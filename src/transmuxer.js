@@ -392,7 +392,7 @@ ElementaryStream.prototype = new hls.Stream();
  * AAC Audio Frames of the individual packets.
  */
 AacStream = function() {
-  var  self, adtsSampleingRates, extraData;
+  var  self, adtsSampleingRates, extraData, audioSpecificConfig, getAudioSpecificConfig, stereo, audiosamplerate;
   AacStream.prototype.init.call(this);
   self = this,
   adtsSampleingRates = [
@@ -403,72 +403,14 @@ AacStream = function() {
     16000, 12000
   ],
 
-
-    this.getAudioSpecificConfig = function (data) { // data as Uint8Array
-
-    // We need to parse the beginning of the adts_frame in order to get
-    // object type, sampling frequency and channel configuration
-    var profile = mpegts.binary.getValueFromByte(data[2], 0, 2);
-    var sampling_frequency_index = mpegts.binary.getValueFromByte(data[2], 2, 4);
-    var channel_configuration = mpegts.binary.getValueFrom2Bytes(data.subarray(2, 5), 7, 3);
-
-    var audioSpecificConfig = new Uint8Array(2);
-
-    // audioObjectType = profile => profile, the MPEG-4 Audio Object Type minus 1
-    audioSpecificConfig[0] = (profile+1) << 3;
-
-    // samplingFrequencyIndex
-    audioSpecificConfig[0] |= (sampling_frequency_index & 0x0E) >> 1;
-    audioSpecificConfig[1] |= (sampling_frequency_index & 0x01) << 7;
-
-    // channelConfiguration
-    audioSpecificConfig[1] |= channel_configuration << 3;
-
-   /*  code for HE AAC v2 to be tested
-
-    var audioSpecificConfig = new Uint8Array(4);
-
-    // audioObjectType = profile => profile, the MPEG-4 Audio Object Type minus 1
-    audioSpecificConfig[0] = 29 << 3;
-
-    // samplingFrequencyIndex
-    audioSpecificConfig[0] |= (sampling_frequency_index & 0x0E) >> 1;
-    audioSpecificConfig[1] |= (sampling_frequency_index & 0x01) << 7;
-
-    // channelConfiguration
-    audioSpecificConfig[1] |= channel_configuration << 3;
-
-    var extensionSamplingFrequencyIndex = 5;// in HE AAC Extension Sampling frequence
-
-    audioSpecificConfig[1] |= extensionSamplingFrequencyIndex >> 1;
-
-    audioSpecificConfig[2] = (extensionSamplingFrequencyIndex << 7) | ((profile+1) << 2);// origin object type equals to 2 => AAC Main Low Complexity
-    audioSpecificConfig[3] = 0x0; //alignment bits
-
-   */
-
-    return audioSpecificConfig;
-};
-
-  this.push = function(packet) {
-
-    if (packet.type == "audio" && packet.data != undefined) {
-
-      var adtsProtectionAbsent, // :Boolean
+  getAudioSpecificConfig = function(data) {
+    var adtsProtectionAbsent, // :Boolean
         adtsObjectType, // :int
         adtsSampleingIndex, // :int
         adtsChanelConfig, // :int
         adtsFrameSize, // :int
         adtsSampleCount, // :int
-        adtsDuration, // :int
-        aacFrame, // :Frame = null;
-        next_pts = packet.pts,
-        data = packet.data;
-
-      // byte 0
-      if (0xFF !== data[0]) {
-        console.assert(false, 'Error no ATDS header found');
-      }
+        adtsDuration; // :int
 
       // byte 1
       adtsProtectionAbsent = !!(data[1] & 0x01);
@@ -494,31 +436,52 @@ AacStream = function() {
       adtsDuration = (adtsSampleCount * 1000) / adtsSampleingRates[adtsSampleingIndex];
 
 
-    var audioSpecificConfig = new Uint8Array(2);
+      self.audioSpecificConfig = new Uint8Array(2);
 
-    // audioObjectType = profile => profile, the MPEG-4 Audio Object Type minus 1
-    audioSpecificConfig[0] = adtsObjectType << 3;
+      // audioObjectType = profile => profile, the MPEG-4 Audio Object Type minus 1
+      self.audioSpecificConfig[0] = adtsObjectType << 3;
 
-    // samplingFrequencyIndex
-    audioSpecificConfig[0] |= (adtsSampleingIndex & 0x0E) >> 1;
-    audioSpecificConfig[1] |= (adtsSampleingIndex & 0x01) << 7;
+      // samplingFrequencyIndex
+      self.audioSpecificConfig[0] |= (adtsSampleingIndex & 0x0E) >> 1;
+      self.audioSpecificConfig[1] |= (adtsSampleingIndex & 0x01) << 7;
 
-    // channelConfiguration
-    audioSpecificConfig[1] |= adtsChanelConfig << 3;
+      // channelConfiguration
+      self.audioSpecificConfig[1] |= adtsChanelConfig << 3;
 
-        aacFrame = {};
-        aacFrame.pts = next_pts;
-        aacFrame.dts = next_pts;
-        aacFrame.bytes = new Uint8Array();
+      self.stereo = (2 === adtsChanelConfig);
+      self.audiosamplerate = adtsSampleingRates[adtsSampleingIndex]
+  };
 
-        // AAC is always 10
-        aacFrame.audiocodecid = 10;
-        aacFrame.stereo = (2 === adtsChanelConfig);
-        aacFrame.audiosamplerate = adtsSampleingRates[adtsSampleingIndex];
-        // Is AAC always 16 bit?
-        aacFrame.audiosamplesize = 16;
-        aacFrame.bytes = packet.data.subarray(7, packet.data.length);
-        packet.frame = aacFrame;
+  this.push = function(packet) {
+
+    if (packet.type == "audio" && packet.data != undefined) {
+
+      var aacFrame, // :Frame = null;
+        next_pts = packet.pts,
+        data = packet.data;
+
+      // byte 0
+      if (0xFF !== data[0]) {
+        console.assert(false, 'Error no ATDS header found');
+      }
+
+      if(self.audioSpecificConfig == undefined) {
+        getAudioSpecificConfig(data);
+      }
+
+      aacFrame = {};
+      aacFrame.pts = next_pts;
+      aacFrame.dts = next_pts;
+      aacFrame.bytes = new Uint8Array();
+
+      // AAC is always 10
+      aacFrame.audiocodecid = 10;
+      aacFrame.stereo = self.stereo;
+      aacFrame.audiosamplerate = self.audiosamplerate;
+      // Is AAC always 16 bit?
+      aacFrame.audiosamplesize = 16;
+      aacFrame.bytes = packet.data.subarray(7, packet.data.length);
+      packet.frame = aacFrame;
 
       this.trigger('data', packet);
     }
