@@ -1,4 +1,7 @@
-(function(window, mseHls, undefined) {
+/**
+ * generate MP4 Box
+ */
+(function() {
 'use strict';
 
 var box, dinf, ftyp, mdat, mfhd, minf, moof, moov, mvex, mvhd, trak,
@@ -30,7 +33,7 @@ DataView = window.DataView;
     minf: [],
     moof: [],
     moov: [],
-    mp4a: [], 
+    mp4a: [],
     mvex: [],
     mvhd: [],
     sdtp: [],
@@ -143,7 +146,7 @@ DataView = window.DataView;
   STSD = new Uint8Array([
     0x00, // version 0
     0x00, 0x00, 0x00, // flags
-    0x00, 0x00, 0x00, 0x01]);// entry_count 
+    0x00, 0x00, 0x00, 0x01]);// entry_count
 
   MEDIAHEADER_TYPES = {
     "video": VMHD,
@@ -398,7 +401,7 @@ esds = function(track) {
       3: AAC SSR (Scalable Sample Rate)
       4: AAC LTP (Long Term Prediction)
       5: SBR (Spectral Band Replication)
-      6: AAC Scalable 
+      6: AAC Scalable
     */
     audio_profile = 2;
   /* sampling freq
@@ -425,7 +428,7 @@ esds = function(track) {
     These are the channel configurations:
     0: Defined in AOT Specifc Config
     1: 1 channel: front-center
-    2: 2 channels: front-left, front-right 
+    2: 2 channels: front-left, front-right
   */
   channel_config = 2;
   //audioSpecificConfig = (audio_profile << 11) + (sampling_freq << 7) + (channel_config << 3);
@@ -625,7 +628,7 @@ trun = function(track, offset) {
   return box(types.trun, new Uint8Array(bytes));
 };
 
-window.mseHls.mp4 = {
+hls.mp4 = {
   ftyp: ftyp,
   mdat: mdat,
   moof: moof,
@@ -643,4 +646,4 @@ window.mseHls.mp4 = {
   }
 };
 
-})(window, window.mseHls);
+})();

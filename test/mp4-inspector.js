@@ -1,4 +1,4 @@
-(function(window, mseHls) {
+(function() {
 'use strict';
 
 var
@@ -81,7 +81,7 @@ var
         vertresolution: view.getUint16(32) + (view.getUint16(34) / 16),
         frameCount: view.getUint16(40),
         depth: view.getUint16(74),
-        config: mseHls.inspectMp4(data.subarray(78, data.byteLength))
+        config: hls.inspectMp4(data.subarray(78, data.byteLength))
       };
     },
     avcC: function(data) {
@@ -146,14 +146,14 @@ var
     },
     dinf: function(data) {
       return {
-        boxes: mseHls.inspectMp4(data)
+        boxes: hls.inspectMp4(data)
       };
     },
     dref: function(data) {
       return {
         version: data[0],
         flags: new Uint8Array(data.subarray(1, 4)),
-        dataReferences: mseHls.inspectMp4(data.subarray(8))
+        dataReferences: hls.inspectMp4(data.subarray(8))
       };
     },
     hdlr: function(data) {
@@ -229,7 +229,7 @@ var
     },
     mdia: function(data) {
       return {
-        boxes: mseHls.inspectMp4(data)
+        boxes: hls.inspectMp4(data)
       };
     },
     mfhd: function(data) {
@@ -244,22 +244,22 @@ var
     },
     minf: function(data) {
       return {
-        boxes: mseHls.inspectMp4(data)
+        boxes: hls.inspectMp4(data)
       };
     },
     moof: function(data) {
       return {
-        boxes: mseHls.inspectMp4(data)
+        boxes: hls.inspectMp4(data)
       };
     },
     moov: function(data) {
       return {
-        boxes: mseHls.inspectMp4(data)
+        boxes: hls.inspectMp4(data)
       };
     },
     mvex: function(data) {
       return {
-        boxes: mseHls.inspectMp4(data)
+        boxes: hls.inspectMp4(data)
       };
     },
     mvhd: function(data) {
@@ -359,7 +359,7 @@ var
     },
     stbl: function(data) {
       return {
-        boxes: mseHls.inspectMp4(data)
+        boxes: hls.inspectMp4(data)
       };
     },
     stco: function(data) {
@@ -400,7 +400,7 @@ var
       return {
         version: data[0],
         flags: new Uint8Array(data.subarray(1, 4)),
-        sampleDescriptions: mseHls.inspectMp4(data.subarray(8))
+        sampleDescriptions: hls.inspectMp4(data.subarray(8))
       };
     },
     stsz: function(data) {
@@ -532,12 +532,12 @@ var
     },
     traf: function(data) {
       return {
-        boxes: mseHls.inspectMp4(data)
+        boxes: hls.inspectMp4(data)
       };
     },
     trak: function(data) {
       return {
-        boxes: mseHls.inspectMp4(data)
+        boxes: hls.inspectMp4(data)
       };
     },
     trex: function(data) {
@@ -646,7 +646,7 @@ var
  * @param data {Uint8Array} the binary data of the media to be inspected
  * @return {array} a javascript array of potentially nested box objects
  */
-mseHls.inspectMp4 = function(data) {
+hls.inspectMp4 = function(data) {
   var
     i = 0,
     result = [],
@@ -677,4 +677,4 @@ mseHls.inspectMp4 = function(data) {
   }
   return result;
 };
-})(window, window.mseHls);
+})();

@@ -3,19 +3,19 @@
  * deliver mp4s to a SourceBuffer on platforms that support native
  * Media Source Extensions.
  */
-(function(window, mseHls, undefined) {
+(function() {
 'use strict';
 
 var
-  TransportPacketStream, TransportParseStream, ElementaryStream, 
-  VideoSegmentStream, AudioSegmentStream, 
+  TransportPacketStream, TransportParseStream, ElementaryStream,
+  VideoSegmentStream, AudioSegmentStream,
   Transmuxer, AacStream, H264Stream, NalByteStream,
   MP2T_PACKET_LENGTH, H264_STREAM_TYPE, ADTS_STREAM_TYPE, mp4;
 
 MP2T_PACKET_LENGTH = 188; // bytes
 H264_STREAM_TYPE = 0x1b;
 ADTS_STREAM_TYPE = 0x0f;
-mp4 = mseHls.mp4;
+mp4 = hls.mp4;
 
 /**
  * Splits an incoming stream of binary data into MPEG-2 Transport
@@ -70,7 +70,7 @@ TransportPacketStream = function() {
     }
   };
 };
-TransportPacketStream.prototype = new mseHls.Stream();
+TransportPacketStream.prototype = new hls.Stream();
 
 /**
  * Accepts an MP2T TransportPacketStream and emits data events with parsed
@@ -244,16 +244,16 @@ TransportParseStream = function() {
       result.streamType = this.programMapTable[result.pid];
       if(result.streamType == undefined) {
         return;
-      } else {  
+      } else {
         result.type = 'pes';
-        parsePes(packet.subarray(offset), result);      
+        parsePes(packet.subarray(offset), result);
       }
     }
 
     this.trigger('data', result);
   };
 };
-TransportParseStream.prototype = new mseHls.Stream();
+TransportParseStream.prototype = new hls.Stream();
 TransportParseStream.STREAM_TYPES  = {
   h264: 0x1b,
   adts: 0x0f
@@ -385,7 +385,7 @@ ElementaryStream = function() {
     flushStream(audio, 'audio');
   };
 };
-ElementaryStream.prototype = new mseHls.Stream();
+ElementaryStream.prototype = new hls.Stream();
 
 /*
  * Accepts a ElementaryStream and emits data events with parsed
@@ -437,11 +437,11 @@ AacStream = function() {
 
     // channelConfiguration
     audioSpecificConfig[1] |= channel_configuration << 3;
-    
+
     var extensionSamplingFrequencyIndex = 5;// in HE AAC Extension Sampling frequence
 
     audioSpecificConfig[1] |= extensionSamplingFrequencyIndex >> 1;
-       
+
     audioSpecificConfig[2] = (extensionSamplingFrequencyIndex << 7) | ((profile+1) << 2);// origin object type equals to 2 => AAC Main Low Complexity
     audioSpecificConfig[3] = 0x0; //alignment bits
 
@@ -524,7 +524,7 @@ AacStream = function() {
     }
   };
 };
-AacStream.prototype = new mseHls.Stream();
+AacStream.prototype = new hls.Stream();
 
 /**
  * Accepts a NAL unit byte stream and unpacks the embedded NAL units.
@@ -613,7 +613,7 @@ NalByteStream = function() {
     syncPoint = 1;
   };
 };
-NalByteStream.prototype = new mseHls.Stream();
+NalByteStream.prototype = new hls.Stream();
 
 /**
  * Accepts input from a ElementaryStream and produces H.264 NAL unit data
@@ -726,7 +726,7 @@ H264Stream = function() {
       scalingListCount,
       i;
 
-    expGolombDecoder = new mseHls.ExpGolomb(data);
+    expGolombDecoder = new hls.ExpGolomb(data);
     profileIdc = expGolombDecoder.readUnsignedByte(); // profile_idc
     profileCompatibility = expGolombDecoder.readBits(5); // constraint_set[0-5]_flag
     expGolombDecoder.skipBits(3); //  u(1), reserved_zero_2bits u(2)
@@ -808,7 +808,7 @@ H264Stream = function() {
   };
 
 };
-H264Stream.prototype = new mseHls.Stream();
+H264Stream.prototype = new hls.Stream();
 
 /**
  * Constructs a single-track, ISO BMFF media segment from H264 data
@@ -910,7 +910,7 @@ VideoSegmentStream = function(track) {
     this.trigger('data', boxes);
   };
 };
-VideoSegmentStream.prototype = new mseHls.Stream();
+VideoSegmentStream.prototype = new hls.Stream();
 
 
 
@@ -955,7 +955,7 @@ AudioSegmentStream = function(track) {
         hasRedundancy: 0,
         degradationPriority: 0
       },
-      compositionTimeOffset: 0      
+      compositionTimeOffset: 0
     };
     i = 0;
     startUnit = aacUnits[0];
@@ -983,7 +983,7 @@ AudioSegmentStream = function(track) {
         data.set(currentUnit.data, i);
         i += currentUnit.data.byteLength;
         aacUnits.shift();
-        lastUnit = currentUnit;      
+        lastUnit = currentUnit;
     }
     // record the last sample
     if (track.samples.length) {
@@ -1006,7 +1006,7 @@ AudioSegmentStream = function(track) {
     this.trigger('data', boxes);
   };
 };
-AudioSegmentStream.prototype = new mseHls.Stream();
+AudioSegmentStream.prototype = new hls.Stream();
 
 
 
@@ -1066,7 +1066,7 @@ Transmuxer = function() {
       // generate an init segment once all the metadata is available
       if (pps) {
         self.trigger('data', {
-          data: mseHls.mp4.initSegment([trackVideo,trackAudio])
+          data: mp4.initSegment([trackVideo,trackAudio])
         });
       }
     }
@@ -1077,7 +1077,7 @@ Transmuxer = function() {
 
       if (configVideo) {
         self.trigger('data', {
-          data: mseHls.mp4.initSegment([trackVideo,trackAudio])
+          data: mp4.initSegment([trackVideo,trackAudio])
         });
       }
     }
@@ -1126,9 +1126,9 @@ Transmuxer = function() {
     audioSegmentStream.end();
   };
 };
-Transmuxer.prototype = new mseHls.Stream();
+Transmuxer.prototype = new hls.Stream();
 
-window.mseHls.mp2t = {
+hls.mp2t = {
   PAT_PID: 0x0000,
   MP2T_PACKET_LENGTH: MP2T_PACKET_LENGTH,
   H264_STREAM_TYPE: H264_STREAM_TYPE,
@@ -1142,4 +1142,4 @@ window.mseHls.mp2t = {
   AacStream: AacStream,
   H264Stream: H264Stream
 };
-})(window, window.mseHls);
+})();

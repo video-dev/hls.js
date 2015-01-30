@@ -43,14 +43,11 @@
     <footer class="wrapper">
     </footer>
   </div>
-
-  <script>
-    window.mseHls = {};
-  </script>
-  <script src="src/mp4-generator.js"></script>  
-  <script src="src/exp-golomb.js"></script>  
-  <script src="src/stream.js"></script>  
-  <script src="src/transmuxer.js"></script>  
+  <script src="src/hls.js"></script>
+  <script src="src/mp4-generator.js"></script>
+  <script src="src/exp-golomb.js"></script>
+  <script src="src/stream.js"></script>
+  <script src="src/transmuxer.js"></script>
   <!--<script src="test/mp4-inspector.js"></script> -->
   <script>
     var mediaSource = new MediaSource(),
@@ -59,7 +56,7 @@
     // setup the media source
     mediaSource.addEventListener('sourceopen', function() {
       var buffer = mediaSource.addSourceBuffer('video/mp4;codecs=avc1.4d400d,mp4a.40.5'),
-        transmuxer = new mseHls.mp2t.Transmuxer(),
+        transmuxer = new hls.mp2t.Transmuxer(),
         segments = [];
 
       //buffer.mode = 'segments';
@@ -75,7 +72,7 @@
 
       // transmux the MPEG-TS data to BMFF segments
       transmuxer.on('data', function(segment) {
-        //console.log(JSON.stringify(mseHls.inspectMp4(segment.data)),null,4);
+        //console.log(JSON.stringify(hls.inspectMp4(segment.data)),null,4);
         segments.push(segment);
       });
 
@@ -113,7 +110,7 @@
 
 
       // function xhr_dumpMP4(event) {
-      //   console.log(JSON.stringify(mseHls.inspectMp4(new Uint8Array(event.currentTarget.response))));
+      //   console.log(JSON.stringify(hls.inspectMp4(new Uint8Array(event.currentTarget.response))));
       // }
 
       // relative URL resolver
@@ -196,8 +193,59 @@
       console.log("media source closed");
     });
 
+    function logEvt(evt) {
+      var data = '';
+      switch(evt.type) {
+        case 'durationchange':
+          data = event.target.duration;
+          break;
+        case 'resize':
+          data = "videoWidth:" + evt.target.videoWidth + "/videoHeight:" + evt.target.videoHeight;
+          break;
+        case 'loadedmetadata':
+          data = "duration:" + evt.target.duration + "/videoWidth:" + evt.target.videoWidth + "/videoHeight:" + evt.target.videoHeight;
+          break;
+        case 'loadeddata':
+        case 'canplay':
+        case 'canplaythrough':
+        case 'timeupdate':
+        case 'seeking':
+        case 'seeked':
+        case 'pause':
+        case 'play':
+        case 'stalled':
+          data = "currentTime:" + evt.target.currentTime;
+          break;
+        default:
+        break;
+      }
+      console.log(evt.type + ":" + data);
+    }
+
     demo.src = URL.createObjectURL(mediaSource);
-    demo.addEventListener('error', console.log.bind(console));
+    demo.addEventListener('loadstart', function(evt) { logEvt(evt); }) ;
+    demo.addEventListener('progress', function(evt) { logEvt(evt); }) ;
+    demo.addEventListener('suspend', function(evt) { logEvt(evt); }) ;
+    demo.addEventListener('abort', function(evt) { logEvt(evt); }) ;
+    demo.addEventListener('error', function(evt) { logEvt(evt); }) ;
+    demo.addEventListener('emptied', function(evt) { logEvt(evt); }) ;
+    demo.addEventListener('stalled', function(evt) { logEvt(evt); }) ;
+    demo.addEventListener('loadedmetadata', function(evt) { logEvt(evt); }) ;
+    demo.addEventListener('loadeddata', function(evt) { logEvt(evt); }) ;
+    demo.addEventListener('canplay', function(evt) { logEvt(evt); }) ;
+    demo.addEventListener('canplaythrough', function(evt) { logEvt(evt); }) ;
+    demo.addEventListener('playing', function(evt) { logEvt(evt); }) ;
+    demo.addEventListener('waiting', function(evt) { logEvt(evt); }) ;
+    demo.addEventListener('seeking', function(evt) { logEvt(evt); }) ;
+    demo.addEventListener('seeked', function(evt) { logEvt(evt); }) ;
+    demo.addEventListener('durationchange', function(evt) { logEvt(evt); }) ;
+    demo.addEventListener('timeupdate', function(evt) { logEvt(evt); }) ;
+    demo.addEventListener('play', function(evt) { logEvt(evt); }) ;
+    demo.addEventListener('pause', function(evt) { logEvt(evt); }) ;
+    demo.addEventListener('ratechange', function(evt) { logEvt(evt); }) ;
+    demo.addEventListener('resize', function(evt) { logEvt(evt); }) ;
+    demo.addEventListener('volumechange', function(evt) { logEvt(evt); }) ;
+
   </script>
 </body>
 
