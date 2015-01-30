@@ -1,8 +1,7 @@
 /**
- * A stream-based mp2t to mp4 converter. This utility is used to
+ * A stream-based mp2ts to mp4 converter. This utility is used to
  * deliver mp4s to a SourceBuffer on platforms that support native
- * Media Source Extensions. The equivalent process for Flash-based
- * platforms can be found in segment-parser.js
+ * Media Source Extensions.
  */
 (function(window, mseHls, undefined) {
 'use strict';
