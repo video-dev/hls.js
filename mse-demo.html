@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>HLS Media Sources Demo</title>
+  <meta name="description" content="">
+  <meta name="viewport" content="width=device-width">
+
+</head>
+
+<body>
+  <div class="header-container">
+    <header class="wrapper clearfix">
+      <h1 class="title">HLS Media Sources Demo</h1>
+    </header>
+  </div>
+
+  <div class="main-container">
+    <div class="main wrapper clearfix">
+
+      <article>
+        <header>
+          <p>
+            transmuxing HLS single level playlist into MP4 fragments - Media Source Extension-compatible media segments on the fly. Check out the demo below in Chrome!
+          </p>
+        </header>
+        <section>
+          <video id=demo width=640 height=360 controls>
+            <p>
+              Your browser is too old to view this demo. How about upgrading?
+            </p>
+          </video>
+        </section>
+      </article>
+
+    </div>
+    <!-- #main -->
+  </div>
+  <!-- #main-container -->
+
+  <div class="footer-container">
+    <footer class="wrapper">
+    </footer>
+  </div>
+
+  <script>
+    window.mseHls = {};
+  </script>
+  <script src="src/mp4-generator.js"></script>  
+  <script src="src/exp-golomb.js"></script>  
+  <script src="src/stream.js"></script>  
+  <script src="src/transmuxer.js"></script>  
+  <!--<script src="test/mp4-inspector.js"></script> -->
+  <script>
+    var mediaSource = new MediaSource(),
+      demo = document.getElementById('demo');
+
+    // setup the media source
+    mediaSource.addEventListener('sourceopen', function() {
+      var buffer = mediaSource.addSourceBuffer('video/mp4;codecs=avc1.4d400d,mp4a.40.5'),
+        transmuxer = new mseHls.mp2t.Transmuxer(),
+        segments = [];
+
+      //buffer.mode = 'segments';
+      buffer.addEventListener('updateend', function() {
+        //console.log(" buffer append updateend");
+        appendSegments();
+      });
+
+      buffer.addEventListener('error', function(event) {
+        console.log(" buffer append error:" + event);
+      });
+
+
+      // transmux the MPEG-TS data to BMFF segments
+      transmuxer.on('data', function(segment) {
+        //console.log(JSON.stringify(mseHls.inspectMp4(segment.data)),null,4);
+        segments.push(segment);
+      });
+
+      var fragments;
+      var fragmentIndex;
+
+      // loading manifest
+      function loadManifest(url) {
+        var ajax = new XMLHttpRequest();
+        ajax.addEventListener('load', function() {
+          fragments =
+            this.responseText
+            .split(/\r?\n/)
+            .filter(RegExp.prototype.test.bind(/\.ts$/))
+            .map(resolveURL.bind(null, url))
+          console.log('found ' + fragments.length + ' fragments');
+          fragmentIndex = 0;
+          xhr_request(fragments[fragmentIndex++],
+            xhr_transmuxBytes,
+            xhr_transferFailed,
+            "arraybuffer");
+        });
+        ajax.open('GET', url, true);
+        ajax.send();
+      }
+
+
+      // // loading mp4
+      // function loadMP4(url) {
+      //   xhr_request(url,
+      //     xhr_dumpMP4,
+      //     xhr_transferFailed,
+      //     "arraybuffer");
+      // }
+
+
+      // function xhr_dumpMP4(event) {
+      //   console.log(JSON.stringify(mseHls.inspectMp4(new Uint8Array(event.currentTarget.response))));
+      // }
+
+      // relative URL resolver
+      var resolveURL = (function() {
+        var doc = document,
+          old_base = doc.getElementsByTagName('base')[0],
+          old_href = old_base && old_base.href,
+          doc_head = doc.head || doc.getElementsByTagName('head')[0],
+          our_base = old_base || doc.createElement('base'),
+          resolver = doc.createElement('a'),
+          resolved_url;
+
+        return function(base_url, url) {
+          old_base || doc_head.appendChild(our_base);
+
+          our_base.href = base_url;
+          resolver.href = url;
+          resolved_url = resolver.href; // browser magic at work here
+
+          old_base ? old_base.href = old_href : doc_head.removeChild(our_base);
+
+          return resolved_url;
+        };
+      })();
+
+      function xhr_request(url, loadcallback, errorcallback, responseType) {
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", url, loadcallback ? true : false);
+        if (responseType) {
+          xhr.responseType = responseType;
+        }
+        if (loadcallback) {
+          xhr.onload = loadcallback;
+          xhr.onerror = errorcallback;
+          xhr.send();
+        } else {
+          xhr.send();
+          return xhr.status == 200 ? xhr.response : "";
+        }
+      }
+
+      function xhr_transmuxBytes(event) {
+        console.log(event.currentTarget.responseURL + " loaded");
+        transmuxer.push(new Uint8Array(event.currentTarget.response));
+        transmuxer.end();
+        // buffer up the video data
+        appendSegments();
+        if (fragmentIndex < fragments.length) {
+          xhr_request(fragments[fragmentIndex++],
+            xhr_transmuxBytes,
+            xhr_transferFailed,
+            "arraybuffer");
+        } else {
+          console.log("last fragment loaded");
+          appendSegments();
+        }
+      }
+
+      function appendSegments() {
+        if (!buffer.updating && segments.length) {
+          //console.log("append " + segments[0].data.length);
+          buffer.appendBuffer(segments.shift().data);
+        }
+      }
+
+      function xhr_transferFailed(event) {
+        console.log("An error occurred while transferring the file :" + event.target.status);
+      }
+
+      var manifest = 'http://www.streambox.fr/playlists/test_001/stream_1000k_48k_640x360.m3u8';
+      loadManifest(manifest);
+      //loadMP4("http://localhost:8000/mse/car-audio.mp4");
+    });
+
+    mediaSource.addEventListener('sourceended', function() {
+      console.log("media source ended");
+    });
+
+    mediaSource.addEventListener('sourceclose', function() {
+      console.log("media source closed");
+    });
+
+    demo.src = URL.createObjectURL(mediaSource);
+    demo.addEventListener('error', console.log.bind(console));
+  </script>
+</body>
+
+</html>
