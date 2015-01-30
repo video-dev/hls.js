@@ -1,4 +1,7 @@
-(function(window, mseHls, undefined) {
+/**
+ * generate MP4 Box
+ */
+(function() {
     'use strict';
 
     var box,
@@ -725,7 +728,7 @@
       3: AAC SSR (Scalable Sample Rate)
       4: AAC LTP (Long Term Prediction)
       5: SBR (Spectral Band Replication)
-      6: AAC Scalable 
+      6: AAC Scalable
     */
         audio_profile = 2;
         /* sampling freq
@@ -752,7 +755,7 @@
     These are the channel configurations:
     0: Defined in AOT Specifc Config
     1: 1 channel: front-center
-    2: 2 channels: front-left, front-right 
+    2: 2 channels: front-left, front-right
   */
         channel_config = 2;
         //audioSpecificConfig = (audio_profile << 11) + (sampling_freq << 7) + (channel_config << 3);
@@ -1069,7 +1072,7 @@
         return box(types.trun, new Uint8Array(bytes));
     };
 
-    window.mseHls.mp4 = {
+    hls.mp4 = {
         ftyp: ftyp,
         mdat: mdat,
         moof: moof,
@@ -1085,4 +1088,4 @@
             return result;
         }
     };
-})(window, window.mseHls);
+})();

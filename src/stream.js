@@ -2,7 +2,9 @@
  * A lightweight readable stream implemention that handles event dispatching.
  * Objects that inherit from streams should call init in their constructors.
  */
-(function(mseHls, undefined) {
+(function() {
+    'use strict';
+
     var Stream = function() {
         this.init = function() {
             var listeners = {};
@@ -82,5 +84,5 @@
         });
     };
 
-    mseHls.Stream = Stream;
-})(window.mseHls);
+    hls.Stream = Stream;
+})();

@@ -1,9 +1,10 @@
-(function(window) {
-    /**
-     * Parser for exponential Golomb codes, a variable-bitwidth number encoding
-     * scheme used by h264.
-     */
-    window.mseHls.ExpGolomb = function(workingData) {
+/**
+ * Parser for exponential Golomb codes, a variable-bitwidth number encoding
+ * scheme used by h264.
+ */
+(function() {
+    'use strict';
+    window.hls.ExpGolomb = function(workingData) {
         var // the number of bytes left to examine in workingData
             workingBytesAvailable = workingData.byteLength,
             // the current word being examined

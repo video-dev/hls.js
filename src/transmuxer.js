@@ -3,7 +3,7 @@
  * deliver mp4s to a SourceBuffer on platforms that support native
  * Media Source Extensions.
  */
-(function(window, mseHls, undefined) {
+(function() {
     'use strict';
 
     var TransportPacketStream,
@@ -23,7 +23,7 @@
     MP2T_PACKET_LENGTH = 188; // bytes
     H264_STREAM_TYPE = 0x1b;
     ADTS_STREAM_TYPE = 0x0f;
-    mp4 = mseHls.mp4;
+    mp4 = hls.mp4;
 
     /**
      * Splits an incoming stream of binary data into MPEG-2 Transport
@@ -77,7 +77,7 @@
             }
         };
     };
-    TransportPacketStream.prototype = new mseHls.Stream();
+    TransportPacketStream.prototype = new hls.Stream();
 
     /**
      * Accepts an MP2T TransportPacketStream and emits data events with parsed
@@ -267,7 +267,7 @@
             this.trigger('data', result);
         };
     };
-    TransportParseStream.prototype = new mseHls.Stream();
+    TransportParseStream.prototype = new hls.Stream();
     TransportParseStream.STREAM_TYPES = {
         h264: 0x1b,
         adts: 0x0f
@@ -398,7 +398,7 @@
             flushStream(audio, 'audio');
         };
     };
-    ElementaryStream.prototype = new mseHls.Stream();
+    ElementaryStream.prototype = new hls.Stream();
 
     /*
  * Accepts a ElementaryStream and emits data events with parsed
@@ -464,11 +464,11 @@
 
     // channelConfiguration
     audioSpecificConfig[1] |= channel_configuration << 3;
-    
+
     var extensionSamplingFrequencyIndex = 5;// in HE AAC Extension Sampling frequence
 
     audioSpecificConfig[1] |= extensionSamplingFrequencyIndex >> 1;
-       
+
     audioSpecificConfig[2] = (extensionSamplingFrequencyIndex << 7) | ((profile+1) << 2);// origin object type equals to 2 => AAC Main Low Complexity
     audioSpecificConfig[3] = 0x0; //alignment bits
 
@@ -552,7 +552,7 @@
             }
         };
     };
-    AacStream.prototype = new mseHls.Stream();
+    AacStream.prototype = new hls.Stream();
 
     /**
      * Accepts a NAL unit byte stream and unpacks the embedded NAL units.
@@ -647,7 +647,7 @@
             syncPoint = 1;
         };
     };
-    NalByteStream.prototype = new mseHls.Stream();
+    NalByteStream.prototype = new hls.Stream();
 
     /**
      * Accepts input from a ElementaryStream and produces H.264 NAL unit data
@@ -761,7 +761,7 @@
                 scalingListCount,
                 i;
 
-            expGolombDecoder = new mseHls.ExpGolomb(data);
+            expGolombDecoder = new hls.ExpGolomb(data);
             profileIdc = expGolombDecoder.readUnsignedByte(); // profile_idc
             profileCompatibility = expGolombDecoder.readBits(5); // constraint_set[0-5]_flag
             expGolombDecoder.skipBits(3); //  u(1), reserved_zero_2bits u(2)
@@ -855,7 +855,7 @@
             };
         };
     };
-    H264Stream.prototype = new mseHls.Stream();
+    H264Stream.prototype = new hls.Stream();
 
     /**
      * Constructs a single-track, ISO BMFF media segment from H264 data
@@ -969,7 +969,7 @@
             this.trigger('data', boxes);
         };
     };
-    VideoSegmentStream.prototype = new mseHls.Stream();
+    VideoSegmentStream.prototype = new hls.Stream();
 
     /**
      * Constructs a single-track, ISO BMFF media segment from AAC data
@@ -1071,7 +1071,7 @@
             this.trigger('data', boxes);
         };
     };
-    AudioSegmentStream.prototype = new mseHls.Stream();
+    AudioSegmentStream.prototype = new hls.Stream();
 
     /**
      * A Stream that expects MP2T binary data as input and produces
@@ -1133,7 +1133,7 @@
                 // generate an init segment once all the metadata is available
                 if (pps) {
                     self.trigger('data', {
-                        data: mseHls.mp4.initSegment([trackVideo, trackAudio])
+                        data: mp4.initSegment([trackVideo, trackAudio])
                     });
                 }
             }
@@ -1143,7 +1143,7 @@
 
                 if (configVideo) {
                     self.trigger('data', {
-                        data: mseHls.mp4.initSegment([trackVideo, trackAudio])
+                        data: mp4.initSegment([trackVideo, trackAudio])
                     });
                 }
             }
@@ -1197,9 +1197,9 @@
             audioSegmentStream.end();
         };
     };
-    Transmuxer.prototype = new mseHls.Stream();
+    Transmuxer.prototype = new hls.Stream();
 
-    window.mseHls.mp2t = {
+    hls.mp2t = {
         PAT_PID: 0x0000,
         MP2T_PACKET_LENGTH: MP2T_PACKET_LENGTH,
         H264_STREAM_TYPE: H264_STREAM_TYPE,
@@ -1213,4 +1213,4 @@
         AacStream: AacStream,
         H264Stream: H264Stream
     };
-})(window, window.mseHls);
+})();
