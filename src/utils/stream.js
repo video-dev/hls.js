@@ -83,6 +83,5 @@
       destination.push(data);
     });
   };
-
   hls.Stream = Stream;
 })();

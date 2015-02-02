@@ -9,12 +9,13 @@
 var
   TransportPacketStream, TransportParseStream, ElementaryStream,
   VideoSegmentStream, AudioSegmentStream,
-  Transmuxer, AacStream, H264Stream, NalByteStream,
-  MP2T_PACKET_LENGTH, H264_STREAM_TYPE, ADTS_STREAM_TYPE, mp4;
+  TSDemuxer, AacStream, H264Stream, NalByteStream,
+  MP2T_PACKET_LENGTH, PAT_PID, H264_STREAM_TYPE, ADTS_STREAM_TYPE, mp4;
 
 MP2T_PACKET_LENGTH = 188; // bytes
 H264_STREAM_TYPE = 0x1b;
 ADTS_STREAM_TYPE = 0x0f;
+PAT_PID = 0;
 mp4 = hls.mp4;
 
 /**
@@ -234,7 +235,7 @@ TransportParseStream = function() {
     }
 
     // parse the rest of the packet based on the type
-    if (result.pid === 0) {
+    if (result.pid === PAT_PID) {
       result.type = 'pat';
       parsePsi(packet.subarray(offset), result);
     } else if (result.pid === this.pmtPid) {
@@ -852,7 +853,7 @@ AudioSegmentStream.prototype = new hls.Stream();
  * @see test/muxer/mse-demo.html for sample usage of a Transmuxer with
  * MSE
  */
-Transmuxer = function() {
+TSDemuxer = function() {
   var
     self = this,
     trackAudio,
@@ -863,7 +864,7 @@ Transmuxer = function() {
 
     packetStream, parseStream, elementaryStream, aacStream, h264Stream, audioSegmentStream, videoSegmentStream;
 
-  Transmuxer.prototype.init.call(this);
+  TSDemuxer.prototype.init.call(this);
 
   // set up the parsing pipeline
   packetStream = new TransportPacketStream();
@@ -960,20 +961,9 @@ Transmuxer = function() {
     audioSegmentStream.end();
   };
 };
-Transmuxer.prototype = new hls.Stream();
+TSDemuxer.prototype = new hls.Stream();
 
-hls.mp2t = {
-  PAT_PID: 0x0000,
-  MP2T_PACKET_LENGTH: MP2T_PACKET_LENGTH,
-  H264_STREAM_TYPE: H264_STREAM_TYPE,
-  ADTS_STREAM_TYPE: ADTS_STREAM_TYPE,
-  TransportPacketStream: TransportPacketStream,
-  TransportParseStream: TransportParseStream,
-  ElementaryStream: ElementaryStream,
-  AudioSegmentStream: AudioSegmentStream,
-  VideoSegmentStream: VideoSegmentStream,
-  Transmuxer: Transmuxer,
-  AacStream: AacStream,
-  H264Stream: H264Stream
+hls.demux = {
+  TSDemuxer: TSDemuxer
 };
 })();

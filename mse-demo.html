@@ -44,10 +44,10 @@
     </footer>
   </div>
   <script src="src/hls.js"></script>
-  <script src="src/mp4-generator.js"></script>
-  <script src="src/exp-golomb.js"></script>
-  <script src="src/stream.js"></script>
-  <script src="src/transmuxer.js"></script>
+  <script src="src/utils/stream.js"></script>
+  <script src="src/remux/mp4-generator.js"></script>
+  <script src="src/demux/exp-golomb.js"></script>
+  <script src="src/demux/tsdemuxer.js"></script>
   <!--<script src="test/mp4-inspector.js"></script> -->
   <script>
     var mediaSource = new MediaSource(),
@@ -56,7 +56,7 @@
     // setup the media source
     mediaSource.addEventListener('sourceopen', function() {
       var buffer = mediaSource.addSourceBuffer('video/mp4;codecs=avc1.4d400d,mp4a.40.5'),
-        transmuxer = new hls.mp2t.Transmuxer(),
+        transmuxer = new hls.demux.TSDemuxer(),
         segments = [];
 
       //buffer.mode = 'segments';
