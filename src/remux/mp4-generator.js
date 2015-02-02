@@ -8,11 +8,7 @@ var box, dinf, ftyp, mdat, mfhd, minf, moof, moov, mvex, mvhd, trak,
     tkhd, mdia, mdhd, hdlr, sdtp, stbl, stsd, styp, traf, trex, trun,
     avc1, mp4a, esds,
     types, MAJOR_BRAND, MINOR_VERSION, AVC1_BRAND, VIDEO_HDLR,
-    AUDIO_HDLR, HDLR_TYPES, VMHD, SMHD, MEDIAHEADER_TYPES, DREF, STCO, STSC, STSZ, STTS, ESDS, STSD
-    Uint8Array, DataView;
-
-Uint8Array = window.Uint8Array;
-DataView = window.DataView;
+    AUDIO_HDLR, HDLR_TYPES, VMHD, SMHD, MEDIAHEADER_TYPES, DREF, STCO, STSC, STSZ, STTS, ESDS, STSD;
 
 // pre-calculate constants
 (function() {
@@ -629,7 +625,6 @@ trun = function(track, offset) {
 };
 
 hls.mp4 = {
-  ftyp: ftyp,
   mdat: mdat,
   moof: moof,
   moov: moov,
