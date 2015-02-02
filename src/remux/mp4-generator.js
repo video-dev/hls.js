@@ -46,10 +46,6 @@
         STTS,
         ESDS,
         STSD;
-    Uint8Array, DataView;
-
-    Uint8Array = window.Uint8Array;
-    DataView = window.DataView;
 
     // pre-calculate constants
     (function() {
@@ -1073,7 +1069,6 @@
     };
 
     hls.mp4 = {
-        ftyp: ftyp,
         mdat: mdat,
         moof: moof,
         moov: moov,
