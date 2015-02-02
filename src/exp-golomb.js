@@ -15,16 +15,6 @@
     // the number of bits left to examine in the current word
     workingBitsAvailable = 0; // :uint;
 
-  // ():uint
-  function length() {
-    return (8 * workingBytesAvailable);
-  };
-
-  // ():uint
-  function bitsAvailable() {
-    return (8 * workingBytesAvailable) + workingBitsAvailable;
-  };
-
   // ():void
   function loadWord() {
     var
