@@ -10,14 +10,19 @@
   playlistLoader = function() {
     var url;
     var self = this;
+    var trequest;
+    var tfirst;
 
     playlistLoader.prototype.init.call(this);
 
     this.load = function(url) {
       this.url = url;
+      trequest = Date.now();
+      tfirst = null;
       var xhr = new XMLHttpRequest();
       xhr.onload=  loadsuccess;
       xhr.onerror =  loaderror;
+      xhr.onprogress = loadprogress;
       xhr.open('GET', url, true);
       xhr.send();
     };
@@ -29,11 +34,18 @@
       .filter(RegExp.prototype.test.bind(/\.ts$/))
       .map(resolveURL.bind(null, self.url))
       console.log('found ' + fragments.length + ' fragments');
+      self.trigger('stats', {trequest : trequest, tfirst : tfirst, tend : Date.now(), length :fragments.length, url : self.url });
       self.trigger('data',fragments);
     }
 
     function loaderror(event) {
       console.log('error loading ' + self.url);
+    }
+
+    function loadprogress(event) {
+      if(tfirst === null) {
+        tfirst = Date.now();
+      }
     }
 
     // relative URL resolver
