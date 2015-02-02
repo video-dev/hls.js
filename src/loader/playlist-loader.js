@@ -33,7 +33,7 @@
     }
 
     function loaderror(event) {
-      console.log('error loading ' + this.url);
+      console.log('error loading ' + self.url);
     }
 
     // relative URL resolver

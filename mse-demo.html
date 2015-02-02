@@ -46,6 +46,7 @@
   <script src="src/hls.js"></script>
   <script src="src/utils/stream.js"></script>
   <script src="src/loader/playlist-loader.js"></script>
+  <script src="src/loader/fragment-loader.js"></script>
   <script src="src/remux/mp4-generator.js"></script>
   <script src="src/demux/exp-golomb.js"></script>
   <script src="src/demux/tsdemuxer.js"></script>
@@ -70,48 +71,35 @@
         console.log(" buffer append error:" + event);
       });
 
-
-      // transmux the MPEG-TS data to BMFF segments
-      transmuxer.on('data', function(segment) {
-        //console.log(JSON.stringify(hls.inspectMp4(segment.data)),null,4);
-        segments.push(segment);
-      });
-
       var fragments;
       var fragmentIndex;
 
-      function xhr_request(url, loadcallback, errorcallback, responseType) {
-        var xhr = new XMLHttpRequest();
-        xhr.open("GET", url, loadcallback ? true : false);
-        if (responseType) {
-          xhr.responseType = responseType;
-        }
-        if (loadcallback) {
-          xhr.onload = loadcallback;
-          xhr.onerror = errorcallback;
-          xhr.send();
-        } else {
-          xhr.send();
-          return xhr.status == 200 ? xhr.response : "";
-        }
-      }
+      var playlistLoader = new hls.playlistLoader();
+      var fragmentLoader = new hls.fragmentLoader();
 
-      function xhr_transmuxBytes(event) {
-        console.log(event.currentTarget.responseURL + " loaded");
-        transmuxer.push(new Uint8Array(event.currentTarget.response));
+      playlistLoader.on('data',function(data) {
+        fragments = data;
+          fragmentIndex = 0;
+          fragmentLoader.load(fragments[fragmentIndex++]);
+      });
+
+      fragmentLoader.on('data', function(data) {
+        transmuxer.push(new Uint8Array(data));
         transmuxer.end();
-        // buffer up the video data
         appendSegments();
         if (fragmentIndex < fragments.length) {
-          xhr_request(fragments[fragmentIndex++],
-            xhr_transmuxBytes,
-            xhr_transferFailed,
-            "arraybuffer");
+          fragmentLoader.load(fragments[fragmentIndex++]);
         } else {
           console.log("last fragment loaded");
           appendSegments();
         }
-      }
+      });
+
+      // transmux the MPEG-TS data to ISO-BMFF segments
+      transmuxer.on('data', function(segment) {
+        //console.log(JSON.stringify(hls.inspectMp4(segment.data)),null,4);
+        segments.push(segment);
+      });
 
       function appendSegments() {
         if (!buffer.updating && segments.length) {
@@ -120,23 +108,9 @@
         }
       }
 
-      function xhr_transferFailed(event) {
-        console.log("An error occurred while transferring the file :" + event.target.status);
-      }
 
       var manifest = 'http://www.streambox.fr/playlists/test_001/stream_1000k_48k_640x360.m3u8';
-
-      var playlistLoader = new hls.playlistLoader();
       playlistLoader.load(manifest);
-      playlistLoader.on('data',function(data) {
-        fragments = data;
-          fragmentIndex = 0;
-          xhr_request(fragments[fragmentIndex++],
-            xhr_transmuxBytes,
-            xhr_transferFailed,
-            "arraybuffer");
-      }
-      );
     });
 
     mediaSource.addEventListener('sourceended', function() {
