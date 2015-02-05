@@ -1,0 +1,41 @@
+{
+  "name": "mse-hls",
+  "version": "0.0.1",
+  "description": "Media Source Extension - HLS library, by/for Dailymotion",
+  "homepage": "https://github.com/dailymotion/mse-hls",
+  "authors": "Guillaume du Pontavice <guillaume.dupontavice@dailymotion.com>",
+  "main": "src/hls.js",
+  "private": true,
+  "scripts": {
+    "clean": "rm -r dist/*",
+    "prebuild": "npm run clean & npm run test",
+    "build": "browserify -s hls src/hls.js -o dist/hls.js",
+    "postbuild": "npm run minify",
+    "minify": "uglifyjs dist/hls.js > dist/hls.min.js",
+    "watch": "watchify --debug -s hls src/hls.js -o dist/hls.js",
+    "pretest": "npm run lint",
+    "test": "mocha tests/",
+    "lint": "jshint src/*.js",
+    "serve": "http-server -p 8000 .",
+    "open": "opener http://localhost:8000/demo/",
+    "live-reload": "live-reload --port 8001 dist/",
+    "dev": "npm run open -s & parallelshell 'npm run live-reload -s' 'npm run serve -s' 'npm run watch -s'"
+  },
+  "browserify": {
+    "transform": [
+      "6to5ify"
+    ]
+  },
+  "devDependencies": {
+    "6to5ify": "^3.1.2",
+    "browserify": "^8.1.1",
+    "http-server": "^0.7.4",
+    "jshint": "^2.5.11",
+    "live-reload": "^0.2.0",
+    "mocha": "^2.1.0",
+    "opener": "^1.4.0",
+    "parallelshell": "^1.0.3",
+    "uglify-js": "^2.4.16",
+    "watchify": "^2.2.1"
+  }
+}
