@@ -681,6 +681,7 @@ VideoSegmentStream = function(track) {
         dependsOn: 1,
         isDependedOn: 0,
         hasRedundancy: 0,
+        isNonSyncSample : 1,
         degradationPriority: 0
       }
     };
@@ -703,7 +704,8 @@ VideoSegmentStream = function(track) {
             dependsOn: 1,
             isDependedOn: 0,
             hasRedundancy: 0,
-            degradationPriority: 0
+            isNonSyncSample : 1,
+            degradationPriority: 0,
           },
           compositionTimeOffset: currentNal.pts - currentNal.dts
         };
@@ -712,6 +714,7 @@ VideoSegmentStream = function(track) {
       if (currentNal.nalUnitType === 'slice_layer_without_partitioning_rbsp_idr') {
         // the current sample is a key frame
         sample.flags.dependsOn = 2;
+        sample.flags.isNonSyncSample = 0;
       }
       sample.size += 4; // space for the NAL length
       sample.size += currentNal.data.byteLength;
