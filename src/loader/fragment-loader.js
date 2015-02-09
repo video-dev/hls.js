@@ -24,7 +24,7 @@
             xhr.onerror = loaderror;
             xhr.onprogress = loadprogress;
             xhr.responseType = 'arraybuffer';
-            xhr.open('GET', url + '?' + Date.now(), true);
+            xhr.open('GET', url, true);
             xhr.send();
         };
 
