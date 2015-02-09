@@ -716,6 +716,7 @@
                     dependsOn: 1,
                     isDependedOn: 0,
                     hasRedundancy: 0,
+                    isNonSyncSample: 1,
                     degradationPriority: 0
                 }
             };
@@ -738,6 +739,7 @@
                             dependsOn: 1,
                             isDependedOn: 0,
                             hasRedundancy: 0,
+                            isNonSyncSample: 1,
                             degradationPriority: 0
                         },
                         compositionTimeOffset: currentNal.pts - currentNal.dts
@@ -750,6 +752,7 @@
                 ) {
                     // the current sample is a key frame
                     sample.flags.dependsOn = 2;
+                    sample.flags.isNonSyncSample = 0;
                 }
                 sample.size += 4; // space for the NAL length
                 sample.size += currentNal.data.byteLength;
