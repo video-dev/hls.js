@@ -40,7 +40,7 @@ class TransportPacketStream extends Stream {
 
       bytes = bytes.subarray(remaining);
       this.end = 0;
-      super.trigger('data', buffer);
+      this.trigger('data', buffer);
     }
 
     // if less than a single packet is available, buffer it up for later
