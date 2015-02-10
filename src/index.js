@@ -16,12 +16,16 @@ var mediaSource, video, url;
 var playlistLoader, fragmentLoader;
 var buffer, demuxer;
 var mp4segments;
+var fragments;
+var fragmentIndex;
 
   init = function() {
     mediaSource = new MediaSource();
     stream = new Stream();
     playlistLoader = new PlaylistLoader();
     fragmentLoader = new FragmentLoader();
+    demuxer = new TSDemuxer();
+    mp4segments = [];
     // setup the media source
     mediaSource.addEventListener('sourceopen', onMediaSourceOpen);
     mediaSource.addEventListener('sourceended', function() {
@@ -31,55 +35,7 @@ var mp4segments;
   mediaSource.addEventListener('sourceclose', function() {
     logger.log("media source closed");
   });
-}
 
-attachView = function(view) {
-  video = view;
-  video.src = URL.createObjectURL(mediaSource);
-  video.addEventListener('loadstart', function(evt) { logEvt(evt); }) ;
-  video.addEventListener('progress', function(evt) { logEvt(evt); }) ;
-  video.addEventListener('suspend', function(evt) { logEvt(evt); }) ;
-  video.addEventListener('abort', function(evt) { logEvt(evt); }) ;
-  video.addEventListener('error', function(evt) { logEvt(evt); }) ;
-  video.addEventListener('emptied', function(evt) { logEvt(evt); }) ;
-  video.addEventListener('stalled', function(evt) { logEvt(evt); }) ;
-  video.addEventListener('loadedmetadata', function(evt) { logEvt(evt); }) ;
-  video.addEventListener('loadeddata', function(evt) { logEvt(evt); }) ;
-  video.addEventListener('canplay', function(evt) { logEvt(evt); }) ;
-  video.addEventListener('canplaythrough', function(evt) { logEvt(evt); }) ;
-  video.addEventListener('playing', function(evt) { logEvt(evt); }) ;
-  video.addEventListener('waiting', function(evt) { logEvt(evt); }) ;
-  video.addEventListener('seeking', function(evt) { logEvt(evt); }) ;
-  video.addEventListener('seeked', function(evt) { logEvt(evt); }) ;
-  video.addEventListener('durationchange', function(evt) { logEvt(evt); }) ;
-  video.addEventListener('timeupdate', function(evt) { logEvt(evt); }) ;
-  video.addEventListener('play', function(evt) { logEvt(evt); }) ;
-  video.addEventListener('pause', function(evt) { logEvt(evt); }) ;
-  video.addEventListener('ratechange', function(evt) { logEvt(evt); }) ;
-  video.addEventListener('resize', function(evt) { logEvt(evt); }) ;
-  video.addEventListener('volumechange', function(evt) { logEvt(evt); }) ;
-}
-
-attachSource = function(url) {
-  url = url;
-  playlistLoader.load(url);
-}
-
-function onMediaSourceOpen() {
-  buffer = mediaSource.addSourceBuffer('video/mp4;codecs=avc1.4d400d,mp4a.40.5');
-  demuxer = new TSDemuxer();
-  mp4segments = [];
-
-  buffer.addEventListener('updateend', function() {
-    appendSegments();
-  });
-
-  buffer.addEventListener('error', function(event) {
-    logger.log(" buffer append error:" + event);
-  });
-
-  var fragments;
-  var fragmentIndex;
   playlistLoader.on('data',function(data) {
     fragments = data;
     fragmentIndex = 0;
@@ -117,6 +73,53 @@ function onMediaSourceOpen() {
     demuxer.on('data', function(segment) {
     //logger.log(JSON.stringify(MP4Inspect.mp4toJSON(segment.data)),null,4);
     mp4segments.push(segment);
+  });
+
+}
+
+attachView = function(view) {
+  video = view;
+  video.src = URL.createObjectURL(mediaSource);
+  video.addEventListener('loadstart', function(evt) { logEvt(evt); }) ;
+  video.addEventListener('progress', function(evt) { logEvt(evt); }) ;
+  video.addEventListener('suspend', function(evt) { logEvt(evt); }) ;
+  video.addEventListener('abort', function(evt) { logEvt(evt); }) ;
+  video.addEventListener('error', function(evt) { logEvt(evt); }) ;
+  video.addEventListener('emptied', function(evt) { logEvt(evt); }) ;
+  video.addEventListener('stalled', function(evt) { logEvt(evt); }) ;
+  video.addEventListener('loadedmetadata', function(evt) { logEvt(evt); }) ;
+  video.addEventListener('loadeddata', function(evt) { logEvt(evt); }) ;
+  video.addEventListener('canplay', function(evt) { logEvt(evt); }) ;
+  video.addEventListener('canplaythrough', function(evt) { logEvt(evt); }) ;
+  video.addEventListener('playing', function(evt) { logEvt(evt); }) ;
+  video.addEventListener('waiting', function(evt) { logEvt(evt); }) ;
+  video.addEventListener('seeking', function(evt) { logEvt(evt); }) ;
+  video.addEventListener('seeked', function(evt) { logEvt(evt); }) ;
+  video.addEventListener('durationchange', function(evt) { logEvt(evt); }) ;
+  video.addEventListener('timeupdate', function(evt) { logEvt(evt); }) ;
+  video.addEventListener('play', function(evt) { logEvt(evt); }) ;
+  video.addEventListener('pause', function(evt) { logEvt(evt); }) ;
+  video.addEventListener('ratechange', function(evt) { logEvt(evt); }) ;
+  video.addEventListener('resize', function(evt) { logEvt(evt); }) ;
+  video.addEventListener('volumechange', function(evt) { logEvt(evt); }) ;
+}
+
+attachSource = function(url) {
+  url = url;
+  logger.log("attachSource:"+url);
+  playlistLoader.load(url);
+}
+
+function onMediaSourceOpen() {
+  buffer = mediaSource.addSourceBuffer('video/mp4;codecs=avc1.4d400d,mp4a.40.5');
+
+
+  buffer.addEventListener('updateend', function() {
+    appendSegments();
+  });
+
+  buffer.addEventListener('error', function(event) {
+    logger.log(" buffer append error:" + event);
   });
 }
 
