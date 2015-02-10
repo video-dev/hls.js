@@ -558,12 +558,11 @@ class H264Stream extends Stream {
   constructor() {
     super();
     this.nalByteStream = new NalByteStream();
-    this.nalByteStream.parent = this;
     this.nalByteStream.on('data', function(data) {
     var event = {
-      trackId: this.parent.trackId,
-      pts: this.parent.currentPts,
-      dts: this.parent.currentDts,
+      trackId: this.trackId,
+      pts: this.currentPts,
+      dts: this.currentDts,
       data: data
     };
     switch (data[0] & 0x1f) {
@@ -585,8 +584,8 @@ class H264Stream extends Stream {
     default:
       break;
     }
-    this.parent.trigger('data', event);
-  });
+    this.trigger('data', event);
+  }.bind(this));
   }
 
   push(packet) {

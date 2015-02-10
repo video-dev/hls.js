@@ -40,23 +40,22 @@ var resolveURL = (function() {
     this.trequest = Date.now();
     this.tfirst = null;
     var xhr = new XMLHttpRequest();
-    xhr.onload=  this.loadsuccess;
-    xhr.onerror =  this.loaderror;
-    xhr.onprogress = this.loadprogress;
-    xhr.parent = this;
+    xhr.onload=  this.loadsuccess.bind(this);
+    xhr.onerror = this.loaderror.bind(this);
+    xhr.onprogress = this.loadprogress.bind(this);
     xhr.open('GET', url, true);
     xhr.send();
   }
 
   loadsuccess(event) {
     var fragments =
-    this.responseText
+    event.currentTarget.responseText
     .split(/\r?\n/)
     .filter(RegExp.prototype.test.bind(/\.ts$/))
-    .map(resolveURL.bind(null, this.parent.url))
+    .map(resolveURL.bind(null, this.url))
     logger.log('found ' + fragments.length + ' fragments');
-    this.parent.trigger('stats', {trequest : this.parent.trequest, tfirst : this.parent.tfirst, tend : Date.now(), length :fragments.length, url : this.parent.url});
-    this.parent.trigger('data',fragments);
+    this.trigger('stats', {trequest : this.trequest, tfirst : this.tfirst, tend : Date.now(), length :fragments.length, url : this.url});
+    this.trigger('data',fragments);
   }
 
   loaderror(event) {
@@ -64,8 +63,8 @@ var resolveURL = (function() {
   }
 
   loadprogress(event) {
-    if(this.parent.tfirst === null) {
-      this.parent.tfirst = Date.now();
+    if(this.tfirst === null) {
+      this.tfirst = Date.now();
     }
   }
 }

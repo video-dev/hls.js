@@ -17,27 +17,26 @@ import {logger}         from '../utils/logger';
     this.trequest = Date.now();
     this.tfirst = null;
     var xhr = new XMLHttpRequest();
-    xhr.onload=  this.loadsuccess;
-    xhr.onerror = this.loaderror;
-    xhr.onprogress = this.loadprogress;
+    xhr.onload=  this.loadsuccess.bind(this);
+    xhr.onerror = this.loaderror.bind(this);
+    xhr.onprogress = this.loadprogress.bind(this);
     xhr.responseType = "arraybuffer";
-    xhr.parent = this;
     xhr.open('GET', url , true);
     xhr.send();
   }
 
   loadsuccess(event) {
-    this.parent.trigger('stats', {trequest : this.parent.trequest, tfirst : this.parent.tfirst, tend : Date.now(), length :event.currentTarget.response.byteLength, url : this.url });
-    this.parent.trigger('data',event.currentTarget.response);
+    this.trigger('stats', {trequest : this.trequest, tfirst : this.tfirst, tend : Date.now(), length :event.currentTarget.response.byteLength, url : this.url });
+    this.trigger('data',event.currentTarget.response);
   }
 
   loaderror(event) {
-    logger.log('error loading ' + this.parent.url);
+    logger.log('error loading ' + this.url);
   }
 
   loadprogress(event) {
-    if(this.parent.tfirst === null) {
-      this.parent.tfirst = Date.now();
+    if(this.tfirst === null) {
+      this.tfirst = Date.now();
     }
   }
 }
