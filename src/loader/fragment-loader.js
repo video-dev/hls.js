@@ -3,7 +3,7 @@
  *
  */
 
- //import {enableLogs}    from '../utils/logger';
+import {logger}         from '../utils/logger';
  import Stream          from '../utils/stream';
 
  class FragmentLoader extends Stream {
@@ -32,7 +32,7 @@
   }
 
   loaderror(event) {
-    console.log('error loading ' + this.parent.url);
+    logger.log('error loading ' + this.parent.url);
   }
 
   loadprogress(event) {
