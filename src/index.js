@@ -16,12 +16,16 @@ var mediaSource, video, url;
 var playlistLoader, fragmentLoader;
 var buffer, demuxer;
 var mp4segments;
+var fragments;
+var fragmentIndex;
 
 init = function() {
     mediaSource = new MediaSource();
     stream = new Stream();
     playlistLoader = new PlaylistLoader();
     fragmentLoader = new FragmentLoader();
+    demuxer = new TSDemuxer();
+    mp4segments = [];
     // setup the media source
     mediaSource.addEventListener('sourceopen', onMediaSourceOpen);
     mediaSource.addEventListener('sourceended', function() {
@@ -30,6 +34,59 @@ init = function() {
 
     mediaSource.addEventListener('sourceclose', function() {
         logger.log('media source closed');
+    });
+
+    playlistLoader.on('data', function(data) {
+        fragments = data;
+        fragmentIndex = 0;
+        fragmentLoader.load(fragments[fragmentIndex++]);
+    });
+
+    playlistLoader.on('stats', function(stats) {
+        var rtt, loadtime, bw;
+        rtt = stats.tfirst - stats.trequest;
+        loadtime = stats.tend - stats.trequest;
+        logger.log(
+            'playlist loaded,RTT(ms)/load(ms)/nb frag:' +
+                rtt +
+                '/' +
+                loadtime +
+                '/' +
+                stats.length
+        );
+    });
+
+    fragmentLoader.on('data', function(data) {
+        demuxer.push(new Uint8Array(data));
+        demuxer.end();
+        appendSegments();
+        if (fragmentIndex < fragments.length) {
+            fragmentLoader.load(fragments[fragmentIndex++]);
+        } else {
+            logger.log('last fragment loaded');
+        }
+    });
+
+    fragmentLoader.on('stats', function(stats) {
+        var rtt, loadtime, bw;
+        rtt = stats.tfirst - stats.trequest;
+        loadtime = stats.tend - stats.trequest;
+        bw = stats.length * 8 / (1000 * loadtime);
+        logger.log(
+            'frag loaded, RTT(ms)/load(ms)/bitrate:' +
+                rtt +
+                '/' +
+                loadtime +
+                '/' +
+                bw.toFixed(3) +
+                ' Mb/s'
+        );
+    });
+
+    // transmux the MPEG-TS data to ISO-BMFF segments
+    demuxer.on('data', function(segment) {
+        //logger.log(JSON.stringify(MP4Inspect.mp4toJSON(segment.data)),null,4);
+        mp4segments.push(segment);
     });
 };
 
@@ -106,6 +163,7 @@ attachView = function(view) {
 
 attachSource = function(url) {
     url = url;
+    logger.log('attachSource:' + url);
     playlistLoader.load(url);
 };
 
@@ -113,8 +171,6 @@ function onMediaSourceOpen() {
     buffer = mediaSource.addSourceBuffer(
         'video/mp4;codecs=avc1.4d400d,mp4a.40.5'
     );
-    demuxer = new TSDemuxer();
-    mp4segments = [];
 
     buffer.addEventListener('updateend', function() {
         appendSegments();
@@ -122,61 +178,6 @@ function onMediaSourceOpen() {
 
     buffer.addEventListener('error', function(event) {
         logger.log(' buffer append error:' + event);
-    });
-
-    var fragments;
-    var fragmentIndex;
-    playlistLoader.on('data', function(data) {
-        fragments = data;
-        fragmentIndex = 0;
-        fragmentLoader.load(fragments[fragmentIndex++]);
-    });
-
-    playlistLoader.on('stats', function(stats) {
-        var rtt, loadtime, bw;
-        rtt = stats.tfirst - stats.trequest;
-        loadtime = stats.tend - stats.trequest;
-        logger.log(
-            'playlist loaded,RTT(ms)/load(ms)/nb frag:' +
-                rtt +
-                '/' +
-                loadtime +
-                '/' +
-                stats.length
-        );
-    });
-
-    fragmentLoader.on('data', function(data) {
-        demuxer.push(new Uint8Array(data));
-        demuxer.end();
-        appendSegments();
-        if (fragmentIndex < fragments.length) {
-            fragmentLoader.load(fragments[fragmentIndex++]);
-        } else {
-            logger.log('last fragment loaded');
-        }
-    });
-
-    fragmentLoader.on('stats', function(stats) {
-        var rtt, loadtime, bw;
-        rtt = stats.tfirst - stats.trequest;
-        loadtime = stats.tend - stats.trequest;
-        bw = stats.length * 8 / (1000 * loadtime);
-        logger.log(
-            'frag loaded, RTT(ms)/load(ms)/bitrate:' +
-                rtt +
-                '/' +
-                loadtime +
-                '/' +
-                bw.toFixed(3) +
-                ' Mb/s'
-        );
-    });
-
-    // transmux the MPEG-TS data to ISO-BMFF segments
-    demuxer.on('data', function(segment) {
-        //logger.log(JSON.stringify(MP4Inspect.mp4toJSON(segment.data)),null,4);
-        mp4segments.push(segment);
     });
 }
 
