@@ -43,23 +43,19 @@
     <footer class="wrapper">
     </footer>
   </div>
-  <script src="../src/hls.js"></script>
-  <script src="../src/utils/log.js"></script>
-  <script src="../src/utils/stream.js"></script>
-  <script src="../src/loader/playlist-loader.js"></script>
-  <script src="../src/loader/fragment-loader.js"></script>
-  <script src="../src/remux/mp4-generator.js"></script>
-  <script src="../src/demux/exp-golomb.js"></script>
-  <script src="../src/demux/tsdemuxer.js"></script>
-  <!--<script src="test/mp4-inspector.js"></script> -->
+  <!-- live-reload script -->
+  <script src="//localhost:8001"></script>
+  <script src="../dist/hls.js"></script>
   <script>
-    var video = document.getElementById('video');
-
-    hls.init();
-    hls.attachView(video);
-    var manifest = 'http://www.streambox.fr/playlists/test_001/stream_1000k_48k_640x360.m3u8';
-    hls.attachSource(manifest);
-
+(function(){
+     'use strict';
+     var video = document.getElementById('video');
+     var manifest = 'http://www.streambox.fr/playlists/test_001/stream_1000k_48k_640x360.m3u8';
+     hls.init();
+     hls.debug(true);
+     hls.attachView(video);
+     hls.attachSource(manifest);
+  })();
   </script>
 </body>
 

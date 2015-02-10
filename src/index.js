@@ -1,26 +1,35 @@
 /**
  * HLS engine
  */
- (function() {
-  'use strict';
-  var init, attachView, attachSource;
-  var mediaSource, video, url;
-  var playlistLoader, fragmentLoader;
-  var buffer, demuxer;
-  var mp4segments;
+'use strict';
+
+import TSDemuxer            from './demux/tsdemuxer';
+import FragmentLoader       from './loader/fragment-loader';
+import PlaylistLoader       from './loader/playlist-loader';
+import {logger,enableLogs}  from './utils/logger';
+import Stream               from './utils/stream';
+//import MP4Inspect         from '/remux/mp4-inspector';
+
+var init, attachView, attachSource;
+var stream;
+var mediaSource, video, url;
+var playlistLoader, fragmentLoader;
+var buffer, demuxer;
+var mp4segments;
 
   init = function() {
     mediaSource = new MediaSource();
-    playlistLoader = new hls.playlistLoader();
-    fragmentLoader = new hls.fragmentLoader();
+    stream = new Stream();
+    playlistLoader = new PlaylistLoader();
+    fragmentLoader = new FragmentLoader();
     // setup the media source
     mediaSource.addEventListener('sourceopen', onMediaSourceOpen);
-  mediaSource.addEventListener('sourceended', function() {
-  hls.log.debug("media source ended");
+    mediaSource.addEventListener('sourceended', function() {
+    logger.log("media source ended");
   });
 
   mediaSource.addEventListener('sourceclose', function() {
-    hls.log.debug("media source closed");
+    logger.log("media source closed");
   });
 }
 
@@ -58,7 +67,7 @@ attachSource = function(url) {
 
 function onMediaSourceOpen() {
   buffer = mediaSource.addSourceBuffer('video/mp4;codecs=avc1.4d400d,mp4a.40.5');
-  demuxer = new hls.demux.TSDemuxer();
+  demuxer = new TSDemuxer();
   mp4segments = [];
 
   buffer.addEventListener('updateend', function() {
@@ -66,7 +75,7 @@ function onMediaSourceOpen() {
   });
 
   buffer.addEventListener('error', function(event) {
-    hls.log.debug(" buffer append error:" + event);
+    logger.log(" buffer append error:" + event);
   });
 
   var fragments;
@@ -81,7 +90,7 @@ function onMediaSourceOpen() {
     var rtt,loadtime,bw;
     rtt = stats.tfirst - stats.trequest;
     loadtime = stats.tend - stats.trequest;
-    hls.log.debug("playlist loaded,RTT(ms)/load(ms)/nb frag:" + rtt + "/" + loadtime + "/" + stats.length);
+    logger.log("playlist loaded,RTT(ms)/load(ms)/nb frag:" + rtt + "/" + loadtime + "/" + stats.length);
   });
 
 
@@ -92,7 +101,7 @@ function onMediaSourceOpen() {
     if (fragmentIndex < fragments.length) {
       fragmentLoader.load(fragments[fragmentIndex++]);
     } else {
-      hls.log.debug("last fragment loaded");
+      logger.log("last fragment loaded");
     }
   });
 
@@ -101,12 +110,12 @@ function onMediaSourceOpen() {
     rtt = stats.tfirst - stats.trequest;
     loadtime = stats.tend - stats.trequest;
     bw = stats.length*8/(1000*loadtime);
-    hls.log.debug("frag loaded, RTT(ms)/load(ms)/bitrate:" + rtt + "/" + loadtime + "/" + bw.toFixed(3) + " Mb/s");
+    logger.log("frag loaded, RTT(ms)/load(ms)/bitrate:" + rtt + "/" + loadtime + "/" + bw.toFixed(3) + " Mb/s");
   });
 
   // transmux the MPEG-TS data to ISO-BMFF segments
-  demuxer.on('data', function(segment) {
-    //console.log(JSON.stringify(hls.inspectMp4(segment.data)),null,4);
+    demuxer.on('data', function(segment) {
+    //logger.log(JSON.stringify(MP4Inspect.mp4toJSON(segment.data)),null,4);
     mp4segments.push(segment);
   });
 }
@@ -143,13 +152,16 @@ function logEvt(evt) {
     default:
     break;
   }
-  hls.log.debug(evt.type + ":" + data);
+  logger.log(evt.type + ":" + data);
 }
 
-window.hls = window.hls || {
+
+
+let hls = {
   init : init,
+  debug : enableLogs,
   attachView : attachView,
   attachSource : attachSource
 };
-}
-)();
+
+export default hls;

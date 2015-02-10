@@ -624,7 +624,7 @@ trun = function(track, offset) {
   return box(types.trun, new Uint8Array(bytes));
 };
 
-hls.mp4 = {
+let MP4 = {
   mdat: mdat,
   moof: moof,
   moov: moov,
@@ -640,5 +640,7 @@ hls.mp4 = {
     return result;
   }
 };
+
+export default MP4;
 
 })();

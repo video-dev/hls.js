@@ -3,58 +3,50 @@
  * deliver mp4s to a SourceBuffer on platforms that support native
  * Media Source Extensions.
  */
-(function() {
-'use strict';
 
-var
-  TransportPacketStream, TransportParseStream, ElementaryStream,
-  VideoSegmentStream, AudioSegmentStream,
-  TSDemuxer, AacStream, H264Stream, NalByteStream,
-  MP2T_PACKET_LENGTH, PAT_PID, H264_STREAM_TYPE, ADTS_STREAM_TYPE, mp4;
+import ExpGolomb       from './exp-golomb';
+import Stream          from '../utils/stream';
+import MP4             from '../remux/mp4-generator';
 
-MP2T_PACKET_LENGTH = 188; // bytes
-H264_STREAM_TYPE = 0x1b;
-ADTS_STREAM_TYPE = 0x0f;
-PAT_PID = 0;
-mp4 = hls.mp4;
+const MP2T_PACKET_LENGTH = 188; // bytes
+const H264_STREAM_TYPE = 0x1b;
+const ADTS_STREAM_TYPE = 0x0f;
+const PAT_PID = 0;
 
 /**
  * Splits an incoming stream of binary data into MPEG-2 Transport
  * Stream packets.
  */
-TransportPacketStream = function() {
-  var
-    buffer = new Uint8Array(MP2T_PACKET_LENGTH),
-    end = 0;
+class TransportPacketStream extends Stream {
+  constructor() {
+    super();
+    this.buffer = new Uint8Array(MP2T_PACKET_LENGTH);
+    this.end = 0;
+  }
 
-  TransportPacketStream.prototype.init.call(this);
-
-  /**
-   * Deliver new bytes to the stream.
-   */
-  this.push = function(bytes) {
+  push(bytes) {
     var remaining, i;
 
     // clear out any partial packets in the buffer
-    if (end > 0) {
-      remaining = MP2T_PACKET_LENGTH - end;
-      buffer.set(bytes.subarray(0, remaining), end);
+    if (this.end > 0) {
+      remaining = MP2T_PACKET_LENGTH - this.end;
+      this.buffer.set(bytes.subarray(0, remaining), this.end);
 
       // we still didn't write out a complete packet
       if (bytes.byteLength < remaining) {
-        end += bytes.byteLength;
+        this.end += bytes.byteLength;
         return;
       }
 
       bytes = bytes.subarray(remaining);
-      end = 0;
-      this.trigger('data', buffer);
+      this.end = 0;
+      super.trigger('data', buffer);
     }
 
     // if less than a single packet is available, buffer it up for later
     if (bytes.byteLength < MP2T_PACKET_LENGTH) {
-      buffer.set(bytes.subarray(i), end);
-      end += bytes.byteLength;
+      this.buffer.set(bytes.subarray(i), this.end);
+      this.end += bytes.byteLength;
       return;
     }
     // parse out all the completed packets
@@ -66,27 +58,24 @@ TransportPacketStream = function() {
     } while (i < bytes.byteLength && remaining >= MP2T_PACKET_LENGTH);
     // buffer any partial packets left over
     if (remaining > 0) {
-      buffer.set(bytes.subarray(i));
-      end = remaining;
+      this.buffer.set(bytes.subarray(i));
+      this.end = remaining;
     }
   };
 };
-TransportPacketStream.prototype = new hls.Stream();
 
 /**
  * Accepts an MP2T TransportPacketStream and emits data events with parsed
  * forms of the individual transport stream packets.
  */
-TransportParseStream = function() {
-  var parsePsi, parsePat, parsePmt, parsePes, self;
-  TransportParseStream.prototype.init.call(this);
-  self = this;
+class TransportParseStream extends Stream {
+  constructor() {
+    super();
+    this.programMapTable = {};
+  }
 
-  this.programMapTable = {};
-
-  parsePsi = function(payload, psi) {
+  parsePsi(payload, psi) {
     var offset = 0;
-
     // PSI packets may be split into multiple sections and those
     // sections may be split into multiple packets. If a PSI
     // section starts in this packet, the payload_unit_start_indicator
@@ -98,19 +87,18 @@ TransportParseStream = function() {
     }
 
     if (psi.type === 'pat') {
-      parsePat(payload.subarray(offset), psi);
+      this.parsePat(payload.subarray(offset), psi);
     } else {
-      parsePmt(payload.subarray(offset), psi);
+      this.parsePmt(payload.subarray(offset), psi);
     }
   };
 
-  parsePat = function(payload, pat) {
+  parsePat(payload, pat) {
     pat.section_number = payload[7];
     pat.last_section_number = payload[8];
 
     // skip the PSI header and parse the first PMT entry
-    self.pmtPid = (payload[10] & 0x1F) << 8 | payload[11];
-    pat.pmtPid = self.pmtPid;
+    pat.pmtPid = this.pmtPid = (payload[10] & 0x1F) << 8 | payload[11];
   };
 
   /**
@@ -121,7 +109,7 @@ TransportParseStream = function() {
    * @param pmt {object} the object that should be decorated with
    * fields parsed from the PMT.
    */
-  parsePmt = function(payload, pmt) {
+  parsePmt(payload, pmt) {
     var sectionLength, tableEnd, programInfoLength, offset;
 
     // PMTs can be sent ahead of the time when they should actually
@@ -134,7 +122,7 @@ TransportParseStream = function() {
     }
 
     // overwrite any existing program map table
-    self.programMapTable = {};
+    this.programMapTable = {};
 
     // the mapping table ends at the end of the current section
     sectionLength = (payload[1] & 0x0f) << 8 | payload[2];
@@ -148,7 +136,7 @@ TransportParseStream = function() {
     offset = 12 + programInfoLength;
     while (offset < tableEnd) {
       // add an entry that maps the elementary_pid to the stream_type
-      self.programMapTable[(payload[offset + 1] & 0x1F) << 8 | payload[offset + 2]] = payload[offset];
+      this.programMapTable[(payload[offset + 1] & 0x1F) << 8 | payload[offset + 2]] = payload[offset];
 
       // move to the next table entry
       // skip past the elementary stream descriptors, if present
@@ -156,10 +144,10 @@ TransportParseStream = function() {
     }
 
     // record the map on the packet as well
-    pmt.programMapTable = self.programMapTable;
+    pmt.programMapTable = this.programMapTable;
   };
 
-  parsePes = function(payload, pes) {
+  parsePes(payload, pes) {
     var ptsDtsFlags;
 
     if (!pes.payloadUnitStartIndicator) {
@@ -210,7 +198,7 @@ TransportParseStream = function() {
   /**
    * Deliver a new MP2T packet to the stream.
    */
-  this.push = function(packet) {
+  push(packet) {
     var
       result = {},
       offset = 4;
@@ -237,27 +225,22 @@ TransportParseStream = function() {
     // parse the rest of the packet based on the type
     if (result.pid === PAT_PID) {
       result.type = 'pat';
-      parsePsi(packet.subarray(offset), result);
+      this.parsePsi(packet.subarray(offset), result);
     } else if (result.pid === this.pmtPid) {
       result.type = 'pmt';
-      parsePsi(packet.subarray(offset), result);
+      this.parsePsi(packet.subarray(offset), result);
     } else {
       result.streamType = this.programMapTable[result.pid];
       if(result.streamType == undefined) {
         return;
       } else {
         result.type = 'pes';
-        parsePes(packet.subarray(offset), result);
+        this.parsePes(packet.subarray(offset), result);
       }
     }
 
     this.trigger('data', result);
   };
-};
-TransportParseStream.prototype = new hls.Stream();
-TransportParseStream.STREAM_TYPES  = {
-  h264: 0x1b,
-  adts: 0x0f
 };
 
 /**
@@ -268,89 +251,59 @@ TransportParseStream.STREAM_TYPES  = {
  * packets plus relevant metadata that has been extracted from the
  * container.
  */
-ElementaryStream = function() {
-  var
-    // PES packet fragments
-    video = {
-      data: [],
-      size: 0
-    },
-    audio = {
-      data: [],
-      size: 0
-    },
-    flushStream = function(stream, type) {
-      var
-        event = {
-          type: type,
-          data: new Uint8Array(stream.size),
-        },
-        i = 0,
-        fragment;
+class ElementaryStream extends Stream {
 
-      // do nothing if there is no buffered data
-      if (!stream.data.length) {
-        return;
-      }
-      event.trackId = stream.data[0].pid;
-      event.pts = stream.data[0].pts;
-      event.dts = stream.data[0].dts;
-      //if(type == 'audio') {
-        //console.log("PES audio size/PTS:" + stream.size + "/" + event.pts);
-      //}
-      // reassemble the packet
-      while (stream.data.length) {
-        fragment = stream.data.shift();
+  constructor() {
+    super();
+    this.audio = {data: [],size: 0};
+    this.video = {data: [],size: 0};
+  }
 
-        event.data.set(fragment.data, i);
-        i += fragment.data.byteLength;
-      }
-      stream.size = 0;
-
-      self.trigger('data', event);
-    },
-    self;
-
-  ElementaryStream.prototype.init.call(this);
-  self = this;
-
-  this.push = function(data) {
-    ({
-      pat: function() {
-        // we have to wait for the PMT to arrive as well before we
-        // have any meaningful metadata
+  flushStream(stream, type) {
+    var
+      event = {
+        type: type,
+        data: new Uint8Array(stream.size),
       },
-      pes: function() {
-        var stream, streamType;
+      i = 0,
+      fragment;
 
-        if (data.streamType === H264_STREAM_TYPE) {
-          stream = video;
-          streamType = 'video';
-        } else {
-          stream = audio;
-          streamType = 'audio';
-        }
+    // do nothing if there is no buffered data
+    if (!stream.data.length) {
+      return;
+    }
+    event.trackId = stream.data[0].pid;
+    event.pts = stream.data[0].pts;
+    event.dts = stream.data[0].dts;
+    //if(type == 'audio') {
+      //console.log("PES audio size/PTS:" + stream.size + "/" + event.pts);
+    //}
+    // reassemble the packet
+    while (stream.data.length) {
+      fragment = stream.data.shift();
 
-        // if a new packet is starting, we can flush the completed
-        // packet
-        if (data.payloadUnitStartIndicator) {
-          flushStream(stream, streamType);
-        }
+      event.data.set(fragment.data, i);
+      i += fragment.data.byteLength;
+    }
+    stream.size = 0;
+    this.trigger('data', event);
+  }
 
-        // buffer this fragment until we are sure we've received the
-        // complete payload
-        stream.data.push(data);
-        stream.size += data.data.byteLength;
-      },
-      pmt: function() {
+  push(data) {
+    switch(data.type) {
+      case "pat":
+          // we have to wait for the PMT to arrive as well before we
+            // have any meaningful metadata
+            break;
+      case "pmt":
         var
-          event = {
-            type: 'metadata',
-            tracks: []
-          },
-          programMapTable = data.programMapTable,
-          k,
-          track;
+        event = {
+          type: 'metadata',
+          tracks: []
+        },
+        programMapTable = data.programMapTable,
+        k,
+        track;
 
         // translate streams to tracks
         for (k in programMapTable) {
@@ -367,11 +320,33 @@ ElementaryStream = function() {
             event.tracks.push(track);
           }
         }
-        self.trigger('data', event);
-      }
-    })[data.type]();
-  };
+        this.trigger('data', event);
+        break;
+      case "pes":
+        var stream, streamType;
 
+        if (data.streamType === H264_STREAM_TYPE) {
+          stream = this.video;
+          streamType = 'video';
+        } else {
+          stream = this.audio;
+          streamType = 'audio';
+        }
+
+        // if a new packet is starting, we can flush the completed
+        // packet
+        if (data.payloadUnitStartIndicator) {
+          this.flushStream(stream, streamType);
+        }
+        // buffer this fragment until we are sure we've received the
+        // complete payload
+        stream.data.push(data);
+        stream.size += data.data.byteLength;
+        break;
+      default:
+        break;
+        }
+      };
   /**
    * Flush any remaining input. Video PES packets may be of variable
    * length. Normally, the start of a new video packet can trigger the
@@ -381,30 +356,29 @@ ElementaryStream = function() {
    * clear that no additional data is forthcoming, calling this method
    * will flush the buffered packets.
    */
-  this.end = function() {
-    flushStream(video, 'video');
-    flushStream(audio, 'audio');
+  end() {
+    this.flushStream(this.video, 'video');
+    this.flushStream(this.audio, 'audio');
   };
 };
-ElementaryStream.prototype = new hls.Stream();
-
 /*
  * Accepts a ElementaryStream and emits data events with parsed
  * AAC Audio Frames of the individual packets.
  */
-AacStream = function() {
-  var  self, adtsSampleingRates, extraData, audioSpecificConfig, getAudioSpecificConfig, stereo, audiosamplerate;
-  AacStream.prototype.init.call(this);
-  self = this,
-  adtsSampleingRates = [
+class AacStream extends Stream {
+
+  constructor() {
+    super();
+    this.adtsSampleingRates = [
     96000, 88200,
     64000, 48000,
     44100, 32000,
     24000, 22050,
     16000, 12000
-  ],
+  ];
+  }
 
-  getAudioSpecificConfig = function(data) {
+  getAudioSpecificConfig(data) {
     var adtsProtectionAbsent, // :Boolean
         adtsObjectType, // :int
         adtsSampleingIndex, // :int
@@ -434,26 +408,26 @@ AacStream = function() {
 
       // byte 6
       adtsSampleCount = ((data[6] & 0x03) + 1) * 1024;
-      adtsDuration = (adtsSampleCount * 1000) / adtsSampleingRates[adtsSampleingIndex];
+      adtsDuration = (adtsSampleCount * 1000) / this.adtsSampleingRates[adtsSampleingIndex];
 
 
-      self.audioSpecificConfig = new Uint8Array(2);
+      this.audioSpecificConfig = new Uint8Array(2);
 
       // audioObjectType = profile => profile, the MPEG-4 Audio Object Type minus 1
-      self.audioSpecificConfig[0] = adtsObjectType << 3;
+      this.audioSpecificConfig[0] = adtsObjectType << 3;
 
       // samplingFrequencyIndex
-      self.audioSpecificConfig[0] |= (adtsSampleingIndex & 0x0E) >> 1;
-      self.audioSpecificConfig[1] |= (adtsSampleingIndex & 0x01) << 7;
+      this.audioSpecificConfig[0] |= (adtsSampleingIndex & 0x0E) >> 1;
+      this.audioSpecificConfig[1] |= (adtsSampleingIndex & 0x01) << 7;
 
       // channelConfiguration
-      self.audioSpecificConfig[1] |= adtsChanelConfig << 3;
+      this.audioSpecificConfig[1] |= adtsChanelConfig << 3;
 
-      self.stereo = (2 === adtsChanelConfig);
-      self.audiosamplerate = adtsSampleingRates[adtsSampleingIndex]
+      this.stereo = (2 === adtsChanelConfig);
+      this.audiosamplerate = this.adtsSampleingRates[adtsSampleingIndex]
   };
 
-  this.push = function(packet) {
+  push(packet) {
 
     if (packet.type == "audio" && packet.data != undefined) {
 
@@ -466,8 +440,8 @@ AacStream = function() {
         console.assert(false, 'Error no ATDS header found');
       }
 
-      if(self.audioSpecificConfig == undefined) {
-        getAudioSpecificConfig(data);
+      if(this.audioSpecificConfig == undefined) {
+        this.getAudioSpecificConfig(data);
       }
 
       aacFrame = {};
@@ -477,8 +451,8 @@ AacStream = function() {
 
       // AAC is always 10
       aacFrame.audiocodecid = 10;
-      aacFrame.stereo = self.stereo;
-      aacFrame.audiosamplerate = self.audiosamplerate;
+      aacFrame.stereo = this.stereo;
+      aacFrame.audiosamplerate = this.audiosamplerate;
       // Is AAC always 16 bit?
       aacFrame.audiosamplesize = 16;
       aacFrame.bytes = packet.data.subarray(7, packet.data.length);
@@ -488,28 +462,29 @@ AacStream = function() {
     }
   };
 };
-AacStream.prototype = new hls.Stream();
 
 /**
  * Accepts a NAL unit byte stream and unpacks the embedded NAL units.
  */
-NalByteStream = function() {
-  var
-    i = 6,
-    syncPoint = 1,
-    buffer;
-  NalByteStream.prototype.init.call(this);
+class NalByteStream extends Stream {
 
-  this.push = function(data) {
+  constructor() {
+    super();
+    this.i=6;
+    this.syncPoint =1;
+    this.buffer = null;
+  }
+
+  push (data) {
     var swapBuffer;
 
-    if (!buffer) {
-      buffer = data.data;
+    if (!this.buffer) {
+      this.buffer = data.data;
     } else {
-      swapBuffer = new Uint8Array(buffer.byteLength + data.data.byteLength);
-      swapBuffer.set(buffer);
-      swapBuffer.set(data.data, buffer.byteLength);
-      buffer = swapBuffer;
+      swapBuffer = new Uint8Array(this.buffer.byteLength + data.data.byteLength);
+      swapBuffer.set(this.buffer);
+      swapBuffer.set(data.data, this.buffer.byteLength);
+      this.buffer = swapBuffer;
     }
 
     // Rec. ITU-T H.264, Annex B
@@ -521,108 +496,86 @@ NalByteStream = function() {
     // or this:
     // 0 0 1 .. NAL .. 0 0 0
     // ^ sync point        ^ i
-    while (i < buffer.byteLength) {
-      switch (buffer[i]) {
+    while (this.i < this.buffer.byteLength) {
+      switch (this.buffer[this.i]) {
       case 0:
         // skip past non-sync sequences
-        if (buffer[i - 1] !== 0) {
-          i += 2;
+        if (this.buffer[this.i - 1] !== 0) {
+          this.i += 2;
           break;
-        } else if (buffer[i - 2] !== 0) {
-          i++;
+        } else if (this.buffer[this.i - 2] !== 0) {
+          this.i++;
           break;
         }
 
         // deliver the NAL unit
-        this.trigger('data', buffer.subarray(syncPoint + 3, i - 2));
+        this.trigger('data', this.buffer.subarray(this.syncPoint + 3, this.i - 2));
 
         // drop trailing zeroes
         do {
-          i++;
-        } while (buffer[i] !== 1);
-        syncPoint = i - 2;
-        i += 3;
+          this.i++;
+        } while (this.buffer[this.i] !== 1);
+        this.syncPoint = this.i - 2;
+        this.i += 3;
         break;
       case 1:
         // skip past non-sync sequences
-        if (buffer[i - 1] !== 0 ||
-            buffer[i - 2] !== 0) {
-          i += 3;
+        if (this.buffer[this.i - 1] !== 0 ||
+            this.buffer[this.i - 2] !== 0) {
+          this.i += 3;
           break;
         }
 
         // deliver the NAL unit
-        this.trigger('data', buffer.subarray(syncPoint + 3, i - 2));
-        syncPoint = i - 2;
-        i += 3;
+        this.trigger('data', this.buffer.subarray(this.syncPoint + 3, this.i - 2));
+        this.syncPoint = this.i - 2;
+        this.i += 3;
         break;
       default:
-        i += 3;
+        this.i += 3;
         break;
       }
     }
     // filter out the NAL units that were delivered
-    buffer = buffer.subarray(syncPoint);
-    i -= syncPoint;
-    syncPoint = 0;
+    this.buffer = this.buffer.subarray(this.syncPoint);
+    this.i -= this.syncPoint;
+    this.syncPoint = 0;
   };
 
-  this.end = function() {
+  end() {
     // deliver the last buffered NAL unit
-    if (buffer.byteLength > 3) {
-      this.trigger('data', buffer.subarray(syncPoint + 3));
+    if (this.buffer.byteLength > 3) {
+      this.trigger('data', this.buffer.subarray(this.syncPoint + 3));
     }
-    buffer = null;
-    i = 6;
-    syncPoint = 1;
+    this.buffer = null;
+    this.i = 6;
+    this.syncPoint = 1;
   };
 };
-NalByteStream.prototype = new hls.Stream();
-
 /**
  * Accepts input from a ElementaryStream and produces H.264 NAL unit data
  * events.
  */
-H264Stream = function() {
-  var
-    nalByteStream = new NalByteStream(),
-    self,
-    trackId,
-    currentPts,
-    currentDts,
+class H264Stream extends Stream {
 
-    readSequenceParameterSet,
-    skipScalingList;
-
-  H264Stream.prototype.init.call(this);
-  self = this;
-
-  this.push = function(packet) {
-    if (packet.type !== 'video') {
-      return;
-    }
-    trackId = packet.trackId;
-    currentPts = packet.pts;
-    currentDts = packet.dts;
-
-    nalByteStream.push(packet);
-  };
-
-  nalByteStream.on('data', function(data) {
+  constructor() {
+    super();
+    this.nalByteStream = new NalByteStream();
+    this.nalByteStream.parent = this;
+    this.nalByteStream.on('data', function(data) {
     var event = {
-      trackId: trackId,
-      pts: currentPts,
-      dts: currentDts,
+      trackId: this.parent.trackId,
+      pts: this.parent.currentPts,
+      dts: this.parent.currentDts,
       data: data
     };
     switch (data[0] & 0x1f) {
-
     case 0x05:
       event.nalUnitType = 'slice_layer_without_partitioning_rbsp_idr';
       break;
     case 0x07:
       event.nalUnitType = 'seq_parameter_set_rbsp';
-      var expGolombDecoder = new hls.ExpGolomb(data.subarray(1));
+      var expGolombDecoder = new ExpGolomb(data.subarray(1));
       event.config = expGolombDecoder.readSequenceParameterSet();
       break;
     case 0x08:
@@ -635,15 +588,25 @@ H264Stream = function() {
     default:
       break;
     }
-    self.trigger('data', event);
+    this.parent.trigger('data', event);
   });
+  }
 
-  this.end = function() {
-    nalByteStream.end();
+  push(packet) {
+    if (packet.type !== 'video') {
+      return;
+    }
+    this.trackId = packet.trackId;
+    this.currentPts = packet.pts;
+    this.currentDts = packet.dts;
+    this.nalByteStream.push(packet);
+  };
+
+  end() {
+    this.nalByteStream.end();
   };
 
 };
-H264Stream.prototype = new hls.Stream();
 
 /**
  * Constructs a single-track, ISO BMFF media segment from H264 data
@@ -651,29 +614,32 @@ H264Stream.prototype = new hls.Stream();
  * configured with a suitable initialization segment.
  * @param track {object} track metadata configuration
  */
-VideoSegmentStream = function(track) {
-  var
-    sequenceNumber = 0,
-    totalduration = 0,
-    nalUnits = [],
-    nalUnitsLength = 0;
-  VideoSegmentStream.prototype.init.call(this);
+class VideoSegmentStream extends Stream {
 
-  this.push = function(data) {
+  constructor(track) {
+    super();
+    this.sequenceNumber = 0;
+    this.totalduration = 0;
+    this.nalUnits = [];
+    this.nalUnitsLength = 0;
+    this.track = track;
+  }
+
+  push(data) {
     // buffer video until end() is called
-    nalUnits.push(data);
-    nalUnitsLength += data.data.byteLength;
+    this.nalUnits.push(data);
+    this.nalUnitsLength += data.data.byteLength;
   };
 
-  this.end = function() {
+  end() {
     var startUnit, currentNal, moof, mdat, boxes, i, data, view, sample, startdts;
 
     // concatenate the video data and construct the mdat
     // first, we have to build the index from byte locations to
     // samples (that is, frames) in the video data
-    data = new Uint8Array(nalUnitsLength + (4 * nalUnits.length));
+    data = new Uint8Array(this.nalUnitsLength + (4 * this.nalUnits.length));
     view = new DataView(data.buffer);
-    track.samples = [];
+    this.track.samples = [];
     sample = {
       size: 0,
       flags: {
@@ -686,16 +652,16 @@ VideoSegmentStream = function(track) {
       }
     };
     i = 0;
-    startdts = nalUnits[0].dts;
-    while (nalUnits.length) {
-      currentNal = nalUnits[0];
+    startdts = this.nalUnits[0].dts;
+    while (this.nalUnits.length) {
+      currentNal = this.nalUnits[0];
       // flush the sample we've been building when a new sample is started
       if (currentNal.nalUnitType === 'access_unit_delimiter_rbsp') {
         if (startUnit) {
           // convert the duration to 90kHZ timescale to match the
           // timescales specified in the init segment
           sample.duration = (currentNal.dts - startUnit.dts) * 90;
-          track.samples.push(sample);
+          this.track.samples.push(sample);
         }
         sample = {
           size: 0,
@@ -724,33 +690,30 @@ VideoSegmentStream = function(track) {
       data.set(currentNal.data, i);
       i += currentNal.data.byteLength;
 
-      nalUnits.shift();
+      this.nalUnits.shift();
     }
     // record the last sample
-    if (track.samples.length) {
-      sample.duration = track.samples[track.samples.length - 1].duration;
+    if (this.track.samples.length) {
+      sample.duration = this.track.samples[this.track.samples.length - 1].duration;
     }
-    track.samples.push(sample);
-    nalUnitsLength = 0;
-    mdat = mp4.mdat(data);
-    moof = mp4.moof(sequenceNumber,totalduration,[track]);
-    totalduration += (currentNal.dts - startdts)*90;
+    this.track.samples.push(sample);
+    this.nalUnitsLength = 0;
+    mdat = MP4.mdat(data);
+    moof = MP4.moof(this.sequenceNumber,this.totalduration,[this.track]);
+    this.totalduration += (currentNal.dts - startdts)*90;
     // it would be great to allocate this array up front instead of
     // throwing away hundreds of media segment fragments
     boxes = new Uint8Array(moof.byteLength + mdat.byteLength);
 
     // bump the sequence number for next time
-    sequenceNumber++;
+    this.sequenceNumber++;
 
     boxes.set(moof);
     boxes.set(mdat, moof.byteLength);
 
     this.trigger('data', boxes);
   };
-};
-VideoSegmentStream.prototype = new hls.Stream();
-
-
+}
 
 /**
  * Constructs a single-track, ISO BMFF media segment from AAC data
@@ -758,34 +721,36 @@ VideoSegmentStream.prototype = new hls.Stream();
  * configured with a suitable initialization segment.
  * @param track {object} track metadata configuration
  */
-AudioSegmentStream = function(track) {
-  var
-    sample,
-    sequenceNumber = 0,
-    totalduration = 0,
-    aacUnits = [],
-    aacUnitsLength = 0;
-  AudioSegmentStream.prototype.init.call(this);
+class AudioSegmentStream extends Stream {
 
-  this.push = function(data) {
+  constructor(track) {
+    super();
+    this.sequenceNumber = 0;
+    this.totalduration = 0;
+    this.aacUnits = [];
+    this.aacUnitsLength = 0;
+    this.track = track;
+  }
+
+  push(data) {
     //remove ADTS header
     data.data = data.data.subarray(7);
     // buffer audio until end() is called
-    aacUnits.push(data);
-    aacUnitsLength += data.data.byteLength;
+    this.aacUnits.push(data);
+    this.aacUnitsLength += data.data.byteLength;
   };
 
-  this.end = function() {
+  end() {
     var data, view, i, currentUnit, startUnit, lastUnit, mdat, moof, boxes;
     // // concatenate the audio data and construct the mdat
     // // first, we have to build the index from byte locations to
     // // samples (that is, frames) in the audio data
     //data = new Uint8Array(aacUnitsLength + (4 * aacUnits.length));
-    data = new Uint8Array(aacUnitsLength);
+    data = new Uint8Array(this.aacUnitsLength);
     view = new DataView(data.buffer);
-    track.samples = [];
-    sample = {
-      size: aacUnits[0].data.byteLength,
+    this.track.samples = [];
+    var sample = {
+      size: this.aacUnits[0].data.byteLength,
       flags: {
         isLeading: 0,
         dependsOn: 1,
@@ -796,14 +761,14 @@ AudioSegmentStream = function(track) {
       compositionTimeOffset: 0
     };
     i = 0;
-    startUnit = aacUnits[0];
+    startUnit = this.aacUnits[0];
     lastUnit = null;
-    while (aacUnits.length) {
-      currentUnit = aacUnits[0];
+    while (this.aacUnits.length) {
+      currentUnit = this.aacUnits[0];
       if(lastUnit != null) {
         //flush previous sample, update its duration beforehand
           sample.duration = (currentUnit.dts - lastUnit.dts) * 90;
-          track.samples.push(sample);
+          this.track.samples.push(sample);
           sample = {
             size: currentUnit.data.byteLength,
             flags: {
@@ -820,33 +785,30 @@ AudioSegmentStream = function(track) {
         //i += 4;
         data.set(currentUnit.data, i);
         i += currentUnit.data.byteLength;
-        aacUnits.shift();
+        this.aacUnits.shift();
         lastUnit = currentUnit;
     }
     // record the last sample
-    if (track.samples.length) {
-      sample.duration = track.samples[track.samples.length - 1].duration;
-      track.samples.push(sample);
+    if (this.track.samples.length) {
+      sample.duration = this.track.samples[this.track.samples.length - 1].duration;
+      this.track.samples.push(sample);
     }
-    aacUnitsLength = 0;
-    mdat = mp4.mdat(data);
-    moof = mp4.moof(sequenceNumber,totalduration,[track]);
-    totalduration += (currentUnit.dts - startUnit.dts)*90;
+    this.aacUnitsLength = 0;
+    mdat = MP4.mdat(data);
+    moof = MP4.moof(this.sequenceNumber,this.totalduration,[this.track]);
+    this.totalduration += (currentUnit.dts - startUnit.dts)*90;
     // it would be great to allocate this array up front instead of
     // throwing away hundreds of media segment fragments
     boxes = new Uint8Array(moof.byteLength + mdat.byteLength);
 
     // bump the sequence number for next time
-    sequenceNumber++;
+    this.sequenceNumber++;
     boxes.set(moof);
     boxes.set(mdat, moof.byteLength);
 
     this.trigger('data', boxes);
   };
-};
-AudioSegmentStream.prototype = new hls.Stream();
-
-
+}
 
 /**
  * A Stream that expects MP2T binary data as input and produces
@@ -856,43 +818,45 @@ AudioSegmentStream.prototype = new hls.Stream();
  * @see test/muxer/mse-demo.html for sample usage of a Transmuxer with
  * MSE
  */
-TSDemuxer = function() {
-  var
-    self = this,
-    trackAudio,
-    trackVideo,
-    configAudio,
-    configVideo,
-    pps,
 
-    packetStream, parseStream, elementaryStream, aacStream, h264Stream, audioSegmentStream, videoSegmentStream;
 
-  TSDemuxer.prototype.init.call(this);
+var packetStream,parseStream, elementaryStream, aacStream, h264Stream,
+    audioSegmentStream, videoSegmentStream,
+    configAudio, configVideo,
+    trackVideo, trackAudio,
+    pps,sps,self;
 
-  // set up the parsing pipeline
-  packetStream = new TransportPacketStream();
-  parseStream = new TransportParseStream();
-  elementaryStream = new ElementaryStream();
-  aacStream = new AacStream();
-  h264Stream = new H264Stream();
+class TSDemuxer extends Stream {
 
-  packetStream.pipe(parseStream);
-  parseStream.pipe(elementaryStream);
-  elementaryStream.pipe(aacStream);
-  elementaryStream.pipe(h264Stream);
+  constructor() {
+    super();
 
-  // handle incoming data events
-  aacStream.on('data', function(data) {
-    if(!configAudio) {
-      configAudio = data
-    }
-  });
+    // set up the parsing pipeline
+    packetStream = new TransportPacketStream();
+    parseStream = new TransportParseStream();
+    elementaryStream = new ElementaryStream();
+    aacStream = new AacStream();
+    h264Stream = new H264Stream();
 
-  h264Stream.on('data', function(data) {
-    // record the track config
-    if (data.nalUnitType === 'seq_parameter_set_rbsp' &&
+    packetStream.pipe(parseStream);
+    parseStream.pipe(elementaryStream);
+    elementaryStream.pipe(aacStream);
+    elementaryStream.pipe(h264Stream);
+    self = this;
+
+
+    // handle incoming data events
+    aacStream.on('data', function(data) {
+      if(!configAudio) {
+        configAudio = data
+      }
+    });
+
+    h264Stream.on('data', function(data) {
+      // record the track config
+      if (data.nalUnitType === 'seq_parameter_set_rbsp' &&
         !configVideo) {
-      configVideo = data.config;
+        configVideo = data.config;
 
       trackVideo.width = configVideo.width;
       trackVideo.height = configVideo.height;
@@ -901,72 +865,69 @@ TSDemuxer = function() {
       trackVideo.levelIdc = configVideo.levelIdc;
       trackVideo.profileCompatibility = configVideo.profileCompatibility;
 
-      // generate an init segment once all the metadata is available
-      if (pps) {
-        self.trigger('data', {
-          data: mp4.initSegment([trackVideo,trackAudio])
-        });
+        // generate an init segment once all the metadata is available
+        if (pps) {
+          this.trigger('data', {
+            data: MP4.initSegment([trackVideo,trackAudio])
+          });
+        }
       }
-    }
-    if (data.nalUnitType === 'pic_parameter_set_rbsp' &&
+      if (data.nalUnitType === 'pic_parameter_set_rbsp' &&
         !pps) {
-      pps = data.data;
-      trackVideo.pps = [data.data];
+          pps = data.data;
+          trackVideo.pps = [data.data];
 
-      if (configVideo) {
-        self.trigger('data', {
-          data: mp4.initSegment([trackVideo,trackAudio])
-        });
-      }
-    }
-  });
-  // hook up the video segment stream once track metadata is delivered
-  elementaryStream.on('data', function(data) {
-    var i, triggerData = function(segment) {
-      self.trigger('data', {
-        data: segment
+          if (configVideo) {
+            self.trigger('data', {
+              data: MP4.initSegment([trackVideo,trackAudio])
+            });
+          }
+        }
       });
-    };
-    if (data.type === 'metadata') {
-      i = data.tracks.length;
-      while (i--) {
-        if (data.tracks[i].type === 'video') {
-          trackVideo = data.tracks[i];
-          if (!videoSegmentStream) {
-            videoSegmentStream = new VideoSegmentStream(trackVideo);
-            h264Stream.pipe(videoSegmentStream);
-            videoSegmentStream.on('data', triggerData);
-          }
-          break;
-        } else {
-          if (data.tracks[i].type === 'audio') {
-            trackAudio = data.tracks[i];
-          if (!audioSegmentStream) {
-            audioSegmentStream = new AudioSegmentStream(trackAudio);
-            aacStream.pipe(audioSegmentStream);
-            audioSegmentStream.on('data', triggerData);
-          }
+    // hook up the video segment stream once track metadata is delivered
+    elementaryStream.on('data', function(data) {
+      var i, triggerData = function(segment) {
+        self.trigger('data', {
+          data: segment
+        });
+      };
+      if (data.type === 'metadata') {
+        i = data.tracks.length;
+        while (i--) {
+          if (data.tracks[i].type === 'video') {
+            trackVideo = data.tracks[i];
+            if (!videoSegmentStream) {
+              videoSegmentStream = new VideoSegmentStream(trackVideo);
+              h264Stream.pipe(videoSegmentStream);
+              videoSegmentStream.on('data', triggerData);
+            }
+            break;
+          } else {
+            if (data.tracks[i].type === 'audio') {
+              trackAudio = data.tracks[i];
+              if (!audioSegmentStream) {
+                audioSegmentStream = new AudioSegmentStream(trackAudio);
+                aacStream.pipe(audioSegmentStream);
+                audioSegmentStream.on('data', triggerData);
+              }
+            }
           }
         }
       }
-    }
-  });
+    });
+  }
 
   // feed incoming data to the front of the parsing pipeline
-  this.push = function(data) {
+  push(data) {
     packetStream.push(data);
-  };
+  }
   // flush any buffered data
-  this.end = function() {
+  end() {
     elementaryStream.end();
     h264Stream.end();
     videoSegmentStream.end();
     audioSegmentStream.end();
-  };
-};
-TSDemuxer.prototype = new hls.Stream();
+  }
+}
 
-hls.demux = {
-  TSDemuxer: TSDemuxer
-};
-})();
+export default TSDemuxer;
