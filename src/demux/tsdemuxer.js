@@ -572,36 +572,38 @@ class H264Stream extends Stream {
     constructor() {
         super();
         this.nalByteStream = new NalByteStream();
-        this.nalByteStream.parent = this;
-        this.nalByteStream.on('data', function(data) {
-            var event = {
-                trackId: this.parent.trackId,
-                pts: this.parent.currentPts,
-                dts: this.parent.currentDts,
-                data: data
-            };
-            switch (data[0] & 0x1f) {
-                case 0x05:
-                    event.nalUnitType =
-                        'slice_layer_without_partitioning_rbsp_idr';
-                    break;
-                case 0x07:
-                    event.nalUnitType = 'seq_parameter_set_rbsp';
-                    var expGolombDecoder = new ExpGolomb(data.subarray(1));
-                    event.config = expGolombDecoder.readSequenceParameterSet();
-                    break;
-                case 0x08:
-                    event.nalUnitType = 'pic_parameter_set_rbsp';
-                    break;
-                case 0x09:
-                    event.nalUnitType = 'access_unit_delimiter_rbsp';
-                    break;
+        this.nalByteStream.on(
+            'data',
+            function(data) {
+                var event = {
+                    trackId: this.trackId,
+                    pts: this.currentPts,
+                    dts: this.currentDts,
+                    data: data
+                };
+                switch (data[0] & 0x1f) {
+                    case 0x05:
+                        event.nalUnitType =
+                            'slice_layer_without_partitioning_rbsp_idr';
+                        break;
+                    case 0x07:
+                        event.nalUnitType = 'seq_parameter_set_rbsp';
+                        var expGolombDecoder = new ExpGolomb(data.subarray(1));
+                        event.config = expGolombDecoder.readSequenceParameterSet();
+                        break;
+                    case 0x08:
+                        event.nalUnitType = 'pic_parameter_set_rbsp';
+                        break;
+                    case 0x09:
+                        event.nalUnitType = 'access_unit_delimiter_rbsp';
+                        break;
 
-                default:
-                    break;
-            }
-            this.parent.trigger('data', event);
-        });
+                    default:
+                        break;
+                }
+                this.trigger('data', event);
+            }.bind(this)
+        );
     }
 
     push(packet) {
