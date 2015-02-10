@@ -1068,7 +1068,7 @@
         return box(types.trun, new Uint8Array(bytes));
     };
 
-    hls.mp4 = {
+    let MP4 = {
         mdat: mdat,
         moof: moof,
         moov: moov,
@@ -1083,4 +1083,6 @@
             return result;
         }
     };
+
+    export default MP4;
 })();
