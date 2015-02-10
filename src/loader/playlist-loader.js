@@ -4,6 +4,7 @@
  */
 
 import Stream from '../utils/stream';
+import { logger } from '../utils/logger';
 
 // relative URL resolver
 var resolveURL = (function() {
@@ -50,7 +51,7 @@ class PlaylistLoader extends Stream {
             .split(/\r?\n/)
             .filter(RegExp.prototype.test.bind(/\.ts$/))
             .map(resolveURL.bind(null, this.parent.url));
-        console.log('found ' + fragments.length + ' fragments');
+        logger.log('found ' + fragments.length + ' fragments');
         this.parent.trigger('stats', {
             trequest: this.parent.trequest,
             tfirst: this.parent.tfirst,
@@ -62,7 +63,7 @@ class PlaylistLoader extends Stream {
     }
 
     loaderror(event) {
-        console.log('error loading ' + self.url);
+        logger.log('error loading ' + self.url);
     }
 
     loadprogress(event) {

@@ -278,9 +278,6 @@ class ElementaryStream extends Stream {
         event.trackId = stream.data[0].pid;
         event.pts = stream.data[0].pts;
         event.dts = stream.data[0].dts;
-        //if(type == 'audio') {
-        //console.log("PES audio size/PTS:" + stream.size + "/" + event.pts);
-        //}
         // reassemble the packet
         while (stream.data.length) {
             fragment = stream.data.shift();
