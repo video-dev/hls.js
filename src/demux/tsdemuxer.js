@@ -844,7 +844,12 @@ class TSDemuxer extends Stream {
     // handle incoming data events
     aacStream.on('data', function(data) {
       if(!configAudio) {
-        configAudio = data
+        configAudio = data;
+        if (configVideo) {
+          self.trigger('data', {
+            data: MP4.initSegment([trackVideo,trackAudio])
+          });
+        }
       }
     });
 
@@ -873,7 +878,7 @@ class TSDemuxer extends Stream {
           pps = data.data;
           trackVideo.pps = [data.data];
 
-          if (configVideo) {
+          if (configVideo && configAudio) {
             self.trigger('data', {
               data: MP4.initSegment([trackVideo,trackAudio])
             });
@@ -897,7 +902,6 @@ class TSDemuxer extends Stream {
               h264Stream.pipe(videoSegmentStream);
               videoSegmentStream.on('data', triggerData);
             }
-            break;
           } else {
             if (data.tracks[i].type === 'audio') {
               trackAudio = data.tracks[i];
