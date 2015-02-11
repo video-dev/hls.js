@@ -43,7 +43,7 @@
                 i += 4;
                 switch (avcStream[i] & 0x1f) {
                     case 0x01:
-                        result.push('slice_layer_without_partitioning_rbsp');
+                        result.push('NDR');
                         break;
                     case 0x05:
                         result.push('IDR');
