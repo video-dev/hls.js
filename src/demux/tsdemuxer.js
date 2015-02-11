@@ -502,7 +502,7 @@ class AacStream extends Stream {
 class NalByteStream extends Stream {
     constructor() {
         super();
-        this.i = 6;
+        this.index = 6;
         this.syncPoint = 1;
         this.buffer = null;
     }
@@ -530,57 +530,51 @@ class NalByteStream extends Stream {
         // or this:
         // 0 0 1 .. NAL .. 0 0 0
         // ^ sync point        ^ i
-        while (this.i < this.buffer.byteLength) {
-            switch (this.buffer[this.i]) {
+        var i = this.index;
+        var sync = this.syncPoint;
+        while (i < this.buffer.byteLength) {
+            switch (this.buffer[i]) {
                 case 0:
                     // skip past non-sync sequences
-                    if (this.buffer[this.i - 1] !== 0) {
-                        this.i += 2;
+                    if (this.buffer[i - 1] !== 0) {
+                        i += 2;
                         break;
-                    } else if (this.buffer[this.i - 2] !== 0) {
-                        this.i++;
+                    } else if (this.buffer[i - 2] !== 0) {
+                        i++;
                         break;
                     }
 
                     // deliver the NAL unit
-                    this.trigger(
-                        'data',
-                        this.buffer.subarray(this.syncPoint + 3, this.i - 2)
-                    );
+                    this.trigger('data', this.buffer.subarray(sync + 3, i - 2));
 
                     // drop trailing zeroes
                     do {
-                        this.i++;
-                    } while (this.buffer[this.i] !== 1);
-                    this.syncPoint = this.i - 2;
-                    this.i += 3;
+                        i++;
+                    } while (this.buffer[i] !== 1);
+                    sync = i - 2;
+                    i += 3;
                     break;
                 case 1:
                     // skip past non-sync sequences
-                    if (
-                        this.buffer[this.i - 1] !== 0 ||
-                        this.buffer[this.i - 2] !== 0
-                    ) {
-                        this.i += 3;
+                    if (this.buffer[i - 1] !== 0 || this.buffer[i - 2] !== 0) {
+                        i += 3;
                         break;
                     }
 
                     // deliver the NAL unit
-                    this.trigger(
-                        'data',
-                        this.buffer.subarray(this.syncPoint + 3, this.i - 2)
-                    );
-                    this.syncPoint = this.i - 2;
-                    this.i += 3;
+                    this.trigger('data', this.buffer.subarray(sync + 3, i - 2));
+                    sync = i - 2;
+                    i += 3;
                     break;
                 default:
-                    this.i += 3;
+                    i += 3;
                     break;
             }
         }
         // filter out the NAL units that were delivered
-        this.buffer = this.buffer.subarray(this.syncPoint);
-        this.i -= this.syncPoint;
+        this.buffer = this.buffer.subarray(sync);
+        i -= sync;
+        this.index = i;
         this.syncPoint = 0;
     }
 
@@ -590,7 +584,7 @@ class NalByteStream extends Stream {
             this.trigger('data', this.buffer.subarray(this.syncPoint + 3));
         }
         this.buffer = null;
-        this.i = 6;
+        this.index = 6;
         this.syncPoint = 1;
     }
 }
@@ -613,19 +607,18 @@ class H264Stream extends Stream {
                 };
                 switch (data[0] & 0x1f) {
                     case 0x05:
-                        event.nalUnitType =
-                            'slice_layer_without_partitioning_rbsp_idr';
+                        event.nalUnitType = 'IDR';
                         break;
                     case 0x07:
-                        event.nalUnitType = 'seq_parameter_set_rbsp';
+                        event.nalUnitType = 'SPS';
                         var expGolombDecoder = new ExpGolomb(data.subarray(1));
                         event.config = expGolombDecoder.readSequenceParameterSet();
                         break;
                     case 0x08:
-                        event.nalUnitType = 'pic_parameter_set_rbsp';
+                        event.nalUnitType = 'PPS';
                         break;
                     case 0x09:
-                        event.nalUnitType = 'access_unit_delimiter_rbsp';
+                        event.nalUnitType = 'AUD';
                         break;
 
                     default:
@@ -707,7 +700,7 @@ class VideoSegmentStream extends Stream {
         while (this.nalUnits.length) {
             currentNal = this.nalUnits[0];
             // flush the sample we've been building when a new sample is started
-            if (currentNal.nalUnitType === 'access_unit_delimiter_rbsp') {
+            if (currentNal.nalUnitType === 'AUD') {
                 if (startUnit) {
                     // convert the duration to 90kHZ timescale to match the
                     // timescales specified in the init segment
@@ -728,10 +721,7 @@ class VideoSegmentStream extends Stream {
                 };
                 startUnit = currentNal;
             }
-            if (
-                currentNal.nalUnitType ===
-                'slice_layer_without_partitioning_rbsp_idr'
-            ) {
+            if (currentNal.nalUnitType === 'IDR') {
                 // the current sample is a key frame
                 sample.flags.dependsOn = 2;
                 sample.flags.isNonSyncSample = 0;
@@ -922,7 +912,7 @@ class TSDemuxer extends Stream {
 
         h264Stream.on('data', function(data) {
             // record the track config
-            if (data.nalUnitType === 'seq_parameter_set_rbsp' && !configVideo) {
+            if (data.nalUnitType === 'SPS' && !configVideo) {
                 configVideo = data.config;
 
                 trackVideo.width = configVideo.width;
@@ -940,7 +930,7 @@ class TSDemuxer extends Stream {
                     });
                 }
             }
-            if (data.nalUnitType === 'pic_parameter_set_rbsp' && !pps) {
+            if (data.nalUnitType === 'PPS' && !pps) {
                 pps = data.data;
                 trackVideo.pps = [data.data];
 
