@@ -873,6 +873,7 @@ class TSDemuxer extends Stream {
     aacStream.on('data', function(data) {
       if(!configAudio) {
         trackAudio.config = configAudio = data.config;
+        trackAudio.audiosamplerate = data.audiosamplerate;
         if (configVideo) {
           self.trigger('data', {
             data: MP4.initSegment([trackVideo,trackAudio])

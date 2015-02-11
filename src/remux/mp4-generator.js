@@ -421,7 +421,9 @@ mp4a = function(track) {
       0x00, 0x02, // channelcount:2 channels
       0x00, 0x10, // sampleSize:16bits
       0x00, 0x00, 0x00, 0x00, // reserved2
-      0xBB, 0x80, 0x00, 0x00]), // Rate=48000
+      (track.audiosamplerate & 0xff00) >> 8,
+      track.audiosamplerate & 0xff, //
+      0x00, 0x00]),
       box(types.esds, esds(track)));
 };
 
