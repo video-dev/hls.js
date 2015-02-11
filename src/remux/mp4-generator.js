@@ -388,49 +388,6 @@ avc1 = function(track) {
 };
 
 esds = function(track) {
-    var audio_profile,sampling_freq,channel_config,audioSpecificConfig;
-    /* refer to http://wiki.multimedia.cx/index.php?title=MPEG-4_Audio#Audio_Specific_Config
-      Audio Profile
-      0: Null
-      1: AAC Main
-      2: AAC LC (Low Complexity)
-      3: AAC SSR (Scalable Sample Rate)
-      4: AAC LTP (Long Term Prediction)
-      5: SBR (Spectral Band Replication)
-      6: AAC Scalable
-    */
-    audio_profile = 2;
-  /* sampling freq
-    0: 96000 Hz
-    1: 88200 Hz
-    2: 64000 Hz
-    3: 48000 Hz
-    4: 44100 Hz
-    5: 32000 Hz
-    6: 24000 Hz
-    7: 22050 Hz
-    8: 16000 Hz
-    9: 12000 Hz
-    10: 11025 Hz
-    11: 8000 Hz
-    12: 7350 Hz
-    13: Reserved
-    14: Reserved
-    15: frequency is written explictly
-  */
-  sampling_freq = 3;
-
-  /* Channel Configurations
-    These are the channel configurations:
-    0: Defined in AOT Specifc Config
-    1: 1 channel: front-center
-    2: 2 channels: front-left, front-right
-  */
-  channel_config = 2;
-  //audioSpecificConfig = (audio_profile << 11) + (sampling_freq << 7) + (channel_config << 3);
-  audioSpecificConfig = 4880;
-
-
   return new Uint8Array([
     0x00, // version 0
     0x00, 0x00, 0x00, // flags
@@ -450,9 +407,7 @@ esds = function(track) {
 
     0x05, // descriptor_type
     0x02, // length
-    (audioSpecificConfig & 0xFF00) >> 8,
-    audioSpecificConfig & 0xFF
-    //0x12,0x10 //audio_profile(5 bits/sampling freq 4 bits/channel config 4bits/frameLength 1bit/dependsOnCoreCoder 1 bit/extensionFlag 1 bit)
+    track.config[0],track.config[1]
   ]);
 }
 
