@@ -569,27 +569,21 @@
     };
 
     avc1 = function(track) {
-        var sequenceParameterSets = [],
-            pictureParameterSets = [],
+        var sps = [],
+            pps = [],
             i;
         // assemble the SPSs
         for (i = 0; i < track.sps.length; i++) {
-            sequenceParameterSets.push(
-                (track.sps[i].byteLength & 0xff00) >>> 8
-            );
-            sequenceParameterSets.push(track.sps[i].byteLength & 0xff); // sequenceParameterSetLength
-            sequenceParameterSets = sequenceParameterSets.concat(
-                Array.prototype.slice.call(track.sps[i])
-            ); // SPS
+            sps.push((track.sps[i].byteLength & 0xff00) >>> 8);
+            sps.push(track.sps[i].byteLength & 0xff); // sequenceParameterSetLength
+            sps = sps.concat(Array.prototype.slice.call(track.sps[i])); // SPS
         }
 
         // assemble the PPSs
         for (i = 0; i < track.pps.length; i++) {
-            pictureParameterSets.push((track.pps[i].byteLength & 0xff00) >>> 8);
-            pictureParameterSets.push(track.pps[i].byteLength & 0xff);
-            pictureParameterSets = pictureParameterSets.concat(
-                Array.prototype.slice.call(track.pps[i])
-            );
+            pps.push((track.pps[i].byteLength & 0xff00) >>> 8);
+            pps.push(track.pps[i].byteLength & 0xff);
+            pps = pps.concat(Array.prototype.slice.call(track.pps[i]));
         }
 
         return box(
@@ -687,11 +681,11 @@
                         .concat([
                             track.sps.length // numOfSequenceParameterSets
                         ])
-                        .concat(sequenceParameterSets)
+                        .concat(sps)
                         .concat([
                             track.pps.length // numOfPictureParameterSets
                         ])
-                        .concat(pictureParameterSets)
+                        .concat(pps)
                 )
             ), // "PPS"
             box(
