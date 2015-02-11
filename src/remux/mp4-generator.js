@@ -772,11 +772,11 @@
                 0x00,
                 0x00,
                 0x00, // reserved2
-                0xbb,
-                0x80,
+                (track.audiosamplerate & 0xff00) >> 8,
+                track.audiosamplerate & 0xff, //
                 0x00,
                 0x00
-            ]), // Rate=48000
+            ]),
             box(types.esds, esds(track))
         );
     };
