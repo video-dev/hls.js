@@ -3,8 +3,10 @@
  *
  */
 
-import {logger}         from '../utils/logger';
- import Stream          from '../utils/stream';
+import Event                from '../events';
+import observer             from '../observer';
+import Stream               from '../utils/stream';
+import {logger}             from '../utils/logger';
 
  class FragmentLoader extends Stream {
 
@@ -28,10 +30,12 @@ import {logger}         from '../utils/logger';
   loadsuccess(event) {
     this.trigger('stats', {trequest : this.trequest, tfirst : this.tfirst, tend : Date.now(), length :event.currentTarget.response.byteLength, url : this.url });
     this.trigger('data',event.currentTarget.response);
+    observer.trigger(Event.FRAGMENT_LOADED);
   }
 
   loaderror(event) {
     logger.log('error loading ' + this.url);
+    observer.trigger(Event.ERROR);
   }
 
   loadprogress(event) {

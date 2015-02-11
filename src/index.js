@@ -3,11 +3,13 @@
  */
 'use strict';
 
-import TSDemuxer            from './demux/tsdemuxer';
+import Event                from './events';
 import FragmentLoader       from './loader/fragment-loader';
+import observer             from './observer';
 import PlaylistLoader       from './loader/playlist-loader';
-import {logger,enableLogs}  from './utils/logger';
 import Stream               from './utils/stream';
+import TSDemuxer            from './demux/tsdemuxer';
+import {logger,enableLogs}  from './utils/logger';
 //import MP4Inspect         from '/remux/mp4-inspector';
 
 var init, attachView, attachSource;
@@ -121,6 +123,7 @@ function onMediaSourceOpen() {
   buffer.addEventListener('error', function(event) {
     logger.log(" buffer append error:" + event);
   });
+  observer.trigger(Event.FRAMEWORK_READY);
 }
 
 function appendSegments() {
@@ -164,7 +167,10 @@ let hls = {
   init : init,
   debug : enableLogs,
   attachView : attachView,
-  attachSource : attachSource
+  attachSource : attachSource,
+  // Events
+  on  : observer.on.bind(observer),
+  off : observer.removeListener.bind(observer)
 };
 
 export default hls;
