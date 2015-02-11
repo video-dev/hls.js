@@ -44,19 +44,19 @@ var
         result.push('slice_layer_without_partitioning_rbsp');
         break;
       case 0x05:
-        result.push('slice_layer_without_partitioning_rbsp_idr');
+        result.push('IDR');
         break;
       case 0x06:
-        result.push('sei_rbsp');
+        result.push('SEI');
         break;
       case 0x07:
-        result.push('seq_parameter_set_rbsp');
+        result.push('SPS');
         break;
       case 0x08:
-        result.push('pic_parameter_set_rbsp');
+        result.push('PPS');
         break;
       case 0x09:
-        result.push('access_unit_delimiter_rbsp');
+        result.push('AUD');
         break;
       default:
         result.push(avcStream[i] & 0x1F);
