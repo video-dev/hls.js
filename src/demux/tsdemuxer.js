@@ -415,18 +415,48 @@ class AacStream extends Stream {
             adtsSampleCount *
             1000 /
             this.adtsSampleingRates[adtsSampleingIndex];
-
-        this.audioSpecificConfig = new Uint8Array(2);
-
+        this.config = new Uint8Array(2);
+        /* refer to http://wiki.multimedia.cx/index.php?title=MPEG-4_Audio#Audio_Specific_Config
+      Audio Profile
+      0: Null
+      1: AAC Main
+      2: AAC LC (Low Complexity)
+      3: AAC SSR (Scalable Sample Rate)
+      4: AAC LTP (Long Term Prediction)
+      5: SBR (Spectral Band Replication)
+      6: AAC Scalable
+     sampling freq
+      0: 96000 Hz
+      1: 88200 Hz
+      2: 64000 Hz
+      3: 48000 Hz
+      4: 44100 Hz
+      5: 32000 Hz
+      6: 24000 Hz
+      7: 22050 Hz
+      8: 16000 Hz
+      9: 12000 Hz
+      10: 11025 Hz
+      11: 8000 Hz
+      12: 7350 Hz
+      13: Reserved
+      14: Reserved
+      15: frequency is written explictly
+    Channel Configurations
+      These are the channel configurations:
+      0: Defined in AOT Specifc Config
+      1: 1 channel: front-center
+      2: 2 channels: front-left, front-right
+    */
         // audioObjectType = profile => profile, the MPEG-4 Audio Object Type minus 1
-        this.audioSpecificConfig[0] = adtsObjectType << 3;
+        this.config[0] = adtsObjectType << 3;
 
         // samplingFrequencyIndex
-        this.audioSpecificConfig[0] |= (adtsSampleingIndex & 0x0e) >> 1;
-        this.audioSpecificConfig[1] |= (adtsSampleingIndex & 0x01) << 7;
+        this.config[0] |= (adtsSampleingIndex & 0x0e) >> 1;
+        this.config[1] |= (adtsSampleingIndex & 0x01) << 7;
 
         // channelConfiguration
-        this.audioSpecificConfig[1] |= adtsChanelConfig << 3;
+        this.config[1] |= adtsChanelConfig << 3;
 
         this.stereo = 2 === adtsChanelConfig;
         this.audiosamplerate = this.adtsSampleingRates[adtsSampleingIndex];
@@ -443,7 +473,7 @@ class AacStream extends Stream {
                 console.assert(false, 'Error no ATDS header found');
             }
 
-            if (this.audioSpecificConfig == undefined) {
+            if (this.config == undefined) {
                 this.getAudioSpecificConfig(data);
             }
 
@@ -460,7 +490,7 @@ class AacStream extends Stream {
             aacFrame.audiosamplesize = 16;
             aacFrame.bytes = packet.data.subarray(7, packet.data.length);
             packet.frame = aacFrame;
-
+            packet.config = this.config;
             this.trigger('data', packet);
         }
     }
@@ -770,7 +800,6 @@ class AudioSegmentStream extends Stream {
         // // concatenate the audio data and construct the mdat
         // // first, we have to build the index from byte locations to
         // // samples (that is, frames) in the audio data
-        //data = new Uint8Array(aacUnitsLength + (4 * aacUnits.length));
         data = new Uint8Array(this.aacUnitsLength);
         view = new DataView(data.buffer);
         this.track.samples = [];
@@ -881,7 +910,7 @@ class TSDemuxer extends Stream {
         // handle incoming data events
         aacStream.on('data', function(data) {
             if (!configAudio) {
-                configAudio = data;
+                trackAudio.config = configAudio = data.config;
                 if (configVideo) {
                     self.trigger('data', {
                         data: MP4.initSegment([trackVideo, trackAudio])
