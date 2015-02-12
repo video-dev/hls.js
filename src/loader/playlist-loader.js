@@ -54,19 +54,59 @@ const TARGETDURATION  = '#EXT-X-TARGETDURATION:';
 
 
   parseManifest(string, url) {
+    var levels;
     if(string.indexOf(HEADER) == 0) {
       // 1 level playlist, create unique level and parse playlist
       if (string.indexOf(FRAGMENT) > 0) {
-        var level = this.parseLevelPlaylist(string,url);
-        observer.trigger(Event.MANIFEST_LOADED,
-                        { levels : [level],
-                          url : url ,
-                          stats : {trequest : this.trequest, tfirst : this.tfirst, tend : Date.now()}});
+        levels = [this.parseLevelPlaylist(string,url)];
+      } else {
+        levels = this.parseMasterPlaylist(string,url);
       }
+     observer.trigger(Event.MANIFEST_LOADED,
+                    { levels : levels,
+                      url : url ,
+                      stats : {trequest : this.trequest, tfirst : this.tfirst, tend : Date.now()}});
     }
   }
 
+  parseMasterPlaylist(string,baseurl) {
+    // var re = /(r'#EXT-X-STREAM-INF:[^\n\r]*RESOLUTION=(\d+)x(\d+)[^\r\n]*[\r\n]+([^\r\n]+))/g;
+    // var results = string.match(re);
+    var levels = [];
+    var level =  {};
+    var level_found = false;
+    var lines = string.split(/\r?\n/);
+    lines.forEach(line => {
+      if(line.indexOf(LEVEL) == 0) {
+        level_found = true;
+        var params = line.substr(LEVEL.length).split(',');
+        params.forEach(param => {
+          if (param.indexOf('BANDWIDTH') > -1) {
+              level.bitrate = param.split('=')[1];
+          } else if (param.indexOf('RESOLUTION') > -1) {
+              var res = param.split('=')[1];
+              var dim = res.split('x');
+              level.width = parseInt(dim[0]);
+              level.height = parseInt(dim[1]);
+          } else if (param.indexOf('CODECS') > -1) {
+              level.codecs = param.split('=')[1];
+          } else if (param.indexOf('NAME') > -1) {
+              level.name = (param.split('=')[1]);
+          }
+        });
+      } else if(level_found == true) {
+        level.url = this.resolve(line,baseurl);
+        levels.push(level);
+        level = {};
+        level_found = false;
+      }
+    });
+    return levels;
+  }
+
   parseLevelPlaylist(string, baseurl) {
+    // var re = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):(\d+)[^\r\n]*[\r\n]+([^\r\n]+))/g;
+    // var results = string.match(re);
     var startSN,endSN,targetduration,endList = false, totalduration = 0;
     var currentSN, duration, extinf_found = false;
     var lines = string.split(/\r?\n/);
