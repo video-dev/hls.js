@@ -235,6 +235,7 @@ let hls = {
     attachView: attachView,
     attachSource: attachSource,
     // Events
+    Events: Event,
     on: observer.on.bind(observer),
     off: observer.removeListener.bind(observer)
 };
