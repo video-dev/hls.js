@@ -20,7 +20,7 @@ import {logger}             from '../utils/logger';
     xhr.onload=  this.loadsuccess.bind(this);
     xhr.onerror = this.loaderror.bind(this);
     xhr.onprogress = this.loadprogress.bind(this);
-    xhr.responseType = "arraybuffer";
+    xhr.responseType = 'arraybuffer';
     xhr.open('GET', url , true);
     xhr.send();
     observer.trigger(Event.FRAGMENT_LOADING, { url: this.url});
@@ -35,10 +35,10 @@ import {logger}             from '../utils/logger';
 
   loaderror(event) {
     logger.log('error loading ' + this.url);
-    observer.trigger(Event.LOAD_ERROR, { url : this.url});
+    observer.trigger(Event.LOAD_ERROR, { url : this.url, event:event});
   }
 
-  loadprogress(event) {
+  loadprogress() {
     if(this.tfirst === null) {
       this.tfirst = Date.now();
     }

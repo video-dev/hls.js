@@ -42,7 +42,7 @@ class TransportPacketStream extends Stream {
 
       bytes = bytes.subarray(remaining);
       this.end = 0;
-      this.trigger('data', buffer);
+      this.trigger('data', this.buffer);
     }
 
     // if less than a single packet is available, buffer it up for later
@@ -63,8 +63,8 @@ class TransportPacketStream extends Stream {
       this.buffer.set(bytes.subarray(i));
       this.end = remaining;
     }
-  };
-};
+  }
+}
 
 /**
  * Accepts an MP2T TransportPacketStream and emits data events with parsed
@@ -93,15 +93,15 @@ class TransportParseStream extends Stream {
     } else {
       this.parsePmt(payload.subarray(offset), psi);
     }
-  };
+  }
 
   parsePat(payload, pat) {
-    pat.section_number = payload[7];
-    pat.last_section_number = payload[8];
+    pat.sectionNumber = payload[7];
+    pat.lastSectionNumber = payload[8];
 
     // skip the PSI header and parse the first PMT entry
     pat.pmtPid = this.pmtPid = (payload[10] & 0x1F) << 8 | payload[11];
-  };
+  }
 
   /**
    * Parse out the relevant fields of a Program Map Table (PMT).
@@ -147,7 +147,7 @@ class TransportParseStream extends Stream {
 
     // record the map on the packet as well
     pmt.programMapTable = this.programMapTable;
-  };
+  }
 
   parsePes(payload, pes) {
     var ptsDtsFlags;
@@ -195,7 +195,7 @@ class TransportParseStream extends Stream {
     // pes_header_data_length specifies the number of header bytes
     // that follow the last byte of the field.
     pes.data = payload.subarray(9 + payload[8]);
-  };
+  }
 
   /**
    * Deliver a new MP2T packet to the stream.
@@ -233,7 +233,7 @@ class TransportParseStream extends Stream {
       this.parsePsi(packet.subarray(offset), result);
     } else {
       result.streamType = this.programMapTable[result.pid];
-      if(result.streamType == undefined) {
+      if(result.streamType === undefined) {
         return;
       } else {
         result.type = 'pes';
@@ -242,8 +242,8 @@ class TransportParseStream extends Stream {
     }
 
     this.trigger('data', result);
-  };
-};
+  }
+}
 
 /**
  * Reconsistutes program elementary stream (PES) packets from parsed
@@ -290,11 +290,11 @@ class ElementaryStream extends Stream {
 
   push(data) {
     switch(data.type) {
-      case "pat":
+      case 'pat':
           // we have to wait for the PMT to arrive as well before we
             // have any meaningful metadata
             break;
-      case "pmt":
+      case 'pmt':
         var
         event = {
           type: 'metadata',
@@ -321,7 +321,7 @@ class ElementaryStream extends Stream {
         }
         this.trigger('data', event);
         break;
-      case "pes":
+      case 'pes':
         var stream, streamType;
 
         if (data.streamType === H264_STREAM_TYPE) {
@@ -345,7 +345,7 @@ class ElementaryStream extends Stream {
       default:
         break;
         }
-      };
+      }
   /**
    * Flush any remaining input. Video PES packets may be of variable
    * length. Normally, the start of a new video packet can trigger the
@@ -358,8 +358,8 @@ class ElementaryStream extends Stream {
   end() {
     this.flushStream(this.video, 'video');
     this.flushStream(this.audio, 'audio');
-  };
-};
+  }
+}
 /*
  * Accepts a ElementaryStream and emits data events with parsed
  * AAC Audio Frames of the individual packets.
@@ -453,14 +453,14 @@ class AacStream extends Stream {
 
       this.stereo = (2 === adtsChanelConfig);
       this.audiosamplerate = this.adtsSampleingRates[adtsSampleingIndex];
-  };
+  }
 
   push(packet) {
 
-    if (packet.type == "audio" && packet.data != undefined) {
+    if (packet.type === 'audio' && packet.data !== undefined) {
 
       var aacFrame, // :Frame = null;
-        next_pts = packet.pts,
+        nextPTS = packet.pts,
         data = packet.data;
 
       // byte 0
@@ -468,13 +468,13 @@ class AacStream extends Stream {
         console.assert(false, 'Error no ATDS header found');
       }
 
-      if(this.config == undefined) {
+      if(this.config === undefined) {
         this.getAudioSpecificConfig(data);
       }
 
       aacFrame = {};
-      aacFrame.pts = next_pts;
-      aacFrame.dts = next_pts;
+      aacFrame.pts = nextPTS;
+      aacFrame.dts = nextPTS;
       aacFrame.bytes = new Uint8Array();
 
       // AAC is always 10
@@ -488,8 +488,8 @@ class AacStream extends Stream {
       packet.config = this.config;
       this.trigger('data', packet);
     }
-  };
-};
+  }
+}
 
 /**
  * Accepts a NAL unit byte stream and unpacks the embedded NAL units.
@@ -572,7 +572,7 @@ class NalByteStream extends Stream {
     i -= sync;
     this.index = i;
     this.syncPoint = 0;
-  };
+  }
 
   end() {
     // deliver the last buffered NAL unit
@@ -582,8 +582,8 @@ class NalByteStream extends Stream {
     this.buffer = null;
     this.index = 6;
     this.syncPoint = 1;
-  };
-};
+  }
+}
 /**
  * Accepts input from a ElementaryStream and produces H.264 NAL unit data
  * events.
@@ -631,13 +631,13 @@ class H264Stream extends Stream {
     this.currentPts = packet.pts;
     this.currentDts = packet.dts;
     this.nalByteStream.push(packet);
-  };
+  }
 
   end() {
     this.nalByteStream.end();
-  };
+  }
 
-};
+}
 
 /**
  * Constructs a single-track, ISO BMFF media segment from H264 data
@@ -660,7 +660,7 @@ class VideoSegmentStream extends Stream {
     // buffer video until end() is called
     this.nalUnits.push(data);
     this.nalUnitsLength += data.data.byteLength;
-  };
+  }
 
   end() {
     var startUnit, currentNal, moof, mdat, boxes, i, data, view, sample, startdts;
@@ -743,7 +743,7 @@ class VideoSegmentStream extends Stream {
     boxes.set(mdat, moof.byteLength);
 
     this.trigger('data', boxes);
-  };
+  }
 }
 
 /**
@@ -769,7 +769,7 @@ class AudioSegmentStream extends Stream {
     // buffer audio until end() is called
     this.aacUnits.push(data);
     this.aacUnitsLength += data.data.byteLength;
-  };
+  }
 
   end() {
     var data, view, i, currentUnit, startUnit, lastUnit, mdat, moof, boxes;
@@ -837,7 +837,7 @@ class AudioSegmentStream extends Stream {
     boxes.set(mdat, moof.byteLength);
 
     this.trigger('data', boxes);
-  };
+  }
 }
 
 /**
@@ -854,7 +854,7 @@ var packetStream,parseStream, elementaryStream, aacStream, h264Stream,
     audioSegmentStream, videoSegmentStream,
     configAudio, configVideo,
     trackVideo, trackAudio,
-    pps,sps;
+    pps;
 
 class TSDemuxer {
 

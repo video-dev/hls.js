@@ -8,7 +8,7 @@ var box, dinf, ftyp, mdat, mfhd, minf, moof, moov, mvex, mvhd, trak,
     tkhd, mdia, mdhd, hdlr, sdtp, stbl, stsd, styp, traf, trex, trun,
     avc1, mp4a, esds,
     types, MAJOR_BRAND, MINOR_VERSION, AVC1_BRAND, VIDEO_HDLR,
-    AUDIO_HDLR, HDLR_TYPES, VMHD, SMHD, MEDIAHEADER_TYPES, DREF, STCO, STSC, STSZ, STTS, ESDS, STSD;
+    AUDIO_HDLR, HDLR_TYPES, VMHD, SMHD, MEDIAHEADER_TYPES, DREF, STCO, STSC, STSZ, STTS, STSD;
 
 // pre-calculate constants
 (function() {
@@ -99,8 +99,8 @@ var box, dinf, ftyp, mdat, mfhd, minf, moof, moov, mvex, mvhd, trak,
     0x64, 0x6c, 0x65, 0x72, 0x00 // name: 'SoundHandler'
   ]);
   HDLR_TYPES = {
-    "video":VIDEO_HDLR,
-    "audio": AUDIO_HDLR
+    'video':VIDEO_HDLR,
+    'audio': AUDIO_HDLR
   };
   DREF = new Uint8Array([
     0x00, // version 0
@@ -145,8 +145,8 @@ var box, dinf, ftyp, mdat, mfhd, minf, moof, moov, mvex, mvhd, trak,
     0x00, 0x00, 0x00, 0x01]);// entry_count
 
   MEDIAHEADER_TYPES = {
-    "video": VMHD,
-    "audio": SMHD
+    'video': VMHD,
+    'audio': SMHD
   };
 })();
 
@@ -384,7 +384,7 @@ avc1 = function(track) {
           0x00, 0x1c, 0x9c, 0x80, // bufferSizeDB
           0x00, 0x2d, 0xc6, 0xc0, // maxBitrate
           0x00, 0x2d, 0xc6, 0xc0])) // avgBitrate
-        )
+        );
 };
 
 esds = function(track) {
@@ -409,7 +409,7 @@ esds = function(track) {
     0x02, // length
     track.config[0],track.config[1]
   ]);
-}
+};
 
 mp4a = function(track) {
       return box(types.mp4a, new Uint8Array([

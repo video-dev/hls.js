@@ -159,7 +159,6 @@ var
     hdlr: function(data) {
       var
         view = new DataView(data.buffer, data.byteOffset, data.byteLength),
-        language,
         result = {
           version: view.getUint8(0),
           flags: new Uint8Array(data.subarray(1, 4)),
@@ -278,7 +277,7 @@ var
         result.modificationTime = parseMp4Date(view.getUint32(i)); // truncating top 4 bytes
         i += 4;
         result.timescale = view.getUint32(i);
-        i += 8
+        i += 8;
         result.duration = view.getUint32(i); // truncating top 4 bytes
       } else {
         result.creationTime = parseMp4Date(view.getUint32(i));
@@ -598,7 +597,7 @@ var
         }
         result.samples.push(sample);
         sampleCount--;
-      };
+      }
       while (sampleCount--) {
         sample = {};
         if (sampleDurationPresent) {
@@ -628,7 +627,7 @@ var
       };
     },
     vmhd: function(data) {
-      var view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+      //var view = new DataView(data.buffer, data.byteOffset, data.byteLength);
       return {
         version: data[0],
         flags: new Uint8Array(data.subarray(1, 4)),

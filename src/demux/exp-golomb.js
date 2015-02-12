@@ -34,7 +34,7 @@ class ExpGolomb {
     // track the amount of this.workingData that has been processed
     this.workingBitsAvailable = availableBytes * 8;
     this.workingBytesAvailable -= availableBytes;
-  };
+  }
 
   // (count:int):void
   skipBits(count) {
@@ -54,7 +54,7 @@ class ExpGolomb {
       this.workingWord <<= count;
       this.workingBitsAvailable -= count;
     }
-  };
+  }
 
   // (size:int):uint
   readBits(size) {
@@ -77,7 +77,7 @@ class ExpGolomb {
     } else {
       return valu;
     }
-  };
+  }
 
   // ():uint
   skipLeadingZeros() {
@@ -94,23 +94,23 @@ class ExpGolomb {
     // we exhausted workingWord and still have not found a 1
     this.loadWord();
     return leadingZeroCount + this.skipLeadingZeros();
-  };
+  }
 
   // ():void
   skipUnsignedExpGolomb() {
     this.skipBits(1 + this.skipLeadingZeros());
-  };
+  }
 
   // ():void
   skipExpGolomb() {
     this.skipBits(1 + this.skipLeadingZeros());
-  };
+  }
 
   // ():uint
   readUnsignedExpGolomb() {
     var clz = this.skipLeadingZeros(); // :uint
     return this.readBits(clz + 1) - 1;
-  };
+  }
 
   // ():int
   readExpGolomb() {
@@ -121,18 +121,18 @@ class ExpGolomb {
     } else {
       return -1 * (valu >>> 1); // divide by two then make it negative
     }
-  };
+  }
 
   // Some convenience functions
   // :Boolean
   readBoolean() {
     return 1 === this.readBits(1);
-  };
+  }
 
   // ():int
   readUnsignedByte() {
     return this.readBits(8);
-  };
+  }
 
   /**
    * Advance the ExpGolomb decoder past a scaling list. The scaling
@@ -156,7 +156,7 @@ class ExpGolomb {
 
       lastScale = (nextScale === 0) ? lastScale : nextScale;
     }
-  };
+  }
 
   /**
    * Read a sequence parameter set and return some interesting video

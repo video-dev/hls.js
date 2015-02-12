@@ -63,13 +63,13 @@
         callbacks[i].apply(this, args);
       }
     }
-  };
+  }
   /**
    * Destroys the stream and cleans up.
    */
    dispose() {
     this.listeners = {};
-  };
+  }
 
 
   /**

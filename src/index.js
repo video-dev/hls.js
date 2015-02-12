@@ -14,7 +14,7 @@ import {logger,enableLogs}  from './utils/logger';
 
 var init, attachView, attachSource;
 var stream;
-var mediaSource, video, url;
+var mediaSource;
 var playlistLoader, fragmentLoader;
 var buffer, demuxer;
 var mp4segments;
@@ -31,22 +31,22 @@ var fragmentIndex;
     // setup the media source
     mediaSource.addEventListener('sourceopen', onMediaSourceOpen);
     mediaSource.addEventListener('sourceended', function() {
-    logger.log("media source ended");
+    logger.log('media source ended');
   });
 
   mediaSource.addEventListener('sourceclose', function() {
-    logger.log("media source closed");
+    logger.log('media source closed');
   });
 
   hls.on(Event.MANIFEST_LOADED, function(event,data) {
     fragments = data.levels[0].fragments;
     fragmentIndex = 0;
     fragmentLoader.load(fragments[fragmentIndex++].url);
-    var stats,rtt,loadtime,bw;
+    var stats,rtt,loadtime;
     stats = data.stats;
     rtt = stats.tfirst - stats.trequest;
     loadtime = stats.tend - stats.trequest;
-    logger.log("playlist loaded,RTT(ms)/load(ms)/nb frag:" + rtt + "/" + loadtime + "/" + stats.length);
+    logger.log('playlist loaded,RTT(ms)/load(ms)/nb frag:' + rtt + '/' + loadtime + '/' + stats.length);
   });
 
   hls.on(Event.FRAGMENT_LOADED, function(event,data) {
@@ -56,7 +56,7 @@ var fragmentIndex;
     if (fragmentIndex < fragments.length) {
       fragmentLoader.load(fragments[fragmentIndex++].url);
     } else {
-      logger.log("last fragment loaded");
+      logger.log('last fragment loaded');
       observer.trigger(Event.LAST_FRAGMENT_LOADED);
     }
     var stats,rtt,loadtime,bw;
@@ -64,7 +64,7 @@ var fragmentIndex;
     rtt = stats.tfirst - stats.trequest;
     loadtime = stats.tend - stats.trequest;
     bw = stats.length*8/(1000*loadtime);
-    logger.log("frag loaded, RTT(ms)/load(ms)/bitrate:" + rtt + "/" + loadtime + "/" + bw.toFixed(3) + " Mb/s");
+    logger.log('frag loaded, RTT(ms)/load(ms)/bitrate:' + rtt + '/' + loadtime + '/' + bw.toFixed(3) + ' Mb/s');
   });
 
   // transmux the MPEG-TS data to ISO-BMFF segments
@@ -73,10 +73,9 @@ var fragmentIndex;
     mp4segments.push(segment);
   });
 
-}
+};
 
-attachView = function(view) {
-  video = view;
+attachView = function(video) {
   video.src = URL.createObjectURL(mediaSource);
   video.addEventListener('loadstart', function(evt) { logEvt(evt); }) ;
   video.addEventListener('progress', function(evt) { logEvt(evt); }) ;
@@ -100,13 +99,13 @@ attachView = function(view) {
   video.addEventListener('ratechange', function(evt) { logEvt(evt); }) ;
   video.addEventListener('resize', function(evt) { logEvt(evt); }) ;
   video.addEventListener('volumechange', function(evt) { logEvt(evt); }) ;
-}
+};
 
 attachSource = function(url) {
   url = url;
-  logger.log("attachSource:"+url);
+  logger.log('attachSource:'+url);
   playlistLoader.load(url);
-}
+};
 
 function onMediaSourceOpen() {
   buffer = mediaSource.addSourceBuffer('video/mp4;codecs=avc1.4d400d,mp4a.40.5');
@@ -117,7 +116,7 @@ function onMediaSourceOpen() {
   });
 
   buffer.addEventListener('error', function(event) {
-    logger.log(" buffer append error:" + event);
+    logger.log(' buffer append error:' + event);
   });
   observer.trigger(Event.FRAMEWORK_READY);
 }
@@ -135,10 +134,10 @@ function logEvt(evt) {
     data = event.target.duration;
     break;
     case 'resize':
-    data = "videoWidth:" + evt.target.videoWidth + "/videoHeight:" + evt.target.videoHeight;
+    data = 'videoWidth:' + evt.target.videoWidth + '/videoHeight:' + evt.target.videoHeight;
     break;
     case 'loadedmetadata':
-    data = "duration:" + evt.target.duration + "/videoWidth:" + evt.target.videoWidth + "/videoHeight:" + evt.target.videoHeight;
+    data = 'duration:' + evt.target.duration + '/videoWidth:' + evt.target.videoWidth + '/videoHeight:' + evt.target.videoHeight;
     break;
     case 'loadeddata':
     case 'canplay':
@@ -149,12 +148,12 @@ function logEvt(evt) {
     case 'pause':
     case 'play':
     case 'stalled':
-    data = "currentTime:" + evt.target.currentTime;
+    data = 'currentTime:' + evt.target.currentTime;
     break;
     default:
     break;
   }
-  logger.log(evt.type + ":" + data);
+  logger.log(evt.type + ':' + data);
 }
 
 
