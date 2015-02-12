@@ -5,13 +5,10 @@
 
 import Event from '../events';
 import observer from '../observer';
-import Stream from '../utils/stream';
 import { logger } from '../utils/logger';
 
-class FragmentLoader extends Stream {
-    constructor() {
-        super();
-    }
+class FragmentLoader {
+    constructor() {}
 
     load(url) {
         this.url = url;
@@ -27,15 +24,16 @@ class FragmentLoader extends Stream {
     }
 
     loadsuccess(event) {
-        this.trigger('stats', {
-            trequest: this.trequest,
-            tfirst: this.tfirst,
-            tend: Date.now(),
-            length: event.currentTarget.response.byteLength,
-            url: this.url
+        observer.trigger(Event.FRAGMENT_LOADED, {
+            payload: event.currentTarget.response,
+            url: this.url,
+            stats: {
+                trequest: this.trequest,
+                tfirst: this.tfirst,
+                tend: Date.now(),
+                length: event.currentTarget.response.byteLength
+            }
         });
-        this.trigger('data', event.currentTarget.response);
-        observer.trigger(Event.FRAGMENT_LOADED);
     }
 
     loaderror(event) {

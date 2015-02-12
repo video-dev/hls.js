@@ -3,7 +3,8 @@
  *
  */
 
-import Stream from '../utils/stream';
+import Event from '../events';
+import observer from '../observer';
 import { logger } from '../utils/logger';
 
 // relative URL resolver
@@ -28,10 +29,8 @@ var resolveURL = (function() {
     };
 })();
 
-class PlaylistLoader extends Stream {
-    constructor() {
-        super();
-    }
+class PlaylistLoader {
+    constructor() {}
 
     load(url) {
         this.url = url;
@@ -43,6 +42,7 @@ class PlaylistLoader extends Stream {
         xhr.onprogress = this.loadprogress.bind(this);
         xhr.open('GET', url, true);
         xhr.send();
+        observer.trigger(Event.MANIFEST_LOADING);
     }
 
     loadsuccess(event) {
@@ -51,18 +51,19 @@ class PlaylistLoader extends Stream {
             .filter(RegExp.prototype.test.bind(/\.ts$/))
             .map(resolveURL.bind(null, this.url));
         logger.log('found ' + fragments.length + ' fragments');
-        this.trigger('stats', {
-            trequest: this.trequest,
-            tfirst: this.tfirst,
-            tend: Date.now(),
-            length: fragments.length,
-            url: this.url
+        observer.trigger(Event.MANIFEST_LOADED, {
+            fragments: fragments,
+            url: this.url,
+            stats: {
+                trequest: this.trequest,
+                tfirst: this.tfirst,
+                tend: Date.now()
+            }
         });
-        this.trigger('data', fragments);
     }
 
     loaderror(event) {
-        logger.log('error loading ' + self.url);
+        observer.trigger(Event.ERROR, 'error loading ' + this.url);
     }
 
     loadprogress(event) {

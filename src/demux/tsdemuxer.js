@@ -4,9 +4,11 @@
  * Media Source Extensions.
  */
 
+import Event from '../events';
 import ExpGolomb from './exp-golomb';
-import Stream from '../utils/stream';
 import MP4 from '../remux/mp4-generator';
+import observer from '../observer';
+import Stream from '../utils/stream';
 
 const MP2T_PACKET_LENGTH = 188; // bytes
 const H264_STREAM_TYPE = 0x1b;
@@ -877,13 +879,10 @@ var packetStream,
     trackVideo,
     trackAudio,
     pps,
-    sps,
-    self;
+    sps;
 
-class TSDemuxer extends Stream {
+class TSDemuxer {
     constructor() {
-        super();
-
         // set up the parsing pipeline
         packetStream = new TransportPacketStream();
         parseStream = new TransportParseStream();
@@ -895,7 +894,6 @@ class TSDemuxer extends Stream {
         parseStream.pipe(elementaryStream);
         elementaryStream.pipe(aacStream);
         elementaryStream.pipe(h264Stream);
-        self = this;
 
         // handle incoming data events
         aacStream.on('data', function(data) {
@@ -903,7 +901,7 @@ class TSDemuxer extends Stream {
                 trackAudio.config = configAudio = data.config;
                 trackAudio.audiosamplerate = data.audiosamplerate;
                 if (configVideo) {
-                    self.trigger('data', {
+                    observer.trigger(Event.FRAGMENT_PARSED, {
                         data: MP4.initSegment([trackVideo, trackAudio])
                     });
                 }
@@ -925,7 +923,7 @@ class TSDemuxer extends Stream {
 
                 // generate an init segment once all the metadata is available
                 if (pps) {
-                    this.trigger('data', {
+                    observer.trigger(Event.FRAGMENT_PARSED, {
                         data: MP4.initSegment([trackVideo, trackAudio])
                     });
                 }
@@ -935,7 +933,7 @@ class TSDemuxer extends Stream {
                 trackVideo.pps = [data.data];
 
                 if (configVideo && configAudio) {
-                    self.trigger('data', {
+                    observer.trigger(Event.FRAGMENT_PARSED, {
                         data: MP4.initSegment([trackVideo, trackAudio])
                     });
                 }
@@ -945,7 +943,7 @@ class TSDemuxer extends Stream {
         elementaryStream.on('data', function(data) {
             var i,
                 triggerData = function(segment) {
-                    self.trigger('data', {
+                    observer.trigger(Event.FRAGMENT_PARSED, {
                         data: segment
                     });
                 };
