@@ -15,7 +15,7 @@
     "watch": "watchify --debug -s hls src/index.js -o dist/hls.js",
     "pretest": "npm run lint",
     "test": "mocha tests/",
-    "lint": "jshint src/*.js",
+    "lint": "jshint src/",
     "serve": "http-server -p 8000 .",
     "open": "opener http://localhost:8000/demo/",
     "live-reload": "live-reload --port 8001 dist/",
