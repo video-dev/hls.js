@@ -39,9 +39,9 @@ var fragmentIndex;
   });
 
   hls.on(Event.MANIFEST_LOADED, function(event,data) {
-    fragments = data.fragments;
+    fragments = data.levels[0].fragments;
     fragmentIndex = 0;
-    fragmentLoader.load(fragments[fragmentIndex++]);
+    fragmentLoader.load(fragments[fragmentIndex++].url);
     var stats,rtt,loadtime,bw;
     stats = data.stats;
     rtt = stats.tfirst - stats.trequest;
@@ -54,7 +54,7 @@ var fragmentIndex;
     demuxer.end();
     appendSegments();
     if (fragmentIndex < fragments.length) {
-      fragmentLoader.load(fragments[fragmentIndex++]);
+      fragmentLoader.load(fragments[fragmentIndex++].url);
     } else {
       logger.log("last fragment loaded");
       observer.trigger(Event.LAST_FRAGMENT_LOADED);
