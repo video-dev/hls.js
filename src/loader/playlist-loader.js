@@ -42,7 +42,7 @@ class PlaylistLoader {
         xhr.onprogress = this.loadprogress.bind(this);
         xhr.open('GET', url, true);
         xhr.send();
-        observer.trigger(Event.MANIFEST_LOADING);
+        observer.trigger(Event.MANIFEST_LOADING, { url: this.url });
     }
 
     loadsuccess(event) {
@@ -63,7 +63,7 @@ class PlaylistLoader {
     }
 
     loaderror(event) {
-        observer.trigger(Event.ERROR, 'error loading ' + this.url);
+        observer.trigger(Event.LOAD_ERROR, { url: this.url });
     }
 
     loadprogress(event) {

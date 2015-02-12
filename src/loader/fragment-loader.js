@@ -21,6 +21,7 @@ class FragmentLoader {
         xhr.responseType = 'arraybuffer';
         xhr.open('GET', url, true);
         xhr.send();
+        observer.trigger(Event.FRAGMENT_LOADING, { url: this.url });
     }
 
     loadsuccess(event) {
@@ -38,7 +39,7 @@ class FragmentLoader {
 
     loaderror(event) {
         logger.log('error loading ' + this.url);
-        observer.trigger(Event.ERROR);
+        observer.trigger(Event.LOAD_ERROR, { url: this.url });
     }
 
     loadprogress(event) {
