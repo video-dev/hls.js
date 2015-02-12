@@ -7,13 +7,10 @@ import Event from './events';
 import FragmentLoader from './loader/fragment-loader';
 import observer from './observer';
 import PlaylistLoader from './loader/playlist-loader';
-import Stream from './utils/stream';
 import TSDemuxer from './demux/tsdemuxer';
 import { logger, enableLogs } from './utils/logger';
 //import MP4Inspect         from '/remux/mp4-inspector';
 
-var init, attachView, attachSource;
-var stream;
 var mediaSource;
 var playlistLoader, fragmentLoader;
 var buffer, demuxer;
@@ -21,9 +18,8 @@ var mp4segments;
 var fragments;
 var fragmentIndex;
 
-init = function() {
+function init() {
     mediaSource = new MediaSource();
-    stream = new Stream();
     playlistLoader = new PlaylistLoader();
     fragmentLoader = new FragmentLoader();
     demuxer = new TSDemuxer();
@@ -87,9 +83,9 @@ init = function() {
         //logger.log(JSON.stringify(MP4Inspect.mp4toJSON(segment.data)),null,4);
         mp4segments.push(segment);
     });
-};
+}
 
-attachView = function(video) {
+function attachView(video) {
     video.src = URL.createObjectURL(mediaSource);
     video.addEventListener('loadstart', function(evt) {
         logEvt(evt);
@@ -157,19 +153,18 @@ attachView = function(video) {
     video.addEventListener('volumechange', function(evt) {
         logEvt(evt);
     });
-};
+}
 
-attachSource = function(url) {
+function attachSource(url) {
     url = url;
     logger.log('attachSource:' + url);
     playlistLoader.load(url);
-};
+}
 
 function onMediaSourceOpen() {
     buffer = mediaSource.addSourceBuffer(
         'video/mp4;codecs=avc1.4d400d,mp4a.40.5'
     );
-
     buffer.addEventListener('updateend', function() {
         appendSegments();
     });
