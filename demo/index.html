@@ -55,7 +55,7 @@
      hls.debug(true);
      hls.init();
      hls.attachView(video);
-     hls.on('hlsFrameworkReady',function() {
+     hls.on(hls.Events.FRAMEWORK_READY,function() {
         hls.attachSource(manifest);
       });
   })();
