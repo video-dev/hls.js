@@ -12,7 +12,7 @@ the lib is written in EcmaScript 6, and transpiled in ES5.
 
 <script>
      var video = document.getElementById('video');
-     hls.init();
+     var hls = new Hls();
      hls.attachView(video);
      hls.on(hls.Events.FRAMEWORK_READY,function() {
         hls.attachSource(manifest);
