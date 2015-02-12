@@ -5,10 +5,6 @@ export default {
   MANIFEST_LOADING : 'hlsManifestLoading',
   //Identifier for a manifest loaded event, when this event is received, main manifest and start level has been retrieved
   MANIFEST_LOADED  : 'hlsManifestLoaded',
-  // Identifier for a manifest parsed event,
-  // triggered after main manifest has been retrieved and parsed.
-  //in case of adaptive streaming, start level playlist is not downloaded yet at that stage
-  MANIFEST_PARSED  : 'hlsManifestParsed',
   // Identifier for a level loading event
   LEVEL_LOADING    : 'hlsLevelLoading',
   // Identifier for a level loaded event
@@ -22,7 +18,9 @@ export default {
   // Identifier for a fragment loaded event
   FRAGMENT_LOADED :  'hlsFragmentLoaded',
   // Identifier when last fragment of playlist has been loaded
-  LAST_VOD_FRAGMENT_LOADED :  'hlsLastFragmentLoaded',
+  LAST_FRAGMENT_LOADED :  'hlsLastFragmentLoaded',
+  // Identifier for a fragment parsed event
+  FRAGMENT_PARSED :  'hlsFragmentParsed',
   // Identifier for a playback error event
   ERROR :  'hlsError',
   // Identifier for a playback media time change event

@@ -38,33 +38,29 @@ var fragmentIndex;
     logger.log("media source closed");
   });
 
-  playlistLoader.on('data',function(data) {
-    fragments = data;
+  hls.on(Event.MANIFEST_LOADED, function(event,data) {
+    fragments = data.fragments;
     fragmentIndex = 0;
     fragmentLoader.load(fragments[fragmentIndex++]);
-  });
-
-  playlistLoader.on('stats', function(stats) {
-    var rtt,loadtime,bw;
+    var stats,rtt,loadtime,bw;
+    stats = data.stats;
     rtt = stats.tfirst - stats.trequest;
     loadtime = stats.tend - stats.trequest;
     logger.log("playlist loaded,RTT(ms)/load(ms)/nb frag:" + rtt + "/" + loadtime + "/" + stats.length);
   });
 
-
-  fragmentLoader.on('data', function(data) {
-    demuxer.push(new Uint8Array(data));
+  hls.on(Event.FRAGMENT_LOADED, function(event,data) {
+    demuxer.push(new Uint8Array(data.payload));
     demuxer.end();
     appendSegments();
     if (fragmentIndex < fragments.length) {
       fragmentLoader.load(fragments[fragmentIndex++]);
     } else {
       logger.log("last fragment loaded");
+      observer.trigger(Event.LAST_FRAGMENT_LOADED);
     }
-  });
-
-  fragmentLoader.on('stats', function(stats) {
-    var rtt,loadtime,bw;
+    var stats,rtt,loadtime,bw;
+    stats = data.stats;
     rtt = stats.tfirst - stats.trequest;
     loadtime = stats.tend - stats.trequest;
     bw = stats.length*8/(1000*loadtime);
@@ -72,7 +68,7 @@ var fragmentIndex;
   });
 
   // transmux the MPEG-TS data to ISO-BMFF segments
-    demuxer.on('data', function(segment) {
+  hls.on(Event.FRAGMENT_PARSED, function(event,segment) {
     //logger.log(JSON.stringify(MP4Inspect.mp4toJSON(segment.data)),null,4);
     mp4segments.push(segment);
   });

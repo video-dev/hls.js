@@ -3,8 +3,9 @@
  *
  */
 
- import Stream          from '../utils/stream';
- import {logger}         from '../utils/logger';
+import Event                from '../events';
+import observer             from '../observer';
+import {logger}             from '../utils/logger';
 
 // relative URL resolver
 var resolveURL = (function() {
@@ -29,10 +30,9 @@ var resolveURL = (function() {
 })();
 
 
- class PlaylistLoader extends Stream {
+ class PlaylistLoader {
 
   constructor() {
-    super();
   }
 
   load(url) {
@@ -45,6 +45,7 @@ var resolveURL = (function() {
     xhr.onprogress = this.loadprogress.bind(this);
     xhr.open('GET', url, true);
     xhr.send();
+    observer.trigger(Event.MANIFEST_LOADING);
   }
 
   loadsuccess(event) {
@@ -54,12 +55,11 @@ var resolveURL = (function() {
     .filter(RegExp.prototype.test.bind(/\.ts$/))
     .map(resolveURL.bind(null, this.url))
     logger.log('found ' + fragments.length + ' fragments');
-    this.trigger('stats', {trequest : this.trequest, tfirst : this.tfirst, tend : Date.now(), length :fragments.length, url : this.url});
-    this.trigger('data',fragments);
+    observer.trigger(Event.MANIFEST_LOADED, { fragments : fragments, url : this.url , stats : {trequest : this.trequest, tfirst : this.tfirst, tend : Date.now()}});
   }
 
   loaderror(event) {
-    logger.log('error loading ' + self.url);
+    observer.trigger(Event.ERROR, 'error loading ' + this.url);
   }
 
   loadprogress(event) {
