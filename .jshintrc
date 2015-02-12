@@ -1,5 +1,5 @@
 {
-  "bitwise"   : true,
+  "bitwise"   : false,
   "browser"   : true,
   "camelcase" : true,
   "curly"     : true,
@@ -20,5 +20,9 @@
   "trailing"  : true,
   "undef"     : true,
   "unused"    : true,
-  "white"     : true
+  "white"     : true,
+  "globals"   : {
+    "console"     : true,
+    "MediaSource" : true
+  }
 }
