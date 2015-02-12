@@ -45,7 +45,7 @@ var resolveURL = (function() {
     xhr.onprogress = this.loadprogress.bind(this);
     xhr.open('GET', url, true);
     xhr.send();
-    observer.trigger(Event.MANIFEST_LOADING);
+    observer.trigger(Event.MANIFEST_LOADING, { url: this.url});
   }
 
   loadsuccess(event) {
@@ -55,11 +55,14 @@ var resolveURL = (function() {
     .filter(RegExp.prototype.test.bind(/\.ts$/))
     .map(resolveURL.bind(null, this.url))
     logger.log('found ' + fragments.length + ' fragments');
-    observer.trigger(Event.MANIFEST_LOADED, { fragments : fragments, url : this.url , stats : {trequest : this.trequest, tfirst : this.tfirst, tend : Date.now()}});
+    observer.trigger(Event.MANIFEST_LOADED,
+                    { fragments : fragments,
+                      url : this.url ,
+                      stats : {trequest : this.trequest, tfirst : this.tfirst, tend : Date.now()}});
   }
 
   loaderror(event) {
-    observer.trigger(Event.ERROR, 'error loading ' + this.url);
+    observer.trigger(Event.LOAD_ERROR, { url : this.url});
   }
 
   loadprogress(event) {

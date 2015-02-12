@@ -21,8 +21,8 @@ export default {
   LAST_FRAGMENT_LOADED :  'hlsLastFragmentLoaded',
   // Identifier for a fragment parsed event
   FRAGMENT_PARSED :  'hlsFragmentParsed',
-  // Identifier for a playback error event
-  ERROR :  'hlsError',
+  // Identifier for a load error event
+  LOAD_ERROR :  'hlsLoadError',
   // Identifier for a playback media time change event
   MEDIA_TIME :  'hlsMediaTime',
   // Identifier for a playback state switch event
