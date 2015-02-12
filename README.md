@@ -14,7 +14,9 @@ the lib is written in EcmaScript 6, and transpiled in ES5.
      var video = document.getElementById('video');
      hls.init();
      hls.attachView(video);
-     hls.attachSource('http://dailymotion.com/hls.m3u8');
+     hls.on(hls.Events.FRAMEWORK_READY,function() {
+        hls.attachSource(manifest);
+      });
 </script>
 ```
 
