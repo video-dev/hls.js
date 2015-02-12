@@ -42,7 +42,7 @@ class TransportPacketStream extends Stream {
 
             bytes = bytes.subarray(remaining);
             this.end = 0;
-            this.trigger('data', buffer);
+            this.trigger('data', this.buffer);
         }
 
         // if less than a single packet is available, buffer it up for later
@@ -96,8 +96,8 @@ class TransportParseStream extends Stream {
     }
 
     parsePat(payload, pat) {
-        pat.section_number = payload[7];
-        pat.last_section_number = payload[8];
+        pat.sectionNumber = payload[7];
+        pat.lastSectionNumber = payload[8];
 
         // skip the PSI header and parse the first PMT entry
         pat.pmtPid = this.pmtPid = ((payload[10] & 0x1f) << 8) | payload[11];
@@ -238,7 +238,7 @@ class TransportParseStream extends Stream {
             this.parsePsi(packet.subarray(offset), result);
         } else {
             result.streamType = this.programMapTable[result.pid];
-            if (result.streamType == undefined) {
+            if (result.streamType === undefined) {
                 return;
             } else {
                 result.type = 'pes';
@@ -465,9 +465,9 @@ class AacStream extends Stream {
     }
 
     push(packet) {
-        if (packet.type == 'audio' && packet.data != undefined) {
+        if (packet.type === 'audio' && packet.data !== undefined) {
             var aacFrame, // :Frame = null;
-                next_pts = packet.pts,
+                nextPTS = packet.pts,
                 data = packet.data;
 
             // byte 0
@@ -475,13 +475,13 @@ class AacStream extends Stream {
                 console.assert(false, 'Error no ATDS header found');
             }
 
-            if (this.config == undefined) {
+            if (this.config === undefined) {
                 this.getAudioSpecificConfig(data);
             }
 
             aacFrame = {};
-            aacFrame.pts = next_pts;
-            aacFrame.dts = next_pts;
+            aacFrame.pts = nextPTS;
+            aacFrame.dts = nextPTS;
             aacFrame.bytes = new Uint8Array();
 
             // AAC is always 10
@@ -879,8 +879,7 @@ var packetStream,
     configVideo,
     trackVideo,
     trackAudio,
-    pps,
-    sps;
+    pps;
 
 class TSDemuxer {
     constructor() {

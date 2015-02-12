@@ -44,7 +44,6 @@
         STSC,
         STSZ,
         STTS,
-        ESDS,
         STSD;
 
     // pre-calculate constants

@@ -30,27 +30,30 @@ class PlaylistLoader {
         observer.trigger(Event.MANIFEST_LOADING, { url: this.url });
     }
 
-    resolve(url, base_url) {
+    resolve(url, baseUrl) {
         var doc = document,
-            old_base = doc.getElementsByTagName('base')[0],
-            old_href = old_base && old_base.href,
-            doc_head = doc.head || doc.getElementsByTagName('head')[0],
-            our_base =
-                old_base || doc_head.appendChild(doc.createElement('base')),
+            oldBase = doc.getElementsByTagName('base')[0],
+            oldHref = oldBase && oldBase.href,
+            docHead = doc.head || doc.getElementsByTagName('head')[0],
+            ourBase = oldBase || docHead.appendChild(doc.createElement('base')),
             resolver = doc.createElement('a'),
-            resolved_url;
-        our_base.href = base_url;
-        resolver.href = url;
-        resolved_url = resolver.href; // browser magic at work here
+            resolvedUrl;
 
-        if (old_base) old_base.href = old_href;
-        else doc_head.removeChild(our_base);
-        return resolved_url;
+        ourBase.href = baseUrl;
+        resolver.href = url;
+        resolvedUrl = resolver.href; // browser magic at work here
+
+        if (oldBase) {
+            oldBase.href = oldHref;
+        } else {
+            docHead.removeChild(ourBase);
+        }
+        return resolvedUrl;
     }
 
     parseManifest(string, url) {
         var levels;
-        if (string.indexOf(HEADER) == 0) {
+        if (string.indexOf(HEADER) === 0) {
             // 1 level playlist, create unique level and parse playlist
             if (string.indexOf(FRAGMENT) > 0) {
                 levels = [this.parseLevelPlaylist(string, url)];
@@ -74,11 +77,11 @@ class PlaylistLoader {
         // var results = string.match(re);
         var levels = [];
         var level = {};
-        var level_found = false;
+        var levelFound = false;
         var lines = string.split(/\r?\n/);
         lines.forEach(line => {
-            if (line.indexOf(LEVEL) == 0) {
-                level_found = true;
+            if (line.indexOf(LEVEL) === 0) {
+                levelFound = true;
                 var params = line.substr(LEVEL.length).split(',');
                 params.forEach(param => {
                     if (param.indexOf('BANDWIDTH') > -1) {
@@ -94,11 +97,11 @@ class PlaylistLoader {
                         level.name = param.split('=')[1];
                     }
                 });
-            } else if (level_found == true) {
+            } else if (levelFound === true) {
                 level.url = this.resolve(line, baseurl);
                 levels.push(level);
                 level = {};
-                level_found = false;
+                levelFound = false;
             }
         });
         return levels;
@@ -114,34 +117,34 @@ class PlaylistLoader {
             totalduration = 0;
         var currentSN,
             duration,
-            extinf_found = false;
+            extinfFound = false;
         var lines = string.split(/\r?\n/);
         var fragments = [];
         lines.forEach(line => {
-            if (line.indexOf(SEQNUM) == 0) {
+            if (line.indexOf(SEQNUM) === 0) {
                 currentSN = startSN = parseInt(line.substr(SEQNUM.length));
-            } else if (line.indexOf(TARGETDURATION) == 0) {
+            } else if (line.indexOf(TARGETDURATION) === 0) {
                 targetduration = parseFloat(line.substr(TARGETDURATION.length));
-            } else if (line.indexOf(ENDLIST) == 0) {
+            } else if (line.indexOf(ENDLIST) === 0) {
                 endList = true;
-            } else if (line.indexOf(FRAGMENT) == 0) {
-                var comma_position = line.indexOf(',');
+            } else if (line.indexOf(FRAGMENT) === 0) {
+                var commaPosition = line.indexOf(',');
                 duration =
-                    comma_position == -1
+                    commaPosition === -1
                         ? parseFloat(line.substr(FRAGMENT.length))
                         : parseFloat(
                               line.substr(
                                   FRAGMENT.length,
-                                  comma_position - FRAGMENT.length
+                                  commaPosition - FRAGMENT.length
                               )
                           );
                 totalduration += duration;
-                extinf_found = true;
-            } else if (extinf_found == true) {
+                extinfFound = true;
+            } else if (extinfFound === true) {
                 var url = this.resolve(line, baseurl);
                 fragments.push({ url: url, duration: duration, sn: currentSN });
                 currentSN++;
-                extinf_found = false;
+                extinfFound = false;
             }
         });
         endSN = currentSN - 1;
@@ -158,15 +161,15 @@ class PlaylistLoader {
         };
     }
 
-    loadsuccess(event) {
+    loadsuccess() {
         this.parseManifest(event.currentTarget.responseText, this.url);
     }
 
     loaderror(event) {
-        observer.trigger(Event.LOAD_ERROR, { url: this.url });
+        observer.trigger(Event.LOAD_ERROR, { url: this.url, event: event });
     }
 
-    loadprogress(event) {
+    loadprogress() {
         if (this.tfirst === null) {
             this.tfirst = Date.now();
         }

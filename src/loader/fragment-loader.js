@@ -39,10 +39,10 @@ class FragmentLoader {
 
     loaderror(event) {
         logger.log('error loading ' + this.url);
-        observer.trigger(Event.LOAD_ERROR, { url: this.url });
+        observer.trigger(Event.LOAD_ERROR, { url: this.url, event: event });
     }
 
-    loadprogress(event) {
+    loadprogress() {
         if (this.tfirst === null) {
             this.tfirst = Date.now();
         }

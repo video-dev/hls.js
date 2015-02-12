@@ -185,7 +185,6 @@
                         data.byteOffset,
                         data.byteLength
                     ),
-                    language,
                     result = {
                         version: view.getUint8(0),
                         flags: new Uint8Array(data.subarray(1, 4)),
@@ -708,11 +707,7 @@
                 };
             },
             vmhd: function(data) {
-                var view = new DataView(
-                    data.buffer,
-                    data.byteOffset,
-                    data.byteLength
-                );
+                //var view = new DataView(data.buffer, data.byteOffset, data.byteLength);
                 return {
                     version: data[0],
                     flags: new Uint8Array(data.subarray(1, 4))

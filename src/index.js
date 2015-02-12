@@ -14,7 +14,7 @@ import { logger, enableLogs } from './utils/logger';
 
 var init, attachView, attachSource;
 var stream;
-var mediaSource, video, url;
+var mediaSource;
 var playlistLoader, fragmentLoader;
 var buffer, demuxer;
 var mp4segments;
@@ -42,7 +42,7 @@ init = function() {
         fragments = data.levels[0].fragments;
         fragmentIndex = 0;
         fragmentLoader.load(fragments[fragmentIndex++].url);
-        var stats, rtt, loadtime, bw;
+        var stats, rtt, loadtime;
         stats = data.stats;
         rtt = stats.tfirst - stats.trequest;
         loadtime = stats.tend - stats.trequest;
@@ -89,8 +89,7 @@ init = function() {
     });
 };
 
-attachView = function(view) {
-    video = view;
+attachView = function(video) {
     video.src = URL.createObjectURL(mediaSource);
     video.addEventListener('loadstart', function(evt) {
         logEvt(evt);
