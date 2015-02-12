@@ -526,38 +526,39 @@ class NalByteStream extends Stream {
     // ^ sync point        ^ i
     var i = this.index;
     var sync = this.syncPoint;
-    while (i < this.buffer.byteLength) {
-      switch (this.buffer[i]) {
+    var buf = this.buffer;
+    while (i < buf.byteLength) {
+      switch (buf[i]) {
       case 0:
         // skip past non-sync sequences
-        if (this.buffer[i - 1] !== 0) {
+        if (buf[i - 1] !== 0) {
           i += 2;
           break;
-        } else if (this.buffer[i - 2] !== 0) {
+        } else if (buf[i - 2] !== 0) {
           i++;
           break;
         }
 
         // deliver the NAL unit
-        this.trigger('data', this.buffer.subarray(sync + 3, i - 2));
+        this.trigger('data', buf.subarray(sync + 3, i - 2));
 
         // drop trailing zeroes
         do {
           i++;
-        } while (this.buffer[i] !== 1);
+        } while (buf[i] !== 1);
         sync = i - 2;
         i += 3;
         break;
       case 1:
         // skip past non-sync sequences
-        if (this.buffer[i - 1] !== 0 ||
-            this.buffer[i - 2] !== 0) {
+        if (buf[i - 1] !== 0 ||
+            buf[i - 2] !== 0) {
           i += 3;
           break;
         }
 
         // deliver the NAL unit
-        this.trigger('data', this.buffer.subarray(sync + 3, i - 2));
+        this.trigger('data', buf.subarray(sync + 3, i - 2));
         sync = i - 2;
         i += 3;
         break;
@@ -567,7 +568,7 @@ class NalByteStream extends Stream {
       }
     }
     // filter out the NAL units that were delivered
-    this.buffer = this.buffer.subarray(sync);
+    this.buffer = buf.subarray(sync);
     i -= sync;
     this.index = i;
     this.syncPoint = 0;
