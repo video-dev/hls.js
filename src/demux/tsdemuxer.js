@@ -9,6 +9,7 @@ import ExpGolomb from './exp-golomb';
 import MP4 from '../remux/mp4-generator';
 import observer from '../observer';
 import Stream from '../utils/stream';
+import { logger } from '../utils/logger';
 
 const MP2T_PACKET_LENGTH = 188; // bytes
 const H264_STREAM_TYPE = 0x1b;
@@ -472,7 +473,7 @@ class AacStream extends Stream {
 
             // byte 0
             if (0xff !== data[0]) {
-                console.assert(false, 'Error no ATDS header found');
+                logger.error(false, 'Error no ATDS header found');
             }
 
             if (this.config === undefined) {

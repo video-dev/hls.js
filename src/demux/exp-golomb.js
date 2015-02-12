@@ -3,6 +3,8 @@
  * scheme used by h264.
  */
 
+import { logger } from '../utils/logger';
+
 class ExpGolomb {
     constructor(workingData) {
         this.workingData = workingData;
@@ -59,7 +61,7 @@ class ExpGolomb {
         var bits = Math.min(this.workingBitsAvailable, size), // :uint
             valu = this.workingWord >>> (32 - bits); // :uint
 
-        console.assert(size < 32, 'Cannot read more than 32 bits at a time');
+        logger.error(size < 32, 'Cannot read more than 32 bits at a time');
 
         this.workingBitsAvailable -= bits;
         if (this.workingBitsAvailable > 0) {
