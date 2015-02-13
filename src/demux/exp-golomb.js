@@ -61,7 +61,9 @@ class ExpGolomb {
         var bits = Math.min(this.workingBitsAvailable, size), // :uint
             valu = this.workingWord >>> (32 - bits); // :uint
 
-        logger.error(size < 32, 'Cannot read more than 32 bits at a time');
+        if (size > 32) {
+            logger.error('Cannot read more than 32 bits at a time');
+        }
 
         this.workingBitsAvailable -= bits;
         if (this.workingBitsAvailable > 0) {

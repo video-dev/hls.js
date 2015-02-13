@@ -473,7 +473,7 @@ class AacStream extends Stream {
 
             // byte 0
             if (0xff !== data[0]) {
-                logger.error(false, 'Error no ATDS header found');
+                logger.error('Error no ATDS header found');
             }
 
             if (this.config === undefined) {
