@@ -12,11 +12,18 @@ import {logger}             from '../utils/logger';
   constructor() {
   }
 
+  destroy() {
+    if(this.xhr &&this.xhr.readyState !== 4) {
+      this.xhr.abort();
+      this.xhr = null;
+    }
+  }
+
   load(url) {
     this.url = url;
     this.trequest = Date.now();
     this.tfirst = null;
-    var xhr = new XMLHttpRequest();
+    var xhr = this.xhr = new XMLHttpRequest();
     xhr.onload=  this.loadsuccess.bind(this);
     xhr.onerror = this.loaderror.bind(this);
     xhr.onprogress = this.loadprogress.bind(this);

@@ -18,8 +18,7 @@ class Hls {
     return (window.MediaSource && MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"'));
   }
 
-  constructor() {
-    this.mediaSource = new MediaSource();
+  constructor(video) {
     this.playlistLoader = new PlaylistLoader();
     this.fragmentLoader = new FragmentLoader();
     this.demuxer = new TSDemuxer();
@@ -27,98 +26,194 @@ class Hls {
     this.Events = Event;
     this.debug = enableLogs;
     this.logEvt = this.logEvt;
-    // setup listeners
+    //Media Source listeners
+    this.onmso = this.onMediaSourceOpen.bind(this);
+    this.onmse = this.onMediaSourceEnded.bind(this);
+    this.onmsc = this.onMediaSourceClose.bind(this);
+    // Source Buffer listeners
+    this.onsbue = this.onSourceBufferUpdateEnd.bind(this);
+    this.onsbe  = this.onSourceBufferError.bind(this);
+    // internal listeners
+    this.onml = this.onManifestLoaded.bind(this);
+    this.onfl = this.onFragmentLoaded.bind(this);
+    this.onfp = this.onFragmentParsed.bind(this);
+    // observer setup
     this.on = observer.on.bind(observer);
     this.off = observer.removeListener.bind(observer);
-    // setup the media source
-    this.mediaSource.addEventListener('sourceopen', this.onMediaSourceOpen.bind(this));
-    this.mediaSource.addEventListener('sourceended', function() {logger.log('media source ended');});
-    this.mediaSource.addEventListener('sourceclose', function() {logger.log('media source closed');});
+    this.video = video;
+    this.attachView(video);
+  }
 
-    observer.on(Event.MANIFEST_LOADED, function(event,data) {
-      this.fragments = data.levels[0].fragments;
-      this.fragmentIndex = 0;
-      this.fragmentLoader.load(this.fragments[this.fragmentIndex++].url);
-      var stats,rtt,loadtime;
-      stats = data.stats;
-      rtt = stats.tfirst - stats.trequest;
-      loadtime = stats.tend - stats.trequest;
-      logger.log('playlist loaded,RTT(ms)/load(ms)/nb frag:' + rtt + '/' + loadtime + '/' + stats.length);
-    }.bind(this));
-
-    observer.on(Event.FRAGMENT_LOADED, function(event,data) {
-      this.demuxer.push(new Uint8Array(data.payload));
-      this.demuxer.end();
-      this.appendSegments();
-      if (this.fragmentIndex < this.fragments.length) {
-        this.fragmentLoader.load(this.fragments[this.fragmentIndex++].url);
-      } else {
-        logger.log('last fragment loaded');
-        observer.trigger(Event.LAST_FRAGMENT_LOADED);
-      }
-      var stats,rtt,loadtime,bw;
-      stats = data.stats;
-      rtt = stats.tfirst - stats.trequest;
-      loadtime = stats.tend - stats.trequest;
-      bw = stats.length*8/(1000*loadtime);
-      logger.log('frag loaded, RTT(ms)/load(ms)/bitrate:' + rtt + '/' + loadtime + '/' + bw.toFixed(3) + ' Mb/s');
-    }.bind(this));
-
-    // transmux the MPEG-TS data to ISO-BMFF segments
-    observer.on(Event.FRAGMENT_PARSED, function(event,segment) {
-      //logger.log(JSON.stringify(MP4Inspect.mp4toJSON(segment.data)),null,4);
-      this.mp4segments.push(segment);
-    }.bind(this));
+  destroy() {
+    this.detachSource();
+    this.detachView();
   }
 
   attachView(video) {
-    this.video = video;
-    video.src = URL.createObjectURL(this.mediaSource);
-    video.addEventListener('loadstart',       function(evt) { this.logEvt(evt); }.bind(this));
-    video.addEventListener('progress',        function(evt) { this.logEvt(evt); }.bind(this));
-    video.addEventListener('suspend',         function(evt) { this.logEvt(evt); }.bind(this));
-    video.addEventListener('abort',           function(evt) { this.logEvt(evt); }.bind(this));
-    video.addEventListener('error',           function(evt) { this.logEvt(evt); }.bind(this));
-    video.addEventListener('emptied',         function(evt) { this.logEvt(evt); }.bind(this));
-    video.addEventListener('stalled',         function(evt) { this.logEvt(evt); }.bind(this));
-    video.addEventListener('loadedmetadata',  function(evt) { this.logEvt(evt); }.bind(this));
-    video.addEventListener('loadeddata',      function(evt) { this.logEvt(evt); }.bind(this));
-    video.addEventListener('canplay',         function(evt) { this.logEvt(evt); }.bind(this));
-    video.addEventListener('canplaythrough',  function(evt) { this.logEvt(evt); }.bind(this));
-    video.addEventListener('playing',         function(evt) { this.logEvt(evt); }.bind(this));
-    video.addEventListener('waiting',         function(evt) { this.logEvt(evt); }.bind(this));
-    video.addEventListener('seeking',         function(evt) { this.logEvt(evt); }.bind(this));
-    video.addEventListener('seeked',          function(evt) { this.logEvt(evt); }.bind(this));
-    video.addEventListener('durationchange',  function(evt) { this.logEvt(evt); }.bind(this));
-    video.addEventListener('timeupdate',      function(evt) { this.logEvt(evt); }.bind(this));
-    video.addEventListener('play',            function(evt) { this.logEvt(evt); }.bind(this));
-    video.addEventListener('pause',           function(evt) { this.logEvt(evt); }.bind(this));
-    video.addEventListener('ratechange',      function(evt) { this.logEvt(evt); }.bind(this));
-    video.addEventListener('resize',          function(evt) { this.logEvt(evt); }.bind(this));
-    video.addEventListener('volumechange',    function(evt) { this.logEvt(evt); }.bind(this));
+    // setup the media source
+    var ms = this.mediaSource = new MediaSource();
+    ms.addEventListener('sourceopen',  this.onmso);
+    ms.addEventListener('sourceended', this.onmse);
+    ms.addEventListener('sourceclose', this.onmsc);
+    // link video and media Source
+    video.src = URL.createObjectURL(ms);
+    // listen to all video events
+    var listener = function(evt) { this.logEvt(evt); }.bind(this);
+    this.videoListenerBind = listener;
+    video.addEventListener('loadstart',       listener);
+    video.addEventListener('progress',        listener);
+    video.addEventListener('suspend',         listener);
+    video.addEventListener('abort',           listener);
+    video.addEventListener('error',           listener);
+    video.addEventListener('emptied',         listener);
+    video.addEventListener('stalled',         listener);
+    video.addEventListener('loadedmetadata',  listener);
+    video.addEventListener('loadeddata',      listener);
+    video.addEventListener('canplay',         listener);
+    video.addEventListener('canplaythrough',  listener);
+    video.addEventListener('playing',         listener);
+    video.addEventListener('waiting',         listener);
+    video.addEventListener('seeking',         listener);
+    video.addEventListener('seeked',          listener);
+    video.addEventListener('durationchange',  listener);
+    video.addEventListener('timeupdate',      listener);
+    video.addEventListener('play',            listener);
+    video.addEventListener('pause',           listener);
+    video.addEventListener('ratechange',      listener);
+    video.addEventListener('resize',          listener);
+    video.addEventListener('volumechange',    listener);
+  }
+
+  detachView() {
+    var video = this.video;
+    var listener = this.videoListenerBind;
+    var ms = this.mediaSource;
+    if(ms) {
+      var sb = this.sourceBuffer;
+      if(sb) {
+        //detach sourcebuffer from Media Source
+        ms.removeSourceBuffer(sb);
+        sb.removeEventListener('updateend', this.onsbue);
+        sb.removeEventListener('error', this.onsbe);
+        this.sourceBuffer = null;
+      }
+      ms.removeEventListener('sourceopen',  this.onmso);
+      ms.removeEventListener('sourceended', this.onmse);
+      ms.removeEventListener('sourceclose', this.onmsc);
+      // unlink MediaSource from video tag
+      video.src = '';
+      this.mediaSource = null;
+    }
+    this.video = null;
+    // remove all video listeners
+    video.removeEventListener('loadstart',       listener);
+    video.removeEventListener('progress',        listener);
+    video.removeEventListener('suspend',         listener);
+    video.removeEventListener('abort',           listener);
+    video.removeEventListener('error',           listener);
+    video.removeEventListener('emptied',         listener);
+    video.removeEventListener('stalled',         listener);
+    video.removeEventListener('loadedmetadata',  listener);
+    video.removeEventListener('loadeddata',      listener);
+    video.removeEventListener('canplay',         listener);
+    video.removeEventListener('canplaythrough',  listener);
+    video.removeEventListener('playing',         listener);
+    video.removeEventListener('waiting',         listener);
+    video.removeEventListener('seeking',         listener);
+    video.removeEventListener('seeked',          listener);
+    video.removeEventListener('durationchange',  listener);
+    video.removeEventListener('timeupdate',      listener);
+    video.removeEventListener('play',            listener);
+    video.removeEventListener('pause',           listener);
+    video.removeEventListener('ratechange',      listener);
+    video.removeEventListener('resize',          listener);
+    video.removeEventListener('volumechange',    listener);
   }
 
   attachSource(url) {
-    url = url;
+    this.url = url;
     logger.log('attachSource:'+url);
+    // create source Buffer and link them to MediaSource
+    var sb = this.sourceBuffer = this.mediaSource.addSourceBuffer('video/mp4;codecs=avc1.4d400d,mp4a.40.5');
+    sb.addEventListener('updateend', this.onsbue);
+    sb.addEventListener('error', this.onsbe);
+    // internal listener setup
+    observer.on(Event.MANIFEST_LOADED, this.onml);
+    observer.on(Event.FRAGMENT_LOADED, this.onfl);
+    observer.on(Event.FRAGMENT_PARSED, this.onfp);
+    // when attaching to a source URL, trigger a playlist load
     this.playlistLoader.load(url);
   }
 
-  onMediaSourceOpen() {
-    this.buffer = this.mediaSource.addSourceBuffer('video/mp4;codecs=avc1.4d400d,mp4a.40.5');
-    this.buffer.addEventListener('updateend', function() {
-    this.appendSegments();
-    }.bind(this));
+  detachSource() {
+    this.url = null;
+    this.playlistLoader.destroy();
+    this.fragmentLoader.destroy();
+    this.demuxer.destroy();
+    // internal listener setup
+    observer.removeListener(Event.MANIFEST_LOADED, this.onml);
+    observer.removeListener(Event.FRAGMENT_LOADED, this.onfl);
+    observer.removeListener(Event.FRAGMENT_PARSED, this.onfp);
+    this.mp4segments = [];
+  }
 
-    this.buffer.addEventListener('error', function(event) {
-      logger.log(' buffer append error:' + event);
-    });
+  onManifestLoaded(event,data) {
+    this.fragments = data.levels[0].fragments;
+    this.fragmentIndex = 0;
+    this.fragmentLoader.load(this.fragments[this.fragmentIndex++].url);
+    var stats,rtt,loadtime;
+    stats = data.stats;
+    rtt = stats.tfirst - stats.trequest;
+    loadtime = stats.tend - stats.trequest;
+    logger.log('playlist loaded,RTT(ms)/load(ms)/nb frag:' + rtt + '/' + loadtime + '/' + stats.length);
+  }
+
+  onFragmentLoaded(event,data) {
+    // transmux the MPEG-TS data to ISO-BMFF segments
+    this.demuxer.push(new Uint8Array(data.payload));
+    this.demuxer.end();
+    if (this.fragmentIndex < this.fragments.length) {
+      this.fragmentLoader.load(this.fragments[this.fragmentIndex++].url);
+    } else {
+      logger.log('last fragment loaded');
+      observer.trigger(Event.LAST_FRAGMENT_LOADED);
+    }
+    var stats,rtt,loadtime,bw;
+    stats = data.stats;
+    rtt = stats.tfirst - stats.trequest;
+    loadtime = stats.tend - stats.trequest;
+    bw = stats.length*8/(1000*loadtime);
+    logger.log(data.url + ' loaded, RTT(ms)/load(ms)/bitrate:' + rtt + '/' + loadtime + '/' + bw.toFixed(3) + ' Mb/s');
+  }
+
+  onFragmentParsed(event,data) {
+    this.mp4segments.push(data);
+    this.appendSegments();
+  }
+
+  onMediaSourceOpen() {
     observer.trigger(Event.FRAMEWORK_READY);
   }
 
+  onMediaSourceClose() {
+    logger.log('media source closed');
+  }
+
+  onMediaSourceEnded() {
+    logger.log('media source ended');
+  }
+
+  onSourceBufferUpdateEnd() {
+    this.appendSegments();
+  }
+
+  onSourceBufferError() {
+      logger.log(' buffer append error:' + event);
+  }
+
   appendSegments() {
-    if (!this.buffer.updating && this.mp4segments.length) {
-      this.buffer.appendBuffer(this.mp4segments.shift().data);
+    if (this.sourceBuffer && !this.sourceBuffer.updating && this.mp4segments.length) {
+      this.sourceBuffer.appendBuffer(this.mp4segments.shift().data);
     }
   }
 

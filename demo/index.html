@@ -56,12 +56,17 @@
        //var manifest = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
        //var manifest = "http://sublimevideo-media.s3.amazonaws.com/v/dm/hls/xwr14q/55008890_mp4_h264_aac_hq.m3u8";
        var isSupported = Hls.isSupported();
-       var hls = new Hls();
+       var hls = new Hls(video);
        hls.debug(true);
-       hls.attachView(video);
        hls.on(hls.Events.FRAMEWORK_READY,function() {
           hls.attachSource(manifest);
        });
+
+      //  window.setTimeout(function() {
+      //    hls.destroy();
+      //    hls = new Hls(video);
+      //    hls.debug(true);
+      // } ,1000);
     } else {
       document.getElementById("isHlsSupported").innerHTML = "your Browser does not support MediaSourceExtension / MP4 mediasource";
     }
