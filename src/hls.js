@@ -14,6 +14,10 @@ import {logger,enableLogs}  from './utils/logger';
 
 class Hls {
 
+  static isSupported() {
+    return (window.MediaSource && MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"'));
+  }
+
   constructor() {
     this.mediaSource = new MediaSource();
     this.playlistLoader = new PlaylistLoader();
