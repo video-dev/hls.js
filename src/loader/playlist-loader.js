@@ -74,13 +74,12 @@ class PlaylistLoader {
     parseMasterPlaylist(string, baseurl) {
         var levels = [];
         var level = {};
-        var levelFound = false;
         var result;
         var re = /#EXT-X-STREAM-INF:[^\n\r]*(BANDWIDTH)=(\d+)*[^\n\r](RESOLUTION)=(\d+)x(\d+)[^\r\n]*[\r\n]+([^\r\n]+)/g;
         while ((result = re.exec(string)) != null) {
             result.shift();
             result = result.filter(function(n) {
-                return n != undefined;
+                return n !== undefined;
             });
             level.url = this.resolve(result.pop(), baseurl);
             while (result.length > 0) {
@@ -113,10 +112,10 @@ class PlaylistLoader {
 
         var result;
         var re = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):(\d+)[^\r\n]*[\r\n]+([^\r\n]+)|(?:#EXT-X-(ENDLIST)))/g;
-        while ((result = re.exec(string)) != null) {
+        while ((result = re.exec(string)) !== null) {
             result.shift();
             result = result.filter(function(n) {
-                return n != undefined;
+                return n !== undefined;
             });
             switch (result[0]) {
                 case 'MEDIA-SEQUENCE':
@@ -135,6 +134,7 @@ class PlaylistLoader {
                         sn: currentSN++
                     });
                     totalduration += result[1];
+                    break;
                 default:
                     break;
             }
