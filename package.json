@@ -11,7 +11,7 @@
     "prebuild": "npm run clean & npm run test",
     "build": "browserify -s hls src/hls.js -o dist/hls.js",
     "postbuild": "npm run minify",
-    "minify": "uglifyjs dist/hls.js > dist/hls.min.js",
+    "minify": "uglifyjs dist/hls.js -c -m --screw-ie8 > dist/hls.min.js",
     "watch": "watchify --debug -s Hls src/hls.js -o dist/hls.js",
     "pretest": "npm run lint",
     "test": "mocha tests/",
