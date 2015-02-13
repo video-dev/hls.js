@@ -66,12 +66,11 @@ import {logger}             from '../utils/logger';
   parseMasterPlaylist(string,baseurl) {
     var levels = [];
     var level =  {};
-    var levelFound = false;
     var result;
     var re = /#EXT-X-STREAM-INF:[^\n\r]*(BANDWIDTH)=(\d+)*[^\n\r](RESOLUTION)=(\d+)x(\d+)[^\r\n]*[\r\n]+([^\r\n]+)/g;
     while((result = re.exec(string)) != null){
       result.shift();
-      result = result.filter(function(n){ return n != undefined });
+      result = result.filter(function(n){ return (n !== undefined);});
       level.url = this.resolve(result.pop(),baseurl);
       while(result.length > 0) {
         switch(result.shift()) {
@@ -101,9 +100,9 @@ import {logger}             from '../utils/logger';
 
     var result;
     var re = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):(\d+)[^\r\n]*[\r\n]+([^\r\n]+)|(?:#EXT-X-(ENDLIST)))/g;
-    while((result = re.exec(string)) != null){
+    while((result = re.exec(string)) !== null){
       result.shift();
-      result = result.filter(function(n){ return n != undefined });
+      result = result.filter(function(n){ return (n !== undefined);});
       switch(result[0]) {
         case 'MEDIA-SEQUENCE':
           currentSN = startSN = result[1];
@@ -117,6 +116,7 @@ import {logger}             from '../utils/logger';
         case 'INF':
           fragments.push({url : this.resolve(result[2],baseurl), duration : result[1], sn : currentSN++});
           totalduration+=result[1];
+          break;
         default:
           break;
       }
