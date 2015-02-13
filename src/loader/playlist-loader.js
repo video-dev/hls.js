@@ -7,13 +7,6 @@ import Event from '../events';
 import observer from '../observer';
 import { logger } from '../utils/logger';
 
-const ENDLIST = '#EXT-X-ENDLIST';
-const FRAGMENT = '#EXTINF:';
-const HEADER = '#EXTM3U';
-const LEVEL = '#EXT-X-STREAM-INF:';
-const SEQNUM = '#EXT-X-MEDIA-SEQUENCE:';
-const TARGETDURATION = '#EXT-X-TARGETDURATION:';
-
 class PlaylistLoader {
     constructor() {}
 
@@ -53,11 +46,12 @@ class PlaylistLoader {
 
     parseManifest(string, url) {
         var levels;
-        if (string.indexOf(HEADER) === 0) {
-            // 1 level playlist, create unique level and parse playlist
-            if (string.indexOf(FRAGMENT) > 0) {
+        if (string.indexOf('#EXTM3U') === 0) {
+            if (string.indexOf('#EXTINF:') > 0) {
+                // 1 level playlist, create unique level and parse playlist
                 levels = [this.parseLevelPlaylist(string, url)];
             } else {
+                // multi level playlist, parse level info
                 levels = this.parseMasterPlaylist(string, url);
             }
             observer.trigger(Event.MANIFEST_LOADED, {
@@ -69,92 +63,88 @@ class PlaylistLoader {
                     tend: Date.now()
                 }
             });
+        } else {
+            observer.trigger(Event.LOAD_ERROR, {
+                url: url,
+                event: 'not an HLS playlist'
+            });
         }
     }
 
     parseMasterPlaylist(string, baseurl) {
-        // var re = /(r'#EXT-X-STREAM-INF:[^\n\r]*RESOLUTION=(\d+)x(\d+)[^\r\n]*[\r\n]+([^\r\n]+))/g;
-        // var results = string.match(re);
         var levels = [];
         var level = {};
         var levelFound = false;
-        var lines = string.split(/\r?\n/);
-        lines.forEach(line => {
-            if (line.indexOf(LEVEL) === 0) {
-                levelFound = true;
-                var params = line.substr(LEVEL.length).split(',');
-                params.forEach(param => {
-                    if (param.indexOf('BANDWIDTH') > -1) {
-                        level.bitrate = param.split('=')[1];
-                    } else if (param.indexOf('RESOLUTION') > -1) {
-                        var res = param.split('=')[1];
-                        var dim = res.split('x');
-                        level.width = parseInt(dim[0]);
-                        level.height = parseInt(dim[1]);
-                    } else if (param.indexOf('CODECS') > -1) {
-                        level.codecs = param.split('=')[1];
-                    } else if (param.indexOf('NAME') > -1) {
-                        level.name = param.split('=')[1];
-                    }
-                });
-            } else if (levelFound === true) {
-                level.url = this.resolve(line, baseurl);
-                levels.push(level);
-                level = {};
-                levelFound = false;
+        var result;
+        var re = /#EXT-X-STREAM-INF:[^\n\r]*(BANDWIDTH)=(\d+)*[^\n\r](RESOLUTION)=(\d+)x(\d+)[^\r\n]*[\r\n]+([^\r\n]+)/g;
+        while ((result = re.exec(string)) != null) {
+            result.shift();
+            result = result.filter(function(n) {
+                return n != undefined;
+            });
+            level.url = this.resolve(result.pop(), baseurl);
+            while (result.length > 0) {
+                switch (result.shift()) {
+                    case 'RESOLUTION':
+                        level.width = result.shift();
+                        level.height = result.shift();
+                        break;
+                    case 'BANDWIDTH':
+                        level.bitrate = result.shift();
+                        break;
+                    default:
+                        result.shift();
+                        break;
+                }
             }
-        });
+            levels.push(level);
+            level = {};
+        }
         return levels;
     }
 
     parseLevelPlaylist(string, baseurl) {
-        // var re = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):(\d+)[^\r\n]*[\r\n]+([^\r\n]+))/g;
-        // var results = string.match(re);
         var startSN,
-            endSN,
             targetduration,
             endList = false,
             totalduration = 0;
-        var currentSN,
-            duration,
-            extinfFound = false;
-        var lines = string.split(/\r?\n/);
+        var currentSN;
         var fragments = [];
-        lines.forEach(line => {
-            if (line.indexOf(SEQNUM) === 0) {
-                currentSN = startSN = parseInt(line.substr(SEQNUM.length));
-            } else if (line.indexOf(TARGETDURATION) === 0) {
-                targetduration = parseFloat(line.substr(TARGETDURATION.length));
-            } else if (line.indexOf(ENDLIST) === 0) {
-                endList = true;
-            } else if (line.indexOf(FRAGMENT) === 0) {
-                var commaPosition = line.indexOf(',');
-                duration =
-                    commaPosition === -1
-                        ? parseFloat(line.substr(FRAGMENT.length))
-                        : parseFloat(
-                              line.substr(
-                                  FRAGMENT.length,
-                                  commaPosition - FRAGMENT.length
-                              )
-                          );
-                totalduration += duration;
-                extinfFound = true;
-            } else if (extinfFound === true) {
-                var url = this.resolve(line, baseurl);
-                fragments.push({ url: url, duration: duration, sn: currentSN });
-                currentSN++;
-                extinfFound = false;
-            }
-        });
-        endSN = currentSN - 1;
 
+        var result;
+        var re = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):(\d+)[^\r\n]*[\r\n]+([^\r\n]+)|(?:#EXT-X-(ENDLIST)))/g;
+        while ((result = re.exec(string)) != null) {
+            result.shift();
+            result = result.filter(function(n) {
+                return n != undefined;
+            });
+            switch (result[0]) {
+                case 'MEDIA-SEQUENCE':
+                    currentSN = startSN = result[1];
+                    break;
+                case 'TARGETDURATION':
+                    targetduration = result[1];
+                    break;
+                case 'ENDLIST':
+                    endList = true;
+                    break;
+                case 'INF':
+                    fragments.push({
+                        url: this.resolve(result[2], baseurl),
+                        duration: result[1],
+                        sn: currentSN++
+                    });
+                    totalduration += result[1];
+                default:
+                    break;
+            }
+        }
         logger.log('found ' + fragments.length + ' fragments');
         return {
             fragments: fragments,
             url: baseurl,
             startSN: startSN,
-            endSN: endSN,
+            endSN: currentSN - 1,
             targetduration: targetduration,
             totalduration: totalduration,
             endList: endList
