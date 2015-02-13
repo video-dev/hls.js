@@ -988,6 +988,11 @@ class TSDemuxer {
         videoSegmentStream.end();
         audioSegmentStream.end();
     }
+
+    destroy() {
+        audioSegmentStream = videoSegmentStream = null;
+        configAudio = configVideo = trackVideo = trackAudio = pps = null;
+    }
 }
 
 export default TSDemuxer;
