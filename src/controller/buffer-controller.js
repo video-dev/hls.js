@@ -103,9 +103,9 @@ class BufferController {
                     this.fragmentLoader.load(fragments[i].url);
                     this.state = LOADING_IN_PROGRESS;
                 } else {
-                    logger.log('last fragment loaded');
-                    observer.trigger(Event.LAST_FRAGMENT_LOADED);
-                    this.state = LOADING_COMPLETED;
+                    //logger.log('last fragment loaded');
+                    //observer.trigger(Event.LAST_FRAGMENT_LOADED);
+                    //this.state = LOADING_COMPLETED;
                 }
             }
         }
