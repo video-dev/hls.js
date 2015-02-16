@@ -213,18 +213,10 @@ class MP4 {
     return MP4.box(MP4.types.minf, MP4.box(MP4.types.vmhd, MP4.MEDIAHEADER_TYPES[track.type]), MP4.DINF, MP4.stbl(track));
   }
 
-  static moof(sequenceNumber, baseMediaDecodeTime, tracks) {
-    var
-      trackFragments = [],
-      i = tracks.length;
-    // build traf boxes for each track fragment
-    while (i--) {
-      trackFragments[i] = MP4.traf(tracks[i],baseMediaDecodeTime);
-    }
-    return MP4.box.apply(null, [
-      MP4.types.moof,
-      MP4.mfhd(sequenceNumber)
-    ].concat(trackFragments));
+  static moof(sn, baseMediaDecodeTime, track) {
+    return MP4.box(MP4.types.moof,
+                   MP4.mfhd(sn),
+                   MP4.traf(track,baseMediaDecodeTime));
   }
 /**
  * @param tracks... (optional) {array} the tracks associated with this movie
