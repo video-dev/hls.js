@@ -345,16 +345,11 @@ class MP4 {
         );
     }
 
-    static moof(sequenceNumber, baseMediaDecodeTime, tracks) {
-        var trackFragments = [],
-            i = tracks.length;
-        // build traf boxes for each track fragment
-        while (i--) {
-            trackFragments[i] = MP4.traf(tracks[i], baseMediaDecodeTime);
-        }
-        return MP4.box.apply(
-            null,
-            [MP4.types.moof, MP4.mfhd(sequenceNumber)].concat(trackFragments)
+    static moof(sn, baseMediaDecodeTime, track) {
+        return MP4.box(
+            MP4.types.moof,
+            MP4.mfhd(sn),
+            MP4.traf(track, baseMediaDecodeTime)
         );
     }
     /**

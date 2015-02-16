@@ -749,7 +749,7 @@ class VideoSegmentStream extends Stream {
         this.track.samples.push(sample);
         this.nalUnitsLength = 0;
         mdat = MP4.mdat(data);
-        moof = MP4.moof(this.sequenceNumber, this.totalduration, [this.track]);
+        moof = MP4.moof(this.sequenceNumber, this.totalduration, this.track);
         this.totalduration += (currentNal.dts - startdts) * 90;
         // it would be great to allocate this array up front instead of
         // throwing away hundreds of media segment fragments
@@ -845,7 +845,7 @@ class AudioSegmentStream extends Stream {
         }
         this.aacUnitsLength = 0;
         mdat = MP4.mdat(data);
-        moof = MP4.moof(this.sequenceNumber, this.totalduration, [this.track]);
+        moof = MP4.moof(this.sequenceNumber, this.totalduration, this.track);
         this.totalduration += (currentUnit.dts - startUnit.dts) * 90;
         // it would be great to allocate this array up front instead of
         // throwing away hundreds of media segment fragments
