@@ -69,14 +69,39 @@ import TSDemuxer             from '../demux/tsdemuxer';
 
 
   tick() {
-    if(this.state === LOADING_IDLE) {
-      // check buffer, ensure that we have at least 2mns of buffer available
-      var v = this.video;
-      var buffer = (v.buffered.length === 0 ? 0 : v.buffered.end(0)) - v.currentTime;
-      if(buffer < 120) {
-        // load next segment
-        this.fragmentLoader.load(this.levels[this.level].fragments[this.fragmentIndex++].url);
+    if(this.state === LOADING_IDLE && !this.sourceBuffer.updating) {
+      // check if current play position is buffered
+      var v = this.video,
+          pos = v.currentTime,
+          buffered = v.buffered,
+          bufferLen,
+          bufferEnd,
+          i;
+      for(i = 0, bufferLen = 0, bufferEnd = pos ; i < buffered.length ; i++) {
+        if(pos >= buffered.start(i) && pos < buffered.end(i)) {
+          // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
+          bufferEnd = buffered.end(i);
+          bufferLen = bufferEnd - pos;
+        }
+      }
+      // if buffer length is less than 60s try to load a new fragment
+      if(bufferLen < 60) {
+        // find fragment index, contiguous with end of buffer position
+        var fragments = this.levels[this.level].fragments;
+        for (i = 0; i < fragments.length ; i++) {
+          if(fragments[i].start <=  (bufferEnd+0.1) && (fragments[i].start + fragments[i].duration) > (bufferEnd+0.1)) {
+            break;
+          }
+        }
+        if(i < fragments.length) {
+        logger.log('loading frag ' + i);
+        this.fragmentLoader.load(fragments[i].url);
         this.state = LOADING_IN_PROGRESS;
+        } else {
+          logger.log('last fragment loaded');
+          observer.trigger(Event.LAST_FRAGMENT_LOADED);
+          this.state = LOADING_COMPLETED;
+        }
       }
     }
   }
@@ -94,13 +119,7 @@ import TSDemuxer             from '../demux/tsdemuxer';
     // transmux the MPEG-TS data to ISO-BMFF segments
     this.demuxer.push(new Uint8Array(data.payload));
     this.demuxer.end();
-    if (this.fragmentIndex === this.levels[this.level].fragments.length) {
-      logger.log('last fragment loaded');
-      observer.trigger(Event.LAST_FRAGMENT_LOADED);
-      this.state = LOADING_COMPLETED;
-    } else {
-      this.state = LOADING_IDLE;
-    }
+    this.state = LOADING_IDLE;
     var stats,rtt,loadtime,bw;
     stats = data.stats;
     rtt = stats.tfirst - stats.trequest;
@@ -121,7 +140,7 @@ import TSDemuxer             from '../demux/tsdemuxer';
   }
 
   onSourceBufferUpdateEnd() {
-    logger.log('buffer appended');
+    //logger.log('buffer appended');
     this.appendSegments();
   }
 
