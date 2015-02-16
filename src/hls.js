@@ -82,7 +82,7 @@ class Hls {
         video.addEventListener('seeking', listener);
         video.addEventListener('seeked', listener);
         video.addEventListener('durationchange', listener);
-        video.addEventListener('timeupdate', listener);
+        //video.addEventListener('timeupdate',      listener);
         video.addEventListener('play', listener);
         video.addEventListener('pause', listener);
         video.addEventListener('ratechange', listener);
@@ -128,7 +128,7 @@ class Hls {
         video.removeEventListener('seeking', listener);
         video.removeEventListener('seeked', listener);
         video.removeEventListener('durationchange', listener);
-        video.removeEventListener('timeupdate', listener);
+        //video.removeEventListener('timeupdate',      listener);
         video.removeEventListener('play', listener);
         video.removeEventListener('pause', listener);
         video.removeEventListener('ratechange', listener);
@@ -243,6 +243,7 @@ class Hls {
     }
 
     onSourceBufferUpdateEnd() {
+        //logger.log('buffer appended');
         this.appendSegments();
     }
 
@@ -292,6 +293,16 @@ class Hls {
             case 'play':
             case 'stalled':
                 data = 'currentTime:' + evt.target.currentTime;
+                break;
+            case 'progress':
+                data =
+                    'currentTime:' +
+                    evt.target.currentTime +
+                    ',bufferRange:[' +
+                    this.video.buffered.start(0) +
+                    ',' +
+                    this.video.buffered.end(0) +
+                    ']';
                 break;
             default:
                 break;
