@@ -238,7 +238,7 @@ class MP4 {
       boxes[i] = MP4.trak(tracks[i]);
     }
 
-    return MP4.box.apply(null, [MP4.types.moov, MP4.mvhd(1)].concat(boxes).concat(MP4.mvex(tracks)));
+    return MP4.box.apply(null, [MP4.types.moov, MP4.mvhd(tracks[0].duration)].concat(boxes).concat(MP4.mvex(tracks)));
   }
 
   static mvex(tracks) {

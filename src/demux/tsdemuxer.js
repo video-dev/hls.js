@@ -854,7 +854,7 @@ class AudioSegmentStream extends Stream {
 var packetStream,parseStream, elementaryStream, aacStream, h264Stream,
     audioSegmentStream, videoSegmentStream,
     configAudio, configVideo,
-    trackVideo, trackAudio,
+    trackVideo, trackAudio,_duration,
     pps;
 
 class TSDemuxer {
@@ -877,6 +877,7 @@ class TSDemuxer {
       if(!configAudio) {
         trackAudio.config = configAudio = data.config;
         trackAudio.audiosamplerate = data.audiosamplerate;
+        trackAudio.duration = 90000*_duration;
         if (configVideo) {
             observer.trigger(Event.FRAGMENT_PARSED,{
             data: MP4.initSegment([trackVideo,trackAudio])
@@ -897,6 +898,7 @@ class TSDemuxer {
       trackVideo.profileIdc = configVideo.profileIdc;
       trackVideo.levelIdc = configVideo.levelIdc;
       trackVideo.profileCompatibility = configVideo.profileCompatibility;
+      trackVideo.duration = 90000*_duration;
 
         // generate an init segment once all the metadata is available
         if (pps) {
@@ -949,6 +951,10 @@ class TSDemuxer {
     });
   }
 
+  set duration(duration) {
+    _duration = duration;
+  }
+
   // feed incoming data to the front of the parsing pipeline
   push(data) {
     packetStream.push(data);
@@ -964,6 +970,7 @@ class TSDemuxer {
   destroy() {
     audioSegmentStream = videoSegmentStream = null;
     configAudio = configVideo = trackVideo = trackAudio = pps = null;
+    _duration = 0;
   }
 }
 
