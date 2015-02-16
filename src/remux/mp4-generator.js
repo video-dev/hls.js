@@ -157,7 +157,7 @@ class MP4 {
       size += payload[i].byteLength;
     }
     result = new Uint8Array(size + 8);
-    view = new DataView(result.buffer, result.byteOffset, result.byteLength);
+    view = new DataView(result.buffer);
     view.setUint32(0, result.byteLength);
     result.set(type, 4);
 
