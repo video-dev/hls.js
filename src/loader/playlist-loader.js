@@ -8,26 +8,59 @@ import observer from '../observer';
 import { logger } from '../utils/logger';
 
 class PlaylistLoader {
-    constructor() {}
+    constructor() {
+        this.levels = [];
+        this._level = undefined;
+    }
 
     destroy() {
         if (this.xhr && this.xhr.readyState !== 4) {
             this.xhr.abort();
             this.xhr = null;
         }
+        this.levels = [];
+        this._level = undefined;
     }
 
     load(url) {
+        observer.trigger(Event.MANIFEST_LOADING, { url: this.url });
+        this._load(url);
+    }
+
+    _load(url) {
         this.url = url;
-        this.trequest = Date.now();
-        this.tfirst = null;
+        this.stats = { trequest: Date.now() };
         var xhr = (this.xhr = new XMLHttpRequest());
         xhr.onload = this.loadsuccess.bind(this);
         xhr.onerror = this.loaderror.bind(this);
         xhr.onprogress = this.loadprogress.bind(this);
         xhr.open('GET', url, true);
         xhr.send();
-        observer.trigger(Event.MANIFEST_LOADING, { url: this.url });
+    }
+
+    get level() {
+        return this._level;
+    }
+
+    set level(newLevel) {
+        if (this._level !== newLevel) {
+            // check if level idx is valid
+            if (newLevel >= 0 && newLevel < this.levels.length) {
+                this._level = newLevel;
+                // check if we need to load playlist for this new level
+                if (this.levels[newLevel].fragments === undefined) {
+                    // level not retrieved yet, we need to load it
+                    observer.trigger(Event.LEVEL_LOADING, { level: newLevel });
+                    this._load(this.levels[newLevel].url);
+                }
+            } else {
+                // invalid level id given, trigger error
+                observer.trigger(Event.LEVEL_ERROR, {
+                    level: newLevel,
+                    event: 'invalid level idx'
+                });
+            }
+        }
     }
 
     resolve(url, baseUrl) {
@@ -52,24 +85,32 @@ class PlaylistLoader {
     }
 
     parseManifest(string, url) {
-        var levels;
         if (string.indexOf('#EXTM3U') === 0) {
             if (string.indexOf('#EXTINF:') > 0) {
                 // 1 level playlist, create unique level and parse playlist
-                levels = [this.parseLevelPlaylist(string, url)];
+                this._level = 0;
+                this.levels.length = 1;
+                this.levels[0] = {};
+                this.parseLevelPlaylist(string, url, 0);
+                observer.trigger(Event.MANIFEST_LOADED, {
+                    levels: this.levels,
+                    url: url,
+                    stats: this.stats
+                });
+                observer.trigger(Event.LEVEL_LOADED, {
+                    level: this._level,
+                    url: url,
+                    stats: this.stats
+                });
             } else {
                 // multi level playlist, parse level info
-                levels = this.parseMasterPlaylist(string, url);
+                this.levels = this.parseMasterPlaylist(string, url);
+                observer.trigger(Event.MANIFEST_LOADED, {
+                    levels: this.levels,
+                    url: url,
+                    stats: this.stats
+                });
             }
-            observer.trigger(Event.MANIFEST_LOADED, {
-                levels: levels,
-                url: url,
-                stats: {
-                    trequest: this.trequest,
-                    tfirst: this.tfirst,
-                    tend: Date.now()
-                }
-            });
         } else {
             observer.trigger(Event.LOAD_ERROR, {
                 url: url,
@@ -99,7 +140,6 @@ class PlaylistLoader {
                         level.bitrate = result.shift();
                         break;
                     default:
-                        result.shift();
                         break;
                 }
             }
@@ -109,13 +149,13 @@ class PlaylistLoader {
         return levels;
     }
 
-    parseLevelPlaylist(string, baseurl) {
-        var startSN,
-            targetduration,
-            endList = false,
+    parseLevelPlaylist(string, baseurl, idx) {
+        var currentSN,
             totalduration = 0;
-        var currentSN;
-        var fragments = [];
+        var obj = this.levels[idx];
+        obj.url = baseurl;
+        obj.fragments = [];
+        obj.endList = false;
 
         var result;
         var re = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):(\d+)[^\r\n]*[\r\n]+([^\r\n]+)|(?:#EXT-X-(ENDLIST)))/g;
@@ -126,40 +166,48 @@ class PlaylistLoader {
             });
             switch (result[0]) {
                 case 'MEDIA-SEQUENCE':
-                    currentSN = startSN = result[1];
+                    currentSN = obj.startSN = parseInt(result[1]);
                     break;
                 case 'TARGETDURATION':
-                    targetduration = result[1];
+                    obj.targetduration = parseFloat(result[1]);
                     break;
                 case 'ENDLIST':
-                    endList = true;
+                    obj.endList = true;
                     break;
                 case 'INF':
-                    fragments.push({
+                    var duration = parseFloat(result[1]);
+                    obj.fragments.push({
                         url: this.resolve(result[2], baseurl),
-                        duration: result[1],
+                        duration: duration,
                         sn: currentSN++
                     });
-                    totalduration += result[1];
+                    totalduration += duration;
                     break;
                 default:
                     break;
             }
         }
-        logger.log('found ' + fragments.length + ' fragments');
-        return {
-            fragments: fragments,
-            url: baseurl,
-            startSN: startSN,
-            endSN: currentSN - 1,
-            targetduration: targetduration,
-            totalduration: totalduration,
-            endList: endList
-        };
+        logger.log('found ' + obj.fragments.length + ' fragments');
+        obj.totalduration = totalduration;
+        obj.endSN = currentSN - 1;
     }
 
     loadsuccess() {
-        this.parseManifest(event.currentTarget.responseText, this.url);
+        this.stats.tend = Date.now();
+        if (this.levels.length === 0) {
+            this.parseManifest(event.currentTarget.responseText, this.url);
+        } else {
+            this.parseLevelPlaylist(
+                event.currentTarget.responseText,
+                this.url,
+                this._level
+            );
+            observer.trigger(Event.LEVEL_LOADED, {
+                level: this._level,
+                url: this.url,
+                stats: this.stats
+            });
+        }
     }
 
     loaderror(event) {
@@ -167,8 +215,8 @@ class PlaylistLoader {
     }
 
     loadprogress() {
-        if (this.tfirst === null) {
-            this.tfirst = Date.now();
+        if (this.stats.tfirst === undefined) {
+            this.stats.tfirst = Date.now();
         }
     }
 }
