@@ -162,7 +162,7 @@ import {logger}             from '../utils/logger';
           break;
         case 'INF':
           var duration = parseFloat(result[1]);
-          obj.fragments.push({url : this.resolve(result[2],baseurl), duration : duration, sn : currentSN++});
+          obj.fragments.push({url : this.resolve(result[2],baseurl), duration : duration, start : totalduration, sn : currentSN++});
           totalduration+=duration;
           break;
         default:
