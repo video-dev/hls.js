@@ -658,7 +658,6 @@ class VideoSegmentStream extends Stream {
     constructor(track) {
         super();
         this.sequenceNumber = 0;
-        this.totalduration = 0;
         this.nalUnits = [];
         this.nalUnitsLength = 0;
         this.track = track;
@@ -701,6 +700,9 @@ class VideoSegmentStream extends Stream {
         };
         i = 0;
         startdts = this.nalUnits[0].dts;
+        if (this.initDts === undefined) {
+            this.initDts = startdts;
+        }
         while (this.nalUnits.length) {
             currentNal = this.nalUnits[0];
             // flush the sample we've been building when a new sample is started
@@ -749,8 +751,11 @@ class VideoSegmentStream extends Stream {
         this.track.samples.push(sample);
         this.nalUnitsLength = 0;
         mdat = MP4.mdat(data);
-        moof = MP4.moof(this.sequenceNumber, this.totalduration, this.track);
-        this.totalduration += (currentNal.dts - startdts) * 90;
+        moof = MP4.moof(
+            this.sequenceNumber,
+            (startdts - this.initDts) * 90,
+            this.track
+        );
         // it would be great to allocate this array up front instead of
         // throwing away hundreds of media segment fragments
         boxes = new Uint8Array(moof.byteLength + mdat.byteLength);
@@ -775,7 +780,6 @@ class AudioSegmentStream extends Stream {
     constructor(track) {
         super();
         this.sequenceNumber = 0;
-        this.totalduration = 0;
         this.aacUnits = [];
         this.aacUnitsLength = 0;
         this.track = track;
@@ -790,7 +794,15 @@ class AudioSegmentStream extends Stream {
     }
 
     end() {
-        var data, view, i, currentUnit, startUnit, lastUnit, mdat, moof, boxes;
+        var data,
+            view,
+            i,
+            currentUnit,
+            startUnitDts,
+            lastUnit,
+            mdat,
+            moof,
+            boxes;
         // // concatenate the audio data and construct the mdat
         // // first, we have to build the index from byte locations to
         // // samples (that is, frames) in the audio data
@@ -809,7 +821,10 @@ class AudioSegmentStream extends Stream {
             compositionTimeOffset: 0
         };
         i = 0;
-        startUnit = this.aacUnits[0];
+        startUnitDts = this.aacUnits[0].dts;
+        if (this.initDts === undefined) {
+            this.initDts = startUnitDts;
+        }
         lastUnit = null;
         while (this.aacUnits.length) {
             currentUnit = this.aacUnits[0];
@@ -845,8 +860,11 @@ class AudioSegmentStream extends Stream {
         }
         this.aacUnitsLength = 0;
         mdat = MP4.mdat(data);
-        moof = MP4.moof(this.sequenceNumber, this.totalduration, this.track);
-        this.totalduration += (currentUnit.dts - startUnit.dts) * 90;
+        moof = MP4.moof(
+            this.sequenceNumber,
+            (startUnitDts - this.initDts) * 90,
+            this.track
+        );
         // it would be great to allocate this array up front instead of
         // throwing away hundreds of media segment fragments
         boxes = new Uint8Array(moof.byteLength + mdat.byteLength);
