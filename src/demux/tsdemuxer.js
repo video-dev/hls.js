@@ -984,6 +984,10 @@ class TSDemuxer {
         _duration = duration;
     }
 
+    get duration() {
+        return _duration;
+    }
+
     // feed incoming data to the front of the parsing pipeline
     push(data) {
         packetStream.push(data);
