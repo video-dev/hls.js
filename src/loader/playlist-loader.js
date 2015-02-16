@@ -179,6 +179,7 @@ class PlaylistLoader {
                     obj.fragments.push({
                         url: this.resolve(result[2], baseurl),
                         duration: duration,
+                        start: totalduration,
                         sn: currentSN++
                     });
                     totalduration += duration;
