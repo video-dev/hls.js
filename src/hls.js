@@ -52,7 +52,7 @@ class Hls {
     var listener = function(evt) { this.logEvt(evt); }.bind(this);
     this.videoListenerBind = listener;
     video.addEventListener('loadstart',       listener);
-    video.addEventListener('progress',        listener);
+    //video.addEventListener('progress',        listener);
     video.addEventListener('suspend',         listener);
     video.addEventListener('abort',           listener);
     video.addEventListener('error',           listener);
@@ -96,7 +96,7 @@ class Hls {
     this.video = null;
     // remove all video listeners
     video.removeEventListener('loadstart',       listener);
-    video.removeEventListener('progress',        listener);
+    //video.removeEventListener('progress',        listener);
     video.removeEventListener('suspend',         listener);
     video.removeEventListener('abort',           listener);
     video.removeEventListener('error',           listener);
@@ -184,9 +184,9 @@ class Hls {
       case 'stalled':
         data = 'currentTime:' + evt.target.currentTime;
         break;
-      case 'progress':
-        data = 'currentTime:' + evt.target.currentTime + ',bufferRange:[' + this.video.buffered.start(0) + ',' + this.video.buffered.end(0) + ']';
-        break;
+      // case 'progress':
+      //   data = 'currentTime:' + evt.target.currentTime + ',bufferRange:[' + this.video.buffered.start(0) + ',' + this.video.buffered.end(0) + ']';
+      //   break;
       default:
       break;
     }
