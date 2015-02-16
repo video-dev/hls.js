@@ -69,7 +69,7 @@ import TSDemuxer             from '../demux/tsdemuxer';
 
 
   tick() {
-    if(this.state == LOADING_IDLE) {
+    if(this.state === LOADING_IDLE) {
       // check buffer, ensure that we have at least 2mns of buffer available
       var v = this.video;
       var buffer = (v.buffered.length === 0 ? 0 : v.buffered.end(0)) - v.currentTime;
@@ -94,7 +94,7 @@ import TSDemuxer             from '../demux/tsdemuxer';
     // transmux the MPEG-TS data to ISO-BMFF segments
     this.demuxer.push(new Uint8Array(data.payload));
     this.demuxer.end();
-    if (this.fragmentIndex == this.levels[this.level].fragments.length) {
+    if (this.fragmentIndex === this.levels[this.level].fragments.length) {
       logger.log('last fragment loaded');
       observer.trigger(Event.LAST_FRAGMENT_LOADED);
       this.state = LOADING_COMPLETED;

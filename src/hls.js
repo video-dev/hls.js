@@ -123,7 +123,7 @@ class Hls {
     this.url = url;
     logger.log('attachSource:'+url);
     // create source Buffer and link them to MediaSource
-    var sb = this.sourceBuffer = this.mediaSource.addSourceBuffer('video/mp4;codecs=avc1.4d400d,mp4a.40.5');
+    this.sourceBuffer = this.mediaSource.addSourceBuffer('video/mp4;codecs=avc1.4d400d,mp4a.40.5');
     // internal listener setup
     observer.on(Event.MANIFEST_LOADED, this.onml);
     // when attaching to a source URL, trigger a playlist load
