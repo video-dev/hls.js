@@ -35,6 +35,7 @@ class Hls {
     this.onsbe  = this.onSourceBufferError.bind(this);
     // internal listeners
     this.onml = this.onManifestLoaded.bind(this);
+    this.onll = this.onLevelLoaded.bind(this);
     this.onfl = this.onFragmentLoaded.bind(this);
     this.onfp = this.onFragmentParsed.bind(this);
     // observer setup
@@ -139,6 +140,7 @@ class Hls {
     sb.addEventListener('error', this.onsbe);
     // internal listener setup
     observer.on(Event.MANIFEST_LOADED, this.onml);
+    observer.on(Event.LEVEL_LOADED, this.onll);
     observer.on(Event.FRAGMENT_LOADED, this.onfl);
     observer.on(Event.FRAGMENT_PARSED, this.onfp);
     // when attaching to a source URL, trigger a playlist load
@@ -152,20 +154,28 @@ class Hls {
     this.demuxer.destroy();
     // internal listener setup
     observer.removeListener(Event.MANIFEST_LOADED, this.onml);
+    observer.removeListener(Event.LEVEL_LOADED, this.onll);
     observer.removeListener(Event.FRAGMENT_LOADED, this.onfl);
     observer.removeListener(Event.FRAGMENT_PARSED, this.onfp);
     this.mp4segments = [];
   }
 
   onManifestLoaded(event,data) {
-    this.fragments = data.levels[0].fragments;
+    this.levels = data.levels;
+    var stats = data.stats;
+    logger.log('manifest loaded,RTT(ms)/load(ms)/nb frag:' + stats.tfirst - stats.trequest + '/' + stats.tend - stats.trequest + '/' + stats.length);
+    if(this.levels.length > 1) {
+      // set level, it will trigger a playlist loading request
+      this.playlistLoader.level = this.levels.length-1;
+    }
+  }
+
+  onLevelLoaded(event,data) {
+    this.fragments = this.levels[data.level].fragments;
     this.fragmentIndex = 0;
     this.fragmentLoader.load(this.fragments[this.fragmentIndex++].url);
-    var stats,rtt,loadtime;
-    stats = data.stats;
-    rtt = stats.tfirst - stats.trequest;
-    loadtime = stats.tend - stats.trequest;
-    logger.log('playlist loaded,RTT(ms)/load(ms)/nb frag:' + rtt + '/' + loadtime + '/' + stats.length);
+    var stats = data.stats;
+    logger.log('manifest loaded,RTT(ms)/load(ms)/nb frag:' + stats.tfirst - stats.trequest + '/' + stats.tend - stats.trequest + '/' + stats.length);
   }
 
   onFragmentLoaded(event,data) {
