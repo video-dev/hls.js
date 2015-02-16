@@ -12,7 +12,7 @@ import TSDemuxer             from '../demux/tsdemuxer';
 
   const LOADING_IDLE = 0;
   const LOADING_IN_PROGRESS = 1;
-  // const LOADING_WAITING_LEVEL_UPDATE = 2;
+  const LOADING_WAITING_LEVEL_UPDATE = 2;
   // const LOADING_STALLED = 3;
   // const LOADING_FRAGMENT_IO_ERROR = 4;
   const LOADING_COMPLETED = 5;
@@ -32,7 +32,7 @@ import TSDemuxer             from '../demux/tsdemuxer';
     this.onfl = this.onFragmentLoaded.bind(this);
     this.onfp = this.onFragmentParsed.bind(this);
     this.ontick = this.tick.bind(this);
-    this.state = LOADING_IDLE;
+    this.state = LOADING_WAITING_LEVEL_UPDATE;
   }
 
   destroy() {
@@ -42,7 +42,7 @@ import TSDemuxer             from '../demux/tsdemuxer';
     this.mp4segments = [];
     this.sourceBuffer.removeEventListener('updateend', this.onsbue);
     this.sourceBuffer.removeEventListener('error', this.onsbe);
-    this.state = LOADING_IDLE;
+    this.state = LOADING_WAITING_LEVEL_UPDATE;
   }
 
   start(levels, sb) {
@@ -75,25 +75,26 @@ import TSDemuxer             from '../demux/tsdemuxer';
       var buffer = (v.buffered.length === 0 ? 0 : v.buffered.end(0)) - v.currentTime;
       if(buffer < 120) {
         // load next segment
-        this.fragmentLoader.load(this.fragments[this.fragmentIndex++].url);
+        this.fragmentLoader.load(this.levels[this.level].fragments[this.fragmentIndex++].url);
         this.state = LOADING_IN_PROGRESS;
       }
     }
   }
 
   onLevelLoaded(event,data) {
-    this.fragments = this.levels[data.level].fragments;
-    this.demuxer.duration = this.levels[data.level].totalduration;
+    this.level = data.level;
+    this.demuxer.duration = this.levels[this.level].totalduration;
     this.fragmentIndex = 0;
     var stats = data.stats;
-    logger.log('level loaded,RTT(ms)/load(ms)/nb frag:' + (stats.tfirst - stats.trequest) + '/' + (stats.tend - stats.trequest) + '/' + this.fragments.length);
+    logger.log('level loaded,RTT(ms)/load(ms)/duration:' + (stats.tfirst - stats.trequest) + '/' + (stats.tend - stats.trequest) + '/' + this.demuxer.duration);
+    this.state = LOADING_IDLE;
   }
 
   onFragmentLoaded(event,data) {
     // transmux the MPEG-TS data to ISO-BMFF segments
     this.demuxer.push(new Uint8Array(data.payload));
     this.demuxer.end();
-    if (this.fragmentIndex == this.fragments.length) {
+    if (this.fragmentIndex == this.levels[this.level].fragments.length) {
       logger.log('last fragment loaded');
       observer.trigger(Event.LAST_FRAGMENT_LOADED);
       this.state = LOADING_COMPLETED;
