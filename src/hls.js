@@ -4,10 +4,9 @@
 'use strict';
 
 import Event from './events';
-import FragmentLoader from './loader/fragment-loader';
 import observer from './observer';
 import PlaylistLoader from './loader/playlist-loader';
-import TSDemuxer from './demux/tsdemuxer';
+import BufferController from './controller/buffer-controller';
 import { logger, enableLogs } from './utils/logger';
 //import MP4Inspect         from '/remux/mp4-inspector';
 
@@ -23,9 +22,7 @@ class Hls {
 
     constructor(video) {
         this.playlistLoader = new PlaylistLoader();
-        this.fragmentLoader = new FragmentLoader();
-        this.demuxer = new TSDemuxer();
-        this.mp4segments = [];
+        this.bufferController = new BufferController(video);
         this.Events = Event;
         this.debug = enableLogs;
         this.logEvt = this.logEvt;
@@ -33,14 +30,8 @@ class Hls {
         this.onmso = this.onMediaSourceOpen.bind(this);
         this.onmse = this.onMediaSourceEnded.bind(this);
         this.onmsc = this.onMediaSourceClose.bind(this);
-        // Source Buffer listeners
-        this.onsbue = this.onSourceBufferUpdateEnd.bind(this);
-        this.onsbe = this.onSourceBufferError.bind(this);
         // internal listeners
         this.onml = this.onManifestLoaded.bind(this);
-        this.onll = this.onLevelLoaded.bind(this);
-        this.onfl = this.onFragmentLoaded.bind(this);
-        this.onfp = this.onFragmentParsed.bind(this);
         // observer setup
         this.on = observer.on.bind(observer);
         this.off = observer.removeListener.bind(observer);
@@ -99,8 +90,6 @@ class Hls {
             if (sb) {
                 //detach sourcebuffer from Media Source
                 ms.removeSourceBuffer(sb);
-                sb.removeEventListener('updateend', this.onsbue);
-                sb.removeEventListener('error', this.onsbe);
                 this.sourceBuffer = null;
             }
             ms.removeEventListener('sourceopen', this.onmso);
@@ -143,13 +132,8 @@ class Hls {
         var sb = (this.sourceBuffer = this.mediaSource.addSourceBuffer(
             'video/mp4;codecs=avc1.4d400d,mp4a.40.5'
         ));
-        sb.addEventListener('updateend', this.onsbue);
-        sb.addEventListener('error', this.onsbe);
         // internal listener setup
         observer.on(Event.MANIFEST_LOADED, this.onml);
-        observer.on(Event.LEVEL_LOADED, this.onll);
-        observer.on(Event.FRAGMENT_LOADED, this.onfl);
-        observer.on(Event.FRAGMENT_PARSED, this.onfp);
         // when attaching to a source URL, trigger a playlist load
         this.playlistLoader.load(url);
     }
@@ -157,14 +141,9 @@ class Hls {
     detachSource() {
         this.url = null;
         this.playlistLoader.destroy();
-        this.fragmentLoader.destroy();
-        this.demuxer.destroy();
+        this.bufferController.destroy();
         // internal listener setup
         observer.removeListener(Event.MANIFEST_LOADED, this.onml);
-        observer.removeListener(Event.LEVEL_LOADED, this.onll);
-        observer.removeListener(Event.FRAGMENT_LOADED, this.onfl);
-        observer.removeListener(Event.FRAGMENT_PARSED, this.onfp);
-        this.mp4segments = [];
     }
 
     onManifestLoaded(event, data) {
@@ -180,45 +159,7 @@ class Hls {
             // set level, it will trigger a playlist loading request
             this.playlistLoader.level = this.levels.length - 1;
         }
-    }
-
-    onLevelLoaded(event, data) {
-        this.fragments = this.levels[data.level].fragments;
-        this.demuxer.duration = this.levels[data.level].totalduration;
-        this.fragmentIndex = 0;
-        this.fragmentLoader.load(this.fragments[this.fragmentIndex++].url);
-        var stats = data.stats;
-        logger.log(
-            'level loaded,RTT(ms)/load(ms)/nb frag:' +
-                (stats.tfirst - stats.trequest) +
-                '/' +
-                (stats.tend - stats.trequest) +
-                '/' +
-                this.fragments.length
-        );
-    }
-
-    onFragmentLoaded(event, data) {
-        // transmux the MPEG-TS data to ISO-BMFF segments
-        this.demuxer.push(new Uint8Array(data.payload));
-        this.demuxer.end();
-        if (this.fragmentIndex < this.fragments.length) {
-            this.fragmentLoader.load(this.fragments[this.fragmentIndex++].url);
-        } else {
-            logger.log('last fragment loaded');
-            observer.trigger(Event.LAST_FRAGMENT_LOADED);
-        }
-        var stats, rtt, loadtime, bw;
-        stats = data.stats;
-        rtt = stats.tfirst - stats.trequest;
-        loadtime = stats.tend - stats.trequest;
-        bw = stats.length * 8 / (1000 * loadtime);
-        //logger.log(data.url + ' loaded, RTT(ms)/load(ms)/bitrate:' + rtt + '/' + loadtime + '/' + bw.toFixed(3) + ' Mb/s');
-    }
-
-    onFragmentParsed(event, data) {
-        this.mp4segments.push(data);
-        this.appendSegments();
+        this.bufferController.start(this.levels, this.sourceBuffer);
     }
 
     onMediaSourceOpen() {
@@ -231,25 +172,6 @@ class Hls {
 
     onMediaSourceEnded() {
         logger.log('media source ended');
-    }
-
-    onSourceBufferUpdateEnd() {
-        //logger.log('buffer appended');
-        this.appendSegments();
-    }
-
-    onSourceBufferError() {
-        logger.log(' buffer append error:' + event);
-    }
-
-    appendSegments() {
-        if (
-            this.sourceBuffer &&
-            !this.sourceBuffer.updating &&
-            this.mp4segments.length
-        ) {
-            this.sourceBuffer.appendBuffer(this.mp4segments.shift().data);
-        }
     }
 
     logEvt(evt) {
