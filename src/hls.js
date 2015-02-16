@@ -171,14 +171,10 @@ class Hls {
         this.levels = data.levels;
         var stats = data.stats;
         logger.log(
-            'manifest loaded,RTT(ms)/load(ms)/nb frag:' +
-                stats.tfirst -
-                stats.trequest +
+            'manifest loaded,RTT(ms)/load(ms):' +
+                (stats.tfirst - stats.trequest) +
                 '/' +
-                stats.tend -
-                stats.trequest +
-                '/' +
-                stats.length
+                (stats.tend - stats.trequest)
         );
         if (this.levels.length > 1) {
             // set level, it will trigger a playlist loading request
@@ -188,18 +184,17 @@ class Hls {
 
     onLevelLoaded(event, data) {
         this.fragments = this.levels[data.level].fragments;
+        this.demuxer.duration = this.levels[data.level].totalduration;
         this.fragmentIndex = 0;
         this.fragmentLoader.load(this.fragments[this.fragmentIndex++].url);
         var stats = data.stats;
         logger.log(
-            'manifest loaded,RTT(ms)/load(ms)/nb frag:' +
-                stats.tfirst -
-                stats.trequest +
+            'level loaded,RTT(ms)/load(ms)/nb frag:' +
+                (stats.tfirst - stats.trequest) +
                 '/' +
-                stats.tend -
-                stats.trequest +
+                (stats.tend - stats.trequest) +
                 '/' +
-                stats.length
+                this.fragments.length
         );
     }
 

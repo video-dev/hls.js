@@ -374,7 +374,9 @@ class MP4 {
 
         return MP4.box.apply(
             null,
-            [MP4.types.moov, MP4.mvhd(1)].concat(boxes).concat(MP4.mvex(tracks))
+            [MP4.types.moov, MP4.mvhd(tracks[0].duration)]
+                .concat(boxes)
+                .concat(MP4.mvex(tracks))
         );
     }
 
