@@ -1,12 +1,7 @@
 <!DOCTYPE html>
 
 <head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
   <title>HLS Media Sources Demo</title>
-  <meta name="description" content="">
-  <meta name="viewport" content="width=device-width">
-
 </head>
 
 <body>
@@ -18,7 +13,6 @@
 
   <div class="main-container">
     <div class="main wrapper clearfix">
-
       <article>
         <header>
           <p>
@@ -26,24 +20,17 @@
           </p>
         </header>
         <section>
-          <video id=video controls>
-            <p>
-              Your browser is too old to view this demo. How about upgrading?
-            </p>
+          <video id=video controls onloadedmetadata="buffered_loaded(event);">
           </video>
         </section>
       </article>
-
     </div>
     <!-- #main -->
     <pre id='isHlsSupported'></pre>
+    <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)";>
+    </canvas> <br>
   </div>
-  <!-- #main-container -->
-
-  <div class="footer-container">
-    <footer class="wrapper">
-    </footer>
-  </div>
+  <div id="buffered_log" style="font-size: small;"></div>
   <!-- live-reload script -->
   <script src="//localhost:8001"></script>
   <script src="../dist/hls.js"></script>
@@ -71,6 +58,70 @@
       document.getElementById("isHlsSupported").innerHTML = "your Browser does not support MediaSourceExtension / MP4 mediasource";
     }
   })();
+
+
+  function outputLog(msg) {
+    document.getElementById('buffered_log').innerHTML = msg + "<br>";
+  }
+
+  function timeRangesToString(r) {
+    var log = "";
+    for (var i=0; i<r.length; i++) {
+      log += "[" + r.start(i) + "," + r.end(i) + "]<br>";
+    }
+    return log;
+  }
+
+  function updateBuffered() {
+    var v = document.getElementById('video');
+    var canvas = document.getElementById('buffered_c');
+    var ctx = canvas.getContext('2d');
+    var r = v.buffered;
+    ctx.fillStyle = "black";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = "gray";
+    if (r) {
+      for (var i=0; i<r.length; i++) {
+        var start = r.start(i)/v.duration * canvas.width;
+        var end = r.end(i)/v.duration * canvas.width;
+        ctx.fillRect(start, 3, Math.max(2, end-start), 10);
+      }
+      var log = "Buffered:<br>"
+              + timeRangesToString(v.buffered)
+              + "<br>"
+              + "Seekable:<br>"
+              + timeRangesToString(v.seekable)
+              + "<br>";
+      document.getElementById("buffered_log").innerHTML = log;
+      ctx.fillStyle = "blue";
+      var x = v.currentTime / v.duration * canvas.width;
+      ctx.fillRect(x, 0, 2, 15);
+    }
+  }
+
+  function minsecs(ts) {
+    var m = Math.floor(Math.floor(ts % 3600) / 60);
+    var s = Math.floor(ts % 60);
+    return m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  function buffered_seek(event) {
+    var canvas = document.getElementById('buffered_c');
+    var v = document.getElementById('video');
+    var target = (event.clientX - canvas.offsetLeft) / canvas.width * v.duration;
+    v.currentTime = target;
+    outputLog("Seeking to " + target + " (" + minsecs(target) + ")");
+  }
+
+  function buffered_loaded(event) {
+    var v = document.getElementById('video');
+    if (!v.buffered) {
+      outputLog('Buffered attribute not supported by your browser\n');
+    } else {
+      outputLog("Buffered attribute is supported, click on the black progress bar to seek.");
+      window.setInterval(updateBuffered, 100);
+    }
+  }
   </script>
 </body>
 
