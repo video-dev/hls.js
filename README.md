@@ -5,6 +5,10 @@ this lib allows to playback HLS streams on browsers supporting media source exte
  
 the lib is written in EcmaScript 6, and transpiled in ES5.
 
+# sneak peek demo
+working in Chrome (also on mobile device)
+[http://streambox.fr/mse/demo](http://streambox.fr/mse/demo/)
+
 # Getting Started
 
 ```html
