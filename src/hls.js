@@ -86,12 +86,6 @@ class Hls {
         var listener = this.videoListenerBind;
         var ms = this.mediaSource;
         if (ms) {
-            var sb = this.sourceBuffer;
-            if (sb) {
-                //detach sourcebuffer from Media Source
-                ms.removeSourceBuffer(sb);
-                this.sourceBuffer = null;
-            }
             ms.removeEventListener('sourceopen', this.onmso);
             ms.removeEventListener('sourceended', this.onmse);
             ms.removeEventListener('sourceclose', this.onmsc);
@@ -128,10 +122,6 @@ class Hls {
     attachSource(url) {
         this.url = url;
         logger.log('attachSource:' + url);
-        // create source Buffer and link them to MediaSource
-        this.sourceBuffer = this.mediaSource.addSourceBuffer(
-            'video/mp4;codecs=avc1.4d400d,mp4a.40.5'
-        );
         // internal listener setup
         observer.on(Event.MANIFEST_LOADED, this.onml);
         // when attaching to a source URL, trigger a playlist load
@@ -159,7 +149,7 @@ class Hls {
             // set level, it will trigger a playlist loading request
             this.playlistLoader.level = this.levels.length - 1;
         }
-        this.bufferController.start(this.levels, this.sourceBuffer);
+        this.bufferController.start(this.levels, this.mediaSource);
     }
 
     onMediaSourceOpen() {

@@ -21,6 +21,8 @@ export default {
     LAST_FRAGMENT_LOADED: 'hlsLastFragmentLoaded',
     // Identifier for a fragment parsed event
     FRAGMENT_PARSED: 'hlsFragmentParsed',
+    // Identifier for an init segment event
+    INIT_SEGMENT: 'hlsInitSegment',
     // Identifier for a load error event
     LOAD_ERROR: 'hlsLoadError',
     // Identifier for a level switch error
