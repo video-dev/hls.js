@@ -15,7 +15,7 @@ import TSDemuxer             from '../demux/tsdemuxer';
   const LOADING_WAITING_LEVEL_UPDATE = 2;
   // const LOADING_STALLED = 3;
   // const LOADING_FRAGMENT_IO_ERROR = 4;
-  const LOADING_COMPLETED = 5;
+  //const LOADING_COMPLETED = 5;
 
  class BufferController {
 
@@ -30,6 +30,7 @@ import TSDemuxer             from '../demux/tsdemuxer';
     // internal listeners
     this.onll = this.onLevelLoaded.bind(this);
     this.onfl = this.onFragmentLoaded.bind(this);
+    this.onis = this.onInitSegment.bind(this);
     this.onfp = this.onFragmentParsed.bind(this);
     this.ontick = this.tick.bind(this);
     this.state = LOADING_WAITING_LEVEL_UPDATE;
@@ -40,21 +41,26 @@ import TSDemuxer             from '../demux/tsdemuxer';
     this.fragmentLoader.destroy();
     this.demuxer.destroy();
     this.mp4segments = [];
-    this.sourceBuffer.removeEventListener('updateend', this.onsbue);
-    this.sourceBuffer.removeEventListener('error', this.onsbe);
+    var sb = this.sourceBuffer;
+    if(sb) {
+      //detach sourcebuffer from Media Source
+      this.mediaSource.removeSourceBuffer(sb);
+      sb.removeEventListener('updateend', this.onsbue);
+      sb.removeEventListener('error', this.onsbe);
+      this.sourceBuffer = null;
+    }
     this.state = LOADING_WAITING_LEVEL_UPDATE;
   }
 
-  start(levels, sb) {
+  start(levels, mediaSource) {
     this.levels = levels;
-    this.sourceBuffer = sb;
+    this.mediaSource =mediaSource;
     this.stop();
     this.timer = setInterval(this.ontick, 100);
     observer.on(Event.FRAGMENT_LOADED, this.onfl);
+    observer.on(Event.INIT_SEGMENT, this.onis);
     observer.on(Event.FRAGMENT_PARSED, this.onfp);
     observer.on(Event.LEVEL_LOADED, this.onll);
-    sb.addEventListener('updateend', this.onsbue);
-    sb.addEventListener('error', this.onsbe);
   }
 
   stop() {
@@ -65,11 +71,12 @@ import TSDemuxer             from '../demux/tsdemuxer';
     observer.removeListener(Event.FRAGMENT_LOADED, this.onfl);
     observer.removeListener(Event.FRAGMENT_PARSED, this.onfp);
     observer.removeListener(Event.LEVEL_LOADED, this.onll);
+    observer.removeListener(Event.INIT_SEGMENT, this.onis);
   }
 
 
   tick() {
-    if(this.state === LOADING_IDLE && !this.sourceBuffer.updating) {
+    if(this.state === LOADING_IDLE && (!this.sourceBuffer || !this.sourceBuffer.updating)) {
       // check if current play position is buffered
       var v = this.video,
           pos = v.currentTime,
@@ -126,6 +133,15 @@ import TSDemuxer             from '../demux/tsdemuxer';
     loadtime = stats.tend - stats.trequest;
     bw = stats.length*8/(1000*loadtime);
     //logger.log(data.url + ' loaded, RTT(ms)/load(ms)/bitrate:' + rtt + '/' + loadtime + '/' + bw.toFixed(3) + ' Mb/s');
+  }
+
+  onInitSegment(event,data) {
+    // create source Buffer and link them to MediaSource
+    var sb = this.sourceBuffer = this.mediaSource.addSourceBuffer('video/mp4;codecs=' + data.codec);
+    sb.addEventListener('updateend', this.onsbue);
+    sb.addEventListener('error', this.onsbe);
+    this.mp4segments.push(data);
+    this.appendSegments();
   }
 
   onFragmentParsed(event,data) {

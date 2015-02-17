@@ -369,13 +369,6 @@ class AacStream extends Stream {
 
   constructor() {
     super();
-    this.adtsSampleingRates = [
-    96000, 88200,
-    64000, 48000,
-    44100, 32000,
-    24000, 22050,
-    16000, 12000
-  ];
   }
 
   getAudioSpecificConfig(data) {
@@ -386,6 +379,14 @@ class AacStream extends Stream {
         adtsFrameSize, // :int
         adtsSampleCount, // :int
         adtsDuration; // :int
+
+        var adtsSampleingRates = [
+            96000, 88200,
+            64000, 48000,
+            44100, 32000,
+            24000, 22050,
+            16000, 12000
+          ];
 
       // byte 1
       adtsProtectionAbsent = !!(data[1] & 0x01);
@@ -408,7 +409,7 @@ class AacStream extends Stream {
 
       // byte 6
       adtsSampleCount = ((data[6] & 0x03) + 1) * 1024;
-      adtsDuration = (adtsSampleCount * 1000) / this.adtsSampleingRates[adtsSampleingIndex];
+      adtsDuration = (adtsSampleCount * 1000) / adtsSampleingRates[adtsSampleingIndex];
       this.config = new Uint8Array(2);
     /* refer to http://wiki.multimedia.cx/index.php?title=MPEG-4_Audio#Audio_Specific_Config
       Audio Profile
@@ -453,7 +454,7 @@ class AacStream extends Stream {
       this.config[1] |= adtsChanelConfig << 3;
 
       this.stereo = (2 === adtsChanelConfig);
-      this.audiosamplerate = this.adtsSampleingRates[adtsSampleingIndex];
+      this.audiosamplerate = adtsSampleingRates[adtsSampleingIndex];
   }
 
   push(packet) {
@@ -487,6 +488,7 @@ class AacStream extends Stream {
       aacFrame.bytes = packet.data.subarray(7, packet.data.length);
       packet.frame = aacFrame;
       packet.config = this.config;
+      packet.audiosamplerate = this.audiosamplerate;
       this.trigger('data', packet);
     }
   }
@@ -880,9 +882,14 @@ class TSDemuxer {
         trackAudio.config = configAudio = data.config;
         trackAudio.audiosamplerate = data.audiosamplerate;
         trackAudio.duration = 90000*_duration;
+        // implicit SBR signalling (HE-AAC) : if sampling rate less than 24kHz
+        var codec = (data.audiosamplerate <= 24000) ? 5 : ((configAudio[0] & 0xF8) >> 3);
+        trackAudio.codec = 'mp4a.40.' + codec;
+        console.log(trackAudio.codec);
         if (configVideo) {
-            observer.trigger(Event.FRAGMENT_PARSED,{
-            data: MP4.initSegment([trackVideo,trackAudio])
+            observer.trigger(Event.INIT_SEGMENT,{
+            data: MP4.initSegment([trackVideo,trackAudio]),
+            codec : trackVideo.codec + ',' + trackAudio.codec
           });
         }
       }
@@ -897,6 +904,17 @@ class TSDemuxer {
       trackVideo.width = configVideo.width;
       trackVideo.height = configVideo.height;
       trackVideo.sps = [data.data];
+      var codecarray = data.data.subarray(1,4);
+      var codecstring  = 'avc1.';
+      for(var i = 0; i < 3; i++) {
+          var h = codecarray[i].toString(16);
+          if (h.length < 2) {
+              h = '0' + h;
+          }
+          codecstring += h;
+      }
+      trackVideo.codec = codecstring;
+      console.log(trackVideo.codec);
       trackVideo.profileIdc = configVideo.profileIdc;
       trackVideo.levelIdc = configVideo.levelIdc;
       trackVideo.profileCompatibility = configVideo.profileCompatibility;
@@ -904,8 +922,9 @@ class TSDemuxer {
 
         // generate an init segment once all the metadata is available
         if (pps) {
-            observer.trigger(Event.FRAGMENT_PARSED,{
-            data: MP4.initSegment([trackVideo,trackAudio])
+            observer.trigger(Event.INIT_SEGMENT,{
+            data: MP4.initSegment([trackVideo,trackAudio]),
+            codec : trackVideo.codec + ',' + trackAudio.codec
           });
         }
       }
@@ -915,8 +934,9 @@ class TSDemuxer {
           trackVideo.pps = [data.data];
 
           if (configVideo && configAudio) {
-            observer.trigger(Event.FRAGMENT_PARSED,{
-              data: MP4.initSegment([trackVideo,trackAudio])
+            observer.trigger(Event.INIT_SEGMENT,{
+              data: MP4.initSegment([trackVideo,trackAudio]),
+              codec : trackVideo.codec + ',' + trackAudio.codec
             });
           }
         }
