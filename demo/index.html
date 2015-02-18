@@ -26,13 +26,13 @@
       </article>
     </div>
     <!-- #main -->
-    <pre id='isHlsSupported'></pre>
+    <pre id='HlsUrl'></pre>
     <pre id='HlsStatus'></pre>
     <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)";>
     </canvas> <br>
   </div>
   <div id="buffered_log" style="font-size: small;"></div>
-<button style="font: bold 30px Arial" onclick="loadDMRandomVid()">Click to Load a random DM Video</button>
+<button style="font: bold 20px Arial" onclick="loadDMRandomVid()">Click to Load a random DM Video</button>
 
 <br><br><br><br>Change Stream <br>
 <input id="userInput" value="http://www.streambox.fr/playlists/test_001/stream.m3u8" size="80"> <button onclick="userSubmit()">Load</button><br>
@@ -64,11 +64,12 @@
    var hls;
    var video = document.getElementById('video');
    //var manifest = 'http://www.streambox.fr/playlists/test_001/stream_1000k_48k_640x360.m3u8';
-   var manifest = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
+   //var manifest = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
    //var manifest = 'http://media.sublimevideo.net/v/dm/hls/xwr14q.m3u8';
    //var manifest = 'http://sublimevideo-media.s3.amazonaws.com/v/dm/hls/xwr14q/55008890_mp4_h264_aac_hq.m3u8';
    //var manifest = 'http://media.sublimevideo.net/v/dm/hls/xwr14q.m3u8';
    //var manifest = 'http://www.flashls.org/playlists/issue_002/test.m3u8';
+   var manifest = 'x2hijwc';
    loadStream(video,manifest);
    if(Hls.isSupported()) {
     listStreams(teststreams,"streamlist");
@@ -79,60 +80,87 @@
        if(hls) {
         hls.destroy();
        }
+      document.getElementById("HlsUrl").innerHTML = 'URL: ' + url;
+      document.getElementById('buffered_c').style.display="none";
+      document.getElementById('buffered_log').style.display="none";
+      document.getElementById("HlsStatus").innerHTML = 'loading ' + url;
        if(url.indexOf('http') === -1) {
+        document.getElementById("HlsStatus").innerHTML = 'DM url detected, resolving ...';
         url = getDMURL(url);
+        if(url) {
+          document.getElementById("HlsStatus").innerHTML = 'DM url resolved';
+        } else {
+          document.getElementById("HlsStatus").innerHTML = 'unable to resolve DM url, aborting ...if not on DM domain, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin</a> Chrome Extension';
+          return;
+        }
        }
        hls = new Hls(video);
        hls.debug(true);
        hls.on(hls.Events.FRAMEWORK_READY,function() {
+          document.getElementById("HlsStatus").innerHTML = 'attaching URL to video tag';
           hls.attachSource(url);
        });
        hls.on(hls.Events.INIT_SEGMENT,function() {
-          var canvas = document.getElementById('buffered_c');
-          canvas.style.display="block";
+          document.getElementById('buffered_c').style.display="block";
           document.getElementById("HlsStatus").innerHTML = "playlist successfully loaded";
        });
        hls.on(hls.Events.LOAD_ERROR,function(event,data) {
           hls.destroy();
           document.getElementById("HlsStatus").innerHTML = "a Load Error happened, broken playlist or CORS issue ?";
-          var canvas = document.getElementById('buffered_c');
-          canvas.style.display="none";
+          document.getElementById('buffered_c').style.display="none";
        });
        hls.on(hls.Events.VIDEO_ERROR,function(event,data) {
           hls.destroy();
           document.getElementById("HlsStatus").innerHTML = "a Video Error happened";
-          var canvas = document.getElementById('buffered_c');
-          canvas.style.display="none";
+          document.getElementById('buffered_c').style.display="none";
        });
     } else {
-      document.getElementById("isHlsSupported").innerHTML = "your Browser does not support MediaSourceExtension / MP4 mediasource";
+      document.getElementById("HlsStatus").innerHTML = "your Browser does not support MediaSourceExtension / MP4 mediasource";
     }
   }
 
   function getDMURL(url) {
     var xhr = new XMLHttpRequest();
     xhr.open('GET', 'http://www.dailymotion.com/player/metadata/video/'+url , false);
-    xhr.send(null);
+    try {
+      xhr.send(null);
+    } catch(err) {
+     return null;
+    }
 
     if(xhr.status === 200) {
       return JSON.parse(xhr.responseText).qualities.auto[0].url;
+    } else {
+      return null;
     }
   }
 
 function getDMRandomVid() {
     var xhr = new XMLHttpRequest();
     xhr.open('GET', 'https://api.dailymotion.com/videos?flags=no_live&limit=50' , false);
-    xhr.send(null);
+    try {
+      xhr.send(null);
+    } catch(err) {
+     return null;
+    }
 
     if(xhr.status === 200) {
       var obj = JSON.parse(xhr.responseText);
       var idx = Math.floor(Math.random()*obj.list.length);
       return JSON.parse(xhr.responseText).list[idx].id;
+    } else {
+      return null;
     }
 }
 
 function loadDMRandomVid() {
-  loadStream(video,getDMRandomVid());
+  var url = getDMRandomVid();
+  if(url) {
+    loadStream(video,url);
+  } else {
+    document.getElementById("HlsStatus").innerHTML = "unable to load DM random video lists, if not on DM domain, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin Chrome Extension</a>";
+  }
+
 }
 
   function outputLog(msg) {
