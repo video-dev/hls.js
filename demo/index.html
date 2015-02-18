@@ -32,7 +32,9 @@
     </canvas> <br>
   </div>
   <div id="buffered_log" style="font-size: small;"></div>
-Change Stream <br>
+<button style="font: bold 30px Arial" onclick="loadDMRandomVid()">Click to Load a random DM Video</button>
+
+<br><br><br><br>Change Stream <br>
 <input id="userInput" value="http://www.streambox.fr/playlists/test_001/stream.m3u8" size="80"> <button onclick="userSubmit()">Load</button><br>
 
 <h3> Test Videos </h3>
@@ -62,9 +64,10 @@ Change Stream <br>
    var hls;
    var video = document.getElementById('video');
    //var manifest = 'http://www.streambox.fr/playlists/test_001/stream_1000k_48k_640x360.m3u8';
-   //var manifest = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
+   var manifest = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
    //var manifest = 'http://media.sublimevideo.net/v/dm/hls/xwr14q.m3u8';
-   var manifest = 'http://sublimevideo-media.s3.amazonaws.com/v/dm/hls/xwr14q/55008890_mp4_h264_aac_hq.m3u8';
+   //var manifest = 'http://sublimevideo-media.s3.amazonaws.com/v/dm/hls/xwr14q/55008890_mp4_h264_aac_hq.m3u8';
+   //var manifest = 'http://media.sublimevideo.net/v/dm/hls/xwr14q.m3u8';
    //var manifest = 'http://www.flashls.org/playlists/issue_002/test.m3u8';
    loadStream(video,manifest);
    if(Hls.isSupported()) {
@@ -75,6 +78,9 @@ Change Stream <br>
      if(Hls.isSupported()) {
        if(hls) {
         hls.destroy();
+       }
+       if(url.indexOf('http') === -1) {
+        url = getDMURL(url);
        }
        hls = new Hls(video);
        hls.debug(true);
@@ -102,6 +108,32 @@ Change Stream <br>
       document.getElementById("isHlsSupported").innerHTML = "your Browser does not support MediaSourceExtension / MP4 mediasource";
     }
   }
+
+  function getDMURL(url) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'http://www.dailymotion.com/player/metadata/video/'+url , false);
+    xhr.send(null);
+
+    if(xhr.status === 200) {
+      return JSON.parse(xhr.responseText).qualities.auto[0].url;
+    }
+  }
+
+function getDMRandomVid() {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'https://api.dailymotion.com/videos?flags=no_live&limit=50' , false);
+    xhr.send(null);
+
+    if(xhr.status === 200) {
+      var obj = JSON.parse(xhr.responseText);
+      var idx = Math.floor(Math.random()*obj.list.length);
+      return JSON.parse(xhr.responseText).list[idx].id;
+    }
+}
+
+function loadDMRandomVid() {
+  loadStream(video,getDMRandomVid());
+}
 
   function outputLog(msg) {
     document.getElementById('buffered_log').innerHTML = msg + "<br>";
