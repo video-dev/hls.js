@@ -29,13 +29,17 @@ class Hls {
   }
 
   destroy() {
-    this.playlistLoader.destroy();
-    this.bufferController.destroy();
+    if(this.playlistLoader) {
+      this.playlistLoader.destroy();
+      this.playlistLoader = null;
+    }
+    if(this.bufferController) {
+      this.bufferController.destroy();
+      this.bufferController = null;
+    }
     this.detachSource();
     this.detachView();
     observer.removeAllListeners();
-    this.playlistLoader = null;
-    this.bufferController = null;
   }
 
   attachView(video) {
@@ -93,30 +97,32 @@ class Hls {
     this.onmso = this.onmse = this.onmsc = null;
     var listener = this.onve;
     this.onve = null;
-    this.video = null;
-    // remove all video listeners
-    video.removeEventListener('loadstart',       listener);
-    //video.removeEventListener('progress',        listener);
-    video.removeEventListener('suspend',         listener);
-    video.removeEventListener('abort',           listener);
-    video.removeEventListener('error',           listener);
-    video.removeEventListener('emptied',         listener);
-    video.removeEventListener('stalled',         listener);
-    video.removeEventListener('loadedmetadata',  listener);
-    video.removeEventListener('loadeddata',      listener);
-    video.removeEventListener('canplay',         listener);
-    video.removeEventListener('canplaythrough',  listener);
-    video.removeEventListener('playing',         listener);
-    video.removeEventListener('waiting',         listener);
-    video.removeEventListener('seeking',         listener);
-    video.removeEventListener('seeked',          listener);
-    video.removeEventListener('durationchange',  listener);
-    //video.removeEventListener('timeupdate',      listener);
-    video.removeEventListener('play',            listener);
-    video.removeEventListener('pause',           listener);
-    video.removeEventListener('ratechange',      listener);
-    video.removeEventListener('resize',          listener);
-    video.removeEventListener('volumechange',    listener);
+    if(video) {
+      this.video = null;
+      // remove all video listeners
+      video.removeEventListener('loadstart',       listener);
+      //video.removeEventListener('progress',        listener);
+      video.removeEventListener('suspend',         listener);
+      video.removeEventListener('abort',           listener);
+      video.removeEventListener('error',           listener);
+      video.removeEventListener('emptied',         listener);
+      video.removeEventListener('stalled',         listener);
+      video.removeEventListener('loadedmetadata',  listener);
+      video.removeEventListener('loadeddata',      listener);
+      video.removeEventListener('canplay',         listener);
+      video.removeEventListener('canplaythrough',  listener);
+      video.removeEventListener('playing',         listener);
+      video.removeEventListener('waiting',         listener);
+      video.removeEventListener('seeking',         listener);
+      video.removeEventListener('seeked',          listener);
+      video.removeEventListener('durationchange',  listener);
+      //video.removeEventListener('timeupdate',      listener);
+      video.removeEventListener('play',            listener);
+      video.removeEventListener('pause',           listener);
+      video.removeEventListener('ratechange',      listener);
+      video.removeEventListener('resize',          listener);
+      video.removeEventListener('volumechange',    listener);
+    }
   }
 
   attachSource(url) {
@@ -132,9 +138,11 @@ class Hls {
 
   detachSource() {
     this.url = null;
-    // internal listener setup
-    observer.removeListener(Event.MANIFEST_LOADED, this.onml);
-    this.onml = null;
+    // internal listener cleanup
+    if(this.onml) {
+      observer.removeListener(Event.MANIFEST_LOADED, this.onml);
+      this.onml = null;
+    }
     this.levels = null;
   }
 
