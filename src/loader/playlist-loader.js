@@ -150,7 +150,7 @@ class PlaylistLoader {
     }
 
     parseLevelPlaylist(string, baseurl, idx) {
-        var currentSN,
+        var currentSN = 0,
             totalduration = 0;
         var obj = this.levels[idx];
         obj.url = baseurl;
