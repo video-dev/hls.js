@@ -5,8 +5,8 @@ var teststreams = [{
   file:'http://www.flashls.org/playlists/test_001/stream.m3u8',
   title: 'VOD (6 levels) - ffmpeg internal segmenter x264+aac'
 },{
-  file:'http://www.flashls.org/playlists/issue_002/test.m3u8',
-  title: 'issues/2'
+  file:'xwr14q',
+  title: 'DM xwr14q'
 },{
   file:'http://www.flashls.org/playlists/issue_006/sample.m3u8',
   title: 'issues/6 - TS parsing robustness'
