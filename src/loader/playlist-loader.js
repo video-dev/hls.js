@@ -139,7 +139,7 @@ import {logger}             from '../utils/logger';
   }
 
   parseLevelPlaylist(string, baseurl, idx) {
-    var currentSN,totalduration = 0;
+    var currentSN = 0,totalduration = 0;
     var obj = this.levels[idx];
     obj.url = baseurl;
     obj.fragments = [];
