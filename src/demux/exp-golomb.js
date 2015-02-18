@@ -45,9 +45,9 @@ class ExpGolomb {
       this.workingBitsAvailable -= count;
     } else {
       count -= this.workingBitsAvailable;
-      skipBytes = count / 8;
+      skipBytes = count >> 3;
 
-      count -= (skipBytes * 8);
+      count -= (skipBytes >> 3);
       this.workingBytesAvailable -= skipBytes;
 
       this.loadWord();
@@ -176,8 +176,7 @@ class ExpGolomb {
       frameCropRightOffset = 0,
       frameCropTopOffset = 0,
       frameCropBottomOffset = 0,
-      profileIdc, levelIdc, profileCompatibility,
-      chromaFormatIdc, picOrderCntType,
+      profileIdc,
       numRefFramesInPicOrderCntCycle, picWidthInMbsMinus1,
       picHeightInMapUnitsMinus1,
       frameMbsOnlyFlag,
@@ -185,22 +184,16 @@ class ExpGolomb {
       i;
 
     profileIdc = this.readUnsignedByte(); // profile_idc
-    profileCompatibility = this.readBits(5); // constraint_set[0-5]_flag
-    this.skipBits(3); //  u(1), reserved_zero_2bits u(2)
-    levelIdc = this.readUnsignedByte(); // level_idc u(8)
+    // constraint_set[0-5]_flag, u(1), reserved_zero_2bits u(2), level_idc u(8)
+    this.skipBits(16); //  u(1), reserved_zero_2bits u(2)
     this.skipUnsignedExpGolomb(); // seq_parameter_set_id
 
     // some profiles have more optional data we don't need
     if (profileIdc === 100 ||
         profileIdc === 110 ||
         profileIdc === 122 ||
-        profileIdc === 244 ||
-        profileIdc === 44 ||
-        profileIdc === 83 ||
-        profileIdc === 86 ||
-        profileIdc === 118 ||
-        profileIdc === 128) {
-      chromaFormatIdc = this.readUnsignedExpGolomb();
+        profileIdc === 144) {
+      var chromaFormatIdc = this.readUnsignedExpGolomb();
       if (chromaFormatIdc === 3) {
         this.skipBits(1); // separate_colour_plane_flag
       }
@@ -222,7 +215,7 @@ class ExpGolomb {
     }
 
     this.skipUnsignedExpGolomb(); // log2_max_frame_num_minus4
-    picOrderCntType = this.readUnsignedExpGolomb();
+    var picOrderCntType = this.readUnsignedExpGolomb();
 
     if (picOrderCntType === 0) {
       this.readUnsignedExpGolomb(); //log2_max_pic_order_cnt_lsb_minus4
@@ -256,9 +249,6 @@ class ExpGolomb {
     }
 
     return {
-      profileIdc: profileIdc,
-      levelIdc: levelIdc,
-      profileCompatibility: profileCompatibility,
       width: ((picWidthInMbsMinus1 + 1) * 16) - frameCropLeftOffset * 2 - frameCropRightOffset * 2,
       height: ((2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16) - (frameCropTopOffset * 2) - (frameCropBottomOffset * 2)
     };
