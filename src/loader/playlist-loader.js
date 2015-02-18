@@ -123,7 +123,7 @@ class PlaylistLoader {
         var levels = [];
         var level = {};
         var result;
-        var re = /#EXT-X-STREAM-INF:[^\n\r]*(BANDWIDTH)=(\d+)[^\n\r]*(RESOLUTION)=(\d+)x(\d+)[^\r\n]*[\r\n]+([^\r\n]+)/g;
+        var re = /#EXT-X-STREAM-INF:([^\n\r]*(BAND)WIDTH=(\d+))?([^\n\r]*(RES)OLUTION=(\d+)x(\d+))?([^\n\r]*(NAME)=\"(.*)\")?[^\n\r]*[\r\n]+([^\r\n]+)/g;
         while ((result = re.exec(string)) != null) {
             result.shift();
             result = result.filter(function(n) {
@@ -132,12 +132,15 @@ class PlaylistLoader {
             level.url = this.resolve(result.pop(), baseurl);
             while (result.length > 0) {
                 switch (result.shift()) {
-                    case 'RESOLUTION':
+                    case 'RES':
                         level.width = result.shift();
                         level.height = result.shift();
                         break;
-                    case 'BANDWIDTH':
+                    case 'BAND':
                         level.bitrate = result.shift();
+                        break;
+                    case 'NAME':
+                        level.name = result.shift();
                         break;
                     default:
                         break;
