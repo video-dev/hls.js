@@ -27,39 +27,81 @@
     </div>
     <!-- #main -->
     <pre id='isHlsSupported'></pre>
+    <pre id='HlsStatus'></pre>
     <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)";>
     </canvas> <br>
   </div>
   <div id="buffered_log" style="font-size: small;"></div>
+Change Stream <br>
+<input id="userInput" value="http://www.streambox.fr/playlists/test_001/stream.m3u8" size="80"> <button onclick="userSubmit()">Load</button><br>
+
+<h3> Test Videos </h3>
+<ul id="streamlist"></ul>
+
+
+  <script src="streams.js"></script>
+
+  <script>
+  function userSubmit() {
+    loadStream(video,document.getElementById('userInput').value);
+  }
+  function listStreams(list, container) {
+    for(var i=0; i<list.length; i++) { var entry = document.createElement("li");
+      entry.innerHTML = "<a href='#' onclick='return loadStream(video,\""+list[i].file+"\")'>"+list[i].title+"</a>";
+      document.getElementById(container).appendChild(entry);
+    }
+  }
+
+  </script>
   <!-- live-reload script -->
   <script src="//localhost:8001"></script>
   <script src="../dist/hls.js"></script>
   <script>
-(function(){
-     'use strict';
+
+   'use strict';
+   var hls;
+   var video = document.getElementById('video');
+   //var manifest = 'http://www.streambox.fr/playlists/test_001/stream_1000k_48k_640x360.m3u8';
+   //var manifest = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
+   //var manifest = 'http://media.sublimevideo.net/v/dm/hls/xwr14q.m3u8';
+   var manifest = 'http://sublimevideo-media.s3.amazonaws.com/v/dm/hls/xwr14q/55008890_mp4_h264_aac_hq.m3u8';
+   //var manifest = 'http://www.flashls.org/playlists/issue_002/test.m3u8';
+   loadStream(video,manifest);
+   if(Hls.isSupported()) {
+    listStreams(teststreams,"streamlist");
+   }
+
+  function loadStream(video,url) {
      if(Hls.isSupported()) {
-       var video = document.getElementById('video');
-       //var manifest = 'http://www.streambox.fr/playlists/test_001/stream_1000k_48k_640x360.m3u8';
-       //var manifest = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
-       //var manifest = 'http://media.sublimevideo.net/v/dm/hls/xwr14q.m3u8';
-       var manifest = "http://sublimevideo-media.s3.amazonaws.com/v/dm/hls/xwr14q/55008890_mp4_h264_aac_hq.m3u8";
-       var isSupported = Hls.isSupported();
-       var hls = new Hls(video);
+       if(hls) {
+        hls.destroy();
+       }
+       hls = new Hls(video);
        hls.debug(true);
        hls.on(hls.Events.FRAMEWORK_READY,function() {
-          hls.attachSource(manifest);
+          hls.attachSource(url);
        });
-
-      //  window.setTimeout(function() {
-      //    hls.destroy();
-      //    hls = new Hls(video);
-      //    hls.debug(true);
-      // } ,1000);
+       hls.on(hls.Events.INIT_SEGMENT,function() {
+          var canvas = document.getElementById('buffered_c');
+          canvas.style.display="block";
+          document.getElementById("HlsStatus").innerHTML = "playlist successfully loaded";
+       });
+       hls.on(hls.Events.LOAD_ERROR,function(event,data) {
+          hls.destroy();
+          document.getElementById("HlsStatus").innerHTML = "a Load Error happened, broken playlist or CORS issue ?";
+          var canvas = document.getElementById('buffered_c');
+          canvas.style.display="none";
+       });
+       hls.on(hls.Events.VIDEO_ERROR,function(event,data) {
+          hls.destroy();
+          document.getElementById("HlsStatus").innerHTML = "a Video Error happened";
+          var canvas = document.getElementById('buffered_c');
+          canvas.style.display="none";
+       });
     } else {
       document.getElementById("isHlsSupported").innerHTML = "your Browser does not support MediaSourceExtension / MP4 mediasource";
     }
-  })();
-
+  }
 
   function outputLog(msg) {
     document.getElementById('buffered_log').innerHTML = msg + "<br>";
