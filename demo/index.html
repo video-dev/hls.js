@@ -64,12 +64,12 @@
    var hls;
    var video = document.getElementById('video');
    //var manifest = 'http://www.streambox.fr/playlists/test_001/stream_1000k_48k_640x360.m3u8';
-   //var manifest = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
+   var manifest = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
    //var manifest = 'http://media.sublimevideo.net/v/dm/hls/xwr14q.m3u8';
    //var manifest = 'http://sublimevideo-media.s3.amazonaws.com/v/dm/hls/xwr14q/55008890_mp4_h264_aac_hq.m3u8';
    //var manifest = 'http://media.sublimevideo.net/v/dm/hls/xwr14q.m3u8';
    //var manifest = 'http://www.flashls.org/playlists/issue_002/test.m3u8';
-   var manifest = 'x2hijwc';
+   //var manifest = 'x2hijwc';
    loadStream(video,manifest);
    if(Hls.isSupported()) {
     listStreams(teststreams,"streamlist");
