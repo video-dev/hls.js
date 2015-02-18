@@ -22,27 +22,30 @@ class Hls {
     this.Events = Event;
     this.debug = enableLogs;
     this.logEvt = this.logEvt;
-    //Media Source listeners
-    this.onmso = this.onMediaSourceOpen.bind(this);
-    this.onmse = this.onMediaSourceEnded.bind(this);
-    this.onmsc = this.onMediaSourceClose.bind(this);
-    // internal listeners
-    this.onml = this.onManifestLoaded.bind(this);
     // observer setup
     this.on = observer.on.bind(observer);
     this.off = observer.removeListener.bind(observer);
-    this.video = video;
     this.attachView(video);
   }
 
   destroy() {
+    this.playlistLoader.destroy();
+    this.bufferController.destroy();
     this.detachSource();
     this.detachView();
+    observer.removeAllListeners();
+    this.playlistLoader = null;
+    this.bufferController = null;
   }
 
   attachView(video) {
+    this.video = video;
     // setup the media source
     var ms = this.mediaSource = new MediaSource();
+    //Media Source listeners
+    this.onmso = this.onMediaSourceOpen.bind(this);
+    this.onmse = this.onMediaSourceEnded.bind(this);
+    this.onmsc = this.onMediaSourceClose.bind(this);
     ms.addEventListener('sourceopen',  this.onmso);
     ms.addEventListener('sourceended', this.onmse);
     ms.addEventListener('sourceclose', this.onmsc);
@@ -50,7 +53,7 @@ class Hls {
     video.src = URL.createObjectURL(ms);
     // listen to all video events
     var listener = function(evt) { this.logEvt(evt); }.bind(this);
-    this.videoListenerBind = listener;
+    this.onve = listener;
     video.addEventListener('loadstart',       listener);
     //video.addEventListener('progress',        listener);
     video.addEventListener('suspend',         listener);
@@ -77,9 +80,9 @@ class Hls {
 
   detachView() {
     var video = this.video;
-    var listener = this.videoListenerBind;
     var ms = this.mediaSource;
     if(ms) {
+      ms.endOfStream();
       ms.removeEventListener('sourceopen',  this.onmso);
       ms.removeEventListener('sourceended', this.onmse);
       ms.removeEventListener('sourceclose', this.onmsc);
@@ -87,6 +90,9 @@ class Hls {
       video.src = '';
       this.mediaSource = null;
     }
+    this.onmso = this.onmse = this.onmsc = null;
+    var listener = this.onve;
+    this.onve = null;
     this.video = null;
     // remove all video listeners
     video.removeEventListener('loadstart',       listener);
@@ -117,6 +123,8 @@ class Hls {
     this.url = url;
     logger.log('attachSource:'+url);
     // internal listener setup
+    // internal listeners
+    this.onml = this.onManifestLoaded.bind(this);
     observer.on(Event.MANIFEST_LOADED, this.onml);
     // when attaching to a source URL, trigger a playlist load
     this.playlistLoader.load(url);
@@ -124,10 +132,10 @@ class Hls {
 
   detachSource() {
     this.url = null;
-    this.playlistLoader.destroy();
-    this.bufferController.destroy();
     // internal listener setup
     observer.removeListener(Event.MANIFEST_LOADED, this.onml);
+    this.onml = null;
+    this.levels = null;
   }
 
   onManifestLoaded(event,data) {
