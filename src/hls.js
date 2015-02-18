@@ -44,6 +44,7 @@ class Hls {
 
   attachView(video) {
     this.video = video;
+    this.onverror = this.onVideoError.bind(this);
     // setup the media source
     var ms = this.mediaSource = new MediaSource();
     //Media Source listeners
@@ -62,7 +63,7 @@ class Hls {
     //video.addEventListener('progress',        listener);
     video.addEventListener('suspend',         listener);
     video.addEventListener('abort',           listener);
-    video.addEventListener('error',           listener);
+    video.addEventListener('error',           this.onverror);
     video.addEventListener('emptied',         listener);
     video.addEventListener('stalled',         listener);
     video.addEventListener('loadedmetadata',  listener);
@@ -104,7 +105,7 @@ class Hls {
       //video.removeEventListener('progress',        listener);
       video.removeEventListener('suspend',         listener);
       video.removeEventListener('abort',           listener);
-      video.removeEventListener('error',           listener);
+      video.removeEventListener('error',           this.onverror);
       video.removeEventListener('emptied',         listener);
       video.removeEventListener('stalled',         listener);
       video.removeEventListener('loadedmetadata',  listener);
@@ -122,6 +123,7 @@ class Hls {
       video.removeEventListener('ratechange',      listener);
       video.removeEventListener('resize',          listener);
       video.removeEventListener('volumechange',    listener);
+      this.onverror = null;
     }
   }
 
@@ -167,6 +169,10 @@ class Hls {
 
   onMediaSourceEnded() {
     logger.log('media source ended');
+  }
+
+  onVideoError() {
+    observer.trigger(Event.VIDEO_ERROR);
   }
 
   logEvt(evt) {
