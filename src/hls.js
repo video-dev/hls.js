@@ -152,7 +152,7 @@ class Hls {
     this.levels = data.levels;
     var stats = data.stats;
     logger.log('manifest loaded,RTT(ms)/load(ms):' + (stats.tfirst - stats.trequest)+ '/' + (stats.tend - stats.trequest));
-    if(this.levels.length > 1) {
+    if(this.levels.length > 1 || this.levels[0].fragments === undefined) {
       // set level, it will trigger a playlist loading request
       this.playlistLoader.level = this.levels.length-1;
     }
