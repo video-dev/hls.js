@@ -27,6 +27,8 @@ export default {
     LOAD_ERROR: 'hlsLoadError',
     // Identifier for a level switch error
     LEVEL_ERROR: 'hlsLevelError',
+    // Identifier for a video error event
+    VIDEO_ERROR: 'hlsVideoError',
     // Identifier for a playback media time change event
     MEDIA_TIME: 'hlsMediaTime',
     // Identifier for a playback state switch event
