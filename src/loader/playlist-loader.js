@@ -114,7 +114,7 @@ import {logger}             from '../utils/logger';
     var levels = [];
     var level =  {};
     var result;
-    var re = /#EXT-X-STREAM-INF:[^\n\r]*(BANDWIDTH)=(\d+)*[^\n\r](RESOLUTION)=(\d+)x(\d+)[^\r\n]*[\r\n]+([^\r\n]+)/g;
+    var re = /#EXT-X-STREAM-INF:[^\n\r]*(BANDWIDTH)=(\d+)[^\n\r]*(RESOLUTION)=(\d+)x(\d+)[^\r\n]*[\r\n]+([^\r\n]+)/g;
     while((result = re.exec(string)) != null){
       result.shift();
       result = result.filter(function(n){ return (n !== undefined);});
