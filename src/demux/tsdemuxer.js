@@ -941,7 +941,6 @@ class TSDemuxer {
             // record the track config
             if (data.nalUnitType === 'SPS' && !configVideo) {
                 configVideo = data.config;
-
                 trackVideo.width = configVideo.width;
                 trackVideo.height = configVideo.height;
                 trackVideo.sps = [data.data];
@@ -956,29 +955,26 @@ class TSDemuxer {
                 }
                 trackVideo.codec = codecstring;
                 console.log(trackVideo.codec);
-                trackVideo.profileIdc = configVideo.profileIdc;
-                trackVideo.levelIdc = configVideo.levelIdc;
-                trackVideo.profileCompatibility =
-                    configVideo.profileCompatibility;
                 trackVideo.duration = 90000 * _duration;
-
-                // generate an init segment once all the metadata is available
-                if (pps) {
-                    observer.trigger(Event.INIT_SEGMENT, {
-                        data: MP4.initSegment([trackVideo, trackAudio]),
-                        codec: trackVideo.codec + ',' + trackAudio.codec
-                    });
-                }
             }
             if (data.nalUnitType === 'PPS' && !pps) {
                 pps = data.data;
                 trackVideo.pps = [data.data];
 
-                if (configVideo && configAudio) {
-                    observer.trigger(Event.INIT_SEGMENT, {
-                        data: MP4.initSegment([trackVideo, trackAudio]),
-                        codec: trackVideo.codec + ',' + trackAudio.codec
-                    });
+                if (configVideo) {
+                    if (audioSegmentStream) {
+                        if (configAudio) {
+                            observer.trigger(Event.INIT_SEGMENT, {
+                                data: MP4.initSegment([trackVideo, trackAudio]),
+                                codec: trackVideo.codec + ',' + trackAudio.codec
+                            });
+                        }
+                    } else {
+                        observer.trigger(Event.INIT_SEGMENT, {
+                            data: MP4.initSegment([trackVideo]),
+                            codec: trackVideo.codec
+                        });
+                    }
                 }
             }
         });
@@ -1035,8 +1031,12 @@ class TSDemuxer {
     end() {
         elementaryStream.end();
         h264Stream.end();
-        videoSegmentStream.end();
-        audioSegmentStream.end();
+        if (videoSegmentStream) {
+            videoSegmentStream.end();
+        }
+        if (audioSegmentStream) {
+            audioSegmentStream.end();
+        }
     }
 
     destroy() {
