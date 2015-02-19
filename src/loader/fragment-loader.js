@@ -25,8 +25,8 @@ class FragmentLoader {
         xhr.onload = this.loadsuccess.bind(this);
         xhr.onerror = this.loaderror.bind(this);
         xhr.onprogress = this.loadprogress.bind(this);
-        xhr.responseType = 'arraybuffer';
         xhr.open('GET', url, true);
+        xhr.responseType = 'arraybuffer';
         xhr.send();
         observer.trigger(Event.FRAGMENT_LOADING, { url: this.url });
     }
