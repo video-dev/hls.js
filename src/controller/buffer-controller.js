@@ -181,7 +181,7 @@ class BufferController {
         this.appendSegments();
     }
 
-    onSourceBufferError() {
+    onSourceBufferError(event) {
         logger.log(' buffer append error:' + event);
     }
 }
