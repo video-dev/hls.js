@@ -177,7 +177,7 @@ import {logger}             from '../utils/logger';
     obj.endSN = currentSN - 1;
   }
 
-  loadsuccess() {
+  loadsuccess(event) {
     this.stats.tend = Date.now();
     if(this.levels.length === 0) {
       this.parseManifest(event.currentTarget.responseText, this.url);
