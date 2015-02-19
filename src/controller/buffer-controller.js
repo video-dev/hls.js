@@ -160,7 +160,7 @@ import TSDemuxer             from '../demux/tsdemuxer';
     this.appendSegments();
   }
 
-  onSourceBufferError() {
+  onSourceBufferError(event) {
       logger.log(' buffer append error:' + event);
   }
 }
