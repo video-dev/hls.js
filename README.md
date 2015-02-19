@@ -7,7 +7,7 @@ the lib is written in EcmaScript 6, and transpiled in ES5.
 
 # sneak peek demo
 working in Chrome (also on mobile device)
-[http://streambox.fr/mse/demo](http://streambox.fr/mse/demo/)
+[http://gdupontavice.dev.dailymotion.com/mse-hls/demo/index.html](http://gdupontavice.dev.dailymotion.com/mse-hls/demo/index.html)
 
 # Getting Started
 
