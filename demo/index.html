@@ -20,19 +20,19 @@
           </p>
         </header>
         <section>
+          <pre id='HlsUrl'></pre>
+          <button style="font: bold 20px Arial" onclick="loadDMRandomVid()">Click to Load a random DM Video</button><br><br>
           <video id=video controls onloadedmetadata="buffered_loaded(event);">
           </video>
         </section>
       </article>
     </div>
     <!-- #main -->
-    <pre id='HlsUrl'></pre>
     <pre id='HlsStatus'></pre>
     <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)";>
     </canvas> <br>
   </div>
   <div id="buffered_log" style="font-size: small;"></div>
-<button style="font: bold 20px Arial" onclick="loadDMRandomVid()">Click to Load a random DM Video</button>
 
 <br><br><br><br>Change Stream <br>
 <input id="userInput" value="http://www.streambox.fr/playlists/test_001/stream.m3u8" size="80"> <button onclick="userSubmit()">Load</button><br>
@@ -63,13 +63,17 @@
    'use strict';
    var hls;
    var video = document.getElementById('video');
-   //var manifest = 'http://www.streambox.fr/playlists/test_001/stream_1000k_48k_640x360.m3u8';
-   var manifest = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
-   //var manifest = 'http://media.sublimevideo.net/v/dm/hls/xwr14q.m3u8';
-   //var manifest = 'http://sublimevideo-media.s3.amazonaws.com/v/dm/hls/xwr14q/55008890_mp4_h264_aac_hq.m3u8';
-   //var manifest = 'http://media.sublimevideo.net/v/dm/hls/xwr14q.m3u8';
-   //var manifest = 'http://www.flashls.org/playlists/issue_002/test.m3u8';
-   //var manifest = 'x2hijwc';
+   var manifest = decodeURIComponent(location.search.split('src=')[1]);
+   if(manifest === 'undefined') {
+   // manifest = 'http://www.streambox.fr/playlists/test_001/stream_1000k_48k_640x360.m3u8';
+   manifest = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
+   //manifest = 'http://media.sublimevideo.net/v/dm/hls/xwr14q.m3u8';
+   //manifest = 'http://sublimevideo-media.s3.amazonaws.com/v/dm/hls/xwr14q/55008890_mp4_h264_aac_hq.m3u8';
+   //manifest = 'http://media.sublimevideo.net/v/dm/hls/xwr14q.m3u8';
+   //manifest = 'http://www.flashls.org/playlists/issue_002/test.m3u8';
+   //manifest = 'x2hijwc';
+   }
+
    loadStream(video,manifest);
    if(Hls.isSupported()) {
     listStreams(teststreams,"streamlist");
@@ -80,7 +84,13 @@
        if(hls) {
         hls.destroy();
        }
-      document.getElementById("HlsUrl").innerHTML = 'URL: ' + url;
+      var hlsLink = document.URL.split('?')[0] +  '?src=' + encodeURIComponent(url);
+      var description = 'URL: ' + url + '<br>HLS link: ' + "<a href=\"" + hlsLink + "\">" + hlsLink + "</a>";
+      if(url.indexOf('http') === -1) {
+        var dmlink = 'http://www.dailymotion.com/video/' + url;
+        description += '<br>DM link:' + "<a href=\"" + dmlink + "\">" + dmlink + "</a>";
+      }
+      document.getElementById("HlsUrl").innerHTML = description;
       document.getElementById('buffered_c').style.display="none";
       document.getElementById('buffered_log').style.display="none";
       document.getElementById("HlsStatus").innerHTML = 'loading ' + url;
@@ -102,6 +112,7 @@
        });
        hls.on(hls.Events.INIT_SEGMENT,function() {
           document.getElementById('buffered_c').style.display="block";
+          document.getElementById('buffered_log').style.display="block";
           document.getElementById("HlsStatus").innerHTML = "playlist successfully loaded";
        });
        hls.on(hls.Events.LOAD_ERROR,function(event,data) {
@@ -137,7 +148,7 @@
 
 function getDMRandomVid() {
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'https://api.dailymotion.com/videos?flags=no_live&limit=50' , false);
+    xhr.open('GET', 'https://api.dailymotion.com/videos?longer_than=20&flags=no_live,partner&limit=50' , false);
     try {
       xhr.send(null);
     } catch(err) {
