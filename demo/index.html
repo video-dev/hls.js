@@ -62,6 +62,7 @@
 
    'use strict';
    var hls;
+   var _url;
    var video = document.getElementById('video');
    var manifest = decodeURIComponent(location.search.split('src=')[1]);
    if(manifest === 'undefined') {
@@ -96,19 +97,21 @@
       document.getElementById("HlsStatus").innerHTML = 'loading ' + url;
        if(url.indexOf('http') === -1) {
         document.getElementById("HlsStatus").innerHTML = 'DM url detected, resolving ...';
-        url = getDMURL(url);
-        if(url) {
+        _url = getDMURL(url);
+        if(_url) {
           document.getElementById("HlsStatus").innerHTML = 'DM url resolved';
         } else {
           document.getElementById("HlsStatus").innerHTML = 'unable to resolve DM url, aborting ...if not on DM domain, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin</a> Chrome Extension';
           return;
         }
+       } else {
+        _url = url;
        }
        hls = new Hls(video);
        hls.debug(true);
        hls.on(hls.Events.FRAMEWORK_READY,function() {
           document.getElementById("HlsStatus").innerHTML = 'attaching URL to video tag';
-          hls.attachSource(url);
+          hls.attachSource(_url);
        });
        hls.on(hls.Events.INIT_SEGMENT,function() {
           document.getElementById('buffered_log').style.display="block";
