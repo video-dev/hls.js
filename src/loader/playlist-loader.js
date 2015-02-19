@@ -149,7 +149,7 @@ import {logger}             from '../utils/logger';
     obj.endList = false;
 
     var result;
-    var re = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):([0-9]*\.?[0-9]+.))|(?:#EXT(INF):([0-9]*\.?[0-9]+.),[^\r\n]*[\r\n]+([^\r\n]+)|(?:#EXT-X-(ENDLIST)))/g;
+    var re = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):([\d\.]+)[^\r\n]*[\r\n]+([^\r\n]+)|(?:#EXT-X-(ENDLIST)))/g;
     while((result = re.exec(string)) !== null){
       result.shift();
       result = result.filter(function(n){ return (n !== undefined);});
