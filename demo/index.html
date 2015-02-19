@@ -22,7 +22,7 @@
         <section>
           <pre id='HlsUrl'></pre>
           <button style="font: bold 20px Arial" onclick="loadDMRandomVid()">Click to Load a random DM Video</button><br><br>
-          <video id=video controls onloadedmetadata="buffered_loaded(event);">
+          <video id=video controls autoplay onloadedmetadata="buffered_loaded(event);" onresize="buffered_resize(event);">
           </video>
         </section>
       </article>
@@ -91,7 +91,7 @@
         description += '<br>DM link:' + "<a href=\"" + dmlink + "\">" + dmlink + "</a>";
       }
       document.getElementById("HlsUrl").innerHTML = description;
-      document.getElementById('buffered_c').style.display="none";
+      document.getElementById('buffered_c').width = 0;
       document.getElementById('buffered_log').style.display="none";
       document.getElementById("HlsStatus").innerHTML = 'loading ' + url;
        if(url.indexOf('http') === -1) {
@@ -111,19 +111,17 @@
           hls.attachSource(url);
        });
        hls.on(hls.Events.INIT_SEGMENT,function() {
-          document.getElementById('buffered_c').style.display="block";
           document.getElementById('buffered_log').style.display="block";
           document.getElementById("HlsStatus").innerHTML = "playlist successfully loaded";
        });
        hls.on(hls.Events.LOAD_ERROR,function(event,data) {
           hls.destroy();
           document.getElementById("HlsStatus").innerHTML = "a Load Error happened, broken playlist or CORS issue ?";
-          document.getElementById('buffered_c').style.display="none";
        });
        hls.on(hls.Events.VIDEO_ERROR,function(event,data) {
           hls.destroy();
-          document.getElementById("HlsStatus").innerHTML = "a Video Error happened";
-          document.getElementById('buffered_c').style.display="none";
+          document.getElementById("HlsStatus").innerHTML = "Video Error";
+          document.getElementById('buffered_c').width = 0;
        });
     } else {
       document.getElementById("HlsStatus").innerHTML = "your Browser does not support MediaSourceExtension / MP4 mediasource";
@@ -148,6 +146,19 @@
 
 function getDMRandomVid() {
     var xhr = new XMLHttpRequest();
+    // // from march 2005 onwards
+    // var startTime = new Date(2014,2).getTime();
+    // var currentTime = new Date().getTime();
+    // var randomStartTime = startTime+Math.floor(Math.random()*(currentTime-startTime));
+    // // one month after
+    // var randomEndTime = Math.min(randomStartTime + (1000*60*60*24*365/12));
+
+    // console.log("start filter:" + new Date(randomStartTime).toUTCString());
+    // console.log("end   filter:" + new Date(randomEndTime).toUTCString());
+
+    // var filter = 'created_after=' + randomStartTime + '&created_before=' + randomEndTime;
+    // var apiCall = 'https://api.dailymotion.com/videos?' + filter + '&flags=no_live&limit=50';
+    // xhr.open('GET', apiCall , false);
     xhr.open('GET', 'https://api.dailymotion.com/videos?longer_than=20&flags=no_live,partner&limit=50' , false);
     try {
       xhr.send(null);
@@ -236,6 +247,13 @@ function loadDMRandomVid() {
       window.setInterval(updateBuffered, 100);
     }
   }
+
+  function buffered_resize(event) {
+    var canvas = document.getElementById('buffered_c');
+    canvas.width = event.target.videoWidth;
+  }
+
+
   </script>
 </body>
 
