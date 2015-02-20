@@ -114,7 +114,7 @@ import {logger}             from '../utils/logger';
     var levels = [];
     var level =  {};
     var result;
-    var re = /#EXT-X-STREAM-INF:([^\n\r]*(BAND)WIDTH=(\d+))?([^\n\r]*(RES)OLUTION=(\d+)x(\d+))?([^\n\r]*(NAME)=\"(.*)\")?[^\n\r]*[\r\n]+([^\r\n]+)/g;
+    var re = /#EXT-X-STREAM-INF:([^\n\r]*(BAND)WIDTH=(\d+))?([^\n\r]*(CODECS)=\"(.*)\",)?([^\n\r]*(RES)OLUTION=(\d+)x(\d+))?([^\n\r]*(NAME)=\"(.*)\")?[^\n\r]*[\r\n]+([^\r\n]+)/g;
     while((result = re.exec(string)) != null){
       result.shift();
       result = result.filter(function(n){ return (n !== undefined);});
@@ -130,6 +130,9 @@ import {logger}             from '../utils/logger';
             break;
           case 'NAME':
             level.name = result.shift();
+            break;
+          case 'CODECS':
+            level.codecs = result.shift();
             break;
           default:
             break;
