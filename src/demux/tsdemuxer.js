@@ -681,6 +681,10 @@ class VideoSegmentStream extends Stream {
             sample,
             startdts;
 
+        if (this.nalUnitsLength === 0) {
+            return;
+        }
+
         // concatenate the video data and construct the mdat
         // first, we have to build the index from byte locations to
         // samples (that is, frames) in the video data
@@ -803,6 +807,11 @@ class AudioSegmentStream extends Stream {
             mdat,
             moof,
             boxes;
+
+        if (this.aacUnitsLength === 0) {
+            return;
+        }
+
         // // concatenate the audio data and construct the mdat
         // // first, we have to build the index from byte locations to
         // // samples (that is, frames) in the audio data
