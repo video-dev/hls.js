@@ -108,8 +108,9 @@ class BufferController {
                         break;
                     }
                 }
-                if (i < fragments.length) {
+                if (i < fragments.length && fragments[i].loaded !== true) {
                     logger.log('loading frag ' + i);
+                    fragments[i].loaded = true;
                     this.fragmentLoader.load(fragments[i].url);
                     this.state = LOADING_IN_PROGRESS;
                 } else {
