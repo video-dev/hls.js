@@ -100,8 +100,9 @@ import TSDemuxer             from '../demux/tsdemuxer';
             break;
           }
         }
-        if(i < fragments.length && fragments[i].loaded !== true) {
+        if(i < fragments.length && this.loadingIndex != i) {
         logger.log('loading frag ' + i);
+        this.loadingIndex = i;
         fragments[i].loaded = true;
         this.fragmentLoader.load(fragments[i].url);
         this.state = LOADING_IN_PROGRESS;
@@ -138,7 +139,14 @@ import TSDemuxer             from '../demux/tsdemuxer';
 
   onInitSegment(event,data) {
     // create source Buffer and link them to MediaSource
-    var sb = this.sourceBuffer = this.mediaSource.addSourceBuffer('video/mp4;codecs=' + data.codec);
+    var codec = data.codec;
+    // var codec = this.levels[this.level].codecs;
+    // if(codec === undefined) {
+    //   codec = data.codec;
+    // }
+    // codec="mp4a.40.5,avc1.420016";
+    // logger.log("choosed codecs:" + codec);
+    var sb = this.sourceBuffer = this.mediaSource.addSourceBuffer('video/mp4;codecs=' + codec);
     sb.addEventListener('updateend', this.onsbue);
     sb.addEventListener('error', this.onsbe);
     this.mp4segments.push(data);
