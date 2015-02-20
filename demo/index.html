@@ -141,7 +141,8 @@
     }
 
     if(xhr.status === 200) {
-      return JSON.parse(xhr.responseText).qualities.auto[0].url;
+      var json = JSON.parse(xhr.responseText);
+      return json.qualities.auto[0].url;
     } else {
       return null;
     }
