@@ -936,7 +936,7 @@ class TSDemuxer {
                         ? 5
                         : (configAudio[0] & 0xf8) >> 3;
                 trackAudio.codec = 'mp4a.40.' + codec;
-                console.log(trackAudio.codec);
+                console.log(trackAudio.codec + ',rate:' + data.audiosamplerate);
                 if (configVideo) {
                     observer.trigger(Event.INIT_SEGMENT, {
                         data: MP4.initSegment([trackVideo, trackAudio]),
