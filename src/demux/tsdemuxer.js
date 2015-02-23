@@ -727,7 +727,8 @@ class VideoSegmentStream extends Stream {
                         isNonSyncSample: 1,
                         degradationPriority: 0
                     },
-                    compositionTimeOffset: currentNal.pts - currentNal.dts
+                    compositionTimeOffset:
+                        (currentNal.pts - currentNal.dts) * 90
                 };
                 startUnit = currentNal;
             }
