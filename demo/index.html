@@ -232,7 +232,10 @@ function loadDMRandomVid() {
         var end = r.end(i)/v.duration * canvas.width;
         ctx.fillRect(start, 3, Math.max(2, end-start), 10);
       }
-      var log = "Buffered:<br>"
+      var log = "position:<br>"
+              + v.currentTime.toFixed(2)
+              + "<br>"
+              + "Buffered:<br>"
               + timeRangesToString(v.buffered)
               + "<br>"
               + "Seekable:<br>"
