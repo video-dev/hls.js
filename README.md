@@ -1,4 +1,4 @@
-# mse-hls
+# hls.js
 [MSE](http://w3c.github.io/media-source/)-based [HLS](http://en.wikipedia.org/wiki/HTTP_Live_Streaming) library.
 
 this lib allows to playback HLS streams on browsers supporting media source extensions.
@@ -7,7 +7,7 @@ the lib is written in EcmaScript 6, and transpiled in ES5.
 
 # sneak peek demo
 working in Chrome (also on mobile device)
-[http://gdupontavice.dev.dailymotion.com/mse-hls/demo/index.html](http://gdupontavice.dev.dailymotion.com/mse-hls/demo/index.html)
+[http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html](http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html)
 
 # Getting Started
 
@@ -29,7 +29,7 @@ playback is then controlled through video tag, as usual.
 
 
 # compatibility
- mse-hls is compatible with browsers supporting MSE with 'video/MP4' inputs.
+ hls.js is compatible with browsers supporting MSE with 'video/MP4' inputs.
 as of today, supported on:
 
  * Chrome for Desktop 34+

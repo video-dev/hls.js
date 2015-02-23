@@ -10,8 +10,8 @@
         ],
       "file_exclude_patterns": [
         ".gitignore",
-        "mse-hls.sublime-project",
-        "mse-hls.sublime-workspace"
+        "hls.js.sublime-project",
+        "hls.js.sublime-workspace"
       ]
     }
   ]
