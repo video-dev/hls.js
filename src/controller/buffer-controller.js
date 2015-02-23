@@ -108,7 +108,7 @@ class BufferController {
                         break;
                     }
                 }
-                if (i < fragments.length && this.loadingIndex != i) {
+                if (i < fragments.length && this.loadingIndex !== i) {
                     logger.log('loading frag ' + i);
                     this.loadingIndex = i;
                     fragments[i].loaded = true;
