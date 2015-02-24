@@ -20,8 +20,12 @@
           </p>
         </header>
         <section>
+          <pre id='HlsDimension'></pre>
           <pre id='HlsUrl'></pre>
-          <button style="font: bold 20px Arial" onclick="loadDMRandomVid()">Click to Load a random DM Video</button><br><br>
+          <button style="font: bold 20px Arial" onclick="loadTestVid()">Load a test Video</button>
+          <button style="font: bold 20px Arial" onclick="loadRandomPykeVid()">Load a Random Pyke Video</button>
+          <button style="font: bold 20px Arial" onclick="loadDMRandomVid()">Load a random DM Video</button>
+          <button style="font: bold 20px Arial" onclick="document.getElementById('video').webkitRequestFullScreen()">Full Screen</button><br><br>
           <video id=video controls autoplay onloadedmetadata="buffered_loaded(event);" onresize="buffered_resize(event);">
           </video>
         </section>
@@ -66,7 +70,7 @@
   }
   function listStreams(list, container) {
     for(var i=0; i<list.length; i++) { var entry = document.createElement("li");
-      entry.innerHTML = "<a href='#' onclick='return loadStream(video,\""+list[i].file+"\")'>"+list[i].title+"</a>";
+      entry.innerHTML = "<a href='#' onclick='return loadStream(video,\""+list[i].file+"\")'>"+((list[i].title !== undefined) ? list[i].title : list[i].file )+"</a>";
       document.getElementById(container).appendChild(entry);
     }
   }
@@ -149,8 +153,30 @@
   }
 
   function getDMURL(url) {
+    return 'http://www.dailymotion.com/cdn/manifest/video/' + url + '.m3u8';
+  }
+
+function loadTestVid() {
+  var url = getRandomTestVid();
+  if(url) {
+    loadStream(video,url);
+  } else {
+    document.getElementById("HlsStatus").innerHTML = "unable to load random test video, if you ae not on DM domain, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin Chrome Extension</a>";
+  }
+}
+
+function loadRandomPykeVid() {
+  var url = getRandomPykeVid();
+  if(url) {
+    loadStream(video,url);
+  } else {
+    document.getElementById("HlsStatus").innerHTML = "unable to load random test video, if you ae not on DM domain, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin Chrome Extension</a>";
+  }
+}
+
+function getRandomPykeVid() {
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'http://www.dailymotion.com/player/metadata/video/'+url , false);
+    xhr.open('GET', 'https://api.dailymotion.com/user/pyke369/videos&limit=100' , false);
     try {
       xhr.send(null);
     } catch(err) {
@@ -158,12 +184,19 @@
     }
 
     if(xhr.status === 200) {
-      var json = JSON.parse(xhr.responseText);
-      return json.qualities.auto[0].url;
+      var obj = JSON.parse(xhr.responseText);
+      var idx = Math.floor(Math.random()*obj.list.length);
+      return obj.list[idx].id;
     } else {
       return null;
     }
-  }
+}
+
+
+function getRandomTestVid() {
+  var idx = Math.floor(Math.random()*teststreams.length);
+  return teststreams[idx].file;
+}
 
 function getDMRandomVid() {
     var xhr = new XMLHttpRequest();
@@ -180,7 +213,7 @@ function getDMRandomVid() {
     // var filter = 'created_after=' + randomStartTime + '&created_before=' + randomEndTime;
     // var apiCall = 'https://api.dailymotion.com/videos?' + filter + '&flags=no_live&limit=50';
     // xhr.open('GET', apiCall , false);
-    xhr.open('GET', 'https://api.dailymotion.com/videos?longer_than=20&flags=no_live,partner&limit=50' , false);
+    xhr.open('GET', 'https://api.dailymotion.com/videos?longer_than=20&flags=no_live,partner,tvod&limit=100' , false);
     try {
       xhr.send(null);
     } catch(err) {
@@ -190,7 +223,7 @@ function getDMRandomVid() {
     if(xhr.status === 200) {
       var obj = JSON.parse(xhr.responseText);
       var idx = Math.floor(Math.random()*obj.list.length);
-      return JSON.parse(xhr.responseText).list[idx].id;
+      return obj.list[idx].id;
     } else {
       return null;
     }
@@ -275,6 +308,7 @@ function loadDMRandomVid() {
   function buffered_resize(event) {
     var canvas = document.getElementById('buffered_c');
     canvas.width = event.target.videoWidth;
+    document.getElementById("HlsDimension").innerHTML = "video dimension:" + event.target.videoWidth + 'x' + event.target.videoHeight;
   }
 
 
