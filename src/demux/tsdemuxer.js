@@ -10,6 +10,7 @@ import MP4             from '../remux/mp4-generator';
 import observer        from '../observer';
 import Stream          from '../utils/stream';
 import {logger}        from '../utils/logger';
+//import Hex             from '../utils/hex';
 
 const MP2T_PACKET_LENGTH = 188; // bytes
 const H264_STREAM_TYPE = 0x1b;
@@ -285,6 +286,7 @@ class ElementaryStream extends Stream {
       event.data.set(fragment.data, i);
       i += fragment.data.byteLength;
     }
+    //logger.log('PES:' + Hex.hexDump(event.data));
     stream.size = 0;
     this.trigger('data', event);
   }
@@ -604,8 +606,14 @@ class H264Stream extends Stream {
       data: data
     };
     switch (data[0] & 0x1f) {
+    case 0x01:
+      event.nalUnitType = 'NDR';
+      break;
     case 0x05:
       event.nalUnitType = 'IDR';
+      break;
+    case 0x06:
+      event.nalUnitType = 'SEI';
       break;
     case 0x07:
       event.nalUnitType = 'SPS';
@@ -622,6 +630,7 @@ class H264Stream extends Stream {
     default:
       break;
     }
+    //logger.log("video/PTS/DTS/type:" + event.pts.toFixed(0) + '/' + event.dts.toFixed(0) + '/' + event.nalUnitType);
     this.trigger('data', event);
   }.bind(this));
   }
@@ -698,7 +707,7 @@ class VideoSegmentStream extends Stream {
       // flush the sample we've been building when a new sample is started
       if (currentNal.nalUnitType === 'AUD') {
         if (startUnit) {
-          // convert the duration to 90kHZ timescale to match the
+          // convert the duration to 90kHz timescale to match the
           // timescales specified in the init segment
           sample.duration = (currentNal.dts - startUnit.dts) * 90;
           this.track.samples.push(sample);
