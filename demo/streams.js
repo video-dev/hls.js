@@ -5,22 +5,28 @@ var teststreams = [{
   file:'http://www.flashls.org/playlists/test_001/stream.m3u8',
   title: 'VOD (6 levels) - ffmpeg internal segmenter x264+aac'
 },{
-  file:'xwr14q',
-  title: 'DM xwr14q'
+  file:'x2gnf38',
+  title : 'DevinSupertramp 2014 1080p'
 },{
-  file:'http://www.flashls.org/playlists/issue_006/sample.m3u8',
-  title: 'issues/6 - TS parsing robustness'
+  file:'x212fsj',
+  title : 'Blender 4k'
 },{
-  file:'http://www.flashls.org/playlists/issue_010/list.m3u8',
-  title: 'issues/10 - drift between segment and playlist duration'
+  file:'xzp29g',
+  title:'Enders Game Trailer 1080p'
 },{
-  file:'http://www.flashls.org/playlists/issue_012/playlist.m3u8',
-  title: 'issues/12 - PTS/seqnum not synchronized accross adaptive playlists'
+  file:'x2hpg4o',
+  title:'Anime 720p'
 },{
-  file:'http://www.flashls.org/playlists/issue_020/new/test.m3u8',
-  title: 'issues/20 - AVC NAL unit parsing issue'
+  file:'x2hz1aj',
+  title:'National Geographic Abu Dhabi 408p'
 },{
-  file:'http://www.flashls.org/playlists/issue_066/prog_index.m3u8',
-  title: 'issues/66 - accurate seeking - multiple keyframes per segment - playback artifacts'
+  file:'x2hyzr0',
+  title:'Ouatch.tv AndroMag 720p'
+},{
+  file:'x2hw9xg',
+  title:'Anime 384p'
+},{
+  file:'x2hv5jb',
+  title:'JACKBOOTS ON WHITEHALL 1032p'
 }
 ];
