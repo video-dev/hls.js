@@ -358,25 +358,18 @@ class TSDemuxer {
         this._avcSamplesLength = 0;
         this._avcSamplesNbNalu = 0;
 
-        mdat = MP4.mdat(data);
         moof = MP4.moof(
             track.sequenceNumber,
             (firstDTS - this._initDTS) * 90,
             track
         );
-        // it would be great to allocate this array up front instead of
-        // throwing away hundreds of media segment fragments
-        boxes = new Uint8Array(moof.byteLength + mdat.byteLength);
-
-        // bump the sequence number for next time
-        track.sequenceNumber++;
-
-        boxes.set(moof);
-        boxes.set(mdat, moof.byteLength);
-
-        //logger.log(MP4Inspect.mp4toJSON(boxes));
         observer.trigger(Event.FRAGMENT_PARSED, {
-            data: boxes
+            data: moof
+        });
+
+        mdat = MP4.mdat(data);
+        observer.trigger(Event.FRAGMENT_PARSED, {
+            data: mdat
         });
     }
 
@@ -566,26 +559,21 @@ class TSDemuxer {
         mp4Sample.duration = track.samples[track.samples.length - 2].duration;
         this._aacSamplesLength = 0;
 
-        mdat = MP4.mdat(data);
         moof = MP4.moof(
             track.sequenceNumber,
             (firstDTS - this._initDTS) * 90,
             track
         );
-        // it would be great to allocate this array up front instead of
-        // throwing away hundreds of media segment fragments
-        boxes = new Uint8Array(moof.byteLength + mdat.byteLength);
+        observer.trigger(Event.FRAGMENT_PARSED, {
+            data: moof
+        });
 
+        mdat = MP4.mdat(data);
+        observer.trigger(Event.FRAGMENT_PARSED, {
+            data: mdat
+        });
         // bump the sequence number for next time
         track.sequenceNumber++;
-
-        boxes.set(moof);
-        boxes.set(mdat, moof.byteLength);
-
-        //logger.log(MP4Inspect.mp4toJSON(boxes));
-        observer.trigger(Event.FRAGMENT_PARSED, {
-            data: boxes
-        });
     }
 
     _parseADTSHeader(data) {
