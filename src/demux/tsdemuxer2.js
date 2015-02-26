@@ -284,9 +284,8 @@ class TSDemuxer {
     }
 
     _flushAVCSamples() {
-        var data,
-            view,
-            i = 0,
+        var view,
+            i = 8,
             avcSample,
             mp4Sample,
             mp4SampleLength,
@@ -299,13 +298,14 @@ class TSDemuxer {
             firstDTS;
         track.samples = [];
 
-        // concatenate the video data and construct the mdat
-        // first, we have to build the index from byte locations to
-        // samples (that is, frames) in the video data
-        data = new Uint8Array(
-            this._avcSamplesLength + 4 * this._avcSamplesNbNalu
+        /* concatenate the video data and construct the mdat in place
+      (need 8 more bytes to fill length and mpdat type) */
+        mdat = new Uint8Array(
+            this._avcSamplesLength + 4 * this._avcSamplesNbNalu + 8
         );
-        view = new DataView(data.buffer);
+        view = new DataView(mdat.buffer);
+        view.setUint32(0, mdat.byteLength);
+        mdat.set(MP4.types.mdat, 4);
         while (this._avcSamples.length) {
             avcSample = this._avcSamples.shift();
             mp4SampleLength = 0;
@@ -314,7 +314,7 @@ class TSDemuxer {
                 unit = avcSample.units.units.shift();
                 view.setUint32(i, unit.data.byteLength);
                 i += 4;
-                data.set(unit.data, i);
+                mdat.set(unit.data, i);
                 i += unit.data.byteLength;
                 mp4SampleLength += 4 + unit.data.byteLength;
             }
@@ -367,7 +367,6 @@ class TSDemuxer {
             data: moof
         });
 
-        mdat = MP4.mdat(data);
         observer.trigger(Event.FRAGMENT_PARSED, {
             data: mdat
         });
@@ -507,9 +506,8 @@ class TSDemuxer {
     }
 
     _flushAACSamples() {
-        var data,
-            view,
-            i = 0,
+        var view,
+            i = 8,
             aacSample,
             mp4Sample,
             unit,
@@ -521,13 +519,16 @@ class TSDemuxer {
             firstDTS;
         track.samples = [];
 
-        // concatenate the video data and construct the mdat
-        data = new Uint8Array(this._aacSamplesLength);
-        view = new DataView(data.buffer);
+        /* concatenate the audio data and construct the mdat in place
+      (need 8 more bytes to fill length and mpdat type) */
+        mdat = new Uint8Array(this._aacSamplesLength + 8);
+        view = new DataView(mdat.buffer);
+        view.setUint32(0, mdat.byteLength);
+        mdat.set(MP4.types.mdat, 4);
         while (this._aacSamples.length) {
             aacSample = this._aacSamples.shift();
             unit = aacSample.unit;
-            data.set(unit, i);
+            mdat.set(unit, i);
             i += unit.byteLength;
 
             if (lastSampleDTS !== undefined) {
@@ -568,7 +569,6 @@ class TSDemuxer {
             data: moof
         });
 
-        mdat = MP4.mdat(data);
         observer.trigger(Event.FRAGMENT_PARSED, {
             data: mdat
         });
