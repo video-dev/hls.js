@@ -294,7 +294,6 @@ class TSDemuxer {
             lastSampleDTS,
             mdat,
             moof,
-            boxes,
             firstDTS;
         track.samples = [];
 
@@ -515,7 +514,6 @@ class TSDemuxer {
             lastSampleDTS,
             mdat,
             moof,
-            boxes,
             firstDTS;
         track.samples = [];
 
