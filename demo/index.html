@@ -24,9 +24,8 @@
           <pre id='HlsUrl'></pre>
           <button style="font: bold 20px Arial" onclick="loadTestVid()">Load a test Video</button>
           <button style="font: bold 20px Arial" onclick="loadRandomPykeVid()">Load a Random Pyke Video</button>
-          <button style="font: bold 20px Arial" onclick="loadDMRandomVid()">Load a random DM Video</button>
-          <button style="font: bold 20px Arial" onclick="document.getElementById('video').webkitRequestFullScreen()">Full Screen</button><br><br>
-          <video id=video controls autoplay onloadedmetadata="buffered_loaded(event);" onresize="buffered_resize(event);">
+          <button style="font: bold 20px Arial" onclick="loadDMRandomVid()">Load a random DM Video</button><br><br>
+          <video id=video controls autoplay onloadedmetadata="buffered_loaded(event);" onresize="buffered_resize(event);" onclick="document.getElementById('video').webkitRequestFullScreen()">
           </video>
         </section>
       </article>
