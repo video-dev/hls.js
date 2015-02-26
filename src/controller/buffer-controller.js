@@ -7,7 +7,7 @@ import Event from '../events';
 import FragmentLoader from '../loader/fragment-loader';
 import observer from '../observer';
 import { logger } from '../utils/logger';
-import TSDemuxer from '../demux/tsdemuxer';
+import TSDemuxer from '../demux/tsdemuxer2';
 
 const LOADING_IDLE = 0;
 const LOADING_IN_PROGRESS = 1;
@@ -141,7 +141,9 @@ class BufferController {
 
     onFragmentLoaded(event, data) {
         // transmux the MPEG-TS data to ISO-BMFF segments
+        this.tparse0 = Date.now();
         this.demuxer.push(new Uint8Array(data.payload));
+        this.tparse1 = Date.now();
         this.demuxer.end();
         this.state = LOADING_IDLE;
         var stats, rtt, loadtime, bw;
@@ -171,6 +173,13 @@ class BufferController {
     }
 
     onFragmentParsed(event, data) {
+        this.tparse2 = Date.now();
+        logger.log(
+            'push time/total time:' +
+                (this.tparse1 - this.tparse0) +
+                '/' +
+                (this.tparse2 - this.tparse0)
+        );
         this.mp4segments.push(data);
         this.appendSegments();
     }
