@@ -267,7 +267,7 @@
 
   _flushAVCSamples() {
     var view,i=8,avcSample,mp4Sample,mp4SampleLength,unit,track = this._avcTrack,
-        lastSampleDTS,mdat,moof,boxes,
+        lastSampleDTS,mdat,moof,
         firstDTS;
     track.samples = [];
 
@@ -438,7 +438,7 @@
 
   _flushAACSamples() {
     var view,i=8,aacSample,mp4Sample,unit,track = this._aacTrack,
-        lastSampleDTS,mdat,moof,boxes,
+        lastSampleDTS,mdat,moof,
         firstDTS;
     track.samples = [];
 
