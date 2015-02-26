@@ -285,17 +285,17 @@ class MP4 {
     var
       samples = track.samples || [],
       bytes = new Uint8Array(4 + samples.length),
-      sample,
+      flags,
       i;
 
     // leave the full box header (4 bytes) all zero
 
     // write the sample table
     for (i = 0; i < samples.length; i++) {
-      sample = samples[i];
-      bytes[i + 4] = (sample.flags.dependsOn << 4) |
-        (sample.flags.isDependedOn << 2) |
-        (sample.flags.hasRedundancy);
+      flags = samples[i].flags;
+      bytes[i + 4] = (flags.dependsOn << 4) |
+        (flags.isDependedOn << 2) |
+        (flags.hasRedundancy);
     }
 
     return MP4.box(MP4.types.sdtp,
@@ -518,12 +518,13 @@ class MP4 {
   }
 
   static trun(track, offset) {
-    var bytes, samples, sample, i;
+    var bytes, samples, sample, i, array;
 
     samples = track.samples || [];
-    offset += 8 + 12 + (16 * samples.length);
+    array = new Uint8Array(12 + (16 * samples.length));
+    offset += 8 + array.byteLength;
 
-    bytes = [
+    array.set([
       0x00, // version 0
       0x00, 0x0f, 0x01, // flags
       (samples.length & 0xFF000000) >>> 24,
@@ -534,11 +535,11 @@ class MP4 {
       (offset & 0xFF0000) >>> 16,
       (offset & 0xFF00) >>> 8,
       offset & 0xFF // data_offset
-    ];
+    ],0);
 
     for (i = 0; i < samples.length; i++) {
       sample = samples[i];
-      bytes = bytes.concat([
+      array.set([
         (sample.duration & 0xFF000000) >>> 24,
         (sample.duration & 0xFF0000) >>> 16,
         (sample.duration & 0xFF00) >>> 8,
@@ -558,9 +559,9 @@ class MP4 {
         (sample.compositionTimeOffset & 0xFF0000) >>> 16,
         (sample.compositionTimeOffset & 0xFF00) >>> 8,
         sample.compositionTimeOffset & 0xFF // sample_composition_time_offset
-      ]);
+      ],12+16*i);
     }
-    return MP4.box(MP4.types.trun, new Uint8Array(bytes));
+    return MP4.box(MP4.types.trun, array);
   }
 
   static initSegment(tracks) {
