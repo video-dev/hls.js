@@ -490,18 +490,18 @@ class MP4 {
     static sdtp(track) {
         var samples = track.samples || [],
             bytes = new Uint8Array(4 + samples.length),
-            sample,
+            flags,
             i;
 
         // leave the full box header (4 bytes) all zero
 
         // write the sample table
         for (i = 0; i < samples.length; i++) {
-            sample = samples[i];
+            flags = samples[i].flags;
             bytes[i + 4] =
-                (sample.flags.dependsOn << 4) |
-                (sample.flags.isDependedOn << 2) |
-                sample.flags.hasRedundancy;
+                (flags.dependsOn << 4) |
+                (flags.isDependedOn << 2) |
+                flags.hasRedundancy;
         }
 
         return MP4.box(MP4.types.sdtp, bytes);
@@ -918,51 +918,58 @@ class MP4 {
     }
 
     static trun(track, offset) {
-        var bytes, samples, sample, i;
+        var bytes, samples, sample, i, array;
 
         samples = track.samples || [];
-        offset += 8 + 12 + 16 * samples.length;
+        array = new Uint8Array(12 + 16 * samples.length);
+        offset += 8 + array.byteLength;
 
-        bytes = [
-            0x00, // version 0
-            0x00,
-            0x0f,
-            0x01, // flags
-            (samples.length & 0xff000000) >>> 24,
-            (samples.length & 0xff0000) >>> 16,
-            (samples.length & 0xff00) >>> 8,
-            samples.length & 0xff, // sample_count
-            (offset & 0xff000000) >>> 24,
-            (offset & 0xff0000) >>> 16,
-            (offset & 0xff00) >>> 8,
-            offset & 0xff // data_offset
-        ];
+        array.set(
+            [
+                0x00, // version 0
+                0x00,
+                0x0f,
+                0x01, // flags
+                (samples.length & 0xff000000) >>> 24,
+                (samples.length & 0xff0000) >>> 16,
+                (samples.length & 0xff00) >>> 8,
+                samples.length & 0xff, // sample_count
+                (offset & 0xff000000) >>> 24,
+                (offset & 0xff0000) >>> 16,
+                (offset & 0xff00) >>> 8,
+                offset & 0xff // data_offset
+            ],
+            0
+        );
 
         for (i = 0; i < samples.length; i++) {
             sample = samples[i];
-            bytes = bytes.concat([
-                (sample.duration & 0xff000000) >>> 24,
-                (sample.duration & 0xff0000) >>> 16,
-                (sample.duration & 0xff00) >>> 8,
-                sample.duration & 0xff, // sample_duration
-                (sample.size & 0xff000000) >>> 24,
-                (sample.size & 0xff0000) >>> 16,
-                (sample.size & 0xff00) >>> 8,
-                sample.size & 0xff, // sample_size
-                (sample.flags.isLeading << 2) | sample.flags.dependsOn,
-                (sample.flags.isDependedOn << 6) |
-                    (sample.flags.hasRedundancy << 4) |
-                    (sample.flags.paddingValue << 1) |
-                    sample.flags.isNonSyncSample,
-                sample.flags.degradationPriority & (0xf0 << 8),
-                sample.flags.degradationPriority & 0x0f, // sample_flags
-                (sample.compositionTimeOffset & 0xff000000) >>> 24,
-                (sample.compositionTimeOffset & 0xff0000) >>> 16,
-                (sample.compositionTimeOffset & 0xff00) >>> 8,
-                sample.compositionTimeOffset & 0xff // sample_composition_time_offset
-            ]);
+            array.set(
+                [
+                    (sample.duration & 0xff000000) >>> 24,
+                    (sample.duration & 0xff0000) >>> 16,
+                    (sample.duration & 0xff00) >>> 8,
+                    sample.duration & 0xff, // sample_duration
+                    (sample.size & 0xff000000) >>> 24,
+                    (sample.size & 0xff0000) >>> 16,
+                    (sample.size & 0xff00) >>> 8,
+                    sample.size & 0xff, // sample_size
+                    (sample.flags.isLeading << 2) | sample.flags.dependsOn,
+                    (sample.flags.isDependedOn << 6) |
+                        (sample.flags.hasRedundancy << 4) |
+                        (sample.flags.paddingValue << 1) |
+                        sample.flags.isNonSyncSample,
+                    sample.flags.degradationPriority & (0xf0 << 8),
+                    sample.flags.degradationPriority & 0x0f, // sample_flags
+                    (sample.compositionTimeOffset & 0xff000000) >>> 24,
+                    (sample.compositionTimeOffset & 0xff0000) >>> 16,
+                    (sample.compositionTimeOffset & 0xff00) >>> 8,
+                    sample.compositionTimeOffset & 0xff // sample_composition_time_offset
+                ],
+                12 + 16 * i
+            );
         }
-        return MP4.box(MP4.types.trun, new Uint8Array(bytes));
+        return MP4.box(MP4.types.trun, array);
     }
 
     static initSegment(tracks) {
