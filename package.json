@@ -36,6 +36,7 @@
     "opener": "^1.4.0",
     "parallelshell": "^1.0.3",
     "uglify-js": "^2.4.16",
-    "watchify": "^2.2.1"
+    "watchify": "^2.2.1",
+    "webworkify": "^1.0.2"
   }
 }
