@@ -7,7 +7,7 @@
  import FragmentLoader       from '../loader/fragment-loader';
  import observer             from '../observer';
  import {logger}             from '../utils/logger';
- import TSDemuxer            from '../demux/tsdemuxer2';
+ import TSDemuxer            from '../demux/tsdemuxer';
  import TSDemuxerWorker      from '../demux/tsdemuxerworker';
 
   const IDLE = 0;
