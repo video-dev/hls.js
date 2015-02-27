@@ -24,6 +24,7 @@
           <pre id='HlsUrl'></pre>
           <button style="font: bold 20px Arial" onclick="loadTestVid()">Load a test Video</button>
           <button style="font: bold 20px Arial" onclick="loadRandomPykeVid()">Load a Random Pyke Video</button>
+          <button style="font: bold 20px Arial" onclick="loadNextPykeVid()">Load Next Pyke Video</button>
           <button style="font: bold 20px Arial" onclick="loadDMRandomVid()">Load a random DM Video</button><br><br>
           <video id=video controls autoplay onloadedmetadata="buffered_loaded(event);" onresize="buffered_resize(event);" onclick="document.getElementById('video').webkitRequestFullScreen()">
           </video>
@@ -173,6 +174,16 @@ function loadRandomPykeVid() {
   }
 }
 
+function loadNextPykeVid() {
+  var url = getNextPykeVid();
+  if(url) {
+    loadStream(video,url);
+  } else {
+    document.getElementById("HlsStatus").innerHTML = "unable to load test video, if you ae not on DM domain, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin Chrome Extension</a>";
+  }
+}
+
+
 function getRandomPykeVid() {
     var xhr = new XMLHttpRequest();
     xhr.open('GET', 'https://api.dailymotion.com/user/pyke369/videos&limit=100' , false);
@@ -186,6 +197,25 @@ function getRandomPykeVid() {
       var obj = JSON.parse(xhr.responseText);
       var idx = Math.floor(Math.random()*obj.list.length);
       return obj.list[idx].id;
+    } else {
+      return null;
+    }
+}
+
+var pykeVideoIdx = 0;
+
+function getNextPykeVid() {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'https://api.dailymotion.com/user/pyke369/videos&limit=100' , false);
+    try {
+      xhr.send(null);
+    } catch(err) {
+     return null;
+    }
+
+    if(xhr.status === 200) {
+      var obj = JSON.parse(xhr.responseText);
+      return obj.list[pykeVideoIdx++].id;
     } else {
       return null;
     }
