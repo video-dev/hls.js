@@ -8,6 +8,7 @@ import FragmentLoader from '../loader/fragment-loader';
 import observer from '../observer';
 import { logger } from '../utils/logger';
 import TSDemuxer from '../demux/tsdemuxer2';
+import TSDemuxerWorker from '../demux/tsdemuxerworker';
 
 const LOADING_IDLE = 0;
 const LOADING_IN_PROGRESS = 1;
@@ -20,7 +21,16 @@ class BufferController {
     constructor(video) {
         this.video = video;
         this.fragmentLoader = new FragmentLoader();
-        this.demuxer = new TSDemuxer();
+        var enableWorker = true;
+        if (enableWorker && typeof Worker !== 'undefined') {
+            console.log('TS demuxing in webworker');
+            var work = require('webworkify');
+            this.w = work(TSDemuxerWorker);
+            this.onwmsg = this.onWorkerMessage.bind(this);
+            this.w.addEventListener('message', this.onwmsg);
+        } else {
+            this.demuxer = new TSDemuxer();
+        }
         this.mp4segments = [];
         // Source Buffer listeners
         this.onsbue = this.onSourceBufferUpdateEnd.bind(this);
@@ -37,7 +47,13 @@ class BufferController {
     destroy() {
         this.stop();
         this.fragmentLoader.destroy();
-        this.demuxer.destroy();
+        if (this.w) {
+            this.w.removeEventListener('message', this.onwmsg);
+            this.w.terminate();
+            this.w = null;
+        } else {
+            this.demuxer.destroy();
+        }
         this.mp4segments = [];
         var sb = this.sourceBuffer;
         if (sb) {
@@ -125,7 +141,12 @@ class BufferController {
 
     onLevelLoaded(event, data) {
         this.level = data.level;
-        this.demuxer.duration = this.levels[this.level].totalduration;
+        var duration = this.levels[this.level].totalduration;
+        if (this.w) {
+            this.w.postMessage(duration); // post duration
+        } else {
+            this.demuxer.duration = duration;
+        }
         this.fragmentIndex = 0;
         var stats = data.stats;
         logger.log(
@@ -134,7 +155,7 @@ class BufferController {
                 '/' +
                 (stats.tend - stats.trequest) +
                 '/' +
-                this.demuxer.duration
+                duration
         );
         this.state = LOADING_IDLE;
     }
@@ -142,9 +163,15 @@ class BufferController {
     onFragmentLoaded(event, data) {
         // transmux the MPEG-TS data to ISO-BMFF segments
         this.tparse0 = Date.now();
-        this.demuxer.push(new Uint8Array(data.payload));
-        this.tparse1 = Date.now();
-        this.demuxer.end();
+        if (this.w) {
+            // post fragment payload as transferable objects (no copy)
+            this.w.postMessage(data.payload, [data.payload]);
+            this.tparse1 = Date.now();
+        } else {
+            this.demuxer.push(new Uint8Array(data.payload));
+            this.tparse1 = Date.now();
+            this.demuxer.end();
+        }
         this.state = LOADING_IDLE;
         var stats, rtt, loadtime, bw;
         stats = data.stats;
@@ -174,12 +201,7 @@ class BufferController {
 
     onFragmentParsed(event, data) {
         this.tparse2 = Date.now();
-        logger.log(
-            'push time/total time:' +
-                (this.tparse1 - this.tparse0) +
-                '/' +
-                (this.tparse2 - this.tparse0)
-        );
+        //logger.log('push time/total time:' + (this.tparse1-this.tparse0) + '/' + (this.tparse2-this.tparse0));
         this.mp4segments.push(data);
         this.appendSegments();
     }
@@ -201,6 +223,25 @@ class BufferController {
 
     onSourceBufferError(event) {
         logger.log(' buffer append error:' + event);
+    }
+
+    onWorkerMessage(ev) {
+        //console.log(ev);
+        switch (ev.data.event) {
+            case Event.INIT_SEGMENT:
+                observer.trigger(Event.INIT_SEGMENT, {
+                    data: new Uint8Array(ev.data.data),
+                    codec: ev.data.codec
+                });
+                break;
+            case Event.FRAGMENT_PARSED:
+                observer.trigger(Event.FRAGMENT_PARSED, {
+                    data: new Uint8Array(ev.data.data)
+                });
+                break;
+            default:
+                break;
+        }
     }
 }
 

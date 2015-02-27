@@ -5,6 +5,8 @@ this lib allows to playback HLS streams on browsers supporting media source exte
  
 the lib is written in EcmaScript 6, and transpiled in ES5.
 
+MPEG-2 TS transmuxing is offloaded into a Web Worker.
+
 # sneak peek demo
 working in Chrome (also on mobile device)
 [http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html](http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html)
