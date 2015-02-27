@@ -281,7 +281,10 @@ class BufferController {
                 break;
             case Event.FRAGMENT_PARSING:
                 observer.trigger(Event.FRAGMENT_PARSING, {
-                    data: new Uint8Array(ev.data.data)
+                    data: new Uint8Array(ev.data.data),
+                    start: ev.data.start,
+                    end: ev.data.end,
+                    type: ev.data.type
                 });
                 break;
             case Event.FRAGMENT_PARSED:

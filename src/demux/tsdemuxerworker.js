@@ -1,5 +1,5 @@
 import Event from '../events';
-import TSDemuxer from '../demux/tsdemuxer2';
+import TSDemuxer from '../demux/tsdemuxer';
 import observer from '../observer';
 
 class TSDemuxerWorker {
@@ -27,7 +27,13 @@ class TSDemuxerWorker {
             self.postMessage(objData, [objData.data]);
         });
         observer.on(Event.FRAGMENT_PARSING, function(ev, data) {
-            var objData = { event: ev, data: data.data.buffer };
+            var objData = {
+                event: ev,
+                type: data.type,
+                start: data.start,
+                end: data.end,
+                data: data.data.buffer
+            };
             // pass fMP4 data as transferable object (no copy)
             self.postMessage(objData, [objData.data]);
         });
