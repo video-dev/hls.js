@@ -19,6 +19,8 @@ export default {
     FRAGMENT_LOADED: 'hlsFragmentLoaded',
     // Identifier when last fragment of playlist has been loaded
     LAST_FRAGMENT_LOADED: 'hlsLastFragmentLoaded',
+    // Identifier for a fragment parsing event
+    FRAGMENT_PARSING: 'hlsFragmentParsing',
     // Identifier for a fragment parsed event
     FRAGMENT_PARSED: 'hlsFragmentParsed',
     // Identifier for an init segment event
