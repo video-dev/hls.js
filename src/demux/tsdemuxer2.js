@@ -56,6 +56,9 @@
     }
     //logger.log('nb AAC samples:' + this._aacSamples.length);
     this._flushAACSamples();
+
+    //notify end of parsing
+    observer.trigger(Event.FRAGMENT_PARSED);
   }
 
   destroy() {
@@ -330,11 +333,13 @@
     this._avcSamplesNbNalu = 0;
 
     moof = MP4.moof(track.sequenceNumber,(firstDTS - this._initDTS)*90,track);
-    observer.trigger(Event.FRAGMENT_PARSED,{
+    observer.trigger(Event.FRAGMENT_PARSING,{
       data: moof
     });
 
-    observer.trigger(Event.FRAGMENT_PARSED,{
+   logger.log('video start/end offset:' + ((firstDTS - this._initDTS)/1000).toFixed(3) + '/' + ((lastSampleDTS - this._initDTS)/1000).toFixed(3));
+
+    observer.trigger(Event.FRAGMENT_PARSING,{
       data: mdat
     });
   }
@@ -484,11 +489,13 @@
     this._aacSamplesLength = 0;
 
     moof = MP4.moof(track.sequenceNumber,(firstDTS - this._initDTS)*90,track);
-    observer.trigger(Event.FRAGMENT_PARSED,{
+
+    logger.log('audio start/end offset:' + ((firstDTS - this._initDTS)/1000).toFixed(3) + '/' + ((lastSampleDTS - this._initDTS)/1000).toFixed(3));
+    observer.trigger(Event.FRAGMENT_PARSING,{
       data: moof
     });
 
-    observer.trigger(Event.FRAGMENT_PARSED,{
+    observer.trigger(Event.FRAGMENT_PARSING,{
       data: mdat
     });
     // bump the sequence number for next time

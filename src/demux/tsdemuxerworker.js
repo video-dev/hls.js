@@ -23,13 +23,17 @@ class TSDemuxerWorker {
       // pass init segment as transferable object (no copy)
       self.postMessage(objData,[objData.data]);
     });
-    observer.on(Event.FRAGMENT_PARSED, function(ev,data) {
+    observer.on(Event.FRAGMENT_PARSING, function(ev,data) {
       var objData = { event : ev , data : data.data.buffer};
       // pass fMP4 data as transferable object (no copy)
       self.postMessage(objData,[objData.data]);
     });
+    observer.on(Event.FRAGMENT_PARSED, function(ev,data) {
+      var objData = { event : ev };
+      self.postMessage(objData);
+    });
   }
-};
+}
 
 export default TSDemuxerWorker;
 
