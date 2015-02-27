@@ -270,7 +270,7 @@
 
   _flushAVCSamples() {
     var view,i=8,avcSample,mp4Sample,mp4SampleLength,unit,track = this._avcTrack,
-        lastSampleDTS,mdat,moof,
+        lastSampleDTS,mdat,moof,startOffset,endOffset,
         firstDTS;
     track.samples = [];
 
@@ -332,15 +332,23 @@
     this._avcSamplesLength = 0;
     this._avcSamplesNbNalu = 0;
 
-    moof = MP4.moof(track.sequenceNumber,(firstDTS - this._initDTS)*90,track);
+    startOffset = (firstDTS - this._initDTS)/1000;
+    endOffset = (lastSampleDTS - this._initDTS)/1000;
+
+    moof = MP4.moof(track.sequenceNumber++,(firstDTS - this._initDTS)*90,track);
     observer.trigger(Event.FRAGMENT_PARSING,{
-      data: moof
+      data: moof,
+      start : startOffset,
+      end : endOffset,
+      type : 'video'
     });
-
-   logger.log('video start/end offset:' + ((firstDTS - this._initDTS)/1000).toFixed(3) + '/' + ((lastSampleDTS - this._initDTS)/1000).toFixed(3));
+   //logger.log('video start/end offset:' + startOffset.toFixed(3) + '/' + endOffset.toFixed(3));
 
     observer.trigger(Event.FRAGMENT_PARSING,{
-      data: mdat
+      data: mdat,
+      start : startOffset,
+      end : endOffset,
+      type : 'video'
     });
   }
 
@@ -404,7 +412,7 @@
 
   _parseAACPES(pes) {
     //logger.log('PES:' + Hex.hexDump(pes.data));
-    var track = this._aacTrack,aacSample,data = pes.data,config,adtsFrameSize,adtsStartOffset,adtsHeaderLen;
+    var track = this._aacTrack,aacSample,data = pes.data,config,adtsFrameSize,adtsStartOffset,adtsHeaderLen,stamp,i;
     if(data[0] === 0xff) {
       if(!track.audiosamplerate) {
         config = this._parseADTSHeader(pes.data);
@@ -416,7 +424,7 @@
         track.codec = 'mp4a.40.' + 2; //codec;
         console.log(track.codec +',rate:' + config.samplerate);
       }
-      adtsStartOffset = 0;
+      adtsStartOffset = i = 0;
       while(adtsStartOffset < data.length) {
         // retrieve frame size
         adtsFrameSize = ((data[adtsStartOffset+3] & 0x03) << 11);
@@ -426,11 +434,14 @@
         adtsFrameSize |= ((data[adtsStartOffset+5] & 0xE0) >>> 5);
         adtsHeaderLen = (!!(data[adtsStartOffset+1] & 0x01) ? 7 : 9);
         adtsFrameSize -= adtsHeaderLen;
-        //logger.log('AAC frame, offset/length:' + (adtsStartOffset+7) + '/' + adtsFrameSize);
-        aacSample = { unit : pes.data.subarray(adtsStartOffset+adtsHeaderLen,adtsStartOffset+adtsHeaderLen+adtsFrameSize) , pts : pes.pts, dts : pes.dts};
+        stamp = pes.pts + i*1024*1000/track.audiosamplerate;
+        //stamp = pes.pts;
+        //console.log('AAC frame, offset/length/pts:' + (adtsStartOffset+7) + '/' + adtsFrameSize + '/' + stamp.toFixed(0));
+        aacSample = { unit : pes.data.subarray(adtsStartOffset+adtsHeaderLen,adtsStartOffset+adtsHeaderLen+adtsFrameSize) , pts : stamp, dts : stamp};
         adtsStartOffset+=adtsFrameSize+adtsHeaderLen;
         this._aacSamples.push(aacSample);
         this._aacSamplesLength += adtsFrameSize;
+        i++;
       }
     } else {
       observer.trigger(Event.PARSING_ERROR,'Stream did not start with ADTS header.');
@@ -443,7 +454,7 @@
 
   _flushAACSamples() {
     var view,i=8,aacSample,mp4Sample,unit,track = this._aacTrack,
-        lastSampleDTS,mdat,moof,
+        lastSampleDTS,mdat,moof,startOffset,endOffset,
         firstDTS;
     track.samples = [];
 
@@ -488,18 +499,23 @@
     mp4Sample.duration = track.samples[track.samples.length-2].duration;
     this._aacSamplesLength = 0;
 
-    moof = MP4.moof(track.sequenceNumber,(firstDTS - this._initDTS)*90,track);
+    startOffset = (firstDTS - this._initDTS)/1000;
+    endOffset = (lastSampleDTS - this._initDTS)/1000;
 
-    logger.log('audio start/end offset:' + ((firstDTS - this._initDTS)/1000).toFixed(3) + '/' + ((lastSampleDTS - this._initDTS)/1000).toFixed(3));
+    moof = MP4.moof(track.sequenceNumber++,(firstDTS - this._initDTS)*90,track);
     observer.trigger(Event.FRAGMENT_PARSING,{
-      data: moof
+      data: moof,
+      start : startOffset,
+      end : endOffset,
+      type : 'audio'
     });
 
     observer.trigger(Event.FRAGMENT_PARSING,{
-      data: mdat
+      data: mdat,
+      start : startOffset,
+      end : endOffset,
+      type : 'audio'
     });
-    // bump the sequence number for next time
-    track.sequenceNumber++;
   }
 
   _parseADTSHeader(data) {
