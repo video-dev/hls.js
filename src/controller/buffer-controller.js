@@ -110,7 +110,7 @@
             //logger.log('sb append in progress');
         // check if any MP4 segments left to append
           } else if(this.mp4segments.length) {
-            this.sourceBuffer.appendBuffer(this.mp4segments.shift().data);
+            this.sourceBuffer.appendBuffer(this.mp4segments.shift());
           } else if (this.state === PARSED_APPENDING) {
             // no more sourcebuffer to update, and parsing finished we are done with this segment, switch back to IDLE state
             //logger.log('sb append finished');
@@ -241,7 +241,7 @@
       sb.addEventListener('updateend', this.onsbue);
       sb.addEventListener('error', this.onsbe);
     }
-    this.mp4segments.push(data);
+    this.mp4segments.push(data.data);
     //trigger handler right now
     this.tick();
   }
@@ -249,7 +249,8 @@
   onFragmentParsing(event,data) {
     this.tparse2 = Date.now();
     logger.log('parsed data, type/start/end:' + data.type + '/' + data.start.toFixed(3) + '/' + data.end.toFixed(3) );
-    this.mp4segments.push(data);
+    this.mp4segments.push(data.moof);
+    this.mp4segments.push(data.mdat);
     //trigger handler right now
     this.tick();
   }
@@ -282,7 +283,8 @@
       break;
       case Event.FRAGMENT_PARSING:
         observer.trigger(Event.FRAGMENT_PARSING,{
-          data: new Uint8Array(ev.data.data),
+          moof : new Uint8Array(ev.moof.data),
+          mdat : new Uint8Array(ev.mdat.data),
           start : ev.data.start,
           end : ev.data.end,
           type : ev.data.type

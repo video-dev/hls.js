@@ -338,15 +338,8 @@
 
     moof = MP4.moof(track.sequenceNumber++,(firstDTS - this._initDTS)*90,track);
     observer.trigger(Event.FRAGMENT_PARSING,{
-      data: moof,
-      start : startOffset,
-      end : endOffset,
-      type : 'video'
-    });
-   //logger.log('video start/end offset:' + startOffset.toFixed(3) + '/' + endOffset.toFixed(3));
-
-    observer.trigger(Event.FRAGMENT_PARSING,{
-      data: mdat,
+      moof: moof,
+      mdat: mdat,
       start : startOffset,
       end : endOffset,
       type : 'video'
@@ -505,14 +498,8 @@
 
     moof = MP4.moof(track.sequenceNumber++,(firstDTS - this._initDTS)*90,track);
     observer.trigger(Event.FRAGMENT_PARSING,{
-      data: moof,
-      start : startOffset,
-      end : endOffset,
-      type : 'audio'
-    });
-
-    observer.trigger(Event.FRAGMENT_PARSING,{
-      data: mdat,
+      moof: moof,
+      mdat: mdat,
       start : startOffset,
       end : endOffset,
       type : 'audio'
