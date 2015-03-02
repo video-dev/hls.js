@@ -421,7 +421,7 @@
         track.duration = 90000*this._duration;
         // implicit SBR signalling (HE-AAC) : if sampling rate less than 24kHz
         var codec = (config.samplerate <= 24000) ? 5 : ((track.config[0] & 0xF8) >> 3);
-        track.codec = 'mp4a.40.' + 2; //codec;
+        track.codec = 'mp4a.40.' + codec;
         console.log(track.codec +',rate:' + config.samplerate);
       }
       adtsStartOffset = i = 0;

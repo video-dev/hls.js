@@ -194,14 +194,15 @@
   }
 
   onInitSegment(event,data) {
-    // create source Buffer and link them to MediaSource
-    var codec = data.codec;
-    // var codec = this.levels[this.level].codecs;
-    // if(codec === undefined) {
-    //   codec = data.codec;
-    // }
+    // check if codecs have been explicitely defined in the master playlist for this level;
+    // if yes use these ones instead of the ones parsed from the demux
+    var codec = this.levels[this.level].codecs;
+    if(codec === undefined) {
+      codec = data.codec;
+    }
     // codec="mp4a.40.5,avc1.420016";
-    // logger.log("choosed codecs:" + codec);
+    logger.log("choosed codecs:" + codec);
+    // create source Buffer and link them to MediaSource
     var sb = this.sourceBuffer = this.mediaSource.addSourceBuffer('video/mp4;codecs=' + codec);
     sb.addEventListener('updateend', this.onsbue);
     sb.addEventListener('error', this.onsbe);
