@@ -85,6 +85,7 @@
    var hls;
    var _url;
    var video = document.getElementById('video');
+   video.volume = 0.1;
    var manifest = decodeURIComponent(location.search.split('src=')[1]);
    if(manifest === 'undefined') {
    // manifest = 'http://www.streambox.fr/playlists/test_001/stream_1000k_48k_640x360.m3u8';
