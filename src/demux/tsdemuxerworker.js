@@ -28,7 +28,7 @@ class TSDemuxerWorker {
       // pass fMP4 data as transferable object (no copy)
       self.postMessage(objData,[objData.data]);
     });
-    observer.on(Event.FRAGMENT_PARSED, function(ev,data) {
+    observer.on(Event.FRAGMENT_PARSED, function(ev) {
       var objData = { event : ev };
       self.postMessage(objData);
     });

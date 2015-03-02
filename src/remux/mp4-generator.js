@@ -518,7 +518,7 @@ class MP4 {
   }
 
   static trun(track, offset) {
-    var bytes, samples, sample, i, array;
+    var samples, sample, i, array;
 
     samples = track.samples || [];
     array = new Uint8Array(12 + (16 * samples.length));
