@@ -161,7 +161,6 @@
             this.state = LOADING_WAITING_LEVEL_UPDATE;
             this.waitlevel = true;
           } else {
-            this.waitlevel = false;
             // find fragment index, contiguous with end of buffer position
             var fragments = level.fragments, frag;
             for (i = 0; i < fragments.length ; i++) {
@@ -172,6 +171,7 @@
             }
             if(i < fragments.length) {
               if(this.loadingIndex !== i) {
+                this.waitlevel = false;
                 logger.log('      Loading       ' + frag.sn + ' of [' + fragments[0].sn + ',' + fragments[fragments.length-1].sn + '],level '  + loadLevel);
                 //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
                 this.loadingIndex = i;
