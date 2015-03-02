@@ -156,7 +156,6 @@ class Hls {
 
   onManifestLoaded(event,data) {
     this.levels = data.levels;
-    var stats = data.stats;
     logger.log('manifest loaded,' +  this.levels.length + ' level(s) found');
     this.bufferController.start(this.levels, this.mediaSource);
   }
