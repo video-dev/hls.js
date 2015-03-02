@@ -165,7 +165,6 @@ class BufferController {
                         this.state = LOADING_WAITING_LEVEL_UPDATE;
                         this.waitlevel = true;
                     } else {
-                        this.waitlevel = false;
                         // find fragment index, contiguous with end of buffer position
                         var fragments = level.fragments,
                             frag;
@@ -180,6 +179,7 @@ class BufferController {
                         }
                         if (i < fragments.length) {
                             if (this.loadingIndex !== i) {
+                                this.waitlevel = false;
                                 logger.log(
                                     '      Loading       ' +
                                         frag.sn +
