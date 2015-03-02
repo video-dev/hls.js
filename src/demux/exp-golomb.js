@@ -183,6 +183,7 @@ class ExpGolomb {
       scalingListCount,
       i;
 
+    this.readUnsignedByte();
     profileIdc = this.readUnsignedByte(); // profile_idc
     // constraint_set[0-5]_flag, u(1), reserved_zero_2bits u(2), level_idc u(8)
     this.skipBits(16); //  u(1), reserved_zero_2bits u(2)

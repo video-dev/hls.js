@@ -225,9 +225,8 @@
           break;
         //SPS
         case 7:
-          if(!track.pps) {
+          if(!track.sps) {
             var expGolombDecoder = new ExpGolomb(unit.data);
-            expGolombDecoder.skipBits(8);
             var config = expGolombDecoder.readSequenceParameterSet();
             track.width = config.width;
             track.height = config.height;
@@ -272,7 +271,7 @@
   _flushAVCSamples() {
     var view,i=8,avcSample,mp4Sample,mp4SampleLength,unit,track = this._avcTrack,
         lastSampleDTS,mdat,moof,startOffset,endOffset,
-        firstDTS;
+        firstPTS;
     track.samples = [];
 
     /* concatenate the video data and construct the mdat in place
@@ -285,6 +284,7 @@
       avcSample = this._avcSamples.shift();
       mp4SampleLength = 0;
 
+      // convert NALU bitstream to MP4 format (prepend NALU with size field)
       while(avcSample.units.units.length) {
         unit = avcSample.units.units.shift();
         view.setUint32(i, unit.data.byteLength);
@@ -297,12 +297,9 @@
       if(lastSampleDTS !== undefined) {
         mp4Sample.duration = (avcSample.dts - lastSampleDTS)*90;
       } else {
-        // remember first DTS of our avcSamples
-        firstDTS = avcSample.dts;
-        if(this._initDTS === undefined) {
-          // remember first DTS of this demuxing context
-          this._initDTS = firstDTS;
-        }
+        //logger.log('Video/PTS/DTS/duration:' + avcSample.pts.toFixed(0) + '/' + avcSample.dts.toFixed(0) + '/unknown');
+        // remember first PTS of our avcSamples
+        firstPTS = avcSample.pts;
       }
 
       mp4Sample = {
@@ -328,15 +325,16 @@
       lastSampleDTS = avcSample.dts;
     }
     //set last sample duration as being identical to previous sample
-    mp4Sample.duration = track.samples[track.samples.length-2].duration;
+    mp4Sample.duration = 4*track.samples[track.samples.length-2].duration;
+    //logger.log('Video/PTS/DTS/duration:' + avcSample.pts.toFixed(0) + '/' + avcSample.dts.toFixed(0) + '/' + (mp4Sample.duration/90).toFixed(0));
 
     this._avcSamplesLength = 0;
     this._avcSamplesNbNalu = 0;
 
-    startOffset = (firstDTS - this._initDTS)/1000;
-    endOffset = (lastSampleDTS - this._initDTS)/1000;
+    startOffset = (firstPTS - this._initPTS)/1000;
+    endOffset = (avcSample.pts - this._initPTS)/1000;
 
-    moof = MP4.moof(track.sequenceNumber++,(firstDTS - this._initDTS)*90,track);
+    moof = MP4.moof(track.sequenceNumber++,(firstPTS - this._initPTS)*90,track);
     observer.trigger(Event.FRAGMENT_PARSING,{
       moof: moof,
       mdat: mdat,
@@ -449,7 +447,7 @@
   _flushAACSamples() {
     var view,i=8,aacSample,mp4Sample,unit,track = this._aacTrack,
         lastSampleDTS,mdat,moof,startOffset,endOffset,
-        firstDTS;
+        firstPTS;
     track.samples = [];
 
     /* concatenate the audio data and construct the mdat in place
@@ -465,14 +463,12 @@
       i += unit.byteLength;
 
       if(lastSampleDTS !== undefined) {
+        // we use DTS to compute sample duration, but we use PTS to compute initPTS which is used to sync audio and video
         mp4Sample.duration = (aacSample.dts - lastSampleDTS)*90;
       } else {
-        // remember first DTS of our avcSamples
-        firstDTS = aacSample.dts;
-        if(this._initDTS === undefined) {
-          // remember first DTS of this demuxing context
-          this._initDTS = firstDTS;
-        }
+        //logger.log('Audio/PTS/DTS/duration:' + aacSample.pts.toFixed(0) + '/' + aacSample.dts.toFixed(0) + '/unknown');
+        // remember first PTS of our avcSamples
+        firstPTS = aacSample.pts;
       }
 
       mp4Sample = {
@@ -490,13 +486,15 @@
       lastSampleDTS = aacSample.dts;
     }
     //set last sample duration as being identical to previous sample
-    mp4Sample.duration = track.samples[track.samples.length-2].duration;
+    mp4Sample.duration = 4*track.samples[track.samples.length-2].duration;
+    //logger.log('Audio/PTS/DTS/duration:' + aacSample.pts.toFixed(0) + '/' + aacSample.dts.toFixed(0) + '/' + (mp4Sample.duration/90).toFixed(0));
+
     this._aacSamplesLength = 0;
 
-    startOffset = (firstDTS - this._initDTS)/1000;
-    endOffset = (lastSampleDTS - this._initDTS)/1000;
+    startOffset = (firstPTS - this._initPTS)/1000;
+    endOffset = (aacSample.pts - this._initPTS)/1000;
 
-    moof = MP4.moof(track.sequenceNumber++,(firstDTS - this._initDTS)*90,track);
+    moof = MP4.moof(track.sequenceNumber++,(firstPTS - this._initPTS)*90,track);
     observer.trigger(Event.FRAGMENT_PARSING,{
       moof: moof,
       mdat: mdat,
@@ -579,6 +577,10 @@
         });
         this._initSegGenerated = true;
       }
+      if(this._initPTS === undefined) {
+        // remember first PTS of this demuxing context
+        this._initPTS = this._aacSamples[0].pts;
+      }
     } else
     if(this._aacId === -1) {
       //video only
@@ -588,6 +590,10 @@
           codec : this._avcTrack.codec
         });
         this._initSegGenerated = true;
+        if(this._initPTS === undefined) {
+          // remember first PTS of this demuxing context
+          this._initPTS = this._avcSamples[0].pts;
+        }
       }
     } else {
       //audio and video
@@ -597,6 +603,10 @@
           codec : this._avcTrack.codec + ',' + this._aacTrack.codec
         });
         this._initSegGenerated = true;
+        if(this._initPTS === undefined) {
+          // remember first PTS of this demuxing context
+          this._initPTS = Math.min(this._avcSamples[0].pts,this._aacSamples[0].pts);
+        }
       }
     }
   }
