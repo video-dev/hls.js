@@ -15,6 +15,10 @@
  class TSDemuxer {
 
   constructor() {
+    this.switchLevel();
+  }
+
+  switchLevel() {
     this.pmtParsed = false;
     this._pmtId = this._avcId = this._aacId = -1;
     this._avcTrack = {type : 'video', sequenceNumber : 0};

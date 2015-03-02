@@ -7,6 +7,7 @@ import Event                from './events';
 import observer             from './observer';
 import PlaylistLoader       from './loader/playlist-loader';
 import BufferController     from './controller/buffer-controller';
+import LevelController      from './controller/level-controller';
 import {logger,enableLogs}  from './utils/logger';
 //import MP4Inspect         from '/remux/mp4-inspector';
 
@@ -18,7 +19,8 @@ class Hls {
 
   constructor(video) {
     this.playlistLoader = new PlaylistLoader();
-    this.bufferController = new BufferController(video);
+    this.levelController = new LevelController();
+    this.bufferController = new BufferController(video,this.playlistLoader,this.levelController);
     this.Events = Event;
     this.debug = enableLogs;
     this.logEvt = this.logEvt;
@@ -36,6 +38,10 @@ class Hls {
     if(this.bufferController) {
       this.bufferController.destroy();
       this.bufferController = null;
+    }
+    if(this.levelController) {
+      this.levelController.destroy();
+      this.levelController = null;
     }
     this.detachSource();
     this.detachView();
@@ -151,11 +157,7 @@ class Hls {
   onManifestLoaded(event,data) {
     this.levels = data.levels;
     var stats = data.stats;
-    logger.log('manifest loaded,RTT(ms)/load(ms):' + (stats.tfirst - stats.trequest)+ '/' + (stats.tend - stats.trequest));
-    if(this.levels.length > 1 || this.levels[0].fragments === undefined) {
-      // set level, it will trigger a playlist loading request
-      this.playlistLoader.level = this.levels.length-1;
-    }
+    logger.log('manifest loaded,' +  this.levels.length + ' level(s) found');
     this.bufferController.start(this.levels, this.mediaSource);
   }
 
