@@ -176,6 +176,7 @@
     this.state = PARSING_APPENDING;
     // transmux the MPEG-TS data to ISO-BMFF segments
     this.tparse0 = Date.now();
+    this.parselen = data.payload.byteLength;
     if(this.w) {
       // post fragment payload as transferable objects (no copy)
       this.w.postMessage(data.payload,[data.payload]);
@@ -222,7 +223,7 @@
   onFragmentParsed(event,data) {
     this.state = PARSED_APPENDING;
     this.tparse2 = Date.now();
-    //logger.log('push time/total time:' + (this.tparse1-this.tparse0) + '/' + (this.tparse2-this.tparse0));
+    logger.log('      parsing len/duration/rate:' + (this.parselen/1000000).toFixed(2) + 'MB/'  + (this.tparse2-this.tparse0) +'ms/' + ((this.parselen/1000)/(this.tparse2-this.tparse0)).toFixed(2) + 'MB/s');
      //trigger handler right now
     this.tick();
   }
