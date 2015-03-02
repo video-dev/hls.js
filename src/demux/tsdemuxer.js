@@ -69,23 +69,43 @@
   }
 
   _parseTSPacket(data,start) {
-    var stt,pid,atf,pes,payload,offset=start+4;
+    var stt,pid,atf,offset;
     if(data[start] === 0x47) {
       stt = !!(data[start+1] & 0x40);
       // pid is a 13-bit field starting at the last bit of TS[1]
-      pid = data[start+1] & 0x1f;
-      pid <<= 8;
-      pid |= data[start+2];
+      pid = ((data[start+1] & 0x1f) << 8) + data[start+2];
       atf = (data[start+3] & 0x30) >> 4;
       // if an adaption field is present, its length is specified by the fifth byte of the TS packet header.
       if(atf > 1) {
-        offset += data[offset] + 1;
+        offset = start+5+data[start+4];
         // return if there is only adaptation field
         if(offset === (start+188)) {
           return;
         }
+      } else {
+        offset = start+4;
       }
-      if(this.pmtParsed === false) {
+      if(this.pmtParsed) {
+        if(pid === this._avcId) {
+          if(stt) {
+            if(this._avcData) {
+              this._parseAVCPES(this._parsePES(this._avcData));
+            }
+            this._avcData = {data: [],size: 0};
+          }
+          this._avcData.data.push(data.subarray(offset,start+188));
+          this._avcData.size+=start+188-offset;
+        } else if(pid === this._aacId) {
+          if(stt) {
+            if(this._aacData) {
+              this._parseAACPES(this._parsePES(this._aacData));
+            }
+            this._aacData = {data: [],size: 0};
+          }
+          this._aacData.data.push(data.subarray(offset,start+188));
+          this._aacData.size+=start+188-offset;
+        }
+      } else {
         if(stt) {
           offset += data[offset] + 1;
         }
@@ -94,32 +114,6 @@
         } else if(pid === this._pmtId) {
           this._parsePMT(data,offset);
           this.pmtParsed = true;
-        }
-      } else {
-        if(pid === this._avcId) {
-          if(stt) {
-            if(this._avcData) {
-              pes = this._parsePES(this._avcData);
-              //logger.log('AVC PES, PTS/DTS/length:'+ pes.pts.toFixed(0) + '/' + pes.dts.toFixed(0) + '/' + pes.data.byteLength);
-              this._parseAVCPES(pes);
-            }
-            this._avcData = {data: [],size: 0};
-          }
-          payload = data.subarray(offset,start+188);
-          this._avcData.data.push(payload);
-          this._avcData.size+=payload.length;
-        } else if(pid === this._aacId) {
-          if(stt) {
-            if(this._aacData) {
-              pes = this._parsePES(this._aacData);
-              //logger.log('AAC PES, PTS/DTS/length:'+ pes.pts + '/' + pes.dts + '/' + pes.data.byteLength);
-              this._parseAACPES(pes);
-            }
-            this._aacData = {data: [],size: 0};
-          }
-          payload = data.subarray(offset,start+188);
-          this._aacData.data.push(payload);
-          this._aacData.size+=payload.length;
         }
       }
     } else {
