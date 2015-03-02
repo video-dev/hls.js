@@ -47,6 +47,8 @@ class PlaylistLoader {
             // check if level idx is valid
             if (newLevel >= 0 && newLevel < this.levels.length) {
                 this._level = newLevel;
+                logger.log('switching to level ' + newLevel);
+                observer.trigger(Event.LEVEL_SWITCH, { level: newLevel });
                 // check if we need to load playlist for this new level
                 if (this.levels[newLevel].fragments === undefined) {
                     // level not retrieved yet, we need to load it
@@ -194,7 +196,7 @@ class PlaylistLoader {
                     break;
             }
         }
-        logger.log('found ' + obj.fragments.length + ' fragments');
+        //logger.log('found ' + obj.fragments.length + ' fragments');
         obj.totalduration = totalduration;
         obj.endSN = currentSN - 1;
     }
