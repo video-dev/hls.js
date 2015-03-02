@@ -48,14 +48,17 @@ class TSDemuxer {
             this._avcData = null;
         }
         //logger.log('nb AVC samples:' + this._avcSamples.length);
-        this._flushAVCSamples();
+        if (this._avcSamples.length) {
+            this._flushAVCSamples();
+        }
         if (this._aacData) {
             this._parseAACPES(this._parsePES(this._aacData));
             this._aacData = null;
         }
         //logger.log('nb AAC samples:' + this._aacSamples.length);
-        this._flushAACSamples();
-
+        if (this._aacSamples.length) {
+            this._flushAACSamples();
+        }
         //notify end of parsing
         observer.trigger(Event.FRAGMENT_PARSED);
     }
