@@ -27,6 +27,7 @@
 
   onManifestLoaded(event,data) {
     this.levels = data.levels;
+    this.level = 0;
   }
 
 
@@ -40,13 +41,16 @@
 
 
   startLevel() {
-    //return 0;
-    return this.levels.length-1;
+    return 0;
+    //return this.levels.length-1;
   }
 
   bestLevel() {
+
+    this.level = (this.level+1) % (this.levels.length-1);
+    return this.level;
     //return Math.floor(Math.random()*this.levels.length);
-    return this.levels.length-1;
+    //return this.levels.length-1;
   }
 }
 
