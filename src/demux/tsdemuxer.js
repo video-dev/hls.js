@@ -483,7 +483,7 @@ class TSDemuxer {
                     config.samplerate <= 24000
                         ? 5
                         : (track.config[0] & 0xf8) >> 3;
-                track.codec = 'mp4a.40.' + 2; //codec;
+                track.codec = 'mp4a.40.' + codec;
                 console.log(track.codec + ',rate:' + config.samplerate);
             }
             adtsStartOffset = i = 0;
