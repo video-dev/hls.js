@@ -241,7 +241,7 @@
       sb.addEventListener('updateend', this.onsbue);
       sb.addEventListener('error', this.onsbe);
     }
-    this.mp4segments.push(data.data);
+    this.mp4segments.push(data.moov);
     //trigger handler right now
     this.tick();
   }
@@ -277,7 +277,7 @@
     switch(ev.data.event) {
       case Event.INIT_SEGMENT:
         observer.trigger(Event.INIT_SEGMENT,{
-          data: new Uint8Array(ev.data.data),
+          moov: new Uint8Array(ev.moov.data),
           codec : ev.data.codec
         });
       break;

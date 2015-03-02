@@ -574,7 +574,7 @@
       //audio only
       if(this._aacTrack.config) {
          observer.trigger(Event.INIT_SEGMENT,{
-          data: MP4.initSegment([this._aacTrack]),
+          moov: MP4.initSegment([this._aacTrack]),
           codec : this._aacTrack.codec
         });
         this._initSegGenerated = true;
@@ -584,7 +584,7 @@
       //video only
       if(this._avcTrack.sps && this._avcTrack.pps) {
          observer.trigger(Event.INIT_SEGMENT,{
-          data: MP4.initSegment([this._avcTrack]),
+          moov: MP4.initSegment([this._avcTrack]),
           codec : this._avcTrack.codec
         });
         this._initSegGenerated = true;
@@ -593,7 +593,7 @@
       //audio and video
       if(this._aacTrack.config && this._avcTrack.sps && this._avcTrack.pps) {
          observer.trigger(Event.INIT_SEGMENT,{
-          data: MP4.initSegment([this._avcTrack, this._aacTrack]),
+          moov: MP4.initSegment([this._avcTrack, this._aacTrack]),
           codec : this._avcTrack.codec + ',' + this._aacTrack.codec
         });
         this._initSegGenerated = true;
