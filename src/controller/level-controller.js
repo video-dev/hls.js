@@ -5,7 +5,7 @@
 
 import Event from '../events';
 import observer from '../observer';
-import { logger } from '../utils/logger';
+// import {logger}             from '../utils/logger';
 
 class LevelController {
     constructor(video) {
@@ -33,7 +33,6 @@ class LevelController {
         rtt = stats.tfirst - stats.trequest;
         loadtime = stats.tend - stats.trequest;
         bw = stats.length * 8 / (1000 * loadtime);
-        //logger.log(data.url + ' loaded, RTT(ms)/load(ms)/bitrate:' + rtt + '/' + loadtime + '/' + bw.toFixed(3) + ' Mb/s');
     }
 
     startLevel() {

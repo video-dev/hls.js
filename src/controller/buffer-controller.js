@@ -111,7 +111,7 @@ class BufferController {
                         this.sourceBuffer.appendBuffer(
                             this.mp4segments.shift().data
                         );
-                    } else if (this.state == PARSED_APPENDING) {
+                    } else if (this.state === PARSED_APPENDING) {
                         // no more sourcebuffer to update, and parsing finished we are done with this segment, switch back to IDLE state
                         //logger.log('sb append finished');
                         this.state = LOADING_IDLE;
@@ -300,7 +300,7 @@ class BufferController {
         this.tick();
     }
 
-    onFragmentParsed(event, data) {
+    onFragmentParsed() {
         this.state = PARSED_APPENDING;
         this.tparse2 = Date.now();
         //logger.log('      parsing len/duration/rate:' + (this.parselen/1000000).toFixed(2) + 'MB/'  + (this.tparse2-this.tparse0) +'ms/' + ((this.parselen/1000)/(this.tparse2-this.tparse0)).toFixed(2) + 'MB/s');
