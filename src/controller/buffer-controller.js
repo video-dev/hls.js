@@ -10,17 +10,19 @@ import { logger } from '../utils/logger';
 import TSDemuxer from '../demux/tsdemuxer';
 import TSDemuxerWorker from '../demux/tsdemuxerworker';
 
-const IDLE = 0;
-const LOADING = 1;
-const WAITING_LEVEL = 2;
+const LOADING_IDLE = 0;
+const LOADING_IN_PROGRESS = 1;
+const LOADING_WAITING_LEVEL_UPDATE = 2;
 const PARSING_APPENDING = 3;
 const PARSED_APPENDING = 4;
 
 class BufferController {
-    constructor(video) {
+    constructor(video, playlistLoader, levelController) {
         this.video = video;
+        this.playlistLoader = playlistLoader;
+        this.levelController = levelController;
         this.fragmentLoader = new FragmentLoader();
-        var enableWorker = true;
+        var enableWorker = false;
         if (enableWorker && typeof Worker !== 'undefined') {
             console.log('TS demuxing in webworker');
             var work = require('webworkify');
@@ -41,7 +43,8 @@ class BufferController {
         this.onfpg = this.onFragmentParsing.bind(this);
         this.onfp = this.onFragmentParsed.bind(this);
         this.ontick = this.tick.bind(this);
-        this.state = WAITING_LEVEL;
+        this.state = LOADING_IDLE;
+        this.waitlevel = true;
     }
 
     destroy() {
@@ -63,7 +66,7 @@ class BufferController {
             sb.removeEventListener('error', this.onsbe);
             this.sourceBuffer = null;
         }
-        this.state = WAITING_LEVEL;
+        this.state = LOADING_IDLE;
     }
 
     start(levels, mediaSource) {
@@ -92,8 +95,10 @@ class BufferController {
 
     tick() {
         switch (this.state) {
-            case LOADING:
-                // nothing to do, wait for fragment retrieval
+            case LOADING_IN_PROGRESS:
+            // nothing to do, wait for fragment retrieval
+            case LOADING_WAITING_LEVEL_UPDATE:
+                // nothing to do, wait for level retrieval
                 break;
             case PARSING_APPENDING:
             case PARSED_APPENDING:
@@ -109,11 +114,11 @@ class BufferController {
                     } else if (this.state == PARSED_APPENDING) {
                         // no more sourcebuffer to update, and parsing finished we are done with this segment, switch back to IDLE state
                         //logger.log('sb append finished');
-                        this.state = IDLE;
+                        this.state = LOADING_IDLE;
                     }
                 }
                 break;
-            case IDLE:
+            case LOADING_IDLE:
                 // determine next candidate fragment to be loaded, based on current position and end of buffer position
                 // ensure 60s of buffer upfront
                 var v = this.video,
@@ -135,44 +140,74 @@ class BufferController {
                 }
                 // if buffer length is less than 60s try to load a new fragment
                 if (bufferLen < 60) {
-                    // find fragment index, contiguous with end of buffer position
-                    var fragments = this.levels[this.level].fragments;
-                    for (i = 0; i < fragments.length; i++) {
-                        if (
-                            fragments[i].start <= bufferEnd + 0.1 &&
-                            fragments[i].start + fragments[i].duration >
-                                bufferEnd + 0.1
-                        ) {
-                            break;
-                        }
+                    var loadLevel;
+                    // determine loading level
+                    if (typeof this.level === 'undefined') {
+                        // level not defined, get start level from level Controller
+                        loadLevel = this.levelController.startLevel();
+                    } else if (this.waitlevel === false) {
+                        // level already defined, and we are not already switching, get best level from level Controller
+                        loadLevel = this.levelController.bestLevel();
+                    } else {
+                        // we just switched level and playlist should now be retrieved, stick to switched level
+                        loadLevel = this.level;
                     }
-                    if (i < fragments.length) {
-                        if (this.loadingIndex !== i) {
-                            logger.log(
-                                '      loading frag ' +
-                                    i +
-                                    ',pos/bufEnd:' +
-                                    pos.toFixed(3) +
-                                    '/' +
-                                    bufferEnd.toFixed(3)
-                            );
-                            this.loadingIndex = i;
-                            fragments[i].loaded = true;
-                            this.fragmentLoader.load(fragments[i].url);
-                            this.state = LOADING;
-                        } else {
-                            logger.log(
-                                'avoid loading frag ' +
-                                    i +
-                                    ',pos/bufEnd:' +
-                                    pos.toFixed(3) +
-                                    '/' +
-                                    bufferEnd.toFixed(3) +
-                                    ',frag start/end:' +
-                                    fragments[i].start +
-                                    '/' +
-                                    (fragments[i].start + fragments[i].duration)
-                            );
+                    if (loadLevel !== this.playlistLoader.level) {
+                        // set new level to playlist loader : this will trigger a playlist load if needed
+                        this.playlistLoader.level = loadLevel;
+                        this.level = loadLevel;
+                        // tell demuxer that we will switch level (this will force init segment to be regenerated)
+                        this.demuxer.switchLevel();
+                    }
+                    var level = this.levels[loadLevel];
+                    // if level not retrieved yet, switch state and wait for playlist retrieval
+                    if (typeof level.fragments === 'undefined') {
+                        this.state = LOADING_WAITING_LEVEL_UPDATE;
+                        this.waitlevel = true;
+                    } else {
+                        this.waitlevel = false;
+                        // find fragment index, contiguous with end of buffer position
+                        var fragments = level.fragments,
+                            frag;
+                        for (i = 0; i < fragments.length; i++) {
+                            frag = fragments[i];
+                            if (
+                                frag.start <= bufferEnd + 0.2 &&
+                                frag.start + frag.duration > bufferEnd + 0.2
+                            ) {
+                                break;
+                            }
+                        }
+                        if (i < fragments.length) {
+                            if (this.loadingIndex !== i) {
+                                logger.log(
+                                    '      Loading       ' +
+                                        frag.sn +
+                                        ' of [' +
+                                        fragments[0].sn +
+                                        ',' +
+                                        fragments[fragments.length - 1].sn +
+                                        '],level ' +
+                                        loadLevel
+                                );
+                                //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
+                                this.loadingIndex = i;
+                                this.fragmentLoader.load(frag.url);
+                                this.state = LOADING_IN_PROGRESS;
+                            } else {
+                                logger.log(
+                                    'avoid loading frag ' +
+                                        i +
+                                        ',pos/bufEnd:' +
+                                        pos.toFixed(3) +
+                                        '/' +
+                                        bufferEnd.toFixed(3) +
+                                        ',frag start/end:' +
+                                        frag.start +
+                                        '/' +
+                                        (frag.start + frag.duration)
+                                );
+                            }
                         }
                     }
                 }
@@ -190,17 +225,18 @@ class BufferController {
         } else {
             this.demuxer.duration = duration;
         }
-        this.fragmentIndex = 0;
         var stats = data.stats;
         logger.log(
-            'level loaded,RTT(ms)/load(ms)/duration:' +
+            'level ' +
+                data.level +
+                ' loaded,RTT(ms)/load(ms)/duration:' +
                 (stats.tfirst - stats.trequest) +
                 '/' +
                 (stats.tend - stats.trequest) +
                 '/' +
                 duration
         );
-        this.state = IDLE;
+        this.state = LOADING_IDLE;
         //trigger handler right now
         this.tick();
     }
@@ -236,12 +272,14 @@ class BufferController {
         }
         // codec="mp4a.40.5,avc1.420016";
         logger.log('choosed codecs:' + codec);
-        // create source Buffer and link them to MediaSource
-        var sb = (this.sourceBuffer = this.mediaSource.addSourceBuffer(
-            'video/mp4;codecs=' + codec
-        ));
-        sb.addEventListener('updateend', this.onsbue);
-        sb.addEventListener('error', this.onsbe);
+        if (!this.sourceBuffer) {
+            // create source Buffer and link them to MediaSource
+            var sb = (this.sourceBuffer = this.mediaSource.addSourceBuffer(
+                'video/mp4;codecs=' + codec
+            ));
+            sb.addEventListener('updateend', this.onsbue);
+            sb.addEventListener('error', this.onsbe);
+        }
         this.mp4segments.push(data);
         //trigger handler right now
         this.tick();
@@ -249,7 +287,14 @@ class BufferController {
 
     onFragmentParsing(event, data) {
         this.tparse2 = Date.now();
-        //logger.log('push time/total time:' + (this.tparse1-this.tparse0) + '/' + (this.tparse2-this.tparse0));
+        logger.log(
+            'parsed data, type/start/end:' +
+                data.type +
+                '/' +
+                data.start.toFixed(3) +
+                '/' +
+                data.end.toFixed(3)
+        );
         this.mp4segments.push(data);
         //trigger handler right now
         this.tick();
@@ -258,17 +303,7 @@ class BufferController {
     onFragmentParsed(event, data) {
         this.state = PARSED_APPENDING;
         this.tparse2 = Date.now();
-        logger.log(
-            '      parsing len/duration/rate:' +
-                (this.parselen / 1000000).toFixed(2) +
-                'MB/' +
-                (this.tparse2 - this.tparse0) +
-                'ms/' +
-                (this.parselen / 1000 / (this.tparse2 - this.tparse0)).toFixed(
-                    2
-                ) +
-                'MB/s'
-        );
+        //logger.log('      parsing len/duration/rate:' + (this.parselen/1000000).toFixed(2) + 'MB/'  + (this.tparse2-this.tparse0) +'ms/' + ((this.parselen/1000)/(this.tparse2-this.tparse0)).toFixed(2) + 'MB/s');
         //trigger handler right now
         this.tick();
     }
