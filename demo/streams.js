@@ -1,5 +1,5 @@
 var teststreams = [{
-  file:'http://sublimevideo-media.s3.amazonaws.com/v/dm/hls/xwr14q/55008890_mp4_h264_aac_hq.m3u8',
+  file:'xwr14q',
   title: 'sublimevideo xwr14q'
 },{
   file:'http://www.flashls.org/playlists/test_001/stream.m3u8',
