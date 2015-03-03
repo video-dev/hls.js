@@ -37,7 +37,8 @@ class MP4 {
       trun: [],
       trex: [],
       tkhd: [],
-      vmhd: []
+      vmhd: [],
+      smhd: []
     };
 
     var i;
@@ -135,11 +136,6 @@ class MP4 {
       0x00, 0x00, 0x00, // flags
       0x00, 0x00, 0x00, 0x01]);// entry_count
 
-    MP4.MEDIAHEADER_TYPES = {
-      'video': MP4.VMHD,
-      'audio': MP4.SMHD
-    };
-
     MP4.FTYP = MP4.box(MP4.types.ftyp, MP4.MAJOR_BRAND, MP4.MINOR_VERSION, MP4.MAJOR_BRAND, MP4.AVC1_BRAND);
     MP4.DINF = MP4.box(MP4.types.dinf, MP4.box(MP4.types.dref, MP4.DREF));
   }
@@ -210,7 +206,11 @@ class MP4 {
   }
 
   static minf(track) {
-    return MP4.box(MP4.types.minf, MP4.box(MP4.types.vmhd, MP4.MEDIAHEADER_TYPES[track.type]), MP4.DINF, MP4.stbl(track));
+    if (track.type === 'audio') {
+      return MP4.box(MP4.types.minf, MP4.box(MP4.types.smhd, MP4.SMHD), MP4.DINF, MP4.stbl(track));
+    } else {
+      return MP4.box(MP4.types.minf, MP4.box(MP4.types.vmhd, MP4.VMHD), MP4.DINF, MP4.stbl(track));
+    }
   }
 
   static moof(sn, baseMediaDecodeTime, track) {
