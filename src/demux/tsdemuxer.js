@@ -230,6 +230,9 @@
             var config = expGolombDecoder.readSequenceParameterSet();
             track.width = config.width;
             track.height = config.height;
+            track.profileIdc = config.profileIdc;
+            track.profileCompatibility = config.profileCompatibility;
+            track.levelIdc = config.levelIdc;
             track.sps = [unit.data];
             track.duration = 90000*this._duration;
             var codecarray = unit.data.subarray(1,4);
