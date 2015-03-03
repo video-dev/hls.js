@@ -39,7 +39,6 @@
   <div id="buffered_log" style="font-size: small;"></div>
 
     <div id='buttons'>
-      <button onclick="document.getElementById('video').load()">load()</button>
       <button onclick="document.getElementById('video').play()">play()</button>
       <button onclick="document.getElementById('video').pause()">pause()</button><br>
       <button onclick="document.getElementById('video').currentTime+=10">currentTime+=10</button>
@@ -53,10 +52,12 @@
       <button onclick="document.getElementById('video').volume-=0.1">volume-=0.1</button>
       <button onclick="document.getElementById('video').muted=true">muted=true</button>
       <button onclick="document.getElementById('video').muted=false">muted=false</button><br>
+      <button onclick="document.getElementById('video').currentTime=document.getElementById('seek_pos').value">seek to </button>
+       <input type="text" id='seek_pos'>
     </div>
 
 <br><br><br><br>Change Stream <br>
-<input id="userInput" value="http://www.streambox.fr/playlists/test_001/stream.m3u8" size="80"> <button onclick="userSubmit()">Load</button><br>
+<input id="userInput" value="http://www.streambox.fr/playlists/test_001/stream.m3u8" size="80"> <button onclick="changeStream()">Load</button><br>
 
 <h3> Test Videos </h3>
 <ul id="streamlist"></ul>
@@ -65,7 +66,7 @@
   <script src="streams.js"></script>
 
   <script>
-  function userSubmit() {
+  function changeStream() {
     loadStream(video,document.getElementById('userInput').value);
   }
   function listStreams(list, container) {
