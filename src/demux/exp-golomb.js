@@ -177,6 +177,8 @@ class ExpGolomb {
             frameCropTopOffset = 0,
             frameCropBottomOffset = 0,
             profileIdc,
+            profileCompatibility,
+            levelIdc,
             numRefFramesInPicOrderCntCycle,
             picWidthInMbsMinus1,
             picHeightInMapUnitsMinus1,
@@ -186,8 +188,9 @@ class ExpGolomb {
 
         this.readUnsignedByte();
         profileIdc = this.readUnsignedByte(); // profile_idc
-        // constraint_set[0-5]_flag, u(1), reserved_zero_2bits u(2), level_idc u(8)
-        this.skipBits(16); //  u(1), reserved_zero_2bits u(2)
+        profileCompatibility = this.readBits(5); // constraint_set[0-4]_flag, u(5)
+        this.skipBits(3); // reserved_zero_3bits u(3),
+        levelIdc = this.readUnsignedByte(); //level_idc u(8)
         this.skipUnsignedExpGolomb(); // seq_parameter_set_id
 
         // some profiles have more optional data we don't need
@@ -256,6 +259,9 @@ class ExpGolomb {
         }
 
         return {
+            profileIdc: profileIdc,
+            profileCompatibility: profileCompatibility,
+            levelIdc: levelIdc,
             width:
                 (picWidthInMbsMinus1 + 1) * 16 -
                 frameCropLeftOffset * 2 -
