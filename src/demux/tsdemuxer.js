@@ -268,17 +268,16 @@ class TSDemuxer {
                     break;
             }
         });
-
-        if (!this._initSegGenerated) {
-            this._generateInitSegment();
-        }
-
         //build sample from PES
         // Annex B to MP4 conversion to be done
         avcSample = { units: units, pts: pes.pts, dts: pes.dts, key: key };
         this._avcSamples.push(avcSample);
         this._avcSamplesLength += units.length;
         this._avcSamplesNbNalu += units.units.length;
+        // generate Init Segment if needed
+        if (!this._initSegGenerated) {
+            this._generateInitSegment();
+        }
     }
 
     _flushAVCSamples() {
