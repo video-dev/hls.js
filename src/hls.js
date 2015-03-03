@@ -190,7 +190,7 @@ class Hls {
         var data = '';
         switch (evt.type) {
             case 'durationchange':
-                data = event.target.duration;
+                data = evt.target.duration;
                 break;
             case 'resize':
                 data =
