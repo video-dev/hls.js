@@ -25,6 +25,7 @@ class LevelController {
 
     onManifestLoaded(event, data) {
         this.levels = data.levels;
+        //this.level = this.levels.length-1;
         this.level = 0;
     }
 
@@ -37,8 +38,8 @@ class LevelController {
     }
 
     startLevel() {
-        return 0;
-        //return this.levels.length-1;
+        //return 0;
+        return this.level;
     }
 
     bestLevel() {
