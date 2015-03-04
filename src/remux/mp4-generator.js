@@ -181,6 +181,7 @@ class MP4 {
             0x00 // entry_count
         ]);
         MP4.STSC = MP4.STCO;
+        MP4.STTS = MP4.STCO;
         MP4.STSZ = new Uint8Array([
             0x00, // version
             0x00,
@@ -195,7 +196,6 @@ class MP4 {
             0x00,
             0x00 // sample_count
         ]);
-        MP4.STTS = MP4.STCO;
         MP4.VMHD = new Uint8Array([
             0x00, // version
             0x00,
