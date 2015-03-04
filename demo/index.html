@@ -26,7 +26,24 @@
           <button style="font: bold 20px Arial" onclick="loadRandomPykeVid()">Load a Random Pyke Video</button>
           <button style="font: bold 20px Arial" onclick="loadNextPykeVid()">Load Next Pyke Video</button>
           <button style="font: bold 20px Arial" onclick="loadDMRandomVid()">Load a random DM Video</button><br><br>
-          <video id=video controls autoplay onloadedmetadata="buffered_loaded(event);" onresize="buffered_resize(event);" onclick="document.getElementById('video').webkitRequestFullScreen()">
+          <div id='buttons'>
+            <button onclick="document.getElementById('video').play()">play()</button>
+            <button onclick="document.getElementById('video').pause()">pause()</button><br>
+            <button onclick="document.getElementById('video').currentTime+=10">currentTime+=10</button>
+            <button onclick="document.getElementById('video').currentTime-=10">currentTime-=10</button>
+            <button onclick="document.getElementById('video').currentTime=50">currentTime=50</button><br>
+            <button onclick="document.getElementById('video').playbackRate++">playbackRate++</button>
+            <button onclick="document.getElementById('video').playbackRate--">playbackRate--</button>
+            <button onclick="document.getElementById('video').playbackRate+=0.1">playbackRate+=0.1</button>
+            <button onclick="document.getElementById('video').playbackRate-=0.1">playbackRate-=0.1</button><br>
+            <button onclick="document.getElementById('video').volume+=0.1">volume+=0.1</button>
+            <button onclick="document.getElementById('video').volume-=0.1">volume-=0.1</button>
+            <button onclick="document.getElementById('video').muted=true">muted=true</button>
+            <button onclick="document.getElementById('video').muted=false">muted=false</button><br>
+            <button onclick="document.getElementById('video').currentTime=document.getElementById('seek_pos').value">seek to </button>
+             <input type="text" id='seek_pos' onkeydown="if(window.event.keyCode=='13'){document.getElementById('video').currentTime=document.getElementById('seek_pos').value;}">
+          </div>
+          <video id=video controls autoplay onloadedmetadata="buffered_loaded(event);" onresize="buffered_resize(event);" onclick="goFullscreen('video')">
           </video>
         </section>
       </article>
@@ -38,23 +55,6 @@
   </div>
   <div id="buffered_log" style="font-size: small;"></div>
 
-    <div id='buttons'>
-      <button onclick="document.getElementById('video').play()">play()</button>
-      <button onclick="document.getElementById('video').pause()">pause()</button><br>
-      <button onclick="document.getElementById('video').currentTime+=10">currentTime+=10</button>
-      <button onclick="document.getElementById('video').currentTime-=10">currentTime-=10</button>
-      <button onclick="document.getElementById('video').currentTime=50">currentTime=50</button><br>
-      <button onclick="document.getElementById('video').playbackRate++">playbackRate++</button>
-      <button onclick="document.getElementById('video').playbackRate--">playbackRate--</button>
-      <button onclick="document.getElementById('video').playbackRate+=0.1">playbackRate+=0.1</button>
-      <button onclick="document.getElementById('video').playbackRate-=0.1">playbackRate-=0.1</button><br>
-      <button onclick="document.getElementById('video').volume+=0.1">volume+=0.1</button>
-      <button onclick="document.getElementById('video').volume-=0.1">volume-=0.1</button>
-      <button onclick="document.getElementById('video').muted=true">muted=true</button>
-      <button onclick="document.getElementById('video').muted=false">muted=false</button><br>
-      <button onclick="document.getElementById('video').currentTime=document.getElementById('seek_pos').value">seek to </button>
-       <input type="text" id='seek_pos' onkeydown="if(window.event.keyCode=='13'){document.getElementById('video').currentTime=document.getElementById('seek_pos').value;}">
-    </div>
 
 <br><br><br><br>Change Stream <br>
 <input id="userInput" value="http://www.streambox.fr/playlists/test_001/stream.m3u8" size="80"> <button onclick="changeStream()">Load</button><br>
@@ -136,7 +136,7 @@
           document.getElementById("HlsStatus").innerHTML = 'attaching URL to video tag';
           hls.attachSource(_url);
        });
-       hls.on(hls.Events.INIT_SEGMENT,function() {
+       hls.on(hls.Events.INIT_SEGMENT,function(event,data) {
           document.getElementById('buffered_log').style.display="block";
           document.getElementById("HlsStatus").innerHTML = "playlist successfully loaded";
        });
@@ -292,6 +292,9 @@ function loadDMRandomVid() {
     ctx.fillRect(0,0,canvas.width,canvas.height);
     ctx.fillStyle = "gray";
     if (r) {
+      if(!canvas.width || canvas.width !== v.videoWidth) {
+        canvas.width = v.videoWidth;
+      }
       for (var i=0; i<r.length; i++) {
         var start = r.start(i)/v.duration * canvas.width;
         var end = r.end(i)/v.duration * canvas.width;
@@ -343,7 +346,14 @@ function loadDMRandomVid() {
     document.getElementById("HlsDimension").innerHTML = "video dimension:" + event.target.videoWidth + 'x' + event.target.videoHeight;
   }
 
-
+  function goFullscreen(id) {
+    var element = document.getElementById(id);
+    if (element.mozRequestFullScreen) {
+      element.mozRequestFullScreen();
+    } else if (element.webkitRequestFullScreen) {
+      element.webkitRequestFullScreen();
+    }
+  }
   </script>
 </body>
 
