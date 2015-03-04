@@ -747,7 +747,9 @@ class TSDemuxer {
             if (this._avcTrack.sps && this._avcTrack.pps) {
                 observer.trigger(Event.INIT_SEGMENT, {
                     moov: MP4.initSegment([this._avcTrack]),
-                    codec: this._avcTrack.codec
+                    codec: this._avcTrack.codec,
+                    width: this._avcTrack.width,
+                    height: this._avcTrack.height
                 });
                 this._initSegGenerated = true;
                 if (this._initPTS === undefined) {
@@ -764,7 +766,9 @@ class TSDemuxer {
             ) {
                 observer.trigger(Event.INIT_SEGMENT, {
                     moov: MP4.initSegment([this._avcTrack, this._aacTrack]),
-                    codec: this._avcTrack.codec + ',' + this._aacTrack.codec
+                    codec: this._avcTrack.codec + ',' + this._aacTrack.codec,
+                    width: this._avcTrack.width,
+                    height: this._avcTrack.height
                 });
                 this._initSegGenerated = true;
                 if (this._initPTS === undefined) {
