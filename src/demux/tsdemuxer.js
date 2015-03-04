@@ -147,8 +147,10 @@
         // ISO/IEC 13818-7 ADTS AAC (MPEG-2 lower bit-rate audio)
         case 0x0f:
         //logger.log('AAC PID:'  + pid);
-        this._aacId = pid;
-        this._aacTrack.id = pid;
+        if(navigator.userAgent.toLowerCase().indexOf('firefox') === -1) {
+          this._aacId = pid;
+          this._aacTrack.id = pid;
+        }
         break;
         // ITU-T Rec. H.264 and ISO/IEC 14496-10 (lower bit-rate video)
         case 0x1b:
@@ -300,21 +302,27 @@
       if(lastSampleDTS !== undefined) {
         mp4Sample.duration = (avcSample.dts - lastSampleDTS)*90;
       } else {
-        //logger.log('Video/PTS/PTSend:' + avcSample.pts.toFixed(0) + '/unknown');
         // check if fragments are contiguous (i.e. no missing frames between fragment)
-        if(this.nextAvcDts && this.nextAvcDts !== avcSample.dts) {
-          var delta = avcSample.dts - this.nextAvcDts;
-          if(delta > 0 && delta < 300) {
-            logger.log('AVC:' + delta.toFixed(3) + ' ms hole between fragments detected,filling it');
-            avcSample.dts = this.nextAvcDts;
-            avcSample.pts -= delta;
-          } else if(delta < 0 && delta > -300) {
-            logger.log('AVC:' + (-delta.toFixed(3)) + ' ms overlapping between fragments detected,filling it');
-            avcSample.dts = this.nextAvcDts;
+        if(this.nextAvcPts) {
+          var delta = avcSample.pts - this.nextAvcPts;
+          // if delta is less than 300 ms, next loaded fragment is assumed to be contiguous with last one
+          if(Math.abs(delta) < 300) {
+            //logger.log('Video next PTS:' + this.nextAvcPts);
+            if(delta > 1) {
+              logger.log('AVC:' + delta.toFixed(0) + ' ms hole between fragments detected,filling it');
+            } else if (delta < -1) {
+              logger.log('AVC:' + (-delta.toFixed(0)) + ' ms overlapping between fragments detected');
+            }
+            //in any case ensure DTS is greater or equal than last DTS
+            avcSample.dts = Math.max(this.lastAvcDts, avcSample.dts);
+            // set PTS to next PTS, and ensure PTS is greater or equal than DTS
+            avcSample.pts = Math.max(this.nextAvcPts, avcSample.dts);
+            //logger.log('Video/PTS/DTS adjusted:' + avcSample.pts + '/' + avcSample.dts);
           }
         }
         // remember first PTS of our avcSamples
         firstPTS = avcSample.pts;
+
       }
 
       mp4Sample = {
@@ -340,9 +348,10 @@
       lastSampleDTS = avcSample.dts;
     }
     mp4Sample.duration = track.samples[track.samples.length-2].duration;
-    // next aac sample DTS should be equal to last sample DTS + duration
-    this.nextAvcDts = avcSample.dts + mp4Sample.duration/90;
-    //logger.log('Video/PTS/PTSend:' + avcSample.pts.toFixed(0) + '/' + (avcSample.pts+(mp4Sample.duration/90)).toFixed(0));
+    this.lastAvcDts = avcSample.dts;
+    // next AVC sample PTS should be equal to last sample PTS + duration
+    this.nextAvcPts = avcSample.pts + mp4Sample.duration/90;
+    //logger.log('Video/PTS/PTSend:' + avcSample.pts + '/' + (avcSample.pts+(mp4Sample.duration/90)));
 
     this._avcSamplesLength = 0;
     this._avcSamplesNbNalu = 0;
@@ -478,21 +487,29 @@
       mdat.set(unit, i);
       i += unit.byteLength;
 
+      //logger.log('Audio/PTS:' + aacSample.pts.toFixed(0));
       if(lastSampleDTS !== undefined) {
         // we use DTS to compute sample duration, but we use PTS to compute initPTS which is used to sync audio and video
         mp4Sample.duration = (aacSample.dts - lastSampleDTS)*90;
       } else {
-        //logger.log('Audio/PTS/PTSend:' + aacSample.pts.toFixed(0) + '/unknown');
         // check if fragments are contiguous (i.e. no missing frames between fragment)
-        if(this.nextAacDts && this.nextAacDts !== aacSample.dts) {
-          var delta = aacSample.dts - this.nextAacDts;
-          if(delta > 0 && delta < 300) {
-            logger.log('AAC:' + delta.toFixed(3) + ' ms hole between fragments detected,filling it');
-            aacSample.dts = this.nextAacDts;
-            aacSample.pts-= delta;
+        if(this.nextAacPts && this.nextAacPts !== aacSample.pts) {
+          //logger.log('Audio next PTS:' + this.nextAacPts);
+          var delta = aacSample.pts - this.nextAacPts;
+          // if delta is less than 300 ms, next loaded fragment is assumed to be contiguous with last one
+          if(Math.abs(delta) > 1 && Math.abs(delta) < 300) {
+            if(delta > 0) {
+              logger.log('AAC:' + delta.toFixed(0) + ' ms hole between fragments detected,filling it');
+              // set PTS to next PTS, and ensure PTS is greater or equal than last DTS
+              aacSample.pts = Math.max(this.nextAacPts, this.lastAacDts);
+              aacSample.dts = aacSample.pts;
+              //logger.log('Audio/PTS/DTS adjusted:' + aacSample.pts + '/' + aacSample.dts);
+            } else {
+              logger.log('AAC:' + (-delta.toFixed(0)) + ' ms overlapping between fragments detected');
+            }
           }
         }
-        // remember first PTS of our aacSamples
+        // remember first PTS of our avcSamples
         firstPTS = aacSample.pts;
       }
 
@@ -512,8 +529,9 @@
     }
     //set last sample duration as being identical to previous sample
     mp4Sample.duration = track.samples[track.samples.length-2].duration;
-    // next aac sample DTS should be equal to last sample DTS + duration
-    this.nextAacDts = aacSample.dts + mp4Sample.duration/90;
+    this.lastAacDts = aacSample.dts;
+    // next aac sample PTS should be equal to last sample PTS + duration
+    this.nextAacPts = aacSample.pts + mp4Sample.duration/90;
     //logger.log('Audio/PTS/PTSend:' + aacSample.pts.toFixed(0) + '/' + this.nextAacDts.toFixed(0));
 
     this._aacSamplesLength = 0;
