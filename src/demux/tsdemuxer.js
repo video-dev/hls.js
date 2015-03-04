@@ -295,17 +295,19 @@
         i += unit.data.byteLength;
         mp4SampleLength+=4+unit.data.byteLength;
       }
+      //logger.log('Video/PTS/DTS:' + avcSample.pts.toFixed(0) + '/' + avcSample.dts.toFixed(0));
 
       if(lastSampleDTS !== undefined) {
         mp4Sample.duration = (avcSample.dts - lastSampleDTS)*90;
       } else {
         //logger.log('Video/PTS/PTSend:' + avcSample.pts.toFixed(0) + '/unknown');
         // check if fragments are contiguous (i.e. no missing frames between fragment)
-        if(this.nextAvcDts && this.nextAvcDts !== avcSample.pts) {
-          var delta = avcSample.pts - this.nextAvcDts;
+        if(this.nextAvcDts && this.nextAvcDts !== avcSample.dts) {
+          var delta = avcSample.dts - this.nextAvcDts;
           if(delta > 0 && delta < 300) {
-          //logger.log('firstPTS != nextAvcDts:' + avcSample.pts + '/' + this.nextAvcDts);
-          avcSample.pts = this.nextAvcDts;
+          logger.log('AVC:' + delta.toFixed(1) + ' ms hole between fragments detected,filling it');
+          avcSample.dts = this.nextAvcDts;
+          avcSample.pts -= delta;
           }
         }
         // remember first PTS of our avcSamples
@@ -479,11 +481,12 @@
       } else {
         //logger.log('Audio/PTS/PTSend:' + aacSample.pts.toFixed(0) + '/unknown');
         // check if fragments are contiguous (i.e. no missing frames between fragment)
-        if(this.nextAacDts && this.nextAacDts !== aacSample.pts) {
-          var delta = aacSample.pts - this.nextAacDts;
+        if(this.nextAacDts && this.nextAacDts !== aacSample.dts) {
+          var delta = aacSample.dts - this.nextAacDts;
           if(delta > 0 && delta < 300) {
-          //logger.log('firstPTS != nextAacDts:' + aacSample.pts + '/' + this.nextAacDts);
-          aacSample.pts = this.nextAacDts;
+          logger.log('AAC:' + delta.toFixed(1) + ' ms hole between fragments detected,filling it');
+          aacSample.dts = this.nextAacDts;
+          aacSample.pts-= delta;
           }
         }
         // remember first PTS of our aacSamples
@@ -508,7 +511,7 @@
     mp4Sample.duration = track.samples[track.samples.length-2].duration;
     // next aac sample DTS should be equal to last sample DTS + duration
     this.nextAacDts = aacSample.dts + mp4Sample.duration/90;
-    //logger.log('Audio/PTS/PTSend:' + aacSample.pts.toFixed(0) + '/' + (aacSample.pts+(mp4Sample.duration/90)).toFixed(0));
+    //logger.log('Audio/PTS/PTSend:' + aacSample.pts.toFixed(0) + '/' + this.nextAacDts.toFixed(0));
 
     this._aacSamplesLength = 0;
 
