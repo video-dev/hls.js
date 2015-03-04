@@ -326,16 +326,21 @@ class TSDemuxer {
                 i += unit.data.byteLength;
                 mp4SampleLength += 4 + unit.data.byteLength;
             }
-            //logger.log('Video/PTS/DTS:' + avcSample.pts.toFixed(0) + '/' + avcSample.dts.toFixed(0));
+
+            avcSample.pts -= this._initPTS;
+            avcSample.dts -= this._initPTS;
+            //logger.log('Video/PTS/DTS:' + avcSample.pts + '/' + avcSample.dts);
 
             if (lastSampleDTS !== undefined) {
                 mp4Sample.duration = (avcSample.dts - lastSampleDTS) * 90;
             } else {
                 // check if fragments are contiguous (i.e. no missing frames between fragment)
                 if (this.nextAvcPts) {
-                    var delta = avcSample.pts - this.nextAvcPts;
+                    var delta = avcSample.pts - this.nextAvcPts,
+                        absdelta = Math.abs(delta);
+                    //logger.log('absdelta/avcSample.pts:' + absdelta + '/' + avcSample.pts);
                     // if delta is less than 300 ms, next loaded fragment is assumed to be contiguous with last one
-                    if (Math.abs(delta) < 300) {
+                    if (absdelta < 300) {
                         //logger.log('Video next PTS:' + this.nextAvcPts);
                         if (delta > 1) {
                             logger.log(
@@ -350,17 +355,14 @@ class TSDemuxer {
                                     ' ms overlapping between fragments detected'
                             );
                         }
-                        //in any case ensure DTS is greater or equal than last DTS
+                        // set PTS to next PTS
+                        avcSample.pts = this.nextAvcPts;
+                        // offset DTS as well, ensure that DTS is smaller or equal than new PTS
                         avcSample.dts = Math.max(
-                            this.lastAvcDts,
-                            avcSample.dts
+                            avcSample.dts - delta,
+                            this.lastAvcDts
                         );
-                        // set PTS to next PTS, and ensure PTS is greater or equal than DTS
-                        avcSample.pts = Math.max(
-                            this.nextAvcPts,
-                            avcSample.dts
-                        );
-                        //logger.log('Video/PTS/DTS adjusted:' + avcSample.pts + '/' + avcSample.dts);
+                        // logger.log('Video/PTS/DTS adjusted:' + avcSample.pts + '/' + avcSample.dts);
                     }
                 }
                 // remember first PTS of our avcSamples
@@ -393,19 +395,15 @@ class TSDemuxer {
         this.lastAvcDts = avcSample.dts;
         // next AVC sample PTS should be equal to last sample PTS + duration
         this.nextAvcPts = avcSample.pts + mp4Sample.duration / 90;
-        //logger.log('Video/PTS/PTSend:' + avcSample.pts + '/' + (avcSample.pts+(mp4Sample.duration/90)));
+        //logger.log('Video/lastAvcDts/nextAvcPts:' + this.lastAvcDts + '/' + this.nextAvcPts);
 
         this._avcSamplesLength = 0;
         this._avcSamplesNbNalu = 0;
 
-        startOffset = (firstPTS - this._initPTS) / 1000;
-        endOffset = (avcSample.pts - this._initPTS) / 1000;
+        startOffset = firstPTS / 1000;
+        endOffset = avcSample.pts / 1000;
 
-        moof = MP4.moof(
-            track.sequenceNumber++,
-            (firstPTS - this._initPTS) * 90,
-            track
-        );
+        moof = MP4.moof(track.sequenceNumber++, firstPTS * 90, track);
         observer.trigger(Event.FRAGMENT_PARSING, {
             moof: moof,
             mdat: mdat,
@@ -580,6 +578,9 @@ class TSDemuxer {
             mdat.set(unit, i);
             i += unit.byteLength;
 
+            aacSample.pts -= this._initPTS;
+            aacSample.dts -= this._initPTS;
+
             //logger.log('Audio/PTS:' + aacSample.pts.toFixed(0));
             if (lastSampleDTS !== undefined) {
                 // we use DTS to compute sample duration, but we use PTS to compute initPTS which is used to sync audio and video
@@ -640,14 +641,10 @@ class TSDemuxer {
 
         this._aacSamplesLength = 0;
 
-        startOffset = (firstPTS - this._initPTS) / 1000;
-        endOffset = (aacSample.pts - this._initPTS) / 1000;
+        startOffset = firstPTS / 1000;
+        endOffset = aacSample.pts / 1000;
 
-        moof = MP4.moof(
-            track.sequenceNumber++,
-            (firstPTS - this._initPTS) * 90,
-            track
-        );
+        moof = MP4.moof(track.sequenceNumber++, firstPTS * 90, track);
         observer.trigger(Event.FRAGMENT_PARSING, {
             moof: moof,
             mdat: mdat,
