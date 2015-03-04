@@ -53,7 +53,7 @@
       <button onclick="document.getElementById('video').muted=true">muted=true</button>
       <button onclick="document.getElementById('video').muted=false">muted=false</button><br>
       <button onclick="document.getElementById('video').currentTime=document.getElementById('seek_pos').value">seek to </button>
-       <input type="text" id='seek_pos'>
+       <input type="text" id='seek_pos' onkeydown="if(window.event.keyCode=='13'){document.getElementById('video').currentTime=document.getElementById('seek_pos').value;}">
     </div>
 
 <br><br><br><br>Change Stream <br>
