@@ -127,7 +127,7 @@ class TSDemuxer {
     _parsePAT(data, offset) {
         // skip the PSI header and parse the first PMT entry
         this._pmtId = ((data[offset + 10] & 0x1f) << 8) | data[offset + 11];
-        logger.log('PMT PID:' + this._pmtId);
+        //logger.log('PMT PID:'  + this._pmtId);
     }
 
     _parsePMT(data, offset) {
@@ -146,13 +146,13 @@ class TSDemuxer {
             switch (data[offset]) {
                 // ISO/IEC 13818-7 ADTS AAC (MPEG-2 lower bit-rate audio)
                 case 0x0f:
-                    logger.log('AAC PID:' + pid);
+                    //logger.log('AAC PID:'  + pid);
                     this._aacId = pid;
                     this._aacTrack.id = pid;
                     break;
                 // ITU-T Rec. H.264 and ISO/IEC 14496-10 (lower bit-rate video)
                 case 0x1b:
-                    logger.log('AVC PID:' + pid);
+                    //logger.log('AVC PID:'  + pid);
                     this._avcId = pid;
                     this._avcTrack.id = pid;
                     break;
@@ -333,11 +333,18 @@ class TSDemuxer {
                     if (delta > 0 && delta < 300) {
                         logger.log(
                             'AVC:' +
-                                delta.toFixed(1) +
+                                delta.toFixed(3) +
                                 ' ms hole between fragments detected,filling it'
                         );
                         avcSample.dts = this.nextAvcDts;
                         avcSample.pts -= delta;
+                    } else if (delta < 0 && delta > -300) {
+                        logger.log(
+                            'AVC:' +
+                                -delta.toFixed(3) +
+                                ' ms overlapping between fragments detected,filling it'
+                        );
+                        avcSample.dts = this.nextAvcDts;
                     }
                 }
                 // remember first PTS of our avcSamples
@@ -567,7 +574,7 @@ class TSDemuxer {
                     if (delta > 0 && delta < 300) {
                         logger.log(
                             'AAC:' +
-                                delta.toFixed(1) +
+                                delta.toFixed(3) +
                                 ' ms hole between fragments detected,filling it'
                         );
                         aacSample.dts = this.nextAacDts;
