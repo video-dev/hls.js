@@ -19,7 +19,7 @@ class TSDemuxerWorker {
 
     // listen to events triggered by TS Demuxer
     observer.on(Event.INIT_SEGMENT, function(ev,data) {
-      var objData = { event : ev, codec : data.codec , moov : data.moov.buffer};
+      var objData = { event : ev, codec : data.codec , moov : data.moov.buffer, width : data.width, height : data.height};
       // pass moov as transferable object (no copy)
       self.postMessage(objData,[objData.moov]);
     });
