@@ -113,9 +113,7 @@ import {logger}             from '../utils/logger';
   }
 
   parseMasterPlaylist(string,baseurl) {
-    var levels = [];
-    var level =  {};
-    var result;
+    var levels = [],level =  {},result, bitrateSet={};
     var re = /#EXT-X-STREAM-INF:([^\n\r]*(BAND)WIDTH=(\d+))?([^\n\r]*(CODECS)=\"(.*)\",)?([^\n\r]*(RES)OLUTION=(\d+)x(\d+))?([^\n\r]*(NAME)=\"(.*)\")?[^\n\r]*[\r\n]+([^\r\n]+)/g;
     while((result = re.exec(string)) != null){
       result.shift();
@@ -140,7 +138,11 @@ import {logger}             from '../utils/logger';
             break;
         }
       }
-      levels.push(level);
+      // remove failover level for now to simplify the logic
+      if(!bitrateSet.hasOwnProperty(level.bitrate)) {
+        levels.push(level);
+        bitrateSet[level.bitrate] = true;
+      }
       level = {};
     }
     return levels;
