@@ -5,7 +5,7 @@
 
  import Event                from '../events';
  import observer             from '../observer';
-// import {logger}             from '../utils/logger';
+ import {logger}             from '../utils/logger';
 
 
  class LevelController {
@@ -26,9 +26,22 @@
   }
 
   onManifestLoaded(event,data) {
-    this.levels = data.levels;
-    //this.level = this.levels.length-1;
-    this.level = 0;
+    var levels = data.levels, bitrateStart, i;
+    // start bitrate is the first bitrate of the manifest
+    bitrateStart = levels[0].bitrate;
+    // sort level on bitrate
+    levels.sort(function (a, b) {
+      return a.bitrate-b.bitrate;
+    });
+    this.levels = levels;
+    // find index of start level in sorted levels
+    for(i=0; i < levels.length ; i++) {
+      if(levels[i].bitrate === bitrateStart) {
+        this.level = this._startLevel = i;
+        logger.log('manifest loaded,' + levels.length + ' level(s) found, start bitrate:' + bitrateStart);
+        return;
+      }
+    }
   }
 
 
@@ -42,12 +55,10 @@
 
 
   startLevel() {
-    //return 0;
-    return this.level;
+    return this._startLevel;
   }
 
   bestLevel() {
-
     this.level = (this.level+1) % (this.levels.length-1);
     return this.level;
     //return Math.floor(Math.random()*this.levels.length);
