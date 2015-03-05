@@ -27,6 +27,8 @@
     this.onsbue = this.onSourceBufferUpdateEnd.bind(this);
     this.onsbe  = this.onSourceBufferError.bind(this);
     // internal listeners
+    this.onfr = this.onFrameworkReady.bind(this);
+    this.onml = this.onManifestLoaded.bind(this);
     this.onll = this.onLevelLoaded.bind(this);
     this.onfl = this.onFragmentLoaded.bind(this);
     this.onis = this.onInitSegment.bind(this);
@@ -35,6 +37,8 @@
     this.ontick = this.tick.bind(this);
     this.state = LOADING_IDLE;
     this.waitlevel = true;
+    observer.on(Event.FRAMEWORK_READY, this.onfr);
+    observer.on(Event.MANIFEST_LOADED, this.onml);
   }
 
   destroy() {
@@ -53,12 +57,12 @@
       sb.removeEventListener('error', this.onsbe);
       this.sourceBuffer = null;
     }
+    observer.removeListener(Event.FRAMEWORK_READY, this.onfr);
+    observer.removeListener(Event.MANIFEST_LOADED, this.onml);
     this.state = LOADING_IDLE;
   }
 
-  start(levels, mediaSource) {
-    this.levels = levels;
-    this.mediaSource =mediaSource;
+  start() {
     this.stop();
     this.timer = setInterval(this.ontick, 100);
     observer.on(Event.FRAGMENT_LOADED, this.onfl);
@@ -174,6 +178,15 @@
       default:
         break;
     }
+  }
+
+  onFrameworkReady(event,data) {
+    this.mediaSource = data.mediaSource;
+  }
+
+  onManifestLoaded(event,data) {
+    this.levels = data.levels;
+    this.start();
   }
 
   onLevelLoaded(event,data) {
