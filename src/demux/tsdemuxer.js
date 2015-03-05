@@ -298,6 +298,10 @@
 
       if(lastSampleDTS !== undefined) {
         mp4Sample.duration = (avcSample.dts - lastSampleDTS)*90;
+        if(mp4Sample.duration < 0) {
+          //logger.log('invalid sample duration at PTS/DTS::' + avcSample.pts + '/' + avcSample.dts + ':' + mp4Sample.duration);
+          mp4Sample.duration = 0;
+        }
       } else {
         // check if fragments are contiguous (i.e. no missing frames between fragment)
         if(this.nextAvcPts) {
@@ -320,7 +324,6 @@
         }
         // remember first PTS of our avcSamples
         firstPTS = avcSample.pts;
-
       }
 
       mp4Sample = {
@@ -492,6 +495,10 @@
       if(lastSampleDTS !== undefined) {
         // we use DTS to compute sample duration, but we use PTS to compute initPTS which is used to sync audio and video
         mp4Sample.duration = (aacSample.dts - lastSampleDTS)*90;
+        if(mp4Sample.duration < 0) {
+          //logger.log('invalid sample duration at PTS/DTS::' + avcSample.pts + '/' + avcSample.dts + ':' + mp4Sample.duration);
+          mp4Sample.duration = 0;
+        }
       } else {
         // check if fragments are contiguous (i.e. no missing frames between fragment)
         if(this.nextAacPts && this.nextAacPts !== aacSample.pts) {
