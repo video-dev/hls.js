@@ -140,10 +140,7 @@ import {logger}             from '../utils/logger';
             break;
         }
       }
-      // don't allow audio codec switch, discard HE-AAC codecs for now(lowest quality)
-      if(!level.codecs || (level.codecs.indexOf('mp4a.40.2') !== -1)) {
-        levels.push(level);
-      }
+      levels.push(level);
       level = {};
     }
     return levels;
