@@ -148,30 +148,18 @@ class Hls {
         logger.log('attachSource:' + url);
         // internal listener setup
         // internal listeners
-        this.onml = this.onManifestLoaded.bind(this);
-        observer.on(Event.MANIFEST_LOADED, this.onml);
         // when attaching to a source URL, trigger a playlist load
         this.playlistLoader.load(url);
     }
 
     detachSource() {
         this.url = null;
-        // internal listener cleanup
-        if (this.onml) {
-            observer.removeListener(Event.MANIFEST_LOADED, this.onml);
-            this.onml = null;
-        }
-        this.levels = null;
-    }
-
-    onManifestLoaded(event, data) {
-        this.levels = data.levels;
-        logger.log('manifest loaded,' + this.levels.length + ' level(s) found');
-        this.bufferController.start(this.levels, this.mediaSource);
     }
 
     onMediaSourceOpen() {
-        observer.trigger(Event.FRAMEWORK_READY);
+        observer.trigger(Event.FRAMEWORK_READY, {
+            mediaSource: this.mediaSource
+        });
     }
 
     onMediaSourceClose() {
