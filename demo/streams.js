@@ -9,7 +9,7 @@ var teststreams = [{
   title : 'DevinSupertramp 2014 1080p'
 },{
   file:'x212fsj',
-  title : 'Blender 4k'
+  title : 'Tears of Steel 4k'
 },{
   file:'xzp29g',
   title:'Enders Game Trailer 1080p'
