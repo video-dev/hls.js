@@ -4,15 +4,27 @@ import observer from '../observer';
 
 class TSDemuxerWorker {
     constructor() {
-        self.demuxer = new TSDemuxer();
         self.addEventListener('message', function(ev) {
-            // if type is number then it is playlist duration
-            if (typeof ev.data === 'number') {
-                self.demuxer.duration = ev.data;
-            } else {
-                // if not number, this is our fragment payload, trigger a demux
-                self.demuxer.push(new Uint8Array(ev.data));
-                self.demuxer.end();
+            //console.log('demuxer cmd:' + ev.data.cmd);
+            switch (ev.data.cmd) {
+                case 'init':
+                    self.demuxer = new TSDemuxer(ev.data.data);
+                    break;
+                case 'switchLevel':
+                    self.demuxer.switchLevel();
+                    break;
+                case 'demux':
+                    self.demuxer.push(
+                        new Uint8Array(ev.data.data),
+                        ev.data.codecs
+                    );
+                    self.demuxer.end();
+                    break;
+                case 'destroy':
+                    self.demuxer.destroy();
+                    break;
+                default:
+                    break;
             }
         });
 

@@ -7,8 +7,7 @@ import Event from '../events';
 import FragmentLoader from '../loader/fragment-loader';
 import observer from '../observer';
 import { logger } from '../utils/logger';
-import TSDemuxer from '../demux/tsdemuxer';
-import TSDemuxerWorker from '../demux/tsdemuxerworker';
+import Demuxer from '../demux/demuxer';
 
 const LOADING_IDLE = 0;
 const LOADING_IN_PROGRESS = 1;
@@ -22,16 +21,6 @@ class BufferController {
         this.playlistLoader = playlistLoader;
         this.levelController = levelController;
         this.fragmentLoader = new FragmentLoader();
-        var enableWorker = false;
-        if (enableWorker && typeof Worker !== 'undefined') {
-            console.log('TS demuxing in webworker');
-            var work = require('webworkify');
-            this.w = work(TSDemuxerWorker);
-            this.onwmsg = this.onWorkerMessage.bind(this);
-            this.w.addEventListener('message', this.onwmsg);
-        } else {
-            this.demuxer = new TSDemuxer();
-        }
         this.mp4segments = [];
         // Source Buffer listeners
         this.onsbue = this.onSourceBufferUpdateEnd.bind(this);
@@ -50,12 +39,9 @@ class BufferController {
     destroy() {
         this.stop();
         this.fragmentLoader.destroy();
-        if (this.w) {
-            this.w.removeEventListener('message', this.onwmsg);
-            this.w.terminate();
-            this.w = null;
-        } else {
+        if (this.demuxer) {
             this.demuxer.destroy();
+            this.demuxer = null;
         }
         this.mp4segments = [];
         var sb = this.sourceBuffer;
@@ -157,7 +143,9 @@ class BufferController {
                         this.playlistLoader.level = loadLevel;
                         this.level = loadLevel;
                         // tell demuxer that we will switch level (this will force init segment to be regenerated)
-                        this.demuxer.switchLevel();
+                        if (this.demuxer) {
+                            this.demuxer.switchLevel();
+                        }
                     }
                     var level = this.levels[loadLevel];
                     // if level not retrieved yet, switch state and wait for playlist retrieval
@@ -220,10 +208,8 @@ class BufferController {
     onLevelLoaded(event, data) {
         this.level = data.level;
         var duration = this.levels[this.level].totalduration;
-        if (this.w) {
-            this.w.postMessage(duration); // post duration
-        } else {
-            this.demuxer.duration = duration;
+        if (!this.demuxer) {
+            this.demuxer = new Demuxer(duration);
         }
         var stats = data.stats;
         logger.log(
@@ -246,15 +232,7 @@ class BufferController {
         // transmux the MPEG-TS data to ISO-BMFF segments
         this.tparse0 = Date.now();
         this.parselen = data.payload.byteLength;
-        if (this.w) {
-            // post fragment payload as transferable objects (no copy)
-            this.w.postMessage(data.payload, [data.payload]);
-            this.tparse1 = Date.now();
-        } else {
-            this.demuxer.push(new Uint8Array(data.payload));
-            this.tparse1 = Date.now();
-            this.demuxer.end();
-        }
+        this.demuxer.push(data.payload, this.levels[this.level].codecs);
         var stats, rtt, loadtime, bw;
         stats = data.stats;
         rtt = stats.tfirst - stats.trequest;
@@ -316,32 +294,6 @@ class BufferController {
 
     onSourceBufferError(event) {
         logger.log(' buffer append error:' + event);
-    }
-
-    onWorkerMessage(ev) {
-        //console.log(ev);
-        switch (ev.data.event) {
-            case Event.INIT_SEGMENT:
-                observer.trigger(Event.INIT_SEGMENT, {
-                    moov: new Uint8Array(ev.moov.data),
-                    codec: ev.data.codec
-                });
-                break;
-            case Event.FRAGMENT_PARSING:
-                observer.trigger(Event.FRAGMENT_PARSING, {
-                    moof: new Uint8Array(ev.moof.data),
-                    mdat: new Uint8Array(ev.mdat.data),
-                    start: ev.data.start,
-                    end: ev.data.end,
-                    type: ev.data.type
-                });
-                break;
-            case Event.FRAGMENT_PARSED:
-                observer.trigger(Event.FRAGMENT_PARSED);
-                break;
-            default:
-                break;
-        }
     }
 }
 

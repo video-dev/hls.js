@@ -664,39 +664,40 @@ class MP4 {
     }
 
     static esds(track) {
-        return new Uint8Array([
-            0x00, // version 0
-            0x00,
-            0x00,
-            0x00, // flags
+        return new Uint8Array(
+            [
+                0x00, // version 0
+                0x00,
+                0x00,
+                0x00, // flags
 
-            0x03, // descriptor_type
-            0x19, // length
-            0x00,
-            0x01, //es_id
-            0x00, // stream_priority
+                0x03, // descriptor_type
+                0x17 + track.config.length, // length
+                0x00,
+                0x01, //es_id
+                0x00, // stream_priority
 
-            0x04, // descriptor_type
-            0x11, // length
-            0x40, //codec : mpeg4_audio
-            0x15, // stream_type
-            0x00,
-            0x00,
-            0x00, // buffer_size
-            0x00,
-            0x00,
-            0x00,
-            0x00, // maxBitrate
-            0x00,
-            0x00,
-            0x00,
-            0x00, // avgBitrate
+                0x04, // descriptor_type
+                0x0f + track.config.length, // length
+                0x40, //codec : mpeg4_audio
+                0x15, // stream_type
+                0x00,
+                0x00,
+                0x00, // buffer_size
+                0x00,
+                0x00,
+                0x00,
+                0x00, // maxBitrate
+                0x00,
+                0x00,
+                0x00,
+                0x00, // avgBitrate
 
-            0x05, // descriptor_type
-            0x02, // length
-            track.config[0],
-            track.config[1]
-        ]);
+                0x05 // descriptor_type
+            ]
+                .concat([track.config.length])
+                .concat(track.config)
+        ); // length + audio config descriptor
     }
 
     static mp4a(track) {

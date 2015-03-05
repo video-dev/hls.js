@@ -13,8 +13,9 @@ import observer from '../observer';
 import { logger } from '../utils/logger';
 
 class TSDemuxer {
-    constructor() {
+    constructor(duration) {
         this.switchLevel();
+        this._duration = duration;
     }
 
     switchLevel() {
@@ -30,16 +31,9 @@ class TSDemuxer {
         this._initSegGenerated = false;
     }
 
-    set duration(duration) {
-        this._duration = duration;
-    }
-
-    get duration() {
-        return this._duration;
-    }
-
     // feed incoming data to the front of the parsing pipeline
-    push(data) {
+    push(data, codecs) {
+        this.codecs = codecs;
         var offset;
         for (offset = 0; offset < data.length; offset += 188) {
             this._parseTSPacket(data, offset);
@@ -501,7 +495,7 @@ class TSDemuxer {
             i;
         if (data[0] === 0xff) {
             if (!track.audiosamplerate) {
-                config = this._parseADTSHeader(pes.data);
+                config = this._ADTStoAudioConfig(pes.data, this.codecs);
                 track.config = config.config;
                 track.audiosamplerate = config.samplerate;
                 track.duration = 90000 * this._duration;
@@ -654,9 +648,10 @@ class TSDemuxer {
         });
     }
 
-    _parseADTSHeader(data) {
+    _ADTStoAudioConfig(data, codecs) {
         var adtsObjectType, // :int
             adtsSampleingIndex, // :int
+            adtsExtensionSampleingIndex, // :int
             adtsChanelConfig, // :int
             config,
             adtsSampleingRates = [
@@ -677,11 +672,25 @@ class TSDemuxer {
         adtsSampleingIndex = (data[2] & 0x3c) >>> 2;
         adtsChanelConfig = (data[2] & 0x01) << 2;
 
+        //  HE-AAC detection : either it should be advertised directly in codecs (retrieved from parsing manifest)
+        // or if no codec specified,we implicitely assume that audio with sampling rate less or equal than 24 kHz is HE-AAC (index 6)
+        if (
+            (codecs && codecs.indexOf('mp4a.40.5') !== -1) ||
+            (!codecs && adtsSampleingIndex >= 6)
+        ) {
+            adtsObjectType = 5;
+            // HE-AAC uses SBR (Spectral Band Replication) , high frequencies are constructed from low frequencies
+            // there is a factor 2 between frame sample rate and output sample rate
+            // multiply frequency by 2 (see table below, equivalent to substract 3)
+            adtsExtensionSampleingIndex = adtsSampleingIndex - 3;
+        } else {
+            adtsExtensionSampleingIndex = adtsSampleingIndex;
+        }
         // byte 3
         adtsChanelConfig |= (data[3] & 0xc0) >>> 6;
-        config = new Uint8Array(2);
         /* refer to http://wiki.multimedia.cx/index.php?title=MPEG-4_Audio#Audio_Specific_Config
-    Audio Profile
+      ISO 14496-3 (AAC).pdf - Table 1.13 — Syntax of AudioSpecificConfig()
+    Audio Profile / Audio Object Type
     0: Null
     1: AAC Main
     2: AAC LC (Low Complexity)
@@ -713,12 +722,21 @@ class TSDemuxer {
     2: 2 channels: front-left, front-right
   */
         // audioObjectType = profile => profile, the MPEG-4 Audio Object Type minus 1
+
+        config = new Array(4);
         config[0] = adtsObjectType << 3;
         // samplingFrequencyIndex
         config[0] |= (adtsSampleingIndex & 0x0e) >> 1;
         config[1] |= (adtsSampleingIndex & 0x01) << 7;
         // channelConfiguration
         config[1] |= adtsChanelConfig << 3;
+        // adtsExtensionSampleingIndex
+        config[1] |= (adtsExtensionSampleingIndex & 0x0e) >> 1;
+        config[2] = (adtsExtensionSampleingIndex & 0x01) << 7;
+        // adtsObjectType (force to 2, chrome is checking that object type is less than 5 ???
+        //    https://chromium.googlesource.com/chromium/src.git/+/master/media/formats/mp4/aac.cc
+        config[2] |= 2 << 2;
+        config[3] = 0;
         return {
             config: config,
             samplerate: adtsSampleingRates[adtsSampleingIndex]
