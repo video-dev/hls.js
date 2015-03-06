@@ -206,17 +206,19 @@
   }
 
   onFragmentLoaded(event,data) {
-    this.state = PARSING_APPENDING;
-    // transmux the MPEG-TS data to ISO-BMFF segments
-    this.tparse0 = Date.now();
-    this.parselen = data.payload.byteLength;
-    this.demuxer.push(data.payload,this.levels[this.level].codecs);
-    var stats,rtt,loadtime,bw;
-    stats = data.stats;
-    rtt = stats.tfirst - stats.trequest;
-    loadtime = stats.tend - stats.trequest;
-    bw = stats.length*8/(1000*loadtime);
-    //logger.log(data.url + ' loaded, RTT(ms)/load(ms)/bitrate:' + rtt + '/' + loadtime + '/' + bw.toFixed(3) + ' Mb/s');
+    if(this.state === LOADING_IN_PROGRESS) {
+      this.state = PARSING_APPENDING;
+      // transmux the MPEG-TS data to ISO-BMFF segments
+      this.tparse0 = Date.now();
+      this.parselen = data.payload.byteLength;
+      this.demuxer.push(data.payload,this.levels[this.level].codecs);
+      var stats,rtt,loadtime,bw;
+      stats = data.stats;
+      rtt = stats.tfirst - stats.trequest;
+      loadtime = stats.tend - stats.trequest;
+      bw = stats.length*8/(1000*loadtime);
+      logger.log(data.url + ' loaded, RTT(ms)/load(ms)/bitrate:' + rtt + '/' + loadtime + '/' + bw.toFixed(3) + ' Mb/s');
+    }
   }
 
   onInitSegment(event,data) {
@@ -227,6 +229,8 @@
       codec = data.codec;
     }
     // codec="mp4a.40.5,avc1.420016";
+    // force HE-AAC for audio (some browsers don't support audio codec switch that could happen in adaptive playlists)
+    codec.replace('mp4a.40.2','mp4a.40.5');
     logger.log('choosed codecs:' + codec);
     if(!this.sourceBuffer) {
       // create source Buffer and link them to MediaSource
