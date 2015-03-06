@@ -692,9 +692,11 @@ class TSDemuxer {
             // there is a factor 2 between frame sample rate and output sample rate
             // multiply frequency by 2 (see table below, equivalent to substract 3)
             adtsExtensionSampleingIndex = adtsSampleingIndex - 3;
+            config = new Array(4);
         } else {
-            adtsObjectType = 5;
+            adtsObjectType = 5; //2
             adtsExtensionSampleingIndex = adtsSampleingIndex;
+            config = new Array(4); //2
         }
         // byte 3
         adtsChanelConfig |= (data[3] & 0xc0) >>> 6;
@@ -732,21 +734,21 @@ class TSDemuxer {
     2: 2 channels: front-left, front-right
   */
         // audioObjectType = profile => profile, the MPEG-4 Audio Object Type minus 1
-
-        config = new Array(4);
         config[0] = adtsObjectType << 3;
         // samplingFrequencyIndex
         config[0] |= (adtsSampleingIndex & 0x0e) >> 1;
         config[1] |= (adtsSampleingIndex & 0x01) << 7;
         // channelConfiguration
         config[1] |= adtsChanelConfig << 3;
-        // adtsExtensionSampleingIndex
-        config[1] |= (adtsExtensionSampleingIndex & 0x0e) >> 1;
-        config[2] = (adtsExtensionSampleingIndex & 0x01) << 7;
-        // adtsObjectType (force to 2, chrome is checking that object type is less than 5 ???
-        //    https://chromium.googlesource.com/chromium/src.git/+/master/media/formats/mp4/aac.cc
-        config[2] |= 2 << 2;
-        config[3] = 0;
+        if (adtsObjectType == 5) {
+            // adtsExtensionSampleingIndex
+            config[1] |= (adtsExtensionSampleingIndex & 0x0e) >> 1;
+            config[2] = (adtsExtensionSampleingIndex & 0x01) << 7;
+            // adtsObjectType (force to 2, chrome is checking that object type is less than 5 ???
+            //    https://chromium.googlesource.com/chromium/src.git/+/master/media/formats/mp4/aac.cc
+            config[2] |= 2 << 2;
+            config[3] = 0;
+        }
         return {
             config: config,
             samplerate: adtsSampleingRates[adtsSampleingIndex]
