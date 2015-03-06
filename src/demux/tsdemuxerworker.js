@@ -18,9 +18,6 @@ class TSDemuxerWorker {
           self.demuxer.push(new Uint8Array(ev.data.data), ev.data.codecs);
           self.demuxer.end();
           break;
-        case 'destroy':
-          self.demuxer.destroy();
-          break;
         default:
           break;
       }
