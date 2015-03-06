@@ -21,7 +21,6 @@ class Demuxer {
 
     destroy() {
         if (this.w) {
-            this.w.postMessage({ cmd: 'destroy' });
             this.w.removeEventListener('message', this.onwmsg);
             this.w.terminate();
             this.w = null;

@@ -20,9 +20,6 @@ class TSDemuxerWorker {
                     );
                     self.demuxer.end();
                     break;
-                case 'destroy':
-                    self.demuxer.destroy();
-                    break;
                 default:
                     break;
             }
