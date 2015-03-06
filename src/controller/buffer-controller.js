@@ -231,7 +231,11 @@
     }
     // codec="mp4a.40.5,avc1.420016";
     // force HE-AAC for audio (some browsers don't support audio codec switch that could happen in adaptive playlists)
-    codec = codec.replace('mp4a.40.2','mp4a.40.5');
+    if((navigator.userAgent.toLowerCase().indexOf('android') === -1) {
+      codec = codec.replace('mp4a.40.2','mp4a.40.5');
+    } /*else {
+      codec = codec.replace('mp4a.40.5','mp4a.40.2');
+    }*/
     logger.log('playlist/choosed codecs:' + this.levels[this.level].codecs + '/' + codec);
     if(!this.sourceBuffer) {
       // create source Buffer and link them to MediaSource

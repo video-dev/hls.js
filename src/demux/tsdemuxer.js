@@ -589,7 +589,11 @@
       adtsExtensionSampleingIndex = adtsSampleingIndex - 3;
       config = new Array(4);
     } else {
-      adtsObjectType = 5; //2
+      if((navigator.userAgent.toLowerCase().indexOf('android') === -1) {
+        adtsObjectType = 5;
+      }else {
+        adtsObjectType = 2;
+      }
       adtsExtensionSampleingIndex = adtsSampleingIndex;
       config = new Array(4); //2
     }
