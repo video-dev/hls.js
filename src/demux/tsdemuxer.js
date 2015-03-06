@@ -580,7 +580,7 @@
     // in case stream is really HE-AAC: it should be either  advertised directly in codecs (retrieved from parsing manifest)
     // or if no codec specified,we implicitely assume that audio with sampling rate less or equal than 24 kHz is HE-AAC (index 6)
     // currently broken on Chrome/Android
-    if((navigator.userAgent.toLowerCase().indexOf('android') === -1) &&
+    if(navigator.userAgent.toLowerCase().indexOf('android') === -1 &&
       ((codecs && codecs.indexOf('mp4a.40.5') !==-1) || (!codecs && adtsSampleingIndex >=6)))  {
       adtsObjectType = 5;
       // HE-AAC uses SBR (Spectral Band Replication) , high frequencies are constructed from low frequencies
@@ -589,7 +589,7 @@
       adtsExtensionSampleingIndex = adtsSampleingIndex - 3;
       config = new Array(4);
     } else {
-      if((navigator.userAgent.toLowerCase().indexOf('android') === -1) {
+      if(navigator.userAgent.toLowerCase().indexOf('android') === -1) {
         adtsObjectType = 5;
       }else {
         adtsObjectType = 2;
