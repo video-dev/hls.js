@@ -107,17 +107,20 @@
         }
         break;
       case LOADING_IDLE:
-        // determine next candidate fragment to be loaded, based on current position and end of buffer position
-        // ensure 60s of buffer upfront
+        // determine next candidate fragment to be loaded, based on current position and
+        //  end of buffer position
+        //  ensure 60s of buffer upfront
         var v = this.video,
             pos = v.currentTime,
             buffered = v.buffered,
             bufferLen,
-            bufferEnd,
+            // bufferStart and bufferEnd are buffer boundaries around current video position
+            bufferStart,bufferEnd,
             i;
-        for(i = 0, bufferLen = 0, bufferEnd = pos ; i < buffered.length ; i++) {
+        for(i = 0, bufferLen = 0, bufferStart = bufferEnd = pos ; i < buffered.length ; i++) {
           if(pos >= buffered.start(i) && pos < buffered.end(i)) {
             // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
+            bufferStart = buffered.start(i);
             bufferEnd = buffered.end(i);
             bufferLen = bufferEnd - pos;
           }
@@ -154,10 +157,19 @@
             this.waitlevel = true;
           } else {
             // find fragment index, contiguous with end of buffer position
-            var fragments = level.data.fragments, frag;
+            var fragments = level.data.fragments, frag, offset;
+            // check if any data is buffered around current video position
+            if(bufferLen === 0) {
+              // no data buffered, look for fragments matching with current play position
+              offset = pos;
+            } else {
+              // data buffered, look for fragments located just after end of buffer
+              offset = bufferEnd + 0.2;
+            }
             for (i = 0; i < fragments.length ; i++) {
               frag = fragments[i];
-              if(frag.start <=  (bufferEnd+0.2) && (frag.start + frag.duration) > (bufferEnd+0.2)) {
+              // offset should be within fragment boundary
+              if(frag.start <=  offset && (frag.start + frag.duration) > offset) {
                 break;
               }
             }
