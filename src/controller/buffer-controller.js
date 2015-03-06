@@ -149,12 +149,12 @@
           }
           var level = this.levels[loadLevel];
           // if level not retrieved yet, switch state and wait for playlist retrieval
-          if(typeof level.fragments === 'undefined') {
+          if(typeof level.data === 'undefined') {
             this.state = LOADING_WAITING_LEVEL_UPDATE;
             this.waitlevel = true;
           } else {
             // find fragment index, contiguous with end of buffer position
-            var fragments = level.fragments, frag;
+            var fragments = level.data.fragments, frag;
             for (i = 0; i < fragments.length ; i++) {
               frag = fragments[i];
               if(frag.start <=  (bufferEnd+0.2) && (frag.start + frag.duration) > (bufferEnd+0.2)) {
@@ -192,8 +192,8 @@
   }
 
   onLevelLoaded(event,data) {
-    // override level info
-    this.levels[data.id] = data.level;
+    // merge level info
+    this.levels[data.id].data = data.level;
     var duration = data.level.totalduration;
     if(!this.demuxer) {
       this.demuxer = new Demuxer(duration);
@@ -225,6 +225,7 @@
     // check if codecs have been explicitely defined in the master playlist for this level;
     // if yes use these ones instead of the ones parsed from the demux
     var codec = this.levels[this.level].codecs;
+    //logger.log('playlist codecs:' + codec);
     if(codec === undefined) {
       codec = data.codec;
     }
