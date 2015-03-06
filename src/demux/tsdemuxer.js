@@ -680,7 +680,8 @@ class TSDemuxer {
         adtsSampleingIndex = (data[2] & 0x3c) >>> 2;
         adtsChanelConfig = (data[2] & 0x01) << 2;
 
-        //  HE-AAC detection : either it should be advertised directly in codecs (retrieved from parsing manifest)
+        //  always force audio type to be HE-AAC SBR. some browsers do not support audio codec switch properly
+        // in case stream is really HE-AAC: it should be either  advertised directly in codecs (retrieved from parsing manifest)
         // or if no codec specified,we implicitely assume that audio with sampling rate less or equal than 24 kHz is HE-AAC (index 6)
         if (
             (codecs && codecs.indexOf('mp4a.40.5') !== -1) ||
@@ -692,6 +693,7 @@ class TSDemuxer {
             // multiply frequency by 2 (see table below, equivalent to substract 3)
             adtsExtensionSampleingIndex = adtsSampleingIndex - 3;
         } else {
+            adtsObjectType = 5;
             adtsExtensionSampleingIndex = adtsSampleingIndex;
         }
         // byte 3
