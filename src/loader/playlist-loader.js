@@ -18,7 +18,6 @@ class PlaylistLoader {
             this.xhr = null;
         }
         this.url = this.id = null;
-        this.manifestLoaded = false;
     }
 
     load(url, request_id) {
@@ -144,8 +143,7 @@ class PlaylistLoader {
                 // 1 level playlist, parse it
                 level = this.parseLevelPlaylist(string, url);
                 // if first request, fire manifest loaded event beforehand
-                if (this.manifestLoaded === false) {
-                    this.manifestLoaded = true;
+                if (this.id === null) {
                     observer.trigger(Event.MANIFEST_LOADED, {
                         levels: [level],
                         url: url,
@@ -161,7 +159,6 @@ class PlaylistLoader {
                 });
             } else {
                 // multi level playlist, parse level info
-                this.manifestLoaded = true;
                 observer.trigger(Event.MANIFEST_LOADED, {
                     levels: this.parseMasterPlaylist(string, url),
                     url: url,

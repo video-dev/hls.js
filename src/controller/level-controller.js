@@ -21,7 +21,6 @@ class LevelController {
     destroy() {
         observer.removeListener(Event.MANIFEST_LOADED, this.onml);
         observer.removeListener(Event.FRAGMENT_LOADED, this.onfl);
-        this.levels = null;
     }
 
     onManifestLoaded(event, data) {
@@ -98,7 +97,7 @@ class LevelController {
         stats = data.stats;
         rtt = stats.tfirst - stats.trequest;
         loadtime = stats.tend - stats.trequest;
-        bw = stats.length * 8 / (1000 * loadtime);
+        this.lastbw = stats.length * 8000 / loadtime;
     }
 
     startLevel() {
@@ -106,7 +105,26 @@ class LevelController {
     }
 
     bestLevel() {
-        return (this._level + 1) % this.levels.length;
+        var lastbw = this.lastbw,
+            adjustedbw,
+            i;
+        // follow algorithm captured from stagefright :
+        // https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp
+        // Pick the highest bandwidth stream below or equal to estimated bandwidth.
+        for (i = 0; i < this.levels.length; i++) {
+            // consider only 80% of the available bandwidth, but if we are switching up,
+            // be even more conservative (70%) to avoid overestimating and immediately
+            // switching back.
+            if (i <= this._level) {
+                adjustedbw = 0.8 * lastbw;
+            } else {
+                adjustedbw = 0.7 * lastbw;
+            }
+            if (adjustedbw < this.levels[i].bitrate) {
+                return Math.max(0, i - 1);
+            }
+        }
+        return i - 1;
     }
 }
 
