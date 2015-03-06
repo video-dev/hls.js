@@ -698,11 +698,12 @@ class TSDemuxer {
         } else {
             if (navigator.userAgent.toLowerCase().indexOf('android') === -1) {
                 adtsObjectType = 5;
+                config = new Array(4);
             } else {
                 adtsObjectType = 2;
+                config = new Array(2);
             }
             adtsExtensionSampleingIndex = adtsSampleingIndex;
-            config = new Array(4); //2
         }
         // byte 3
         adtsChanelConfig |= (data[3] & 0xc0) >>> 6;
