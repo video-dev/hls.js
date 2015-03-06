@@ -10,8 +10,9 @@
 
  class LevelController {
 
-  constructor(video) {
+  constructor(video,playlistLoader) {
     this.video = video;
+    this.playlistLoader = playlistLoader;
     this.onml = this.onManifestLoaded.bind(this);
     this.onfl = this.onFragmentLoaded.bind(this);
     observer.on(Event.MANIFEST_LOADED, this.onml);
@@ -26,7 +27,14 @@
   }
 
   onManifestLoaded(event,data) {
-    var levels = data.levels, bitrateStart, i;
+    var levels = [],bitrateStart,i,bitrateSet={};
+    // remove failover level for now to simplify the logic
+    data.levels.forEach(level => {
+      if(!bitrateSet.hasOwnProperty(level.bitrate)) {
+        levels.push(level);
+        bitrateSet[level.bitrate] = true;
+      }
+    });
     // start bitrate is the first bitrate of the manifest
     bitrateStart = levels[0].bitrate;
     // sort level on bitrate
@@ -37,13 +45,40 @@
     // find index of start level in sorted levels
     for(i=0; i < levels.length ; i++) {
       if(levels[i].bitrate === bitrateStart) {
-        this.level = this._startLevel = i;
+        this._startLevel = i;
         logger.log('manifest loaded,' + levels.length + ' level(s) found, start bitrate:' + bitrateStart);
-        return;
+        break;
+      }
+    }
+    observer.trigger(Event.MANIFEST_PARSED,
+                    { levels : this.levels,
+                      startLevel : i});
+    return;
+  }
+
+  get level() {
+    return this._level;
+  }
+
+  set level(newLevel) {
+    if(this._level !== newLevel) {
+      // check if level idx is valid
+      if(newLevel >= 0 && newLevel < this.levels.length) {
+        this._level = newLevel;
+        logger.log('switching to level ' + newLevel);
+        observer.trigger(Event.LEVEL_SWITCH, { level : newLevel});
+         // check if we need to load playlist for this new level
+        if(this.levels[newLevel].fragments === undefined) {
+          // level not retrieved yet, we need to load it
+          observer.trigger(Event.LEVEL_LOADING, { level : newLevel});
+          this.playlistLoader.load(this.levels[newLevel].url,newLevel);
+        }
+      } else {
+        // invalid level id given, trigger error
+        observer.trigger(Event.LEVEL_ERROR, { level : newLevel, event: 'invalid level idx'});
       }
     }
   }
-
 
   onFragmentLoaded(event,data) {
     var stats,rtt,loadtime,bw;
@@ -59,10 +94,7 @@
   }
 
   bestLevel() {
-    this.level = (this.level+1) % (this.levels.length-1);
-    return this.level;
-    //return Math.floor(Math.random()*this.levels.length);
-    //return this.levels.length-1;
+    return (this._level+1) % this.levels.length;
   }
 }
 

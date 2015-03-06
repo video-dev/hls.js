@@ -3,8 +3,10 @@ export default {
   FRAMEWORK_READY : 'hlsFrameworkReady',
   // Identifier for a manifest loading event, triggered after a call to hls.attachSource(url)
   MANIFEST_LOADING : 'hlsManifestLoading',
-  //Identifier for a manifest loaded event, when this event is received, main manifest and start level has been retrieved
+  //Identifier for a manifest loaded event
   MANIFEST_LOADED  : 'hlsManifestLoaded',
+  //Identifier for a manifest parsed event, when this event is received, main manifest and start level has been retrieved
+  MANIFEST_PARSED  : 'hlsManifestParsed',
   // Identifier for a level loading event
   LEVEL_LOADING    : 'hlsLevelLoading',
   // Identifier for a level loaded event
