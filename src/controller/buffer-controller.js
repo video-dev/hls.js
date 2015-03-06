@@ -231,8 +231,8 @@
     }
     // codec="mp4a.40.5,avc1.420016";
     // force HE-AAC for audio (some browsers don't support audio codec switch that could happen in adaptive playlists)
-    codec.replace('mp4a.40.2','mp4a.40.5');
-    logger.log('choosed codecs:' + codec);
+    codec = codec.replace('mp4a.40.2','mp4a.40.5');
+    logger.log('playlist/choosed codecs:' + this.levels[this.level].codecs + '/' + codec);
     if(!this.sourceBuffer) {
       // create source Buffer and link them to MediaSource
       var sb = this.sourceBuffer = this.mediaSource.addSourceBuffer('video/mp4;codecs=' + codec);
