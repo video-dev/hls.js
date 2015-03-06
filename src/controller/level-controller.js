@@ -67,10 +67,11 @@
         logger.log('switching to level ' + newLevel);
         observer.trigger(Event.LEVEL_SWITCH, { level : newLevel});
          // check if we need to load playlist for this new level
-        if(this.levels[newLevel].fragments === undefined) {
+        if(this.levels[newLevel].loading === undefined) {
           // level not retrieved yet, we need to load it
           observer.trigger(Event.LEVEL_LOADING, { level : newLevel});
           this.playlistLoader.load(this.levels[newLevel].url,newLevel);
+          this.levels[newLevel].loading = true;
         }
       } else {
         // invalid level id given, trigger error
@@ -90,9 +91,16 @@
 
   startLevel() {
     return this._startLevel;
+    //return this.levels.length-1;
+    //return 0;
   }
 
   bestLevel() {
+    // if(this._level == 0) {
+    //   return this.levels.length-1;
+    // } else {
+    //   return 0;
+    // }
     var lastbw = this.lastbw,adjustedbw,i;
     // follow algorithm captured from stagefright :
     // https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp
