@@ -579,7 +579,9 @@
     //  always force audio type to be HE-AAC SBR. some browsers do not support audio codec switch properly
     // in case stream is really HE-AAC: it should be either  advertised directly in codecs (retrieved from parsing manifest)
     // or if no codec specified,we implicitely assume that audio with sampling rate less or equal than 24 kHz is HE-AAC (index 6)
-    if((codecs && codecs.indexOf('mp4a.40.5') !==-1) || (!codecs && adtsSampleingIndex >=6))  {
+    // currently broken on Chrome/Android
+    if((navigator.userAgent.toLowerCase().indexOf('android') === -1) &&
+      ((codecs && codecs.indexOf('mp4a.40.5') !==-1) || (!codecs && adtsSampleingIndex >=6)))  {
       adtsObjectType = 5;
       // HE-AAC uses SBR (Spectral Band Replication) , high frequencies are constructed from low frequencies
       // there is a factor 2 between frame sample rate and output sample rate
