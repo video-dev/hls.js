@@ -19,7 +19,6 @@ import {logger}             from '../utils/logger';
       this.xhr = null;
     }
     this.url = this.id = null;
-    this.manifestLoaded = false;
   }
 
   load(url,request_id) {
@@ -124,8 +123,7 @@ import {logger}             from '../utils/logger';
         // 1 level playlist, parse it
         level = this.parseLevelPlaylist(string,url);
         // if first request, fire manifest loaded event beforehand
-        if(this.manifestLoaded === false) {
-          this.manifestLoaded = true;
+        if(this.id === null) {
           observer.trigger(Event.MANIFEST_LOADED,
                           { levels : [level],
                             url : url,
@@ -139,7 +137,6 @@ import {logger}             from '../utils/logger';
                           stats : this.stats});
       } else {
         // multi level playlist, parse level info
-        this.manifestLoaded = true;
         observer.trigger(Event.MANIFEST_LOADED,
                         { levels : this.parseMasterPlaylist(string,url),
                           url : url ,

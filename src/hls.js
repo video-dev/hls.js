@@ -139,7 +139,7 @@ class Hls {
     // internal listener setup
     // internal listeners
     // when attaching to a source URL, trigger a playlist load
-    this.playlistLoader.load(url);
+    this.playlistLoader.load(url,null);
   }
 
   detachSource() {
