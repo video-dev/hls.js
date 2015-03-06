@@ -23,10 +23,9 @@ class Hls {
 
     constructor(video) {
         this.playlistLoader = new PlaylistLoader();
-        this.levelController = new LevelController();
+        this.levelController = new LevelController(video, this.playlistLoader);
         this.bufferController = new BufferController(
             video,
-            this.playlistLoader,
             this.levelController
         );
         this.Events = Event;

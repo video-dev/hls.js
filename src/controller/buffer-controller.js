@@ -16,9 +16,8 @@ const PARSING_APPENDING = 3;
 const PARSED_APPENDING = 4;
 
 class BufferController {
-    constructor(video, playlistLoader, levelController) {
+    constructor(video, levelController) {
         this.video = video;
-        this.playlistLoader = playlistLoader;
         this.levelController = levelController;
         this.fragmentLoader = new FragmentLoader();
         this.mp4segments = [];
@@ -27,7 +26,7 @@ class BufferController {
         this.onsbe = this.onSourceBufferError.bind(this);
         // internal listeners
         this.onfr = this.onFrameworkReady.bind(this);
-        this.onml = this.onManifestLoaded.bind(this);
+        this.onmp = this.onManifestParsed.bind(this);
         this.onll = this.onLevelLoaded.bind(this);
         this.onfl = this.onFragmentLoaded.bind(this);
         this.onis = this.onInitSegment.bind(this);
@@ -35,9 +34,9 @@ class BufferController {
         this.onfp = this.onFragmentParsed.bind(this);
         this.ontick = this.tick.bind(this);
         this.state = LOADING_IDLE;
-        this.waitlevel = true;
+        this.waitlevel = false;
         observer.on(Event.FRAMEWORK_READY, this.onfr);
-        observer.on(Event.MANIFEST_LOADED, this.onml);
+        observer.on(Event.MANIFEST_PARSED, this.onmp);
     }
 
     destroy() {
@@ -57,7 +56,7 @@ class BufferController {
             this.sourceBuffer = null;
         }
         observer.removeListener(Event.FRAMEWORK_READY, this.onfr);
-        observer.removeListener(Event.MANIFEST_LOADED, this.onml);
+        observer.removeListener(Event.MANIFEST_PARSED, this.onmp);
         this.state = LOADING_IDLE;
     }
 
@@ -131,25 +130,27 @@ class BufferController {
                 // if buffer length is less than 60s try to load a new fragment
                 if (bufferLen < 60) {
                     var loadLevel;
-                    // determine loading level
-                    if (typeof this.level === 'undefined') {
-                        // level not defined, get start level from level Controller
-                        loadLevel = this.levelController.startLevel();
-                    } else if (this.waitlevel === false) {
-                        // level already defined, and we are not already switching, get best level from level Controller
-                        loadLevel = this.levelController.bestLevel();
-                    } else {
-                        // we just switched level and playlist should now be retrieved, stick to switched level
-                        loadLevel = this.level;
-                    }
-                    if (loadLevel !== this.playlistLoader.level) {
-                        // set new level to playlist loader : this will trigger a playlist load if needed
-                        this.playlistLoader.level = loadLevel;
-                        this.level = loadLevel;
-                        // tell demuxer that we will switch level (this will force init segment to be regenerated)
-                        if (this.demuxer) {
-                            this.demuxer.switchLevel();
+                    if (this.waitlevel === false) {
+                        // determine loading level
+                        if (this.justStarted === true) {
+                            // get start level from level Controller
+                            loadLevel = this.levelController.startLevel();
+                            this.justStarted = false;
+                        } else {
+                            // we are not at playback start, get best level from level Controller
+                            loadLevel = this.levelController.bestLevel();
                         }
+                        if (loadLevel !== this.levelController.level) {
+                            // set new level to playlist loader : this will trigger a playlist load if needed
+                            this.level = this.levelController.level = loadLevel;
+                            // tell demuxer that we will switch level (this will force init segment to be regenerated)
+                            if (this.demuxer) {
+                                this.demuxer.switchLevel();
+                            }
+                        }
+                    } else {
+                        // load level is retrieved from level Controller
+                        loadLevel = this.level;
                     }
                     var level = this.levels[loadLevel];
                     // if level not retrieved yet, switch state and wait for playlist retrieval
@@ -213,21 +214,23 @@ class BufferController {
         this.mediaSource = data.mediaSource;
     }
 
-    onManifestLoaded(event, data) {
+    onManifestParsed(event, data) {
         this.levels = data.levels;
+        this.justStarted = true;
         this.start();
     }
 
     onLevelLoaded(event, data) {
-        this.level = data.level;
-        var duration = this.levels[this.level].totalduration;
+        // override level info
+        this.levels[data.id] = data.level;
+        var duration = data.level.totalduration;
         if (!this.demuxer) {
             this.demuxer = new Demuxer(duration);
         }
         var stats = data.stats;
         logger.log(
             'level ' +
-                data.level +
+                data.id +
                 ' loaded,RTT(ms)/load(ms)/duration:' +
                 (stats.tfirst - stats.trequest) +
                 '/' +

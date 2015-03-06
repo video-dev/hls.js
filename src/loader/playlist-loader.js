@@ -9,8 +9,7 @@ import { logger } from '../utils/logger';
 
 class PlaylistLoader {
     constructor() {
-        this.levels = [];
-        this._level = undefined;
+        this.manifestLoaded = false;
     }
 
     destroy() {
@@ -18,17 +17,13 @@ class PlaylistLoader {
             this.xhr.abort();
             this.xhr = null;
         }
-        this.levels = [];
-        this._level = undefined;
+        this.url = this.id = null;
+        this.manifestLoaded = false;
     }
 
-    load(url) {
-        observer.trigger(Event.MANIFEST_LOADING, { url: this.url });
-        this._load(url);
-    }
-
-    _load(url) {
+    load(url, request_id) {
         this.url = url;
+        this.id = request_id;
         this.stats = { trequest: Date.now() };
         var xhr = (this.xhr = new XMLHttpRequest());
         xhr.onload = this.loadsuccess.bind(this);
@@ -36,33 +31,6 @@ class PlaylistLoader {
         xhr.onprogress = this.loadprogress.bind(this);
         xhr.open('GET', url, true);
         xhr.send();
-    }
-
-    get level() {
-        return this._level;
-    }
-
-    set level(newLevel) {
-        if (this._level !== newLevel) {
-            // check if level idx is valid
-            if (newLevel >= 0 && newLevel < this.levels.length) {
-                this._level = newLevel;
-                logger.log('switching to level ' + newLevel);
-                observer.trigger(Event.LEVEL_SWITCH, { level: newLevel });
-                // check if we need to load playlist for this new level
-                if (this.levels[newLevel].fragments === undefined) {
-                    // level not retrieved yet, we need to load it
-                    observer.trigger(Event.LEVEL_LOADING, { level: newLevel });
-                    this._load(this.levels[newLevel].url);
-                }
-            } else {
-                // invalid level id given, trigger error
-                observer.trigger(Event.LEVEL_ERROR, {
-                    level: newLevel,
-                    event: 'invalid level idx'
-                });
-            }
-        }
     }
 
     resolve(url, baseUrl) {
@@ -86,46 +54,10 @@ class PlaylistLoader {
         return resolvedUrl;
     }
 
-    parseManifest(string, url) {
-        if (string.indexOf('#EXTM3U') === 0) {
-            if (string.indexOf('#EXTINF:') > 0) {
-                // 1 level playlist, create unique level and parse playlist
-                this._level = 0;
-                this.levels.length = 1;
-                this.levels[0] = {};
-                this.parseLevelPlaylist(string, url, 0);
-                observer.trigger(Event.MANIFEST_LOADED, {
-                    levels: this.levels,
-                    url: url,
-                    stats: this.stats
-                });
-                observer.trigger(Event.LEVEL_LOADED, {
-                    level: this._level,
-                    url: url,
-                    stats: this.stats
-                });
-            } else {
-                // multi level playlist, parse level info
-                this.levels = this.parseMasterPlaylist(string, url);
-                observer.trigger(Event.MANIFEST_LOADED, {
-                    levels: this.levels,
-                    url: url,
-                    stats: this.stats
-                });
-            }
-        } else {
-            observer.trigger(Event.LOAD_ERROR, {
-                url: url,
-                event: 'not an HLS playlist'
-            });
-        }
-    }
-
     parseMasterPlaylist(string, baseurl) {
         var levels = [],
             level = {},
-            result,
-            bitrateSet = {};
+            result;
         var re = /#EXT-X-STREAM-INF:([^\n\r]*(BAND)WIDTH=(\d+))?([^\n\r]*(CODECS)=\"(.*)\",)?([^\n\r]*(RES)OLUTION=(\d+)x(\d+))?([^\n\r]*(NAME)=\"(.*)\")?[^\n\r]*[\r\n]+([^\r\n]+)/g;
         while ((result = re.exec(string)) != null) {
             result.shift();
@@ -152,44 +84,37 @@ class PlaylistLoader {
                         break;
                 }
             }
-            // remove failover level for now to simplify the logic
-            if (!bitrateSet.hasOwnProperty(level.bitrate)) {
-                levels.push(level);
-                bitrateSet[level.bitrate] = true;
-            }
+            levels.push(level);
             level = {};
         }
         return levels;
     }
 
-    parseLevelPlaylist(string, baseurl, idx) {
+    parseLevelPlaylist(string, baseurl) {
         var currentSN = 0,
-            totalduration = 0;
-        var obj = this.levels[idx];
-        obj.url = baseurl;
-        obj.fragments = [];
-        obj.endList = false;
-
-        var result;
-        var re = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):([\d\.]+)[^\r\n]*[\r\n]+([^\r\n]+)|(?:#EXT-X-(ENDLIST)))/g;
-        while ((result = re.exec(string)) !== null) {
+            totalduration = 0,
+            level = { url: baseurl, fragments: [], endList: false },
+            result,
+            regexp;
+        regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):([\d\.]+)[^\r\n]*[\r\n]+([^\r\n]+)|(?:#EXT-X-(ENDLIST)))/g;
+        while ((result = regexp.exec(string)) !== null) {
             result.shift();
             result = result.filter(function(n) {
                 return n !== undefined;
             });
             switch (result[0]) {
                 case 'MEDIA-SEQUENCE':
-                    currentSN = obj.startSN = parseInt(result[1]);
+                    currentSN = level.startSN = parseInt(result[1]);
                     break;
                 case 'TARGETDURATION':
-                    obj.targetduration = parseFloat(result[1]);
+                    level.targetduration = parseFloat(result[1]);
                     break;
                 case 'ENDLIST':
-                    obj.endList = true;
+                    level.endList = true;
                     break;
                 case 'INF':
                     var duration = parseFloat(result[1]);
-                    obj.fragments.push({
+                    level.fragments.push({
                         url: this.resolve(result[2], baseurl),
                         duration: duration,
                         start: totalduration,
@@ -201,25 +126,53 @@ class PlaylistLoader {
                     break;
             }
         }
-        //logger.log('found ' + obj.fragments.length + ' fragments');
-        obj.totalduration = totalduration;
-        obj.endSN = currentSN - 1;
+        //logger.log('found ' + level.fragments.length + ' fragments');
+        level.totalduration = totalduration;
+        level.endSN = currentSN - 1;
+        return level;
     }
 
     loadsuccess(event) {
+        var level,
+            string = event.currentTarget.responseText,
+            url = this.url,
+            id = this.id;
         this.stats.tend = Date.now();
-        if (this.levels.length === 0) {
-            this.parseManifest(event.currentTarget.responseText, this.url);
+
+        if (string.indexOf('#EXTM3U') === 0) {
+            if (string.indexOf('#EXTINF:') > 0) {
+                // 1 level playlist, parse it
+                level = this.parseLevelPlaylist(string, url);
+                // if first request, fire manifest loaded event beforehand
+                if (this.manifestLoaded === false) {
+                    this.manifestLoaded = true;
+                    observer.trigger(Event.MANIFEST_LOADED, {
+                        levels: [level],
+                        url: url,
+                        id: id,
+                        stats: this.stats
+                    });
+                }
+                observer.trigger(Event.LEVEL_LOADED, {
+                    level: level,
+                    url: url,
+                    id: id,
+                    stats: this.stats
+                });
+            } else {
+                // multi level playlist, parse level info
+                this.manifestLoaded = true;
+                observer.trigger(Event.MANIFEST_LOADED, {
+                    levels: this.parseMasterPlaylist(string, url),
+                    url: url,
+                    id: id,
+                    stats: this.stats
+                });
+            }
         } else {
-            this.parseLevelPlaylist(
-                event.currentTarget.responseText,
-                this.url,
-                this._level
-            );
-            observer.trigger(Event.LEVEL_LOADED, {
-                level: this._level,
-                url: this.url,
-                stats: this.stats
+            observer.trigger(Event.LOAD_ERROR, {
+                url: url,
+                event: 'not an HLS playlist'
             });
         }
     }
