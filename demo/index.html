@@ -24,6 +24,7 @@
           <pre id='HlsUrl'></pre>
           <button style="font: bold 20px Arial" onclick="loadTestVid()">Load a test Video</button>
           <button style="font: bold 20px Arial" onclick="loadRandomPykeVid()">Load a Random Pyke Video</button>
+          <button style="font: bold 20px Arial" onclick="loadRandomLiveVid()">Load a Random Live Video</button>
           <button style="font: bold 20px Arial" onclick="loadNextPykeVid()">Load Next Pyke Video</button>
           <button style="font: bold 20px Arial" onclick="loadDMRandomVid()">Load a random DM Video</button><br><br>
           <div id='buttons'>
@@ -64,6 +65,7 @@
 
 
   <script src="streams.js"></script>
+  <script src="dm.js"></script>
 
   <script>
   function changeStream() {
@@ -154,134 +156,23 @@
     }
   }
 
-  function getDMURL(url) {
-    //return 'http://www.dailymotion.com/cdn/manifest/video/' + url + '.m3u8';
-    return 'http://stage-10.dailymotion.com/cdn/manifest/video/' + url + '.m3u8';
-  }
-
-function loadTestVid() {
-  var url = getRandomTestVid();
-  if(url) {
-    loadStream(video,url);
-  } else {
-    document.getElementById("HlsStatus").innerHTML = "unable to load random test video, if you ae not on DM domain, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin Chrome Extension</a>";
-  }
-}
-
-function loadRandomPykeVid() {
-  var url = getRandomPykeVid();
-  if(url) {
-    loadStream(video,url);
-  } else {
-    document.getElementById("HlsStatus").innerHTML = "unable to load random test video, if you ae not on DM domain, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin Chrome Extension</a>";
-  }
-}
-
-function loadNextPykeVid() {
-  var url = getNextPykeVid();
-  if(url) {
-    loadStream(video,url);
-  } else {
-    document.getElementById("HlsStatus").innerHTML = "unable to load test video, if you ae not on DM domain, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin Chrome Extension</a>";
-  }
-}
-
-
-function getRandomPykeVid() {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'https://api.dailymotion.com/user/pyke369/videos&limit=100' , false);
-    try {
-      xhr.send(null);
-    } catch(err) {
-     return null;
-    }
-
-    if(xhr.status === 200) {
-      var obj = JSON.parse(xhr.responseText);
-      var idx = Math.floor(Math.random()*obj.list.length);
-      return obj.list[idx].id;
-    } else {
-      return null;
-    }
-}
-
-var pykeVideoIdx = 0;
-
-function getNextPykeVid() {
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'https://api.dailymotion.com/user/pyke369/videos&limit=100' , false);
-    try {
-      xhr.send(null);
-    } catch(err) {
-     return null;
-    }
-
-    if(xhr.status === 200) {
-      var obj = JSON.parse(xhr.responseText);
-      return obj.list[pykeVideoIdx++].id;
-    } else {
-      return null;
-    }
-}
-
 
 function getRandomTestVid() {
   var idx = Math.floor(Math.random()*teststreams.length);
   return teststreams[idx].file;
 }
 
-function getDMRandomVid() {
-    var xhr = new XMLHttpRequest();
-    // // from march 2005 onwards
-    // var startTime = new Date(2014,2).getTime();
-    // var currentTime = new Date().getTime();
-    // var randomStartTime = startTime+Math.floor(Math.random()*(currentTime-startTime));
-    // // one month after
-    // var randomEndTime = Math.min(randomStartTime + (1000*60*60*24*365/12));
-
-    // console.log("start filter:" + new Date(randomStartTime).toUTCString());
-    // console.log("end   filter:" + new Date(randomEndTime).toUTCString());
-
-    // var filter = 'created_after=' + randomStartTime + '&created_before=' + randomEndTime;
-    // var apiCall = 'https://api.dailymotion.com/videos?' + filter + '&flags=no_live&limit=50';
-    // xhr.open('GET', apiCall , false);
-    xhr.open('GET', 'https://api.dailymotion.com/videos?longer_than=20&flags=no_live,partner,tvod&limit=100' , false);
-    try {
-      xhr.send(null);
-    } catch(err) {
-     return null;
-    }
-
-    if(xhr.status === 200) {
-      var obj = JSON.parse(xhr.responseText);
-      var idx = Math.floor(Math.random()*obj.list.length);
-      return obj.list[idx].id;
-    } else {
-      return null;
-    }
+function outputLog(msg) {
+  document.getElementById('buffered_log').innerHTML = msg + "<br>";
 }
 
-function loadDMRandomVid() {
-  var url = getDMRandomVid();
-  if(url) {
-    loadStream(video,url);
-  } else {
-    document.getElementById("HlsStatus").innerHTML = "unable to load DM random video lists, if not on DM domain, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin Chrome Extension</a>";
+function timeRangesToString(r) {
+  var log = "";
+  for (var i=0; i<r.length; i++) {
+    log += "[" + r.start(i) + "," + r.end(i) + "]<br>";
   }
-
+  return log;
 }
-
-  function outputLog(msg) {
-    document.getElementById('buffered_log').innerHTML = msg + "<br>";
-  }
-
-  function timeRangesToString(r) {
-    var log = "";
-    for (var i=0; i<r.length; i++) {
-      log += "[" + r.start(i) + "," + r.end(i) + "]<br>";
-    }
-    return log;
-  }
 
   function updateBuffered() {
     var v = document.getElementById('video');
