@@ -64,6 +64,7 @@ function loadRandomPykeVid() {
 function loadRandomLiveVid() {
   var url = getDMRandom('https://api.dailymotion.com/videos?flags=live_onair&limit=100');
   if(url) {
+    url = 'http://www.dailymotion.com/cdn/live/video/' + url + '?protocol=hls';
     loadStream(video,url);
   } else {
     loadError();
