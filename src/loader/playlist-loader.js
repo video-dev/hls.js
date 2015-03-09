@@ -134,7 +134,7 @@ class PlaylistLoader {
     loadsuccess(event) {
         var level,
             string = event.currentTarget.responseText,
-            url = this.url,
+            url = event.currentTarget.responseURL,
             id = this.id;
         this.stats.tend = Date.now();
 
