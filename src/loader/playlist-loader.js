@@ -115,7 +115,7 @@ import {logger}             from '../utils/logger';
   }
 
   loadsuccess(event) {
-    var level,string = event.currentTarget.responseText, url = this.url, id = this.id;
+    var level,string = event.currentTarget.responseText, url = event.currentTarget.responseURL, id = this.id;
     this.stats.tend = Date.now();
 
     if(string.indexOf('#EXTM3U') === 0) {
