@@ -55,7 +55,10 @@ class Demuxer {
       case Event.INIT_SEGMENT:
         observer.trigger(Event.INIT_SEGMENT,{
           moov: new Uint8Array(ev.data.moov),
-          codec : ev.data.codec
+          codec : ev.data.codec,
+          width : ev.data.width,
+          height : ev.data.height,
+          audioChannelCount : ev.data.audioChannelCount
         });
       break;
       case Event.FRAGMENT_PARSING:

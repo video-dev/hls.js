@@ -248,7 +248,8 @@
     }
     // codec="mp4a.40.5,avc1.420016";
     // force HE-AAC for audio (some browsers don't support audio codec switch that could happen in adaptive playlists)
-    if(navigator.userAgent.toLowerCase().indexOf('android') === -1) {
+    //don't do it for mono streams ...
+    if(data.audioChannelCount === 2 && navigator.userAgent.toLowerCase().indexOf('android') === -1) {
       codec = codec.replace('mp4a.40.2','mp4a.40.5');
     }
     logger.log('playlist/choosed codecs:' + this.levels[this.level].codecs + '/' + codec);
