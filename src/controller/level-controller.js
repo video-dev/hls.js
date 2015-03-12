@@ -93,7 +93,7 @@
   }
 
   onFragmentLoaded(event,data) {
-    var stats,rtt,loadtime,bw;
+    var stats,rtt,loadtime;
     stats = data.stats;
     rtt = stats.tfirst - stats.trequest;
     loadtime = stats.tend - stats.trequest;
