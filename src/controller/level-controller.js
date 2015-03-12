@@ -74,6 +74,7 @@
         // stopping live reloading timer if any
         if(this.timer) {
          clearInterval(this.timer);
+         this.timer = null;
         }
         this._level = newLevel;
         logger.log('switching to level ' + newLevel);
@@ -111,7 +112,6 @@
   }
 
   tick() {
-    logger.log('on tick');
     observer.trigger(Event.LEVEL_LOADING, { level : this._level});
     this.playlistLoader.load(this.levels[this._level].url,this._level);
   }
