@@ -5,7 +5,7 @@
 
 import Event from '../events';
 import observer from '../observer';
-import { logger } from '../utils/logger';
+//import {logger}             from '../utils/logger';
 
 class PlaylistLoader {
     constructor() {
@@ -20,9 +20,9 @@ class PlaylistLoader {
         this.url = this.id = null;
     }
 
-    load(url, request_id) {
+    load(url, requestId) {
         this.url = url;
-        this.id = request_id;
+        this.id = requestId;
         this.stats = { trequest: Date.now() };
         var xhr = (this.xhr = new XMLHttpRequest());
         xhr.onload = this.loadsuccess.bind(this);
@@ -56,7 +56,9 @@ class PlaylistLoader {
     parseMasterPlaylist(string, baseurl) {
         var levels = [],
             level = {},
-            result;
+            result,
+            codecs,
+            codec;
         var re = /#EXT-X-STREAM-INF:([^\n\r]*(BAND)WIDTH=(\d+))?([^\n\r]*(CODECS)=\"(.*)\",)?([^\n\r]*(RES)OLUTION=(\d+)x(\d+))?([^\n\r]*(NAME)=\"(.*)\")?[^\n\r]*[\r\n]+([^\r\n]+)/g;
         while ((result = re.exec(string)) != null) {
             result.shift();
@@ -77,7 +79,19 @@ class PlaylistLoader {
                         level.name = result.shift();
                         break;
                     case 'CODECS':
-                        level.codecs = result.shift();
+                        codecs = result.shift().split(',');
+                        while (codecs.length > 0) {
+                            if (level.codecs === undefined) {
+                                level.codecs = '';
+                            } else {
+                                level.codecs += ',';
+                            }
+                            codec = codecs.shift();
+                            if (codec.indexOf('avc1') !== -1) {
+                                codec = this.avc1toavcoti(codec);
+                            }
+                            level.codecs += codec;
+                        }
                         break;
                     default:
                         break;
@@ -87,6 +101,21 @@ class PlaylistLoader {
             level = {};
         }
         return levels;
+    }
+
+    avc1toavcoti(codec) {
+        var result,
+            avcdata = codec.split('.');
+        if (avcdata.length > 2) {
+            result = avcdata.shift() + '.';
+            result += parseInt(avcdata.shift()).toString(16);
+            result += ('00' + parseInt(avcdata.shift()).toString(16)).substr(
+                -4
+            );
+        } else {
+            result = codec;
+        }
+        return result;
     }
 
     parseLevelPlaylist(string, baseurl) {
