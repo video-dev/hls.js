@@ -32,7 +32,8 @@ class TSDemuxerWorker {
                 codec: data.codec,
                 moov: data.moov.buffer,
                 width: data.width,
-                height: data.height
+                height: data.height,
+                audioChannelCount: data.audioChannelCount
             };
             // pass moov as transferable object (no copy)
             self.postMessage(objData, [objData.moov]);
