@@ -747,7 +747,7 @@ class TSDemuxer {
         config[1] |= (adtsSampleingIndex & 0x01) << 7;
         // channelConfiguration
         config[1] |= adtsChanelConfig << 3;
-        if (adtsObjectType == 5) {
+        if (adtsObjectType === 5) {
             // adtsExtensionSampleingIndex
             config[1] |= (adtsExtensionSampleingIndex & 0x0e) >> 1;
             config[2] = (adtsExtensionSampleingIndex & 0x01) << 7;
