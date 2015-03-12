@@ -15,14 +15,22 @@
     this.playlistLoader = playlistLoader;
     this.onml = this.onManifestLoaded.bind(this);
     this.onfl = this.onFragmentLoaded.bind(this);
+    this.onll = this.onLevelLoaded.bind(this);
+    this.ontick = this.tick.bind(this);
     observer.on(Event.MANIFEST_LOADED, this.onml);
     observer.on(Event.FRAGMENT_LOADED, this.onfl);
+    observer.on(Event.LEVEL_LOADED, this.onll);
+
     //this.startLevel = startLevel;
   }
 
   destroy() {
     observer.removeListener(Event.MANIFEST_LOADED, this.onml);
     observer.removeListener(Event.FRAGMENT_LOADED, this.onfl);
+    observer.removeListener(Event.LEVEL_LOADED, this.onll);
+    if(this.timer) {
+     clearInterval(this.ontick);
+    }
   }
 
   onManifestLoaded(event,data) {
@@ -63,6 +71,10 @@
     if(this._level !== newLevel) {
       // check if level idx is valid
       if(newLevel >= 0 && newLevel < this.levels.length) {
+        // stopping live reloading timer if any
+        if(this.timer) {
+         clearInterval(this.ontick);
+        }
         this._level = newLevel;
         logger.log('switching to level ' + newLevel);
         observer.trigger(Event.LEVEL_SWITCH, { level : newLevel});
@@ -88,6 +100,21 @@
     this.lastbw = stats.length*8000/loadtime;
   }
 
+
+  onLevelLoaded(event,data) {
+    // check if current playlist is a live playlist
+    if(data.level.endList === false && !this.timer) {
+      // if live playlist we will have to reload it periodically
+      // set reload period to playlist target duration
+      this.timer = setInterval(this.ontick, 1000*data.level.targetduration);
+    }
+  }
+
+  tick() {
+    logger.log('on tick');
+    observer.trigger(Event.LEVEL_LOADING, { level : this._level});
+    this.playlistLoader.load(this.levels[this._level].url,this._level);
+  }
 
   startLevel() {
     return this._startLevel;
