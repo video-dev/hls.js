@@ -74,7 +74,7 @@
 
   stop() {
     if(this.timer) {
-      clearInterval(this.ontick);
+      clearInterval(this.timer);
     }
     this.timer = undefined;
     observer.removeListener(Event.FRAGMENT_LOADED, this.onfl);

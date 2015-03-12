@@ -29,7 +29,7 @@
     observer.removeListener(Event.FRAGMENT_LOADED, this.onfl);
     observer.removeListener(Event.LEVEL_LOADED, this.onll);
     if(this.timer) {
-     clearInterval(this.ontick);
+     clearInterval(this.timer);
     }
   }
 
@@ -73,7 +73,7 @@
       if(newLevel >= 0 && newLevel < this.levels.length) {
         // stopping live reloading timer if any
         if(this.timer) {
-         clearInterval(this.ontick);
+         clearInterval(this.timer);
         }
         this._level = newLevel;
         logger.log('switching to level ' + newLevel);
