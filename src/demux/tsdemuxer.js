@@ -502,6 +502,7 @@ class TSDemuxer {
                 config = this._ADTStoAudioConfig(pes.data, this.codecs);
                 track.config = config.config;
                 track.audiosamplerate = config.samplerate;
+                track.channelCount = config.channelCount;
                 track.duration = 90000 * this._duration;
                 // implicit SBR signalling (HE-AAC) : if sampling rate less than 24kHz
                 var codec =
@@ -509,7 +510,13 @@ class TSDemuxer {
                         ? 5
                         : (track.config[0] & 0xf8) >> 3;
                 track.codec = 'mp4a.40.' + codec;
-                console.log(track.codec + ',rate:' + config.samplerate);
+                console.log(
+                    track.codec +
+                        ',rate:' +
+                        config.samplerate +
+                        ',nb channel:' +
+                        config.channelCount
+                );
             }
             adtsStartOffset = i = 0;
             while (adtsStartOffset < data.length) {
@@ -758,7 +765,8 @@ class TSDemuxer {
         }
         return {
             config: config,
-            samplerate: adtsSampleingRates[adtsSampleingIndex]
+            samplerate: adtsSampleingRates[adtsSampleingIndex],
+            channelCount: adtsChanelConfig
         };
     }
 

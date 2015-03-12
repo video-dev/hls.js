@@ -721,7 +721,7 @@ class MP4 {
                 0x00,
                 0x00, // reserved
                 0x00,
-                0x02, // channelcount:2 channels
+                track.channelCount, // channelcount
                 0x00,
                 0x10, // sampleSize:16bits
                 0x00,
