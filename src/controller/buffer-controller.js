@@ -9,11 +9,12 @@ import observer from '../observer';
 import { logger } from '../utils/logger';
 import Demuxer from '../demux/demuxer';
 
-const LOADING_IDLE = 0;
-const LOADING_IN_PROGRESS = 1;
-const LOADING_WAITING_LEVEL_UPDATE = 2;
-const PARSING_APPENDING = 3;
-const PARSED_APPENDING = 4;
+const IDLE = 0;
+const LOADING = 1;
+const WAITING_LEVEL = 2;
+const PARSING = 3;
+const PARSED = 4;
+const APPENDING = 5;
 
 class BufferController {
     constructor(video, levelController) {
@@ -33,7 +34,7 @@ class BufferController {
         this.onfpg = this.onFragmentParsing.bind(this);
         this.onfp = this.onFragmentParsed.bind(this);
         this.ontick = this.tick.bind(this);
-        this.state = LOADING_IDLE;
+        this.state = IDLE;
         this.waitlevel = false;
         observer.on(Event.FRAMEWORK_READY, this.onfr);
         observer.on(Event.MANIFEST_PARSED, this.onmp);
@@ -57,7 +58,7 @@ class BufferController {
         }
         observer.removeListener(Event.FRAMEWORK_READY, this.onfr);
         observer.removeListener(Event.MANIFEST_PARSED, this.onmp);
-        this.state = LOADING_IDLE;
+        this.state = IDLE;
     }
 
     start() {
@@ -84,13 +85,15 @@ class BufferController {
 
     tick() {
         switch (this.state) {
-            case LOADING_IN_PROGRESS:
+            case LOADING:
             // nothing to do, wait for fragment retrieval
-            case LOADING_WAITING_LEVEL_UPDATE:
-                // nothing to do, wait for level retrieval
+            case WAITING_LEVEL:
+            // nothing to do, wait for level retrieval
+            case PARSING:
+                // nothing to do, wait for fragment being parsed
                 break;
-            case PARSING_APPENDING:
-            case PARSED_APPENDING:
+            case PARSED:
+            case APPENDING:
                 if (this.sourceBuffer) {
                     // if MP4 segment appending in progress nothing to do
                     if (this.sourceBuffer.updating) {
@@ -100,14 +103,11 @@ class BufferController {
                         this.sourceBuffer.appendBuffer(
                             this.mp4segments.shift()
                         );
-                    } else if (this.state === PARSED_APPENDING) {
-                        // no more sourcebuffer to update, and parsing finished we are done with this segment, switch back to IDLE state
-                        //logger.log('sb append finished');
-                        this.state = LOADING_IDLE;
+                        this.state = APPENDING;
                     }
                 }
                 break;
-            case LOADING_IDLE:
+            case IDLE:
                 // determine next candidate fragment to be loaded, based on current position and
                 //  end of buffer position
                 //  ensure 60s of buffer upfront
@@ -124,7 +124,11 @@ class BufferController {
                     i < buffered.length;
                     i++
                 ) {
-                    if (pos >= buffered.start(i) && pos < buffered.end(i)) {
+                    //logger.log('buf start/end:' + buffered.start(i) + '/' + buffered.end(i));
+                    if (
+                        pos + 0.04 >= buffered.start(i) &&
+                        pos < buffered.end(i)
+                    ) {
                         // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
                         bufferStart = buffered.start(i);
                         bufferEnd = buffered.end(i);
@@ -159,62 +163,62 @@ class BufferController {
                     var level = this.levels[loadLevel];
                     // if level not retrieved yet, switch state and wait for playlist retrieval
                     if (typeof level.data === 'undefined') {
-                        this.state = LOADING_WAITING_LEVEL_UPDATE;
+                        this.state = WAITING_LEVEL;
                         this.waitlevel = true;
                     } else {
                         // find fragment index, contiguous with end of buffer position
                         var fragments = level.data.fragments,
-                            frag,
-                            offset;
-                        // check if any data is buffered around current video position
-                        if (bufferLen === 0) {
-                            // no data buffered, look for fragments matching with current play position
-                            offset = pos;
-                        } else {
-                            // data buffered, look for fragments located just after end of buffer
-                            offset = bufferEnd + 0.2;
-                        }
-                        for (i = 0; i < fragments.length; i++) {
+                            frag;
+                        if (bufferLen > 0 && buffered.length === 1) {
+                            i = this.lastSN + 1 - fragments[0].sn;
                             frag = fragments[i];
-                            // offset should be within fragment boundary
-                            if (
-                                frag.start <= offset &&
-                                frag.start + frag.duration > offset
-                            ) {
-                                break;
+                        } else {
+                            // no data buffered, look for fragments matching with current play position
+                            for (i = 0; i < fragments.length; i++) {
+                                frag = fragments[i];
+                                // offset should be within fragment boundary
+                                if (
+                                    frag.start <= bufferEnd &&
+                                    frag.start + frag.duration > bufferEnd
+                                ) {
+                                    break;
+                                }
                             }
+                            logger.log(
+                                'find SN matching with pos:' +
+                                    bufferEnd +
+                                    ':' +
+                                    frag.sn
+                            );
                         }
-                        if (i < fragments.length) {
-                            if (this.loadingIndex !== i) {
-                                this.waitlevel = false;
-                                logger.log(
-                                    '      Loading       ' +
-                                        frag.sn +
-                                        ' of [' +
-                                        fragments[0].sn +
-                                        ',' +
-                                        fragments[fragments.length - 1].sn +
-                                        '],level ' +
-                                        loadLevel
-                                );
-                                //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
-                                this.loadingIndex = i;
-                                this.fragmentLoader.load(frag.url);
-                                this.state = LOADING_IN_PROGRESS;
-                            } else {
-                                logger.log(
-                                    'avoid loading frag ' +
-                                        i +
-                                        ',pos/bufEnd:' +
-                                        pos.toFixed(3) +
-                                        '/' +
-                                        bufferEnd.toFixed(3) +
-                                        ',frag start/end:' +
-                                        frag.start +
-                                        '/' +
-                                        (frag.start + frag.duration)
-                                );
+                        if (i >= 0 && i < fragments.length) {
+                            this.waitlevel = false;
+                            if (frag.sn === this.lastSN) {
+                                if (i === fragments.length - 1) {
+                                    // we are at the end of the playlist and we already loaded last fragment, don't do anything
+                                    return;
+                                } else {
+                                    frag = fragments[i + 1];
+                                    logger.log(
+                                        'SN just loaded, load next one:' +
+                                            frag.sn
+                                    );
+                                }
                             }
+                            logger.log(
+                                'Loading       ' +
+                                    frag.sn +
+                                    ' of [' +
+                                    fragments[0].sn +
+                                    ',' +
+                                    fragments[fragments.length - 1].sn +
+                                    '],level ' +
+                                    loadLevel
+                            );
+                            //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
+                            this.lastSN = frag.sn;
+                            this.fragmentLoader.load(frag.url);
+                            this.state = LOADING;
                         }
                     }
                 }
@@ -241,25 +245,25 @@ class BufferController {
         if (!this.demuxer) {
             this.demuxer = new Demuxer(duration);
         }
-        var stats = data.stats;
+        var fragments = data.level.fragments;
         logger.log(
             'level ' +
                 data.id +
-                ' loaded,RTT(ms)/load(ms)/duration:' +
-                (stats.tfirst - stats.trequest) +
-                '/' +
-                (stats.tend - stats.trequest) +
-                '/' +
+                ' loaded [' +
+                fragments[0].sn +
+                ',' +
+                fragments[fragments.length - 1].sn +
+                '],duration:' +
                 duration
         );
-        this.state = LOADING_IDLE;
+        this.state = IDLE;
         //trigger handler right now
         this.tick();
     }
 
     onFragmentLoaded(event, data) {
-        if (this.state === LOADING_IN_PROGRESS) {
-            this.state = PARSING_APPENDING;
+        if (this.state === LOADING) {
+            this.state = PARSING;
             // transmux the MPEG-TS data to ISO-BMFF segments
             this.tparse0 = Date.now();
             this.parselen = data.payload.byteLength;
@@ -269,16 +273,7 @@ class BufferController {
             rtt = stats.tfirst - stats.trequest;
             loadtime = stats.tend - stats.trequest;
             bw = stats.length * 8 / (1000 * loadtime);
-            logger.log(
-                data.url +
-                    ' loaded, RTT(ms)/load(ms)/bitrate:' +
-                    rtt +
-                    '/' +
-                    loadtime +
-                    '/' +
-                    bw.toFixed(3) +
-                    ' Mb/s'
-            );
+            //logger.log(data.url + ' loaded, RTT(ms)/load(ms)/bitrate:' + rtt + '/' + loadtime + '/' + bw.toFixed(3) + ' Mb/s');
         }
     }
 
@@ -317,7 +312,7 @@ class BufferController {
     onFragmentParsing(event, data) {
         this.tparse2 = Date.now();
         logger.log(
-            'parsed data, type/start/end:' +
+            '      parsed data, type/start/end:' +
                 data.type +
                 '/' +
                 data.start.toFixed(3) +
@@ -331,7 +326,7 @@ class BufferController {
     }
 
     onFragmentParsed() {
-        this.state = PARSED_APPENDING;
+        this.state = PARSED;
         this.tparse2 = Date.now();
         //logger.log('      parsing len/duration/rate:' + (this.parselen/1000000).toFixed(2) + 'MB/'  + (this.tparse2-this.tparse0) +'ms/' + ((this.parselen/1000)/(this.tparse2-this.tparse0)).toFixed(2) + 'MB/s');
         //trigger handler right now
@@ -340,6 +335,10 @@ class BufferController {
 
     onSourceBufferUpdateEnd() {
         //trigger handler right now
+        if (this.mp4segments.length === 0) {
+            //logger.log('appending finished');
+            this.state = IDLE;
+        }
         this.tick();
     }
 
