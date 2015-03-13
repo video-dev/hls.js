@@ -143,7 +143,6 @@ class BufferController {
                         if (this.justStarted === true) {
                             // get start level from level Controller
                             loadLevel = this.levelController.startLevel();
-                            this.justStarted = false;
                         } else {
                             // we are not at playback start, get best level from level Controller
                             loadLevel = this.levelController.bestLevel();
@@ -246,6 +245,17 @@ class BufferController {
         if (!this.demuxer) {
             this.demuxer = new Demuxer(duration);
         }
+        if (this.justStarted === true) {
+            // if live playlist, set start position to be fragment N-3
+            if (data.level.endList === false) {
+                this.video.currentTime = Math.max(
+                    0,
+                    duration - 3 * data.level.targetduration
+                );
+            }
+            this.justStarted = false;
+        }
+
         var fragments = data.level.fragments;
         logger.log(
             'level ' +
