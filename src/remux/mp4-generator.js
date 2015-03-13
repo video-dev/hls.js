@@ -294,10 +294,9 @@ class MP4 {
                 0x01,
                 0x5f,
                 0x90, // timescale, 90,000 "ticks" per second
-
-                (duration & 0xff000000) >> 24,
-                (duration & 0xff0000) >> 16,
-                (duration & 0xff00) >> 8,
+                duration >> 24,
+                (duration >> 16) & 0xff,
+                (duration >> 8) & 0xff,
                 duration & 0xff, // duration
                 0x55,
                 0xc4, // 'und' language (undetermined)
@@ -324,9 +323,9 @@ class MP4 {
                 0x00,
                 0x00,
                 0x00, // flags
-                (sequenceNumber & 0xff000000) >> 24,
-                (sequenceNumber & 0xff0000) >> 16,
-                (sequenceNumber & 0xff00) >> 8,
+                sequenceNumber >> 24,
+                (sequenceNumber >> 16) & 0xff,
+                (sequenceNumber >> 8) & 0xff,
                 sequenceNumber & 0xff // sequence_number
             ])
         );
@@ -404,9 +403,9 @@ class MP4 {
             0x01,
             0x5f,
             0x90, // timescale, 90,000 "ticks" per second
-            (duration & 0xff000000) >> 24,
-            (duration & 0xff0000) >> 16,
-            (duration & 0xff00) >> 8,
+            duration >> 24,
+            (duration >> 16) & 0xff,
+            (duration >> 8) & 0xff,
             duration & 0xff, // duration
             0x00,
             0x01,
@@ -769,9 +768,9 @@ class MP4 {
                 0x00,
                 0x00,
                 0x00, // reserved
-                (track.duration & 0xff000000) >> 24,
-                (track.duration & 0xff0000) >> 16,
-                (track.duration & 0xff00) >> 8,
+                track.duration >> 24,
+                (track.duration >> 16) & 0xff,
+                (track.duration >> 8) & 0xff,
                 track.duration & 0xff, // duration
                 0x00,
                 0x00,
@@ -848,9 +847,9 @@ class MP4 {
                     0x00,
                     0x00,
                     0x00, // flags
-                    (track.id & 0xff000000) >> 24,
-                    (track.id & 0xff0000) >> 16,
-                    (track.id & 0xff00) >> 8,
+                    track.id >> 24,
+                    (track.id >> 16) & 0xff,
+                    (track.id >> 8) & 0xff,
                     track.id & 0xff // track_ID
                 ])
             ),
@@ -861,9 +860,9 @@ class MP4 {
                     0x00,
                     0x00,
                     0x00, // flags
-                    (baseMediaDecodeTime & 0xff000000) >> 24,
-                    (baseMediaDecodeTime & 0xff0000) >> 16,
-                    (baseMediaDecodeTime & 0xff00) >> 8,
+                    baseMediaDecodeTime >> 24,
+                    (baseMediaDecodeTime >> 16) & 0xff,
+                    (baseMediaDecodeTime >> 8) & 0xff,
                     baseMediaDecodeTime & 0xff // baseMediaDecodeTime
                 ])
             ),
@@ -899,9 +898,9 @@ class MP4 {
                 0x00,
                 0x00,
                 0x00, // flags
-                (track.id & 0xff000000) >> 24,
-                (track.id & 0xff0000) >> 16,
-                (track.id & 0xff00) >> 8,
+                track.id >> 24,
+                (track.id >> 16) & 0xff,
+                (track.id >> 8) & 0xff,
                 track.id & 0xff, // track_ID
                 0x00,
                 0x00,
