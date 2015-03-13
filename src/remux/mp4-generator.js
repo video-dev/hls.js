@@ -180,10 +180,9 @@ class MP4 {
       0x00, 0x00, 0x00, 0x02, // creation_time
       0x00, 0x00, 0x00, 0x03, // modification_time
       0x00, 0x01, 0x5f, 0x90, // timescale, 90,000 "ticks" per second
-
-      (duration & 0xFF000000) >> 24,
-      (duration & 0xFF0000) >> 16,
-      (duration & 0xFF00) >> 8,
+      (duration >> 24),
+      (duration >> 16) & 0xFF,
+      (duration >>  8) & 0xFF,
       duration & 0xFF, // duration
       0x55, 0xc4, // 'und' language (undetermined)
       0x00, 0x00
@@ -198,9 +197,9 @@ class MP4 {
     return MP4.box(MP4.types.mfhd, new Uint8Array([
       0x00,
       0x00, 0x00, 0x00, // flags
-      (sequenceNumber & 0xFF000000) >> 24,
-      (sequenceNumber & 0xFF0000) >> 16,
-      (sequenceNumber & 0xFF00) >> 8,
+      (sequenceNumber >> 24),
+      (sequenceNumber >> 16) & 0xFF,
+      (sequenceNumber >>  8) & 0xFF,
       sequenceNumber & 0xFF, // sequence_number
     ]));
   }
@@ -252,9 +251,9 @@ class MP4 {
         0x00, 0x00, 0x00, 0x01, // creation_time
         0x00, 0x00, 0x00, 0x02, // modification_time
         0x00, 0x01, 0x5f, 0x90, // timescale, 90,000 "ticks" per second
-        (duration & 0xFF000000) >> 24,
-        (duration & 0xFF0000) >> 16,
-        (duration & 0xFF00) >> 8,
+        (duration >> 24),
+        (duration >> 16) & 0xFF,
+        (duration >>  8) & 0xFF,
         duration & 0xFF, // duration
         0x00, 0x01, 0x00, 0x00, // 1.0 rate
         0x01, 0x00, // 1.0 volume
@@ -430,9 +429,9 @@ class MP4 {
       (track.id & 0xFF00) >> 8,
       track.id & 0xFF, // track_ID
       0x00, 0x00, 0x00, 0x00, // reserved
-      (track.duration & 0xFF000000) >> 24,
-      (track.duration & 0xFF0000) >> 16,
-      (track.duration & 0xFF00) >> 8,
+      (track.duration >> 24),
+      (track.duration >> 16) & 0xFF,
+      (track.duration >>  8) & 0xFF,
       track.duration & 0xFF, // duration
       0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00, // reserved
@@ -464,17 +463,17 @@ class MP4 {
                MP4.box(MP4.types.tfhd, new Uint8Array([
                  0x00, // version 0
                  0x00, 0x00, 0x00, // flags
-                 (track.id & 0xFF000000) >> 24,
-                 (track.id & 0xFF0000) >> 16,
-                 (track.id & 0xFF00) >> 8,
+                 (track.id >> 24),
+                 (track.id >> 16) & 0XFF,
+                 (track.id >> 8) & 0XFF,
                  (track.id & 0xFF) // track_ID
                ])),
                MP4.box(MP4.types.tfdt, new Uint8Array([
                  0x00, // version 0
                  0x00, 0x00, 0x00, // flags
-                 (baseMediaDecodeTime & 0xFF000000) >> 24,
-                 (baseMediaDecodeTime & 0xFF0000) >> 16,
-                 (baseMediaDecodeTime & 0xFF00) >> 8,
+                 (baseMediaDecodeTime >>24),
+                 (baseMediaDecodeTime >> 16) & 0XFF,
+                 (baseMediaDecodeTime >> 8) & 0XFF,
                  (baseMediaDecodeTime & 0xFF) // baseMediaDecodeTime
                ])),
                MP4.trun(track,
@@ -504,10 +503,10 @@ class MP4 {
     return MP4.box(MP4.types.trex, new Uint8Array([
       0x00, // version 0
       0x00, 0x00, 0x00, // flags
-      (track.id & 0xFF000000) >> 24,
-      (track.id & 0xFF0000) >> 16,
-      (track.id & 0xFF00) >> 8,
-      (track.id & 0xFF), // track_ID
+     (track.id >> 24),
+     (track.id >> 16) & 0XFF,
+     (track.id >> 8) & 0XFF,
+     (track.id & 0xFF), // track_ID
       0x00, 0x00, 0x00, 0x01, // default_sample_description_index
       0x00, 0x00, 0x00, 0x00, // default_sample_duration
       0x00, 0x00, 0x00, 0x00, // default_sample_size
