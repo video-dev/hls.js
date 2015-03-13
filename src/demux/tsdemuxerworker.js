@@ -15,7 +15,7 @@ class TSDemuxerWorker {
           self.demuxer.switchLevel();
           break;
         case 'demux':
-          self.demuxer.push(new Uint8Array(ev.data.data), ev.data.codecs);
+          self.demuxer.push(new Uint8Array(ev.data.data), ev.data.codecs, ev.data.timeOffset);
           self.demuxer.end();
           break;
         default:

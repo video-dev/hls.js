@@ -2,13 +2,15 @@
  import TSDemuxer            from './tsdemuxer';
  import TSDemuxerWorker      from './tsdemuxerworker';
  import observer             from '../observer';
+ import {logger}             from '../utils/logger';
+
 
 class Demuxer {
 
   constructor(duration) {
     var enableWorker = true;
     if(enableWorker && (typeof(Worker) !== 'undefined')) {
-      console.log('TS demuxing in webworker');
+      logger.log('TS demuxing in webworker');
       var work = require('webworkify');
       this.w = work(TSDemuxerWorker);
       this.onwmsg = this.onWorkerMessage.bind(this);
@@ -30,12 +32,12 @@ class Demuxer {
     }
   }
 
-  push(data, codecs) {
+  push(data, codecs, timeOffset) {
     if(this.w) {
       // post fragment payload as transferable objects (no copy)
-      this.w.postMessage({ cmd : 'demux' , data : data, codecs : codecs },[data]);
+      this.w.postMessage({ cmd : 'demux' , data : data, codecs : codecs, timeOffset : timeOffset},[data]);
     } else {
-      this.demuxer.push(new Uint8Array(data), codecs);
+      this.demuxer.push(new Uint8Array(data), codecs, timeOffset);
       this.demuxer.end();
     }
   }
