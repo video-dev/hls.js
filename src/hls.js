@@ -145,8 +145,6 @@ class Hls {
     attachSource(url) {
         this.url = url;
         logger.log('attachSource:' + url);
-        // internal listener setup
-        // internal listeners
         // when attaching to a source URL, trigger a playlist load
         this.playlistLoader.load(url, null);
     }
