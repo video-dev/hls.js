@@ -141,6 +141,7 @@ import observer             from '../observer';
   loadsuccess(event) {
     var level,string = event.currentTarget.responseText, url = event.currentTarget.responseURL, id = this.id;
     this.stats.tend = Date.now();
+    var mtime = new Date(this.xhr.getResponseHeader("Last-Modified"));
 
     if(string.indexOf('#EXTM3U') === 0) {
       if (string.indexOf('#EXTINF:') > 0) {
@@ -152,12 +153,14 @@ import observer             from '../observer';
                           { levels : [level],
                             url : url,
                             id : id,
+                            mtime : mtime,
                             stats : this.stats});
         }
         observer.trigger(Event.LEVEL_LOADED,
                         { level : level,
                           url : url,
                           id : id,
+                          mtime : mtime,
                           stats : this.stats});
       } else {
         // multi level playlist, parse level info
@@ -165,6 +168,7 @@ import observer             from '../observer';
                         { levels : this.parseMasterPlaylist(string,url),
                           url : url ,
                           id : id,
+                          mtime : mtime,
                           stats : this.stats});
       }
     } else {
