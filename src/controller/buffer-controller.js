@@ -170,7 +170,7 @@ class BufferController {
                         var fragments = level.data.fragments,
                             frag;
                         if (bufferLen > 0 && buffered.length === 1) {
-                            i = this.lastSN + 1 - fragments[0].sn;
+                            i = this.frag.sn + 1 - fragments[0].sn;
                             frag = fragments[i];
                         } else {
                             // no data buffered, look for fragments matching with current play position
@@ -193,7 +193,7 @@ class BufferController {
                         }
                         if (i >= 0 && i < fragments.length) {
                             this.waitlevel = false;
-                            if (frag.sn === this.lastSN) {
+                            if (this.frag && frag.sn === this.frag.sn) {
                                 if (i === fragments.length - 1) {
                                     // we are at the end of the playlist and we already loaded last fragment, don't do anything
                                     return;
@@ -216,7 +216,8 @@ class BufferController {
                                     loadLevel
                             );
                             //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
-                            this.lastSN = frag.sn;
+
+                            this.frag = frag;
                             this.fragmentLoader.load(frag.url);
                             this.state = LOADING;
                         }
@@ -267,7 +268,11 @@ class BufferController {
             // transmux the MPEG-TS data to ISO-BMFF segments
             this.tparse0 = Date.now();
             this.parselen = data.payload.byteLength;
-            this.demuxer.push(data.payload, this.levels[this.level].codecs);
+            this.demuxer.push(
+                data.payload,
+                this.levels[this.level].codecs,
+                this.frag.start
+            );
             var stats, rtt, loadtime, bw;
             stats = data.stats;
             rtt = stats.tfirst - stats.trequest;

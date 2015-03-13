@@ -32,8 +32,9 @@ class TSDemuxer {
     }
 
     // feed incoming data to the front of the parsing pipeline
-    push(data, codecs) {
+    push(data, codecs, timeOffset) {
         this.codecs = codecs;
+        this.timeOffset = timeOffset;
         var offset;
         for (offset = 0; offset < data.length; offset += 188) {
             this._parseTSPacket(data, offset);
@@ -783,7 +784,8 @@ class TSDemuxer {
             }
             if (this._initPTS === undefined) {
                 // remember first PTS of this demuxing context
-                this._initPTS = this._aacSamples[0].pts;
+                this._initPTS =
+                    this._aacSamples[0].pts - 1000 * this.timeOffset;
             }
         } else if (this._aacId === -1) {
             //video only
@@ -797,7 +799,8 @@ class TSDemuxer {
                 this._initSegGenerated = true;
                 if (this._initPTS === undefined) {
                     // remember first PTS of this demuxing context
-                    this._initPTS = this._avcSamples[0].pts;
+                    this._initPTS =
+                        this._avcSamples[0].pts - 1000 * this.timeOffset;
                 }
             }
         } else {
@@ -817,10 +820,12 @@ class TSDemuxer {
                 this._initSegGenerated = true;
                 if (this._initPTS === undefined) {
                     // remember first PTS of this demuxing context
-                    this._initPTS = Math.min(
-                        this._avcSamples[0].pts,
-                        this._aacSamples[0].pts
-                    );
+                    this._initPTS =
+                        Math.min(
+                            this._avcSamples[0].pts,
+                            this._aacSamples[0].pts
+                        ) -
+                        1000 * this.timeOffset;
                 }
             }
         }
