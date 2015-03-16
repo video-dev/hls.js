@@ -17,8 +17,7 @@ function getDMRandom(apiCall) {
 }
 
 function getDMURL(url) {
-  //return 'http://www.dailymotion.com/cdn/manifest/video/' + url + '.m3u8';
-  return 'http://stage-10.dailymotion.com/cdn/manifest/video/' + url + '.m3u8';
+  return 'http://www.dailymotion.com/cdn/manifest/video/' + url + '.m3u8';
 }
 
 function loadTestVid() {
