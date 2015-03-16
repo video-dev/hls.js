@@ -212,6 +212,10 @@
   }
 
   onManifestParsed(event,data) {
+    this.audiocodecswitch = data.audiocodecswitch;
+    if(this.audiocodecswitch) {
+      logger.log('both AAC/HE-AAC audio found in levels; declaring audio codec as HE-AAC');
+    }
     this.levels = data.levels;
     this.justStarted = true;
     this.start();
@@ -273,13 +277,14 @@
     // if yes use these ones instead of the ones parsed from the demux
     var codec = this.levels[this.level].codecs;
     //logger.log('playlist codecs:' + codec);
+    // if playlist does not specify codecs, use codecs found while parsing fragment
     if(codec === undefined) {
       codec = data.codec;
     }
     // codec="mp4a.40.5,avc1.420016";
-    // force HE-AAC for audio (some browsers don't support audio codec switch that could happen in adaptive playlists)
+    // in case several audio codecs might be used, force HE-AAC for audio (some browsers don't support audio codec switch)
     //don't do it for mono streams ...
-    if(data.audioChannelCount === 2 && navigator.userAgent.toLowerCase().indexOf('android') === -1) {
+    if(this.audiocodecswitch && data.audioChannelCount === 2 && navigator.userAgent.toLowerCase().indexOf('android') === -1) {
       codec = codec.replace('mp4a.40.2','mp4a.40.5');
     }
     logger.log('playlist/choosed codecs:' + this.levels[this.level].codecs + '/' + codec);
