@@ -167,7 +167,22 @@ class BufferController {
                     } else {
                         // find fragment index, contiguous with end of buffer position
                         var fragments = level.data.fragments,
-                            frag;
+                            frag,
+                            sliding = level.data.sliding,
+                            start;
+                        // check if requested position is within seekable boundaries :
+                        // in case of live playlist we need to ensure that requested position is not located before playlist start
+                        start = fragments[0].start + sliding;
+                        if (bufferEnd < start) {
+                            logger.log(
+                                'requested position:' +
+                                    bufferEnd +
+                                    ' is before start of playlist, reset video position to start:' +
+                                    start
+                            );
+                            this.video.currentTime = start + 0.01;
+                            return;
+                        }
                         if (bufferLen > 0 && buffered.length === 1) {
                             i = this.frag.sn + 1 - fragments[0].sn;
                             frag = fragments[i];
@@ -175,10 +190,11 @@ class BufferController {
                             // no data buffered, look for fragments matching with current play position
                             for (i = 0; i < fragments.length; i++) {
                                 frag = fragments[i];
+                                start = frag.start + sliding;
                                 // offset should be within fragment boundary
                                 if (
-                                    frag.start <= bufferEnd &&
-                                    frag.start + frag.duration > bufferEnd
+                                    start <= bufferEnd &&
+                                    start + frag.duration > bufferEnd
                                 ) {
                                     break;
                                 }
@@ -239,15 +255,30 @@ class BufferController {
     }
 
     onLevelLoaded(event, data) {
-        // merge level info
-        this.levels[data.id].data = data.level;
+        var level = this.levels[data.id],
+            sliding = 0;
+        // check if playlist is already loaded (if yes, it should be a live playlist)
+        if (level.data && level.data.live) {
+            //  playlist sliding is the sum of : previous playlist sliding + sliding of new playlist compared to old one
+            sliding = level.data.sliding;
+            // check sliding of new playlist against old one :
+            //retrieve SN of first fragment of new playlist,
+            var sn = data.level.fragments[0].sn;
+            // and find its position in old playlist
+            sliding +=
+                level.data.fragments[sn - level.data.fragments[0].sn].start;
+            logger.log('live playlist sliding:' + sliding.toFixed(3));
+        }
+        // override level info
+        level.data = data.level;
+        level.data.sliding = sliding;
         var duration = data.level.totalduration;
         if (!this.demuxer) {
             this.demuxer = new Demuxer(duration);
         }
         if (this.justStarted === true) {
             // if live playlist, set start position to be fragment N-3
-            if (data.level.endList === false) {
+            if (data.level.live) {
                 this.video.currentTime = Math.max(
                     0,
                     duration - 3 * data.level.targetduration
@@ -330,13 +361,19 @@ class BufferController {
 
     onFragmentParsing(event, data) {
         this.tparse2 = Date.now();
+        var level = this.levels[this.level];
+        if (level.data.live) {
+            level.data.sliding = data.start - this.frag.start;
+        }
         logger.log(
-            '      parsed data, type/start/end:' +
+            '      parsed data, type/start/end/sliding:' +
                 data.type +
                 '/' +
                 data.start.toFixed(3) +
                 '/' +
-                data.end.toFixed(3)
+                data.end.toFixed(3) +
+                '/' +
+                level.data.sliding.toFixed(3)
         );
         this.mp4segments.push(data.moof);
         this.mp4segments.push(data.mdat);

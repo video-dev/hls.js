@@ -116,7 +116,7 @@ class LevelController {
 
     onLevelLoaded(event, data) {
         // check if current playlist is a live playlist
-        if (data.level.endList === false && !this.timer) {
+        if (data.level.live && !this.timer) {
             // if live playlist we will have to reload it periodically
             // set reload period to playlist target duration
             this.timer = setInterval(

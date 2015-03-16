@@ -400,7 +400,7 @@ class TSDemuxer {
         this._avcSamplesNbNalu = 0;
 
         startOffset = firstPTS / 1000;
-        endOffset = avcSample.pts / 1000;
+        endOffset = this.nextAvcPts / 1000;
 
         moof = MP4.moof(track.sequenceNumber++, firstPTS * 90, track);
         observer.trigger(Event.FRAGMENT_PARSING, {
@@ -652,7 +652,7 @@ class TSDemuxer {
         this._aacSamplesLength = 0;
 
         startOffset = firstPTS / 1000;
-        endOffset = aacSample.pts / 1000;
+        endOffset = this.nextAacPts / 1000;
 
         moof = MP4.moof(track.sequenceNumber++, firstPTS * 90, track);
         observer.trigger(Event.FRAGMENT_PARSING, {

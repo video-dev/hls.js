@@ -121,7 +121,7 @@ class PlaylistLoader {
     parseLevelPlaylist(string, baseurl) {
         var currentSN = 0,
             totalduration = 0,
-            level = { url: baseurl, fragments: [], endList: false },
+            level = { url: baseurl, fragments: [], live: true },
             result,
             regexp;
         regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):([\d\.]+)[^\r\n]*[\r\n]+([^\r\n]+)|(?:#EXT-X-(ENDLIST)))/g;
@@ -138,7 +138,7 @@ class PlaylistLoader {
                     level.targetduration = parseFloat(result[1]);
                     break;
                 case 'ENDLIST':
-                    level.endList = true;
+                    level.live = false;
                     break;
                 case 'INF':
                     var duration = parseFloat(result[1]);
