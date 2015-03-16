@@ -61,11 +61,11 @@ import observer             from '../observer';
       while(result.length > 0) {
         switch(result.shift()) {
           case 'RES':
-            level.width = result.shift();
-            level.height = result.shift();
+            level.width = parseInt(result.shift());
+            level.height = parseInt(result.shift());
             break;
           case 'BAND':
-            level.bitrate = result.shift();
+            level.bitrate = parseInt(result.shift());
             break;
           case 'NAME':
             level.name = result.shift();
