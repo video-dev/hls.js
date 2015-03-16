@@ -18,7 +18,7 @@ class LevelController {
         observer.on(Event.MANIFEST_LOADED, this.onml);
         observer.on(Event.FRAGMENT_LOADED, this.onfl);
         observer.on(Event.LEVEL_LOADED, this.onll);
-
+        this._manualLevel = -1;
         //this.startLevel = startLevel;
     }
 
@@ -29,6 +29,7 @@ class LevelController {
         if (this.timer) {
             clearInterval(this.timer);
         }
+        this._manualLevel = -1;
     }
 
     onManifestLoaded(event, data) {
@@ -63,7 +64,7 @@ class LevelController {
         levels.sort(function(a, b) {
             return a.bitrate - b.bitrate;
         });
-        this.levels = levels;
+        this._levels = levels;
         // find index of start level in sorted levels
         for (i = 0; i < levels.length; i++) {
             if (levels[i].bitrate === bitrateStart) {
@@ -78,11 +79,15 @@ class LevelController {
             }
         }
         observer.trigger(Event.MANIFEST_PARSED, {
-            levels: this.levels,
+            levels: this._levels,
             startLevel: i,
             audiocodecswitch: aac && heaac
         });
         return;
+    }
+
+    get levels() {
+        return this._levels;
     }
 
     get level() {
@@ -92,7 +97,7 @@ class LevelController {
     set level(newLevel) {
         if (this._level !== newLevel) {
             // check if level idx is valid
-            if (newLevel >= 0 && newLevel < this.levels.length) {
+            if (newLevel >= 0 && newLevel < this._levels.length) {
                 // stopping live reloading timer if any
                 if (this.timer) {
                     clearInterval(this.timer);
@@ -100,16 +105,16 @@ class LevelController {
                 }
                 this._level = newLevel;
                 logger.log('switching to level ' + newLevel);
-                observer.trigger(Event.LEVEL_SWITCH, { level: newLevel });
+                observer.trigger(Event.LEVEL_SWITCH, { id: newLevel });
                 // check if we need to load playlist for this new level
-                if (this.levels[newLevel].loading === undefined) {
+                if (this._levels[newLevel].loading === undefined) {
                     // level not retrieved yet, we need to load it
-                    observer.trigger(Event.LEVEL_LOADING, { level: newLevel });
+                    observer.trigger(Event.LEVEL_LOADING, { id: newLevel });
                     this.playlistLoader.load(
-                        this.levels[newLevel].url,
+                        this._levels[newLevel].url,
                         newLevel
                     );
-                    this.levels[newLevel].loading = true;
+                    this._levels[newLevel].loading = true;
                 }
             } else {
                 // invalid level id given, trigger error
@@ -119,6 +124,15 @@ class LevelController {
                 });
             }
         }
+    }
+
+    get manualLevel() {
+        return this._manualLevel;
+    }
+
+    set manualLevel(newLevel) {
+        this._manualLevel = newLevel;
+        this.level = newLevel;
     }
 
     onFragmentLoaded(event, data) {
@@ -142,29 +156,32 @@ class LevelController {
     }
 
     tick() {
-        observer.trigger(Event.LEVEL_LOADING, { level: this._level });
-        this.playlistLoader.load(this.levels[this._level].url, this._level);
+        observer.trigger(Event.LEVEL_LOADING, { id: this._level });
+        this.playlistLoader.load(this._levels[this._level].url, this._level);
     }
 
     startLevel() {
         return this._startLevel;
-        //return this.levels.length-1;
+        //return this._levels.length-1;
         //return 0;
     }
 
-    bestLevel() {
-        // if(this._level == 0) {
-        //   return this.levels.length-1;
-        // } else {
-        //   return 0;
-        // }
+    nextLevel() {
+        if (this._manualLevel !== -1) {
+            return this._manualLevel;
+        } else {
+            return this.nextAutoLevel();
+        }
+    }
+
+    nextAutoLevel() {
         var lastbw = this.lastbw,
             adjustedbw,
             i;
         // follow algorithm captured from stagefright :
         // https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp
         // Pick the highest bandwidth stream below or equal to estimated bandwidth.
-        for (i = 0; i < this.levels.length; i++) {
+        for (i = 0; i < this._levels.length; i++) {
             // consider only 80% of the available bandwidth, but if we are switching up,
             // be even more conservative (70%) to avoid overestimating and immediately
             // switching back.
@@ -173,7 +190,7 @@ class LevelController {
             } else {
                 adjustedbw = 0.7 * lastbw;
             }
-            if (adjustedbw < this.levels[i].bitrate) {
+            if (adjustedbw < this._levels[i].bitrate) {
                 return Math.max(0, i - 1);
             }
         }

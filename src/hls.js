@@ -153,6 +153,30 @@ class Hls {
         this.url = null;
     }
 
+    /** Return all quality levels **/
+    get levels() {
+        return this.levelController.levels;
+    }
+    /** Return the quality level of last loaded fragment **/
+    get level() {
+        return this.levelController.level;
+    }
+
+    /* set quality level for next loaded fragment (-1 for automatic level selection) */
+    set level(newLevel) {
+        this.levelController.manualLevel = newLevel;
+    }
+
+    /* check if we are in automatic level selection mode */
+    get autoLevelEnabled() {
+        return this.levelController.manualLevel === -1;
+    }
+
+    /* return manual level */
+    get manualLevel() {
+        return this.levelController.manualLevel;
+    }
+
     onMediaSourceOpen() {
         observer.trigger(Event.FRAMEWORK_READY, {
             mediaSource: this.mediaSource
