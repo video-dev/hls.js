@@ -202,13 +202,16 @@ class PlaylistLoader {
         } else {
             observer.trigger(Event.LOAD_ERROR, {
                 url: url,
-                event: 'not an HLS playlist'
+                response: event.currentTarget
             });
         }
     }
 
     loaderror(event) {
-        observer.trigger(Event.LOAD_ERROR, { url: this.url, event: event });
+        observer.trigger(Event.LOAD_ERROR, {
+            url: this.url,
+            response: event.currentTarget
+        });
     }
 
     loadprogress() {
