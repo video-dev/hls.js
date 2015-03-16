@@ -13,8 +13,6 @@ export default {
     LEVEL_LOADED: 'hlsLevelLoaded',
     // Identifier for a level switch event
     LEVEL_SWITCH: 'hlsLevelSwitch',
-    // Identifier for a level ENDLIST event
-    LEVEL_ENDLIST: 'hlsLevelEndList',
     // Identifier for a fragment loading event
     FRAGMENT_LOADING: 'hlsFragmentLoading',
     // Identifier for a fragment loaded event
