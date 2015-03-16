@@ -172,12 +172,12 @@ import observer             from '../observer';
                           stats : this.stats});
       }
     } else {
-      observer.trigger(Event.LOAD_ERROR, { url : url, event: 'not an HLS playlist'});
+      observer.trigger(Event.LOAD_ERROR, { url : url, response : event.currentTarget});
     }
   }
 
   loaderror(event) {
-    observer.trigger(Event.LOAD_ERROR, { url : this.url, event: event});
+    observer.trigger(Event.LOAD_ERROR, { url : this.url, response : event.currentTarget});
   }
 
   loadprogress() {
