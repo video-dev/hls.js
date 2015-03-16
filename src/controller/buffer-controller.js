@@ -135,10 +135,10 @@
               // get start level from level Controller
               loadLevel = this.levelController.startLevel();
             } else {
-              // we are not at playback start, get best level from level Controller
-              loadLevel = this.levelController.bestLevel();
+              // we are not at playback start, get next load level from level Controller
+              loadLevel = this.levelController.nextLevel();
             }
-            if(loadLevel !== this.levelController.level) {
+            if(loadLevel !== this.level) {
               // set new level to playlist loader : this will trigger a playlist load if needed
               this.level = this.levelController.level = loadLevel;
               // tell demuxer that we will switch level (this will force init segment to be regenerated)

@@ -43,6 +43,8 @@
             <button onclick="document.getElementById('video').muted=false">muted=false</button><br>
             <button onclick="document.getElementById('video').currentTime=document.getElementById('seek_pos').value">seek to </button>
              <input type="text" id='seek_pos' onkeydown="if(window.event.keyCode=='13'){document.getElementById('video').currentTime=document.getElementById('seek_pos').value;}">
+            <button onclick="hls.level=parseInt(document.getElementById('manualLevel').value);">set level </button>
+             <input type="text" id='manualLevel' onkeydown="if(window.event.keyCode=='13'){hls.level=parseInt(document.getElementById('manualLevel').value);}">
           </div>
           <video id=video controls autoplay onloadedmetadata="buffered_loaded(event);" onresize="buffered_resize(event);" onclick="goFullscreen('video')">
           </video>
@@ -51,6 +53,7 @@
     </div>
     <!-- #main -->
     <pre id='HlsStatus'></pre>
+    <pre id='HlsLevel'></pre>
     <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)";>
     </canvas> <br>
   </div>
@@ -91,13 +94,7 @@
    video.volume = 0.05;
    var manifest = decodeURIComponent(location.search.split('src=')[1]);
    if(manifest === 'undefined') {
-   // manifest = 'http://www.streambox.fr/playlists/test_001/stream_1000k_48k_640x360.m3u8';
    manifest = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
-   //manifest = 'http://media.sublimevideo.net/v/dm/hls/xwr14q.m3u8';
-   //manifest = 'http://sublimevideo-media.s3.amazonaws.com/v/dm/hls/xwr14q/55008890_mp4_h264_aac_hq.m3u8';
-   //manifest = 'http://media.sublimevideo.net/v/dm/hls/xwr14q.m3u8';
-   //manifest = 'http://www.flashls.org/playlists/issue_002/test.m3u8';
-   //manifest = 'x2hijwc';
    }
 
    loadStream(video,manifest);
@@ -140,7 +137,7 @@
        });
        hls.on(hls.Events.INIT_SEGMENT,function(event,data) {
           document.getElementById('buffered_log').style.display="block";
-          document.getElementById("HlsStatus").innerHTML = "playlist successfully loaded";
+          document.getElementById("HlsStatus").innerHTML = "playlist successfully loaded," + hls.levels.length + " levels found";
        });
        hls.on(hls.Events.LOAD_ERROR,function(event,data) {
           hls.destroy();
@@ -148,6 +145,15 @@
           if(data.response.status === 0) {
             document.getElementById("HlsStatus").innerHTML += "this is most probably a CORS issue, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin</a> Chrome Extension";
           }
+       });
+       hls.on(hls.Events.LEVEL_SWITCH,function(event,data) {
+          document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",switching to level:" + data.id;
+       });
+       hls.on(hls.Events.LEVEL_LOADING,function(event,data) {
+          document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",loading level:" + data.id;
+       });
+       hls.on(hls.Events.LEVEL_LOADED,function(event,data) {
+          document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",last loaded level:" + data.id;
        });
        hls.on(hls.Events.VIDEO_ERROR,function(event,data) {
           hls.destroy();
