@@ -28,5 +28,8 @@ var teststreams = [{
 },{
   file:'x2hv5jb',
   title:'JACKBOOTS ON WHITEHALL 1032p'
+},{
+  file:'x1z8wi9',
+  title:'Timescapes 2880x1620'
 }
 ];
