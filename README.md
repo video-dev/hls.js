@@ -56,6 +56,18 @@ video is controlled through HTML ```<video>``` element.
 
 standard control and events could be used seamlessly.
 
+### Level Duration
+
+level duration could be retrieved by listening to ```hls.Events.LEVEL_LOADED```:
+
+```html
+hls.on(hls.Events.LEVEL_LOADED,function(event,data) {
+	var level_duration = data.level.totalduration;
+});
+```
+
+video duration can also be retrieved from ```<video>``` element, but only after [init segment](http://w3c.github.io/media-source/#init-segment) has been appended into [SourceBuffer](http://w3c.github.io/media-source/#sourcebuffer).
+
 ### Quality switch
 
 hls.js handles quality switch automatically.
