@@ -108,7 +108,7 @@ import observer             from '../observer';
   }
 
   parseLevelPlaylist(string, baseurl) {
-    var currentSN = 0,totalduration = 0, level = { url : baseurl, fragments : [], endList : false}, result, regexp;
+    var currentSN = 0,totalduration = 0, level = { url : baseurl, fragments : [], live : true}, result, regexp;
     regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):([\d\.]+)[^\r\n]*[\r\n]+([^\r\n]+)|(?:#EXT-X-(ENDLIST)))/g;
     while((result = regexp.exec(string)) !== null){
       result.shift();
@@ -121,7 +121,7 @@ import observer             from '../observer';
           level.targetduration = parseFloat(result[1]);
           break;
         case 'ENDLIST':
-          level.endList = true;
+          level.live = false;
           break;
         case 'INF':
           var duration = parseFloat(result[1]);
@@ -141,7 +141,7 @@ import observer             from '../observer';
   loadsuccess(event) {
     var level,string = event.currentTarget.responseText, url = event.currentTarget.responseURL, id = this.id;
     this.stats.tend = Date.now();
-    var mtime = new Date(this.xhr.getResponseHeader("Last-Modified"));
+    var mtime = new Date(this.xhr.getResponseHeader('Last-Modified'));
 
     if(string.indexOf('#EXTM3U') === 0) {
       if (string.indexOf('#EXTINF:') > 0) {
