@@ -438,10 +438,8 @@
         track.config = config.config;
         track.audiosamplerate = config.samplerate;
         track.channelCount = config.channelCount;
+        track.codec = config.codec;
         track.duration = 90000*this._duration;
-        // implicit SBR signalling (HE-AAC) : if sampling rate less than 24kHz
-        var codec = (config.samplerate <= 24000) ? 5 : ((track.config[0] & 0xF8) >> 3);
-        track.codec = 'mp4a.40.' + codec;
         console.log(track.codec +',rate:' + config.samplerate + ',nb channel:' + config.channelCount);
       }
       adtsStartOffset = i = 0;
@@ -651,7 +649,7 @@
       config[2] |= 2 << 2;
       config[3] = 0;
     }
-    return { config : config, samplerate : adtsSampleingRates[adtsSampleingIndex], channelCount : adtsChanelConfig};
+    return { config : config, samplerate : adtsSampleingRates[adtsSampleingIndex], channelCount : adtsChanelConfig, codec : ('mp4a.40.' + adtsObjectType)};
   }
 
   _generateInitSegment() {
