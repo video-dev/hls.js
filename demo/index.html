@@ -54,8 +54,8 @@
     <!-- #main -->
     <pre id='HlsStatus'></pre>
     <pre id='HlsLevel'></pre>
-    <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)";>
-    </canvas> <br>
+    <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)";></canvas> <br>
+    <canvas id="event_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
   </div>
   <div id="buffered_log" style="font-size: small;"></div>
 
@@ -85,6 +85,7 @@
   <!-- live-reload script -->
   <script src="//localhost:8001"></script>
   <script src="../dist/hls.js"></script>
+  <script src="canvas.js"></script>
   <script>
 
    'use strict';
@@ -133,6 +134,9 @@
        hls.debug(true);
        hls.on(hls.Events.FRAMEWORK_READY,function() {
           document.getElementById("HlsStatus").innerHTML = 'attaching URL to video tag';
+          canvasFlushEvents(document.getElementById('event_c'));
+          document.getElementById('event_c').width = window.innerWidth-100;
+          hls.t0 = Date.now();
           hls.attachSource(_url);
        });
        hls.on(hls.Events.INIT_SEGMENT,function(event,data) {
@@ -152,8 +156,36 @@
        hls.on(hls.Events.LEVEL_LOADING,function(event,data) {
           document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",loading level:" + data.id;
        });
+       hls.on(hls.Events.MANIFEST_LOADED,function(event,data) {
+          var event = {
+            name : "variant manifest",
+            time : data.stats.trequest - hls.t0,
+            latency : data.stats.tfirst - data.stats.trequest,
+            duration : data.stats.tend - data.stats.tfirst,
+          };
+          canvasPushEvent(document.getElementById('event_c'),event);
+          canvasUpdate(document.getElementById('event_c'));
+       });
        hls.on(hls.Events.LEVEL_LOADED,function(event,data) {
           document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",last loaded level:" + data.id;
+          var event = {
+            name : "stream manifest @ " + data.id,
+            time : data.stats.trequest - hls.t0,
+            latency : data.stats.tfirst - data.stats.trequest,
+            duration : data.stats.tend - data.stats.tfirst,
+          };
+          canvasPushEvent(document.getElementById('event_c'),event);
+          canvasUpdate(document.getElementById('event_c'));
+       });
+       hls.on(hls.Events.FRAGMENT_LOADED,function(event,data) {
+          var event = {
+            name : "fragment " + data.frag.sn + " @ " + data.levelId,
+            time : data.stats.trequest - hls.t0,
+            latency : data.stats.tfirst - data.stats.trequest,
+            duration : data.stats.tend - data.stats.tfirst,
+          };
+          canvasPushEvent(document.getElementById('event_c'),event);
+          canvasUpdate(document.getElementById('event_c'));
        });
        hls.on(hls.Events.VIDEO_ERROR,function(event,data) {
           hls.destroy();
