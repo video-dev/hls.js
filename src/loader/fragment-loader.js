@@ -32,15 +32,13 @@ class FragmentLoader {
     }
 
     loadsuccess(event) {
-        var response = event.currentTarget.response;
         observer.trigger(Event.FRAGMENT_LOADED, {
-            payload: response,
+            payload: event.currentTarget.response,
             url: this.url,
             stats: {
                 trequest: this.trequest,
                 tfirst: this.tfirst,
-                tend: new Date(),
-                length: response.byteLength
+                tend: new Date()
             }
         });
     }
