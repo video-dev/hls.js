@@ -19,7 +19,7 @@ class FragmentLoader {
 
     load(url) {
         this.url = url;
-        this.trequest = Date.now();
+        this.trequest = new Date();
         this.tfirst = null;
         var xhr = (this.xhr = new XMLHttpRequest());
         xhr.onload = this.loadsuccess.bind(this);
@@ -38,7 +38,7 @@ class FragmentLoader {
             stats: {
                 trequest: this.trequest,
                 tfirst: this.tfirst,
-                tend: Date.now(),
+                tend: new Date(),
                 length: event.currentTarget.response.byteLength
             }
         });
@@ -51,7 +51,7 @@ class FragmentLoader {
 
     loadprogress() {
         if (this.tfirst === null) {
-            this.tfirst = Date.now();
+            this.tfirst = new Date();
         }
     }
 }

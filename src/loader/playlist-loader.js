@@ -23,7 +23,7 @@ class PlaylistLoader {
     load(url, requestId) {
         this.url = url;
         this.id = requestId;
-        this.stats = { trequest: Date.now() };
+        this.stats = { trequest: new Date() };
         var xhr = (this.xhr = new XMLHttpRequest());
         xhr.onload = this.loadsuccess.bind(this);
         xhr.onerror = this.loaderror.bind(this);
@@ -165,7 +165,7 @@ class PlaylistLoader {
             string = event.currentTarget.responseText,
             url = event.currentTarget.responseURL,
             id = this.id;
-        this.stats.tend = Date.now();
+        this.stats.tend = new Date();
         var mtime = new Date(this.xhr.getResponseHeader('Last-Modified'));
 
         if (string.indexOf('#EXTM3U') === 0) {
@@ -216,7 +216,7 @@ class PlaylistLoader {
 
     loadprogress() {
         if (this.stats.tfirst === undefined) {
-            this.stats.tfirst = Date.now();
+            this.stats.tfirst = new Date();
         }
     }
 }
