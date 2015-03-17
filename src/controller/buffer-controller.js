@@ -70,6 +70,7 @@
     observer.on(Event.FRAGMENT_PARSING, this.onfpg);
     observer.on(Event.FRAGMENT_PARSED, this.onfp);
     observer.on(Event.LEVEL_LOADED, this.onll);
+    this.tick();
   }
 
   stop() {
@@ -196,7 +197,7 @@
               //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
 
               this.frag = frag;
-              this.fragmentLoader.load(frag.url);
+              this.fragmentLoader.load(frag,loadLevel);
               this.state = LOADING;
             }
           }
