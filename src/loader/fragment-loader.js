@@ -21,7 +21,7 @@ import {logger}             from '../utils/logger';
 
   load(url) {
     this.url = url;
-    this.trequest = Date.now();
+    this.trequest = new Date();
     this.tfirst = null;
     var xhr = this.xhr = new XMLHttpRequest();
     xhr.onload=  this.loadsuccess.bind(this);
@@ -37,7 +37,7 @@ import {logger}             from '../utils/logger';
     observer.trigger(Event.FRAGMENT_LOADED,
                     { payload : event.currentTarget.response,
                       url : this.url ,
-                      stats : {trequest : this.trequest, tfirst : this.tfirst, tend : Date.now(), length :event.currentTarget.response.byteLength }});
+                      stats : {trequest : this.trequest, tfirst : this.tfirst, tend : new Date(), length :event.currentTarget.response.byteLength }});
   }
 
   loaderror(event) {
@@ -47,7 +47,7 @@ import {logger}             from '../utils/logger';
 
   loadprogress() {
     if(this.tfirst === null) {
-      this.tfirst = Date.now();
+      this.tfirst = new Date();
     }
   }
 }

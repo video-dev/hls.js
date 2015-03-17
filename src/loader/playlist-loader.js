@@ -24,7 +24,7 @@ import observer             from '../observer';
   load(url,requestId) {
     this.url = url;
     this.id = requestId;
-    this.stats = { trequest : Date.now()};
+    this.stats = { trequest : new Date()};
     var xhr = this.xhr = new XMLHttpRequest();
     xhr.onload=  this.loadsuccess.bind(this);
     xhr.onerror = this.loaderror.bind(this);
@@ -140,7 +140,7 @@ import observer             from '../observer';
 
   loadsuccess(event) {
     var level,string = event.currentTarget.responseText, url = event.currentTarget.responseURL, id = this.id;
-    this.stats.tend = Date.now();
+    this.stats.tend = new Date();
     var mtime = new Date(this.xhr.getResponseHeader('Last-Modified'));
 
     if(string.indexOf('#EXTM3U') === 0) {
@@ -182,7 +182,7 @@ import observer             from '../observer';
 
   loadprogress() {
     if(this.stats.tfirst === undefined) {
-      this.stats.tfirst = Date.now();
+      this.stats.tfirst = new Date();
     }
   }
 }
