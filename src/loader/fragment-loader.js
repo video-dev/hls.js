@@ -19,30 +19,32 @@ import {logger}             from '../utils/logger';
     }
   }
 
-  load(url) {
-    this.url = url;
+  load(frag,levelId) {
+    this.frag = frag;
+    this.levelId = levelId;
     this.trequest = new Date();
     this.tfirst = null;
     var xhr = this.xhr = new XMLHttpRequest();
     xhr.onload=  this.loadsuccess.bind(this);
     xhr.onerror = this.loaderror.bind(this);
     xhr.onprogress = this.loadprogress.bind(this);
-    xhr.open('GET', url , true);
+    xhr.open('GET', frag.url , true);
     xhr.responseType = 'arraybuffer';
     xhr.send();
-    observer.trigger(Event.FRAGMENT_LOADING, { url: this.url});
+    observer.trigger(Event.FRAGMENT_LOADING, { url: frag.url});
   }
 
   loadsuccess(event) {
     observer.trigger(Event.FRAGMENT_LOADED,
                     { payload : event.currentTarget.response,
-                      url : this.url ,
+                      frag : this.frag ,
+                      levelId : this.levelId,
                       stats : {trequest : this.trequest, tfirst : this.tfirst, tend : new Date()}});
   }
 
   loaderror(event) {
-    logger.log('error loading ' + this.url);
-    observer.trigger(Event.LOAD_ERROR, { url : this.url, event:event});
+    logger.log('error loading ' + this.frag.url);
+    observer.trigger(Event.LOAD_ERROR, { url : this.frag.url, event:event});
   }
 
   loadprogress() {

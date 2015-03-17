@@ -107,7 +107,7 @@ import observer             from '../observer';
     return result;
   }
 
-  parseLevelPlaylist(string, baseurl) {
+  parseLevelPlaylist(string, baseurl, id) {
     var currentSN = 0,totalduration = 0, level = { url : baseurl, fragments : [], live : true}, result, regexp;
     regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):([\d\.]+)[^\r\n]*[\r\n]+([^\r\n]+)|(?:#EXT-X-(ENDLIST)))/g;
     while((result = regexp.exec(string)) !== null){
@@ -146,7 +146,7 @@ import observer             from '../observer';
     if(string.indexOf('#EXTM3U') === 0) {
       if (string.indexOf('#EXTINF:') > 0) {
         // 1 level playlist, parse it
-        level = this.parseLevelPlaylist(string,url);
+        level = this.parseLevelPlaylist(string,url,id);
         // if first request, fire manifest loaded event beforehand
         if(this.id === null) {
           observer.trigger(Event.MANIFEST_LOADED,
