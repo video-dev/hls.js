@@ -201,12 +201,7 @@ class BufferController {
                                     break;
                                 }
                             }
-                            logger.log(
-                                'find SN matching with pos:' +
-                                    bufferEnd +
-                                    ':' +
-                                    frag.sn
-                            );
+                            //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
                         }
                         if (i >= 0 && i < fragments.length) {
                             this.waitlevel = false;
