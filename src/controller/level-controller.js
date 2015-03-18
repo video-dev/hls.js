@@ -123,7 +123,7 @@
     var stats,rtt,loadtime;
     stats = data.stats;
     rtt = stats.tfirst - stats.trequest;
-    loadtime = stats.tend - stats.trequest;
+    loadtime = stats.tload - stats.trequest;
     this.lastbw = stats.length*8000/loadtime;
   }
 

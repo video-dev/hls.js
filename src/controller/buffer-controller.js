@@ -261,15 +261,8 @@
     if(this.state === LOADING) {
       this.state = PARSING;
       // transmux the MPEG-TS data to ISO-BMFF segments
-      this.tparse0 = Date.now();
-      this.parselen = data.payload.byteLength;
+      this.stats = data.stats;
       this.demuxer.push(data.payload,this.levels[this.level].codecs,this.frag.start);
-      var stats,rtt,loadtime,bw;
-      stats = data.stats;
-      rtt = stats.tfirst - stats.trequest;
-      loadtime = stats.tend - stats.trequest;
-      bw = stats.length*8/(1000*loadtime);
-      //logger.log(data.url + ' loaded, RTT(ms)/load(ms)/bitrate:' + rtt + '/' + loadtime + '/' + bw.toFixed(3) + ' Mb/s');
     }
   }
 
@@ -315,16 +308,16 @@
 
   onFragmentParsed() {
     this.state = PARSED;
-    this.tparse2 = Date.now();
-    //logger.log('      parsing len/duration/rate:' + (this.parselen/1000000).toFixed(2) + 'MB/'  + (this.tparse2-this.tparse0) +'ms/' + ((this.parselen/1000)/(this.tparse2-this.tparse0)).toFixed(2) + 'MB/s');
+    this.stats.tparsed = new Date();
      //trigger handler right now
     this.tick();
   }
 
   onSourceBufferUpdateEnd() {
     //trigger handler right now
-    if(this.mp4segments.length === 0)  {
-      //logger.log('appending finished');
+    if(this.state === APPENDING && this.mp4segments.length === 0)  {
+      this.stats.tbuffered = new Date();
+      observer.trigger(Event.FRAGMENT_BUFFERED, { stats : this.stats, frag : this.frag , levelId : this.level});
       this.state = IDLE;
     }
     this.tick();

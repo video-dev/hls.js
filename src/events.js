@@ -21,6 +21,8 @@ export default {
   FRAGMENT_PARSING :  'hlsFragmentParsing',
   // Identifier for a fragment parsed event
   FRAGMENT_PARSED :  'hlsFragmentParsed',
+  // Identifier for a fragment buffered  event
+  FRAGMENT_BUFFERED :  'hlsFragmentBuffered',
   // Identifier for an init segment event
   INIT_SEGMENT :  'hlsInitSegment',
   // Identifier for a load error event

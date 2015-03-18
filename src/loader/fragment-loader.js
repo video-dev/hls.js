@@ -35,11 +35,12 @@ import {logger}             from '../utils/logger';
   }
 
   loadsuccess(event) {
+    var payload = event.currentTarget.response;
     observer.trigger(Event.FRAGMENT_LOADED,
-                    { payload : event.currentTarget.response,
+                    { payload : payload,
                       frag : this.frag ,
                       levelId : this.levelId,
-                      stats : {trequest : this.trequest, tfirst : this.tfirst, tend : new Date()}});
+                      stats : {trequest : this.trequest, tfirst : this.tfirst, tload : new Date(), length :payload.byteLength }});
   }
 
   loaderror(event) {
