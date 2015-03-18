@@ -9,7 +9,10 @@ class TSDemuxerWorker {
       //console.log('demuxer cmd:' + ev.data.cmd);
       switch(ev.data.cmd) {
         case 'init':
-          self.demuxer = new TSDemuxer(ev.data.data);
+          self.demuxer = new TSDemuxer();
+          break;
+        case 'duration':
+          self.demuxer.duration = ev.data.data;
           break;
         case 'switchLevel':
           self.demuxer.switchLevel();

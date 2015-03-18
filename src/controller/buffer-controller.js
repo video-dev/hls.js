@@ -39,6 +39,7 @@
     this.waitlevel = false;
     observer.on(Event.FRAMEWORK_READY, this.onfr);
     observer.on(Event.MANIFEST_PARSED, this.onmp);
+    this.demuxer = new Demuxer();
   }
 
   destroy() {
@@ -239,9 +240,7 @@
     level.data = data.level;
     level.data.sliding = sliding;
     var duration = data.level.totalduration;
-    if(!this.demuxer) {
-      this.demuxer = new Demuxer(duration);
-    }
+    this.demuxer.duration = duration;
     if(this.justStarted === true) {
       // if live playlist, set start position to be fragment N-3
       if(data.level.live) {

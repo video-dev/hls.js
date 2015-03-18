@@ -14,9 +14,12 @@
 
  class TSDemuxer {
 
-  constructor(duration) {
+  constructor() {
     this.switchLevel();
-    this._duration = duration;
+  }
+
+  set duration(newDuration) {
+    this._duration = newDuration;
   }
 
   switchLevel() {
