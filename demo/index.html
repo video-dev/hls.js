@@ -135,7 +135,7 @@
        hls.on(hls.Events.FRAMEWORK_READY,function() {
           document.getElementById("HlsStatus").innerHTML = 'attaching URL to video tag';
           canvasFlushEvents(document.getElementById('event_c'));
-          document.getElementById('event_c').width = window.innerWidth-100;
+          document.getElementById('event_c').width = window.innerWidth-30;
           hls.t0 = Date.now();
           hls.attachSource(_url);
        });
@@ -161,7 +161,8 @@
             name : "variant manifest",
             time : data.stats.trequest - hls.t0,
             latency : data.stats.tfirst - data.stats.trequest,
-            duration : data.stats.tend - data.stats.tfirst,
+            load : data.stats.tload - data.stats.tfirst,
+            duration : data.stats.tload - data.stats.tfirst,
           };
           canvasPushEvent(document.getElementById('event_c'),event);
           canvasUpdate(document.getElementById('event_c'));
@@ -172,17 +173,21 @@
             name : "stream manifest @ " + data.id,
             time : data.stats.trequest - hls.t0,
             latency : data.stats.tfirst - data.stats.trequest,
-            duration : data.stats.tend - data.stats.tfirst,
+            load : data.stats.tload - data.stats.tfirst,
+            duration : data.stats.tload - data.stats.tfirst
           };
           canvasPushEvent(document.getElementById('event_c'),event);
           canvasUpdate(document.getElementById('event_c'));
        });
-       hls.on(hls.Events.FRAGMENT_LOADED,function(event,data) {
+       hls.on(hls.Events.FRAGMENT_BUFFERED,function(event,data) {
           var event = {
             name : "fragment " + data.frag.sn + " @ " + data.levelId,
             time : data.stats.trequest - hls.t0,
             latency : data.stats.tfirst - data.stats.trequest,
-            duration : data.stats.tend - data.stats.tfirst,
+            load : data.stats.tload - data.stats.tfirst,
+            demux : data.stats.tparsed - data.stats.tload,
+            buffer : data.stats.tbuffered - data.stats.tparsed,
+            duration : data.stats.tbuffered - data.stats.tfirst,
           };
           canvasPushEvent(document.getElementById('event_c'),event);
           canvasUpdate(document.getElementById('event_c'));
