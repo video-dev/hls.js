@@ -108,8 +108,11 @@
      if(Hls.isSupported()) {
        if(hls) {
         hls.destroy();
-        clearInterval(bufferTimer);
        }
+       if(bufferTimer !== undefined) {
+          clearInterval(bufferTimer);
+        }
+
       var hlsLink = document.URL.split('?')[0] +  '?src=' + encodeURIComponent(url);
       var description = 'URL: ' + url + '<br>HLS link: ' + "<a href=\"" + hlsLink + "\">" + hlsLink + "</a>";
       if(url.indexOf('http') === -1) {
