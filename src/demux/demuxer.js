@@ -5,7 +5,7 @@ import observer from '../observer';
 import { logger } from '../utils/logger';
 
 class Demuxer {
-    constructor(duration) {
+    constructor() {
         var enableWorker = true;
         if (enableWorker && typeof Worker !== 'undefined') {
             logger.log('TS demuxing in webworker');
@@ -13,11 +13,20 @@ class Demuxer {
             this.w = work(TSDemuxerWorker);
             this.onwmsg = this.onWorkerMessage.bind(this);
             this.w.addEventListener('message', this.onwmsg);
-            this.w.postMessage({ cmd: 'init', data: duration });
+            this.w.postMessage({ cmd: 'init' });
         } else {
-            this.demuxer = new TSDemuxer(duration);
+            this.demuxer = new TSDemuxer();
         }
         this.demuxInitialized = true;
+    }
+
+    set duration(newDuration) {
+        if (this.w) {
+            // post fragment payload as transferable objects (no copy)
+            this.w.postMessage({ cmd: 'duration', data: newDuration });
+        } else {
+            this.demuxer.duration = newDuration;
+        }
     }
 
     destroy() {
