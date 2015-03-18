@@ -16,10 +16,28 @@
     canvas.height = 20*(canvas.canvasEvents.length+1);
 
     //draw legend
-    var legend = 'start time / latency / load duration / end time';
-    ctx.fillStyle = "green";
+    var offset = 50;
     ctx.font = "12px Arial";
-    ctx.fillText(legend,5,15);
+
+    legend = 'latency';
+    ctx.fillStyle = "orange";
+    ctx.fillText(legend,offset,15);
+    offset += ctx.measureText(legend).width+5;
+
+    legend = 'loading';
+    ctx.fillStyle = "green";
+    ctx.fillText(legend,offset,15);
+    offset += ctx.measureText(legend).width+5;
+
+    legend = 'parsing';
+    ctx.fillStyle = "blue";
+    ctx.fillText(legend,offset,15);
+    offset += ctx.measureText(legend).width+5;
+
+    legend = 'appending';
+    ctx.fillStyle = "red";
+    ctx.fillText(legend,offset,15);
+    offset += ctx.measureText(legend).width+5;
 
     for (var i =0 ; i < canvas.canvasEvents.length; i++) {
       canvasDrawEvent(ctx,20*(i+1),canvas.canvasEvents[i]);
@@ -27,38 +45,85 @@
   }
 
   var eventNameWidth = 150;
-  var eventLegendWidth = 100;
+  var eventLegendWidth = 120;
 
   function canvasDrawEvent(ctx,yoffset,event) {
+    var legend,offset,x_start,x_w,
+    networkChartStart = eventNameWidth+eventLegendWidth,
+    networkChartWidth = ctx.canvas.width-eventNameWidth-eventLegendWidth-40,
+    tend = event.time + event.duration + event.latency;
+
     // draw event name
     ctx.fillStyle = "black";
     ctx.font = "15px Arial";
     ctx.fillText(event.name,5,yoffset+15);
 
-    var networkChartStart = eventNameWidth+eventLegendWidth;
-    var networkChartWidth = ctx.canvas.width-eventNameWidth-eventLegendWidth;
+   //draw start
+    ctx.fillStyle = "black";
+    ctx.font = "12px Arial";
+    legend = event.time;
+    offset = ctx.measureText(legend).width+5;
+    x_start = networkChartStart-offset+networkChartWidth*event.time/ctx.canvas.canvasMaxTime;
+    ctx.fillText(legend,x_start,yoffset+12);
 
     //draw latency rectangle
-    ctx.fillStyle = "green";
-    var x_start = networkChartStart + networkChartWidth*event.time/ctx.canvas.canvasMaxTime;
-    var x_w = networkChartWidth*event.latency/ctx.canvas.canvasMaxTime;
+    ctx.fillStyle = "orange";
+    x_start = networkChartStart + networkChartWidth*event.time/ctx.canvas.canvasMaxTime;
+    x_w = networkChartWidth*event.latency/ctx.canvas.canvasMaxTime;
     ctx.fillRect(x_start,yoffset,x_w, 15);
     //draw download rectangle
-    ctx.fillStyle = "blue";
+    ctx.fillStyle = "green";
     x_start = networkChartStart + networkChartWidth*(event.time+event.latency)/ctx.canvas.canvasMaxTime;
-    x_w = networkChartWidth*event.duration/ctx.canvas.canvasMaxTime;
+    x_w = networkChartWidth*event.load/ctx.canvas.canvasMaxTime;
     ctx.fillRect(x_start,yoffset,x_w, 15);
 
-    //draw legend
-    var legend = event.legend;
-    if (legend === undefined) {
-      var tend = event.time + event.latency + event.duration;
-      legend = event.time + '/' + event.latency + '/' + event.duration + '/' + tend;
+    if(event.demux) {
+      //draw demux rectangle
+      ctx.fillStyle = "blue";
+      x_start = networkChartStart + networkChartWidth*(event.time+event.latency+event.load)/ctx.canvas.canvasMaxTime;
+      x_w = networkChartWidth*event.demux/ctx.canvas.canvasMaxTime;
+      ctx.fillRect(x_start,yoffset,x_w, 15);
+
+      //draw buffering rectangle
+      ctx.fillStyle = "red";
+      x_start = networkChartStart + networkChartWidth*(event.time+event.latency+event.load+event.demux)/ctx.canvas.canvasMaxTime;
+      x_w = networkChartWidth*event.buffer/ctx.canvas.canvasMaxTime;
+      ctx.fillRect(x_start,yoffset,x_w, 15);
     }
-    ctx.fillStyle = "green";
+
+   //draw end time
+    ctx.fillStyle = "black";
     ctx.font = "12px Arial";
-    x_start = eventNameWidth; //*(event.time+event.latency+event.duration)/ctx.canvas.canvasMaxTime;
-    ctx.fillText(legend,x_start+5,yoffset+15);
+    legend = tend;
+    x_start += x_w + 5;
+    ctx.fillText(legend,x_start,yoffset+12);
+
+    //draw legend
+    //draw legend
+    var offset = eventNameWidth;
+    ctx.font = "12px Arial";
+
+    legend = event.latency;
+    ctx.fillStyle = "orange";
+    ctx.fillText(legend,offset,yoffset+12);
+    offset += ctx.measureText(legend).width+5;
+
+    legend = event.load;
+    ctx.fillStyle = "green";
+    ctx.fillText(legend,offset,yoffset+12);
+    offset += ctx.measureText(legend).width+5;
+
+    if(event.demux) {
+      legend = event.demux;
+      ctx.fillStyle = "blue";
+      ctx.fillText(legend,offset,yoffset+12);
+      offset += ctx.measureText(legend).width+5;
+
+      legend = event.buffer;
+      ctx.fillStyle = "red";
+      ctx.fillText(legend,offset,yoffset+12);
+      offset += ctx.measureText(legend).width+5;
+    }
   }
 
   function canvasDrawLegend(canvas, eventIdx) {
