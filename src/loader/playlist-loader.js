@@ -165,7 +165,7 @@ class PlaylistLoader {
             string = event.currentTarget.responseText,
             url = event.currentTarget.responseURL,
             id = this.id;
-        this.stats.tend = new Date();
+        this.stats.tload = new Date();
         var mtime = new Date(this.xhr.getResponseHeader('Last-Modified'));
 
         if (string.indexOf('#EXTM3U') === 0) {
