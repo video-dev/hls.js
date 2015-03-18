@@ -89,6 +89,14 @@ class PlaylistLoader {
                             codec = codecs.shift();
                             if (codec.indexOf('avc1') !== -1) {
                                 codec = this.avc1toavcoti(codec);
+                            } else {
+                                if (
+                                    navigator.userAgent
+                                        .toLowerCase()
+                                        .indexOf('firefox') === -1
+                                ) {
+                                    continue;
+                                }
                             }
                             level.codecs += codec;
                         }
