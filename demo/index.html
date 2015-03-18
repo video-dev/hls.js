@@ -46,7 +46,7 @@
             <button onclick="hls.level=parseInt(document.getElementById('manualLevel').value);">set level </button>
              <input type="text" id='manualLevel' onkeydown="if(window.event.keyCode=='13'){hls.level=parseInt(document.getElementById('manualLevel').value);}">
           </div>
-          <video id=video controls autoplay onloadedmetadata="buffered_loaded(event);" onresize="buffered_resize(event);" onclick="goFullscreen('video')">
+          <video id=video controls autoplay oncanplaythrough="buffered_loaded(event);" onresize="buffered_resize(event);" onclick="goFullscreen('video')">
           </video>
         </section>
       </article>
@@ -55,6 +55,7 @@
     <pre id='HlsStatus'></pre>
     <pre id='HlsLevel'></pre>
     <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)";></canvas> <br>
+    <canvas id="buffertime_c" width="640" height="100" style="border:1px solid #000000";></canvas><br>
     <canvas id="event_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
   </div>
   <div id="buffered_log" style="font-size: small;"></div>
@@ -107,6 +108,7 @@
      if(Hls.isSupported()) {
        if(hls) {
         hls.destroy();
+        clearInterval(bufferTimer);
        }
       var hlsLink = document.URL.split('?')[0] +  '?src=' + encodeURIComponent(url);
       var description = 'URL: ' + url + '<br>HLS link: ' + "<a href=\"" + hlsLink + "\">" + hlsLink + "</a>";
@@ -135,7 +137,9 @@
        hls.on(hls.Events.FRAMEWORK_READY,function() {
           document.getElementById("HlsStatus").innerHTML = 'attaching URL to video tag';
           canvasFlushEvents(document.getElementById('event_c'));
+          canvasFlushEvents(document.getElementById('buffertime_c'));
           document.getElementById('event_c').width = window.innerWidth-30;
+          document.getElementById('buffertime_c').width = window.innerWidth-30;
           hls.t0 = Date.now();
           hls.attachSource(_url);
        });
@@ -165,7 +169,7 @@
             duration : data.stats.tload - data.stats.tfirst,
           };
           canvasPushEvent(document.getElementById('event_c'),event);
-          canvasUpdate(document.getElementById('event_c'));
+          refreshCanvas();
        });
        hls.on(hls.Events.LEVEL_LOADED,function(event,data) {
           document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",last loaded level:" + data.id;
@@ -177,7 +181,7 @@
             duration : data.stats.tload - data.stats.tfirst
           };
           canvasPushEvent(document.getElementById('event_c'),event);
-          canvasUpdate(document.getElementById('event_c'));
+          refreshCanvas();
        });
        hls.on(hls.Events.FRAGMENT_BUFFERED,function(event,data) {
           var event = {
@@ -190,7 +194,7 @@
             duration : data.stats.tbuffered - data.stats.tfirst,
           };
           canvasPushEvent(document.getElementById('event_c'),event);
-          canvasUpdate(document.getElementById('event_c'));
+          refreshCanvas();
        });
        hls.on(hls.Events.VIDEO_ERROR,function(event,data) {
           hls.destroy();
@@ -232,11 +236,19 @@ function timeRangesToString(r) {
       if(!canvas.width || canvas.width !== v.videoWidth) {
         canvas.width = v.videoWidth;
       }
-      for (var i=0; i<r.length; i++) {
+      var pos = v.currentTime,bufferLen;
+      for (var i=0, bufferLen=0; i<r.length; i++) {
         var start = r.start(i)/v.duration * canvas.width;
         var end = r.end(i)/v.duration * canvas.width;
         ctx.fillRect(start, 3, Math.max(2, end-start), 10);
+        if(pos >= r.start(i) && pos < r.end(i)) {
+          // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
+          bufferLen = r.end(i) - pos;
+        }
       }
+      var event = { time : new Date() - hls.t0, buffer : bufferLen};
+      canvasPushEvent(document.getElementById('buffertime_c'),event);
+      refreshCanvas();
       var log = "position:<br>"
               + v.currentTime.toFixed(2)
               + "<br>"
@@ -253,6 +265,12 @@ function timeRangesToString(r) {
     }
   }
 
+  function refreshCanvas()  {
+      var maxTime = new Date() - hls.t0;
+      canvasUpdate(document.getElementById('event_c'), maxTime);
+      canvasUpdateBuffer(document.getElementById('buffertime_c'), maxTime);
+  }
+
   function minsecs(ts) {
     var m = Math.floor(Math.floor(ts % 3600) / 60);
     var s = Math.floor(ts % 60);
@@ -267,13 +285,17 @@ function timeRangesToString(r) {
     outputLog("Seeking to " + target + " (" + minsecs(target) + ")");
   }
 
+
+var bufferTimer;
   function buffered_loaded(event) {
     var v = document.getElementById('video');
     if (!v.buffered) {
       outputLog('Buffered attribute not supported by your browser\n');
     } else {
       outputLog("Buffered attribute is supported, click on the black progress bar to seek.");
-      window.setInterval(updateBuffered, 100);
+      var event = { time : new Date() - hls.t0, buffer : 0};
+      canvasPushEvent(document.getElementById('buffertime_c'),event);
+      bufferTimer = window.setInterval(updateBuffered, 100);
     }
   }
 
