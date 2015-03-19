@@ -294,7 +294,7 @@
     // codec="mp4a.40.5,avc1.420016";
     // in case several audio codecs might be used, force HE-AAC for audio (some browsers don't support audio codec switch)
     //don't do it for mono streams ...
-    if(this.audiocodecswitch && data.audioChannelCount === 2 && navigator.userAgent.toLowerCase().indexOf('android') === -1) {
+    if(this.audiocodecswitch && data.audioChannelCount === 2 && navigator.userAgent.toLowerCase().indexOf('android') === -1 && navigator.userAgent.toLowerCase().indexOf('firefox') === -1) {
       codec = codec.replace('mp4a.40.2','mp4a.40.5');
     }
     logger.log('playlist/choosed codecs:' + this.levels[this.level].codecs + '/' + codec);

@@ -596,7 +596,7 @@
       adtsExtensionSampleingIndex = adtsSampleingIndex - 3;
       config = new Array(4);
     } else {
-      if(navigator.userAgent.toLowerCase().indexOf('android') === -1) {
+      if(navigator.userAgent.toLowerCase().indexOf('android') === -1 && navigator.userAgent.toLowerCase().indexOf('firefox') === -1) {
         adtsObjectType = 5;
         config = new Array(4);
       }else {
