@@ -181,7 +181,7 @@ class BufferController {
                     } else {
                         // load level is retrieved from level Controller
                         loadLevel = this.levelController.level;
-                        logger.log('next level:' + loadLevel);
+                        //logger.log('next level:' + loadLevel);
                     }
                     var level = this.levels[loadLevel];
                     // if level not retrieved yet, switch state and wait for playlist retrieval
@@ -211,11 +211,7 @@ class BufferController {
                             i = this.frag.sn + 1 - fragments[0].sn;
                             if (i >= fragments.length) {
                                 // most certainly live playlist is outdated, let's move to WAITING LEVEL state and come back once it will have been refreshed
-                                logger.log(
-                                    'sn ' +
-                                        (this.frag.sn + 1) +
-                                        ' out of range, wait for live playlist update'
-                                );
+                                //logger.log('sn ' + (this.frag.sn + 1) + ' out of range, wait for live playlist update');
                                 this.state = WAITING_LEVEL;
                                 this.waitlevel = true;
                                 return;
