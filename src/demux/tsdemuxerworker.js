@@ -46,8 +46,10 @@ class TSDemuxerWorker {
             var objData = {
                 event: ev,
                 type: data.type,
-                start: data.start,
-                end: data.end,
+                startPTS: data.startPTS,
+                endPTS: data.endPTS,
+                startDTS: data.startDTS,
+                endDTS: data.endDTS,
                 moof: data.moof.buffer,
                 mdat: data.mdat.buffer
             };

@@ -145,13 +145,8 @@ class TSDemuxer {
                 // ISO/IEC 13818-7 ADTS AAC (MPEG-2 lower bit-rate audio)
                 case 0x0f:
                     //logger.log('AAC PID:'  + pid);
-                    if (
-                        navigator.userAgent.toLowerCase().indexOf('firefox') ===
-                        -1
-                    ) {
-                        this._aacId = pid;
-                        this._aacTrack.id = pid;
-                    }
+                    this._aacId = pid;
+                    this._aacTrack.id = pid;
                     break;
                 // ITU-T Rec. H.264 and ISO/IEC 14496-10 (lower bit-rate video)
                 case 0x1b:
@@ -300,7 +295,8 @@ class TSDemuxer {
             moof,
             startOffset,
             endOffset,
-            firstPTS;
+            firstPTS,
+            firstDTS;
         track.samples = [];
 
         /* concatenate the video data and construct the mdat in place
@@ -325,8 +321,8 @@ class TSDemuxer {
                 mp4SampleLength += 4 + unit.data.byteLength;
             }
 
-            avcSample.pts -= this._initPTS;
-            avcSample.dts -= this._initPTS;
+            avcSample.pts -= this._initDTS;
+            avcSample.dts -= this._initDTS;
             //logger.log('Video/PTS/DTS:' + avcSample.pts + '/' + avcSample.dts);
 
             if (lastSampleDTS !== undefined) {
@@ -369,6 +365,7 @@ class TSDemuxer {
                 }
                 // remember first PTS of our avcSamples
                 firstPTS = avcSample.pts;
+                firstDTS = avcSample.dts;
             }
 
             mp4Sample = {
@@ -405,12 +402,14 @@ class TSDemuxer {
         startOffset = firstPTS / 1000;
         endOffset = this.nextAvcPts / 1000;
 
-        moof = MP4.moof(track.sequenceNumber++, firstPTS * 90, track);
+        moof = MP4.moof(track.sequenceNumber++, firstDTS * 90, track);
         observer.trigger(Event.FRAGMENT_PARSING, {
             moof: moof,
             mdat: mdat,
-            start: startOffset,
-            end: endOffset,
+            startPTS: startOffset,
+            endPTS: endOffset,
+            startDTS: firstDTS / 1000,
+            endDTS: (avcSample.dts + mp4Sample.duration / 90) / 1000,
             type: 'video'
         });
     }
@@ -567,7 +566,8 @@ class TSDemuxer {
             moof,
             startOffset,
             endOffset,
-            firstPTS;
+            firstPTS,
+            firstDTS;
         track.samples = [];
 
         /* concatenate the audio data and construct the mdat in place
@@ -582,8 +582,8 @@ class TSDemuxer {
             mdat.set(unit, i);
             i += unit.byteLength;
 
-            aacSample.pts -= this._initPTS;
-            aacSample.dts -= this._initPTS;
+            aacSample.pts -= this._initDTS;
+            aacSample.dts -= this._initDTS;
 
             //logger.log('Audio/PTS:' + aacSample.pts.toFixed(0));
             if (lastSampleDTS !== undefined) {
@@ -624,6 +624,7 @@ class TSDemuxer {
                 }
                 // remember first PTS of our avcSamples
                 firstPTS = aacSample.pts;
+                firstDTS = aacSample.dts;
             }
 
             mp4Sample = {
@@ -652,12 +653,14 @@ class TSDemuxer {
         startOffset = firstPTS / 1000;
         endOffset = this.nextAacPts / 1000;
 
-        moof = MP4.moof(track.sequenceNumber++, firstPTS * 90, track);
+        moof = MP4.moof(track.sequenceNumber++, firstDTS * 90, track);
         observer.trigger(Event.FRAGMENT_PARSING, {
             moof: moof,
             mdat: mdat,
-            start: startOffset,
-            end: endOffset,
+            startPTS: startOffset,
+            endPTS: endOffset,
+            startDTS: firstDTS / 1000,
+            endDTS: (aacSample.dts + mp4Sample.duration / 90) / 1000,
             type: 'audio'
         });
     }
@@ -785,6 +788,8 @@ class TSDemuxer {
                 // remember first PTS of this demuxing context
                 this._initPTS =
                     this._aacSamples[0].pts - 1000 * this.timeOffset;
+                this._initDTS =
+                    this._aacSamples[0].dts - 1000 * this.timeOffset;
             }
         } else if (this._aacId === -1) {
             //video only
@@ -800,6 +805,8 @@ class TSDemuxer {
                     // remember first PTS of this demuxing context
                     this._initPTS =
                         this._avcSamples[0].pts - 1000 * this.timeOffset;
+                    this._initDTS =
+                        this._avcSamples[0].dts - 1000 * this.timeOffset;
                 }
             }
         } else {
@@ -823,6 +830,12 @@ class TSDemuxer {
                         Math.min(
                             this._avcSamples[0].pts,
                             this._aacSamples[0].pts
+                        ) -
+                        1000 * this.timeOffset;
+                    this._initDTS =
+                        Math.min(
+                            this._avcSamples[0].dts,
+                            this._aacSamples[0].dts
                         ) -
                         1000 * this.timeOffset;
                 }

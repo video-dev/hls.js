@@ -121,19 +121,40 @@ class BufferController {
                     bufferStart,
                     bufferEnd,
                     i;
+                var buffered2 = [];
+                // there might be some small holes between buffer time range
+                // consider that holes smaller than 300 ms are irrelevant and build another
+                // buffer time range representations that discards those holes
+                for (i = 0; i < buffered.length; i++) {
+                    //logger.log('buf start/end:' + buffered.start(i) + '/' + buffered.end(i));
+                    if (
+                        buffered2.length &&
+                        buffered.start(i) -
+                            buffered2[buffered2.length - 1].end <
+                            0.3
+                    ) {
+                        buffered2[buffered2.length - 1].end = buffered.end(i);
+                    } else {
+                        buffered2.push({
+                            start: buffered.start(i),
+                            end: buffered.end(i)
+                        });
+                    }
+                }
+
                 for (
                     i = 0, bufferLen = 0, bufferStart = bufferEnd = pos;
-                    i < buffered.length;
+                    i < buffered2.length;
                     i++
                 ) {
                     //logger.log('buf start/end:' + buffered.start(i) + '/' + buffered.end(i));
                     if (
-                        pos + 0.04 >= buffered.start(i) &&
-                        pos < buffered.end(i)
+                        pos + 0.3 >= buffered2[i].start &&
+                        pos < buffered2[i].end
                     ) {
                         // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
-                        bufferStart = buffered.start(i);
-                        bufferEnd = buffered.end(i);
+                        bufferStart = buffered2[i].start;
+                        bufferEnd = buffered2[i].end + 0.3;
                         bufferLen = bufferEnd - pos;
                     }
                 }
@@ -359,15 +380,19 @@ class BufferController {
         this.tparse2 = Date.now();
         var level = this.levels[this.level];
         if (level.data.live) {
-            level.data.sliding = data.start - this.frag.start;
+            level.data.sliding = data.startPTS - this.frag.start;
         }
         logger.log(
-            '      parsed data, type/start/end/sliding:' +
+            '      parsed data, type/startPTS/endPTS/startDTS/endDTS/sliding:' +
                 data.type +
                 '/' +
-                data.start.toFixed(3) +
+                data.startPTS.toFixed(3) +
                 '/' +
-                data.end.toFixed(3) +
+                data.endPTS.toFixed(3) +
+                '/' +
+                data.startDTS.toFixed(3) +
+                '/' +
+                data.endDTS.toFixed(3) +
                 '/' +
                 level.data.sliding.toFixed(3)
         );

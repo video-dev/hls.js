@@ -696,7 +696,8 @@ class MP4 {
             ]
                 .concat([track.config.length])
                 .concat(track.config)
-        ); // length + audio config descriptor
+                .concat([0x06, 0x01, 0x02])
+        ); // GASpecificConfig)); // length + audio config descriptor
     }
 
     static mp4a(track) {
