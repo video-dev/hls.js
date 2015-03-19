@@ -46,7 +46,7 @@
             <button onclick="hls.level=parseInt(document.getElementById('manualLevel').value);">set level </button>
              <input type="text" id='manualLevel' onkeydown="if(window.event.keyCode=='13'){hls.level=parseInt(document.getElementById('manualLevel').value);}">
           </div>
-          <video id=video controls autoplay oncanplaythrough="buffered_loaded(event);" onresize="buffered_resize(event);" onclick="goFullscreen('video')">
+          <video id=video controls autoplay oncanplaythrough="buffered_loaded(event);" onresize="buffered_resize(event);"">
           </video>
         </section>
       </article>
@@ -62,7 +62,7 @@
     <button onclick="windowSliding=true;windowDuration=30000">=30s</button>
     <button onclick="windowSliding=true;windowDuration=60000">=60s</button>
     <button onclick="windowSliding=true;windowDuration=120000">=120s</button>
-    <button onclick="windowSliding=true;windowDuration=0">=infinity</button>
+    <button onclick="windowSliding=true;windowDuration=0">=infinity</button><br>
     <button onclick="var windowTime = getWindowTimeRange(); windowStart=windowTime.min;windowEnd=windowTime.max;document.getElementById('windowStart').value=windowStart;document.getElementById('windowEnd').value=windowEnd">use current sliding window for fixed window</button>
     <button onclick="windowSliding=!windowSliding">toggle sliding/fixed window</button>
     <button onclick="windowStart=document.getElementById('windowStart').value">fixed window start(ms)</button>
@@ -357,15 +357,6 @@ document.getElementById('windowStart').value=windowStart;document.getElementById
     var canvas = document.getElementById('buffered_c');
     canvas.width = event.target.videoWidth;
     document.getElementById("HlsDimension").innerHTML = "video dimension:" + event.target.videoWidth + 'x' + event.target.videoHeight;
-  }
-
-  function goFullscreen(id) {
-    var element = document.getElementById(id);
-    if (element.mozRequestFullScreen) {
-      element.mozRequestFullScreen();
-    } else if (element.webkitRequestFullScreen) {
-      element.webkitRequestFullScreen();
-    }
   }
   </script>
 </body>
