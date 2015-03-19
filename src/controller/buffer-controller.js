@@ -320,9 +320,13 @@ class BufferController {
                 '],duration:' +
                 duration
         );
-        this.state = IDLE;
-        //trigger handler right now
-        this.tick();
+
+        // only switch batck to IDLE state if we were waiting for level to start downloading a new fragment
+        if (this.state === WAITING_LEVEL) {
+            this.state = IDLE;
+            //trigger handler right now
+            this.tick();
+        }
     }
 
     onFragmentLoaded(event, data) {
