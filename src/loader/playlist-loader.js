@@ -146,7 +146,8 @@ class PlaylistLoader {
                         url: this.resolve(result[2], baseurl),
                         duration: duration,
                         start: totalduration,
-                        sn: currentSN++
+                        sn: currentSN++,
+                        level: id
                     });
                     totalduration += duration;
                     break;

@@ -172,7 +172,7 @@ class BufferController {
                         }
                         if (loadLevel !== this.level) {
                             // set new level to playlist loader : this will trigger a playlist load if needed
-                            this.level = this.levelController.level = loadLevel;
+                            this.levelController.level = this.level = loadLevel;
                             // tell demuxer that we will switch level (this will force init segment to be regenerated)
                             if (this.demuxer) {
                                 this.demuxer.switchLevel();
@@ -180,7 +180,8 @@ class BufferController {
                         }
                     } else {
                         // load level is retrieved from level Controller
-                        loadLevel = this.level;
+                        loadLevel = this.levelController.level;
+                        logger.log('next level:' + loadLevel);
                     }
                     var level = this.levels[loadLevel];
                     // if level not retrieved yet, switch state and wait for playlist retrieval
@@ -208,6 +209,17 @@ class BufferController {
                         }
                         if (bufferLen > 0 && buffered.length === 1) {
                             i = this.frag.sn + 1 - fragments[0].sn;
+                            if (i >= fragments.length) {
+                                // most certainly live playlist is outdated, let's move to WAITING LEVEL state and come back once it will have been refreshed
+                                logger.log(
+                                    'sn ' +
+                                        (this.frag.sn + 1) +
+                                        ' out of range, wait for live playlist update'
+                                );
+                                this.state = WAITING_LEVEL;
+                                this.waitlevel = true;
+                                return;
+                            }
                             frag = fragments[i];
                         } else {
                             // no data buffered, look for fragments matching with current play position
@@ -280,17 +292,21 @@ class BufferController {
 
     onLevelLoaded(event, data) {
         var level = this.levels[data.id],
-            sliding = 0;
+            sliding = 0,
+            levelCurrent = this.levels[this.level];
+
         // check if playlist is already loaded (if yes, it should be a live playlist)
         if (level.data && level.data.live) {
-            //  playlist sliding is the sum of : previous playlist sliding + sliding of new playlist compared to old one
-            sliding = level.data.sliding;
-            // check sliding of new playlist against old one :
+            //  playlist sliding is the sum of : current playlist sliding + sliding of new playlist compared to current one
+            sliding = levelCurrent.data.sliding;
+            // check sliding of updated playlist against current one :
             //retrieve SN of first fragment of new playlist,
-            var sn = data.level.fragments[0].sn;
-            // and find its position in old playlist
+            var newSN = data.level.fragments[0].sn;
+            // and find its position in current playlist
             sliding +=
-                level.data.fragments[sn - level.data.fragments[0].sn].start;
+                levelCurrent.data.fragments[
+                    newSN - levelCurrent.data.fragments[0].sn
+                ].start;
             logger.log('live playlist sliding:' + sliding.toFixed(3));
         }
         // override level info
@@ -420,8 +436,7 @@ class BufferController {
             this.stats.tbuffered = new Date();
             observer.trigger(Event.FRAGMENT_BUFFERED, {
                 stats: this.stats,
-                frag: this.frag,
-                levelId: this.level
+                frag: this.frag
             });
             this.state = IDLE;
         }

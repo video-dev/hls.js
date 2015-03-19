@@ -201,7 +201,7 @@
        });
        hls.on(hls.Events.FRAGMENT_BUFFERED,function(event,data) {
           var event = {
-            name : "fragment " + data.frag.sn + " @ " + data.levelId,
+            name : "fragment " + data.frag.sn + " @ " + data.frag.level,
             time : data.stats.trequest - hls.t0,
             latency : data.stats.tfirst - data.stats.trequest,
             load : data.stats.tload - data.stats.tfirst,
