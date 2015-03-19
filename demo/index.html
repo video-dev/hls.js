@@ -105,6 +105,7 @@
    }
 
   function loadStream(video,url) {
+    hideCanvas();
      if(Hls.isSupported()) {
        if(hls) {
         hls.destroy();
@@ -120,8 +121,6 @@
         description += '<br>DM link:' + "<a href=\"" + dmlink + "\">" + dmlink + "</a>";
       }
       document.getElementById("HlsUrl").innerHTML = description;
-      document.getElementById('buffered_c').width = 0;
-      document.getElementById('buffered_log').style.display="none";
       document.getElementById("HlsStatus").innerHTML = 'loading ' + url;
        if(url.indexOf('http') === -1) {
         document.getElementById("HlsStatus").innerHTML = 'DM url detected, resolving ...';
@@ -147,7 +146,7 @@
           hls.attachSource(_url);
        });
        hls.on(hls.Events.INIT_SEGMENT,function(event,data) {
-          document.getElementById('buffered_log').style.display="block";
+          showCanvas();
           document.getElementById("HlsStatus").innerHTML = "playlist successfully loaded," + hls.levels.length + " levels found";
        });
        hls.on(hls.Events.LOAD_ERROR,function(event,data) {
@@ -205,7 +204,11 @@
           document.getElementById('buffered_c').width = 0;
        });
     } else {
-      document.getElementById("HlsStatus").innerHTML = "your Browser does not support MediaSourceExtension / MP4 mediasource";
+      if(navigator.userAgent.toLowerCase().indexOf('firefox') !== -1) {
+      document.getElementById("HlsStatus").innerHTML = "you are using Firefox, it looks like MediaSource is not enabled,<br>please ensure the following keys are set appropriately in <b>about:config<br>media.mediasource.enabled=true<br>media.mediasource.ignore_codecs=true<br>media.mediasource.mp4.enabled=true<br>media.mediasource.youtubeonly=false</b>";
+      } else {
+        document.getElementById("HlsStatus").innerHTML = "your Browser does not support MediaSourceExtension / MP4 mediasource";
+      }
     }
   }
 
@@ -266,6 +269,20 @@ function timeRangesToString(r) {
       var x = v.currentTime / v.duration * canvas.width;
       ctx.fillRect(x, 0, 2, 15);
     }
+  }
+
+  function showCanvas()  {
+      document.getElementById('buffered_log').style.display="block";
+      document.getElementById('buffered_c').style.display="block";
+      document.getElementById('buffertime_c').style.display="block";
+      document.getElementById('event_c').style.display="block";
+  }
+
+  function hideCanvas()  {
+      document.getElementById('buffered_log').style.display="none";
+      document.getElementById('buffered_c').style.display="none";
+      document.getElementById('buffertime_c').style.display="none";
+      document.getElementById('event_c').style.display="none";
   }
 
   function refreshCanvas()  {
