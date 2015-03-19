@@ -55,7 +55,21 @@
     <pre id='HlsStatus'></pre>
     <pre id='HlsLevel'></pre>
     <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)";></canvas> <br>
-    <canvas id="buffertime_c" width="640" height="100" style="border:1px solid #000000";></canvas><br>
+    <button onclick="windowSliding=true;windowDuration=2000">window=2s</button>
+    <button onclick="windowSliding=true;windowDuration=5000">=5s</button>
+    <button onclick="windowSliding=true;windowDuration=10000">=10s</button>
+    <button onclick="windowSliding=true;windowDuration=20000">=20s</button>
+    <button onclick="windowSliding=true;windowDuration=30000">=30s</button>
+    <button onclick="windowSliding=true;windowDuration=60000">=60s</button>
+    <button onclick="windowSliding=true;windowDuration=120000">=120s</button>
+    <button onclick="windowSliding=true;windowDuration=0">=infinity</button>
+    <button onclick="var windowTime = getWindowTimeRange(); windowStart=windowTime.min;windowEnd=windowTime.max;document.getElementById('windowStart').value=windowStart;document.getElementById('windowEnd').value=windowEnd">use current sliding window for fixed window</button>
+    <button onclick="windowSliding=!windowSliding">toggle sliding/fixed window</button>
+    <button onclick="windowStart=document.getElementById('windowStart').value">fixed window start(ms)</button>
+    <input type="text" id='windowStart' defaultValue="0" onkeydown="if(window.event.keyCode=='13'){windowStart=document.getElementById('windowStart').value;}">
+    <button onclick="windowEnd=document.getElementById('windowEnd').value">fixed window end(ms)</button>
+    <input type="text" id='windowEnd' defaultValue="10000" onkeydown="if(window.event.keyCode=='13'){windowEnd=document.getElementById('windowEnd').value;}">
+    <canvas id="buffertime_c" width="640" height="100" style="border:1px solid #000000";></canvas>
     <canvas id="event_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
   </div>
   <div id="buffered_log" style="font-size: small;"></div>
@@ -290,10 +304,30 @@ function timeRangesToString(r) {
       document.getElementById('event_c').style.display="none";
   }
 
+var windowDuration=20000,windowSliding=true,windowStart=0,windowEnd=10000;
+document.getElementById('windowStart').value=windowStart;document.getElementById('windowEnd').value=windowEnd;
   function refreshCanvas()  {
-      var maxTime = new Date() - hls.t0;
-      canvasUpdate(document.getElementById('event_c'), maxTime);
-      canvasUpdateBuffer(document.getElementById('buffertime_c'), maxTime);
+      var windowTime = getWindowTimeRange();
+      canvasUpdate(document.getElementById('event_c'), windowTime.min,windowTime.max);
+      canvasUpdateBuffer(document.getElementById('buffertime_c'), windowTime.min,windowTime.max);
+  }
+
+  function getWindowTimeRange() {
+      if(windowSliding) {
+        var tnow = new Date() - hls.t0,minTime,maxTime;
+        // let's show the last 60s from current time
+        if(windowDuration) {
+          minTime = Math.max(0, tnow-windowDuration),
+          maxTime = Math.min(minTime + windowDuration, tnow);
+        } else {
+          minTime = 0;
+          maxTime = tnow;
+        }
+      } else {
+        minTime = windowStart;
+        maxTime = windowEnd;
+      }
+      return { min : minTime, max: maxTime}
   }
 
   function minsecs(ts) {
