@@ -357,7 +357,8 @@ class BufferController {
         if (
             this.audiocodecswitch &&
             data.audioChannelCount === 2 &&
-            navigator.userAgent.toLowerCase().indexOf('android') === -1
+            navigator.userAgent.toLowerCase().indexOf('android') === -1 &&
+            navigator.userAgent.toLowerCase().indexOf('firefox') === -1
         ) {
             codec = codec.replace('mp4a.40.2', 'mp4a.40.5');
         }
