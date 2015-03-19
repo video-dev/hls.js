@@ -33,7 +33,7 @@ class TSDemuxerWorker {
       self.postMessage(objData,[objData.moov]);
     });
     observer.on(Event.FRAGMENT_PARSING, function(ev,data) {
-      var objData = { event : ev , type : data.type, start : data.start, end : data.end , moof : data.moof.buffer, mdat : data.mdat.buffer};
+      var objData = { event : ev , type : data.type, startPTS : data.startPTS, endPTS : data.endPTS , startDTS : data.startDTS, endDTS : data.endDTS ,moof : data.moof.buffer, mdat : data.mdat.buffer};
       // pass moof/mdat data as transferable object (no copy)
       self.postMessage(objData,[objData.moof,objData.mdat]);
     });

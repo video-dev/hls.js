@@ -391,7 +391,7 @@ class MP4 {
       0x00, 0x00, 0x00, 0x00, // avgBitrate
 
       0x05 // descriptor_type
-      ].concat([track.config.length]).concat(track.config)); // length + audio config descriptor
+      ].concat([track.config.length]).concat(track.config).concat([0x06, 0x01, 0x02])); // GASpecificConfig)); // length + audio config descriptor
   }
 
   static mp4a(track) {

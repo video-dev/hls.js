@@ -76,8 +76,10 @@ class Demuxer {
         observer.trigger(Event.FRAGMENT_PARSING,{
           moof : new Uint8Array(ev.data.moof),
           mdat : new Uint8Array(ev.data.mdat),
-          start : ev.data.start,
-          end : ev.data.end,
+          startPTS : ev.data.startPTS,
+          endPTS : ev.data.endPTS,
+          startDTS : ev.data.startDTS,
+          endDTS : ev.data.endDTS,
           type : ev.data.type
         });
       break;
