@@ -108,12 +108,12 @@
     hideCanvas();
      if(Hls.isSupported()) {
        if(hls) {
-        hls.destroy();
+         hls.destroy();
+         if(hls.bufferTimer) {
+           clearInterval(hls.bufferTimer);
+           hls.bufferTimer = undefined;
+         }
        }
-       if(bufferTimer !== undefined) {
-          clearInterval(bufferTimer);
-        }
-
       var hlsLink = document.URL.split('?')[0] +  '?src=' + encodeURIComponent(url);
       var description = 'URL: ' + url + '<br>HLS link: ' + "<a href=\"" + hlsLink + "\">" + hlsLink + "</a>";
       if(url.indexOf('http') === -1) {
@@ -196,6 +196,11 @@
             duration : data.stats.tbuffered - data.stats.tfirst,
           };
           canvasPushEvent(document.getElementById('event_c'),event);
+          if(hls.bufferTimer === undefined) {
+            var event2 = { time : new Date() - hls.t0, buffer : 0};
+            canvasPushEvent(document.getElementById('buffertime_c'),event2);
+            hls.bufferTimer = window.setInterval(updateBuffered, 100);
+          }
           refreshCanvas();
        });
        hls.on(hls.Events.VIDEO_ERROR,function(event,data) {
@@ -305,17 +310,12 @@ function timeRangesToString(r) {
     outputLog("Seeking to " + target + " (" + minsecs(target) + ")");
   }
 
-
-var bufferTimer;
   function buffered_loaded(event) {
     var v = document.getElementById('video');
     if (!v.buffered) {
       outputLog('Buffered attribute not supported by your browser\n');
     } else {
       outputLog("Buffered attribute is supported, click on the black progress bar to seek.");
-      var event = { time : new Date() - hls.t0, buffer : 0};
-      canvasPushEvent(document.getElementById('buffertime_c'),event);
-      bufferTimer = window.setInterval(updateBuffered, 100);
     }
   }
 
