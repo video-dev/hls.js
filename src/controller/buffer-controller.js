@@ -264,9 +264,13 @@
 
     var fragments = data.level.fragments;
     logger.log('level ' + data.id + ' loaded [' + fragments[0].sn + ',' + fragments[fragments.length-1].sn + '],duration:' + duration);
-    this.state = IDLE;
-    //trigger handler right now
-    this.tick();
+
+    // only switch batck to IDLE state if we were waiting for level to start downloading a new fragment
+    if(this.state === WAITING_LEVEL) {
+      this.state = IDLE;
+      //trigger handler right now
+      this.tick();
+    }
   }
 
   onFragmentLoaded(event,data) {
