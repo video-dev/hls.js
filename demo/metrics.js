@@ -68,10 +68,14 @@ var timeRangeMouseDown=false;
 var windowDuration=20000,windowSliding=true,windowStart=0,windowEnd=10000;
 document.getElementById('windowStart').value=windowStart;document.getElementById('windowEnd').value=windowEnd;
   function refreshCanvas()  {
+    try {
       var windowTime = getWindowTimeRange();
       canvasLoadUpdate(document.getElementById('event_c'), windowTime.min,windowTime.max, events.load);
       canvasBufferUpdate(document.getElementById('buffertime_c'), windowTime.min,windowTime.max, events.buffer);
       canvasTimeRangeUpdate(document.getElementById('timerange_c'), 0, windowTime.now, windowTime.min,windowTime.max, events.buffer);
+    } catch(err) {
+      console.log("refreshCanvas error:" +err.message);
+    }
   }
 
   function getWindowTimeRange() {
