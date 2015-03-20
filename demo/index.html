@@ -64,14 +64,13 @@
     <button onclick="windowSliding=true;windowDuration=60000">=60s</button>
     <button onclick="windowSliding=true;windowDuration=120000">=120s</button>
     <button onclick="windowSliding=true;windowDuration=0">=infinity</button><br>
-    <button onclick="var windowTime = getWindowTimeRange(); windowStart=windowTime.min;windowEnd=windowTime.max;document.getElementById('windowStart').value=windowStart;document.getElementById('windowEnd').value=windowEnd">use current sliding window for fixed window</button>
-    <button onclick="windowSliding=!windowSliding">toggle sliding/fixed window</button>
+    <button onclick="windowSliding=!windowSliding">toggle sliding/fixed window</button><br>
     <button onclick="windowStart=document.getElementById('windowStart').value">fixed window start(ms)</button>
     <input type="text" id='windowStart' defaultValue="0" onkeydown="if(window.event.keyCode=='13'){windowStart=document.getElementById('windowStart').value;}">
     <button onclick="windowEnd=document.getElementById('windowEnd').value">fixed window end(ms)</button>
     <input type="text" id='windowEnd' defaultValue="10000" onkeydown="if(window.event.keyCode=='13'){windowEnd=document.getElementById('windowEnd').value;}">
     <canvas id="timerange_c" width="640" height="60" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
-    <canvas id="buffertime_c" width="640" height="100" style="border:1px solid #000000";></canvas>
+    <canvas id="buffertime_c" width="640" height="120" style="border:1px solid #000000";></canvas>
     <canvas id="event_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
   </div>
   <div id="buffered_log" style="font-size: small;"></div>
@@ -214,8 +213,7 @@
           };
           events.load.push(event);
           if(hls.bufferTimer === undefined) {
-            var event2 = { time : new Date() - hls.t0, buffer : 0};
-            events.buffer.push(event2);
+            events.buffer.push({ time : 0, buffer : 0});
             hls.bufferTimer = window.setInterval(updateBuffered, 100);
           }
           refreshCanvas();
@@ -275,6 +273,17 @@ function timeRangesToString(r) {
         }
       }
       var event = { time : new Date() - hls.t0, buffer : bufferLen};
+      var bufEvents = events.buffer, bufEventLen = bufEvents.length;
+      if(bufEventLen > 1) {
+        var event0 = bufEvents[bufEventLen-2],event1 = bufEvents[bufEventLen-1];
+        var slope0 = (event1.buffer - event0.buffer)/(event1.time-event0.time);
+        var slope1 = (event.buffer - event0.buffer)/(event.time-event0.time);
+        // compute slopes. if less than 10% difference, remove event1
+        //console.log("Math.abs(slope0/slope1 -1):" + Math.abs(slope0/slope1 -1).toFixed(3));
+        if(slope0 === slope1 || Math.abs(slope0/slope1 -1) <= 0.1) {
+          bufEvents.pop();
+        }
+      }
       events.buffer.push(event);
       refreshCanvas();
       var log = "position:<br>"
@@ -354,7 +363,6 @@ var timeRangeMouseDown=false;
  }
 
  function timeRangeCanvasonMouseOut(evt) {
-  console.log(timeRangeCanvasonMouseOut);
   timeRangeMouseDown = false;
  }
 
