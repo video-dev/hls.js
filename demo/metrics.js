@@ -1,5 +1,3 @@
-var t0;
-
   function showMetrics()  {
       document.getElementById('event_c').width = window.innerWidth-30;
       document.getElementById('buffertime_c').width = window.innerWidth-30;
@@ -77,7 +75,12 @@ document.getElementById('windowStart').value=windowStart;document.getElementById
   }
 
   function getWindowTimeRange() {
-      var tnow = events.buffer[events.buffer.length-1].time,minTime,maxTime;
+      var tnow,minTime,maxTime;
+      if(events.buffer.length) {
+        tnow = events.buffer[events.buffer.length-1].time;
+      } else {
+        tnow = 0;
+      }
       if(windowSliding) {
         // let's show the last 60s from current time
         if(windowDuration) {
