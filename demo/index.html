@@ -340,8 +340,6 @@ var timeRangeMouseDown=false;
           bRect = canvas.getBoundingClientRect(),
           mouseX = Math.round((evt.clientX - bRect.left)*(canvas.width/bRect.width)),
           pos = Math.round(mouseX * getWindowTimeRange().now / canvas.width);
-
-      console.log('pos/windowStart:' + '/' + pos + '/' + windowStart);
       if(pos < windowStart) {
         windowStart = pos;
       } else {
@@ -358,7 +356,6 @@ var timeRangeMouseDown=false;
  }
 
  function timeRangeCanvasonMouseUp(evt) {
-  console.log(timeRangeCanvasonMouseUp);
   timeRangeMouseDown = false;
  }
 
