@@ -162,7 +162,7 @@
     ctx.lineTo(x_offset, canvas.height);
     ctx.fill();
 
-    ctx.globalAlpha = 0.5;
+    ctx.globalAlpha = 0.7;
     ctx.fillStyle = "grey";
     var x_start = bufferChartStart;
     var x_w = bufferChartWidth*(windowMinTime-minTime)/(maxTime-minTime);
