@@ -18,6 +18,8 @@
     <button onclick="timeRangeSetSliding(60000)">=60s</button>
     <button onclick="timeRangeSetSliding(120000)">=120s</button>
     <button onclick="timeRangeSetSliding(0)">=infinity</button><br>
+    <button onclick="timeRangeZoomIn()">Zoom In</button>
+    <button onclick="timeRangeZoomOut()">Zoom Out</button><br>
     <button onclick="windowSliding=!windowSliding; refreshCanvas()">toggle sliding/fixed window</button><br>
     <button onclick="windowStart=document.getElementById('windowStart').value;refreshCanvas();">fixed window start(ms)</button>
     <input type="text" id='windowStart' defaultValue="0" onkeydown="if(window.event.keyCode=='13'){windowStart=document.getElementById('windowStart').value;refreshCanvas();}">

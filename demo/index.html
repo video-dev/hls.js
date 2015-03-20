@@ -56,20 +56,23 @@
     <pre id='HlsStatus'></pre>
     <pre id='HlsLevel'></pre>
     <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)";></canvas> <br>
-    <button onclick="timeRangeSetSliding(2000);">window=2s</button>
-    <button onclick="timeRangeSetSliding(5000)">=5s</button>
-    <button onclick="timeRangeSetSliding(10000)">=10s</button>
-    <button onclick="timeRangeSetSliding(20000)">=20s</button>
-    <button onclick="timeRangeSetSliding(30000)">=30s</button>
-    <button onclick="timeRangeSetSliding(60000)">=60s</button>
-    <button onclick="timeRangeSetSliding(120000)">=120s</button>
-    <button onclick="timeRangeSetSliding(0)">=infinity</button><br>
+    window size
+    <button onclick="timeRangeSetSliding(2000);">2s</button>
+    <button onclick="timeRangeSetSliding(5000)">5s</button>
+    <button onclick="timeRangeSetSliding(10000)">10s</button>
+    <button onclick="timeRangeSetSliding(20000)">20s</button>
+    <button onclick="timeRangeSetSliding(30000)">30s</button>
+    <button onclick="timeRangeSetSliding(60000)">60s</button>
+    <button onclick="timeRangeSetSliding(120000)">120s</button>
+    <button onclick="timeRangeSetSliding(0)">ALL</button><br>
+    <button onclick="timeRangeZoomIn()">Zoom In</button>
+    <button onclick="timeRangeZoomOut()">Zoom Out</button><br>
     <button onclick="windowSliding=!windowSliding; refreshCanvas()">toggle sliding/fixed window</button><br>
     <button onclick="windowStart=document.getElementById('windowStart').value">fixed window start(ms)</button>
     <input type="text" id='windowStart' defaultValue="0" onkeydown="if(window.event.keyCode=='13'){windowStart=document.getElementById('windowStart').value;}">
     <button onclick="windowEnd=document.getElementById('windowEnd').value">fixed window end(ms)</button>
     <input type="text" id='windowEnd' defaultValue="10000" onkeydown="if(window.event.keyCode=='13'){windowEnd=document.getElementById('windowEnd').value;}"><br>
-    <button onclick="exportmetrics()">metrics permalink</button>
+    <button onclick="exportmetrics()" style="font-size:18px">metrics permalink</button>
     <canvas id="timerange_c" width="640" height="60" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
     <canvas id="buffertime_c" width="640" height="120" style="border:1px solid #000000";></canvas>
     <canvas id="event_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
