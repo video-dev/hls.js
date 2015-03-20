@@ -51,6 +51,7 @@
 
   function canvasBufferUpdate(canvas, minTime, maxTime, events) {
     var ctx = canvas.getContext('2d'),
+    minTimeBuffer,
     bufferChartStart = eventNameWidth+eventLegendWidth,
     bufferChartWidth = ctx.canvas.width-eventNameWidth-eventLegendWidth-40;
     ctx.clearRect (0,0,canvas.width, canvas.height);
@@ -64,15 +65,29 @@
     var y_offset = 0;
     ctx.font = "15px Arial";
 
-    var maxBuffer = 0;
+    var maxBuffer = 0, firstEventIdx = -1, playableAfter = -1, event;
     for (var i =0 ; i < events.length; i++) {
-      var buffer = events[i].buffer;
+      event = events[i];
+      var buffer = event.buffer;
       maxBuffer = Math.max(maxBuffer, buffer);
+      if(playableAfter === -1 && event.buffer) {
+        playableAfter = event.time;
+      }
+      if(firstEventIdx === -1 && event.time >= minTime) {
+        firstEventIdx = Math.max(0,i-1);
+      }
     }
+    // compute buffer length as pos minTime using linear approximation
+    if((firstEventIdx+1) < events.length) {
+      minTimeBuffer = events[firstEventIdx].buffer + (minTime-events[firstEventIdx].time)*(events[firstEventIdx+1].buffer-events[firstEventIdx].buffer)/(events[firstEventIdx+1].time-events[firstEventIdx].time);
+    } else {
+      minTimeBuffer = 0;
+    }
+
     maxBuffer+=10;
 
     y_offset += 15;
-    legend = 'playable after:' + events[0].time + ' ms';
+    legend = 'playable after:' + playableAfter + ' ms';
     ctx.fillStyle = "blue";
     ctx.fillText(legend,x_offset,y_offset);
 
@@ -101,14 +116,18 @@
     ctx.fillStyle = "blue";
     ctx.fillText(legend,x_offset,y_offset);
 
+    y_offset += 15;
+    legend = 'nb samples:' + events.length;
+    ctx.fillStyle = "blue";
+    ctx.fillText(legend,x_offset,y_offset);
+
     ctx.beginPath();
     ctx.moveTo(bufferChartStart, ctx.canvas.height);
-    for (var i =0 ; i < events.length; i++) {
+    ctx.lineTo(bufferChartStart, ctx.canvas.height*(1 - minTimeBuffer/maxBuffer));
+    for (var i =firstEventIdx+1 ; i < events.length; i++) {
       x_offset = bufferChartStart + (bufferChartWidth*(events[i].time-minTime))/(maxTime-minTime);
       y_offset = ctx.canvas.height*(1 - events[i].buffer/maxBuffer);
-      if(x_offset >= bufferChartStart && x_offset <= (bufferChartStart+bufferChartWidth)) {
-        ctx.lineTo(x_offset,y_offset);
-      }
+      ctx.lineTo(x_offset,y_offset);
     }
     ctx.lineTo(x_offset, canvas.height);
     ctx.fill();
