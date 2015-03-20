@@ -56,19 +56,20 @@
     <pre id='HlsStatus'></pre>
     <pre id='HlsLevel'></pre>
     <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)";></canvas> <br>
-    <button onclick="windowSliding=true;windowDuration=2000">window=2s</button>
-    <button onclick="windowSliding=true;windowDuration=5000">=5s</button>
-    <button onclick="windowSliding=true;windowDuration=10000">=10s</button>
-    <button onclick="windowSliding=true;windowDuration=20000">=20s</button>
-    <button onclick="windowSliding=true;windowDuration=30000">=30s</button>
-    <button onclick="windowSliding=true;windowDuration=60000">=60s</button>
-    <button onclick="windowSliding=true;windowDuration=120000">=120s</button>
-    <button onclick="windowSliding=true;windowDuration=0">=infinity</button><br>
-    <button onclick="windowSliding=!windowSliding">toggle sliding/fixed window</button><br>
+    <button onclick="timeRangeSetSliding(2000);">window=2s</button>
+    <button onclick="timeRangeSetSliding(5000)">=5s</button>
+    <button onclick="timeRangeSetSliding(10000)">=10s</button>
+    <button onclick="timeRangeSetSliding(20000)">=20s</button>
+    <button onclick="timeRangeSetSliding(30000)">=30s</button>
+    <button onclick="timeRangeSetSliding(60000)">=60s</button>
+    <button onclick="timeRangeSetSliding(120000)">=120s</button>
+    <button onclick="timeRangeSetSliding(0)">=infinity</button><br>
+    <button onclick="windowSliding=!windowSliding; refreshCanvas()">toggle sliding/fixed window</button><br>
     <button onclick="windowStart=document.getElementById('windowStart').value">fixed window start(ms)</button>
     <input type="text" id='windowStart' defaultValue="0" onkeydown="if(window.event.keyCode=='13'){windowStart=document.getElementById('windowStart').value;}">
     <button onclick="windowEnd=document.getElementById('windowEnd').value">fixed window end(ms)</button>
-    <input type="text" id='windowEnd' defaultValue="10000" onkeydown="if(window.event.keyCode=='13'){windowEnd=document.getElementById('windowEnd').value;}">
+    <input type="text" id='windowEnd' defaultValue="10000" onkeydown="if(window.event.keyCode=='13'){windowEnd=document.getElementById('windowEnd').value;}"><br>
+    <button onclick="exportmetrics()">metrics permalink</button>
     <canvas id="timerange_c" width="640" height="60" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
     <canvas id="buffertime_c" width="640" height="120" style="border:1px solid #000000";></canvas>
     <canvas id="event_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
@@ -102,6 +103,7 @@
   <script src="//localhost:8001"></script>
   <script src="../dist/hls.js"></script>
   <script src="canvas.js"></script>
+  <script src="metrics.js"></script>
   <script>
 
    'use strict';
@@ -152,13 +154,10 @@
        }
        hls = new Hls(video);
        hls.debug(true);
+       t0 = Date.now();
        hls.on(hls.Events.FRAMEWORK_READY,function() {
           document.getElementById("HlsStatus").innerHTML = 'attaching URL to video tag';
           events = { load : [], buffer : []};
-          document.getElementById('event_c').width = window.innerWidth-30;
-          document.getElementById('buffertime_c').width = window.innerWidth-30;
-          document.getElementById('timerange_c').width = window.innerWidth-30;
-          hls.t0 = Date.now();
           hls.attachSource(_url);
        });
        hls.on(hls.Events.INIT_SEGMENT,function(event,data) {
@@ -181,7 +180,7 @@
        hls.on(hls.Events.MANIFEST_LOADED,function(event,data) {
           var event = {
             name : "variant manifest",
-            time : data.stats.trequest - hls.t0,
+            time : data.stats.trequest - t0,
             latency : data.stats.tfirst - data.stats.trequest,
             load : data.stats.tload - data.stats.tfirst,
             duration : data.stats.tload - data.stats.tfirst,
@@ -193,7 +192,7 @@
           document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",last loaded level:" + data.id;
           var event = {
             name : "stream manifest @ " + data.id,
-            time : data.stats.trequest - hls.t0,
+            time : data.stats.trequest - t0,
             latency : data.stats.tfirst - data.stats.trequest,
             load : data.stats.tload - data.stats.tfirst,
             duration : data.stats.tload - data.stats.tfirst
@@ -204,7 +203,7 @@
        hls.on(hls.Events.FRAGMENT_BUFFERED,function(event,data) {
           var event = {
             name : "fragment " + data.frag.sn + " @ " + data.frag.level,
-            time : data.stats.trequest - hls.t0,
+            time : data.stats.trequest - t0,
             latency : data.stats.tfirst - data.stats.trequest,
             load : data.stats.tload - data.stats.tfirst,
             demux : data.stats.tparsed - data.stats.tload,
@@ -272,7 +271,7 @@ function timeRangesToString(r) {
           bufferLen = r.end(i) - pos;
         }
       }
-      var event = { time : new Date() - hls.t0, buffer : bufferLen};
+      var event = { time : new Date() - t0, buffer : Math.round(bufferLen*100)/100};
       var bufEvents = events.buffer, bufEventLen = bufEvents.length;
       if(bufEventLen > 1) {
         var event0 = bufEvents[bufEventLen-2],event1 = bufEvents[bufEventLen-1];
@@ -303,91 +302,23 @@ function timeRangesToString(r) {
   }
 
   function showCanvas()  {
+      showMetrics();
       document.getElementById('buffered_log').style.display="block";
       document.getElementById('buffered_c').style.display="block";
-      document.getElementById('buffertime_c').style.display="block";
-      document.getElementById('timerange_c').style.display="block";
-      document.getElementById('event_c').style.display="block";
   }
 
   function hideCanvas()  {
+      hideMetrics();
       document.getElementById('buffered_log').style.display="none";
       document.getElementById('buffered_c').style.display="none";
-      document.getElementById('buffertime_c').style.display="none";
-      document.getElementById('timerange_c').style.display="none";
-      document.getElementById('event_c').style.display="none";
   }
 
 
-
-var timeRangeMouseDown=false;
- function timeRangeCanvasonMouseDown(evt) {
-  var canvas = document.getElementById('timerange_c'),
-      bRect = canvas.getBoundingClientRect(),
-      mouseX = Math.round((evt.clientX - bRect.left)*(canvas.width/bRect.width));
-      windowStart = Math.round(mouseX * getWindowTimeRange().now / canvas.width);
-      windowEnd = windowStart+500;
-      timeRangeMouseDown = true;
-      windowSliding = false;
-      //console.log('windowStart/windowEnd:' + '/' + windowStart + '/' + windowEnd);
-      document.getElementById('windowStart').value=windowStart;
-      document.getElementById('windowEnd').value=windowEnd;
- }
-
- function timeRangeCanvasonMouseMove(evt) {
-    if(timeRangeMouseDown) {
-      var canvas = document.getElementById('timerange_c'),
-          bRect = canvas.getBoundingClientRect(),
-          mouseX = Math.round((evt.clientX - bRect.left)*(canvas.width/bRect.width)),
-          pos = Math.round(mouseX * getWindowTimeRange().now / canvas.width);
-      if(pos < windowStart) {
-        windowStart = pos;
-      } else {
-        windowEnd = pos;
-      }
-      if(windowStart === windowEnd) {
-        // to avoid division by zero ...
-        windowEnd +=50;
-      }
-      //console.log('windowStart/windowEnd:' + '/' + windowStart + '/' + windowEnd);
-      document.getElementById('windowStart').value=windowStart;
-      document.getElementById('windowEnd').value=windowEnd;
-    }
- }
-
- function timeRangeCanvasonMouseUp(evt) {
-  timeRangeMouseDown = false;
- }
-
- function timeRangeCanvasonMouseOut(evt) {
-  timeRangeMouseDown = false;
- }
-
-var windowDuration=20000,windowSliding=true,windowStart=0,windowEnd=10000;
-document.getElementById('windowStart').value=windowStart;document.getElementById('windowEnd').value=windowEnd;
-  function refreshCanvas()  {
-      var windowTime = getWindowTimeRange();
-      canvasLoadUpdate(document.getElementById('event_c'), windowTime.min,windowTime.max, events.load);
-      canvasBufferUpdate(document.getElementById('buffertime_c'), windowTime.min,windowTime.max, events.buffer);
-      canvasTimeRangeUpdate(document.getElementById('timerange_c'), 0, windowTime.now, windowTime.min,windowTime.max, events.buffer);
-  }
-
-  function getWindowTimeRange() {
-      var tnow = new Date() - hls.t0,minTime,maxTime;
-      if(windowSliding) {
-        // let's show the last 60s from current time
-        if(windowDuration) {
-          minTime = Math.max(0, tnow-windowDuration),
-          maxTime = Math.min(minTime + windowDuration, tnow);
-        } else {
-          minTime = 0;
-          maxTime = tnow;
-        }
-      } else {
-        minTime = windowStart;
-        maxTime = windowEnd;
-      }
-      return { min : minTime, max: maxTime, now : tnow}
+  function exportmetrics() {
+    var url = document.URL;
+    var b64 = btoa(JSON.stringify(events));
+    url = url.substr(0,url.lastIndexOf("/")+1) + 'metrics.html?data=' + b64;
+    window.open(url,'_blank');
   }
 
   function minsecs(ts) {
