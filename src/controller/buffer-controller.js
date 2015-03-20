@@ -113,51 +113,9 @@ class BufferController {
                 // determine next candidate fragment to be loaded, based on current position and
                 //  end of buffer position
                 //  ensure 60s of buffer upfront
-                var v = this.video,
-                    pos = v.currentTime,
-                    buffered = v.buffered,
-                    bufferLen,
-                    // bufferStart and bufferEnd are buffer boundaries around current video position
-                    bufferStart,
-                    bufferEnd,
-                    i;
-                var buffered2 = [];
-                // there might be some small holes between buffer time range
-                // consider that holes smaller than 300 ms are irrelevant and build another
-                // buffer time range representations that discards those holes
-                for (i = 0; i < buffered.length; i++) {
-                    //logger.log('buf start/end:' + buffered.start(i) + '/' + buffered.end(i));
-                    if (
-                        buffered2.length &&
-                        buffered.start(i) -
-                            buffered2[buffered2.length - 1].end <
-                            0.3
-                    ) {
-                        buffered2[buffered2.length - 1].end = buffered.end(i);
-                    } else {
-                        buffered2.push({
-                            start: buffered.start(i),
-                            end: buffered.end(i)
-                        });
-                    }
-                }
-
-                for (
-                    i = 0, bufferLen = 0, bufferStart = bufferEnd = pos;
-                    i < buffered2.length;
-                    i++
-                ) {
-                    //logger.log('buf start/end:' + buffered.start(i) + '/' + buffered.end(i));
-                    if (
-                        pos + 0.3 >= buffered2[i].start &&
-                        pos < buffered2[i].end
-                    ) {
-                        // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
-                        bufferStart = buffered2[i].start;
-                        bufferEnd = buffered2[i].end + 0.3;
-                        bufferLen = bufferEnd - pos;
-                    }
-                }
+                var bufferInfo = this.bufferInfo,
+                    bufferLen = bufferInfo.len,
+                    bufferEnd = bufferInfo.end;
                 // if buffer length is less than 60s try to load a new fragment
                 if (bufferLen < 60) {
                     var loadLevel;
@@ -172,16 +130,16 @@ class BufferController {
                         }
                         if (loadLevel !== this.level) {
                             // set new level to playlist loader : this will trigger a playlist load if needed
-                            this.levelController.level = this.level = loadLevel;
+                            this.levelController.level = loadLevel;
                             // tell demuxer that we will switch level (this will force init segment to be regenerated)
                             if (this.demuxer) {
                                 this.demuxer.switchLevel();
                             }
                         }
                     } else {
-                        // load level is retrieved from level Controller
+                        // we just retrieved playlist info after switching level,
+                        // stick on same level, retrieve level from level controller
                         loadLevel = this.levelController.level;
-                        //logger.log('next level:' + loadLevel);
                     }
                     var level = this.levels[loadLevel];
                     // if level not retrieved yet, switch state and wait for playlist retrieval
@@ -207,8 +165,8 @@ class BufferController {
                             this.video.currentTime = start + 0.01;
                             return;
                         }
-                        if (bufferLen > 0 && buffered.length === 1) {
-                            i = this.frag.sn + 1 - fragments[0].sn;
+                        if (bufferLen > 0 && this.video.buffered.length === 1) {
+                            var i = this.frag.sn + 1 - fragments[0].sn;
                             if (i >= fragments.length) {
                                 // most certainly live playlist is outdated, let's move to WAITING LEVEL state and come back once it will have been refreshed
                                 //logger.log('sn ' + (this.frag.sn + 1) + ' out of range, wait for live playlist update');
@@ -259,6 +217,7 @@ class BufferController {
                             //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
 
                             this.frag = frag;
+                            this.level = loadLevel;
                             this.fragmentLoader.load(frag, loadLevel);
                             this.state = LOADING;
                         }
@@ -268,6 +227,50 @@ class BufferController {
             default:
                 break;
         }
+    }
+
+    get bufferInfo() {
+        var v = this.video,
+            pos = v.currentTime,
+            buffered = v.buffered,
+            bufferLen,
+            // bufferStart and bufferEnd are buffer boundaries around current video position
+            bufferStart,
+            bufferEnd,
+            i;
+        var buffered2 = [];
+        // there might be some small holes between buffer time range
+        // consider that holes smaller than 300 ms are irrelevant and build another
+        // buffer time range representations that discards those holes
+        for (i = 0; i < buffered.length; i++) {
+            //logger.log('buf start/end:' + buffered.start(i) + '/' + buffered.end(i));
+            if (
+                buffered2.length &&
+                buffered.start(i) - buffered2[buffered2.length - 1].end < 0.3
+            ) {
+                buffered2[buffered2.length - 1].end = buffered.end(i);
+            } else {
+                buffered2.push({
+                    start: buffered.start(i),
+                    end: buffered.end(i)
+                });
+            }
+        }
+
+        for (
+            i = 0, bufferLen = 0, bufferStart = bufferEnd = pos;
+            i < buffered2.length;
+            i++
+        ) {
+            //logger.log('buf start/end:' + buffered.start(i) + '/' + buffered.end(i));
+            if (pos + 0.3 >= buffered2[i].start && pos < buffered2[i].end) {
+                // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
+                bufferStart = buffered2[i].start;
+                bufferEnd = buffered2[i].end + 0.3;
+                bufferLen = bufferEnd - pos;
+            }
+        }
+        return { len: bufferLen, start: bufferStart, end: bufferEnd };
     }
 
     onFrameworkReady(event, data) {
@@ -287,41 +290,8 @@ class BufferController {
     }
 
     onLevelLoaded(event, data) {
-        var level = this.levels[data.id],
-            sliding = 0,
-            levelCurrent = this.levels[this.level];
-
-        // check if playlist is already loaded (if yes, it should be a live playlist)
-        if (level.data && level.data.live) {
-            //  playlist sliding is the sum of : current playlist sliding + sliding of new playlist compared to current one
-            sliding = levelCurrent.data.sliding;
-            // check sliding of updated playlist against current one :
-            //retrieve SN of first fragment of new playlist,
-            var newSN = data.level.fragments[0].sn;
-            // and find its position in current playlist
-            sliding +=
-                levelCurrent.data.fragments[
-                    newSN - levelCurrent.data.fragments[0].sn
-                ].start;
-            logger.log('live playlist sliding:' + sliding.toFixed(3));
-        }
-        // override level info
-        level.data = data.level;
-        level.data.sliding = sliding;
-        var duration = data.level.totalduration;
-        this.demuxer.duration = duration;
-        if (this.justStarted === true) {
-            // if live playlist, set start position to be fragment N-3
-            if (data.level.live) {
-                this.video.currentTime = Math.max(
-                    0,
-                    duration - 3 * data.level.targetduration
-                );
-            }
-            this.justStarted = false;
-        }
-
-        var fragments = data.level.fragments;
+        var fragments = data.level.fragments,
+            duration = data.level.totalduration;
         logger.log(
             'level ' +
                 data.id +
@@ -333,6 +303,40 @@ class BufferController {
                 duration
         );
 
+        var level = this.levels[data.id],
+            sliding = 0,
+            levelCurrent = this.levels[this.level];
+        // check if playlist is already loaded (if yes, it should be a live playlist)
+        if (levelCurrent && levelCurrent.data && levelCurrent.data.live) {
+            //  playlist sliding is the sum of : current playlist sliding + sliding of new playlist compared to current one
+            sliding = levelCurrent.data.sliding;
+            // check sliding of updated playlist against current one :
+            // and find its position in current playlist
+            //logger.log("fragments[0].sn/this.level/levelCurrent.data.fragments[0].sn:" + fragments[0].sn + "/" + this.level + "/" + levelCurrent.data.fragments[0].sn);
+            var SNdiff = fragments[0].sn - levelCurrent.data.fragments[0].sn;
+            if (SNdiff >= 0) {
+                // positive sliding : new playlist sliding window is after previous one
+                sliding += levelCurrent.data.fragments[SNdiff].start;
+            } else {
+                // negative sliding: new playlist sliding window is before previous one
+                sliding -= fragments[-SNdiff].start;
+            }
+            logger.log('live playlist sliding:' + sliding.toFixed(3));
+        }
+        // override level info
+        level.data = data.level;
+        level.data.sliding = sliding;
+        this.demuxer.duration = duration;
+        if (this.justStarted === true) {
+            // if live playlist, set start position to be fragment N-3
+            if (data.level.live) {
+                this.video.currentTime = Math.max(
+                    0,
+                    duration - 3 * data.level.targetduration
+                );
+            }
+            this.justStarted = false;
+        }
         // only switch batck to IDLE state if we were waiting for level to start downloading a new fragment
         if (this.state === WAITING_LEVEL) {
             this.state = IDLE;
