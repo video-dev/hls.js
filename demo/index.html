@@ -108,6 +108,7 @@
    var hls;
    var _url;
    var video = document.getElementById('video');
+   var events;
    video.volume = 0.05;
    var manifest = decodeURIComponent(location.search.split('src=')[1]);
    if(manifest === 'undefined') {
@@ -153,8 +154,7 @@
        hls.debug(true);
        hls.on(hls.Events.FRAMEWORK_READY,function() {
           document.getElementById("HlsStatus").innerHTML = 'attaching URL to video tag';
-          canvasFlushEvents(document.getElementById('event_c'));
-          canvasFlushEvents(document.getElementById('buffertime_c'));
+          events = { load : [], buffer : []};
           document.getElementById('event_c').width = window.innerWidth-30;
           document.getElementById('buffertime_c').width = window.innerWidth-30;
           hls.t0 = Date.now();
@@ -185,7 +185,7 @@
             load : data.stats.tload - data.stats.tfirst,
             duration : data.stats.tload - data.stats.tfirst,
           };
-          canvasPushEvent(document.getElementById('event_c'),event);
+          events.load.push(event);
           refreshCanvas();
        });
        hls.on(hls.Events.LEVEL_LOADED,function(event,data) {
@@ -197,7 +197,7 @@
             load : data.stats.tload - data.stats.tfirst,
             duration : data.stats.tload - data.stats.tfirst
           };
-          canvasPushEvent(document.getElementById('event_c'),event);
+          events.load.push(event);
           refreshCanvas();
        });
        hls.on(hls.Events.FRAGMENT_BUFFERED,function(event,data) {
@@ -210,10 +210,10 @@
             buffer : data.stats.tbuffered - data.stats.tparsed,
             duration : data.stats.tbuffered - data.stats.tfirst,
           };
-          canvasPushEvent(document.getElementById('event_c'),event);
+          events.load.push(event);
           if(hls.bufferTimer === undefined) {
             var event2 = { time : new Date() - hls.t0, buffer : 0};
-            canvasPushEvent(document.getElementById('buffertime_c'),event2);
+            events.buffer.push(event2);
             hls.bufferTimer = window.setInterval(updateBuffered, 100);
           }
           refreshCanvas();
@@ -273,7 +273,7 @@ function timeRangesToString(r) {
         }
       }
       var event = { time : new Date() - hls.t0, buffer : bufferLen};
-      canvasPushEvent(document.getElementById('buffertime_c'),event);
+      events.buffer.push(event);
       refreshCanvas();
       var log = "position:<br>"
               + v.currentTime.toFixed(2)
@@ -309,8 +309,8 @@ var windowDuration=20000,windowSliding=true,windowStart=0,windowEnd=10000;
 document.getElementById('windowStart').value=windowStart;document.getElementById('windowEnd').value=windowEnd;
   function refreshCanvas()  {
       var windowTime = getWindowTimeRange();
-      canvasUpdate(document.getElementById('event_c'), windowTime.min,windowTime.max);
-      canvasUpdateBuffer(document.getElementById('buffertime_c'), windowTime.min,windowTime.max);
+      canvasLoadUpdate(document.getElementById('event_c'), windowTime.min,windowTime.max, events.load);
+      canvasBufferUpdate(document.getElementById('buffertime_c'), windowTime.min,windowTime.max, events.buffer);
   }
 
   function getWindowTimeRange() {

@@ -1,17 +1,9 @@
 
-  function canvasPushEvent(canvas,event) {
-    if(canvas.canvasEvents === undefined) {
-      canvas.canvasEvents = [];
-    }
-    canvas.canvasEvents.push(event);
-  }
+  var eventNameWidth = 150;
+  var eventLegendWidth = 120;
 
-  function canvasFlushEvents(canvas) {
-    canvas.canvasEvents = [];
-  }
-
-  function canvasUpdate(canvas, minTime, maxTime) {
-    var ctx = canvas.getContext('2d'), events = canvas.canvasEvents;
+  function canvasLoadUpdate(canvas, minTime, maxTime, events) {
+    var ctx = canvas.getContext('2d');
     for (var i =0, y_offset = 20; i < events.length; i++) {
       var event = events[i], start = event.time, end = event.time + event.duration + event.latency;
       if((start <= minTime && end >= maxTime) ||
@@ -51,17 +43,16 @@
       if((start <= minTime && end >= maxTime) ||
          (start >= minTime && end <= maxTime) ||
          (start <= minTime && end >= maxTime)) {
-        canvasDrawEvent(ctx,y_offset,canvas.canvasEvents[i],minTime,maxTime);
+        canvasLoadDrawEvent(ctx,y_offset,event,minTime,maxTime);
         y_offset+=20;
       }
     }
   }
 
-  function canvasUpdateBuffer(canvas, minTime, maxTime) {
+  function canvasBufferUpdate(canvas, minTime, maxTime, events) {
     var ctx = canvas.getContext('2d'),
     bufferChartStart = eventNameWidth+eventLegendWidth,
-    bufferChartWidth = ctx.canvas.width-eventNameWidth-eventLegendWidth-40,
-    events = canvas.canvasEvents;
+    bufferChartWidth = ctx.canvas.width-eventNameWidth-eventLegendWidth-40;
     ctx.clearRect (0,0,canvas.width, canvas.height);
 
     if(events.length === 0) {
@@ -121,10 +112,7 @@
     ctx.stroke();
   }
 
-  var eventNameWidth = 150;
-  var eventLegendWidth = 120;
-
-  function canvasDrawEvent(ctx,yoffset,event,minTime,maxTime) {
+  function canvasLoadDrawEvent(ctx,yoffset,event,minTime,maxTime) {
     var legend,offset,x_start,x_w,
     networkChartStart = eventNameWidth+eventLegendWidth,
     networkChartWidth = ctx.canvas.width-eventNameWidth-eventLegendWidth-40,
@@ -176,7 +164,6 @@
     ctx.fillText(legend,x_start,yoffset+12);
 
     //draw legend
-    //draw legend
     var offset = eventNameWidth;
     ctx.font = "12px Arial";
 
@@ -203,16 +190,3 @@
     }
   }
 
-  function canvasDrawLegend(canvas, eventIdx) {
-    var ctx = canvas.getContext('2d');
-    // draw event name
-    ctx.fillStyle = "green";
-    ctx.font = "15px Arial";
-    var event = canvas.canvasEvents[eventIdx];
-    var legend = event.legend;
-    if (legend === undefined) {
-      legend = event.name + ' :t/rtt/duration(ms):' + event.time + '/' + event.latency + '/' + event.duration;
-    }
-    ctx.fillText(legend,5,20*(canvas.canvasEvents.length+1));
-
-  }
