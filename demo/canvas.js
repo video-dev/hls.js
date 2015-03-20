@@ -69,6 +69,7 @@
       var buffer = events[i].buffer;
       maxBuffer = Math.max(maxBuffer, buffer);
     }
+    maxBuffer+=10;
 
     y_offset += 15;
     legend = 'playable after:' + events[0].time + ' ms';
@@ -109,7 +110,49 @@
         ctx.lineTo(x_offset,y_offset);
       }
     }
-    ctx.stroke();
+    ctx.lineTo(x_offset, canvas.height);
+    ctx.fill();
+  }
+
+  function canvasTimeRangeUpdate(canvas, minTime, maxTime, windowMinTime, windowMaxTime, events) {
+    var ctx = canvas.getContext('2d'),
+    bufferChartStart = 0,
+    bufferChartWidth = ctx.canvas.width;
+    x_offset = 0,y_offset = 0;
+    ctx.clearRect (0,0,canvas.width, canvas.height);
+
+    if(events.length === 0) {
+      return;
+    }
+
+    var maxBuffer = 0;
+    for (var i =0 ; i < events.length; i++) {
+      var buffer = events[i].buffer;
+      maxBuffer = Math.max(maxBuffer, buffer);
+    }
+    maxBuffer+=10;
+
+    ctx.fillStyle = "blue";
+    ctx.beginPath();
+    ctx.moveTo(bufferChartStart, ctx.canvas.height);
+    for (var i =0 ; i < events.length; i++) {
+      x_offset = bufferChartStart + (bufferChartWidth*(events[i].time-minTime))/(maxTime-minTime);
+      y_offset = ctx.canvas.height*(1 - events[i].buffer/maxBuffer);
+      ctx.lineTo(x_offset,y_offset);
+    }
+    ctx.lineTo(x_offset, canvas.height);
+    ctx.fill();
+
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = "grey";
+    var x_start = bufferChartStart;
+    var x_w = bufferChartWidth*(windowMinTime-minTime)/(maxTime-minTime);
+    ctx.fillRect(x_start,0,x_w, canvas.height);
+
+
+    var x_start = bufferChartStart+bufferChartWidth*(windowMaxTime-minTime)/(maxTime-minTime); ;
+    var x_w = bufferChartWidth-x_start;
+    ctx.fillRect(x_start,0,x_w, canvas.height);
   }
 
   function canvasLoadDrawEvent(ctx,yoffset,event,minTime,maxTime) {

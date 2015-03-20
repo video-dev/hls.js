@@ -70,6 +70,7 @@
     <input type="text" id='windowStart' defaultValue="0" onkeydown="if(window.event.keyCode=='13'){windowStart=document.getElementById('windowStart').value;}">
     <button onclick="windowEnd=document.getElementById('windowEnd').value">fixed window end(ms)</button>
     <input type="text" id='windowEnd' defaultValue="10000" onkeydown="if(window.event.keyCode=='13'){windowEnd=document.getElementById('windowEnd').value;}">
+    <canvas id="timerange_c" width="640" height="60" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
     <canvas id="buffertime_c" width="640" height="100" style="border:1px solid #000000";></canvas>
     <canvas id="event_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
   </div>
@@ -157,6 +158,7 @@
           events = { load : [], buffer : []};
           document.getElementById('event_c').width = window.innerWidth-30;
           document.getElementById('buffertime_c').width = window.innerWidth-30;
+          document.getElementById('timerange_c').width = window.innerWidth-30;
           hls.t0 = Date.now();
           hls.attachSource(_url);
        });
@@ -295,6 +297,7 @@ function timeRangesToString(r) {
       document.getElementById('buffered_log').style.display="block";
       document.getElementById('buffered_c').style.display="block";
       document.getElementById('buffertime_c').style.display="block";
+      document.getElementById('timerange_c').style.display="block";
       document.getElementById('event_c').style.display="block";
   }
 
@@ -302,8 +305,58 @@ function timeRangesToString(r) {
       document.getElementById('buffered_log').style.display="none";
       document.getElementById('buffered_c').style.display="none";
       document.getElementById('buffertime_c').style.display="none";
+      document.getElementById('timerange_c').style.display="none";
       document.getElementById('event_c').style.display="none";
   }
+
+
+
+var timeRangeMouseDown=false;
+ function timeRangeCanvasonMouseDown(evt) {
+  var canvas = document.getElementById('timerange_c'),
+      bRect = canvas.getBoundingClientRect(),
+      mouseX = Math.round((evt.clientX - bRect.left)*(canvas.width/bRect.width));
+      windowStart = Math.round(mouseX * getWindowTimeRange().now / canvas.width);
+      windowEnd = windowStart+500;
+      timeRangeMouseDown = true;
+      windowSliding = false;
+      //console.log('windowStart/windowEnd:' + '/' + windowStart + '/' + windowEnd);
+      document.getElementById('windowStart').value=windowStart;
+      document.getElementById('windowEnd').value=windowEnd;
+ }
+
+ function timeRangeCanvasonMouseMove(evt) {
+    if(timeRangeMouseDown) {
+      var canvas = document.getElementById('timerange_c'),
+          bRect = canvas.getBoundingClientRect(),
+          mouseX = Math.round((evt.clientX - bRect.left)*(canvas.width/bRect.width)),
+          pos = Math.round(mouseX * getWindowTimeRange().now / canvas.width);
+
+      console.log('pos/windowStart:' + '/' + pos + '/' + windowStart);
+      if(pos < windowStart) {
+        windowStart = pos;
+      } else {
+        windowEnd = pos;
+      }
+      if(windowStart === windowEnd) {
+        // to avoid division by zero ...
+        windowEnd +=50;
+      }
+      //console.log('windowStart/windowEnd:' + '/' + windowStart + '/' + windowEnd);
+      document.getElementById('windowStart').value=windowStart;
+      document.getElementById('windowEnd').value=windowEnd;
+    }
+ }
+
+ function timeRangeCanvasonMouseUp(evt) {
+  console.log(timeRangeCanvasonMouseUp);
+  timeRangeMouseDown = false;
+ }
+
+ function timeRangeCanvasonMouseOut(evt) {
+  console.log(timeRangeCanvasonMouseOut);
+  timeRangeMouseDown = false;
+ }
 
 var windowDuration=20000,windowSliding=true,windowStart=0,windowEnd=10000;
 document.getElementById('windowStart').value=windowStart;document.getElementById('windowEnd').value=windowEnd;
@@ -311,11 +364,12 @@ document.getElementById('windowStart').value=windowStart;document.getElementById
       var windowTime = getWindowTimeRange();
       canvasLoadUpdate(document.getElementById('event_c'), windowTime.min,windowTime.max, events.load);
       canvasBufferUpdate(document.getElementById('buffertime_c'), windowTime.min,windowTime.max, events.buffer);
+      canvasTimeRangeUpdate(document.getElementById('timerange_c'), 0, windowTime.now, windowTime.min,windowTime.max, events.buffer);
   }
 
   function getWindowTimeRange() {
+      var tnow = new Date() - hls.t0,minTime,maxTime;
       if(windowSliding) {
-        var tnow = new Date() - hls.t0,minTime,maxTime;
         // let's show the last 60s from current time
         if(windowDuration) {
           minTime = Math.max(0, tnow-windowDuration),
@@ -328,7 +382,7 @@ document.getElementById('windowStart').value=windowStart;document.getElementById
         minTime = windowStart;
         maxTime = windowEnd;
       }
-      return { min : minTime, max: maxTime}
+      return { min : minTime, max: maxTime, now : tnow}
   }
 
   function minsecs(ts) {
