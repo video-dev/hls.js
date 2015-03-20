@@ -100,3 +100,34 @@ document.getElementById('windowStart').value=windowStart;document.getElementById
       }
       return { min : minTime, max: maxTime, now : tnow}
   }
+
+function timeRangeZoomIn() {
+  if(windowSliding) {
+    windowDuration/=2;
+  } else {
+    var duration = windowEnd-windowStart;
+    windowStart+=duration/4;
+    windowEnd-=duration/4;
+    if(windowStart === windowEnd) {
+      windowEnd+=50;
+    }
+  }
+  refreshCanvas();
+}
+
+function timeRangeZoomOut() {
+  if(windowSliding) {
+    windowDuration*=2;
+  }  else {
+    var duration = windowEnd-windowStart;
+    windowStart-=duration/2;
+    windowEnd+=duration/2;
+    windowStart=Math.max(0,windowStart);
+    windowEnd=Math.min(events.buffer[events.buffer.length-1].time,windowEnd);
+  }
+ refreshCanvas();
+}
+
+
+
+
