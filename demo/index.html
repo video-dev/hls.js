@@ -112,6 +112,7 @@
   <script src="../dist/hls.js"></script>
   <script src="canvas.js"></script>
   <script src="metrics.js"></script>
+  <script src="jsonpack.js"></script>
   <script>
 
    'use strict';
@@ -188,7 +189,8 @@
        });
        hls.on(hls.Events.MANIFEST_LOADED,function(event,data) {
           var event = {
-            name : "variant manifest",
+            type : "variant manifest",
+            name : "",
             time : data.stats.trequest - t0,
             latency : data.stats.tfirst - data.stats.trequest,
             load : data.stats.tload - data.stats.tfirst,
@@ -200,7 +202,8 @@
        hls.on(hls.Events.LEVEL_LOADED,function(event,data) {
           document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",last loaded level:" + data.id;
           var event = {
-            name : "stream manifest @ " + data.id,
+            type : "stream manifest",
+            name : "@ " + data.id,
             time : data.stats.trequest - t0,
             latency : data.stats.tfirst - data.stats.trequest,
             load : data.stats.tload - data.stats.tfirst,
@@ -211,7 +214,8 @@
        });
        hls.on(hls.Events.FRAGMENT_BUFFERED,function(event,data) {
           var event = {
-            name : "fragment " + data.frag.sn + " @ " + data.frag.level,
+            type : "fragment",
+            name : data.frag.sn + " @ " + data.frag.level,
             time : data.stats.trequest - t0,
             latency : data.stats.tfirst - data.stats.trequest,
             load : data.stats.tload - data.stats.tfirst,
@@ -254,7 +258,7 @@ var lastSeekingTime;
     var data = '';
     switch(evt.type) {
        case 'durationchange':
-         data = ':' + evt.target.duration.toFixed(3);
+         data = ':' + evt.target.duration.toFixed(2);
          break;
       // case 'resize':
       //   data = 'videoWidth:' + evt.target.videoWidth + '/videoHeight:' + evt.target.videoHeight;
@@ -281,7 +285,7 @@ var lastSeekingTime;
       default:
       break;
     }
-    var event = {time : new Date() - t0, name :  evt.type + data};
+    var event = {time : new Date() - t0, type : evt.type, name : data};
     if(evt.type === 'seeking') {
       lastSeekingTime = event.time;
     }
@@ -330,7 +334,7 @@ function timeRangesToString(r) {
           bufferLen = r.end(i) - pos;
         }
       }
-      var event = { time : new Date() - t0, buffer : Math.round(bufferLen*100)/100, pos: Math.round(pos*100)/100};
+      var event = { time : new Date() - t0, buffer : Math.round(bufferLen*1000), pos: Math.round(pos*1000)};
       var bufEvents = events.buffer, bufEventLen = bufEvents.length;
       if(bufEventLen > 1) {
         var event0 = bufEvents[bufEventLen-2],event1 = bufEvents[bufEventLen-1];
@@ -380,8 +384,13 @@ function timeRangesToString(r) {
 
   function exportmetrics() {
     var url = document.URL;
-    var b64 = btoa(JSON.stringify(events));
+    var json = JSON.stringify(events);
+    var jsonpacked = jsonpack.pack(json);
+    //console.log(jsonpacked);
+    var b64 = btoa(jsonpacked);
+    console.log("packing JSON from " + json.length + " to " + jsonpacked.length + " bytes");
     url = url.substr(0,url.lastIndexOf("/")+1) + 'metrics.html?data=' + b64;
+    console.log(url);
     window.open(url,'_blank');
   }
 

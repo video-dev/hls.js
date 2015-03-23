@@ -85,6 +85,16 @@
     ctx.fillStyle = "black";
     ctx.fillText(legend,x_offset,15);
 
+    x_offset = eventLeftMargin+5;
+    legend = 'time';
+    ctx.fillStyle = "black";
+    ctx.fillText(legend,x_offset,15);
+
+    x_offset += ctx.measureText(legend).width+5;
+    legend = '[seek duration]';
+    ctx.fillStyle = "blue";
+    ctx.fillText(legend,x_offset,15);
+
     for (i =0, y_offset = 20; i < events.length; i++) {
       var event = events[i], start = event.time, end = event.time;
       if((start >= minTime && start <= maxTime)) {
@@ -93,8 +103,6 @@
       }
     }
   }
-
-
 
   function canvasBufferWindowUpdate(canvas, minTime, maxTime, events) {
     var ctx = canvas.getContext('2d'),
@@ -126,6 +134,8 @@
         firstEventIdx = Math.max(0,i-1);
       }
     }
+    // convert to seconds
+    maxBuffer;
     // compute buffer length as pos minTime using linear approximation
     if((firstEventIdx+1) < events.length) {
       minTimeBuffer = events[firstEventIdx].buffer + (minTime-events[firstEventIdx].time)*(events[firstEventIdx+1].buffer-events[firstEventIdx].buffer)/(events[firstEventIdx+1].time-events[firstEventIdx].time);
@@ -133,7 +143,7 @@
       minTimeBuffer = 0;
     }
 
-    maxBuffer+=10;
+    maxBuffer+=10000;
 
     y_offset += 15;
     legend = 'buffer window';
@@ -206,7 +216,7 @@
       minTimePos = 0;
     }
 
-    maxPos+=10;
+    maxPos+=10000;
 
     y_offset += 15;
     legend = 'position window';
@@ -273,13 +283,13 @@
     }
 
     y_offset+=15;
-    legend = 'max:' + maxBuffer.toFixed(2);
+    legend = 'max:' + (maxBuffer/1000).toFixed(2);
     ctx.fillText(legend,x_offset,y_offset);
 
     y_offset+=15;
-    legend = 'cur:' + events[events.length-1].buffer.toFixed(2);
+    legend = 'cur:' + (events[events.length-1].buffer/1000).toFixed(2);
     ctx.fillText(legend,x_offset,y_offset);
-    maxBuffer+=10;
+    maxBuffer+=10000;
 
     ctx.fillStyle = "blue";
     ctx.beginPath();
@@ -334,14 +344,14 @@
     }
 
     y_offset+=15;
-    legend = 'max:' + maxPos.toFixed(2);
+    legend = 'max:' + (maxPos/1000).toFixed(2);
     ctx.fillText(legend,x_offset,y_offset);
 
     y_offset+=15;
-    legend = 'cur:' + events[events.length-1].pos.toFixed(2);
+    legend = 'cur:' + (events[events.length-1].pos/1000).toFixed(2);
     ctx.fillText(legend,x_offset,y_offset);
 
-    maxPos+=10;
+    maxPos+=10000;
 
     ctx.fillStyle = "blue";
     ctx.beginPath();
@@ -440,7 +450,7 @@
     // draw event name
     ctx.fillStyle = "black";
     ctx.font = "15px Arial";
-    ctx.fillText(event.name,5,yoffset+15);
+    ctx.fillText(event.type + ' ' + event.name,5,yoffset+15);
   }
 
   function canvasDrawVideoEvent(ctx,yoffset,event,minTime,maxTime) {
@@ -452,7 +462,7 @@
     // draw event name
     ctx.fillStyle = "black";
     ctx.font = "15px Arial";
-    ctx.fillText(event.name,5,yoffset+15);
+    ctx.fillText(event.type + event.name,5,yoffset+15);
 
     //draw event rectangle
     x_start = networkChartStart + networkChartWidth*(event.time-minTime)/(maxTime-minTime);

@@ -36,9 +36,12 @@
 
   <script src="canvas.js"></script>
   <script src="metrics.js"></script>
+  <script src="jsonpack.js"></script>
   <script>
 
-  var events = JSON.parse(atob(decodeURIComponent(location.search.split('data=')[1])));
+  console.log(jsonpack.unpack(atob(decodeURIComponent(location.search.split('data=')[1]))));
+
+  var events = jsonpack.unpack(atob(decodeURIComponent(location.search.split('data=')[1])));
   showMetrics();
   refreshCanvas();
   </script>
