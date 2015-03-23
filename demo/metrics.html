@@ -25,8 +25,9 @@
     <input type="text" id='windowStart' defaultValue="0" onkeydown="if(window.event.keyCode=='13'){windowStart=document.getElementById('windowStart').value;refreshCanvas();}">
     <button onclick="windowEnd=document.getElementById('windowEnd').value;refreshCanvas();">fixed window end(ms)</button>
     <input type="text" id='windowEnd' defaultValue="10000" onkeydown="if(window.event.keyCode=='13'){windowEnd=document.getElementById('windowEnd').value;refreshCanvas();}"><br>
-    <canvas id="timerange_c" width="640" height="60" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
-    <canvas id="buffertime_c" width="640" height="120" style="border:1px solid #000000";></canvas>
+    <canvas id="bufferTimerange_c" width="640" height="60" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
+    <canvas id="positionTimerange_c" width="640" height="60" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
+    <canvas id="buffertime_c" width="640" height="80" style="border:1px solid #000000";></canvas>
     <canvas id="event_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
 
   <script src="canvas.js"></script>
