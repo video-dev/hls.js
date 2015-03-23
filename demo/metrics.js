@@ -1,19 +1,27 @@
   function showMetrics()  {
     var width = window.innerWidth-30;
-      document.getElementById('event_c').width =
-      document.getElementById('buffertime_c').width =
+      document.getElementById('videoEvent_c').width =
+      document.getElementById('loadEvent_c').width =
+      document.getElementById('bufferWindow_c').width =
+      document.getElementById('positionWindow_c').width =
       document.getElementById('bufferTimerange_c').width =
       document.getElementById('positionTimerange_c').width =  width;
-      document.getElementById('buffertime_c').style.display=
+      document.getElementById('bufferWindow_c').style.display=
+      document.getElementById('positionWindow_c').style.display=
       document.getElementById('bufferTimerange_c').style.display=
       document.getElementById('positionTimerange_c').style.display =
-      document.getElementById('event_c').style.display= "block";
+      document.getElementById('videoEvent_c').style.display =
+      document.getElementById('loadEvent_c').style.display= "block";
   }
 
+
   function hideMetrics()  {
-      document.getElementById('buffertime_c').style.display="none";
-      document.getElementById('bufferTimerange_c').style.display="none";
-      document.getElementById('event_c').style.display="none";
+      document.getElementById('bufferWindow_c').style.display=
+      document.getElementById('positionWindow_c').style.display=
+      document.getElementById('bufferTimerange_c').style.display=
+      document.getElementById('positionTimerange_c').style.display =
+      document.getElementById('videoEvent_c').style.display =
+      document.getElementById('loadEvent_c').style.display= "none";
   }
 
   function timeRangeSetSliding(duration) {
@@ -22,13 +30,12 @@
     refreshCanvas();
   }
 
-
 var timeRangeMouseDown=false;
  function timeRangeCanvasonMouseDown(evt) {
     var canvas = evt.currentTarget,
         bRect = canvas.getBoundingClientRect(),
         mouseX = Math.round((evt.clientX - bRect.left)*(canvas.width/bRect.width));
-    windowStart = Math.max(0,Math.round((mouseX-bufferNameWidth) * getWindowTimeRange().now / (canvas.width-bufferNameWidth)));
+    windowStart = Math.max(0,Math.round((mouseX-eventLeftMargin) * getWindowTimeRange().now / (canvas.width-eventLeftMargin)));
     windowEnd = windowStart+500;
     timeRangeMouseDown = true;
     windowSliding = false;
@@ -43,7 +50,7 @@ var timeRangeMouseDown=false;
       var canvas = evt.currentTarget,
           bRect = canvas.getBoundingClientRect(),
           mouseX = Math.round((evt.clientX - bRect.left)*(canvas.width/bRect.width)),
-          pos = Math.max(0,Math.round((mouseX-bufferNameWidth) * getWindowTimeRange().now / (canvas.width-bufferNameWidth)));
+          pos = Math.max(0,Math.round((mouseX-eventLeftMargin) * getWindowTimeRange().now / (canvas.width-eventLeftMargin)));
       if(pos < windowStart) {
         windowStart = pos;
       } else {
@@ -73,10 +80,12 @@ document.getElementById('windowStart').value=windowStart;document.getElementById
   function refreshCanvas()  {
     try {
       var windowTime = getWindowTimeRange();
-      canvasLoadUpdate(document.getElementById('event_c'), windowTime.min,windowTime.max, events.load);
-      canvasBufferUpdate(document.getElementById('buffertime_c'), windowTime.min,windowTime.max, events.buffer);
       canvasBufferTimeRangeUpdate(document.getElementById('bufferTimerange_c'), 0, windowTime.now, windowTime.min,windowTime.max, events.buffer);
       canvasPositionTimeRangeUpdate(document.getElementById('positionTimerange_c'), 0, windowTime.now, windowTime.min,windowTime.max, events.buffer);
+      canvasBufferWindowUpdate(document.getElementById('bufferWindow_c'), windowTime.min,windowTime.max, events.buffer);
+      canvasPositionWindowUpdate(document.getElementById('positionWindow_c'), windowTime.min,windowTime.max, events.buffer);
+      canvasVideoEventUpdate(document.getElementById('videoEvent_c'), windowTime.min,windowTime.max, events.video);
+      canvasLoadEventUpdate(document.getElementById('loadEvent_c'), windowTime.min,windowTime.max, events.load);
     } catch(err) {
       console.log("refreshCanvas error:" +err.message);
     }
@@ -116,6 +125,8 @@ function timeRangeZoomIn() {
       windowEnd+=50;
     }
   }
+  document.getElementById('windowStart').value=windowStart;
+  document.getElementById('windowEnd').value=windowEnd;
   refreshCanvas();
 }
 
@@ -129,9 +140,31 @@ function timeRangeZoomOut() {
     windowStart=Math.max(0,windowStart);
     windowEnd=Math.min(events.buffer[events.buffer.length-1].time,windowEnd);
   }
- refreshCanvas();
+  document.getElementById('windowStart').value=windowStart;
+  document.getElementById('windowEnd').value=windowEnd;
+  refreshCanvas();
 }
 
+function timeRangeSlideLeft() {
+  var duration = windowEnd-windowStart;
+  windowStart-=duration/4;
+  windowEnd-=duration/4;
+  windowStart=Math.max(0,windowStart);
+  windowEnd=Math.min(events.buffer[events.buffer.length-1].time,windowEnd);
+  document.getElementById('windowStart').value=windowStart;
+  document.getElementById('windowEnd').value=windowEnd;
+  refreshCanvas();
+}
 
+function timeRangeSlideRight() {
+  var duration = windowEnd-windowStart;
+  windowStart+=duration/4;
+  windowEnd+=duration/4;
+  windowStart=Math.max(0,windowStart);
+  windowEnd=Math.min(events.buffer[events.buffer.length-1].time,windowEnd);
+  document.getElementById('windowStart').value=windowStart;
+  document.getElementById('windowEnd').value=windowEnd;
+  refreshCanvas();
+}
 
 

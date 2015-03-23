@@ -20,6 +20,8 @@
     <button onclick="timeRangeSetSliding(0)">=infinity</button><br>
     <button onclick="timeRangeZoomIn()">Zoom In</button>
     <button onclick="timeRangeZoomOut()">Zoom Out</button><br>
+    <button onclick="timeRangeSlideLeft()"> <<< Slide </button>
+    <button onclick="timeRangeSlideRight()">Slide >>> </button><br>
     <button onclick="windowSliding=!windowSliding; refreshCanvas()">toggle sliding/fixed window</button><br>
     <button onclick="windowStart=document.getElementById('windowStart').value;refreshCanvas();">fixed window start(ms)</button>
     <input type="text" id='windowStart' defaultValue="0" onkeydown="if(window.event.keyCode=='13'){windowStart=document.getElementById('windowStart').value;refreshCanvas();}">
@@ -27,8 +29,10 @@
     <input type="text" id='windowEnd' defaultValue="10000" onkeydown="if(window.event.keyCode=='13'){windowEnd=document.getElementById('windowEnd').value;refreshCanvas();}"><br>
     <canvas id="bufferTimerange_c" width="640" height="60" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
     <canvas id="positionTimerange_c" width="640" height="60" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
-    <canvas id="buffertime_c" width="640" height="80" style="border:1px solid #000000";></canvas>
-    <canvas id="event_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
+    <canvas id="bufferWindow_c" width="640" height="80" style="border:1px solid #000000";></canvas>
+    <canvas id="positionWindow_c" width="640" height="80" style="border:1px solid #000000";></canvas>
+    <canvas id="videoEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas>
+    <canvas id="loadEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
 
   <script src="canvas.js"></script>
   <script src="metrics.js"></script>
