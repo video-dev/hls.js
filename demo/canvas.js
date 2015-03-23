@@ -1,26 +1,39 @@
 
-  var eventNameWidth = 150;
-  var eventLegendWidth = 120;
+  var eventLeftMargin = 180;
+  var eventRightMargin = 0;
 
-  var bufferNameWidth = 80;
-
-  function canvasLoadUpdate(canvas, minTime, maxTime, events) {
+  function canvasLoadEventUpdate(canvas, minTime, maxTime, events) {
     var ctx = canvas.getContext('2d');
     for (var i =0, y_offset = 20; i < events.length; i++) {
       var event = events[i], start = event.time, end = event.time + event.duration + event.latency;
-      if((start <= minTime && end >= maxTime) ||
-         (start >= minTime && end <= maxTime) ||
-         (start <= minTime && end >= maxTime)) {
+      if((start >= minTime && start <= maxTime)) {
         y_offset+=20;
       }
     }
     canvas.height = y_offset;
 
+    ctx.fillStyle = "green";
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(0,0,eventLeftMargin, canvas.height);
+    ctx.fillRect(canvas.width-eventRightMargin,0,eventRightMargin, canvas.height);
+    ctx.globalAlpha = 1;
+
     //draw legend
-    var x_offset = 50;
+    var x_offset = 5;
     ctx.font = "12px Arial";
 
-    legend = 'latency';
+    legend = "load event";
+    ctx.fillStyle = "black";
+    ctx.fillText(legend,x_offset,15);
+    x_offset = eventLeftMargin+5;
+
+
+    legend = 'start - end';
+    ctx.fillStyle = "black";
+    ctx.fillText(legend,x_offset,15);
+    x_offset += ctx.measureText(legend).width+5;
+
+    legend = '[latency';
     ctx.fillStyle = "orange";
     ctx.fillText(legend,x_offset,15);
     x_offset += ctx.measureText(legend).width+5;
@@ -35,46 +48,80 @@
     ctx.fillText(legend,x_offset,15);
     x_offset += ctx.measureText(legend).width+5;
 
-    legend = 'appending';
+    legend = 'appending]';
     ctx.fillStyle = "red";
     ctx.fillText(legend,x_offset,15);
     x_offset += ctx.measureText(legend).width+5;
 
     for (i =0, y_offset = 20; i < events.length; i++) {
       var event = events[i], start = event.time, end = event.time + event.duration + event.latency;
-      if((start <= minTime && end >= maxTime) ||
-         (start >= minTime && end <= maxTime) ||
-         (start <= minTime && end >= maxTime)) {
-        canvasLoadDrawEvent(ctx,y_offset,event,minTime,maxTime);
+      if((start >= minTime && start <= maxTime)) {
+        canvasDrawLoadEvent(ctx,y_offset,event,minTime,maxTime);
         y_offset+=20;
       }
     }
   }
 
-  function canvasBufferUpdate(canvas, minTime, maxTime, events) {
+  function canvasVideoEventUpdate(canvas, minTime, maxTime, events) {
+    var ctx = canvas.getContext('2d');
+    for (var i =0, y_offset = 20; i < events.length; i++) {
+      var event = events[i], start = event.time, end = event.time;
+      if((start >= minTime && start <= maxTime)) {
+        y_offset+=20;
+      }
+    }
+    canvas.height = y_offset;
+    ctx.fillStyle = "green";
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(0,0,eventLeftMargin, canvas.height);
+    ctx.fillRect(canvas.width-eventRightMargin,0,eventRightMargin, canvas.height);
+    ctx.globalAlpha = 1;
+
+    //draw legend
+    var x_offset = 5;
+    ctx.font = "12px Arial";
+
+    legend = 'video event';
+    ctx.fillStyle = "black";
+    ctx.fillText(legend,x_offset,15);
+
+    for (i =0, y_offset = 20; i < events.length; i++) {
+      var event = events[i], start = event.time, end = event.time;
+      if((start >= minTime && start <= maxTime)) {
+        canvasDrawVideoEvent(ctx,y_offset,event,minTime,maxTime);
+        y_offset+=20;
+      }
+    }
+  }
+
+
+
+  function canvasBufferWindowUpdate(canvas, minTime, maxTime, events) {
     var ctx = canvas.getContext('2d'),
     minTimeBuffer,
-    bufferChartStart = eventNameWidth+eventLegendWidth,
-    bufferChartWidth = ctx.canvas.width-eventNameWidth-eventLegendWidth-40;
+    bufferChartStart = eventLeftMargin,
+    bufferChartWidth = ctx.canvas.width-eventLeftMargin-eventRightMargin;
     ctx.clearRect (0,0,canvas.width, canvas.height);
 
     if(events.length === 0) {
       return;
     }
 
+    ctx.fillStyle = "green";
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(0,0,eventLeftMargin, canvas.height);
+    ctx.globalAlpha = 1;
+
     //draw legend
     var x_offset = 5;
     var y_offset = 0;
     ctx.font = "15px Arial";
 
-    var maxBuffer = 0, firstEventIdx = -1, playableAfter = -1, event;
+    var maxBuffer = 0, firstEventIdx = -1, event;
     for (var i =0 ; i < events.length; i++) {
       event = events[i];
       var buffer = event.buffer;
       maxBuffer = Math.max(maxBuffer, buffer);
-      if(playableAfter === -1 && event.buffer) {
-        playableAfter = event.time;
-      }
       if(firstEventIdx === -1 && event.time >= minTime) {
         firstEventIdx = Math.max(0,i-1);
       }
@@ -89,25 +136,19 @@
     maxBuffer+=10;
 
     y_offset += 15;
-    legend = 'playable after:' + playableAfter + ' ms';
-    ctx.fillStyle = "blue";
+    legend = 'buffer window';
+    ctx.fillStyle = "black";
     ctx.fillText(legend,x_offset,y_offset);
 
     y_offset += 15;
-    legend = 'window start:' + (minTime/1000).toFixed(1) + ' s';
-    ctx.fillStyle = "blue";
-    ctx.fillText(legend,x_offset,y_offset);
-
-    y_offset += 15;
-    legend = 'window end:' + (maxTime/1000).toFixed(1) + ' s';
-    ctx.fillStyle = "blue";
+    legend = '[' + minTime + ',' + maxTime + ']';
     ctx.fillText(legend,x_offset,y_offset);
 
     y_offset += 15;
     legend = 'nb samples:' + events.length;
-    ctx.fillStyle = "blue";
     ctx.fillText(legend,x_offset,y_offset);
 
+    ctx.fillStyle = "blue";
     ctx.beginPath();
     ctx.moveTo(bufferChartStart, ctx.canvas.height);
     ctx.lineTo(bufferChartStart, ctx.canvas.height*(1 - minTimeBuffer/maxBuffer));
@@ -118,19 +159,106 @@
     }
     ctx.lineTo(x_offset, canvas.height);
     ctx.fill();
+
+    ctx.fillStyle = "white";
+    ctx.fillRect(canvas.width-eventRightMargin,0,eventRightMargin, canvas.height);
+    ctx.fillStyle = "green";
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(canvas.width-eventRightMargin,0,eventRightMargin, canvas.height);
+    ctx.globalAlpha = 1;
   }
+
+
+  function canvasPositionWindowUpdate(canvas, minTime, maxTime, events) {
+    var ctx = canvas.getContext('2d'),
+    minTimeBuffer,
+    bufferChartStart = eventLeftMargin,
+    bufferChartWidth = ctx.canvas.width-eventLeftMargin-eventRightMargin;
+    ctx.clearRect (0,0,canvas.width, canvas.height);
+
+    if(events.length === 0) {
+      return;
+    }
+
+    ctx.fillStyle = "green";
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(0,0,eventLeftMargin, canvas.height);
+    ctx.globalAlpha = 1;
+
+    //draw legend
+    var x_offset = 5;
+    var y_offset = 0;
+    ctx.font = "15px Arial";
+
+    var maxPos = 0, firstEventIdx = -1, event;
+    for (var i =0 ; i < events.length; i++) {
+      event = events[i];
+      var pos = event.pos;
+      maxPos = Math.max(maxPos, pos);
+      if(firstEventIdx === -1 && event.time >= minTime) {
+        firstEventIdx = Math.max(0,i-1);
+      }
+    }
+    // compute Position(minTime) using linear approximation
+    if((firstEventIdx+1) < events.length) {
+      minTimePos = events[firstEventIdx].pos + (minTime-events[firstEventIdx].time)*(events[firstEventIdx+1].pos-events[firstEventIdx].pos)/(events[firstEventIdx+1].time-events[firstEventIdx].time);
+    } else {
+      minTimePos = 0;
+    }
+
+    maxPos+=10;
+
+    y_offset += 15;
+    legend = 'position window';
+    ctx.fillStyle = "black";
+    ctx.fillText(legend,x_offset,y_offset);
+
+    y_offset += 15;
+    legend = '[' + minTime + ',' + maxTime + ']';
+    ctx.fillText(legend,x_offset,y_offset);
+
+    y_offset += 15;
+    legend = 'nb samples:' + events.length;
+    ctx.fillText(legend,x_offset,y_offset);
+
+    ctx.fillStyle = "blue";
+    ctx.beginPath();
+    ctx.moveTo(bufferChartStart, ctx.canvas.height);
+    ctx.lineTo(bufferChartStart, ctx.canvas.height*(1 - minTimeBuffer/maxPos));
+    for (var i =firstEventIdx+1 ; i < events.length; i++) {
+      x_offset = bufferChartStart + (bufferChartWidth*(events[i].time-minTime))/(maxTime-minTime);
+      y_offset = ctx.canvas.height*(1 - events[i].pos/maxPos);
+      ctx.lineTo(x_offset,y_offset);
+    }
+    ctx.lineTo(x_offset, canvas.height);
+    ctx.fill();
+
+    ctx.fillStyle = "white";
+    ctx.fillRect(canvas.width-eventRightMargin,0,eventRightMargin, canvas.height);
+    ctx.fillStyle = "green";
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(canvas.width-eventRightMargin,0,eventRightMargin, canvas.height);
+    ctx.globalAlpha = 1;
+  }
+
 
   function canvasBufferTimeRangeUpdate(canvas, minTime, maxTime, windowMinTime, windowMaxTime, events) {
     var ctx = canvas.getContext('2d'),
-    bufferChartStart = bufferNameWidth,
-    bufferChartWidth = ctx.canvas.width-bufferChartStart;
+    bufferChartStart = eventLeftMargin,
+    bufferChartWidth = ctx.canvas.width-eventLeftMargin-eventRightMargin;
     x_offset = 0,y_offset = 0;
     ctx.clearRect (0,0,canvas.width, canvas.height);
+
+    ctx.fillStyle = "green";
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(0,0,eventLeftMargin, canvas.height);
+    ctx.fillRect(canvas.width-eventRightMargin,0,eventRightMargin, canvas.height);
+    ctx.globalAlpha = 1;
 
     x_offset = 5;
     y_offset = 15;
     legend = 'buffer';
-    ctx.fillStyle = "blue";
+    ctx.fillStyle = "black";
     ctx.font = "15px Arial";
     ctx.fillText(legend,x_offset,y_offset);
 
@@ -148,6 +276,9 @@
     legend = 'max:' + maxBuffer.toFixed(2);
     ctx.fillText(legend,x_offset,y_offset);
 
+    y_offset+=15;
+    legend = 'cur:' + events[events.length-1].buffer.toFixed(2);
+    ctx.fillText(legend,x_offset,y_offset);
     maxBuffer+=10;
 
     ctx.fillStyle = "blue";
@@ -166,24 +297,29 @@
     var x_start = bufferChartStart;
     var x_w = bufferChartWidth*(windowMinTime-minTime)/(maxTime-minTime);
     ctx.fillRect(x_start,0,x_w, canvas.height);
-
-
-    var x_start = bufferChartStart+bufferChartWidth*(windowMaxTime-minTime)/(maxTime-minTime); ;
-    var x_w = canvas.width-x_start;
+    var x_start = bufferChartStart+bufferChartWidth*(windowMaxTime-minTime)/(maxTime-minTime);
+    var x_w = canvas.width-x_start-eventRightMargin;
     ctx.fillRect(x_start,0,x_w, canvas.height);
+    ctx.globalAlpha = 1;
   }
 
   function canvasPositionTimeRangeUpdate(canvas, minTime, maxTime, windowMinTime, windowMaxTime, events) {
     var ctx = canvas.getContext('2d'),
-    posChartStart = bufferNameWidth,
-    posChartWidth = ctx.canvas.width-posChartStart;
+    posChartStart = eventLeftMargin,
+    posChartWidth = ctx.canvas.width-eventLeftMargin-eventRightMargin;
     x_offset = 0,y_offset = 0;
     ctx.clearRect (0,0,canvas.width, canvas.height);
+
+    ctx.fillStyle = "green";
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(0,0,eventLeftMargin, canvas.height);
+    ctx.fillRect(canvas.width-eventRightMargin,0,eventRightMargin, canvas.height);
+    ctx.globalAlpha = 1;
 
     x_offset = 5;
     y_offset = 15;
     legend = 'position';
-    ctx.fillStyle = "blue";
+    ctx.fillStyle = "black";
     ctx.font = "15px Arial";
     ctx.fillText(legend,x_offset,y_offset);
 
@@ -201,6 +337,9 @@
     legend = 'max:' + maxPos.toFixed(2);
     ctx.fillText(legend,x_offset,y_offset);
 
+    y_offset+=15;
+    legend = 'cur:' + events[events.length-1].pos.toFixed(2);
+    ctx.fillText(legend,x_offset,y_offset);
 
     maxPos+=10;
 
@@ -223,21 +362,17 @@
 
 
     var x_start = posChartStart+posChartWidth*(windowMaxTime-minTime)/(maxTime-minTime); ;
-    var x_w = canvas.width-x_start;
+    var x_w = canvas.width-x_start-eventRightMargin;
     ctx.fillRect(x_start,0,x_w, canvas.height);
+    ctx.globalAlpha = 1;
   }
 
 
-  function canvasLoadDrawEvent(ctx,yoffset,event,minTime,maxTime) {
+  function canvasDrawLoadEvent(ctx,yoffset,event,minTime,maxTime) {
     var legend,offset,x_start,x_w,
-    networkChartStart = eventNameWidth+eventLegendWidth,
-    networkChartWidth = ctx.canvas.width-eventNameWidth-eventLegendWidth-40,
+    networkChartStart = eventLeftMargin,
+    networkChartWidth = ctx.canvas.width-eventLeftMargin-eventRightMargin,
     tend = event.time + event.duration + event.latency;
-
-    // draw event name
-    ctx.fillStyle = "black";
-    ctx.font = "15px Arial";
-    ctx.fillText(event.name,5,yoffset+15);
 
    //draw start
     ctx.fillStyle = "black";
@@ -278,31 +413,63 @@
     legend = tend;
     x_start += x_w + 5;
     ctx.fillText(legend,x_start,yoffset+12);
+    x_start += ctx.measureText(legend).width+5;
 
-    //draw legend
-    var offset = eventNameWidth;
-    ctx.font = "12px Arial";
-
-    legend = event.latency;
+    legend = "[" + event.latency;
     ctx.fillStyle = "orange";
-    ctx.fillText(legend,offset,yoffset+12);
-    offset += ctx.measureText(legend).width+5;
+    ctx.fillText(legend,x_start,yoffset+12);
+    x_start += ctx.measureText(legend).width+5;
 
     legend = event.load;
+    if(!event.demux) legend += "]";
     ctx.fillStyle = "green";
-    ctx.fillText(legend,offset,yoffset+12);
-    offset += ctx.measureText(legend).width+5;
+    ctx.fillText(legend,x_start,yoffset+12);
+    x_start += ctx.measureText(legend).width+5;
 
     if(event.demux) {
       legend = event.demux;
       ctx.fillStyle = "blue";
-      ctx.fillText(legend,offset,yoffset+12);
-      offset += ctx.measureText(legend).width+5;
+      ctx.fillText(legend,x_start,yoffset+12);
+      x_start += ctx.measureText(legend).width+5;
 
-      legend = event.buffer;
+      legend = event.buffer + "]";
       ctx.fillStyle = "red";
-      ctx.fillText(legend,offset,yoffset+12);
-      offset += ctx.measureText(legend).width+5;
+      ctx.fillText(legend,x_start,yoffset+12);
+      x_start += ctx.measureText(legend).width+5;
     }
+    // draw event name
+    ctx.fillStyle = "black";
+    ctx.font = "15px Arial";
+    ctx.fillText(event.name,5,yoffset+15);
   }
 
+  function canvasDrawVideoEvent(ctx,yoffset,event,minTime,maxTime) {
+    var legend,offset,x_start,x_w,
+    networkChartStart = eventLeftMargin,
+    networkChartWidth = ctx.canvas.width-eventLeftMargin-eventRightMargin,
+    tend = event.time;
+
+    // draw event name
+    ctx.fillStyle = "black";
+    ctx.font = "15px Arial";
+    ctx.fillText(event.name,5,yoffset+15);
+
+    //draw event rectangle
+    x_start = networkChartStart + networkChartWidth*(event.time-minTime)/(maxTime-minTime);
+    x_w = 1;
+    ctx.fillRect(x_start,yoffset,x_w, 15);
+
+   //draw end time
+    ctx.fillStyle = "black";
+    ctx.font = "12px Arial";
+    legend = tend;
+    x_start += x_w + 5;
+    ctx.fillText(legend,x_start,yoffset+12);
+    x_start += ctx.measureText(legend).width+5;
+
+    if(event.duration) {
+      legend = "[" + event.duration + "]";
+      ctx.fillStyle = "blue";
+      ctx.fillText(legend,x_start,yoffset+12);
+    }
+  }

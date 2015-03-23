@@ -67,16 +67,20 @@
     <button onclick="timeRangeSetSliding(0)">ALL</button><br>
     <button onclick="timeRangeZoomIn()">Zoom In</button>
     <button onclick="timeRangeZoomOut()">Zoom Out</button><br>
+    <button onclick="timeRangeSlideLeft()"> <<< Slide </button>
+    <button onclick="timeRangeSlideRight()">Slide >>> </button><br>
     <button onclick="windowSliding=!windowSliding; refreshCanvas()">toggle sliding/fixed window</button><br>
     <button onclick="windowStart=document.getElementById('windowStart').value">fixed window start(ms)</button>
     <input type="text" id='windowStart' defaultValue="0" onkeydown="if(window.event.keyCode=='13'){windowStart=document.getElementById('windowStart').value;}">
     <button onclick="windowEnd=document.getElementById('windowEnd').value">fixed window end(ms)</button>
     <input type="text" id='windowEnd' defaultValue="10000" onkeydown="if(window.event.keyCode=='13'){windowEnd=document.getElementById('windowEnd').value;}"><br>
     <button onclick="exportmetrics()" style="font-size:18px">metrics permalink</button>
-    <canvas id="bufferTimerange_c" width="640" height="40" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
-    <canvas id="positionTimerange_c" width="640" height="40" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
-    <canvas id="buffertime_c" width="640" height="80" style="border:1px solid #000000";></canvas>
-    <canvas id="event_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
+    <canvas id="bufferTimerange_c" width="640" height="50" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
+    <canvas id="positionTimerange_c" width="640" height="50" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
+    <canvas id="bufferWindow_c" width="640" height="50" style="border:1px solid #000000";></canvas>
+    <canvas id="positionWindow_c" width="640" height="50" style="border:1px solid #000000";></canvas>
+    <canvas id="videoEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas>
+    <canvas id="loadEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
   </div>
   <div id="buffered_log" style="font-size: small;"></div>
 
@@ -162,7 +166,7 @@
        t0 = Date.now();
        hls.on(hls.Events.FRAMEWORK_READY,function() {
           document.getElementById("HlsStatus").innerHTML = 'attaching URL to video tag';
-          events = { load : [], buffer : []};
+          events = { load : [], buffer : [], video : []};
           hls.attachSource(_url);
        });
        hls.on(hls.Events.INIT_SEGMENT,function(event,data) {
@@ -227,6 +231,14 @@
           document.getElementById("HlsStatus").innerHTML = "Video Error";
           document.getElementById('buffered_c').width = 0;
        });
+       video.addEventListener('seeking', handleVideoEvent);
+       video.addEventListener('seeked', handleVideoEvent);
+       video.addEventListener('pause', handleVideoEvent);
+       video.addEventListener('play', handleVideoEvent);
+       video.addEventListener('playing', handleVideoEvent);
+       video.addEventListener('waiting', handleVideoEvent);
+       video.addEventListener('error', handleVideoEvent);
+       video.addEventListener('durationchange', handleVideoEvent);
     } else {
       if(navigator.userAgent.toLowerCase().indexOf('firefox') !== -1) {
       document.getElementById("HlsStatus").innerHTML = "you are using Firefox, it looks like MediaSource is not enabled,<br>please ensure the following keys are set appropriately in <b>about:config<br>media.mediasource.enabled=true<br>media.mediasource.ignore_codecs=true<br>media.mediasource.mp4.enabled=true<br>media.mediasource.youtubeonly=false</b>";
@@ -236,6 +248,48 @@
     }
   }
 
+
+var lastSeekingTime;
+  function handleVideoEvent(evt) {
+    var data = '';
+    switch(evt.type) {
+       case 'durationchange':
+         data = ':' + evt.target.duration.toFixed(3);
+         break;
+      // case 'resize':
+      //   data = 'videoWidth:' + evt.target.videoWidth + '/videoHeight:' + evt.target.videoHeight;
+      //   break;
+      // case 'loadedmetadata':
+      //   data = 'duration:' + evt.target.duration + '/videoWidth:' + evt.target.videoWidth + '/videoHeight:' + evt.target.videoHeight;
+      //  break;
+      // case 'loadeddata':
+      // case 'canplay':
+      // case 'canplaythrough':
+      case 'seeking':
+      case 'seeked':
+      case 'pause':
+      case 'play':
+      case 'playing':
+      case 'waiting':
+      case 'stalled':
+      case 'error':
+        data = ' @' + evt.target.currentTime.toFixed(2);
+        break;
+      // case 'progress':
+      //   data = 'currentTime:' + evt.target.currentTime + ',bufferRange:[' + this.video.buffered.start(0) + ',' + this.video.buffered.end(0) + ']';
+      //   break;
+      default:
+      break;
+    }
+    var event = {time : new Date() - t0, name :  evt.type + data};
+    if(evt.type === 'seeking') {
+      lastSeekingTime = event.time;
+    }
+    if(evt.type === 'seeked') {
+      event.duration = event.time - lastSeekingTime;
+    }
+    events.video.push(event);
+  }
 
 function getRandomTestVid() {
   var idx = Math.floor(Math.random()*teststreams.length);
