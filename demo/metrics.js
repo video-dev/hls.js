@@ -1,15 +1,18 @@
   function showMetrics()  {
-      document.getElementById('event_c').width = window.innerWidth-30;
-      document.getElementById('buffertime_c').width = window.innerWidth-30;
-      document.getElementById('timerange_c').width = window.innerWidth-30;
-      document.getElementById('buffertime_c').style.display="block";
-      document.getElementById('timerange_c').style.display="block";
-      document.getElementById('event_c').style.display="block";
+    var width = window.innerWidth-30;
+      document.getElementById('event_c').width =
+      document.getElementById('buffertime_c').width =
+      document.getElementById('bufferTimerange_c').width =
+      document.getElementById('positionTimerange_c').width =  width;
+      document.getElementById('buffertime_c').style.display=
+      document.getElementById('bufferTimerange_c').style.display=
+      document.getElementById('positionTimerange_c').style.display =
+      document.getElementById('event_c').style.display= "block";
   }
 
   function hideMetrics()  {
       document.getElementById('buffertime_c').style.display="none";
-      document.getElementById('timerange_c').style.display="none";
+      document.getElementById('bufferTimerange_c').style.display="none";
       document.getElementById('event_c').style.display="none";
   }
 
@@ -22,10 +25,10 @@
 
 var timeRangeMouseDown=false;
  function timeRangeCanvasonMouseDown(evt) {
-    var canvas = document.getElementById('timerange_c'),
+    var canvas = evt.currentTarget,
         bRect = canvas.getBoundingClientRect(),
         mouseX = Math.round((evt.clientX - bRect.left)*(canvas.width/bRect.width));
-    windowStart = Math.round(mouseX * getWindowTimeRange().now / canvas.width);
+    windowStart = Math.max(0,Math.round((mouseX-bufferNameWidth) * getWindowTimeRange().now / (canvas.width-bufferNameWidth)));
     windowEnd = windowStart+500;
     timeRangeMouseDown = true;
     windowSliding = false;
@@ -37,10 +40,10 @@ var timeRangeMouseDown=false;
 
  function timeRangeCanvasonMouseMove(evt) {
     if(timeRangeMouseDown) {
-      var canvas = document.getElementById('timerange_c'),
+      var canvas = evt.currentTarget,
           bRect = canvas.getBoundingClientRect(),
           mouseX = Math.round((evt.clientX - bRect.left)*(canvas.width/bRect.width)),
-          pos = Math.round(mouseX * getWindowTimeRange().now / canvas.width);
+          pos = Math.max(0,Math.round((mouseX-bufferNameWidth) * getWindowTimeRange().now / (canvas.width-bufferNameWidth)));
       if(pos < windowStart) {
         windowStart = pos;
       } else {
@@ -72,7 +75,8 @@ document.getElementById('windowStart').value=windowStart;document.getElementById
       var windowTime = getWindowTimeRange();
       canvasLoadUpdate(document.getElementById('event_c'), windowTime.min,windowTime.max, events.load);
       canvasBufferUpdate(document.getElementById('buffertime_c'), windowTime.min,windowTime.max, events.buffer);
-      canvasTimeRangeUpdate(document.getElementById('timerange_c'), 0, windowTime.now, windowTime.min,windowTime.max, events.buffer);
+      canvasBufferTimeRangeUpdate(document.getElementById('bufferTimerange_c'), 0, windowTime.now, windowTime.min,windowTime.max, events.buffer);
+      canvasPositionTimeRangeUpdate(document.getElementById('positionTimerange_c'), 0, windowTime.now, windowTime.min,windowTime.max, events.buffer);
     } catch(err) {
       console.log("refreshCanvas error:" +err.message);
     }

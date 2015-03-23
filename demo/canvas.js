@@ -2,6 +2,8 @@
   var eventNameWidth = 150;
   var eventLegendWidth = 120;
 
+  var bufferNameWidth = 80;
+
   function canvasLoadUpdate(canvas, minTime, maxTime, events) {
     var ctx = canvas.getContext('2d');
     for (var i =0, y_offset = 20; i < events.length; i++) {
@@ -92,27 +94,12 @@
     ctx.fillText(legend,x_offset,y_offset);
 
     y_offset += 15;
-    legend = 'current buffer:' + events[events.length-1].buffer.toFixed(2);
+    legend = 'window start:' + (minTime/1000).toFixed(1) + ' s';
     ctx.fillStyle = "blue";
     ctx.fillText(legend,x_offset,y_offset);
 
     y_offset += 15;
-    legend = 'max buffer:' + maxBuffer.toFixed(2) + ' s';
-    ctx.fillStyle = "blue";
-    ctx.fillText(legend,x_offset,y_offset);
-
-    y_offset += 15;
-    legend = 'window start time:' + (minTime/1000).toFixed(1) + ' s';
-    ctx.fillStyle = "blue";
-    ctx.fillText(legend,x_offset,y_offset);
-
-    y_offset += 15;
-    legend = 'window end time:' + (maxTime/1000).toFixed(1) + ' s';
-    ctx.fillStyle = "blue";
-    ctx.fillText(legend,x_offset,y_offset);
-
-    y_offset += 15;
-    legend = 'current time:' + (events[events.length-1].time/1000).toFixed(1) + ' s';
+    legend = 'window end:' + (maxTime/1000).toFixed(1) + ' s';
     ctx.fillStyle = "blue";
     ctx.fillText(legend,x_offset,y_offset);
 
@@ -133,12 +120,19 @@
     ctx.fill();
   }
 
-  function canvasTimeRangeUpdate(canvas, minTime, maxTime, windowMinTime, windowMaxTime, events) {
+  function canvasBufferTimeRangeUpdate(canvas, minTime, maxTime, windowMinTime, windowMaxTime, events) {
     var ctx = canvas.getContext('2d'),
-    bufferChartStart = 0,
-    bufferChartWidth = ctx.canvas.width;
+    bufferChartStart = bufferNameWidth,
+    bufferChartWidth = ctx.canvas.width-bufferChartStart;
     x_offset = 0,y_offset = 0;
     ctx.clearRect (0,0,canvas.width, canvas.height);
+
+    x_offset = 5;
+    y_offset = 15;
+    legend = 'buffer';
+    ctx.fillStyle = "blue";
+    ctx.font = "15px Arial";
+    ctx.fillText(legend,x_offset,y_offset);
 
     if(events.length === 0) {
       return;
@@ -149,6 +143,11 @@
       var buffer = events[i].buffer;
       maxBuffer = Math.max(maxBuffer, buffer);
     }
+
+    y_offset+=15;
+    legend = 'max:' + maxBuffer.toFixed(2);
+    ctx.fillText(legend,x_offset,y_offset);
+
     maxBuffer+=10;
 
     ctx.fillStyle = "blue";
@@ -170,9 +169,64 @@
 
 
     var x_start = bufferChartStart+bufferChartWidth*(windowMaxTime-minTime)/(maxTime-minTime); ;
-    var x_w = bufferChartWidth-x_start;
+    var x_w = canvas.width-x_start;
     ctx.fillRect(x_start,0,x_w, canvas.height);
   }
+
+  function canvasPositionTimeRangeUpdate(canvas, minTime, maxTime, windowMinTime, windowMaxTime, events) {
+    var ctx = canvas.getContext('2d'),
+    posChartStart = bufferNameWidth,
+    posChartWidth = ctx.canvas.width-posChartStart;
+    x_offset = 0,y_offset = 0;
+    ctx.clearRect (0,0,canvas.width, canvas.height);
+
+    x_offset = 5;
+    y_offset = 15;
+    legend = 'position';
+    ctx.fillStyle = "blue";
+    ctx.font = "15px Arial";
+    ctx.fillText(legend,x_offset,y_offset);
+
+    if(events.length === 0) {
+      return;
+    }
+
+    var maxPos = 0;
+    for (var i =0 ; i < events.length; i++) {
+      var pos = events[i].pos;
+      maxPos = Math.max(maxPos, pos);
+    }
+
+    y_offset+=15;
+    legend = 'max:' + maxPos.toFixed(2);
+    ctx.fillText(legend,x_offset,y_offset);
+
+
+    maxPos+=10;
+
+    ctx.fillStyle = "blue";
+    ctx.beginPath();
+    ctx.moveTo(posChartStart, ctx.canvas.height);
+    for (var i =0 ; i < events.length; i++) {
+      x_offset = posChartStart + (posChartWidth*(events[i].time-minTime))/(maxTime-minTime);
+      y_offset = ctx.canvas.height*(1 - events[i].pos/maxPos);
+      ctx.lineTo(x_offset,y_offset);
+    }
+    ctx.lineTo(x_offset, canvas.height);
+    ctx.fill();
+
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = "grey";
+    var x_start = posChartStart;
+    var x_w = posChartWidth*(windowMinTime-minTime)/(maxTime-minTime);
+    ctx.fillRect(x_start,0,x_w, canvas.height);
+
+
+    var x_start = posChartStart+posChartWidth*(windowMaxTime-minTime)/(maxTime-minTime); ;
+    var x_w = canvas.width-x_start;
+    ctx.fillRect(x_start,0,x_w, canvas.height);
+  }
+
 
   function canvasLoadDrawEvent(ctx,yoffset,event,minTime,maxTime) {
     var legend,offset,x_start,x_w,

@@ -73,8 +73,9 @@
     <button onclick="windowEnd=document.getElementById('windowEnd').value">fixed window end(ms)</button>
     <input type="text" id='windowEnd' defaultValue="10000" onkeydown="if(window.event.keyCode=='13'){windowEnd=document.getElementById('windowEnd').value;}"><br>
     <button onclick="exportmetrics()" style="font-size:18px">metrics permalink</button>
-    <canvas id="timerange_c" width="640" height="60" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
-    <canvas id="buffertime_c" width="640" height="120" style="border:1px solid #000000";></canvas>
+    <canvas id="bufferTimerange_c" width="640" height="40" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
+    <canvas id="positionTimerange_c" width="640" height="40" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
+    <canvas id="buffertime_c" width="640" height="80" style="border:1px solid #000000";></canvas>
     <canvas id="event_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
   </div>
   <div id="buffered_log" style="font-size: small;"></div>
@@ -216,7 +217,7 @@
           };
           events.load.push(event);
           if(hls.bufferTimer === undefined) {
-            events.buffer.push({ time : 0, buffer : 0});
+            events.buffer.push({ time : 0, buffer : 0, pos: 0});
             hls.bufferTimer = window.setInterval(updateBuffered, 100);
           }
           refreshCanvas();
@@ -275,15 +276,20 @@ function timeRangesToString(r) {
           bufferLen = r.end(i) - pos;
         }
       }
-      var event = { time : new Date() - t0, buffer : Math.round(bufferLen*100)/100};
+      var event = { time : new Date() - t0, buffer : Math.round(bufferLen*100)/100, pos: Math.round(pos*100)/100};
       var bufEvents = events.buffer, bufEventLen = bufEvents.length;
       if(bufEventLen > 1) {
         var event0 = bufEvents[bufEventLen-2],event1 = bufEvents[bufEventLen-1];
-        var slope0 = (event1.buffer - event0.buffer)/(event1.time-event0.time);
-        var slope1 = (event.buffer - event0.buffer)/(event.time-event0.time);
+        var slopeBuf0 = (event1.buffer - event0.buffer)/(event1.time-event0.time);
+        var slopeBuf1 = (event.buffer - event0.buffer)/(event.time-event0.time);
+
+        var slopePos0 = (event1.pos - event0.pos)/(event1.time-event0.time);
+        var slopePos1 = (event.pos - event0.pos)/(event.time-event0.time);
         // compute slopes. if less than 10% difference, remove event1
         //console.log("Math.abs(slope0/slope1 -1):" + Math.abs(slope0/slope1 -1).toFixed(3));
-        if(slope0 === slope1 || Math.abs(slope0/slope1 -1) <= 0.1) {
+        if((slopeBuf0 === slopeBuf1 || Math.abs(slopeBuf0/slopeBuf1 -1) <= 0.1) &&
+           (slopePos0 === slopePos1 || Math.abs(slopePos0/slopePos1 -1) <= 0.1))
+         {
           bufEvents.pop();
         }
       }
