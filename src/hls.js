@@ -57,7 +57,6 @@ class Hls {
 
     attachView(video) {
         this.video = video;
-        this.onverror = this.onVideoError.bind(this);
         // setup the media source
         var ms = (this.mediaSource = new MediaSource());
         //Media Source listeners
@@ -69,33 +68,8 @@ class Hls {
         ms.addEventListener('sourceclose', this.onmsc);
         // link video and media Source
         video.src = URL.createObjectURL(ms);
-        // listen to all video events
-        var listener = function(evt) {
-            this.logEvt(evt);
-        }.bind(this);
-        this.onve = listener;
-        video.addEventListener('loadstart', listener);
-        //video.addEventListener('progress',        listener);
-        video.addEventListener('suspend', listener);
-        video.addEventListener('abort', listener);
+        this.onverror = this.onVideoError.bind(this);
         video.addEventListener('error', this.onverror);
-        video.addEventListener('emptied', listener);
-        video.addEventListener('stalled', listener);
-        video.addEventListener('loadedmetadata', listener);
-        video.addEventListener('loadeddata', listener);
-        video.addEventListener('canplay', listener);
-        video.addEventListener('canplaythrough', listener);
-        video.addEventListener('playing', listener);
-        video.addEventListener('waiting', listener);
-        video.addEventListener('seeking', listener);
-        video.addEventListener('seeked', listener);
-        video.addEventListener('durationchange', listener);
-        //video.addEventListener('timeupdate',      listener);
-        video.addEventListener('play', listener);
-        video.addEventListener('pause', listener);
-        video.addEventListener('ratechange', listener);
-        video.addEventListener('resize', listener);
-        video.addEventListener('volumechange', listener);
     }
 
     detachView() {
@@ -111,33 +85,10 @@ class Hls {
             this.mediaSource = null;
         }
         this.onmso = this.onmse = this.onmsc = null;
-        var listener = this.onve;
-        this.onve = null;
         if (video) {
             this.video = null;
-            // remove all video listeners
-            video.removeEventListener('loadstart', listener);
-            //video.removeEventListener('progress',        listener);
-            video.removeEventListener('suspend', listener);
-            video.removeEventListener('abort', listener);
+            // remove video error listener
             video.removeEventListener('error', this.onverror);
-            video.removeEventListener('emptied', listener);
-            video.removeEventListener('stalled', listener);
-            video.removeEventListener('loadedmetadata', listener);
-            video.removeEventListener('loadeddata', listener);
-            video.removeEventListener('canplay', listener);
-            video.removeEventListener('canplaythrough', listener);
-            video.removeEventListener('playing', listener);
-            video.removeEventListener('waiting', listener);
-            video.removeEventListener('seeking', listener);
-            video.removeEventListener('seeked', listener);
-            video.removeEventListener('durationchange', listener);
-            //video.removeEventListener('timeupdate',      listener);
-            video.removeEventListener('play', listener);
-            video.removeEventListener('pause', listener);
-            video.removeEventListener('ratechange', listener);
-            video.removeEventListener('resize', listener);
-            video.removeEventListener('volumechange', listener);
             this.onverror = null;
         }
     }
@@ -193,48 +144,6 @@ class Hls {
 
     onVideoError() {
         observer.trigger(Event.VIDEO_ERROR);
-    }
-
-    logEvt(evt) {
-        var data = '';
-        switch (evt.type) {
-            case 'durationchange':
-                data = evt.target.duration;
-                break;
-            case 'resize':
-                data =
-                    'videoWidth:' +
-                    evt.target.videoWidth +
-                    '/videoHeight:' +
-                    evt.target.videoHeight;
-                break;
-            case 'loadedmetadata':
-                data =
-                    'duration:' +
-                    evt.target.duration +
-                    '/videoWidth:' +
-                    evt.target.videoWidth +
-                    '/videoHeight:' +
-                    evt.target.videoHeight;
-                break;
-            case 'loadeddata':
-            case 'canplay':
-            case 'canplaythrough':
-            case 'timeupdate':
-            case 'seeking':
-            case 'seeked':
-            case 'pause':
-            case 'play':
-            case 'stalled':
-                data = 'currentTime:' + evt.target.currentTime;
-                break;
-            // case 'progress':
-            //   data = 'currentTime:' + evt.target.currentTime + ',bufferRange:[' + this.video.buffered.start(0) + ',' + this.video.buffered.end(0) + ']';
-            //   break;
-            default:
-                break;
-        }
-        logger.log(evt.type + ':' + data);
     }
 }
 
