@@ -33,12 +33,6 @@ export default {
   VIDEO_ERROR :  'hlsVideoError',
   // Identifier for a parsing error event
   PARSING_ERROR :  'hlsParsingError',
-  // Identifier for a playback media time change event
-  MEDIA_TIME :  'hlsMediaTime',
-  // Identifier for a playback state switch event
-  PLAYBACK_STATE :  'hlsPlaybackState',
-  // Identifier for a seek state switch event
-  SEEK_STATE :  'hlsSeekState',
   // Identifier for a playback complete event
   PLAYBACK_COMPLETE :  'hlsPlayBackComplete'
 };
