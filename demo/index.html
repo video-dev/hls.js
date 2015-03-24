@@ -340,7 +340,7 @@ function timeRangesToString(r) {
           bufferLen = r.end(i) - pos;
         }
       }
-      if(bufferLen <= 0.1 && v.paused === false && pos !=lastStartPosition) {
+      if(bufferLen <= 0.1 && v.paused === false && (pos-lastStartPosition) > 0.5) {
         if(bufferingIdx !== -1) {
           bufferingDuration = new Date() - t0 - events.video[bufferingIdx].time;
           events.video[bufferingIdx].duration = bufferingDuration;
