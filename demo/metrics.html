@@ -9,6 +9,8 @@
       <h1 class="title">hls.js metrics page</h1>
     </header>
   </div>
+  <pre id='HlsDate'></pre>
+  <pre id='HlsUrl'></pre>
     <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)";></canvas> <br>
     window size
     <button onclick="timeRangeSetSliding(2000);">2s</button>
@@ -38,9 +40,11 @@
   <script src="jsonpack.js"></script>
   <script>
 
-  console.log(jsonpack.unpack(atob(decodeURIComponent(location.search.split('data=')[1]))));
-
   var events = jsonpack.unpack(atob(decodeURIComponent(location.search.split('data=')[1])));
+  var hlsLink = document.URL.substr(0,document.URL.lastIndexOf("/")+1) + 'index.html?src=' + encodeURIComponent(events.url);
+  var description = 'playlist: ' + "<a href=\"" + events.url + "\">" + events.url + "</a>" + '<br>replay: ' + "<a href=\"" + hlsLink + "\">" + hlsLink + "</a>";
+  document.getElementById("HlsUrl").innerHTML = description;
+  document.getElementById("HlsDate").innerHTML = "session Start Date:" + events.date;
   showMetrics();
   refreshCanvas();
   </script>
