@@ -3,13 +3,9 @@
       document.getElementById('videoEvent_c').width =
       document.getElementById('loadEvent_c').width =
       document.getElementById('bufferWindow_c').width =
-      document.getElementById('positionWindow_c').width =
-      document.getElementById('bufferTimerange_c').width =
-      document.getElementById('positionTimerange_c').width =  width;
+      document.getElementById('bufferTimerange_c').width = width;
       document.getElementById('bufferWindow_c').style.display=
-      document.getElementById('positionWindow_c').style.display=
       document.getElementById('bufferTimerange_c').style.display=
-      document.getElementById('positionTimerange_c').style.display =
       document.getElementById('videoEvent_c').style.display =
       document.getElementById('loadEvent_c').style.display= "block";
   }
@@ -17,9 +13,7 @@
 
   function hideMetrics()  {
       document.getElementById('bufferWindow_c').style.display=
-      document.getElementById('positionWindow_c').style.display=
       document.getElementById('bufferTimerange_c').style.display=
-      document.getElementById('positionTimerange_c').style.display =
       document.getElementById('videoEvent_c').style.display =
       document.getElementById('loadEvent_c').style.display= "none";
   }
@@ -75,15 +69,23 @@ var timeRangeMouseDown=false;
   timeRangeMouseDown = false;
  }
 
-var windowDuration=20000,windowSliding=true,windowStart=0,windowEnd=10000;
+ function windowCanvasonMouseMove(evt) {
+    var canvas = evt.currentTarget,
+        bRect = canvas.getBoundingClientRect(),
+        mouseX = Math.round((evt.clientX - bRect.left)*(canvas.width/bRect.width)),
+        timeRange = getWindowTimeRange();
+    windowFocus = timeRange.min + Math.max(0,Math.round((mouseX-eventLeftMargin) * (timeRange.max - timeRange.min)  / (canvas.width-eventLeftMargin)));
+    //console.log(windowFocus);
+    refreshCanvas();
+ }
+
+var windowDuration=20000,windowSliding=true,windowStart=0,windowEnd=10000,windowFocus;
 document.getElementById('windowStart').value=windowStart;document.getElementById('windowEnd').value=windowEnd;
   function refreshCanvas()  {
     try {
       var windowTime = getWindowTimeRange();
       canvasBufferTimeRangeUpdate(document.getElementById('bufferTimerange_c'), 0, windowTime.now, windowTime.min,windowTime.max, events.buffer);
-      canvasPositionTimeRangeUpdate(document.getElementById('positionTimerange_c'), 0, windowTime.now, windowTime.min,windowTime.max, events.buffer);
-      canvasBufferWindowUpdate(document.getElementById('bufferWindow_c'), windowTime.min,windowTime.max, events.buffer);
-      canvasPositionWindowUpdate(document.getElementById('positionWindow_c'), windowTime.min,windowTime.max, events.buffer);
+      canvasBufferWindowUpdate(document.getElementById('bufferWindow_c'), windowTime.min,windowTime.max, windowTime.focus, events.buffer);
       canvasVideoEventUpdate(document.getElementById('videoEvent_c'), windowTime.min,windowTime.max, events.video);
       canvasLoadEventUpdate(document.getElementById('loadEvent_c'), windowTime.min,windowTime.max, events.load);
     } catch(err) {
@@ -111,7 +113,10 @@ document.getElementById('windowStart').value=windowStart;document.getElementById
         minTime = windowStart;
         maxTime = windowEnd;
       }
-      return { min : minTime, max: maxTime, now : tnow}
+      if(windowFocus === undefined || windowFocus < minTime || windowFocus > maxTime) {
+        windowFocus = minTime;
+      }
+      return { min : minTime, max: maxTime, now : tnow, focus : windowFocus}
   }
 
 function timeRangeZoomIn() {
