@@ -165,7 +165,7 @@
        t0 = Date.now();
        hls.on(hls.Events.FRAMEWORK_READY,function() {
           document.getElementById("HlsStatus").innerHTML = 'attaching URL to video tag';
-          events = { load : [], buffer : [], video : []};
+          events = { url : _url, date : new Date(), load : [], buffer : [], video : []};
           bufferingIdx = -1;
           hls.attachSource(_url);
        });
