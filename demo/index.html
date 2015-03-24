@@ -75,10 +75,8 @@
     <button onclick="windowEnd=document.getElementById('windowEnd').value">fixed window end(ms)</button>
     <input type="text" id='windowEnd' defaultValue="10000" onkeydown="if(window.event.keyCode=='13'){windowEnd=document.getElementById('windowEnd').value;}"><br>
     <button onclick="exportmetrics()" style="font-size:18px">metrics permalink</button>
-    <canvas id="bufferTimerange_c" width="640" height="50" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
-    <canvas id="positionTimerange_c" width="640" height="50" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
-    <canvas id="bufferWindow_c" width="640" height="50" style="border:1px solid #000000";></canvas>
-    <canvas id="positionWindow_c" width="640" height="50" style="border:1px solid #000000";></canvas>
+    <canvas id="bufferTimerange_c" width="640" height="100" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
+    <canvas id="bufferWindow_c" width="640" height="100" style="border:1px solid #000000" onmousemove="windowCanvasonMouseMove(event)";></canvas>
     <canvas id="videoEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas>
     <canvas id="loadEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
   </div>
