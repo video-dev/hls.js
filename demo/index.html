@@ -364,6 +364,8 @@ function timeRangesToString(r) {
           }
           playbackEnded = false;
         }
+      } else {
+        playbackEnded = false;
       }
 
       if(bufferLen > 0.1 && bufferingIdx !=-1) {
