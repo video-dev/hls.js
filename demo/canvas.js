@@ -96,7 +96,7 @@
     ctx.fillText(legend,x_offset,15);
 
     x_offset += ctx.measureText(legend).width+5;
-    legend = '[seek duration]';
+    legend = '[duration]';
     ctx.fillStyle = "blue";
     ctx.fillText(legend,x_offset,15);
 
@@ -399,28 +399,44 @@
   function canvasDrawVideoEvent(ctx,yoffset,event,minTime,maxTime) {
     var legend,offset,x_start,x_w,
     networkChartStart = eventLeftMargin,
-    networkChartWidth = ctx.canvas.width-eventLeftMargin-eventRightMargin,
-    tend = event.time;
+    networkChartWidth = ctx.canvas.width-eventLeftMargin-eventRightMargin;
 
     // draw event name
     ctx.fillStyle = "black";
     ctx.font = "15px Arial";
-    ctx.fillText(event.type + event.name,5,yoffset+15);
+    legend = event.type;
+    if (event.name) legend+= ':' + event.name;
+    ctx.fillText(legend,5,yoffset+15);
+
+
+   //draw start time
+    ctx.fillStyle = "black";
+    ctx.font = "12px Arial";
+    legend = event.time;
+    offset = ctx.measureText(legend).width+5;
+    x_start = networkChartStart-offset+networkChartWidth*(event.time-minTime)/(maxTime-minTime);
+    ctx.fillText(legend,x_start,yoffset+12);
+
 
     //draw event rectangle
     x_start = networkChartStart + networkChartWidth*(event.time-minTime)/(maxTime-minTime);
-    x_w = 1;
+    if(event.duration) {
+      x_w = networkChartWidth*event.duration/(maxTime-minTime);
+    } else {
+      x_w = 1;
+    }
     ctx.fillRect(x_start,yoffset,x_w, 15);
 
-   //draw end time
-    ctx.fillStyle = "black";
-    ctx.font = "12px Arial";
-    legend = tend;
-    x_start += x_w + 5;
-    ctx.fillText(legend,x_start,yoffset+12);
-    x_start += ctx.measureText(legend).width+5;
-
     if(event.duration) {
+
+     //draw end time
+      ctx.fillStyle = "black";
+      ctx.font = "12px Arial";
+      legend = event.time+event.duration;
+      x_start += x_w + 5;
+      ctx.fillText(legend,x_start,yoffset+12);
+      x_start += ctx.measureText(legend).width+5;
+
       legend = "[" + event.duration + "]";
       ctx.fillStyle = "blue";
       ctx.fillText(legend,x_start,yoffset+12);

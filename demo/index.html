@@ -166,6 +166,7 @@
        hls.on(hls.Events.FRAMEWORK_READY,function() {
           document.getElementById("HlsStatus").innerHTML = 'attaching URL to video tag';
           events = { load : [], buffer : [], video : []};
+          bufferingIdx = -1;
           hls.attachSource(_url);
        });
        hls.on(hls.Events.INIT_SEGMENT,function(event,data) {
@@ -235,6 +236,7 @@
           document.getElementById("HlsStatus").innerHTML = "Video Error";
           document.getElementById('buffered_c').width = 0;
        });
+       video.addEventListener('resize', handleVideoEvent);
        video.addEventListener('seeking', handleVideoEvent);
        video.addEventListener('seeked', handleVideoEvent);
        video.addEventListener('pause', handleVideoEvent);
@@ -253,16 +255,16 @@
   }
 
 
-var lastSeekingTime;
+var lastSeekingIdx, lastStartPosition;
   function handleVideoEvent(evt) {
     var data = '';
     switch(evt.type) {
        case 'durationchange':
-         data = ':' + evt.target.duration.toFixed(2);
+         data = evt.target.duration.toFixed(2);
          break;
-      // case 'resize':
-      //   data = 'videoWidth:' + evt.target.videoWidth + '/videoHeight:' + evt.target.videoHeight;
-      //   break;
+      case 'resize':
+        data = 'W/H=' + evt.target.videoWidth + '/' + evt.target.videoHeight;
+        break;
       // case 'loadedmetadata':
       //   data = 'duration:' + evt.target.duration + '/videoWidth:' + evt.target.videoWidth + '/videoHeight:' + evt.target.videoHeight;
       //  break;
@@ -271,13 +273,14 @@ var lastSeekingTime;
       // case 'canplaythrough':
       case 'seeking':
       case 'seeked':
-      case 'pause':
       case 'play':
       case 'playing':
+        lastStartPosition = evt.target.currentTime;
+      case 'pause':
       case 'waiting':
       case 'stalled':
       case 'error':
-        data = ' @' + evt.target.currentTime.toFixed(2);
+        data = evt.target.currentTime.toFixed(2);
         break;
       // case 'progress':
       //   data = 'currentTime:' + evt.target.currentTime + ',bufferRange:[' + this.video.buffered.start(0) + ',' + this.video.buffered.end(0) + ']';
@@ -286,13 +289,13 @@ var lastSeekingTime;
       break;
     }
     var event = {time : new Date() - t0, type : evt.type, name : data};
+    events.video.push(event);
     if(evt.type === 'seeking') {
-      lastSeekingTime = event.time;
+      lastSeekingIdx = events.video.length-1;
     }
     if(evt.type === 'seeked') {
-      event.duration = event.time - lastSeekingTime;
+      events.video[lastSeekingIdx].duration = event.time - events.video[lastSeekingIdx].time;
     }
-    events.video.push(event);
   }
 
 function getRandomTestVid() {
@@ -312,11 +315,14 @@ function timeRangesToString(r) {
   return log;
 }
 
+  var bufferingIdx = -1;
+
   function updateBuffered() {
     var v = document.getElementById('video');
     var canvas = document.getElementById('buffered_c');
     var ctx = canvas.getContext('2d');
     var r = v.buffered;
+    var bufferingDuration;
     ctx.fillStyle = "black";
     ctx.fillRect(0,0,canvas.width,canvas.height);
     ctx.fillStyle = "gray";
@@ -334,19 +340,38 @@ function timeRangesToString(r) {
           bufferLen = r.end(i) - pos;
         }
       }
+      if(bufferLen <= 0.1 && v.paused === false && pos !=lastStartPosition) {
+        if(bufferingIdx !== -1) {
+          bufferingDuration = new Date() - t0 - events.video[bufferingIdx].time;
+          events.video[bufferingIdx].duration = bufferingDuration;
+          events.video[bufferingIdx].name = bufferingDuration;
+        } else {
+          events.video.push({ type : 'buffering' , time : new Date() - t0 });
+          // we are in buffering state
+          bufferingIdx = events.video.length-1;
+        }
+      }
+
+      if(bufferLen > 0.1 && bufferingIdx !=-1) {
+          bufferingDuration = new Date() - t0 - events.video[bufferingIdx].time;
+          events.video[bufferingIdx].duration = bufferingDuration;
+          events.video[bufferingIdx].name = bufferingDuration;
+        // we are out of buffering state
+        bufferingIdx = -1;
+      }
+
       var event = { time : new Date() - t0, buffer : Math.round(bufferLen*1000), pos: Math.round(pos*1000)};
       var bufEvents = events.buffer, bufEventLen = bufEvents.length;
       if(bufEventLen > 1) {
         var event0 = bufEvents[bufEventLen-2],event1 = bufEvents[bufEventLen-1];
-        var slopeBuf0 = (event1.buffer - event0.buffer)/(event1.time-event0.time);
-        var slopeBuf1 = (event.buffer - event0.buffer)/(event.time-event0.time);
+        var slopeBuf0 = (event0.buffer - event1.buffer)/(event0.time-event1.time);
+        var slopeBuf1 = (event1.buffer - event.buffer)/(event1.time-event.time);
 
-        var slopePos0 = (event1.pos - event0.pos)/(event1.time-event0.time);
-        var slopePos1 = (event.pos - event0.pos)/(event.time-event0.time);
-        // compute slopes. if less than 10% difference, remove event1
-        //console.log("Math.abs(slope0/slope1 -1):" + Math.abs(slope0/slope1 -1).toFixed(3));
-        if((slopeBuf0 === slopeBuf1 || Math.abs(slopeBuf0/slopeBuf1 -1) <= 0.1) &&
-           (slopePos0 === slopePos1 || Math.abs(slopePos0/slopePos1 -1) <= 0.1))
+        var slopePos0 = (event0.pos - event1.pos)/(event0.time-event1.time);
+        var slopePos1 = (event1.pos - event.pos)/(event1.time-event.time);
+        // compute slopes. if less than 30% difference, remove event1
+        if((slopeBuf0 === slopeBuf1 || Math.abs(slopeBuf0/slopeBuf1 -1) <= 0.3) &&
+           (slopePos0 === slopePos1 || Math.abs(slopePos0/slopePos1 -1) <= 0.3))
          {
           bufEvents.pop();
         }
