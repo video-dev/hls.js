@@ -53,6 +53,11 @@
     ctx.fillText(legend,x_offset,15);
     x_offset += ctx.measureText(legend).width+5;
 
+    legend = 'bitrate';
+    ctx.fillStyle = "black";
+    ctx.fillText(legend,x_offset,15);
+    x_offset += ctx.measureText(legend).width+5;
+
     for (i =0, y_offset = 20; i < events.length; i++) {
       var event = events[i], start = event.time, end = event.time + event.duration + event.latency;
       if((start >= minTime && start <= maxTime)) {
@@ -370,10 +375,25 @@
       ctx.fillText(legend,x_start,yoffset+12);
       x_start += ctx.measureText(legend).width+5;
     }
+
+    if(event.bw) {
+      legend = event.bw + ' kb/s';
+      ctx.fillStyle = "black";
+      ctx.fillText(legend,x_start,yoffset+12);
+      x_start += ctx.measureText(legend).width+5;
+    }
+
     // draw event name
     ctx.fillStyle = "black";
     ctx.font = "15px Arial";
-    ctx.fillText(event.type + ' ' + event.name,5,yoffset+15);
+    legend = event.type;
+    if(event.id2 !== undefined) {
+      legend += ' ' + event.id2;
+    }
+    if(event.id !== undefined) {
+      legend += ' @ ' + event.id;
+    }
+    ctx.fillText(legend,5,yoffset+15);
   }
 
   function canvasDrawVideoEvent(ctx,yoffset,event,minTime,maxTime) {
