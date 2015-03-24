@@ -106,7 +106,7 @@ document.getElementById('windowStart').value=windowStart;document.getElementById
         tnow = 0;
       }
       if(windowSliding) {
-        // let's show the last 60s from current time
+        // let's show the requested window
         if(windowDuration) {
           minTime = Math.max(0, tnow-windowDuration),
           maxTime = Math.min(minTime + windowDuration, tnow);
