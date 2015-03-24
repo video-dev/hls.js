@@ -227,7 +227,7 @@
           events.load.push(event);
           if(hls.bufferTimer === undefined) {
             events.buffer.push({ time : 0, buffer : 0, pos: 0});
-            hls.bufferTimer = window.setInterval(updateBuffered, 100);
+            hls.bufferTimer = window.setInterval(checkBuffer, 100);
           }
           refreshCanvas();
        });
@@ -242,7 +242,6 @@
        video.addEventListener('pause', handleVideoEvent);
        video.addEventListener('play', handleVideoEvent);
        video.addEventListener('playing', handleVideoEvent);
-       video.addEventListener('waiting', handleVideoEvent);
        video.addEventListener('error', handleVideoEvent);
        video.addEventListener('durationchange', handleVideoEvent);
     } else {
@@ -255,15 +254,16 @@
   }
 
 
-var lastSeekingIdx, lastStartPosition;
+var lastSeekingIdx, lastStartPosition,lastDuration;
   function handleVideoEvent(evt) {
     var data = '';
     switch(evt.type) {
        case 'durationchange':
+        lastDuration = evt.target.duration;
          data = evt.target.duration.toFixed(2);
          break;
       case 'resize':
-        data = 'W/H=' + evt.target.videoWidth + '/' + evt.target.videoHeight;
+        data = evt.target.videoWidth + '/' + evt.target.videoHeight;
         break;
       // case 'loadedmetadata':
       //   data = 'duration:' + evt.target.duration + '/videoWidth:' + evt.target.videoWidth + '/videoHeight:' + evt.target.videoHeight;
@@ -316,8 +316,9 @@ function timeRangesToString(r) {
 }
 
   var bufferingIdx = -1;
+  var playbackEnded = false;
 
-  function updateBuffered() {
+  function checkBuffer() {
     var v = document.getElementById('video');
     var canvas = document.getElementById('buffered_c');
     var ctx = canvas.getContext('2d');
@@ -340,15 +341,26 @@ function timeRangesToString(r) {
           bufferLen = r.end(i) - pos;
         }
       }
+      // check if we are in buffering / or playback ended state
       if(bufferLen <= 0.1 && v.paused === false && (pos-lastStartPosition) > 0.5) {
-        if(bufferingIdx !== -1) {
-          bufferingDuration = new Date() - t0 - events.video[bufferingIdx].time;
-          events.video[bufferingIdx].duration = bufferingDuration;
-          events.video[bufferingIdx].name = bufferingDuration;
-        } else {
-          events.video.push({ type : 'buffering' , time : new Date() - t0 });
-          // we are in buffering state
-          bufferingIdx = events.video.length-1;
+        // don't create buffering event if we are at the end of the playlist
+        if(lastDuration -pos <= 0.5) {
+          if(playbackEnded === false) {
+            events.video.push({ type : 'ended' , time : new Date() - t0 });
+            playbackEnded = true;
+          }
+        } else if(playbackEnded !==false) {
+         // we are not at the end of the playlist ... real buffering
+          if(bufferingIdx !== -1) {
+            bufferingDuration = new Date() - t0 - events.video[bufferingIdx].time;
+            events.video[bufferingIdx].duration = bufferingDuration;
+            events.video[bufferingIdx].name = bufferingDuration;
+          } else {
+            events.video.push({ type : 'buffering' , time : new Date() - t0 });
+            // we are in buffering state
+            bufferingIdx = events.video.length-1;
+          }
+          playbackEnded = false;
         }
       }
 
@@ -360,6 +372,7 @@ function timeRangesToString(r) {
         bufferingIdx = -1;
       }
 
+      // update buffer/position for current Time
       var event = { time : new Date() - t0, buffer : Math.round(bufferLen*1000), pos: Math.round(pos*1000)};
       var bufEvents = events.buffer, bufEventLen = bufEvents.length;
       if(bufEventLen > 1) {
