@@ -85,7 +85,12 @@ document.getElementById('windowStart').value=windowStart;document.getElementById
     try {
       var windowTime = getWindowTimeRange();
       canvasBufferTimeRangeUpdate(document.getElementById('bufferTimerange_c'), 0, windowTime.now, windowTime.min,windowTime.max, events.buffer);
-      canvasBufferWindowUpdate(document.getElementById('bufferWindow_c'), windowTime.min,windowTime.max, windowTime.focus, events.buffer);
+      if(windowTime.min !== 0 || windowTime.max !== windowTime.now) {
+        document.getElementById('bufferWindow_c').style.display="block";
+        canvasBufferWindowUpdate(document.getElementById('bufferWindow_c'), windowTime.min,windowTime.max, windowTime.focus, events.buffer);
+      } else {
+        document.getElementById('bufferWindow_c').style.display="none";
+      }
       canvasVideoEventUpdate(document.getElementById('videoEvent_c'), windowTime.min,windowTime.max, events.video);
       canvasLoadEventUpdate(document.getElementById('loadEvent_c'), windowTime.min,windowTime.max, events.load);
     } catch(err) {
