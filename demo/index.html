@@ -117,6 +117,7 @@
    var hls;
    var _url;
    var t0;
+   var isLive = false;
    var video = document.getElementById('video');
    var events;
    video.volume = 0.05;
@@ -200,6 +201,7 @@
        });
        hls.on(hls.Events.LEVEL_LOADED,function(event,data) {
           document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",last loaded level:" + data.id;
+          isLive = data.level.live;
           var event = {
             type : "stream manifest",
             id : data.id,
@@ -343,13 +345,13 @@ function timeRangesToString(r) {
       }
       // check if we are in buffering / or playback ended state
       if(bufferLen <= 0.1 && v.paused === false && (pos-lastStartPosition) > 0.5) {
-        // don't create buffering event if we are at the end of the playlist
-        if(lastDuration -pos <= 0.5) {
+        // don't create buffering event if we are at the end of the playlist, don't report ended for live playlist
+        if(lastDuration -pos <= 0.5  && isLive === false) {
           if(playbackEnded === false) {
             events.video.push({ type : 'ended' , time : new Date() - t0 });
             playbackEnded = true;
           }
-        } else if(playbackEnded !==false) {
+        } else {
          // we are not at the end of the playlist ... real buffering
           if(bufferingIdx !== -1) {
             bufferingDuration = new Date() - t0 - events.video[bufferingIdx].time;
