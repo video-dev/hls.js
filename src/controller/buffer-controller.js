@@ -72,10 +72,10 @@
   start() {
     this.stop();
     this.timer = setInterval(this.ontick, 100);
-    observer.on(Event.FRAGMENT_LOADED, this.onfl);
-    observer.on(Event.INIT_SEGMENT, this.onis);
-    observer.on(Event.FRAGMENT_PARSING, this.onfpg);
-    observer.on(Event.FRAGMENT_PARSED, this.onfp);
+    observer.on(Event.FRAG_LOADED, this.onfl);
+    observer.on(Event.FRAG_PARSING_INIT_SEGMENT, this.onis);
+    observer.on(Event.FRAG_PARSING_DATA, this.onfpg);
+    observer.on(Event.FRAG_PARSED, this.onfp);
     observer.on(Event.LEVEL_LOADED, this.onll);
     this.tick();
   }
@@ -85,11 +85,11 @@
       clearInterval(this.timer);
     }
     this.timer = undefined;
-    observer.removeListener(Event.FRAGMENT_LOADED, this.onfl);
-    observer.removeListener(Event.FRAGMENT_PARSED, this.onfp);
-    observer.removeListener(Event.FRAGMENT_PARSING, this.onfpg);
+    observer.removeListener(Event.FRAG_LOADED, this.onfl);
+    observer.removeListener(Event.FRAG_PARSED, this.onfp);
+    observer.removeListener(Event.FRAG_PARSING_DATA, this.onfpg);
     observer.removeListener(Event.LEVEL_LOADED, this.onll);
-    observer.removeListener(Event.INIT_SEGMENT, this.onis);
+    observer.removeListener(Event.FRAG_PARSING_INIT_SEGMENT, this.onis);
   }
 
   tick() {
@@ -325,7 +325,7 @@
         this.state = IDLE;
         this.fragmentBitrateTest = false;
         data.stats.tparsed = data.stats.tbuffered = new Date();
-        observer.trigger(Event.FRAGMENT_BUFFERED, { stats : data.stats, frag : this.frag});
+        observer.trigger(Event.FRAG_BUFFERED, { stats : data.stats, frag : this.frag});
         this.frag = null;
       } else {
         this.state = PARSING;
@@ -388,7 +388,7 @@
     //trigger handler right now
     if(this.state === APPENDING && this.mp4segments.length === 0)  {
       this.stats.tbuffered = new Date();
-      observer.trigger(Event.FRAGMENT_BUFFERED, { stats : this.stats, frag : this.frag});
+      observer.trigger(Event.FRAG_BUFFERED, { stats : this.stats, frag : this.frag});
       this.state = IDLE;
     }
     this.tick();

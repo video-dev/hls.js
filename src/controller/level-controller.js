@@ -18,7 +18,7 @@
     this.onll = this.onLevelLoaded.bind(this);
     this.ontick = this.tick.bind(this);
     observer.on(Event.MANIFEST_LOADED, this.onml);
-    observer.on(Event.FRAGMENT_LOADED, this.onfl);
+    observer.on(Event.FRAG_LOADED, this.onfl);
     observer.on(Event.LEVEL_LOADED, this.onll);
     this._manualLevel = this._autoLevelCapping = -1;
     //this.startLevel = startLevel;
@@ -26,7 +26,7 @@
 
   destroy() {
     observer.removeListener(Event.MANIFEST_LOADED, this.onml);
-    observer.removeListener(Event.FRAGMENT_LOADED, this.onfl);
+    observer.removeListener(Event.FRAG_LOADED, this.onfl);
     observer.removeListener(Event.LEVEL_LOADED, this.onll);
     if(this.timer) {
      clearInterval(this.timer);

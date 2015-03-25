@@ -158,7 +158,6 @@ import observer             from '../observer';
         }
         observer.trigger(Event.LEVEL_LOADED,
                         { level : level,
-                          url : url,
                           id : id,
                           mtime : mtime,
                           stats : this.stats});
@@ -166,7 +165,7 @@ import observer             from '../observer';
         // multi level playlist, parse level info
         observer.trigger(Event.MANIFEST_LOADED,
                         { levels : this.parseMasterPlaylist(string,url),
-                          url : url ,
+                          url : url,
                           id : id,
                           mtime : mtime,
                           stats : this.stats});

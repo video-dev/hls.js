@@ -12,23 +12,23 @@ export default {
   // Identifier for a level switch event
   LEVEL_SWITCH :  'hlsLevelSwitch',
   // Identifier for a fragment loading event
-  FRAGMENT_LOADING :  'hlsFragmentLoading',
+  FRAG_LOADING :  'hlsFragmentLoading',
   // Identifier for a fragment loaded event
-  FRAGMENT_LOADED :  'hlsFragmentLoaded',
-  // Identifier for a fragment parsing event
-  FRAGMENT_PARSING :  'hlsFragmentParsing',
+  FRAG_LOADED :  'hlsFragmentLoaded',
+  // Identifier for a fragment parsing init segment event
+  FRAG_PARSING_INIT_SEGMENT :  'hlsFragmentParsingInitSegment',
+  // Identifier for a fragment parsing data event
+  FRAG_PARSING_DATA :  'hlsFragmentParsingData',
+  // Identifier for a fragment parsing error event
+  FRAG_PARSING_ERROR :  'hlsFragmentParsingError',
   // Identifier for a fragment parsed event
-  FRAGMENT_PARSED :  'hlsFragmentParsed',
+  FRAG_PARSED :  'hlsFragmentParsed',
   // Identifier for a fragment buffered  event
-  FRAGMENT_BUFFERED :  'hlsFragmentBuffered',
-  // Identifier for an init segment event
-  INIT_SEGMENT :  'hlsInitSegment',
+  FRAG_BUFFERED :  'hlsFragmentBuffered',
   // Identifier for a load error event
   LOAD_ERROR :  'hlsLoadError',
   // Identifier for a level switch error
   LEVEL_ERROR :  'hlsLevelError',
   // Identifier for a video error event
-  VIDEO_ERROR :  'hlsVideoError',
-  // Identifier for a parsing error event
-  PARSING_ERROR :  'hlsParsingError',
+  VIDEO_ERROR :  'hlsVideoError'
 };
