@@ -78,9 +78,10 @@ class LevelController {
                 break;
             }
         }
+        //this._startLevel = -1;
         observer.trigger(Event.MANIFEST_PARSED, {
             levels: this._levels,
-            startLevel: i,
+            startLevel: this._startLevel,
             audiocodecswitch: aac && heaac
         });
         return;
