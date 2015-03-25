@@ -33,12 +33,12 @@ class FragmentLoader {
         xhr.open('GET', frag.url, true);
         xhr.responseType = 'arraybuffer';
         xhr.send();
-        observer.trigger(Event.FRAGMENT_LOADING, { url: frag.url });
+        observer.trigger(Event.FRAG_LOADING, { frag: frag });
     }
 
     loadsuccess(event) {
         var payload = event.currentTarget.response;
-        observer.trigger(Event.FRAGMENT_LOADED, {
+        observer.trigger(Event.FRAG_LOADED, {
             payload: payload,
             frag: this.frag,
             levelId: this.levelId,

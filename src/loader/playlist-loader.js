@@ -185,7 +185,6 @@ class PlaylistLoader {
                 }
                 observer.trigger(Event.LEVEL_LOADED, {
                     level: level,
-                    url: url,
                     id: id,
                     mtime: mtime,
                     stats: this.stats

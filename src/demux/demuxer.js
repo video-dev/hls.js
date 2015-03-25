@@ -69,8 +69,8 @@ class Demuxer {
     onWorkerMessage(ev) {
         //console.log('onWorkerMessage:' + ev.data.event);
         switch (ev.data.event) {
-            case Event.INIT_SEGMENT:
-                observer.trigger(Event.INIT_SEGMENT, {
+            case Event.FRAG_PARSING_INIT_SEGMENT:
+                observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
                     moov: new Uint8Array(ev.data.moov),
                     codec: ev.data.codec,
                     width: ev.data.width,
@@ -78,8 +78,8 @@ class Demuxer {
                     audioChannelCount: ev.data.audioChannelCount
                 });
                 break;
-            case Event.FRAGMENT_PARSING:
-                observer.trigger(Event.FRAGMENT_PARSING, {
+            case Event.FRAG_PARSING_DATA:
+                observer.trigger(Event.FRAG_PARSING_DATA, {
                     moof: new Uint8Array(ev.data.moof),
                     mdat: new Uint8Array(ev.data.mdat),
                     startPTS: ev.data.startPTS,
@@ -89,8 +89,8 @@ class Demuxer {
                     type: ev.data.type
                 });
                 break;
-            case Event.FRAGMENT_PARSED:
-                observer.trigger(Event.FRAGMENT_PARSED);
+            case Event.FRAG_PARSED:
+                observer.trigger(Event.FRAG_PARSED);
                 break;
             default:
                 break;

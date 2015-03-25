@@ -140,19 +140,19 @@ full list of Events available below :
   - `hls.events.LEVEL_LOADING`  - Identifier for a level loading event
   	-  data: { id : id of level being loaded}
   - `hls.events.LEVEL_LOADED`  - Identifier for a level loaded event
-  	-  data: { level : level object , url : level URL}
+  	-  data: { level : level object }
   - `hls.events.LEVEL_SWITCH`  - Identifier for a level switch event
   	-  data: { id : id of new level }
-  - `hls.events.FRAGMENT_LOADING`  - Identifier for a fragment loading event
-  	-  data: { url : fragment URL}
-  - `hls.events.FRAGMENT_LOADED`  - Identifier for a fragment loaded event
-	  -  data: { payload : fragment payload, frag : fragment object}
-  - `hls.events.FRAGMENT_PARSING`  - Identifier for a fragment parsing event
+  - `hls.events.FRAG_LOADING`  - Identifier for a fragment loading event
+  	-  data: { frag : fragment object}
+  - `hls.events.FRAG_LOADED`  - Identifier for a fragment loaded event
+	  -  data: { frag : fragment object, payload : fragment payload}
+  - `hls.events.FRAG_PARSING_INIT_SEGMENT` - Identifier for a Fragment Parsing Init Segment event
+    -  data: { moov : moov MP4 box, codecs : codecs found while parsing fragment}    
+  - `hls.events.FRAG_PARSING_DATA`  - Identifier for a fragment parsing data event
 	  -  data: { moof : moof MP4 box, mdat : mdat MP4 box}
-  - `hls.events.FRAGMENT_PARSED`  - Identifier for a fragment parsed event
+  - `hls.events.FRAG_PARSED`  - Identifier for a fragment parsed event
 	  -  data: undefined
-  - `hls.events.INIT_SEGMENT` - Identifier for a Init Segment  event
-	  -  data: { moov : moov MP4 box, codecs : codecs found while parsing fragment}
   - `hls.events.LOAD_ERROR` - Identifier for fragment/playlist load error
 	  -  data: { url : faulty URL, response : XHR response}
   - `hls.events.LEVEL_ERROR` - Identifier for a level switch error

@@ -172,7 +172,7 @@
           bufferingIdx = -1;
           hls.attachSource(_url);
        });
-       hls.on(hls.Events.INIT_SEGMENT,function(event,data) {
+       hls.on(hls.Events.FRAG_PARSING_INIT_SEGMENT,function(event,data) {
           showCanvas();
           document.getElementById("HlsStatus").innerHTML = "playlist successfully loaded," + hls.levels.length + " levels found";
        });
@@ -217,7 +217,7 @@
           events.load.push(event);
           refreshCanvas();
        });
-       hls.on(hls.Events.FRAGMENT_BUFFERED,function(event,data) {
+       hls.on(hls.Events.FRAG_BUFFERED,function(event,data) {
           var event = {
             type : "fragment",
             id : data.frag.level,

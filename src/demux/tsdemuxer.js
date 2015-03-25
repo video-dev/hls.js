@@ -62,7 +62,7 @@ class TSDemuxer {
             this._flushAACSamples();
         }
         //notify end of parsing
-        observer.trigger(Event.FRAGMENT_PARSED);
+        observer.trigger(Event.FRAG_PARSED);
     }
 
     destroy() {
@@ -403,7 +403,7 @@ class TSDemuxer {
         endOffset = this.nextAvcPts / 1000;
 
         moof = MP4.moof(track.sequenceNumber++, firstDTS * 90, track);
-        observer.trigger(Event.FRAGMENT_PARSING, {
+        observer.trigger(Event.FRAG_PARSING_DATA, {
             moof: moof,
             mdat: mdat,
             startPTS: startOffset,
@@ -544,7 +544,7 @@ class TSDemuxer {
             }
         } else {
             observer.trigger(
-                Event.PARSING_ERROR,
+                Event.FRAG_PARSING_ERROR,
                 'Stream did not start with ADTS header.'
             );
             return;
@@ -654,7 +654,7 @@ class TSDemuxer {
         endOffset = this.nextAacPts / 1000;
 
         moof = MP4.moof(track.sequenceNumber++, firstDTS * 90, track);
-        observer.trigger(Event.FRAGMENT_PARSING, {
+        observer.trigger(Event.FRAG_PARSING_DATA, {
             moof: moof,
             mdat: mdat,
             startPTS: startOffset,
@@ -780,7 +780,7 @@ class TSDemuxer {
         if (this._avcId === -1) {
             //audio only
             if (this._aacTrack.config) {
-                observer.trigger(Event.INIT_SEGMENT, {
+                observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
                     moov: MP4.initSegment([this._aacTrack]),
                     codec: this._aacTrack.codec,
                     audioChannelCount: this._aacTrack.channelCount
@@ -797,7 +797,7 @@ class TSDemuxer {
         } else if (this._aacId === -1) {
             //video only
             if (this._avcTrack.sps && this._avcTrack.pps) {
-                observer.trigger(Event.INIT_SEGMENT, {
+                observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
                     moov: MP4.initSegment([this._avcTrack]),
                     codec: this._avcTrack.codec,
                     width: this._avcTrack.width,
@@ -819,7 +819,7 @@ class TSDemuxer {
                 this._avcTrack.sps &&
                 this._avcTrack.pps
             ) {
-                observer.trigger(Event.INIT_SEGMENT, {
+                observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
                     moov: MP4.initSegment([this._avcTrack, this._aacTrack]),
                     codec: this._avcTrack.codec + ',' + this._aacTrack.codec,
                     width: this._avcTrack.width,
