@@ -40,6 +40,9 @@
     observer.on(Event.FRAMEWORK_READY, this.onfr);
     observer.on(Event.MANIFEST_PARSED, this.onmp);
     this.demuxer = new Demuxer();
+    // video seeking listener
+    this.onvseeking = this.onVideoSeeking.bind(this);
+    video.addEventListener('seeking',this.onvseeking);
   }
 
   destroy() {
@@ -60,6 +63,9 @@
     }
     observer.removeListener(Event.FRAMEWORK_READY, this.onfr);
     observer.removeListener(Event.MANIFEST_PARSED, this.onmp);
+    // remove video listener
+    this.video.removeEventListener('seeking',this.onvseeking);
+    this.onvseeking = null;
     this.state = IDLE;
   }
 
@@ -239,6 +245,20 @@
 
   onFrameworkReady(event,data) {
     this.mediaSource = data.mediaSource;
+  }
+
+  onVideoSeeking(event) {
+    if(this.state === LOADING) {
+      // check if currently loaded fragment is inside buffer.
+      //if outside, cancel fragment loading, otherwise do nothing
+      if(this.bufferInfo.len === 0) {
+      logger.log('seeking outside of buffer while fragment load in progress, cancel fragment load');
+      this.fragmentLoader.abort();
+      this.state = IDLE;
+      }
+    }
+    // tick to speed up processing
+    this.tick();
   }
 
   onManifestParsed(event,data) {
