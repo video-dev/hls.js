@@ -43,7 +43,6 @@ import {logger}             from '../utils/logger';
     observer.trigger(Event.FRAG_LOADED,
                     { payload : payload,
                       frag : this.frag ,
-                      levelId : this.levelId,
                       stats : {trequest : this.trequest, tfirst : this.tfirst, tload : new Date(), length :payload.byteLength }});
   }
 

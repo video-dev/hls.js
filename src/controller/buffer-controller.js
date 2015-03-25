@@ -279,9 +279,9 @@
 
   onLevelLoaded(event,data) {
     var fragments = data.level.fragments,duration = data.level.totalduration;
-    logger.log('level ' + data.id + ' loaded [' + fragments[0].sn + ',' + fragments[fragments.length-1].sn + '],duration:' + duration);
+    logger.log('level ' + data.levelId + ' loaded [' + fragments[0].sn + ',' + fragments[fragments.length-1].sn + '],duration:' + duration);
 
-    var level = this.levels[data.id],sliding = 0, levelCurrent = this.levels[this.level];
+    var level = this.levels[data.levelId],sliding = 0, levelCurrent = this.levels[this.level];
     // check if playlist is already loaded (if yes, it should be a live playlist)
     if(levelCurrent && levelCurrent.data && levelCurrent.data.live) {
       //  playlist sliding is the sum of : current playlist sliding + sliding of new playlist compared to current one
