@@ -363,7 +363,7 @@ class BufferController {
                     duration - 3 * data.level.targetduration
                 );
             }
-            this.startLevelLoaded = false;
+            this.startLevelLoaded = true;
         }
         // only switch batck to IDLE state if we were waiting for level to start downloading a new fragment
         if (this.state === WAITING_LEVEL) {
