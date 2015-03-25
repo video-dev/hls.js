@@ -1,8 +1,6 @@
 export default {
     // Identifier for a framework ready event, triggered when ready to set DataSource
     FRAMEWORK_READY: 'hlsFrameworkReady',
-    // Identifier for a manifest loading event, triggered after a call to hls.attachSource(url)
-    MANIFEST_LOADING: 'hlsManifestLoading',
     //Identifier for a manifest loaded event
     MANIFEST_LOADED: 'hlsManifestLoaded',
     //Identifier for a manifest parsed event, when this event is received, main manifest and start level has been retrieved
@@ -32,7 +30,5 @@ export default {
     // Identifier for a video error event
     VIDEO_ERROR: 'hlsVideoError',
     // Identifier for a parsing error event
-    PARSING_ERROR: 'hlsParsingError',
-    // Identifier for a playback complete event
-    PLAYBACK_COMPLETE: 'hlsPlayBackComplete'
+    PARSING_ERROR: 'hlsParsingError'
 };
