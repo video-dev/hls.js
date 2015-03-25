@@ -105,7 +105,7 @@
          // check if we need to load playlist for this level
         if(level.loading === undefined || (level.data && level.data.live === true)) {
           // level not retrieved yet, or live playlist we need to (re)load it
-          observer.trigger(Event.LEVEL_LOADING, { id : newLevel});
+          observer.trigger(Event.LEVEL_LOADING, { levelId : newLevel});
           logger.log('(re)loading playlist for level ' + newLevel);
           this.playlistLoader.load(level.url,newLevel);
           level.loading = true;
