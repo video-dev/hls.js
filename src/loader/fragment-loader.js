@@ -11,9 +11,13 @@ class FragmentLoader {
     constructor() {}
 
     destroy() {
+        this.abort();
+        this.xhr = null;
+    }
+
+    abort() {
         if (this.xhr && this.xhr.readyState !== 4) {
             this.xhr.abort();
-            this.xhr = null;
         }
     }
 
