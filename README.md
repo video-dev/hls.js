@@ -97,20 +97,71 @@ width: 512],
 ```
 
 #### hls.level
-getter : Return the quality level of last loaded fragment
+get/set : quality level of last loaded fragment.
 
-setter : set quality level for next loaded fragment, set to -1 for automatic level selection
+set to -1 for automatic level selection
+
+#### hls.startLevel
+
+get/set :  start level (level of first fragment that will be played back)
+
+  - if undefined : first level appearing in manifest will be used as start level.
+  -  if -1 : automatic start level selection, playback will start from level matching download bandwidth (determined from download of first segment)
+
+default value is undefined (first level appearing in Manifest will be used as start level)
 
 #### hls.autoLevelEnabled
 
 tell whether auto level selection is enabled or not
 
 #### hls.autoLevelCapping
-getter : Return the capping/max level value that could be used by automatic level selection algorithm
-
-setter : Set the capping/max level value that could be used by automatic level selection algorithm
+get/set : capping/max level value that could be used by automatic level selection algorithm
 
 default value is -1 (no level capping)
+
+## Runtime Events
+
+hls.js fires a bunch of events, that could be registered as below:
+
+
+```html
+hls.on(hls.Events.LEVEL_LOADED,function(event,data) {
+	var level_duration = data.level.totalduration;
+});
+```
+full list of Events available below :
+
+  - `hls.events.FRAMEWORK_READY`  - Identifier for a framework ready event, triggered when ready to set DataSource
+  	-  data: { mediaSource }
+  - `hls.events.MANIFEST_LOADED`  - Identifier for a manifest loaded event
+  	-  data: { levels : [available quality levels] , url : manifestURL}
+  - `hls.events.MANIFEST_PARSED`  - Identifier for a manifest parsed event
+  	-  data: { levels : [available quality levels] , startLevel : playback start level, audiocodecswitch: true if different audio codecs used}
+  - `hls.events.LEVEL_LOADING`  - Identifier for a level loading event
+  	-  data: { id : id of level being loaded}
+  - `hls.events.LEVEL_LOADED`  - Identifier for a level loaded event
+  	-  data: { level : level object , url : level URL}
+  - `hls.events.LEVEL_SWITCH`  - Identifier for a level switch event
+  	-  data: { id : id of new level }
+  - `hls.events.FRAGMENT_LOADING`  - Identifier for a fragment loading event
+  	-  data: { url : fragment URL}
+  - `hls.events.FRAGMENT_LOADED`  - Identifier for a fragment loaded event
+	  -  data: { payload : fragment payload, frag : fragment object}
+  - `hls.events.FRAGMENT_PARSING`  - Identifier for a fragment parsing event
+	  -  data: { moof : moof MP4 box, mdat : mdat MP4 box}
+  - `hls.events.FRAGMENT_PARSED`  - Identifier for a fragment parsed event
+	  -  data: undefined
+  - `hls.events.INIT_SEGMENT` - Identifier for a Init Segment  event
+	  -  data: { moov : moov MP4 box, codecs : codecs found while parsing fragment}
+  - `hls.events.LOAD_ERROR` - Identifier for fragment/playlist load error
+	  -  data: { url : faulty URL, response : XHR response}
+  - `hls.events.LEVEL_ERROR` - Identifier for a level switch error
+	  -  data: { level : faulty level Id, event : error description}
+  - `hls.events.VIDEO_ERROR` - Identifier for a video error
+	  -  data: undefined
+  - `hls.events.PARSING_ERROR` - Identifier for a fragment parsing error
+	  -  data: parsing error description
+
 
 ## compatibility
  hls.js is compatible with browsers supporting MSE with 'video/MP4' inputs.
