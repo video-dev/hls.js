@@ -103,7 +103,7 @@
         observer.trigger(Event.LEVEL_SWITCH, { levelId : newLevel});
         var level = this._levels[newLevel];
          // check if we need to load playlist for this level
-        if(level.loading === undefined || (level.data && level.data.live === true)) {
+        if(level.loading === undefined || (level.details && level.details.live === true)) {
           // level not retrieved yet, or live playlist we need to (re)load it
           observer.trigger(Event.LEVEL_LOADING, { levelId : newLevel});
           logger.log('(re)loading playlist for level ' + newLevel);
@@ -156,10 +156,10 @@
 
   onLevelLoaded(event,data) {
     // check if current playlist is a live playlist
-    if(data.level.live && !this.timer) {
+    if(data.details.live && !this.timer) {
       // if live playlist we will have to reload it periodically
       // set reload period to playlist target duration
-      this.timer = setInterval(this.ontick, 1000*data.level.targetduration);
+      this.timer = setInterval(this.ontick, 1000*data.details.targetduration);
     }
   }
 

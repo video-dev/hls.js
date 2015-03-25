@@ -39,71 +39,47 @@ working in Chrome (also on mobile device)
     var video = document.getElementById('video');
     var hls = new Hls(video);
     hls.on(hls.Events.FRAMEWORK_READY,function() {
-      hls.attachSource(manifest);
+      hls.attachSource('http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8');
   });
  }
 </script>
 ```
 
+## compatibility
+ hls.js is compatible with browsers supporting MSE with 'video/MP4' inputs.
+as of today, it is supported on:
+
+ * Chrome for Desktop 34+
+ * Safari for Mac 8+
+ * IE for Windows 11+
+ * Chrome for Android 34+
+ * IE for Winphone 8.1+
 
 
-
-## Runtime Control
-
-### Video Control
+## Video Control
 
 video is controlled through HTML ```<video>``` element.
 
-standard control and events could be used seamlessly.
+HTMLVideoElement control and events could be used seamlessly.
 
-### Level Duration
 
-level duration could be retrieved by listening to ```hls.Events.LEVEL_LOADED```:
-
-```html
-hls.on(hls.Events.LEVEL_LOADED,function(event,data) {
-	var level_duration = data.level.totalduration;
-});
-```
-
-video duration can also be retrieved from ```<video>``` element, but only after [init segment](http://w3c.github.io/media-source/#init-segment) has been appended into [SourceBuffer](http://w3c.github.io/media-source/#sourcebuffer).
-
-### Quality switch
+## Quality switch Control
 
 hls.js handles quality switch automatically.
 it is also possible to manually control quality swith using below API:
 
-#### hls.levels
-return an array of available quality levels
 
-```
-[
-[bitrate: 246440,
-codecs: "mp4a.40.5,avc1.42000d",
-height: 136,
-name: "240",
-url: "http://url1.m3u8",
-width: 320
-],
-[
-bitrate: 460560,
-codecs: "mp4a.40.5,avc1.420015",
-height: 216,
-name: "380",
-url: "http://url2.m3u8",
-width: 512],
-...
-]
-```
+#### hls.levels
+return array of available quality levels
 
 #### hls.level
-get/set : quality level of last loaded fragment.
+get/set : index of quality level of last loaded fragment.
 
 set to -1 for automatic level selection
 
 #### hls.startLevel
 
-get/set :  start level (level of first fragment that will be played back)
+get/set :  start level index (level of first fragment that will be played back)
 
   - if undefined : first level appearing in manifest will be used as start level.
   -  if -1 : automatic start level selection, playback will start from level matching download bandwidth (determined from download of first segment)
@@ -131,29 +107,29 @@ hls.on(hls.Events.LEVEL_LOADED,function(event,data) {
 ```
 full list of Events available below :
 
-  - `hls.events.FRAMEWORK_READY`  - Identifier for a framework ready event, triggered when ready to set DataSource
+  - `hls.events.FRAMEWORK_READY`  - fired when framework and MediaSource is ready to be used
   	-  data: { mediaSource }
-  - `hls.events.MANIFEST_LOADED`  - Identifier for a manifest loaded event
-  	-  data: { levels : [available quality levels] , url : manifestURL}
-  - `hls.events.MANIFEST_PARSED`  - Identifier for a manifest parsed event
+  - `hls.events.MANIFEST_LOADED`  - fired after manifest has been loaded
+  	-  data: { levels : [available quality levels] , url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
+  - `hls.events.MANIFEST_PARSED`  - fired after manifest has been parsed
   	-  data: { levels : [available quality levels] , startLevel : playback start level, audiocodecswitch: true if different audio codecs used}
-  - `hls.events.LEVEL_LOADING`  - Identifier for a level loading event
-  	-  data: { id : id of level being loaded}
-  - `hls.events.LEVEL_LOADED`  - Identifier for a level loaded event
-  	-  data: { level : level object }
-  - `hls.events.LEVEL_SWITCH`  - Identifier for a level switch event
+  - `hls.events.LEVEL_LOADING`  - fired when a level playlist loading starts
+  	-  data: { levelId : id of level being loaded}
+  - `hls.events.LEVEL_LOADED`  - fired when a level playlist loading finishes
+  	-  data: { details : levelDetails object, levelId : id of loaded level, stats : { trequest, tfirst, tload, mtime} }
+  - `hls.events.LEVEL_SWITCH`  - fired when a level switch is requested
   	-  data: { levelId : id of new level }
-  - `hls.events.FRAG_LOADING`  - Identifier for a fragment loading event
+  - `hls.events.FRAG_LOADING`  - fired when a fragment loading starts
   	-  data: { frag : fragment object}
-  - `hls.events.FRAG_LOADED`  - Identifier for a fragment loaded event
+  - `hls.events.FRAG_LOADED`  - fired when a fragment loading is completed
 	  -  data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length}}
-  - `hls.events.FRAG_PARSING_INIT_SEGMENT` - Identifier for a Fragment Parsing Init Segment event
+  - `hls.events.FRAG_PARSING_INIT_SEGMENT` - fired when Init Segment has been extracted from fragment
     -  data: { moov : moov MP4 box, codecs : codecs found while parsing fragment}    
-  - `hls.events.FRAG_PARSING_DATA`  - Identifier for a fragment parsing data event
+  - `hls.events.FRAG_PARSING_DATA`  - fired when moof/mdat have been extracted from fragment
 	  -  data: { moof : moof MP4 box, mdat : mdat MP4 box}
-  - `hls.events.FRAG_PARSED`  - Identifier for a fragment parsed event
+  - `hls.events.FRAG_PARSED`  - fired when fragment parsing is completed
 	  -  data: undefined
-  - `hls.events.FRAG_BUFFERED`  - fired after all fragment remuxed MP4 boxes have been appended into SourceBuffer
+  - `hls.events.FRAG_BUFFERED`  - fired when fragment remuxed MP4 boxes have all been appended into SourceBuffer
     -  data: { frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length} }
   - `hls.events.LOAD_ERROR` - Identifier for fragment/playlist load error
 	  -  data: { url : faulty URL, response : XHR response}
@@ -164,13 +140,72 @@ full list of Events available below :
   - `hls.events.PARSING_ERROR` - Identifier for a fragment parsing error
 	  -  data: parsing error description
 
+## Objects
+### Level
 
-## compatibility
- hls.js is compatible with browsers supporting MSE with 'video/MP4' inputs.
-as of today, it is supported on:
+a level object represents a given quality level.
+it contains quality level related info, retrieved from manifest, such as
 
- * Chrome for Desktop 34+
- * Safari for Mac 8+
- * IE for Windows 11+
- * Chrome for Android 34+
- * IE for Winphone 8.1+
+* level bitrate
+* used codecs
+* video width/height
+* level name
+* level URL
+
+see sample Level object below:
+
+```
+{
+  url: 'http://levelURL.com'
+  bitrate: 246440,
+  name: "240",
+  codecs: "mp4a.40.5,avc1.42000d",
+  width: 320,
+  height: 136,
+}
+```
+
+### Level details
+
+level detailed infos contains level details retrieved after level playlist parsing, they are specified below :
+
+* start sequence number
+* end sequence number
+* level total duration
+* level fragment target duration
+* array of fragments info
+* is this level a live playlist or not ?
+
+see sample object below, available after corresponding LEVEL_LOADED event has been fired:
+
+```
+{
+	startSN: 0,
+	endSN: 50,
+	totalduration: 510,
+	targetduration: 10,	  
+	fragments: Array[51],
+	live: false
+}
+```
+
+### Fragment
+the Fragment object contains fragment related info, such as
+
+* fragment URL
+* fragment duration
+* fragment sequence number
+* fragment start offset
+* level Id
+
+see sample object below:
+
+```
+{
+  duration: 10,
+  level : 3,
+  sn: 35,
+  start : 30,
+  url: 'http://fragURL.com'
+}
+```

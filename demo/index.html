@@ -203,12 +203,12 @@
        });
        hls.on(hls.Events.LEVEL_LOADED,function(event,data) {
           document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",last loaded level:" + data.levelId;
-          isLive = data.level.live;
+          isLive = data.details.live;
           var event = {
             type : "level",
             id : data.levelId,
-            start : data.level.startSN,
-            end : data.level.endSN,
+            start : data.details.startSN,
+            end : data.details.endSN,
             time : data.stats.trequest - t0,
             latency : data.stats.tfirst - data.stats.trequest,
             load : data.stats.tload - data.stats.tfirst,
