@@ -20,7 +20,7 @@
     observer.on(Event.MANIFEST_LOADED, this.onml);
     observer.on(Event.FRAGMENT_LOADED, this.onfl);
     observer.on(Event.LEVEL_LOADED, this.onll);
-    this._manualLevel = -1;
+    this._manualLevel = this._autoLevelCapping = -1;
     //this.startLevel = startLevel;
   }
 
@@ -121,6 +121,17 @@
     this.level = newLevel;
   }
 
+  /** Return the capping/max level value that could be used by automatic level selection algorithm **/
+  get autoLevelCapping() {
+    return this._autoLevelCapping;
+  }
+
+  /** set the capping/max level value that could be used by automatic level selection algorithm **/
+  set autoLevelCapping(newLevel) {
+    this._autoLevelCapping = newLevel;
+  }
+
+
   onFragmentLoaded(event,data) {
     var stats,rtt,loadtime;
     stats = data.stats;
@@ -159,11 +170,16 @@
   }
 
   nextAutoLevel() {
-    var lastbw = this.lastbw,adjustedbw,i;
+    var lastbw = this.lastbw,adjustedbw,i,maxAutoLevel;
+    if(this._autoLevelCapping == -1) {
+      maxAutoLevel = this._levels.length-1;
+    } else {
+      maxAutoLevel = this._autoLevelCapping;
+    }
     // follow algorithm captured from stagefright :
     // https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp
     // Pick the highest bandwidth stream below or equal to estimated bandwidth.
-    for(i =0; i < this._levels.length ; i++) {
+    for(i =0; i <= maxAutoLevel ; i++) {
     // consider only 80% of the available bandwidth, but if we are switching up,
     // be even more conservative (70%) to avoid overestimating and immediately
     // switching back.

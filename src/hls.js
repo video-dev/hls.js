@@ -111,6 +111,16 @@ class Hls {
     this.levelController.manualLevel = newLevel;
   }
 
+  /** Return the capping/max level value that could be used by automatic level selection algorithm **/
+  get autoLevelCapping() {
+    return this.levelController.autoLevelCapping;
+  }
+
+  /** set the capping/max level value that could be used by automatic level selection algorithm **/
+  set autoLevelCapping(newLevel) {
+    this.levelController.autoLevelCapping = newLevel;
+  }
+
   /* check if we are in automatic level selection mode */
   get autoLevelEnabled() {
     return (this.levelController.manualLevel  === -1);

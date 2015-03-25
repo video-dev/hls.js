@@ -105,6 +105,12 @@ setter : set quality level for next loaded fragment, set to -1 for automatic lev
 
 tell whether auto level selection is enabled or not
 
+#### hls.autoLevelCapping
+getter : Return the capping/max level value that could be used by automatic level selection algorithm
+
+setter : Set the capping/max level value that could be used by automatic level selection algorithm
+
+default value is -1 (no level capping)
 
 ## compatibility
  hls.js is compatible with browsers supporting MSE with 'video/MP4' inputs.
