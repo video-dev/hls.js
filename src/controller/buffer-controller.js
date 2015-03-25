@@ -124,9 +124,14 @@
           var loadLevel;
           if(this.waitlevel === false) {
             // determine loading level
-            if(this.justStarted === true) {
+            if(this.startFragmentLoaded === false) {
               // get start level from level Controller
               loadLevel = this.levelController.startLevel();
+              if (loadLevel === -1) {
+                // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
+                loadLevel = 0;
+                this.fragmentBitrateTest = true;
+              }
             } else {
               // we are not at playback start, get next load level from level Controller
               loadLevel = this.levelController.nextLevel();
@@ -267,7 +272,8 @@
       logger.log('both AAC/HE-AAC audio found in levels; declaring audio codec as HE-AAC');
     }
     this.levels = data.levels;
-    this.justStarted = true;
+    this.startLevelLoaded = false;
+    this.startFragmentLoaded = false;
     this.start();
   }
 
@@ -297,12 +303,12 @@
     level.data = data.level;
     level.data.sliding = sliding;
     this.demuxer.duration = duration;
-    if(this.justStarted === true) {
+    if(this.startLevelLoaded === false) {
       // if live playlist, set start position to be fragment N-3
       if(data.level.live) {
         this.video.currentTime = Math.max(0,duration - 3 * data.level.targetduration);
       }
-      this.justStarted = false;
+      this.startLevelLoaded = false;
     }
     // only switch batck to IDLE state if we were waiting for level to start downloading a new fragment
     if(this.state === WAITING_LEVEL) {
@@ -314,10 +320,20 @@
 
   onFragmentLoaded(event,data) {
     if(this.state === LOADING) {
-      this.state = PARSING;
-      // transmux the MPEG-TS data to ISO-BMFF segments
-      this.stats = data.stats;
-      this.demuxer.push(data.payload,this.levels[this.level].codecs,this.frag.start);
+      if(this.fragmentBitrateTest === true) {
+        // switch back to IDLE state ... we just loaded a fragment to determine adequate start bitrate and initialize autoswitch algo
+        this.state = IDLE;
+        this.fragmentBitrateTest = false;
+        data.stats.tparsed = data.stats.tbuffered = new Date();
+        observer.trigger(Event.FRAGMENT_BUFFERED, { stats : data.stats, frag : this.frag});
+        this.frag = null;
+      } else {
+        this.state = PARSING;
+        // transmux the MPEG-TS data to ISO-BMFF segments
+        this.stats = data.stats;
+        this.demuxer.push(data.payload,this.levels[this.level].codecs,this.frag.start);
+      }
+      this.startFragmentLoaded = true;
     }
   }
 
@@ -362,9 +378,9 @@
   }
 
   onFragmentParsed() {
-    this.state = PARSED;
-    this.stats.tparsed = new Date();
-     //trigger handler right now
+      this.state = PARSED;
+      this.stats.tparsed = new Date();
+    //trigger handler right now
     this.tick();
   }
 
