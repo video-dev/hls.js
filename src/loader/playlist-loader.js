@@ -140,6 +140,11 @@ import observer             from '../observer';
 
   loadsuccess(event) {
     var data,string = event.currentTarget.responseText, url = event.currentTarget.responseURL, id = this.id;
+    // responseURL not supported on some browsers (it is used to detect URL redirection)
+    if(url === undefined) {
+      // fallback to initial URL
+      url = this.url;
+    }
     this.stats.tload = new Date();
     this.stats.mtime = new Date(this.xhr.getResponseHeader('Last-Modified'));
 
