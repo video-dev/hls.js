@@ -118,6 +118,22 @@ class Hls {
         this.levelController.manualLevel = newLevel;
     }
 
+    /** Return start level (level of first fragment that will be played back)
+      if undefined : first level appearing in manifest will be used as start level
+      if -1 : automatic start level selection, playback will start from level matching download bandwidth (determined from download of first segment)
+  **/
+    get startLevel() {
+        return this.levelController.startLevel;
+    }
+
+    /** set  start level (level of first fragment that will be played back)
+      if undefined : first level appearing in manifest will be used as start level
+      if -1 : automatic start level selection, playback will start from level matching download bandwidth (determined from download of first segment)
+  **/
+    set startLevel(newLevel) {
+        this.levelController.startLevel = newLevel;
+    }
+
     /** Return the capping/max level value that could be used by automatic level selection algorithm **/
     get autoLevelCapping() {
         return this.levelController.autoLevelCapping;

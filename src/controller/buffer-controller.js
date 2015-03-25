@@ -129,7 +129,7 @@ class BufferController {
                         // determine loading level
                         if (this.startFragmentLoaded === false) {
                             // get start level from level Controller
-                            loadLevel = this.levelController.startLevel();
+                            loadLevel = this.levelController.startLevel;
                             if (loadLevel === -1) {
                                 // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
                                 loadLevel = 0;
