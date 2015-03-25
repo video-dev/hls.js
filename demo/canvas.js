@@ -391,7 +391,13 @@
       legend += ' ' + event.id2;
     }
     if(event.id !== undefined) {
-      legend += ' @ ' + event.id;
+      if(event.type === 'fragment') {
+      legend += ' @';
+      }
+      legend += ' ' + event.id;
+    }
+    if(event.start !== undefined) {
+      legend += ' [' + event.start + ',' + event.end + ']';
     }
     ctx.fillText(legend,5,yoffset+15);
   }
