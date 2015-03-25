@@ -46,6 +46,8 @@
              <input type="text" id='seek_pos' onkeydown="if(window.event.keyCode=='13'){document.getElementById('video').currentTime=document.getElementById('seek_pos').value;}">
             <button onclick="hls.level=parseInt(document.getElementById('manualLevel').value);">set level </button>
              <input type="text" id='manualLevel' onkeydown="if(window.event.keyCode=='13'){hls.level=parseInt(document.getElementById('manualLevel').value);}">
+             <button onclick="hls.autoLevelCapping=parseInt(document.getElementById('autoLevelCapping').value);">set autoLevelCapping </button>
+             <input type="text" id='autoLevelCapping' onkeydown="if(window.event.keyCode=='13'){hls.autoLevelCapping=parseInt(document.getElementById('autoLevelCapping').value);}">
           </div>
           <video id=video controls autoplay oncanplaythrough="buffered_loaded(event);" onresize="buffered_resize(event);"">
           </video>
