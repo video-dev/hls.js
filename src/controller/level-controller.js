@@ -60,14 +60,18 @@
       return a.bitrate-b.bitrate;
     });
     this._levels = levels;
-    // find index of start level in sorted levels
-    for(i=0; i < levels.length ; i++) {
-      if(levels[i].bitrate === bitrateStart) {
-        this._startLevel = i;
-        logger.log('manifest loaded,' + levels.length + ' level(s) found, start bitrate:' + bitrateStart);
-        break;
+
+    if(this._startLevel === undefined) {
+      // find index of start level in sorted levels
+      for(i=0; i < levels.length ; i++) {
+        if(levels[i].bitrate === bitrateStart) {
+          this._startLevel = i;
+          logger.log('manifest loaded,' + levels.length + ' level(s) found, start bitrate:' + bitrateStart);
+          break;
+        }
       }
     }
+
     //this._startLevel = -1;
     observer.trigger(Event.MANIFEST_PARSED,
                     { levels : this._levels,
@@ -132,6 +136,14 @@
     this._autoLevelCapping = newLevel;
   }
 
+  get startLevel() {
+    return this._startLevel;
+  }
+
+
+  set startLevel(newLevel) {
+    this._startLevel = newLevel;
+  }
 
   onFragmentLoaded(event,data) {
     var stats,rtt,loadtime;
@@ -154,12 +166,6 @@
   tick() {
     observer.trigger(Event.LEVEL_LOADING, { id : this._level});
     this.playlistLoader.load(this._levels[this._level].url,this._level);
-  }
-
-  startLevel() {
-    return this._startLevel;
-    //return this._levels.length-1;
-    //return 0;
   }
 
   nextLevel() {
