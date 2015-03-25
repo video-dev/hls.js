@@ -167,7 +167,9 @@ class PlaylistLoader {
             url = event.currentTarget.responseURL,
             id = this.id;
         this.stats.tload = new Date();
-        var mtime = new Date(this.xhr.getResponseHeader('Last-Modified'));
+        this.stats.mtime = new Date(
+            this.xhr.getResponseHeader('Last-Modified')
+        );
 
         if (string.indexOf('#EXTM3U') === 0) {
             if (string.indexOf('#EXTINF:') > 0) {
@@ -178,15 +180,12 @@ class PlaylistLoader {
                     observer.trigger(Event.MANIFEST_LOADED, {
                         levels: [level],
                         url: url,
-                        id: id,
-                        mtime: mtime,
                         stats: this.stats
                     });
                 }
                 observer.trigger(Event.LEVEL_LOADED, {
                     level: level,
                     levelId: id,
-                    mtime: mtime,
                     stats: this.stats
                 });
             } else {
@@ -195,7 +194,6 @@ class PlaylistLoader {
                     levels: this.parseMasterPlaylist(string, url),
                     url: url,
                     id: id,
-                    mtime: mtime,
                     stats: this.stats
                 });
             }
