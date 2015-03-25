@@ -153,15 +153,15 @@ class BufferController {
                         loadLevel = this.levelController.level;
                     }
                     var level = this.levels[loadLevel];
-                    // if level not retrieved yet, switch state and wait for playlist retrieval
-                    if (typeof level.data === 'undefined') {
+                    // if level details retrieved yet, switch state and wait for playlist retrieval
+                    if (typeof level.details === 'undefined') {
                         this.state = WAITING_LEVEL;
                         this.waitlevel = true;
                     } else {
                         // find fragment index, contiguous with end of buffer position
-                        var fragments = level.data.fragments,
+                        var fragments = level.details.fragments,
                             frag,
-                            sliding = level.data.sliding,
+                            sliding = level.details.sliding,
                             start;
                         // check if requested position is within seekable boundaries :
                         // in case of live playlist we need to ensure that requested position is not located before playlist start
@@ -318,8 +318,8 @@ class BufferController {
     }
 
     onLevelLoaded(event, data) {
-        var fragments = data.level.fragments,
-            duration = data.level.totalduration;
+        var fragments = data.details.fragments,
+            duration = data.details.totalduration;
         logger.log(
             'level ' +
                 data.levelId +
@@ -335,16 +335,16 @@ class BufferController {
             sliding = 0,
             levelCurrent = this.levels[this.level];
         // check if playlist is already loaded (if yes, it should be a live playlist)
-        if (levelCurrent && levelCurrent.data && levelCurrent.data.live) {
+        if (levelCurrent && levelCurrent.details && levelCurrent.details.live) {
             //  playlist sliding is the sum of : current playlist sliding + sliding of new playlist compared to current one
-            sliding = levelCurrent.data.sliding;
+            sliding = levelCurrent.details.sliding;
             // check sliding of updated playlist against current one :
             // and find its position in current playlist
-            //logger.log("fragments[0].sn/this.level/levelCurrent.data.fragments[0].sn:" + fragments[0].sn + "/" + this.level + "/" + levelCurrent.data.fragments[0].sn);
-            var SNdiff = fragments[0].sn - levelCurrent.data.fragments[0].sn;
+            //logger.log("fragments[0].sn/this.level/levelCurrent.details.fragments[0].sn:" + fragments[0].sn + "/" + this.level + "/" + levelCurrent.details.fragments[0].sn);
+            var SNdiff = fragments[0].sn - levelCurrent.details.fragments[0].sn;
             if (SNdiff >= 0) {
                 // positive sliding : new playlist sliding window is after previous one
-                sliding += levelCurrent.data.fragments[SNdiff].start;
+                sliding += levelCurrent.details.fragments[SNdiff].start;
             } else {
                 // negative sliding: new playlist sliding window is before previous one
                 sliding -= fragments[-SNdiff].start;
@@ -352,15 +352,15 @@ class BufferController {
             logger.log('live playlist sliding:' + sliding.toFixed(3));
         }
         // override level info
-        level.data = data.level;
-        level.data.sliding = sliding;
+        level.details = data.details;
+        level.details.sliding = sliding;
         this.demuxer.duration = duration;
         if (this.startLevelLoaded === false) {
             // if live playlist, set start position to be fragment N-3
-            if (data.level.live) {
+            if (data.details.live) {
                 this.video.currentTime = Math.max(
                     0,
-                    duration - 3 * data.level.targetduration
+                    duration - 3 * data.details.targetduration
                 );
             }
             this.startLevelLoaded = true;
@@ -441,8 +441,8 @@ class BufferController {
     onFragmentParsing(event, data) {
         this.tparse2 = Date.now();
         var level = this.levels[this.level];
-        if (level.data.live) {
-            level.data.sliding = data.startPTS - this.frag.start;
+        if (level.details.live) {
+            level.details.sliding = data.startPTS - this.frag.start;
         }
         logger.log(
             '      parsed data, type/startPTS/endPTS/startDTS/endDTS/sliding:' +
@@ -456,7 +456,7 @@ class BufferController {
                 '/' +
                 data.endDTS.toFixed(3) +
                 '/' +
-                level.data.sliding.toFixed(3)
+                level.details.sliding.toFixed(3)
         );
         this.mp4segments.push(data.moof);
         this.mp4segments.push(data.mdat);

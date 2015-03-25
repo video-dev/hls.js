@@ -162,7 +162,7 @@ class PlaylistLoader {
     }
 
     loadsuccess(event) {
-        var level,
+        var data,
             string = event.currentTarget.responseText,
             url = event.currentTarget.responseURL,
             id = this.id;
@@ -174,17 +174,17 @@ class PlaylistLoader {
         if (string.indexOf('#EXTM3U') === 0) {
             if (string.indexOf('#EXTINF:') > 0) {
                 // 1 level playlist, parse it
-                level = this.parseLevelPlaylist(string, url, id);
+                data = this.parseLevelPlaylist(string, url, id);
                 // if first request, fire manifest loaded event beforehand
                 if (this.id === null) {
                     observer.trigger(Event.MANIFEST_LOADED, {
-                        levels: [level],
+                        levels: [data],
                         url: url,
                         stats: this.stats
                     });
                 }
                 observer.trigger(Event.LEVEL_LOADED, {
-                    level: level,
+                    details: data,
                     levelId: id,
                     stats: this.stats
                 });
