@@ -41,7 +41,6 @@ class FragmentLoader {
         observer.trigger(Event.FRAG_LOADED, {
             payload: payload,
             frag: this.frag,
-            levelId: this.levelId,
             stats: {
                 trequest: this.trequest,
                 tfirst: this.tfirst,

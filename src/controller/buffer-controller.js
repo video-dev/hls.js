@@ -322,7 +322,7 @@ class BufferController {
             duration = data.level.totalduration;
         logger.log(
             'level ' +
-                data.id +
+                data.levelId +
                 ' loaded [' +
                 fragments[0].sn +
                 ',' +
@@ -331,7 +331,7 @@ class BufferController {
                 duration
         );
 
-        var level = this.levels[data.id],
+        var level = this.levels[data.levelId],
             sliding = 0,
             levelCurrent = this.levels[this.level];
         // check if playlist is already loaded (if yes, it should be a live playlist)

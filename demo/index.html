@@ -184,10 +184,10 @@
           }
        });
        hls.on(hls.Events.LEVEL_SWITCH,function(event,data) {
-          document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",switching to level:" + data.id;
+          document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",switching to level:" + data.levelId;
        });
        hls.on(hls.Events.LEVEL_LOADING,function(event,data) {
-          document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",loading level:" + data.id;
+          document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",loading level:" + data.levelId;
        });
        hls.on(hls.Events.MANIFEST_LOADED,function(event,data) {
           var event = {
@@ -202,11 +202,11 @@
           refreshCanvas();
        });
        hls.on(hls.Events.LEVEL_LOADED,function(event,data) {
-          document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",last loaded level:" + data.id;
+          document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",last loaded level:" + data.levelId;
           isLive = data.level.live;
           var event = {
             type : "level",
-            id : data.id,
+            id : data.levelId,
             start : data.level.startSN,
             end : data.level.endSN,
             time : data.stats.trequest - t0,

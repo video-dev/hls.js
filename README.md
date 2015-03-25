@@ -142,17 +142,19 @@ full list of Events available below :
   - `hls.events.LEVEL_LOADED`  - Identifier for a level loaded event
   	-  data: { level : level object }
   - `hls.events.LEVEL_SWITCH`  - Identifier for a level switch event
-  	-  data: { id : id of new level }
+  	-  data: { levelId : id of new level }
   - `hls.events.FRAG_LOADING`  - Identifier for a fragment loading event
   	-  data: { frag : fragment object}
   - `hls.events.FRAG_LOADED`  - Identifier for a fragment loaded event
-	  -  data: { frag : fragment object, payload : fragment payload}
+	  -  data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length}}
   - `hls.events.FRAG_PARSING_INIT_SEGMENT` - Identifier for a Fragment Parsing Init Segment event
     -  data: { moov : moov MP4 box, codecs : codecs found while parsing fragment}    
   - `hls.events.FRAG_PARSING_DATA`  - Identifier for a fragment parsing data event
 	  -  data: { moof : moof MP4 box, mdat : mdat MP4 box}
   - `hls.events.FRAG_PARSED`  - Identifier for a fragment parsed event
 	  -  data: undefined
+  - `hls.events.FRAG_BUFFERED`  - fired after all fragment remuxed MP4 boxes have been appended into SourceBuffer
+    -  data: { frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length} }
   - `hls.events.LOAD_ERROR` - Identifier for fragment/playlist load error
 	  -  data: { url : faulty URL, response : XHR response}
   - `hls.events.LEVEL_ERROR` - Identifier for a level switch error
