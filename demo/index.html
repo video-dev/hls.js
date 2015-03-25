@@ -189,7 +189,7 @@
        });
        hls.on(hls.Events.MANIFEST_LOADED,function(event,data) {
           var event = {
-            type : "variant manifest",
+            type : "manifest",
             name : "",
             time : data.stats.trequest - t0,
             latency : data.stats.tfirst - data.stats.trequest,
@@ -203,7 +203,7 @@
           document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",last loaded level:" + data.id;
           isLive = data.level.live;
           var event = {
-            type : "stream manifest",
+            type : "level",
             id : data.id,
             time : data.stats.trequest - t0,
             latency : data.stats.tfirst - data.stats.trequest,
@@ -262,7 +262,7 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
     switch(evt.type) {
        case 'durationchange':
         lastDuration = evt.target.duration;
-         data = evt.target.duration.toFixed(2);
+         data = Math.round(evt.target.duration*1000);
          break;
       case 'resize':
         data = evt.target.videoWidth + '/' + evt.target.videoHeight;
@@ -282,7 +282,7 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
       case 'waiting':
       case 'stalled':
       case 'error':
-        data = evt.target.currentTime.toFixed(2);
+        data = Math.round(evt.target.currentTime*1000);
         break;
       // case 'progress':
       //   data = 'currentTime:' + evt.target.currentTime + ',bufferRange:[' + this.video.buffered.start(0) + ',' + this.video.buffered.end(0) + ']';
