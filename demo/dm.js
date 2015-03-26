@@ -100,6 +100,6 @@ function getNextPykeVid() {
 }
 
 function loadError() {
-  document.getElementById("HlsStatus").innerHTML = "unable to load random test video, if you ae not on DM domain, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin Chrome Extension</a>";
+  document.getElementById("HlsStatus").innerHTML = "unable to load a random video, if you are not on DM domain, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin Chrome Extension</a>";
 }
 
