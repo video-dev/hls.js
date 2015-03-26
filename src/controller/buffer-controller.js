@@ -110,6 +110,7 @@
         // set new level to playlist loader : this will trigger start level load
         this.levelController.level = this.startLevel;
         this.state = WAITING_LEVEL;
+        this.loadedmetadata = false;
         return;
         break;
       case IDLE:
@@ -117,10 +118,10 @@
         //  end of buffer position
         //  ensure 60s of buffer upfront
         // if we have not yet loaded any fragment, start loading from start position
-        if(this.startFragmentLoaded === false) {
-          pos = this.startPosition;
-        } else {
+        if(this.loadedmetadata) {
           pos = this.video.currentTime;
+        } else {
+          pos = this.nextLoadPosition;
         }
         var bufferInfo = this.bufferInfo(pos), bufferLen = bufferInfo.len, bufferEnd = bufferInfo.end;
         // if buffer length is less than 60s try to load a new fragment
@@ -166,7 +167,7 @@
             frag = fragments[fragIdx];
           } else {
             // no data buffered, or multiple buffer range look for fragments matching with current play position
-            for (fragIdx = 0; i < fragments.length ; fragIdx++) {
+            for (fragIdx = 0; fragIdx < fragments.length ; fragIdx++) {
               frag = fragments[fragIdx];
               start = frag.start+sliding;
               // offset should be within fragment boundary
@@ -276,6 +277,7 @@
       if(this.video.currentTime !== this.startPosition) {
         this.video.currentTime = this.startPosition;
     }
+    this.loadedmetadata = true;
     this.tick();
   }
 
@@ -323,6 +325,7 @@
       } else {
         this.startPosition = 0;
       }
+      this.nextLoadPosition = this.startPosition;
       this.startLevelLoaded = true;
     }
     // only switch batck to IDLE state if we were waiting for level to start downloading a new fragment
@@ -388,6 +391,7 @@
     logger.log('      parsed data, type/startPTS/endPTS/startDTS/endDTS/sliding:' + data.type + '/' + data.startPTS.toFixed(3) + '/' + data.endPTS.toFixed(3) + '/' + data.startDTS.toFixed(3) + '/' + data.endDTS.toFixed(3) + '/' + level.details.sliding.toFixed(3));
     this.mp4segments.push(data.moof);
     this.mp4segments.push(data.mdat);
+    this.nextLoadPosition = data.endPTS;
     //trigger handler right now
     this.tick();
   }
