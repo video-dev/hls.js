@@ -39,9 +39,11 @@ class BufferController {
         observer.on(Event.FRAMEWORK_READY, this.onfr);
         observer.on(Event.MANIFEST_PARSED, this.onmp);
         this.demuxer = new Demuxer();
-        // video seeking listener
+        // video listener
         this.onvseeking = this.onVideoSeeking.bind(this);
+        this.onvmetadata = this.onVideoMetadata.bind(this);
         video.addEventListener('seeking', this.onvseeking);
+        video.addEventListener('loadedmetadata', this.onvmetadata);
     }
 
     destroy() {
@@ -64,7 +66,9 @@ class BufferController {
         observer.removeListener(Event.MANIFEST_PARSED, this.onmp);
         // remove video listener
         this.video.removeEventListener('seeking', this.onvseeking);
+        this.video.removeEventListener('loadedmetadata', this.onvmetadata);
         this.onvseeking = null;
+        this.onvmetadata = null;
         this.state = IDLE;
     }
 
@@ -119,7 +123,15 @@ class BufferController {
                 // determine next candidate fragment to be loaded, based on current position and
                 //  end of buffer position
                 //  ensure 60s of buffer upfront
-                var bufferInfo = this.bufferInfo,
+                var pos;
+                // if we have not yet loaded any fragment, start loading from start position
+                if (this.startFragmentLoaded === false) {
+                    pos = this.startPosition;
+                } else {
+                    pos = this.video.currentTime;
+                }
+
+                var bufferInfo = this.bufferInfo(pos),
                     bufferLen = bufferInfo.len,
                     bufferEnd = bufferInfo.end;
                 // if buffer length is less than 60s try to load a new fragment
@@ -240,9 +252,8 @@ class BufferController {
         }
     }
 
-    get bufferInfo() {
+    bufferInfo(pos) {
         var v = this.video,
-            pos = v.currentTime,
             buffered = v.buffered,
             bufferLen,
             // bufferStart and bufferEnd are buffer boundaries around current video position
@@ -292,7 +303,7 @@ class BufferController {
         if (this.state === LOADING) {
             // check if currently loaded fragment is inside buffer.
             //if outside, cancel fragment loading, otherwise do nothing
-            if (this.bufferInfo.len === 0) {
+            if (this.bufferInfo(this.video.currentTime).len === 0) {
                 logger.log(
                     'seeking outside of buffer while fragment load in progress, cancel fragment load'
                 );
@@ -302,6 +313,13 @@ class BufferController {
         }
         // tick to speed up processing
         this.tick();
+    }
+
+    onVideoMetadata(event) {
+        if (this.video.currentTime !== this.startPosition) {
+            this.video.currentTime = this.startPosition;
+        }
+        tick();
     }
 
     onManifestParsed(event, data) {
@@ -358,19 +376,21 @@ class BufferController {
         if (this.startLevelLoaded === false) {
             // if live playlist, set start position to be fragment N-3
             if (data.details.live) {
-                this.video.currentTime = Math.max(
+                this.startPosition = Math.max(
                     0,
                     duration - 3 * data.details.targetduration
                 );
+            } else {
+                this.startPosition = 0;
             }
             this.startLevelLoaded = true;
         }
         // only switch batck to IDLE state if we were waiting for level to start downloading a new fragment
         if (this.state === WAITING_LEVEL) {
             this.state = IDLE;
-            //trigger handler right now
-            this.tick();
         }
+        //trigger handler right now
+        this.tick();
     }
 
     onFragmentLoaded(event, data) {
