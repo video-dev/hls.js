@@ -9,11 +9,12 @@ function getDMRandom(apiCall) {
 
     if(xhr.status === 200) {
       var obj = JSON.parse(xhr.responseText);
-      var idx = Math.floor(Math.random()*obj.list.length);
-      return obj.list[idx].id;
-    } else {
-      return null;
+      if(obj.list.length) {
+        var idx = Math.floor(Math.random()*obj.list.length);
+        return obj.list[idx].id;
+      }
     }
+    return null;
 }
 
 function getDMURL(url) {
