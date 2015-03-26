@@ -299,7 +299,7 @@
       //logger.log('Video/PTS/DTS:' + avcSample.pts + '/' + avcSample.dts);
 
       if(lastSampleDTS !== undefined) {
-        mp4Sample.duration = (avcSample.dts - lastSampleDTS)*90;
+        mp4Sample.duration = Math.round((avcSample.dts - lastSampleDTS)*90);
         if(mp4Sample.duration < 0) {
           //logger.log('invalid sample duration at PTS/DTS::' + avcSample.pts + '/' + avcSample.dts + ':' + mp4Sample.duration);
           mp4Sample.duration = 0;
@@ -498,7 +498,7 @@
       //logger.log('Audio/PTS:' + aacSample.pts.toFixed(0));
       if(lastSampleDTS !== undefined) {
         // we use DTS to compute sample duration, but we use PTS to compute initPTS which is used to sync audio and video
-        mp4Sample.duration = (aacSample.dts - lastSampleDTS)*90;
+        mp4Sample.duration = Math.round((aacSample.dts - lastSampleDTS)*90);
         if(mp4Sample.duration < 0) {
           //logger.log('invalid sample duration at PTS/DTS::' + avcSample.pts + '/' + avcSample.dts + ':' + mp4Sample.duration);
           mp4Sample.duration = 0;
