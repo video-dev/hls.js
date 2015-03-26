@@ -314,14 +314,14 @@ class MP4 {
     var sps = [], pps = [], i;
     // assemble the SPSs
     for (i = 0; i < track.sps.length; i++) {
-      sps.push((track.sps[i].byteLength & 0xFF00) >>> 8);
+      sps.push((track.sps[i].byteLength >>> 8) & 0xFF);
       sps.push((track.sps[i].byteLength & 0xFF)); // sequenceParameterSetLength
       sps = sps.concat(Array.prototype.slice.call(track.sps[i])); // SPS
     }
 
     // assemble the PPSs
     for (i = 0; i < track.pps.length; i++) {
-      pps.push((track.pps[i].byteLength & 0xFF00) >>> 8);
+      pps.push((track.pps[i].byteLength >>> 8) & 0xFF);
       pps.push((track.pps[i].byteLength & 0xFF));
       pps = pps.concat(Array.prototype.slice.call(track.pps[i]));
     }
@@ -335,9 +335,9 @@ class MP4 {
         0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, // pre_defined
-        (track.width & 0xff00) >> 8,
+        (track.width >> 8) & 0xFF,
         track.width & 0xff, // width
-        (track.height & 0xff00) >> 8,
+        (track.height >> 8) & 0xFF,
         track.height & 0xff, // height
         0x00, 0x48, 0x00, 0x00, // horizresolution
         0x00, 0x48, 0x00, 0x00, // vertresolution
@@ -404,7 +404,7 @@ class MP4 {
         0x00, track.channelCount, // channelcount
         0x00, 0x10, // sampleSize:16bits
         0x00, 0x00, 0x00, 0x00, // reserved2
-        (track.audiosamplerate & 0xff00) >> 8,
+        (track.audiosamplerate >> 8) & 0xFF,
         track.audiosamplerate & 0xff, //
         0x00, 0x00]),
         MP4.box(MP4.types.esds, MP4.esds(track)));
@@ -424,9 +424,9 @@ class MP4 {
       0x00, 0x00, 0x07, // flags
       0x00, 0x00, 0x00, 0x00, // creation_time
       0x00, 0x00, 0x00, 0x00, // modification_time
-      (track.id & 0xFF000000) >> 24,
-      (track.id & 0xFF0000) >> 16,
-      (track.id & 0xFF00) >> 8,
+      (track.id >> 24) & 0xFF,
+      (track.id >> 16) & 0xFF,
+      (track.id >> 8) & 0xFF,
       track.id & 0xFF, // track_ID
       0x00, 0x00, 0x00, 0x00, // reserved
       (track.duration >> 24),
@@ -448,10 +448,10 @@ class MP4 {
       0x00, 0x00, 0x00, 0x00,
       0x00, 0x00, 0x00, 0x00,
       0x40, 0x00, 0x00, 0x00, // transformation: unity matrix
-      (track.width & 0xFF00) >> 8,
+      (track.width >> 8) & 0xFF,
       track.width & 0xFF,
       0x00, 0x00, // width
-      (track.height & 0xFF00) >> 8,
+      (track.height >> 8) & 0xFF,
       track.height & 0xFF,
       0x00, 0x00 // height
     ]));
@@ -524,26 +524,26 @@ class MP4 {
     array.set([
       0x00, // version 0
       0x00, 0x0f, 0x01, // flags
-      (samples.length & 0xFF000000) >>> 24,
-      (samples.length & 0xFF0000) >>> 16,
-      (samples.length & 0xFF00) >>> 8,
+      (samples.length >>> 24) & 0xFF,
+      (samples.length >>> 16) & 0xFF,
+      (samples.length >>> 8) & 0xFF,
       samples.length & 0xFF, // sample_count
-      (offset & 0xFF000000) >>> 24,
-      (offset & 0xFF0000) >>> 16,
-      (offset & 0xFF00) >>> 8,
+      (offset >>> 24) & 0xFF,
+      (offset >>> 16) & 0xFF,
+      (offset >>> 8) & 0xFF,
       offset & 0xFF // data_offset
     ],0);
 
     for (i = 0; i < samples.length; i++) {
       sample = samples[i];
       array.set([
-        (sample.duration & 0xFF000000) >>> 24,
-        (sample.duration & 0xFF0000) >>> 16,
-        (sample.duration & 0xFF00) >>> 8,
+        (sample.duration >>> 24) & 0xFF,
+        (sample.duration >>> 16) & 0xFF,
+        (sample.duration >>> 8) & 0xFF,
         sample.duration & 0xFF, // sample_duration
-        (sample.size & 0xFF000000) >>> 24,
-        (sample.size & 0xFF0000) >>> 16,
-        (sample.size & 0xFF00) >>> 8,
+        (sample.size >>> 24) & 0xFF,
+        (sample.size >>> 16) & 0xFF,
+        (sample.size >>> 8) & 0xFF,
         sample.size & 0xFF, // sample_size
         (sample.flags.isLeading << 2) | sample.flags.dependsOn,
         (sample.flags.isDependedOn << 6) |
@@ -552,9 +552,9 @@ class MP4 {
           sample.flags.isNonSyncSample,
         sample.flags.degradationPriority & 0xF0 << 8,
         sample.flags.degradationPriority & 0x0F, // sample_flags
-        (sample.compositionTimeOffset & 0xFF000000) >>> 24,
-        (sample.compositionTimeOffset & 0xFF0000) >>> 16,
-        (sample.compositionTimeOffset & 0xFF00) >>> 8,
+        (sample.compositionTimeOffset >>> 24) & 0xFF,
+        (sample.compositionTimeOffset >>> 16) & 0xFF,
+        (sample.compositionTimeOffset >>> 8) & 0xFF,
         sample.compositionTimeOffset & 0xFF // sample_composition_time_offset
       ],12+16*i);
     }
