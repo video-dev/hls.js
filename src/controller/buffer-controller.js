@@ -96,7 +96,7 @@ class BufferController {
     }
 
     tick() {
-        var loadLevel, pos;
+        var pos, loadLevel, loadLevelDetails;
         switch (this.state) {
             case STARTING:
                 // determine load level
@@ -140,84 +140,82 @@ class BufferController {
                             this.demuxer.switchLevel();
                         }
                     }
-                    var levelObj = this.levels[loadLevel];
-                    // if level details retrieved yet, switch state and wait for playlist retrieval
-                    if (typeof levelObj.details === 'undefined') {
+                    loadLevelDetails = this.levels[loadLevel].details;
+                    // if level details retrieved yet, switch state and wait for level retrieval
+                    if (typeof loadLevelDetails === 'undefined') {
                         this.state = WAITING_LEVEL;
                         return;
-                    } else {
-                        // find fragment index, contiguous with end of buffer position
-                        var fragments = levelObj.details.fragments,
-                            frag,
-                            sliding = levelObj.details.sliding,
-                            start;
-                        // check if requested position is within seekable boundaries :
-                        // in case of live playlist we need to ensure that requested position is not located before playlist start
+                    }
+                    // find fragment index, contiguous with end of buffer position
+                    var fragments = loadLevelDetails.fragments,
+                        frag,
+                        sliding = loadLevelDetails.sliding,
                         start = fragments[0].start + sliding;
-                        if (bufferEnd < start) {
-                            logger.log(
-                                'requested position:' +
-                                    bufferEnd +
-                                    ' is before start of playlist, reset video position to start:' +
-                                    start
-                            );
-                            this.video.currentTime = start + 0.01;
+                    // check if requested position is within seekable boundaries :
+                    // in case of live playlist we need to ensure that requested position is not located before playlist start
+                    if (bufferEnd < start) {
+                        logger.log(
+                            'requested position:' +
+                                bufferEnd +
+                                ' is before start of playlist, reset video position to start:' +
+                                start
+                        );
+                        this.video.currentTime = start + 0.01;
+                        return;
+                    }
+                    // if one buffer range, load next SN
+                    if (bufferLen > 0 && this.video.buffered.length === 1) {
+                        var fragIdx = this.frag.sn + 1 - fragments[0].sn;
+                        if (fragIdx >= fragments.length) {
+                            // most certainly live playlist is outdated, let's move to WAITING LEVEL state and come back once it will have been refreshed
+                            //logger.log('sn ' + (this.frag.sn + 1) + ' out of range, wait for live playlist update');
+                            this.state = WAITING_LEVEL;
                             return;
                         }
-                        if (bufferLen > 0 && this.video.buffered.length === 1) {
-                            var i = this.frag.sn + 1 - fragments[0].sn;
-                            if (i >= fragments.length) {
-                                // most certainly live playlist is outdated, let's move to WAITING LEVEL state and come back once it will have been refreshed
-                                //logger.log('sn ' + (this.frag.sn + 1) + ' out of range, wait for live playlist update');
-                                this.state = WAITING_LEVEL;
+                        frag = fragments[fragIdx];
+                    } else {
+                        // no data buffered, or multiple buffer range look for fragments matching with current play position
+                        for (fragIdx = 0; i < fragments.length; fragIdx++) {
+                            frag = fragments[fragIdx];
+                            start = frag.start + sliding;
+                            // offset should be within fragment boundary
+                            if (
+                                start <= bufferEnd &&
+                                start + frag.duration > bufferEnd
+                            ) {
+                                break;
+                            }
+                        }
+                        //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
+                    }
+                    if (fragIdx >= 0 && fragIdx < fragments.length) {
+                        if (this.frag && frag.sn === this.frag.sn) {
+                            if (fragIdx === fragments.length - 1) {
+                                // we are at the end of the playlist and we already loaded last fragment, don't do anything
                                 return;
+                            } else {
+                                frag = fragments[fragIdx + 1];
+                                logger.log(
+                                    'SN just loaded, load next one:' + frag.sn
+                                );
                             }
-                            frag = fragments[i];
-                        } else {
-                            // no data buffered, look for fragments matching with current play position
-                            for (i = 0; i < fragments.length; i++) {
-                                frag = fragments[i];
-                                start = frag.start + sliding;
-                                // offset should be within fragment boundary
-                                if (
-                                    start <= bufferEnd &&
-                                    start + frag.duration > bufferEnd
-                                ) {
-                                    break;
-                                }
-                            }
-                            //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
                         }
-                        if (i >= 0 && i < fragments.length) {
-                            if (this.frag && frag.sn === this.frag.sn) {
-                                if (i === fragments.length - 1) {
-                                    // we are at the end of the playlist and we already loaded last fragment, don't do anything
-                                    return;
-                                } else {
-                                    frag = fragments[i + 1];
-                                    logger.log(
-                                        'SN just loaded, load next one:' +
-                                            frag.sn
-                                    );
-                                }
-                            }
-                            logger.log(
-                                'Loading       ' +
-                                    frag.sn +
-                                    ' of [' +
-                                    fragments[0].sn +
-                                    ',' +
-                                    fragments[fragments.length - 1].sn +
-                                    '],level ' +
-                                    loadLevel
-                            );
-                            //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
+                        logger.log(
+                            'Loading       ' +
+                                frag.sn +
+                                ' of [' +
+                                fragments[0].sn +
+                                ',' +
+                                fragments[fragments.length - 1].sn +
+                                '],level ' +
+                                loadLevel
+                        );
+                        //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
 
-                            this.frag = frag;
-                            this.level = loadLevel;
-                            this.fragmentLoader.load(frag, loadLevel);
-                            this.state = LOADING;
-                        }
+                        this.frag = frag;
+                        this.level = loadLevel;
+                        this.fragmentLoader.load(frag, loadLevel);
+                        this.state = LOADING;
                     }
                 }
                 break;
