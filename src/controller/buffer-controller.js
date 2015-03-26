@@ -9,8 +9,9 @@
  import {logger}             from '../utils/logger';
  import Demuxer              from '../demux/demuxer';
 
+  const STARTING = -1;
   const IDLE = 0;
-  const LOADING = 1;
+  const LOADING =  1;
   const WAITING_LEVEL = 2;
   const PARSING = 3;
   const PARSED = 4;
@@ -35,7 +36,7 @@
     this.onfpg = this.onFragmentParsing.bind(this);
     this.onfp = this.onFragmentParsed.bind(this);
     this.ontick = this.tick.bind(this);
-    this.state = IDLE;
+    this.state = STARTING;
     this.waitlevel = false;
     observer.on(Event.FRAMEWORK_READY, this.onfr);
     observer.on(Event.MANIFEST_PARSED, this.onmp);
@@ -97,32 +98,26 @@
   }
 
   tick() {
+    var loadLevel,pos;
     switch(this.state) {
-      case LOADING:
-        // nothing to do, wait for fragment retrieval
-      case WAITING_LEVEL:
-        // nothing to do, wait for level retrieval
-      case PARSING:
-        // nothing to do, wait for fragment being parsed
-        break;
-      case PARSED:
-      case APPENDING:
-        if (this.sourceBuffer) {
-          // if MP4 segment appending in progress nothing to do
-          if(this.sourceBuffer.updating) {
-            //logger.log('sb append in progress');
-        // check if any MP4 segments left to append
-          } else if(this.mp4segments.length) {
-            this.sourceBuffer.appendBuffer(this.mp4segments.shift());
-            this.state = APPENDING;
-          }
+      case STARTING:
+        // determine load level
+        this.startLevel = this.levelController.startLevel;
+        if (this.startLevel === -1) {
+          // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
+          this.startLevel = 0;
+          this.fragmentBitrateTest = true;
         }
+        // set new level to playlist loader : this will trigger start level load
+        this.levelController.level = this.startLevel;
+        this.state = WAITING_LEVEL;
+        this.waitlevel = true;
+        return;
         break;
       case IDLE:
         // determine next candidate fragment to be loaded, based on current position and
         //  end of buffer position
         //  ensure 60s of buffer upfront
-        var pos;
         // if we have not yet loaded any fragment, start loading from start position
         if(this.startFragmentLoaded === false) {
           pos = this.startPosition;
@@ -133,17 +128,10 @@
         var bufferInfo = this.bufferInfo(pos), bufferLen = bufferInfo.len, bufferEnd = bufferInfo.end;
         // if buffer length is less than 60s try to load a new fragment
         if(bufferLen < 60) {
-          var loadLevel;
           if(this.waitlevel === false) {
             // determine loading level
             if(this.startFragmentLoaded === false) {
-              // get start level from level Controller
-              loadLevel = this.levelController.startLevel;
-              if (loadLevel === -1) {
-                // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
-                loadLevel = 0;
-                this.fragmentBitrateTest = true;
-              }
+              loadLevel = this.startLevel;
             } else {
               // we are not at playback start, get next load level from level Controller
               loadLevel = this.levelController.nextLevel();
@@ -221,6 +209,26 @@
           }
         }
         break;
+      case LOADING:
+        // nothing to do, wait for fragment retrieval
+      case WAITING_LEVEL:
+        // nothing to do, wait for level retrieval
+      case PARSING:
+        // nothing to do, wait for fragment being parsed
+        break;
+      case PARSED:
+      case APPENDING:
+        if (this.sourceBuffer) {
+          // if MP4 segment appending in progress nothing to do
+          if(this.sourceBuffer.updating) {
+            //logger.log('sb append in progress');
+        // check if any MP4 segments left to append
+          } else if(this.mp4segments.length) {
+            this.sourceBuffer.appendBuffer(this.mp4segments.shift());
+            this.state = APPENDING;
+          }
+        }
+        break;
       default:
         break;
     }
@@ -281,7 +289,7 @@
       if(this.video.currentTime !== this.startPosition) {
         this.video.currentTime = this.startPosition;
     }
-    tick();
+    this.tick();
   }
 
   onManifestParsed(event,data) {
