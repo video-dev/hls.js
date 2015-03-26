@@ -36,7 +36,6 @@ class BufferController {
         this.onfp = this.onFragmentParsed.bind(this);
         this.ontick = this.tick.bind(this);
         this.state = STARTING;
-        this.waitlevel = false;
         observer.on(Event.FRAMEWORK_READY, this.onfr);
         observer.on(Event.MANIFEST_PARSED, this.onmp);
         this.demuxer = new Demuxer();
@@ -110,7 +109,6 @@ class BufferController {
                 // set new level to playlist loader : this will trigger start level load
                 this.levelController.level = this.startLevel;
                 this.state = WAITING_LEVEL;
-                this.waitlevel = true;
                 return;
                 break;
             case IDLE:
@@ -123,43 +121,35 @@ class BufferController {
                 } else {
                     pos = this.video.currentTime;
                 }
-
                 var bufferInfo = this.bufferInfo(pos),
                     bufferLen = bufferInfo.len,
                     bufferEnd = bufferInfo.end;
                 // if buffer length is less than 60s try to load a new fragment
                 if (bufferLen < 60) {
-                    if (this.waitlevel === false) {
-                        // determine loading level
-                        if (this.startFragmentLoaded === false) {
-                            loadLevel = this.startLevel;
-                        } else {
-                            // we are not at playback start, get next load level from level Controller
-                            loadLevel = this.levelController.nextLevel();
-                        }
-                        if (loadLevel !== this.level) {
-                            // set new level to playlist loader : this will trigger a playlist load if needed
-                            this.levelController.level = loadLevel;
-                            // tell demuxer that we will switch level (this will force init segment to be regenerated)
-                            if (this.demuxer) {
-                                this.demuxer.switchLevel();
-                            }
-                        }
+                    if (this.startFragmentLoaded === false) {
+                        loadLevel = this.startLevel;
                     } else {
-                        // we just retrieved playlist info after switching level,
-                        // stick on same level, retrieve level from level controller
-                        loadLevel = this.levelController.level;
+                        // we are not at playback start, get next load level from level Controller
+                        loadLevel = this.levelController.nextLevel();
                     }
-                    var level = this.levels[loadLevel];
+                    if (loadLevel !== this.level) {
+                        // set new level to playlist loader : this will trigger a playlist load if needed
+                        this.levelController.level = loadLevel;
+                        // tell demuxer that we will switch level (this will force init segment to be regenerated)
+                        if (this.demuxer) {
+                            this.demuxer.switchLevel();
+                        }
+                    }
+                    var levelObj = this.levels[loadLevel];
                     // if level details retrieved yet, switch state and wait for playlist retrieval
-                    if (typeof level.details === 'undefined') {
+                    if (typeof levelObj.details === 'undefined') {
                         this.state = WAITING_LEVEL;
-                        this.waitlevel = true;
+                        return;
                     } else {
                         // find fragment index, contiguous with end of buffer position
-                        var fragments = level.details.fragments,
+                        var fragments = levelObj.details.fragments,
                             frag,
-                            sliding = level.details.sliding,
+                            sliding = levelObj.details.sliding,
                             start;
                         // check if requested position is within seekable boundaries :
                         // in case of live playlist we need to ensure that requested position is not located before playlist start
@@ -180,7 +170,6 @@ class BufferController {
                                 // most certainly live playlist is outdated, let's move to WAITING LEVEL state and come back once it will have been refreshed
                                 //logger.log('sn ' + (this.frag.sn + 1) + ' out of range, wait for live playlist update');
                                 this.state = WAITING_LEVEL;
-                                this.waitlevel = true;
                                 return;
                             }
                             frag = fragments[i];
@@ -200,7 +189,6 @@ class BufferController {
                             //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
                         }
                         if (i >= 0 && i < fragments.length) {
-                            this.waitlevel = false;
                             if (this.frag && frag.sn === this.frag.sn) {
                                 if (i === fragments.length - 1) {
                                     // we are at the end of the playlist and we already loaded last fragment, don't do anything
