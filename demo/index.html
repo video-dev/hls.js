@@ -249,6 +249,7 @@
        video.addEventListener('play', handleVideoEvent);
        video.addEventListener('playing', handleVideoEvent);
        video.addEventListener('error', handleVideoEvent);
+       video.addEventListener('loadedmetadata', handleVideoEvent);
        video.addEventListener('durationchange', handleVideoEvent);
     } else {
       if(navigator.userAgent.toLowerCase().indexOf('firefox') !== -1) {
@@ -271,7 +272,7 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
       case 'resize':
         data = evt.target.videoWidth + '/' + evt.target.videoHeight;
         break;
-      // case 'loadedmetadata':
+      case 'loadedmetadata':
       //   data = 'duration:' + evt.target.duration + '/videoWidth:' + evt.target.videoWidth + '/videoHeight:' + evt.target.videoHeight;
       //  break;
       // case 'loadeddata':
