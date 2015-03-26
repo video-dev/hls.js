@@ -528,14 +528,14 @@ class MP4 {
             i;
         // assemble the SPSs
         for (i = 0; i < track.sps.length; i++) {
-            sps.push((track.sps[i].byteLength & 0xff00) >>> 8);
+            sps.push((track.sps[i].byteLength >>> 8) & 0xff);
             sps.push(track.sps[i].byteLength & 0xff); // sequenceParameterSetLength
             sps = sps.concat(Array.prototype.slice.call(track.sps[i])); // SPS
         }
 
         // assemble the PPSs
         for (i = 0; i < track.pps.length; i++) {
-            pps.push((track.pps[i].byteLength & 0xff00) >>> 8);
+            pps.push((track.pps[i].byteLength >>> 8) & 0xff);
             pps.push(track.pps[i].byteLength & 0xff);
             pps = pps.concat(Array.prototype.slice.call(track.pps[i]));
         }
@@ -567,9 +567,9 @@ class MP4 {
                 0x00,
                 0x00,
                 0x00, // pre_defined
-                (track.width & 0xff00) >> 8,
+                (track.width >> 8) & 0xff,
                 track.width & 0xff, // width
-                (track.height & 0xff00) >> 8,
+                (track.height >> 8) & 0xff,
                 track.height & 0xff, // height
                 0x00,
                 0x48,
@@ -728,7 +728,7 @@ class MP4 {
                 0x00,
                 0x00,
                 0x00, // reserved2
-                (track.audiosamplerate & 0xff00) >> 8,
+                (track.audiosamplerate >> 8) & 0xff,
                 track.audiosamplerate & 0xff, //
                 0x00,
                 0x00
@@ -761,9 +761,9 @@ class MP4 {
                 0x00,
                 0x00,
                 0x00, // modification_time
-                (track.id & 0xff000000) >> 24,
-                (track.id & 0xff0000) >> 16,
-                (track.id & 0xff00) >> 8,
+                (track.id >> 24) & 0xff,
+                (track.id >> 16) & 0xff,
+                (track.id >> 8) & 0xff,
                 track.id & 0xff, // track_ID
                 0x00,
                 0x00,
@@ -825,11 +825,11 @@ class MP4 {
                 0x00,
                 0x00,
                 0x00, // transformation: unity matrix
-                (track.width & 0xff00) >> 8,
+                (track.width >> 8) & 0xff,
                 track.width & 0xff,
                 0x00,
                 0x00, // width
-                (track.height & 0xff00) >> 8,
+                (track.height >> 8) & 0xff,
                 track.height & 0xff,
                 0x00,
                 0x00 // height
@@ -936,13 +936,13 @@ class MP4 {
                 0x00,
                 0x0f,
                 0x01, // flags
-                (samples.length & 0xff000000) >>> 24,
-                (samples.length & 0xff0000) >>> 16,
-                (samples.length & 0xff00) >>> 8,
+                (samples.length >>> 24) & 0xff,
+                (samples.length >>> 16) & 0xff,
+                (samples.length >>> 8) & 0xff,
                 samples.length & 0xff, // sample_count
-                (offset & 0xff000000) >>> 24,
-                (offset & 0xff0000) >>> 16,
-                (offset & 0xff00) >>> 8,
+                (offset >>> 24) & 0xff,
+                (offset >>> 16) & 0xff,
+                (offset >>> 8) & 0xff,
                 offset & 0xff // data_offset
             ],
             0
@@ -952,13 +952,13 @@ class MP4 {
             sample = samples[i];
             array.set(
                 [
-                    (sample.duration & 0xff000000) >>> 24,
-                    (sample.duration & 0xff0000) >>> 16,
-                    (sample.duration & 0xff00) >>> 8,
+                    (sample.duration >>> 24) & 0xff,
+                    (sample.duration >>> 16) & 0xff,
+                    (sample.duration >>> 8) & 0xff,
                     sample.duration & 0xff, // sample_duration
-                    (sample.size & 0xff000000) >>> 24,
-                    (sample.size & 0xff0000) >>> 16,
-                    (sample.size & 0xff00) >>> 8,
+                    (sample.size >>> 24) & 0xff,
+                    (sample.size >>> 16) & 0xff,
+                    (sample.size >>> 8) & 0xff,
                     sample.size & 0xff, // sample_size
                     (sample.flags.isLeading << 2) | sample.flags.dependsOn,
                     (sample.flags.isDependedOn << 6) |
@@ -967,9 +967,9 @@ class MP4 {
                         sample.flags.isNonSyncSample,
                     sample.flags.degradationPriority & (0xf0 << 8),
                     sample.flags.degradationPriority & 0x0f, // sample_flags
-                    (sample.compositionTimeOffset & 0xff000000) >>> 24,
-                    (sample.compositionTimeOffset & 0xff0000) >>> 16,
-                    (sample.compositionTimeOffset & 0xff00) >>> 8,
+                    (sample.compositionTimeOffset >>> 24) & 0xff,
+                    (sample.compositionTimeOffset >>> 16) & 0xff,
+                    (sample.compositionTimeOffset >>> 8) & 0xff,
                     sample.compositionTimeOffset & 0xff // sample_composition_time_offset
                 ],
                 12 + 16 * i
