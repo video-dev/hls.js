@@ -102,7 +102,7 @@ hls.js fires a bunch of events, that could be registered as below:
 
 ```html
 hls.on(hls.Events.LEVEL_LOADED,function(event,data) {
-	var level_duration = data.level.totalduration;
+	var level_duration = data.details.totalduration;
 });
 ```
 full list of Events available below :
