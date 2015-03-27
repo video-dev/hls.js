@@ -664,8 +664,8 @@
       //audio only
       if(this._aacTrack.config) {
          observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT,{
-          moov: MP4.initSegment([this._aacTrack]),
-          codec : this._aacTrack.codec,
+          audioMoov: MP4.initSegment([this._aacTrack]),
+          audioCodec : this._aacTrack.codec,
           audioChannelCount : this._aacTrack.channelCount
         });
         this._initSegGenerated = true;
@@ -680,10 +680,10 @@
       //video only
       if(this._avcTrack.sps && this._avcTrack.pps) {
          observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT,{
-          moov: MP4.initSegment([this._avcTrack]),
-          codec : this._avcTrack.codec,
-          width : this._avcTrack.width,
-          height : this._avcTrack.height
+          videoMoov: MP4.initSegment([this._avcTrack]),
+          videoCodec : this._avcTrack.codec,
+          videoWidth : this._avcTrack.width,
+          videoHeight : this._avcTrack.height
         });
         this._initSegGenerated = true;
         if(this._initPTS === undefined) {
@@ -696,11 +696,13 @@
       //audio and video
       if(this._aacTrack.config && this._avcTrack.sps && this._avcTrack.pps) {
          observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT,{
-          moov: MP4.initSegment([this._avcTrack, this._aacTrack]),
-          codec : this._avcTrack.codec + ',' + this._aacTrack.codec,
-          width : this._avcTrack.width,
-          height : this._avcTrack.height,
-          audioChannelCount : this._aacTrack.channelCount
+          audioMoov: MP4.initSegment([this._aacTrack]),
+          audioCodec : this._aacTrack.codec,
+          audioChannelCount : this._aacTrack.channelCount,
+          videoMoov: MP4.initSegment([this._avcTrack]),
+          videoCodec : this._avcTrack.codec,
+          videoWidth : this._avcTrack.width,
+          videoHeight : this._avcTrack.height
         });
         this._initSegGenerated = true;
         if(this._initPTS === undefined) {

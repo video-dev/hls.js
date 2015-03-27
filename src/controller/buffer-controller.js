@@ -57,10 +57,18 @@
     this.mp4segments = [];
     var sb = this.sourceBuffer;
     if(sb) {
-      //detach sourcebuffer from Media Source
-      this.mediaSource.removeSourceBuffer(sb);
-      sb.removeEventListener('updateend', this.onsbue);
-      sb.removeEventListener('error', this.onsbe);
+      if(sb.audio) {
+          //detach sourcebuffer from Media Source
+          this.mediaSource.removeSourceBuffer(sb.audio);
+          sb.audio.removeEventListener('updateend', this.onsbue);
+          sb.audio.removeEventListener('error', this.onsbe);
+      }
+      if(sb.video) {
+          //detach sourcebuffer from Media Source
+          this.mediaSource.removeSourceBuffer(sb.video);
+          sb.video.removeEventListener('updateend', this.onsbue);
+          sb.video.removeEventListener('error', this.onsbe);
+      }
       this.sourceBuffer = null;
     }
     observer.removeListener(Event.FRAMEWORK_READY, this.onfr);
@@ -208,11 +216,12 @@
       case APPENDING:
         if (this.sourceBuffer) {
           // if MP4 segment appending in progress nothing to do
-          if(this.sourceBuffer.updating) {
+          if(this.sourceBuffer.audio.updating || this.sourceBuffer.video.updating) {
             //logger.log('sb append in progress');
         // check if any MP4 segments left to append
           } else if(this.mp4segments.length) {
-            this.sourceBuffer.appendBuffer(this.mp4segments.shift());
+            var segment = this.mp4segments.shift();
+            this.sourceBuffer[segment.type].appendBuffer(segment.data);
             this.state = APPENDING;
           }
         }
@@ -358,26 +367,44 @@
   onInitSegment(event,data) {
     // check if codecs have been explicitely defined in the master playlist for this level;
     // if yes use these ones instead of the ones parsed from the demux
-    var codec = this.levels[this.level].codecs;
+    var audioCodec = this.levels[this.level].audioCodec, videoCodec = this.levels[this.level].videoCodec,sb;
+    //logger.log('playlist level A/V codecs:' + audioCodec + ',' + videoCodec);
     //logger.log('playlist codecs:' + codec);
     // if playlist does not specify codecs, use codecs found while parsing fragment
-    if(codec === undefined) {
-      codec = data.codec;
+    if(audioCodec === undefined) {
+      audioCodec = data.audioCodec;
     }
+    if(videoCodec === undefined) {
+      videoCodec = data.videoCodec;
+    }
+
     // codec="mp4a.40.5,avc1.420016";
     // in case several audio codecs might be used, force HE-AAC for audio (some browsers don't support audio codec switch)
     //don't do it for mono streams ...
     if(this.audiocodecswitch && data.audioChannelCount === 2 && navigator.userAgent.toLowerCase().indexOf('android') === -1 && navigator.userAgent.toLowerCase().indexOf('firefox') === -1) {
-      codec = codec.replace('mp4a.40.2','mp4a.40.5');
+      audioCodec = 'mp4a.40.5';
     }
-    logger.log('playlist/choosed codecs:' + this.levels[this.level].codecs + '/' + codec);
     if(!this.sourceBuffer) {
+      this.sourceBuffer = {};
+      logger.log('selected A/V codecs for sourceBuffers:' + audioCodec + ',' + videoCodec);
       // create source Buffer and link them to MediaSource
-      var sb = this.sourceBuffer = this.mediaSource.addSourceBuffer('video/mp4;codecs=' + codec);
-      sb.addEventListener('updateend', this.onsbue);
-      sb.addEventListener('error', this.onsbe);
+      if(audioCodec) {
+        sb = this.sourceBuffer.audio = this.mediaSource.addSourceBuffer('video/mp4;codecs=' + audioCodec);
+        sb.addEventListener('updateend', this.onsbue);
+        sb.addEventListener('error', this.onsbe);
+      }
+      if(videoCodec) {
+        sb = this.sourceBuffer.video = this.mediaSource.addSourceBuffer('video/mp4;codecs=' + videoCodec);
+        sb.addEventListener('updateend', this.onsbue);
+        sb.addEventListener('error', this.onsbe);
+      }
     }
-    this.mp4segments.push(data.moov);
+    if(audioCodec) {
+      this.mp4segments.push({ type : 'audio', data : data.audioMoov});
+    }
+    if(videoCodec) {
+      this.mp4segments.push({ type : 'video', data : data.videoMoov});
+    }
     //trigger handler right now
     this.tick();
   }
@@ -389,8 +416,8 @@
       level.details.sliding = data.startPTS - this.frag.start;
     }
     logger.log('      parsed data, type/startPTS/endPTS/startDTS/endDTS/sliding:' + data.type + '/' + data.startPTS.toFixed(3) + '/' + data.endPTS.toFixed(3) + '/' + data.startDTS.toFixed(3) + '/' + data.endDTS.toFixed(3) + '/' + level.details.sliding.toFixed(3));
-    this.mp4segments.push(data.moof);
-    this.mp4segments.push(data.mdat);
+    this.mp4segments.push({ type : data.type, data : data.moof});
+    this.mp4segments.push({ type : data.type, data : data.mdat});
     this.nextLoadPosition = data.endPTS;
     //trigger handler right now
     this.tick();

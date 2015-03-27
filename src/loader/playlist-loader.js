@@ -73,16 +73,12 @@ import observer             from '../observer';
           case 'CODECS':
             codecs = result.shift().split(',');
             while(codecs.length > 0) {
-              if (level.codecs === undefined) {
-                level.codecs = '';
-              } else {
-                level.codecs += ',';
-              }
               codec = codecs.shift();
               if(codec.indexOf('avc1') !== -1) {
-                codec = this.avc1toavcoti(codec);
+                level.videoCodec = this.avc1toavcoti(codec);
+              } else {
+                level.audioCodec = codec;
               }
-              level.codecs += codec;
             }
             break;
           default:
