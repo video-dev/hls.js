@@ -4,10 +4,14 @@
   <title>hls.js demo page</title>
 </head>
 
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+
 <body>
   <div class="header-container">
     <header class="wrapper clearfix">
-      <h1 class="title">hls.js demo page</h1>
+      <h1 class="title"><a href="https://github.com/dailymotion/hls.js">hls.js</a> demo page</h1>
     </header>
   </div>
 
@@ -21,72 +25,60 @@
           </p>
         </header>
         <section>
-          <pre id='HlsDimension'></pre>
+          <button type="button" class="btn btn-primary" onclick="loadTestVid()">Load a test Video</button>
+          <button type="button" class="btn btn-primary" onclick="loadRandomPykeVid()">Load a Random Pyke Video</button>
+          <button type="button" class="btn btn-primary" onclick="loadRandomLiveVid()">Load a Random Live Video</button>
+          <button type="button" class="btn btn-primary" onclick="loadNextPykeVid()">Load Next Pyke Video</button>
+          <button type="button" class="btn btn-primary" onclick="loadDMRandomVid()">Load a random DM Video</button><br><br>
           <pre id='HlsUrl'></pre>
-          <button style="font: bold 20px Arial" onclick="loadTestVid()">Load a test Video</button>
-          <button style="font: bold 20px Arial" onclick="loadRandomPykeVid()">Load a Random Pyke Video</button>
-          <button style="font: bold 20px Arial" onclick="loadRandomLiveVid()">Load a Random Live Video</button>
-          <button style="font: bold 20px Arial" onclick="loadNextPykeVid()">Load Next Pyke Video</button>
-          <button style="font: bold 20px Arial" onclick="loadDMRandomVid()">Load a random DM Video</button><br><br>
+          <pre id='HlsStatus'></pre>
+          <video id=video controls autoplay""></video>
+          <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)";></canvas> <br>
           <div id='buttons'>
-            <button onclick="document.getElementById('video').play()">play()</button>
-            <button onclick="document.getElementById('video').pause()">pause()</button><br>
-            <button onclick="document.getElementById('video').currentTime+=10">currentTime+=10</button>
-            <button onclick="document.getElementById('video').currentTime-=10">currentTime-=10</button>
-            <button onclick="document.getElementById('video').currentTime=50">currentTime=50</button><br>
-            <button onclick="document.getElementById('video').playbackRate++">playbackRate++</button>
-            <button onclick="document.getElementById('video').playbackRate--">playbackRate--</button>
-            <button onclick="document.getElementById('video').playbackRate+=0.1">playbackRate+=0.1</button>
-            <button onclick="document.getElementById('video').playbackRate-=0.1">playbackRate-=0.1</button><br>
-            <button onclick="document.getElementById('video').volume+=0.1">volume+=0.1</button>
-            <button onclick="document.getElementById('video').volume-=0.1">volume-=0.1</button>
-            <button onclick="document.getElementById('video').muted=true">muted=true</button>
-            <button onclick="document.getElementById('video').muted=false">muted=false</button><br>
-            <button onclick="document.getElementById('video').currentTime=document.getElementById('seek_pos').value">seek to </button>
-             <input type="text" id='seek_pos' onkeydown="if(window.event.keyCode=='13'){document.getElementById('video').currentTime=document.getElementById('seek_pos').value;}">
-            <button onclick="hls.level=parseInt(document.getElementById('manualLevel').value);">set level </button>
-             <input type="text" id='manualLevel' onkeydown="if(window.event.keyCode=='13'){hls.level=parseInt(document.getElementById('manualLevel').value);}">
-             <button onclick="hls.autoLevelCapping=parseInt(document.getElementById('autoLevelCapping').value);">set autoLevelCapping </button>
-             <input type="text" id='autoLevelCapping' onkeydown="if(window.event.keyCode=='13'){hls.autoLevelCapping=parseInt(document.getElementById('autoLevelCapping').value);}">
+            <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').play()">play()</button>
+            <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').pause()">pause()</button>
+            <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').currentTime+=10">currentTime+=10</button>
+            <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').currentTime-=10">currentTime-=10</button><br>
+            <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').currentTime=document.getElementById('seek_pos').value">seek to </button>
+             <input type="text" id='seek_pos' size="8" onkeydown="if(window.event.keyCode=='13'){document.getElementById('video').currentTime=document.getElementById('seek_pos').value;}">
+            <button type="button" class="btn btn-sm btn-success" onclick="hls.level=parseInt(document.getElementById('manualLevel').value);">set level </button>
+             <input type="text" id='manualLevel' size="2" onkeydown="if(window.event.keyCode=='13'){hls.level=parseInt(document.getElementById('manualLevel').value);}">
+             <button type="button" class="btn btn-sm btn-success" onclick="hls.autoLevelCapping=parseInt(document.getElementById('autoLevelCapping').value);">set autoLevelCapping </button>
+             <input type="text" id='autoLevelCapping' size="2" onkeydown="if(window.event.keyCode=='13'){hls.autoLevelCapping=parseInt(document.getElementById('autoLevelCapping').value);}">
           </div>
-          <video id=video controls autoplay oncanplaythrough="buffered_loaded(event);" onresize="buffered_resize(event);"">
-          </video>
         </section>
       </article>
     </div>
     <!-- #main -->
-    <pre id='HlsStatus'></pre>
-    <pre id='HlsLevel'></pre>
-    <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)";></canvas> <br>
-    window size
-    <button onclick="timeRangeSetSliding(2000);">2s</button>
-    <button onclick="timeRangeSetSliding(5000)">5s</button>
-    <button onclick="timeRangeSetSliding(10000)">10s</button>
-    <button onclick="timeRangeSetSliding(20000)">20s</button>
-    <button onclick="timeRangeSetSliding(30000)">30s</button>
-    <button onclick="timeRangeSetSliding(60000)">60s</button>
-    <button onclick="timeRangeSetSliding(120000)">120s</button>
-    <button onclick="timeRangeSetSliding(0)">ALL</button><br>
-    <button onclick="timeRangeZoomIn()">Zoom In</button>
-    <button onclick="timeRangeZoomOut()">Zoom Out</button><br>
-    <button onclick="timeRangeSlideLeft()"> <<< Slide </button>
-    <button onclick="timeRangeSlideRight()">Slide >>> </button><br>
-    <button onclick="windowSliding=!windowSliding; refreshCanvas()">toggle sliding/fixed window</button><br>
-    <button onclick="windowStart=document.getElementById('windowStart').value">fixed window start(ms)</button>
-    <input type="text" id='windowStart' defaultValue="0" onkeydown="if(window.event.keyCode=='13'){windowStart=document.getElementById('windowStart').value;}">
-    <button onclick="windowEnd=document.getElementById('windowEnd').value">fixed window end(ms)</button>
-    <input type="text" id='windowEnd' defaultValue="10000" onkeydown="if(window.event.keyCode=='13'){windowEnd=document.getElementById('windowEnd').value;}"><br>
-    <button onclick="exportmetrics()" style="font-size:18px">metrics permalink</button>
+    <br>
+    <h3 class="title">real time metrics</h1>
+    <button type="button" class="btn btn-xs btn-primary" onclick="windowSliding=!windowSliding; refreshCanvas()">toggle sliding/fixed window</button><br>
+    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(0)">window ALL</button>
+    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(2000)">2s</button>
+    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(5000)">5s</button>
+    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(10000)">10s</button>
+    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(20000)">20s</button>
+    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(30000)">30s</button>
+    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(60000)">60s</button>
+    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(120000)">120s</button><br>
+    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeZoomIn()">Window Zoom In</button>
+    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeZoomOut()">Window Zoom Out</button><br>
+    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSlideLeft()"> <<< Window Slide </button>
+    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSlideRight()">Window Slide >>> </button><br>
+    <button type="button" class="btn btn-xs btn-primary" onclick="windowStart=document.getElementById('windowStart').value">fixed window start(ms)</button>
+    <input type="text" id='windowStart' defaultValue="0" size="8" onkeydown="if(window.event.keyCode=='13'){windowStart=document.getElementById('windowStart').value;}">
+    <button type="button" class="btn btn-xs btn-primary" onclick="windowEnd=document.getElementById('windowEnd').value">fixed window end(ms)</button>
+    <input type="text" id='windowEnd' defaultValue="10000" size="8" onkeydown="if(window.event.keyCode=='13'){windowEnd=document.getElementById('windowEnd').value;}"><br>
+    <button type="button" class="btn btn-xs btn-success" onclick="exportmetrics()" style="font-size:18px">metrics permalink</button>
     <canvas id="bufferTimerange_c" width="640" height="100" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
     <canvas id="bufferWindow_c" width="640" height="100" style="border:1px solid #000000" onmousemove="windowCanvasonMouseMove(event)";></canvas>
     <canvas id="videoEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas>
     <canvas id="loadEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
   </div>
-  <div id="buffered_log" style="font-size: small;"></div>
+  <div id="buffered_log"></div>
 
-
-<br><br><br><br>Change Stream <br>
-<input id="userInput" value="http://www.streambox.fr/playlists/test_001/stream.m3u8" size="80"> <button onclick="changeStream()">Load</button><br>
+<br>Change Stream <br>
+<input id="userInput" value="http://www.streambox.fr/playlists/test_001/stream.m3u8" size="80"> <button type="button" class="btn btn-sm btn-primary" onclick="changeStream()">Load</button><br>
 
 <h3> Test Videos </h3>
 <ul id="streamlist"></ul>
@@ -186,10 +178,10 @@
           }
        });
        hls.on(hls.Events.LEVEL_SWITCH,function(event,data) {
-          document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",switching to level:" + data.levelId;
+          //document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",switching to level:" + data.levelId;
        });
        hls.on(hls.Events.LEVEL_LOADING,function(event,data) {
-          document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",loading level:" + data.levelId;
+          //document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",loading level:" + data.levelId;
        });
        hls.on(hls.Events.MANIFEST_LOADED,function(event,data) {
           var event = {
@@ -204,7 +196,7 @@
           refreshCanvas();
        });
        hls.on(hls.Events.LEVEL_LOADED,function(event,data) {
-          document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",last loaded level:" + data.levelId;
+          //document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",last loaded level:" + data.levelId;
           isLive = data.details.live;
           var event = {
             type : "level",
@@ -312,10 +304,6 @@ function getRandomTestVid() {
   return teststreams[idx].file;
 }
 
-function outputLog(msg) {
-  document.getElementById('buffered_log').innerHTML = msg + "<br>";
-}
-
 function timeRangesToString(r) {
   var log = "";
   for (var i=0; i<r.length; i++) {
@@ -402,15 +390,10 @@ function timeRangesToString(r) {
       }
       events.buffer.push(event);
       refreshCanvas();
-      var log = "position:<br>"
-              + v.currentTime.toFixed(2)
-              + "<br>"
-              + "Buffered:<br>"
+      var log = "Buffered:<br>"
               + timeRangesToString(v.buffered)
-              + "<br>"
               + "Seekable:<br>"
-              + timeRangesToString(v.seekable)
-              + "<br>";
+              + timeRangesToString(v.seekable);
       document.getElementById("buffered_log").innerHTML = log;
       ctx.fillStyle = "blue";
       var x = v.currentTime / v.duration * canvas.width;
@@ -454,22 +437,6 @@ function timeRangesToString(r) {
     var v = document.getElementById('video');
     var target = (event.clientX - canvas.offsetLeft) / canvas.width * v.duration;
     v.currentTime = target;
-    outputLog("Seeking to " + target + " (" + minsecs(target) + ")");
-  }
-
-  function buffered_loaded(event) {
-    var v = document.getElementById('video');
-    if (!v.buffered) {
-      outputLog('Buffered attribute not supported by your browser\n');
-    } else {
-      outputLog("Buffered attribute is supported, click on the black progress bar to seek.");
-    }
-  }
-
-  function buffered_resize(event) {
-    var canvas = document.getElementById('buffered_c');
-    canvas.width = event.target.videoWidth;
-    document.getElementById("HlsDimension").innerHTML = "video dimension:" + event.target.videoWidth + 'x' + event.target.videoHeight;
   }
   </script>
 </body>
