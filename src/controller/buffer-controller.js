@@ -130,17 +130,23 @@ class BufferController {
                 } else {
                     pos = this.nextLoadPosition;
                 }
+                // determine next load level
+                if (this.startFragmentLoaded === false) {
+                    loadLevel = this.startLevel;
+                } else {
+                    // we are not at playback start, get next load level from level Controller
+                    loadLevel = this.levelController.nextLevel();
+                }
                 var bufferInfo = this.bufferInfo(pos),
                     bufferLen = bufferInfo.len,
                     bufferEnd = bufferInfo.end;
-                // if buffer length is less than 60s try to load a new fragment
-                if (bufferLen < 60) {
-                    if (this.startFragmentLoaded === false) {
-                        loadLevel = this.startLevel;
-                    } else {
-                        // we are not at playback start, get next load level from level Controller
-                        loadLevel = this.levelController.nextLevel();
-                    }
+                // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 60s
+                var maxBufLen = Math.min(
+                    8 * 60 * 1000 * 1000 / this.levels[loadLevel].bitrate,
+                    60
+                );
+                // if buffer length is less than maxBufLen try to load a new fragment
+                if (bufferLen < maxBufLen) {
                     if (loadLevel !== this.level) {
                         // set new level to playlist loader : this will trigger a playlist load if needed
                         this.levelController.level = loadLevel;
