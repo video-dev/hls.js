@@ -171,6 +171,8 @@
           events = { url : _url, date : new Date(), load : [], buffer : [], video : []};
           bufferingIdx = -1;
           hls.attachSource(_url);
+          // video tag is in autoplay but firefox does not handle properly autoplay with MSE
+          video.play();
        });
        hls.on(hls.Events.FRAG_PARSING_INIT_SEGMENT,function(event,data) {
           showCanvas();
