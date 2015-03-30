@@ -40,11 +40,11 @@
             <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').currentTime+=10">currentTime+=10</button>
             <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').currentTime-=10">currentTime-=10</button><br>
             <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').currentTime=document.getElementById('seek_pos').value">seek to </button>
-             <input type="text" id='seek_pos' size="8" onkeydown="if(window.event.keyCode=='13'){document.getElementById('video').currentTime=document.getElementById('seek_pos').value;}">
+             <input type="text" id='seek_pos' size="8" onkeydown="if(event.keyCode=='13'){document.getElementById('video').currentTime=document.getElementById('seek_pos').value;}">
             <button type="button" class="btn btn-sm btn-success" onclick="hls.level=parseInt(document.getElementById('manualLevel').value);">set level </button>
-             <input type="text" id='manualLevel' size="2" onkeydown="if(window.event.keyCode=='13'){hls.level=parseInt(document.getElementById('manualLevel').value);}">
+             <input type="text" id='manualLevel' size="2" onkeydown="if(event.keyCode=='13'){hls.level=parseInt(document.getElementById('manualLevel').value);}">
              <button type="button" class="btn btn-sm btn-success" onclick="hls.autoLevelCapping=parseInt(document.getElementById('autoLevelCapping').value);">set autoLevelCapping </button>
-             <input type="text" id='autoLevelCapping' size="2" onkeydown="if(window.event.keyCode=='13'){hls.autoLevelCapping=parseInt(document.getElementById('autoLevelCapping').value);}">
+             <input type="text" id='autoLevelCapping' size="2" onkeydown="if(event.keyCode=='13'){hls.autoLevelCapping=parseInt(document.getElementById('autoLevelCapping').value);}">
           </div>
         </section>
       </article>
@@ -66,9 +66,9 @@
     <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSlideLeft()"> <<< Window Slide </button>
     <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSlideRight()">Window Slide >>> </button><br>
     <button type="button" class="btn btn-xs btn-primary" onclick="windowStart=document.getElementById('windowStart').value">fixed window start(ms)</button>
-    <input type="text" id='windowStart' defaultValue="0" size="8" onkeydown="if(window.event.keyCode=='13'){windowStart=document.getElementById('windowStart').value;}">
+    <input type="text" id='windowStart' defaultValue="0" size="8" onkeydown="if(event.keyCode=='13'){windowStart=document.getElementById('windowStart').value;}">
     <button type="button" class="btn btn-xs btn-primary" onclick="windowEnd=document.getElementById('windowEnd').value">fixed window end(ms)</button>
-    <input type="text" id='windowEnd' defaultValue="10000" size="8" onkeydown="if(window.event.keyCode=='13'){windowEnd=document.getElementById('windowEnd').value;}"><br>
+    <input type="text" id='windowEnd' defaultValue="10000" size="8" onkeydown="if(event.keyCode=='13'){windowEnd=document.getElementById('windowEnd').value;}"><br>
     <button type="button" class="btn btn-xs btn-success" onclick="exportmetrics()" style="font-size:18px">metrics permalink</button>
     <canvas id="bufferTimerange_c" width="640" height="100" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
     <canvas id="bufferWindow_c" width="640" height="100" style="border:1px solid #000000" onmousemove="windowCanvasonMouseMove(event)";></canvas>
@@ -307,7 +307,7 @@ function getRandomTestVid() {
 function timeRangesToString(r) {
   var log = "";
   for (var i=0; i<r.length; i++) {
-    log += "[" + r.start(i) + "," + r.end(i) + "]<br>";
+    log += "[" + r.start(i) + "," + r.end(i) + "]";
   }
   return log;
 }
@@ -390,12 +390,21 @@ function timeRangesToString(r) {
       }
       events.buffer.push(event);
       refreshCanvas();
-      var log = "Buffered:<br>"
-              + timeRangesToString(v.buffered)
-              + "Seekable:<br>"
-              + timeRangesToString(v.seekable)
-              + "Played:<br>"
-              + timeRangesToString(v.played);
+
+      var decodedFrames = v.mozDecodedFrames || v.webkitDecodedFrameCount;
+      var droppedFrames = v.webkitDroppedFrameCount || (v.mozParsedFrames-v.mozPresentedFrames);
+
+
+      var log = "Buffered:"
+              + timeRangesToString(v.buffered) + "<br>"
+              + "Seekable:"
+              + timeRangesToString(v.seekable) + "<br>"
+              + "Played:"
+              + timeRangesToString(v.played) + "<br>"
+              + "Decoded Frames:"
+              + decodedFrames + "<br>"
+              + "Dropped Frames:"
+              + droppedFrames + "<br>"
       document.getElementById("buffered_log").innerHTML = log;
       ctx.fillStyle = "blue";
       var x = v.currentTime / v.duration * canvas.width;
