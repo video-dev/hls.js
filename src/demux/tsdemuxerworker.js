@@ -31,18 +31,23 @@ class TSDemuxerWorker {
 
         // listen to events triggered by TS Demuxer
         observer.on(Event.FRAG_PARSING_INIT_SEGMENT, function(ev, data) {
-            var objData = {
-                event: ev,
-                audioCodec: data.audioCodec,
-                audioMoov: data.audioMoov.buffer,
-                audioChannelCount: data.audioChannelCount,
-                videoCodec: data.videoCodec,
-                videoMoov: data.videoMoov.buffer,
-                videoWidth: data.videoWidth,
-                videoHeight: data.videoHeight
-            };
+            var objData = { event: ev };
+            var objTransferable = [];
+            if (data.audioCodec) {
+                objData.audioCodec = data.audioCodec;
+                objData.audioMoov = data.audioMoov.buffer;
+                objData.audioChannelCount = data.audioChannelCount;
+                objTransferable.push(objData.audioMoov);
+            }
+            if (data.videoCodec) {
+                objData.videoCodec = data.videoCodec;
+                objData.videoMoov = data.videoMoov.buffer;
+                objData.videoWidth = data.videoWidth;
+                objData.videoHeight = data.videoHeight;
+                objTransferable.push(objData.videoMoov);
+            }
             // pass moov as transferable object (no copy)
-            self.postMessage(objData, [objData.audioMoov, objData.videoMoov]);
+            self.postMessage(objData, objTransferable);
         });
         observer.on(Event.FRAG_PARSING_DATA, function(ev, data) {
             var objData = {
