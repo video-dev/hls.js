@@ -432,7 +432,8 @@ class BufferController {
                 this.stats = data.stats;
                 this.demuxer.push(
                     data.payload,
-                    this.levels[this.level].codecs,
+                    this.levels[this.level].audioCodec,
+                    this.levels[this.level].videoCodec,
                     this.frag.start
                 );
             }

@@ -19,7 +19,8 @@ class TSDemuxerWorker {
                 case 'demux':
                     self.demuxer.push(
                         new Uint8Array(ev.data.data),
-                        ev.data.codecs,
+                        ev.data.audioCodec,
+                        ev.data.videoCodec,
                         ev.data.timeOffset
                     );
                     self.demuxer.end();
