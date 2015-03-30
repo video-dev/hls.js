@@ -76,15 +76,20 @@ class Demuxer {
         //console.log('onWorkerMessage:' + ev.data.event);
         switch (ev.data.event) {
             case Event.FRAG_PARSING_INIT_SEGMENT:
-                observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
-                    audioMoov: new Uint8Array(ev.data.audioMoov),
-                    audioCodec: ev.data.audioCodec,
-                    audioChannelCount: ev.data.audioChannelCount,
-                    videoMoov: new Uint8Array(ev.data.videoMoov),
-                    videoCodec: ev.data.videoCodec,
-                    videoWidth: ev.data.videoWidth,
-                    videoHeight: ev.data.videoHeight
-                });
+                var obj = {};
+                if (ev.data.audioMoov) {
+                    obj.audioMoov = new Uint8Array(ev.data.audioMoov);
+                    obj.audioCodec = ev.data.audioCodec;
+                    obj.audioChannelCount = ev.data.audioChannelCount;
+                }
+
+                if (ev.data.videoMoov) {
+                    obj.videoMoov = new Uint8Array(ev.data.videoMoov);
+                    obj.videoCodec = ev.data.videoCodec;
+                    obj.videoWidth = ev.data.videoWidth;
+                    obj.videoHeight = ev.data.videoHeight;
+                }
+                observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, obj);
                 break;
             case Event.FRAG_PARSING_DATA:
                 observer.trigger(Event.FRAG_PARSING_DATA, {
