@@ -393,7 +393,9 @@ function timeRangesToString(r) {
       var log = "Buffered:<br>"
               + timeRangesToString(v.buffered)
               + "Seekable:<br>"
-              + timeRangesToString(v.seekable);
+              + timeRangesToString(v.seekable)
+              + "Played:<br>"
+              + timeRangesToString(v.played);
       document.getElementById("buffered_log").innerHTML = log;
       ctx.fillStyle = "blue";
       var x = v.currentTime / v.duration * canvas.width;
