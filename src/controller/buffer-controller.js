@@ -219,7 +219,8 @@
       case APPENDING:
         if (this.sourceBuffer) {
           // if MP4 segment appending in progress nothing to do
-          if(this.sourceBuffer.audio.updating || this.sourceBuffer.video.updating) {
+          if((this.sourceBuffer.audio && this.sourceBuffer.audio.updating) ||
+             (this.sourceBuffer.video && this.sourceBuffer.video.updating)) {
             //logger.log('sb append in progress');
         // check if any MP4 segments left to append
           } else if(this.mp4segments.length) {
