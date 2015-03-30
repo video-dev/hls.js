@@ -362,7 +362,7 @@
         this.state = PARSING;
         // transmux the MPEG-TS data to ISO-BMFF segments
         this.stats = data.stats;
-        this.demuxer.push(data.payload,this.levels[this.level].codecs,this.frag.start);
+        this.demuxer.push(data.payload,this.levels[this.level].audioCodec,this.levels[this.level].videoCodec,this.frag.start);
       }
       this.startFragmentLoaded = true;
     }

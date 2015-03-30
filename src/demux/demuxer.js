@@ -41,12 +41,12 @@ class Demuxer {
     }
   }
 
-  push(data, codecs, timeOffset) {
+  push(data, audioCodec, videoCodec, timeOffset) {
     if(this.w) {
       // post fragment payload as transferable objects (no copy)
-      this.w.postMessage({ cmd : 'demux' , data : data, codecs : codecs, timeOffset : timeOffset},[data]);
+      this.w.postMessage({ cmd : 'demux' , data : data, audioCodec : audioCodec, videoCodec: videoCodec, timeOffset : timeOffset},[data]);
     } else {
-      this.demuxer.push(new Uint8Array(data), codecs, timeOffset);
+      this.demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset);
       this.demuxer.end();
     }
   }

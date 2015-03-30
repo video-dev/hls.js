@@ -36,8 +36,9 @@
   }
 
   // feed incoming data to the front of the parsing pipeline
-  push(data,codecs,timeOffset) {
-    this.codecs = codecs;
+  push(data,audioCodec, videoCodec,timeOffset) {
+    this.audioCodec = audioCodec;
+    this.videoCodec = videoCodec;
     this.timeOffset = timeOffset;
     var offset;
     for(offset = 0; offset < data.length ; offset += 188) {
@@ -438,7 +439,7 @@
     var track = this._aacTrack,aacSample,data = pes.data,config,adtsFrameSize,adtsStartOffset,adtsHeaderLen,stamp,i;
     if(data[0] === 0xff) {
       if(!track.audiosamplerate) {
-        config = this._ADTStoAudioConfig(pes.data,this.codecs);
+        config = this._ADTStoAudioConfig(pes.data,this.audioCodec);
         track.config = config.config;
         track.audiosamplerate = config.samplerate;
         track.channelCount = config.channelCount;
@@ -564,7 +565,7 @@
     });
   }
 
-  _ADTStoAudioConfig(data,codecs) {
+  _ADTStoAudioConfig(data,audioCodec) {
     var adtsObjectType, // :int
         adtsSampleingIndex, // :int
         adtsExtensionSampleingIndex, // :int
@@ -588,7 +589,7 @@
     // or if no codec specified,we implicitely assume that audio with sampling rate less or equal than 24 kHz is HE-AAC (index 6)
     // currently broken on Chrome/Android
     if(navigator.userAgent.toLowerCase().indexOf('android') === -1 &&
-      ((codecs && codecs.indexOf('mp4a.40.5') !==-1) || (!codecs && adtsSampleingIndex >=6)))  {
+      ((audioCodec && audioCodec.indexOf('mp4a.40.5') !==-1) || (!audioCodec && adtsSampleingIndex >=6)))  {
       adtsObjectType = 5;
       // HE-AAC uses SBR (Spectral Band Replication) , high frequencies are constructed from low frequencies
       // there is a factor 2 between frame sample rate and output sample rate
