@@ -391,9 +391,14 @@ function timeRangesToString(r) {
       events.buffer.push(event);
       refreshCanvas();
 
-      var decodedFrames = v.mozDecodedFrames || v.webkitDecodedFrameCount;
-      var droppedFrames = v.webkitDroppedFrameCount || (v.mozParsedFrames-v.mozPresentedFrames);
-
+      var decodedFrames, droppedFrames;
+      if(navigator.userAgent.toLowerCase().indexOf('firefox') !== -1) {
+        decodedFrames = v.mozDecodedFrames;
+        droppedFrames = v.mozParsedFrames-v.mozPresentedFrames;
+      } else {
+        decodedFrames = v.webkitDecodedFrameCount;
+        droppedFrames = v.webkitDroppedFrameCount;
+      }
 
       var log = "Buffered:"
               + timeRangesToString(v.buffered) + "<br>"
