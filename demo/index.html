@@ -154,6 +154,8 @@
        });
        hls.on(hls.Events.FRAG_PARSING_INIT_SEGMENT,function(event,data) {
           showCanvas();
+          var event = {time : new Date() - t0, type : "init segment"};
+          events.video.push(event);
           document.getElementById("HlsStatus").innerHTML = "playlist successfully loaded," + hls.levels.length + " levels found";
        });
        hls.on(hls.Events.LOAD_ERROR,function(event,data) {
