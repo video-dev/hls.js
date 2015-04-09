@@ -288,7 +288,7 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
 function timeRangesToString(r) {
   var log = "";
   for (var i=0; i<r.length; i++) {
-    log += "[" + r.start(i) + "," + r.end(i) + "]<br>";
+    log += "[" + r.start(i) + "," + r.end(i) + "]";
   }
   return log;
 }
@@ -371,12 +371,26 @@ function timeRangesToString(r) {
       }
       events.buffer.push(event);
       refreshCanvas();
-      var log = "Buffered:<br>"
-              + timeRangesToString(v.buffered)
-              + "Seekable:<br>"
-              + timeRangesToString(v.seekable)
-              + "Played:<br>"
-              + timeRangesToString(v.played);
+
+      var decodedFrames, droppedFrames;
+      if(navigator.userAgent.toLowerCase().indexOf('firefox') !== -1) {
+        decodedFrames = v.mozDecodedFrames;
+        droppedFrames = v.mozParsedFrames-v.mozPresentedFrames;
+      } else {
+        decodedFrames = v.webkitDecodedFrameCount;
+        droppedFrames = v.webkitDroppedFrameCount;
+      }
+      var log = "Buffered:"
+              + timeRangesToString(v.buffered) + "<br>"
+              + "Seekable:"
+              + timeRangesToString(v.seekable) + "<br>"
+              + "Played:"
+              + timeRangesToString(v.played) + "<br>"
+              + "Decoded Frames:"
+              + decodedFrames + "<br>"
+              + "Dropped Frames:"
+              + droppedFrames + "<br>";
+
       document.getElementById("buffered_log").innerHTML = log;
       ctx.fillStyle = "blue";
       var x = v.currentTime / v.duration * canvas.width;
