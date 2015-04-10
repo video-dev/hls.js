@@ -28,7 +28,7 @@
           <div id="customButtons"></div>
           <pre id='HlsUrl'></pre>
           <pre id='HlsStatus'></pre>
-          <video id=video controls autoplay"" border="4"></video>
+          <video id=video controls autoplay border="4"></video>
           <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)";></canvas> <br>
           <div id='buttons'>
             <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').play()">play()</button>
@@ -150,7 +150,7 @@
           bufferingIdx = -1;
           hls.attachSource(_url);
           // video tag is in autoplay but firefox does not handle properly autoplay with MSE
-          video.play();
+          //video.play();
        });
        hls.on(hls.Events.FRAG_PARSING_INIT_SEGMENT,function(event,data) {
           showCanvas();
