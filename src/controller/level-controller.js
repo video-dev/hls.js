@@ -37,7 +37,6 @@ class LevelController {
             bitrateStart,
             i,
             bitrateSet = {},
-            audiocodecswitch = false,
             aac = false,
             heaac = false,
             codecs;
@@ -200,7 +199,7 @@ class LevelController {
             adjustedbw,
             i,
             maxAutoLevel;
-        if (this._autoLevelCapping == -1) {
+        if (this._autoLevelCapping === -1) {
             maxAutoLevel = this._levels.length - 1;
         } else {
             maxAutoLevel = this._autoLevelCapping;
