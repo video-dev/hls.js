@@ -105,7 +105,7 @@
   }
 
   tick() {
-    var pos,loadLevel,loadLevelDetails;
+    var pos,loadLevel,loadLevelDetails,fragIdx;
     switch(this.state) {
       case STARTING:
         // determine load level
@@ -120,7 +120,6 @@
         this.state = WAITING_LEVEL;
         this.loadedmetadata = false;
         return;
-        break;
       case IDLE:
         // determine next candidate fragment to be loaded, based on current position and
         //  end of buffer position
@@ -168,7 +167,7 @@
           }
           // if one buffer range, load next SN
           if(bufferLen > 0 && this.video.buffered.length === 1) {
-            var fragIdx = this.frag.sn + 1 - fragments[0].sn;
+            fragIdx = this.frag.sn + 1 - fragments[0].sn;
             if(fragIdx >= fragments.length) {
               // most certainly live playlist is outdated, let's move to WAITING LEVEL state and come back once it will have been refreshed
               //logger.log('sn ' + (this.frag.sn + 1) + ' out of range, wait for live playlist update');
@@ -272,7 +271,7 @@
     this.mediaSource = data.mediaSource;
   }
 
-  onVideoSeeking(event) {
+  onVideoSeeking() {
     if(this.state === LOADING) {
       // check if currently loaded fragment is inside buffer.
       //if outside, cancel fragment loading, otherwise do nothing
@@ -286,7 +285,7 @@
     this.tick();
   }
 
-  onVideoMetadata(event) {
+  onVideoMetadata() {
       if(this.video.currentTime !== this.startPosition) {
         this.video.currentTime = this.startPosition;
     }

@@ -35,7 +35,7 @@
   }
 
   onManifestLoaded(event,data) {
-    var levels = [],bitrateStart,i,bitrateSet={},audiocodecswitch = false, aac=false, heaac=false,codecs;
+    var levels = [],bitrateStart,i,bitrateSet={}, aac=false, heaac=false,codecs;
     // remove failover level for now to simplify the logic
     data.levels.forEach(level => {
       if(!bitrateSet.hasOwnProperty(level.bitrate)) {
@@ -45,10 +45,10 @@
       // detect if we have different kind of audio codecs used amongst playlists
       codecs = level.codecs;
       if(codecs) {
-        if(codecs.indexOf("mp4a.40.2") !== -1) {
+        if(codecs.indexOf('mp4a.40.2') !== -1) {
           aac = true;
         }
-        if(codecs.indexOf("mp4a.40.5") !== -1) {
+        if(codecs.indexOf('mp4a.40.5') !== -1) {
           heaac = true;
         }
       }
@@ -178,7 +178,7 @@
 
   nextAutoLevel() {
     var lastbw = this.lastbw,adjustedbw,i,maxAutoLevel;
-    if(this._autoLevelCapping == -1) {
+    if(this._autoLevelCapping === -1) {
       maxAutoLevel = this._levels.length-1;
     } else {
       maxAutoLevel = this._autoLevelCapping;
