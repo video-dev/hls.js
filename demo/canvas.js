@@ -306,6 +306,110 @@
     ctx.globalAlpha = 1;
   }
 
+  function canvasBitrateEventUpdate(canvas, minTime, maxTime, windowMinTime, windowMaxTime, levelEvents, bitrateEvents) {
+    var ctx = canvas.getContext('2d'),
+    bufferChartStart = eventLeftMargin,
+    bufferChartWidth = ctx.canvas.width-eventLeftMargin-eventRightMargin,
+    x_offset = 0,y_offset = 0,
+    event, maxLevel, minLevel, sumLevel, maxBitrate, minBitrate, sumDuration;
+    ctx.clearRect (0,0,canvas.width, canvas.height);
+
+    if(levelEvents.length === 0) {
+      return;
+    }
+
+    maxBitrate = minBitrate = bitrateEvents[0].bitrate;
+    sumLevel = sumDuration = 0;
+    for (var i =0 ; i < bitrateEvents.length; i++) {
+      sumLevel += bitrateEvents[i].duration*bitrateEvents[i].level;
+      sumDuration += bitrateEvents[i].duration;
+      maxBitrate = Math.max(maxBitrate, bitrateEvents[i].bitrate);
+      minBitrate = Math.min(minBitrate, bitrateEvents[i].bitrate);
+    }
+
+    maxLevel = minLevel = levelEvents[0].id;
+    for (var i =0 ; i < levelEvents.length; i++) {
+      maxLevel = Math.max(maxLevel, levelEvents[i].id);
+      minLevel = Math.min(minLevel, levelEvents[i].id);
+    }
+
+    ctx.fillStyle = "green";
+    ctx.globalAlpha = 0.5;
+    ctx.fillRect(0,0,eventLeftMargin, canvas.height);
+    ctx.fillRect(canvas.width-eventRightMargin,0,eventRightMargin, canvas.height);
+    ctx.globalAlpha = 1;
+
+    x_offset = 5;
+    y_offset = 0;
+    ctx.fillStyle = "black";
+    ctx.font = "15px Arial";
+
+    y_offset+=15;
+    legend = 'last bitrate:' + (bitrateEvents[bitrateEvents.length-1].bitrate/1000).toFixed(2) + "Mb/s";
+    ctx.fillText(legend,x_offset,y_offset);
+
+    y_offset+=15;
+    legend = 'min bitrate:' + (minBitrate/1000).toFixed(2)  + "Mb/s";
+    ctx.fillText(legend,x_offset,y_offset);
+
+    y_offset+=15;
+    legend = 'max bitrate:' + (maxBitrate/1000).toFixed(2)  + "Mb/s";
+    ctx.fillText(legend,x_offset,y_offset);
+
+    y_offset+=15;
+    legend = 'min/last/max level:' + minLevel + '/' + levelEvents[levelEvents.length-1].id + '/' + maxLevel;
+    ctx.fillText(legend,x_offset,y_offset);
+
+    y_offset += 15;
+    legend = 'nb level switch:' + (levelEvents.length-1);
+    ctx.fillText(legend,x_offset,y_offset);
+
+    y_offset += 15;
+    legend = 'average level:' + (sumLevel/sumDuration).toFixed(2);
+    ctx.fillText(legend,x_offset,y_offset);
+
+    maxBitrate*=1.1;
+
+    ctx.strokeStyle = "blue";
+    ctx.beginPath();
+    ctx.moveTo(bufferChartStart, ctx.canvas.height);
+    for (var i =0 ; i < bitrateEvents.length; i++) {
+      event = bitrateEvents[i];
+      x_offset = bufferChartStart + (bufferChartWidth*(event.time-minTime))/(maxTime-minTime);
+      y_offset = ctx.canvas.height*(1 - event.bitrate/maxBitrate);
+      ctx.lineTo(x_offset,y_offset);
+    }
+    ctx.lineTo(bufferChartStart+bufferChartWidth, y_offset);
+    ctx.stroke();
+
+    ctx.strokeStyle = "black";
+    ctx.beginPath();
+    x_offset = bufferChartStart;
+    y_offset =  ctx.canvas.height;
+    ctx.moveTo(x_offset, y_offset);
+    for (var i =0 ; i < levelEvents.length; i++) {
+      event = levelEvents[i];
+      x_offset = bufferChartStart + (bufferChartWidth*(event.time-minTime))/(maxTime-minTime);
+      ctx.lineTo(x_offset,y_offset);
+      y_offset = ctx.canvas.height*(1 - event.bitrate/maxBitrate);
+      ctx.lineTo(x_offset,y_offset);
+    }
+    ctx.lineTo(bufferChartStart+bufferChartWidth, y_offset);
+    ctx.stroke();
+
+    ctx.globalAlpha = 0.7;
+    ctx.fillStyle = "grey";
+    var x_start = bufferChartStart;
+    var x_w = bufferChartWidth*(windowMinTime-minTime)/(maxTime-minTime);
+    ctx.fillRect(x_start,0,x_w, canvas.height);
+    var x_start = bufferChartStart+bufferChartWidth*(windowMaxTime-minTime)/(maxTime-minTime);
+    var x_w = canvas.width-x_start-eventRightMargin;
+    ctx.fillRect(x_start,0,x_w, canvas.height);
+    ctx.globalAlpha = 1;
+
+  }
+
+
   function canvasDrawLoadEvent(ctx,yoffset,event,minTime,maxTime) {
     var legend,offset,x_start,x_w,
     networkChartStart = eventLeftMargin,

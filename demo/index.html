@@ -67,6 +67,7 @@
     <input type="text" id='windowEnd' defaultValue="10000" size="8" onkeydown="if(window.event.keyCode=='13'){windowEnd=document.getElementById('windowEnd').value;}"><br>
     <button type="button" class="btn btn-xs btn-success" onclick="exportmetrics()" style="font-size:18px">metrics permalink</button>
     <canvas id="bufferTimerange_c" width="640" height="100" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
+    <canvas id="bitrateTimerange_c" width="640" height="100" style="border:1px solid #000000";></canvas>
     <canvas id="bufferWindow_c" width="640" height="100" style="border:1px solid #000000" onmousemove="windowCanvasonMouseMove(event)";></canvas>
     <canvas id="videoEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas>
     <canvas id="loadEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
@@ -142,17 +143,16 @@
         _url = url;
        }
        t0 = Date.now();
+       events = { url : _url, date : new Date(), load : [], buffer : [], video : [], level : [], bitrate : []};
        hls = new Hls();
        hls.debug(true);
        document.getElementById("HlsStatus").innerHTML = 'loading manifest and attaching video element...';
        hls.loadSource(_url);
        hls.attachVideo(video);
-       events = { url : _url, date : new Date(), load : [], buffer : [], video : []};
        hls.on(hls.Events.MSE_ATTACHED,function() {
           bufferingIdx = -1;
-          var event = {time : new Date() - t0, type : "MSE attached"};
           document.getElementById("HlsStatus").innerHTML = 'video element attached...';
-          events.video.push(event);
+          events.video.push({time : new Date() - t0, type : "MSE attached"});
        });
        hls.on(hls.Events.FRAG_PARSING_INIT_SEGMENT,function(event,data) {
           showCanvas();
@@ -168,10 +168,7 @@
           }
        });
        hls.on(hls.Events.LEVEL_SWITCH,function(event,data) {
-          //document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",switching to level:" + data.levelId;
-       });
-       hls.on(hls.Events.LEVEL_LOADING,function(event,data) {
-          //document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",loading level:" + data.levelId;
+          events.level.push({time : new Date() - t0, id : data.levelId, bitrate : Math.round(hls.levels[data.levelId].bitrate/1000)});
        });
        hls.on(hls.Events.MANIFEST_LOADED,function(event,data) {
         document.getElementById("HlsStatus").innerHTML = 'manifest loaded...';
@@ -216,6 +213,7 @@
             bw : Math.round(8*data.stats.length/(data.stats.tbuffered - data.stats.tfirst))
           };
           events.load.push(event);
+          events.bitrate.push({time : new Date() - t0, bitrate : event.bw , duration : data.frag.duration, level : event.id});
           if(hls.bufferTimer === undefined) {
             events.buffer.push({ time : 0, buffer : 0, pos: 0});
             hls.bufferTimer = window.setInterval(checkBuffer, 100);
