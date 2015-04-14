@@ -64,19 +64,17 @@ class LevelController {
         });
         this._levels = levels;
 
-        if (this._startLevel === undefined) {
-            // find index of start level in sorted levels
-            for (i = 0; i < levels.length; i++) {
-                if (levels[i].bitrate === bitrateStart) {
-                    this._startLevel = i;
-                    logger.log(
-                        'manifest loaded,' +
-                            levels.length +
-                            ' level(s) found, start bitrate:' +
-                            bitrateStart
-                    );
-                    break;
-                }
+        // find index of first level in sorted levels
+        for (i = 0; i < levels.length; i++) {
+            if (levels[i].bitrate === bitrateStart) {
+                this._firstLevel = i;
+                logger.log(
+                    'manifest loaded,' +
+                        levels.length +
+                        ' level(s) found, first bitrate:' +
+                        bitrateStart
+                );
+                break;
             }
         }
 
@@ -152,8 +150,20 @@ class LevelController {
         this._autoLevelCapping = newLevel;
     }
 
+    get firstLevel() {
+        return this._firstLevel;
+    }
+
+    set firstLevel(newLevel) {
+        this._firstLevel = newLevel;
+    }
+
     get startLevel() {
-        return this._startLevel;
+        if (this._startLevel === undefined) {
+            return this._firstLevel;
+        } else {
+            return this._startLevel;
+        }
     }
 
     set startLevel(newLevel) {
