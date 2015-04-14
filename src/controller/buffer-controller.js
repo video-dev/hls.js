@@ -19,8 +19,7 @@
 
  class BufferController {
 
-  constructor(video,levelController) {
-    this.video = video;
+  constructor(levelController) {
     this.levelController = levelController;
     this.fragmentLoader = new FragmentLoader();
     this.mp4segments = [];
@@ -28,7 +27,7 @@
     this.onsbue = this.onSourceBufferUpdateEnd.bind(this);
     this.onsbe  = this.onSourceBufferError.bind(this);
     // internal listeners
-    this.onfr = this.onFrameworkReady.bind(this);
+    this.onmse = this.onMSEAttached.bind(this);
     this.onmp = this.onManifestParsed.bind(this);
     this.onll = this.onLevelLoaded.bind(this);
     this.onfl = this.onFragmentLoaded.bind(this);
@@ -36,17 +35,10 @@
     this.onfpg = this.onFragmentParsing.bind(this);
     this.onfp = this.onFragmentParsed.bind(this);
     this.ontick = this.tick.bind(this);
-    this.state = STARTING;
-    observer.on(Event.FRAMEWORK_READY, this.onfr);
+    observer.on(Event.MSE_ATTACHED, this.onmse);
     observer.on(Event.MANIFEST_PARSED, this.onmp);
     this.demuxer = new Demuxer();
-    // video listener
-    this.onvseeking = this.onVideoSeeking.bind(this);
-    this.onvmetadata = this.onVideoMetadata.bind(this);
-    video.addEventListener('seeking',this.onvseeking);
-    video.addEventListener('loadedmetadata',this.onvmetadata);
   }
-
   destroy() {
     this.stop();
     this.fragmentLoader.destroy();
@@ -71,7 +63,6 @@
       }
       this.sourceBuffer = null;
     }
-    observer.removeListener(Event.FRAMEWORK_READY, this.onfr);
     observer.removeListener(Event.MANIFEST_PARSED, this.onmp);
     // remove video listener
     this.video.removeEventListener('seeking',this.onvseeking);
@@ -89,6 +80,7 @@
     observer.on(Event.FRAG_PARSING_DATA, this.onfpg);
     observer.on(Event.FRAG_PARSED, this.onfp);
     observer.on(Event.LEVEL_LOADED, this.onll);
+    this.state = STARTING;
     this.tick();
   }
 
@@ -267,10 +259,17 @@
   }
 
 
-  onFrameworkReady(event,data) {
+  onMSEAttached(event,data) {
+    this.video = data.video;
     this.mediaSource = data.mediaSource;
+    this.onvseeking = this.onVideoSeeking.bind(this);
+    this.onvmetadata = this.onVideoMetadata.bind(this);
+    this.video.addEventListener('seeking',this.onvseeking);
+    this.video.addEventListener('loadedmetadata',this.onvmetadata);
+    if(this.levels) {
+      this.start();
+    }
   }
-
   onVideoSeeking() {
     if(this.state === LOADING) {
       // check if currently loaded fragment is inside buffer.
@@ -301,7 +300,9 @@
     this.levels = data.levels;
     this.startLevelLoaded = false;
     this.startFragmentLoaded = false;
-    this.start();
+    if(this.video) {
+      this.start();
+    }
   }
 
   onLevelLoaded(event,data) {

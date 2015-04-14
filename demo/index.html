@@ -141,16 +141,18 @@
        } else {
         _url = url;
        }
-       hls = new Hls(video);
-       hls.debug(true);
        t0 = Date.now();
-       hls.on(hls.Events.FRAMEWORK_READY,function() {
-          document.getElementById("HlsStatus").innerHTML = 'attaching URL to video tag';
-          events = { url : _url, date : new Date(), load : [], buffer : [], video : []};
+       hls = new Hls();
+       hls.debug(true);
+       document.getElementById("HlsStatus").innerHTML = 'loading manifest and attaching video element...';
+       hls.loadSource(_url);
+       hls.attachVideo(video);
+       events = { url : _url, date : new Date(), load : [], buffer : [], video : []};
+       hls.on(hls.Events.MSE_ATTACHED,function() {
           bufferingIdx = -1;
-          hls.attachSource(_url);
-          // video tag is in autoplay but firefox does not handle properly autoplay with MSE
-          //video.play();
+          var event = {time : new Date() - t0, type : "MSE attached"};
+          document.getElementById("HlsStatus").innerHTML = 'video element attached...';
+          events.video.push(event);
        });
        hls.on(hls.Events.FRAG_PARSING_INIT_SEGMENT,function(event,data) {
           showCanvas();
@@ -172,6 +174,7 @@
           //document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",loading level:" + data.levelId;
        });
        hls.on(hls.Events.MANIFEST_LOADED,function(event,data) {
+        document.getElementById("HlsStatus").innerHTML = 'manifest loaded...';
           var event = {
             type : "manifest",
             name : "",

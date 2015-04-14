@@ -10,8 +10,7 @@
 
  class LevelController {
 
-  constructor(video,playlistLoader) {
-    this.video = video;
+  constructor(playlistLoader) {
     this.playlistLoader = playlistLoader;
     this.onml = this.onManifestLoaded.bind(this);
     this.onfl = this.onFragmentLoaded.bind(this);

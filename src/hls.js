@@ -17,17 +17,16 @@ class Hls {
     return (window.MediaSource && MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"'));
   }
 
-  constructor(video) {
+  constructor() {
     this.playlistLoader = new PlaylistLoader();
-    this.levelController = new LevelController(video,this.playlistLoader);
-    this.bufferController = new BufferController(video,this.levelController);
+    this.levelController = new LevelController(this.playlistLoader);
+    this.bufferController = new BufferController(this.levelController);
     this.Events = Event;
     this.debug = enableLogs;
     this.logEvt = this.logEvt;
     // observer setup
     this.on = observer.on.bind(observer);
     this.off = observer.removeListener.bind(observer);
-    this.attachView(video);
   }
 
   destroy() {
@@ -44,11 +43,11 @@ class Hls {
       this.levelController = null;
     }
     this.detachSource();
-    this.detachView();
+    this.detachVideo();
     observer.removeAllListeners();
   }
 
-  attachView(video) {
+  attachVideo(video) {
     this.video = video;
     // setup the media source
     var ms = this.mediaSource = new MediaSource();
@@ -65,7 +64,7 @@ class Hls {
     video.addEventListener('error',this.onverror);
   }
 
-  detachView() {
+  detachVideo() {
     var video = this.video;
     var ms = this.mediaSource;
     if(ms) {
@@ -86,14 +85,14 @@ class Hls {
     }
   }
 
-  attachSource(url) {
+  loadSource(url) {
     this.url = url;
-    logger.log('attachSource:'+url);
+    logger.log('loadSource:'+url);
     // when attaching to a source URL, trigger a playlist load
     this.playlistLoader.load(url,null);
   }
 
-  detachSource() {
+  unloadSource() {
     this.url = null;
   }
 
@@ -148,7 +147,7 @@ class Hls {
   }
 
   onMediaSourceOpen() {
-    observer.trigger(Event.FRAMEWORK_READY, { mediaSource : this.mediaSource });
+    observer.trigger(Event.MSE_ATTACHED, { video: this.video, mediaSource : this.mediaSource });
   }
 
   onMediaSourceClose() {
