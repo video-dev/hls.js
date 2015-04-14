@@ -11,7 +11,7 @@ class TSDemuxerWorker {
                     self.demuxer = new TSDemuxer();
                     break;
                 case 'duration':
-                    self.demuxer.duration = ev.data.data;
+                    self.demuxer.setDuration(ev.data.data);
                     break;
                 case 'switchLevel':
                     self.demuxer.switchLevel();
