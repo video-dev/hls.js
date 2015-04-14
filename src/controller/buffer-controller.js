@@ -330,7 +330,7 @@
     // override level info
     level.details = data.details;
     level.details.sliding = sliding;
-    this.demuxer.duration = duration;
+    this.demuxer.setDuration(duration);
     if(this.startLevelLoaded === false) {
       // if live playlist, set start position to be fragment N-3
       if(data.details.live) {

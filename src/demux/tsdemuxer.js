@@ -18,7 +18,7 @@
     this.switchLevel();
   }
 
-  set duration(newDuration) {
+  setDuration(newDuration) {
     this._duration = newDuration;
   }
 

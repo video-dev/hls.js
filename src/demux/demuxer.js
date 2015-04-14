@@ -22,12 +22,12 @@ class Demuxer {
     this.demuxInitialized = true;
   }
 
-  set duration(newDuration) {
+  setDuration(newDuration) {
     if(this.w) {
       // post fragment payload as transferable objects (no copy)
       this.w.postMessage({ cmd : 'duration' , data : newDuration});
     } else {
-      this.demuxer.duration = newDuration;
+      this.demuxer.setDuration(newDuration);
     }
   }
 
