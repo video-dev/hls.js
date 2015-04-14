@@ -110,8 +110,20 @@ class Hls {
     this.levelController.manualLevel = newLevel;
   }
 
+  /** Return first level (index of first level referenced in manifest)
+  **/
+  get firstLevel() {
+    return this.levelController.firstLevel;
+  }
+
+  /** set first level (index of first level referenced in manifest)
+  **/
+  set firstLevel(newLevel) {
+    this.levelController.firstLevel = newLevel;
+  }
+
   /** Return start level (level of first fragment that will be played back)
-      if undefined : first level appearing in manifest will be used as start level
+      if not overrided by user, first level appearing in manifest will be used as start level
       if -1 : automatic start level selection, playback will start from level matching download bandwidth (determined from download of first segment)
   **/
   get startLevel() {
@@ -119,7 +131,7 @@ class Hls {
   }
 
   /** set  start level (level of first fragment that will be played back)
-      if undefined : first level appearing in manifest will be used as start level
+      if not overrided by user, first level appearing in manifest will be used as start level
       if -1 : automatic start level selection, playback will start from level matching download bandwidth (determined from download of first segment)
   **/
   set startLevel(newLevel) {

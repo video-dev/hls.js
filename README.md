@@ -86,14 +86,18 @@ get/set : index of quality level of last loaded fragment.
 
 set to -1 for automatic level selection
 
+#### hls.firstLevel
+
+get :  first level index (index of first level appearing in Manifest. it is usually defined as start level hint for player)
+
 #### hls.startLevel
 
 get/set :  start level index (level of first fragment that will be played back)
 
-  - if undefined : first level appearing in manifest will be used as start level.
+  - if not overrided by user : first level appearing in manifest will be used as start level.
   -  if -1 : automatic start level selection, playback will start from level matching download bandwidth (determined from download of first segment)
 
-default value is undefined (first level appearing in Manifest will be used as start level)
+default value is firstLevel
 
 #### hls.autoLevelEnabled
 
