@@ -42,7 +42,7 @@ class Hls {
       this.levelController.destroy();
       this.levelController = null;
     }
-    this.detachSource();
+    this.unloadSource();
     this.detachVideo();
     observer.removeAllListeners();
   }
