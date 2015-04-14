@@ -1,6 +1,6 @@
 export default {
-    // Identifier for a framework ready event, triggered when ready to set DataSource
-    FRAMEWORK_READY: 'hlsFrameworkReady',
+    // triggered when MediaSource has been attached to video tag
+    MSE_ATTACHED: 'hlsMediaSourceAttached',
     //Identifier for a manifest loaded event
     MANIFEST_LOADED: 'hlsManifestLoaded',
     //Identifier for a manifest parsed event, when this event is received, main manifest and start level has been retrieved

@@ -37,10 +37,19 @@ working in Chrome (also on mobile device)
 <script>
   if(Hls.isSupported()) {
     var video = document.getElementById('video');
-    var hls = new Hls(video);
-    hls.on(hls.Events.FRAMEWORK_READY,function() {
-      hls.attachSource('http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8');
+    var hls = new Hls();
+    hls.loadSource('http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8');    
+    hls.attachVideo(video);
+
+    hls.on(hls.Events.MANIFEST_PARSED,function() {
+      ...
   });
+
+    hls.on(hls.Events.MSE_ATTACHED,function() {
+      ...
+  });
+
+
  }
 </script>
 ```
@@ -107,7 +116,7 @@ hls.on(hls.Events.LEVEL_LOADED,function(event,data) {
 ```
 full list of Events available below :
 
-  - `hls.events.FRAMEWORK_READY`  - fired when framework and MediaSource is ready to be used
+  - `hls.events.MSE_ATTACHED`  - fired when MediaSource has been succesfully attached to video element.
   	-  data: { mediaSource }
   - `hls.events.MANIFEST_LOADED`  - fired after manifest has been loaded
   	-  data: { levels : [available quality levels] , url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
