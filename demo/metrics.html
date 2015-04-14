@@ -31,6 +31,7 @@
     <button onclick="windowEnd=document.getElementById('windowEnd').value;refreshCanvas();">fixed window end(ms)</button>
     <input type="text" id='windowEnd' defaultValue="10000" onkeydown="if(window.event.keyCode=='13'){windowEnd=document.getElementById('windowEnd').value;refreshCanvas();}"><br>
     <canvas id="bufferTimerange_c" width="640" height="100" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
+    <canvas id="bitrateTimerange_c" width="640" height="100" style="border:1px solid #000000";></canvas>
     <canvas id="bufferWindow_c" width="640" height="100" style="border:1px solid #000000" onmousemove="windowCanvasonMouseMove(event)";></canvas>
     <canvas id="videoEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas>
     <canvas id="loadEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>

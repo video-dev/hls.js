@@ -3,8 +3,10 @@
       document.getElementById('videoEvent_c').width =
       document.getElementById('loadEvent_c').width =
       document.getElementById('bufferWindow_c').width =
+      document.getElementById('bitrateTimerange_c').width =
       document.getElementById('bufferTimerange_c').width = width;
       document.getElementById('bufferWindow_c').style.display=
+      document.getElementById('bitrateTimerange_c').style.display=
       document.getElementById('bufferTimerange_c').style.display=
       document.getElementById('videoEvent_c').style.display =
       document.getElementById('loadEvent_c').style.display= "block";
@@ -13,6 +15,7 @@
 
   function hideMetrics()  {
       document.getElementById('bufferWindow_c').style.display=
+      document.getElementById('bitrateTimerange_c').style.display=
       document.getElementById('bufferTimerange_c').style.display=
       document.getElementById('videoEvent_c').style.display =
       document.getElementById('loadEvent_c').style.display= "none";
@@ -91,6 +94,7 @@ document.getElementById('windowStart').value=windowStart;document.getElementById
       } else {
         document.getElementById('bufferWindow_c').style.display="none";
       }
+      canvasBitrateEventUpdate(document.getElementById('bitrateTimerange_c'), 0, windowTime.now, windowTime.min,windowTime.max, events.level, events.bitrate);
       canvasVideoEventUpdate(document.getElementById('videoEvent_c'), windowTime.min,windowTime.max, events.video);
       canvasLoadEventUpdate(document.getElementById('loadEvent_c'), windowTime.min,windowTime.max, events.load);
     } catch(err) {
