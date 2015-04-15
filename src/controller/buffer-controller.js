@@ -64,10 +64,13 @@ class BufferController {
         }
         observer.removeListener(Event.MANIFEST_PARSED, this.onmp);
         // remove video listener
-        this.video.removeEventListener('seeking', this.onvseeking);
-        this.video.removeEventListener('loadedmetadata', this.onvmetadata);
-        this.onvseeking = null;
-        this.onvmetadata = null;
+        if (this.video) {
+            this.video.removeEventListener('seeking', this.onvseeking);
+            this.video.removeEventListener('loadedmetadata', this.onvmetadata);
+            this.onvseeking = null;
+            this.onvmetadata = null;
+        }
+
         this.state = IDLE;
     }
 
