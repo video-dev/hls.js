@@ -421,6 +421,7 @@ class TSDemuxer {
         var i = 0,
             len = array.byteLength,
             value,
+            overflow,
             state = 0;
         var units = [],
             unit,
@@ -464,6 +465,32 @@ class TSDemuxer {
                             length += i - state - 1 - lastUnitStart;
                             //logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
                             units.push(unit);
+                        } else {
+                            // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
+                            overflow = i - state - 1;
+                            if (overflow) {
+                                //logger.log('first NALU found with overflow:' + overflow);
+                                if (this._avcSamples.length) {
+                                    var lastavcSample = this._avcSamples[
+                                        this._avcSamples.length - 1
+                                    ];
+                                    var lastUnit =
+                                        lastavcSample.units.units[
+                                            lastavcSample.units.units.length - 1
+                                        ];
+                                    var tmp = new Uint8Array(
+                                        lastUnit.data.byteLength + overflow
+                                    );
+                                    tmp.set(lastUnit.data, 0);
+                                    tmp.set(
+                                        array.subarray(0, overflow),
+                                        lastUnit.data.byteLength
+                                    );
+                                    lastUnit.data = tmp;
+                                    lastavcSample.units.length += overflow;
+                                    this._avcSamplesLength += overflow;
+                                }
+                            }
                         }
                         lastUnitStart = i;
                         lastUnitType = unitType;
