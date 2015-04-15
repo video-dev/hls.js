@@ -225,6 +225,11 @@
           document.getElementById("HlsStatus").innerHTML = "Video Error";
           document.getElementById('buffered_c').width = 0;
        });
+       hls.on(hls.Events.FRAG_PARSING_ERROR,function(event,data) {
+          hls.destroy();
+          document.getElementById("HlsStatus").innerHTML = "Parsing Error:" + data;
+          document.getElementById('buffered_c').width = 0;
+       });
        video.addEventListener('resize', handleVideoEvent);
        video.addEventListener('seeking', handleVideoEvent);
        video.addEventListener('seeked', handleVideoEvent);
