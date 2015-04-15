@@ -448,7 +448,7 @@
         console.log(track.codec +',rate:' + config.samplerate + ',nb channel:' + config.channelCount);
       }
       adtsStartOffset = i = 0;
-      while(adtsStartOffset < data.length) {
+      while((adtsStartOffset + 5) < data.length) {
         // retrieve frame size
         adtsFrameSize = ((data[adtsStartOffset+3] & 0x03) << 11);
         // byte 4
