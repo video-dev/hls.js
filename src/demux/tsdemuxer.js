@@ -493,7 +493,6 @@ class TSDemuxer {
     }
 
     _parseAACPES(pes) {
-        //logger.log('PES:' + Hex.hexDump(pes.data));
         var track = this._aacTrack,
             aacSample,
             data = pes.data,
@@ -503,6 +502,15 @@ class TSDemuxer {
             adtsHeaderLen,
             stamp,
             i;
+        if (this.aacOverFlow) {
+            var tmp = new Uint8Array(
+                this.aacOverFlow.byteLength + data.byteLength
+            );
+            tmp.set(this.aacOverFlow, 0);
+            tmp.set(data, this.aacOverFlow.byteLength);
+            data = tmp;
+        }
+        //logger.log('PES:' + Hex.hexDump(data));
         if (data[0] === 0xff) {
             if (!track.audiosamplerate) {
                 config = this._ADTStoAudioConfig(pes.data, this.audioCodec);
@@ -532,18 +540,25 @@ class TSDemuxer {
                 stamp = pes.pts + i * 1024 * 1000 / track.audiosamplerate;
                 //stamp = pes.pts;
                 //console.log('AAC frame, offset/length/pts:' + (adtsStartOffset+7) + '/' + adtsFrameSize + '/' + stamp.toFixed(0));
-                aacSample = {
-                    unit: pes.data.subarray(
-                        adtsStartOffset + adtsHeaderLen,
-                        adtsStartOffset + adtsHeaderLen + adtsFrameSize
-                    ),
-                    pts: stamp,
-                    dts: stamp
-                };
-                adtsStartOffset += adtsFrameSize + adtsHeaderLen;
-                this._aacSamples.push(aacSample);
-                this._aacSamplesLength += adtsFrameSize;
-                i++;
+                if (
+                    adtsStartOffset + adtsHeaderLen + adtsFrameSize <=
+                    data.length
+                ) {
+                    aacSample = {
+                        unit: data.subarray(
+                            adtsStartOffset + adtsHeaderLen,
+                            adtsStartOffset + adtsHeaderLen + adtsFrameSize
+                        ),
+                        pts: stamp,
+                        dts: stamp
+                    };
+                    this._aacSamples.push(aacSample);
+                    this._aacSamplesLength += adtsFrameSize;
+                    adtsStartOffset += adtsFrameSize + adtsHeaderLen;
+                    i++;
+                } else {
+                    break;
+                }
             }
         } else {
             observer.trigger(
@@ -554,6 +569,11 @@ class TSDemuxer {
         }
         if (!this._initSegGenerated) {
             this._generateInitSegment();
+        }
+        if (adtsStartOffset < data.length) {
+            this.aacOverFlow = data.subarray(adtsStartOffset, data.length);
+        } else {
+            this.aacOverFlow = null;
         }
     }
 
