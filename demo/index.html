@@ -238,6 +238,7 @@
        video.addEventListener('playing', handleVideoEvent);
        video.addEventListener('error', handleVideoEvent);
        video.addEventListener('loadedmetadata', handleVideoEvent);
+       video.addEventListener('loadeddata', handleVideoEvent);
        video.addEventListener('durationchange', handleVideoEvent);
     } else {
       if(navigator.userAgent.toLowerCase().indexOf('firefox') !== -1) {
@@ -263,7 +264,7 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
       case 'loadedmetadata':
       //   data = 'duration:' + evt.target.duration + '/videoWidth:' + evt.target.videoWidth + '/videoHeight:' + evt.target.videoHeight;
       //  break;
-      // case 'loadeddata':
+      case 'loadeddata':
       // case 'canplay':
       // case 'canplaythrough':
       case 'seeking':
