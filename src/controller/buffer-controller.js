@@ -66,9 +66,9 @@ class BufferController {
         // remove video listener
         if (this.video) {
             this.video.removeEventListener('seeking', this.onvseeking);
+            this.video.removeEventListener('seeked', this.onvseeked);
             this.video.removeEventListener('loadedmetadata', this.onvmetadata);
-            this.onvseeking = null;
-            this.onvmetadata = null;
+            this.onvseeking = this.onvseeked = this.onvmetadata = null;
         }
 
         this.state = IDLE;
@@ -113,7 +113,7 @@ class BufferController {
                 this.levelController.level = this.startLevel;
                 this.state = WAITING_LEVEL;
                 this.loadedmetadata = false;
-                return;
+                break;
             case IDLE:
                 // determine next candidate fragment to be loaded, based on current position and
                 //  end of buffer position
@@ -153,7 +153,7 @@ class BufferController {
                     // if level details retrieved yet, switch state and wait for level retrieval
                     if (typeof loadLevelDetails === 'undefined') {
                         this.state = WAITING_LEVEL;
-                        return;
+                        break;
                     }
                     // find fragment index, contiguous with end of buffer position
                     var fragments = loadLevelDetails.fragments,
@@ -170,7 +170,7 @@ class BufferController {
                                 start
                         );
                         this.video.currentTime = start + 0.01;
-                        return;
+                        break;
                     }
                     // if one buffer range, load next SN
                     if (bufferLen > 0 && this.video.buffered.length === 1) {
@@ -179,7 +179,7 @@ class BufferController {
                             // most certainly live playlist is outdated, let's move to WAITING LEVEL state and come back once it will have been refreshed
                             //logger.log('sn ' + (this.frag.sn + 1) + ' out of range, wait for live playlist update');
                             this.state = WAITING_LEVEL;
-                            return;
+                            break;
                         }
                         frag = fragments[fragIdx];
                     } else {
@@ -205,7 +205,7 @@ class BufferController {
                         if (this.frag && frag.sn === this.frag.sn) {
                             if (fragIdx === fragments.length - 1) {
                                 // we are at the end of the playlist and we already loaded last fragment, don't do anything
-                                return;
+                                break;
                             } else {
                                 frag = fragments[fragIdx + 1];
                                 logger.log(
@@ -263,6 +263,8 @@ class BufferController {
             default:
                 break;
         }
+        // check/update fragment playing
+        this._checkFragmentPlaying();
     }
 
     bufferInfo(pos) {
@@ -308,12 +310,78 @@ class BufferController {
         return { len: bufferLen, start: bufferStart, end: bufferEnd };
     }
 
+    getFragment(position) {
+        var i, range;
+        for (i = this.bufferRange.length - 1; i >= 0; i--) {
+            range = this.bufferRange[i];
+            if (position >= range.start && position <= range.end) {
+                return range.frag;
+            }
+        }
+        return null;
+    }
+
+    get playbackLevel() {
+        var frag = this.getFragment(this.video.currentTime);
+        if (frag) {
+            return frag.level;
+        } else {
+            return -1;
+        }
+    }
+
+    isBuffered(position) {
+        var v = this.video,
+            buffered = v.buffered;
+        for (var i = 0; i < buffered.length; i++) {
+            if (position >= buffered.start(i) && position <= buffered.end(i)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    _checkFragmentPlaying() {
+        var fragPlaying;
+        if (
+            this.video &&
+            this.video.seeking === false &&
+            this.isBuffered(this.video.currentTime)
+        ) {
+            fragPlaying = this.getFragment(this.video.currentTime);
+        } else {
+            fragPlaying = null;
+        }
+
+        if (fragPlaying !== this.fragPlaying) {
+            this.fragPlaying = fragPlaying;
+            observer.trigger(Event.FRAG_PLAYING, { frag: fragPlaying });
+        }
+    }
+
+    /*
+  flushBuffer() {
+    var sb = this.sourceBuffer;
+    if(sb) {
+      if(sb.audio) {
+        sb.audio.remove(0,9999);
+      }
+      if(sb.video) {
+        sb.video.remove(0,9999);
+      }
+    }
+    this.bufferRange = {};
+  }
+*/
+
     onMSEAttached(event, data) {
         this.video = data.video;
         this.mediaSource = data.mediaSource;
         this.onvseeking = this.onVideoSeeking.bind(this);
+        this.onvseeked = this.onVideoSeeked.bind(this);
         this.onvmetadata = this.onVideoMetadata.bind(this);
         this.video.addEventListener('seeking', this.onvseeking);
+        this.video.addEventListener('seeked', this.onvseeked);
         this.video.addEventListener('loadedmetadata', this.onvmetadata);
         if (this.levels) {
             this.start();
@@ -332,6 +400,11 @@ class BufferController {
             }
         }
         // tick to speed up processing
+        this.tick();
+    }
+
+    onVideoSeeked() {
+        // tick to speed up FRAGMENT_PLAYING triggering
         this.tick();
     }
 
@@ -473,6 +546,7 @@ class BufferController {
         }
         if (!this.sourceBuffer) {
             this.sourceBuffer = {};
+            this.bufferRange = [];
             logger.log(
                 'selected A/V codecs for sourceBuffers:' +
                     audioCodec +
@@ -528,6 +602,12 @@ class BufferController {
         this.mp4segments.push({ type: data.type, data: data.moof });
         this.mp4segments.push({ type: data.type, data: data.mdat });
         this.nextLoadPosition = data.endPTS;
+        this.bufferRange.push({
+            type: data.type,
+            start: data.startPTS,
+            end: data.endPTS,
+            frag: this.frag
+        });
         //trigger handler right now
         this.tick();
     }
