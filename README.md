@@ -149,7 +149,7 @@ full list of Events available below :
 	  -  data: undefined
   - `hls.events.FRAG_BUFFERED`  - fired when fragment remuxed MP4 boxes have all been appended into SourceBuffer
     -  data: { frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length} }
-  - `hls.events.FRAG_PLAYING`  - fired when playback of new fragment starts
+  - `hls.events.FRAG_CHANGED`  - fired when fragment matching with current video position is changing
     -  data: { frag : fragment object }
   - `hls.events.LOAD_ERROR` - Identifier for fragment/playlist load error
 	  -  data: { url : faulty URL, response : XHR response}

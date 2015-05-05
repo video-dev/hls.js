@@ -238,8 +238,8 @@
           }
           refreshCanvas();
        });
-       hls.on(hls.Events.FRAG_PLAYING,function(event,data) {
-        var event = {time : new Date() - t0, type : 'frag playing', name : data.frag.sn + ' @ ' + data.frag.level };
+       hls.on(hls.Events.FRAG_CHANGED,function(event,data) {
+        var event = {time : new Date() - t0, type : 'frag changed', name : data.frag.sn + ' @ ' + data.frag.level };
         events.video.push(event);
         refreshCanvas();
        });
