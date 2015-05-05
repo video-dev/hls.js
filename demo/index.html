@@ -177,19 +177,6 @@
        });
        hls.on(hls.Events.MANIFEST_LOADED,function(event,data) {
         document.getElementById("HlsStatus").innerHTML = 'manifest loaded...';
-
-        var html1 = '<button type="button" class="btn btn-xs btn-success" onclick="hls.currentLevel=-1">auto</button>';
-        var html2 = '<button type="button" class="btn btn-xs btn-success" onclick="hls.loadLevel=-1">auto</button>';
-        var html3 = '<button type="button" class="btn btn-xs btn-success" onclick="hls.autoLevelCapping=-1">none</button>';
-        for (var i=0; i < data.levels.length; i++) {
-          html1 += '<button type="button" class="btn btn-xs btn-success" onclick="hls.currentLevel=' + i + '">' + i + '</button>';
-          html2 += '<button type="button" class="btn btn-xs btn-success" onclick="hls.loadLevel=' + i + '">' + i + '</button>';
-          html3 += '<button type="button" class="btn btn-xs btn-success" onclick="hls.autoLevelCapping=' + i + '">' + i + '</button>';
-        }
-        document.getElementById('currentLevelControl').innerHTML = html1;
-        document.getElementById('loadLevelControl').innerHTML = html2;
-        document.getElementById('levelCappingControl').innerHTML = html3;
-
           var event = {
             type : "manifest",
             name : "",
@@ -200,6 +187,9 @@
           };
           events.load.push(event);
           refreshCanvas();
+       });
+       hls.on(hls.Events.MANIFEST_PARSED,function(event,data) {
+         updateLevelInfo();
        });
        hls.on(hls.Events.LEVEL_LOADED,function(event,data) {
           //document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",last loaded level:" + data.levelId;
@@ -466,6 +456,20 @@ function timeRangesToString(r) {
     var v = document.getElementById('video');
     var target = (event.clientX - canvas.offsetLeft) / canvas.width * v.duration;
     v.currentTime = target;
+  }
+
+  function updateLevelInfo() {
+    var html1 = '<button type="button" class="btn btn-xs btn-success" onclick="hls.currentLevel=-1">auto</button>';
+    var html2 = '<button type="button" class="btn btn-xs btn-success" onclick="hls.loadLevel=-1">auto</button>';
+    var html3 = '<button type="button" class="btn btn-xs btn-success" onclick="hls.autoLevelCapping=-1">none</button>';
+    for (var i=0; i < hls.levels.length; i++) {
+      html1 += '<button type="button" class="btn btn-xs btn-success" onclick="hls.currentLevel=' + i + '">' + i + '</button>';
+      html2 += '<button type="button" class="btn btn-xs btn-success" onclick="hls.loadLevel=' + i + '">' + i + '</button>';
+      html3 += '<button type="button" class="btn btn-xs btn-success" onclick="hls.autoLevelCapping=' + i + '">' + i + '</button>';
+    }
+    document.getElementById('currentLevelControl').innerHTML = html1;
+    document.getElementById('loadLevelControl').innerHTML = html2;
+    document.getElementById('levelCappingControl').innerHTML = html3;
   }
   </script>
 </body>
