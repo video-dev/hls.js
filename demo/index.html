@@ -156,14 +156,12 @@
        hls.attachVideo(video);
        hls.on(hls.Events.MSE_ATTACHED,function() {
           bufferingIdx = -1;
-          document.getElementById("HlsStatus").innerHTML = 'video element attached...';
           events.video.push({time : new Date() - t0, type : "MSE attached"});
        });
        hls.on(hls.Events.FRAG_PARSING_INIT_SEGMENT,function(event,data) {
           showCanvas();
           var event = {time : new Date() - t0, type : "init segment"};
           events.video.push(event);
-          document.getElementById("HlsStatus").innerHTML = "playlist successfully loaded," + hls.levels.length + " levels found";
        });
        hls.on(hls.Events.LOAD_ERROR,function(event,data) {
           hls.destroy();
@@ -176,7 +174,6 @@
           events.level.push({time : new Date() - t0, id : data.levelId, bitrate : Math.round(hls.levels[data.levelId].bitrate/1000)});
        });
        hls.on(hls.Events.MANIFEST_LOADED,function(event,data) {
-        document.getElementById("HlsStatus").innerHTML = 'manifest loaded...';
           var event = {
             type : "manifest",
             name : "",
@@ -189,6 +186,7 @@
           refreshCanvas();
        });
        hls.on(hls.Events.MANIFEST_PARSED,function(event,data) {
+         document.getElementById("HlsStatus").innerHTML = "manifest successfully loaded," + hls.levels.length + " levels found";
          updateLevelInfo();
        });
        hls.on(hls.Events.LEVEL_LOADED,function(event,data) {
