@@ -9,11 +9,18 @@ class Demuxer {
         var enableWorker = true;
         if (enableWorker && typeof Worker !== 'undefined') {
             logger.log('TS demuxing in webworker');
-            var work = require('webworkify');
-            this.w = work(TSDemuxerWorker);
-            this.onwmsg = this.onWorkerMessage.bind(this);
-            this.w.addEventListener('message', this.onwmsg);
-            this.w.postMessage({ cmd: 'init' });
+            try {
+                var work = require('webworkify');
+                this.w = work(TSDemuxerWorker);
+                this.onwmsg = this.onWorkerMessage.bind(this);
+                this.w.addEventListener('message', this.onwmsg);
+                this.w.postMessage({ cmd: 'init' });
+            } catch (err) {
+                logger.log(
+                    'error while initializing TSDemuxerWorker, fallback on regular TSDemuxer'
+                );
+                this.demuxer = new TSDemuxer();
+            }
         } else {
             this.demuxer = new TSDemuxer();
         }
