@@ -158,6 +158,11 @@ class Hls {
     return this.levelController.manualLevel;
   }
 
+  /* return current playback level */
+  get playbackLevel() {
+    return this.bufferController.playbackLevel;
+  }
+
   onMediaSourceOpen() {
     observer.trigger(Event.MSE_ATTACHED, { video: this.video, mediaSource : this.mediaSource });
   }

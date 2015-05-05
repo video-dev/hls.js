@@ -232,6 +232,11 @@
           }
           refreshCanvas();
        });
+       hls.on(hls.Events.FRAG_PLAYING,function(event,data) {
+        var event = {time : new Date() - t0, type : 'frag playing', name : data.frag.sn + ' @ ' + data.frag.level };
+        events.video.push(event);
+        refreshCanvas();
+       });
        hls.on(hls.Events.VIDEO_ERROR,function(event,data) {
           hls.destroy();
           document.getElementById("HlsStatus").innerHTML = "Video Error";
