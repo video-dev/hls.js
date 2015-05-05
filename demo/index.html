@@ -31,17 +31,19 @@
           <video id=video controls autoplay border="4"></video>
           <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)";></canvas> <br>
           <div id='buttons'>
-            <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').play()">play()</button>
-            <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').pause()">pause()</button>
+            <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').play()">play</button>
+            <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').pause()">pause</button>
             <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').currentTime+=10">currentTime+=10</button>
-            <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').currentTime-=10">currentTime-=10</button><br>
+            <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').currentTime-=10">currentTime-=10</button>
             <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').currentTime=document.getElementById('seek_pos').value">seek to </button>
              <input type="text" id='seek_pos' size="8" onkeydown="if(window.event.keyCode=='13'){document.getElementById('video').currentTime=document.getElementById('seek_pos').value;}">
-            <button type="button" class="btn btn-sm btn-success" onclick="hls.level=parseInt(document.getElementById('manualLevel').value);">set level </button>
-             <input type="text" id='manualLevel' size="2" onkeydown="if(window.event.keyCode=='13'){hls.level=parseInt(document.getElementById('manualLevel').value);}">
-             <button type="button" class="btn btn-sm btn-success" onclick="hls.autoLevelCapping=parseInt(document.getElementById('autoLevelCapping').value);">set autoLevelCapping </button>
-             <input type="text" id='autoLevelCapping' size="2" onkeydown="if(window.event.keyCode=='13'){hls.autoLevelCapping=parseInt(document.getElementById('autoLevelCapping').value);}">
           </div>
+        <div>
+          set level: <div id="levelControl" style="display: inline;"></div>
+        </div>
+        <div>
+          cap level: <div id="levelCappingControl" style="display: inline;"></div>
+        </div>
         </section>
       </article>
     </div>
@@ -172,6 +174,16 @@
        });
        hls.on(hls.Events.MANIFEST_LOADED,function(event,data) {
         document.getElementById("HlsStatus").innerHTML = 'manifest loaded...';
+
+        var html1 = '<button type="button" class="btn btn-xs btn-success" onclick="hls.level=-1">auto</button>';
+        var html2 = '<button type="button" class="btn btn-xs btn-success" onclick="hls.autoLevelCapping=-1">none</button>';
+        for (var i=0; i < data.levels.length; i++) {
+          html1 += '<button type="button" class="btn btn-xs btn-success" onclick="hls.level=' + i + '">' + i + '</button>';
+          html2 += '<button type="button" class="btn btn-xs btn-success" onclick="hls.autoLevelCapping=' + i + '">' + i + '</button>';
+        }
+        document.getElementById('levelControl').innerHTML = html1;
+        document.getElementById('levelCappingControl').innerHTML = html2;
+
           var event = {
             type : "manifest",
             name : "",
