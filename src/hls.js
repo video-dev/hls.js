@@ -104,13 +104,25 @@ class Hls {
     get levels() {
         return this.levelController.levels;
     }
+
+    /** Return current playback quality level **/
+    get currentLevel() {
+        return this.bufferController.playbackLevel;
+    }
+
+    /* set quality level immediately (-1 for automatic level selection) */
+    set currentLevel(newLevel) {
+        this.loadLevel = newLevel;
+        this.bufferController.immediateLevelSwitch();
+    }
+
     /** Return the quality level of last loaded fragment **/
-    get level() {
+    get loadLevel() {
         return this.levelController.level;
     }
 
     /* set quality level for next loaded fragment (-1 for automatic level selection) */
-    set level(newLevel) {
+    set loadLevel(newLevel) {
         this.levelController.manualLevel = newLevel;
     }
 

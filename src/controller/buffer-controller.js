@@ -349,30 +349,58 @@ class BufferController {
             this.isBuffered(this.video.currentTime)
         ) {
             fragPlaying = this.getFragment(this.video.currentTime);
-        } else {
-            fragPlaying = null;
         }
 
-        if (fragPlaying !== this.fragPlaying) {
+        if (fragPlaying && fragPlaying !== this.fragPlaying) {
             this.fragPlaying = fragPlaying;
             observer.trigger(Event.FRAG_PLAYING, { frag: fragPlaying });
         }
     }
 
-    /*
-  flushBuffer() {
-    var sb = this.sourceBuffer;
-    if(sb) {
-      if(sb.audio) {
-        sb.audio.remove(0,9999);
-      }
-      if(sb.video) {
-        sb.video.remove(0,9999);
-      }
+    flushBuffer() {
+        logger.log('flushBuffer');
+        var sb = this.sourceBuffer;
+        if (sb) {
+            if (sb.audio) {
+                sb.audio.remove(0, Number.POSITIVE_INFINITY);
+            }
+            if (sb.video) {
+                sb.video.remove(0, Number.POSITIVE_INFINITY);
+            }
+        }
+        this.bufferRange = [];
     }
-    this.bufferRange = {};
-  }
+
+    /*
+      on immediate level switch :
+       - pause playback if playing
+       - cancel any pending load request
+       - flush whole buffer
+       - trigger fragment load for new level
+    */
+    immediateLevelSwitch() {
+        this.immediateSwitch = true;
+        this.previouslyPaused = this.video.paused;
+        this.video.pause();
+        this.fragmentLoader.abort();
+        this.flushBuffer();
+        this.state = IDLE;
+        // speed up switching, trigger timer function
+        this.tick();
+    }
+
+    /*
+   on immediate level switch end, after fragment has been buffered :
+    - nudge video decoder by slightly adjusting video currentTime
+    - resume the playback if needed
 */
+    immediateLevelSwitchEnd() {
+        this.immediateSwitch = false;
+        this.video.currentTime -= 0.0001;
+        if (!this.previouslyPaused) {
+            this.video.play();
+        }
+    }
 
     onMSEAttached(event, data) {
         this.video = data.video;
@@ -628,6 +656,10 @@ class BufferController {
                 frag: this.frag
             });
             this.state = IDLE;
+
+            if (this.immediateSwitch) {
+                this.immediateLevelSwitchEnd();
+            }
         }
         this.tick();
     }
