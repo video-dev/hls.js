@@ -39,13 +39,13 @@
              <input type="text" id='seek_pos' size="8" onkeydown="if(window.event.keyCode=='13'){document.getElementById('video').currentTime=document.getElementById('seek_pos').value;}">
           </div>
         <div>
-          set current level: <div id="currentLevelControl" style="display: inline;"></div>
+        current level: <div id="currentLevelControl" style="display: inline;"></div>
         </div>
         <div>
-          set load level: <div id="loadLevelControl" style="display: inline;"></div>
+        load level: <div id="loadLevelControl" style="display: inline;"></div>
         </div>
         <div>
-          set cap level: <div id="levelCappingControl" style="display: inline;"></div>
+        cap level: <div id="levelCappingControl" style="display: inline;"></div>
         </div>
         </section>
       </article>
@@ -172,6 +172,7 @@
        });
        hls.on(hls.Events.LEVEL_SWITCH,function(event,data) {
           events.level.push({time : new Date() - t0, id : data.levelId, bitrate : Math.round(hls.levels[data.levelId].bitrate/1000)});
+          updateLevelInfo();
        });
        hls.on(hls.Events.MANIFEST_LOADED,function(event,data) {
           var event = {
@@ -225,11 +226,13 @@
             hls.bufferTimer = window.setInterval(checkBuffer, 100);
           }
           refreshCanvas();
+          updateLevelInfo();
        });
        hls.on(hls.Events.FRAG_CHANGED,function(event,data) {
         var event = {time : new Date() - t0, type : 'frag changed', name : data.frag.sn + ' @ ' + data.frag.level };
         events.video.push(event);
         refreshCanvas();
+        updateLevelInfo();
        });
        hls.on(hls.Events.VIDEO_ERROR,function(event,data) {
           hls.destroy();
@@ -457,13 +460,60 @@ function timeRangesToString(r) {
   }
 
   function updateLevelInfo() {
-    var html1 = '<button type="button" class="btn btn-xs btn-success" onclick="hls.currentLevel=-1">auto</button>';
-    var html2 = '<button type="button" class="btn btn-xs btn-success" onclick="hls.loadLevel=-1">auto</button>';
-    var html3 = '<button type="button" class="btn btn-xs btn-success" onclick="hls.autoLevelCapping=-1">none</button>';
+    var button_template = '<button type="button" class="btn btn-xs ';
+    var button_enabled  = 'btn-primary" ';
+    var button_disabled = 'btn-success" ';
+
+    var html1 = button_template;
+    if(hls.autoLevelEnabled) {
+      html1 += button_enabled;
+    } else {
+      html1 += button_disabled;
+    }
+    html1 += 'onclick="hls.currentLevel=-1">auto</button>';
+
+
+    var html2 = button_template;
+    if(hls.autoLevelEnabled) {
+      html2 += button_enabled;
+    } else {
+      html2 += button_disabled;
+    }
+    html2 += 'onclick="hls.loadLevel=-1">auto</button>';
+
+    var html3 = button_template;
+    if(hls.autoLevelCapping === -1) {
+      html3 += button_enabled;
+    } else {
+      html3 += button_disabled;
+    }
+    html3 += 'onclick="hls.autoLevelCapping=-1;updateLevelInfo()">none</button>';
+
     for (var i=0; i < hls.levels.length; i++) {
-      html1 += '<button type="button" class="btn btn-xs btn-success" onclick="hls.currentLevel=' + i + '">' + i + '</button>';
-      html2 += '<button type="button" class="btn btn-xs btn-success" onclick="hls.loadLevel=' + i + '">' + i + '</button>';
-      html3 += '<button type="button" class="btn btn-xs btn-success" onclick="hls.autoLevelCapping=' + i + '">' + i + '</button>';
+      html1 += button_template;
+      if(hls.currentLevel === i) {
+        html1 += button_enabled;
+      } else {
+        html1 += button_disabled;
+      }
+      html1 += 'onclick="hls.currentLevel=' + i + '">' + i + '</button>';
+
+
+      html2 += button_template;
+      if(hls.loadLevel === i) {
+        html2 += button_enabled;
+      } else {
+        html2 += button_disabled;
+      }
+      html2 += 'onclick="hls.loadLevel=' + i + '">' + i + '</button>';
+
+      html3 += button_template;
+      if(hls.autoLevelCapping === i) {
+        html3 += button_enabled;
+      } else {
+        html3 += button_disabled;
+      }
+      html3 += 'onclick="hls.autoLevelCapping=' + i + ';updateLevelInfo()">' + i + '</button>';
     }
     document.getElementById('currentLevelControl').innerHTML = html1;
     document.getElementById('loadLevelControl').innerHTML = html2;
