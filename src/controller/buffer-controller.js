@@ -263,8 +263,8 @@ class BufferController {
             default:
                 break;
         }
-        // check/update fragment playing
-        this._checkFragmentPlaying();
+        // check/update current fragment
+        this._checkFragmentChanged();
     }
 
     bufferInfo(pos) {
@@ -341,19 +341,19 @@ class BufferController {
         return false;
     }
 
-    _checkFragmentPlaying() {
-        var fragPlaying;
+    _checkFragmentChanged() {
+        var fragCurrent;
         if (
             this.video &&
             this.video.seeking === false &&
             this.isBuffered(this.video.currentTime)
         ) {
-            fragPlaying = this.getFragment(this.video.currentTime);
+            fragCurrent = this.getFragment(this.video.currentTime);
         }
 
-        if (fragPlaying && fragPlaying !== this.fragPlaying) {
-            this.fragPlaying = fragPlaying;
-            observer.trigger(Event.FRAG_PLAYING, { frag: fragPlaying });
+        if (fragCurrent && fragCurrent !== this.fragCurrent) {
+            this.fragCurrent = fragCurrent;
+            observer.trigger(Event.FRAG_CHANGED, { frag: fragCurrent });
         }
     }
 

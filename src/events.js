@@ -23,8 +23,8 @@ export default {
     FRAG_PARSED: 'hlsFragmentParsed',
     // fired when fragment remuxed MP4 boxes have all been appended into SourceBuffer - data: { frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length} }
     FRAG_BUFFERED: 'hlsFragmentBuffered',
-    // fired when playback of new fragment starts - data : { frag : fragment object }
-    FRAG_PLAYING: 'hlsFragmentPlaying',
+    // fired when fragment matching with current video position is changing - data : { frag : fragment object }
+    FRAG_CHANGED: 'hlsFragmentChanged',
     // Identifier for fragment/playlist load error - data: { url : faulty URL, response : XHR response}
     LOAD_ERROR: 'hlsLoadError',
     // Identifier for a level switch error - data: { level : faulty level Id, event : error description}
