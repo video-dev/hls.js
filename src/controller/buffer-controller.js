@@ -23,6 +23,7 @@
     this.levelController = levelController;
     this.fragmentLoader = new FragmentLoader();
     this.mp4segments = [];
+    this.bufferRange = [];
     // Source Buffer listeners
     this.onsbue = this.onSourceBufferUpdateEnd.bind(this);
     this.onsbe  = this.onSourceBufferError.bind(this);
@@ -47,6 +48,7 @@
       this.demuxer = null;
     }
     this.mp4segments = [];
+    this.bufferRange = [];
     var sb = this.sourceBuffer;
     if(sb) {
       if(sb.audio) {
@@ -277,12 +279,13 @@
 
 
   get playbackLevel() {
-    var frag = this.getFragment(this.video.currentTime);
-    if(frag) {
-      return frag.level;
-    } else {
-      return -1;
+    if(this.video) {
+      var frag = this.getFragment(this.video.currentTime);
+      if(frag) {
+        return frag.level;
+      }
     }
+    return -1;
   }
 
   isBuffered(position) {
@@ -490,7 +493,6 @@
     }
     if(!this.sourceBuffer) {
       this.sourceBuffer = {};
-      this.bufferRange = [];
       logger.log('selected A/V codecs for sourceBuffers:' + audioCodec + ',' + videoCodec);
       // create source Buffer and link them to MediaSource
       if(audioCodec) {
