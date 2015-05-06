@@ -107,7 +107,7 @@ class Hls {
 
     /** Return current playback quality level **/
     get currentLevel() {
-        return this.bufferController.playbackLevel;
+        return this.bufferController.currentLevel;
     }
 
     /* set quality level immediately (-1 for automatic level selection) */
@@ -172,11 +172,6 @@ class Hls {
     /* return manual level */
     get manualLevel() {
         return this.levelController.manualLevel;
-    }
-
-    /* return current playback level */
-    get playbackLevel() {
-        return this.bufferController.playbackLevel;
     }
 
     onMediaSourceOpen() {
