@@ -175,19 +175,17 @@
       pesFlags = frag[7];
       if (pesFlags & 0xC0) {
         // PES header described here : http://dvd.sourceforge.net/dvdinfo/pes-hdr.html
-        pesPts = (frag[9] & 0x0E) << 28
-          | (frag[10] & 0xFF) << 21
-          | (frag[11] & 0xFE) << 13
-          | (frag[12] & 0xFF) <<  6
-          | (frag[13] & 0xFE) >>>  2;
-        pesPts /= 45;
+        pesPts = (frag[9] & 0x0E) << 29
+          | (frag[10] & 0xFF) << 22
+          | (frag[11] & 0xFE) << 14
+          | (frag[12] & 0xFF) <<  7
+          | (frag[13] & 0xFE) >>>  1;
         if (pesFlags & 0x40) {
-          pesDts = (frag[14] & 0x0E ) << 28
-            | (frag[15] & 0xFF ) << 21
-            | (frag[16] & 0xFE ) << 13
-            | (frag[17] & 0xFF ) << 6
-            | (frag[18] & 0xFE ) >>> 2;
-          pesDts /= 45;
+          pesDts = (frag[14] & 0x0E ) << 29
+            | (frag[15] & 0xFF ) << 22
+            | (frag[16] & 0xFE ) << 14
+            | (frag[17] & 0xFF ) << 7
+            | (frag[18] & 0xFE ) >>> 1;
         } else {
           pesDts = pesPts;
         }
@@ -271,8 +269,7 @@
 
   _flushAVCSamples() {
     var view,i=8,avcSample,mp4Sample,mp4SampleLength,unit,track = this._avcTrack,
-        lastSampleDTS,mdat,moof,startOffset,endOffset,
-        firstPTS,firstDTS;
+        lastSampleDTS,mdat,moof,firstPTS,firstDTS;
     track.samples = [];
 
     /* concatenate the video data and construct the mdat in place
@@ -300,7 +297,7 @@
       //logger.log('Video/PTS/DTS:' + avcSample.pts + '/' + avcSample.dts);
 
       if(lastSampleDTS !== undefined) {
-        mp4Sample.duration = Math.round((avcSample.dts - lastSampleDTS)*90);
+        mp4Sample.duration = avcSample.dts - lastSampleDTS;
         if(mp4Sample.duration < 0) {
           //logger.log('invalid sample duration at PTS/DTS::' + avcSample.pts + '/' + avcSample.dts + ':' + mp4Sample.duration);
           mp4Sample.duration = 0;
@@ -308,7 +305,7 @@
       } else {
         // check if fragments are contiguous (i.e. no missing frames between fragment)
         if(this.nextAvcPts) {
-          var delta = avcSample.pts - this.nextAvcPts,absdelta=Math.abs(delta);
+          var delta = (avcSample.pts - this.nextAvcPts)/90,absdelta=Math.abs(delta);
           //logger.log('absdelta/avcSample.pts:' + absdelta + '/' + avcSample.pts);
           // if delta is less than 300 ms, next loaded fragment is assumed to be contiguous with last one
           if(absdelta < 300) {
@@ -332,7 +329,7 @@
 
       mp4Sample = {
         size: mp4SampleLength,
-        compositionTimeOffset: (avcSample.pts - avcSample.dts)*90,
+        compositionTimeOffset: avcSample.pts - avcSample.dts,
         flags: {
           isLeading: 0,
           isDependedOn: 0,
@@ -355,23 +352,20 @@
     mp4Sample.duration = track.samples[track.samples.length-2].duration;
     this.lastAvcDts = avcSample.dts;
     // next AVC sample PTS should be equal to last sample PTS + duration
-    this.nextAvcPts = avcSample.pts + mp4Sample.duration/90;
+    this.nextAvcPts = avcSample.pts + mp4Sample.duration;
     //logger.log('Video/lastAvcDts/nextAvcPts:' + this.lastAvcDts + '/' + this.nextAvcPts);
 
     this._avcSamplesLength = 0;
     this._avcSamplesNbNalu = 0;
 
-    startOffset = firstPTS/1000;
-    endOffset = this.nextAvcPts/1000;
-
-    moof = MP4.moof(track.sequenceNumber++,firstDTS*90,track);
+    moof = MP4.moof(track.sequenceNumber++,firstDTS,track);
     observer.trigger(Event.FRAG_PARSING_DATA,{
       moof: moof,
       mdat: mdat,
-      startPTS : startOffset,
-      endPTS : endOffset,
-      startDTS : firstDTS/1000,
-      endDTS : (avcSample.dts + mp4Sample.duration/90)/1000,
+      startPTS : firstPTS/90000,
+      endPTS : this.nextAvcPts/90000,
+      startDTS : firstDTS/90000,
+      endDTS : (avcSample.dts + mp4Sample.duration)/90000,
       type : 'video'
     });
   }
@@ -479,7 +473,7 @@
         adtsFrameSize |= ((data[adtsStartOffset+5] & 0xE0) >>> 5);
         adtsHeaderLen = (!!(data[adtsStartOffset+1] & 0x01) ? 7 : 9);
         adtsFrameSize -= adtsHeaderLen;
-        stamp = pes.pts + i*1024*1000/track.audiosamplerate;
+        stamp = pes.pts + i*1024*90000/track.audiosamplerate;
         //stamp = pes.pts;
         //console.log('AAC frame, offset/length/pts:' + (adtsStartOffset+7) + '/' + adtsFrameSize + '/' + stamp.toFixed(0));
         if(adtsStartOffset+adtsHeaderLen+adtsFrameSize <= data.length) {
@@ -508,8 +502,7 @@
 
   _flushAACSamples() {
     var view,i=8,aacSample,mp4Sample,unit,track = this._aacTrack,
-        lastSampleDTS,mdat,moof,startOffset,endOffset,
-        firstPTS,firstDTS;
+        lastSampleDTS,mdat,moof,firstPTS,firstDTS;
     track.samples = [];
 
     /* concatenate the audio data and construct the mdat in place
@@ -530,7 +523,7 @@
       //logger.log('Audio/PTS:' + aacSample.pts.toFixed(0));
       if(lastSampleDTS !== undefined) {
         // we use DTS to compute sample duration, but we use PTS to compute initPTS which is used to sync audio and video
-        mp4Sample.duration = Math.round((aacSample.dts - lastSampleDTS)*90);
+        mp4Sample.duration = aacSample.dts - lastSampleDTS;
         if(mp4Sample.duration < 0) {
           //logger.log('invalid sample duration at PTS/DTS::' + avcSample.pts + '/' + avcSample.dts + ':' + mp4Sample.duration);
           mp4Sample.duration = 0;
@@ -539,7 +532,7 @@
         // check if fragments are contiguous (i.e. no missing frames between fragment)
         if(this.nextAacPts && this.nextAacPts !== aacSample.pts) {
           //logger.log('Audio next PTS:' + this.nextAacPts);
-          var delta = aacSample.pts - this.nextAacPts;
+          var delta = (aacSample.pts - this.nextAacPts)/90;
           // if delta is less than 300 ms, next loaded fragment is assumed to be contiguous with last one
           if(Math.abs(delta) > 1 && Math.abs(delta) < 300) {
             if(delta > 0) {
@@ -576,22 +569,19 @@
     mp4Sample.duration = track.samples[track.samples.length-2].duration;
     this.lastAacDts = aacSample.dts;
     // next aac sample PTS should be equal to last sample PTS + duration
-    this.nextAacPts = aacSample.pts + mp4Sample.duration/90;
+    this.nextAacPts = aacSample.pts + mp4Sample.duration;
     //logger.log('Audio/PTS/PTSend:' + aacSample.pts.toFixed(0) + '/' + this.nextAacDts.toFixed(0));
 
     this._aacSamplesLength = 0;
 
-    startOffset = firstPTS/1000;
-    endOffset = this.nextAacPts/1000;
-
-    moof = MP4.moof(track.sequenceNumber++,firstDTS*90,track);
+    moof = MP4.moof(track.sequenceNumber++,firstDTS,track);
     observer.trigger(Event.FRAG_PARSING_DATA,{
       moof: moof,
       mdat: mdat,
-      startPTS : startOffset,
-      endPTS : endOffset,
-      startDTS : firstDTS/1000,
-      endDTS : (aacSample.dts + mp4Sample.duration/90)/1000,
+      startPTS : firstPTS/90000,
+      endPTS : this.nextAacPts/90000,
+      startDTS : firstDTS/90000,
+      endDTS : (aacSample.dts + mp4Sample.duration)/90000,
       type : 'audio'
     });
   }
@@ -704,8 +694,8 @@
       }
       if(this._initPTS === undefined) {
         // remember first PTS of this demuxing context
-        this._initPTS = this._aacSamples[0].pts - 1000*this.timeOffset;
-        this._initDTS = this._aacSamples[0].dts - 1000*this.timeOffset;
+        this._initPTS = this._aacSamples[0].pts - 90000*this.timeOffset;
+        this._initDTS = this._aacSamples[0].dts - 90000*this.timeOffset;
       }
     } else
     if(this._aacId === -1) {
@@ -720,8 +710,8 @@
         this._initSegGenerated = true;
         if(this._initPTS === undefined) {
           // remember first PTS of this demuxing context
-          this._initPTS = this._avcSamples[0].pts - 1000*this.timeOffset;
-          this._initDTS = this._avcSamples[0].dts - 1000*this.timeOffset;
+          this._initPTS = this._avcSamples[0].pts - 90000*this.timeOffset;
+          this._initDTS = this._avcSamples[0].dts - 90000*this.timeOffset;
         }
       }
     } else {
@@ -739,8 +729,8 @@
         this._initSegGenerated = true;
         if(this._initPTS === undefined) {
           // remember first PTS of this demuxing context
-          this._initPTS = Math.min(this._avcSamples[0].pts,this._aacSamples[0].pts) - 1000*this.timeOffset;
-          this._initDTS = Math.min(this._avcSamples[0].dts,this._aacSamples[0].dts) - 1000*this.timeOffset;
+          this._initPTS = Math.min(this._avcSamples[0].pts,this._aacSamples[0].pts) - 90000*this.timeOffset;
+          this._initDTS = Math.min(this._avcSamples[0].dts,this._aacSamples[0].dts) - 90000*this.timeOffset;
         }
       }
     }
