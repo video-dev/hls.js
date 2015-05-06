@@ -1,15 +1,24 @@
 # hls.js
-[MSE](http://w3c.github.io/media-source/)-based [HTTP Live Streaming](http://en.wikipedia.org/wiki/HTTP_Live_Streaming) library.
+[Media Source Extensions](http://w3c.github.io/media-source/) based [HTTP Live Streaming](http://en.wikipedia.org/wiki/HTTP_Live_Streaming) library.
 
-this lib allows to playback HLS streams on browsers supporting media source extension API.
+this library allows to playback HLS streams on browsers supporting Media Source Extension API.
  
-the lib is written in EcmaScript 6, and transpiled using Babel.
+it is written in EcmaScript 6, and transpiled using Babel.
 
 MPEG-2 TS transmuxing is offloaded into a Web Worker.
 
 ## Demo
-working in Chrome (also on mobile device)
 [http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html](http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html)
+
+## compatibility
+ hls.js is compatible with browsers supporting MSE with 'video/MP4' inputs.
+as of today, it is supported on:
+
+ * Chrome for Android 34+
+ * Chrome for Desktop 34+
+ * Firefox for Desktop 38+
+ * IE11+ for Windows 8.1
+ * Safari for Mac 8+ (still buggy)
 
 ## Features
 
@@ -17,6 +26,8 @@ working in Chrome (also on mobile device)
     - Sliding window (aka DVR) support on Live playlists
   - Adaptive streaming
     - Manual & Auto switching
+    	- instant switching (immediate quality switch at current video position)
+    	-  smooth switching (quality switch for next loaded fragment)
   - Accurate Seeking  on VoD & Live
     - ability to seek in buffer and back buffer without redownloading segments
 
@@ -53,17 +64,6 @@ working in Chrome (also on mobile device)
  }
 </script>
 ```
-
-## compatibility
- hls.js is compatible with browsers supporting MSE with 'video/MP4' inputs.
-as of today, it is supported on:
-
- * Chrome for Desktop 34+
- * Safari for Mac 8+
- * IE for Windows 11+
- * Chrome for Android 34+
- * IE for Winphone 8.1+
-
 
 ## Video Control
 
