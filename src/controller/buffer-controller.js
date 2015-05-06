@@ -16,6 +16,7 @@ const WAITING_LEVEL = 2;
 const PARSING = 3;
 const PARSED = 4;
 const APPENDING = 5;
+const BUFFER_FLUSHING = 6;
 
 class BufferController {
     constructor(levelController) {
@@ -262,6 +263,13 @@ class BufferController {
                     }
                 }
                 break;
+            case BUFFER_FLUSHING:
+                // flushBuffer will abort any buffer append in progress and flush Audio/Video Buffer
+                if (this.flushBuffer()) {
+                    // move to IDLE once flush complete. this should trigger new fragment loading
+                    this.state = IDLE;
+                } // otherwise stay in BUFFER_FLUSHING state. we will come back here each time sourceBuffer updateend() callback will be triggered
+                break;
             default:
                 break;
         }
@@ -360,45 +368,63 @@ class BufferController {
         }
     }
 
+    /*
+  abort any buffer append in progress, and flush all buffered data
+  return true once everything has been flushed.
+  sourceBuffer.abort() and sourceBuffer.remove() are asynchronous operations
+  the idea is to call this function from tick() timer and call it again until all resources have been cleaned
+  the timer is rearmed upon sourceBuffer updateend() event, so this should be optimal
+*/
     flushBuffer() {
-        logger.log('flushBuffer');
         var sb, i, start, end;
         if (this.sourceBuffer) {
             for (var type in this.sourceBuffer) {
                 sb = this.sourceBuffer[type];
-                for (i = 0; i < sb.buffered.length; i++) {
-                    start = sb.buffered.start(i);
-                    end = sb.buffered.end(i);
-                    logger.log(
-                        'flush ' + type + ' [' + start + ',' + end + ']'
-                    );
-                    sb.remove(start, end);
+                if (!sb.updating) {
+                    for (i = 0; i < sb.buffered.length; i++) {
+                        start = sb.buffered.start(i);
+                        end = sb.buffered.end(i);
+                        logger.log(
+                            'flush ' + type + ' [' + start + ',' + end + ']'
+                        );
+                        sb.remove(start, end);
+                        return false;
+                    }
+                } else {
+                    logger.log('abort ' + type + ' append in progress');
+                    // this will abort any appending in progress
+                    sb.abort();
+                    return false;
                 }
             }
         }
         this.bufferRange = [];
+        logger.log('buffer flushed');
+        // everything flushed !
+        return true;
     }
 
     /*
       on immediate level switch :
        - pause playback if playing
        - cancel any pending load request
-       - flush whole buffer
-       - trigger fragment load for new level
+       - and trigger a buffer flush
     */
     immediateLevelSwitch() {
-        this.immediateSwitch = true;
-        this.previouslyPaused = this.video.paused;
-        this.video.pause();
+        if (!this.immediateSwitch) {
+            this.immediateSwitch = true;
+            this.previouslyPaused = this.video.paused;
+            this.video.pause();
+        }
         this.fragmentLoader.abort();
-        this.flushBuffer();
-        this.state = IDLE;
+        // trigger a sourceBuffer flush
+        this.state = BUFFER_FLUSHING;
         // speed up switching, trigger timer function
         this.tick();
     }
 
     /*
-   on immediate level switch end, after fragment has been buffered :
+   on immediate level switch end, after new fragment has been buffered :
     - nudge video decoder by slightly adjusting video currentTime
     - resume the playback if needed
 */
