@@ -312,13 +312,16 @@
 
   flushBuffer() {
     logger.log('flushBuffer');
-    var sb = this.sourceBuffer;
-    if(sb) {
-      if(sb.audio) {
-        sb.audio.remove(0,Number.POSITIVE_INFINITY);
-      }
-      if(sb.video) {
-        sb.video.remove(0,Number.POSITIVE_INFINITY);
+    var sb,i,start,end;
+    if(this.sourceBuffer) {
+      for(var type in this.sourceBuffer) {
+        sb = this.sourceBuffer[type];
+        for(i = 0 ; i < sb.buffered.length ; i++) {
+          start = sb.buffered.start(i);
+          end = sb.buffered.end(i);
+          logger.log('flush ' + type + ' [' + start + ',' + end + ']');
+          sb.remove(start,end);
+        }
       }
     }
     this.bufferRange = [];
