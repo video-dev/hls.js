@@ -278,7 +278,7 @@
   }
 
 
-  get playbackLevel() {
+  get currentLevel() {
     if(this.video) {
       var frag = this.getFragment(this.video.currentTime);
       if(frag) {
