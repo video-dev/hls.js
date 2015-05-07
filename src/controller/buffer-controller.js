@@ -24,6 +24,7 @@ class BufferController {
         this.fragmentLoader = new FragmentLoader();
         this.mp4segments = [];
         this.bufferRange = [];
+        this.flushBufferCounter = 0;
         // Source Buffer listeners
         this.onsbue = this.onSourceBufferUpdateEnd.bind(this);
         this.onsbe = this.onSourceBufferError.bind(this);
@@ -118,6 +119,12 @@ class BufferController {
                 this.loadedmetadata = false;
                 break;
             case IDLE:
+                // reset flush counter
+                this.flushBufferCounter = 0;
+                // handle end of immediate switching if needed
+                if (this.immediateSwitch) {
+                    this.immediateLevelSwitchEnd();
+                }
                 // determine next candidate fragment to be loaded, based on current position and
                 //  end of buffer position
                 //  ensure 60s of buffer upfront
@@ -405,7 +412,11 @@ class BufferController {
 */
     flushBuffer(offset) {
         var sb, i, start, end;
-        if (this.sourceBuffer) {
+        // safeguard to avoid infinite looping
+        if (
+            this.flushBufferCounter++ < 2 * this.bufferRange.length &&
+            this.sourceBuffer
+        ) {
             for (var type in this.sourceBuffer) {
                 sb = this.sourceBuffer[type];
                 if (!sb.updating) {
@@ -782,10 +793,6 @@ class BufferController {
                 frag: this.frag
             });
             this.state = IDLE;
-
-            if (this.immediateSwitch) {
-                this.immediateLevelSwitchEnd();
-            }
         }
         this.tick();
     }
