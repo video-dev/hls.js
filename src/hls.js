@@ -112,6 +112,17 @@ class Hls {
     this.bufferController.immediateLevelSwitch();
   }
 
+  /** Return next playback quality level (quality level of next fragment) **/
+  get nextLevel() {
+    return this.bufferController.nextLevel;
+  }
+
+  /* set quality level for next fragment (-1 for automatic level selection) */
+  set nextLevel(newLevel) {
+    this.loadLevel = newLevel;
+    this.bufferController.nextLevelSwitch();
+  }
+
   /** Return the quality level of last loaded fragment **/
   get loadLevel() {
     return this.levelController.level;

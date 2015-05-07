@@ -229,7 +229,7 @@
         break;
       case BUFFER_FLUSHING:
         // flushBuffer will abort any buffer append in progress and flush Audio/Video Buffer
-        if(this.flushBuffer()) {
+        if(this.flushBuffer(this.flushOffset)) {
           // move to IDLE once flush complete. this should trigger new fragment loading
           this.state = IDLE;
         } // otherwise stay in BUFFER_FLUSHING state. we will come back here each time sourceBuffer updateend() callback will be triggered
@@ -274,12 +274,12 @@
   }
 
 
-  getFragment(position) {
+  getBufferRange(position) {
     var i,range;
     for (i = this.bufferRange.length-1; i >=0 ; i--) {
       range = this.bufferRange[i];
       if(position >= range.start && position <= range.end) {
-        return range.frag;
+        return range;
       }
     }
     return null;
@@ -288,12 +288,39 @@
 
   get currentLevel() {
     if(this.video) {
-      var frag = this.getFragment(this.video.currentTime);
-      if(frag) {
-        return frag.level;
+      var range = this.getBufferRange(this.video.currentTime);
+      if(range) {
+        return range.frag.level;
       }
     }
     return -1;
+  }
+
+  get nextBufferRange() {
+    if(this.video) {
+      // first get end range of current fragment
+      return this.followingBufferRange(this.getBufferRange(this.video.currentTime));
+    } else {
+      return null;
+    }
+  }
+
+  followingBufferRange(range) {
+    if(range) {
+      // try to get range of next fragment (500ms after this range)
+      return this.getBufferRange(range.end+0.5);
+    }
+    return null;
+  }
+
+
+  get nextLevel() {
+    var range = this.nextBufferRange;
+    if(range) {
+      return range.frag.level;
+    } else {
+      return -1;
+    }
   }
 
   isBuffered(position) {
@@ -307,14 +334,14 @@
   }
 
   _checkFragmentChanged() {
-    var fragCurrent;
+    var rangeCurrent;
     if(this.video && this.video.seeking === false && this.isBuffered(this.video.currentTime)) {
-      fragCurrent = this.getFragment(this.video.currentTime);
+      rangeCurrent = this.getBufferRange(this.video.currentTime);
     }
 
-    if(fragCurrent && fragCurrent !== this.fragCurrent) {
-      this.fragCurrent = fragCurrent;
-      observer.trigger(Event.FRAG_CHANGED, { frag : fragCurrent });
+    if(rangeCurrent && rangeCurrent.frag !== this.fragCurrent) {
+      this.fragCurrent = rangeCurrent.frag;
+      observer.trigger(Event.FRAG_CHANGED, { frag : this.fragCurrent });
     }
   }
 
@@ -326,7 +353,7 @@
   the idea is to call this function from tick() timer and call it again until all resources have been cleaned
   the timer is rearmed upon sourceBuffer updateend() event, so this should be optimal
 */
-  flushBuffer() {
+  flushBuffer(offset) {
     var sb,i,start,end;
     if(this.sourceBuffer) {
       for(var type in this.sourceBuffer) {
@@ -335,19 +362,42 @@
           for(i = 0 ; i < sb.buffered.length ; i++) {
             start = sb.buffered.start(i);
             end = sb.buffered.end(i);
-            logger.log('flush ' + type + ' [' + start + ',' + end + ']');
-            sb.remove(start,end);
-            return false;
+            if(offset < end) {
+              var start2 = Math.max(start,offset);
+              /* sometimes sourcebuffer.remove() does not flush
+                 the exact expected time range.
+                 to avoid rounding issues/infinite loop,
+                 only flush buffer range of length greater than 500ms.
+              */
+              if(end - start2 > 0.5) {
+                logger.log('flush ' + type + ' [' + start2 + ',' + end + '], of [' + start + ',' + end + ']');
+                sb.remove(start2,end);
+                return false;
+              }
+            }
           }
         } else {
-            logger.log('abort ' + type + ' append in progress');
+          //logger.log('abort ' + type + ' append in progress');
           // this will abort any appending in progress
-          sb.abort();
+          //sb.abort();
           return false;
         }
       }
     }
-    this.bufferRange = [];
+
+    /* after successful buffer flushing, rebuild buffer Range array
+      loop through existing buffer range and check if
+      corresponding range is still buffered. only push to new array already buffered range
+    */
+    var newRange = [],range;
+    for (i = 0 ; i < this.bufferRange.length ; i++) {
+      range = this.bufferRange[i];
+      if(this.isBuffered((range.start + range.end)/2)) {
+        newRange.push(range);
+      }
+    }
+    this.bufferRange = newRange;
+
     logger.log('buffer flushed');
     // everything flushed !
     return true;
@@ -366,6 +416,8 @@
       this.video.pause();
     }
     this.fragmentLoader.abort();
+    // flush everything
+    this.flushOffset = 0;
     // trigger a sourceBuffer flush
     this.state = BUFFER_FLUSHING;
     // speed up switching, trigger timer function
@@ -382,6 +434,35 @@
     this.video.currentTime-=0.0001;
     if(!this.previouslyPaused) {
       this.video.play();
+    }
+  }
+
+  nextLevelSwitch() {
+    /* try to switch ASAP without breaking video playback :
+       in order to ensure smooth but quick level switching,
+      we need to find the next flushable buffer range
+      we should take into account new segment fetch time + add a safety delay of 1s (fetchdelay)
+    */
+    var fetchdelay;
+    if(!this.video.paused) {
+      fetchdelay=this.levelController.nextFetchDuration()+1;
+    } else {
+      fetchdelay = 0;
+    }
+    //logger.log('fetchdelay:'+fetchdelay);
+    // find buffer range that will be reached once new fragment will be fetched
+    var range = this.getBufferRange(this.video.currentTime + fetchdelay);
+    if(range) {
+      // we can flush buffer range following this one without stalling playback
+      range = this.followingBufferRange(range);
+      if(range) {
+        // flush position is the start position of this new buffer
+        this.flushOffset = range.start;
+        // trigger a sourceBuffer flush
+        this.state = BUFFER_FLUSHING;
+        // speed up switching, trigger timer function
+        this.tick();
+      }
     }
   }
 
