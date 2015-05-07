@@ -170,25 +170,13 @@
             this.video.currentTime = start + 0.01;
             break;
           }
-          // if one buffer range, load next SN
-          if(bufferLen > 0 && this.video.buffered.length === 1) {
-            fragIdx = this.frag.sn + 1 - fragments[0].sn;
-            if(fragIdx >= fragments.length) {
-              // most certainly live playlist is outdated, let's move to WAITING LEVEL state and come back once it will have been refreshed
-              //logger.log('sn ' + (this.frag.sn + 1) + ' out of range, wait for live playlist update');
-              this.state = WAITING_LEVEL;
-              break;
-            }
+          //look for fragments matching with current play position
+          for (fragIdx = 0; fragIdx < fragments.length ; fragIdx++) {
             frag = fragments[fragIdx];
-          } else {
-            // no data buffered, or multiple buffer range look for fragments matching with current play position
-            for (fragIdx = 0; fragIdx < fragments.length ; fragIdx++) {
-              frag = fragments[fragIdx];
-              start = frag.start+sliding;
-              // offset should be within fragment boundary
-              if(start <= bufferEnd && (start + frag.duration) > bufferEnd) {
-                break;
-              }
+            start = frag.start+sliding;
+            // offset should be within fragment boundary
+            if(start <= bufferEnd && (start + frag.duration) > bufferEnd) {
+              break;
             }
             //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
           }
@@ -229,7 +217,13 @@
         // check if any MP4 segments left to append
           } else if(this.mp4segments.length) {
             var segment = this.mp4segments.shift();
-            this.sourceBuffer[segment.type].appendBuffer(segment.data);
+            try {
+              this.sourceBuffer[segment.type].appendBuffer(segment.data);
+            } catch(err) {
+              // in case any error occured while appending, put back segment in mp4segments table
+              logger.log('error while trying to append buffer, buffer might be full, try appending later');
+              this.mp4segments.unshift(segment);
+            }
             this.state = APPENDING;
           }
         }
@@ -237,6 +231,7 @@
       case BUFFER_FLUSHING:
         // flushBuffer will abort any buffer append in progress and flush Audio/Video Buffer
         if(this.flushBuffer(this.flushOffset)) {
+          logger.log(this.timeRangesToString(this.video.buffered));
           // move to IDLE once flush complete. this should trigger new fragment loading
           this.state = IDLE;
         } // otherwise stay in BUFFER_FLUSHING state. we will come back here each time sourceBuffer updateend() callback will be triggered
@@ -352,6 +347,14 @@
     }
   }
 
+
+  timeRangesToString(r) {
+  var log = "timerange:";
+  for (var i=0; i<r.length; i++) {
+    log += "[" + r.start(i) + "," + r.end(i) + "]";
+  }
+  return log;
+}
 
 /*
   abort any buffer append in progress, and flush all buffered data
