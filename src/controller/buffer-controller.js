@@ -265,7 +265,6 @@ class BufferController {
             case BUFFER_FLUSHING:
                 // flushBuffer will abort any buffer append in progress and flush Audio/Video Buffer
                 if (this.flushBuffer(this.flushOffset)) {
-                    logger.log(this.timeRangesToString(this.video.buffered));
                     // move to IDLE once flush complete. this should trigger new fragment loading
                     this.state = IDLE;
                 } // otherwise stay in BUFFER_FLUSHING state. we will come back here each time sourceBuffer updateend() callback will be triggered
@@ -394,14 +393,6 @@ class BufferController {
             this.fragCurrent = rangeCurrent.frag;
             observer.trigger(Event.FRAG_CHANGED, { frag: this.fragCurrent });
         }
-    }
-
-    timeRangesToString(r) {
-        var log = 'timerange:';
-        for (var i = 0; i < r.length; i++) {
-            log += '[' + r.start(i) + ',' + r.end(i) + ']';
-        }
-        return log;
     }
 
     /*
