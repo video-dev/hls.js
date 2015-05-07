@@ -154,7 +154,7 @@
   }
 
   onFragmentLoaded(event,data) {
-    var stats,rtt,loadtime;
+    var stats,rtt;
     stats = data.stats;
     rtt = stats.tfirst - stats.trequest;
     this.lastfetchduration = (stats.tload - stats.trequest)/1000;
