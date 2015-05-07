@@ -45,6 +45,9 @@
         current level: <div id="currentLevelControl" style="display: inline;"></div>
         </div>
         <div>
+        next level: <div id="nextLevelControl" style="display: inline;"></div>
+        </div>
+        <div>
         load level: <div id="loadLevelControl" style="display: inline;"></div>
         </div>
         <div>
@@ -492,6 +495,14 @@ function timeRangesToString(r) {
     }
     html3 += 'onclick="hls.autoLevelCapping=-1;updateLevelInfo()">none</button>';
 
+    var html4 = button_template;
+    if(hls.autoLevelEnabled) {
+      html4 += button_enabled;
+    } else {
+      html4 += button_disabled;
+    }
+    html4 += 'onclick="hls.nextLevel=-1">auto</button>';
+
     for (var i=0; i < hls.levels.length; i++) {
       html1 += button_template;
       if(hls.currentLevel === i) {
@@ -517,6 +528,14 @@ function timeRangesToString(r) {
         html3 += button_disabled;
       }
       html3 += 'onclick="hls.autoLevelCapping=' + i + ';updateLevelInfo()">' + i + '</button>';
+
+      html4 += button_template;
+      if(hls.nextLevel === i) {
+        html4 += button_enabled;
+      } else {
+        html4 += button_disabled;
+      }
+      html4 += 'onclick="hls.nextLevel=' + i + '">' + i + '</button>';
     }
     var v = document.getElementById('video');
     if(v.videoWidth) {
@@ -525,6 +544,7 @@ function timeRangesToString(r) {
     document.getElementById('currentLevelControl').innerHTML = html1;
     document.getElementById('loadLevelControl').innerHTML = html2;
     document.getElementById('levelCappingControl').innerHTML = html3;
+    document.getElementById('nextLevelControl').innerHTML = html4;
   }
   </script>
 </body>

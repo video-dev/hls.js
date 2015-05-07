@@ -174,8 +174,9 @@ class LevelController {
         var stats, rtt, loadtime;
         stats = data.stats;
         rtt = stats.tfirst - stats.trequest;
-        loadtime = stats.tload - stats.trequest;
-        this.lastbw = stats.length * 8000 / loadtime;
+        this.lastfetchduration = (stats.tload - stats.trequest) / 1000;
+        this.lastfetchlevel = data.frag.level;
+        this.lastbw = stats.length * 8 / this.lastfetchduration;
     }
 
     onLevelLoaded(event, data) {
@@ -200,6 +201,18 @@ class LevelController {
             return this._manualLevel;
         } else {
             return this.nextAutoLevel();
+        }
+    }
+
+    nextFetchDuration() {
+        if (this.lastfetchduration) {
+            return (
+                this.lastfetchduration *
+                this._levels[this._level].bitrate /
+                this._levels[this.lastfetchlevel].bitrate
+            );
+        } else {
+            return 0;
         }
     }
 
