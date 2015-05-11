@@ -171,9 +171,13 @@
        });
        hls.on(hls.Events.LOAD_ERROR,function(event,data) {
           hls.destroy();
-          document.getElementById("HlsStatus").innerHTML = "cannot Load <a href=\"" + data.url + "\">" + url + "</a><br>HTTP response code:" + data.response.status + "<br>" + data.response.statusText;
-          if(data.response.status === 0) {
-            document.getElementById("HlsStatus").innerHTML += "this is most probably a CORS issue, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin</a> Chrome Extension";
+          if(data.response.hasOwnProperty('status')) {
+            document.getElementById("HlsStatus").innerHTML = "cannot Load <a href=\"" + data.url + "\">" + url + "</a><br>HTTP response code:" + data.response.status + "<br>" + data.response.statusText;
+              if(data.response.status === 0) {
+                document.getElementById("HlsStatus").innerHTML += "this is most probably a CORS issue, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin</a> Chrome Extension";
+              }
+          } else {
+            document.getElementById("HlsStatus").innerHTML = "cannot Load <a href=\"" + data.url + "\">" + url + "</a><br>Reason:" + data.response;
           }
        });
        hls.on(hls.Events.LEVEL_SWITCH,function(event,data) {
