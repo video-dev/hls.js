@@ -24,6 +24,7 @@ class BufferController {
         this.fragmentLoader = new FragmentLoader();
         this.mp4segments = [];
         this.bufferRange = [];
+        this.flushRange = [];
         this.flushBufferCounter = 0;
         // Source Buffer listeners
         this.onsbue = this.onSourceBufferUpdateEnd.bind(this);
@@ -50,6 +51,7 @@ class BufferController {
         }
         this.mp4segments = [];
         this.bufferRange = [];
+        this.flushRange = [];
         var sb = this.sourceBuffer;
         if (sb) {
             if (sb.audio) {
@@ -119,8 +121,6 @@ class BufferController {
                 this.loadedmetadata = false;
                 break;
             case IDLE:
-                // reset flush counter
-                this.flushBufferCounter = 0;
                 // handle end of immediate switching if needed
                 if (this.immediateSwitch) {
                     this.immediateLevelSwitchEnd();
@@ -263,11 +263,28 @@ class BufferController {
                 }
                 break;
             case BUFFER_FLUSHING:
-                // flushBuffer will abort any buffer append in progress and flush Audio/Video Buffer
-                if (this.flushBuffer(this.flushOffset)) {
+                // loop through all buffer ranges to flush
+                while (this.flushRange.length) {
+                    var range = this.flushRange[0];
+                    // flushBuffer will abort any buffer append in progress and flush Audio/Video Buffer
+                    if (this.flushBuffer(range.start, range.end)) {
+                        // range flushed, remove from flush array
+                        this.flushRange.shift();
+                        // reset flush counter
+                        this.flushBufferCounter = 0;
+                    } else {
+                        // flush in progress, come back later
+                        break;
+                    }
+                }
+
+                if (this.flushRange.length === 0) {
                     // move to IDLE once flush complete. this should trigger new fragment loading
                     this.state = IDLE;
-                } // otherwise stay in BUFFER_FLUSHING state. we will come back here each time sourceBuffer updateend() callback will be triggered
+                }
+                /* if not everything flushed, stay in BUFFER_FLUSHING state. we will come back here
+            each time sourceBuffer updateend() callback will be triggered
+            */
                 break;
             default:
                 break;
@@ -402,8 +419,9 @@ class BufferController {
   the idea is to call this function from tick() timer and call it again until all resources have been cleaned
   the timer is rearmed upon sourceBuffer updateend() event, so this should be optimal
 */
-    flushBuffer(offset) {
-        var sb, i, start, end;
+    flushBuffer(startOffset, endOffset) {
+        var sb, i, bufStart, bufEnd, flushStart, flushEnd;
+        //logger.log('flushBuffer,pos/start/end: ' + this.video.currentTime + '/' + startOffset + '/' + endOffset);
         // safeguard to avoid infinite looping
         if (
             this.flushBufferCounter++ < 2 * this.bufferRange.length &&
@@ -413,32 +431,32 @@ class BufferController {
                 sb = this.sourceBuffer[type];
                 if (!sb.updating) {
                     for (i = 0; i < sb.buffered.length; i++) {
-                        start = sb.buffered.start(i);
-                        end = sb.buffered.end(i);
-                        if (offset < end) {
-                            var start2 = Math.max(start, offset);
-                            /* sometimes sourcebuffer.remove() does not flush
-                 the exact expected time range.
-                 to avoid rounding issues/infinite loop,
-                 only flush buffer range of length greater than 500ms.
-              */
-                            if (end - start2 > 0.5) {
-                                logger.log(
-                                    'flush ' +
-                                        type +
-                                        ' [' +
-                                        start2 +
-                                        ',' +
-                                        end +
-                                        '], of [' +
-                                        start +
-                                        ',' +
-                                        end +
-                                        ']'
-                                );
-                                sb.remove(start2, end);
-                                return false;
-                            }
+                        bufStart = sb.buffered.start(i);
+                        bufEnd = sb.buffered.end(i);
+                        flushStart = Math.max(bufStart, startOffset);
+                        flushEnd = Math.min(bufEnd, endOffset);
+                        /* sometimes sourcebuffer.remove() does not flush
+               the exact expected time range.
+               to avoid rounding issues/infinite loop,
+               only flush buffer range of length greater than 500ms.
+            */
+                        if (flushEnd - flushStart > 0.5) {
+                            logger.log(
+                                'flush ' +
+                                    type +
+                                    ' [' +
+                                    flushStart +
+                                    ',' +
+                                    flushEnd +
+                                    '], of [' +
+                                    bufStart +
+                                    ',' +
+                                    bufEnd +
+                                    '], pos:' +
+                                    this.video.currentTime
+                            );
+                            sb.remove(flushStart, flushEnd);
+                            return false;
                         }
                     }
                 } else {
@@ -483,7 +501,7 @@ class BufferController {
         }
         this.fragmentLoader.abort();
         // flush everything
-        this.flushOffset = 0;
+        this.flushRange.push({ start: 0, end: Number.POSITIVE_INFINITY });
         // trigger a sourceBuffer flush
         this.state = BUFFER_FLUSHING;
         // speed up switching, trigger timer function
@@ -507,28 +525,42 @@ class BufferController {
         /* try to switch ASAP without breaking video playback :
        in order to ensure smooth but quick level switching,
       we need to find the next flushable buffer range
-      we should take into account new segment fetch time + add a safety delay of 1s (fetchdelay)
+      we should take into account new segment fetch time
     */
-        var fetchdelay;
+        var fetchdelay, currentRange, nextRange;
+
+        currentRange = this.getBufferRange(this.video.currentTime);
+        if (currentRange) {
+            // flush buffer preceding current fragment (flush until current fragment start offset)
+            // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
+            this.flushRange.push({ start: 0, end: currentRange.start - 1 });
+        }
+
         if (!this.video.paused) {
+            // add a safety delay of 1s
             fetchdelay = this.levelController.nextFetchDuration() + 1;
         } else {
             fetchdelay = 0;
         }
         //logger.log('fetchdelay:'+fetchdelay);
         // find buffer range that will be reached once new fragment will be fetched
-        var range = this.getBufferRange(this.video.currentTime + fetchdelay);
-        if (range) {
+        nextRange = this.getBufferRange(this.video.currentTime + fetchdelay);
+        if (nextRange) {
             // we can flush buffer range following this one without stalling playback
-            range = this.followingBufferRange(range);
-            if (range) {
+            nextRange = this.followingBufferRange(nextRange);
+            if (nextRange) {
                 // flush position is the start position of this new buffer
-                this.flushOffset = range.start;
-                // trigger a sourceBuffer flush
-                this.state = BUFFER_FLUSHING;
-                // speed up switching, trigger timer function
-                this.tick();
+                this.flushRange.push({
+                    start: nextRange.start,
+                    end: Number.POSITIVE_INFINITY
+                });
             }
+        }
+        if (this.flushRange.length) {
+            // trigger a sourceBuffer flush
+            this.state = BUFFER_FLUSHING;
+            // speed up switching, trigger timer function
+            this.tick();
         }
     }
 
