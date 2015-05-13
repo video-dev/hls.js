@@ -175,21 +175,22 @@ class PlaylistLoader {
 
         if (string.indexOf('#EXTM3U') === 0) {
             if (string.indexOf('#EXTINF:') > 0) {
-                // 1 level playlist, parse it
-                data = this.parseLevelPlaylist(string, url, id);
-                // if first request, fire manifest loaded event beforehand
+                // 1 level playlist
+                // if first request, fire manifest loaded event, level will be reloaded afterwards
+                // (this is to have a uniform logic for 1 level/multilevel playlists)
                 if (this.id === null) {
                     observer.trigger(Event.MANIFEST_LOADED, {
-                        levels: [data],
+                        levels: [{ url: url }],
                         url: url,
                         stats: this.stats
                     });
+                } else {
+                    observer.trigger(Event.LEVEL_LOADED, {
+                        details: this.parseLevelPlaylist(string, url, id),
+                        levelId: id,
+                        stats: this.stats
+                    });
                 }
-                observer.trigger(Event.LEVEL_LOADED, {
-                    details: data,
-                    levelId: id,
-                    stats: this.stats
-                });
             } else {
                 levels = this.parseMasterPlaylist(string, url);
                 // multi level playlist, parse level info

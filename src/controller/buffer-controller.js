@@ -143,12 +143,17 @@ class BufferController {
                 }
                 var bufferInfo = this.bufferInfo(pos),
                     bufferLen = bufferInfo.len,
-                    bufferEnd = bufferInfo.end;
+                    bufferEnd = bufferInfo.end,
+                    maxBufLen;
                 // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
-                var maxBufLen = Math.min(
-                    8 * 60 * 1000 * 1000 / this.levels[loadLevel].bitrate,
-                    30
-                );
+                if (this.levels[loadLevel].hasOwnProperty('bitrate')) {
+                    maxBufLen = Math.min(
+                        8 * 60 * 1000 * 1000 / this.levels[loadLevel].bitrate,
+                        30
+                    );
+                } else {
+                    maxBufLen = 30;
+                }
                 // if buffer length is less than maxBufLen try to load a new fragment
                 if (bufferLen < maxBufLen) {
                     if (loadLevel !== this.level) {
