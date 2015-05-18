@@ -39,7 +39,7 @@ class LevelController {
             aac = false,
             heaac = false,
             codecs;
-        if (levels.length > 1) {
+        if (data.levels.length > 1) {
             // remove failover level for now to simplify the logic
             data.levels.forEach(level => {
                 if (!bitrateSet.hasOwnProperty(level.bitrate)) {
