@@ -158,8 +158,7 @@ class PlaylistLoader {
     }
 
     loadsuccess(event) {
-        var data,
-            string = event.currentTarget.responseText,
+        var string = event.currentTarget.responseText,
             url = event.currentTarget.responseURL,
             id = this.id,
             levels;
