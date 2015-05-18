@@ -135,7 +135,7 @@ import observer             from '../observer';
   }
 
   loadsuccess(event) {
-    var data,string = event.currentTarget.responseText, url = event.currentTarget.responseURL, id = this.id,levels;
+    var string = event.currentTarget.responseText, url = event.currentTarget.responseURL, id = this.id,levels;
     // responseURL not supported on some browsers (it is used to detect URL redirection)
     if(url === undefined) {
       // fallback to initial URL
@@ -170,7 +170,7 @@ import observer             from '../observer';
                             id : id,
                             stats : this.stats});
         } else {
-          observer.trigger(Event.LOAD_ERROR, { url : url, response : "no level found in manifest"});
+          observer.trigger(Event.LOAD_ERROR, { url : url, response : 'no level found in manifest'});
         }
       }
     } else {
