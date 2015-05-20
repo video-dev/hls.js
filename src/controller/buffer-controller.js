@@ -443,7 +443,7 @@ class BufferController {
                             navigator.userAgent
                                 .toLowerCase()
                                 .indexOf('firefox') !== -1 &&
-                            endOffset == Number.POSITIVE_INFINITY
+                            endOffset === Number.POSITIVE_INFINITY
                         ) {
                             flushStart = startOffset;
                             flushEnd = endOffset;
