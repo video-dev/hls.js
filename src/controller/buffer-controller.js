@@ -438,8 +438,19 @@ class BufferController {
                     for (i = 0; i < sb.buffered.length; i++) {
                         bufStart = sb.buffered.start(i);
                         bufEnd = sb.buffered.end(i);
-                        flushStart = Math.max(bufStart, startOffset);
-                        flushEnd = Math.min(bufEnd, endOffset);
+                        // workaround firefox not able to properly flush multiple buffered range.
+                        if (
+                            navigator.userAgent
+                                .toLowerCase()
+                                .indexOf('firefox') !== -1 &&
+                            endOffset == Number.POSITIVE_INFINITY
+                        ) {
+                            flushStart = startOffset;
+                            flushEnd = endOffset;
+                        } else {
+                            flushStart = Math.max(bufStart, startOffset);
+                            flushEnd = Math.min(bufEnd, endOffset);
+                        }
                         /* sometimes sourcebuffer.remove() does not flush
                the exact expected time range.
                to avoid rounding issues/infinite loop,
