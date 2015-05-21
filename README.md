@@ -1,14 +1,29 @@
 # hls.js
-[Media Source Extensions](http://w3c.github.io/media-source/) based [HTTP Live Streaming](http://en.wikipedia.org/wiki/HTTP_Live_Streaming) library.
+hls.js is a JavaScript library which implements an [HTTP Live Streaming] client.
+It relies on [HTML5 video][] and [MediaSource Extensions][] for playback.
 
-this library allows to playback HLS streams on browsers supporting Media Source Extension API.
+it works by transmuxing MPEG-2 Transport Stream into ISO BMFF (MP4) fragments.
+this transmuxing could be performed asynchronously using [Web Worker] if available in the browser.
  
-it is written in EcmaScript 6, and transpiled using Babel.
+hls.js is written in [ES6], and transpiled in ES5 using [Babel].
 
-MPEG-2 TS transmuxing is offloaded into a Web Worker.
+
+[HTML5 video]: http://www.html5rocks.com/en/tutorials/video/basics/
+[MediaSource Extensions]: http://w3c.github.io/media-source/
+[HTTP Live Streaming]: http://en.wikipedia.org/wiki/HTTP_Live_Streaming
+[Web Worker]: http://caniuse.com/#search=worker
+[ES6]: https://github.com/ericdouglas/ES6-Learning#articles--tutorials
+[Babel]: https://babeljs.io
 
 ## Demo
 [http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html](http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html)
+
+## Dependencies
+
+prepackaged distribution is available in the [dist] (dist) folder:
+
+ - [hls.js] (dist/hls.js)
+ - [hls.min.js] (dist/hls.min.js)
 
 ## compatibility
  hls.js is compatible with browsers supporting MSE with 'video/MP4' inputs.
@@ -27,7 +42,8 @@ as of today, it is supported on:
   - Adaptive streaming
     - Manual & Auto switching
     	- instant switching (immediate quality switch at current video position)
-    	-  smooth switching (quality switch for next loaded fragment)
+    	- smooth switching (quality switch for next loaded fragment)
+    	- bandwidth conservative switching (quality switch change for next loaded fragment, without flushing the buffer) 
   - Accurate Seeking  on VoD & Live
     - ability to seek in buffer and back buffer without redownloading segments
 
@@ -42,7 +58,7 @@ as of today, it is supported on:
 
 ## Getting Started
 
-```html
+```js
 <script src="dist/hls.js"></script>
 
 <script>
@@ -123,7 +139,7 @@ default value is -1 (no level capping)
 hls.js fires a bunch of events, that could be registered as below:
 
 
-```html
+```js
 hls.on(hls.Events.LEVEL_LOADED,function(event,data) {
 	var level_duration = data.details.totalduration;
 });
@@ -179,7 +195,7 @@ it contains quality level related info, retrieved from manifest, such as
 
 see sample Level object below:
 
-```
+```js
 {
   url: 'http://levelURL.com'
   bitrate: 246440,
@@ -203,7 +219,7 @@ level detailed infos contains level details retrieved after level playlist parsi
 
 see sample object below, available after corresponding LEVEL_LOADED event has been fired:
 
-```
+```js
 {
 	startSN: 0,
 	endSN: 50,
@@ -225,7 +241,7 @@ the Fragment object contains fragment related info, such as
 
 see sample object below:
 
-```
+```js
 {
   duration: 10,
   level : 3,
