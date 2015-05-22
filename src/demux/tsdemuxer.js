@@ -592,6 +592,7 @@
         adtsExtensionSampleingIndex, // :int
         adtsChanelConfig, // :int
         config,
+        userAgent = navigator.userAgent.toLowerCase(),
         adtsSampleingRates = [
             96000, 88200,
             64000, 48000,
@@ -605,27 +606,40 @@
     adtsSampleingIndex = ((data[2] & 0x3C) >>> 2);
     adtsChanelConfig = ((data[2] & 0x01) << 2);
 
-    //  always force audio type to be HE-AAC SBR. some browsers do not support audio codec switch properly
-    // in case stream is really HE-AAC: it should be either  advertised directly in codecs (retrieved from parsing manifest)
-    // or if no codec specified,we implicitely assume that audio with sampling rate less or equal than 24 kHz is HE-AAC (index 6)
-    // currently broken on Chrome/Android
-    if(navigator.userAgent.toLowerCase().indexOf('android') === -1 &&
-      ((audioCodec && audioCodec.indexOf('mp4a.40.5') !==-1) || (!audioCodec && adtsSampleingIndex >=6)))  {
-      adtsObjectType = 5;
-      // HE-AAC uses SBR (Spectral Band Replication) , high frequencies are constructed from low frequencies
-      // there is a factor 2 between frame sample rate and output sample rate
-      // multiply frequency by 2 (see table below, equivalent to substract 3)
-      adtsExtensionSampleingIndex = adtsSampleingIndex - 3;
-      config = new Array(4);
-    } else {
-      if(navigator.userAgent.toLowerCase().indexOf('android') === -1 && navigator.userAgent.toLowerCase().indexOf('firefox') === -1) {
+    // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
+    if(userAgent.indexOf('firefox') !== -1) {
+      if(adtsSampleingIndex >=6) {
         adtsObjectType = 5;
         config = new Array(4);
-      }else {
+        // HE-AAC uses SBR (Spectral Band Replication) , high frequencies are constructed from low frequencies
+        // there is a factor 2 between frame sample rate and output sample rate
+        // multiply frequency by 2 (see table below, equivalent to substract 3)
+        adtsExtensionSampleingIndex = adtsSampleingIndex -3;
+      } else {
         adtsObjectType = 2;
         config = new Array(2);
+        adtsExtensionSampleingIndex = adtsSampleingIndex;
       }
+      // Android : always use AAC
+    } else if(userAgent.indexOf('android') !== -1) {
+      adtsObjectType = 2;
+      config = new Array(2);
       adtsExtensionSampleingIndex = adtsSampleingIndex;
+    } else {
+      /*  for other browsers
+          always force audio type to be HE-AAC SBR, as some browsers do not support audio codec switch properly (like Chrome ...)
+      */
+        adtsObjectType = 5;
+        config = new Array(4);
+       // if manifest codec is HE-AAC or frequency less than 24kHz
+      if((audioCodec && audioCodec.indexOf('mp4a.40.5') !==-1) || (!audioCodec && adtsSampleingIndex >=6))  {
+        // HE-AAC uses SBR (Spectral Band Replication) , high frequencies are constructed from low frequencies
+        // there is a factor 2 between frame sample rate and output sample rate
+        // multiply frequency by 2 (see table below, equivalent to substract 3)
+        adtsExtensionSampleingIndex = adtsSampleingIndex - 3;
+      } else {
+        adtsExtensionSampleingIndex = adtsSampleingIndex;
+      }
     }
     // byte 3
     adtsChanelConfig |= ((data[3] & 0xC0) >>> 6);
