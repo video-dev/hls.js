@@ -70,10 +70,9 @@ class LevelController {
                 if (levels[i].bitrate === bitrateStart) {
                     this._firstLevel = i;
                     logger.log(
-                        'manifest loaded,' +
-                            levels.length +
-                            ' level(s) found, first bitrate:' +
-                            bitrateStart
+                        `manifest loaded,${
+                            levels.length
+                        } level(s) found, first bitrate:${bitrateStart}`
                     );
                     break;
                 }
@@ -116,7 +115,7 @@ class LevelController {
                     this.timer = null;
                 }
                 this._level = newLevel;
-                logger.log('switching to level ' + newLevel);
+                logger.log(`switching to level ${newLevel}`);
                 observer.trigger(Event.LEVEL_SWITCH, { levelId: newLevel });
                 var level = this._levels[newLevel];
                 // check if we need to load playlist for this level
@@ -128,7 +127,7 @@ class LevelController {
                     observer.trigger(Event.LEVEL_LOADING, {
                         levelId: newLevel
                     });
-                    logger.log('(re)loading playlist for level ' + newLevel);
+                    logger.log(`(re)loading playlist for level ${newLevel}`);
                     this.playlistLoader.load(level.url, newLevel);
                     level.loading = true;
                 }

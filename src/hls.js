@@ -91,7 +91,7 @@ class Hls {
 
     loadSource(url) {
         this.url = url;
-        logger.log('loadSource:' + url);
+        logger.log(`loadSource:${url}`);
         // when attaching to a source URL, trigger a playlist load
         this.playlistLoader.load(url, null);
     }

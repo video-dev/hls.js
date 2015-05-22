@@ -179,10 +179,7 @@ class BufferController {
                     // in case of live playlist we need to ensure that requested position is not located before playlist start
                     if (bufferEnd < start) {
                         logger.log(
-                            'requested position:' +
-                                bufferEnd +
-                                ' is before start of playlist, reset video position to start:' +
-                                start
+                            `requested position: ${bufferEnd} is before start of playlist, reset video position to start: ${start}`
                         );
                         this.video.currentTime = start + 0.01;
                         break;
@@ -208,19 +205,14 @@ class BufferController {
                             } else {
                                 frag = fragments[fragIdx + 1];
                                 logger.log(
-                                    'SN just loaded, load next one:' + frag.sn
+                                    `SN just loaded, load next one: ${frag.sn}`
                                 );
                             }
                         }
                         logger.log(
-                            'Loading       ' +
-                                frag.sn +
-                                ' of [' +
-                                fragments[0].sn +
-                                ',' +
-                                fragments[fragments.length - 1].sn +
-                                '],level ' +
-                                loadLevel
+                            `Loading       ${frag.sn} of [${fragments[0].sn} ,${
+                                fragments[fragments.length - 1].sn
+                            }],level ${loadLevel}`
                         );
                         //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
 
@@ -458,18 +450,9 @@ class BufferController {
             */
                         if (flushEnd - flushStart > 0.5) {
                             logger.log(
-                                'flush ' +
-                                    type +
-                                    ' [' +
-                                    flushStart +
-                                    ',' +
-                                    flushEnd +
-                                    '], of [' +
-                                    bufStart +
-                                    ',' +
-                                    bufEnd +
-                                    '], pos:' +
+                                `flush ${type} [${flushStart},${flushEnd}], of [${bufStart},${bufEnd}], pos:${
                                     this.video.currentTime
+                                }`
                             );
                             sb.remove(flushStart, flushEnd);
                             return false;
@@ -641,14 +624,9 @@ class BufferController {
         var fragments = data.details.fragments,
             duration = data.details.totalduration;
         logger.log(
-            'level ' +
-                data.levelId +
-                ' loaded [' +
-                fragments[0].sn +
-                ',' +
-                fragments[fragments.length - 1].sn +
-                '],duration:' +
-                duration
+            `level ${data.levelId} loaded [${fragments[0].sn},${
+                fragments[fragments.length - 1].sn
+            }],duration:${duration}`
         );
 
         var level = this.levels[data.levelId],
@@ -669,7 +647,7 @@ class BufferController {
                 // negative sliding: new playlist sliding window is before previous one
                 sliding -= fragments[-SNdiff].start;
             }
-            logger.log('live playlist sliding:' + sliding.toFixed(3));
+            logger.log(`live playlist sliding:${sliding.toFixed(3)}`);
         }
         // override level info
         level.details = data.details;
@@ -753,10 +731,7 @@ class BufferController {
         if (!this.sourceBuffer) {
             this.sourceBuffer = {};
             logger.log(
-                'selected A/V codecs for sourceBuffers:' +
-                    audioCodec +
-                    ',' +
-                    videoCodec
+                `selected A/V codecs for sourceBuffers:${audioCodec},${videoCodec}`
             );
             // create source Buffer and link them to MediaSource
             if (audioCodec) {
@@ -791,18 +766,13 @@ class BufferController {
             level.details.sliding = data.startPTS - this.frag.start;
         }
         logger.log(
-            '      parsed data, type/startPTS/endPTS/startDTS/endDTS/sliding:' +
-                data.type +
-                '/' +
-                data.startPTS.toFixed(3) +
-                '/' +
-                data.endPTS.toFixed(3) +
-                '/' +
-                data.startDTS.toFixed(3) +
-                '/' +
-                data.endDTS.toFixed(3) +
-                '/' +
-                level.details.sliding.toFixed(3)
+            `      parsed data, type/startPTS/endPTS/startDTS/endDTS/sliding:${
+                data.type
+            }/${data.startPTS.toFixed(3)}/${data.endPTS.toFixed(
+                3
+            )}/${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(
+                3
+            )}/${level.details.sliding.toFixed(3)}`
         );
         this.mp4segments.push({ type: data.type, data: data.moof });
         this.mp4segments.push({ type: data.type, data: data.mdat });
@@ -838,7 +808,7 @@ class BufferController {
     }
 
     onSourceBufferError(event) {
-        logger.log(' buffer append error:' + event);
+        logger.log(` buffer append error:${event}`);
     }
 }
 

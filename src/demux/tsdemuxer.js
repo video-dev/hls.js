@@ -339,15 +339,15 @@ class TSDemuxer {
                         //logger.log('Video next PTS:' + this.nextAvcPts);
                         if (delta > 1) {
                             logger.log(
-                                'AVC:' +
-                                    delta.toFixed(0) +
-                                    ' ms hole between fragments detected,filling it'
+                                `AVC:${delta.toFixed(
+                                    0
+                                )} ms hole between fragments detected,filling it`
                             );
                         } else if (delta < -1) {
                             logger.log(
-                                'AVC:' +
-                                    -delta.toFixed(0) +
-                                    ' ms overlapping between fragments detected'
+                                `AVC:${-delta.toFixed(
+                                    0
+                                )} ms overlapping between fragments detected`
                             );
                         }
                         // set PTS to next PTS
