@@ -5,7 +5,7 @@
 
 import Event                from '../events';
 import observer             from '../observer';
-import {logger}             from '../utils/logger';
+import Xhr                  from '../utils/xhr';
 
  class FragmentLoader {
 
@@ -13,48 +13,37 @@ import {logger}             from '../utils/logger';
   }
 
   destroy() {
-    this.abort();
-    this.xhr = null;
+    if(this.xhr) {
+      this.xhr.destroy();
+      this.xhr = null;
+    }
   }
 
   abort() {
-    if(this.xhr &&this.xhr.readyState !== 4) {
+    if(this.xhr) {
       this.xhr.abort();
     }
   }
 
-  load(frag,levelId) {
+  load(frag,levelId, timeout = 60000, maxAttempts=3) {
     this.frag = frag;
     this.levelId = levelId;
-    this.trequest = new Date();
-    this.tfirst = null;
-    var xhr = this.xhr = new XMLHttpRequest();
-    xhr.onload=  this.loadsuccess.bind(this);
-    xhr.onerror = this.loaderror.bind(this);
-    xhr.onprogress = this.loadprogress.bind(this);
-    xhr.open('GET', frag.url , true);
-    xhr.responseType = 'arraybuffer';
-    xhr.send();
-    observer.trigger(Event.FRAG_LOADING, { frag : frag});
+    this.xhr = new Xhr();
+    this.xhr.load(frag.url,'arraybuffer',this.loadsuccess.bind(this), this.loaderror.bind(this), timeout, maxAttempts);
   }
 
-  loadsuccess(event) {
+
+  loadsuccess(event, stats) {
     var payload = event.currentTarget.response;
+    stats.length = payload.byteLength;
     observer.trigger(Event.FRAG_LOADED,
                     { payload : payload,
                       frag : this.frag ,
-                      stats : {trequest : this.trequest, tfirst : this.tfirst, tload : new Date(), length :payload.byteLength }});
+                      stats : stats});
   }
 
   loaderror(event) {
-    logger.log('error loading ' + this.frag.url);
     observer.trigger(Event.LOAD_ERROR, { url : this.frag.url, event:event});
-  }
-
-  loadprogress() {
-    if(this.tfirst === null) {
-      this.tfirst = new Date();
-    }
   }
 }
 
