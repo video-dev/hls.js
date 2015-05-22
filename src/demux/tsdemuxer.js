@@ -311,9 +311,9 @@
           if(absdelta < 300) {
             //logger.log('Video next PTS:' + this.nextAvcPts);
             if(delta > 1) {
-              logger.log('AVC:' + delta.toFixed(0) + ' ms hole between fragments detected,filling it');
+              logger.log(`AVC:${delta.toFixed(0)} ms hole between fragments detected,filling it`);
             } else if (delta < -1) {
-              logger.log('AVC:' + (-delta.toFixed(0)) + ' ms overlapping between fragments detected');
+              logger.log(`AVC:${(-delta.toFixed(0))} ms overlapping between fragments detected`);
             }
             // set PTS to next PTS
             avcSample.pts = this.nextAvcPts;
