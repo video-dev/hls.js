@@ -5,6 +5,7 @@
 
 import Event from '../events';
 import observer from '../observer';
+import Xhr from '../utils/xhr';
 //import {logger}             from '../utils/logger';
 
 class PlaylistLoader {
@@ -13,23 +14,25 @@ class PlaylistLoader {
     }
 
     destroy() {
-        if (this.xhr && this.xhr.readyState !== 4) {
-            this.xhr.abort();
+        if (this.xhr) {
+            this.xhr.destroy();
             this.xhr = null;
         }
         this.url = this.id = null;
     }
 
-    load(url, requestId) {
+    load(url, requestId, timeout = 10000, maxAttempts = 3) {
         this.url = url;
         this.id = requestId;
-        this.stats = { trequest: new Date() };
-        var xhr = (this.xhr = new XMLHttpRequest());
-        xhr.onload = this.loadsuccess.bind(this);
-        xhr.onerror = this.loaderror.bind(this);
-        xhr.onprogress = this.loadprogress.bind(this);
-        xhr.open('GET', url, true);
-        xhr.send();
+        this.xhr = new Xhr();
+        this.xhr.load(
+            url,
+            '',
+            this.loadsuccess.bind(this),
+            this.loaderror.bind(this),
+            timeout,
+            maxAttempts
+        );
     }
 
     resolve(url, baseUrl) {
@@ -157,7 +160,7 @@ class PlaylistLoader {
         return level;
     }
 
-    loadsuccess(event) {
+    loadsuccess(event, stats) {
         var string = event.currentTarget.responseText,
             url = event.currentTarget.responseURL,
             id = this.id,
@@ -167,9 +170,9 @@ class PlaylistLoader {
             // fallback to initial URL
             url = this.url;
         }
-        this.stats.tload = new Date();
-        this.stats.mtime = new Date(
-            this.xhr.getResponseHeader('Last-Modified')
+        stats.tload = new Date();
+        stats.mtime = new Date(
+            event.currentTarget.getResponseHeader('Last-Modified')
         );
 
         if (string.indexOf('#EXTM3U') === 0) {
@@ -181,13 +184,13 @@ class PlaylistLoader {
                     observer.trigger(Event.MANIFEST_LOADED, {
                         levels: [{ url: url }],
                         url: url,
-                        stats: this.stats
+                        stats: stats
                     });
                 } else {
                     observer.trigger(Event.LEVEL_LOADED, {
                         details: this.parseLevelPlaylist(string, url, id),
                         levelId: id,
-                        stats: this.stats
+                        stats: stats
                     });
                 }
             } else {
@@ -198,7 +201,7 @@ class PlaylistLoader {
                         levels: levels,
                         url: url,
                         id: id,
-                        stats: this.stats
+                        stats: stats
                     });
                 } else {
                     observer.trigger(Event.LOAD_ERROR, {
@@ -220,12 +223,6 @@ class PlaylistLoader {
             url: this.url,
             response: event.currentTarget
         });
-    }
-
-    loadprogress() {
-        if (this.stats.tfirst === undefined) {
-            this.stats.tfirst = new Date();
-        }
     }
 }
 
