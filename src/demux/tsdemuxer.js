@@ -605,6 +605,11 @@
     adtsObjectType = ((data[2] & 0xC0) >>> 6) + 1;
     adtsSampleingIndex = ((data[2] & 0x3C) >>> 2);
     adtsChanelConfig = ((data[2] & 0x01) << 2);
+    // byte 3
+    adtsChanelConfig |= ((data[3] & 0xC0) >>> 6);
+
+    //console.log(`mp4a audioCodec:${audioCodec}, objectType : ${adtsObjectType},adtsSampleingIndex : ${adtsSampleingIndex}, channelConfig : ${adtsChanelConfig}`);
+
 
     // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
     if(userAgent.indexOf('firefox') !== -1) {
@@ -614,7 +619,7 @@
         // HE-AAC uses SBR (Spectral Band Replication) , high frequencies are constructed from low frequencies
         // there is a factor 2 between frame sample rate and output sample rate
         // multiply frequency by 2 (see table below, equivalent to substract 3)
-        adtsExtensionSampleingIndex = adtsSampleingIndex -3;
+        adtsExtensionSampleingIndex = adtsSampleingIndex-3;
       } else {
         adtsObjectType = 2;
         config = new Array(2);
@@ -641,8 +646,6 @@
         adtsExtensionSampleingIndex = adtsSampleingIndex;
       }
     }
-    // byte 3
-    adtsChanelConfig |= ((data[3] & 0xC0) >>> 6);
   /* refer to http://wiki.multimedia.cx/index.php?title=MPEG-4_Audio#Audio_Specific_Config
       ISO 14496-3 (AAC).pdf - Table 1.13 — Syntax of AudioSpecificConfig()
     Audio Profile / Audio Object Type
