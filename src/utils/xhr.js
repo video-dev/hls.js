@@ -45,8 +45,8 @@ class Xhr {
         xhr.onload = this.loadsuccess.bind(this);
         xhr.onerror = xhr.ontimeout = this.loaderror.bind(this);
         xhr.onprogress = this.loadprogress.bind(this);
-        xhr.timeout = this.timeout;
         xhr.open('GET', this.url, true);
+        xhr.timeout = this.timeout;
         xhr.responseType = this.responseType;
         this.attempts++;
         this.tfirst = null;
