@@ -461,7 +461,7 @@
         track.channelCount = config.channelCount;
         track.codec = config.codec;
         track.duration = 90000*this._duration;
-        console.log(track.codec +',rate:' + config.samplerate + ',nb channel:' + config.channelCount);
+        console.log(`parsed   codec:${track.codec},rate:${config.samplerate},nb channel:${config.channelCount}`);
       }
       adtsStartOffset = i = 0;
       while((adtsStartOffset + 5) < data.length) {
@@ -608,7 +608,7 @@
     // byte 3
     adtsChanelConfig |= ((data[3] & 0xC0) >>> 6);
 
-    //console.log(`mp4a audioCodec:${audioCodec}, objectType : ${adtsObjectType},adtsSampleingIndex : ${adtsSampleingIndex}, channelConfig : ${adtsChanelConfig}`);
+    console.log(`manifest codec:${audioCodec},ADTS data:type:${adtsObjectType},sampleingIndex:${adtsSampleingIndex}[${adtsSampleingRates[adtsSampleingIndex]}kHz],channelConfig:${adtsChanelConfig}`);
 
 
     // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
