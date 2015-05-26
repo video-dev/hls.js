@@ -725,6 +725,10 @@ class TSDemuxer {
         adtsObjectType = ((data[2] & 0xc0) >>> 6) + 1;
         adtsSampleingIndex = (data[2] & 0x3c) >>> 2;
         adtsChanelConfig = (data[2] & 0x01) << 2;
+        // byte 3
+        adtsChanelConfig |= (data[3] & 0xc0) >>> 6;
+
+        //console.log(`mp4a audioCodec:${audioCodec}, objectType : ${adtsObjectType},adtsSampleingIndex : ${adtsSampleingIndex}, channelConfig : ${adtsChanelConfig}`);
 
         // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
         if (userAgent.indexOf('firefox') !== -1) {
@@ -764,8 +768,6 @@ class TSDemuxer {
                 adtsExtensionSampleingIndex = adtsSampleingIndex;
             }
         }
-        // byte 3
-        adtsChanelConfig |= (data[3] & 0xc0) >>> 6;
         /* refer to http://wiki.multimedia.cx/index.php?title=MPEG-4_Audio#Audio_Specific_Config
       ISO 14496-3 (AAC).pdf - Table 1.13 — Syntax of AudioSpecificConfig()
     Audio Profile / Audio Object Type
