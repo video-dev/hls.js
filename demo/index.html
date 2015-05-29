@@ -29,7 +29,11 @@
           <pre id='HlsUrl'></pre>
           <pre id='HlsStatus'></pre>
           <video id=video controls autoplay border="4" style="max-width:90%;margin-left:5%"></video>
-          <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)" style="margin-left:5%";></canvas> <br>
+          <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)" style="margin-left:5%";></canvas>
+        <div>
+        video dimension: <div id="currentResolution" style="display: inline;"></div>
+        </div>
+        <input type="range" min="0" step="1" value="0" id="videoWidthSlider" style="margin-left:5%;width:90%" onchange="videoWidthSliderChange()";/>
           <div id='buttons'>
             <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').play()">play</button>
             <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').pause()">pause</button>
@@ -38,9 +42,6 @@
             <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').currentTime=document.getElementById('seek_pos').value">seek to </button>
              <input type="text" id='seek_pos' size="8" onkeydown="if(window.event.keyCode=='13'){document.getElementById('video').currentTime=document.getElementById('seek_pos').value;}">
           </div>
-        <div>
-        current video resolution: <div id="currentResolution" style="display: inline;"></div>
-        </div>
         <div>
         current level: <div id="currentLevelControl" style="display: inline;"></div>
         </div>
@@ -120,8 +121,12 @@
    if(manifest === 'undefined') {
      manifest = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
    }
+   var videoWidthSlider=document.getElementById("videoWidthSlider");
+   videoWidthSlider.max = 0.9*window.innerWidth;
+   var capVideo=false;
 
   loadStream(manifest);
+
 
   function loadStream(url) {
     hideCanvas();
@@ -283,6 +288,9 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
          break;
       case 'resize':
         data = evt.target.videoWidth + '/' + evt.target.videoHeight;
+        if(capVideo==false) {
+            document.getElementById("videoWidthSlider").value = evt.target.clientWidth;
+        }
         break;
       case 'loadedmetadata':
       //   data = 'duration:' + evt.target.duration + '/videoWidth:' + evt.target.videoWidth + '/videoHeight:' + evt.target.videoHeight;
@@ -549,6 +557,12 @@ function timeRangesToString(r) {
     document.getElementById('levelCappingControl').innerHTML = html3;
     document.getElementById('nextLevelControl').innerHTML = html4;
   }
+
+  function videoWidthSliderChange() {
+    document.getElementById('video').width = document.getElementById("videoWidthSlider").valueAsNumber;
+    capVideo=true;
+  }
+
   </script>
 </body>
 
