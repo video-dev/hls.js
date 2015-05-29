@@ -155,8 +155,7 @@
        }
        t0 = Date.now();
        events = { url : _url, date : new Date(), load : [], buffer : [], video : [], level : [], bitrate : []};
-       hls = new Hls();
-       hls.debug(true);
+       hls = new Hls({debug:true});
        document.getElementById("HlsStatus").innerHTML = 'loading manifest and attaching video element...';
        hls.loadSource(_url);
        hls.attachVideo(video);

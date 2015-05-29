@@ -21,13 +21,34 @@ class Hls {
         );
     }
 
-    constructor() {
-        this.playlistLoader = new PlaylistLoader();
+    constructor(config = {}) {
+        var configDefault = {
+            debug: false,
+            maxBufferLength: 30,
+            maxBufferSize: 60 * 1000 * 1000,
+            enableWorker: true,
+            fragLoadingTimeOut: 60000,
+            fragLoadingMaxRetry: 3,
+            fragLoadingRetryDelay: 500,
+            manifestLoadingTimeOut: 10000,
+            manifestLoadingMaxRetry: 3,
+            manifestLoadingRetryDelay: 500
+        };
+        for (var prop in configDefault) {
+            if (prop in config) {
+                continue;
+            }
+            config[prop] = configDefault[prop];
+        }
+        enableLogs(config.debug);
+
+        this.playlistLoader = new PlaylistLoader(config);
         this.levelController = new LevelController(this.playlistLoader);
-        this.bufferController = new BufferController(this.levelController);
+        this.bufferController = new BufferController(
+            this.levelController,
+            config
+        );
         this.Events = Event;
-        this.debug = enableLogs;
-        this.logEvt = this.logEvt;
         // observer setup
         this.on = observer.on.bind(observer);
         this.off = observer.removeListener.bind(observer);

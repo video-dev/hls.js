@@ -19,24 +19,16 @@ class Xhr {
         }
     }
 
-    load(
-        url,
-        responseType,
-        onSuccess,
-        onError,
-        timeout,
-        maxAttempts,
-        retryDelay = 500
-    ) {
+    load(url, responseType, onSuccess, onError, timeout, maxRetry, retryDelay) {
         this.url = url;
         this.responseType = responseType;
         this.onSuccess = onSuccess;
         this.onError = onError;
         this.trequest = new Date();
         this.timeout = timeout;
-        this.maxAttempts = maxAttempts;
+        this.maxRetry = maxRetry;
         this.retryDelay = retryDelay;
-        this.attempts = 0;
+        this.retry = 0;
         this.loadInternal();
     }
 
@@ -48,7 +40,6 @@ class Xhr {
         xhr.open('GET', this.url, true);
         xhr.timeout = this.timeout;
         xhr.responseType = this.responseType;
-        this.attempts++;
         this.tfirst = null;
         xhr.send();
     }
@@ -62,16 +53,17 @@ class Xhr {
     }
 
     loaderror(event) {
-        if (this.attempts < this.maxAttempts) {
-            var retryDelay = this.retryDelay * this.attempts;
-            this.timeout *= 2;
+        if (this.retry < this.maxRetry) {
             logger.log(
-                `${event.type} while loading ${
-                    this.url
-                }, retrying in ${retryDelay}...`
+                `${event.type} while loading ${this.url}, retrying in ${
+                    this.retryDelay
+                }...`
             );
             this.destroy();
-            window.setTimeout(this.loadInternal.bind(this), retryDelay);
+            window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
+            // exponential backoff
+            this.retryDelay = Math.min(2 * this.retryDelay, 64000);
+            this.retry++;
         } else {
             logger.log(`${event.type} while loading ${this.url}`);
             this.onError(event);

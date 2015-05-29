@@ -88,6 +88,60 @@ video is controlled through HTML ```<video>``` element.
 HTMLVideoElement control and events could be used seamlessly.
 
 
+## Configuration Parameters
+
+configuration parameters could be provided to hls.js upon instantiation of Hls Object.
+
+```js
+
+   var config = {
+      debug : false,
+      maxBufferLength : 30,
+      maxBufferSize : 60*1000*1000,
+      enableWorker : true,
+      fragLoadingTimeOut : 60000,
+      fragLoadingMaxRetry : 3,
+      fragLoadingRetryDelay : 500,
+      manifestLoadingTimeOut : 10000,
+      manifestLoadingMaxRetry : 3,
+      manifestLoadingRetryDelay : 500
+    };
+
+
+var hls = new Hls(config);
+```
+
+###debug
+(default false)
+
+turn on debug logs on JS console 
+###maxBufferLength
+(default 30s)
+
+maximum buffer Length in seconds. if buffer length is/become less than this value, a new fragment will be loaded.
+###maxBufferSize
+(default 60 MB)
+
+maximum buffer size in bytes. if buffer size upfront is bigger than this value, no fragment will be loaded.
+###enableWorker
+(default true)
+
+enable webworker (if available on browser) for TS demuxing/MP4 remuxing, to improve performance and avoid lag/frame drops.
+###fragLoadingTimeOut/manifestLoadingTimeOut
+(default 60000ms for fragment/10000ms for manifest)
+
+XmlHttpRequest connection timeout (in ms)
+###fragLoadingMaxRetry/manifestLoadingMaxRetry
+(default 3)
+
+max nb of load retry
+###fragLoadingRetryDelay/manifestLoadingRetryDelay
+(default 500ms)
+
+initial delay between XmlHttpRequest error and first load retry (in ms)
+any I/O error will trigger retries every 500ms,1s,2s,4s,8s, ... capped to 64s (exponential backoff)
+
+
 ## Quality switch Control
 
 hls.js handles quality switch automatically.
