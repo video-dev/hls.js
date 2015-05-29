@@ -9,7 +9,8 @@ import Xhr                  from '../utils/xhr';
 
  class FragmentLoader {
 
-  constructor() {
+  constructor(config) {
+    this.config=config;
   }
 
   destroy() {
@@ -25,11 +26,10 @@ import Xhr                  from '../utils/xhr';
     }
   }
 
-  load(frag,levelId, timeout = 60000, maxAttempts=3) {
+  load(frag) {
     this.frag = frag;
-    this.levelId = levelId;
     this.xhr = new Xhr();
-    this.xhr.load(frag.url,'arraybuffer',this.loadsuccess.bind(this), this.loaderror.bind(this), timeout, maxAttempts);
+    this.xhr.load(frag.url,'arraybuffer',this.loadsuccess.bind(this), this.loaderror.bind(this), this.config.fragLoadingTimeOut, this.config.fragLoadingMaxRetry,this.config.fragLoadingRetryDelay);
   }
 
 

@@ -20,9 +20,10 @@
 
  class BufferController {
 
-  constructor(levelController) {
+  constructor(levelController,config) {
     this.levelController = levelController;
-    this.fragmentLoader = new FragmentLoader();
+    this.config = config;
+    this.fragmentLoader = new FragmentLoader(config);
     this.mp4segments = [];
     this.bufferRange = [];
     this.flushRange = [];
@@ -41,7 +42,7 @@
     this.ontick = this.tick.bind(this);
     observer.on(Event.MSE_ATTACHED, this.onmse);
     observer.on(Event.MANIFEST_PARSED, this.onmp);
-    this.demuxer = new Demuxer();
+    this.demuxer = new Demuxer(config);
   }
   destroy() {
     this.stop();
@@ -145,9 +146,9 @@
         var bufferInfo = this.bufferInfo(pos), bufferLen = bufferInfo.len, bufferEnd = bufferInfo.end, maxBufLen;
         // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
         if((this.levels[loadLevel]).hasOwnProperty('bitrate')) {
-          maxBufLen = Math.min(8*60*1000*1000/this.levels[loadLevel].bitrate,30);
+          maxBufLen = Math.min(8*this.config.maxBufferSize/this.levels[loadLevel].bitrate,this.config.maxBufferLength);
         } else {
-          maxBufLen = 30;
+          maxBufLen = this.config.maxBufferLength;
         }
         // if buffer length is less than maxBufLen try to load a new fragment
         if(bufferLen < maxBufLen) {
@@ -178,6 +179,7 @@
           for (fragIdx = 0; fragIdx < fragments.length ; fragIdx++) {
             frag = fragments[fragIdx];
             start = frag.start+sliding;
+            //logger.log(`level/sn/start/end/bufEnd:${loadLevel}/${frag.sn}/${start}/${start+frag.duration}/${bufferEnd}`);
             // offset should be within fragment boundary
             if(start <= bufferEnd && (start + frag.duration) > bufferEnd) {
               break;
@@ -199,7 +201,7 @@
 
             this.frag = frag;
             this.level = loadLevel;
-            this.fragmentLoader.load(frag,loadLevel);
+            this.fragmentLoader.load(frag);
             this.state = LOADING;
           }
         }
@@ -222,6 +224,7 @@
           } else if(this.mp4segments.length) {
             var segment = this.mp4segments.shift();
             try {
+              //logger.log(`appending ${segment.type} SB, size:${segment.data.length}`);
               this.sourceBuffer[segment.type].appendBuffer(segment.data);
             } catch(err) {
               // in case any error occured while appending, put back segment in mp4segments table

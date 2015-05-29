@@ -10,7 +10,8 @@ import Xhr                  from '../utils/xhr';
 
  class PlaylistLoader {
 
-  constructor() {
+  constructor(config) {
+    this.config = config;
     this.manifestLoaded = false;
   }
 
@@ -22,11 +23,11 @@ import Xhr                  from '../utils/xhr';
     this.url = this.id = null;
   }
 
-  load(url,requestId, timeout=10000, maxAttempts=3) {
+  load(url,requestId) {
     this.url = url;
     this.id = requestId;
     this.xhr = new Xhr();
-    this.xhr.load(url,'',this.loadsuccess.bind(this), this.loaderror.bind(this), timeout, maxAttempts);
+    this.xhr.load(url,'',this.loadsuccess.bind(this), this.loaderror.bind(this), this.config.manifestLoadingTimeOut, this.config.manifestLoadingMaxRetry,this.config.manifestLoadingRetryDelay);
   }
 
   resolve(url, baseUrl) {
