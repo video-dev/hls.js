@@ -33,7 +33,7 @@
         <div>
         video dimension: <div id="currentResolution" style="display: inline;"></div>
         </div>
-        <input type="range" min="0" step="1" value="0" id="videoWidthSlider" style="margin-left:5%;width:90%" onchange="videoWidthSliderChange()";/>
+        <input type="range" min="0" step="1" value="0" id="videoWidthSlider" style="margin-left:5%;width:90%" oninput="videoWidthSliderChange()";/>
           <div id='buttons'>
             <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').play()">play</button>
             <button type="button" class="btn btn-sm btn-success" onclick="document.getElementById('video').pause()">pause</button>
