@@ -181,12 +181,11 @@ class LevelController {
     }
 
     onFragmentLoaded(event, data) {
-        var stats, rtt;
-        stats = data.stats;
-        rtt = stats.tfirst - stats.trequest;
+        var stats = data.stats;
         this.lastfetchduration = (stats.tload - stats.trequest) / 1000;
         this.lastfetchlevel = data.frag.level;
         this.lastbw = stats.length * 8 / this.lastfetchduration;
+        //console.log(`len:${stats.length},fetchDuration:${this.lastfetchduration},bw:${(this.lastbw/1000).toFixed(0)}`);
     }
 
     onLevelLoaded(event, data) {
