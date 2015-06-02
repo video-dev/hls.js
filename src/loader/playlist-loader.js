@@ -5,7 +5,6 @@
 
 import Event                from '../events';
 import observer             from '../observer';
-import Xhr                  from '../utils/xhr';
 //import {logger}             from '../utils/logger';
 
  class PlaylistLoader {
@@ -16,9 +15,9 @@ import Xhr                  from '../utils/xhr';
   }
 
   destroy() {
-    if(this.xhr) {
-      this.xhr.destroy();
-      this.xhr = null;
+    if(this.loader) {
+      this.loader.destroy();
+      this.loader = null;
     }
     this.url = this.id = null;
   }
@@ -26,8 +25,8 @@ import Xhr                  from '../utils/xhr';
   load(url,requestId) {
     this.url = url;
     this.id = requestId;
-    this.xhr = new Xhr();
-    this.xhr.load(url,'',this.loadsuccess.bind(this), this.loaderror.bind(this), this.config.manifestLoadingTimeOut, this.config.manifestLoadingMaxRetry,this.config.manifestLoadingRetryDelay);
+    this.loader = new this.config.loader();
+    this.loader.load(url,'',this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), this.config.manifestLoadingTimeOut, this.config.manifestLoadingMaxRetry,this.config.manifestLoadingRetryDelay);
   }
 
   resolve(url, baseUrl) {
@@ -178,6 +177,11 @@ import Xhr                  from '../utils/xhr';
   loaderror(event) {
     observer.trigger(Event.LOAD_ERROR, { url : this.url, response : event.currentTarget});
   }
+
+  loadtimeout() {
+   observer.trigger(Event.LOAD_TIMEOUT, { url : this.url});
+  }
+
 }
 
 export default PlaylistLoader;

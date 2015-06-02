@@ -9,6 +9,7 @@ import PlaylistLoader       from './loader/playlist-loader';
 import BufferController     from './controller/buffer-controller';
 import LevelController      from './controller/level-controller';
 import {logger,enableLogs}  from './utils/logger';
+import XhrLoader            from './utils/xhr-loader';
 //import MP4Inspect         from '/remux/mp4-inspector';
 
 class Hls {
@@ -28,7 +29,8 @@ class Hls {
       fragLoadingRetryDelay : 500,
       manifestLoadingTimeOut : 10000,
       manifestLoadingMaxRetry : 3,
-      manifestLoadingRetryDelay : 500
+      manifestLoadingRetryDelay : 500,
+      loader : XhrLoader
     };
     for (var prop in configDefault) {
         if (prop in config) { continue; }
