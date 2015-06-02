@@ -105,7 +105,7 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       manifestLoadingTimeOut : 10000,
       manifestLoadingMaxRetry : 3,
       manifestLoadingRetryDelay : 500,
-      loader : Xhr
+      loader : customLoader
     };
 
 
@@ -146,9 +146,9 @@ initial delay between XmlHttpRequest error and first load retry (in ms)
 any I/O error will trigger retries every 500ms,1s,2s,4s,8s, ... capped to 64s (exponential backoff)
 
 #### loader
-(default : standard URL loader)
+(default : standard XmlHttpRequest based URL loader)
 
-override internal URL loader (based on XmlHttpRequest) by a custom one.
+override standard URL loader by a custom one.
 could be useful for P2P or stubbing (testing).
 
 ```js
