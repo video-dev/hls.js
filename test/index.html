@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+
+<head>
+  <title>hls.js auto-test page</title>
+</head>
+
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+  <!-- live-reload script -->
+  <script src="//localhost:8001"></script>
+  <script src="../dist/hls.js"></script>
+  <script src="stubLoader.js"></script>
+<body>
+    <header class="wrapper clearfix">
+      <h1 class="title"><a href="https://github.com/dailymotion/hls.js">hls.js</a> test page</h1>
+    </header>
+
+  <video id=video controls border="4" style="max-width:90%;margin-left:5%"></video>
+
+  <script>
+
+   'use strict';
+   var hls;
+   var video = document.getElementById('video');
+   video.volume = 0.05;
+   var manifest = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
+   loadStream(manifest);
+
+
+  function loadStream(url) {
+     if(Hls.isSupported()) {
+       if(hls) {
+         hls.destroy();
+       }
+       hls = new Hls({debug:true, loader:stubLoader});
+       hls.loadSource(url);
+       hls.attachVideo(video);
+    }
+  }
+
+  </script>
+
+</body>
