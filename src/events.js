@@ -27,6 +27,8 @@ export default {
     FRAG_CHANGED: 'hlsFragmentChanged',
     // Identifier for fragment/playlist load error - data: { url : faulty URL, response : XHR response}
     LOAD_ERROR: 'hlsLoadError',
+    // Identifier for fragment/playlist load timeout - data: { url : faulty URL, response : XHR response}
+    LOAD_TIMEOUT: 'hlsLoadTimeOut',
     // Identifier for a level switch error - data: { level : faulty level Id, event : error description}
     LEVEL_ERROR: 'hlsLevelError',
     // Identifier for a video error -  data: undefined

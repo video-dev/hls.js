@@ -5,7 +5,6 @@
 
 import Event from '../events';
 import observer from '../observer';
-import Xhr from '../utils/xhr';
 
 class FragmentLoader {
     constructor(config) {
@@ -13,26 +12,27 @@ class FragmentLoader {
     }
 
     destroy() {
-        if (this.xhr) {
-            this.xhr.destroy();
-            this.xhr = null;
+        if (this.loader) {
+            this.loader.destroy();
+            this.loader = null;
         }
     }
 
     abort() {
-        if (this.xhr) {
-            this.xhr.abort();
+        if (this.loader) {
+            this.loader.abort();
         }
     }
 
     load(frag) {
         this.frag = frag;
-        this.xhr = new Xhr();
-        this.xhr.load(
+        this.loader = new this.config.loader();
+        this.loader.load(
             frag.url,
             'arraybuffer',
             this.loadsuccess.bind(this),
             this.loaderror.bind(this),
+            this.loadtimeout.bind(this),
             this.config.fragLoadingTimeOut,
             this.config.fragLoadingMaxRetry,
             this.config.fragLoadingRetryDelay
@@ -54,6 +54,10 @@ class FragmentLoader {
             url: this.frag.url,
             event: event
         });
+    }
+
+    loadtimeout() {
+        observer.trigger(Event.LOAD_TIMEOUT, { url: this.frag.url });
     }
 }
 

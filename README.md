@@ -104,7 +104,8 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       fragLoadingRetryDelay : 500,
       manifestLoadingTimeOut : 10000,
       manifestLoadingMaxRetry : 3,
-      manifestLoadingRetryDelay : 500
+      manifestLoadingRetryDelay : 500,
+      loader : Xhr
     };
 
 
@@ -130,7 +131,10 @@ enable webworker (if available on browser) for TS demuxing/MP4 remuxing, to impr
 #### fragLoadingTimeOut/manifestLoadingTimeOut
 (default 60000ms for fragment/10000ms for manifest)
 
-XmlHttpRequest connection timeout (in ms)
+URL Loader timeout.
+A timeout callback will be triggered if loading duration exceeds this timeout.
+no further action will be done : the load operation will not be cancelled/aborted.
+It is up to the application to catch this event and treat it as needed.
 #### fragLoadingMaxRetry/manifestLoadingMaxRetry
 (default 3)
 
@@ -141,6 +145,35 @@ max nb of load retry
 initial delay between XmlHttpRequest error and first load retry (in ms)
 any I/O error will trigger retries every 500ms,1s,2s,4s,8s, ... capped to 64s (exponential backoff)
 
+#### loader
+(default : standard URL loader)
+
+override internal URL loader (based on XmlHttpRequest) by a custom one.
+could be useful for P2P or stubbing (testing).
+
+```js
+var customLoader = function() {
+
+  /* calling load() will start retrieving content at given URL (HTTP GET)
+  params : 
+  url : URL to load
+  responseType : xhr response Type (arraybuffer or default response Type for playlist)
+  onSuccess : callback triggered upon successful loading of URL.
+              it should return xhr event and load stats object {trequest,tfirst,tload}
+  onError :   callback triggered if any I/O error is met while loading fragment
+  onTimeOut : callback triggered if loading is still not finished after a certain duration
+  timeout : timeout after which onTimeOut callback will be triggered(if loading is still not finished after that delay)
+  maxRetry : max nb of load retry
+  retryDelay : delay between an I/O error and following connection retry (ms). this to avoid spamming the server.
+  */
+  this.load = function(url,responseType,onSuccess,onError,timeout,maxRetry,retryDelay) {}
+  
+  /* abort any loading in progress */
+  this.abort = function() {}
+  /* destroy loading context */
+  this.destroy = function() {}
+  }
+```
 
 ## Quality switch Control
 
@@ -228,6 +261,8 @@ full list of Events available below :
     -  data: { frag : fragment object }
   - `hls.events.LOAD_ERROR` - Identifier for fragment/playlist load error
 	  -  data: { url : faulty URL, response : XHR response}
+  - `hls.events.LOAD_TIMEOUT` - Identifier for fragment/playlist load timeout
+	  -  data: { url : faulty URL,{ trequest, tfirst,loaded } }
   - `hls.events.LEVEL_ERROR` - Identifier for a level switch error
 	  -  data: { level : faulty level Id, event : error description}
   - `hls.events.VIDEO_ERROR` - Identifier for a video error
