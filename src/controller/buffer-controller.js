@@ -631,10 +631,10 @@
     //logger.log('playlist level A/V codecs:' + audioCodec + ',' + videoCodec);
     //logger.log('playlist codecs:' + codec);
     // if playlist does not specify codecs, use codecs found while parsing fragment
-    if(audioCodec === undefined) {
+    if(audioCodec === undefined || data.audiocodec === undefined) {
       audioCodec = data.audioCodec;
     }
-    if(videoCodec === undefined) {
+    if(videoCodec === undefined  || data.videocodec === undefined) {
       videoCodec = data.videoCodec;
     }
 
