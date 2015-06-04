@@ -225,6 +225,7 @@
         if(level && level.details) {
           this.state = IDLE;
         }
+        break;
       case LOADING:
         // nothing to do, wait for fragment retrieval
       case PARSING:
