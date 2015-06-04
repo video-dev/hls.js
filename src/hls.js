@@ -87,7 +87,6 @@ class Hls {
         ms.addEventListener('sourceclose', this.onmsc);
         // link video and media Source
         video.src = URL.createObjectURL(ms);
-        this.onverror = this.onVideoError.bind(this);
         video.addEventListener('error', this.onverror);
     }
 
@@ -106,9 +105,6 @@ class Hls {
         this.onmso = this.onmse = this.onmsc = null;
         if (video) {
             this.video = null;
-            // remove video error listener
-            video.removeEventListener('error', this.onverror);
-            this.onverror = null;
         }
     }
 
@@ -117,6 +113,12 @@ class Hls {
         logger.log(`loadSource:${url}`);
         // when attaching to a source URL, trigger a playlist load
         this.playlistLoader.load(url, null);
+    }
+
+    recoverError() {
+        var video = this.video;
+        this.detachVideo();
+        this.attachVideo(video);
     }
 
     unloadSource() {
@@ -221,10 +223,6 @@ class Hls {
 
     onMediaSourceEnded() {
         logger.log('media source ended');
-    }
-
-    onVideoError() {
-        observer.trigger(Event.VIDEO_ERROR);
     }
 }
 
