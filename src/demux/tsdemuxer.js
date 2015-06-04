@@ -633,7 +633,7 @@
       config = new Array(2);
       adtsExtensionSampleingIndex = adtsSampleingIndex;
     } else {
-      /*  for other browsers
+      /*  for other browsers (chrome ...)
           always force audio type to be HE-AAC SBR, as some browsers do not support audio codec switch properly (like Chrome ...)
       */
         adtsObjectType = 5;
@@ -645,6 +645,11 @@
         // multiply frequency by 2 (see table below, equivalent to substract 3)
         adtsExtensionSampleingIndex = adtsSampleingIndex - 3;
       } else {
+      // if (manifest codec is AAC) AND (frequency less than 24kHz)
+        if(audioCodec && audioCodec.indexOf('mp4a.40.2') !==-1 && adtsSampleingIndex >= 6) {
+          adtsObjectType = 2;
+          config = new Array(2);
+        }
         adtsExtensionSampleingIndex = adtsSampleingIndex;
       }
     }
