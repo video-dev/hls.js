@@ -22,11 +22,8 @@ class BufferController {
     constructor(levelController, config) {
         this.levelController = levelController;
         this.config = config;
+        this.startPosition = 0;
         this.fragmentLoader = new FragmentLoader(config);
-        this.mp4segments = [];
-        this.bufferRange = [];
-        this.flushRange = [];
-        this.flushBufferCounter = 0;
         // Source Buffer listeners
         this.onsbue = this.onSourceBufferUpdateEnd.bind(this);
         this.onsbe = this.onSourceBufferError.bind(this);
@@ -41,34 +38,10 @@ class BufferController {
         this.ontick = this.tick.bind(this);
         observer.on(Event.MSE_ATTACHED, this.onmse);
         observer.on(Event.MANIFEST_PARSED, this.onmp);
-        this.demuxer = new Demuxer(config);
     }
     destroy() {
         this.stop();
         this.fragmentLoader.destroy();
-        if (this.demuxer) {
-            this.demuxer.destroy();
-            this.demuxer = null;
-        }
-        this.mp4segments = [];
-        this.bufferRange = [];
-        this.flushRange = [];
-        var sb = this.sourceBuffer;
-        if (sb) {
-            if (sb.audio) {
-                //detach sourcebuffer from Media Source
-                this.mediaSource.removeSourceBuffer(sb.audio);
-                sb.audio.removeEventListener('updateend', this.onsbue);
-                sb.audio.removeEventListener('error', this.onsbe);
-            }
-            if (sb.video) {
-                //detach sourcebuffer from Media Source
-                this.mediaSource.removeSourceBuffer(sb.video);
-                sb.video.removeEventListener('updateend', this.onsbue);
-                sb.video.removeEventListener('error', this.onsbe);
-            }
-            this.sourceBuffer = null;
-        }
         observer.removeListener(Event.MANIFEST_PARSED, this.onmp);
         // remove video listener
         if (this.video) {
@@ -77,27 +50,64 @@ class BufferController {
             this.video.removeEventListener('loadedmetadata', this.onvmetadata);
             this.onvseeking = this.onvseeked = this.onvmetadata = null;
         }
-
         this.state = IDLE;
     }
 
     start() {
+        this.startInternal();
+        if (this.lastCurrentTime) {
+            logger.log(`resuming video @ ${this.lastCurrentTime}`);
+            this.startPosition = this.lastCurrentTime;
+            this.state = IDLE;
+        } else {
+            this.state = STARTING;
+        }
+        this.tick();
+    }
+
+    restart() {
+        this.startInternal();
+        // this will flush everything and restart playback
+        //this.immediateLevelSwitch();
+    }
+
+    startInternal() {
         this.stop();
+        this.demuxer = new Demuxer(this.config);
         this.timer = setInterval(this.ontick, 100);
         observer.on(Event.FRAG_LOADED, this.onfl);
         observer.on(Event.FRAG_PARSING_INIT_SEGMENT, this.onis);
         observer.on(Event.FRAG_PARSING_DATA, this.onfpg);
         observer.on(Event.FRAG_PARSED, this.onfp);
         observer.on(Event.LEVEL_LOADED, this.onll);
-        this.state = STARTING;
-        this.tick();
     }
 
     stop() {
+        this.mp4segments = [];
+        this.flushRange = [];
+        this.bufferRange = [];
+        this.frag = null;
+        this.fragmentLoader.abort();
+        this.flushBufferCounter = 0;
+        if (this.sourceBuffer) {
+            for (var type in this.sourceBuffer) {
+                var sb = this.sourceBuffer[type];
+                try {
+                    this.mediaSource.removeSourceBuffer(sb);
+                    sb.removeEventListener('updateend', this.onsbue);
+                    sb.removeEventListener('error', this.onsbe);
+                } catch (err) {}
+            }
+            this.sourceBuffer = null;
+        }
         if (this.timer) {
             clearInterval(this.timer);
+            this.timer = null;
         }
-        this.timer = undefined;
+        if (this.demuxer) {
+            this.demuxer.destroy();
+            this.demuxer = null;
+        }
         observer.removeListener(Event.FRAG_LOADED, this.onfl);
         observer.removeListener(Event.FRAG_PARSED, this.onfp);
         observer.removeListener(Event.FRAG_PARSING_DATA, this.onfpg);
@@ -227,10 +237,14 @@ class BufferController {
                     }
                 }
                 break;
+            case WAITING_LEVEL:
+                var level = this.levels[this.level];
+                // check if playlist is already loaded
+                if (level && level.details) {
+                    this.state = IDLE;
+                }
             case LOADING:
             // nothing to do, wait for fragment retrieval
-            case WAITING_LEVEL:
-            // nothing to do, wait for level retrieval
             case PARSING:
                 // nothing to do, wait for fragment being parsed
                 break;
@@ -256,7 +270,9 @@ class BufferController {
                         } catch (err) {
                             // in case any error occured while appending, put back segment in mp4segments table
                             logger.log(
-                                'error while trying to append buffer, buffer might be full, try appending later'
+                                `error while trying to append buffer:${
+                                    err.message
+                                },try appending later`
                             );
                             this.mp4segments.unshift(segment);
                         }
@@ -399,13 +415,12 @@ class BufferController {
     }
 
     _checkFragmentChanged() {
-        var rangeCurrent;
-        if (
-            this.video &&
-            this.video.seeking === false &&
-            this.isBuffered(this.video.currentTime)
-        ) {
-            rangeCurrent = this.getBufferRange(this.video.currentTime);
+        var rangeCurrent, currentTime;
+        if (this.video && this.video.seeking === false) {
+            this.lastCurrentTime = currentTime = this.video.currentTime;
+            if (this.isBuffered(currentTime)) {
+                rangeCurrent = this.getBufferRange(currentTime);
+            }
         }
 
         if (rangeCurrent && rangeCurrent.frag !== this.fragCurrent) {
@@ -593,6 +608,9 @@ class BufferController {
                 this.state = IDLE;
             }
         }
+        if (this.video) {
+            this.lastCurrentTime = this.video.currentTime;
+        }
         // tick to speed up processing
         this.tick();
     }
@@ -665,8 +683,6 @@ class BufferController {
                     0,
                     duration - 3 * data.details.targetduration
                 );
-            } else {
-                this.startPosition = 0;
             }
             this.nextLoadPosition = this.startPosition;
             this.startLevelLoaded = true;
@@ -695,6 +711,9 @@ class BufferController {
                 this.state = PARSING;
                 // transmux the MPEG-TS data to ISO-BMFF segments
                 this.stats = data.stats;
+                this.demuxer.setDuration(
+                    this.levels[this.level].details.totalduration
+                );
                 this.demuxer.push(
                     data.payload,
                     this.levels[this.level].audioCodec,
@@ -741,14 +760,14 @@ class BufferController {
             // create source Buffer and link them to MediaSource
             if (audioCodec) {
                 sb = this.sourceBuffer.audio = this.mediaSource.addSourceBuffer(
-                    'video/mp4;codecs=' + audioCodec
+                    `video/mp4;codecs=${audioCodec}`
                 );
                 sb.addEventListener('updateend', this.onsbue);
                 sb.addEventListener('error', this.onsbe);
             }
             if (videoCodec) {
                 sb = this.sourceBuffer.video = this.mediaSource.addSourceBuffer(
-                    'video/mp4;codecs=' + videoCodec
+                    `video/mp4;codecs=${videoCodec}`
                 );
                 sb.addEventListener('updateend', this.onsbue);
                 sb.addEventListener('error', this.onsbe);
