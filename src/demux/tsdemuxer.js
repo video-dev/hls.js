@@ -67,6 +67,8 @@ class TSDemuxer {
     }
 
     destroy() {
+        this.switchLevel();
+        this._initPTS = this._initDTS = undefined;
         this._duration = 0;
     }
 
@@ -757,7 +759,7 @@ class TSDemuxer {
       */
             adtsObjectType = 5;
             config = new Array(4);
-            // if manifest codec is HE-AAC or frequency less than 24kHz
+            // if (manifest codec is HE-AAC) OR (manifest codec not specified AND frequency less than 24kHz)
             if (
                 (audioCodec && audioCodec.indexOf('mp4a.40.5') !== -1) ||
                 (!audioCodec && adtsSampleingIndex >= 6)
