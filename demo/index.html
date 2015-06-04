@@ -26,6 +26,7 @@
         </header>
         <section>
           <div id="customButtons"></div>
+          <div id="customText"></div>
           <pre id='HlsUrl'></pre>
           <pre id='HlsStatus'></pre>
           <video id=video controls autoplay border="4" style="max-width:90%;margin-left:5%"></video>
@@ -117,6 +118,7 @@
    var video = document.getElementById('video');
    var events;
    video.volume = 0.05;
+   var videoError = false;
    var manifest = decodeURIComponent(location.search.split('src=')[1]);
    if(manifest === 'undefined') {
      manifest = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
@@ -248,15 +250,11 @@
         refreshCanvas();
         updateLevelInfo();
        });
-       hls.on(hls.Events.VIDEO_ERROR,function(event,data) {
-          hls.destroy();
-          document.getElementById("HlsStatus").innerHTML = "Video Error";
-          document.getElementById('buffered_c').width = 0;
-       });
        hls.on(hls.Events.FRAG_PARSING_ERROR,function(event,data) {
           hls.destroy();
           document.getElementById("HlsStatus").innerHTML = "Parsing Error:" + data;
           document.getElementById('buffered_c').width = 0;
+          videoError = true;
        });
        video.addEventListener('resize', handleVideoEvent);
        video.addEventListener('seeking', handleVideoEvent);
@@ -308,6 +306,11 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
       case 'stalled':
       case 'error':
         data = Math.round(evt.target.currentTime*1000);
+        if(evt.type === 'error') {
+          document.getElementById("HlsStatus").innerHTML = "Recovering Video Error";
+          hls.recoverError();
+          videoError = true;
+        }
         break;
       // case 'progress':
       //   data = 'currentTime:' + evt.target.currentTime + ',bufferRange:[' + this.video.buffered.start(0) + ',' + this.video.buffered.end(0) + ']';
