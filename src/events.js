@@ -31,8 +31,6 @@ export default {
   LOAD_TIMEOUT :  'hlsLoadTimeOut',
   // Identifier for a level switch error - data: { level : faulty level Id, event : error description}
   LEVEL_ERROR :  'hlsLevelError',
-  // Identifier for a video error -  data: undefined
-  VIDEO_ERROR :  'hlsVideoError',
   // Identifier for a fragment parsing error event - data: parsing error description
   FRAG_PARSING_ERROR :  'hlsFragmentParsingError'
 };
