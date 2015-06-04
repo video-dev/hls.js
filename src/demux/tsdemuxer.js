@@ -68,6 +68,8 @@
   }
 
   destroy() {
+    this.switchLevel();
+    this._initPTS = this._initDTS = undefined;
     this._duration = 0;
   }
 
@@ -636,7 +638,7 @@
       */
         adtsObjectType = 5;
         config = new Array(4);
-       // if manifest codec is HE-AAC or frequency less than 24kHz
+       // if (manifest codec is HE-AAC) OR (manifest codec not specified AND frequency less than 24kHz)
       if((audioCodec && audioCodec.indexOf('mp4a.40.5') !==-1) || (!audioCodec && adtsSampleingIndex >=6))  {
         // HE-AAC uses SBR (Spectral Band Replication) , high frequencies are constructed from low frequencies
         // there is a factor 2 between frame sample rate and output sample rate
