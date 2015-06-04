@@ -107,6 +107,7 @@ class Hls {
   }
 
   recoverError() {
+    logger.log('try to recover error');
     var video = this.video;
     this.detachVideo();
     this.attachVideo(video);
