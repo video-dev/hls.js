@@ -252,7 +252,7 @@ full list of Events available below :
   - `hls.events.FRAG_PARSING_INIT_SEGMENT` - fired when Init Segment has been extracted from fragment
     -  data: { moov : moov MP4 box, codecs : codecs found while parsing fragment}    
   - `hls.events.FRAG_PARSING_DATA`  - fired when moof/mdat have been extracted from fragment
-	  -  data: { moof : moof MP4 box, mdat : mdat MP4 box}
+	  -  data: { moof : moof MP4 box, mdat : mdat MP4 box, startPTS : PTS of first sample, endPTS : PTS of last sample, startDTS : DTS of first sample, endDTS : DTS of last sample, type : stream type (audio or video), nb : number of samples}
   - `hls.events.FRAG_PARSED`  - fired when fragment parsing is completed
 	  -  data: undefined
   - `hls.events.FRAG_BUFFERED`  - fired when fragment remuxed MP4 boxes have all been appended into SourceBuffer

@@ -47,7 +47,7 @@ class TSDemuxerWorker {
       self.postMessage(objData,objTransferable);
     });
     observer.on(Event.FRAG_PARSING_DATA, function(ev,data) {
-      var objData = { event : ev , type : data.type, startPTS : data.startPTS, endPTS : data.endPTS , startDTS : data.startDTS, endDTS : data.endDTS ,moof : data.moof.buffer, mdat : data.mdat.buffer};
+      var objData = { event : ev , type : data.type, startPTS : data.startPTS, endPTS : data.endPTS , startDTS : data.startDTS, endDTS : data.endDTS ,moof : data.moof.buffer, mdat : data.mdat.buffer, nb : data.nb};
       // pass moof/mdat data as transferable object (no copy)
       self.postMessage(objData,[objData.moof,objData.mdat]);
     });
