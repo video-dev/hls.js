@@ -323,9 +323,9 @@
            // logger.log('Video/PTS/DTS adjusted:' + avcSample.pts + '/' + avcSample.dts);
           }
         }
-        // remember first PTS of our avcSamples
-        firstPTS = avcSample.pts;
-        firstDTS = avcSample.dts;
+        // remember first PTS of our avcSamples, ensure value is positive
+        firstPTS = Math.max(0,avcSample.pts);
+        firstDTS = Math.max(0,avcSample.dts);
       }
 
       mp4Sample = {
@@ -548,9 +548,9 @@
             }
           }
         }
-        // remember first PTS of our avcSamples
-        firstPTS = aacSample.pts;
-        firstDTS = aacSample.dts;
+        // remember first PTS of our aacSamples, ensure value is positive
+        firstPTS = Math.max(0,aacSample.pts);
+        firstDTS = Math.max(0,aacSample.dts);
       }
 
       mp4Sample = {
