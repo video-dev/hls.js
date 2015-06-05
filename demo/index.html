@@ -256,6 +256,11 @@
           document.getElementById('buffered_c').width = 0;
           videoError = true;
        });
+       hls.on(hls.Events.FRAG_APPENDING_ERROR,function(event,data) {
+          document.getElementById("HlsStatus").innerHTML = "try to recover video Error";
+          hls.recoverError();
+          videoError = true;
+       });
        video.addEventListener('resize', handleVideoEvent);
        video.addEventListener('seeking', handleVideoEvent);
        video.addEventListener('seeked', handleVideoEvent);
@@ -307,7 +312,7 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
       case 'error':
         data = Math.round(evt.target.currentTime*1000);
         if(evt.type === 'error') {
-          document.getElementById("HlsStatus").innerHTML = "Recovering Video Error";
+          document.getElementById("HlsStatus").innerHTML = "try to recover video Error";
           hls.recoverError();
           videoError = true;
         }
