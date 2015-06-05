@@ -808,13 +808,13 @@ class BufferController {
             level.details.sliding = data.startPTS - this.frag.start;
         }
         logger.log(
-            `      parsed data, type/startPTS/endPTS/startDTS/endDTS/sliding:${
+            `      parsed data, type/startPTS/endPTS/startDTS/endDTS/nb/sliding:${
                 data.type
             }/${data.startPTS.toFixed(3)}/${data.endPTS.toFixed(
                 3
-            )}/${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(
-                3
-            )}/${level.details.sliding.toFixed(3)}`
+            )}/${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}/${
+                data.nb
+            }/${level.details.sliding.toFixed(3)}`
         );
         this.mp4segments.push({ type: data.type, data: data.moof });
         this.mp4segments.push({ type: data.type, data: data.mdat });
@@ -823,7 +823,8 @@ class BufferController {
             type: data.type,
             start: data.startPTS,
             end: data.endPTS,
-            frag: this.frag
+            frag: this.frag,
+            nb: data.nb
         });
         //trigger handler right now
         this.tick();

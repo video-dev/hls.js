@@ -59,7 +59,8 @@ class TSDemuxerWorker {
                 startDTS: data.startDTS,
                 endDTS: data.endDTS,
                 moof: data.moof.buffer,
-                mdat: data.mdat.buffer
+                mdat: data.mdat.buffer,
+                nb: data.nb
             };
             // pass moof/mdat data as transferable object (no copy)
             self.postMessage(objData, [objData.moof, objData.mdat]);

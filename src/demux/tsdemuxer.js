@@ -408,7 +408,8 @@ class TSDemuxer {
             endPTS: this.nextAvcPts / 90000,
             startDTS: firstDTS / 90000,
             endDTS: (avcSample.dts + mp4Sample.duration) / 90000,
-            type: 'video'
+            type: 'video',
+            nb: samples.length
         });
     }
 
@@ -700,7 +701,8 @@ class TSDemuxer {
             endPTS: this.nextAacPts / 90000,
             startDTS: firstDTS / 90000,
             endDTS: (aacSample.dts + mp4Sample.duration) / 90000,
-            type: 'audio'
+            type: 'audio',
+            nb: samples.length
         });
     }
 
