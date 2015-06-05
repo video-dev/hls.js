@@ -9,6 +9,7 @@
  import {logger}             from '../utils/logger';
  import Demuxer              from '../demux/demuxer';
 
+  const ERROR = -2;
   const STARTING = -1;
   const IDLE = 0;
   const LOADING =  1;
@@ -76,6 +77,7 @@
     this.stop();
     this.demuxer = new Demuxer(this.config);
     this.timer = setInterval(this.ontick, 100);
+    this.appendError=0;
     observer.on(Event.FRAG_LOADED, this.onfl);
     observer.on(Event.FRAG_PARSING_INIT_SEGMENT, this.onis);
     observer.on(Event.FRAG_PARSING_DATA, this.onfpg);
@@ -122,6 +124,9 @@
   tick() {
     var pos,loadLevel,loadLevelDetails,fragIdx;
     switch(this.state) {
+      case ERROR:
+        //don't do anything in error state to avoid breaking further ...
+        break;
       case STARTING:
         // determine load level
         this.startLevel = this.levelController.startLevel;
@@ -244,10 +249,18 @@
             try {
               //logger.log(`appending ${segment.type} SB, size:${segment.data.length}`);
               this.sourceBuffer[segment.type].appendBuffer(segment.data);
+              this.appendError=0;
             } catch(err) {
               // in case any error occured while appending, put back segment in mp4segments table
               logger.log(`error while trying to append buffer:${err.message},try appending later`);
               this.mp4segments.unshift(segment);
+              this.appendError++;
+              if(this.appendError > 3) {
+                logger.log(`fail 3 times to append segment in sourceBuffer`);
+                observer.trigger(Event.FRAG_APPENDING_ERROR, {frag : this.frag});
+                this.state = ERROR;
+                return;
+              }
             }
             this.state = APPENDING;
           }
@@ -725,7 +738,9 @@
   }
 
   onSourceBufferError(event) {
-      logger.log(` buffer append error:${event}`);
+      logger.log(`sourceBuffer error:${event}`);
+      this.state = ERROR;
+      observer.trigger(Event.FRAG_APPENDING_ERROR, {frag : this.frag});
   }
 }
 

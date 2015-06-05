@@ -32,5 +32,7 @@ export default {
   // Identifier for a level switch error - data: { level : faulty level Id, event : error description}
   LEVEL_ERROR :  'hlsLevelError',
   // Identifier for a fragment parsing error event - data: parsing error description
-  FRAG_PARSING_ERROR :  'hlsFragmentParsingError'
+  FRAG_PARSING_ERROR :  'hlsFragmentParsingError',
+    // Identifier for a fragment appending error event - data: appending error description
+  FRAG_APPENDING_ERROR :  'hlsFragmentAppendingError'
 };
