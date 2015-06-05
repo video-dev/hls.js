@@ -295,8 +295,8 @@ class TSDemuxer {
             mdat,
             moof,
             firstPTS,
-            firstDTS;
-        track.samples = [];
+            firstDTS,
+            samples = [];
 
         /* concatenate the video data and construct the mdat in place
       (need 8 more bytes to fill length and mpdat type) */
@@ -386,10 +386,10 @@ class TSDemuxer {
                 mp4Sample.flags.dependsOn = 1;
                 mp4Sample.flags.isNonSyncSample = 1;
             }
-            track.samples.push(mp4Sample);
+            samples.push(mp4Sample);
             lastSampleDTS = avcSample.dts;
         }
-        mp4Sample.duration = track.samples[track.samples.length - 2].duration;
+        mp4Sample.duration = samples[samples.length - 2].duration;
         this.lastAvcDts = avcSample.dts;
         // next AVC sample PTS should be equal to last sample PTS + duration
         this.nextAvcPts = avcSample.pts + mp4Sample.duration;
@@ -398,7 +398,9 @@ class TSDemuxer {
         this._avcSamplesLength = 0;
         this._avcSamplesNbNalu = 0;
 
+        track.samples = samples;
         moof = MP4.moof(track.sequenceNumber++, firstDTS, track);
+        track.samples = [];
         observer.trigger(Event.FRAG_PARSING_DATA, {
             moof: moof,
             mdat: mdat,
@@ -606,8 +608,8 @@ class TSDemuxer {
             mdat,
             moof,
             firstPTS,
-            firstDTS;
-        track.samples = [];
+            firstDTS,
+            samples = [];
 
         /* concatenate the audio data and construct the mdat in place
       (need 8 more bytes to fill length and mpdat type) */
@@ -677,19 +679,20 @@ class TSDemuxer {
                     dependsOn: 1
                 }
             };
-            track.samples.push(mp4Sample);
+            samples.push(mp4Sample);
             lastSampleDTS = aacSample.dts;
         }
         //set last sample duration as being identical to previous sample
-        mp4Sample.duration = track.samples[track.samples.length - 2].duration;
+        mp4Sample.duration = samples[samples.length - 2].duration;
         this.lastAacDts = aacSample.dts;
         // next aac sample PTS should be equal to last sample PTS + duration
         this.nextAacPts = aacSample.pts + mp4Sample.duration;
         //logger.log('Audio/PTS/PTSend:' + aacSample.pts.toFixed(0) + '/' + this.nextAacDts.toFixed(0));
 
         this._aacSamplesLength = 0;
-
+        track.samples = samples;
         moof = MP4.moof(track.sequenceNumber++, firstDTS, track);
+        track.samples = [];
         observer.trigger(Event.FRAG_PARSING_DATA, {
             moof: moof,
             mdat: mdat,
