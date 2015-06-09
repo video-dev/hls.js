@@ -257,7 +257,7 @@
           videoError = true;
        });
        hls.on(hls.Events.FRAG_APPENDING_ERROR,function(event,data) {
-          document.getElementById("HlsStatus").innerHTML = "try to recover video Error";
+          document.getElementById("HlsStatus").innerHTML = "try to recover video Error (fragment appending)";
           hls.recoverError();
           videoError = true;
        });
@@ -312,8 +312,21 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
       case 'error':
         data = Math.round(evt.target.currentTime*1000);
         if(evt.type === 'error') {
-          document.getElementById("HlsStatus").innerHTML = "try to recover video Error";
-          hls.recoverError();
+          switch(evt.currentTarget.error.code) {
+            case evt.currentTarget.error.MEDIA_ERR_ABORTED:
+              document.getElementById("HlsStatus").innerHTML = "You aborted the video playback";
+              break;
+            case evt.currentTarget.error.MEDIA_ERR_DECODE:
+              document.getElementById("HlsStatus").innerHTML = "The video playback was aborted due to a corruption problem or because the video used features your browser did not support,try to recover video Error";
+              hls.recoverError();
+              break;
+            case evt.currentTarget.error.MEDIA_ERR_NETWORK:
+              document.getElementById("HlsStatus").innerHTML = "A network error caused the video download to fail part-way";
+              break;
+            case evt.currentTarget.error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+            document.getElementById("HlsStatus").innerHTML = "The video could not be loaded, either because the server or network failed or because the format is not supported";
+              break;
+          }
           videoError = true;
         }
         break;
