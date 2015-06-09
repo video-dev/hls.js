@@ -140,6 +140,7 @@ class BufferController {
                 // handle end of immediate switching if needed
                 if (this.immediateSwitch) {
                     this.immediateLevelSwitchEnd();
+                    break;
                 }
                 // determine next candidate fragment to be loaded, based on current position and
                 //  end of buffer position
@@ -317,6 +318,8 @@ class BufferController {
                 if (this.flushRange.length === 0) {
                     // move to IDLE once flush complete. this should trigger new fragment loading
                     this.state = IDLE;
+                    // reset reference to frag
+                    this.frag = null;
                 }
                 /* if not everything flushed, stay in BUFFER_FLUSHING state. we will come back here
             each time sourceBuffer updateend() callback will be triggered
@@ -441,9 +444,28 @@ class BufferController {
             }
         }
 
-        if (rangeCurrent && rangeCurrent.frag !== this.fragCurrent) {
-            this.fragCurrent = rangeCurrent.frag;
-            observer.trigger(Event.FRAG_CHANGED, { frag: this.fragCurrent });
+        if (rangeCurrent) {
+            if (rangeCurrent.frag !== this.fragCurrent) {
+                this.fragCurrent = rangeCurrent.frag;
+                observer.trigger(Event.FRAG_CHANGED, {
+                    frag: this.fragCurrent
+                });
+                // if(this.fragCurrent.fpsExpected) {
+                //   this.fragCurrent.decodedFramesDate = Date.now();
+                //   this.fragCurrent.decodedFramesNb = this.video.webkitDecodedFrameCount;
+                //   logger.log(`frag changed, expected FPS:${this.fragCurrent.fpsExpected.toFixed(2)}`);
+                // }
+            } /* else {
+        if(this.fragCurrent.fpsExpected) {
+          // compare real fps vs theoritical one
+          var nbnew = this.video.webkitDecodedFrameCount;
+          var time = Date.now();
+          if((time - this.fragCurrent.decodedFramesDate) > 2000) {
+            var fps = 1000*(nbnew - this.fragCurrent.decodedFramesNb)/(time-this.fragCurrent.decodedFramesDate);
+            logger.log(`real/expected FPS:${fps.toFixed(2)}/${this.fragCurrent.fpsExpected.toFixed(2)}`);
+          }
+        }
+      } */
         }
     }
 
@@ -623,6 +645,7 @@ class BufferController {
                     'seeking outside of buffer while fragment load in progress, cancel fragment load'
                 );
                 this.fragmentLoader.abort();
+                this.frag = null;
                 this.state = IDLE;
             }
         }
@@ -823,9 +846,11 @@ class BufferController {
             type: data.type,
             start: data.startPTS,
             end: data.endPTS,
-            frag: this.frag,
-            nb: data.nb
+            frag: this.frag
         });
+        // if(data.type === 'video') {
+        //   this.frag.fpsExpected = (data.nb-1) / (data.endPTS - data.startPTS);
+        // }
         //trigger handler right now
         this.tick();
     }
