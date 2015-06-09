@@ -194,6 +194,8 @@
           var event = {
             type : "manifest",
             name : "",
+            start : 0,
+            end : data.levels.length,
             time : data.stats.trequest - t0,
             latency : data.stats.tfirst - data.stats.trequest,
             load : data.stats.tload - data.stats.tfirst,
