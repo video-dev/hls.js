@@ -648,8 +648,8 @@
         // multiply frequency by 2 (see table below, equivalent to substract 3)
         adtsExtensionSampleingIndex = adtsSampleingIndex - 3;
       } else {
-      // if (manifest codec is AAC) AND (frequency less than 24kHz)
-        if(audioCodec && audioCodec.indexOf('mp4a.40.2') !==-1 && adtsSampleingIndex >= 6) {
+      // if (manifest codec is AAC) AND (frequency less than 24kHz OR nb channel is 1)
+        if(audioCodec && audioCodec.indexOf('mp4a.40.2') !==-1 && (adtsSampleingIndex >= 6 || adtsChanelConfig ===1)) {
           adtsObjectType = 2;
           config = new Array(2);
         }
