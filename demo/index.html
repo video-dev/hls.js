@@ -286,6 +286,10 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
     var data = '';
     switch(evt.type) {
        case 'durationchange':
+       if(evt.target.duration - lastDuration <= 0.5) {
+        // some browsers reports several duration change events with almost the same value ... avoid spamming video events
+        return;
+       }
         lastDuration = evt.target.duration;
          data = Math.round(evt.target.duration*1000);
          break;
