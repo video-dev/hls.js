@@ -67,12 +67,6 @@
     this.tick();
   }
 
-  restart() {
-    this.startInternal();
-    // this will flush everything and restart playback
-    //this.immediateLevelSwitch();
-  }
-
   startInternal() {
     this.stop();
     this.demuxer = new Demuxer(this.config);
