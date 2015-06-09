@@ -53,7 +53,7 @@
     ctx.fillText(legend,x_offset,15);
     x_offset += ctx.measureText(legend).width+5;
 
-    legend = 'bitrate';
+    legend = 'size bitrate';
     ctx.fillStyle = "black";
     ctx.fillText(legend,x_offset,15);
     x_offset += ctx.measureText(legend).width+5;
@@ -480,8 +480,23 @@
       x_start += ctx.measureText(legend).width+5;
     }
 
+    if(event.size) {
+      if(event.size > 1000*1000) {
+        legend = (event.size/1000000).toFixed(1) + 'MB';
+      } else {
+        legend = Math.round(event.size/1000) + 'kB';
+      }
+      ctx.fillStyle = "black";
+      ctx.fillText(legend,x_start,yoffset+12);
+      x_start += ctx.measureText(legend).width+5;
+    }
+
     if(event.bw) {
-      legend = event.bw + ' kb/s';
+      if(event.bw > 1000) {
+        legend = (event.bw/1000).toFixed(1) + 'Mbps';
+      } else {
+        legend = event.bw + ' kbps';
+      }
       ctx.fillStyle = "black";
       ctx.fillText(legend,x_start,yoffset+12);
       x_start += ctx.measureText(legend).width+5;
