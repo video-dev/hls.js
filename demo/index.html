@@ -312,21 +312,23 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
       case 'error':
         data = Math.round(evt.target.currentTime*1000);
         if(evt.type === 'error') {
-          switch(evt.currentTarget.error.code) {
-            case evt.currentTarget.error.MEDIA_ERR_ABORTED:
-              document.getElementById("HlsStatus").innerHTML = "You aborted the video playback";
+          var errorTxt,mediaError=evt.currentTarget.error;
+          switch(mediaError.code) {
+            case mediaError.MEDIA_ERR_ABORTED:
+               errorTxt = "You aborted the video playback";
               break;
-            case evt.currentTarget.error.MEDIA_ERR_DECODE:
-              document.getElementById("HlsStatus").innerHTML = "The video playback was aborted due to a corruption problem or because the video used features your browser did not support,try to recover video Error";
+            case mediaError.MEDIA_ERR_DECODE:
+              errorTxt = "The video playback was aborted due to a corruption problem or because the video used features your browser did not support,try to recover video Error";
               hls.recoverError();
               break;
-            case evt.currentTarget.error.MEDIA_ERR_NETWORK:
-              document.getElementById("HlsStatus").innerHTML = "A network error caused the video download to fail part-way";
+            case mediaError.MEDIA_ERR_NETWORK:
+              errorTxt = "A network error caused the video download to fail part-way";
               break;
-            case evt.currentTarget.error.MEDIA_ERR_SRC_NOT_SUPPORTED:
-            document.getElementById("HlsStatus").innerHTML = "The video could not be loaded, either because the server or network failed or because the format is not supported";
+            case mediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+              errorTxt = "The video could not be loaded, either because the server or network failed or because the format is not supported";
               break;
           }
+          document.getElementById("HlsStatus").innerHTML = errorTxt;
           videoError = true;
         }
         break;
