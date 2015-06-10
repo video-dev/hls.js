@@ -233,13 +233,13 @@ get : return playback session stats
   bufSeekDelay : buffering delay introduced by seek requests (in ms)
   bufSpuriousDelay : spurious buffering (not related to init or seek actions) (in ms)
   bufUpfront : duration of buffered content upfront of play position
-  bufTotal : total buffer duration (including back buffer)  
+  bufTotal : total buffer duration (including all buffer timeranges, and back buffer)
   seek : number of seek performed by user (other than initial seek at playback start)
   levelStart : start quality level
   levelMin : min quality level experienced by End User
   levelMax : max quality level experienced by End User
   levelAvg : avg quality level experienced by End User
-  levelTotal : total nb of quality level for this playback session
+  levelTotal : total nb of quality level referenced in Manifest
   levelSwitch : nb of quality level switch
   fragMinBitrate : min fragment load bitrate
   fragMaxBitrate : max fragment load bitrate
