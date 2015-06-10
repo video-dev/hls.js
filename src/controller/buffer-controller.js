@@ -158,7 +158,7 @@ class BufferController {
                     maxBufLen;
                 // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
                 if (this.levels[loadLevel].hasOwnProperty('bitrate')) {
-                    maxBufLen = Math.min(
+                    maxBufLen = Math.max(
                         8 *
                             this.config.maxBufferSize /
                             this.levels[loadLevel].bitrate,
