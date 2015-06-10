@@ -227,13 +227,15 @@ get : return playback session stats
 ```js
 { ua : User Agent,
   tech : 'hls.js v1.xxxx',
-  duration : video duration
-  watched : watch duration
-  bufInitDelay : initial delay between manifest load and playback ready to start (in ms),
-  bufSeekDelay : buffering delay introduced by seek requests (in ms)
-  bufSpuriousDelay : spurious buffering (not related to init or seek actions) (in ms)
-  bufUpfront : duration of buffered content upfront of play position
-  bufTotal : total buffer duration (including all buffer timeranges, and back buffer)
+  duration : video duration from manifest (in ms)
+  playing : duration during which video element was in playing state (in ms) (if the first 10s of the video are rendered twice then playback is stopped, playing is 20s)
+  paused : duration during which video element was in paused state (in ms) 
+  played : duration of rendered content time range (in ms) (if the first 10s of the video are rendered twice, played is 10s)
+  loading : initial delay between hls.load and loadeddata event (in ms),
+  seeking : buffering delay introduced by seek requests  sum(Tseeked - Tseeking) (in ms)
+  buffering : spurious buffering delay (not related to init or seek actions) (in ms)
+  buffer : duration of buffered content upfront of play position
+  bufferTotal : total buffer duration (including all buffer timeranges, and back buffer)
   seek : number of seek performed by user (other than initial seek at playback start)
   levelStart : start quality level
   levelMin : min quality level experienced by End User
