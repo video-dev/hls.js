@@ -11,7 +11,7 @@
     "prebuild": "npm run clean & npm run test",
     "build": "browserify -s hls src/hls.js -o dist/hls.js",
     "postbuild": "npm run minify",
-    "minify": "uglifyjs dist/hls.js -c -m --screw-ie8 > dist/hls.min.js",
+    "minify": "uglifyjs dist/hls.js -c sequences=true,dead_code=true,conditionals=true,booleans=true,unused=true,if_return=true,join_vars=true,drop_console=true -m sort --screw-ie8 > dist/hls.min.js",
     "watch": "watchify --debug -s Hls src/hls.js -o dist/hls.js",
     "pretest": "npm run lint",
     "test": "mocha tests/",
@@ -23,11 +23,11 @@
   },
   "browserify": {
     "transform": [
-      "6to5ify"
+      "babelify"
     ]
   },
   "devDependencies": {
-    "6to5ify": "^3.1.2",
+    "babelify": "^6.1.2",
     "browserify": "^8.1.1",
     "http-server": "^0.7.4",
     "jshint": "^2.5.11",
@@ -35,7 +35,7 @@
     "mocha": "^2.1.0",
     "opener": "^1.4.0",
     "parallelshell": "^1.0.3",
-    "uglify-js": "^2.4.16",
+    "uglify-js": "^2.4.23",
     "watchify": "^2.2.1",
     "webworkify": "^1.0.2"
   }
