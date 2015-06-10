@@ -22,7 +22,7 @@ class StatsHandler {
     }
 
     get stats() {
-        return { ua: navigator.userAgent, tech: 'hls.js' };
+        return { tech: 'hls.js' };
     }
 }
 
