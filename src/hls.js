@@ -4,6 +4,7 @@
 'use strict';
 
 import Event                from './events';
+import StatsHandler         from './stats';
 import observer             from './observer';
 import PlaylistLoader       from './loader/playlist-loader';
 import BufferController     from './controller/buffer-controller';
@@ -41,6 +42,7 @@ class Hls {
     this.playlistLoader = new PlaylistLoader(config);
     this.levelController = new LevelController(this.playlistLoader);
     this.bufferController = new BufferController(this.levelController,config);
+    this.statsHandler = new StatsHandler(config);
     this.Events = Event;
     // observer setup
     this.on = observer.on.bind(observer);
@@ -67,6 +69,7 @@ class Hls {
 
   attachVideo(video) {
     this.video = video;
+    this.statsHandler.attachVideo(video);
     // setup the media source
     var ms = this.mediaSource = new MediaSource();
     //Media Source listeners
@@ -83,6 +86,7 @@ class Hls {
 
   detachVideo() {
     var video = this.video;
+    this.statsHandler.detachVideo(video);
     var ms = this.mediaSource;
     if(ms) {
       ms.endOfStream();
@@ -200,6 +204,12 @@ class Hls {
   /* return manual level */
   get manualLevel() {
     return this.levelController.manualLevel;
+  }
+
+
+  /* return playback session stats */
+  get stats() {
+    return this.statsHandler.stats;
   }
 
   onMediaSourceOpen() {
