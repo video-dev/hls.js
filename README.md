@@ -221,6 +221,35 @@ get/set : capping/max level value that could be used by automatic level selectio
 
 default value is -1 (no level capping)
 
+#### hls.stats
+get : return playback session stats
+
+```js
+{ ua : User Agent,
+  tech : 'hls.js v1.xxxx',
+  duration : video duration
+  watched : watch duration
+  bufInitDelay : initial delay between manifest load and playback ready to start (in ms),
+  bufSeekDelay : buffering delay introduced by seek requests (in ms)
+  bufSpuriousDelay : spurious buffering (not related to init or seek actions) (in ms)
+  bufUpfront : duration of buffered content upfront of play position
+  bufTotal : total buffer duration (including back buffer)  
+  seek : number of seek performed by user (other than initial seek at playback start)
+  levelStart : start quality level
+  levelMin : min quality level experienced by End User
+  levelMax : max quality level experienced by End User
+  levelAvg : avg quality level experienced by End User
+  levelTotal : total nb of quality level for this playback session
+  levelSwitch : nb of quality level switch
+  fragMinBitrate : min fragment load bitrate
+  fragMaxBitrate : max fragment load bitrate
+  fragAvgBitrate : avg fragment load bitrate
+  fragMinLatency : min fragment load latency
+  fragMaxLatency : max fragment load latency
+  fragAvgLatency : avg fragment load latency
+}
+```
+
 ## Runtime Events
 
 hls.js fires a bunch of events, that could be registered as below:
