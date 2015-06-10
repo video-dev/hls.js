@@ -159,7 +159,7 @@
         var bufferInfo = this.bufferInfo(pos), bufferLen = bufferInfo.len, bufferEnd = bufferInfo.end, maxBufLen;
         // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
         if((this.levels[loadLevel]).hasOwnProperty('bitrate')) {
-          maxBufLen = Math.min(8*this.config.maxBufferSize/this.levels[loadLevel].bitrate,this.config.maxBufferLength);
+          maxBufLen = Math.max(8*this.config.maxBufferSize/this.levels[loadLevel].bitrate,this.config.maxBufferLength);
         } else {
           maxBufLen = this.config.maxBufferLength;
         }
