@@ -2,10 +2,8 @@
  import TSDemuxer            from '../demux/tsdemuxer';
  import observer             from '../observer';
 
-class TSDemuxerWorker {
-
-  constructor() {
-    self.addEventListener('message',function (ev){
+var TSDemuxerWorker = function (self) {
+    self.addEventListener('message',function (ev) {
       //console.log('demuxer cmd:' + ev.data.cmd);
       switch(ev.data.cmd) {
         case 'init':
@@ -55,8 +53,8 @@ class TSDemuxerWorker {
       var objData = { event : ev };
       self.postMessage(objData);
     });
+
   }
-}
 
 export default TSDemuxerWorker;
 
