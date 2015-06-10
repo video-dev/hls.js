@@ -53,8 +53,7 @@ var TSDemuxerWorker = function (self) {
       var objData = { event : ev };
       self.postMessage(objData);
     });
-
-  }
+  };
 
 export default TSDemuxerWorker;
 
