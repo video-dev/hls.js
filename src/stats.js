@@ -25,7 +25,7 @@ import observer             from './observer';
   }
 
   get stats() {
-    return {ua: navigator.userAgent, tech : 'hls.js'};
+    return {tech : 'hls.js'};
   }
 }
 

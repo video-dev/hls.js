@@ -225,7 +225,7 @@ default value is -1 (no level capping)
 get : return playback session stats
 
 ```js
-{ ua : User Agent,
+{ 
   tech : 'hls.js v1.xxxx',
   duration : video duration from manifest (in ms)
   playing : duration during which video element was in playing state (in ms) (if the first 10s of the video are rendered twice then playback is stopped, playing is 20s)
