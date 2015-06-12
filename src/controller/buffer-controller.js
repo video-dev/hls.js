@@ -192,7 +192,7 @@
           for (fragIdx = 0; fragIdx < fragments.length ; fragIdx++) {
             frag = fragments[fragIdx];
             start = frag.start+sliding;
-            //logger.log(`level/sn/start/end/bufEnd:${loadLevel}/${frag.sn}/${start}/${start+frag.duration}/${bufferEnd}`);
+            //logger.log(`level/sn/sliding/start/end/bufEnd:${loadLevel}/${frag.sn}/${sliding}/${start}/${start+frag.duration}/${bufferEnd}`);
             // offset should be within fragment boundary
             if(start <= bufferEnd && (start + frag.duration) > bufferEnd) {
               break;
@@ -723,10 +723,7 @@
   onFragmentParsing(event,data) {
     this.tparse2 = Date.now();
     var level = this.levels[this.level];
-    if(level.details.live) {
-      level.details.sliding = data.startPTS - this.frag.start;
-    }
-    logger.log(`      parsed data, type/startPTS/endPTS/startDTS/endDTS/nb/sliding:${data.type}/${data.startPTS.toFixed(3)}/${data.endPTS.toFixed(3)}/${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}/${data.nb}/${level.details.sliding.toFixed(3)}`);
+    logger.log(`      parsed data, type/startPTS/endPTS/startDTS/endDTS/nb:${data.type}/${data.startPTS.toFixed(3)}/${data.endPTS.toFixed(3)}/${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}/${data.nb}`);
     this.mp4segments.push({ type : data.type, data : data.moof});
     this.mp4segments.push({ type : data.type, data : data.mdat});
     this.nextLoadPosition = data.endPTS;
