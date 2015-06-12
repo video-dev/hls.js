@@ -820,7 +820,6 @@ class BufferController {
 
     onFragmentParsing(event, data) {
         this.tparse2 = Date.now();
-        var level = this.levels[this.level];
         logger.log(
             `      parsed data, type/startPTS/endPTS/startDTS/endDTS/nb:${
                 data.type
