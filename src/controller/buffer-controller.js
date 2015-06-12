@@ -722,7 +722,6 @@
 
   onFragmentParsing(event,data) {
     this.tparse2 = Date.now();
-    var level = this.levels[this.level];
     logger.log(`      parsed data, type/startPTS/endPTS/startDTS/endDTS/nb:${data.type}/${data.startPTS.toFixed(3)}/${data.endPTS.toFixed(3)}/${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}/${data.nb}`);
     this.mp4segments.push({ type : data.type, data : data.moof});
     this.mp4segments.push({ type : data.type, data : data.mdat});
