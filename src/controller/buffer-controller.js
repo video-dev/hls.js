@@ -37,6 +37,8 @@
     this.onis = this.onInitSegment.bind(this);
     this.onfpg = this.onFragmentParsing.bind(this);
     this.onfp = this.onFragmentParsed.bind(this);
+    this.onflt = this.onFragmentLoadTimeout.bind(this);
+    this.onfle = this.onFragmentLoadError.bind(this);
     this.ontick = this.tick.bind(this);
     observer.on(Event.MSE_ATTACHED, this.onmse);
     observer.on(Event.MANIFEST_PARSED, this.onmp);
@@ -76,6 +78,8 @@
     observer.on(Event.FRAG_PARSING_INIT_SEGMENT, this.onis);
     observer.on(Event.FRAG_PARSING_DATA, this.onfpg);
     observer.on(Event.FRAG_PARSED, this.onfp);
+    observer.on(Event.FRAG_LOAD_ERROR, this.onfle);
+    observer.on(Event.FRAG_LOAD_TIMEOUT, this.onflt);
     observer.on(Event.LEVEL_LOADED, this.onll);
   }
 
@@ -113,6 +117,8 @@
     observer.removeListener(Event.FRAG_PARSING_DATA, this.onfpg);
     observer.removeListener(Event.LEVEL_LOADED, this.onll);
     observer.removeListener(Event.FRAG_PARSING_INIT_SEGMENT, this.onis);
+    observer.removeListener(Event.FRAG_LOAD_ERROR, this.onfle);
+    observer.removeListener(Event.FRAG_LOAD_TIMEOUT, this.onflt);
   }
 
   tick() {
@@ -184,9 +190,13 @@
           // check if requested position is within seekable boundaries :
           // in case of live playlist we need to ensure that requested position is not located before playlist start
           if(bufferEnd < start) {
-            logger.log(`requested position: ${bufferEnd} is before start of playlist, reset video position to start: ${start}`);
-            this.video.currentTime = start + 0.01;
-            break;
+            if(this.video.seeking === false) {
+              logger.log(`requested position: ${bufferEnd} is before start of playlist, reset video position to start: ${start}`);
+              this.video.currentTime = start + 0.01;
+              break;
+            } else {
+              bufferEnd = start + 0.01;
+            }
           }
           //look for fragments matching with current play position
           for (fragIdx = 0; fragIdx < fragments.length ; fragIdx++) {
@@ -620,15 +630,20 @@
     var level = this.levels[data.levelId],sliding = 0, levelCurrent = this.levels[this.level];
     // check if playlist is already loaded (if yes, it should be a live playlist)
     if(levelCurrent && levelCurrent.details && levelCurrent.details.live) {
+      var oldfragments = levelCurrent.details.fragments;
       //  playlist sliding is the sum of : current playlist sliding + sliding of new playlist compared to current one
       sliding = levelCurrent.details.sliding;
       // check sliding of updated playlist against current one :
       // and find its position in current playlist
       //logger.log("fragments[0].sn/this.level/levelCurrent.details.fragments[0].sn:" + fragments[0].sn + "/" + this.level + "/" + levelCurrent.details.fragments[0].sn);
-      var SNdiff = fragments[0].sn - levelCurrent.details.fragments[0].sn;
+      var SNdiff = fragments[0].sn - oldfragments[0].sn;
       if(SNdiff >=0) {
         // positive sliding : new playlist sliding window is after previous one
-        sliding += levelCurrent.details.fragments[SNdiff].start;
+        if( SNdiff < oldfragments.length) {
+          sliding += oldfragments[SNdiff].start;
+        } else {
+          logger.log(`cannot compute sliding, no SN in common between old:[${oldfragments[0].sn},${oldfragments[oldfragments.length-1].sn}/new level [${fragments[0].sn},${fragments[fragments.length-1].sn}]`);
+        }
       } else {
         // negative sliding: new playlist sliding window is before previous one
         sliding -= fragments[-SNdiff].start;
@@ -739,6 +754,18 @@
       this.stats.tparsed = new Date();
     //trigger handler right now
     this.tick();
+  }
+
+  onFragmentLoadError() {
+    logger.log('buffer controller: error while loading frag, retry ...');
+    this.state = IDLE;
+    this.frag = null;
+  }
+
+  onFragmentLoadTimeout() {
+    logger.log('buffer controller: timeout while loading frag, retry ...');
+    this.state = IDLE;
+    this.frag = null;
   }
 
   onSourceBufferUpdateEnd() {
