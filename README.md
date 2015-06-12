@@ -99,11 +99,11 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       maxBufferLength : 30,
       maxBufferSize : 60*1000*1000,
       enableWorker : true,
-      fragLoadingTimeOut : 60000,
-      fragLoadingMaxRetry : 3,
+      fragLoadingTimeOut : 20000,
+      fragLoadingMaxRetry : 6,
       fragLoadingRetryDelay : 500,
       manifestLoadingTimeOut : 10000,
-      manifestLoadingMaxRetry : 3,
+      manifestLoadingMaxRetry : 6,
       manifestLoadingRetryDelay : 500,
       loader : customLoader
     };
@@ -290,10 +290,14 @@ full list of Events available below :
     -  data: { frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length} }
   - `hls.events.FRAG_CHANGED`  - fired when fragment matching with current video position is changing
     -  data: { frag : fragment object }
-  - `hls.events.LOAD_ERROR` - Identifier for fragment/playlist load error
+  - `hls.events.FRAG_LOAD_ERROR` - Identifier for fragment load error
 	  -  data: { url : faulty URL, response : XHR response}
-  - `hls.events.LOAD_TIMEOUT` - Identifier for fragment/playlist load timeout
+  - `hls.events.FRAG_LOAD_TIMEOUT` - Identifier for fragment load timeout
 	  -  data: { url : faulty URL,{ trequest, tfirst,loaded } }
+  - `hls.events.LEVEL_LOAD_ERROR` - Identifier for playlist load error
+    -  data: { url : faulty URL, response : XHR response}
+  - `hls.events.LEVEL_LOAD_TIMEOUT` - Identifier for playlist load timeout
+    -  data: { url : faulty URL,{ trequest, tfirst,loaded } }    
   - `hls.events.LEVEL_ERROR` - Identifier for a level switch error
 	  -  data: { level : faulty level Id, event : error description}
   - `hls.events.VIDEO_ERROR` - Identifier for a video error

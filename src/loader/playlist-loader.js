@@ -221,14 +221,14 @@ class PlaylistLoader {
     }
 
     loaderror(event) {
-        observer.trigger(Event.LOAD_ERROR, {
+        observer.trigger(Event.LEVEL_LOAD_ERROR, {
             url: this.url,
             response: event.currentTarget
         });
     }
 
     loadtimeout() {
-        observer.trigger(Event.LOAD_TIMEOUT, { url: this.url });
+        observer.trigger(Event.LEVEL_LOAD_TIMEOUT, { url: this.url });
     }
 }
 

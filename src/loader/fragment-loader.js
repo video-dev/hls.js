@@ -50,14 +50,14 @@ class FragmentLoader {
     }
 
     loaderror(event) {
-        observer.trigger(Event.LOAD_ERROR, {
+        observer.trigger(Event.FRAG_LOAD_ERROR, {
             url: this.frag.url,
             event: event
         });
     }
 
     loadtimeout() {
-        observer.trigger(Event.LOAD_TIMEOUT, { url: this.frag.url });
+        observer.trigger(Event.FRAG_LOAD_TIMEOUT, { url: this.frag.url });
     }
 }
 

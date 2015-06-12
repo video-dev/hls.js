@@ -25,10 +25,14 @@ export default {
     FRAG_BUFFERED: 'hlsFragmentBuffered',
     // fired when fragment matching with current video position is changing - data : { frag : fragment object }
     FRAG_CHANGED: 'hlsFragmentChanged',
-    // Identifier for fragment/playlist load error - data: { url : faulty URL, response : XHR response}
-    LOAD_ERROR: 'hlsLoadError',
-    // Identifier for fragment/playlist load timeout - data: { url : faulty URL, response : XHR response}
-    LOAD_TIMEOUT: 'hlsLoadTimeOut',
+    // Identifier for fragment load error - data: { url : faulty URL, response : XHR response}
+    FRAG_LOAD_ERROR: 'hlsFragLoadError',
+    // Identifier for fragment load timeout - data: { url : faulty URL, response : XHR response}
+    FRAG_LOAD_TIMEOUT: 'hlsFragLoadTimeOut',
+    // Identifier for playlist load error - data: { url : faulty URL, response : XHR response}
+    LEVEL_LOAD_ERROR: 'hlsLevelLoadError',
+    // Identifier for playlist load timeout - data: { url : faulty URL, response : XHR response}
+    LEVEL_LOAD_TIMEOUT: 'hlsLevelLoadTimeOut',
     // Identifier for a level switch error - data: { level : faulty level Id, event : error description}
     LEVEL_ERROR: 'hlsLevelError',
     // Identifier for a fragment parsing error event - data: parsing error description
