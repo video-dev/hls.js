@@ -3,8 +3,8 @@
  *
  */
 
-import Event from './events';
-import observer from './observer';
+// import Event                from './events';
+// import observer             from './observer';
 
 class StatsHandler {
     constructor(config) {
