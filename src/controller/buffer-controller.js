@@ -218,9 +218,9 @@ class BufferController {
                         ) {
                             break;
                         }
-                        //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
                     }
                     if (fragIdx >= 0 && fragIdx < fragments.length) {
+                        //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
                         if (this.frag && frag.sn === this.frag.sn) {
                             if (fragIdx === fragments.length - 1) {
                                 // we are at the end of the playlist and we already loaded last fragment, don't do anything
@@ -840,6 +840,19 @@ class BufferController {
 
     onFragmentParsing(event, data) {
         this.tparse2 = Date.now();
+        var level = this.levels[this.level];
+        if (level.details.live) {
+            var fragments = this.levels[this.level].details.fragments;
+            var sn0 = fragments[0].sn,
+                sn1 = fragments[fragments.length - 1].sn,
+                sn = this.frag.sn;
+            //retrieve this.frag.sn in this.levels[this.level]
+            if (sn >= sn0 && sn <= sn1) {
+                level.details.sliding =
+                    data.startPTS - fragments[sn - sn0].start;
+                //logger.log(`live playlist sliding:${level.details.sliding.toFixed(3)}`);
+            }
+        }
         logger.log(
             `      parsed data, type/startPTS/endPTS/startDTS/endDTS/nb:${
                 data.type
@@ -872,12 +885,14 @@ class BufferController {
 
     onFragmentLoadError() {
         logger.log('buffer controller: error while loading frag, retry ...');
+        this.fragmentLoader.abort();
         this.state = this.IDLE;
         this.frag = null;
     }
 
     onFragmentLoadTimeout() {
         logger.log('buffer controller: timeout while loading frag, retry ...');
+        this.fragmentLoader.abort();
         this.state = this.IDLE;
         this.frag = null;
     }
