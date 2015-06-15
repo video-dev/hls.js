@@ -294,6 +294,10 @@ full list of Events available below :
 	  -  data: { url : faulty URL, response : XHR response}
   - `hls.events.FRAG_LOAD_TIMEOUT` - Identifier for fragment load timeout
 	  -  data: { url : faulty URL,{ trequest, tfirst,loaded } }
+  - `hls.events.FRAG_PARSING_ERROR` - Identifier for a fragment parsing error
+    -  data: parsing error description
+  - `hls.events.FRAG_APPENDING_ERROR` - Identifier for a fragment appending error
+    -  data: appending error description    
   - `hls.events.LEVEL_LOAD_ERROR` - Identifier for playlist load error
     -  data: { url : faulty URL, response : XHR response}
   - `hls.events.LEVEL_LOAD_TIMEOUT` - Identifier for playlist load timeout
@@ -302,8 +306,6 @@ full list of Events available below :
 	  -  data: { level : faulty level Id, event : error description}
   - `hls.events.VIDEO_ERROR` - Identifier for a video error
 	  -  data: undefined
-  - `hls.events.PARSING_ERROR` - Identifier for a fragment parsing error
-	  -  data: parsing error description
 
 ## Objects
 ### Level
