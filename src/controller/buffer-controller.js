@@ -641,7 +641,7 @@
         if( SNdiff < oldfragments.length) {
           sliding += oldfragments[SNdiff].start;
         } else {
-          logger.log(`cannot compute sliding, no SN in common between old:[${oldfragments[0].sn},${oldfragments[oldfragments.length-1].sn}/new level [${fragments[0].sn},${fragments[fragments.length-1].sn}]`);
+          logger.log(`cannot compute sliding, no SN in common between old/new level:[${oldfragments[0].sn},${oldfragments[oldfragments.length-1].sn}]/[${fragments[0].sn},${fragments[fragments.length-1].sn}]`);
         }
       } else {
         // negative sliding: new playlist sliding window is before previous one
