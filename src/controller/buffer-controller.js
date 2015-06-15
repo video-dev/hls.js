@@ -121,7 +121,7 @@
   }
 
   tick() {
-    var pos,loadLevel,loadLevelDetails,fragIdx;
+    var pos,level,levelInfo,fragIdx;
     switch(this.state) {
       case this.ERROR:
         //don't do anything in error state to avoid breaking further ...
@@ -156,36 +156,36 @@
         }
         // determine next load level
         if(this.startFragmentLoaded === false) {
-          loadLevel = this.startLevel;
+          level = this.startLevel;
         } else {
           // we are not at playback start, get next load level from level Controller
-          loadLevel = this.levelController.nextLevel();
+          level = this.levelController.nextLevel();
         }
         var bufferInfo = this.bufferInfo(pos), bufferLen = bufferInfo.len, bufferEnd = bufferInfo.end, maxBufLen;
         // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
-        if((this.levels[loadLevel]).hasOwnProperty('bitrate')) {
-          maxBufLen = Math.max(8*this.config.maxBufferSize/this.levels[loadLevel].bitrate,this.config.maxBufferLength);
+        if((this.levels[level]).hasOwnProperty('bitrate')) {
+          maxBufLen = Math.max(8*this.config.maxBufferSize/this.levels[level].bitrate,this.config.maxBufferLength);
         } else {
           maxBufLen = this.config.maxBufferLength;
         }
         // if buffer length is less than maxBufLen try to load a new fragment
         if(bufferLen < maxBufLen) {
-          if(loadLevel !== this.level) {
+          if(level !== this.level) {
             // set new level to playlist loader : this will trigger a playlist load if needed
-            this.levelController.level = loadLevel;
+            this.levelController.level = level;
             // tell demuxer that we will switch level (this will force init segment to be regenerated)
             if (this.demuxer) {
               this.demuxer.switchLevel();
             }
           }
-          loadLevelDetails = this.levels[loadLevel].details;
-          // if level details retrieved yet, switch state and wait for level retrieval
-          if(typeof loadLevelDetails === 'undefined') {
+          levelInfo = this.levels[level].details;
+          // if level info not retrieved yet, switch state and wait for level retrieval
+          if(typeof levelInfo === 'undefined') {
             this.state = this.WAITING_LEVEL;
             break;
           }
           // find fragment index, contiguous with end of buffer position
-          var fragments = loadLevelDetails.fragments, frag, sliding = loadLevelDetails.sliding, start = fragments[0].start + sliding;
+          var fragments = levelInfo.fragments, frag, sliding = levelInfo.sliding, start = fragments[0].start + sliding;
           // check if requested position is within seekable boundaries :
           // in case of live playlist we need to ensure that requested position is not located before playlist start
           if(bufferEnd < start) {
@@ -201,7 +201,7 @@
           for (fragIdx = 0; fragIdx < fragments.length ; fragIdx++) {
             frag = fragments[fragIdx];
             start = frag.start+sliding;
-            //logger.log(`level/sn/sliding/start/end/bufEnd:${loadLevel}/${frag.sn}/${sliding}/${start}/${start+frag.duration}/${bufferEnd}`);
+            //logger.log(`level/sn/sliding/start/end/bufEnd:${level}/${frag.sn}/${sliding}/${start}/${start+frag.duration}/${bufferEnd}`);
             // offset should be within fragment boundary
             if(start <= bufferEnd && (start + frag.duration) > bufferEnd) {
               break;
@@ -218,11 +218,11 @@
                 logger.log(`SN just loaded, load next one: ${frag.sn}`);
               }
             }
-            logger.log(`Loading       ${frag.sn} of [${fragments[0].sn} ,${fragments[fragments.length-1].sn}],level ${loadLevel}`);
+            logger.log(`Loading       ${frag.sn} of [${fragments[0].sn} ,${fragments[fragments.length-1].sn}],level ${level}`);
             //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
 
             this.frag = frag;
-            this.level = loadLevel;
+            this.level = level;
             this.fragmentLoader.load(frag);
             this.state = this.LOADING;
           }
