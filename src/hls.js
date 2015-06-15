@@ -26,11 +26,11 @@ class Hls {
       maxBufferSize : 60*1000*1000,
       enableWorker : true,
       fragLoadingTimeOut : 20000,
-      fragLoadingMaxRetry : 6,
-      fragLoadingRetryDelay : 500,
+      fragLoadingMaxRetry : 3,
+      fragLoadingRetryDelay : 1000,
       manifestLoadingTimeOut : 10000,
-      manifestLoadingMaxRetry : 6,
-      manifestLoadingRetryDelay : 500,
+      manifestLoadingMaxRetry : 3,
+      manifestLoadingRetryDelay : 1000,
       loader : XhrLoader
     };
     for (var prop in configDefault) {
