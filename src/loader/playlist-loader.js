@@ -21,6 +21,12 @@ class PlaylistLoader {
         this.url = this.id = null;
     }
 
+    abort() {
+        if (this.loader) {
+            this.loader.abort();
+        }
+    }
+
     load(url, requestId) {
         this.url = url;
         this.id = requestId;

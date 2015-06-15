@@ -15,12 +15,16 @@ class LevelController {
         this.onll = this.onLevelLoaded.bind(this);
         this.onfle = this.onFragmentLoadError.bind(this);
         this.onflt = this.onFragmentLoadTimeout.bind(this);
+        this.onllt = this.onLevelLoadTimeout.bind(this);
+        this.onlle = this.onLevelLoadError.bind(this);
         this.ontick = this.tick.bind(this);
         observer.on(Event.MANIFEST_LOADED, this.onml);
         observer.on(Event.FRAG_LOADED, this.onfl);
         observer.on(Event.FRAG_LOAD_ERROR, this.onfle);
         observer.on(Event.FRAG_LOAD_TIMEOUT, this.onflt);
         observer.on(Event.LEVEL_LOADED, this.onll);
+        observer.on(Event.LEVEL_LOAD_ERROR, this.onlle);
+        observer.on(Event.LEVEL_LOAD_TIMEOUT, this.onllt);
         this._manualLevel = this._autoLevelCapping = -1;
         //this.startLevel = startLevel;
     }
@@ -31,6 +35,8 @@ class LevelController {
         observer.removeListener(Event.FRAG_LOAD_ERROR, this.onfle);
         observer.removeListener(Event.FRAG_LOAD_TIMEOUT, this.onflt);
         observer.removeListener(Event.LEVEL_LOADED, this.onll);
+        observer.removeListener(Event.LEVEL_LOAD_ERROR, this.onlle);
+        observer.removeListener(Event.LEVEL_LOAD_TIMEOUT, this.onllt);
         if (this.timer) {
             clearInterval(this.timer);
         }
@@ -113,37 +119,39 @@ class LevelController {
 
     set level(newLevel) {
         if (this._level !== newLevel) {
-            // check if level idx is valid
-            if (newLevel >= 0 && newLevel < this._levels.length) {
-                // stopping live reloading timer if any
-                if (this.timer) {
-                    clearInterval(this.timer);
-                    this.timer = null;
-                }
-                this._level = newLevel;
-                logger.log(`switching to level ${newLevel}`);
-                observer.trigger(Event.LEVEL_SWITCH, { levelId: newLevel });
-                var level = this._levels[newLevel];
-                // check if we need to load playlist for this level
-                if (
-                    level.loading === undefined ||
-                    (level.details && level.details.live === true)
-                ) {
-                    // level not retrieved yet, or live playlist we need to (re)load it
-                    observer.trigger(Event.LEVEL_LOADING, {
-                        levelId: newLevel
-                    });
-                    logger.log(`(re)loading playlist for level ${newLevel}`);
-                    this.playlistLoader.load(level.url, newLevel);
-                    level.loading = true;
-                }
-            } else {
-                // invalid level id given, trigger error
-                observer.trigger(Event.LEVEL_ERROR, {
-                    level: newLevel,
-                    event: 'invalid level idx'
-                });
+            this.setLevelInternal(newLevel);
+        }
+    }
+
+    setLevelInternal(newLevel) {
+        // check if level idx is valid
+        if (newLevel >= 0 && newLevel < this._levels.length) {
+            // stopping live reloading timer if any
+            if (this.timer) {
+                clearInterval(this.timer);
+                this.timer = null;
             }
+            this._level = newLevel;
+            logger.log(`switching to level ${newLevel}`);
+            observer.trigger(Event.LEVEL_SWITCH, { levelId: newLevel });
+            var level = this._levels[newLevel];
+            // check if we need to load playlist for this level
+            if (
+                level.loading === undefined ||
+                (level.details && level.details.live === true)
+            ) {
+                // level not retrieved yet, or live playlist we need to (re)load it
+                observer.trigger(Event.LEVEL_LOADING, { levelId: newLevel });
+                logger.log(`(re)loading playlist for level ${newLevel}`);
+                this.playlistLoader.load(level.url, newLevel);
+                level.loading = true;
+            }
+        } else {
+            // invalid level id given, trigger error
+            observer.trigger(Event.LEVEL_ERROR, {
+                level: newLevel,
+                event: 'invalid level idx'
+            });
         }
     }
 
@@ -208,6 +216,24 @@ class LevelController {
         );
         this.lastbw = 0;
         this.lastfetchduration = 0;
+    }
+
+    onLevelLoadError() {
+        logger.log(
+            `level controller,level load error: try to reload same level`
+        );
+        this._levels[this._level].loading = undefined;
+        this.playlistLoader.abort();
+        this.setLevelInternal(this._level);
+    }
+
+    onLevelLoadTimeout() {
+        logger.log(
+            `level controller,level load timeout: try to reload same level`
+        );
+        this._levels[this._level].loading = undefined;
+        this.playlistLoader.abort();
+        this.setLevelInternal(this._level);
     }
 
     onLevelLoaded(event, data) {
