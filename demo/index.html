@@ -264,6 +264,12 @@
           hls.recoverError();
           videoError = true;
        });
+       hls.on(hls.Events.LEVEL_LOAD_ERROR,function(event,data) {
+          document.getElementById("HlsStatus").innerHTML = "error while trying to load level playlist";
+       });
+       hls.on(hls.Events.LEVEL_LOAD_TIMEOUT,function(event,data) {
+          document.getElementById("HlsStatus").innerHTML = "timeout while trying to load level playlist";
+       });
        video.addEventListener('resize', handleVideoEvent);
        video.addEventListener('seeking', handleVideoEvent);
        video.addEventListener('seeked', handleVideoEvent);
