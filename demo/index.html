@@ -61,6 +61,8 @@
     <!-- #main -->
     <br>
     <h3 class="title">real time metrics</h1>
+    <button type="button" class="btn btn-xs btn-success" onclick="toggleMetricsDisplay()">toggle metrics display</button><br>
+    <div id="metricsButton">
     <button type="button" class="btn btn-xs btn-primary" onclick="windowSliding=!windowSliding; refreshCanvas()">toggle sliding/fixed window</button><br>
     <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(0)">window ALL</button>
     <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(2000)">2s</button>
@@ -85,6 +87,8 @@
     <canvas id="videoEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas>
     <canvas id="loadEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
   </div>
+  </div>
+  <pre id='HlsStats'></pre>
   <div id="buffered_log"></div>
 
 <br>Change Stream <br>
@@ -466,12 +470,13 @@ function timeRangesToString(r) {
               + decodedFrames + "<br>"
               + "Dropped Frames:"
               + droppedFrames + "<br>";
-
       document.getElementById("buffered_log").innerHTML = log;
+      document.getElementById("HlsStats").innerHTML = JSON.stringify(hls.stats,null,"\t");
       ctx.fillStyle = "blue";
       var x = v.currentTime / v.duration * canvas.width;
       ctx.fillRect(x, 0, 2, 15);
     }
+
   }
 
   function showCanvas()  {
