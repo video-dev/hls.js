@@ -84,7 +84,7 @@ import observer             from './observer';
 
   // triggered each time a new fragment is buffered
   onFragmentBuffered(event,data) {
-    var stats = this._stats,latency = data.stats.tfirst - data.stats.trequest, bitrate = Math.round(8*data.stats.length/(data.stats.tbuffered - data.stats.tfirst)), autoLevel = data.frag.autoLevel;
+    var stats = this._stats,latency = data.stats.tfirst - data.stats.trequest, bitrate = Math.round(8*data.stats.length/(data.stats.tbuffered - data.stats.tfirst));
     if(stats.fragBuffered) {
       stats.fragMinLatency = Math.min(stats.fragMinLatency,latency);
       stats.fragMaxLatency = Math.max(stats.fragMaxLatency,latency);
