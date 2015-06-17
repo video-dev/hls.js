@@ -38,10 +38,10 @@ class Hls {
         config[prop] = configDefault[prop];
     }
     enableLogs(config.debug);
-
+    this.config = config;
     this.playlistLoader = new PlaylistLoader(config);
     this.levelController = new LevelController(this.playlistLoader);
-    this.bufferController = new BufferController(this.levelController,config);
+    this.bufferController = new BufferController(this);
     this.statsHandler = new StatsHandler(config);
     this.Events = Event;
     // observer setup

@@ -11,7 +11,7 @@
 
  class BufferController {
 
-  constructor(levelController,config) {
+  constructor(hls) {
     this.ERROR = -2;
     this.STARTING = -1;
     this.IDLE = 0;
@@ -21,10 +21,11 @@
     this.PARSED = 4;
     this.APPENDING = 5;
     this.BUFFER_FLUSHING = 6;
-    this.levelController = levelController;
-    this.config = config;
+    this.levelController = hls.levelController;
+    this.config = hls.config;
     this.startPosition = 0;
-    this.fragmentLoader = new FragmentLoader(config);
+    this.fragmentLoader = new FragmentLoader(hls.config);
+    this.hls = hls;
     // Source Buffer listeners
     this.onsbue = this.onSourceBufferUpdateEnd.bind(this);
     this.onsbe  = this.onSourceBufferError.bind(this);
@@ -224,7 +225,7 @@
             }
             logger.log(`Loading       ${frag.sn} of [${fragments[0].sn} ,${fragments[fragments.length-1].sn}],level ${level}`);
             //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
-
+            frag.autoLevel = this.hls.autoLevelEnabled;
             this.frag = frag;
             this.level = level;
             this.fragmentLoader.load(frag);
