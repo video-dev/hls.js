@@ -101,8 +101,7 @@ class StatsHandler {
                 8 *
                     data.stats.length /
                     (data.stats.tbuffered - data.stats.tfirst)
-            ),
-            autoLevel = data.frag.autoLevel;
+            );
         if (stats.fragBuffered) {
             stats.fragMinLatency = Math.min(stats.fragMinLatency, latency);
             stats.fragMaxLatency = Math.max(stats.fragMaxLatency, latency);
