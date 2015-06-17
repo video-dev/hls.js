@@ -226,29 +226,28 @@ get : return playback session stats
 
 ```js
 { 
-  tech : 'hls.js v1.xxxx',
-  duration : video duration from manifest (in ms)
-  playing : duration during which video element was in playing state (in ms) (if the first 10s of the video are rendered twice then playback is stopped, playing is 20s)
-  paused : duration during which video element was in paused state (in ms) 
-  played : duration of rendered content time range (in ms) (if the first 10s of the video are rendered twice, played is 10s)
-  loading : initial delay between hls.load and loadeddata event (in ms),
-  seeking : buffering delay introduced by seek requests  sum(Tseeked - Tseeking) (in ms)
-  buffering : spurious buffering delay (not related to init or seek actions) (in ms)
-  buffer : duration of buffered content upfront of play position
-  bufferTotal : total buffer duration (including all buffer timeranges, and back buffer)
-  seek : number of seek performed by user (other than initial seek at playback start)
-  levelStart : start quality level
-  levelMin : min quality level experienced by End User
-  levelMax : max quality level experienced by End User
-  levelAvg : avg quality level experienced by End User
-  levelTotal : total nb of quality level referenced in Manifest
-  levelSwitch : nb of quality level switch
-  fragMinBitrate : min fragment load bitrate
-  fragMaxBitrate : max fragment load bitrate
-  fragAvgBitrate : avg fragment load bitrate
+  tech : 'hls.js',
+  levelNb : total nb of quality level referenced in Manifest
+  levelStart : first quality level experienced by End User 
+  autoLevelMin : min quality level experienced by End User (in auto mode)
+  autoLevelMax : max quality level experienced by End User (in auto mode)
+  autoLevelAvg : avg quality level experienced by End User (in auto mode)
+  autoLevelLast : last quality level experienced by End User (in auto mode)  
+  autoLevelSwitch : nb of quality level switch in auto mode
+  manualLevelMin : min quality level experienced by End User (in manual mode)
+  manualLevelMax : max quality level experienced by End User (in manual mode)
+  manualLevelLast : last quality level experienced by End User (in manual mode)  
+  manualLevelSwitch : nb of quality level switch in manual mode
+  fragMinKbps : min fragment load bitrate
+  fragMaxKbps : max fragment load bitrate
+  fragAvgKbps : avg fragment load bitrate
   fragMinLatency : min fragment load latency
   fragMaxLatency : max fragment load latency
   fragAvgLatency : avg fragment load latency
+  fragBuffered : total nb of buffered fragments  
+  fragBufferedBytes : total nb of buffered bytes
+  fragChangedAuto : nb of frag played (loaded in auto mode)
+  fragChangedManual : nb of frag played (loaded in manual mode)
 }
 ```
 
