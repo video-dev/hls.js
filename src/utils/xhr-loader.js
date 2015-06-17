@@ -53,7 +53,7 @@ import {logger}             from '../utils/logger';
 
   loadsuccess(event) {
     window.clearTimeout(this.timeoutHandle);
-    this.onSuccess(event,{trequest : this.trequest, tfirst : this.tfirst, tload : new Date(), loaded : this.loaded});
+    this.onSuccess(event,{trequest : this.trequest, tfirst : this.tfirst, tload : new Date(), loaded : this.loaded, retry : this.retry});
   }
 
   loaderror(event) {
