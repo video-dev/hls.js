@@ -67,7 +67,8 @@ class XhrLoader {
             trequest: this.trequest,
             tfirst: this.tfirst,
             tload: new Date(),
-            loaded: this.loaded
+            loaded: this.loaded,
+            retry: this.retry
         });
     }
 
