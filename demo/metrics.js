@@ -1,24 +1,39 @@
   function showMetrics()  {
-    var width = window.innerWidth-30;
-      document.getElementById('videoEvent_c').width =
-      document.getElementById('loadEvent_c').width =
-      document.getElementById('bufferWindow_c').width =
-      document.getElementById('bitrateTimerange_c').width =
-      document.getElementById('bufferTimerange_c').width = width;
-      document.getElementById('bufferWindow_c').style.display=
-      document.getElementById('bitrateTimerange_c').style.display=
-      document.getElementById('bufferTimerange_c').style.display=
-      document.getElementById('videoEvent_c').style.display =
-      document.getElementById('loadEvent_c').style.display= "block";
+    if(metricsDisplayed) {
+      var width = window.innerWidth-30;
+        document.getElementById('videoEvent_c').width =
+        document.getElementById('loadEvent_c').width =
+        document.getElementById('bufferWindow_c').width =
+        document.getElementById('bitrateTimerange_c').width =
+        document.getElementById('bufferTimerange_c').width = width;
+        document.getElementById('bufferWindow_c').style.display=
+        document.getElementById('bitrateTimerange_c').style.display=
+        document.getElementById('bufferTimerange_c').style.display=
+        document.getElementById('videoEvent_c').style.display =
+        document.getElementById('metricsButton').style.display =
+        document.getElementById('loadEvent_c').style.display= "block";
+    }
   }
 
 
+  function toggleMetricsDisplay() {
+    metricsDisplayed = !metricsDisplayed;
+    if(metricsDisplayed) {
+      showMetrics();
+    } else {
+      hideMetrics();
+    }
+  }
+
   function hideMetrics()  {
-      document.getElementById('bufferWindow_c').style.display=
-      document.getElementById('bitrateTimerange_c').style.display=
-      document.getElementById('bufferTimerange_c').style.display=
-      document.getElementById('videoEvent_c').style.display =
-      document.getElementById('loadEvent_c').style.display= "none";
+      if(!metricsDisplayed) {
+        document.getElementById('bufferWindow_c').style.display=
+        document.getElementById('bitrateTimerange_c').style.display=
+        document.getElementById('bufferTimerange_c').style.display=
+        document.getElementById('videoEvent_c').style.display =
+        document.getElementById('metricsButton').style.display =
+        document.getElementById('loadEvent_c').style.display= "none";
+      }
   }
 
   function timeRangeSetSliding(duration) {
@@ -82,23 +97,25 @@ var timeRangeMouseDown=false;
     refreshCanvas();
  }
 
-var windowDuration=20000,windowSliding=true,windowStart=0,windowEnd=10000,windowFocus;
+var windowDuration=20000,windowSliding=true,windowStart=0,windowEnd=10000,windowFocus,metricsDisplayed=false;
 document.getElementById('windowStart').value=windowStart;document.getElementById('windowEnd').value=windowEnd;
   function refreshCanvas()  {
-    try {
-      var windowTime = getWindowTimeRange();
-      canvasBufferTimeRangeUpdate(document.getElementById('bufferTimerange_c'), 0, windowTime.now, windowTime.min,windowTime.max, events.buffer);
-      if(windowTime.min !== 0 || windowTime.max !== windowTime.now) {
-        document.getElementById('bufferWindow_c').style.display="block";
-        canvasBufferWindowUpdate(document.getElementById('bufferWindow_c'), windowTime.min,windowTime.max, windowTime.focus, events.buffer);
-      } else {
-        document.getElementById('bufferWindow_c').style.display="none";
+    if(metricsDisplayed) {
+      try {
+        var windowTime = getWindowTimeRange();
+        canvasBufferTimeRangeUpdate(document.getElementById('bufferTimerange_c'), 0, windowTime.now, windowTime.min,windowTime.max, events.buffer);
+        if(windowTime.min !== 0 || windowTime.max !== windowTime.now) {
+          document.getElementById('bufferWindow_c').style.display="block";
+          canvasBufferWindowUpdate(document.getElementById('bufferWindow_c'), windowTime.min,windowTime.max, windowTime.focus, events.buffer);
+        } else {
+          document.getElementById('bufferWindow_c').style.display="none";
+        }
+        canvasBitrateEventUpdate(document.getElementById('bitrateTimerange_c'), 0, windowTime.now, windowTime.min,windowTime.max, events.level, events.bitrate);
+        canvasVideoEventUpdate(document.getElementById('videoEvent_c'), windowTime.min,windowTime.max, events.video);
+        canvasLoadEventUpdate(document.getElementById('loadEvent_c'), windowTime.min,windowTime.max, events.load);
+      } catch(err) {
+        console.log("refreshCanvas error:" +err.message);
       }
-      canvasBitrateEventUpdate(document.getElementById('bitrateTimerange_c'), 0, windowTime.now, windowTime.min,windowTime.max, events.level, events.bitrate);
-      canvasVideoEventUpdate(document.getElementById('videoEvent_c'), windowTime.min,windowTime.max, events.video);
-      canvasLoadEventUpdate(document.getElementById('loadEvent_c'), windowTime.min,windowTime.max, events.load);
-    } catch(err) {
-      console.log("refreshCanvas error:" +err.message);
     }
   }
 
