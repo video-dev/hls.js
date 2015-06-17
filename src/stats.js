@@ -10,12 +10,12 @@ import observer             from './observer';
 
   constructor(config) {
     this.config=config;
-    this.onml = this.onManifestLoaded.bind(this);
+    this.onmp = this.onManifestParsed.bind(this);
     this.onfc = this.onFragmentChanged.bind(this);
     this.onfb = this.onFragmentBuffered.bind(this);
     this.onflt = this.onFragmentLoadTimeout.bind(this);
     this.onfle = this.onFragmentLoadError.bind(this);
-    observer.on(Event.MANIFEST_LOADED, this.onml);
+    observer.on(Event.MANIFEST_PARSED, this.onmp);
     observer.on(Event.FRAG_BUFFERED, this.onfb);
     observer.on(Event.FRAG_CHANGED, this.onfc);
     observer.on(Event.FRAG_LOAD_ERROR, this.onfle);
@@ -34,8 +34,8 @@ import observer             from './observer';
     this.video = null;
   }
 
-  // reset stats on manifest loaded
-  onManifestLoaded(event,data) {
+  // reset stats on manifest parsed
+  onManifestParsed(event,data) {
     this._stats = { tech : 'hls.js', levelNb : data.levels.length};
   }
 
