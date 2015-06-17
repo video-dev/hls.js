@@ -145,6 +145,13 @@
           this.immediateLevelSwitchEnd();
           break;
         }
+
+        // seek back to a expected position after video stalling
+        if(this.seekAfterStalling) {
+          this.video.currentTime=this.seekAfterStalling;
+          this.seekAfterStalling = undefined;
+        }
+
         // determine next candidate fragment to be loaded, based on current position and
         //  end of buffer position
         //  ensure 60s of buffer upfront
@@ -188,14 +195,11 @@
           var fragments = levelInfo.fragments, frag, sliding = levelInfo.sliding, start = fragments[0].start + sliding;
           // check if requested position is within seekable boundaries :
           // in case of live playlist we need to ensure that requested position is not located before playlist start
+          //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.video.seeking}`);
           if(bufferEnd < start) {
-            if(this.video.seeking === false) {
-              logger.log(`requested position: ${bufferEnd} is before start of playlist, reset video position to start: ${start}`);
-              this.video.currentTime = start + 0.01;
-              break;
-            } else {
-              bufferEnd = start + 0.01;
-            }
+              this.seekAfterStalling = this.startPosition + sliding;
+              logger.log(`buffer end: ${bufferEnd} is located before start of live sliding playlist, media position will be reseted to: ${this.seekAfterStalling.toFixed(3)}`);
+              bufferEnd = this.seekAfterStalling;
           }
           //look for fragments matching with current play position
           for (fragIdx = 0; fragIdx < fragments.length ; fragIdx++) {
@@ -229,7 +233,7 @@
         }
         break;
       case this.WAITING_LEVEL:
-        var level = this.levels[this.level];
+        level = this.levels[this.level];
         // check if playlist is already loaded
         if(level && level.details) {
           this.state = this.IDLE;
@@ -652,7 +656,7 @@
     // override level info
     level.details = data.details;
     level.details.sliding = sliding;
-    this.demuxer.setDuration(duration);
+    this.demuxer.setDuration(duration+sliding);
     if(this.startLevelLoaded === false) {
       // if live playlist, set start position to be fragment N-3
       if(data.details.live) {
@@ -682,8 +686,12 @@
         this.state = this.PARSING;
         // transmux the MPEG-TS data to ISO-BMFF segments
         this.stats = data.stats;
-        this.demuxer.setDuration(this.levels[this.level].details.totalduration);
-        this.demuxer.push(data.payload,this.levels[this.level].audioCodec,this.levels[this.level].videoCodec,this.frag.start);
+        var currentLevel = this.levels[this.level], details = currentLevel.details,  duration =  details.totalduration;
+        if(details.live) {
+          duration+=details.sliding;
+        }
+        this.demuxer.setDuration(duration);
+        this.demuxer.push(data.payload,currentLevel.audioCodec,currentLevel.videoCodec,this.frag.start);
       }
       this.startFragmentLoaded = true;
     }
