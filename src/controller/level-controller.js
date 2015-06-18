@@ -8,8 +8,8 @@ import observer from '../observer';
 import { logger } from '../utils/logger';
 
 class LevelController {
-    constructor(playlistLoader) {
-        this.playlistLoader = playlistLoader;
+    constructor(hls) {
+        this.playlistLoader = hls.playlistLoader;
         this.onml = this.onManifestLoaded.bind(this);
         this.onfl = this.onFragmentLoaded.bind(this);
         this.onll = this.onLevelLoaded.bind(this);

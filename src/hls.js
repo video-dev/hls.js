@@ -45,8 +45,8 @@ class Hls {
         }
         enableLogs(config.debug);
         this.config = config;
-        this.playlistLoader = new PlaylistLoader(config);
-        this.levelController = new LevelController(this.playlistLoader);
+        this.playlistLoader = new PlaylistLoader(this);
+        this.levelController = new LevelController(this);
         this.bufferController = new BufferController(this);
         this.statsHandler = new StatsHandler(this);
         this.Events = Event;

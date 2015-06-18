@@ -8,8 +8,8 @@ import observer from '../observer';
 //import {logger}             from '../utils/logger';
 
 class PlaylistLoader {
-    constructor(config) {
-        this.config = config;
+    constructor(hls) {
+        this.hls = hls;
         this.manifestLoaded = false;
     }
 
@@ -28,18 +28,19 @@ class PlaylistLoader {
     }
 
     load(url, requestId) {
+        var config = this.hls.config;
         this.url = url;
         this.id = requestId;
-        this.loader = new this.config.loader();
+        this.loader = new config.loader();
         this.loader.load(
             url,
             '',
             this.loadsuccess.bind(this),
             this.loaderror.bind(this),
             this.loadtimeout.bind(this),
-            this.config.manifestLoadingTimeOut,
-            this.config.manifestLoadingMaxRetry,
-            this.config.manifestLoadingRetryDelay
+            config.manifestLoadingTimeOut,
+            config.manifestLoadingMaxRetry,
+            config.manifestLoadingRetryDelay
         );
     }
 
