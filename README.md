@@ -232,8 +232,11 @@ get : return playback session stats
   autoLevelMin : min quality level experienced by End User (in auto mode)
   autoLevelMax : max quality level experienced by End User (in auto mode)
   autoLevelAvg : avg quality level experienced by End User (in auto mode)
-  autoLevelLast : last quality level experienced by End User (in auto mode)  
+  autoLevelLast : last quality level experienced by End User (in auto mode)
   autoLevelSwitch : nb of quality level switch in auto mode
+  autoLevelCappingMin : min auto quality level capping value
+  autoLevelCappingMax : max auto quality level capping value
+  autoLevelCappingLast : last auto quality level capping value
   manualLevelMin : min quality level experienced by End User (in manual mode)
   manualLevelMax : max quality level experienced by End User (in manual mode)
   manualLevelLast : last quality level experienced by End User (in manual mode)  

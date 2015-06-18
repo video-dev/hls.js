@@ -42,7 +42,7 @@ class Hls {
     this.playlistLoader = new PlaylistLoader(config);
     this.levelController = new LevelController(this.playlistLoader);
     this.bufferController = new BufferController(this);
-    this.statsHandler = new StatsHandler(config);
+    this.statsHandler = new StatsHandler(this);
     this.Events = Event;
     // observer setup
     this.on = observer.on.bind(observer);
