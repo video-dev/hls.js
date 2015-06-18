@@ -7,8 +7,8 @@ import Event from './events';
 import observer from './observer';
 
 class StatsHandler {
-    constructor(config) {
-        this.config = config;
+    constructor(hls) {
+        this.hls = hls;
         this.onmp = this.onManifestParsed.bind(this);
         this.onfc = this.onFragmentChanged.bind(this);
         this.onfb = this.onFragmentBuffered.bind(this);
@@ -107,12 +107,21 @@ class StatsHandler {
             stats.fragMaxLatency = Math.max(stats.fragMaxLatency, latency);
             stats.fragMinKbps = Math.min(stats.fragMinKbps, bitrate);
             stats.fragMaxKbps = Math.max(stats.fragMaxKbps, bitrate);
+            stats.autoLevelCappingMin = Math.min(
+                stats.autoLevelCappingMin,
+                this.hls.autoLevelCapping
+            );
+            stats.autoLevelCappingMax = Math.max(
+                stats.autoLevelCappingMax,
+                this.hls.autoLevelCapping
+            );
             stats.fragBuffered++;
         } else {
             stats.fragMinLatency = stats.fragMaxLatency = latency;
             stats.fragMinKbps = stats.fragMaxKbps = bitrate;
             stats.fragBuffered = 1;
             stats.fragBufferedBytes = 0;
+            stats.autoLevelCappingMin = stats.autoLevelCappingMax = this.hls.autoLevelCapping;
             this.sumLatency = 0;
             this.sumKbps = 0;
         }
@@ -121,6 +130,7 @@ class StatsHandler {
         stats.fragBufferedBytes += data.stats.length;
         stats.fragAvgLatency = Math.round(this.sumLatency / stats.fragBuffered);
         stats.fragAvgKbps = Math.round(this.sumKbps / stats.fragBuffered);
+        stats.autoLevelCappingLast = this.hls.autoLevelCapping;
     }
 
     onFragmentLoadTimeout() {
