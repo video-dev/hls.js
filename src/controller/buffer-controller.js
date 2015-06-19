@@ -682,11 +682,12 @@
         this.state = this.PARSING;
         // transmux the MPEG-TS data to ISO-BMFF segments
         this.stats = data.stats;
-        var currentLevel = this.levels[this.level], details = currentLevel.details,  duration =  details.totalduration;
+        var currentLevel = this.levels[this.level], details = currentLevel.details,  duration =  details.totalduration, start = this.frag.start;
         if(details.live) {
           duration+=details.sliding;
+          start+=details.sliding;
         }
-        this.demuxer.push(data.payload,currentLevel.audioCodec,currentLevel.videoCodec,this.frag.start,this.frag.cc, this.level, duration);
+        this.demuxer.push(data.payload,currentLevel.audioCodec,currentLevel.videoCodec,start,this.frag.cc, this.level, duration);
       }
       this.startFragmentLoaded = true;
     }
