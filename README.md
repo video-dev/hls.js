@@ -55,6 +55,7 @@ as of today, it is supported on:
   - `#EXT-X-ENDLIST` (VoD / Live playlist)
   - `#EXT-X-MEDIA-SEQUENCE`
   - `#EXT-X-TARGETDURATION`
+  - `#EXT-X-DISCONTINUITY`
 
 ## Getting Started
 

@@ -181,10 +181,6 @@
           if(level !== this.level) {
             // set new level to playlist loader : this will trigger a playlist load if needed
             this.levelController.level = level;
-            // tell demuxer that we will switch level (this will force init segment to be regenerated)
-            if (this.demuxer) {
-              this.demuxer.switchLevel();
-            }
           }
           levelInfo = this.levels[level].details;
           // if level info not retrieved yet, switch state and wait for level retrieval
@@ -657,7 +653,6 @@
     // override level info
     level.details = data.details;
     level.details.sliding = sliding;
-    this.demuxer.setDuration(duration+sliding);
     if(this.startLevelLoaded === false) {
       // if live playlist, set start position to be fragment N-3
       if(data.details.live) {
@@ -691,8 +686,7 @@
         if(details.live) {
           duration+=details.sliding;
         }
-        this.demuxer.setDuration(duration);
-        this.demuxer.push(data.payload,currentLevel.audioCodec,currentLevel.videoCodec,this.frag.start);
+        this.demuxer.push(data.payload,currentLevel.audioCodec,currentLevel.videoCodec,this.frag.start,this.frag.cc, this.level, duration);
       }
       this.startFragmentLoaded = true;
     }

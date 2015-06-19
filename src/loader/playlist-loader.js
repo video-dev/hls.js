@@ -107,8 +107,8 @@ import observer             from '../observer';
   }
 
   parseLevelPlaylist(string, baseurl, id) {
-    var currentSN = 0,totalduration = 0, level = { url : baseurl, fragments : [], live : true}, result, regexp;
-    regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):([\d\.]+)[^\r\n]*[\r\n]+([^\r\n]+)|(?:#EXT-X-(ENDLIST)))/g;
+    var currentSN = 0,totalduration = 0, level = { url : baseurl, fragments : [], live : true}, result, regexp, cc = 0;
+    regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):([\d\.]+)[^\r\n]*[\r\n]+([^\r\n]+)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))/g;
     while((result = regexp.exec(string)) !== null){
       result.shift();
       result = result.filter(function(n){ return (n !== undefined);});
@@ -121,10 +121,12 @@ import observer             from '../observer';
           break;
         case 'ENDLIST':
           level.live = false;
+        case 'DIS':
+          cc++;
           break;
         case 'INF':
           var duration = parseFloat(result[1]);
-          level.fragments.push({url : this.resolve(result[2],baseurl), duration : duration, start : totalduration, sn : currentSN++, level:id});
+          level.fragments.push({url : this.resolve(result[2],baseurl), duration : duration, start : totalduration, sn : currentSN++, level:id, cc : cc});
           totalduration+=duration;
           break;
         default:
