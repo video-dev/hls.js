@@ -26,15 +26,6 @@ class Demuxer {
         this.demuxInitialized = true;
     }
 
-    setDuration(newDuration) {
-        if (this.w) {
-            // post fragment payload as transferable objects (no copy)
-            this.w.postMessage({ cmd: 'duration', data: newDuration });
-        } else {
-            this.demuxer.setDuration(newDuration);
-        }
-    }
-
     destroy() {
         if (this.w) {
             this.w.removeEventListener('message', this.onwmsg);
@@ -45,7 +36,7 @@ class Demuxer {
         }
     }
 
-    push(data, audioCodec, videoCodec, timeOffset) {
+    push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
         if (this.w) {
             // post fragment payload as transferable objects (no copy)
             this.w.postMessage(
@@ -54,7 +45,10 @@ class Demuxer {
                     data: data,
                     audioCodec: audioCodec,
                     videoCodec: videoCodec,
-                    timeOffset: timeOffset
+                    timeOffset: timeOffset,
+                    cc: cc,
+                    level: level,
+                    duration: duration
                 },
                 [data]
             );
@@ -63,18 +57,12 @@ class Demuxer {
                 new Uint8Array(data),
                 audioCodec,
                 videoCodec,
-                timeOffset
+                timeOffset,
+                cc,
+                level,
+                duration
             );
             this.demuxer.end();
-        }
-    }
-
-    switchLevel() {
-        if (this.w) {
-            // post fragment payload as transferable objects (no copy)
-            this.w.postMessage({ cmd: 'switchLevel' });
-        } else {
-            this.demuxer.switchLevel();
         }
     }
 

@@ -14,11 +14,7 @@ import { logger } from '../utils/logger';
 
 class TSDemuxer {
     constructor() {
-        this.switchLevel();
-    }
-
-    setDuration(newDuration) {
-        this._duration = newDuration;
+        this.lastCC = 0;
     }
 
     switchLevel() {
@@ -34,11 +30,26 @@ class TSDemuxer {
         this._initSegGenerated = false;
     }
 
+    insertDiscontinuity() {
+        this.switchLevel();
+        this._initPTS = this._initDTS = undefined;
+    }
+
     // feed incoming data to the front of the parsing pipeline
-    push(data, audioCodec, videoCodec, timeOffset) {
+    push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
         this.audioCodec = audioCodec;
         this.videoCodec = videoCodec;
         this.timeOffset = timeOffset;
+        this._duration = duration;
+        if (cc !== this.lastCC) {
+            logger.log(`discontinuity detected`);
+            this.insertDiscontinuity();
+            this.lastCC = cc;
+        } else if (level !== this.lastLevel) {
+            logger.log(`level switch detected`);
+            this.switchLevel();
+            this.lastLevel = level;
+        }
         var offset;
         for (offset = 0; offset < data.length; offset += 188) {
             this._parseTSPacket(data, offset);
