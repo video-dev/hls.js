@@ -770,15 +770,17 @@ class BufferController {
                 this.stats = data.stats;
                 var currentLevel = this.levels[this.level],
                     details = currentLevel.details,
-                    duration = details.totalduration;
+                    duration = details.totalduration,
+                    start = this.frag.start;
                 if (details.live) {
                     duration += details.sliding;
+                    start += details.sliding;
                 }
                 this.demuxer.push(
                     data.payload,
                     currentLevel.audioCodec,
                     currentLevel.videoCodec,
-                    this.frag.start,
+                    start,
                     this.frag.cc,
                     this.level,
                     duration
