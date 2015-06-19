@@ -121,6 +121,7 @@ import observer             from '../observer';
           break;
         case 'ENDLIST':
           level.live = false;
+          break;
         case 'DIS':
           cc++;
           break;
