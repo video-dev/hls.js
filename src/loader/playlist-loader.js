@@ -148,6 +148,7 @@ class PlaylistLoader {
                     break;
                 case 'ENDLIST':
                     level.live = false;
+                    break;
                 case 'DIS':
                     cc++;
                     break;
