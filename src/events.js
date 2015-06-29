@@ -38,5 +38,7 @@ export default {
     // Identifier for a fragment parsing error event - data: parsing error description
     FRAG_PARSING_ERROR: 'hlsFragmentParsingError',
     // Identifier for a fragment appending error event - data: appending error description
-    FRAG_APPENDING_ERROR: 'hlsFragmentAppendingError'
+    FRAG_APPENDING_ERROR: 'hlsFragmentAppendingError',
+    // Identifier for a FPS drop event - data: {curentDropped, currentDecoded, totalDroppedFrames}
+    FPS_DROP: 'hlsFPSDrop'
 };
