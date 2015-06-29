@@ -33,7 +33,7 @@ class Hls {
       manifestLoadingMaxRetry : 3,
       manifestLoadingRetryDelay : 1000,
       fpsDroppedMonitoringPeriod : 5000,
-      fpsDroppedMonitoringThreshold : 0.000001,
+      fpsDroppedMonitoringThreshold : 0.2,
       loader : XhrLoader
     };
     for (var prop in configDefault) {
