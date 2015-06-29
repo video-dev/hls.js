@@ -106,6 +106,8 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       manifestLoadingTimeOut : 10000,
       manifestLoadingMaxRetry : 6,
       manifestLoadingRetryDelay : 500,
+      fpsDroppedMonitoringPeriod : 5000,
+      fpsDroppedMonitoringThreshold : 0.2,
       loader : customLoader
     };
 
@@ -187,16 +189,19 @@ return array of available quality levels
 
 #### hls.currentLevel
 get : return current playback quality level
+
 set : trigger an immediate quality level switch to new quality level. this will pause the video if it was playing, flush the whole buffer, and fetch fragment matching with current position and requested quality level. then resume the video if needed once fetched fragment will have been buffered.
 set to -1 for automatic level selection
 
 #### hls.nextLevel
-get : return next playback quality level (playback quality level for next buffered fragment). return -1 if next fragment not buffered yet
+get : return next playback quality level (playback quality level for next buffered fragment). return -1 if next fragment not buffered yet.
+
 set : trigger a quality level switch for next fragment. this could eventually flush already buffered next fragment
 set to -1 for automatic level selection
 
 #### hls.loadLevel
 get : return last loaded fragment quality level.
+
 set : set quality level for next loaded fragment
 set to -1 for automatic level selection
 
@@ -252,6 +257,8 @@ get : return playback session stats
   fragBufferedBytes : total nb of buffered bytes
   fragChangedAuto : nb of frag played (loaded in auto mode)
   fragChangedManual : nb of frag played (loaded in manual mode)
+  fpsDropEvent : nb of FPS drop event
+  fpsTotalDroppedFrames : total nb of dropped frames since video element creation
 }
 ```
 
@@ -307,8 +314,8 @@ full list of Events available below :
     -  data: { url : faulty URL,{ trequest, tfirst,loaded } }    
   - `hls.events.LEVEL_ERROR` - Identifier for a level switch error
 	  -  data: { level : faulty level Id, event : error description}
-  - `hls.events.VIDEO_ERROR` - Identifier for a video error
-	  -  data: undefined
+  - `hls.events.FPS_DROP` - triggered when FPS drop in last monitoring period is higher than given threshold
+	  -  data: {curentDropped : nb of dropped frames in last monitoring period, currentDecoded: nb of decoded frames in last monitoring period, totalDropped : total dropped frames on this video element}
 
 ## Objects
 ### Level

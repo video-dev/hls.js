@@ -9,6 +9,7 @@ import observer             from './observer';
 import PlaylistLoader       from './loader/playlist-loader';
 import BufferController     from './controller/buffer-controller';
 import LevelController      from './controller/level-controller';
+import FPSController        from './controller/fps-controller';
 import {logger,enableLogs}  from './utils/logger';
 import XhrLoader            from './utils/xhr-loader';
 //import MP4Inspect         from '/remux/mp4-inspector';
@@ -31,6 +32,8 @@ class Hls {
       manifestLoadingTimeOut : 10000,
       manifestLoadingMaxRetry : 3,
       manifestLoadingRetryDelay : 1000,
+      fpsDroppedMonitoringPeriod : 5000,
+      fpsDroppedMonitoringThreshold : 0.000001,
       loader : XhrLoader
     };
     for (var prop in configDefault) {
@@ -42,6 +45,7 @@ class Hls {
     this.playlistLoader = new PlaylistLoader(this);
     this.levelController = new LevelController(this);
     this.bufferController = new BufferController(this);
+    this.fpsController = new FPSController(this);
     this.statsHandler = new StatsHandler(this);
     this.Events = Event;
     // observer setup
@@ -61,6 +65,10 @@ class Hls {
     if(this.levelController) {
       this.levelController.destroy();
       this.levelController = null;
+    }
+    if(this.fpsController) {
+      this.fpsController.destroy();
+      this.fpsController = null;
     }
     this.unloadSource();
     this.detachVideo();

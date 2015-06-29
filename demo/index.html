@@ -274,6 +274,10 @@
        hls.on(hls.Events.LEVEL_LOAD_TIMEOUT,function(event,data) {
           document.getElementById("HlsStatus").innerHTML = "timeout while trying to load level playlist";
        });
+       hls.on(hls.Events.FPS_DROP,function(event,data) {
+          var evt = {time : new Date() - t0, type : "frame drop", name : data.currentDropped + "/" + data.currentDecoded};
+          events.video.push(evt);
+       });
        video.addEventListener('resize', handleVideoEvent);
        video.addEventListener('seeking', handleVideoEvent);
        video.addEventListener('seeked', handleVideoEvent);

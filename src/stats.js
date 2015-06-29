@@ -15,11 +15,13 @@ import observer             from './observer';
     this.onfb = this.onFragmentBuffered.bind(this);
     this.onflt = this.onFragmentLoadTimeout.bind(this);
     this.onfle = this.onFragmentLoadError.bind(this);
+    this.onfpsd = this.onFPSDrop.bind(this);
     observer.on(Event.MANIFEST_PARSED, this.onmp);
     observer.on(Event.FRAG_BUFFERED, this.onfb);
     observer.on(Event.FRAG_CHANGED, this.onfc);
     observer.on(Event.FRAG_LOAD_ERROR, this.onfle);
     observer.on(Event.FRAG_LOAD_TIMEOUT, this.onflt);
+    observer.on(Event.FPS_DROP, this.onfpsd);
   }
 
   destroy() {
@@ -129,6 +131,18 @@ import observer             from './observer';
       } else {
         stats.fragLoadError++;
       }
+    }
+  }
+
+  onFPSDrop(event,data) {
+    var stats = this._stats;
+    if(stats) {
+     if(stats.fpsDropEvent === undefined) {
+        stats.fpsDropEvent =1;
+      } else {
+        stats.fpsDropEvent++;
+      }
+      stats.fpsTotalDroppedFrames = data.totalDroppedFrames;
     }
   }
 
