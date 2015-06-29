@@ -13,6 +13,8 @@
   <pre id='HlsUrl'></pre>
     <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)";></canvas> <br>
     window size
+    <div id="metricsButton">
+    <button onclick="timeRangeSetSliding(0)">ALL</button><br>
     <button onclick="timeRangeSetSliding(2000);">2s</button>
     <button onclick="timeRangeSetSliding(5000)">5s</button>
     <button onclick="timeRangeSetSliding(10000)">10s</button>
@@ -20,7 +22,6 @@
     <button onclick="timeRangeSetSliding(30000)">30s</button>
     <button onclick="timeRangeSetSliding(60000)">60s</button>
     <button onclick="timeRangeSetSliding(120000)">120s</button>
-    <button onclick="timeRangeSetSliding(0)">ALL</button><br>
     <button onclick="timeRangeZoomIn()">Zoom In</button>
     <button onclick="timeRangeZoomOut()">Zoom Out</button><br>
     <button onclick="timeRangeSlideLeft()"> <<< Slide </button>
@@ -35,6 +36,7 @@
     <canvas id="bufferWindow_c" width="640" height="100" style="border:1px solid #000000" onmousemove="windowCanvasonMouseMove(event)";></canvas>
     <canvas id="videoEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas>
     <canvas id="loadEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
+  </div>
 
   <script src="canvas.js"></script>
   <script src="metrics.js"></script>
@@ -46,6 +48,7 @@
   var description = 'playlist: ' + "<a href=\"" + events.url + "\">" + events.url + "</a>" + '<br>replay: ' + "<a href=\"" + hlsLink + "\">" + hlsLink + "</a>";
   document.getElementById("HlsUrl").innerHTML = description;
   document.getElementById("HlsDate").innerHTML = "session Start Date:" + events.date;
+  metricsDisplayed=true;
   showMetrics();
   refreshCanvas();
   </script>
