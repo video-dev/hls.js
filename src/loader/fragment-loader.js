@@ -26,6 +26,7 @@ class FragmentLoader {
 
     load(frag) {
         this.frag = frag;
+        this.frag.loaded = 0;
         this.loader = new this.config.loader();
         this.loader.load(
             frag.url,
@@ -35,7 +36,8 @@ class FragmentLoader {
             this.loadtimeout.bind(this),
             this.config.fragLoadingTimeOut,
             this.config.fragLoadingMaxRetry,
-            this.config.fragLoadingRetryDelay
+            this.config.fragLoadingRetryDelay,
+            this.loadprogress.bind(this)
         );
     }
 
@@ -51,13 +53,21 @@ class FragmentLoader {
 
     loaderror(event) {
         observer.trigger(Event.FRAG_LOAD_ERROR, {
-            url: this.frag.url,
+            frag: this.frag,
             event: event
         });
     }
 
     loadtimeout() {
-        observer.trigger(Event.FRAG_LOAD_TIMEOUT, { url: this.frag.url });
+        observer.trigger(Event.FRAG_LOAD_TIMEOUT, { frag: this.frag });
+    }
+
+    loadprogress(event, stats) {
+        this.frag.loaded = stats.loaded;
+        observer.trigger(Event.FRAG_LOAD_PROGRESS, {
+            frag: this.frag,
+            stats: stats
+        });
     }
 }
 
