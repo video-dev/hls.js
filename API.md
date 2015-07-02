@@ -2,9 +2,9 @@
 ##Hello hls.js !
 
 ###first step : setup and support
-you need to do is to include ```dist/hls.{min}.js``` in your web page and check whether your browser is supporting [MediaSource Extensions][].
+first include ```dist/hls.{min}.js``` in your web page and check whether your browser is supporting [MediaSource Extensions][].
 [MediaSource Extensions]: http://w3c.github.io/media-source/
-this is performed by invoking a static method : ```Hls.isSupported()```
+just invoke the following static method : ```Hls.isSupported()```
 
 ```js
  <script src="dist/hls.{min}.js"></script>
@@ -15,8 +15,8 @@ this is performed by invoking a static method : ```Hls.isSupported()```
 </script>
 ```
 
-###second step: create instance and bind to video element
-you need to 
+###second step: instanciate hls object and bind it to ```<video>```
+let's
 
    - create a ```<video>``` element
    - create a new HLS object
@@ -33,9 +33,10 @@ you need to
     var hls = new Hls();
     // bind them together
     hls.attachVideo(video);
+    // MSE_ATTACHED event is fired by hls object once MediaSource is ready
     hls.on(hls.Events.MSE_ATTACHED,function() {
-		console.log("video and hls.js are now bound together !");
-     });
+		  console.log("video and hls.js are now bound together !");
+    });
  }
 </script>
 ```
@@ -70,21 +71,14 @@ video is controlled through HTML ```<video>``` element.
 
 HTMLVideoElement control and events could be used seamlessly.
 
+```js
+  video.play();
+```
 
 ###fifth step : error handling
 
 mmm we forgot something isn't it ?
-hls.js will fire events to signal errors, please refer to event description later in this page.
-
-
-
-```js
-    hls.on(hls.Events.MSE_ATTACHED,function() {
-
-     });
- }
-</script>
-```
+errors are signal using events, please refer to event description below
 
 
 ## Fine Tuning
