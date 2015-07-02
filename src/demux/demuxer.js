@@ -76,7 +76,6 @@ class Demuxer {
                     obj.audioCodec = ev.data.audioCodec;
                     obj.audioChannelCount = ev.data.audioChannelCount;
                 }
-
                 if (ev.data.videoMoov) {
                     obj.videoMoov = new Uint8Array(ev.data.videoMoov);
                     obj.videoCodec = ev.data.videoCodec;
@@ -97,10 +96,8 @@ class Demuxer {
                     nb: ev.data.nb
                 });
                 break;
-            case Event.FRAG_PARSED:
-                observer.trigger(Event.FRAG_PARSED);
-                break;
             default:
+                observer.trigger(ev.data.event, ev.data.data);
                 break;
         }
     }
