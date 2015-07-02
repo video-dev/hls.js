@@ -13,23 +13,28 @@ import observer             from './observer';
     this.onmp = this.onManifestParsed.bind(this);
     this.onfc = this.onFragmentChanged.bind(this);
     this.onfb = this.onFragmentBuffered.bind(this);
-    this.onflt = this.onFragmentLoadTimeout.bind(this);
+    this.onflea = this.onFragmentLoadEmergencyAborted.bind(this);
     this.onfle = this.onFragmentLoadError.bind(this);
     this.onfpsd = this.onFPSDrop.bind(this);
     observer.on(Event.MANIFEST_PARSED, this.onmp);
     observer.on(Event.FRAG_BUFFERED, this.onfb);
     observer.on(Event.FRAG_CHANGED, this.onfc);
     observer.on(Event.FRAG_LOAD_ERROR, this.onfle);
-    observer.on(Event.FRAG_LOAD_TIMEOUT, this.onflt);
+    observer.on(Event.FRAG_LOAD_EMERGENCY_ABORTED, this.onflea);
     observer.on(Event.FPS_DROP, this.onfpsd);
   }
 
   destroy() {
+    observer.off(Event.MANIFEST_PARSED, this.onmp);
+    observer.off(Event.FRAG_BUFFERED, this.onfb);
+    observer.off(Event.FRAG_CHANGED, this.onfc);
+    observer.off(Event.FRAG_LOAD_ERROR, this.onfle);
+    observer.off(Event.FRAG_LOAD_EMERGENCY_ABORTED, this.onflea);
+    observer.off(Event.FPS_DROP, this.onfpsd);
   }
 
   attachVideo(video) {
     this.video = video;
-
   }
 
   detachVideo() {
@@ -112,13 +117,13 @@ import observer             from './observer';
     stats.autoLevelCappingLast = this.hls.autoLevelCapping;
   }
 
-  onFragmentLoadTimeout() {
+  onFragmentLoadEmergencyAborted() {
     var stats = this._stats;
     if(stats) {
-      if(stats.fragLoadTimeout === undefined) {
-        stats.fragLoadTimeout =1;
+      if(stats.fragLoadEmergencyAborted === undefined) {
+        stats.fragLoadEmergencyAborted =1;
       } else {
-        stats.fragLoadTimeout++;
+        stats.fragLoadEmergencyAborted++;
       }
     }
   }

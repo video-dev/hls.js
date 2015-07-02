@@ -24,17 +24,17 @@ import {logger}             from '../utils/logger';
     }
   }
 
-  load(url,responseType,onSuccess,onError,onTimeout,timeout,maxRetry,retryDelay) {
+  load(url,responseType,onSuccess,onError,onTimeout,timeout,maxRetry,retryDelay,onProgress=null) {
     this.url = url;
     this.responseType = responseType;
     this.onSuccess = onSuccess;
+    this.onProgress = onProgress;
     this.onTimeout = onTimeout;
     this.onError = onError;
-    this.trequest = new Date();
+    this.stats = { trequest:new Date(), retry:0};
     this.timeout = timeout;
     this.maxRetry = maxRetry;
     this.retryDelay = retryDelay;
-    this.retry = 0;
     this.timeoutHandle = window.setTimeout(this.loadtimeout.bind(this),timeout);
     this.loadInternal();
   }
@@ -46,14 +46,15 @@ import {logger}             from '../utils/logger';
     xhr.onprogress = this.loadprogress.bind(this);
     xhr.open('GET', this.url , true);
     xhr.responseType = this.responseType;
-    this.tfirst = null;
-    this.loaded = 0;
+    this.stats.tfirst = null;
+    this.stats.loaded = 0;
     xhr.send();
   }
 
   loadsuccess(event) {
     window.clearTimeout(this.timeoutHandle);
-    this.onSuccess(event,{trequest : this.trequest, tfirst : this.tfirst, tload : new Date(), loaded : this.loaded, retry : this.retry});
+    this.stats.tload = new Date();
+    this.onSuccess(event,this.stats);
   }
 
   loaderror(event) {
@@ -73,15 +74,17 @@ import {logger}             from '../utils/logger';
 
   loadtimeout(event) {
     logger.log(`timeout while loading ${this.url}` );
-    this.onTimeout(event,{trequest : this.trequest, tfirst : this.tfirst, loaded : this.loaded});
+    this.onTimeout(event,this.stats);
   }
 
   loadprogress(event) {
-    if(this.tfirst === null) {
-      this.tfirst = new Date();
+    var stats = this.stats;
+    if(stats.tfirst === null) {
+      stats.tfirst = new Date();
     }
-    if(event.lengthComputable) {
-      this.loaded = event.loaded;
+    stats.loaded = event.loaded;
+    if(this.onProgress) {
+      this.onProgress(event, stats);
     }
   }
 }

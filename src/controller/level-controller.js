@@ -13,29 +13,25 @@
   constructor(hls) {
     this.playlistLoader = hls.playlistLoader;
     this.onml = this.onManifestLoaded.bind(this);
-    this.onfl = this.onFragmentLoaded.bind(this);
     this.onll = this.onLevelLoaded.bind(this);
+    this.onflp = this.onFragmentLoadProgress.bind(this);
     this.onfle = this.onFragmentLoadError.bind(this);
-    this.onflt = this.onFragmentLoadTimeout.bind(this);
     this.onllt = this.onLevelLoadTimeout.bind(this);
     this.onlle = this.onLevelLoadError.bind(this);
     this.ontick = this.tick.bind(this);
     observer.on(Event.MANIFEST_LOADED, this.onml);
-    observer.on(Event.FRAG_LOADED, this.onfl);
+    observer.on(Event.FRAG_LOAD_PROGRESS, this.onflp);
     observer.on(Event.FRAG_LOAD_ERROR, this.onfle);
-    observer.on(Event.FRAG_LOAD_TIMEOUT, this.onflt);
     observer.on(Event.LEVEL_LOADED, this.onll);
     observer.on(Event.LEVEL_LOAD_ERROR, this.onlle);
     observer.on(Event.LEVEL_LOAD_TIMEOUT, this.onllt);
     this._manualLevel = this._autoLevelCapping = -1;
-    //this.startLevel = startLevel;
   }
 
   destroy() {
     observer.removeListener(Event.MANIFEST_LOADED, this.onml);
-    observer.removeListener(Event.FRAG_LOADED, this.onfl);
+    observer.removeListener(Event.FRAG_LOAD_PROGRESS, this.onflp);
     observer.removeListener(Event.FRAG_LOAD_ERROR, this.onfle);
-    observer.removeListener(Event.FRAG_LOAD_TIMEOUT, this.onflt);
     observer.removeListener(Event.LEVEL_LOADED, this.onll);
     observer.removeListener(Event.LEVEL_LOAD_ERROR, this.onlle);
     observer.removeListener(Event.LEVEL_LOAD_TIMEOUT, this.onllt);
@@ -182,11 +178,11 @@
     this._startLevel = newLevel;
   }
 
-  onFragmentLoaded(event,data) {
+  onFragmentLoadProgress(event,data) {
     var stats = data.stats;
-    this.lastfetchduration = (stats.tload - stats.trequest)/1000;
+    this.lastfetchduration = (new Date() - stats.trequest)/1000;
     this.lastfetchlevel = data.frag.level;
-    this.lastbw = stats.length*8/this.lastfetchduration;
+    this.lastbw = stats.loaded*8/this.lastfetchduration;
     //console.log(`len:${stats.length},fetchDuration:${this.lastfetchduration},bw:${(this.lastbw/1000).toFixed(0)}`);
   }
 
@@ -195,12 +191,6 @@
     this.lastbw = 0;
     this.lastfetchduration = 0;
 
-  }
-
-  onFragmentLoadTimeout() {
-    logger.log(`level controller,frag load timeout: emergency switch-down for next fragment`);
-    this.lastbw = 0;
-    this.lastfetchduration = 0;
   }
 
   onLevelLoadError() {

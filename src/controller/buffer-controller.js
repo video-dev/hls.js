@@ -37,7 +37,6 @@
     this.onis = this.onInitSegment.bind(this);
     this.onfpg = this.onFragmentParsing.bind(this);
     this.onfp = this.onFragmentParsed.bind(this);
-    this.onflt = this.onFragmentLoadTimeout.bind(this);
     this.onfle = this.onFragmentLoadError.bind(this);
     this.ontick = this.tick.bind(this);
     observer.on(Event.MSE_ATTACHED, this.onmse);
@@ -79,7 +78,6 @@
     observer.on(Event.FRAG_PARSING_DATA, this.onfpg);
     observer.on(Event.FRAG_PARSED, this.onfp);
     observer.on(Event.FRAG_LOAD_ERROR, this.onfle);
-    observer.on(Event.FRAG_LOAD_TIMEOUT, this.onflt);
     observer.on(Event.LEVEL_LOADED, this.onll);
   }
 
@@ -118,7 +116,6 @@
     observer.removeListener(Event.LEVEL_LOADED, this.onll);
     observer.removeListener(Event.FRAG_PARSING_INIT_SEGMENT, this.onis);
     observer.removeListener(Event.FRAG_LOAD_ERROR, this.onfle);
-    observer.removeListener(Event.FRAG_LOAD_TIMEOUT, this.onflt);
   }
 
   tick() {
@@ -163,7 +160,7 @@
           pos = this.nextLoadPosition;
         }
         // determine next load level
-        if(this.startFragmentLoaded === false) {
+        if(this.startFragmentRequested === false) {
           level = this.startLevel;
         } else {
           // we are not at playback start, get next load level from level Controller
@@ -222,8 +219,13 @@
             logger.log(`Loading       ${frag.sn} of [${fragments[0].sn} ,${fragments[fragments.length-1].sn}],level ${level}`);
             //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
             frag.autoLevel = this.hls.autoLevelEnabled;
+            if(this.levels.length>1) {
+              frag.expectedLen = Math.round(frag.duration*this.levels[level].bitrate/8);
+              frag.trequest = new Date();
+            }
             this.frag = frag;
             this.level = level;
+            this.startFragmentRequested = true;
             this.fragmentLoader.load(frag);
             this.state = this.LOADING;
           }
@@ -237,7 +239,36 @@
         }
         break;
       case this.LOADING:
-        // nothing to do, wait for fragment retrieval
+        /*
+          monitor fragment retrieval time...
+          we compute expected time of arrival of the complete fragment.
+          we compare it to expected time of buffer starvation
+        */
+        var v = this.video, frag = this.frag;
+        /* only monitor frag retrieval time if
+        (video not paused OR first fragment being loaded) AND autoswitching enabled AND not lowest level AND multiple levels */
+        if(v && (!v.paused || this.loadedmetadata === false) && frag.autoLevel && this.level && this.levels.length>1 ) {
+          var requestDelay=new Date()-frag.trequest;
+          // monitor fragment load progress after half of expected fragment duration,to stabilize bitrate
+          if(requestDelay > 500*frag.duration) {
+            var loadRate = frag.loaded*1000/requestDelay; // byte/s
+            if(frag.expectedLen < frag.loaded) {
+              frag.expectedLen = frag.loaded;
+            }
+            var fragLoadedDelay =(frag.expectedLen-frag.loaded)/loadRate;
+            var pos = v.currentTime,bufferStarvationDelay=this.bufferInfo(pos).end-pos;
+            var fragLevel0LoadedDelay = frag.duration*this.levels[0].bitrate/(8*loadRate); //bps/Bps
+            /* if we have less than 2 frag duration in buffer and if frag loaded delay is greater than buffer starvation delay
+              ... and also bigger than duration needed to load fragment at level 0 ...*/
+            if(bufferStarvationDelay < 2*frag.duration && fragLoadedDelay > bufferStarvationDelay && fragLoadedDelay > fragLevel0LoadedDelay) {
+              // abort fragment loading ...
+              logger.log('loading too slow, abort fragment loading');
+              logger.log(`fragLoadedDelay/bufferStarvationDelay/fragLevel0LoadedDelay :${fragLoadedDelay.toFixed(1)}/${bufferStarvationDelay.toFixed(1)}/${fragLevel0LoadedDelay.toFixed(1)}`);
+              this.abortFragment();
+            }
+          }
+        }
+        break;
       case this.PARSING:
         // nothing to do, wait for fragment being parsed
         break;
@@ -585,9 +616,7 @@
       //if outside, cancel fragment loading, otherwise do nothing
       if(this.bufferInfo(this.video.currentTime).len === 0) {
         logger.log('seeking outside of buffer while fragment load in progress, cancel fragment load');
-        this.fragmentLoader.abort();
-        this.frag = null;
-        this.state = this.IDLE;
+        this.abortFragment();
       }
     }
     if(this.video) {
@@ -617,7 +646,7 @@
     }
     this.levels = data.levels;
     this.startLevelLoaded = false;
-    this.startFragmentLoaded = false;
+    this.startFragmentRequested = false;
     if(this.video) {
       this.start();
     }
@@ -689,7 +718,6 @@
         }
         this.demuxer.push(data.payload,currentLevel.audioCodec,currentLevel.videoCodec,start,this.frag.cc, this.level, duration);
       }
-      this.startFragmentLoaded = true;
     }
   }
 
@@ -771,13 +799,10 @@
 
   onFragmentLoadError() {
     logger.log('buffer controller: error while loading frag, retry ...');
-    this.fragmentLoader.abort();
-    this.state = this.IDLE;
-    this.frag = null;
+    this.abortFragment();
   }
 
-  onFragmentLoadTimeout() {
-    logger.log('buffer controller: timeout while loading frag, retry ...');
+  abortFragment() {
     this.fragmentLoader.abort();
     this.state = this.IDLE;
     this.frag = null;
