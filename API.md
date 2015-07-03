@@ -100,7 +100,7 @@ each error is categorized by :
     - ```false```if error is not fatal, hls.js will try to recover it
     - ```true```if error is fatal, an action is required to (try to) recover it.
  
- full details is described [below](#Errors)
+ full details is described [below](##Errors)
  
  
  see sample code below to listen to errors:
