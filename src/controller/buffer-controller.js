@@ -8,6 +8,7 @@
  import observer             from '../observer';
  import {logger}             from '../utils/logger';
  import Demuxer              from '../demux/demuxer';
+ import {ErrorTypes,ErrorDetails} from '../errors';
 
  class BufferController {
 
@@ -37,7 +38,7 @@
     this.onis = this.onInitSegment.bind(this);
     this.onfpg = this.onFragmentParsing.bind(this);
     this.onfp = this.onFragmentParsed.bind(this);
-    this.onfle = this.onFragmentLoadError.bind(this);
+    this.onerr = this.onError.bind(this);
     this.ontick = this.tick.bind(this);
     observer.on(Event.MSE_ATTACHED, this.onmse);
     observer.on(Event.MANIFEST_PARSED, this.onmp);
@@ -77,7 +78,7 @@
     observer.on(Event.FRAG_PARSING_INIT_SEGMENT, this.onis);
     observer.on(Event.FRAG_PARSING_DATA, this.onfpg);
     observer.on(Event.FRAG_PARSED, this.onfp);
-    observer.on(Event.FRAG_LOAD_ERROR, this.onfle);
+    observer.on(Event.ERROR, this.onerr);
     observer.on(Event.LEVEL_LOADED, this.onll);
   }
 
@@ -115,7 +116,7 @@
     observer.removeListener(Event.FRAG_PARSING_DATA, this.onfpg);
     observer.removeListener(Event.LEVEL_LOADED, this.onll);
     observer.removeListener(Event.FRAG_PARSING_INIT_SEGMENT, this.onis);
-    observer.removeListener(Event.FRAG_LOAD_ERROR, this.onfle);
+    observer.removeListener(Event.ERROR, this.onerr);
   }
 
   tick() {
@@ -186,7 +187,7 @@
             break;
           }
           // find fragment index, contiguous with end of buffer position
-          var fragments = levelInfo.fragments, frag, sliding = levelInfo.sliding, start = fragments[0].start + sliding;
+          let fragments = levelInfo.fragments, frag, sliding = levelInfo.sliding, start = fragments[0].start + sliding;
           // check if requested position is within seekable boundaries :
           // in case of live playlist we need to ensure that requested position is not located before playlist start
           //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.video.seeking}`);
@@ -244,7 +245,7 @@
           we compute expected time of arrival of the complete fragment.
           we compare it to expected time of buffer starvation
         */
-        var v = this.video, frag = this.frag;
+        let v = this.video,frag = this.frag;
         /* only monitor frag retrieval time if
         (video not paused OR first fragment being loaded) AND autoswitching enabled AND not lowest level AND multiple levels */
         if(v && (!v.paused || this.loadedmetadata === false) && frag.autoLevel && this.level && this.levels.length>1 ) {
@@ -255,8 +256,9 @@
             if(frag.expectedLen < frag.loaded) {
               frag.expectedLen = frag.loaded;
             }
+            pos = v.currentTime;
             var fragLoadedDelay =(frag.expectedLen-frag.loaded)/loadRate;
-            var pos = v.currentTime,bufferStarvationDelay=this.bufferInfo(pos).end-pos;
+            var bufferStarvationDelay=this.bufferInfo(pos).end-pos;
             var fragLevel0LoadedDelay = frag.duration*this.levels[0].bitrate/(8*loadRate); //bps/Bps
             /* if we have less than 2 frag duration in buffer and if frag loaded delay is greater than buffer starvation delay
               ... and also bigger than duration needed to load fragment at level 0 ...*/
@@ -293,7 +295,7 @@
               this.appendError++;
               if(this.appendError > 3) {
                 logger.log(`fail 3 times to append segment in sourceBuffer`);
-                observer.trigger(Event.FRAG_APPENDING_ERROR, {frag : this.frag});
+                observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_APPENDING_ERROR, fatal : true, frag : this.frag});
                 this.state = this.ERROR;
                 return;
               }
@@ -797,9 +799,12 @@
     this.tick();
   }
 
-  onFragmentLoadError() {
-    logger.log('buffer controller: error while loading frag, retry ...');
-    this.abortFragment();
+  onError(event,data) {
+    // abort fragment loading on errors
+    if(data.details === ErrorDetails.FRAG_LOAD_ERROR) {
+      logger.log('buffer controller: error while loading frag, abort loading ...');
+      this.abortFragment();
+    }
   }
 
   abortFragment() {
@@ -821,7 +826,7 @@
   onSourceBufferError(event) {
       logger.log(`sourceBuffer error:${event}`);
       this.state = this.ERROR;
-      observer.trigger(Event.FRAG_APPENDING_ERROR, {frag : this.frag});
+      observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_APPENDING_ERROR, fatal:true, frag : this.frag});
   }
 }
 

@@ -14,23 +14,23 @@ import observer             from './observer';
     this.onfc = this.onFragmentChanged.bind(this);
     this.onfb = this.onFragmentBuffered.bind(this);
     this.onflea = this.onFragmentLoadEmergencyAborted.bind(this);
-    this.onfle = this.onFragmentLoadError.bind(this);
+    this.onerr = this.onError.bind(this);
     this.onfpsd = this.onFPSDrop.bind(this);
     observer.on(Event.MANIFEST_PARSED, this.onmp);
     observer.on(Event.FRAG_BUFFERED, this.onfb);
     observer.on(Event.FRAG_CHANGED, this.onfc);
-    observer.on(Event.FRAG_LOAD_ERROR, this.onfle);
+    observer.on(Event.ERROR, this.onerr);
     observer.on(Event.FRAG_LOAD_EMERGENCY_ABORTED, this.onflea);
     observer.on(Event.FPS_DROP, this.onfpsd);
   }
 
   destroy() {
-    observer.off(Event.MANIFEST_PARSED, this.onmp);
-    observer.off(Event.FRAG_BUFFERED, this.onfb);
-    observer.off(Event.FRAG_CHANGED, this.onfc);
-    observer.off(Event.FRAG_LOAD_ERROR, this.onfle);
-    observer.off(Event.FRAG_LOAD_EMERGENCY_ABORTED, this.onflea);
-    observer.off(Event.FPS_DROP, this.onfpsd);
+    observer.removeListener(Event.MANIFEST_PARSED, this.onmp);
+    observer.removeListener(Event.FRAG_BUFFERED, this.onfb);
+    observer.removeListener(Event.FRAG_CHANGED, this.onfc);
+    observer.removeListener(Event.ERROR, this.onerr);
+    observer.removeListener(Event.FRAG_LOAD_EMERGENCY_ABORTED, this.onflea);
+    observer.removeListener(Event.FPS_DROP, this.onfpsd);
   }
 
   attachVideo(video) {
@@ -128,13 +128,22 @@ import observer             from './observer';
     }
   }
 
-  onFragmentLoadError() {
+  onError(event,data) {
     var stats = this._stats;
     if(stats) {
-      if(stats.fragLoadError === undefined) {
-        stats.fragLoadError =1;
+      // track all errors independently
+      if(stats[data.details] === undefined) {
+        stats[data.details] =1;
       } else {
-        stats.fragLoadError++;
+        stats[data.details]+=1;
+      }
+      // track fatal error
+      if(data.fatal) {
+        if(stats.fatalError === undefined) {
+            stats.fatalError=1;
+        } else {
+            stats.fatalError+=1;
+        }
       }
     }
   }

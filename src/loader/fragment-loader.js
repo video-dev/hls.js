@@ -5,6 +5,7 @@
 
 import Event                from '../events';
 import observer             from '../observer';
+import {ErrorTypes,ErrorDetails} from '../errors';
 
  class FragmentLoader {
 
@@ -32,7 +33,6 @@ import observer             from '../observer';
     this.loader.load(frag.url,'arraybuffer',this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), this.config.fragLoadingTimeOut, this.config.fragLoadingMaxRetry,this.config.fragLoadingRetryDelay,this.loadprogress.bind(this));
   }
 
-
   loadsuccess(event, stats) {
     var payload = event.currentTarget.response;
     stats.length = payload.byteLength;
@@ -43,11 +43,12 @@ import observer             from '../observer';
   }
 
   loaderror(event) {
-    observer.trigger(Event.FRAG_LOAD_ERROR, { frag : this.frag, event:event});
+    // fatal error if fail to load fragment at level 0
+    observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details : ErrorDetails.FRAG_LOAD_ERROR, fatal:!!this.frag.level,frag : this.frag, response:event});
   }
 
   loadtimeout() {
-   observer.trigger(Event.FRAG_LOAD_TIMEOUT, { frag : this.frag});
+    observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details : ErrorDetails.FRAG_LOAD_TIMEOUT, fatal:!!this.frag.level,frag : this.frag});
   }
 
   loadprogress(event, stats) {

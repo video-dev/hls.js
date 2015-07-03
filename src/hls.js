@@ -1,23 +1,35 @@
 /**
- * HLS engine
+ * HLS interface
  */
 'use strict';
 
-import Event                from './events';
-import StatsHandler         from './stats';
-import observer             from './observer';
-import PlaylistLoader       from './loader/playlist-loader';
-import BufferController     from './controller/buffer-controller';
-import LevelController      from './controller/level-controller';
-import FPSController        from './controller/fps-controller';
-import {logger,enableLogs}  from './utils/logger';
-import XhrLoader            from './utils/xhr-loader';
-//import MP4Inspect         from '/remux/mp4-inspector';
+import Event                      from './events';
+import {ErrorTypes,ErrorDetails}  from './errors';
+import StatsHandler               from './stats';
+import observer                   from './observer';
+import PlaylistLoader             from './loader/playlist-loader';
+import BufferController           from './controller/buffer-controller';
+import LevelController            from './controller/level-controller';
+import FPSController              from './controller/fps-controller';
+import {logger,enableLogs}        from './utils/logger';
+import XhrLoader                  from './utils/xhr-loader';
 
 class Hls {
 
   static isSupported() {
     return (window.MediaSource && MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"'));
+  }
+
+  static get Events() {
+    return Event;
+  }
+
+  static get ErrorTypes() {
+    return ErrorTypes;
+  }
+
+  static get ErrorDetails() {
+    return ErrorDetails;
   }
 
   constructor(config = {}) {
@@ -47,7 +59,6 @@ class Hls {
     this.bufferController = new BufferController(this);
     this.fpsController = new FPSController(this);
     this.statsHandler = new StatsHandler(this);
-    this.Events = Event;
     // observer setup
     this.on = observer.on.bind(observer);
     this.off = observer.removeListener.bind(observer);
@@ -118,8 +129,12 @@ class Hls {
     this.playlistLoader.load(url,null);
   }
 
-  recoverError() {
-    logger.log('try to recover error');
+  recoverNetworkError() {
+    logger.log('try to recover network Error');
+  }
+
+  recoverMediaError() {
+    logger.log('try to recover media Error');
     var video = this.video;
     this.detachVideo();
     this.attachVideo(video);

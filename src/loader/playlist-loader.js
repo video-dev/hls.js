@@ -5,6 +5,7 @@
 
 import Event                from '../events';
 import observer             from '../observer';
+import {ErrorTypes,ErrorDetails} from '../errors';
 //import {logger}             from '../utils/logger';
 
  class PlaylistLoader {
@@ -176,22 +177,33 @@ import observer             from '../observer';
                             id : id,
                             stats : stats});
         } else {
-          observer.trigger(Event.LOAD_ERROR, { url : url, response : 'no level found in manifest'});
+          observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details : ErrorDetails.MANIFEST_PARSING_ERROR, fatal:true, url : url, reason : 'no level found in manifest'});
         }
       }
     } else {
-      observer.trigger(Event.LOAD_ERROR, { url : url, response : event.currentTarget});
+      observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details : ErrorDetails.MANIFEST_PARSING_ERROR, fatal:true, url : url, reason : 'no EXTM3U delimiter'});
     }
   }
 
   loaderror(event) {
-    observer.trigger(Event.LEVEL_LOAD_ERROR, { url : this.url, response : event.currentTarget});
+    var details;
+    if(this.id) {
+      details = ErrorDetails.LEVEL_LOAD_ERROR;
+    } else {
+      details = ErrorDetails.MANIFEST_LOAD_ERROR;
+    }
+    observer.trigger(Event.ERROR, {type : ErrorTypes.NETWORK_ERROR, details:details, fatal:true, url:this.url, response:event.currentTarget});
   }
 
   loadtimeout() {
-   observer.trigger(Event.LEVEL_LOAD_TIMEOUT, { url : this.url});
+    var details;
+    if(this.id) {
+      details = ErrorDetails.LEVEL_LOAD_TIMEOUT;
+    } else {
+      details = ErrorDetails.MANIFEST_LOAD_TIMEOUT;
+    }
+   observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details:details, fatal:true,url : this.url});
   }
-
 }
 
 export default PlaylistLoader;

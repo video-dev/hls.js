@@ -29,18 +29,8 @@ export default {
   FRAG_BUFFERED :  'hlsFragBuffered',
   // fired when fragment matching with current video position is changing - data : { frag : fragment object }
   FRAG_CHANGED :  'hlsFragChanged',
-  // Identifier for playlist load error - data: { url : faulty URL, response : XHR response}
-  LEVEL_LOAD_ERROR :  'hlsLevelLoadError',
-  // Identifier for playlist load timeout - data: { url : faulty URL, response : XHR response}
-  LEVEL_LOAD_TIMEOUT :  'hlsLevelLoadTimeOut',
-  // Identifier for a level switch error - data: { level : faulty level Id, event : error description}
-  LEVEL_ERROR :  'hlsLevelError',
-  // Identifier for fragment load error - data: { frag : fragment object, response : XHR response}
-  FRAG_LOAD_ERROR :  'hlsFragLoadError',
-  // Identifier for a fragment parsing error event - data: parsing error description
-  FRAG_PARSING_ERROR :  'hlsFragParsingError',
-    // Identifier for a fragment appending error event - data: appending error description
-  FRAG_APPENDING_ERROR :  'hlsFragAppendingError',
     // Identifier for a FPS drop event - data: {curentDropped, currentDecoded, totalDroppedFrames}
-  FPS_DROP :  'hlsFPSDrop'
+  FPS_DROP :  'hlsFPSDrop',
+  // Identifier for an error event - data: { type : error type, details : error details, fatal : if true, hls.js cannot/will not try to recover, if false, hls.js will try to recover,other error specific data}
+  ERROR : 'hlsError'
 };

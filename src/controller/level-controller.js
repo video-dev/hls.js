@@ -6,7 +6,7 @@
  import Event                from '../events';
  import observer             from '../observer';
  import {logger}             from '../utils/logger';
-
+ import {ErrorTypes,ErrorDetails} from '../errors';
 
  class LevelController {
 
@@ -15,26 +15,20 @@
     this.onml = this.onManifestLoaded.bind(this);
     this.onll = this.onLevelLoaded.bind(this);
     this.onflp = this.onFragmentLoadProgress.bind(this);
-    this.onfle = this.onFragmentLoadError.bind(this);
-    this.onllt = this.onLevelLoadTimeout.bind(this);
-    this.onlle = this.onLevelLoadError.bind(this);
+    this.onerr = this.onError.bind(this);
     this.ontick = this.tick.bind(this);
     observer.on(Event.MANIFEST_LOADED, this.onml);
     observer.on(Event.FRAG_LOAD_PROGRESS, this.onflp);
-    observer.on(Event.FRAG_LOAD_ERROR, this.onfle);
     observer.on(Event.LEVEL_LOADED, this.onll);
-    observer.on(Event.LEVEL_LOAD_ERROR, this.onlle);
-    observer.on(Event.LEVEL_LOAD_TIMEOUT, this.onllt);
+    observer.on(Event.ERROR, this.onerr);
     this._manualLevel = this._autoLevelCapping = -1;
   }
 
   destroy() {
     observer.removeListener(Event.MANIFEST_LOADED, this.onml);
     observer.removeListener(Event.FRAG_LOAD_PROGRESS, this.onflp);
-    observer.removeListener(Event.FRAG_LOAD_ERROR, this.onfle);
     observer.removeListener(Event.LEVEL_LOADED, this.onll);
-    observer.removeListener(Event.LEVEL_LOAD_ERROR, this.onlle);
-    observer.removeListener(Event.LEVEL_LOAD_TIMEOUT, this.onllt);
+    observer.removeListener(Event.ERROR, this.onerr);
     if(this.timer) {
      clearInterval(this.timer);
     }
@@ -134,7 +128,7 @@
       }
     } else {
       // invalid level id given, trigger error
-      observer.trigger(Event.LEVEL_ERROR, { level : newLevel, event: 'invalid level idx'});
+      observer.trigger(Event.ERROR, { type : ErrorTypes.OTHER_ERROR, details: ErrorDetails.LEVEL_SWITCH_ERROR, level : newLevel, fatal:false, reason: 'invalid level idx'});
     }
  }
 
@@ -186,27 +180,32 @@
     //console.log(`len:${stats.length},fetchDuration:${this.lastfetchduration},bw:${(this.lastbw/1000).toFixed(0)}`);
   }
 
-  onFragmentLoadError() {
-    logger.log(`level controller,frag load error: emergency switch-down for next fragment`);
-    this.lastbw = 0;
-    this.lastfetchduration = 0;
-
+  onError(event,data) {
+    // try to recover not fatal errors
+    if(!data.fatal) {
+      switch(data.details) {
+        case ErrorDetails.FRAG_LOAD_ERROR:
+          logger.log(`level controller,frag load error: emergency switch-down for next fragment`);
+          this.lastbw = 0;
+          this.lastfetchduration = 0;
+          break;
+        case ErrorDetails.LEVEL_LOAD_ERROR:
+          logger.log(`level controller,level load error: try to reload same level`);
+          this._levels[this._level].loading=undefined;
+          this.playlistLoader.abort();
+          this.setLevelInternal(this._level);
+          break;
+        case ErrorDetails.LEVEL_LOAD_TIMEOUT:
+          logger.log(`level controller,level load timeout: try to reload same level`);
+          this._levels[this._level].loading=undefined;
+          this.playlistLoader.abort();
+          this.setLevelInternal(this._level);
+          break;
+        default:
+          break;
+      }
+    }
   }
-
-  onLevelLoadError() {
-    logger.log(`level controller,level load error: try to reload same level`);
-    this._levels[this._level].loading=undefined;
-    this.playlistLoader.abort();
-    this.setLevelInternal(this._level);
-  }
-
-  onLevelLoadTimeout() {
-    logger.log(`level controller,level load timeout: try to reload same level`);
-    this._levels[this._level].loading=undefined;
-    this.playlistLoader.abort();
-    this.setLevelInternal(this._level);
-  }
-
 
   onLevelLoaded(event,data) {
     // check if current playlist is a live playlist
