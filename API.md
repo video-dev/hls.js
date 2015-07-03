@@ -100,10 +100,10 @@ each error is categorized by :
     - ```false```if error is not fatal, hls.js will try to recover it
     - ```true```if error is fatal, an action is required to (try to) recover it.
  
- full details is described [below](#Runtime Errors)
+ full details is described [below](#Errors)
  
  
- see sample below to listen to errors
+ see sample code below to listen to errors:
 
 ```js
   hls.on(Hls.Events.ERROR,function(event,data) {
@@ -380,7 +380,7 @@ full list of Events available below :
     - data: { type : error Type, details : error details, fatal : is error fatal or not, other error specific data} 
 
 
-##Runtime Errors
+##Errors
 
 full list of Errors is described below:
 
