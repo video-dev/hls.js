@@ -67,7 +67,7 @@ class Hls {
         this.statsHandler = new StatsHandler(this);
         // observer setup
         this.on = observer.on.bind(observer);
-        this.off = observer.removeListener.bind(observer);
+        this.off = observer.off.bind(observer);
     }
 
     destroy() {

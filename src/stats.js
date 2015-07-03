@@ -24,12 +24,12 @@ class StatsHandler {
     }
 
     destroy() {
-        observer.removeListener(Event.MANIFEST_PARSED, this.onmp);
-        observer.removeListener(Event.FRAG_BUFFERED, this.onfb);
-        observer.removeListener(Event.FRAG_CHANGED, this.onfc);
-        observer.removeListener(Event.ERROR, this.onerr);
-        observer.removeListener(Event.FRAG_LOAD_EMERGENCY_ABORTED, this.onflea);
-        observer.removeListener(Event.FPS_DROP, this.onfpsd);
+        observer.off(Event.MANIFEST_PARSED, this.onmp);
+        observer.off(Event.FRAG_BUFFERED, this.onfb);
+        observer.off(Event.FRAG_CHANGED, this.onfc);
+        observer.off(Event.ERROR, this.onerr);
+        observer.off(Event.FRAG_LOAD_EMERGENCY_ABORTED, this.onflea);
+        observer.off(Event.FPS_DROP, this.onfpsd);
     }
 
     attachVideo(video) {

@@ -24,10 +24,10 @@ class LevelController {
     }
 
     destroy() {
-        observer.removeListener(Event.MANIFEST_LOADED, this.onml);
-        observer.removeListener(Event.FRAG_LOAD_PROGRESS, this.onflp);
-        observer.removeListener(Event.LEVEL_LOADED, this.onll);
-        observer.removeListener(Event.ERROR, this.onerr);
+        observer.off(Event.MANIFEST_LOADED, this.onml);
+        observer.off(Event.FRAG_LOAD_PROGRESS, this.onflp);
+        observer.off(Event.LEVEL_LOADED, this.onll);
+        observer.off(Event.ERROR, this.onerr);
         if (this.timer) {
             clearInterval(this.timer);
         }
