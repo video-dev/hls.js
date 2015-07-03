@@ -4,15 +4,16 @@ It relies on [HTML5 video][] and [MediaSource Extensions][] for playback.
 
 it works by transmuxing MPEG-2 Transport Stream into ISO BMFF (MP4) fragments.
 this transmuxing could be performed asynchronously using [Web Worker] if available in the browser.
- 
-hls.js is written in [ES6], and transpiled in ES5 using [Babel].
 
+hls.js does not need any player, it works directly on top of a standard HTML```<video>```element.
+ 
+hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
 
 [HTML5 video]: http://www.html5rocks.com/en/tutorials/video/basics/
 [MediaSource Extensions]: http://w3c.github.io/media-source/
 [HTTP Live Streaming]: http://en.wikipedia.org/wiki/HTTP_Live_Streaming
 [Web Worker]: http://caniuse.com/#search=worker
-[ES6]: https://github.com/ericdouglas/ES6-Learning#articles--tutorials
+[ECMAScript6]: https://github.com/ericdouglas/ES6-Learning#articles--tutorials
 [Babel]: https://babeljs.io
 
 ## Demo
@@ -21,20 +22,45 @@ hls.js is written in [ES6], and transpiled in ES5 using [Babel].
 ## Dependencies
 
 No external JS libs are needed. 
-prepackaged distribution is available in the [dist] (dist) folder:
+prepackaged build is included in the [dist] (dist) folder:
 
  - [hls.js] (dist/hls.js)
  - [hls.min.js] (dist/hls.min.js)
 
+if you want to bundle the application yourself, use node
+
+```sh
+git clone https://github.com/dailymotion/hls.js.git
+# setup dev environnement
+cd hls.js
+npm install
+# build dist/hls.js, watch file change for rebuild and launch demo page
+npm run dev
+# lint
+npm run lint
+# minify
+npm run minify
+```
+
+## Installation
+
+either directly include
+
+```dist/hls.js```or```dist/hls.min.js```
+or
+
+```sh
+npm install --save https://github.com/dailymotion/hls.js
+```
 ## compatibility
  hls.js is compatible with browsers supporting MSE with 'video/MP4' inputs.
 as of today, it is supported on:
 
  * Chrome for Android 34+
  * Chrome for Desktop 34+
- * Firefox for Desktop 38+ (with media.mediasource.enabled=true,media.mediasource.whitelist=false in about:config)
+ * Firefox for Desktop 38+ (with ```media.mediasource.whitelist=false``` in about:config)
  * IE11+ for Windows 8.1
- * Safari for Mac 8+ (still buggy)
+ * Safari for Mac 8+ (beta)
 
 ## Features
 
@@ -53,8 +79,8 @@ as of today, it is supported on:
     - every internal events could be monitored (Network Events,Video Events)
     - playback session metrics are also exposed
   - resilience to errors
-    - retry mechanism in case of fragment loading failure
-    - retry mechanism in case of video decoding errors
+    - retry mechanism embedded in the library
+    - recovery actions could be triggered fix fatal media or network errors
 
 ### Supported M3U8 tags
 
@@ -69,20 +95,17 @@ as of today, it is supported on:
 ## Getting Started
 
 ```js
- 
-<video id="video"></video>
 <script src="dist/hls.js"></script>
+<video id="video"></video>
 <script>
   if(Hls.isSupported()) {
     var video = document.getElementById('video');
-
     var hls = new Hls();
-    hls.loadSource('http://devimages.apple.com/iphone/samples/bipbop/bipbopall.m3u8');
+    hls.loadSource('http://www.streambox.fr/playlists/test_001/stream.m3u8');
     hls.attachVideo(video);
-    hls.on(hls.Events.MANIFEST_PARSED,function() {
+    hls.on(Hls.Events.MANIFEST_PARSED,function() {
       video.play();
   });
-
  }
 </script>
 ```
@@ -97,3 +120,9 @@ HTMLVideoElement control and events could be used seamlessly.
 ## API and Configuration Parameters
 
 hls.js can be configured and controlled easily, click [here](API.md) for details.
+
+
+## Design
+
+click [here](design.md) for details.
+
