@@ -46,7 +46,7 @@
   destroy() {
     this.stop();
     this.fragmentLoader.destroy();
-    observer.removeListener(Event.MANIFEST_PARSED, this.onmp);
+    observer.off(Event.MANIFEST_PARSED, this.onmp);
     // remove video listener
     if(this.video) {
       this.video.removeEventListener('seeking',this.onvseeking);
@@ -111,12 +111,12 @@
       this.demuxer.destroy();
       this.demuxer = null;
     }
-    observer.removeListener(Event.FRAG_LOADED, this.onfl);
-    observer.removeListener(Event.FRAG_PARSED, this.onfp);
-    observer.removeListener(Event.FRAG_PARSING_DATA, this.onfpg);
-    observer.removeListener(Event.LEVEL_LOADED, this.onll);
-    observer.removeListener(Event.FRAG_PARSING_INIT_SEGMENT, this.onis);
-    observer.removeListener(Event.ERROR, this.onerr);
+    observer.off(Event.FRAG_LOADED, this.onfl);
+    observer.off(Event.FRAG_PARSED, this.onfp);
+    observer.off(Event.FRAG_PARSING_DATA, this.onfpg);
+    observer.off(Event.LEVEL_LOADED, this.onll);
+    observer.off(Event.FRAG_PARSING_INIT_SEGMENT, this.onis);
+    observer.off(Event.ERROR, this.onerr);
   }
 
   tick() {
