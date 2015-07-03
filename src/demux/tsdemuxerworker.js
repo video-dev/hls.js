@@ -61,9 +61,11 @@ var TSDemuxerWorker = function(self) {
         // pass moof/mdat data as transferable object (no copy)
         self.postMessage(objData, [objData.moof, objData.mdat]);
     });
-    observer.on(Event.FRAG_PARSED, function(ev) {
-        var objData = { event: ev };
-        self.postMessage(objData);
+    observer.on(Event.FRAG_PARSED, function(event) {
+        self.postMessage({ event: event });
+    });
+    observer.on(Event.ERROR, function(event, data) {
+        self.postMessage({ event: event, data: data });
     });
 };
 

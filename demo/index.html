@@ -170,31 +170,20 @@
        document.getElementById("HlsStatus").innerHTML = 'loading manifest and attaching video element...';
        hls.loadSource(_url);
        hls.attachVideo(video);
-       hls.on(hls.Events.MSE_ATTACHED,function() {
+       hls.on(Hls.Events.MSE_ATTACHED,function() {
           bufferingIdx = -1;
           events.video.push({time : new Date() - t0, type : "MSE attached"});
        });
-       hls.on(hls.Events.FRAG_PARSING_INIT_SEGMENT,function(event,data) {
+       hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT,function(event,data) {
           showCanvas();
           var event = {time : new Date() - t0, type : "init segment"};
           events.video.push(event);
        });
-       hls.on(hls.Events.LOAD_ERROR,function(event,data) {
-          hls.destroy();
-          try {
-            document.getElementById("HlsStatus").innerHTML = "cannot Load <a href=\"" + data.url + "\">" + url + "</a><br>HTTP response code:" + data.response.status + "<br>" + data.response.statusText;
-              if(data.response.status === 0) {
-                document.getElementById("HlsStatus").innerHTML += "this is most probably a CORS issue, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin</a> Chrome Extension";
-              }
-          } catch(err) {
-            document.getElementById("HlsStatus").innerHTML = "cannot Load <a href=\"" + data.url + "\">" + url + "</a><br>Reason:Load " + data.event.type;
-          }
-       });
-       hls.on(hls.Events.LEVEL_SWITCH,function(event,data) {
+       hls.on(Hls.Events.LEVEL_SWITCH,function(event,data) {
           events.level.push({time : new Date() - t0, id : data.levelId, bitrate : Math.round(hls.levels[data.levelId].bitrate/1000)});
           updateLevelInfo();
        });
-       hls.on(hls.Events.MANIFEST_LOADED,function(event,data) {
+       hls.on(Hls.Events.MANIFEST_LOADED,function(event,data) {
           var event = {
             type : "manifest",
             name : "",
@@ -208,11 +197,11 @@
           events.load.push(event);
           refreshCanvas();
        });
-       hls.on(hls.Events.MANIFEST_PARSED,function(event,data) {
+       hls.on(Hls.Events.MANIFEST_PARSED,function(event,data) {
          document.getElementById("HlsStatus").innerHTML = "manifest successfully loaded," + hls.levels.length + " levels found";
          updateLevelInfo();
        });
-       hls.on(hls.Events.LEVEL_LOADED,function(event,data) {
+       hls.on(Hls.Events.LEVEL_LOADED,function(event,data) {
           //document.getElementById("HlsLevel").innerHTML = "manual level:" + hls.manualLevel + ",last loaded level:" + data.levelId;
           isLive = data.details.live;
           var event = {
@@ -228,7 +217,7 @@
           events.load.push(event);
           refreshCanvas();
        });
-       hls.on(hls.Events.FRAG_BUFFERED,function(event,data) {
+       hls.on(Hls.Events.FRAG_BUFFERED,function(event,data) {
           var event = {
             type : "fragment",
             id : data.frag.level,
@@ -251,30 +240,66 @@
           refreshCanvas();
           updateLevelInfo();
        });
-       hls.on(hls.Events.FRAG_CHANGED,function(event,data) {
+       hls.on(Hls.Events.FRAG_CHANGED,function(event,data) {
         var event = {time : new Date() - t0, type : 'frag changed', name : data.frag.sn + ' @ ' + data.frag.level };
         events.video.push(event);
         refreshCanvas();
         updateLevelInfo();
        });
-       hls.on(hls.Events.FRAG_PARSING_ERROR,function(event,data) {
-          hls.destroy();
-          document.getElementById("HlsStatus").innerHTML = "Parsing Error:" + data;
-          document.getElementById('buffered_c').width = 0;
-          videoError = true;
+
+       hls.on(Hls.Events.ERROR, function(event,data) {
+        switch(data.details) {
+          case Hls.ErrorDetails.MANIFEST_LOAD_ERROR:
+            try {
+              document.getElementById("HlsStatus").innerHTML = "cannot Load <a href=\"" + data.url + "\">" + url + "</a><br>HTTP response code:" + data.response.status + "<br>" + data.response.statusText;
+                if(data.response.status === 0) {
+                  document.getElementById("HlsStatus").innerHTML += "this is most probably a CORS issue, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin</a> Chrome Extension";
+                }
+            } catch(err) {
+              document.getElementById("HlsStatus").innerHTML = "cannot Load <a href=\"" + data.url + "\">" + url + "</a><br>Reason:Load " + data.event.type;
+            }
+            break;
+          case Hls.ErrorDetails.LEVEL_LOAD_ERROR:
+            document.getElementById("HlsStatus").innerHTML = "error while trying to load level playlist";
+            break;
+          case Hls.ErrorDetails.LEVEL_SWITCH_ERROR:
+            document.getElementById("HlsStatus").innerHTML = "error while trying to switch to level " + data.level;
+            break;
+          case Hls.ErrorDetails.FRAG_LOAD_ERROR:
+            document.getElementById("HlsStatus").innerHTML = "error while trying to load fragment " + data.frag.url;
+            break;
+          case Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT:
+            document.getElementById("HlsStatus").innerHTML = "timeout while trying to load level playlist";
+            break;
+          case Hls.ErrorDetails.FRAG_PARSING_ERROR:
+            hls.destroy();
+            document.getElementById("HlsStatus").innerHTML = "Parsing Error:" + data;
+            document.getElementById('buffered_c').width = 0;
+            videoError = true;
+            break;
+          case Hls.ErrorDetails.FRAG_APPENDING_ERROR:
+            document.getElementById("HlsStatus").innerHTML = "Frag Appending Error";
+            break;
+          default:
+            break;
+        }
+        if(data.fatal) {
+          switch(data.type) {
+            case Hls.ErrorTypes.MEDIA_ERROR:
+              document.getElementById("HlsStatus").innerHTML += ",try to recover media Error ...";
+              hls.recoverMediaError();
+              videoError = true;
+              break;
+            case Hls.ErrorTypes.NETWORK_ERROR:
+            default:
+              document.getElementById("HlsStatus").innerHTML += ", unrecoverable error, destroying context ...";
+              hls.destroy();
+              break;
+          }
+        }
        });
-       hls.on(hls.Events.FRAG_APPENDING_ERROR,function(event,data) {
-          document.getElementById("HlsStatus").innerHTML = "try to recover video Error (fragment appending)";
-          hls.recoverError();
-          videoError = true;
-       });
-       hls.on(hls.Events.LEVEL_LOAD_ERROR,function(event,data) {
-          document.getElementById("HlsStatus").innerHTML = "error while trying to load level playlist";
-       });
-       hls.on(hls.Events.LEVEL_LOAD_TIMEOUT,function(event,data) {
-          document.getElementById("HlsStatus").innerHTML = "timeout while trying to load level playlist";
-       });
-       hls.on(hls.Events.FPS_DROP,function(event,data) {
+
+       hls.on(Hls.Events.FPS_DROP,function(event,data) {
           var evt = {time : new Date() - t0, type : "frame drop", name : data.currentDropped + "/" + data.currentDecoded};
           events.video.push(evt);
        });
@@ -290,7 +315,7 @@
        video.addEventListener('durationchange', handleVideoEvent);
     } else {
       if(navigator.userAgent.toLowerCase().indexOf('firefox') !== -1) {
-      document.getElementById("HlsStatus").innerHTML = "you are using Firefox, it looks like MediaSource is not enabled,<br>please ensure the following keys are set appropriately in <b>about:config<br>media.mediasource.enabled=true<br>media.mediasource.ignore_codecs=true<br>media.mediasource.mp4.enabled=true<br>media.mediasource.youtubeonly=false</b>";
+      document.getElementById("HlsStatus").innerHTML = "you are using Firefox, it looks like MediaSource is not enabled,<br>please ensure the following keys are set appropriately in <b>about:config</b><br>media.mediasource.enabled=true<br>media.mediasource.mp4.enabled=true<br><b>media.mediasource.whitelist=false</b>";
       } else {
         document.getElementById("HlsStatus").innerHTML = "your Browser does not support MediaSourceExtension / MP4 mediasource";
       }
@@ -340,7 +365,7 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
               break;
             case mediaError.MEDIA_ERR_DECODE:
               errorTxt = "The video playback was aborted due to a corruption problem or because the video used features your browser did not support,try to recover video Error";
-              hls.recoverError();
+              hls.recoverMediaError();
               break;
             case mediaError.MEDIA_ERR_NETWORK:
               errorTxt = "A network error caused the video download to fail part-way";

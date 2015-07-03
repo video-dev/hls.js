@@ -15,10 +15,10 @@ just invoke the following static method : ```Hls.isSupported()```
 </script>
 ```
 
-###second step: instanciate hls object and bind it to ```<video>```
+###second step: instanciate hls object and bind it to```<video>```element
 let's
 
-   - create a ```<video>``` element
+   - create a```<video>```element
    - create a new HLS object
    - bind video element to this HLS object
 
@@ -34,7 +34,7 @@ let's
     // bind them together
     hls.attachVideo(video);
     // MSE_ATTACHED event is fired by hls object once MediaSource is ready
-    hls.on(hls.Events.MSE_ATTACHED,function() {
+    hls.on(Hls.Events.MSE_ATTACHED,function() {
 		  console.log("video and hls.js are now bound together !");
     });
  }
@@ -54,10 +54,10 @@ you need to provide manifest URL as below:
     var hls = new Hls();
     // bind them together
     hls.attachVideo(video);
-    hls.on(hls.Events.MSE_ATTACHED,function() {
+    hls.on(Hls.Events.MSE_ATTACHED,function() {
 		console.log("video and hls.js are now bound together !");
 		hls.loadSource("http://my.streamURL.com/playlist.m3u8");
-		hls.on(hls.Events.MANIFEST_PARSED, function(event,data) {
+		hls.on(Hls.Events.MANIFEST_PARSED, function(event,data) {
          console.log("manifest loaded, found " + data.levels.length + " quality level");
 		}
      });
@@ -77,9 +77,85 @@ HTMLVideoElement control and events could be used seamlessly.
 
 ###fifth step : error handling
 
-mmm we forgot something isn't it ?
-errors are signal using events, please refer to event description below
+all errors are signalled through a unique single event.
 
+each error is categorized by :
+
+  - its type:
+    - ```Hls.ErrorTypes.NETWORK_ERROR```for network related errors
+    - ```Hls.ErrorTypes.MEDIA_ERROR```for media/video related errors
+    - ```Hls.ErrorTypes.OTHER_ERROR```for all other errors
+  - its details: 
+    - ```Hls.ErrorDetails.MANIFEST_LOAD_ERROR```raised when manifest loading fails because of a network error
+    - ```Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT```raised when manifest loading fails because of a timeout
+    - ```Hls.ErrorDetails.MANIFEST_PARSING_ERROR```raised when manifest parsing failed to find proper content
+    - ```Hls.ErrorDetails.LEVEL_LOAD_ERROR```raised when level loading fails because of a network error
+    - ```Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT```raised when level loading fails because of a timeout
+    - ```Hls.ErrorDetails.LEVEL_SWITCH_ERROR```raised when level switching fails
+    - ```Hls.ErrorDetails.FRAG_LOAD_ERROR```raised when fragment loading fails because of a network error
+    - ```Hls.ErrorDetails.FRAG_LOAD_TIMEOUT```raised when fragment loading fails because of a timeout
+    - ```Hls.ErrorDetails.FRAG_PARSING_ERROR```raised when fragment parsing fails 
+    - ```Hls.ErrorDetails.FRAG_APPENDING_ERROR```raised when mp4 boxes appending in SourceBuffer fails
+  - its fatality:
+    - ```false```if error is not fatal, hls.js will try to recover it
+    - ```true```if error is fatal, an action is required to (try to) recover it.
+ 
+ full details is described [below](#Runtime Errors)
+ 
+ 
+ see sample below to listen to errors
+
+```js
+  hls.on(Hls.Events.ERROR,function(event,data) {
+
+  var errorType = data.type;
+  var errorDetails = data.details;
+  var errorFatal = data.fatal;
+
+    switch(data.details) {
+      case hls.ErrorDetails.FRAG_LOAD_ERROR:
+        // ....
+        break;
+      default:
+        break;  
+    }
+  }
+``` 
+
+#### Fatal Error Recovery
+
+hls.js provides means to 'try to' recover fatal network and media errors, through these 2 methods:
+
+##### ```hls.recoverNetworkError()```
+
+should be invoked to recover network error
+
+##### ```hls.recoverMediaError()```
+
+should be invoked to recover media error
+
+##### error recovery sample code 
+
+```js
+  hls.on(Hls.Events.ERROR,function(event,data) {
+    if(data.fatal) {
+      switch(data.type) {
+      case Hls.ErrorTypes.NETWORK_ERROR:
+      // try to recover network error
+        console.log("fatal network error encountered, try to recover");
+        hls.recoverNetworkError();
+        break;
+      case Hls.ErrorTypes.MEDIA_ERROR:
+        console.log("fatal media error encountered, try to recover");
+        hls.recoverMediaError();
+        break;
+      default:
+      // cannot recover
+        hls.destroy();
+        break;  
+    }
+  }
+```
 
 ## Fine Tuning
 
@@ -107,40 +183,40 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
 var hls = new Hls(config);
 ```
 
-#### debug
+#### ```debug```
 (default false)
 
 turn on debug logs on JS console 
-#### maxBufferLength
+#### ```maxBufferLength```
 (default 30s)
 
 maximum buffer Length in seconds. if buffer length is/become less than this value, a new fragment will be loaded.
-#### maxBufferSize
+#### ```maxBufferSize```
 (default 60 MB)
 
 maximum buffer size in bytes. if buffer size upfront is bigger than this value, no fragment will be loaded.
-#### enableWorker
+#### ```enableWorker```
 (default true)
 
 enable webworker (if available on browser) for TS demuxing/MP4 remuxing, to improve performance and avoid lag/frame drops.
-#### fragLoadingTimeOut/manifestLoadingTimeOut
+#### ```fragLoadingTimeOut```/```manifestLoadingTimeOut```
 (default 60000ms for fragment/10000ms for manifest)
 
 URL Loader timeout.
 A timeout callback will be triggered if loading duration exceeds this timeout.
 no further action will be done : the load operation will not be cancelled/aborted.
 It is up to the application to catch this event and treat it as needed.
-#### fragLoadingMaxRetry/manifestLoadingMaxRetry
+#### ```fragLoadingMaxRetry```/```manifestLoadingMaxRetry```
 (default 3)
 
 max nb of load retry
-#### fragLoadingRetryDelay/manifestLoadingRetryDelay
+#### ```fragLoadingRetryDelay```/```manifestLoadingRetryDelay```
 (default 500ms)
 
 initial delay between XmlHttpRequest error and first load retry (in ms)
 any I/O error will trigger retries every 500ms,1s,2s,4s,8s, ... capped to 64s (exponential backoff)
 
-#### loader
+#### ```loader```
 (default : standard XmlHttpRequest based URL loader)
 
 override standard URL loader by a custom one.
@@ -176,32 +252,32 @@ by default, hls.js handles quality switch automatically, using heuristics based 
 it is also possible to manually control quality swith using below API:
 
 
-#### hls.levels
+#### ```hls.levels```
 return array of available quality levels
 
-#### hls.currentLevel
+#### ```hls.currentLevel```
 get : return current playback quality level
 
 set : trigger an immediate quality level switch to new quality level. this will pause the video if it was playing, flush the whole buffer, and fetch fragment matching with current position and requested quality level. then resume the video if needed once fetched fragment will have been buffered.
 set to -1 for automatic level selection
 
-#### hls.nextLevel
+#### ```hls.nextLevel```
 get : return next playback quality level (playback quality level for next buffered fragment). return -1 if next fragment not buffered yet.
 
 set : trigger a quality level switch for next fragment. this could eventually flush already buffered next fragment
 set to -1 for automatic level selection
 
-#### hls.loadLevel
+#### ```hls.loadLevel```
 get : return last loaded fragment quality level.
 
 set : set quality level for next loaded fragment
 set to -1 for automatic level selection
 
-#### hls.firstLevel
+#### ```hls.firstLevel```
 
 get :  first level index (index of first level appearing in Manifest. it is usually defined as start level hint for player)
 
-#### hls.startLevel
+#### ```hls.startLevel```
 
 get/set :  start level index (level of first fragment that will be played back)
 
@@ -210,11 +286,11 @@ get/set :  start level index (level of first fragment that will be played back)
 
 default value is firstLevel
 
-#### hls.autoLevelEnabled
+#### ```hls.autoLevelEnabled```
 
 tell whether auto level selection is enabled or not
 
-#### hls.autoLevelCapping
+#### ```hls.autoLevelCapping```
 get/set : capping/max level value that could be used by automatic level selection algorithm
 
 default value is -1 (no level capping)
@@ -223,7 +299,7 @@ default value is -1 (no level capping)
 
 playback session analytics could be retrieved through two means.
 
-### hls.stats
+### ```hls.stats```
 get : return aggregated playback session stats
 
 ```js
@@ -270,50 +346,65 @@ hls.on(hls.Events.LEVEL_LOADED,function(event,data) {
 ```
 full list of Events available below :
 
-  - `hls.events.MSE_ATTACHED`  - fired when MediaSource has been succesfully attached to video element.
+  - `hls.Events.MSE_ATTACHED`  - fired when MediaSource has been succesfully attached to video element.
     -  data: { mediaSource }
-  - `hls.events.MANIFEST_LOADED`  - fired after manifest has been loaded
+  - `hls.Events.MANIFEST_LOADED`  - fired after manifest has been loaded
     -  data: { levels : [available quality levels] , url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
-  - `hls.events.MANIFEST_PARSED`  - fired after manifest has been parsed
+  - `hls.Events.MANIFEST_PARSED`  - fired after manifest has been parsed
     -  data: { levels : [available quality levels] , startLevel : playback start level, audiocodecswitch: true if different audio codecs used}
-  - `hls.events.LEVEL_LOADING`  - fired when a level playlist loading starts
+  - `hls.Events.LEVEL_LOADING`  - fired when a level playlist loading starts
     -  data: { levelId : id of level being loaded}
-  - `hls.events.LEVEL_LOADED`  - fired when a level playlist loading finishes
+  - `hls.Events.LEVEL_LOADED`  - fired when a level playlist loading finishes
     -  data: { details : levelDetails object, levelId : id of loaded level, stats : { trequest, tfirst, tload, mtime} }
-  - `hls.events.LEVEL_SWITCH`  - fired when a level switch is requested
+  - `hls.Events.LEVEL_SWITCH`  - fired when a level switch is requested
     -  data: { levelId : id of new level }
-  - `hls.events.FRAG_LOADING`  - fired when a fragment loading starts
+  - `hls.Events.FRAG_LOADING`  - fired when a fragment loading starts
     -  data: { frag : fragment object, { trequest, tfirst, loaded}}
-  - `hls.events.FRAG_LOAD_PROGRESS`  - fired when a fragment load is in progress
+  - `hls.Events.FRAG_LOAD_PROGRESS`  - fired when a fragment load is in progress
     - data: { frag : fragment object, stats : progress event }
-  - `hls.events.FRAG_LOADED`  - fired when a fragment loading is completed
+  - `hls.Events.FRAG_LOADED`  - fired when a fragment loading is completed
     -  data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length}}
-  - `hls.events.FRAG_PARSING_INIT_SEGMENT` - fired when Init Segment has been extracted from fragment
+  - `hls.Events.FRAG_PARSING_INIT_SEGMENT` - fired when Init Segment has been extracted from fragment
     -  data: { moov : moov MP4 box, codecs : codecs found while parsing fragment}    
-  - `hls.events.FRAG_PARSING_DATA`  - fired when moof/mdat have been extracted from fragment
+  - `hls.Events.FRAG_PARSING_DATA`  - fired when moof/mdat have been extracted from fragment
     -  data: { moof : moof MP4 box, mdat : mdat MP4 box, startPTS : PTS of first sample, endPTS : PTS of last sample, startDTS : DTS of first sample, endDTS : DTS of last sample, type : stream type (audio or video), nb : number of samples}
-  - `hls.events.FRAG_PARSED`  - fired when fragment parsing is completed
+  - `hls.Events.FRAG_PARSED`  - fired when fragment parsing is completed
     -  data: undefined
-  - `hls.events.FRAG_BUFFERED`  - fired when fragment remuxed MP4 boxes have all been appended into SourceBuffer
+  - `hls.Events.FRAG_BUFFERED`  - fired when fragment remuxed MP4 boxes have all been appended into SourceBuffer
     -  data: { frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length} }
-  - `hls.events.FRAG_CHANGED`  - fired when fragment matching with current video position is changing
+  - `hls.Events.FRAG_CHANGED`  - fired when fragment matching with current video position is changing
     -  data: { frag : fragment object }
-  - `hls.events.FRAG_LOAD_ERROR` - Identifier for fragment load error
-    -  data: { frag : fragment object, response : XHR response}
-  - `hls.events.FRAG_LOAD_TIMEOUT` - Identifier for fragment load timeout
-    -  data: { frag : fragment object,{ trequest, tfirst,loaded } }
-  - `hls.events.FRAG_PARSING_ERROR` - Identifier for a fragment parsing error
-    -  data: parsing error description
-  - `hls.events.FRAG_APPENDING_ERROR` - Identifier for a fragment appending error
-    -  data: appending error description    
-  - `hls.events.LEVEL_LOAD_ERROR` - Identifier for playlist load error
-    -  data: { url : faulty URL, response : XHR response}
-  - `hls.events.LEVEL_LOAD_TIMEOUT` - Identifier for playlist load timeout
-    -  data: { url : faulty URL,{ trequest, tfirst,loaded } }    
-  - `hls.events.LEVEL_ERROR` - Identifier for a level switch error
-    -  data: { level : faulty level Id, event : error description}
-  - `hls.events.FPS_DROP` - triggered when FPS drop in last monitoring period is higher than given threshold
+  - `hls.Events.FPS_DROP` - triggered when FPS drop in last monitoring period is higher than given threshold
     -  data: {curentDropped : nb of dropped frames in last monitoring period, currentDecoded: nb of decoded frames in last monitoring period, totalDropped : total dropped frames on this video element}
+  - `hls.Events.ERROR` -  Identifier for an error event
+    - data: { type : error Type, details : error details, fatal : is error fatal or not, other error specific data} 
+
+
+##Runtime Errors
+
+full list of Errors is described below:
+
+  - ```Hls.ErrorDetails.MANIFEST_LOAD_ERROR``` - raised when manifest loading fails because of a network error
+    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.MANIFEST_LOAD_ERROR```, fatal : ```true```,url : manifest URL, response : xhr response}
+  - ```Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT``` - raised when manifest loading fails because of a timeout
+    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT```, fatal : ```true```,url : manifest URL}
+  - ```Hls.ErrorDetails.MANIFEST_PARSING_ERROR``` - raised when manifest parsing failed to find proper content
+    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.MANIFEST_PARSING_ERROR```, fatal : ```true```,url : manifest URL, reason : parsing error reason}
+  - ```Hls.ErrorDetails.LEVEL_LOAD_ERROR```raised when level loading fails because of a network error
+    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.LEVEL_LOAD_ERROR```, fatal : ```true```,url : level URL, response : xhr response}
+  - ```Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT```raised when level loading fails because of a timeout
+    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT```, fatal : ```true```,url : level URL}
+  - ```Hls.ErrorDetails.LEVEL_SWITCH_ERROR```raised when level switching fails
+    - data: { type : ```OTHER_ERROR```, details : ```Hls.ErrorDetails.LEVEL_SWITCH_ERROR```, fatal : ```false```,level : failed level index, reason : failure reason}
+  - ```Hls.ErrorDetails.FRAG_LOAD_ERROR```raised when fragment loading fails because of a network error
+    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.FRAG_LOAD_ERROR```, fatal : ```true/false```,frag : fragment object, response : xhr response}
+  - ```Hls.ErrorDetails.FRAG_LOAD_TIMEOUT```raised when fragment loading fails because of a timeout
+    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.FRAG_LOAD_TIMEOUT```, fatal : ```true/false```,frag : fragment object}
+  - ```Hls.ErrorDetails.FRAG_PARSING_ERROR```raised when fragment parsing fails
+    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.FRAG_PARSING_ERROR```, fatal : ```true/false```, reason : failure reason}
+  - ```Hls.ErrorDetails.FRAG_APPENDING_ERROR```raised when mp4 boxes appending in SourceBuffer fails
+    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.FRAG_APPENDING_ERROR```, fatal : ```true```, frag : fragment object}
+
 
 ## Objects
 ### Level

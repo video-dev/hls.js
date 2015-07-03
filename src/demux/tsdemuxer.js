@@ -8,9 +8,9 @@ import Event from '../events';
 import ExpGolomb from './exp-golomb';
 // import Hex             from '../utils/hex';
 import MP4 from '../remux/mp4-generator';
-// import MP4Inspect      from '../remux/mp4-inspector';
 import observer from '../observer';
 import { logger } from '../utils/logger';
+import { ErrorTypes, ErrorDetails } from '../errors';
 
 class TSDemuxer {
     constructor() {
@@ -132,7 +132,12 @@ class TSDemuxer {
                 }
             }
         } else {
-            logger.log('parsing error');
+            observer.trigger(Event.ERROR, {
+                type: ErrorTypes.MEDIA_ERROR,
+                details: ErrorDetails.FRAG_PARSING_ERROR,
+                fatal: false,
+                reason: 'TS packet did not start with 0x47'
+            });
         }
     }
 
@@ -593,10 +598,12 @@ class TSDemuxer {
                 }
             }
         } else {
-            observer.trigger(
-                Event.FRAG_PARSING_ERROR,
-                'Stream did not start with ADTS header.'
-            );
+            observer.trigger(Event.ERROR, {
+                type: ErrorTypes.MEDIA_ERROR,
+                details: ErrorDetails.FRAG_PARSING_ERROR,
+                fatal: false,
+                reason: 'AAC PES did not start with ADTS header.'
+            });
             return;
         }
         if (!this._initSegGenerated) {

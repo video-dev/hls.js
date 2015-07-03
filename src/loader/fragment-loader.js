@@ -5,6 +5,7 @@
 
 import Event from '../events';
 import observer from '../observer';
+import { ErrorTypes, ErrorDetails } from '../errors';
 
 class FragmentLoader {
     constructor(config) {
@@ -52,14 +53,23 @@ class FragmentLoader {
     }
 
     loaderror(event) {
-        observer.trigger(Event.FRAG_LOAD_ERROR, {
+        // fatal error if fail to load fragment at level 0
+        observer.trigger(Event.ERROR, {
+            type: ErrorTypes.NETWORK_ERROR,
+            details: ErrorDetails.FRAG_LOAD_ERROR,
+            fatal: !!this.frag.level,
             frag: this.frag,
-            event: event
+            response: event
         });
     }
 
     loadtimeout() {
-        observer.trigger(Event.FRAG_LOAD_TIMEOUT, { frag: this.frag });
+        observer.trigger(Event.ERROR, {
+            type: ErrorTypes.NETWORK_ERROR,
+            details: ErrorDetails.FRAG_LOAD_TIMEOUT,
+            fatal: !!this.frag.level,
+            frag: this.frag
+        });
     }
 
     loadprogress(event, stats) {
