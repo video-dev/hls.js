@@ -115,7 +115,7 @@ import {ErrorTypes,ErrorDetails} from '../errors';
   }
 
   parseLevelPlaylist(string, baseurl, id) {
-    var currentSN = 0,totalduration = 0, level = { url : baseurl, fragments : [], live : true}, result, regexp, cc = 0;
+    var currentSN = 0,totalduration = 0, level = { url : baseurl, fragments : [], live : true, startSN : 0}, result, regexp, cc = 0;
     regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):([\d\.]+)[^\r\n]*[\r\n]+([^\r\n]+)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))/g;
     while((result = regexp.exec(string)) !== null){
       result.shift();
