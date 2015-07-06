@@ -8,6 +8,7 @@ import { ErrorTypes, ErrorDetails } from './errors';
 import StatsHandler from './stats';
 import observer from './observer';
 import PlaylistLoader from './loader/playlist-loader';
+import FragmentLoader from './loader/fragment-loader';
 import BufferController from './controller/buffer-controller';
 import LevelController from './controller/level-controller';
 import FPSController from './controller/fps-controller';
@@ -61,6 +62,7 @@ class Hls {
         enableLogs(config.debug);
         this.config = config;
         this.playlistLoader = new PlaylistLoader(this);
+        this.fragmentLoader = new FragmentLoader(this);
         this.levelController = new LevelController(this);
         this.bufferController = new BufferController(this);
         this.fpsController = new FPSController(this);
@@ -71,22 +73,12 @@ class Hls {
     }
 
     destroy() {
-        if (this.playlistLoader) {
-            this.playlistLoader.destroy();
-            this.playlistLoader = null;
-        }
-        if (this.bufferController) {
-            this.bufferController.destroy();
-            this.bufferController = null;
-        }
-        if (this.levelController) {
-            this.levelController.destroy();
-            this.levelController = null;
-        }
-        if (this.fpsController) {
-            this.fpsController.destroy();
-            this.fpsController = null;
-        }
+        this.playlistLoader.destroy();
+        this.fragmentLoader.destroy();
+        this.levelController.destroy();
+        this.bufferController.destroy();
+        this.fpsController.destroy();
+        this.statsHandler.destroy();
         this.unloadSource();
         this.detachVideo();
         observer.removeAllListeners();

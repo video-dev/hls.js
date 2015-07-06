@@ -367,7 +367,7 @@ full list of Events available below :
   - `Hls.Events.LEVEL_SWITCH`  - fired when a level switch is requested
     -  data: { levelId : id of new level }
   - `Hls.Events.FRAG_LOADING`  - fired when a fragment loading starts
-    -  data: { frag : fragment object, { trequest, tfirst, loaded}}
+    -  data: { frag : fragment object}
   - `Hls.Events.FRAG_LOAD_PROGRESS`  - fired when a fragment load is in progress
     - data: { frag : fragment object, stats : progress event }
   - `Hls.Events.FRAG_LOADED`  - fired when a fragment loading is completed

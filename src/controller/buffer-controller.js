@@ -4,7 +4,6 @@
  */
 
 import Event from '../events';
-import FragmentLoader from '../loader/fragment-loader';
 import observer from '../observer';
 import { logger } from '../utils/logger';
 import Demuxer from '../demux/demuxer';
@@ -24,7 +23,6 @@ class BufferController {
         this.levelController = hls.levelController;
         this.config = hls.config;
         this.startPosition = 0;
-        this.fragmentLoader = new FragmentLoader(hls);
         this.hls = hls;
         // Source Buffer listeners
         this.onsbue = this.onSourceBufferUpdateEnd.bind(this);
@@ -44,7 +42,6 @@ class BufferController {
     }
     destroy() {
         this.stop();
-        this.fragmentLoader.destroy();
         observer.off(Event.MANIFEST_PARSED, this.onmp);
         // remove video listener
         if (this.video) {
@@ -85,8 +82,12 @@ class BufferController {
         this.mp4segments = [];
         this.flushRange = [];
         this.bufferRange = [];
-        this.frag = null;
-        this.fragmentLoader.abort();
+        if (this.frag) {
+            if (this.frag.loader) {
+                this.frag.loader.abort();
+            }
+            this.frag = null;
+        }
         this.flushBufferCounter = 0;
         if (this.sourceBuffer) {
             for (var type in this.sourceBuffer) {
@@ -249,7 +250,7 @@ class BufferController {
                         this.frag = frag;
                         this.level = level;
                         this.startFragmentRequested = true;
-                        this.fragmentLoader.load(frag);
+                        observer.trigger(Event.FRAG_LOADING, { frag: frag });
                         this.state = this.LOADING;
                     }
                 }
@@ -626,7 +627,9 @@ class BufferController {
             this.previouslyPaused = this.video.paused;
             this.video.pause();
         }
-        this.fragmentLoader.abort();
+        if (this.frag && this.frag.loader) {
+            this.frag.loader.abort();
+        }
         // flush everything
         this.flushRange.push({ start: 0, end: Number.POSITIVE_INFINITY });
         // trigger a sourceBuffer flush
@@ -963,9 +966,11 @@ class BufferController {
     }
 
     abortFragment() {
-        this.fragmentLoader.abort();
+        if (this.frag && this.frag.loader) {
+            this.frag.loader.abort();
+            this.frag = null;
+        }
         this.state = this.IDLE;
-        this.frag = null;
     }
 
     onSourceBufferUpdateEnd() {

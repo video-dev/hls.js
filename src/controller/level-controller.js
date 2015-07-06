@@ -10,6 +10,7 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 
 class LevelController {
     constructor(hls) {
+        this.hls = hls;
         this.onml = this.onManifestLoaded.bind(this);
         this.onll = this.onLevelLoaded.bind(this);
         this.onflp = this.onFragmentLoadProgress.bind(this);
