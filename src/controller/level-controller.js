@@ -207,6 +207,13 @@ class LevelController {
                     this.lastbw = 0;
                     this.lastfetchduration = 0;
                     break;
+                case ErrorDetails.FRAG_LOAD_TIMEOUT:
+                    logger.log(
+                        `level controller,frag load timeout: emergency switch-down for next fragment`
+                    );
+                    this.lastbw = 0;
+                    this.lastfetchduration = 0;
+                    break;
                 case ErrorDetails.LEVEL_LOAD_ERROR:
                     logger.log(
                         `level controller,level load error: try to reload same level`
