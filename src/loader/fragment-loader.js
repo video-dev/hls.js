@@ -22,12 +22,6 @@ class FragmentLoader {
         observer.off(Event.FRAG_LOADING, this.onfl);
     }
 
-    abort() {
-        if (this.loader) {
-            this.loader.abort();
-        }
-    }
-
     onFragLoading(event, data) {
         var frag = data.frag;
         this.frag = frag;
@@ -62,6 +56,7 @@ class FragmentLoader {
     loaderror(event) {
         // if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal
         let fatal = !(this.hls.autoLevelEnabled && this.frag.level);
+        this.loader.abort();
         observer.trigger(Event.ERROR, {
             type: ErrorTypes.NETWORK_ERROR,
             details: ErrorDetails.FRAG_LOAD_ERROR,
@@ -74,6 +69,7 @@ class FragmentLoader {
     loadtimeout() {
         // if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal
         let fatal = !(this.hls.autoLevelEnabled && this.frag.level);
+        this.loader.abort();
         observer.trigger(Event.ERROR, {
             type: ErrorTypes.NETWORK_ERROR,
             details: ErrorDetails.FRAG_LOAD_TIMEOUT,

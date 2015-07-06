@@ -35,12 +35,6 @@ class PlaylistLoader {
         this.load(data.url, data.level);
     }
 
-    abort() {
-        if (this.loader) {
-            this.loader.abort();
-        }
-    }
-
     load(url, requestId) {
         var config = this.hls.config;
         this.url = url;
@@ -259,13 +253,15 @@ class PlaylistLoader {
         } else {
             details = ErrorDetails.MANIFEST_LOAD_ERROR;
         }
+        this.loader.abort();
         observer.trigger(Event.ERROR, {
             type: ErrorTypes.NETWORK_ERROR,
             details: details,
             fatal: true,
             url: this.url,
             loader: this.loader,
-            response: event.currentTarget
+            response: event.currentTarget,
+            level: this.id
         });
     }
 
@@ -276,12 +272,14 @@ class PlaylistLoader {
         } else {
             details = ErrorDetails.MANIFEST_LOAD_TIMEOUT;
         }
+        this.loader.abort();
         observer.trigger(Event.ERROR, {
             type: ErrorTypes.NETWORK_ERROR,
             details: details,
             fatal: true,
             url: this.url,
-            loader: this.loader
+            loader: this.loader,
+            level: this.id
         });
     }
 }
