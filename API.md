@@ -157,6 +157,12 @@ should be invoked to recover media error
   }
 ```
 
+###final step : destroying, switching between streams
+
+```hls.destroy()``` should be called to free used resources and destroy hls context.
+
+
+
 ## Fine Tuning
 
 configuration parameters could be provided to hls.js upon instantiation of Hls Object.
