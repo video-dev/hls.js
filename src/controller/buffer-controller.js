@@ -25,7 +25,7 @@
     this.levelController = hls.levelController;
     this.config = hls.config;
     this.startPosition = 0;
-    this.fragmentLoader = new FragmentLoader(hls.config);
+    this.fragmentLoader = new FragmentLoader(hls);
     this.hls = hls;
     // Source Buffer listeners
     this.onsbue = this.onSourceBufferUpdateEnd.bind(this);
