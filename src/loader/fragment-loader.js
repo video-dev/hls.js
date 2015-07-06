@@ -11,6 +11,8 @@ import {ErrorTypes,ErrorDetails} from '../errors';
 
   constructor(hls) {
     this.hls=hls;
+    this.onfl = this.onFragLoading.bind(this);
+    observer.on(Event.FRAG_LOADING, this.onfl);
   }
 
   destroy() {
@@ -18,6 +20,7 @@ import {ErrorTypes,ErrorDetails} from '../errors';
       this.loader.destroy();
       this.loader = null;
     }
+    observer.off(Event.FRAG_LOADING, this.onfl);
   }
 
   abort() {
@@ -26,17 +29,20 @@ import {ErrorTypes,ErrorDetails} from '../errors';
     }
   }
 
-  load(frag) {
+  onFragLoading(event,data) {
+    var frag = data.frag;
     this.frag = frag;
     this.frag.loaded = 0;
     var config = this.hls.config;
-    this.loader = new config.loader();
+    frag.loader = this.loader = new config.loader();
     this.loader.load(frag.url,'arraybuffer',this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.fragLoadingTimeOut, config.fragLoadingMaxRetry,config.fragLoadingRetryDelay,this.loadprogress.bind(this));
   }
 
   loadsuccess(event, stats) {
     var payload = event.currentTarget.response;
     stats.length = payload.byteLength;
+    // detach fragment loader on load success
+    this.frag.loader = undefined;
     observer.trigger(Event.FRAG_LOADED,
                     { payload : payload,
                       frag : this.frag ,
