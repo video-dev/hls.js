@@ -29,7 +29,7 @@ design idea is pretty simple :
         - monitor fragment loading speed:
          - "expected time of fragment load completion" is computed using "fragment loading instant bandwidth".
          - this time is compared to the "expected time of buffer starvation".
-         - if we have less than 2 fragments buffered and if "expected time of fragment load completion" is bigger than "expected time of buffer starvation" and also bigger than duration needed to load fragment at level 0 (lowest quality level), current fragment loading is aborted, and an emergency switch down is triggered.
+         - if we have less than 2 fragments buffered and if "expected time of fragment load completion" is bigger than "expected time of buffer starvation" and also bigger than duration needed to load fragment at next quality level (determined by auto quality switch algorithm), current fragment loading is aborted, and an emergency switch down is triggered.
         - trigger fragment parsing (TS demuxing and remuxing in MP4 boxes) upon loading completion
         - trigger MP4 boxes appending in [SourceBuffer](http://www.w3.org/TR/media-source/#sourcebuffer) upon fragment parsing completion.
 
