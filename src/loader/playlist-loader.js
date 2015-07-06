@@ -12,7 +12,10 @@ import {ErrorTypes,ErrorDetails} from '../errors';
 
   constructor(hls) {
     this.hls = hls;
-    this.manifestLoaded = false;
+    this.onml = this.onManifestLoading.bind(this);
+    this.onll = this.onLevelLoading.bind(this);
+    observer.on(Event.MANIFEST_LOADING, this.onml);
+    observer.on(Event.LEVEL_LOADING, this.onll);
   }
 
   destroy() {
@@ -21,6 +24,17 @@ import {ErrorTypes,ErrorDetails} from '../errors';
       this.loader = null;
     }
     this.url = this.id = null;
+    observer.off(Event.MANIFEST_LOADING, this.onml);
+    observer.off(Event.LEVEL_LOADING, this.onll);
+  }
+
+  onManifestLoading(event,data) {
+    this.load(data.url,null);
+  }
+
+
+  onLevelLoading(event,data) {
+    this.load(data.url,data.level);
   }
 
   abort() {
@@ -192,7 +206,7 @@ import {ErrorTypes,ErrorDetails} from '../errors';
     } else {
       details = ErrorDetails.MANIFEST_LOAD_ERROR;
     }
-    observer.trigger(Event.ERROR, {type : ErrorTypes.NETWORK_ERROR, details:details, fatal:true, url:this.url, response:event.currentTarget});
+    observer.trigger(Event.ERROR, {type : ErrorTypes.NETWORK_ERROR, details:details, fatal:true, url:this.url, loader : this.loader, response:event.currentTarget});
   }
 
   loadtimeout() {
@@ -202,7 +216,7 @@ import {ErrorTypes,ErrorDetails} from '../errors';
     } else {
       details = ErrorDetails.MANIFEST_LOAD_TIMEOUT;
     }
-   observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details:details, fatal:true,url : this.url});
+   observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details:details, fatal:true,url : this.url, loader: this.loader});
   }
 }
 

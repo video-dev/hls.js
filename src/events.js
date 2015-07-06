@@ -1,11 +1,13 @@
 export default {
   // fired when MediaSource has been succesfully attached to video element - data: { mediaSource }
   MSE_ATTACHED : 'hlsMediaSourceAttached',
+  // fired to signal that a manifest loading starts - data: { url : manifestURL}
+  MANIFEST_LOADING  : 'hlsManifestLoading',
   // fired after manifest has been loaded - data: { levels : [available quality levels] , url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
   MANIFEST_LOADED  : 'hlsManifestLoaded',
   // fired after manifest has been parsed - data: { levels : [available quality levels] , startLevel : playback start level, audiocodecswitch: true if different audio codecs used}
   MANIFEST_PARSED  : 'hlsManifestParsed',
-  // fired when a level playlist loading starts - data: { levelId : id of level being loaded}
+  // fired when a level playlist loading starts - data: { url : level URL  level : id of level being loaded}
   LEVEL_LOADING    : 'hlsLevelLoading',
   // fired when a level playlist loading finishes - data: { details : levelDetails object, levelId : id of loaded level, stats : { trequest, tfirst, tload, mtime} }
   LEVEL_LOADED :  'hlsLevelLoaded',
