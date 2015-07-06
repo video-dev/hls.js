@@ -314,6 +314,8 @@ class BufferController {
                                 )}/${fragLevel0LoadedDelay.toFixed(1)}`
                             );
                             this.abortFragment();
+                            // switch back to IDLE state to request new fragment at lowest level
+                            this.state = this.IDLE;
                         }
                     }
                 }
@@ -716,6 +718,8 @@ class BufferController {
                     'seeking outside of buffer while fragment load in progress, cancel fragment load'
                 );
                 this.abortFragment();
+                // switch to IDLE state to load new fragment
+                this.state = this.IDLE;
             }
         }
         if (this.video) {
@@ -956,12 +960,21 @@ class BufferController {
     }
 
     onError(event, data) {
-        // abort fragment loading on errors
-        if (data.details === ErrorDetails.FRAG_LOAD_ERROR) {
-            logger.log(
-                'buffer controller: error while loading frag, abort loading ...'
-            );
-            this.abortFragment();
+        switch (data.details) {
+            // abort fragment loading on errors
+            case ErrorDetails.FRAG_LOAD_ERROR:
+            case ErrorDetails.FRAG_LOAD_TIMEOUT:
+                logger.log(
+                    `buffer controller: ${
+                        data.details
+                    } while loading frag, abort loading ...`
+                );
+                this.abortFragment();
+                // if fatal error, stop processing, otherwise move to IDLE to retry loading
+                this.state = data.fatal ? this.ERROR : this.IDLE;
+                break;
+            default:
+                break;
         }
     }
 
@@ -970,7 +983,6 @@ class BufferController {
             this.frag.loader.abort();
             this.frag = null;
         }
-        this.state = this.IDLE;
     }
 
     onSourceBufferUpdateEnd() {
