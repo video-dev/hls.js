@@ -285,16 +285,17 @@
             pos = v.currentTime;
             var fragLoadedDelay =(frag.expectedLen-frag.loaded)/loadRate;
             var bufferStarvationDelay=this.bufferInfo(pos).end-pos;
-            var fragLevel0LoadedDelay = frag.duration*this.levels[0].bitrate/(8*loadRate); //bps/Bps
+            var fragLevelNextLoadedDelay = frag.duration*this.levels[this.levelController.nextLevel()].bitrate/(8*loadRate); //bps/Bps
             /* if we have less than 2 frag duration in buffer and if frag loaded delay is greater than buffer starvation delay
-              ... and also bigger than duration needed to load fragment at level 0 ...*/
-            if(bufferStarvationDelay < 2*frag.duration && fragLoadedDelay > bufferStarvationDelay && fragLoadedDelay > fragLevel0LoadedDelay) {
+              ... and also bigger than duration needed to load fragment at next level ...*/
+            if(bufferStarvationDelay < 2*frag.duration && fragLoadedDelay > bufferStarvationDelay && fragLoadedDelay > fragLevelNextLoadedDelay) {
               // abort fragment loading ...
               logger.log('loading too slow, abort fragment loading');
-              logger.log(`fragLoadedDelay/bufferStarvationDelay/fragLevel0LoadedDelay :${fragLoadedDelay.toFixed(1)}/${bufferStarvationDelay.toFixed(1)}/${fragLevel0LoadedDelay.toFixed(1)}`);
+              logger.log(`fragLoadedDelay/bufferStarvationDelay/fragLevelNextLoadedDelay :${fragLoadedDelay.toFixed(1)}/${bufferStarvationDelay.toFixed(1)}/${fragLevelNextLoadedDelay.toFixed(1)}`);
               //abort fragment loading
               frag.loader.abort();
               this.frag = null;
+              observer.trigger(Event.FRAG_LOAD_EMERGENCY_ABORTED, { frag: frag });
               // switch back to IDLE state to request new fragment at lowest level
               this.state = this.IDLE;
             }
