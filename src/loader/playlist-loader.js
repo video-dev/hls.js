@@ -137,7 +137,7 @@ class PlaylistLoader {
     parseLevelPlaylist(string, baseurl, id) {
         var currentSN = 0,
             totalduration = 0,
-            level = { url: baseurl, fragments: [], live: true },
+            level = { url: baseurl, fragments: [], live: true, startSN: 0 },
             result,
             regexp,
             cc = 0;
