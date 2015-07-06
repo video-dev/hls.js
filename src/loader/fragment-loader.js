@@ -9,8 +9,8 @@ import {ErrorTypes,ErrorDetails} from '../errors';
 
  class FragmentLoader {
 
-  constructor(config) {
-    this.config=config;
+  constructor(hls) {
+    this.hls=hls;
   }
 
   destroy() {
@@ -29,8 +29,9 @@ import {ErrorTypes,ErrorDetails} from '../errors';
   load(frag) {
     this.frag = frag;
     this.frag.loaded = 0;
-    this.loader = new this.config.loader();
-    this.loader.load(frag.url,'arraybuffer',this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), this.config.fragLoadingTimeOut, this.config.fragLoadingMaxRetry,this.config.fragLoadingRetryDelay,this.loadprogress.bind(this));
+    var config = this.hls.config;
+    this.loader = new config.loader();
+    this.loader.load(frag.url,'arraybuffer',this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.fragLoadingTimeOut, config.fragLoadingMaxRetry,config.fragLoadingRetryDelay,this.loadprogress.bind(this));
   }
 
   loadsuccess(event, stats) {
@@ -43,12 +44,15 @@ import {ErrorTypes,ErrorDetails} from '../errors';
   }
 
   loaderror(event) {
-    // fatal error if fail to load fragment at level 0
-    observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details : ErrorDetails.FRAG_LOAD_ERROR, fatal:!!this.frag.level,frag : this.frag, response:event});
+    // if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal
+    let fatal = !(this.hls.autoLevelEnabled && this.frag.level);
+    observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details : ErrorDetails.FRAG_LOAD_ERROR, fatal:fatal,frag : this.frag, response:event});
   }
 
   loadtimeout() {
-    observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details : ErrorDetails.FRAG_LOAD_TIMEOUT, fatal:!!this.frag.level,frag : this.frag});
+    // if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal
+    let fatal = !(this.hls.autoLevelEnabled && this.frag.level);
+    observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details : ErrorDetails.FRAG_LOAD_TIMEOUT, fatal:fatal,frag : this.frag});
   }
 
   loadprogress(event, stats) {
