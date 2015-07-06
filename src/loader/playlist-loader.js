@@ -32,15 +32,8 @@ import {ErrorTypes,ErrorDetails} from '../errors';
     this.load(data.url,null);
   }
 
-
   onLevelLoading(event,data) {
     this.load(data.url,data.level);
-  }
-
-  abort() {
-    if(this.loader) {
-      this.loader.abort();
-    }
   }
 
   load(url,requestId) {
@@ -206,7 +199,8 @@ import {ErrorTypes,ErrorDetails} from '../errors';
     } else {
       details = ErrorDetails.MANIFEST_LOAD_ERROR;
     }
-    observer.trigger(Event.ERROR, {type : ErrorTypes.NETWORK_ERROR, details:details, fatal:true, url:this.url, loader : this.loader, response:event.currentTarget});
+    this.loader.abort();
+    observer.trigger(Event.ERROR, {type : ErrorTypes.NETWORK_ERROR, details:details, fatal:true, url:this.url, loader : this.loader, response:event.currentTarget, level: this.id});
   }
 
   loadtimeout() {
@@ -216,7 +210,8 @@ import {ErrorTypes,ErrorDetails} from '../errors';
     } else {
       details = ErrorDetails.MANIFEST_LOAD_TIMEOUT;
     }
-   observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details:details, fatal:true,url : this.url, loader: this.loader});
+   this.loader.abort();
+   observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details:details, fatal:true,url : this.url, loader: this.loader, level: this.id});
   }
 }
 
