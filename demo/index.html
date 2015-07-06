@@ -55,6 +55,9 @@
         <div>
         cap level: <div id="levelCappingControl" style="display: inline;"></div>
         </div>
+    <button type="button" class="btn btn-xs btn-success" onclick="hls.recoverNetworkError()">recover Network Error</button><br>
+    <button type="button" class="btn btn-xs btn-success" onclick="hls.recoverMediaError()">recover Network Error</button><br>
+    <div id="metricsButton">
         </section>
       </article>
     </div>
@@ -291,6 +294,8 @@
               videoError = true;
               break;
             case Hls.ErrorTypes.NETWORK_ERROR:
+            document.getElementById("HlsStatus").innerHTML += ",network error press on button to recover ...";
+              break;
             default:
               document.getElementById("HlsStatus").innerHTML += ", unrecoverable error, destroying context ...";
               hls.destroy();

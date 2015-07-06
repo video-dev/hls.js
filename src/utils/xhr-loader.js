@@ -69,7 +69,7 @@ class XhrLoader {
     }
 
     loaderror(event) {
-        if (this.retry < this.maxRetry) {
+        if (this.stats.retry < this.maxRetry) {
             logger.log(
                 `${event.type} while loading ${this.url}, retrying in ${
                     this.retryDelay
@@ -79,7 +79,7 @@ class XhrLoader {
             window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
             // exponential backoff
             this.retryDelay = Math.min(2 * this.retryDelay, 64000);
-            this.retry++;
+            this.stats.retry++;
         } else {
             window.clearTimeout(this.timeoutHandle);
             logger.log(`${event.type} while loading ${this.url}`);

@@ -70,6 +70,7 @@ class BufferController {
         this.demuxer = new Demuxer(this.config);
         this.timer = setInterval(this.ontick, 100);
         this.appendError = 0;
+        this.level = -1;
         observer.on(Event.FRAG_LOADED, this.onfl);
         observer.on(Event.FRAG_PARSING_INIT_SEGMENT, this.onis);
         observer.on(Event.FRAG_PARSING_DATA, this.onfpg);
@@ -184,6 +185,7 @@ class BufferController {
                     if (level !== this.level) {
                         // set new level to playlist loader : this will trigger a playlist load if needed
                         this.levelController.level = level;
+                        this.level = level;
                     }
                     levelInfo = this.levels[level].details;
                     // if level info not retrieved yet, switch state and wait for level retrieval
@@ -248,7 +250,6 @@ class BufferController {
                             frag.trequest = new Date();
                         }
                         this.frag = frag;
-                        this.level = level;
                         this.startFragmentRequested = true;
                         observer.trigger(Event.FRAG_LOADING, { frag: frag });
                         this.state = this.LOADING;
@@ -313,7 +314,9 @@ class BufferController {
                                     1
                                 )}/${fragLevel0LoadedDelay.toFixed(1)}`
                             );
-                            this.abortFragment();
+                            //abort fragment loading
+                            frag.loader.abort();
+                            this.frag = null;
                             // switch back to IDLE state to request new fragment at lowest level
                             this.state = this.IDLE;
                         }
@@ -717,7 +720,8 @@ class BufferController {
                 logger.log(
                     'seeking outside of buffer while fragment load in progress, cancel fragment load'
                 );
-                this.abortFragment();
+                this.frag.loader.abort();
+                this.frag = null;
                 // switch to IDLE state to load new fragment
                 this.state = this.IDLE;
             }
@@ -964,24 +968,19 @@ class BufferController {
             // abort fragment loading on errors
             case ErrorDetails.FRAG_LOAD_ERROR:
             case ErrorDetails.FRAG_LOAD_TIMEOUT:
+                // if fatal error, stop processing, otherwise move to IDLE to retry loading
                 logger.log(
                     `buffer controller: ${
                         data.details
-                    } while loading frag, abort loading ...`
+                    } while loading frag,switch to ${
+                        data.fatal ? 'ERROR' : 'IDLE'
+                    } state ...`
                 );
-                this.abortFragment();
-                // if fatal error, stop processing, otherwise move to IDLE to retry loading
                 this.state = data.fatal ? this.ERROR : this.IDLE;
+                this.frag = null;
                 break;
             default:
                 break;
-        }
-    }
-
-    abortFragment() {
-        if (this.frag && this.frag.loader) {
-            this.frag.loader.abort();
-            this.frag = null;
         }
     }
 

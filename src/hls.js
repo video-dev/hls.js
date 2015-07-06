@@ -129,6 +129,7 @@ class Hls {
 
     recoverNetworkError() {
         logger.log('try to recover network Error');
+        this.bufferController.start();
     }
 
     recoverMediaError() {

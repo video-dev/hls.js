@@ -248,7 +248,7 @@ class PlaylistLoader {
 
     loaderror(event) {
         var details;
-        if (this.id) {
+        if (this.id !== undefined) {
             details = ErrorDetails.LEVEL_LOAD_ERROR;
         } else {
             details = ErrorDetails.MANIFEST_LOAD_ERROR;
@@ -267,7 +267,7 @@ class PlaylistLoader {
 
     loadtimeout() {
         var details;
-        if (this.id) {
+        if (this.id !== undefined) {
             details = ErrorDetails.LEVEL_LOAD_TIMEOUT;
         } else {
             details = ErrorDetails.MANIFEST_LOAD_TIMEOUT;
