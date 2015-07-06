@@ -8,8 +8,8 @@ import observer from '../observer';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
 class FragmentLoader {
-    constructor(config) {
-        this.config = config;
+    constructor(hls) {
+        this.hls = hls;
     }
 
     destroy() {
@@ -28,16 +28,17 @@ class FragmentLoader {
     load(frag) {
         this.frag = frag;
         this.frag.loaded = 0;
-        this.loader = new this.config.loader();
+        var config = this.hls.config;
+        this.loader = new config.loader();
         this.loader.load(
             frag.url,
             'arraybuffer',
             this.loadsuccess.bind(this),
             this.loaderror.bind(this),
             this.loadtimeout.bind(this),
-            this.config.fragLoadingTimeOut,
-            this.config.fragLoadingMaxRetry,
-            this.config.fragLoadingRetryDelay,
+            config.fragLoadingTimeOut,
+            config.fragLoadingMaxRetry,
+            config.fragLoadingRetryDelay,
             this.loadprogress.bind(this)
         );
     }
@@ -53,21 +54,24 @@ class FragmentLoader {
     }
 
     loaderror(event) {
-        // fatal error if fail to load fragment at level 0
+        // if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal
+        let fatal = !(this.hls.autoLevelEnabled && this.frag.level);
         observer.trigger(Event.ERROR, {
             type: ErrorTypes.NETWORK_ERROR,
             details: ErrorDetails.FRAG_LOAD_ERROR,
-            fatal: !!this.frag.level,
+            fatal: fatal,
             frag: this.frag,
             response: event
         });
     }
 
     loadtimeout() {
+        // if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal
+        let fatal = !(this.hls.autoLevelEnabled && this.frag.level);
         observer.trigger(Event.ERROR, {
             type: ErrorTypes.NETWORK_ERROR,
             details: ErrorDetails.FRAG_LOAD_TIMEOUT,
-            fatal: !!this.frag.level,
+            fatal: fatal,
             frag: this.frag
         });
     }
