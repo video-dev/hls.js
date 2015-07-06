@@ -199,17 +199,41 @@
               logger.log(`buffer end: ${bufferEnd} is located before start of live sliding playlist, media position will be reseted to: ${this.seekAfterStalling.toFixed(3)}`);
               bufferEnd = this.seekAfterStalling;
           }
+
+          if(levelInfo.live && levelInfo.sliding === undefined) {
+            /* we are switching level on live playlist, but we don't have any sliding info ...
+               try to load frag matching with next SN.
+               even if SN are not synchronized between playlists, loading this frag will help us
+               compute playlist sliding and find the right one after in case it was not the right consecutive one */
+            if(this.frag) {
+              var targetSN = this.frag.sn+1;
+              if(targetSN >= levelInfo.startSN && targetSN <= levelInfo.endSN) {
+                frag = fragments[targetSN-levelInfo.startSN];
+                logger.log(`live playlist, switching playlist, load frag with next SN: ${frag.sn}`);
+              }
+            }
+            if(!frag) {
+              /* we have no idea about which fragment should be loaded.
+                 so let's load mid fragment. it will help computing playlist sliding and find the right one
+              */
+              frag = fragments[Math.round(fragments.length/2)];
+              logger.log(`live playlist, switching playlist, unknown, load middle frag : ${frag.sn}`);
+            }
+          } else {
           //look for fragments matching with current play position
-          for (fragIdx = 0; fragIdx < fragments.length ; fragIdx++) {
-            frag = fragments[fragIdx];
-            start = frag.start+sliding;
-            //logger.log(`level/sn/sliding/start/end/bufEnd:${level}/${frag.sn}/${sliding}/${start}/${start+frag.duration}/${bufferEnd}`);
-            // offset should be within fragment boundary
-            if(start <= bufferEnd && (start + frag.duration) > bufferEnd) {
+            for (fragIdx = 0; fragIdx < fragments.length ; fragIdx++) {
+              frag = fragments[fragIdx];
+              start = frag.start+sliding;
+              //logger.log(`level/sn/sliding/start/end/bufEnd:${level}/${frag.sn}/${sliding}/${start}/${start+frag.duration}/${bufferEnd}`);
+              // offset should be within fragment boundary
+              if(start <= bufferEnd && (start + frag.duration) > bufferEnd) {
+                break;
+              }
+            }
+            if(fragIdx == fragments.length) {
+              // reach end of playlist
               break;
             }
-          }
-          if(fragIdx >= 0 && fragIdx < fragments.length) {
             //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
             if(this.frag && frag.sn === this.frag.sn) {
               if(fragIdx === (fragments.length -1)) {
@@ -220,18 +244,18 @@
                 logger.log(`SN just loaded, load next one: ${frag.sn}`);
               }
             }
-            logger.log(`Loading       ${frag.sn} of [${fragments[0].sn} ,${fragments[fragments.length-1].sn}],level ${level}`);
-            //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
-            frag.autoLevel = this.hls.autoLevelEnabled;
-            if(this.levels.length>1) {
-              frag.expectedLen = Math.round(frag.duration*this.levels[level].bitrate/8);
-              frag.trequest = new Date();
-            }
-            this.frag = frag;
-            this.startFragmentRequested = true;
-            observer.trigger(Event.FRAG_LOADING, { frag: frag });
-            this.state = this.LOADING;
           }
+          logger.log(`Loading       ${frag.sn} of [${levelInfo.startSN} ,${levelInfo.endSN}],level ${level}`);
+          //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
+          frag.autoLevel = this.hls.autoLevelEnabled;
+          if(this.levels.length>1) {
+            frag.expectedLen = Math.round(frag.duration*this.levels[level].bitrate/8);
+            frag.trequest = new Date();
+          }
+          this.frag = frag;
+          this.startFragmentRequested = true;
+          observer.trigger(Event.FRAG_LOADING, { frag: frag });
+          this.state = this.LOADING;
         }
         break;
       case this.WAITING_LEVEL:
@@ -666,39 +690,45 @@
   }
 
   onLevelLoaded(event,data) {
-    var fragments = data.details.fragments,duration = data.details.totalduration;
-    logger.log(`level ${data.levelId} loaded [${fragments[0].sn},${fragments[fragments.length-1].sn}],duration:${duration}`);
-
-    var level = this.levels[data.levelId],sliding = 0, levelCurrent = this.levels[this.level];
+    var newLevelDetails = data.details,
+        duration = newLevelDetails.totalduration,
+        newLevelId = data.levelId,
+        newLevel = this.levels[newLevelId],
+        curLevel = this.levels[this.level],
+        sliding = 0;
+    logger.log(`level ${newLevelId} loaded [${newLevelDetails.startSN},${newLevelDetails.endSN}],duration:${duration}`);
     // check if playlist is already loaded (if yes, it should be a live playlist)
-    if(levelCurrent && levelCurrent.details && levelCurrent.details.live) {
-      var oldfragments = levelCurrent.details.fragments;
+    if(curLevel && curLevel.details && curLevel.details.live) {
+      var curLevelDetails = curLevel.details;
       //  playlist sliding is the sum of : current playlist sliding + sliding of new playlist compared to current one
-      sliding = levelCurrent.details.sliding;
       // check sliding of updated playlist against current one :
       // and find its position in current playlist
-      //logger.log("fragments[0].sn/this.level/levelCurrent.details.fragments[0].sn:" + fragments[0].sn + "/" + this.level + "/" + levelCurrent.details.fragments[0].sn);
-      var SNdiff = fragments[0].sn - oldfragments[0].sn;
+      //logger.log("fragments[0].sn/this.level/curLevel.details.fragments[0].sn:" + fragments[0].sn + "/" + this.level + "/" + curLevel.details.fragments[0].sn);
+      var SNdiff = newLevelDetails.startSN - curLevelDetails.startSN;
       if(SNdiff >=0) {
         // positive sliding : new playlist sliding window is after previous one
+        var oldfragments = curLevelDetails.fragments;
         if( SNdiff < oldfragments.length) {
-          sliding += oldfragments[SNdiff].start;
+          sliding = curLevelDetails.sliding + oldfragments[SNdiff].start;
         } else {
-          logger.log(`cannot compute sliding, no SN in common between old/new level:[${oldfragments[0].sn},${oldfragments[oldfragments.length-1].sn}]/[${fragments[0].sn},${fragments[fragments.length-1].sn}]`);
+          logger.log(`cannot compute sliding, no SN in common between old/new level:[${curLevelDetails.startSN},${curLevelDetails.endSN}]/[${newLevelDetails.startSN},${newLevelDetails.endSN}]`);
+          sliding = undefined;
         }
       } else {
         // negative sliding: new playlist sliding window is before previous one
-        sliding -= fragments[-SNdiff].start;
+        sliding = curLevelDetails.sliding - newLevelDetails.fragments[-SNdiff].start;
       }
-      logger.log(`live playlist sliding:${sliding.toFixed(3)}`);
+      if(sliding) {
+        logger.log(`live playlist sliding:${sliding.toFixed(3)}`);
+      }
     }
     // override level info
-    level.details = data.details;
-    level.details.sliding = sliding;
+    newLevel.details = newLevelDetails;
+    newLevel.details.sliding = sliding;
     if(this.startLevelLoaded === false) {
       // if live playlist, set start position to be fragment N-3
-      if(data.details.live) {
-        this.startPosition = Math.max(0,duration - 3 * data.details.targetduration);
+      if(newLevelDetails.live) {
+        this.startPosition = Math.max(0,duration - 3 * newLevelDetails.targetduration);
       }
       this.nextLoadPosition = this.startPosition;
       this.startLevelLoaded = true;
