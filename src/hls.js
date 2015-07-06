@@ -132,7 +132,7 @@ class Hls {
         this.url = url;
         logger.log(`loadSource:${url}`);
         // when attaching to a source URL, trigger a playlist load
-        this.playlistLoader.load(url, null);
+        observer.trigger(Event.MANIFEST_LOADING, { url: url });
     }
 
     recoverNetworkError() {

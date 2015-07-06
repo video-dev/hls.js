@@ -10,7 +10,6 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 
 class LevelController {
     constructor(hls) {
-        this.playlistLoader = hls.playlistLoader;
         this.onml = this.onManifestLoaded.bind(this);
         this.onll = this.onLevelLoaded.bind(this);
         this.onflp = this.onFragmentLoadProgress.bind(this);
@@ -132,9 +131,11 @@ class LevelController {
                 (level.details && level.details.live === true)
             ) {
                 // level not retrieved yet, or live playlist we need to (re)load it
-                observer.trigger(Event.LEVEL_LOADING, { levelId: newLevel });
                 logger.log(`(re)loading playlist for level ${newLevel}`);
-                this.playlistLoader.load(level.url, newLevel);
+                observer.trigger(Event.LEVEL_LOADING, {
+                    url: level.url,
+                    level: newLevel
+                });
                 level.loading = true;
             }
         } else {
@@ -219,7 +220,7 @@ class LevelController {
                         `level controller,level load error: try to reload same level`
                     );
                     this._levels[this._level].loading = undefined;
-                    this.playlistLoader.abort();
+                    data.loader.abort();
                     this.setLevelInternal(this._level);
                     break;
                 case ErrorDetails.LEVEL_LOAD_TIMEOUT:
@@ -227,7 +228,7 @@ class LevelController {
                         `level controller,level load timeout: try to reload same level`
                     );
                     this._levels[this._level].loading = undefined;
-                    this.playlistLoader.abort();
+                    data.loader.abort();
                     this.setLevelInternal(this._level);
                     break;
                 default:
@@ -249,8 +250,10 @@ class LevelController {
     }
 
     tick() {
-        observer.trigger(Event.LEVEL_LOADING, { levelId: this._level });
-        this.playlistLoader.load(this._levels[this._level].url, this._level);
+        observer.trigger(Event.LEVEL_LOADING, {
+            url: this._levels[this._level].url,
+            level: this._level
+        });
     }
 
     nextLevel() {

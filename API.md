@@ -346,43 +346,45 @@ hls.js fires a bunch of events, that could be registered as below:
 
 
 ```js
-hls.on(hls.Events.LEVEL_LOADED,function(event,data) {
+hls.on(Hls.Events.LEVEL_LOADED,function(event,data) {
   var level_duration = data.details.totalduration;
 });
 ```
 full list of Events available below :
 
-  - `hls.Events.MSE_ATTACHED`  - fired when MediaSource has been succesfully attached to video element.
+  - `Hls.Events.MSE_ATTACHED`  - fired when MediaSource has been succesfully attached to video element.
     -  data: { mediaSource }
-  - `hls.Events.MANIFEST_LOADED`  - fired after manifest has been loaded
+  - `Hls.Events.MANIFEST_LOADING`  - fired to signal that a manifest loading starts
+    -  data: { url : manifestURL}
+  - `Hls.Events.MANIFEST_LOADED`  - fired after manifest has been loaded
     -  data: { levels : [available quality levels] , url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
-  - `hls.Events.MANIFEST_PARSED`  - fired after manifest has been parsed
+  - `Hls.Events.MANIFEST_PARSED`  - fired after manifest has been parsed
     -  data: { levels : [available quality levels] , startLevel : playback start level, audiocodecswitch: true if different audio codecs used}
-  - `hls.Events.LEVEL_LOADING`  - fired when a level playlist loading starts
-    -  data: { levelId : id of level being loaded}
-  - `hls.Events.LEVEL_LOADED`  - fired when a level playlist loading finishes
+  - `Hls.Events.LEVEL_LOADING`  - fired when a level playlist loading starts
+    -  data: { url : level URL, level : id of level being loaded}
+  - `Hls.Events.LEVEL_LOADED`  - fired when a level playlist loading finishes
     -  data: { details : levelDetails object, levelId : id of loaded level, stats : { trequest, tfirst, tload, mtime} }
-  - `hls.Events.LEVEL_SWITCH`  - fired when a level switch is requested
+  - `Hls.Events.LEVEL_SWITCH`  - fired when a level switch is requested
     -  data: { levelId : id of new level }
-  - `hls.Events.FRAG_LOADING`  - fired when a fragment loading starts
+  - `Hls.Events.FRAG_LOADING`  - fired when a fragment loading starts
     -  data: { frag : fragment object, { trequest, tfirst, loaded}}
-  - `hls.Events.FRAG_LOAD_PROGRESS`  - fired when a fragment load is in progress
+  - `Hls.Events.FRAG_LOAD_PROGRESS`  - fired when a fragment load is in progress
     - data: { frag : fragment object, stats : progress event }
-  - `hls.Events.FRAG_LOADED`  - fired when a fragment loading is completed
+  - `Hls.Events.FRAG_LOADED`  - fired when a fragment loading is completed
     -  data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length}}
-  - `hls.Events.FRAG_PARSING_INIT_SEGMENT` - fired when Init Segment has been extracted from fragment
+  - `Hls.Events.FRAG_PARSING_INIT_SEGMENT` - fired when Init Segment has been extracted from fragment
     -  data: { moov : moov MP4 box, codecs : codecs found while parsing fragment}    
-  - `hls.Events.FRAG_PARSING_DATA`  - fired when moof/mdat have been extracted from fragment
+  - `Hls.Events.FRAG_PARSING_DATA`  - fired when moof/mdat have been extracted from fragment
     -  data: { moof : moof MP4 box, mdat : mdat MP4 box, startPTS : PTS of first sample, endPTS : PTS of last sample, startDTS : DTS of first sample, endDTS : DTS of last sample, type : stream type (audio or video), nb : number of samples}
-  - `hls.Events.FRAG_PARSED`  - fired when fragment parsing is completed
+  - `Hls.Events.FRAG_PARSED`  - fired when fragment parsing is completed
     -  data: undefined
-  - `hls.Events.FRAG_BUFFERED`  - fired when fragment remuxed MP4 boxes have all been appended into SourceBuffer
+  - `Hls.Events.FRAG_BUFFERED`  - fired when fragment remuxed MP4 boxes have all been appended into SourceBuffer
     -  data: { frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length} }
-  - `hls.Events.FRAG_CHANGED`  - fired when fragment matching with current video position is changing
+  - `Hls.Events.FRAG_CHANGED`  - fired when fragment matching with current video position is changing
     -  data: { frag : fragment object }
-  - `hls.Events.FPS_DROP` - triggered when FPS drop in last monitoring period is higher than given threshold
+  - `Hls.Events.FPS_DROP` - triggered when FPS drop in last monitoring period is higher than given threshold
     -  data: {curentDropped : nb of dropped frames in last monitoring period, currentDecoded: nb of decoded frames in last monitoring period, totalDropped : total dropped frames on this video element}
-  - `hls.Events.ERROR` -  Identifier for an error event
+  - `Hls.Events.ERROR` -  Identifier for an error event
     - data: { type : error Type, details : error details, fatal : is error fatal or not, other error specific data} 
 
 
@@ -391,15 +393,15 @@ full list of Events available below :
 full list of Errors is described below:
 
   - ```Hls.ErrorDetails.MANIFEST_LOAD_ERROR``` - raised when manifest loading fails because of a network error
-    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.MANIFEST_LOAD_ERROR```, fatal : ```true```,url : manifest URL, response : xhr response}
+    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.MANIFEST_LOAD_ERROR```, fatal : ```true```,url : manifest URL, response : xhr response, loader : URL loader}
   - ```Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT``` - raised when manifest loading fails because of a timeout
-    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT```, fatal : ```true```,url : manifest URL}
+    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT```, fatal : ```true```,url : manifest URL, loader : URL loader}
   - ```Hls.ErrorDetails.MANIFEST_PARSING_ERROR``` - raised when manifest parsing failed to find proper content
     - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.MANIFEST_PARSING_ERROR```, fatal : ```true```,url : manifest URL, reason : parsing error reason}
   - ```Hls.ErrorDetails.LEVEL_LOAD_ERROR```raised when level loading fails because of a network error
-    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.LEVEL_LOAD_ERROR```, fatal : ```true```,url : level URL, response : xhr response}
+    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.LEVEL_LOAD_ERROR```, fatal : ```true```,url : level URL, response : xhr response, loader : URL loader}
   - ```Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT```raised when level loading fails because of a timeout
-    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT```, fatal : ```true```,url : level URL}
+    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT```, fatal : ```true```,url : level URL, loader : URL loader}
   - ```Hls.ErrorDetails.LEVEL_SWITCH_ERROR```raised when level switching fails
     - data: { type : ```OTHER_ERROR```, details : ```Hls.ErrorDetails.LEVEL_SWITCH_ERROR```, fatal : ```false```,level : failed level index, reason : failure reason}
   - ```Hls.ErrorDetails.FRAG_LOAD_ERROR```raised when fragment loading fails because of a network error

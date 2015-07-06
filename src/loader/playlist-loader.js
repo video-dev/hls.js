@@ -11,7 +11,10 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 class PlaylistLoader {
     constructor(hls) {
         this.hls = hls;
-        this.manifestLoaded = false;
+        this.onml = this.onManifestLoading.bind(this);
+        this.onll = this.onLevelLoading.bind(this);
+        observer.on(Event.MANIFEST_LOADING, this.onml);
+        observer.on(Event.LEVEL_LOADING, this.onll);
     }
 
     destroy() {
@@ -20,6 +23,16 @@ class PlaylistLoader {
             this.loader = null;
         }
         this.url = this.id = null;
+        observer.off(Event.MANIFEST_LOADING, this.onml);
+        observer.off(Event.LEVEL_LOADING, this.onll);
+    }
+
+    onManifestLoading(event, data) {
+        this.load(data.url, null);
+    }
+
+    onLevelLoading(event, data) {
+        this.load(data.url, data.level);
     }
 
     abort() {
@@ -251,6 +264,7 @@ class PlaylistLoader {
             details: details,
             fatal: true,
             url: this.url,
+            loader: this.loader,
             response: event.currentTarget
         });
     }
@@ -266,7 +280,8 @@ class PlaylistLoader {
             type: ErrorTypes.NETWORK_ERROR,
             details: details,
             fatal: true,
-            url: this.url
+            url: this.url,
+            loader: this.loader
         });
     }
 }
