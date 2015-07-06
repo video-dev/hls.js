@@ -119,11 +119,10 @@
       observer.trigger(Event.LEVEL_SWITCH, { levelId : newLevel});
       var level = this._levels[newLevel];
        // check if we need to load playlist for this level
-      if(level.loading === undefined || (level.details && level.details.live === true)) {
+      if(level.details === undefined || level.details.live === true) {
         // level not retrieved yet, or live playlist we need to (re)load it
         logger.log(`(re)loading playlist for level ${newLevel}`);
         observer.trigger(Event.LEVEL_LOADING, { url : level.url, level : newLevel});
-        level.loading = true;
       }
     } else {
       // invalid level id given, trigger error
@@ -181,33 +180,23 @@
 
   onError(event,data) {
     // try to recover not fatal errors
-    if(!data.fatal) {
-      switch(data.details) {
-        case ErrorDetails.FRAG_LOAD_ERROR:
-          logger.log(`level controller,frag load error: emergency switch-down for next fragment`);
+    switch(data.details) {
+      case ErrorDetails.FRAG_LOAD_ERROR:
+      case ErrorDetails.FRAG_LOAD_TIMEOUT:
+        if(!data.fatal) {
+          logger.log(`level controller,${data.details}: emergency switch-down for next fragment`);
           this.lastbw = 0;
           this.lastfetchduration = 0;
-          break;
-        case ErrorDetails.FRAG_LOAD_TIMEOUT:
-          logger.log(`level controller,frag load timeout: emergency switch-down for next fragment`);
-          this.lastbw = 0;
-          this.lastfetchduration = 0;
-          break;
-        case ErrorDetails.LEVEL_LOAD_ERROR:
-          logger.log(`level controller,level load error: try to reload same level`);
-          this._levels[this._level].loading=undefined;
-          data.loader.abort();
-          this.setLevelInternal(this._level);
-          break;
-        case ErrorDetails.LEVEL_LOAD_TIMEOUT:
-          logger.log(`level controller,level load timeout: try to reload same level`);
-          this._levels[this._level].loading=undefined;
-          data.loader.abort();
-          this.setLevelInternal(this._level);
-          break;
-        default:
-          break;
-      }
+        }
+        break;
+      case ErrorDetails.LEVEL_LOAD_ERROR:
+      case ErrorDetails.LEVEL_LOAD_TIMEOUT:
+        if(data.fatal) {
+          this._level = undefined;
+        }
+        break;
+      default:
+        break;
     }
   }
 
