@@ -16,7 +16,7 @@
     </header>
   </div>
   <pre id='HlsDate'></pre>
-  <pre id='HlsUrl'></pre>
+  <pre id='StreamPermalink'></pre>
     <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)";></canvas> <br>
     window size
     <div id="metricsButton">
@@ -51,7 +51,7 @@
   var events = jsonpack.unpack(atob(decodeURIComponent(location.search.split('data=')[1])));
   var hlsLink = document.URL.substr(0,document.URL.lastIndexOf("/")+1) + 'index.html?src=' + encodeURIComponent(events.url);
   var description = 'playlist: ' + "<a href=\"" + events.url + "\">" + events.url + "</a>" + '<br>replay: ' + "<a href=\"" + hlsLink + "\">" + hlsLink + "</a>";
-  $("#HlsUrl").html(description);
+  $("#StreamPermalink").html(description);
   $("#HlsDate").text("session Start Date:" + events.date);
   metricsDisplayed=true;
   showMetrics();
