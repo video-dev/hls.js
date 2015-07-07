@@ -17,99 +17,101 @@
   </div>
 
   <div class="main-container">
-    <div class="main wrapper clearfix">
-      <article>
-        <header>
-          <p>
-            transmuxing HLS playlist into MP4 fragments - Media Source Extension-compatible media segments on the fly.
-            Check out the demo below in Chrome / Firefox or Safari !
-          </p>
-        </header>
-        <section>
-          <div id="customButtons"></div>
-          <div id="customText"></div>
-          <pre id="HlsUrl"></pre>
-          <pre id="HlsStatus"></pre>
-          <video id=video controls autoplay border="4" style="max-width:90%;margin-left:5%"></video><br>
-          <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)" style="margin-left:5%";></canvas>
-        <div>
-        video dimension: <div id="currentResolution" style="display: inline;"></div>
-        </div>
-        <input type="range" min="0" step="1" value="0" id="videoWidthSlider" style="margin-left:5%;width:90%" oninput="videoWidthSliderChange()";/>
-          <div id='buttons'>
-            <button type="button" class="btn btn-sm btn-success" onclick="$('#video')[0].play()">play</button>
-            <button type="button" class="btn btn-sm btn-success" onclick="$('#video')[0].pause()">pause</button>
-            <button type="button" class="btn btn-sm btn-success" onclick="$('#video')[0].currentTime+=10">currentTime+=10</button>
-            <button type="button" class="btn btn-sm btn-success" onclick="$('#video')[0].currentTime-=10">currentTime-=10</button>
-            <button type="button" class="btn btn-sm btn-success" onclick="$('#video')[0].currentTime=$('#seek_pos').val()">seek to </button>
-             <input type="text" id='seek_pos' size="8" onkeydown="if(window.event.keyCode=='13'){$('#video')[0].currentTime=$('#seek_pos').val();}">
-          </div>
-        <div>
-        current level: <div id="currentLevelControl" style="display: inline;"></div>
-        </div>
-        <div>
-        next level: <div id="nextLevelControl" style="display: inline;"></div>
-        </div>
-        <div>
-        load level: <div id="loadLevelControl" style="display: inline;"></div>
-        </div>
-        <div>
-        cap level: <div id="levelCappingControl" style="display: inline;"></div>
-        </div>
-    <button type="button" class="btn btn-xs btn-success" onclick="hls.recoverNetworkError()">recover Network Error</button><br>
-    <button type="button" class="btn btn-xs btn-success" onclick="hls.recoverMediaError()">recover Media Error</button><br>
-    <div id="metricsButton">
-        </section>
-      </article>
+    <header>
+      <p>
+        transmuxing HLS playlist into MP4 fragments - Media Source Extension-compatible media segments on the fly.
+        Check out the demo below in Chrome / Firefox or Safari !
+      </p>
+    </header>
+    <div id="customButtons"></div>
+    <div id="customText"></div>
+    <pre id="HlsUrl"></pre>
+    <pre id="HlsStatus"></pre>
+    <video id=video controls autoplay border="4" style="max-width:90%;margin-left:5%"></video><br>
+    <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)" style="margin-left:5%";></canvas>
+    <div>video dimension: <div id="currentResolution" style="display: inline;"></div></div>
+    <input type="range" min="0" step="1" value="0" id="videoWidthSlider" style="margin-left:5%;width:90%" oninput="videoWidthSliderChange()";/>
+
+    <button type="button" class="btn btn-sm" onclick="$('#PlaybackControl').toggle();">toggle playback controls</button>
+    <div id='PlaybackControl'>
+      <button type="button" class="btn btn-sm btn-success" onclick="$('#video')[0].play()">play</button>
+      <button type="button" class="btn btn-sm btn-success" onclick="$('#video')[0].pause()">pause</button>
+      <button type="button" class="btn btn-sm btn-success" onclick="$('#video')[0].currentTime+=10">currentTime+=10</button>
+      <button type="button" class="btn btn-sm btn-success" onclick="$('#video')[0].currentTime-=10">currentTime-=10</button>
+      <button type="button" class="btn btn-sm btn-success" onclick="$('#video')[0].currentTime=$('#seek_pos').val()">seek to </button>
+       <input type="text" id='seek_pos' size="8" onkeydown="if(window.event.keyCode=='13'){$('#video')[0].currentTime=$('#seek_pos').val();}"><br>
+      <button type="button" class="btn btn-xs btn-warning" onclick="hls.recoverNetworkError()">recover Network Error</button>
+      <button type="button" class="btn btn-xs btn-warning" onclick="hls.recoverMediaError()">recover Media Error</button><br>
     </div>
-    <!-- #main -->
-    <br>
-    <h3 class="title">real time metrics</h1>
-    <button type="button" class="btn btn-xs btn-success" onclick="toggleMetricsDisplay()">toggle metrics display</button><br>
-    <div id="metricsButton">
-    <button type="button" class="btn btn-xs btn-primary" onclick="windowSliding=!windowSliding; refreshCanvas()">toggle sliding/fixed window</button><br>
-    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(0)">window ALL</button>
-    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(2000)">2s</button>
-    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(5000)">5s</button>
-    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(10000)">10s</button>
-    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(20000)">20s</button>
-    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(30000)">30s</button>
-    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(60000)">60s</button>
-    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(120000)">120s</button><br>
-    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeZoomIn()">Window Zoom In</button>
-    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeZoomOut()">Window Zoom Out</button><br>
-    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSlideLeft()"> <<< Window Slide </button>
-    <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSlideRight()">Window Slide >>> </button><br>
-    <button type="button" class="btn btn-xs btn-primary" onclick="windowStart=$('#windowStart').val()">fixed window start(ms)</button>
-    <input type="text" id='windowStart' defaultValue="0" size="8" onkeydown="if(window.event.keyCode=='13'){windowStart=$('#windowStart').val();}">
-    <button type="button" class="btn btn-xs btn-primary" onclick="windowEnd=$('#windowEnd').val()">fixed window end(ms)</button>
-    <input type="text" id='windowEnd' defaultValue="10000" size="8" onkeydown="if(window.event.keyCode=='13'){windowEnd=$('#windowEnd').val();}"><br>
-    <button type="button" class="btn btn-xs btn-success" onclick="exportmetrics()" style="font-size:18px">metrics permalink</button>
-    <canvas id="bufferTimerange_c" width="640" height="100" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
-    <canvas id="bitrateTimerange_c" width="640" height="100" style="border:1px solid #000000";></canvas>
-    <canvas id="bufferWindow_c" width="640" height="100" style="border:1px solid #000000" onmousemove="windowCanvasonMouseMove(event)";></canvas>
-    <canvas id="videoEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas>
-    <canvas id="loadEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
+
+    <button type="button" class="btn btn-sm" onclick="$('#QualityLevelControl').toggle();">toggle Quality Level controls</button>
+    <div id='QualityLevelControl'>
+      <table>
+        <tr>
+          <td>current level</td>
+          <td width=10px></td>
+          <td> <div id="currentLevelControl" style="display: inline;"></div> </td>
+        </tr>
+        <tr>
+          <td> <p>next level</p></td>
+          <td> </td>
+          <td> <div id="nextLevelControl" style="display: inline;"></div> </td>
+        </tr>
+        <tr>
+          <td> <p>load level</p></td>
+          <td> </td>
+          <td> <div id="loadLevelControl" style="display: inline;"></div> </td>
+        </tr>
+        <tr>
+          <td> <p>cap level</p></td>
+          <td> </td>
+          <td> <div id="levelCappingControl" style="display: inline;"></div> </td>
+        </tr>
+      </table>
+    </div>
+
+    <button type="button" class="btn btn-sm" onclick="$('#MetricsDisplay').toggle();toggleMetricsDisplay();">toggle Metrics Display</button>
+    <div id='MetricsDisplay'>
+      <div id="metricsButton">
+        <button type="button" class="btn btn-xs btn-primary" onclick="windowSliding=!windowSliding; refreshCanvas()">toggle sliding/fixed window</button><br>
+        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(0)">window ALL</button>
+        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(2000)">2s</button>
+        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(5000)">5s</button>
+        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(10000)">10s</button>
+        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(20000)">20s</button>
+        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(30000)">30s</button>
+        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(60000)">60s</button>
+        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(120000)">120s</button><br>
+        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeZoomIn()">Window Zoom In</button>
+        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeZoomOut()">Window Zoom Out</button><br>
+        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSlideLeft()"> <<< Window Slide </button>
+        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSlideRight()">Window Slide >>> </button><br>
+        <button type="button" class="btn btn-xs btn-primary" onclick="windowStart=$('#windowStart').val()">fixed window start(ms)</button>
+        <input type="text" id='windowStart' defaultValue="0" size="8" onkeydown="if(window.event.keyCode=='13'){windowStart=$('#windowStart').val();}">
+        <button type="button" class="btn btn-xs btn-primary" onclick="windowEnd=$('#windowEnd').val()">fixed window end(ms)</button>
+        <input type="text" id='windowEnd' defaultValue="10000" size="8" onkeydown="if(window.event.keyCode=='13'){windowEnd=$('#windowEnd').val();}"><br>
+        <button type="button" class="btn btn-xs btn-success" onclick="exportmetrics()" style="font-size:18px">metrics permalink</button>
+        <canvas id="bufferTimerange_c" width="640" height="100" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
+        <canvas id="bitrateTimerange_c" width="640" height="100" style="border:1px solid #000000";></canvas>
+        <canvas id="bufferWindow_c" width="640" height="100" style="border:1px solid #000000" onmousemove="windowCanvasonMouseMove(event)";></canvas>
+        <canvas id="videoEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas>
+        <canvas id="loadEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
+      </div>
+    </div>
+
+    <button type="button" class="btn btn-sm" onclick="$('#StatsDisplay').toggle();">toggle Stats Display</button>
+    <div id='StatsDisplay'>
+      <pre id='HlsStats'></pre>
+      <div id="buffered_log"></div>
+    </div>
+    <br>Change Stream <br>
+    <input id="userInput" value="http://www.streambox.fr/playlists/test_001/stream.m3u8" size="80"> <button type="button" class="btn btn-sm btn-primary" onclick="loadStream($('#userInput').val());">Load</button><br>
+
+  <h3> Test Videos </h3>
+  <ul id="streamlist"></ul>
   </div>
-  </div>
-  <pre id='HlsStats'></pre>
-  <div id="buffered_log"></div>
-
-<br>Change Stream <br>
-<input id="userInput" value="http://www.streambox.fr/playlists/test_001/stream.m3u8" size="80"> <button type="button" class="btn btn-sm btn-primary" onclick="changeStream()">Load</button><br>
-
-<h3> Test Videos </h3>
-<ul id="streamlist"></ul>
-
 
   <script src="../../streams.js"></script>
-
-  <script>
-  function changeStream() {
-    loadStream($('#userInput').val());
-  }
-
-  </script>
   <!-- live-reload script -->
   <script src="//localhost:8001"></script>
   <script src="../dist/hls.js"></script>
@@ -119,23 +121,20 @@
   <script>
 
    'use strict';
-   var hls;
-   var _url;
-   var t0;
-   var isLive = false;
+   var hls,_url,t0,isLive,events,capVideo;
    var video = $('#video')[0];
-   var events;
    video.volume = 0.05;
-   var videoError = false;
+   $("#videoWidthSlider")[0].max=0.9*window.innerWidth;
+   $("#PlaybackControl").hide();
+   $("#QualityLevelControl").hide();
+   $("#MetricsDisplay").hide();
+   $("#StatsDisplay").hide();
+
    var manifest = decodeURIComponent(location.search.split('src=')[1]);
    if(manifest === 'undefined') {
      manifest = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
    }
-   $("#videoWidthSlider")[0].max=0.9*window.innerWidth;
-   var capVideo=false;
-
   loadStream(manifest);
-
 
   function loadStream(url) {
     hideCanvas();
@@ -153,7 +152,7 @@
         var dmlink = 'http://www.dailymotion.com/video/' + url;
         description += '<br>DM link:' + "<a href=\"" + dmlink + "\">" + dmlink + "</a>";
       }
-      $("#HlsUrl").text(description);
+      $("#HlsUrl").html(description);
       $("#HlsStatus").text('loading ' + url);
        if(url.indexOf('http') === -1) {
         $("#HlsStatus").text('DM url detected, resolving ...');
@@ -277,7 +276,6 @@
             hls.destroy();
             $("#HlsStatus").text("Parsing Error:" + data);
             $("#buffered_c").width(0);
-            videoError = true;
             break;
           case Hls.ErrorDetails.FRAG_APPENDING_ERROR:
             $("#HlsStatus").text("Frag Appending Error");
@@ -290,7 +288,6 @@
             case Hls.ErrorTypes.MEDIA_ERROR:
               $("#HlsStatus").append(",try to recover media Error ...");
               hls.recoverMediaError();
-              videoError = true;
               break;
             case Hls.ErrorTypes.NETWORK_ERROR:
               $("#HlsStatus").append(",network error press on button to recover ...");
@@ -341,7 +338,7 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
          break;
       case 'resize':
         data = evt.target.videoWidth + '/' + evt.target.videoHeight;
-        if(capVideo==false) {
+        if(capVideo !== true) {
           $("#videoWidthSlider").val(evt.target.clientWidth);
         }
         break;
@@ -379,7 +376,6 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
               break;
           }
           $("#HlsStatus").text(errorTxt);
-          videoError = true;
         }
         break;
       // case 'progress':
@@ -578,7 +574,7 @@ function timeRangesToString(r) {
     } else {
       html3 += button_disabled;
     }
-    html3 += 'onclick="hls.autoLevelCapping=-1;updateLevelInfo()">none</button>';
+    html3 += 'onclick="hls.autoLevelCapping=-1;updateLevelInfo()">auto</button>';
 
     var html4 = button_template;
     if(hls.autoLevelEnabled) {
