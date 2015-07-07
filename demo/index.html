@@ -1,7 +1,30 @@
 <!DOCTYPE html>
 
 <head>
-  <title>hls.js demo page</title>
+<style>
+header {
+  text-align: center;
+}
+#controls
+{
+    width: 80%;
+    padding: 3px;
+    margin: 0px auto 20px auto;
+    border: 1px solid #606060;
+    overflow: hidden;
+}
+.innerControls
+{
+    display:block;
+    float: left;
+    width: 95%;
+    margin: 3px;
+    padding-left: 3px;
+    border: 1px solid #606060;
+    outline: 0;
+}
+</style>
+  <title>hls.js demo</title>
 <link rel="icon" type="image/png" href="http://static1.dmcdn.net/images/favicon-32x32.png" sizes="32x32" />
 <link rel="icon" type="image/png" href="http://static1.dmcdn.net/images/favicon-16x16.png" sizes="16x16" />
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
@@ -23,14 +46,18 @@
         Check out the demo below in Chrome / Firefox or Safari !
       </p>
     </header>
-    <div id="customButtons"></div>
-    <div id="customText"></div>
-    <pre id="HlsUrl"></pre>
-    <pre id="HlsStatus"></pre>
-    <video id=video controls autoplay border="4" style="max-width:90%;margin-left:5%"></video><br>
-    <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)" style="margin-left:5%";></canvas>
-    <div>video dimension: <div id="currentResolution" style="display: inline;"></div></div>
-    <input type="range" min="0" step="1" value="0" id="videoWidthSlider" style="margin-left:5%;width:90%" oninput="videoWidthSliderChange()";/>
+    <div id="controls">
+      <div id="customButtons" class="innerControls"></div>
+      <div id="customText" class="innerControls"></div>
+      <select id="streamSelect" class="innerControls"><option value="" selected>(Enter custom URL below)</option></select>
+      <input id="streamURL" class="innerControls" type=text value=""/><br>
+      <pre id="StreamPermalink" class="innerControls"></pre>
+      <span id="currentResolution">-</span>
+      <video id="video" controls autoplay class="innerControls"></video><br>
+      <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)" class="innerControls";></canvas>
+    </div>
+    <input type="range" min="0" step="1" value="0" id="controlWidthSlider" class="innerControls" oninput="controlWidthSliderChange()";/>
+
 
     <button type="button" class="btn btn-sm" onclick="$('#PlaybackControl').toggle();">toggle playback controls</button>
     <div id='PlaybackControl'>
@@ -104,11 +131,8 @@
       <pre id='HlsStats'></pre>
       <div id="buffered_log"></div>
     </div>
-    <br>Change Stream <br>
-    <input id="userInput" value="http://www.streambox.fr/playlists/test_001/stream.m3u8" size="80"> <button type="button" class="btn btn-sm btn-primary" onclick="loadStream($('#userInput').val());">Load</button><br>
-
-  <h3> Test Videos </h3>
-  <ul id="streamlist"></ul>
+    <pre id="HlsStatus"></pre>
+    <br>
   </div>
 
   <script src="../../streams.js"></script>
@@ -120,15 +144,20 @@
   <script src="jsonpack.js"></script>
   <script>
 
-   'use strict';
-   var hls,_url,t0,isLive,events,capVideo;
-   var video = $('#video')[0];
-   video.volume = 0.05;
-   $("#videoWidthSlider")[0].max=0.9*window.innerWidth;
+$(document).ready(function() {
+  $('#streamSelect').change(function()      { $('#streamURL').val($('#streamSelect').val());loadStream($('#streamURL').val());});
+  $('#streamURL').change(function()           { loadStream($('#streamURL').val());});
+   $("#controlWidthSlider")[0].max=$("#controls").width();
    $("#PlaybackControl").hide();
    $("#QualityLevelControl").hide();
    $("#MetricsDisplay").hide();
    $("#StatsDisplay").hide();
+});
+
+   'use strict';
+   var hls,_url,t0,isLive,events,capVideo;
+   var video = $('#video')[0];
+   video.volume = 0.05;
 
    var manifest = decodeURIComponent(location.search.split('src=')[1]);
    if(manifest === 'undefined') {
@@ -146,13 +175,11 @@
            hls.bufferTimer = undefined;
          }
        }
+
+      $('#streamURL').val(url);
       var hlsLink = document.URL.split('?')[0] +  '?src=' + encodeURIComponent(url);
-      var description = 'URL: ' + url + '<br>HLS link: ' + "<a href=\"" + hlsLink + "\">" + hlsLink + "</a>";
-      if(url.indexOf('http') === -1) {
-        var dmlink = 'http://www.dailymotion.com/video/' + url;
-        description += '<br>DM link:' + "<a href=\"" + dmlink + "\">" + dmlink + "</a>";
-      }
-      $("#HlsUrl").html(description);
+      var description = 'permalink: ' + "<a href=\"" + hlsLink + "\">" + hlsLink + "</a>";
+      $("#StreamPermalink").html(description);
       $("#HlsStatus").text('loading ' + url);
        if(url.indexOf('http') === -1) {
         $("#HlsStatus").text('DM url detected, resolving ...');
@@ -628,11 +655,12 @@ function timeRangesToString(r) {
     $("#nextLevelControl").html(html4);
   }
 
-  function videoWidthSliderChange() {
-    $('#video')[0].width = parseInt($("#videoWidthSlider").val());
+  function controlWidthSliderChange() {
+    //$('#controls')[0].width = parseInt($("#controlWidthSlider").val());
+    console.log(parseInt($("#controlWidthSlider").val()));
+    $('#controls').width(parseInt($("#controlWidthSlider").val()));
     capVideo=true;
   }
-
   </script>
 </body>
 
