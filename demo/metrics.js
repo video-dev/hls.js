@@ -1,17 +1,18 @@
   function showMetrics()  {
     if(metricsDisplayed) {
       var width = window.innerWidth-30;
-        document.getElementById('videoEvent_c').width =
-        document.getElementById('loadEvent_c').width =
-        document.getElementById('bufferWindow_c').width =
-        document.getElementById('bitrateTimerange_c').width =
-        document.getElementById('bufferTimerange_c').width = width;
-        document.getElementById('bufferWindow_c').style.display=
-        document.getElementById('bitrateTimerange_c').style.display=
-        document.getElementById('bufferTimerange_c').style.display=
-        document.getElementById('videoEvent_c').style.display =
-        document.getElementById('metricsButton').style.display =
-        document.getElementById('loadEvent_c').style.display= "block";
+      $("#bufferWindow_c")[0].width =
+      $("#bitrateTimerange_c")[0].width =
+      $("#bufferTimerange_c")[0].width =
+      $("#videoEvent_c")[0].width =
+      $("#metricsButton")[0].width =
+      $("#loadEvent_c")[0].width = width;
+      $("#bufferWindow_c").show();
+      $("#bitrateTimerange_c").show();
+      $("#bufferTimerange_c").show();
+      $("#videoEvent_c").show();
+      $("#metricsButton").show();
+      $("#loadEvent_c").show();
     }
   }
 
@@ -27,12 +28,12 @@
 
   function hideMetrics()  {
       if(!metricsDisplayed) {
-        document.getElementById('bufferWindow_c').style.display=
-        document.getElementById('bitrateTimerange_c').style.display=
-        document.getElementById('bufferTimerange_c').style.display=
-        document.getElementById('videoEvent_c').style.display =
-        document.getElementById('metricsButton').style.display =
-        document.getElementById('loadEvent_c').style.display= "none";
+        $("#bufferWindow_c").hide();
+        $("#bitrateTimerange_c").hide();
+        $("#bufferTimerange_c").hide();
+        $("#videoEvent_c").hide();
+        $("#metricsButton").hide();
+        $("#loadEvent_c").hide();
       }
   }
 
@@ -52,8 +53,8 @@ var timeRangeMouseDown=false;
     timeRangeMouseDown = true;
     windowSliding = false;
     //console.log('windowStart/windowEnd:' + '/' + windowStart + '/' + windowEnd);
-    document.getElementById('windowStart').value=windowStart;
-    document.getElementById('windowEnd').value=windowEnd;
+    $("#windowStart").val(windowStart);
+    $("#windowEnd").val(windowEnd);
     refreshCanvas();
  }
 
@@ -73,8 +74,8 @@ var timeRangeMouseDown=false;
         windowEnd +=50;
       }
       //console.log('windowStart/windowEnd:' + '/' + windowStart + '/' + windowEnd);
-      document.getElementById('windowStart').value=windowStart;
-      document.getElementById('windowEnd').value=windowEnd;
+    $("#windowStart").val(windowStart);
+    $("#windowEnd").val(windowEnd);
       refreshCanvas();
     }
  }
@@ -98,21 +99,22 @@ var timeRangeMouseDown=false;
  }
 
 var windowDuration=20000,windowSliding=true,windowStart=0,windowEnd=10000,windowFocus,metricsDisplayed=false;
-document.getElementById('windowStart').value=windowStart;document.getElementById('windowEnd').value=windowEnd;
+$("#windowStart").val(windowStart);
+$("#windowEnd").val(windowEnd);
   function refreshCanvas()  {
     if(metricsDisplayed) {
       try {
         var windowTime = getWindowTimeRange();
-        canvasBufferTimeRangeUpdate(document.getElementById('bufferTimerange_c'), 0, windowTime.now, windowTime.min,windowTime.max, events.buffer);
+        canvasBufferTimeRangeUpdate($("#bufferTimerange_c")[0], 0, windowTime.now, windowTime.min,windowTime.max, events.buffer);
         if(windowTime.min !== 0 || windowTime.max !== windowTime.now) {
-          document.getElementById('bufferWindow_c').style.display="block";
-          canvasBufferWindowUpdate(document.getElementById('bufferWindow_c'), windowTime.min,windowTime.max, windowTime.focus, events.buffer);
+          $("#bufferWindow_c").show();
+          canvasBufferWindowUpdate($("#bufferWindow_c")[0], windowTime.min,windowTime.max, windowTime.focus, events.buffer);
         } else {
-          document.getElementById('bufferWindow_c').style.display="none";
+          $("#bufferWindow_c").hide();
         }
-        canvasBitrateEventUpdate(document.getElementById('bitrateTimerange_c'), 0, windowTime.now, windowTime.min,windowTime.max, events.level, events.bitrate);
-        canvasVideoEventUpdate(document.getElementById('videoEvent_c'), windowTime.min,windowTime.max, events.video);
-        canvasLoadEventUpdate(document.getElementById('loadEvent_c'), windowTime.min,windowTime.max, events.load);
+        canvasBitrateEventUpdate($("#bitrateTimerange_c")[0], 0, windowTime.now, windowTime.min,windowTime.max, events.level, events.bitrate);
+        canvasVideoEventUpdate($("#videoEvent_c")[0], windowTime.min,windowTime.max, events.video);
+        canvasLoadEventUpdate($("#loadEvent_c")[0], windowTime.min,windowTime.max, events.load);
       } catch(err) {
         console.log("refreshCanvas error:" +err.message);
       }
@@ -156,8 +158,8 @@ function timeRangeZoomIn() {
       windowEnd+=50;
     }
   }
-  document.getElementById('windowStart').value=windowStart;
-  document.getElementById('windowEnd').value=windowEnd;
+  $("#windowStart").val(windowStart);
+  $("#windowEnd").val(windowEnd);
   refreshCanvas();
 }
 
@@ -171,8 +173,8 @@ function timeRangeZoomOut() {
     windowStart=Math.max(0,windowStart);
     windowEnd=Math.min(events.buffer[events.buffer.length-1].time,windowEnd);
   }
-  document.getElementById('windowStart').value=windowStart;
-  document.getElementById('windowEnd').value=windowEnd;
+  $("#windowStart").val(windowStart);
+  $("#windowEnd").val(windowEnd);
   refreshCanvas();
 }
 
@@ -182,8 +184,8 @@ function timeRangeSlideLeft() {
   windowEnd-=duration/4;
   windowStart=Math.max(0,windowStart);
   windowEnd=Math.min(events.buffer[events.buffer.length-1].time,windowEnd);
-  document.getElementById('windowStart').value=windowStart;
-  document.getElementById('windowEnd').value=windowEnd;
+  $("#windowStart").val(windowStart);
+  $("#windowEnd").val(windowEnd);
   refreshCanvas();
 }
 
@@ -193,9 +195,7 @@ function timeRangeSlideRight() {
   windowEnd+=duration/4;
   windowStart=Math.max(0,windowStart);
   windowEnd=Math.min(events.buffer[events.buffer.length-1].time,windowEnd);
-  document.getElementById('windowStart').value=windowStart;
-  document.getElementById('windowEnd').value=windowEnd;
+  $("#windowStart").val(windowStart);
+  $("#windowEnd").val(windowEnd);
   refreshCanvas();
 }
-
-
