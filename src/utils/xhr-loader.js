@@ -17,6 +17,7 @@ import {logger}             from '../utils/logger';
 
   abort() {
     if(this.loader &&this.loader.readyState !== 4) {
+      this.stats.aborted = true;
       this.loader.abort();
     }
     if(this.timeoutHandle) {

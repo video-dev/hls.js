@@ -172,10 +172,12 @@
 
   onFragmentLoadProgress(event,data) {
     var stats = data.stats;
-    this.lastfetchduration = (new Date() - stats.trequest)/1000;
-    this.lastfetchlevel = data.frag.level;
-    this.lastbw = stats.loaded*8/this.lastfetchduration;
-    //console.log(`len:${stats.length},fetchDuration:${this.lastfetchduration},bw:${(this.lastbw/1000).toFixed(0)}`);
+    if(stats.aborted === undefined) {
+      this.lastfetchduration = (new Date() - stats.trequest)/1000;
+      this.lastfetchlevel = data.frag.level;
+      this.lastbw = stats.loaded*8/this.lastfetchduration;
+      console.log(`fetchDuration:${this.lastfetchduration},bw:${(this.lastbw/1000).toFixed(0)}/${stats.aborted}`);
+    }
   }
 
   onError(event,data) {
