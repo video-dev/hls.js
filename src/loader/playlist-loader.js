@@ -194,10 +194,10 @@ import {ErrorTypes,ErrorDetails} from '../errors';
 
   loaderror(event) {
     var details;
-    if(this.id !== undefined) {
-      details = ErrorDetails.LEVEL_LOAD_ERROR;
-    } else {
+    if(this.id === null) {
       details = ErrorDetails.MANIFEST_LOAD_ERROR;
+    } else {
+      details = ErrorDetails.LEVEL_LOAD_ERROR;
     }
     this.loader.abort();
     observer.trigger(Event.ERROR, {type : ErrorTypes.NETWORK_ERROR, details:details, fatal:true, url:this.url, loader : this.loader, response:event.currentTarget, level: this.id});
@@ -205,10 +205,10 @@ import {ErrorTypes,ErrorDetails} from '../errors';
 
   loadtimeout() {
     var details;
-    if(this.id !== undefined) {
-      details = ErrorDetails.LEVEL_LOAD_TIMEOUT;
-    } else {
+    if(this.id === null) {
       details = ErrorDetails.MANIFEST_LOAD_TIMEOUT;
+    } else {
+      details = ErrorDetails.LEVEL_LOAD_TIMEOUT;
     }
    this.loader.abort();
    observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details:details, fatal:true,url : this.url, loader: this.loader, level: this.id});
