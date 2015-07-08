@@ -386,22 +386,22 @@ class TSDemuxer {
             mp4Sample = {
                 size: mp4SampleLength,
                 duration: 0,
-                compositionTimeOffset: avcSample.pts - avcSample.dts,
+                cts: avcSample.pts - avcSample.dts,
                 flags: {
                     isLeading: 0,
                     isDependedOn: 0,
                     hasRedundancy: 0,
-                    degradationPriority: 0
+                    degradPrio: 0
                 }
             };
 
             if (avcSample.key === true) {
                 // the current sample is a key frame
                 mp4Sample.flags.dependsOn = 2;
-                mp4Sample.flags.isNonSyncSample = 0;
+                mp4Sample.flags.isNonSync = 0;
             } else {
                 mp4Sample.flags.dependsOn = 1;
-                mp4Sample.flags.isNonSyncSample = 1;
+                mp4Sample.flags.isNonSync = 1;
             }
             samples.push(mp4Sample);
             lastSampleDTS = avcSample.dts;
@@ -692,13 +692,13 @@ class TSDemuxer {
 
             mp4Sample = {
                 size: unit.byteLength,
-                compositionTimeOffset: 0,
+                cts: 0,
                 duration: 0,
                 flags: {
                     isLeading: 0,
                     isDependedOn: 0,
                     hasRedundancy: 0,
-                    degradationPriority: 0,
+                    degradPrio: 0,
                     dependsOn: 1
                 }
             };

@@ -964,13 +964,13 @@ class MP4 {
                     (sample.flags.isDependedOn << 6) |
                         (sample.flags.hasRedundancy << 4) |
                         (sample.flags.paddingValue << 1) |
-                        sample.flags.isNonSyncSample,
-                    sample.flags.degradationPriority & (0xf0 << 8),
-                    sample.flags.degradationPriority & 0x0f, // sample_flags
-                    (sample.compositionTimeOffset >>> 24) & 0xff,
-                    (sample.compositionTimeOffset >>> 16) & 0xff,
-                    (sample.compositionTimeOffset >>> 8) & 0xff,
-                    sample.compositionTimeOffset & 0xff // sample_composition_time_offset
+                        sample.flags.isNonSync,
+                    sample.flags.degradPrio & (0xf0 << 8),
+                    sample.flags.degradPrio & 0x0f, // sample_flags
+                    (sample.cts >>> 24) & 0xff,
+                    (sample.cts >>> 16) & 0xff,
+                    (sample.cts >>> 8) & 0xff,
+                    sample.cts & 0xff // sample_composition_time_offset
                 ],
                 12 + 16 * i
             );
