@@ -330,9 +330,7 @@ $(document).ready(function() {
             $("#HlsStatus").text("timeout while trying to load level playlist");
             break;
           case Hls.ErrorDetails.FRAG_PARSING_ERROR:
-            hls.destroy();
-            $("#HlsStatus").text("Parsing Error:" + data);
-            $("#buffered_c").width(0);
+            $("#HlsStatus").text("Parsing Error:" + data.details);
             break;
           case Hls.ErrorDetails.FRAG_APPENDING_ERROR:
             $("#HlsStatus").text("Frag Appending Error");
