@@ -17,11 +17,18 @@ header {
 {
     display:block;
     float: left;
-    width: 95%;
+    width: 99%;
     margin: 3px;
     padding-left: 3px;
     border: 1px solid #606060;
     outline: 0;
+}
+.center
+{
+    width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    display: block
 }
 </style>
   <title>hls.js demo</title>
@@ -52,15 +59,29 @@ header {
       <select id="streamSelect" class="innerControls"><option value="" selected>(Enter custom URL below)</option></select>
       <input id="streamURL" class="innerControls" type=text value=""/><br>
       <pre id="StreamPermalink" class="innerControls"></pre>
+      <select id="videoSize">
+       <option value="240">size: tiny (240p)</option>
+       <option value="384">size: small (384p)</option>
+       <option value="480" selected>size: medium (480p)</option>
+       <option value="720">size: large (720p)</option>
+       <option value="1080">size: huge (1080p)</option>
+      </select>
       <span id="currentResolution">-</span>
-      <video id="video" controls autoplay class="innerControls"></video><br>
-      <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)" class="innerControls";></canvas>
     </div>
-    <input type="range" min="0" step="1" value="0" id="controlWidthSlider" class="innerControls" oninput="controlWidthSliderChange()";/>
 
+
+    <video id="video" controls autoplay class="center"></video><br>
+    <canvas id="buffered_c" height="15" class="center" onclick="buffered_seek(event)";></canvas><br><br>
+    <pre id="HlsStatus"></pre>
 
     <button type="button" class="btn btn-sm" onclick="$('#PlaybackControl').toggle();">toggle playback controls</button>
+    <button type="button" class="btn btn-sm" onclick="$('#QualityLevelControl').toggle();">toggle Quality Level controls</button>
+    <button type="button" class="btn btn-sm" onclick="$('#MetricsDisplay').toggle();toggleMetricsDisplay();">toggle Metrics Display</button>
+    <button type="button" class="btn btn-sm" onclick="$('#StatsDisplay').toggle();">toggle Stats Display</button>
+
+
     <div id='PlaybackControl'>
+    <h4> Playback Control </h4>
       <button type="button" class="btn btn-sm btn-success" onclick="$('#video')[0].play()">play</button>
       <button type="button" class="btn btn-sm btn-success" onclick="$('#video')[0].pause()">pause</button>
       <button type="button" class="btn btn-sm btn-success" onclick="$('#video')[0].currentTime+=10">currentTime+=10</button>
@@ -71,8 +92,8 @@ header {
       <button type="button" class="btn btn-xs btn-warning" onclick="hls.recoverMediaError()">recover Media Error</button><br>
     </div>
 
-    <button type="button" class="btn btn-sm" onclick="$('#QualityLevelControl').toggle();">toggle Quality Level controls</button>
     <div id='QualityLevelControl'>
+    <h4> Quality Control </h4>
       <table>
         <tr>
           <td>current level</td>
@@ -97,8 +118,8 @@ header {
       </table>
     </div>
 
-    <button type="button" class="btn btn-sm" onclick="$('#MetricsDisplay').toggle();toggleMetricsDisplay();">toggle Metrics Display</button>
     <div id='MetricsDisplay'>
+    <h4> Real Time Metrics Display </h4>
       <div id="metricsButton">
         <button type="button" class="btn btn-xs btn-primary" onclick="windowSliding=!windowSliding; refreshCanvas()">toggle sliding/fixed window</button><br>
         <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(0)">window ALL</button>
@@ -126,13 +147,11 @@ header {
       </div>
     </div>
 
-    <button type="button" class="btn btn-sm" onclick="$('#StatsDisplay').toggle();">toggle Stats Display</button>
     <div id='StatsDisplay'>
+    <h4> Stats Display </h4>
       <pre id='HlsStats'></pre>
       <div id="buffered_log"></div>
     </div>
-    <pre id="HlsStatus"></pre>
-    <br>
   </div>
 
   <script src="../../streams.js"></script>
@@ -147,7 +166,7 @@ header {
 $(document).ready(function() {
   $('#streamSelect').change(function()      { $('#streamURL').val($('#streamSelect').val());loadStream($('#streamURL').val());});
   $('#streamURL').change(function()           { loadStream($('#streamURL').val());});
-   $("#controlWidthSlider")[0].max=$("#controls").width();
+  $('#videoSize').change(function()          {  $('#video').width($('#videoSize').val()); $('#buffered_c').width($('#videoSize').val());  });
    $("#PlaybackControl").hide();
    $("#QualityLevelControl").hide();
    $("#MetricsDisplay").hide();
@@ -155,7 +174,7 @@ $(document).ready(function() {
 });
 
    'use strict';
-   var hls,_url,t0,isLive,events,capVideo;
+   var hls,t0,isLive,events;
    var video = $('#video')[0];
    video.volume = 0.05;
 
@@ -181,23 +200,11 @@ $(document).ready(function() {
       var description = 'permalink: ' + "<a href=\"" + hlsLink + "\">" + hlsLink + "</a>";
       $("#StreamPermalink").html(description);
       $("#HlsStatus").text('loading ' + url);
-       if(url.indexOf('http') === -1) {
-        $("#HlsStatus").text('DM url detected, resolving ...');
-        _url = getDMURL(url);
-        if(_url) {
-          $("#HlsStatus").text('DM url resolved');
-        } else {
-          $("#HlsStatus").text('unable to resolve DM url, aborting ...if not on DM domain, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin</a> Chrome Extension');
-          return;
-        }
-       } else {
-        _url = url;
-       }
        t0 = Date.now();
-       events = { url : _url, date : new Date(), load : [], buffer : [], video : [], level : [], bitrate : []};
+       events = { url : url, date : new Date(), load : [], buffer : [], video : [], level : [], bitrate : []};
        hls = new Hls({debug:true});
        $("#HlsStatus").text('loading manifest and attaching video element...');
-       hls.loadSource(_url);
+       hls.loadSource(url);
        hls.attachVideo(video);
        hls.on(Hls.Events.MSE_ATTACHED,function() {
           bufferingIdx = -1;
@@ -279,12 +286,12 @@ $(document).ready(function() {
         switch(data.details) {
           case Hls.ErrorDetails.MANIFEST_LOAD_ERROR:
             try {
-              $("#HlsStatus").text("cannot Load <a href=\"" + data.url + "\">" + url + "</a><br>HTTP response code:" + data.response.status + "<br>" + data.response.statusText);
+              $("#HlsStatus").html("cannot Load <a href=\"" + data.url + "\">" + url + "</a><br>HTTP response code:" + data.response.status + "<br>" + data.response.statusText);
                 if(data.response.status === 0) {
-                  $("#HlsStatus").append("this is most probably a CORS issue, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin</a> Chrome Extension");
+                  $("#HlsStatus").append("this might be a CORS issue, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin</a> Chrome Extension");
                 }
             } catch(err) {
-              $("#HlsStatus").text("cannot Load <a href=\"" + data.url + "\">" + url + "</a><br>Reason:Load " + data.event.type);
+              $("#HlsStatus").html("cannot Load <a href=\"" + data.url + "\">" + url + "</a><br>Reason:Load " + data.event.type);
             }
             break;
           case Hls.ErrorDetails.LEVEL_LOAD_ERROR:
@@ -317,10 +324,10 @@ $(document).ready(function() {
               hls.recoverMediaError();
               break;
             case Hls.ErrorTypes.NETWORK_ERROR:
-              $("#HlsStatus").append(",network error press on button to recover ...");
+              $("#HlsStatus").append(",network error ...");
               break;
             default:
-              $("#HlsStatus").append(", unrecoverable error, destroying context ...");
+              $("#HlsStatus").append(", unrecoverable error");
               hls.destroy();
               break;
           }
@@ -365,9 +372,6 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
          break;
       case 'resize':
         data = evt.target.videoWidth + '/' + evt.target.videoHeight;
-        if(capVideo !== true) {
-          $("#videoWidthSlider").val(evt.target.clientWidth);
-        }
         break;
       case 'loadedmetadata':
       //   data = 'duration:' + evt.target.duration + '/videoWidth:' + evt.target.videoWidth + '/videoHeight:' + evt.target.videoHeight;
@@ -647,19 +651,12 @@ function timeRangesToString(r) {
     }
     var v = $('#video')[0];
     if(v.videoWidth) {
-      $("#currentResolution").html(v.videoWidth + 'x' + v.videoHeight);
+      $("#currentResolution").html("current video resolution:" + v.videoWidth + 'x' + v.videoHeight);
     }
     $("#currentLevelControl").html(html1);
     $("#loadLevelControl").html(html2);
     $("#levelCappingControl").html(html3);
     $("#nextLevelControl").html(html4);
-  }
-
-  function controlWidthSliderChange() {
-    //$('#controls')[0].width = parseInt($("#controlWidthSlider").val());
-    console.log(parseInt($("#controlWidthSlider").val()));
-    $('#controls').width(parseInt($("#controlWidthSlider").val()));
-    capVideo=true;
   }
   </script>
 </body>
