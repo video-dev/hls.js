@@ -196,15 +196,15 @@ $(document).ready(function() {
    $('#metricsButtonFixed').toggle(!windowSliding);
 });
 
-   'use strict';
-   var hls,events;
-   var video = $('#video')[0];
-   video.volume = 0.05;
+  'use strict';
+  var hls,events;
+  var video = $('#video')[0];
+  video.volume = 0.05;
 
-   var manifest = decodeURIComponent(location.search.split('src=')[1]);
-   if(manifest === 'undefined') {
-     manifest = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
-   }
+  var manifest = decodeURIComponent(location.search.split('src=')[1]);
+  if(manifest === 'undefined') {
+    manifest = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
+  }
   loadStream(manifest);
 
   function loadStream(url) {
