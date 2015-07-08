@@ -549,13 +549,13 @@ class MP4 {
         (sample.flags.isDependedOn << 6) |
           (sample.flags.hasRedundancy << 4) |
           (sample.flags.paddingValue << 1) |
-          sample.flags.isNonSyncSample,
-        sample.flags.degradationPriority & 0xF0 << 8,
-        sample.flags.degradationPriority & 0x0F, // sample_flags
-        (sample.compositionTimeOffset >>> 24) & 0xFF,
-        (sample.compositionTimeOffset >>> 16) & 0xFF,
-        (sample.compositionTimeOffset >>> 8) & 0xFF,
-        sample.compositionTimeOffset & 0xFF // sample_composition_time_offset
+          sample.flags.isNonSync,
+        sample.flags.degradPrio & 0xF0 << 8,
+        sample.flags.degradPrio & 0x0F, // sample_flags
+        (sample.cts >>> 24) & 0xFF,
+        (sample.cts >>> 16) & 0xFF,
+        (sample.cts >>> 8) & 0xFF,
+        sample.cts & 0xFF // sample_composition_time_offset
       ],12+16*i);
     }
     return MP4.box(MP4.types.trun, array);
