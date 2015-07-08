@@ -48,10 +48,10 @@ header {
   <title>hls.js demo</title>
 <link rel="icon" type="image/png" href="http://static1.dmcdn.net/images/favicon-32x32.png" sizes="32x32" />
 <link rel="icon" type="image/png" href="http://static1.dmcdn.net/images/favicon-16x16.png" sizes="16x16" />
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 
 </head>
 <body>
@@ -99,12 +99,12 @@ header {
 
     <div id='PlaybackControl'>
     <h4> Playback Control </h4>
-      <button type="button" class="btn btn-sm btn-success" onclick="$('#video')[0].play()">play</button>
-      <button type="button" class="btn btn-sm btn-success" onclick="$('#video')[0].pause()">pause</button>
-      <button type="button" class="btn btn-sm btn-success" onclick="$('#video')[0].currentTime+=10">currentTime+=10</button>
-      <button type="button" class="btn btn-sm btn-success" onclick="$('#video')[0].currentTime-=10">currentTime-=10</button>
-      <button type="button" class="btn btn-sm btn-success" onclick="$('#video')[0].currentTime=$('#seek_pos').val()">seek to </button>
-       <input type="text" id='seek_pos' size="8" onkeydown="if(window.event.keyCode=='13'){$('#video')[0].currentTime=$('#seek_pos').val();}"><br>
+      <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].play()">play</button>
+      <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].pause()">pause</button>
+      <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime+=10">currentTime+=10</button>
+      <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime-=10">currentTime-=10</button>
+      <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime=$('#seek_pos').val()">seek to </button>
+       <input type="text" id='seek_pos' size="8" onkeydown="if(window.event.keyCode=='13'){$('#video')[0].currentTime=$('#seek_pos').val();}"><br><br>
       <button type="button" class="btn btn-xs btn-warning" onclick="hls.recoverNetworkError()">recover Network Error</button>
       <button type="button" class="btn btn-xs btn-warning" onclick="hls.recoverMediaError()">recover Media Error</button><br>
     </div>
@@ -138,23 +138,27 @@ header {
     <div id='MetricsDisplay'>
     <h4> Real Time Metrics Display </h4>
       <div id="metricsButton">
-        <button type="button" class="btn btn-xs btn-primary" onclick="windowSliding=!windowSliding; refreshCanvas()">toggle sliding/fixed window</button><br>
-        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(0)">window ALL</button>
-        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(2000)">2s</button>
-        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(5000)">5s</button>
-        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(10000)">10s</button>
-        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(20000)">20s</button>
-        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(30000)">30s</button>
-        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(60000)">60s</button>
-        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(120000)">120s</button><br>
-        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeZoomIn()">Window Zoom In</button>
-        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeZoomOut()">Window Zoom Out</button><br>
-        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSlideLeft()"> <<< Window Slide </button>
-        <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSlideRight()">Window Slide >>> </button><br>
-        <button type="button" class="btn btn-xs btn-primary" onclick="windowStart=$('#windowStart').val()">fixed window start(ms)</button>
-        <input type="text" id='windowStart' defaultValue="0" size="8" onkeydown="if(window.event.keyCode=='13'){windowStart=$('#windowStart').val();}">
-        <button type="button" class="btn btn-xs btn-primary" onclick="windowEnd=$('#windowEnd').val()">fixed window end(ms)</button>
-        <input type="text" id='windowEnd' defaultValue="10000" size="8" onkeydown="if(window.event.keyCode=='13'){windowEnd=$('#windowEnd').val();}"><br>
+        <button type="button" class="btn btn-xs btn-info" onclick="$('#metricsButtonWindow').toggle();$('#metricsButtonFixed').toggle();windowSliding=!windowSliding; refreshCanvas()">toggle sliding/fixed window</button><br>
+        <div id="metricsButtonWindow">
+          <button type="button" class="btn btn-xs btn-info" onclick="timeRangeSetSliding(0)">window ALL</button>
+          <button type="button" class="btn btn-xs btn-info" onclick="timeRangeSetSliding(2000)">2s</button>
+          <button type="button" class="btn btn-xs btn-info" onclick="timeRangeSetSliding(5000)">5s</button>
+          <button type="button" class="btn btn-xs btn-info" onclick="timeRangeSetSliding(10000)">10s</button>
+          <button type="button" class="btn btn-xs btn-info" onclick="timeRangeSetSliding(20000)">20s</button>
+          <button type="button" class="btn btn-xs btn-info" onclick="timeRangeSetSliding(30000)">30s</button>
+          <button type="button" class="btn btn-xs btn-info" onclick="timeRangeSetSliding(60000)">60s</button>
+          <button type="button" class="btn btn-xs btn-info" onclick="timeRangeSetSliding(120000)">120s</button><br>
+          <button type="button" class="btn btn-xs btn-info" onclick="timeRangeZoomIn()">Window Zoom In</button>
+          <button type="button" class="btn btn-xs btn-info" onclick="timeRangeZoomOut()">Window Zoom Out</button><br>
+          <button type="button" class="btn btn-xs btn-info" onclick="timeRangeSlideLeft()"> <<< Window Slide </button>
+          <button type="button" class="btn btn-xs btn-info" onclick="timeRangeSlideRight()">Window Slide >>> </button><br>
+        </div>
+        <div id="metricsButtonFixed">
+          <button type="button" class="btn btn-xs btn-info" onclick="windowStart=$('#windowStart').val()">fixed window start(ms)</button>
+          <input type="text" id='windowStart' defaultValue="0" size="8" onkeydown="if(window.event.keyCode=='13'){windowStart=$('#windowStart').val();}">
+          <button type="button" class="btn btn-xs btn-info" onclick="windowEnd=$('#windowEnd').val()">fixed window end(ms)</button>
+          <input type="text" id='windowEnd' defaultValue="10000" size="8" onkeydown="if(window.event.keyCode=='13'){windowEnd=$('#windowEnd').val();}"><br>
+        </div>
         <button type="button" class="btn btn-xs btn-success" onclick="exportmetrics()" style="font-size:18px">metrics permalink</button>
         <canvas id="bufferTimerange_c" width="640" height="100" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
         <canvas id="bitrateTimerange_c" width="640" height="100" style="border:1px solid #000000";></canvas>
@@ -188,10 +192,12 @@ $(document).ready(function() {
    $("#QualityLevelControl").hide();
    $("#MetricsDisplay").hide();
    $("#StatsDisplay").hide();
+   $('#metricsButtonWindow').toggle(windowSliding);
+   $('#metricsButtonFixed').toggle(!windowSliding);
 });
 
    'use strict';
-   var hls,t0,isLive,events;
+   var hls,events;
    var video = $('#video')[0];
    video.volume = 0.05;
 
@@ -217,23 +223,22 @@ $(document).ready(function() {
       var description = 'permalink: ' + "<a href=\"" + hlsLink + "\">" + hlsLink + "</a>";
       $("#StreamPermalink").html(description);
       $("#HlsStatus").text('loading ' + url);
-       t0 = Date.now();
-       events = { url : url, date : new Date(), load : [], buffer : [], video : [], level : [], bitrate : []};
+       events = { url : url, t0 : Date.now(), load : [], buffer : [], video : [], level : [], bitrate : []};
        hls = new Hls({debug:true});
        $("#HlsStatus").text('loading manifest and attaching video element...');
        hls.loadSource(url);
        hls.attachVideo(video);
        hls.on(Hls.Events.MSE_ATTACHED,function() {
           bufferingIdx = -1;
-          events.video.push({time : new Date() - t0, type : "MSE attached"});
+          events.video.push({time : Date.now() - events.t0, type : "MSE attached"});
        });
        hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT,function(event,data) {
           showCanvas();
-          var event = {time : new Date() - t0, type : "init segment"};
+          var event = {time : Date.now() - events.t0, type : "init segment"};
           events.video.push(event);
        });
        hls.on(Hls.Events.LEVEL_SWITCH,function(event,data) {
-          events.level.push({time : new Date() - t0, id : data.levelId, bitrate : Math.round(hls.levels[data.levelId].bitrate/1000)});
+          events.level.push({time : Date.now() - events.t0, id : data.levelId, bitrate : Math.round(hls.levels[data.levelId].bitrate/1000)});
           updateLevelInfo();
        });
        hls.on(Hls.Events.MANIFEST_LOADED,function(event,data) {
@@ -242,7 +247,7 @@ $(document).ready(function() {
             name : "",
             start : 0,
             end : data.levels.length,
-            time : data.stats.trequest - t0,
+            time : data.stats.trequest - events.t0,
             latency : data.stats.tfirst - data.stats.trequest,
             load : data.stats.tload - data.stats.tfirst,
             duration : data.stats.tload - data.stats.tfirst,
@@ -255,13 +260,13 @@ $(document).ready(function() {
          updateLevelInfo();
        });
        hls.on(Hls.Events.LEVEL_LOADED,function(event,data) {
-          isLive = data.details.live;
+          events.isLive = data.details.live;
           var event = {
             type : "level",
             id : data.levelId,
             start : data.details.startSN,
             end : data.details.endSN,
-            time : data.stats.trequest - t0,
+            time : data.stats.trequest - events.t0,
             latency : data.stats.tfirst - data.stats.trequest,
             load : data.stats.tload - data.stats.tfirst,
             duration : data.stats.tload - data.stats.tfirst
@@ -274,7 +279,7 @@ $(document).ready(function() {
             type : "fragment",
             id : data.frag.level,
             id2 : data.frag.sn,
-            time : data.stats.trequest - t0,
+            time : data.stats.trequest - events.t0,
             latency : data.stats.tfirst - data.stats.trequest,
             load : data.stats.tload - data.stats.tfirst,
             demux : data.stats.tparsed - data.stats.tload,
@@ -284,7 +289,7 @@ $(document).ready(function() {
             size : data.stats.length
           };
           events.load.push(event);
-          events.bitrate.push({time : new Date() - t0, bitrate : event.bw , duration : data.frag.duration, level : event.id});
+          events.bitrate.push({time : Date.now() - events.t0, bitrate : event.bw , duration : data.frag.duration, level : event.id});
           if(hls.bufferTimer === undefined) {
             events.buffer.push({ time : 0, buffer : 0, pos: 0});
             hls.bufferTimer = window.setInterval(checkBuffer, 100);
@@ -293,7 +298,7 @@ $(document).ready(function() {
           updateLevelInfo();
        });
        hls.on(Hls.Events.FRAG_CHANGED,function(event,data) {
-        var event = {time : new Date() - t0, type : 'frag changed', name : data.frag.sn + ' @ ' + data.frag.level };
+        var event = {time : Date.now() - events.t0, type : 'frag changed', name : data.frag.sn + ' @ ' + data.frag.level };
         events.video.push(event);
         refreshCanvas();
         updateLevelInfo();
@@ -352,7 +357,7 @@ $(document).ready(function() {
        });
 
        hls.on(Hls.Events.FPS_DROP,function(event,data) {
-          var evt = {time : new Date() - t0, type : "frame drop", name : data.currentDropped + "/" + data.currentDecoded};
+          var evt = {time : Date.now() - events.t0, type : "frame drop", name : data.currentDropped + "/" + data.currentDecoded};
           events.video.push(evt);
        });
        video.addEventListener('resize', handleVideoEvent);
@@ -432,7 +437,7 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
       default:
       break;
     }
-    var event = {time : new Date() - t0, type : evt.type, name : data};
+    var event = {time : Date.now() - events.t0, type : evt.type, name : data};
     events.video.push(event);
     if(evt.type === 'seeking') {
       lastSeekingIdx = events.video.length-1;
@@ -479,19 +484,19 @@ function timeRangesToString(r) {
       // check if we are in buffering / or playback ended state
       if(bufferLen <= 0.1 && v.paused === false && (pos-lastStartPosition) > 0.5) {
         // don't create buffering event if we are at the end of the playlist, don't report ended for live playlist
-        if(lastDuration -pos <= 0.5  && isLive === false) {
+        if(lastDuration -pos <= 0.5  && events.isLive === false) {
           if(playbackEnded === false) {
-            events.video.push({ type : 'ended' , time : new Date() - t0 });
+            events.video.push({ type : 'ended' , time : Date.now() - events.t0 });
             playbackEnded = true;
           }
         } else {
          // we are not at the end of the playlist ... real buffering
           if(bufferingIdx !== -1) {
-            bufferingDuration = new Date() - t0 - events.video[bufferingIdx].time;
+            bufferingDuration = Date.now() - events.t0 - events.video[bufferingIdx].time;
             events.video[bufferingIdx].duration = bufferingDuration;
             events.video[bufferingIdx].name = bufferingDuration;
           } else {
-            events.video.push({ type : 'buffering' , time : new Date() - t0 });
+            events.video.push({ type : 'buffering' , time : Date.now() - events.t0 });
             // we are in buffering state
             bufferingIdx = events.video.length-1;
           }
@@ -502,7 +507,7 @@ function timeRangesToString(r) {
       }
 
       if(bufferLen > 0.1 && bufferingIdx !=-1) {
-          bufferingDuration = new Date() - t0 - events.video[bufferingIdx].time;
+          bufferingDuration = Date.now() - events.t0 - events.video[bufferingIdx].time;
           events.video[bufferingIdx].duration = bufferingDuration;
           events.video[bufferingIdx].name = bufferingDuration;
         // we are out of buffering state
@@ -510,7 +515,7 @@ function timeRangesToString(r) {
       }
 
       // update buffer/position for current Time
-      var event = { time : new Date() - t0, buffer : Math.round(bufferLen*1000), pos: Math.round(pos*1000)};
+      var event = { time : Date.now() - events.t0, buffer : Math.round(bufferLen*1000), pos: Math.round(pos*1000)};
       var bufEvents = events.buffer, bufEventLen = bufEvents.length;
       if(bufEventLen > 1) {
         var event0 = bufEvents[bufEventLen-2],event1 = bufEvents[bufEventLen-1];
