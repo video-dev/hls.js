@@ -341,6 +341,7 @@
 
       mp4Sample = {
         size: mp4SampleLength,
+        duration : 0,
         compositionTimeOffset: avcSample.pts - avcSample.dts,
         flags: {
           isLeading: 0,
@@ -361,7 +362,9 @@
       samples.push(mp4Sample);
       lastSampleDTS = avcSample.dts;
     }
-    mp4Sample.duration = samples[samples.length-2].duration;
+    if(samples.length >=2) {
+      mp4Sample.duration = samples[samples.length-2].duration;
+    }
     this.lastAvcDts = avcSample.dts;
     // next AVC sample PTS should be equal to last sample PTS + duration
     this.nextAvcPts = avcSample.pts + mp4Sample.duration;
@@ -568,6 +571,7 @@
       mp4Sample = {
         size: unit.byteLength,
         compositionTimeOffset: 0,
+        duration:0,
         flags: {
           isLeading: 0,
           isDependedOn: 0,
@@ -580,7 +584,9 @@
       lastSampleDTS = aacSample.dts;
     }
     //set last sample duration as being identical to previous sample
-    mp4Sample.duration = samples[samples.length-2].duration;
+    if(samples.length >=2) {
+      mp4Sample.duration = samples[samples.length-2].duration;
+    }
     this.lastAacDts = aacSample.dts;
     // next aac sample PTS should be equal to last sample PTS + duration
     this.nextAacPts = aacSample.pts + mp4Sample.duration;
