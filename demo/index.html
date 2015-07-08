@@ -7,7 +7,8 @@ header {
 }
 #controls
 {
-    width: 80%;
+    width: 70%;
+    min-width: 615px;
     padding: 3px;
     margin: 0px auto 20px auto;
     border: 1px solid #606060;
@@ -20,24 +21,38 @@ header {
     width: 99%;
     margin: 3px;
     padding-left: 3px;
-    border: 1px solid #606060;
-    outline: 0;
+    font-size: 8pt
 }
-.center
+.videoCentered
 {
     width: 480px;
     margin-left: auto;
     margin-right: auto;
     display: block
 }
+
+.center
+{
+    width: 70%;
+    min-width: 615px;
+    overflow: hidden;
+    margin-left: auto;
+    margin-right: auto;
+    display: block
+}
+
+#customButtons input { width: 25%; display : inline-block; text-align: center; font-size: 8pt;}
+#toggleButtons button { width: 24%; display : inline-block; text-align: center; font-size: 8pt; background-color: #A0A0A0 }
+
 </style>
   <title>hls.js demo</title>
 <link rel="icon" type="image/png" href="http://static1.dmcdn.net/images/favicon-32x32.png" sizes="32x32" />
 <link rel="icon" type="image/png" href="http://static1.dmcdn.net/images/favicon-16x16.png" sizes="16x16" />
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+
 </head>
 <body>
   <div class="header-container">
@@ -54,31 +69,33 @@ header {
       </p>
     </header>
     <div id="controls">
-      <div id="customButtons" class="innerControls"></div>
-      <div id="customText" class="innerControls"></div>
+      <div id="customButtons"></div>
       <select id="streamSelect" class="innerControls"><option value="" selected>(Enter custom URL below)</option></select>
       <input id="streamURL" class="innerControls" type=text value=""/><br>
-      <pre id="StreamPermalink" class="innerControls"></pre>
-      <select id="videoSize">
-       <option value="240">size: tiny (240p)</option>
-       <option value="384">size: small (384p)</option>
-       <option value="480" selected>size: medium (480p)</option>
-       <option value="720">size: large (720p)</option>
-       <option value="1080">size: huge (1080p)</option>
-      </select>
-      <span id="currentResolution">-</span>
+      <div id="StreamPermalink" class="innerControls"></div>
+      <div>
+        <select id="videoSize" style="float:left">
+         <option value="240">player size: tiny (240p)</option>
+         <option value="384">player size: small (384p)</option>
+         <option value="480" selected>player size: medium (480p)</option>
+         <option value="720">player size: large (720p)</option>
+         <option value="1080">player size: huge (1080p)</option>
+        </select>
+        <span id="currentResolution" style="float:right;font-size: 8pt;">-</span>
+      </div>
     </div>
 
 
-    <video id="video" controls autoplay class="center"></video><br>
-    <canvas id="buffered_c" height="15" class="center" onclick="buffered_seek(event)";></canvas><br><br>
-    <pre id="HlsStatus"></pre>
+    <video id="video" controls autoplay class="videoCentered"></video><br>
+    <canvas id="buffered_c" height="15" class="videoCentered" onclick="buffered_seek(event)";></canvas><br><br>
+    <pre id="HlsStatus" class="center"></pre>
 
-    <button type="button" class="btn btn-sm" onclick="$('#PlaybackControl').toggle();">toggle playback controls</button>
-    <button type="button" class="btn btn-sm" onclick="$('#QualityLevelControl').toggle();">toggle Quality Level controls</button>
-    <button type="button" class="btn btn-sm" onclick="$('#MetricsDisplay').toggle();toggleMetricsDisplay();">toggle Metrics Display</button>
-    <button type="button" class="btn btn-sm" onclick="$('#StatsDisplay').toggle();">toggle Stats Display</button>
-
+    <div class="center" id="toggleButtons">
+      <button type="button" class="btn btn-sm" onclick="$('#PlaybackControl').toggle();">toggle playback controls</button>
+      <button type="button" class="btn btn-sm" onclick="$('#QualityLevelControl').toggle();">toggle Quality Level controls</button>
+      <button type="button" class="btn btn-sm" onclick="$('#MetricsDisplay').toggle();toggleMetricsDisplay();">toggle Metrics Display</button>
+      <button type="button" class="btn btn-sm" onclick="$('#StatsDisplay').toggle();">toggle Stats Display</button>
+    </div>
 
     <div id='PlaybackControl'>
     <h4> Playback Control </h4>
@@ -651,7 +668,7 @@ function timeRangesToString(r) {
     }
     var v = $('#video')[0];
     if(v.videoWidth) {
-      $("#currentResolution").html("current video resolution:" + v.videoWidth + 'x' + v.videoHeight);
+      $("#currentResolution").html("video resolution:" + v.videoWidth + 'x' + v.videoHeight);
     }
     $("#currentLevelControl").html(html1);
     $("#loadLevelControl").html(html2);
