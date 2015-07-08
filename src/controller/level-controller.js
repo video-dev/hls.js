@@ -192,11 +192,7 @@ class LevelController {
             this.lastfetchduration = (new Date() - stats.trequest) / 1000;
             this.lastfetchlevel = data.frag.level;
             this.lastbw = stats.loaded * 8 / this.lastfetchduration;
-            console.log(
-                `fetchDuration:${this.lastfetchduration},bw:${(
-                    this.lastbw / 1000
-                ).toFixed(0)}/${stats.aborted}`
-            );
+            //console.log(`fetchDuration:${this.lastfetchduration},bw:${(this.lastbw/1000).toFixed(0)}/${stats.aborted}`);
         }
     }
 
