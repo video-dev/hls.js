@@ -153,7 +153,9 @@ class LevelController {
 
     set manualLevel(newLevel) {
         this._manualLevel = newLevel;
-        this.level = newLevel;
+        if (newLevel !== -1) {
+            this.level = newLevel;
+        }
     }
 
     /** Return the capping/max level value that could be used by automatic level selection algorithm **/
@@ -197,15 +199,16 @@ class LevelController {
     }
 
     onError(event, data) {
+        var details = data.details,
+            fatal = data.fatal;
         // try to recover not fatal errors
-        switch (data.details) {
+        switch (details) {
             case ErrorDetails.FRAG_LOAD_ERROR:
             case ErrorDetails.FRAG_LOAD_TIMEOUT:
-                if (!data.fatal) {
+            case ErrorDetails.FRAG_LOOP_LOADING_ERROR:
+                if (!fatal) {
                     logger.log(
-                        `level controller,${
-                            data.details
-                        }: emergency switch-down for next fragment`
+                        `level controller,${details}: emergency switch-down for next fragment`
                     );
                     this.lastbw = 0;
                     this.lastfetchduration = 0;
@@ -213,7 +216,7 @@ class LevelController {
                 break;
             case ErrorDetails.LEVEL_LOAD_ERROR:
             case ErrorDetails.LEVEL_LOAD_TIMEOUT:
-                if (data.fatal) {
+                if (fatal) {
                     this._level = undefined;
                 }
                 break;
