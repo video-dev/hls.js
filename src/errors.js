@@ -22,6 +22,8 @@ export var ErrorDetails = {
     LEVEL_SWITCH_ERROR: 'levelSwitchError',
     // Identifier for fragment load error - data: { frag : fragment object, response : XHR response}
     FRAG_LOAD_ERROR: 'fragLoadError',
+    // Identifier for fragment loop loading error - data: { frag : fragment object}
+    FRAG_LOOP_LOADING_ERROR: 'fragLoopLoadingError',
     // Identifier for fragment load timeout error - data: { frag : fragment object}
     FRAG_LOAD_TIMEOUT: 'fragLoadTimeOut',
     // Identifier for a fragment parsing error event - data: parsing error description
