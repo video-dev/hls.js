@@ -70,7 +70,6 @@
     this.stop();
     this.demuxer = new Demuxer(this.config);
     this.timer = setInterval(this.ontick, 100);
-    this.appendError=0;
     this.level = -1;
     observer.on(Event.FRAG_LOADED, this.onfl);
     observer.on(Event.FRAG_PARSING_INIT_SEGMENT, this.onis);
@@ -91,7 +90,6 @@
       }
       this.frag = null;
     }
-    this.flushBufferCounter = 0;
     if(this.sourceBuffer) {
       for(var type in this.sourceBuffer) {
         var sb = this.sourceBuffer[type];
@@ -252,6 +250,26 @@
             frag.expectedLen = Math.round(frag.duration*this.levels[level].bitrate/8);
             frag.trequest = new Date();
           }
+
+          // ensure that we are not reloading the same fragments in loop ...
+          (this.fragLoadIdx !== undefined) ? this.fragLoadIdx++ : this.fragLoadIdx = 0;
+          if(frag.loadCounter) {
+            frag.loadCounter++;
+            let maxThreshold = this.config.fragLoadingLoopThreshold;
+            // if this frag has already been loaded 3 times, and if it has been reloaded recently
+            if(frag.loadCounter > maxThreshold && (Math.abs(this.fragLoadIdx - frag.loadIdx) < maxThreshold)) {
+              // if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal
+              let fatal = !(this.hls.autoLevelEnabled && level);
+              observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal:fatal, frag : this.frag});
+              if(fatal) {
+                this.state = this.ERROR;
+              }
+              return;
+            }
+          } else {
+            frag.loadCounter=1;
+          }
+          frag.loadIdx = this.fragLoadIdx;
           this.frag = frag;
           this.startFragmentRequested = true;
           observer.trigger(Event.FRAG_LOADING, { frag: frag });
@@ -323,7 +341,7 @@
               // in case any error occured while appending, put back segment in mp4segments table
               logger.log(`error while trying to append buffer:${err.message},try appending later`);
               this.mp4segments.unshift(segment);
-              this.appendError++;
+              this.appendError ? this.appendError++ : this.appendError=1;
               if(this.appendError > 3) {
                 logger.log(`fail 3 times to append segment in sourceBuffer`);
                 observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_APPENDING_ERROR, fatal : true, frag : this.frag});
@@ -343,8 +361,6 @@
           if(this.flushBuffer(range.start,range.end)) {
             // range flushed, remove from flush array
             this.flushRange.shift();
-            // reset flush counter
-            this.flushBufferCounter = 0;
           } else {
             // flush in progress, come back later
             break;
@@ -356,6 +372,8 @@
           this.state = this.IDLE;
           // reset reference to frag
           this.frag = null;
+          // increase fragment load Index to avoid frag loop loading error after buffer flush
+          this.fragLoadIdx+=2*this.config.fragLoadingLoopThreshold;
         }
          /* if not everything flushed, stay in BUFFER_FLUSHING state. we will come back here
             each time sourceBuffer updateend() callback will be triggered
@@ -572,6 +590,7 @@
       this.frag.loader.abort();
     }
     // flush everything
+    this.flushBufferCounter = 0;
     this.flushRange.push({ start : 0, end : Number.POSITIVE_INFINITY});
     // trigger a sourceBuffer flush
     this.state = this.BUFFER_FLUSHING;
@@ -625,6 +644,7 @@
       }
     }
     if(this.flushRange.length) {
+      this.flushBufferCounter = 0;
       // trigger a sourceBuffer flush
       this.state = this.BUFFER_FLUSHING;
       // speed up switching, trigger timer function

@@ -42,6 +42,7 @@ class Hls {
       fragLoadingTimeOut : 20000,
       fragLoadingMaxRetry : 3,
       fragLoadingRetryDelay : 1000,
+      fragLoadingLoopThreshold : 3,
       manifestLoadingTimeOut : 10000,
       manifestLoadingMaxRetry : 3,
       manifestLoadingRetryDelay : 1000,

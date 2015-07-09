@@ -93,6 +93,7 @@ each error is categorized by :
     - ```Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT```raised when level loading fails because of a timeout
     - ```Hls.ErrorDetails.LEVEL_SWITCH_ERROR```raised when level switching fails
     - ```Hls.ErrorDetails.FRAG_LOAD_ERROR```raised when fragment loading fails because of a network error
+    - ```Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR```raised upon detection of same fragment being requested in loop
     - ```Hls.ErrorDetails.FRAG_LOAD_TIMEOUT```raised when fragment loading fails because of a timeout
     - ```Hls.ErrorDetails.FRAG_PARSING_ERROR```raised when fragment parsing fails 
     - ```Hls.ErrorDetails.FRAG_APPENDING_ERROR```raised when mp4 boxes appending in SourceBuffer fails
@@ -406,6 +407,8 @@ full list of Errors is described below:
     - data: { type : ```OTHER_ERROR```, details : ```Hls.ErrorDetails.LEVEL_SWITCH_ERROR```, fatal : ```false```,level : failed level index, reason : failure reason}
   - ```Hls.ErrorDetails.FRAG_LOAD_ERROR```raised when fragment loading fails because of a network error
     - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.FRAG_LOAD_ERROR```, fatal : ```true/false```,frag : fragment object, response : xhr response}
+  - ```Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR```raised upon detection of same fragment being requested in loop
+    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR```, fatal : ```true/false```,frag : fragment object}
   - ```Hls.ErrorDetails.FRAG_LOAD_TIMEOUT```raised when fragment loading fails because of a timeout
     - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.FRAG_LOAD_TIMEOUT```, fatal : ```true/false```,frag : fragment object}
   - ```Hls.ErrorDetails.FRAG_PARSING_ERROR```raised when fragment parsing fails

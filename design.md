@@ -21,9 +21,9 @@ design idea is pretty simple :
   - [src/controller/buffer-controller.js][]
     - in charge of:
       - ensuring that buffer is filled as per defined quality selection logic. 
-      - monitoring current playback quality level
+      - monitoring current playback quality level (buffer controller maintains a map between media position and quality level)
     - if buffer is not filled up appropriately (i.e. as per defined maximum buffer size, or as per defined quality level), buffer controller will trigger the following actions:
-        - retrieve "not buffered" media position greater then current playback position
+        - retrieve "not buffered" media position greater then current playback position. this is performed by comparing video.buffered and video.currentTime.
         - retrieve URL of fragment matching with this media position, and appropriate quality level
         - trigger fragment loading
         - monitor fragment loading speed:
@@ -110,6 +110,9 @@ design idea is pretty simple :
   - ```FRAG_LOAD_ERROR``` is raised by [src/loader/fragment-loader.js][] upon xhr failure detected by [src/utils/xhr-loader.js][].
     - if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal: in that case [src/controller/level-controller.js][] will trigger an emergency switch down to level 0.
     - if frag level is 0 or auto level switch is disabled, this error is marked as fatal and a call to ```hls.recoverNetworkError()``` could help recover it.
+  - ```FRAG_LOOP_LOADING_ERROR``` is raised by [src/controller/buffer-controller.js][] upon detection of same fragment being requested in loop. this could happen with badly formatted fragments.
+    - if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal: in that case [src/controller/level-controller.js][] will trigger an emergency switch down to level 0.
+    - if frag level is 0 or auto level switch is disabled, this error is marked as fatal and a call to ```hls.recoverNetworkError()``` could help recover it.  
   - ```FRAG_LOAD_TIMEOUT``` is raised by [src/loader/fragment-loader.js][] upon xhr timeout detected by [src/utils/xhr-loader.js][].
     - if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal: in that case [src/controller/level-controller.js][] will trigger an emergency switch down to level 0.
     - if frag level is 0 or auto level switch is disabled, this error is marked as fatal and a call to ```hls.recoverNetworkError()``` could help recover it.
