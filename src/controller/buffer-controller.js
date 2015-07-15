@@ -257,7 +257,7 @@ class BufferController {
                                 break;
                             }
                         }
-                        if (fragIdx == fragments.length) {
+                        if (fragIdx === fragments.length) {
                             // reach end of playlist
                             break;
                         }
@@ -289,9 +289,11 @@ class BufferController {
                     }
 
                     // ensure that we are not reloading the same fragments in loop ...
-                    this.fragLoadIdx !== undefined
-                        ? this.fragLoadIdx++
-                        : (this.fragLoadIdx = 0);
+                    if (this.fragLoadIdx !== undefined) {
+                        this.fragLoadIdx++;
+                    } else {
+                        this.fragLoadIdx = 0;
+                    }
                     if (frag.loadCounter) {
                         frag.loadCounter++;
                         let maxThreshold = this.config.fragLoadingLoopThreshold;
@@ -427,9 +429,11 @@ class BufferController {
                                 },try appending later`
                             );
                             this.mp4segments.unshift(segment);
-                            this.appendError
-                                ? this.appendError++
-                                : (this.appendError = 1);
+                            if (this.appendError) {
+                                this.appendError++;
+                            } else {
+                                this.appendError = 1;
+                            }
                             if (this.appendError > 3) {
                                 logger.log(
                                     `fail 3 times to append segment in sourceBuffer`
