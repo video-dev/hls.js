@@ -193,12 +193,22 @@
           | (frag[11] & 0xFE) << 14
           | (frag[12] & 0xFF) <<  7
           | (frag[13] & 0xFE) >>>  1;
+          // check if greater than 2^32 -1
+          if (pesPts > 4294967295) {
+              // decrement 2^33
+              pesPts -= 8589934592;
+          }
         if (pesFlags & 0x40) {
           pesDts = (frag[14] & 0x0E ) << 29
             | (frag[15] & 0xFF ) << 22
             | (frag[16] & 0xFE ) << 14
             | (frag[17] & 0xFF ) << 7
             | (frag[18] & 0xFE ) >>> 1;
+          // check if greater than 2^32 -1
+          if (pesDts > 4294967295) {
+              // decrement 2^33
+              pesDts -= 8589934592;
+          }
         } else {
           pesDts = pesPts;
         }
@@ -309,12 +319,16 @@
       //logger.log('Video/PTS/DTS:' + avcSample.pts + '/' + avcSample.dts);
 
       if(lastSampleDTS !== undefined) {
+        avcSample.pts= this._PTSNormalize(avcSample.pts,lastSampleDTS);
+        avcSample.dts= this._PTSNormalize(avcSample.dts,lastSampleDTS);
         mp4Sample.duration = avcSample.dts - lastSampleDTS;
         if(mp4Sample.duration < 0) {
           //logger.log('invalid sample duration at PTS/DTS::' + avcSample.pts + '/' + avcSample.dts + ':' + mp4Sample.duration);
           mp4Sample.duration = 0;
         }
       } else {
+        avcSample.pts= this._PTSNormalize(avcSample.pts,this.nextAvcPts);
+        avcSample.dts= this._PTSNormalize(avcSample.dts,this.nextAvcPts);
         // check if fragments are contiguous (i.e. no missing frames between fragment)
         if(this.nextAvcPts) {
           var delta = (avcSample.pts - this.nextAvcPts)/90,absdelta=Math.abs(delta);
@@ -462,6 +476,22 @@
     return { units : units , length : length};
   }
 
+  _PTSNormalize(value,reference) {
+    var offset;
+    if (reference < value) {
+        // - 2^33
+        offset = - 8589934592;
+    } else {
+        // + 2^33
+        offset = 8589934592;
+    }
+    // 2^32
+    while (Math.abs(value - reference) > 4294967296) {
+        value += offset;
+    }
+    return value;
+  }
+
   _parseAACPES(pes) {
     var track = this._aacTrack,aacSample,data = pes.data,config,adtsFrameSize,adtsStartOffset,adtsHeaderLen,stamp,nbSamples,len;
     if(this.aacOverFlow) {
@@ -556,6 +586,8 @@
 
       //logger.log('Audio/PTS:' + aacSample.pts.toFixed(0));
       if(lastSampleDTS !== undefined) {
+        aacSample.pts= this._PTSNormalize(aacSample.pts,lastSampleDTS);
+        aacSample.dts= this._PTSNormalize(aacSample.dts,lastSampleDTS);
         // we use DTS to compute sample duration, but we use PTS to compute initPTS which is used to sync audio and video
         mp4Sample.duration = aacSample.dts - lastSampleDTS;
         if(mp4Sample.duration < 0) {
@@ -563,6 +595,8 @@
           mp4Sample.duration = 0;
         }
       } else {
+        aacSample.pts= this._PTSNormalize(aacSample.pts,this.nextAacPts);
+        aacSample.dts= this._PTSNormalize(aacSample.dts,this.nextAacPts);
         // check if fragments are contiguous (i.e. no missing frames between fragment)
         if(this.nextAacPts && this.nextAacPts !== aacSample.pts) {
           //logger.log('Audio next PTS:' + this.nextAacPts);
