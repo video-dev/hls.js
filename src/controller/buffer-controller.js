@@ -228,7 +228,7 @@
                 break;
               }
             }
-            if(fragIdx == fragments.length) {
+            if(fragIdx === fragments.length) {
               // reach end of playlist
               break;
             }
@@ -252,7 +252,11 @@
           }
 
           // ensure that we are not reloading the same fragments in loop ...
-          (this.fragLoadIdx !== undefined) ? this.fragLoadIdx++ : this.fragLoadIdx = 0;
+          if(this.fragLoadIdx !== undefined) {
+            this.fragLoadIdx++;
+          } else {
+            this.fragLoadIdx = 0;
+          }
           if(frag.loadCounter) {
             frag.loadCounter++;
             let maxThreshold = this.config.fragLoadingLoopThreshold;
@@ -341,7 +345,11 @@
               // in case any error occured while appending, put back segment in mp4segments table
               logger.log(`error while trying to append buffer:${err.message},try appending later`);
               this.mp4segments.unshift(segment);
-              this.appendError ? this.appendError++ : this.appendError=1;
+              if(this.appendError) {
+                this.appendError++;
+              } else {
+                this.appendError=1;
+              }
               if(this.appendError > 3) {
                 logger.log(`fail 3 times to append segment in sourceBuffer`);
                 observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_APPENDING_ERROR, fatal : true, frag : this.frag});
