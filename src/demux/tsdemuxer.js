@@ -38,7 +38,7 @@
 
   // feed incoming data to the front of the parsing pipeline
   push(data,audioCodec, videoCodec,timeOffset,cc,level,duration) {
-    var avcData,aacData,start,len = data.length,stt,pid,atf,offset
+    var avcData,aacData,start,len = data.length,stt,pid,atf,offset;
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
     this.timeOffset = timeOffset;
