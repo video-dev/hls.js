@@ -216,11 +216,6 @@ class TSDemuxer {
                     ((frag[11] & 0xfe) << 14) |
                     ((frag[12] & 0xff) << 7) |
                     ((frag[13] & 0xfe) >>> 1);
-                // check if greater than 2^32 -1
-                if (pesPts > 4294967295) {
-                    // decrement 2^33
-                    pesPts -= 8589934592;
-                }
                 if (pesFlags & 0x40) {
                     pesDts =
                         ((frag[14] & 0x0e) << 29) |
@@ -228,11 +223,6 @@ class TSDemuxer {
                         ((frag[16] & 0xfe) << 14) |
                         ((frag[17] & 0xff) << 7) |
                         ((frag[18] & 0xfe) >>> 1);
-                    // check if greater than 2^32 -1
-                    if (pesDts > 4294967295) {
-                        // decrement 2^33
-                        pesDts -= 8589934592;
-                    }
                 } else {
                     pesDts = pesPts;
                 }
@@ -330,6 +320,10 @@ class TSDemuxer {
             moof,
             firstPTS,
             firstDTS,
+            pts,
+            dts,
+            ptsnorm,
+            dtsnorm,
             samples = [];
 
         /* concatenate the video data and construct the mdat in place
@@ -353,37 +347,25 @@ class TSDemuxer {
                 i += unit.data.byteLength;
                 mp4SampleLength += 4 + unit.data.byteLength;
             }
-
-            avcSample.pts -= this._initDTS;
-            avcSample.dts -= this._initDTS;
+            pts = avcSample.pts - this._initDTS;
+            dts = avcSample.dts - this._initDTS;
             //logger.log('Video/PTS/DTS:' + avcSample.pts + '/' + avcSample.dts);
 
             if (lastSampleDTS !== undefined) {
-                avcSample.pts = this._PTSNormalize(
-                    avcSample.pts,
-                    lastSampleDTS
-                );
-                avcSample.dts = this._PTSNormalize(
-                    avcSample.dts,
-                    lastSampleDTS
-                );
-                mp4Sample.duration = avcSample.dts - lastSampleDTS;
+                ptsnorm = this._PTSNormalize(pts, lastSampleDTS);
+                dtsnorm = this._PTSNormalize(dts, lastSampleDTS);
+
+                mp4Sample.duration = dtsnorm - lastSampleDTS;
                 if (mp4Sample.duration < 0) {
                     //logger.log('invalid sample duration at PTS/DTS::' + avcSample.pts + '/' + avcSample.dts + ':' + mp4Sample.duration);
                     mp4Sample.duration = 0;
                 }
             } else {
-                avcSample.pts = this._PTSNormalize(
-                    avcSample.pts,
-                    this.nextAvcPts
-                );
-                avcSample.dts = this._PTSNormalize(
-                    avcSample.dts,
-                    this.nextAvcPts
-                );
+                ptsnorm = this._PTSNormalize(pts, this.nextAvcPts);
+                dtsnorm = this._PTSNormalize(dts, this.nextAvcPts);
                 // check if fragments are contiguous (i.e. no missing frames between fragment)
                 if (this.nextAvcPts) {
-                    var delta = (avcSample.pts - this.nextAvcPts) / 90,
+                    var delta = Math.round((ptsnorm - this.nextAvcPts) / 90),
                         absdelta = Math.abs(delta);
                     //logger.log('absdelta/avcSample.pts:' + absdelta + '/' + avcSample.pts);
                     // if delta is less than 300 ms, next loaded fragment is assumed to be contiguous with last one
@@ -391,36 +373,30 @@ class TSDemuxer {
                         //logger.log('Video next PTS:' + this.nextAvcPts);
                         if (delta > 1) {
                             logger.log(
-                                `AVC:${delta.toFixed(
-                                    0
-                                )} ms hole between fragments detected,filling it`
+                                `AVC:${delta} ms hole between fragments detected,filling it`
                             );
                         } else if (delta < -1) {
                             logger.log(
-                                `AVC:${-delta.toFixed(
-                                    0
-                                )} ms overlapping between fragments detected`
+                                `AVC:${-delta} ms overlapping between fragments detected`
                             );
                         }
                         // set PTS to next PTS
-                        avcSample.pts = this.nextAvcPts;
+                        ptsnorm = this.nextAvcPts;
                         // offset DTS as well, ensure that DTS is smaller or equal than new PTS
-                        avcSample.dts = Math.max(
-                            avcSample.dts - delta,
-                            this.lastAvcDts
-                        );
+                        dtsnorm = Math.max(dtsnorm - delta, this.lastAvcDts);
                         // logger.log('Video/PTS/DTS adjusted:' + avcSample.pts + '/' + avcSample.dts);
                     }
                 }
                 // remember first PTS of our avcSamples, ensure value is positive
-                firstPTS = Math.max(0, avcSample.pts);
-                firstDTS = Math.max(0, avcSample.dts);
+                firstPTS = Math.max(0, ptsnorm);
+                firstDTS = Math.max(0, dtsnorm);
             }
+            //console.log(`PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${avcSample.pts}/${avcSample.dts}/${this._initDTS}/${ptsnorm}/${dtsnorm}/${(avcSample.pts/4294967296).toFixed(3)}`);
 
             mp4Sample = {
                 size: mp4SampleLength,
                 duration: 0,
-                cts: avcSample.pts - avcSample.dts,
+                cts: ptsnorm - dtsnorm,
                 flags: {
                     isLeading: 0,
                     isDependedOn: 0,
@@ -438,14 +414,14 @@ class TSDemuxer {
                 mp4Sample.flags.isNonSync = 1;
             }
             samples.push(mp4Sample);
-            lastSampleDTS = avcSample.dts;
+            lastSampleDTS = dtsnorm;
         }
         if (samples.length >= 2) {
             mp4Sample.duration = samples[samples.length - 2].duration;
         }
-        this.lastAvcDts = avcSample.dts;
+        this.lastAvcDts = dtsnorm;
         // next AVC sample PTS should be equal to last sample PTS + duration
-        this.nextAvcPts = avcSample.pts + mp4Sample.duration;
+        this.nextAvcPts = ptsnorm + mp4Sample.duration;
         //logger.log('Video/lastAvcDts/nextAvcPts:' + this.lastAvcDts + '/' + this.nextAvcPts);
 
         this._avcSamplesLength = 0;
@@ -460,7 +436,7 @@ class TSDemuxer {
             startPTS: firstPTS / 90000,
             endPTS: this.nextAvcPts / 90000,
             startDTS: firstDTS / 90000,
-            endDTS: (avcSample.dts + mp4Sample.duration) / 90000,
+            endDTS: (dtsnorm + mp4Sample.duration) / 90000,
             type: 'video',
             nb: samples.length
         });
@@ -577,7 +553,9 @@ class TSDemuxer {
             // + 2^33
             offset = 8589934592;
         }
-        // 2^32
+        /* PTS is 33bit (from 0 to 2^33 -1)
+      if diff between value and reference is bigger than half of the amplitude (2^32) then it means that
+      PTS looping occured. fill the gap */
         while (Math.abs(value - reference) > 4294967296) {
             value += offset;
         }
@@ -664,7 +642,9 @@ class TSDemuxer {
             adtsFrameSize |= (data[adtsStartOffset + 5] & 0xe0) >>> 5;
             adtsHeaderLen = !!(data[adtsStartOffset + 1] & 0x01) ? 7 : 9;
             adtsFrameSize -= adtsHeaderLen;
-            stamp = pes.pts + nbSamples * 1024 * 90000 / track.audiosamplerate;
+            stamp = Math.round(
+                pes.pts + nbSamples * 1024 * 90000 / track.audiosamplerate
+            );
             //stamp = pes.pts;
             //console.log('AAC frame, offset/length/pts:' + (adtsStartOffset+7) + '/' + adtsFrameSize + '/' + stamp.toFixed(0));
             if (adtsStartOffset + adtsHeaderLen + adtsFrameSize <= len) {
@@ -707,6 +687,10 @@ class TSDemuxer {
             moof,
             firstPTS,
             firstDTS,
+            pts,
+            dts,
+            ptsnorm,
+            dtsnorm,
             samples = [];
 
         /* concatenate the audio data and construct the mdat in place
@@ -721,67 +705,51 @@ class TSDemuxer {
             mdat.set(unit, i);
             i += unit.byteLength;
 
-            aacSample.pts -= this._initDTS;
-            aacSample.dts -= this._initDTS;
+            pts = aacSample.pts - this._initDTS;
+            dts = aacSample.dts - this._initDTS;
 
             //logger.log('Audio/PTS:' + aacSample.pts.toFixed(0));
             if (lastSampleDTS !== undefined) {
-                aacSample.pts = this._PTSNormalize(
-                    aacSample.pts,
-                    lastSampleDTS
-                );
-                aacSample.dts = this._PTSNormalize(
-                    aacSample.dts,
-                    lastSampleDTS
-                );
+                ptsnorm = this._PTSNormalize(pts, lastSampleDTS);
+                dtsnorm = this._PTSNormalize(dts, lastSampleDTS);
                 // we use DTS to compute sample duration, but we use PTS to compute initPTS which is used to sync audio and video
-                mp4Sample.duration = aacSample.dts - lastSampleDTS;
+                mp4Sample.duration = dtsnorm - lastSampleDTS;
                 if (mp4Sample.duration < 0) {
                     //logger.log('invalid sample duration at PTS/DTS::' + avcSample.pts + '/' + avcSample.dts + ':' + mp4Sample.duration);
                     mp4Sample.duration = 0;
                 }
             } else {
-                aacSample.pts = this._PTSNormalize(
-                    aacSample.pts,
-                    this.nextAacPts
-                );
-                aacSample.dts = this._PTSNormalize(
-                    aacSample.dts,
-                    this.nextAacPts
-                );
+                ptsnorm = this._PTSNormalize(pts, this.nextAacPts);
+                dtsnorm = this._PTSNormalize(dts, this.nextAacPts);
                 // check if fragments are contiguous (i.e. no missing frames between fragment)
-                if (this.nextAacPts && this.nextAacPts !== aacSample.pts) {
+                if (this.nextAacPts && this.nextAacPts !== ptsnorm) {
                     //logger.log('Audio next PTS:' + this.nextAacPts);
-                    var delta = (aacSample.pts - this.nextAacPts) / 90;
+                    var delta = Math.round((ptsnorm - this.nextAacPts) / 90);
                     // if delta is less than 300 ms, next loaded fragment is assumed to be contiguous with last one
                     if (Math.abs(delta) > 1 && Math.abs(delta) < 300) {
                         if (delta > 0) {
                             logger.log(
-                                'AAC:' +
-                                    delta.toFixed(0) +
-                                    ' ms hole between fragments detected,filling it'
+                                `AAC:${delta} ms hole between fragments detected,filling it`
                             );
                             // set PTS to next PTS, and ensure PTS is greater or equal than last DTS
-                            aacSample.pts = Math.max(
+                            ptsnorm = Math.max(
                                 this.nextAacPts,
                                 this.lastAacDts
                             );
-                            aacSample.dts = aacSample.pts;
+                            dtsnorm = ptsnorm;
                             //logger.log('Audio/PTS/DTS adjusted:' + aacSample.pts + '/' + aacSample.dts);
                         } else {
                             logger.log(
-                                'AAC:' +
-                                    -delta.toFixed(0) +
-                                    ' ms overlapping between fragments detected'
+                                `AAC:${-delta} ms overlapping between fragments detected`
                             );
                         }
                     }
                 }
                 // remember first PTS of our aacSamples, ensure value is positive
-                firstPTS = Math.max(0, aacSample.pts);
-                firstDTS = Math.max(0, aacSample.dts);
+                firstPTS = Math.max(0, ptsnorm);
+                firstDTS = Math.max(0, dtsnorm);
             }
-
+            //console.log(`PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${aacSample.pts}/${aacSample.dts}/${this._initDTS}/${ptsnorm}/${dtsnorm}/${(aacSample.pts/4294967296).toFixed(3)}`);
             mp4Sample = {
                 size: unit.byteLength,
                 cts: 0,
@@ -795,15 +763,15 @@ class TSDemuxer {
                 }
             };
             samples.push(mp4Sample);
-            lastSampleDTS = aacSample.dts;
+            lastSampleDTS = dtsnorm;
         }
         //set last sample duration as being identical to previous sample
         if (samples.length >= 2) {
             mp4Sample.duration = samples[samples.length - 2].duration;
         }
-        this.lastAacDts = aacSample.dts;
+        this.lastAacDts = dtsnorm;
         // next aac sample PTS should be equal to last sample PTS + duration
-        this.nextAacPts = aacSample.pts + mp4Sample.duration;
+        this.nextAacPts = ptsnorm + mp4Sample.duration;
         //logger.log('Audio/PTS/PTSend:' + aacSample.pts.toFixed(0) + '/' + this.nextAacDts.toFixed(0));
 
         this._aacSamplesLength = 0;
@@ -816,7 +784,7 @@ class TSDemuxer {
             startPTS: firstPTS / 90000,
             endPTS: this.nextAacPts / 90000,
             startDTS: firstDTS / 90000,
-            endDTS: (aacSample.dts + mp4Sample.duration) / 90000,
+            endDTS: (dtsnorm + mp4Sample.duration) / 90000,
             type: 'audio',
             nb: samples.length
         });
