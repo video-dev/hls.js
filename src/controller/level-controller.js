@@ -199,6 +199,11 @@
       case ErrorDetails.LEVEL_LOAD_TIMEOUT:
         if(fatal) {
           this._level = undefined;
+          // stopping live reloading timer if any
+          if(this.timer) {
+           clearInterval(this.timer);
+           this.timer = null;
+          }
         }
         break;
       default:
@@ -216,7 +221,9 @@
   }
 
   tick() {
-    observer.trigger(Event.LEVEL_LOADING, { url: this._levels[this._level].url, level : this._level});
+    if(this._level !== undefined) {
+      observer.trigger(Event.LEVEL_LOADING, { url: this._levels[this._level].url, level : this._level});
+    }
   }
 
   nextLevel() {
