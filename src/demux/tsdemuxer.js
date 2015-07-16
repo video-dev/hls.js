@@ -38,6 +38,7 @@
 
   // feed incoming data to the front of the parsing pipeline
   push(data,audioCodec, videoCodec,timeOffset,cc,level,duration) {
+    var avcData,aacData,start,len = data.length,stt,pid,atf,offset
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
     this.timeOffset = timeOffset;
@@ -51,24 +52,75 @@
       this.switchLevel();
       this.lastLevel = level;
     }
-    var offset;
-    for(offset = 0; offset < data.length ; offset += 188) {
-      this._parseTSPacket(data,offset);
+    var pmtParsed=this.pmtParsed,avcId=this._avcId,aacId=this._aacId;
+
+    // loop through TS packets
+    for(start = 0; start < len ; start += 188) {
+      if(data[start] === 0x47) {
+        stt = !!(data[start+1] & 0x40);
+        // pid is a 13-bit field starting at the last bit of TS[1]
+        pid = ((data[start+1] & 0x1f) << 8) + data[start+2];
+        atf = (data[start+3] & 0x30) >> 4;
+        // if an adaption field is present, its length is specified by the fifth byte of the TS packet header.
+        if(atf > 1) {
+          offset = start+5+data[start+4];
+          // continue if there is only adaptation field
+          if(offset === (start+188)) {
+            continue;
+          }
+        } else {
+          offset = start+4;
+        }
+        if(pmtParsed) {
+          if(pid === avcId) {
+            if(stt) {
+              if(avcData) {
+                this._parseAVCPES(this._parsePES(avcData));
+              }
+              avcData = {data: [],size: 0};
+            }
+            avcData.data.push(data.subarray(offset,start+188));
+            avcData.size+=start+188-offset;
+          } else if(pid === aacId) {
+            if(stt) {
+              if(aacData) {
+                this._parseAACPES(this._parsePES(aacData));
+              }
+              aacData = {data: [],size: 0};
+            }
+            aacData.data.push(data.subarray(offset,start+188));
+            aacData.size+=start+188-offset;
+          }
+        } else {
+          if(stt) {
+            offset += data[offset] + 1;
+          }
+          if(pid === 0) {
+            this._parsePAT(data,offset);
+          } else if(pid === this._pmtId) {
+            this._parsePMT(data,offset);
+            pmtParsed = this.pmtParsed = true;
+            avcId = this._avcId;
+            aacId = this._aacId;
+          }
+        }
+      } else {
+        observer.trigger(Event.ERROR, { type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_PARSING_ERROR, fatal:false, reason : 'TS packet did not start with 0x47'});
+      }
+    }
+  // parse last PES packet
+    if(avcData) {
+      this._parseAVCPES(this._parsePES(avcData));
+    }
+    if(aacData) {
+      this._parseAACPES(this._parsePES(aacData));
     }
   }
-  // flush any buffered data
+
   end() {
-    if(this._avcData) {
-      this._parseAVCPES(this._parsePES(this._avcData));
-      this._avcData = null;
-    }
     //logger.log('nb AVC samples:' + this._avcSamples.length);
     if(this._avcSamples.length) {
       this._flushAVCSamples();
-    }
-    if(this._aacData) {
-      this._parseAACPES(this._parsePES(this._aacData));
-      this._aacData = null;
     }
     //logger.log('nb AAC samples:' + this._aacSamples.length);
     if(this._aacSamples.length) {
@@ -82,59 +134,6 @@
     this.switchLevel();
     this._initPTS = this._initDTS = undefined;
     this._duration = 0;
-  }
-
-  _parseTSPacket(data,start) {
-    var stt,pid,atf,offset;
-    if(data[start] === 0x47) {
-      stt = !!(data[start+1] & 0x40);
-      // pid is a 13-bit field starting at the last bit of TS[1]
-      pid = ((data[start+1] & 0x1f) << 8) + data[start+2];
-      atf = (data[start+3] & 0x30) >> 4;
-      // if an adaption field is present, its length is specified by the fifth byte of the TS packet header.
-      if(atf > 1) {
-        offset = start+5+data[start+4];
-        // return if there is only adaptation field
-        if(offset === (start+188)) {
-          return;
-        }
-      } else {
-        offset = start+4;
-      }
-      if(this.pmtParsed) {
-        if(pid === this._avcId) {
-          if(stt) {
-            if(this._avcData) {
-              this._parseAVCPES(this._parsePES(this._avcData));
-            }
-            this._avcData = {data: [],size: 0};
-          }
-          this._avcData.data.push(data.subarray(offset,start+188));
-          this._avcData.size+=start+188-offset;
-        } else if(pid === this._aacId) {
-          if(stt) {
-            if(this._aacData) {
-              this._parseAACPES(this._parsePES(this._aacData));
-            }
-            this._aacData = {data: [],size: 0};
-          }
-          this._aacData.data.push(data.subarray(offset,start+188));
-          this._aacData.size+=start+188-offset;
-        }
-      } else {
-        if(stt) {
-          offset += data[offset] + 1;
-        }
-        if(pid === 0) {
-          this._parsePAT(data,offset);
-        } else if(pid === this._pmtId) {
-          this._parsePMT(data,offset);
-          this.pmtParsed = true;
-        }
-      }
-    } else {
-      observer.trigger(Event.ERROR, { type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_PARSING_ERROR, fatal:false, reason : 'TS packet did not start with 0x47'});
-    }
   }
 
   _parsePAT(data,offset) {
