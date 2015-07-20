@@ -36,7 +36,7 @@ design idea is pretty simple :
       buffer controller actions are scheduled by a tick timer (invoked every 100ms) and actions are controlled by a state machine.
 
   - [src/controller/fps-controller.js][]
-    - in charge of monitoring frame rate, and fire FPS_DROP event in case FPS drop exceeds configured threshold.
+    - in charge of monitoring frame rate, and fire FPS_DROP event in case FPS drop exceeds configured threshold. disabled for now.
   - [src/controller/level-controller.js][]
     - in charge of scheduling playlist (re)loading, monitoring fragment loading bitrate, and determining auto quality level.
     - a timer is armed to periodically refresh active live playlist.
