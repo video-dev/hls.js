@@ -239,7 +239,7 @@ $(document).ready(function() {
           events.video.push(event);
        });
        hls.on(Hls.Events.LEVEL_SWITCH,function(event,data) {
-          events.level.push({time : Date.now() - events.t0, id : data.levelId, bitrate : Math.round(hls.levels[data.levelId].bitrate/1000)});
+          events.level.push({time : Date.now() - events.t0, id : data.level, bitrate : Math.round(hls.levels[data.level].bitrate/1000)});
           updateLevelInfo();
        });
        hls.on(Hls.Events.MANIFEST_LOADED,function(event,data) {
@@ -264,7 +264,7 @@ $(document).ready(function() {
           events.isLive = data.details.live;
           var event = {
             type : "level",
-            id : data.levelId,
+            id : data.level,
             start : data.details.startSN,
             end : data.details.endSN,
             time : data.stats.trequest - events.t0,

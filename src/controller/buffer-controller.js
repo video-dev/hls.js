@@ -846,7 +846,7 @@ class BufferController {
     onLevelLoaded(event, data) {
         var newLevelDetails = data.details,
             duration = newLevelDetails.totalduration,
-            newLevelId = data.levelId,
+            newLevelId = data.level,
             newLevel = this.levels[newLevelId],
             curLevel = this.levels[this.level],
             sliding = 0;
