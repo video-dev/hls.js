@@ -403,13 +403,7 @@ class TSDemuxer {
                 firstPTS = Math.max(0, ptsnorm);
                 firstDTS = Math.max(0, dtsnorm);
             }
-            console.log(
-                `PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${
-                    avcSample.pts
-                }/${avcSample.dts}/${this._initDTS}/${ptsnorm}/${dtsnorm}/${(
-                    avcSample.pts / 4294967296
-                ).toFixed(3)}`
-            );
+            //console.log(`PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${avcSample.pts}/${avcSample.dts}/${this._initDTS}/${ptsnorm}/${dtsnorm}/${(avcSample.pts/4294967296).toFixed(3)}`);
 
             mp4Sample = {
                 size: mp4SampleLength,
@@ -767,13 +761,7 @@ class TSDemuxer {
                 firstPTS = Math.max(0, ptsnorm);
                 firstDTS = Math.max(0, dtsnorm);
             }
-            console.log(
-                `PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${
-                    aacSample.pts
-                }/${aacSample.dts}/${this._initDTS}/${ptsnorm}/${dtsnorm}/${(
-                    aacSample.pts / 4294967296
-                ).toFixed(3)}`
-            );
+            //console.log(`PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${aacSample.pts}/${aacSample.dts}/${this._initDTS}/${ptsnorm}/${dtsnorm}/${(aacSample.pts/4294967296).toFixed(3)}`);
             mp4Sample = {
                 size: unit.byteLength,
                 cts: 0,
