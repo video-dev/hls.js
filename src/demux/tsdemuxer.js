@@ -189,22 +189,22 @@
         /* PES header described here : http://dvd.sourceforge.net/dvdinfo/pes-hdr.html
             as PTS / DTS is 33 bit we cannot use bitwise operator in JS,
             as Bitwise operators treat their operands as a sequence of 32 bits */
-        pesPts = (frag[9] & 0x0E)*536870912 // 1 << 29
-          + (frag[10] & 0xFF)*4194304 // 1 << 22
-          + (frag[11] & 0xFE)*16384 // 1 << 14
-          + (frag[12] & 0xFF)*128 // 1 << 7
-          + (frag[13] & 0xFE)/2;
+        pesPts = (frag[9] & 0x0E)*536870912 +// 1 << 29
+          (frag[10] & 0xFF)*4194304 +// 1 << 22
+          (frag[11] & 0xFE)*16384 +// 1 << 14
+          (frag[12] & 0xFF)*128 +// 1 << 7
+          (frag[13] & 0xFE)/2;
           // check if greater than 2^32 -1
           if (pesPts > 4294967295) {
               // decrement 2^33
               pesPts -= 8589934592;
           }
         if (pesFlags & 0x40) {
-          pesDts = (frag[14] & 0x0E )*536870912 // 1 << 29
-            + (frag[15] & 0xFF )*4194304 // 1 << 22
-            + (frag[16] & 0xFE )*16384 // 1 << 14
-            + (frag[17] & 0xFF )*128 // 1 << 7
-            + (frag[18] & 0xFE )/2;
+          pesDts = (frag[14] & 0x0E )*536870912 +// 1 << 29
+            (frag[15] & 0xFF )*4194304 +// 1 << 22
+            (frag[16] & 0xFE )*16384 +// 1 << 14
+            (frag[17] & 0xFF )*128 +// 1 << 7
+            (frag[18] & 0xFE )/2;
           // check if greater than 2^32 -1
           if (pesDts > 4294967295) {
               // decrement 2^33
