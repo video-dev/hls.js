@@ -109,6 +109,8 @@ import observer             from './observer';
       this.sumLatency=0;
       this.sumKbps=0;
     }
+    this.lastKbps=bitrate;
+    this.lastLatency=latency;
     this.sumLatency+=latency;
     this.sumKbps+=bitrate;
     stats.fragBufferedBytes+=data.stats.length;
