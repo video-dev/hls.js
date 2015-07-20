@@ -186,18 +186,20 @@
       pesLen = (frag[4] << 8) + frag[5];
       pesFlags = frag[7];
       if (pesFlags & 0xC0) {
-        // PES header described here : http://dvd.sourceforge.net/dvdinfo/pes-hdr.html
-        pesPts = (frag[9] & 0x0E) << 29
-          | (frag[10] & 0xFF) << 22
-          | (frag[11] & 0xFE) << 14
-          | (frag[12] & 0xFF) <<  7
-          | (frag[13] & 0xFE) >>>  1;
+        /* PES header described here : http://dvd.sourceforge.net/dvdinfo/pes-hdr.html
+            as PTS / DTS is 33 bit we cannot use bitwise operator in JS,
+            as Bitwise operators treat their operands as a sequence of 32 bits */
+        pesPts = (frag[9] & 0x0E)*536870912 // 1 << 29
+          + (frag[10] & 0xFF)*4194304 // 1 << 22
+          + (frag[11] & 0xFE)*16384 // 1 << 14
+          + (frag[12] & 0xFF)*128 // 1 << 7
+          + (frag[13] & 0xFE)/2;
         if (pesFlags & 0x40) {
-          pesDts = (frag[14] & 0x0E ) << 29
-            | (frag[15] & 0xFF ) << 22
-            | (frag[16] & 0xFE ) << 14
-            | (frag[17] & 0xFF ) << 7
-            | (frag[18] & 0xFE ) >>> 1;
+          pesDts = (frag[14] & 0x0E )*536870912 // 1 << 29
+            + (frag[15] & 0xFF )*4194304 // 1 << 22
+            + (frag[16] & 0xFE )*16384 // 1 << 14
+            + (frag[17] & 0xFF )*128 // 1 << 7
+            + (frag[18] & 0xFE )/2;
         } else {
           pesDts = pesPts;
         }
