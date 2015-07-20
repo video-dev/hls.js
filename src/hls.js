@@ -11,7 +11,7 @@ import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
 import BufferController from './controller/buffer-controller';
 import LevelController from './controller/level-controller';
-import FPSController from './controller/fps-controller';
+//import FPSController              from './controller/fps-controller';
 import { logger, enableLogs } from './utils/logger';
 import XhrLoader from './utils/xhr-loader';
 
@@ -66,7 +66,7 @@ class Hls {
         this.fragmentLoader = new FragmentLoader(this);
         this.levelController = new LevelController(this);
         this.bufferController = new BufferController(this);
-        this.fpsController = new FPSController(this);
+        //this.fpsController = new FPSController(this);
         this.statsHandler = new StatsHandler(this);
         // observer setup
         this.on = observer.on.bind(observer);
@@ -78,7 +78,7 @@ class Hls {
         this.fragmentLoader.destroy();
         this.levelController.destroy();
         this.bufferController.destroy();
-        this.fpsController.destroy();
+        //this.fpsController.destroy();
         this.statsHandler.destroy();
         this.unloadSource();
         this.detachVideo();
