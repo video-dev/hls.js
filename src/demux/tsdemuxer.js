@@ -194,12 +194,22 @@
           + (frag[11] & 0xFE)*16384 // 1 << 14
           + (frag[12] & 0xFF)*128 // 1 << 7
           + (frag[13] & 0xFE)/2;
+          // check if greater than 2^32 -1
+          if (pesPts > 4294967295) {
+              // decrement 2^33
+              pesPts -= 8589934592;
+          }
         if (pesFlags & 0x40) {
           pesDts = (frag[14] & 0x0E )*536870912 // 1 << 29
             + (frag[15] & 0xFF )*4194304 // 1 << 22
             + (frag[16] & 0xFE )*16384 // 1 << 14
             + (frag[17] & 0xFF )*128 // 1 << 7
             + (frag[18] & 0xFE )/2;
+          // check if greater than 2^32 -1
+          if (pesDts > 4294967295) {
+              // decrement 2^33
+              pesDts -= 8589934592;
+          }
         } else {
           pesDts = pesPts;
         }
@@ -343,7 +353,7 @@
         firstPTS = Math.max(0,ptsnorm);
         firstDTS = Math.max(0,dtsnorm);
       }
-      //console.log(`PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${avcSample.pts}/${avcSample.dts}/${this._initDTS}/${ptsnorm}/${dtsnorm}/${(avcSample.pts/4294967296).toFixed(3)}`);
+      console.log(`PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${avcSample.pts}/${avcSample.dts}/${this._initDTS}/${ptsnorm}/${dtsnorm}/${(avcSample.pts/4294967296).toFixed(3)}`);
 
       mp4Sample = {
         size: mp4SampleLength,
@@ -612,7 +622,7 @@
         firstPTS = Math.max(0,ptsnorm);
         firstDTS = Math.max(0,dtsnorm);
       }
-      //console.log(`PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${aacSample.pts}/${aacSample.dts}/${this._initDTS}/${ptsnorm}/${dtsnorm}/${(aacSample.pts/4294967296).toFixed(3)}`);
+      console.log(`PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${aacSample.pts}/${aacSample.dts}/${this._initDTS}/${ptsnorm}/${dtsnorm}/${(aacSample.pts/4294967296).toFixed(3)}`);
       mp4Sample = {
         size: unit.byteLength,
         cts: 0,
