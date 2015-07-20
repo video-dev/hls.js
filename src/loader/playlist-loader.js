@@ -171,7 +171,7 @@ import {ErrorTypes,ErrorDetails} from '../errors';
         } else {
           observer.trigger(Event.LEVEL_LOADED,
                           { details : this.parseLevelPlaylist(string,url,id),
-                            levelId : id,
+                            level : id,
                             stats : stats});
         }
       } else {

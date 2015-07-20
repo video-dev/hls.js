@@ -9,9 +9,9 @@ export default {
   MANIFEST_PARSED  : 'hlsManifestParsed',
   // fired when a level playlist loading starts - data: { url : level URL  level : id of level being loaded}
   LEVEL_LOADING    : 'hlsLevelLoading',
-  // fired when a level playlist loading finishes - data: { details : levelDetails object, levelId : id of loaded level, stats : { trequest, tfirst, tload, mtime} }
+  // fired when a level playlist loading finishes - data: { details : levelDetails object, level : id of loaded level, stats : { trequest, tfirst, tload, mtime} }
   LEVEL_LOADED :  'hlsLevelLoaded',
-  // fired when a level switch is requested - data: { levelId : id of new level }
+  // fired when a level switch is requested - data: { level : id of new level }
   LEVEL_SWITCH :  'hlsLevelSwitch',
   // fired when a fragment loading starts - data: { frag : fragment object}
   FRAG_LOADING :  'hlsFragLoading',

@@ -116,7 +116,7 @@
       }
       this._level = newLevel;
       logger.log(`switching to level ${newLevel}`);
-      observer.trigger(Event.LEVEL_SWITCH, { levelId : newLevel});
+      observer.trigger(Event.LEVEL_SWITCH, { level : newLevel});
       var level = this._levels[newLevel];
        // check if we need to load playlist for this level
       if(level.details === undefined || level.details.live === true) {
