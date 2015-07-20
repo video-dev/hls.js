@@ -209,20 +209,22 @@ class TSDemuxer {
             pesLen = (frag[4] << 8) + frag[5];
             pesFlags = frag[7];
             if (pesFlags & 0xc0) {
-                // PES header described here : http://dvd.sourceforge.net/dvdinfo/pes-hdr.html
+                /* PES header described here : http://dvd.sourceforge.net/dvdinfo/pes-hdr.html
+            as PTS / DTS is 33 bit we cannot use bitwise operator in JS,
+            as Bitwise operators treat their operands as a sequence of 32 bits */
                 pesPts =
-                    ((frag[9] & 0x0e) << 29) |
-                    ((frag[10] & 0xff) << 22) |
-                    ((frag[11] & 0xfe) << 14) |
-                    ((frag[12] & 0xff) << 7) |
-                    ((frag[13] & 0xfe) >>> 1);
+                    (frag[9] & 0x0e) * 536870912 + // 1 << 29
+                    (frag[10] & 0xff) * 4194304 + // 1 << 22
+                    (frag[11] & 0xfe) * 16384 + // 1 << 14
+                    (frag[12] & 0xff) * 128 + // 1 << 7
+                    (frag[13] & 0xfe) / 2;
                 if (pesFlags & 0x40) {
                     pesDts =
-                        ((frag[14] & 0x0e) << 29) |
-                        ((frag[15] & 0xff) << 22) |
-                        ((frag[16] & 0xfe) << 14) |
-                        ((frag[17] & 0xff) << 7) |
-                        ((frag[18] & 0xfe) >>> 1);
+                        (frag[14] & 0x0e) * 536870912 + // 1 << 29
+                        (frag[15] & 0xff) * 4194304 + // 1 << 22
+                        (frag[16] & 0xfe) * 16384 + // 1 << 14
+                        (frag[17] & 0xff) * 128 + // 1 << 7
+                        (frag[18] & 0xfe) / 2;
                 } else {
                     pesDts = pesPts;
                 }
