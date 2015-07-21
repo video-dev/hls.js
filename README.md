@@ -47,10 +47,9 @@ npm run minify
 
 ## Installation
 
-either directly include
+either directly include dist/hls.js or dist/hls.min.js
 
-```dist/hls.js```or```dist/hls.min.js```
-or
+or type
 
 ```sh
 npm install --save https://github.com/dailymotion/hls.js
