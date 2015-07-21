@@ -17,7 +17,10 @@ hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
 [Babel]: https://babeljs.io
 
 ## Demo
-[http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html](http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html)
+
+public demo : [http://dailymotion.github.io/hls.js/demo](http://dailymotion.github.io/hls.js/demo)
+
+private demo : [http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html](http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html)
 
 ## Dependencies
 
