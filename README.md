@@ -69,6 +69,7 @@ as of today, it is supported on:
 
   - VoD & Live playlists
     - DVR support on Live playlists
+  - MPEG-2 TS container  
   - Adaptive streaming
     - Manual & Auto Quality Switching
       - 3 Quality Switching modes are available (controllable through API means)
@@ -84,6 +85,15 @@ as of today, it is supported on:
   - resilience to errors
     - retry mechanism embedded in the library
     - recovery actions could be triggered fix fatal media or network errors
+
+
+## Not Supported (Yet)
+
+  - AAC / MP3 / WebVTT container
+  - AES-128 decryption
+  - Alternate Audio Track Rendition (Master Playlist with alternative Audio)  
+  - Timed Metadata for HTTP Live Streaming (in ID3 format, carried in MPEG-2 TS)
+  - [Redundant/Failover Playlists](https://developer.apple.com/library/ios/documentation/NetworkingInternet/Conceptual/StreamingMediaGuide/UsingHTTPLiveStreaming/UsingHTTPLiveStreaming.html#//apple_ref/doc/uid/TP40008332-CH102-SW22)
 
 ### Supported M3U8 tags
 
