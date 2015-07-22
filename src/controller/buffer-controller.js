@@ -53,16 +53,20 @@
     this.state = this.IDLE;
   }
 
-  start() {
-    this.startInternal();
-    if(this.lastCurrentTime) {
-      logger.log(`resuming video @ ${this.lastCurrentTime}`);
-      this.startPosition = this.lastCurrentTime;
-      this.state = this.IDLE;
+  startLoad() {
+    if(this.levels && this.video) {
+      this.startInternal();
+      if(this.lastCurrentTime) {
+        logger.log(`resuming video @ ${this.lastCurrentTime}`);
+        this.startPosition = this.lastCurrentTime;
+        this.state = this.IDLE;
+      } else {
+        this.state = this.STARTING;
+      }
+      this.tick();
     } else {
-      this.state = this.STARTING;
+      logger.log(`cannot start loading as either manifest not parsed or video not attached`);
     }
-    this.tick();
   }
 
   startInternal() {
@@ -658,8 +662,8 @@
     this.video.addEventListener('seeking',this.onvseeking);
     this.video.addEventListener('seeked',this.onvseeked);
     this.video.addEventListener('loadedmetadata',this.onvmetadata);
-    if(this.levels) {
-      this.start();
+    if(this.levels && this.config.autoStartLoad) {
+      this.startLoad();
     }
   }
   onVideoSeeking() {
@@ -702,8 +706,8 @@
     this.levels = data.levels;
     this.startLevelLoaded = false;
     this.startFragmentRequested = false;
-    if(this.video) {
-      this.start();
+    if(this.video && this.config.autoStartLoad) {
+      this.startLoad();
     }
   }
 

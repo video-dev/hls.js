@@ -127,9 +127,9 @@ each error is categorized by :
 
 hls.js provides means to 'try to' recover fatal network and media errors, through these 2 methods:
 
-##### ```hls.recoverNetworkError()```
+##### ```hls.startLoad()```
 
-should be invoked to recover network error
+should be invoked to recover network error.
 
 ##### ```hls.recoverMediaError()```
 
@@ -172,6 +172,7 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
 
    var config = {
       debug : false,
+      autoStartLoad : true,
       maxBufferLength : 30,
       maxBufferSize : 60*1000*1000,
       enableWorker : true,
@@ -195,6 +196,12 @@ var hls = new Hls(config);
 
 setting ```config.debug=true``` will turn on debug logs on JS console.
 a logger object could also be provided for custom logging : ```config.debug=customLogger```
+
+#### ```autoStartLoad```
+(default true)
+
+ - if set to true, start level playlist and first fragments will be loaded automatically, after triggering of ```Hls.Events.MANIFEST_PARSED``` event
+ - if set to false, an explicit API call (```hls.startLoad()```) will be needed to start quality level/fragment loading.
 
 #### ```maxBufferLength```
 (default 30s)
@@ -303,6 +310,17 @@ tell whether auto level selection is enabled or not
 get/set : capping/max level value that could be used by automatic level selection algorithm
 
 default value is -1 (no level capping)
+
+
+
+## Network Loading Control API
+
+by default, hls.js will automatically start loading quality level playlists, and fragments after Events.MANIFEST_PARSED event triggering.
+
+however if ```config.autoStartLoad``` is set to ```false```, the following method needs to be called to manually start playlist and fragments loading:
+
+#### ```hls.startLoad()```
+start/restart playlist/fragment loading
 
 ## Analytics
 
@@ -488,5 +506,6 @@ see sample object below:
   sn: 35,
   start : 30,
   url: 'http://fragURL.com'
+  url2 : 'http://fragURLfailover.com' // if redundant/failover streams detected in Manifest
 }
 ```
