@@ -39,6 +39,7 @@ class Hls {
 
     constructor(config = {}) {
         var configDefault = {
+            autoStartLoad: true,
             debug: false,
             maxBufferLength: 30,
             maxBufferSize: 60 * 1000 * 1000,
@@ -128,9 +129,8 @@ class Hls {
         observer.trigger(Event.MANIFEST_LOADING, { url: url });
     }
 
-    recoverNetworkError() {
-        logger.log('try to recover network Error');
-        this.bufferController.start();
+    startLoad() {
+        this.bufferController.startLoad();
     }
 
     recoverMediaError() {
