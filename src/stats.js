@@ -106,6 +106,7 @@ class StatsHandler {
     onFragmentBuffered(event, data) {
         var stats = this._stats,
             latency = data.stats.tfirst - data.stats.trequest,
+            process = data.stats.tbuffered - data.stats.trequest,
             bitrate = Math.round(
                 8 *
                     data.stats.length /
@@ -114,6 +115,8 @@ class StatsHandler {
         if (stats.fragBuffered) {
             stats.fragMinLatency = Math.min(stats.fragMinLatency, latency);
             stats.fragMaxLatency = Math.max(stats.fragMaxLatency, latency);
+            stats.fragMinProcess = Math.min(stats.fragMinProcess, process);
+            stats.fragMaxProcess = Math.max(stats.fragMaxProcess, process);
             stats.fragMinKbps = Math.min(stats.fragMinKbps, bitrate);
             stats.fragMaxKbps = Math.max(stats.fragMaxKbps, bitrate);
             stats.autoLevelCappingMin = Math.min(
@@ -127,20 +130,25 @@ class StatsHandler {
             stats.fragBuffered++;
         } else {
             stats.fragMinLatency = stats.fragMaxLatency = latency;
+            stats.fragMinProcess = stats.fragMaxProcess = process;
             stats.fragMinKbps = stats.fragMaxKbps = bitrate;
             stats.fragBuffered = 1;
             stats.fragBufferedBytes = 0;
             stats.autoLevelCappingMin = stats.autoLevelCappingMax = this.hls.autoLevelCapping;
             this.sumLatency = 0;
             this.sumKbps = 0;
+            this.sumProcess = 0;
         }
-        this.lastKbps = bitrate;
-        this.lastLatency = latency;
+        stats.fraglastLatency = latency;
         this.sumLatency += latency;
-        this.sumKbps += bitrate;
-        stats.fragBufferedBytes += data.stats.length;
         stats.fragAvgLatency = Math.round(this.sumLatency / stats.fragBuffered);
+        stats.fragLastProcess = process;
+        this.sumProcess += process;
+        stats.fragAvgProcess = Math.round(this.sumProcess / stats.fragBuffered);
+        stats.fragLastKbps = bitrate;
+        this.sumKbps += bitrate;
         stats.fragAvgKbps = Math.round(this.sumKbps / stats.fragBuffered);
+        stats.fragBufferedBytes += data.stats.length;
         stats.autoLevelCappingLast = this.hls.autoLevelCapping;
     }
 
