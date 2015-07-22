@@ -20,7 +20,6 @@ class BufferController {
         this.PARSED = 4;
         this.APPENDING = 5;
         this.BUFFER_FLUSHING = 6;
-        this.levelController = hls.levelController;
         this.config = hls.config;
         this.startPosition = 0;
         this.hls = hls;
@@ -123,14 +122,14 @@ class BufferController {
                 break;
             case this.STARTING:
                 // determine load level
-                this.startLevel = this.levelController.startLevel;
+                this.startLevel = this.hls.startLevel;
                 if (this.startLevel === -1) {
                     // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
                     this.startLevel = 0;
                     this.fragmentBitrateTest = true;
                 }
                 // set new level to playlist loader : this will trigger start level load
-                this.levelController.level = this.startLevel;
+                this.hls.nextLoadLevel = this.startLevel;
                 this.state = this.WAITING_LEVEL;
                 this.loadedmetadata = false;
                 break;
@@ -161,7 +160,7 @@ class BufferController {
                     level = this.startLevel;
                 } else {
                     // we are not at playback start, get next load level from level Controller
-                    level = this.levelController.nextLevel();
+                    level = this.hls.nextLoadLevel;
                 }
                 var bufferInfo = this.bufferInfo(pos),
                     bufferLen = bufferInfo.len,
@@ -181,8 +180,8 @@ class BufferController {
                 // if buffer length is less than maxBufLen try to load a new fragment
                 if (bufferLen < maxBufLen) {
                     if (level !== this.level) {
-                        // set new level to playlist loader : this will trigger a playlist load if needed
-                        this.levelController.level = level;
+                        // set next load level : this will trigger a playlist load if needed
+                        this.hls.nextLoadLevel = level;
                         this.level = level;
                     }
                     levelInfo = this.levels[level].details;
@@ -364,8 +363,7 @@ class BufferController {
                             this.bufferInfo(pos).end - pos;
                         var fragLevelNextLoadedDelay =
                             frag.duration *
-                            this.levels[this.levelController.nextLevel()]
-                                .bitrate /
+                            this.levels[this.hls.nextLoadLevel].bitrate /
                             (8 * loadRate); //bps/Bps
                         /* if we have less than 2 frag duration in buffer and if frag loaded delay is greater than buffer starvation delay
               ... and also bigger than duration needed to load fragment at next level ...*/
@@ -739,7 +737,17 @@ class BufferController {
 
         if (!this.video.paused) {
             // add a safety delay of 1s
-            fetchdelay = this.levelController.nextFetchDuration() + 1;
+            var nextLevelId = this.hls.nextLoadLevel,
+                nextLevel = this.levels[nextLevelId];
+            if (this.hls.stats.fragLastKbps && this.frag) {
+                fetchdelay =
+                    this.frag.duration *
+                        nextLevel.bitrate /
+                        (1000 * this.hls.stats.fragLastKbps) +
+                    1;
+            } else {
+                fetchdelay = 0;
+            }
         } else {
             fetchdelay = 0;
         }

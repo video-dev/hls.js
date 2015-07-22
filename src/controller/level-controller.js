@@ -253,23 +253,11 @@ class LevelController {
         }
     }
 
-    nextLevel() {
+    nextLoadLevel() {
         if (this._manualLevel !== -1) {
             return this._manualLevel;
         } else {
             return this.nextAutoLevel();
-        }
-    }
-
-    nextFetchDuration() {
-        if (this.lastfetchduration) {
-            return (
-                this.lastfetchduration *
-                this._levels[this._level].bitrate /
-                this._levels[this.lastfetchlevel].bitrate
-            );
-        } else {
-            return 0;
         }
     }
 

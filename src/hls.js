@@ -171,14 +171,24 @@ class Hls {
         this.bufferController.nextLevelSwitch();
     }
 
-    /** Return the quality level of last loaded fragment **/
+    /** Return the quality level of current/last loaded fragment **/
     get loadLevel() {
         return this.levelController.level;
     }
 
-    /* set quality level for next loaded fragment (-1 for automatic level selection) */
+    /* set quality level for current/next loaded fragment (-1 for automatic level selection) */
     set loadLevel(newLevel) {
         this.levelController.manualLevel = newLevel;
+    }
+
+    /** Return the quality level of next loaded fragment **/
+    get nextLoadLevel() {
+        return this.levelController.nextLoadLevel();
+    }
+
+    /** set quality level of next loaded fragment **/
+    set nextLoadLevel(level) {
+        this.levelController.level = level;
     }
 
     /** Return first level (index of first level referenced in manifest)
