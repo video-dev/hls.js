@@ -193,7 +193,9 @@ var hls = new Hls(config);
 #### ```debug```
 (default false)
 
-turn on debug logs on JS console 
+setting ```config.debug=true``` will turn on debug logs on JS console.
+a logger object could also be provided for custom logging : ```config.debug=customLogger```
+
 #### ```maxBufferLength```
 (default 30s)
 
