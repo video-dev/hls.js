@@ -43,11 +43,13 @@ class LevelController {
             heaac = false,
             codecs;
         if (data.levels.length > 1) {
-            // remove failover level for now to simplify the logic
             data.levels.forEach(level => {
-                if (!bitrateSet.hasOwnProperty(level.bitrate)) {
+                var redundantLevelId = bitrateSet[level.bitrate];
+                if (redundantLevelId === undefined) {
+                    bitrateSet[level.bitrate] = levels.length;
                     levels.push(level);
-                    bitrateSet[level.bitrate] = true;
+                } else {
+                    levels[redundantLevelId].url2 = level.url;
                 }
                 // detect if we have different kind of audio codecs used amongst playlists
                 codecs = level.codecs;
