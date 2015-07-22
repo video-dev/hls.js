@@ -181,7 +181,6 @@ import {ErrorTypes,ErrorDetails} from '../errors';
           observer.trigger(Event.MANIFEST_LOADED,
                           { levels : levels,
                             url : url,
-                            id : id,
                             stats : stats});
         } else {
           observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details : ErrorDetails.MANIFEST_PARSING_ERROR, fatal:true, url : url, reason : 'no level found in manifest'});
