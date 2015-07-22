@@ -604,22 +604,7 @@ class BufferController {
                 observer.trigger(Event.FRAG_CHANGED, {
                     frag: this.fragCurrent
                 });
-                // if(this.fragCurrent.fpsExpected) {
-                //   this.fragCurrent.decodedFramesDate = Date.now();
-                //   this.fragCurrent.decodedFramesNb = this.video.webkitDecodedFrameCount;
-                //   logger.log(`frag changed, expected FPS:${this.fragCurrent.fpsExpected.toFixed(2)}`);
-                // }
-            } /* else {
-        if(this.fragCurrent.fpsExpected) {
-          // compare real fps vs theoritical one
-          var nbnew = this.video.webkitDecodedFrameCount;
-          var time = Date.now();
-          if((time - this.fragCurrent.decodedFramesDate) > 2000) {
-            var fps = 1000*(nbnew - this.fragCurrent.decodedFramesNb)/(time-this.fragCurrent.decodedFramesDate);
-            logger.log(`real/expected FPS:${fps.toFixed(2)}/${this.fragCurrent.fpsExpected.toFixed(2)}`);
-          }
-        }
-      } */
+            }
         }
     }
 
