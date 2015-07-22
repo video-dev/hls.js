@@ -222,7 +222,6 @@ class PlaylistLoader {
                     observer.trigger(Event.MANIFEST_LOADED, {
                         levels: levels,
                         url: url,
-                        id: id,
                         stats: stats
                     });
                 } else {
