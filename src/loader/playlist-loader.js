@@ -33,13 +33,14 @@ import {ErrorTypes,ErrorDetails} from '../errors';
   }
 
   onLevelLoading(event,data) {
-    this.load(data.url,data.level);
+    this.load(data.url,data.level,data.id);
   }
 
-  load(url,requestId) {
+  load(url,id1,id2) {
     var config=this.hls.config;
     this.url = url;
-    this.id = requestId;
+    this.id = id1;
+    this.id2 = id2;
     this.loader = new config.loader();
     this.loader.load(url,'',this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.manifestLoadingTimeOut, config.manifestLoadingMaxRetry,config.manifestLoadingRetryDelay);
   }
@@ -149,7 +150,7 @@ import {ErrorTypes,ErrorDetails} from '../errors';
   }
 
   loadsuccess(event, stats) {
-    var string = event.currentTarget.responseText, url = event.currentTarget.responseURL, id = this.id,levels;
+    var string = event.currentTarget.responseText, url = event.currentTarget.responseURL, id = this.id,id2= this.id2, levels;
     // responseURL not supported on some browsers (it is used to detect URL redirection)
     if(url === undefined) {
       // fallback to initial URL
@@ -172,6 +173,7 @@ import {ErrorTypes,ErrorDetails} from '../errors';
           observer.trigger(Event.LEVEL_LOADED,
                           { details : this.parseLevelPlaylist(string,url,id),
                             level : id,
+                            id : id2,
                             stats : stats});
         }
       } else {
@@ -199,7 +201,7 @@ import {ErrorTypes,ErrorDetails} from '../errors';
       details = ErrorDetails.LEVEL_LOAD_ERROR;
     }
     this.loader.abort();
-    observer.trigger(Event.ERROR, {type : ErrorTypes.NETWORK_ERROR, details:details, fatal:true, url:this.url, loader : this.loader, response:event.currentTarget, level: this.id});
+    observer.trigger(Event.ERROR, {type : ErrorTypes.NETWORK_ERROR, details:details, fatal:true, url:this.url, loader : this.loader, response:event.currentTarget, level: this.id, id : this.id2});
   }
 
   loadtimeout() {
@@ -210,7 +212,7 @@ import {ErrorTypes,ErrorDetails} from '../errors';
       details = ErrorDetails.LEVEL_LOAD_TIMEOUT;
     }
    this.loader.abort();
-   observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details:details, fatal:true,url : this.url, loader: this.loader, level: this.id});
+   observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details:details, fatal:true,url : this.url, loader: this.loader, level: this.id, id : this.id2});
   }
 }
 

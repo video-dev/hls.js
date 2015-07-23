@@ -42,6 +42,7 @@
       if(redundantLevelId === undefined) {
         bitrateSet[level.bitrate] = levels.length;
         level.url = [level.url];
+        level.urlId = 0;
         levels.push(level);
       } else {
         levels[redundantLevelId].url.push(level.url);
@@ -111,7 +112,8 @@
       if(level.details === undefined || level.details.live === true) {
         // level not retrieved yet, or live playlist we need to (re)load it
         logger.log(`(re)loading playlist for level ${newLevel}`);
-        observer.trigger(Event.LEVEL_LOADING, { url : level.url[0], level : newLevel});
+        var urlId = level.urlId;
+        observer.trigger(Event.LEVEL_LOADING, { url : level.url[urlId], level : newLevel, id : urlId});
       }
     } else {
       // invalid level id given, trigger error
@@ -210,8 +212,10 @@
   }
 
   tick() {
-    if(this._level !== undefined) {
-      observer.trigger(Event.LEVEL_LOADING, { url: this._levels[this._level].url, level : this._level});
+    var levelId = this._level;
+    if(levelId !== undefined) {
+      var level = this._levels[levelId], urlId = level.urlId;
+      observer.trigger(Event.LEVEL_LOADING, { url: level.url[urlId], level : levelId, id : urlId });
     }
   }
 
