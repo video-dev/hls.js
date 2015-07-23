@@ -315,12 +315,12 @@ default value is -1 (no level capping)
 
 ## Network Loading Control API
 
-by default, hls.js will automatically start loading quality level playlists, and fragments after Events.MANIFEST_PARSED event triggering.
+by default, hls.js will automatically start loading quality level playlists, and fragments after Events.MANIFEST_PARSED event has been triggered (and video element has been attached).
 
 however if ```config.autoStartLoad``` is set to ```false```, the following method needs to be called to manually start playlist and fragments loading:
 
 #### ```hls.startLoad()```
-start/restart playlist/fragment loading
+start/restart playlist/fragment loading. this is only effective if MANIFEST_PARSED event has been triggered and video element has been attached to hls object.
 
 ## Analytics
 
