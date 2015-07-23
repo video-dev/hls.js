@@ -32,13 +32,14 @@ class PlaylistLoader {
     }
 
     onLevelLoading(event, data) {
-        this.load(data.url, data.level);
+        this.load(data.url, data.level, data.id);
     }
 
-    load(url, requestId) {
+    load(url, id1, id2) {
         var config = this.hls.config;
         this.url = url;
-        this.id = requestId;
+        this.id = id1;
+        this.id2 = id2;
         this.loader = new config.loader();
         this.loader.load(
             url,
@@ -186,6 +187,7 @@ class PlaylistLoader {
         var string = event.currentTarget.responseText,
             url = event.currentTarget.responseURL,
             id = this.id,
+            id2 = this.id2,
             levels;
         // responseURL not supported on some browsers (it is used to detect URL redirection)
         if (url === undefined) {
@@ -212,6 +214,7 @@ class PlaylistLoader {
                     observer.trigger(Event.LEVEL_LOADED, {
                         details: this.parseLevelPlaylist(string, url, id),
                         level: id,
+                        id: id2,
                         stats: stats
                     });
                 }
@@ -260,7 +263,8 @@ class PlaylistLoader {
             url: this.url,
             loader: this.loader,
             response: event.currentTarget,
-            level: this.id
+            level: this.id,
+            id: this.id2
         });
     }
 
@@ -278,7 +282,8 @@ class PlaylistLoader {
             fatal: true,
             url: this.url,
             loader: this.loader,
-            level: this.id
+            level: this.id,
+            id: this.id2
         });
     }
 }
