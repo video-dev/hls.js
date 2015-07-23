@@ -382,7 +382,7 @@ full list of Events available below :
   - `Hls.Events.MANIFEST_LOADED`  - fired after manifest has been loaded
     -  data: { levels : [available quality levels] , url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
   - `Hls.Events.MANIFEST_PARSED`  - fired after manifest has been parsed
-    -  data: { levels : [available quality levels] , startLevel : playback start level, audiocodecswitch: true if different audio codecs used}
+    -  data: { levels : [available quality levels] , firstLevel : index of first quality level appearing in Manifest, audiocodecswitch: true if different audio codecs used}
   - `Hls.Events.LEVEL_LOADING`  - fired when a level playlist loading starts
     -  data: { url : level URL, level : id of level being loaded}
   - `Hls.Events.LEVEL_LOADED`  - fired when a level playlist loading finishes
@@ -455,7 +455,7 @@ see sample Level object below:
 
 ```js
 {
-  url: 'http://levelURL.com'
+  url: ['http://levelURL.com','http://levelURLfailover.com']
   bitrate: 246440,
   name: "240",
   codecs: "mp4a.40.5,avc1.42000d",
@@ -463,6 +463,7 @@ see sample Level object below:
   height: 136,
 }
 ```
+url is an array, that might contains several items if failover/redundant streams are found in the manifest.
 
 ### Level details
 
@@ -506,6 +507,5 @@ see sample object below:
   sn: 35,
   start : 30,
   url: 'http://fragURL.com'
-  url2 : 'http://fragURLfailover.com' // if redundant/failover streams detected in Manifest
 }
 ```
