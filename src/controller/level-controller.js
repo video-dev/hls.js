@@ -37,60 +37,47 @@
 
   onManifestLoaded(event,data) {
     var levels = [],bitrateStart,i,bitrateSet={}, aac=false, heaac=false,codecs;
-    if(data.levels.length > 1) {
-      data.levels.forEach(level => {
-        var redundantLevelId = bitrateSet[level.bitrate];
-        if(redundantLevelId === undefined) {
-          bitrateSet[level.bitrate] = levels.length;
-          levels.push(level);
-        } else {
-          levels[redundantLevelId].url2=level.url;
+    data.levels.forEach(level => {
+      var redundantLevelId = bitrateSet[level.bitrate];
+      if(redundantLevelId === undefined) {
+        bitrateSet[level.bitrate] = levels.length;
+        level.url = [level.url];
+        levels.push(level);
+      } else {
+        levels[redundantLevelId].url.push(level.url);
+      }
+      // detect if we have different kind of audio codecs used amongst playlists
+      codecs = level.codecs;
+      if(codecs) {
+        if(codecs.indexOf('mp4a.40.2') !== -1) {
+          aac = true;
         }
-        // detect if we have different kind of audio codecs used amongst playlists
-        codecs = level.codecs;
-        if(codecs) {
-          if(codecs.indexOf('mp4a.40.2') !== -1) {
-            aac = true;
-          }
-          if(codecs.indexOf('mp4a.40.5') !== -1) {
-            heaac = true;
-          }
-        }
-      });
-      // start bitrate is the first bitrate of the manifest
-      bitrateStart = levels[0].bitrate;
-      // sort level on bitrate
-      levels.sort(function (a, b) {
-        return a.bitrate-b.bitrate;
-      });
-      this._levels = levels;
-
-      // find index of first level in sorted levels
-      for(i=0; i < levels.length ; i++) {
-        if(levels[i].bitrate === bitrateStart) {
-          this._firstLevel = i;
-          logger.log(`manifest loaded,${levels.length} level(s) found, first bitrate:${bitrateStart}`);
-          break;
+        if(codecs.indexOf('mp4a.40.5') !== -1) {
+          heaac = true;
         }
       }
+    });
+    // start bitrate is the first bitrate of the manifest
+    bitrateStart = levels[0].bitrate;
+    // sort level on bitrate
+    levels.sort(function (a, b) {
+      return a.bitrate-b.bitrate;
+    });
+    this._levels = levels;
 
-      //this._startLevel = -1;
-      observer.trigger(Event.MANIFEST_PARSED,
-                      { levels : this._levels,
-                        startLevel : this._startLevel,
-                        audiocodecswitch : (aac && heaac)
-                      });
-
-    } else {
-      this._levels = data.levels;
-      this._firstLevel = 0;
-      observer.trigger(Event.MANIFEST_PARSED,
-                      { levels : this._levels,
-                        startLevel : 0,
-                        audiocodecswitch : false
-                      });
+    // find index of first level in sorted levels
+    for(i=0; i < levels.length ; i++) {
+      if(levels[i].bitrate === bitrateStart) {
+        this._firstLevel = i;
+        logger.log(`manifest loaded,${levels.length} level(s) found, first bitrate:${bitrateStart}`);
+        break;
+      }
     }
-
+    observer.trigger(Event.MANIFEST_PARSED,
+                    { levels : this._levels,
+                      firstLevel : this._firstLevel,
+                      audiocodecswitch : (aac && heaac)
+                    });
     return;
   }
 
@@ -124,7 +111,7 @@
       if(level.details === undefined || level.details.live === true) {
         // level not retrieved yet, or live playlist we need to (re)load it
         logger.log(`(re)loading playlist for level ${newLevel}`);
-        observer.trigger(Event.LEVEL_LOADING, { url : level.url, level : newLevel});
+        observer.trigger(Event.LEVEL_LOADING, { url : level.url[0], level : newLevel});
       }
     } else {
       // invalid level id given, trigger error
