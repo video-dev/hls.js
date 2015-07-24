@@ -308,17 +308,12 @@ class BufferController {
                             Math.abs(this.fragLoadIdx - frag.loadIdx) <
                                 maxThreshold
                         ) {
-                            // if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal
-                            let fatal = !(this.hls.autoLevelEnabled && level);
                             observer.trigger(Event.ERROR, {
                                 type: ErrorTypes.MEDIA_ERROR,
                                 details: ErrorDetails.FRAG_LOOP_LOADING_ERROR,
-                                fatal: fatal,
+                                fatal: false,
                                 frag: this.frag
                             });
-                            if (fatal) {
-                                this.state = this.ERROR;
-                            }
                             return;
                         }
                     } else {
@@ -1055,8 +1050,9 @@ class BufferController {
             // abort fragment loading on errors
             case ErrorDetails.FRAG_LOAD_ERROR:
             case ErrorDetails.FRAG_LOAD_TIMEOUT:
+            case ErrorDetails.FRAG_LOOP_LOADING_ERROR:
                 // if fatal error, stop processing, otherwise move to IDLE to retry loading
-                logger.log(
+                logger.warn(
                     `buffer controller: ${
                         data.details
                     } while loading frag,switch to ${
