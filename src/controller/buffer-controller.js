@@ -1051,6 +1051,8 @@ class BufferController {
             case ErrorDetails.FRAG_LOAD_ERROR:
             case ErrorDetails.FRAG_LOAD_TIMEOUT:
             case ErrorDetails.FRAG_LOOP_LOADING_ERROR:
+            case ErrorDetails.LEVEL_LOAD_ERROR:
+            case ErrorDetails.LEVEL_LOAD_TIMEOUT:
                 // if fatal error, stop processing, otherwise move to IDLE to retry loading
                 logger.warn(
                     `buffer controller: ${
