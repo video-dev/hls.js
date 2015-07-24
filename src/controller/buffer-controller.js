@@ -265,12 +265,7 @@
             let maxThreshold = this.config.fragLoadingLoopThreshold;
             // if this frag has already been loaded 3 times, and if it has been reloaded recently
             if(frag.loadCounter > maxThreshold && (Math.abs(this.fragLoadIdx - frag.loadIdx) < maxThreshold)) {
-              // if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal
-              let fatal = !(this.hls.autoLevelEnabled && level);
-              observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal:fatal, frag : this.frag});
-              if(fatal) {
-                this.state = this.ERROR;
-              }
+              observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal:false, frag : this.frag});
               return;
             }
           } else {
@@ -867,8 +862,9 @@
       // abort fragment loading on errors
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
+      case ErrorDetails.FRAG_LOOP_LOADING_ERROR:
         // if fatal error, stop processing, otherwise move to IDLE to retry loading
-        logger.log(`buffer controller: ${data.details} while loading frag,switch to ${data.fatal ? 'ERROR' : 'IDLE'} state ...`);
+        logger.warn(`buffer controller: ${data.details} while loading frag,switch to ${data.fatal ? 'ERROR' : 'IDLE'} state ...`);
         this.state = data.fatal ? this.ERROR : this.IDLE;
         this.frag = null;
         break;
