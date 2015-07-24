@@ -91,7 +91,7 @@
   }
 
   set level(newLevel) {
-    if(this._level !== newLevel) {
+    if(this._level !== newLevel || this._levels[newLevel].details === undefined) {
       this.setLevelInternal(newLevel);
     }
   }
@@ -174,31 +174,51 @@
   }
 
   onError(event,data) {
-    var details = data.details,fatal=data.fatal;
+    var details = data.details,levelId,level;
     // try to recover not fatal errors
     switch(details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
       case ErrorDetails.FRAG_LOOP_LOADING_ERROR:
-        if(!fatal) {
-          logger.log(`level controller,${details}: emergency switch-down for next fragment`);
-          this.lastbw = 0;
-          this.lastfetchduration = 0;
-        }
-        break;
+         levelId = data.frag.level;
+         break;
       case ErrorDetails.LEVEL_LOAD_ERROR:
       case ErrorDetails.LEVEL_LOAD_TIMEOUT:
-        if(fatal) {
-          this._level = undefined;
-          // stopping live reloading timer if any
-          if(this.timer) {
-           clearInterval(this.timer);
-           this.timer = null;
-          }
-        }
+        levelId = data.level;
         break;
       default:
         break;
+    }
+    /* try to switch to a redundant stream if any available.
+     * if no redundant stream available, emergency switch down (if in auto mode and current level not 0)
+     * otherwise, we cannot recover this network error ....
+     */
+    if(levelId !== undefined) {
+      level = this._levels[levelId];
+      if(level.urlId < level.url.length-1) {
+        level.urlId++;
+        level.details = undefined;
+        logger.warn(`level controller,${details} for level ${levelId}: switching to redundant stream id ${level.urlId}`);
+      } else {
+        // we could try to recover if in auto mode and current level not lowest level (0)
+        let recoverable = ((this._manualLevel === -1) && levelId);
+        if(recoverable) {
+          logger.warn(`level controller,${details}: emergency switch-down for next fragment`);
+          this.lastbw = 0;
+          this.lastfetchduration = 0;
+        } else {
+          logger.error(`cannot recover ${details} error`);
+          this._level = undefined;
+          // stopping live reloading timer if any
+          if(this.timer) {
+            clearInterval(this.timer);
+            this.timer = null;
+            // redispatch same error but with fatal set to true
+            data.fatal = true;
+            observer.trigger(event,data);
+          }
+        }
+      }
     }
   }
 
