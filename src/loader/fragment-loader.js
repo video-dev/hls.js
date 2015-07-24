@@ -44,17 +44,13 @@ import {ErrorTypes,ErrorDetails} from '../errors';
   }
 
   loaderror(event) {
-    // if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal
-    let fatal = !(this.hls.autoLevelEnabled && this.frag.level);
     this.loader.abort();
-    observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details : ErrorDetails.FRAG_LOAD_ERROR, fatal:fatal,frag : this.frag, response:event});
+    observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details : ErrorDetails.FRAG_LOAD_ERROR, fatal:false,frag : this.frag, response:event});
   }
 
   loadtimeout() {
-    // if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal
-    let fatal = !(this.hls.autoLevelEnabled && this.frag.level);
     this.loader.abort();
-    observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details : ErrorDetails.FRAG_LOAD_TIMEOUT, fatal:fatal,frag : this.frag});
+    observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details : ErrorDetails.FRAG_LOAD_TIMEOUT, fatal:false,frag : this.frag});
   }
 
   loadprogress(event, stats) {

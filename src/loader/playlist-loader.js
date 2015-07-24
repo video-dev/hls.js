@@ -194,25 +194,29 @@ import {ErrorTypes,ErrorDetails} from '../errors';
   }
 
   loaderror(event) {
-    var details;
+    var details,fatal;
     if(this.id === null) {
       details = ErrorDetails.MANIFEST_LOAD_ERROR;
+      fatal = true;
     } else {
       details = ErrorDetails.LEVEL_LOAD_ERROR;
+      fatal = false;
     }
     this.loader.abort();
-    observer.trigger(Event.ERROR, {type : ErrorTypes.NETWORK_ERROR, details:details, fatal:true, url:this.url, loader : this.loader, response:event.currentTarget, level: this.id, id : this.id2});
+    observer.trigger(Event.ERROR, {type : ErrorTypes.NETWORK_ERROR, details:details, fatal:fatal, url:this.url, loader : this.loader, response:event.currentTarget, level: this.id, id : this.id2});
   }
 
   loadtimeout() {
-    var details;
+    var details,fatal;
     if(this.id === null) {
       details = ErrorDetails.MANIFEST_LOAD_TIMEOUT;
+      fatal = true;
     } else {
       details = ErrorDetails.LEVEL_LOAD_TIMEOUT;
+      fatal = false;
     }
    this.loader.abort();
-   observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details:details, fatal:true,url : this.url, loader: this.loader, level: this.id, id : this.id2});
+   observer.trigger(Event.ERROR, { type : ErrorTypes.NETWORK_ERROR, details:details, fatal:fatal, url : this.url, loader: this.loader, level: this.id, id : this.id2});
   }
 }
 
