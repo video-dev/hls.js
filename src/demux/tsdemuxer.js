@@ -122,6 +122,10 @@
   }
 
   end() {
+    // generate Init Segment if needed
+    if(!this._initSegGenerated) {
+      this._generateInitSegment();
+    }
     //logger.log('nb AVC samples:' + this._avcSamples.length);
     if(this._avcSamples.length) {
       this._flushAVCSamples();
@@ -289,10 +293,6 @@
     this._avcSamples.push(avcSample);
     this._avcSamplesLength += units.length;
     this._avcSamplesNbNalu += units.units.length;
-    // generate Init Segment if needed
-    if(!this._initSegGenerated) {
-      this._generateInitSegment();
-    }
   }
 
 
@@ -563,10 +563,6 @@
       } else {
         break;
       }
-    }
-
-    if(!this._initSegGenerated) {
-      this._generateInitSegment();
     }
     if(adtsStartOffset < len) {
       this.aacOverFlow = data.subarray(adtsStartOffset,len);
