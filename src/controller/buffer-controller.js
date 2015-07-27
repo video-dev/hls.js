@@ -491,6 +491,11 @@
       if(this.isBuffered(currentTime)) {
         rangeCurrent = this.getBufferRange(currentTime);
       } else if(this.isBuffered(currentTime+0.1)) {
+        /* ensure that FRAG_CHANGED event is triggered at startup,
+          when first video frame is displayed and playback is paused.
+          add a tolerance of 100ms, in case current position is not buffered,
+          check if current pos+100ms is buffered and use that buffer range
+          for FRAG_CHANGED event reporting */
         rangeCurrent = this.getBufferRange(currentTime+0.1);
       }
     }
