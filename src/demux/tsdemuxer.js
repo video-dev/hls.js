@@ -15,6 +15,9 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 class TSDemuxer {
     constructor() {
         this.lastCC = 0;
+        this.PES_TIMESCALE = 90000;
+        this.PES2MP4SCALEFACTOR = 4;
+        this.MP4_TIMESCALE = this.PES_TIMESCALE / this.PES2MP4SCALEFACTOR;
     }
 
     switchLevel() {
@@ -284,8 +287,8 @@ class TSDemuxer {
                             config.profileCompatibility;
                         track.levelIdc = config.levelIdc;
                         track.sps = [unit.data];
-                        track.timescale = 90000;
-                        track.duration = 90000 * this._duration;
+                        track.timescale = this.MP4_TIMESCALE;
+                        track.duration = this.MP4_TIMESCALE * this._duration;
                         var codecarray = unit.data.subarray(1, 4);
                         var codecstring = 'avc1.';
                         for (var i = 0; i < 3; i++) {
@@ -368,7 +371,8 @@ class TSDemuxer {
                 ptsnorm = this._PTSNormalize(pts, lastSampleDTS);
                 dtsnorm = this._PTSNormalize(dts, lastSampleDTS);
 
-                mp4Sample.duration = dtsnorm - lastSampleDTS;
+                mp4Sample.duration =
+                    (dtsnorm - lastSampleDTS) / this.PES2MP4SCALEFACTOR;
                 if (mp4Sample.duration < 0) {
                     //logger.log('invalid sample duration at PTS/DTS::' + avcSample.pts + '/' + avcSample.dts + ':' + mp4Sample.duration);
                     mp4Sample.duration = 0;
@@ -409,7 +413,7 @@ class TSDemuxer {
             mp4Sample = {
                 size: mp4SampleLength,
                 duration: 0,
-                cts: ptsnorm - dtsnorm,
+                cts: (ptsnorm - dtsnorm) / this.PES2MP4SCALEFACTOR,
                 flags: {
                     isLeading: 0,
                     isDependedOn: 0,
@@ -434,22 +438,29 @@ class TSDemuxer {
         }
         this.lastAvcDts = dtsnorm;
         // next AVC sample PTS should be equal to last sample PTS + duration
-        this.nextAvcPts = ptsnorm + mp4Sample.duration;
+        this.nextAvcPts =
+            ptsnorm + mp4Sample.duration * this.PES2MP4SCALEFACTOR;
         //logger.log('Video/lastAvcDts/nextAvcPts:' + this.lastAvcDts + '/' + this.nextAvcPts);
 
         this._avcSamplesLength = 0;
         this._avcSamplesNbNalu = 0;
 
         track.samples = samples;
-        moof = MP4.moof(track.sequenceNumber++, firstDTS, track);
+        moof = MP4.moof(
+            track.sequenceNumber++,
+            firstDTS / this.PES2MP4SCALEFACTOR,
+            track
+        );
         track.samples = [];
         observer.trigger(Event.FRAG_PARSING_DATA, {
             moof: moof,
             mdat: mdat,
-            startPTS: firstPTS / 90000,
-            endPTS: this.nextAvcPts / 90000,
-            startDTS: firstDTS / 90000,
-            endDTS: (dtsnorm + mp4Sample.duration) / 90000,
+            startPTS: firstPTS / this.PES_TIMESCALE,
+            endPTS: this.nextAvcPts / this.PES_TIMESCALE,
+            startDTS: firstDTS / this.PES_TIMESCALE,
+            endDTS:
+                (dtsnorm + this.PES2MP4SCALEFACTOR * mp4Sample.duration) /
+                this.PES_TIMESCALE,
             type: 'video',
             nb: samples.length
         });
@@ -638,8 +649,8 @@ class TSDemuxer {
             track.audiosamplerate = config.samplerate;
             track.channelCount = config.channelCount;
             track.codec = config.codec;
-            track.timescale = 90000;
-            track.duration = 90000 * this._duration;
+            track.timescale = this.MP4_TIMESCALE;
+            track.duration = this.MP4_TIMESCALE * this._duration;
             console.log(
                 `parsed   codec:${track.codec},rate:${
                     config.samplerate
@@ -657,7 +668,11 @@ class TSDemuxer {
             adtsHeaderLen = !!(data[adtsStartOffset + 1] & 0x01) ? 7 : 9;
             adtsFrameSize -= adtsHeaderLen;
             stamp = Math.round(
-                pes.pts + nbSamples * 1024 * 90000 / track.audiosamplerate
+                pes.pts +
+                    nbSamples *
+                        1024 *
+                        this.PES_TIMESCALE /
+                        track.audiosamplerate
             );
             //stamp = pes.pts;
             //console.log('AAC frame, offset/length/pts:' + (adtsStartOffset+7) + '/' + adtsFrameSize + '/' + stamp.toFixed(0));
@@ -727,7 +742,8 @@ class TSDemuxer {
                 ptsnorm = this._PTSNormalize(pts, lastSampleDTS);
                 dtsnorm = this._PTSNormalize(dts, lastSampleDTS);
                 // we use DTS to compute sample duration, but we use PTS to compute initPTS which is used to sync audio and video
-                mp4Sample.duration = dtsnorm - lastSampleDTS;
+                mp4Sample.duration =
+                    (dtsnorm - lastSampleDTS) / this.PES2MP4SCALEFACTOR;
                 if (mp4Sample.duration < 0) {
                     //logger.log('invalid sample duration at PTS/DTS::' + avcSample.pts + '/' + avcSample.dts + ':' + mp4Sample.duration);
                     mp4Sample.duration = 0;
@@ -738,7 +754,9 @@ class TSDemuxer {
                 // check if fragments are contiguous (i.e. no missing frames between fragment)
                 if (this.nextAacPts && this.nextAacPts !== ptsnorm) {
                     //logger.log('Audio next PTS:' + this.nextAacPts);
-                    var delta = Math.round((ptsnorm - this.nextAacPts) / 90);
+                    var delta = Math.round(
+                        1000 * (ptsnorm - this.nextAacPts) / this.PES_TIMESCALE
+                    );
                     // if delta is less than 300 ms, next loaded fragment is assumed to be contiguous with last one
                     if (Math.abs(delta) > 1 && Math.abs(delta) < 300) {
                         if (delta > 0) {
@@ -785,20 +803,27 @@ class TSDemuxer {
         }
         this.lastAacDts = dtsnorm;
         // next aac sample PTS should be equal to last sample PTS + duration
-        this.nextAacPts = ptsnorm + mp4Sample.duration;
+        this.nextAacPts =
+            ptsnorm + this.PES2MP4SCALEFACTOR * mp4Sample.duration;
         //logger.log('Audio/PTS/PTSend:' + aacSample.pts.toFixed(0) + '/' + this.nextAacDts.toFixed(0));
 
         this._aacSamplesLength = 0;
         track.samples = samples;
-        moof = MP4.moof(track.sequenceNumber++, firstDTS, track);
+        moof = MP4.moof(
+            track.sequenceNumber++,
+            firstDTS / this.PES2MP4SCALEFACTOR,
+            track
+        );
         track.samples = [];
         observer.trigger(Event.FRAG_PARSING_DATA, {
             moof: moof,
             mdat: mdat,
-            startPTS: firstPTS / 90000,
-            endPTS: this.nextAacPts / 90000,
-            startDTS: firstDTS / 90000,
-            endDTS: (dtsnorm + mp4Sample.duration) / 90000,
+            startPTS: firstPTS / this.PES_TIMESCALE,
+            endPTS: this.nextAacPts / this.PES_TIMESCALE,
+            startDTS: firstDTS / this.PES_TIMESCALE,
+            endDTS:
+                (dtsnorm + this.PES2MP4SCALEFACTOR * mp4Sample.duration) /
+                this.PES_TIMESCALE,
             type: 'audio',
             nb: samples.length
         });
@@ -955,9 +980,11 @@ class TSDemuxer {
             if (this._initPTS === undefined) {
                 // remember first PTS of this demuxing context
                 this._initPTS =
-                    this._aacSamples[0].pts - 90000 * this.timeOffset;
+                    this._aacSamples[0].pts -
+                    this.PES_TIMESCALE * this.timeOffset;
                 this._initDTS =
-                    this._aacSamples[0].dts - 90000 * this.timeOffset;
+                    this._aacSamples[0].dts -
+                    this.PES_TIMESCALE * this.timeOffset;
             }
         } else if (this._aacId === -1) {
             //video only
@@ -972,9 +999,11 @@ class TSDemuxer {
                 if (this._initPTS === undefined) {
                     // remember first PTS of this demuxing context
                     this._initPTS =
-                        this._avcSamples[0].pts - 90000 * this.timeOffset;
+                        this._avcSamples[0].pts -
+                        this.PES_TIMESCALE * this.timeOffset;
                     this._initDTS =
-                        this._avcSamples[0].dts - 90000 * this.timeOffset;
+                        this._avcSamples[0].dts -
+                        this.PES_TIMESCALE * this.timeOffset;
                 }
             }
         } else {
@@ -1001,13 +1030,13 @@ class TSDemuxer {
                             this._avcSamples[0].pts,
                             this._aacSamples[0].pts
                         ) -
-                        90000 * this.timeOffset;
+                        this.PES_TIMESCALE * this.timeOffset;
                     this._initDTS =
                         Math.min(
                             this._avcSamples[0].dts,
                             this._aacSamples[0].dts
                         ) -
-                        90000 * this.timeOffset;
+                        this.PES_TIMESCALE * this.timeOffset;
                 }
             }
         }
