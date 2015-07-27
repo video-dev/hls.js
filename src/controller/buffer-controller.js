@@ -200,7 +200,8 @@ class BufferController {
                     let fragments = levelInfo.fragments,
                         frag,
                         sliding = levelInfo.sliding,
-                        start = fragments[0].start + sliding;
+                        start = fragments[0].start + sliding,
+                        drift = 0;
                     // check if requested position is within seekable boundaries :
                     // in case of live playlist we need to ensure that requested position is not located before playlist start
                     //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.video.seeking}`);
@@ -253,7 +254,11 @@ class BufferController {
                         ) {
                             frag = fragments[fragIdx];
                             start = frag.start + sliding;
-                            //logger.log(`level/sn/sliding/start/end/bufEnd:${level}/${frag.sn}/${sliding}/${start}/${start+frag.duration}/${bufferEnd}`);
+                            if (frag.drift) {
+                                drift = frag.drift;
+                                //logger.log(`level/sn/sliding/start/end/bufEnd:${level}/${frag.sn}/${sliding}/${start.toFixed(3)}/${(start+frag.duration).toFixed(3)}/${bufferEnd.toFixed(3)}`);
+                            }
+                            start += drift;
                             // offset should be within fragment boundary
                             if (
                                 start <= bufferEnd &&
@@ -282,7 +287,7 @@ class BufferController {
                     logger.log(
                         `Loading       ${frag.sn} of [${levelInfo.startSN} ,${
                             levelInfo.endSN
-                        }],level ${level}`
+                        }],level ${level}, bufferEnd:${bufferEnd.toFixed(3)}`
                     );
                     //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
                     frag.autoLevel = this.hls.autoLevelEnabled;
@@ -1041,6 +1046,8 @@ class BufferController {
                 3
             )}/${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}/${data.nb}`
         );
+        this.frag.drift = data.startPTS - this.frag.start;
+        //logger.log(`      drift:${this.frag.drift.toFixed(3)}`);
         this.mp4segments.push({ type: data.type, data: data.moof });
         this.mp4segments.push({ type: data.type, data: data.mdat });
         this.nextLoadPosition = data.endPTS;
