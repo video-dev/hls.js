@@ -490,6 +490,8 @@
       this.lastCurrentTime = currentTime = this.video.currentTime;
       if(this.isBuffered(currentTime)) {
         rangeCurrent = this.getBufferRange(currentTime);
+      } else if(this.isBuffered(currentTime+0.1)) {
+        rangeCurrent = this.getBufferRange(currentTime+0.1);
       }
     }
 
