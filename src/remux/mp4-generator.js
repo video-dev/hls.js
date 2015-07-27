@@ -173,13 +173,16 @@ class MP4 {
     return MP4.box(MP4.types.mdat, data);
   }
 
-  static mdhd(duration) {
+  static mdhd(timescale,duration) {
     return MP4.box(MP4.types.mdhd, new Uint8Array([
       0x00, // version 0
       0x00, 0x00, 0x00, // flags
       0x00, 0x00, 0x00, 0x02, // creation_time
       0x00, 0x00, 0x00, 0x03, // modification_time
-      0x00, 0x01, 0x5f, 0x90, // timescale, 90,000 "ticks" per second
+      (timescale >> 24) & 0xFF,
+      (timescale >> 16) & 0xFF,
+      (timescale >>  8) & 0xFF,
+      timescale & 0xFF, // timescale
       (duration >> 24),
       (duration >> 16) & 0xFF,
       (duration >>  8) & 0xFF,
@@ -190,7 +193,7 @@ class MP4 {
   }
 
   static mdia(track) {
-    return MP4.box(MP4.types.mdia, MP4.mdhd(track.duration), MP4.hdlr(track.type), MP4.minf(track));
+    return MP4.box(MP4.types.mdia, MP4.mdhd(track.timescale,track.duration), MP4.hdlr(track.type), MP4.minf(track));
   }
 
   static mfhd(sequenceNumber) {
@@ -229,7 +232,7 @@ class MP4 {
       boxes[i] = MP4.trak(tracks[i]);
     }
 
-    return MP4.box.apply(null, [MP4.types.moov, MP4.mvhd(tracks[0].duration)].concat(boxes).concat(MP4.mvex(tracks)));
+    return MP4.box.apply(null, [MP4.types.moov, MP4.mvhd(tracks[0].timescale,tracks[0].duration)].concat(boxes).concat(MP4.mvex(tracks)));
   }
 
   static mvex(tracks) {
@@ -243,15 +246,18 @@ class MP4 {
     return MP4.box.apply(null, [MP4.types.mvex].concat(boxes));
   }
 
-  static mvhd(duration) {
+  static mvhd(timescale,duration) {
     var
       bytes = new Uint8Array([
         0x00, // version 0
         0x00, 0x00, 0x00, // flags
         0x00, 0x00, 0x00, 0x01, // creation_time
         0x00, 0x00, 0x00, 0x02, // modification_time
-        0x00, 0x01, 0x5f, 0x90, // timescale, 90,000 "ticks" per second
-        (duration >> 24),
+        (timescale >> 24) & 0xFF,
+        (timescale >> 16) & 0xFF,
+        (timescale >>  8) & 0xFF,
+        timescale & 0xFF, // timescale
+        (duration >> 24) & 0xFF,
         (duration >> 16) & 0xFF,
         (duration >>  8) & 0xFF,
         duration & 0xFF, // duration
