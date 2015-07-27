@@ -274,7 +274,7 @@ class MP4 {
         return MP4.box(MP4.types.mdat, data);
     }
 
-    static mdhd(duration) {
+    static mdhd(timescale, duration) {
         return MP4.box(
             MP4.types.mdhd,
             new Uint8Array([
@@ -290,10 +290,10 @@ class MP4 {
                 0x00,
                 0x00,
                 0x03, // modification_time
-                0x00,
-                0x01,
-                0x5f,
-                0x90, // timescale, 90,000 "ticks" per second
+                (timescale >> 24) & 0xff,
+                (timescale >> 16) & 0xff,
+                (timescale >> 8) & 0xff,
+                timescale & 0xff, // timescale
                 duration >> 24,
                 (duration >> 16) & 0xff,
                 (duration >> 8) & 0xff,
@@ -309,7 +309,7 @@ class MP4 {
     static mdia(track) {
         return MP4.box(
             MP4.types.mdia,
-            MP4.mdhd(track.duration),
+            MP4.mdhd(track.timescale, track.duration),
             MP4.hdlr(track.type),
             MP4.minf(track)
         );
@@ -369,7 +369,7 @@ class MP4 {
 
         return MP4.box.apply(
             null,
-            [MP4.types.moov, MP4.mvhd(tracks[0].duration)]
+            [MP4.types.moov, MP4.mvhd(tracks[0].timescale, tracks[0].duration)]
                 .concat(boxes)
                 .concat(MP4.mvex(tracks))
         );
@@ -385,7 +385,7 @@ class MP4 {
         return MP4.box.apply(null, [MP4.types.mvex].concat(boxes));
     }
 
-    static mvhd(duration) {
+    static mvhd(timescale, duration) {
         var bytes = new Uint8Array([
             0x00, // version 0
             0x00,
@@ -399,11 +399,11 @@ class MP4 {
             0x00,
             0x00,
             0x02, // modification_time
-            0x00,
-            0x01,
-            0x5f,
-            0x90, // timescale, 90,000 "ticks" per second
-            duration >> 24,
+            (timescale >> 24) & 0xff,
+            (timescale >> 16) & 0xff,
+            (timescale >> 8) & 0xff,
+            timescale & 0xff, // timescale
+            (duration >> 24) & 0xff,
             (duration >> 16) & 0xff,
             (duration >> 8) & 0xff,
             duration & 0xff, // duration

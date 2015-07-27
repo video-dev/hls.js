@@ -284,6 +284,7 @@ class TSDemuxer {
                             config.profileCompatibility;
                         track.levelIdc = config.levelIdc;
                         track.sps = [unit.data];
+                        track.timescale = 90000;
                         track.duration = 90000 * this._duration;
                         var codecarray = unit.data.subarray(1, 4);
                         var codecstring = 'avc1.';
@@ -637,6 +638,7 @@ class TSDemuxer {
             track.audiosamplerate = config.samplerate;
             track.channelCount = config.channelCount;
             track.codec = config.codec;
+            track.timescale = 90000;
             track.duration = 90000 * this._duration;
             console.log(
                 `parsed   codec:${track.codec},rate:${
