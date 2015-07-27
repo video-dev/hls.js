@@ -348,11 +348,19 @@
               } else {
                 this.appendError=1;
               }
-              if(this.appendError > 3) {
-                logger.log(`fail 3 times to append segment in sourceBuffer`);
-                observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_APPENDING_ERROR, fatal : true, frag : this.frag});
+              var event = {type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_APPENDING_ERROR, frag : this.frag};
+              /* with UHD content, we could get loop of quota exceeded error until
+                browser is able to evict some data from sourcebuffer. retrying help recovering this
+              */
+              if(this.appendError > this.config.appendErrorMaxRetry) {
+                logger.log(`fail ${this.config.appendErrorMaxRetry} times to append segment in sourceBuffer`);
+                event.fatal = true;
+                observer.trigger(Event.ERROR, event);
                 this.state = this.ERROR;
                 return;
+              } else {
+                event.fatal = false;
+                observer.trigger(Event.ERROR, event);
               }
             }
             this.state = this.APPENDING;
