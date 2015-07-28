@@ -340,7 +340,6 @@ class TSDemuxer {
             dts,
             ptsnorm,
             dtsnorm,
-            ptsOffset = 0,
             samples = [];
 
         /* concatenate the video data and construct the mdat in place
@@ -588,7 +587,9 @@ class TSDemuxer {
 
     _PTSNormalize(value, reference) {
         var offset;
-        if (reference === undefined) return value;
+        if (reference === undefined) {
+            return value;
+        }
         if (reference < value) {
             // - 2^33
             offset = -8589934592;
