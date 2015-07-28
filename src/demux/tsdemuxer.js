@@ -554,7 +554,7 @@
       track.codec = config.codec;
       track.timescale = this.MP4_TIMESCALE;
       track.duration = this.MP4_TIMESCALE*this._duration;
-      console.log(`parsed   codec:${track.codec},rate:${config.samplerate},nb channel:${config.channelCount}`);
+      logger.log(`parsed   codec:${track.codec},rate:${config.samplerate},nb channel:${config.channelCount}`);
     }
     nbSamples = 0;
     while((adtsStartOffset + 5) < len) {
@@ -718,7 +718,7 @@
     // byte 3
     adtsChanelConfig |= ((data[offset+3] & 0xC0) >>> 6);
 
-    console.log(`manifest codec:${audioCodec},ADTS data:type:${adtsObjectType},sampleingIndex:${adtsSampleingIndex}[${adtsSampleingRates[adtsSampleingIndex]}kHz],channelConfig:${adtsChanelConfig}`);
+    logger.log(`manifest codec:${audioCodec},ADTS data:type:${adtsObjectType},sampleingIndex:${adtsSampleingIndex}[${adtsSampleingRates[adtsSampleingIndex]}kHz],channelConfig:${adtsChanelConfig}`);
 
 
     // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
