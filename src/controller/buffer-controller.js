@@ -65,7 +65,7 @@
       }
       this.tick();
     } else {
-      logger.log(`cannot start loading as either manifest not parsed or video not attached`);
+      logger.warn(`cannot start loading as either manifest not parsed or video not attached`);
     }
   }
 
@@ -315,7 +315,7 @@
               ... and also bigger than duration needed to load fragment at next level ...*/
             if(bufferStarvationDelay < 2*frag.duration && fragLoadedDelay > bufferStarvationDelay && fragLoadedDelay > fragLevelNextLoadedDelay) {
               // abort fragment loading ...
-              logger.log('loading too slow, abort fragment loading');
+              logger.warn('loading too slow, abort fragment loading');
               logger.log(`fragLoadedDelay/bufferStarvationDelay/fragLevelNextLoadedDelay :${fragLoadedDelay.toFixed(1)}/${bufferStarvationDelay.toFixed(1)}/${fragLevelNextLoadedDelay.toFixed(1)}`);
               //abort fragment loading
               frag.loader.abort();
@@ -346,7 +346,7 @@
               this.appendError=0;
             } catch(err) {
               // in case any error occured while appending, put back segment in mp4segments table
-              logger.log(`error while trying to append buffer:${err.message},try appending later`);
+              logger.error(`error while trying to append buffer:${err.message},try appending later`);
               this.mp4segments.unshift(segment);
               if(this.appendError) {
                 this.appendError++;
@@ -911,7 +911,7 @@
   }
 
   onSourceBufferError(event) {
-      logger.log(`sourceBuffer error:${event}`);
+      logger.error(`sourceBuffer error:${event}`);
       this.state = this.ERROR;
       observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_APPENDING_ERROR, fatal:true, frag : this.frag});
   }
