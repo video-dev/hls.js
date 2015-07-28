@@ -297,7 +297,7 @@
 
   _flushAVCSamples() {
     var view,i=8,avcSample,mp4Sample,mp4SampleLength,unit,track = this._avcTrack,
-        lastSampleDTS,mdat,moof,firstPTS,firstDTS,pts,dts,ptsnorm,dtsnorm,ptsOffset = 0, samples = [];
+        lastSampleDTS,mdat,moof,firstPTS,firstDTS,pts,dts,ptsnorm,dtsnorm,samples = [];
 
     /* concatenate the video data and construct the mdat in place
       (need 8 more bytes to fill length and mpdat type) */
@@ -499,7 +499,9 @@
 
   _PTSNormalize(value,reference) {
     var offset;
-    if (reference === undefined) return value;
+    if (reference === undefined) {
+      return value;
+    }
     if (reference < value) {
         // - 2^33
         offset = -8589934592;
