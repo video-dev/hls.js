@@ -19,7 +19,6 @@
     this.PES_TIMESCALE=90000;
     this.PES2MP4SCALEFACTOR=4;
     this.MP4_TIMESCALE=this.PES_TIMESCALE/this.PES2MP4SCALEFACTOR;
-
   }
 
   switchLevel() {
@@ -298,7 +297,7 @@
 
   _flushAVCSamples() {
     var view,i=8,avcSample,mp4Sample,mp4SampleLength,unit,track = this._avcTrack,
-        lastSampleDTS,mdat,moof,firstPTS,firstDTS,pts,dts,ptsnorm,dtsnorm,samples = [];
+        lastSampleDTS,mdat,moof,firstPTS,firstDTS,pts,dts,ptsnorm,dtsnorm,ptsOffset = 0, samples = [];
 
     /* concatenate the video data and construct the mdat in place
       (need 8 more bytes to fill length and mpdat type) */
@@ -352,6 +351,21 @@
             // offset DTS as well, ensure that DTS is smaller or equal than new PTS
             dtsnorm = Math.max(dtsnorm-delta, this.lastAvcDts);
            // logger.log('Video/PTS/DTS adjusted:' + avcSample.pts + '/' + avcSample.dts);
+          }
+          else {
+            // not contiguous timestamp, check if PTS is within acceptable range
+            var expectedPTS = this.PES_TIMESCALE*this.timeOffset;
+            // check if there is any unexpected drift between expected timestamp and real one
+            if(Math.abs(expectedPTS - ptsnorm) > this.PES_TIMESCALE*3600 ) {
+              //logger.log(`PTS looping ??? AVC PTS delta:${expectedPTS-ptsnorm}`);
+              var ptsOffset = expectedPTS-ptsnorm;
+              // set PTS to next expected PTS;
+              ptsnorm = expectedPTS;
+              dtsnorm = ptsnorm;
+              // offset initPTS/initDTS to fix computation for following samples
+              this._initPTS-=ptsOffset;
+              this._initDTS-=ptsOffset;
+            }
           }
         }
         // remember first PTS of our avcSamples, ensure value is positive
@@ -485,6 +499,7 @@
 
   _PTSNormalize(value,reference) {
     var offset;
+    if (reference === undefined) return value;
     if (reference < value) {
         // - 2^33
         offset = -8589934592;
@@ -606,9 +621,9 @@
         // check if fragments are contiguous (i.e. no missing frames between fragment)
         if(this.nextAacPts && this.nextAacPts !== ptsnorm) {
           //logger.log('Audio next PTS:' + this.nextAacPts);
-          var delta = Math.round(1000*(ptsnorm - this.nextAacPts)/this.PES_TIMESCALE);
+          var delta = Math.round(1000*(ptsnorm - this.nextAacPts)/this.PES_TIMESCALE),absdelta=Math.abs(delta);
           // if delta is less than 300 ms, next loaded fragment is assumed to be contiguous with last one
-          if(Math.abs(delta) > 1 && Math.abs(delta) < 300) {
+          if(absdelta > 1 && absdelta < 300) {
             if(delta > 0) {
               logger.log(`AAC:${delta} ms hole between fragments detected,filling it`);
               // set PTS to next PTS, and ensure PTS is greater or equal than last DTS
@@ -617,6 +632,22 @@
               //logger.log('Audio/PTS/DTS adjusted:' + aacSample.pts + '/' + aacSample.dts);
             } else {
               logger.log(`AAC:${(-delta)} ms overlapping between fragments detected`);
+            }
+          }
+          else if (absdelta) {
+            // not contiguous timestamp, check if PTS is within acceptable range
+            var expectedPTS = this.PES_TIMESCALE*this.timeOffset;
+            //logger.log(`expectedPTS/PTSnorm:${expectedPTS}/${ptsnorm}/${expectedPTS-ptsnorm}`);
+            // check if there is any unexpected drift between expected timestamp and real one
+            if(Math.abs(expectedPTS - ptsnorm) > this.PES_TIMESCALE*3600 ) {
+              //logger.log(`PTS looping ??? AAC PTS delta:${expectedPTS-ptsnorm}`);
+              var ptsOffset = expectedPTS-ptsnorm;
+              // set PTS to next expected PTS;
+              ptsnorm = expectedPTS;
+              dtsnorm = ptsnorm;
+              // offset initPTS/initDTS to fix computation for following samples
+              this._initPTS-=ptsOffset;
+              this._initDTS-=ptsOffset;
             }
           }
         }
