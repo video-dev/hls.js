@@ -86,7 +86,8 @@ class LevelController {
         observer.trigger(Event.MANIFEST_PARSED, {
             levels: this._levels,
             firstLevel: this._firstLevel,
-            audiocodecswitch: aac && heaac
+            audiocodecswitch: aac && heaac,
+            stats: data.stats
         });
         return;
     }
