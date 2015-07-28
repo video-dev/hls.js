@@ -242,7 +242,7 @@ $(document).ready(function() {
           events.level.push({time : Date.now() - events.t0, id : data.level, bitrate : Math.round(hls.levels[data.level].bitrate/1000)});
           updateLevelInfo();
        });
-       hls.on(Hls.Events.MANIFEST_LOADED,function(event,data) {
+       hls.on(Hls.Events.MANIFEST_PARSED,function(event,data) {
           var event = {
             type : "manifest",
             name : "",
@@ -367,6 +367,7 @@ $(document).ready(function() {
        video.addEventListener('seeked', handleVideoEvent);
        video.addEventListener('pause', handleVideoEvent);
        video.addEventListener('play', handleVideoEvent);
+       video.addEventListener('ended', handleVideoEvent);
        video.addEventListener('playing', handleVideoEvent);
        video.addEventListener('error', handleVideoEvent);
        video.addEventListener('loadedmetadata', handleVideoEvent);
@@ -403,6 +404,7 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
       case 'loadeddata':
       // case 'canplay':
       // case 'canplaythrough':
+      case 'ended':
       case 'seeking':
       case 'seeked':
       case 'play':
@@ -544,7 +546,9 @@ function timeRangesToString(r) {
         decodedFrames = v.webkitDecodedFrameCount;
         droppedFrames = v.webkitDroppedFrameCount;
       }
-      var log = "Buffered:"
+      var log = "Duration:"
+              + v.duration + "<br>"
+              + "Buffered:"
               + timeRangesToString(v.buffered) + "<br>"
               + "Seekable:"
               + timeRangesToString(v.seekable) + "<br>"
