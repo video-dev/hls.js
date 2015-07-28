@@ -290,6 +290,7 @@ class BufferController {
                         }],level ${level}, bufferEnd:${bufferEnd.toFixed(3)}`
                     );
                     //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
+                    frag.drift = drift;
                     frag.autoLevel = this.hls.autoLevelEnabled;
                     if (this.levels.length > 1) {
                         frag.expectedLen = Math.round(
@@ -952,6 +953,9 @@ class BufferController {
                 if (details.live) {
                     duration += details.sliding;
                     start += details.sliding;
+                }
+                if (this.frag.drift) {
+                    start += this.frag.drift;
                 }
                 this.demuxer.push(
                     data.payload,
