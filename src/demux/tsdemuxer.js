@@ -340,6 +340,7 @@ class TSDemuxer {
             dts,
             ptsnorm,
             dtsnorm,
+            ptsOffset = 0,
             samples = [];
 
         /* concatenate the video data and construct the mdat in place
@@ -402,6 +403,23 @@ class TSDemuxer {
                         // offset DTS as well, ensure that DTS is smaller or equal than new PTS
                         dtsnorm = Math.max(dtsnorm - delta, this.lastAvcDts);
                         // logger.log('Video/PTS/DTS adjusted:' + avcSample.pts + '/' + avcSample.dts);
+                    } else {
+                        // not contiguous timestamp, check if PTS is within acceptable range
+                        var expectedPTS = this.PES_TIMESCALE * this.timeOffset;
+                        // check if there is any unexpected drift between expected timestamp and real one
+                        if (
+                            Math.abs(expectedPTS - ptsnorm) >
+                            this.PES_TIMESCALE * 3600
+                        ) {
+                            //logger.log(`PTS looping ??? AVC PTS delta:${expectedPTS-ptsnorm}`);
+                            var ptsOffset = expectedPTS - ptsnorm;
+                            // set PTS to next expected PTS;
+                            ptsnorm = expectedPTS;
+                            dtsnorm = ptsnorm;
+                            // offset initPTS/initDTS to fix computation for following samples
+                            this._initPTS -= ptsOffset;
+                            this._initDTS -= ptsOffset;
+                        }
                     }
                 }
                 // remember first PTS of our avcSamples, ensure value is positive
@@ -570,6 +588,7 @@ class TSDemuxer {
 
     _PTSNormalize(value, reference) {
         var offset;
+        if (reference === undefined) return value;
         if (reference < value) {
             // - 2^33
             offset = -8589934592;
@@ -751,10 +770,13 @@ class TSDemuxer {
                 if (this.nextAacPts && this.nextAacPts !== ptsnorm) {
                     //logger.log('Audio next PTS:' + this.nextAacPts);
                     var delta = Math.round(
-                        1000 * (ptsnorm - this.nextAacPts) / this.PES_TIMESCALE
-                    );
+                            1000 *
+                                (ptsnorm - this.nextAacPts) /
+                                this.PES_TIMESCALE
+                        ),
+                        absdelta = Math.abs(delta);
                     // if delta is less than 300 ms, next loaded fragment is assumed to be contiguous with last one
-                    if (Math.abs(delta) > 1 && Math.abs(delta) < 300) {
+                    if (absdelta > 1 && absdelta < 300) {
                         if (delta > 0) {
                             logger.log(
                                 `AAC:${delta} ms hole between fragments detected,filling it`
@@ -770,6 +792,24 @@ class TSDemuxer {
                             logger.log(
                                 `AAC:${-delta} ms overlapping between fragments detected`
                             );
+                        }
+                    } else if (absdelta) {
+                        // not contiguous timestamp, check if PTS is within acceptable range
+                        var expectedPTS = this.PES_TIMESCALE * this.timeOffset;
+                        //logger.log(`expectedPTS/PTSnorm:${expectedPTS}/${ptsnorm}/${expectedPTS-ptsnorm}`);
+                        // check if there is any unexpected drift between expected timestamp and real one
+                        if (
+                            Math.abs(expectedPTS - ptsnorm) >
+                            this.PES_TIMESCALE * 3600
+                        ) {
+                            //logger.log(`PTS looping ??? AAC PTS delta:${expectedPTS-ptsnorm}`);
+                            var ptsOffset = expectedPTS - ptsnorm;
+                            // set PTS to next expected PTS;
+                            ptsnorm = expectedPTS;
+                            dtsnorm = ptsnorm;
+                            // offset initPTS/initDTS to fix computation for following samples
+                            this._initPTS -= ptsOffset;
+                            this._initDTS -= ptsOffset;
                         }
                     }
                 }
