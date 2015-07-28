@@ -252,6 +252,7 @@
           }
           logger.log(`Loading       ${frag.sn} of [${levelInfo.startSN} ,${levelInfo.endSN}],level ${level}, bufferEnd:${bufferEnd.toFixed(3)}`);
           //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
+          frag.drift = drift;
           frag.autoLevel = this.hls.autoLevelEnabled;
           if(this.levels.length>1) {
             frag.expectedLen = Math.round(frag.duration*this.levels[level].bitrate/8);
@@ -794,6 +795,9 @@
         if(details.live) {
           duration+=details.sliding;
           start+=details.sliding;
+        }
+        if(this.frag.drift) {
+          start+= this.frag.drift;
         }
         this.demuxer.push(data.payload,currentLevel.audioCodec,currentLevel.videoCodec,start,this.frag.cc, this.level, duration);
       }
