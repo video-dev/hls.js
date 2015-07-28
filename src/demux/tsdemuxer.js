@@ -670,7 +670,7 @@ class TSDemuxer {
             track.codec = config.codec;
             track.timescale = this.MP4_TIMESCALE;
             track.duration = this.MP4_TIMESCALE * this._duration;
-            console.log(
+            logger.log(
                 `parsed   codec:${track.codec},rate:${
                     config.samplerate
                 },nb channel:${config.channelCount}`
@@ -892,7 +892,7 @@ class TSDemuxer {
         // byte 3
         adtsChanelConfig |= (data[offset + 3] & 0xc0) >>> 6;
 
-        console.log(
+        logger.log(
             `manifest codec:${audioCodec},ADTS data:type:${adtsObjectType},sampleingIndex:${adtsSampleingIndex}[${
                 adtsSampleingRates[adtsSampleingIndex]
             }kHz],channelConfig:${adtsChanelConfig}`
