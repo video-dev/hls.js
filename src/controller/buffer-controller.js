@@ -64,7 +64,7 @@ class BufferController {
             }
             this.tick();
         } else {
-            logger.log(
+            logger.warn(
                 `cannot start loading as either manifest not parsed or video not attached`
             );
         }
@@ -380,7 +380,7 @@ class BufferController {
                             fragLoadedDelay > fragLevelNextLoadedDelay
                         ) {
                             // abort fragment loading ...
-                            logger.log(
+                            logger.warn(
                                 'loading too slow, abort fragment loading'
                             );
                             logger.log(
@@ -428,7 +428,7 @@ class BufferController {
                             this.appendError = 0;
                         } catch (err) {
                             // in case any error occured while appending, put back segment in mp4segments table
-                            logger.log(
+                            logger.error(
                                 `error while trying to append buffer:${
                                     err.message
                                 },try appending later`
@@ -1113,7 +1113,7 @@ class BufferController {
     }
 
     onSourceBufferError(event) {
-        logger.log(`sourceBuffer error:${event}`);
+        logger.error(`sourceBuffer error:${event}`);
         this.state = this.ERROR;
         observer.trigger(Event.ERROR, {
             type: ErrorTypes.MEDIA_ERROR,

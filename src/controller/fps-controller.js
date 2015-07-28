@@ -45,7 +45,7 @@ class FPSController {
                             this.hls.config.fpsDroppedMonitoringThreshold *
                                 currentDecoded
                         ) {
-                            logger.log(
+                            logger.warn(
                                 `drop FPS ratio greater than max allowed value`
                             );
                             observer.trigger(Event.FPS_DROP, {

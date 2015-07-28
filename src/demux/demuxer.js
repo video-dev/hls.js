@@ -15,7 +15,7 @@ class Demuxer {
                 this.w.addEventListener('message', this.onwmsg);
                 this.w.postMessage({ cmd: 'init' });
             } catch (err) {
-                logger.log(
+                logger.error(
                     'error while initializing TSDemuxerWorker, fallback on regular TSDemuxer'
                 );
                 this.demuxer = new TSDemuxer();

@@ -71,7 +71,7 @@ class XhrLoader {
 
     loaderror(event) {
         if (this.stats.retry < this.maxRetry) {
-            logger.log(
+            logger.warn(
                 `${event.type} while loading ${this.url}, retrying in ${
                     this.retryDelay
                 }...`
@@ -83,13 +83,13 @@ class XhrLoader {
             this.stats.retry++;
         } else {
             window.clearTimeout(this.timeoutHandle);
-            logger.log(`${event.type} while loading ${this.url}`);
+            logger.error(`${event.type} while loading ${this.url}`);
             this.onError(event);
         }
     }
 
     loadtimeout(event) {
-        logger.log(`timeout while loading ${this.url}`);
+        logger.warn(`timeout while loading ${this.url}`);
         this.onTimeout(event, this.stats);
     }
 
