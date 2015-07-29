@@ -597,7 +597,7 @@
        - and trigger a buffer flush
     */
   immediateLevelSwitch() {
-    logger.log("immediateLevelSwitch");
+    logger.log('immediateLevelSwitch');
     if(!this.immediateSwitch) {
       this.immediateSwitch = true;
       this.previouslyPaused = this.video.paused;
@@ -891,7 +891,7 @@
     }
   }
 
-  onFragmentParsed(event,data) {
+  onFragmentParsed() {
     if(this.state === this.PARSING) {
       this.state = this.PARSED;
       this.stats.tparsed = new Date();

@@ -103,7 +103,7 @@ class Hls {
     this.statsHandler.detachVideo(video);
     var ms = this.mediaSource;
     if(ms) {
-      if(ms.readyState !== "ended") {
+      if(ms.readyState !== 'ended') {
         ms.endOfStream();
       }
       ms.removeEventListener('sourceopen',  this.onmso);
