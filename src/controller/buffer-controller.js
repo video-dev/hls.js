@@ -391,8 +391,6 @@
           this.state = this.IDLE;
           // reset reference to frag
           this.frag = null;
-          // increase fragment load Index to avoid frag loop loading error after buffer flush
-          this.fragLoadIdx+=2*this.config.fragLoadingLoopThreshold;
         }
          /* if not everything flushed, stay in BUFFER_FLUSHING state. we will come back here
             each time sourceBuffer updateend() callback will be triggered
@@ -599,6 +597,7 @@
        - and trigger a buffer flush
     */
   immediateLevelSwitch() {
+    logger.log("immediateLevelSwitch");
     if(!this.immediateSwitch) {
       this.immediateSwitch = true;
       this.previouslyPaused = this.video.paused;
@@ -607,11 +606,14 @@
     if(this.frag && this.frag.loader) {
       this.frag.loader.abort();
     }
+    this.frag=null;
     // flush everything
     this.flushBufferCounter = 0;
     this.flushRange.push({ start : 0, end : Number.POSITIVE_INFINITY});
     // trigger a sourceBuffer flush
     this.state = this.BUFFER_FLUSHING;
+    // increase fragment load Index to avoid frag loop loading error after buffer flush
+    this.fragLoadIdx+=2*this.config.fragLoadingLoopThreshold;
     // speed up switching, trigger timer function
     this.tick();
   }
@@ -670,6 +672,8 @@
       this.flushBufferCounter = 0;
       // trigger a sourceBuffer flush
       this.state = this.BUFFER_FLUSHING;
+      // increase fragment load Index to avoid frag loop loading error after buffer flush
+      this.fragLoadIdx+=2*this.config.fragLoadingLoopThreshold;
       // speed up switching, trigger timer function
       this.tick();
     }
@@ -806,6 +810,7 @@
         if(this.frag.drift) {
           start+= this.frag.drift;
         }
+        logger.log(`Demuxing      ${this.frag.sn} of [${details.startSN} ,${details.endSN}],level ${this.level}`);
         this.demuxer.push(data.payload,currentLevel.audioCodec,currentLevel.videoCodec,start,this.frag.cc, this.level, duration);
       }
     }
@@ -857,36 +862,42 @@
   }
 
   onFragmentParsing(event,data) {
-    this.tparse2 = Date.now();
-    var level = this.levels[this.level];
-    if(level.details.live) {
-      var fragments = this.levels[this.level].details.fragments;
-      var sn0 = fragments[0].sn,sn1 = fragments[fragments.length-1].sn, sn = this.frag.sn;
-      //retrieve this.frag.sn in this.levels[this.level]
-      if(sn >= sn0 && sn <= sn1) {
-        level.details.sliding = data.startPTS - fragments[sn-sn0].start;
-        //logger.log(`live playlist sliding:${level.details.sliding.toFixed(3)}`);
+    if(this.state === this.PARSING) {
+      this.tparse2 = Date.now();
+      var level = this.levels[this.level];
+      if(level.details.live) {
+        var fragments = this.levels[this.level].details.fragments;
+        var sn0 = fragments[0].sn,sn1 = fragments[fragments.length-1].sn, sn = this.frag.sn;
+        //retrieve this.frag.sn in this.levels[this.level]
+        if(sn >= sn0 && sn <= sn1) {
+          level.details.sliding = data.startPTS - fragments[sn-sn0].start;
+          //logger.log(`live playlist sliding:${level.details.sliding.toFixed(3)}`);
+        }
       }
+      logger.log(`      parsed data, type/startPTS/endPTS/startDTS/endDTS/nb:${data.type}/${data.startPTS.toFixed(3)}/${data.endPTS.toFixed(3)}/${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}/${data.nb}`);
+      this.frag.drift=data.startPTS-this.frag.start;
+      //logger.log(`      drift:${this.frag.drift.toFixed(3)}`);
+      this.mp4segments.push({ type : data.type, data : data.moof});
+      this.mp4segments.push({ type : data.type, data : data.mdat});
+      this.nextLoadPosition = data.endPTS;
+      this.bufferRange.push({type : data.type, start : data.startPTS, end : data.endPTS, frag : this.frag});
+      // if(data.type === 'video') {
+      //   this.frag.fpsExpected = (data.nb-1) / (data.endPTS - data.startPTS);
+      // }
+      //trigger handler right now
+      this.tick();
+    } else {
+      logger.warn(`not in PARSING state, discarding ${event}`);
     }
-    logger.log(`      parsed data, type/startPTS/endPTS/startDTS/endDTS/nb:${data.type}/${data.startPTS.toFixed(3)}/${data.endPTS.toFixed(3)}/${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}/${data.nb}`);
-    this.frag.drift=data.startPTS-this.frag.start;
-    //logger.log(`      drift:${this.frag.drift.toFixed(3)}`);
-    this.mp4segments.push({ type : data.type, data : data.moof});
-    this.mp4segments.push({ type : data.type, data : data.mdat});
-    this.nextLoadPosition = data.endPTS;
-    this.bufferRange.push({type : data.type, start : data.startPTS, end : data.endPTS, frag : this.frag});
-    // if(data.type === 'video') {
-    //   this.frag.fpsExpected = (data.nb-1) / (data.endPTS - data.startPTS);
-    // }
-    //trigger handler right now
-    this.tick();
   }
 
-  onFragmentParsed() {
+  onFragmentParsed(event,data) {
+    if(this.state === this.PARSING) {
       this.state = this.PARSED;
       this.stats.tparsed = new Date();
-    //trigger handler right now
-    this.tick();
+      //trigger handler right now
+      this.tick();
+    }
   }
 
   onError(event,data) {
@@ -910,9 +921,11 @@
   onSourceBufferUpdateEnd() {
     //trigger handler right now
     if(this.state === this.APPENDING && this.mp4segments.length === 0)  {
-      this.stats.tbuffered = new Date();
-      observer.trigger(Event.FRAG_BUFFERED, { stats : this.stats, frag : this.frag});
-      this.state = this.IDLE;
+      if(this.frag) {
+        this.stats.tbuffered = new Date();
+        observer.trigger(Event.FRAG_BUFFERED, { stats : this.stats, frag : this.frag});
+        this.state = this.IDLE;
+      }
     }
     this.tick();
   }
