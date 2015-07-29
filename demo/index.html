@@ -460,7 +460,6 @@ function timeRangesToString(r) {
 }
 
   var bufferingIdx = -1;
-  var playbackEnded = false;
 
   function checkBuffer() {
     var v = $('#video')[0];
@@ -489,10 +488,6 @@ function timeRangesToString(r) {
       if(bufferLen <= 0.1 && v.paused === false && (pos-lastStartPosition) > 0.5) {
         // don't create buffering event if we are at the end of the playlist, don't report ended for live playlist
         if(lastDuration -pos <= 0.5  && events.isLive === false) {
-          if(playbackEnded === false) {
-            events.video.push({ type : 'ended' , time : Date.now() - events.t0 });
-            playbackEnded = true;
-          }
         } else {
          // we are not at the end of the playlist ... real buffering
           if(bufferingIdx !== -1) {
@@ -504,10 +499,7 @@ function timeRangesToString(r) {
             // we are in buffering state
             bufferingIdx = events.video.length-1;
           }
-          playbackEnded = false;
         }
-      } else {
-        playbackEnded = false;
       }
 
       if(bufferLen > 0.1 && bufferingIdx !=-1) {
