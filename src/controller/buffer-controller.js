@@ -511,12 +511,19 @@
           for FRAG_CHANGED event reporting */
         rangeCurrent = this.getBufferRange(currentTime+0.1);
       }
-    }
-
-    if(rangeCurrent) {
-      if(rangeCurrent.frag !== this.fragCurrent) {
-        this.fragCurrent = rangeCurrent.frag;
-        observer.trigger(Event.FRAG_CHANGED, { frag : this.fragCurrent });
+      if(rangeCurrent) {
+        if(rangeCurrent.frag !== this.fragCurrent) {
+          this.fragCurrent = rangeCurrent.frag;
+          observer.trigger(Event.FRAG_CHANGED, { frag : this.fragCurrent });
+        }
+        // if stream is VOD (not live) and we reach End of Stream
+        var level = this.levels[this.level];
+        if(level && level.details && !level.details.live && (this.video.duration - currentTime) < 0.2) {
+          if(this.mediaSource && this.mediaSource.readyState === 'open') {
+            logger.log(`end of VoD stream reached, signal endOfStream() to MediaSource`);
+            this.mediaSource.endOfStream();
+          }
+        }
       }
     }
   }
