@@ -109,7 +109,9 @@ class Hls {
         this.statsHandler.detachVideo(video);
         var ms = this.mediaSource;
         if (ms) {
-            ms.endOfStream();
+            if (ms.readyState !== 'ended') {
+                ms.endOfStream();
+            }
             ms.removeEventListener('sourceopen', this.onmso);
             ms.removeEventListener('sourceended', this.onmse);
             ms.removeEventListener('sourceclose', this.onmsc);
@@ -246,10 +248,13 @@ class Hls {
     }
 
     onMediaSourceOpen() {
+        logger.log('media source opened');
         observer.trigger(Event.MSE_ATTACHED, {
             video: this.video,
             mediaSource: this.mediaSource
         });
+        // once received, don't listen anymore to sourceopen event
+        this.mediaSource.removeEventListener('sourceopen', this.onmso);
     }
 
     onMediaSourceClose() {
