@@ -1099,7 +1099,7 @@ class BufferController {
         }
     }
 
-    onFragmentParsed(event, data) {
+    onFragmentParsed() {
         if (this.state === this.PARSING) {
             this.state = this.PARSED;
             this.stats.tparsed = new Date();
