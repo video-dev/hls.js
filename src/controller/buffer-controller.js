@@ -723,7 +723,20 @@
   }
 
   onManifestParsed(event,data) {
-    this.audiocodecswitch = data.audiocodecswitch;
+    var aac=false, heaac=false,codecs;
+    data.levels.forEach(level => {
+      // detect if we have different kind of audio codecs used amongst playlists
+      codecs = level.codecs;
+      if(codecs) {
+        if(codecs.indexOf('mp4a.40.2') !== -1) {
+          aac = true;
+        }
+        if(codecs.indexOf('mp4a.40.5') !== -1) {
+          heaac = true;
+        }
+      }
+    });
+    this.audiocodecswitch = (aac && heaac);
     if(this.audiocodecswitch) {
       logger.log('both AAC/HE-AAC audio found in levels; declaring audio codec as HE-AAC');
     }
