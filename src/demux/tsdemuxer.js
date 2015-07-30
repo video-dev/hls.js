@@ -255,11 +255,11 @@
         case 7:
           if(!track.sps) {
             var expGolombDecoder = new ExpGolomb(unit.data);
-            var config = expGolombDecoder.readSequenceParameterSet();
+            var config = expGolombDecoder.readSPS();
             track.width = config.width;
             track.height = config.height;
             track.profileIdc = config.profileIdc;
-            track.profileCompatibility = config.profileCompatibility;
+            track.profileCompat = config.profileCompat;
             track.levelIdc = config.levelIdc;
             track.sps = [unit.data];
             track.timescale = this.MP4_TIMESCALE;

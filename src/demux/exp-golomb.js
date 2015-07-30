@@ -7,70 +7,70 @@ import {logger}        from '../utils/logger';
 
 class ExpGolomb {
 
-  constructor(workingData) {
-    this.workingData = workingData;
-    // the number of bytes left to examine in this.workingData
-    this.workingBytesAvailable = this.workingData.byteLength;
+  constructor(data) {
+    this.data = data;
+    // the number of bytes left to examine in this.data
+    this.bytesAvailable = this.data.byteLength;
     // the current word being examined
-    this.workingWord = 0; // :uint
+    this.word = 0; // :uint
     // the number of bits left to examine in the current word
-    this.workingBitsAvailable = 0; // :uint
+    this.bitsAvailable = 0; // :uint
   }
 
   // ():void
   loadWord() {
     var
-      position = this.workingData.byteLength - this.workingBytesAvailable,
+      position = this.data.byteLength - this.bytesAvailable,
       workingBytes = new Uint8Array(4),
-      availableBytes = Math.min(4, this.workingBytesAvailable);
+      availableBytes = Math.min(4, this.bytesAvailable);
 
     if (availableBytes === 0) {
       throw new Error('no bytes available');
     }
 
-    workingBytes.set(this.workingData.subarray(position,
+    workingBytes.set(this.data.subarray(position,
                                           position + availableBytes));
-    this.workingWord = new DataView(workingBytes.buffer).getUint32(0);
+    this.word = new DataView(workingBytes.buffer).getUint32(0);
 
-    // track the amount of this.workingData that has been processed
-    this.workingBitsAvailable = availableBytes * 8;
-    this.workingBytesAvailable -= availableBytes;
+    // track the amount of this.data that has been processed
+    this.bitsAvailable = availableBytes * 8;
+    this.bytesAvailable -= availableBytes;
   }
 
   // (count:int):void
   skipBits(count) {
     var skipBytes; // :int
-    if (this.workingBitsAvailable > count) {
-      this.workingWord          <<= count;
-      this.workingBitsAvailable -= count;
+    if (this.bitsAvailable > count) {
+      this.word          <<= count;
+      this.bitsAvailable -= count;
     } else {
-      count -= this.workingBitsAvailable;
+      count -= this.bitsAvailable;
       skipBytes = count >> 3;
 
       count -= (skipBytes >> 3);
-      this.workingBytesAvailable -= skipBytes;
+      this.bytesAvailable -= skipBytes;
 
       this.loadWord();
 
-      this.workingWord <<= count;
-      this.workingBitsAvailable -= count;
+      this.word <<= count;
+      this.bitsAvailable -= count;
     }
   }
 
   // (size:int):uint
   readBits(size) {
     var
-      bits = Math.min(this.workingBitsAvailable, size), // :uint
-      valu = this.workingWord >>> (32 - bits); // :uint
+      bits = Math.min(this.bitsAvailable, size), // :uint
+      valu = this.word >>> (32 - bits); // :uint
 
     if(size >32) {
       logger.error('Cannot read more than 32 bits at a time');
     }
 
-    this.workingBitsAvailable -= bits;
-    if (this.workingBitsAvailable > 0) {
-      this.workingWord <<= bits;
-    } else if (this.workingBytesAvailable > 0) {
+    this.bitsAvailable -= bits;
+    if (this.bitsAvailable > 0) {
+      this.word <<= bits;
+    } else if (this.bytesAvailable > 0) {
       this.loadWord();
     }
 
@@ -83,41 +83,41 @@ class ExpGolomb {
   }
 
   // ():uint
-  skipLeadingZeros() {
+  skipLZ() {
     var leadingZeroCount; // :uint
-    for (leadingZeroCount = 0 ; leadingZeroCount < this.workingBitsAvailable ; ++leadingZeroCount) {
-      if (0 !== (this.workingWord & (0x80000000 >>> leadingZeroCount))) {
+    for (leadingZeroCount = 0 ; leadingZeroCount < this.bitsAvailable ; ++leadingZeroCount) {
+      if (0 !== (this.word & (0x80000000 >>> leadingZeroCount))) {
         // the first bit of working word is 1
-        this.workingWord <<= leadingZeroCount;
-        this.workingBitsAvailable -= leadingZeroCount;
+        this.word <<= leadingZeroCount;
+        this.bitsAvailable -= leadingZeroCount;
         return leadingZeroCount;
       }
     }
 
-    // we exhausted workingWord and still have not found a 1
+    // we exhausted word and still have not found a 1
     this.loadWord();
-    return leadingZeroCount + this.skipLeadingZeros();
+    return leadingZeroCount + this.skipLZ();
   }
 
   // ():void
-  skipUnsignedExpGolomb() {
-    this.skipBits(1 + this.skipLeadingZeros());
+  skipUEG() {
+    this.skipBits(1 + this.skipLZ());
   }
 
   // ():void
-  skipExpGolomb() {
-    this.skipBits(1 + this.skipLeadingZeros());
+  skipEG() {
+    this.skipBits(1 + this.skipLZ());
   }
 
   // ():uint
-  readUnsignedExpGolomb() {
-    var clz = this.skipLeadingZeros(); // :uint
+  readUEG() {
+    var clz = this.skipLZ(); // :uint
     return this.readBits(clz + 1) - 1;
   }
 
   // ():int
-  readExpGolomb() {
-    var valu = this.readUnsignedExpGolomb(); // :int
+  readEG() {
+    var valu = this.readUEG(); // :int
     if (0x01 & valu) {
       // the number is odd if the low order bit is set
       return (1 + valu) >>> 1; // add 1 to make it even, and divide by 2
@@ -133,7 +133,7 @@ class ExpGolomb {
   }
 
   // ():int
-  readUnsignedByte() {
+  readUByte() {
     return this.readBits(8);
   }
 
@@ -153,7 +153,7 @@ class ExpGolomb {
 
     for (j = 0; j < count; j++) {
       if (nextScale !== 0) {
-        deltaScale = this.readExpGolomb();
+        deltaScale = this.readEG();
         nextScale = (lastScale + deltaScale + 256) % 256;
       }
 
@@ -170,37 +170,37 @@ class ExpGolomb {
    * sequence parameter set, including the dimensions of the
    * associated video frames.
    */
-  readSequenceParameterSet() {
+  readSPS() {
     var
       frameCropLeftOffset = 0,
       frameCropRightOffset = 0,
       frameCropTopOffset = 0,
       frameCropBottomOffset = 0,
-      profileIdc,profileCompatibility,levelIdc,
+      profileIdc,profileCompat,levelIdc,
       numRefFramesInPicOrderCntCycle, picWidthInMbsMinus1,
       picHeightInMapUnitsMinus1,
       frameMbsOnlyFlag,
       scalingListCount,
       i;
 
-    this.readUnsignedByte();
-    profileIdc = this.readUnsignedByte(); // profile_idc
-    profileCompatibility = this.readBits(5); // constraint_set[0-4]_flag, u(5)
+    this.readUByte();
+    profileIdc = this.readUByte(); // profile_idc
+    profileCompat = this.readBits(5); // constraint_set[0-4]_flag, u(5)
     this.skipBits(3); // reserved_zero_3bits u(3),
-    levelIdc = this.readUnsignedByte(); //level_idc u(8)
-    this.skipUnsignedExpGolomb(); // seq_parameter_set_id
+    levelIdc = this.readUByte(); //level_idc u(8)
+    this.skipUEG(); // seq_parameter_set_id
 
     // some profiles have more optional data we don't need
     if (profileIdc === 100 ||
         profileIdc === 110 ||
         profileIdc === 122 ||
         profileIdc === 144) {
-      var chromaFormatIdc = this.readUnsignedExpGolomb();
+      var chromaFormatIdc = this.readUEG();
       if (chromaFormatIdc === 3) {
         this.skipBits(1); // separate_colour_plane_flag
       }
-      this.skipUnsignedExpGolomb(); // bit_depth_luma_minus8
-      this.skipUnsignedExpGolomb(); // bit_depth_chroma_minus8
+      this.skipUEG(); // bit_depth_luma_minus8
+      this.skipUEG(); // bit_depth_chroma_minus8
       this.skipBits(1); // qpprime_y_zero_transform_bypass_flag
       if (this.readBoolean()) { // seq_scaling_matrix_present_flag
         scalingListCount = (chromaFormatIdc !== 3) ? 8 : 12;
@@ -216,26 +216,26 @@ class ExpGolomb {
       }
     }
 
-    this.skipUnsignedExpGolomb(); // log2_max_frame_num_minus4
-    var picOrderCntType = this.readUnsignedExpGolomb();
+    this.skipUEG(); // log2_max_frame_num_minus4
+    var picOrderCntType = this.readUEG();
 
     if (picOrderCntType === 0) {
-      this.readUnsignedExpGolomb(); //log2_max_pic_order_cnt_lsb_minus4
+      this.readUEG(); //log2_max_pic_order_cnt_lsb_minus4
     } else if (picOrderCntType === 1) {
       this.skipBits(1); // delta_pic_order_always_zero_flag
-      this.skipExpGolomb(); // offset_for_non_ref_pic
-      this.skipExpGolomb(); // offset_for_top_to_bottom_field
-      numRefFramesInPicOrderCntCycle = this.readUnsignedExpGolomb();
+      this.skipEG(); // offset_for_non_ref_pic
+      this.skipEG(); // offset_for_top_to_bottom_field
+      numRefFramesInPicOrderCntCycle = this.readUEG();
       for(i = 0; i < numRefFramesInPicOrderCntCycle; i++) {
-        this.skipExpGolomb(); // offset_for_ref_frame[ i ]
+        this.skipEG(); // offset_for_ref_frame[ i ]
       }
     }
 
-    this.skipUnsignedExpGolomb(); // max_num_ref_frames
+    this.skipUEG(); // max_num_ref_frames
     this.skipBits(1); // gaps_in_frame_num_value_allowed_flag
 
-    picWidthInMbsMinus1 = this.readUnsignedExpGolomb();
-    picHeightInMapUnitsMinus1 = this.readUnsignedExpGolomb();
+    picWidthInMbsMinus1 = this.readUEG();
+    picHeightInMapUnitsMinus1 = this.readUEG();
 
     frameMbsOnlyFlag = this.readBits(1);
     if (frameMbsOnlyFlag === 0) {
@@ -244,15 +244,15 @@ class ExpGolomb {
 
     this.skipBits(1); // direct_8x8_inference_flag
     if (this.readBoolean()) { // frame_cropping_flag
-      frameCropLeftOffset = this.readUnsignedExpGolomb();
-      frameCropRightOffset = this.readUnsignedExpGolomb();
-      frameCropTopOffset = this.readUnsignedExpGolomb();
-      frameCropBottomOffset = this.readUnsignedExpGolomb();
+      frameCropLeftOffset = this.readUEG();
+      frameCropRightOffset = this.readUEG();
+      frameCropTopOffset = this.readUEG();
+      frameCropBottomOffset = this.readUEG();
     }
 
     return {
       profileIdc : profileIdc,
-      profileCompatibility : profileCompatibility,
+      profileCompat : profileCompat,
       levelIdc : levelIdc,
       width: ((picWidthInMbsMinus1 + 1) * 16) - frameCropLeftOffset * 2 - frameCropRightOffset * 2,
       height: ((2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16) - (frameCropTopOffset * 2) - (frameCropBottomOffset * 2)
