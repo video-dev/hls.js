@@ -1015,61 +1015,61 @@ class BufferController {
     }
 
     onInitSegment(event, data) {
-        // check if codecs have been explicitely defined in the master playlist for this level;
-        // if yes use these ones instead of the ones parsed from the demux
-        var audioCodec = this.levels[this.level].audioCodec,
-            videoCodec = this.levels[this.level].videoCodec,
-            sb;
-        //logger.log('playlist level A/V codecs:' + audioCodec + ',' + videoCodec);
-        //logger.log('playlist codecs:' + codec);
-        // if playlist does not specify codecs, use codecs found while parsing fragment
-        if (audioCodec === undefined || data.audiocodec === undefined) {
-            audioCodec = data.audioCodec;
-        }
-        if (videoCodec === undefined || data.videocodec === undefined) {
-            videoCodec = data.videoCodec;
-        }
-
-        // codec="mp4a.40.5,avc1.420016";
-        // in case several audio codecs might be used, force HE-AAC for audio (some browsers don't support audio codec switch)
-        //don't do it for mono streams ...
-        if (
-            this.audiocodecswitch &&
-            data.audioChannelCount === 2 &&
-            navigator.userAgent.toLowerCase().indexOf('android') === -1 &&
-            navigator.userAgent.toLowerCase().indexOf('firefox') === -1
-        ) {
-            audioCodec = 'mp4a.40.5';
-        }
-        if (!this.sourceBuffer) {
-            this.sourceBuffer = {};
-            logger.log(
-                `selected A/V codecs for sourceBuffers:${audioCodec},${videoCodec}`
-            );
-            // create source Buffer and link them to MediaSource
-            if (audioCodec) {
-                sb = this.sourceBuffer.audio = this.mediaSource.addSourceBuffer(
-                    `video/mp4;codecs=${audioCodec}`
+        if (this.state === this.PARSING) {
+            // check if codecs have been explicitely defined in the master playlist for this level;
+            // if yes use these ones instead of the ones parsed from the demux
+            var audioCodec = this.levels[this.level].audioCodec,
+                videoCodec = this.levels[this.level].videoCodec,
+                sb;
+            //logger.log('playlist level A/V codecs:' + audioCodec + ',' + videoCodec);
+            //logger.log('playlist codecs:' + codec);
+            // if playlist does not specify codecs, use codecs found while parsing fragment
+            if (audioCodec === undefined || data.audiocodec === undefined) {
+                audioCodec = data.audioCodec;
+            }
+            if (videoCodec === undefined || data.videocodec === undefined) {
+                videoCodec = data.videoCodec;
+            }
+            // in case several audio codecs might be used, force HE-AAC for audio (some browsers don't support audio codec switch)
+            //don't do it for mono streams ...
+            if (
+                this.audiocodecswitch &&
+                data.audioChannelCount === 2 &&
+                navigator.userAgent.toLowerCase().indexOf('android') === -1 &&
+                navigator.userAgent.toLowerCase().indexOf('firefox') === -1
+            ) {
+                audioCodec = 'mp4a.40.5';
+            }
+            if (!this.sourceBuffer) {
+                this.sourceBuffer = {};
+                logger.log(
+                    `selected A/V codecs for sourceBuffers:${audioCodec},${videoCodec}`
                 );
-                sb.addEventListener('updateend', this.onsbue);
-                sb.addEventListener('error', this.onsbe);
+                // create source Buffer and link them to MediaSource
+                if (audioCodec) {
+                    sb = this.sourceBuffer.audio = this.mediaSource.addSourceBuffer(
+                        `video/mp4;codecs=${audioCodec}`
+                    );
+                    sb.addEventListener('updateend', this.onsbue);
+                    sb.addEventListener('error', this.onsbe);
+                }
+                if (videoCodec) {
+                    sb = this.sourceBuffer.video = this.mediaSource.addSourceBuffer(
+                        `video/mp4;codecs=${videoCodec}`
+                    );
+                    sb.addEventListener('updateend', this.onsbue);
+                    sb.addEventListener('error', this.onsbe);
+                }
+            }
+            if (audioCodec) {
+                this.mp4segments.push({ type: 'audio', data: data.audioMoov });
             }
             if (videoCodec) {
-                sb = this.sourceBuffer.video = this.mediaSource.addSourceBuffer(
-                    `video/mp4;codecs=${videoCodec}`
-                );
-                sb.addEventListener('updateend', this.onsbue);
-                sb.addEventListener('error', this.onsbe);
+                this.mp4segments.push({ type: 'video', data: data.videoMoov });
             }
+            //trigger handler right now
+            this.tick();
         }
-        if (audioCodec) {
-            this.mp4segments.push({ type: 'audio', data: data.audioMoov });
-        }
-        if (videoCodec) {
-            this.mp4segments.push({ type: 'video', data: data.videoMoov });
-        }
-        //trigger handler right now
-        this.tick();
     }
 
     onFragmentParsing(event, data) {
