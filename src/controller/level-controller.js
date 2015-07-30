@@ -38,10 +38,7 @@ class LevelController {
         var levels = [],
             bitrateStart,
             i,
-            bitrateSet = {},
-            aac = false,
-            heaac = false,
-            codecs;
+            bitrateSet = {};
         data.levels.forEach(level => {
             var redundantLevelId = bitrateSet[level.bitrate];
             if (redundantLevelId === undefined) {
@@ -51,16 +48,6 @@ class LevelController {
                 levels.push(level);
             } else {
                 levels[redundantLevelId].url.push(level.url);
-            }
-            // detect if we have different kind of audio codecs used amongst playlists
-            codecs = level.codecs;
-            if (codecs) {
-                if (codecs.indexOf('mp4a.40.2') !== -1) {
-                    aac = true;
-                }
-                if (codecs.indexOf('mp4a.40.5') !== -1) {
-                    heaac = true;
-                }
             }
         });
         // start bitrate is the first bitrate of the manifest
@@ -86,7 +73,6 @@ class LevelController {
         observer.trigger(Event.MANIFEST_PARSED, {
             levels: this._levels,
             firstLevel: this._firstLevel,
-            audiocodecswitch: aac && heaac,
             stats: data.stats
         });
         return;

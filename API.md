@@ -391,7 +391,7 @@ full list of Events available below :
   - `Hls.Events.MANIFEST_LOADED`  - fired after manifest has been loaded
     -  data: { levels : [available quality levels] , url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
   - `Hls.Events.MANIFEST_PARSED`  - fired after manifest has been parsed
-    -  data: { levels : [available quality levels] , firstLevel : index of first quality level appearing in Manifest, audiocodecswitch: true if different audio codecs used}
+    -  data: { levels : [available quality levels] , firstLevel : index of first quality level appearing in Manifest}
   - `Hls.Events.LEVEL_LOADING`  - fired when a level playlist loading starts
     -  data: { url : level URL, level : id of level being loaded}
   - `Hls.Events.LEVEL_LOADED`  - fired when a level playlist loading finishes

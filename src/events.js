@@ -5,7 +5,7 @@ export default {
     MANIFEST_LOADING: 'hlsManifestLoading',
     // fired after manifest has been loaded - data: { levels : [available quality levels] , url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
     MANIFEST_LOADED: 'hlsManifestLoaded',
-    // fired after manifest has been parsed - data: { levels : [available quality levels] , startLevel : playback start level, audiocodecswitch: true if different audio codecs used}
+    // fired after manifest has been parsed - data: { levels : [available quality levels] , firstLevel : index of first quality level appearing in Manifest}
     MANIFEST_PARSED: 'hlsManifestParsed',
     // fired when a level playlist loading starts - data: { url : level URL  level : id of level being loaded}
     LEVEL_LOADING: 'hlsLevelLoading',
