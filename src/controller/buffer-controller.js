@@ -123,7 +123,7 @@
   }
 
   tick() {
-    var pos,level,levelInfo,fragIdx;
+    var pos,level,levelDetails,fragIdx;
     switch(this.state) {
       case this.ERROR:
         //don't do anything in error state to avoid breaking further ...
@@ -182,14 +182,14 @@
           // set next load level : this will trigger a playlist load if needed
           this.hls.nextLoadLevel = level;
           this.level = level;
-          levelInfo = this.levels[level].details;
+          levelDetails = this.levels[level].details;
           // if level info not retrieved yet, switch state and wait for level retrieval
-          if(typeof levelInfo === 'undefined') {
+          if(typeof levelDetails === 'undefined') {
             this.state = this.WAITING_LEVEL;
             break;
           }
           // find fragment index, contiguous with end of buffer position
-          let fragments = levelInfo.fragments, frag, sliding = levelInfo.sliding, start = fragments[0].start + sliding, drift =0;
+          let fragments = levelDetails.fragments, frag, sliding = levelDetails.sliding, start = fragments[0].start + sliding, drift =0;
           // check if requested position is within seekable boundaries :
           // in case of live playlist we need to ensure that requested position is not located before playlist start
           //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.video.seeking}`);
@@ -199,15 +199,15 @@
               bufferEnd = this.seekAfterStalling;
           }
 
-          if(levelInfo.live && levelInfo.sliding === undefined) {
+          if(levelDetails.live && levelDetails.sliding === undefined) {
             /* we are switching level on live playlist, but we don't have any sliding info ...
                try to load frag matching with next SN.
                even if SN are not synchronized between playlists, loading this frag will help us
                compute playlist sliding and find the right one after in case it was not the right consecutive one */
             if(this.frag) {
               var targetSN = this.frag.sn+1;
-              if(targetSN >= levelInfo.startSN && targetSN <= levelInfo.endSN) {
-                frag = fragments[targetSN-levelInfo.startSN];
+              if(targetSN >= levelDetails.startSN && targetSN <= levelDetails.endSN) {
+                frag = fragments[targetSN-levelDetails.startSN];
                 logger.log(`live playlist, switching playlist, load frag with next SN: ${frag.sn}`);
               }
             }
@@ -248,7 +248,7 @@
               }
             }
           }
-          logger.log(`Loading       ${frag.sn} of [${levelInfo.startSN} ,${levelInfo.endSN}],level ${level}, bufferEnd:${bufferEnd.toFixed(3)}`);
+          logger.log(`Loading       ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, bufferEnd:${bufferEnd.toFixed(3)}`);
           //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
           frag.drift = drift;
           frag.autoLevel = this.hls.autoLevelEnabled;
