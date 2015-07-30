@@ -179,11 +179,9 @@
         }
         // if buffer length is less than maxBufLen try to load a new fragment
         if(bufferLen < maxBufLen) {
-          if(level !== this.level) {
-            // set next load level : this will trigger a playlist load if needed
-            this.hls.nextLoadLevel = level;
-            this.level = level;
-          }
+          // set next load level : this will trigger a playlist load if needed
+          this.hls.nextLoadLevel = level;
+          this.level = level;
           levelInfo = this.levels[level].details;
           // if level info not retrieved yet, switch state and wait for level retrieval
           if(typeof levelInfo === 'undefined') {
