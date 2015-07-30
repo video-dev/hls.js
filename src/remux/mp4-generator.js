@@ -628,7 +628,7 @@ class MP4 {
                     [
                         0x01, // configurationVersion
                         track.profileIdc, // AVCProfileIndication
-                        track.profileCompatibility, // profile_compatibility
+                        track.profileCompat, // profile_compatibility
                         track.levelIdc, // AVCLevelIndication
                         0xff // lengthSizeMinusOne, hard-coded to 4 bytes
                     ]
