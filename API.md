@@ -271,6 +271,22 @@ var customLoader = function() {
   }
 ```
 
+## Video Binding/Unbinding API
+
+#### ```hls.attachVideo()```
+calling this method will :
+
+ - bind VideoElement and hls instance, 
+ - create MediaSource and set it as video source
+ - once MediaSource object is successfully created, MSE_ATTACHED event will be fired.
+
+#### ```hls.detachVideo()```
+calling this method will :
+
+ - unbind VideoElement from hls instance, 
+ - signal the end of the stream on MediaSource
+ - reset video source (```video.src = ''```)
+
 ## Quality switch Control API
 
 by default, hls.js handles quality switch automatically, using heuristics based on fragment loading bitrate and quality level bandwidth exposed in the variant manifest.
