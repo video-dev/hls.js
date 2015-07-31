@@ -273,10 +273,10 @@ var customLoader = function() {
 
 ## Video Binding/Unbinding API
 
-#### ```hls.attachVideo()```
+#### ```hls.attachVideo(videoElement)```
 calling this method will :
 
- - bind VideoElement and hls instance, 
+ - bind videoElement and hls instance, 
  - create MediaSource and set it as video source
  - once MediaSource object is successfully created, MSE_ATTACHED event will be fired.
 
