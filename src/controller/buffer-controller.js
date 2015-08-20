@@ -225,9 +225,9 @@
               start = frag.start+sliding;
               if(frag.drift) {
                 drift = frag.drift;
-                //logger.log(`level/sn/sliding/start/end/bufEnd:${level}/${frag.sn}/${sliding}/${start.toFixed(3)}/${(start+frag.duration).toFixed(3)}/${bufferEnd.toFixed(3)}`);
               }
               start+=drift;
+              //logger.log(`level/sn/sliding/drift/start/end/bufEnd:${level}/${frag.sn}/${sliding.toFixed(3)}/${drift.toFixed(3)}/${start.toFixed(3)}/${(start+frag.duration).toFixed(3)}/${bufferEnd.toFixed(3)}`);
               // offset should be within fragment boundary
               if(start <= bufferEnd && (start + frag.duration) > bufferEnd) {
                 break;
@@ -887,6 +887,9 @@
       }
       logger.log(`      parsed data, type/startPTS/endPTS/startDTS/endDTS/nb:${data.type}/${data.startPTS.toFixed(3)}/${data.endPTS.toFixed(3)}/${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}/${data.nb}`);
       this.frag.drift=data.startPTS-this.frag.start;
+      if(level.details.sliding) {
+        this.frag.drift-=level.details.sliding;
+      }
       //logger.log(`      drift:${this.frag.drift.toFixed(3)}`);
       this.mp4segments.push({ type : data.type, data : data.moof});
       this.mp4segments.push({ type : data.type, data : data.mdat});
