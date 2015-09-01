@@ -90,8 +90,12 @@ class TSDemuxer {
                             }
                             avcData = { data: [], size: 0 };
                         }
-                        avcData.data.push(data.subarray(offset, start + 188));
-                        avcData.size += start + 188 - offset;
+                        if (avcData) {
+                            avcData.data.push(
+                                data.subarray(offset, start + 188)
+                            );
+                            avcData.size += start + 188 - offset;
+                        }
                     } else if (pid === aacId) {
                         if (stt) {
                             if (aacData) {
@@ -99,8 +103,12 @@ class TSDemuxer {
                             }
                             aacData = { data: [], size: 0 };
                         }
-                        aacData.data.push(data.subarray(offset, start + 188));
-                        aacData.size += start + 188 - offset;
+                        if (aacData) {
+                            aacData.data.push(
+                                data.subarray(offset, start + 188)
+                            );
+                            aacData.size += start + 188 - offset;
+                        }
                     }
                 } else {
                     if (stt) {
