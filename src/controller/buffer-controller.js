@@ -849,7 +849,7 @@ class BufferController {
         }
     }
 
-    onMSEDetached(event) {
+    onMSEDetached() {
         this.video = null;
         this.mediaSource = null;
         this.mp4segments = [];
