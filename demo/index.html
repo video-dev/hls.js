@@ -230,8 +230,14 @@ $(document).ready(function() {
        hls.loadSource(url);
        hls.attachVideo(video);
        hls.on(Hls.Events.MSE_ATTACHED,function() {
+        $("#HlsStatus").text('MediaSource attached...');
           bufferingIdx = -1;
           events.video.push({time : Date.now() - events.t0, type : "MSE attached"});
+       });
+       hls.on(Hls.Events.MSE_DETACHED,function() {
+        $("#HlsStatus").text('MediaSource detached...');
+          bufferingIdx = -1;
+          events.video.push({time : Date.now() - events.t0, type : "MSE detached"});
        });
        hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT,function(event,data) {
           showCanvas();

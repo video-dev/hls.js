@@ -28,6 +28,7 @@ class BufferController {
         this.onsbe = this.onSourceBufferError.bind(this);
         // internal listeners
         this.onmse = this.onMSEAttached.bind(this);
+        this.onmsed = this.onMSEDetached.bind(this);
         this.onmp = this.onManifestParsed.bind(this);
         this.onll = this.onLevelLoaded.bind(this);
         this.onfl = this.onFragmentLoaded.bind(this);
@@ -37,6 +38,7 @@ class BufferController {
         this.onerr = this.onError.bind(this);
         this.ontick = this.tick.bind(this);
         observer.on(Event.MSE_ATTACHED, this.onmse);
+        observer.on(Event.MSE_DETACHED, this.onmsed);
         observer.on(Event.MANIFEST_PARSED, this.onmp);
     }
     destroy() {
@@ -180,6 +182,10 @@ class BufferController {
                             this.levels[level].bitrate,
                         this.config.maxBufferLength
                     );
+                    maxBufLen = Math.min(
+                        maxBufLen,
+                        this.config.maxMaxBufferLength
+                    );
                 } else {
                     maxBufLen = this.config.maxBufferLength;
                 }
@@ -291,7 +297,9 @@ class BufferController {
                             levelDetails.startSN
                         } ,${
                             levelDetails.endSN
-                        }],level ${level}, bufferEnd:${bufferEnd.toFixed(3)}`
+                        }],level ${level}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(
+                            3
+                        )}`
                     );
                     //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
                     frag.drift = drift;
@@ -322,7 +330,7 @@ class BufferController {
                                 type: ErrorTypes.MEDIA_ERROR,
                                 details: ErrorDetails.FRAG_LOOP_LOADING_ERROR,
                                 fatal: false,
-                                frag: this.frag
+                                frag: frag
                             });
                             return;
                         }
@@ -471,6 +479,9 @@ class BufferController {
                         }
                         this.state = this.APPENDING;
                     }
+                } else {
+                    // sourceBuffer undefined, switch back to IDLE state
+                    this.state = this.IDLE;
                 }
                 break;
             case this.BUFFER_FLUSHING:
@@ -837,6 +848,16 @@ class BufferController {
             this.startLoad();
         }
     }
+
+    onMSEDetached(event) {
+        this.video = null;
+        this.mediaSource = null;
+        this.mp4segments = [];
+        this.flushRange = [];
+        this.bufferRange = [];
+        this.state = this.IDLE;
+    }
+
     onVideoSeeking() {
         if (this.state === this.LOADING) {
             // check if currently loaded fragment is inside buffer.
@@ -853,6 +874,10 @@ class BufferController {
         }
         if (this.video) {
             this.lastCurrentTime = this.video.currentTime;
+        }
+        // avoid reporting fragment loop loading error in case user is seeking several times on same position
+        if (this.fragLoadIdx !== undefined) {
+            this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
         }
         // tick to speed up processing
         this.tick();
@@ -1097,7 +1122,8 @@ class BufferController {
                     data.nb
                 }`
             );
-            this.frag.drift = data.startPTS - this.frag.start;
+            //this.frag.drift=data.startPTS-this.frag.start;
+            this.frag.drift = 0;
             if (level.details.sliding) {
                 this.frag.drift -= level.details.sliding;
             }
