@@ -29,6 +29,7 @@
     this.onsbe  = this.onSourceBufferError.bind(this);
     // internal listeners
     this.onmse = this.onMSEAttached.bind(this);
+    this.onmsed = this.onMSEDetached.bind(this);
     this.onmp = this.onManifestParsed.bind(this);
     this.onll = this.onLevelLoaded.bind(this);
     this.onfl = this.onFragmentLoaded.bind(this);
@@ -38,6 +39,7 @@
     this.onerr = this.onError.bind(this);
     this.ontick = this.tick.bind(this);
     observer.on(Event.MSE_ATTACHED, this.onmse);
+    observer.on(Event.MSE_DETACHED, this.onmsed);
     observer.on(Event.MANIFEST_PARSED, this.onmp);
   }
   destroy() {
@@ -174,6 +176,7 @@
         // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
         if((this.levels[level]).hasOwnProperty('bitrate')) {
           maxBufLen = Math.max(8*this.config.maxBufferSize/this.levels[level].bitrate,this.config.maxBufferLength);
+          maxBufLen = Math.min(maxBufLen,this.config.maxMaxBufferLength);
         } else {
           maxBufLen = this.config.maxBufferLength;
         }
@@ -248,7 +251,7 @@
               }
             }
           }
-          logger.log(`Loading       ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, bufferEnd:${bufferEnd.toFixed(3)}`);
+          logger.log(`Loading       ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
           //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
           frag.drift = drift;
           frag.autoLevel = this.hls.autoLevelEnabled;
@@ -268,7 +271,7 @@
             let maxThreshold = this.config.fragLoadingLoopThreshold;
             // if this frag has already been loaded 3 times, and if it has been reloaded recently
             if(frag.loadCounter > maxThreshold && (Math.abs(this.fragLoadIdx - frag.loadIdx) < maxThreshold)) {
-              observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal:false, frag : this.frag});
+              observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal:false, frag : frag});
               return;
             }
           } else {
@@ -368,6 +371,9 @@
             }
             this.state = this.APPENDING;
           }
+        } else {
+          // sourceBuffer undefined, switch back to IDLE state
+          this.state = this.IDLE;
         }
         break;
       case this.BUFFER_FLUSHING:
@@ -690,6 +696,17 @@
       this.startLoad();
     }
   }
+
+  onMSEDetached(event) {
+    this.video = null;
+    this.mediaSource = null;
+    this.mp4segments = [];
+    this.flushRange = [];
+    this.bufferRange = [];
+    this.state = this.IDLE;
+  }
+
+
   onVideoSeeking() {
     if(this.state === this.LOADING) {
       // check if currently loaded fragment is inside buffer.
@@ -704,6 +721,10 @@
     }
     if(this.video) {
       this.lastCurrentTime = this.video.currentTime;
+    }
+    // avoid reporting fragment loop loading error in case user is seeking several times on same position
+    if(this.fragLoadIdx !== undefined) {
+      this.fragLoadIdx+= 2*this.config.fragLoadingLoopThreshold;
     }
     // tick to speed up processing
     this.tick();
@@ -886,7 +907,8 @@
         }
       }
       logger.log(`      parsed data, type/startPTS/endPTS/startDTS/endDTS/nb:${data.type}/${data.startPTS.toFixed(3)}/${data.endPTS.toFixed(3)}/${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}/${data.nb}`);
-      this.frag.drift=data.startPTS-this.frag.start;
+      //this.frag.drift=data.startPTS-this.frag.start;
+      this.frag.drift=0;
       if(level.details.sliding) {
         this.frag.drift-=level.details.sliding;
       }

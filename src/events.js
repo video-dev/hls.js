@@ -1,6 +1,8 @@
 export default {
   // fired when MediaSource has been succesfully attached to video element - data: { mediaSource }
   MSE_ATTACHED : 'hlsMediaSourceAttached',
+  // fired when MediaSource has been detached from video element - data: { }
+  MSE_DETACHED : 'hlsMediaSourceDetached',
   // fired to signal that a manifest loading starts - data: { url : manifestURL}
   MANIFEST_LOADING  : 'hlsManifestLoading',
   // fired after manifest has been loaded - data: { levels : [available quality levels] , url : manifestURL, stats : { trequest, tfirst, tload, mtime}}

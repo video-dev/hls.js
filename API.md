@@ -402,6 +402,8 @@ full list of Events available below :
 
   - `Hls.Events.MSE_ATTACHED`  - fired when MediaSource has been succesfully attached to video element.
     -  data: { mediaSource }
+  - `Hls.Events.MSE_DETACHED`  - fired when MediaSource has been detached from video element.
+    -  data: { }
   - `Hls.Events.MANIFEST_LOADING`  - fired to signal that a manifest loading starts
     -  data: { url : manifestURL}
   - `Hls.Events.MANIFEST_LOADED`  - fired after manifest has been loaded
