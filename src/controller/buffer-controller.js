@@ -851,11 +851,7 @@ class BufferController {
 
     onMSEDetached() {
         this.video = null;
-        this.mediaSource = null;
-        this.mp4segments = [];
-        this.flushRange = [];
-        this.bufferRange = [];
-        this.state = this.IDLE;
+        this.stop();
     }
 
     onVideoSeeking() {
