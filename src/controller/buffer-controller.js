@@ -59,7 +59,7 @@ class BufferController {
             this.startInternal();
             if (this.lastCurrentTime) {
                 logger.log(`resuming video @ ${this.lastCurrentTime}`);
-                this.startPosition = this.lastCurrentTime;
+                this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
                 this.state = this.IDLE;
             } else {
                 this.state = this.STARTING;
@@ -851,6 +851,7 @@ class BufferController {
 
     onMSEDetached() {
         this.video = null;
+        this.loadedmetadata = false;
         this.stop();
     }
 
