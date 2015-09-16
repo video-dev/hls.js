@@ -134,6 +134,10 @@ HTMLVideoElement control and events could be used seamlessly.
 hls.js can be configured and controlled easily, click [here](API.md) for details.
 
 
+## License
+
+  hls.js is released under [MIT License](LICENSE)
+
 ## Design
 
 click [here](design.md) for details.
