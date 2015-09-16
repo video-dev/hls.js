@@ -20,7 +20,7 @@ hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
 
 public demo : [http://dailymotion.github.io/hls.js/demo](http://dailymotion.github.io/hls.js/demo)
 
-private demo accessible from Dailymotion network only: [http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html](http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html)
+private demo accessible from Dailymotion network: [http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html](http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html)
 
 ## Dependencies
 
@@ -137,6 +137,14 @@ hls.js can be configured and controlled easily, click [here](API.md) for details
 ## License
 
   hls.js is released under [MIT License](LICENSE)
+
+## Contributing
+
+Pull requests are welcome. Here is a quick guide on how to start.
+
+ - Use [EditorConfig](http://editorconfig.org/) or at least stay consistent to the file formats defined in the `.editorconfig` file.
+ - Develop in a topic branch, not master
+ - Don't commit the updated `dist/hls.js` file in your PR. We'll take care of generating an updated build right before releasing a new tagged version.
 
 ## Design
 
