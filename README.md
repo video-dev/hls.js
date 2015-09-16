@@ -136,7 +136,7 @@ hls.js can be configured and controlled easily, click [here](API.md) for details
 
 ## License
 
-  hls.js is released under [MIT License](LICENSE)
+  hls.js is released under [Apache 2.0 License](LICENSE)
 
 ## Contributing
 
