@@ -206,7 +206,7 @@ $(document).ready(function() {
 
   var manifest = decodeURIComponent(location.search.split('src=')[1]);
   if(manifest === 'undefined') {
-    manifest = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
+    manifest = 'http://www.streambox.fr/playlists/x36xhzz/x36xhzz.m3u8';
   }
   loadStream(manifest);
 
@@ -650,8 +650,8 @@ function timeRangesToString(r) {
       } else {
         html1 += button_disabled;
       }
-      html1 += 'onclick="hls.currentLevel=' + i + '">' + i + '</button>';
-
+      var levelName = i + '(' + level2label(i) + ')';
+      html1 += 'onclick="hls.currentLevel=' + i + '">' + levelName + '</button>';
 
       html2 += button_template;
       if(hls.loadLevel === i) {
@@ -659,7 +659,7 @@ function timeRangesToString(r) {
       } else {
         html2 += button_disabled;
       }
-      html2 += 'onclick="hls.loadLevel=' + i + '">' + i + '</button>';
+      html2 += 'onclick="hls.loadLevel=' + i + '">' + levelName + '</button>';
 
       html3 += button_template;
       if(hls.autoLevelCapping === i) {
@@ -667,7 +667,7 @@ function timeRangesToString(r) {
       } else {
         html3 += button_disabled;
       }
-      html3 += 'onclick="hls.autoLevelCapping=' + i + ';updateLevelInfo()">' + i + '</button>';
+      html3 += 'onclick="hls.autoLevelCapping=' + i + ';updateLevelInfo()">' + levelName + '</button>';
 
       html4 += button_template;
       if(hls.nextLevel === i) {
@@ -675,7 +675,7 @@ function timeRangesToString(r) {
       } else {
         html4 += button_disabled;
       }
-      html4 += 'onclick="hls.nextLevel=' + i + '">' + i + '</button>';
+      html4 += 'onclick="hls.nextLevel=' + i + '">' + levelName + '</button>';
     }
     var v = $('#video')[0];
     if(v.videoWidth) {
@@ -686,6 +686,22 @@ function timeRangesToString(r) {
     $("#levelCappingControl").html(html3);
     $("#nextLevelControl").html(html4);
   }
+
+  function level2label(index) {
+    if(hls && hls.levels.length-1 >= index) {
+      var level = hls.levels[index];
+      if (level.name) {
+          return level.name;
+      } else {
+          if (level.height) {
+              return(level.height + 'p / ' + Math.round(level.bitrate / 1024) + 'kb');
+          } else {
+              return(Math.round(level.bitrate / 1024) + 'kb');
+          }
+      }
+    }
+  }
+
   </script>
 </body>
 
