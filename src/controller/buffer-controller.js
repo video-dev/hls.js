@@ -1121,9 +1121,9 @@ class BufferController {
             );
             //this.frag.drift=data.startPTS-this.frag.start;
             this.frag.drift = 0;
-            if (level.details.sliding) {
-                this.frag.drift -= level.details.sliding;
-            }
+            // if(level.details.sliding) {
+            //   this.frag.drift-=level.details.sliding;
+            // }
             //logger.log(`      drift:${this.frag.drift.toFixed(3)}`);
             this.mp4segments.push({ type: data.type, data: data.moof });
             this.mp4segments.push({ type: data.type, data: data.mdat });
