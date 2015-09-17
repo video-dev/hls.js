@@ -105,7 +105,9 @@ header {
       <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime-=10">currentTime-=10</button>
       <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime=$('#seek_pos').val()">seek to </button>
        <input type="text" id='seek_pos' size="8" onkeydown="if(window.event.keyCode=='13'){$('#video')[0].currentTime=$('#seek_pos').val();}"><br><br>
-      <button type="button" class="btn btn-xs btn-warning" onclick="hls.recoverNetworkError()">recover Network Error</button>
+      <button type="button" class="btn btn-xs btn-warning" onclick="hls.attachVideo($('#video')[0])">attach Video</button>
+      <button type="button" class="btn btn-xs btn-warning" onclick="hls.detachVideo()">detach Video</button><br>
+      <button type="button" class="btn btn-xs btn-warning" onclick="hls.startLoad()">recover Network Error</button>
       <button type="button" class="btn btn-xs btn-warning" onclick="hls.recoverMediaError()">recover Media Error</button><br>
     </div>
 
@@ -204,7 +206,7 @@ $(document).ready(function() {
 
   var manifest = decodeURIComponent(location.search.split('src=')[1]);
   if(manifest === 'undefined') {
-    manifest = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
+    manifest = 'http://www.streambox.fr/playlists/x36xhzz/x36xhzz.m3u8';
   }
   loadStream(manifest);
 
@@ -230,8 +232,14 @@ $(document).ready(function() {
        hls.loadSource(url);
        hls.attachVideo(video);
        hls.on(Hls.Events.MSE_ATTACHED,function() {
+        $("#HlsStatus").text('MediaSource attached...');
           bufferingIdx = -1;
           events.video.push({time : Date.now() - events.t0, type : "MSE attached"});
+       });
+       hls.on(Hls.Events.MSE_DETACHED,function() {
+        $("#HlsStatus").text('MediaSource detached...');
+          bufferingIdx = -1;
+          events.video.push({time : Date.now() - events.t0, type : "MSE detached"});
        });
        hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT,function(event,data) {
           showCanvas();
@@ -242,7 +250,7 @@ $(document).ready(function() {
           events.level.push({time : Date.now() - events.t0, id : data.level, bitrate : Math.round(hls.levels[data.level].bitrate/1000)});
           updateLevelInfo();
        });
-       hls.on(Hls.Events.MANIFEST_LOADED,function(event,data) {
+       hls.on(Hls.Events.MANIFEST_PARSED,function(event,data) {
           var event = {
             type : "manifest",
             name : "",
@@ -367,6 +375,7 @@ $(document).ready(function() {
        video.addEventListener('seeked', handleVideoEvent);
        video.addEventListener('pause', handleVideoEvent);
        video.addEventListener('play', handleVideoEvent);
+       video.addEventListener('ended', handleVideoEvent);
        video.addEventListener('playing', handleVideoEvent);
        video.addEventListener('error', handleVideoEvent);
        video.addEventListener('loadedmetadata', handleVideoEvent);
@@ -403,6 +412,7 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
       case 'loadeddata':
       // case 'canplay':
       // case 'canplaythrough':
+      case 'ended':
       case 'seeking':
       case 'seeked':
       case 'play':
@@ -458,7 +468,6 @@ function timeRangesToString(r) {
 }
 
   var bufferingIdx = -1;
-  var playbackEnded = false;
 
   function checkBuffer() {
     var v = $('#video')[0];
@@ -487,10 +496,6 @@ function timeRangesToString(r) {
       if(bufferLen <= 0.1 && v.paused === false && (pos-lastStartPosition) > 0.5) {
         // don't create buffering event if we are at the end of the playlist, don't report ended for live playlist
         if(lastDuration -pos <= 0.5  && events.isLive === false) {
-          if(playbackEnded === false) {
-            events.video.push({ type : 'ended' , time : Date.now() - events.t0 });
-            playbackEnded = true;
-          }
         } else {
          // we are not at the end of the playlist ... real buffering
           if(bufferingIdx !== -1) {
@@ -502,10 +507,7 @@ function timeRangesToString(r) {
             // we are in buffering state
             bufferingIdx = events.video.length-1;
           }
-          playbackEnded = false;
         }
-      } else {
-        playbackEnded = false;
       }
 
       if(bufferLen > 0.1 && bufferingIdx !=-1) {
@@ -544,7 +546,9 @@ function timeRangesToString(r) {
         decodedFrames = v.webkitDecodedFrameCount;
         droppedFrames = v.webkitDroppedFrameCount;
       }
-      var log = "Buffered:"
+      var log = "Duration:"
+              + v.duration + "<br>"
+              + "Buffered:"
               + timeRangesToString(v.buffered) + "<br>"
               + "Seekable:"
               + timeRangesToString(v.seekable) + "<br>"
@@ -646,8 +650,8 @@ function timeRangesToString(r) {
       } else {
         html1 += button_disabled;
       }
-      html1 += 'onclick="hls.currentLevel=' + i + '">' + i + '</button>';
-
+      var levelName = i + '(' + level2label(i) + ')';
+      html1 += 'onclick="hls.currentLevel=' + i + '">' + levelName + '</button>';
 
       html2 += button_template;
       if(hls.loadLevel === i) {
@@ -655,7 +659,7 @@ function timeRangesToString(r) {
       } else {
         html2 += button_disabled;
       }
-      html2 += 'onclick="hls.loadLevel=' + i + '">' + i + '</button>';
+      html2 += 'onclick="hls.loadLevel=' + i + '">' + levelName + '</button>';
 
       html3 += button_template;
       if(hls.autoLevelCapping === i) {
@@ -663,7 +667,7 @@ function timeRangesToString(r) {
       } else {
         html3 += button_disabled;
       }
-      html3 += 'onclick="hls.autoLevelCapping=' + i + ';updateLevelInfo()">' + i + '</button>';
+      html3 += 'onclick="hls.autoLevelCapping=' + i + ';updateLevelInfo()">' + levelName + '</button>';
 
       html4 += button_template;
       if(hls.nextLevel === i) {
@@ -671,7 +675,7 @@ function timeRangesToString(r) {
       } else {
         html4 += button_disabled;
       }
-      html4 += 'onclick="hls.nextLevel=' + i + '">' + i + '</button>';
+      html4 += 'onclick="hls.nextLevel=' + i + '">' + levelName + '</button>';
     }
     var v = $('#video')[0];
     if(v.videoWidth) {
@@ -682,6 +686,22 @@ function timeRangesToString(r) {
     $("#levelCappingControl").html(html3);
     $("#nextLevelControl").html(html4);
   }
+
+  function level2label(index) {
+    if(hls && hls.levels.length-1 >= index) {
+      var level = hls.levels[index];
+      if (level.name) {
+          return level.name;
+      } else {
+          if (level.height) {
+              return(level.height + 'p / ' + Math.round(level.bitrate / 1024) + 'kb');
+          } else {
+              return(Math.round(level.bitrate / 1024) + 'kb');
+          }
+      }
+    }
+  }
+
   </script>
 </body>
 
