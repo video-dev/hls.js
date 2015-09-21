@@ -62,6 +62,7 @@ class BufferController {
                 this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
                 this.state = this.IDLE;
             } else {
+                this.nextLoadPosition = this.startPosition;
                 this.state = this.STARTING;
             }
             this.tick();
@@ -137,7 +138,7 @@ class BufferController {
                     this.fragmentBitrateTest = true;
                 }
                 // set new level to playlist loader : this will trigger start level load
-                this.hls.nextLoadLevel = this.startLevel;
+                this.level = this.hls.nextLoadLevel = this.startLevel;
                 this.state = this.WAITING_LEVEL;
                 this.loadedmetadata = false;
                 break;
@@ -145,6 +146,11 @@ class BufferController {
                 // handle end of immediate switching if needed
                 if (this.immediateSwitch) {
                     this.immediateLevelSwitchEnd();
+                    break;
+                }
+
+                // if video detached or unbound exit loop
+                if (!this.video) {
                     break;
                 }
 
@@ -654,6 +660,8 @@ class BufferController {
                         logger.log(
                             `end of VoD stream reached, signal endOfStream() to MediaSource`
                         );
+                        this.lastCurrentTime = this.startPosition;
+                        this.video = null;
                         this.mediaSource.endOfStream();
                     }
                 }
