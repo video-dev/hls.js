@@ -63,6 +63,7 @@
         this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
         this.state = this.IDLE;
       } else {
+        this.nextLoadPosition = this.startPosition;
         this.state = this.STARTING;
       }
       this.tick();
@@ -139,7 +140,7 @@
           this.fragmentBitrateTest = true;
         }
         // set new level to playlist loader : this will trigger start level load
-        this.hls.nextLoadLevel = this.startLevel;
+        this.level = this.hls.nextLoadLevel = this.startLevel;
         this.state = this.WAITING_LEVEL;
         this.loadedmetadata = false;
         break;
@@ -147,6 +148,11 @@
         // handle end of immediate switching if needed
         if(this.immediateSwitch) {
           this.immediateLevelSwitchEnd();
+          break;
+        }
+
+        // if video detached or unbound exit loop
+        if(!this.video) {
           break;
         }
 
@@ -523,6 +529,8 @@
         if(level && level.details && !level.details.live && (this.video.duration - currentTime) < 0.2) {
           if(this.mediaSource && this.mediaSource.readyState === 'open') {
             logger.log(`end of VoD stream reached, signal endOfStream() to MediaSource`);
+            this.lastCurrentTime = this.startPosition;
+            this.video = null;
             this.mediaSource.endOfStream();
           }
         }
