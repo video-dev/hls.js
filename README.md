@@ -55,7 +55,7 @@ or type
 npm install --save https://github.com/dailymotion/hls.js
 ```
 
-## compatibility
+## Compatibility
  hls.js is compatible with browsers supporting MSE with 'video/MP4' inputs.
 as of today, it is supported on:
 
