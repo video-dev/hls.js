@@ -279,6 +279,21 @@ class TSDemuxer {
             avcSample,
             key = false;
         units = this._parseAVCNALu(pes.data);
+        // no NALu found
+        if ((units.length === 0) & (this._avcSamples.length > 0)) {
+            // append pes.data to previous NAL unit
+            var lastavcSample = this._avcSamples[this._avcSamples.length - 1];
+            var lastUnit =
+                lastavcSample.units.units[lastavcSample.units.units.length - 1];
+            var tmp = new Uint8Array(
+                lastUnit.data.byteLength + pes.data.byteLength
+            );
+            tmp.set(lastUnit.data, 0);
+            tmp.set(pes.data, lastUnit.data.byteLength);
+            lastUnit.data = tmp;
+            lastavcSample.units.length += pes.data.byteLength;
+            this._avcSamplesLength += pes.data.byteLength;
+        }
         //free pes.data to save up some memory
         pes.data = null;
         units.units.forEach(unit => {
@@ -324,10 +339,12 @@ class TSDemuxer {
         });
         //build sample from PES
         // Annex B to MP4 conversion to be done
-        avcSample = { units: units, pts: pes.pts, dts: pes.dts, key: key };
-        this._avcSamples.push(avcSample);
-        this._avcSamplesLength += units.length;
-        this._avcSamplesNbNalu += units.units.length;
+        if (units.length) {
+            avcSample = { units: units, pts: pes.pts, dts: pes.dts, key: key };
+            this._avcSamples.push(avcSample);
+            this._avcSamplesLength += units.length;
+            this._avcSamplesNbNalu += units.units.length;
+        }
     }
 
     _flushAVCSamples() {
