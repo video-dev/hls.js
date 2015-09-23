@@ -58,8 +58,12 @@ class BufferController {
         if (this.levels && this.video) {
             this.startInternal();
             if (this.lastCurrentTime) {
-                logger.log(`resuming video @ ${this.lastCurrentTime}`);
+                logger.log(`seeking @ ${this.lastCurrentTime}`);
                 this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
+                if (!this.lastPaused) {
+                    logger.log(`resuming video`);
+                    this.video.play();
+                }
                 this.state = this.IDLE;
             } else {
                 this.nextLoadPosition = this.startPosition;
@@ -660,7 +664,7 @@ class BufferController {
                         logger.log(
                             `end of VoD stream reached, signal endOfStream() to MediaSource`
                         );
-                        this.lastCurrentTime = this.startPosition;
+                        this.startPosition = this.lastCurrentTime = 0;
                         this.video = null;
                         this.mediaSource.endOfStream();
                     }
