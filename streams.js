@@ -1,6 +1,6 @@
 var teststreams = [{
   file:'http://www.streambox.fr/playlists/x36xhzz/x36xhzz.m3u8',
-  title: 'Big Bug Bunny 1080p HFR'
+  title: 'Big Buck Bunny 1080p HFR'
 },{
   file:'http://www.streambox.fr/playlists/x31jrg1/x31jrg1.m3u8',
   title: 'Costa Rica 1080p'
