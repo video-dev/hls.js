@@ -4,7 +4,7 @@
   "description": "Media Source Extension - HLS library, by/for Dailymotion",
   "homepage": "https://github.com/dailymotion/hls.js",
   "authors": "Guillaume du Pontavice <guillaume.dupontavice@dailymotion.com>",
-  "main": "src/hls.js",
+  "main": "dist/hls.js",
   "private": true,
   "scripts": {
     "clean": "rm -rf dist/*",
