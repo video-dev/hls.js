@@ -1,7 +1,6 @@
 /*
- * fragment loader
- *
- */
+ * Fragment Loader
+*/
 
 import Event from '../events';
 import observer from '../observer';

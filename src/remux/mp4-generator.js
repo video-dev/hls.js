@@ -1,5 +1,5 @@
 /**
- * generate MP4 Box
+ * Generate MP4 Box
  */
 
 class MP4 {
@@ -59,13 +59,16 @@ class MP4 {
             'o'.charCodeAt(0),
             'm'.charCodeAt(0)
         ]);
+
         MP4.AVC1_BRAND = new Uint8Array([
             'a'.charCodeAt(0),
             'v'.charCodeAt(0),
             'c'.charCodeAt(0),
             '1'.charCodeAt(0)
         ]);
+
         MP4.MINOR_VERSION = new Uint8Array([0, 0, 0, 1]);
+
         MP4.VIDEO_HDLR = new Uint8Array([
             0x00, // version 0
             0x00,
@@ -105,6 +108,7 @@ class MP4 {
             0x72,
             0x00 // name: 'VideoHandler'
         ]);
+
         MP4.AUDIO_HDLR = new Uint8Array([
             0x00, // version 0
             0x00,
@@ -144,10 +148,12 @@ class MP4 {
             0x72,
             0x00 // name: 'SoundHandler'
         ]);
+
         MP4.HDLR_TYPES = {
             video: MP4.VIDEO_HDLR,
             audio: MP4.AUDIO_HDLR
         };
+
         MP4.DREF = new Uint8Array([
             0x00, // version 0
             0x00,
@@ -248,7 +254,6 @@ class MP4 {
             i = payload.length,
             result,
             view;
-
         // calculate the total size we need to allocate
         while (i--) {
             size += payload[i].byteLength;
@@ -257,7 +262,6 @@ class MP4 {
         view = new DataView(result.buffer);
         view.setUint32(0, result.byteLength);
         result.set(type, 4);
-
         // copy the payload into the result
         for (i = 0, size = 8; i < payload.length; i++) {
             result.set(payload[i], size);
@@ -496,9 +500,7 @@ class MP4 {
             bytes = new Uint8Array(4 + samples.length),
             flags,
             i;
-
         // leave the full box header (4 bytes) all zero
-
         // write the sample table
         for (i = 0; i < samples.length; i++) {
             flags = samples[i].flags;
@@ -532,14 +534,12 @@ class MP4 {
             sps.push(track.sps[i].byteLength & 0xff); // sequenceParameterSetLength
             sps = sps.concat(Array.prototype.slice.call(track.sps[i])); // SPS
         }
-
         // assemble the PPSs
         for (i = 0; i < track.pps.length; i++) {
             pps.push((track.pps[i].byteLength >>> 8) & 0xff);
             pps.push(track.pps[i].byteLength & 0xff);
             pps = pps.concat(Array.prototype.slice.call(track.pps[i]));
         }
-
         return MP4.box(
             MP4.types.avc1,
             new Uint8Array([
@@ -925,11 +925,9 @@ class MP4 {
 
     static trun(track, offset) {
         var samples, sample, i, array;
-
         samples = track.samples || [];
         array = new Uint8Array(12 + 16 * samples.length);
         offset += 8 + array.byteLength;
-
         array.set(
             [
                 0x00, // version 0
@@ -947,7 +945,6 @@ class MP4 {
             ],
             0
         );
-
         for (i = 0; i < samples.length; i++) {
             sample = samples[i];
             array.set(
@@ -984,7 +981,6 @@ class MP4 {
         }
         var movie = MP4.moov(tracks),
             result;
-
         result = new Uint8Array(MP4.FTYP.byteLength + movie.byteLength);
         result.set(MP4.FTYP);
         result.set(movie, MP4.FTYP.byteLength);

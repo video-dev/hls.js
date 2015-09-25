@@ -1,7 +1,6 @@
 /*
- * FPS controller
- *
- */
+ * FPS Controller
+*/
 
 import Event from '../events';
 import observer from '../observer';
@@ -21,6 +20,7 @@ class FPSController {
             clearInterval(this.timer);
         }
     }
+
     checkFPS() {
         var v = this.hls.video;
         if (v) {
@@ -36,9 +36,7 @@ class FPSController {
                     var droppedFPS = 1000 * currentDropped / currentPeriod;
                     if (droppedFPS > 0) {
                         logger.log(
-                            `checkFPS : droppedFPS/decodedFPS:${droppedFPS.toFixed(
-                                1
-                            )}/${decodedFPS.toFixed(1)}`
+                            'checkFPS : droppedFPS/decodedFPS:${droppedFPS.toFixed(1)}/${decodedFPS.toFixed(1)}'
                         );
                         if (
                             currentDropped >
@@ -46,7 +44,7 @@ class FPSController {
                                 currentDecoded
                         ) {
                             logger.warn(
-                                `drop FPS ratio greater than max allowed value`
+                                'drop FPS ratio greater than max allowed value'
                             );
                             observer.trigger(Event.FPS_DROP, {
                                 currentDropped: currentDropped,

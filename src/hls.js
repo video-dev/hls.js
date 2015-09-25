@@ -11,7 +11,7 @@ import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
 import BufferController from './controller/buffer-controller';
 import LevelController from './controller/level-controller';
-//import FPSController              from './controller/fps-controller';
+//import FPSController from './controller/fps-controller';
 import { logger, enableLogs } from './utils/logger';
 import XhrLoader from './utils/xhr-loader';
 
@@ -19,7 +19,7 @@ class Hls {
     static isSupported() {
         return (
             window.MediaSource &&
-            MediaSource.isTypeSupported(
+            window.MediaSource.isTypeSupported(
                 'video/mp4; codecs="avc1.42E01E,mp4a.40.2"'
             )
         );
@@ -77,7 +77,7 @@ class Hls {
     }
 
     destroy() {
-        logger.log(`destroy`);
+        logger.log('destroy');
         this.playlistLoader.destroy();
         this.fragmentLoader.destroy();
         this.levelController.destroy();
@@ -90,7 +90,7 @@ class Hls {
     }
 
     attachVideo(video) {
-        logger.log(`attachVideo`);
+        logger.log('attachVideo');
         this.video = video;
         this.statsHandler.attachVideo(video);
         // setup the media source
@@ -108,7 +108,7 @@ class Hls {
     }
 
     detachVideo() {
-        logger.log(`detachVideo`);
+        logger.log('detachVideo');
         var video = this.video;
         this.statsHandler.detachVideo(video);
         var ms = this.mediaSource;
@@ -122,7 +122,7 @@ class Hls {
             // unlink MediaSource from video tag
             video.src = '';
             this.mediaSource = null;
-            logger.log(`trigger MSE_DETACHED`);
+            logger.log('trigger MSE_DETACHED');
             observer.trigger(Event.MSE_DETACHED);
         }
         this.onmso = this.onmse = this.onmsc = null;
@@ -132,14 +132,14 @@ class Hls {
     }
 
     loadSource(url) {
-        logger.log(`loadSource:${url}`);
+        logger.log('loadSource:${url}');
         this.url = url;
         // when attaching to a source URL, trigger a playlist load
         observer.trigger(Event.MANIFEST_LOADING, { url: url });
     }
 
     startLoad() {
-        logger.log(`startLoad`);
+        logger.log('startLoad');
         this.bufferController.startLoad();
     }
 
@@ -162,7 +162,7 @@ class Hls {
 
     /* set quality level immediately (-1 for automatic level selection) */
     set currentLevel(newLevel) {
-        logger.log(`set currentLevel:${newLevel}`);
+        logger.log('set currentLevel:${newLevel}');
         this.loadLevel = newLevel;
         this.bufferController.immediateLevelSwitch();
     }
@@ -174,7 +174,7 @@ class Hls {
 
     /* set quality level for next fragment (-1 for automatic level selection) */
     set nextLevel(newLevel) {
-        logger.log(`set nextLevel:${newLevel}`);
+        logger.log('set nextLevel:${newLevel}');
         this.levelController.manualLevel = newLevel;
         this.bufferController.nextLevelSwitch();
     }
@@ -186,7 +186,7 @@ class Hls {
 
     /* set quality level for current/next loaded fragment (-1 for automatic level selection) */
     set loadLevel(newLevel) {
-        logger.log(`set loadLevel:${newLevel}`);
+        logger.log('set loadLevel:${newLevel}');
         this.levelController.manualLevel = newLevel;
     }
 
@@ -209,7 +209,7 @@ class Hls {
     /** set first level (index of first level referenced in manifest)
      **/
     set firstLevel(newLevel) {
-        logger.log(`set firstLevel:${newLevel}`);
+        logger.log('set firstLevel:${newLevel}');
         this.levelController.firstLevel = newLevel;
     }
 
@@ -226,7 +226,7 @@ class Hls {
       if -1 : automatic start level selection, playback will start from level matching download bandwidth (determined from download of first segment)
   **/
     set startLevel(newLevel) {
-        logger.log(`set startLevel:${newLevel}`);
+        logger.log('set startLevel:${newLevel}');
         this.levelController.startLevel = newLevel;
     }
 
@@ -237,7 +237,7 @@ class Hls {
 
     /** set the capping/max level value that could be used by automatic level selection algorithm **/
     set autoLevelCapping(newLevel) {
-        logger.log(`set autoLevelCapping:${newLevel}`);
+        logger.log('set autoLevelCapping:${newLevel}');
         this.levelController.autoLevelCapping = newLevel;
     }
 
