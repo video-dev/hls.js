@@ -1,15 +1,14 @@
- /*
- * Stats Handler
- *
- */
+/**
+ * Stats handler
+*/
 
-import Event                from './events';
-import observer             from './observer';
+import Event from './events';
+import observer from './observer';
 
- class StatsHandler {
+class StatsHandler {
 
   constructor(hls) {
-    this.hls=hls;
+    this.hls = hls;
     this.onmp = this.onManifestParsed.bind(this);
     this.onfc = this.onFragmentChanged.bind(this);
     this.onfb = this.onFragmentBuffered.bind(this);
@@ -43,22 +42,22 @@ import observer             from './observer';
 
   // reset stats on manifest parsed
   onManifestParsed(event,data) {
-    this._stats = { tech : 'hls.js', levelNb : data.levels.length};
+    this._stats = {tech : 'hls.js', levelNb: data.levels.length};
   }
 
   // on fragment changed is triggered whenever playback of a new fragment is starting ...
-  onFragmentChanged(event,data) {
-    var stats = this._stats,level = data.frag.level,autoLevel = data.frag.autoLevel;
-    if(stats) {
-      if(stats.levelStart === undefined) {
+  onFragmentChanged(event, data) {
+    var stats = this._stats, level = data.frag.level, autoLevel = data.frag.autoLevel;
+    if (stats) {
+      if (stats.levelStart === undefined) {
         stats.levelStart = level;
       }
-      if(autoLevel) {
-        if(stats.fragChangedAuto) {
-          stats.autoLevelMin = Math.min(stats.autoLevelMin,level);
-          stats.autoLevelMax = Math.max(stats.autoLevelMax,level);
+      if (autoLevel) {
+        if (stats.fragChangedAuto) {
+          stats.autoLevelMin = Math.min(stats.autoLevelMin, level);
+          stats.autoLevelMax = Math.max(stats.autoLevelMax, level);
           stats.fragChangedAuto++;
-          if(this.levelLastAuto && level !== stats.autoLevelLast) {
+          if (this.levelLastAuto && level !== stats.autoLevelLast) {
             stats.autoLevelSwitch++;
           }
         } else {
@@ -67,15 +66,15 @@ import observer             from './observer';
           stats.fragChangedAuto = 1;
           this.sumAutoLevel = 0;
         }
-        this.sumAutoLevel+=level;
-        stats.autoLevelAvg = Math.round(1000*this.sumAutoLevel/stats.fragChangedAuto)/1000;
+        this.sumAutoLevel += level;
+        stats.autoLevelAvg = Math.round(1000 * this.sumAutoLevel / stats.fragChangedAuto) / 1000;
         stats.autoLevelLast = level;
       } else {
-        if(stats.fragChangedManual) {
-          stats.manualLevelMin = Math.min(stats.manualLevelMin,level);
-          stats.manualLevelMax = Math.max(stats.manualLevelMax,level);
+        if (stats.fragChangedManual) {
+          stats.manualLevelMin = Math.min(stats.manualLevelMin, level);
+          stats.manualLevelMax = Math.max(stats.manualLevelMax, level);
           stats.fragChangedManual++;
-          if(!this.levelLastAuto && level !== stats.manualLevelLast) {
+          if (!this.levelLastAuto && level !== stats.manualLevelLast) {
             stats.manualLevelSwitch++;
           }
         } else {
@@ -90,17 +89,17 @@ import observer             from './observer';
   }
 
   // triggered each time a new fragment is buffered
-  onFragmentBuffered(event,data) {
-    var stats = this._stats,latency = data.stats.tfirst - data.stats.trequest, process = data.stats.tbuffered - data.stats.trequest, bitrate = Math.round(8*data.stats.length/(data.stats.tbuffered - data.stats.tfirst));
-    if(stats.fragBuffered) {
-      stats.fragMinLatency = Math.min(stats.fragMinLatency,latency);
-      stats.fragMaxLatency = Math.max(stats.fragMaxLatency,latency);
-      stats.fragMinProcess = Math.min(stats.fragMinProcess,process);
-      stats.fragMaxProcess = Math.max(stats.fragMaxProcess,process);
-      stats.fragMinKbps = Math.min(stats.fragMinKbps,bitrate);
-      stats.fragMaxKbps = Math.max(stats.fragMaxKbps,bitrate);
-      stats.autoLevelCappingMin = Math.min(stats.autoLevelCappingMin,this.hls.autoLevelCapping);
-      stats.autoLevelCappingMax = Math.max(stats.autoLevelCappingMax,this.hls.autoLevelCapping);
+  onFragmentBuffered(event, data) {
+    var stats = this._stats,latency = data.stats.tfirst - data.stats.trequest, process = data.stats.tbuffered - data.stats.trequest, bitrate = Math.round(8 * data.stats.length / (data.stats.tbuffered - data.stats.tfirst));
+    if (stats.fragBuffered) {
+      stats.fragMinLatency = Math.min(stats.fragMinLatency, latency);
+      stats.fragMaxLatency = Math.max(stats.fragMaxLatency, latency);
+      stats.fragMinProcess = Math.min(stats.fragMinProcess, process);
+      stats.fragMaxProcess = Math.max(stats.fragMaxProcess, process);
+      stats.fragMinKbps = Math.min(stats.fragMinKbps, bitrate);
+      stats.fragMaxKbps = Math.max(stats.fragMaxKbps, bitrate);
+      stats.autoLevelCappingMin = Math.min(stats.autoLevelCappingMin, this.hls.autoLevelCapping);
+      stats.autoLevelCappingMax = Math.max(stats.autoLevelCappingMax, this.hls.autoLevelCapping);
       stats.fragBuffered++;
     } else {
       stats.fragMinLatency = stats.fragMaxLatency = latency;
@@ -109,59 +108,59 @@ import observer             from './observer';
       stats.fragBuffered = 1;
       stats.fragBufferedBytes = 0;
       stats.autoLevelCappingMin = stats.autoLevelCappingMax = this.hls.autoLevelCapping;
-      this.sumLatency=0;
-      this.sumKbps=0;
-      this.sumProcess=0;
+      this.sumLatency = 0;
+      this.sumKbps = 0;
+      this.sumProcess = 0;
     }
-    stats.fraglastLatency=latency;
-    this.sumLatency+=latency;
-    stats.fragAvgLatency = Math.round(this.sumLatency/stats.fragBuffered);
-    stats.fragLastProcess=process;
-    this.sumProcess+=process;
-    stats.fragAvgProcess = Math.round(this.sumProcess/stats.fragBuffered);
-    stats.fragLastKbps=bitrate;
-    this.sumKbps+=bitrate;
-    stats.fragAvgKbps = Math.round(this.sumKbps/stats.fragBuffered);
-    stats.fragBufferedBytes+=data.stats.length;
+    stats.fraglastLatency = latency;
+    this.sumLatency += latency;
+    stats.fragAvgLatency = Math.round(this.sumLatency / stats.fragBuffered);
+    stats.fragLastProcess = process;
+    this.sumProcess += process;
+    stats.fragAvgProcess = Math.round(this.sumProcess / stats.fragBuffered);
+    stats.fragLastKbps = bitrate;
+    this.sumKbps += bitrate;
+    stats.fragAvgKbps = Math.round(this.sumKbps / stats.fragBuffered);
+    stats.fragBufferedBytes += data.stats.length;
     stats.autoLevelCappingLast = this.hls.autoLevelCapping;
   }
 
   onFragmentLoadEmergencyAborted() {
     var stats = this._stats;
-    if(stats) {
-      if(stats.fragLoadEmergencyAborted === undefined) {
-        stats.fragLoadEmergencyAborted =1;
+    if (stats) {
+      if (stats.fragLoadEmergencyAborted === undefined) {
+        stats.fragLoadEmergencyAborted = 1;
       } else {
         stats.fragLoadEmergencyAborted++;
       }
     }
   }
 
-  onError(event,data) {
+  onError(event, data) {
     var stats = this._stats;
-    if(stats) {
+    if (stats) {
       // track all errors independently
-      if(stats[data.details] === undefined) {
-        stats[data.details] =1;
+      if (stats[data.details] === undefined) {
+        stats[data.details] = 1;
       } else {
-        stats[data.details]+=1;
+        stats[data.details] += 1;
       }
       // track fatal error
-      if(data.fatal) {
-        if(stats.fatalError === undefined) {
-            stats.fatalError=1;
+      if (data.fatal) {
+        if (stats.fatalError === undefined) {
+          stats.fatalError = 1;
         } else {
-            stats.fatalError+=1;
+            stats.fatalError += 1;
         }
       }
     }
   }
 
-  onFPSDrop(event,data) {
+  onFPSDrop(event, data) {
     var stats = this._stats;
-    if(stats) {
-     if(stats.fpsDropEvent === undefined) {
-        stats.fpsDropEvent =1;
+    if (stats) {
+     if (stats.fpsDropEvent === undefined) {
+        stats.fpsDropEvent = 1;
       } else {
         stats.fpsDropEvent++;
       }
@@ -170,7 +169,7 @@ import observer             from './observer';
   }
 
   get stats() {
-    if(this.video) {
+    if (this.video) {
       this._stats.lastPos = this.video.currentTime.toFixed(3);
     }
     return this._stats;

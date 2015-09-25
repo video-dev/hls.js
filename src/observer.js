@@ -10,5 +10,4 @@ observer.off = function off (event, ...data) {
   observer.removeListener(event, ...data);
 };
 
-
 export default observer;
