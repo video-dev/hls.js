@@ -1,12 +1,14 @@
 'use strict';
 
 function noop() {}
+
 let fakeLogger = {
     log: noop,
     warn: noop,
     info: noop,
     error: noop
 };
+
 let exportedLogger = fakeLogger;
 
 export var enableLogs = function(debug) {
@@ -23,7 +25,6 @@ export var enableLogs = function(debug) {
         exportedLogger.warn = debug.warn
             ? debug.warn.bind(debug)
             : console.warn.bind(console);
-
         // Some browsers don't allow to use bind on console object anyway
         // fallback to default if needed
         try {
@@ -38,4 +39,5 @@ export var enableLogs = function(debug) {
         exportedLogger = fakeLogger;
     }
 };
+
 export var logger = exportedLogger;

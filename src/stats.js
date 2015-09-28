@@ -1,6 +1,5 @@
-/*
- * Stats Handler
- *
+/**
+ * Stats handler
  */
 
 import Event from './events';

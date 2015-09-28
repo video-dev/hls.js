@@ -1,6 +1,5 @@
 /**
- * Parser for exponential Golomb codes, a variable-bitwidth number encoding
- * scheme used by h264.
+ * Parser for exponential Golomb codes, a variable-bitwidth number encoding scheme used by h264.
  */
 
 import { logger } from '../utils/logger';
@@ -21,16 +20,13 @@ class ExpGolomb {
         var position = this.data.byteLength - this.bytesAvailable,
             workingBytes = new Uint8Array(4),
             availableBytes = Math.min(4, this.bytesAvailable);
-
         if (availableBytes === 0) {
             throw new Error('no bytes available');
         }
-
         workingBytes.set(
             this.data.subarray(position, position + availableBytes)
         );
         this.word = new DataView(workingBytes.buffer).getUint32(0);
-
         // track the amount of this.data that has been processed
         this.bitsAvailable = availableBytes * 8;
         this.bytesAvailable -= availableBytes;
@@ -45,12 +41,9 @@ class ExpGolomb {
         } else {
             count -= this.bitsAvailable;
             skipBytes = count >> 3;
-
             count -= skipBytes >> 3;
             this.bytesAvailable -= skipBytes;
-
             this.loadWord();
-
             this.word <<= count;
             this.bitsAvailable -= count;
         }
@@ -60,18 +53,15 @@ class ExpGolomb {
     readBits(size) {
         var bits = Math.min(this.bitsAvailable, size), // :uint
             valu = this.word >>> (32 - bits); // :uint
-
         if (size > 32) {
             logger.error('Cannot read more than 32 bits at a time');
         }
-
         this.bitsAvailable -= bits;
         if (this.bitsAvailable > 0) {
             this.word <<= bits;
         } else if (this.bytesAvailable > 0) {
             this.loadWord();
         }
-
         bits = size - bits;
         if (bits > 0) {
             return (valu << bits) | this.readBits(bits);
@@ -95,7 +85,6 @@ class ExpGolomb {
                 return leadingZeroCount;
             }
         }
-
         // we exhausted word and still have not found a 1
         this.loadWord();
         return leadingZeroCount + this.skipLZ();
@@ -151,13 +140,11 @@ class ExpGolomb {
             nextScale = 8,
             j,
             deltaScale;
-
         for (j = 0; j < count; j++) {
             if (nextScale !== 0) {
                 deltaScale = this.readEG();
                 nextScale = (lastScale + deltaScale + 256) % 256;
             }
-
             lastScale = nextScale === 0 ? lastScale : nextScale;
         }
     }
@@ -185,14 +172,12 @@ class ExpGolomb {
             frameMbsOnlyFlag,
             scalingListCount,
             i;
-
         this.readUByte();
         profileIdc = this.readUByte(); // profile_idc
         profileCompat = this.readBits(5); // constraint_set[0-4]_flag, u(5)
         this.skipBits(3); // reserved_zero_3bits u(3),
         levelIdc = this.readUByte(); //level_idc u(8)
         this.skipUEG(); // seq_parameter_set_id
-
         // some profiles have more optional data we don't need
         if (
             profileIdc === 100 ||
@@ -222,10 +207,8 @@ class ExpGolomb {
                 }
             }
         }
-
         this.skipUEG(); // log2_max_frame_num_minus4
         var picOrderCntType = this.readUEG();
-
         if (picOrderCntType === 0) {
             this.readUEG(); //log2_max_pic_order_cnt_lsb_minus4
         } else if (picOrderCntType === 1) {
@@ -237,18 +220,14 @@ class ExpGolomb {
                 this.skipEG(); // offset_for_ref_frame[ i ]
             }
         }
-
         this.skipUEG(); // max_num_ref_frames
         this.skipBits(1); // gaps_in_frame_num_value_allowed_flag
-
         picWidthInMbsMinus1 = this.readUEG();
         picHeightInMapUnitsMinus1 = this.readUEG();
-
         frameMbsOnlyFlag = this.readBits(1);
         if (frameMbsOnlyFlag === 0) {
             this.skipBits(1); // mb_adaptive_frame_field_flag
         }
-
         this.skipBits(1); // direct_8x8_inference_flag
         if (this.readBoolean()) {
             // frame_cropping_flag
@@ -257,7 +236,6 @@ class ExpGolomb {
             frameCropTopOffset = this.readUEG();
             frameCropBottomOffset = this.readUEG();
         }
-
         return {
             profileIdc: profileIdc,
             profileCompat: profileCompat,

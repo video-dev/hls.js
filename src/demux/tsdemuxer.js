@@ -6,7 +6,7 @@
 
 import Event from '../events';
 import ExpGolomb from './exp-golomb';
-// import Hex             from '../utils/hex';
+// import Hex from '../utils/hex';
 import MP4 from '../remux/mp4-generator';
 import observer from '../observer';
 import { logger } from '../utils/logger';
@@ -53,18 +53,17 @@ class TSDemuxer {
         this.timeOffset = timeOffset;
         this._duration = duration;
         if (cc !== this.lastCC) {
-            logger.log(`discontinuity detected`);
+            logger.log('discontinuity detected');
             this.insertDiscontinuity();
             this.lastCC = cc;
         } else if (level !== this.lastLevel) {
-            logger.log(`level switch detected`);
+            logger.log('level switch detected');
             this.switchLevel();
             this.lastLevel = level;
         }
         var pmtParsed = this.pmtParsed,
             avcId = this._avcId,
             aacId = this._aacId;
-
         // loop through TS packets
         for (start = 0; start < len; start += 188) {
             if (data[start] === 0x47) {
@@ -178,7 +177,6 @@ class TSDemuxer {
         // long the program info descriptors are
         programInfoLength =
             ((data[offset + 10] & 0x0f) << 8) | data[offset + 11];
-
         // advance the offset to the first entry in the mapping table
         offset += 12 + programInfoLength;
         while (offset < tableEnd) {
@@ -365,7 +363,6 @@ class TSDemuxer {
             ptsnorm,
             dtsnorm,
             samples = [];
-
         /* concatenate the video data and construct the mdat in place
       (need 8 more bytes to fill length and mpdat type) */
         mdat = new Uint8Array(
@@ -377,7 +374,6 @@ class TSDemuxer {
         while (this._avcSamples.length) {
             avcSample = this._avcSamples.shift();
             mp4SampleLength = 0;
-
             // convert NALU bitstream to MP4 format (prepend NALU with size field)
             while (avcSample.units.units.length) {
                 unit = avcSample.units.units.shift();
@@ -390,11 +386,9 @@ class TSDemuxer {
             pts = avcSample.pts - this._initDTS;
             dts = avcSample.dts - this._initDTS;
             //logger.log('Video/PTS/DTS:' + avcSample.pts + '/' + avcSample.dts);
-
             if (lastSampleDTS !== undefined) {
                 ptsnorm = this._PTSNormalize(pts, lastSampleDTS);
                 dtsnorm = this._PTSNormalize(dts, lastSampleDTS);
-
                 mp4Sample.duration =
                     (dtsnorm - lastSampleDTS) / this.PES2MP4SCALEFACTOR;
                 if (mp4Sample.duration < 0) {
@@ -434,7 +428,7 @@ class TSDemuxer {
                             Math.abs(expectedPTS - ptsnorm) >
                             this.PES_TIMESCALE * 3600
                         ) {
-                            //logger.log(`PTS looping ??? AVC PTS delta:${expectedPTS-ptsnorm}`);
+                            //logger.log('PTS looping ??? AVC PTS delta:${expectedPTS-ptsnorm}');
                             var ptsOffset = expectedPTS - ptsnorm;
                             // set PTS to next expected PTS;
                             ptsnorm = expectedPTS;
@@ -449,8 +443,7 @@ class TSDemuxer {
                 firstPTS = Math.max(0, ptsnorm);
                 firstDTS = Math.max(0, dtsnorm);
             }
-            //console.log(`PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${avcSample.pts}/${avcSample.dts}/${this._initDTS}/${ptsnorm}/${dtsnorm}/${(avcSample.pts/4294967296).toFixed(3)}`);
-
+            //console.log('PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${avcSample.pts}/${avcSample.dts}/${this._initDTS}/${ptsnorm}/${dtsnorm}/${(avcSample.pts/4294967296).toFixed(3)}');
             mp4Sample = {
                 size: mp4SampleLength,
                 duration: 0,
@@ -462,7 +455,6 @@ class TSDemuxer {
                     degradPrio: 0
                 }
             };
-
             if (avcSample.key === true) {
                 // the current sample is a key frame
                 mp4Sample.flags.dependsOn = 2;
@@ -482,10 +474,8 @@ class TSDemuxer {
         this.nextAvcPts =
             ptsnorm + mp4Sample.duration * this.PES2MP4SCALEFACTOR;
         //logger.log('Video/lastAvcDts/nextAvcPts:' + this.lastAvcDts + '/' + this.nextAvcPts);
-
         this._avcSamplesLength = 0;
         this._avcSamplesNbNalu = 0;
-
         track.samples = samples;
         moof = MP4.moof(
             track.sequenceNumber++,
@@ -520,7 +510,6 @@ class TSDemuxer {
             lastUnitType,
             length = 0;
         //logger.log('PES:' + Hex.hexDump(array));
-
         while (i < len) {
             value = array[i++];
             // finding 3 or 4-byte start codes (00 00 01 OR 00 00 00 01)
@@ -669,7 +658,7 @@ class TSDemuxer {
                 reason = `AAC PES did not start with ADTS header,offset:${adtsStartOffset}`;
                 fatal = false;
             } else {
-                reason = `no ADTS header found in AAC PES`;
+                reason = 'no ADTS header found in AAC PES';
                 fatal = true;
             }
             observer.trigger(Event.ERROR, {
@@ -682,7 +671,6 @@ class TSDemuxer {
                 return;
             }
         }
-
         if (!track.audiosamplerate) {
             config = this._ADTStoAudioConfig(
                 data,
@@ -696,7 +684,7 @@ class TSDemuxer {
             track.timescale = this.MP4_TIMESCALE;
             track.duration = this.MP4_TIMESCALE * this._duration;
             logger.log(
-                `parsed   codec:${track.codec},rate:${
+                `parsed codec:${track.codec},rate:${
                     config.samplerate
                 },nb channel:${config.channelCount}`
             );
@@ -761,7 +749,6 @@ class TSDemuxer {
             ptsnorm,
             dtsnorm,
             samples = [];
-
         /* concatenate the audio data and construct the mdat in place
       (need 8 more bytes to fill length and mpdat type) */
         mdat = new Uint8Array(this._aacSamplesLength + 8);
@@ -773,10 +760,8 @@ class TSDemuxer {
             unit = aacSample.unit;
             mdat.set(unit, i);
             i += unit.byteLength;
-
             pts = aacSample.pts - this._initDTS;
             dts = aacSample.dts - this._initDTS;
-
             //logger.log('Audio/PTS:' + aacSample.pts.toFixed(0));
             if (lastSampleDTS !== undefined) {
                 ptsnorm = this._PTSNormalize(pts, lastSampleDTS);
@@ -821,13 +806,13 @@ class TSDemuxer {
                     } else if (absdelta) {
                         // not contiguous timestamp, check if PTS is within acceptable range
                         var expectedPTS = this.PES_TIMESCALE * this.timeOffset;
-                        //logger.log(`expectedPTS/PTSnorm:${expectedPTS}/${ptsnorm}/${expectedPTS-ptsnorm}`);
+                        //logger.log('expectedPTS/PTSnorm:${expectedPTS}/${ptsnorm}/${expectedPTS-ptsnorm}');
                         // check if there is any unexpected drift between expected timestamp and real one
                         if (
                             Math.abs(expectedPTS - ptsnorm) >
                             this.PES_TIMESCALE * 3600
                         ) {
-                            //logger.log(`PTS looping ??? AAC PTS delta:${expectedPTS-ptsnorm}`);
+                            //logger.log('PTS looping ??? AAC PTS delta:${expectedPTS-ptsnorm}');
                             var ptsOffset = expectedPTS - ptsnorm;
                             // set PTS to next expected PTS;
                             ptsnorm = expectedPTS;
@@ -842,7 +827,7 @@ class TSDemuxer {
                 firstPTS = Math.max(0, ptsnorm);
                 firstDTS = Math.max(0, dtsnorm);
             }
-            //console.log(`PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${aacSample.pts}/${aacSample.dts}/${this._initDTS}/${ptsnorm}/${dtsnorm}/${(aacSample.pts/4294967296).toFixed(3)}`);
+            //console.log('PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${aacSample.pts}/${aacSample.dts}/${this._initDTS}/${ptsnorm}/${dtsnorm}/${(aacSample.pts/4294967296).toFixed(3)}');
             mp4Sample = {
                 size: unit.byteLength,
                 cts: 0,
@@ -867,7 +852,6 @@ class TSDemuxer {
         this.nextAacPts =
             ptsnorm + this.PES2MP4SCALEFACTOR * mp4Sample.duration;
         //logger.log('Audio/PTS/PTSend:' + aacSample.pts.toFixed(0) + '/' + this.nextAacDts.toFixed(0));
-
         this._aacSamplesLength = 0;
         track.samples = samples;
         moof = MP4.moof(
@@ -909,20 +893,17 @@ class TSDemuxer {
                 16000,
                 12000
             ];
-
         // byte 2
         adtsObjectType = ((data[offset + 2] & 0xc0) >>> 6) + 1;
         adtsSampleingIndex = (data[offset + 2] & 0x3c) >>> 2;
         adtsChanelConfig = (data[offset + 2] & 0x01) << 2;
         // byte 3
         adtsChanelConfig |= (data[offset + 3] & 0xc0) >>> 6;
-
         logger.log(
             `manifest codec:${audioCodec},ADTS data:type:${adtsObjectType},sampleingIndex:${adtsSampleingIndex}[${
                 adtsSampleingRates[adtsSampleingIndex]
             }kHz],channelConfig:${adtsChanelConfig}`
         );
-
         // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
         if (userAgent.indexOf('firefox') !== -1) {
             if (adtsSampleingIndex >= 6) {
@@ -971,38 +952,38 @@ class TSDemuxer {
             }
         }
         /* refer to http://wiki.multimedia.cx/index.php?title=MPEG-4_Audio#Audio_Specific_Config
-      ISO 14496-3 (AAC).pdf - Table 1.13 — Syntax of AudioSpecificConfig()
-    Audio Profile / Audio Object Type
-    0: Null
-    1: AAC Main
-    2: AAC LC (Low Complexity)
-    3: AAC SSR (Scalable Sample Rate)
-    4: AAC LTP (Long Term Prediction)
-    5: SBR (Spectral Band Replication)
-    6: AAC Scalable
-   sampling freq
-    0: 96000 Hz
-    1: 88200 Hz
-    2: 64000 Hz
-    3: 48000 Hz
-    4: 44100 Hz
-    5: 32000 Hz
-    6: 24000 Hz
-    7: 22050 Hz
-    8: 16000 Hz
-    9: 12000 Hz
-    10: 11025 Hz
-    11: 8000 Hz
-    12: 7350 Hz
-    13: Reserved
-    14: Reserved
-    15: frequency is written explictly
-    Channel Configurations
-    These are the channel configurations:
-    0: Defined in AOT Specifc Config
-    1: 1 channel: front-center
-    2: 2 channels: front-left, front-right
-  */
+        ISO 14496-3 (AAC).pdf - Table 1.13 — Syntax of AudioSpecificConfig()
+      Audio Profile / Audio Object Type
+      0: Null
+      1: AAC Main
+      2: AAC LC (Low Complexity)
+      3: AAC SSR (Scalable Sample Rate)
+      4: AAC LTP (Long Term Prediction)
+      5: SBR (Spectral Band Replication)
+      6: AAC Scalable
+     sampling freq
+      0: 96000 Hz
+      1: 88200 Hz
+      2: 64000 Hz
+      3: 48000 Hz
+      4: 44100 Hz
+      5: 32000 Hz
+      6: 24000 Hz
+      7: 22050 Hz
+      8: 16000 Hz
+      9: 12000 Hz
+      10: 11025 Hz
+      11: 8000 Hz
+      12: 7350 Hz
+      13: Reserved
+      14: Reserved
+      15: frequency is written explictly
+      Channel Configurations
+      These are the channel configurations:
+      0: Defined in AOT Specifc Config
+      1: 1 channel: front-center
+      2: 2 channels: front-left, front-right
+    */
         // audioObjectType = profile => profile, the MPEG-4 Audio Object Type minus 1
         config[0] = adtsObjectType << 3;
         // samplingFrequencyIndex

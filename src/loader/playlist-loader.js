@@ -1,12 +1,11 @@
-/*
- * playlist loader
- *
+/**
+ * Playlist Loader
  */
 
 import Event from '../events';
 import observer from '../observer';
 import { ErrorTypes, ErrorDetails } from '../errors';
-//import {logger}             from '../utils/logger';
+//import {logger} from '../utils/logger';
 
 class PlaylistLoader {
     constructor(hls) {
@@ -61,11 +60,9 @@ class PlaylistLoader {
             ourBase = oldBase || docHead.appendChild(doc.createElement('base')),
             resolver = doc.createElement('a'),
             resolvedUrl;
-
         ourBase.href = baseUrl;
         resolver.href = url;
         resolvedUrl = resolver.href; // browser magic at work here
-
         if (oldBase) {
             oldBase.href = oldHref;
         } else {
@@ -198,7 +195,6 @@ class PlaylistLoader {
         stats.mtime = new Date(
             event.currentTarget.getResponseHeader('Last-Modified')
         );
-
         if (string.indexOf('#EXTM3U') === 0) {
             if (string.indexOf('#EXTINF:') > 0) {
                 // 1 level playlist

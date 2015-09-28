@@ -1,7 +1,6 @@
-/*
-  * Xhr based Loader
-  *
-  */
+/**
+ * XHR based logger
+ */
 
 import { logger } from '../utils/logger';
 

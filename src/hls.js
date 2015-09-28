@@ -11,7 +11,7 @@ import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
 import BufferController from './controller/buffer-controller';
 import LevelController from './controller/level-controller';
-//import FPSController              from './controller/fps-controller';
+//import FPSController from './controller/fps-controller';
 import { logger, enableLogs } from './utils/logger';
 import XhrLoader from './utils/xhr-loader';
 
@@ -19,7 +19,7 @@ class Hls {
     static isSupported() {
         return (
             window.MediaSource &&
-            MediaSource.isTypeSupported(
+            window.MediaSource.isTypeSupported(
                 'video/mp4; codecs="avc1.42E01E,mp4a.40.2"'
             )
         );
@@ -77,7 +77,7 @@ class Hls {
     }
 
     destroy() {
-        logger.log(`destroy`);
+        logger.log('destroy');
         this.playlistLoader.destroy();
         this.fragmentLoader.destroy();
         this.levelController.destroy();
@@ -90,7 +90,7 @@ class Hls {
     }
 
     attachVideo(video) {
-        logger.log(`attachVideo`);
+        logger.log('attachVideo');
         this.video = video;
         this.statsHandler.attachVideo(video);
         // setup the media source
@@ -108,7 +108,7 @@ class Hls {
     }
 
     detachVideo() {
-        logger.log(`detachVideo`);
+        logger.log('detachVideo');
         var video = this.video;
         this.statsHandler.detachVideo(video);
         var ms = this.mediaSource;
@@ -122,7 +122,7 @@ class Hls {
             // unlink MediaSource from video tag
             video.src = '';
             this.mediaSource = null;
-            logger.log(`trigger MSE_DETACHED`);
+            logger.log('trigger MSE_DETACHED');
             observer.trigger(Event.MSE_DETACHED);
         }
         this.onmso = this.onmse = this.onmsc = null;
@@ -139,7 +139,7 @@ class Hls {
     }
 
     startLoad() {
-        logger.log(`startLoad`);
+        logger.log('startLoad');
         this.bufferController.startLoad();
     }
 

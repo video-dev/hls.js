@@ -1,7 +1,6 @@
 /*
- * level controller
- *
- */
+ * Level Controller
+*/
 
 import Event from '../events';
 import observer from '../observer';
@@ -57,7 +56,6 @@ class LevelController {
             return a.bitrate - b.bitrate;
         });
         this._levels = levels;
-
         // find index of first level in sorted levels
         for (i = 0; i < levels.length; i++) {
             if (levels[i].bitrate === bitrateStart) {
@@ -177,7 +175,7 @@ class LevelController {
             this.lastfetchduration = (new Date() - stats.trequest) / 1000;
             this.lastfetchlevel = data.frag.level;
             this.lastbw = stats.loaded * 8 / this.lastfetchduration;
-            //console.log(`fetchDuration:${this.lastfetchduration},bw:${(this.lastbw/1000).toFixed(0)}/${stats.aborted}`);
+            //console.log('fetchDuration:${this.lastfetchduration},bw:${(this.lastbw/1000).toFixed(0)}/${stats.aborted}');
         }
     }
 

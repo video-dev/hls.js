@@ -1,7 +1,6 @@
 /*
- * buffer controller
- *
- */
+ * Buffer Controller
+*/
 
 import Event from '../events';
 import observer from '../observer';
@@ -41,6 +40,7 @@ class BufferController {
         observer.on(Event.MSE_DETACHED, this.onmsed);
         observer.on(Event.MANIFEST_PARSED, this.onmp);
     }
+
     destroy() {
         this.stop();
         observer.off(Event.MANIFEST_PARSED, this.onmp);
@@ -61,7 +61,7 @@ class BufferController {
                 logger.log(`seeking @ ${this.lastCurrentTime}`);
                 this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
                 if (!this.lastPaused) {
-                    logger.log(`resuming video`);
+                    logger.log('resuming video');
                     this.video.play();
                 }
                 this.state = this.IDLE;
@@ -72,7 +72,7 @@ class BufferController {
             this.tick();
         } else {
             logger.warn(
-                `cannot start loading as either manifest not parsed or video not attached`
+                'cannot start loading as either manifest not parsed or video not attached'
             );
         }
     }
@@ -152,18 +152,15 @@ class BufferController {
                     this.immediateLevelSwitchEnd();
                     break;
                 }
-
                 // if video detached or unbound exit loop
                 if (!this.video) {
                     break;
                 }
-
                 // seek back to a expected position after video stalling
                 if (this.seekAfterStalling) {
                     this.video.currentTime = this.seekAfterStalling;
                     this.seekAfterStalling = undefined;
                 }
-
                 // determine next candidate fragment to be loaded, based on current position and
                 //  end of buffer position
                 //  ensure 60s of buffer upfront
@@ -228,7 +225,6 @@ class BufferController {
                         );
                         bufferEnd = this.seekAfterStalling;
                     }
-
                     if (
                         levelDetails.live &&
                         levelDetails.sliding === undefined
@@ -276,7 +272,7 @@ class BufferController {
                                 drift = frag.drift;
                             }
                             start += drift;
-                            //logger.log(`level/sn/sliding/drift/start/end/bufEnd:${level}/${frag.sn}/${sliding.toFixed(3)}/${drift.toFixed(3)}/${start.toFixed(3)}/${(start+frag.duration).toFixed(3)}/${bufferEnd.toFixed(3)}`);
+                            //logger.log('level/sn/sliding/drift/start/end/bufEnd:${level}/${frag.sn}/${sliding.toFixed(3)}/${drift.toFixed(3)}/${start.toFixed(3)}/${(start+frag.duration).toFixed(3)}/${bufferEnd.toFixed(3)}');
                             // offset should be within fragment boundary
                             if (
                                 start <= bufferEnd &&
@@ -303,9 +299,7 @@ class BufferController {
                         }
                     }
                     logger.log(
-                        `Loading       ${frag.sn} of [${
-                            levelDetails.startSN
-                        } ,${
+                        `Loading ${frag.sn} of [${levelDetails.startSN} ,${
                             levelDetails.endSN
                         }],level ${level}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(
                             3
@@ -320,7 +314,6 @@ class BufferController {
                         );
                         frag.trequest = new Date();
                     }
-
                     // ensure that we are not reloading the same fragments in loop ...
                     if (this.fragLoadIdx !== undefined) {
                         this.fragLoadIdx++;
@@ -443,7 +436,7 @@ class BufferController {
                     } else if (this.mp4segments.length) {
                         var segment = this.mp4segments.shift();
                         try {
-                            //logger.log(`appending ${segment.type} SB, size:${segment.data.length}`);
+                            //logger.log('appending ${segment.type} SB, size:${segment.data.length}');
                             this.sourceBuffer[segment.type].appendBuffer(
                                 segment.data
                             );
@@ -507,7 +500,6 @@ class BufferController {
                         break;
                     }
                 }
-
                 if (this.flushRange.length === 0) {
                     // move to IDLE once flush complete. this should trigger new fragment loading
                     this.state = this.IDLE;
@@ -551,7 +543,6 @@ class BufferController {
                 });
             }
         }
-
         for (
             i = 0, bufferLen = 0, bufferStart = bufferEnd = pos;
             i < buffered2.length;
@@ -662,7 +653,7 @@ class BufferController {
                         this.mediaSource.readyState === 'open'
                     ) {
                         logger.log(
-                            `end of VoD stream reached, signal endOfStream() to MediaSource`
+                            'end of VoD stream reached, signal endOfStream() to MediaSource'
                         );
                         this.startPosition = this.lastCurrentTime = 0;
                         this.video = null;
@@ -674,12 +665,12 @@ class BufferController {
     }
 
     /*
-  abort any buffer append in progress, and flush all buffered data
-  return true once everything has been flushed.
-  sourceBuffer.abort() and sourceBuffer.remove() are asynchronous operations
-  the idea is to call this function from tick() timer and call it again until all resources have been cleaned
-  the timer is rearmed upon sourceBuffer updateend() event, so this should be optimal
-*/
+    abort any buffer append in progress, and flush all buffered data
+    return true once everything has been flushed.
+    sourceBuffer.abort() and sourceBuffer.remove() are asynchronous operations
+    the idea is to call this function from tick() timer and call it again until all resources have been cleaned
+    the timer is rearmed upon sourceBuffer updateend() event, so this should be optimal
+  */
     flushBuffer(startOffset, endOffset) {
         var sb, i, bufStart, bufEnd, flushStart, flushEnd;
         //logger.log('flushBuffer,pos/start/end: ' + this.video.currentTime + '/' + startOffset + '/' + endOffset);
@@ -744,18 +735,17 @@ class BufferController {
             }
         }
         this.bufferRange = newRange;
-
         logger.log('buffer flushed');
         // everything flushed !
         return true;
     }
 
     /*
-      on immediate level switch :
-       - pause playback if playing
-       - cancel any pending load request
-       - and trigger a buffer flush
-    */
+    on immediate level switch :
+     - pause playback if playing
+     - cancel any pending load request
+     - and trigger a buffer flush
+  */
     immediateLevelSwitch() {
         logger.log('immediateLevelSwitch');
         if (!this.immediateSwitch) {
@@ -779,10 +769,10 @@ class BufferController {
     }
 
     /*
-   on immediate level switch end, after new fragment has been buffered :
-    - nudge video decoder by slightly adjusting video currentTime
-    - resume the playback if needed
-*/
+     on immediate level switch end, after new fragment has been buffered :
+      - nudge video decoder by slightly adjusting video currentTime
+      - resume the playback if needed
+  */
     immediateLevelSwitchEnd() {
         this.immediateSwitch = false;
         this.video.currentTime -= 0.0001;
@@ -798,14 +788,12 @@ class BufferController {
       we should take into account new segment fetch time
     */
         var fetchdelay, currentRange, nextRange;
-
         currentRange = this.getBufferRange(this.video.currentTime);
         if (currentRange) {
             // flush buffer preceding current fragment (flush until current fragment start offset)
             // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
             this.flushRange.push({ start: 0, end: currentRange.start - 1 });
         }
-
         if (!this.video.paused) {
             // add a safety delay of 1s
             var nextLevelId = this.hls.nextLoadLevel,
@@ -1031,7 +1019,7 @@ class BufferController {
                     start += this.frag.drift;
                 }
                 logger.log(
-                    `Demuxing      ${this.frag.sn} of [${details.startSN} ,${
+                    `Demuxing ${this.frag.sn} of [${details.startSN} ,${
                         details.endSN
                     }],level ${this.level}`
                 );
@@ -1082,14 +1070,14 @@ class BufferController {
                 // create source Buffer and link them to MediaSource
                 if (audioCodec) {
                     sb = this.sourceBuffer.audio = this.mediaSource.addSourceBuffer(
-                        `video/mp4;codecs=${audioCodec}`
+                        'video/mp4;codecs=${audioCodec}'
                     );
                     sb.addEventListener('updateend', this.onsbue);
                     sb.addEventListener('error', this.onsbe);
                 }
                 if (videoCodec) {
                     sb = this.sourceBuffer.video = this.mediaSource.addSourceBuffer(
-                        `video/mp4;codecs=${videoCodec}`
+                        'video/mp4;codecs=${videoCodec}'
                     );
                     sb.addEventListener('updateend', this.onsbue);
                     sb.addEventListener('error', this.onsbe);
@@ -1119,11 +1107,11 @@ class BufferController {
                 if (sn >= sn0 && sn <= sn1) {
                     level.details.sliding =
                         data.startPTS - fragments[sn - sn0].start;
-                    //logger.log(`live playlist sliding:${level.details.sliding.toFixed(3)}`);
+                    //logger.log('live playlist sliding:${level.details.sliding.toFixed(3)}');
                 }
             }
             logger.log(
-                `      parsed data, type/startPTS/endPTS/startDTS/endDTS/nb:${
+                `parsed data, type/startPTS/endPTS/startDTS/endDTS/nb:${
                     data.type
                 }/${data.startPTS.toFixed(3)}/${data.endPTS.toFixed(
                     3
@@ -1136,7 +1124,7 @@ class BufferController {
             // if(level.details.sliding) {
             //   this.frag.drift-=level.details.sliding;
             // }
-            //logger.log(`      drift:${this.frag.drift.toFixed(3)}`);
+            //logger.log('      drift:${this.frag.drift.toFixed(3)}');
             this.mp4segments.push({ type: data.type, data: data.moof });
             this.mp4segments.push({ type: data.type, data: data.mdat });
             this.nextLoadPosition = data.endPTS;
