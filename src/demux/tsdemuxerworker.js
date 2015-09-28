@@ -55,3 +55,4 @@ var TSDemuxerWorker = function (self) {
 };
 
 export default TSDemuxerWorker;
+

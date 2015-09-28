@@ -59,7 +59,7 @@ class BufferController {
     if (this.levels && this.video) {
       this.startInternal();
       if (this.lastCurrentTime) {
-        logger.log('seeking @ ${this.lastCurrentTime}');
+        logger.log(`seeking @ ${this.lastCurrentTime}`);
         this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
         if (!this.lastPaused) {
           logger.log('resuming video');
@@ -200,10 +200,10 @@ class BufferController {
           let fragments = levelDetails.fragments, frag, sliding = levelDetails.sliding, start = fragments[0].start + sliding, drift = 0;
           // check if requested position is within seekable boundaries :
           // in case of live playlist we need to ensure that requested position is not located before playlist start
-          //logger.log('start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.video.seeking}');
+          //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.video.seeking}`);
           if (bufferEnd < start) {
               this.seekAfterStalling = this.startPosition + sliding;
-              logger.log('buffer end: ${bufferEnd} is located before start of live sliding playlist, media position will be reseted to: ${this.seekAfterStalling.toFixed(3)}');
+              logger.log(`buffer end: ${bufferEnd} is located before start of live sliding playlist, media position will be reseted to: ${this.seekAfterStalling.toFixed(3)}`);
               bufferEnd = this.seekAfterStalling;
           }
           if (levelDetails.live && levelDetails.sliding === undefined) {
@@ -215,7 +215,7 @@ class BufferController {
               var targetSN = this.frag.sn + 1;
               if (targetSN >= levelDetails.startSN && targetSN <= levelDetails.endSN) {
                 frag = fragments[targetSN - levelDetails.startSN];
-                logger.log('live playlist, switching playlist, load frag with next SN: ${frag.sn}');
+                logger.log(`live playlist, switching playlist, load frag with next SN: ${frag.sn}`);
               }
             }
             if (!frag) {
@@ -223,7 +223,7 @@ class BufferController {
                  so let's load mid fragment. it will help computing playlist sliding and find the right one
               */
               frag = fragments[Math.round(fragments.length / 2)];
-              logger.log('live playlist, switching playlist, unknown, load middle frag : ${frag.sn}');
+              logger.log(`live playlist, switching playlist, unknown, load middle frag : ${frag.sn}`);
             }
           } else {
           //look for fragments matching with current play position
@@ -251,11 +251,11 @@ class BufferController {
                 break;
               } else {
                 frag = fragments[fragIdx + 1];
-                logger.log('SN just loaded, load next one: ${frag.sn}');
+                logger.log(`SN just loaded, load next one: ${frag.sn}`);
               }
             }
           }
-          logger.log('Loading       ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}');
+          logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
           //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
           frag.drift = drift;
           frag.autoLevel = this.hls.autoLevelEnabled;
@@ -320,7 +320,7 @@ class BufferController {
             if (bufferStarvationDelay < (2 * frag.duration) && fragLoadedDelay > bufferStarvationDelay && fragLoadedDelay > fragLevelNextLoadedDelay) {
               // abort fragment loading ...
               logger.warn('loading too slow, abort fragment loading');
-              logger.log('fragLoadedDelay/bufferStarvationDelay/fragLevelNextLoadedDelay :${fragLoadedDelay.toFixed(1)}/${bufferStarvationDelay.toFixed(1)}/${fragLevelNextLoadedDelay.toFixed(1)}');
+              logger.log(`fragLoadedDelay/bufferStarvationDelay/fragLevelNextLoadedDelay :${fragLoadedDelay.toFixed(1)}/${bufferStarvationDelay.toFixed(1)}/${fragLevelNextLoadedDelay.toFixed(1)}`);
               //abort fragment loading
               frag.loader.abort();
               this.frag = null;
@@ -350,7 +350,7 @@ class BufferController {
               this.appendError = 0;
             } catch(err) {
               // in case any error occured while appending, put back segment in mp4segments table
-              logger.error('error while trying to append buffer:${err.message},try appending later');
+              logger.error(`error while trying to append buffer:${err.message},try appending later`);
               this.mp4segments.unshift(segment);
               if (this.appendError) {
                 this.appendError++;
@@ -362,7 +362,7 @@ class BufferController {
                 browser is able to evict some data from sourcebuffer. retrying help recovering this
               */
               if (this.appendError > this.config.appendErrorMaxRetry) {
-                logger.log('fail ${this.config.appendErrorMaxRetry} times to append segment in sourceBuffer');
+                logger.log(`fail ${this.config.appendErrorMaxRetry} times to append segment in sourceBuffer`);
                 event.fatal = true;
                 observer.trigger(Event.ERROR, event);
                 this.state = this.ERROR;
@@ -562,7 +562,7 @@ class BufferController {
                only flush buffer range of length greater than 500ms.
             */
             if (flushEnd - flushStart > 0.5) {
-              logger.log('flush ${type} [${flushStart},${flushEnd}], of [${bufStart},${bufEnd}], pos:${this.video.currentTime}');
+              logger.log(`flush ${type} [${flushStart},${flushEnd}], of [${bufStart},${bufEnd}], pos:${this.video.currentTime}`);
               sb.remove(flushStart, flushEnd);
               return false;
             }
@@ -769,7 +769,7 @@ class BufferController {
         newLevel = this.levels[newLevelId],
         curLevel = this.levels[this.level],
         sliding = 0;
-    logger.log('level ${newLevelId} loaded [${newLevelDetails.startSN},${newLevelDetails.endSN}],duration:${duration}');
+    logger.log(`level ${newLevelId} loaded [${newLevelDetails.startSN},${newLevelDetails.endSN}],duration:${duration}`);
     // check if playlist is already loaded (if yes, it should be a live playlist)
     if (curLevel && curLevel.details && curLevel.details.live) {
       var curLevelDetails = curLevel.details;
@@ -784,7 +784,7 @@ class BufferController {
         if (SNdiff < oldfragments.length) {
           sliding = curLevelDetails.sliding + oldfragments[SNdiff].start;
         } else {
-          logger.log('cannot compute sliding, no SN in common between old/new level:[${curLevelDetails.startSN},${curLevelDetails.endSN}]/[${newLevelDetails.startSN},${newLevelDetails.endSN}]');
+          logger.log(`cannot compute sliding, no SN in common between old/new level:[${curLevelDetails.startSN},${curLevelDetails.endSN}]/[${newLevelDetails.startSN},${newLevelDetails.endSN}]`);
           sliding = undefined;
         }
       } else {
@@ -792,7 +792,7 @@ class BufferController {
         sliding = curLevelDetails.sliding - newLevelDetails.fragments[-SNdiff].start;
       }
       if (sliding) {
-        logger.log('live playlist sliding:${sliding.toFixed(3)}');
+        logger.log(`live playlist sliding:${sliding.toFixed(3)}`);
       }
     }
     // override level info
@@ -835,7 +835,7 @@ class BufferController {
         if (this.frag.drift) {
           start += this.frag.drift;
         }
-        logger.log('Demuxing      ${this.frag.sn} of [${details.startSN} ,${details.endSN}],level ${this.level}');
+        logger.log(`Demuxing ${this.frag.sn} of [${details.startSN} ,${details.endSN}],level ${this.level}`);
         this.demuxer.push(data.payload, currentLevel.audioCodec, currentLevel.videoCodec, start, this.frag.cc, this.level, duration);
       }
     }
@@ -862,7 +862,7 @@ class BufferController {
       }
       if (!this.sourceBuffer) {
         this.sourceBuffer = {};
-        logger.log('selected A/V codecs for sourceBuffers:${audioCodec},${videoCodec}');
+        logger.log(`selected A/V codecs for sourceBuffers:${audioCodec},${videoCodec}`);
         // create source Buffer and link them to MediaSource
         if (audioCodec) {
           sb = this.sourceBuffer.audio = this.mediaSource.addSourceBuffer('video/mp4;codecs=${audioCodec}');
@@ -899,7 +899,7 @@ class BufferController {
           //logger.log('live playlist sliding:${level.details.sliding.toFixed(3)}');
         }
       }
-      logger.log('      parsed data, type/startPTS/endPTS/startDTS/endDTS/nb:${data.type}/${data.startPTS.toFixed(3)}/${data.endPTS.toFixed(3)}/${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}/${data.nb}');
+      logger.log(`parsed data, type/startPTS/endPTS/startDTS/endDTS/nb:${data.type}/${data.startPTS.toFixed(3)}/${data.endPTS.toFixed(3)}/${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}/${data.nb}`);
       //this.frag.drift=data.startPTS-this.frag.start;
       this.frag.drift = 0;
       // if(level.details.sliding) {
@@ -916,7 +916,7 @@ class BufferController {
       //trigger handler right now
       this.tick();
     } else {
-      logger.warn('not in PARSING state, discarding ${event}');
+      logger.warn(`not in PARSING state, discarding ${event}`);
     }
   }
 
@@ -938,7 +938,7 @@ class BufferController {
       case ErrorDetails.LEVEL_LOAD_ERROR:
       case ErrorDetails.LEVEL_LOAD_TIMEOUT:
         // if fatal error, stop processing, otherwise move to IDLE to retry loading
-        logger.warn('buffer controller: ${data.details} while loading frag,switch to ${data.fatal ? "ERROR" : "IDLE"} state ...');
+        logger.warn(`buffer controller: ${data.details} while loading frag,switch to ${data.fatal ? 'ERROR' : 'IDLE'} state ...`);
         this.state = data.fatal ? this.ERROR : this.IDLE;
         this.frag = null;
         break;
@@ -960,10 +960,11 @@ class BufferController {
   }
 
   onSourceBufferError(event) {
-    logger.error('sourceBuffer error:${event}');
+    logger.error(`sourceBuffer error:${event}`);
     this.state = this.ERROR;
     observer.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_APPENDING_ERROR, fatal: true, frag: this.frag});
   }
 }
 
 export default BufferController;
+

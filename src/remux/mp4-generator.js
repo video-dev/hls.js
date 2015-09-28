@@ -96,8 +96,8 @@ class MP4 {
     ]);
 
     MP4.HDLR_TYPES = {
-      'video':MP4.VIDEO_HDLR,
-      'audio':MP4.AUDIO_HDLR
+      'video': MP4.VIDEO_HDLR,
+      'audio': MP4.AUDIO_HDLR
     };
 
     MP4.DREF = new Uint8Array([
@@ -555,7 +555,7 @@ class MP4 {
   }
 
   static initSegment(tracks) {
-    if(!MP4.types) {
+    if (!MP4.types) {
       MP4.init();
     }
     var movie = MP4.moov(tracks), result;

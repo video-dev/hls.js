@@ -18,7 +18,7 @@
     this.lastCC = 0;
     this.PES_TIMESCALE = 90000;
     this.PES2MP4SCALEFACTOR = 4;
-    this.MP4_TIMESCALE = this.PES_TIMESCALE/this.PES2MP4SCALEFACTOR;
+    this.MP4_TIMESCALE = this.PES_TIMESCALE / this.PES2MP4SCALEFACTOR;
   }
 
   switchLevel() {
@@ -41,7 +41,7 @@
 
   // feed incoming data to the front of the parsing pipeline
   push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
-    var avcData,aacData,start,len = data.length,stt,pid,atf,offset;
+    var avcData, aacData, start, len = data.length, stt, pid, atf, offset;
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
     this.timeOffset = timeOffset;
@@ -352,9 +352,9 @@
           if (absdelta < 300) {
             //logger.log('Video next PTS:' + this.nextAvcPts);
             if (delta > 1) {
-              logger.log('AVC:${delta} ms hole between fragments detected,filling it');
+              logger.log(`AVC:${delta} ms hole between fragments detected,filling it`);
             } else if (delta < -1) {
-              logger.log('AVC:${(-delta)} ms overlapping between fragments detected');
+              logger.log(`AVC:${(-delta)} ms overlapping between fragments detected`);
             }
             // set PTS to next PTS
             ptsnorm = this.nextAvcPts;
@@ -541,7 +541,7 @@
     if (adtsStartOffset) {
       var reason, fatal;
       if (adtsStartOffset < len - 1) {
-        reason = 'AAC PES did not start with ADTS header,offset:${adtsStartOffset}';
+        reason = `AAC PES did not start with ADTS header,offset:${adtsStartOffset}`;
         fatal = false;
       } else {
         reason = 'no ADTS header found in AAC PES';
@@ -560,7 +560,7 @@
       track.codec = config.codec;
       track.timescale = this.MP4_TIMESCALE;
       track.duration = this.MP4_TIMESCALE * this._duration;
-      logger.log('parsed codec:${track.codec},rate:${config.samplerate},nb channel:${config.channelCount}');
+      logger.log(`parsed codec:${track.codec},rate:${config.samplerate},nb channel:${config.channelCount}`);
     }
     nbSamples = 0;
     while ((adtsStartOffset + 5) < len) {
@@ -627,13 +627,13 @@
           // if delta is less than 300 ms, next loaded fragment is assumed to be contiguous with last one
           if (absdelta > 1 && absdelta < 300) {
             if (delta > 0) {
-              logger.log('AAC:${delta} ms hole between fragments detected,filling it');
+              logger.log(`AAC:${delta} ms hole between fragments detected,filling it`);
               // set PTS to next PTS, and ensure PTS is greater or equal than last DTS
               ptsnorm = Math.max(this.nextAacPts, this.lastAacDts);
               dtsnorm = ptsnorm;
               //logger.log('Audio/PTS/DTS adjusted:' + aacSample.pts + '/' + aacSample.dts);
             } else {
-              logger.log('AAC:${(-delta)} ms overlapping between fragments detected');
+              logger.log(`AAC:${(-delta)} ms overlapping between fragments detected`);
             }
           }
           else if (absdelta) {
@@ -717,7 +717,7 @@
     adtsChanelConfig = ((data[offset + 2] & 0x01) << 2);
     // byte 3
     adtsChanelConfig |= ((data[offset + 3] & 0xC0) >>> 6);
-    logger.log('manifest codec:${audioCodec},ADTS data:type:${adtsObjectType},sampleingIndex:${adtsSampleingIndex}[${adtsSampleingRates[adtsSampleingIndex]}kHz],channelConfig:${adtsChanelConfig}');
+    logger.log(`manifest codec:${audioCodec},ADTS data:type:${adtsObjectType},sampleingIndex:${adtsSampleingIndex}[${adtsSampleingRates[adtsSampleingIndex]}kHz],channelConfig:${adtsChanelConfig}`);
     // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
     if (userAgent.indexOf('firefox') !== -1) {
       if (adtsSampleingIndex >= 6) {
@@ -867,3 +867,4 @@
 }
 
 export default TSDemuxer;
+

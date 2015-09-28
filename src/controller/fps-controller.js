@@ -31,7 +31,7 @@ class FPSController {
           var decodedFPS = 1000 * currentDecoded / currentPeriod;
           var droppedFPS = 1000 * currentDropped / currentPeriod;
           if (droppedFPS > 0) {
-            logger.log('checkFPS : droppedFPS/decodedFPS:${droppedFPS.toFixed(1)}/${decodedFPS.toFixed(1)}');
+            logger.log(`checkFPS : droppedFPS/decodedFPS:${droppedFPS.toFixed(1)}/${decodedFPS.toFixed(1)}`);
             if (currentDropped > this.hls.config.fpsDroppedMonitoringThreshold * currentDecoded) {
               logger.warn('drop FPS ratio greater than max allowed value');
               observer.trigger(Event.FPS_DROP, {currentDropped: currentDropped, currentDecoded: currentDecoded, totalDroppedFrames: droppedFrames});
@@ -47,3 +47,4 @@ class FPSController {
 }
 
 export default FPSController;
+
