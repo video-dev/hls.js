@@ -26,7 +26,7 @@ export var enableLogs = function(debug) {
       exportedLogger.log = noop;
       exportedLogger.info = noop;
       exportedLogger.error = noop;
-      exportedLogger.   = noop;
+      exportedLogger.warn = noop;
     }
   }
   else {
