@@ -7,7 +7,7 @@
   "main": "dist/hls.js",
   "private": true,
   "scripts": {
-    "clean": "rm -rf dist/*",
+    "clean": "find dist -mindepth 1 -delete",
     "prebuild": "npm run clean & npm run test",
     "build": "browserify -s hls src/hls.js -o dist/hls.js",
     "postbuild": "npm run minify",
