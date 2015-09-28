@@ -656,7 +656,6 @@ class BufferController {
                             'end of VoD stream reached, signal endOfStream() to MediaSource'
                         );
                         this.startPosition = this.lastCurrentTime = 0;
-                        this.video = null;
                         this.mediaSource.endOfStream();
                     }
                 }
