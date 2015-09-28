@@ -2,3 +2,5 @@
 node_modules/*
 bower_components/*
 /streams.js
+
+npm-debug.log

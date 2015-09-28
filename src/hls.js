@@ -3,22 +3,22 @@
  */
 'use strict';
 
-import Event                      from './events';
-import {ErrorTypes,ErrorDetails}  from './errors';
-import StatsHandler               from './stats';
-import observer                   from './observer';
-import PlaylistLoader             from './loader/playlist-loader';
-import FragmentLoader             from './loader/fragment-loader';
-import BufferController           from './controller/buffer-controller';
-import LevelController            from './controller/level-controller';
-//import FPSController              from './controller/fps-controller';
-import {logger,enableLogs}        from './utils/logger';
-import XhrLoader                  from './utils/xhr-loader';
+import Event from './events';
+import {ErrorTypes, ErrorDetails} from './errors';
+import StatsHandler from './stats';
+import observer from './observer';
+import PlaylistLoader from './loader/playlist-loader';
+import FragmentLoader from './loader/fragment-loader';
+import BufferController from './controller/buffer-controller';
+import LevelController from './controller/level-controller';
+//import FPSController from './controller/fps-controller';
+import {logger, enableLogs} from './utils/logger';
+import XhrLoader from './utils/xhr-loader';
 
 class Hls {
 
   static isSupported() {
-    return (window.MediaSource && MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"'));
+    return (window.MediaSource && window.MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"'));
   }
 
   static get Events() {
@@ -35,23 +35,23 @@ class Hls {
 
   constructor(config = {}) {
    var configDefault = {
-      autoStartLoad : true,
-      debug : false,
-      maxBufferLength : 30,
-      maxBufferSize : 60*1000*1000,
-      maxMaxBufferLength : 600,
-      enableWorker : true,
-      fragLoadingTimeOut : 20000,
-      fragLoadingMaxRetry : 1,
-      fragLoadingRetryDelay : 1000,
-      fragLoadingLoopThreshold : 3,
-      manifestLoadingTimeOut : 10000,
-      manifestLoadingMaxRetry : 1,
-      manifestLoadingRetryDelay : 1000,
-      fpsDroppedMonitoringPeriod : 5000,
-      fpsDroppedMonitoringThreshold : 0.2,
-      appendErrorMaxRetry : 200,
-      loader : XhrLoader
+      autoStartLoad: true,
+      debug: false,
+      maxBufferLength: 30,
+      maxBufferSize: 60 * 1000 * 1000,
+      maxMaxBufferLength: 600,
+      enableWorker: true,
+      fragLoadingTimeOut: 20000,
+      fragLoadingMaxRetry: 1,
+      fragLoadingRetryDelay: 1000,
+      fragLoadingLoopThreshold: 3,
+      manifestLoadingTimeOut: 10000,
+      manifestLoadingMaxRetry: 1,
+      manifestLoadingRetryDelay: 1000,
+      fpsDroppedMonitoringPeriod: 5000,
+      fpsDroppedMonitoringThreshold: 0.2,
+      appendErrorMaxRetry: 200,
+      loader: XhrLoader
     };
     for (var prop in configDefault) {
         if (prop in config) { continue; }
@@ -71,7 +71,7 @@ class Hls {
   }
 
   destroy() {
-    logger.log(`destroy`);
+    logger.log('destroy');
     this.playlistLoader.destroy();
     this.fragmentLoader.destroy();
     this.levelController.destroy();
@@ -84,7 +84,7 @@ class Hls {
   }
 
   attachVideo(video) {
-    logger.log(`attachVideo`);
+    logger.log('attachVideo');
     this.video = video;
     this.statsHandler.attachVideo(video);
     // setup the media source
@@ -93,34 +93,34 @@ class Hls {
     this.onmso = this.onMediaSourceOpen.bind(this);
     this.onmse = this.onMediaSourceEnded.bind(this);
     this.onmsc = this.onMediaSourceClose.bind(this);
-    ms.addEventListener('sourceopen',  this.onmso);
+    ms.addEventListener('sourceopen', this.onmso);
     ms.addEventListener('sourceended', this.onmse);
     ms.addEventListener('sourceclose', this.onmsc);
     // link video and media Source
     video.src = URL.createObjectURL(ms);
-    video.addEventListener('error',this.onverror);
+    video.addEventListener('error', this.onverror);
   }
 
   detachVideo() {
-    logger.log(`detachVideo`);
+    logger.log('detachVideo');
     var video = this.video;
     this.statsHandler.detachVideo(video);
     var ms = this.mediaSource;
-    if(ms) {
-      if(ms.readyState !== 'ended') {
+    if (ms) {
+      if (ms.readyState !== 'ended') {
         ms.endOfStream();
       }
-      ms.removeEventListener('sourceopen',  this.onmso);
+      ms.removeEventListener('sourceopen', this.onmso);
       ms.removeEventListener('sourceended', this.onmse);
       ms.removeEventListener('sourceclose', this.onmsc);
       // unlink MediaSource from video tag
       video.src = '';
       this.mediaSource = null;
-      logger.log(`trigger MSE_DETACHED`);
+      logger.log('trigger MSE_DETACHED');
       observer.trigger(Event.MSE_DETACHED);
     }
     this.onmso = this.onmse = this.onmsc = null;
-    if(video) {
+    if (video) {
       this.video = null;
     }
   }
@@ -129,11 +129,11 @@ class Hls {
     logger.log(`loadSource:${url}`);
     this.url = url;
     // when attaching to a source URL, trigger a playlist load
-    observer.trigger(Event.MANIFEST_LOADING, { url: url });
+    observer.trigger(Event.MANIFEST_LOADING, {url: url});
   }
 
   startLoad() {
-    logger.log(`startLoad`);
+    logger.log('startLoad');
     this.bufferController.startLoad();
   }
 
@@ -237,14 +237,13 @@ class Hls {
 
   /* check if we are in automatic level selection mode */
   get autoLevelEnabled() {
-    return (this.levelController.manualLevel  === -1);
+    return (this.levelController.manualLevel === -1);
   }
 
   /* return manual level */
   get manualLevel() {
     return this.levelController.manualLevel;
   }
-
 
   /* return playback session stats */
   get stats() {
@@ -253,9 +252,9 @@ class Hls {
 
   onMediaSourceOpen() {
     logger.log('media source opened');
-    observer.trigger(Event.MSE_ATTACHED, { video: this.video, mediaSource : this.mediaSource });
+    observer.trigger(Event.MSE_ATTACHED, {video: this.video, mediaSource: this.mediaSource});
     // once received, don't listen anymore to sourceopen event
-    this.mediaSource.removeEventListener('sourceopen',  this.onmso);
+    this.mediaSource.removeEventListener('sourceopen', this.onmso);
   }
 
   onMediaSourceClose() {
