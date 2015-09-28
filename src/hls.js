@@ -132,7 +132,7 @@ class Hls {
     }
 
     loadSource(url) {
-        logger.log('loadSource:${url}');
+        logger.log(`loadSource:${url}`);
         this.url = url;
         // when attaching to a source URL, trigger a playlist load
         observer.trigger(Event.MANIFEST_LOADING, { url: url });
@@ -162,7 +162,7 @@ class Hls {
 
     /* set quality level immediately (-1 for automatic level selection) */
     set currentLevel(newLevel) {
-        logger.log('set currentLevel:${newLevel}');
+        logger.log(`set currentLevel:${newLevel}`);
         this.loadLevel = newLevel;
         this.bufferController.immediateLevelSwitch();
     }
@@ -174,7 +174,7 @@ class Hls {
 
     /* set quality level for next fragment (-1 for automatic level selection) */
     set nextLevel(newLevel) {
-        logger.log('set nextLevel:${newLevel}');
+        logger.log(`set nextLevel:${newLevel}`);
         this.levelController.manualLevel = newLevel;
         this.bufferController.nextLevelSwitch();
     }
@@ -186,7 +186,7 @@ class Hls {
 
     /* set quality level for current/next loaded fragment (-1 for automatic level selection) */
     set loadLevel(newLevel) {
-        logger.log('set loadLevel:${newLevel}');
+        logger.log(`set loadLevel:${newLevel}`);
         this.levelController.manualLevel = newLevel;
     }
 
@@ -209,7 +209,7 @@ class Hls {
     /** set first level (index of first level referenced in manifest)
      **/
     set firstLevel(newLevel) {
-        logger.log('set firstLevel:${newLevel}');
+        logger.log(`set firstLevel:${newLevel}`);
         this.levelController.firstLevel = newLevel;
     }
 
@@ -226,7 +226,7 @@ class Hls {
       if -1 : automatic start level selection, playback will start from level matching download bandwidth (determined from download of first segment)
   **/
     set startLevel(newLevel) {
-        logger.log('set startLevel:${newLevel}');
+        logger.log(`set startLevel:${newLevel}`);
         this.levelController.startLevel = newLevel;
     }
 
@@ -237,7 +237,7 @@ class Hls {
 
     /** set the capping/max level value that could be used by automatic level selection algorithm **/
     set autoLevelCapping(newLevel) {
-        logger.log('set autoLevelCapping:${newLevel}');
+        logger.log(`set autoLevelCapping:${newLevel}`);
         this.levelController.autoLevelCapping = newLevel;
     }
 

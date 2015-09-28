@@ -61,7 +61,9 @@ class LevelController {
             if (levels[i].bitrate === bitrateStart) {
                 this._firstLevel = i;
                 logger.log(
-                    'manifest loaded,${levels.length} level(s) found, first bitrate:${bitrateStart}'
+                    `manifest loaded,${
+                        levels.length
+                    } level(s) found, first bitrate:${bitrateStart}`
                 );
                 break;
             }
@@ -100,13 +102,13 @@ class LevelController {
                 this.timer = null;
             }
             this._level = newLevel;
-            logger.log('switching to level ${newLevel}');
+            logger.log(`switching to level ${newLevel}`);
             observer.trigger(Event.LEVEL_SWITCH, { level: newLevel });
             var level = this._levels[newLevel];
             // check if we need to load playlist for this level
             if (level.details === undefined || level.details.live === true) {
                 // level not retrieved yet, or live playlist we need to (re)load it
-                logger.log('(re)loading playlist for level ${newLevel}');
+                logger.log(`(re)loading playlist for level ${newLevel}`);
                 var urlId = level.urlId;
                 observer.trigger(Event.LEVEL_LOADING, {
                     url: level.url[urlId],
@@ -205,19 +207,21 @@ class LevelController {
                 level.urlId++;
                 level.details = undefined;
                 logger.warn(
-                    'level controller,${details} for level ${levelId}: switching to redundant stream id ${level.urlId}'
+                    `level controller,${details} for level ${levelId}: switching to redundant stream id ${
+                        level.urlId
+                    }`
                 );
             } else {
                 // we could try to recover if in auto mode and current level not lowest level (0)
                 let recoverable = this._manualLevel === -1 && levelId;
                 if (recoverable) {
                     logger.warn(
-                        'level controller,${details}: emergency switch-down for next fragment'
+                        `level controller,${details}: emergency switch-down for next fragment`
                     );
                     this.lastbw = 0;
                     this.lastfetchduration = 0;
                 } else {
-                    logger.error('cannot recover ${details} error');
+                    logger.error(`cannot recover ${details} error`);
                     this._level = undefined;
                     // stopping live reloading timer if any
                     if (this.timer) {

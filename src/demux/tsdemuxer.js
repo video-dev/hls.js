@@ -408,11 +408,11 @@ class TSDemuxer {
                         //logger.log('Video next PTS:' + this.nextAvcPts);
                         if (delta > 1) {
                             logger.log(
-                                'AVC:${delta} ms hole between fragments detected,filling it'
+                                `AVC:${delta} ms hole between fragments detected,filling it`
                             );
                         } else if (delta < -1) {
                             logger.log(
-                                'AVC:${(-delta)} ms overlapping between fragments detected'
+                                `AVC:${-delta} ms overlapping between fragments detected`
                             );
                         }
                         // set PTS to next PTS
@@ -655,8 +655,7 @@ class TSDemuxer {
         if (adtsStartOffset) {
             var reason, fatal;
             if (adtsStartOffset < len - 1) {
-                reason =
-                    'AAC PES did not start with ADTS header,offset:${adtsStartOffset}';
+                reason = `AAC PES did not start with ADTS header,offset:${adtsStartOffset}`;
                 fatal = false;
             } else {
                 reason = 'no ADTS header found in AAC PES';
@@ -685,7 +684,9 @@ class TSDemuxer {
             track.timescale = this.MP4_TIMESCALE;
             track.duration = this.MP4_TIMESCALE * this._duration;
             logger.log(
-                'parsed codec:${track.codec},rate:${config.samplerate},nb channel:${config.channelCount}'
+                `parsed codec:${track.codec},rate:${
+                    config.samplerate
+                },nb channel:${config.channelCount}`
             );
         }
         nbSamples = 0;
@@ -788,7 +789,7 @@ class TSDemuxer {
                     if (absdelta > 1 && absdelta < 300) {
                         if (delta > 0) {
                             logger.log(
-                                'AAC:${delta} ms hole between fragments detected,filling it'
+                                `AAC:${delta} ms hole between fragments detected,filling it`
                             );
                             // set PTS to next PTS, and ensure PTS is greater or equal than last DTS
                             ptsnorm = Math.max(
@@ -799,7 +800,7 @@ class TSDemuxer {
                             //logger.log('Audio/PTS/DTS adjusted:' + aacSample.pts + '/' + aacSample.dts);
                         } else {
                             logger.log(
-                                'AAC:${(-delta)} ms overlapping between fragments detected'
+                                `AAC:${-delta} ms overlapping between fragments detected`
                             );
                         }
                     } else if (absdelta) {
@@ -899,7 +900,9 @@ class TSDemuxer {
         // byte 3
         adtsChanelConfig |= (data[offset + 3] & 0xc0) >>> 6;
         logger.log(
-            'manifest codec:${audioCodec},ADTS data:type:${adtsObjectType},sampleingIndex:${adtsSampleingIndex}[${adtsSampleingRates[adtsSampleingIndex]}kHz],channelConfig:${adtsChanelConfig}'
+            `manifest codec:${audioCodec},ADTS data:type:${adtsObjectType},sampleingIndex:${adtsSampleingIndex}[${
+                adtsSampleingRates[adtsSampleingIndex]
+            }kHz],channelConfig:${adtsChanelConfig}`
         );
         // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
         if (userAgent.indexOf('firefox') !== -1) {

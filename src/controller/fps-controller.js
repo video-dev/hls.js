@@ -36,7 +36,9 @@ class FPSController {
                     var droppedFPS = 1000 * currentDropped / currentPeriod;
                     if (droppedFPS > 0) {
                         logger.log(
-                            'checkFPS : droppedFPS/decodedFPS:${droppedFPS.toFixed(1)}/${decodedFPS.toFixed(1)}'
+                            `checkFPS : droppedFPS/decodedFPS:${droppedFPS.toFixed(
+                                1
+                            )}/${decodedFPS.toFixed(1)}`
                         );
                         if (
                             currentDropped >
