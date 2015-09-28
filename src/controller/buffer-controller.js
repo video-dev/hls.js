@@ -1070,14 +1070,14 @@ class BufferController {
                 // create source Buffer and link them to MediaSource
                 if (audioCodec) {
                     sb = this.sourceBuffer.audio = this.mediaSource.addSourceBuffer(
-                        'video/mp4;codecs=${audioCodec}'
+                        `video/mp4;codecs=${audioCodec}`
                     );
                     sb.addEventListener('updateend', this.onsbue);
                     sb.addEventListener('error', this.onsbe);
                 }
                 if (videoCodec) {
                     sb = this.sourceBuffer.video = this.mediaSource.addSourceBuffer(
-                        'video/mp4;codecs=${videoCodec}'
+                        `video/mp4;codecs=${videoCodec}`
                     );
                     sb.addEventListener('updateend', this.onsbue);
                     sb.addEventListener('error', this.onsbe);
