@@ -71,7 +71,8 @@ header {
     <div id="controls">
       <div id="customButtons"></div>
       <select id="streamSelect" class="innerControls"><option value="" selected>(Enter custom URL below)</option></select>
-      <input id="streamURL" class="innerControls" type=text value=""/><br>
+      <input id="streamURL" class="innerControls" type=text value=""/>
+      <label class="innerControls"><input id="enableStream" type=checkbox checked=true/> Enable Streaming</label>
       <div id="StreamPermalink" class="innerControls"></div>
       <div>
         <select id="videoSize" style="float:left">
@@ -197,10 +198,11 @@ $(document).ready(function() {
    $("#StatsDisplay").hide();
    $('#metricsButtonWindow').toggle(windowSliding);
    $('#metricsButtonFixed').toggle(!windowSliding);
+   $('#enableStream').click(function()      { enableStreaming = this.checked; loadStream($('#streamURL').val());});
 });
 
   'use strict';
-  var hls,events;
+  var hls,events, enableStreaming = true;
   var video = $('#video')[0];
   video.volume = 0.05;
 
@@ -219,12 +221,19 @@ $(document).ready(function() {
             clearInterval(hls.bufferTimer);
            hls.bufferTimer = undefined;
          }
+         hls = null;
        }
 
       $('#streamURL').val(url);
       var hlsLink = document.URL.split('?')[0] +  '?src=' + encodeURIComponent(url);
       var description = 'permalink: ' + "<a href=\"" + hlsLink + "\">" + hlsLink + "</a>";
       $("#StreamPermalink").html(description);
+
+      if(!enableStreaming) {
+        $("#HlsStatus").text("Streaming disabled");
+        return;
+      }
+
       $("#HlsStatus").text('loading ' + url);
        events = { url : url, t0 : Date.now(), load : [], buffer : [], video : [], level : [], bitrate : []};
        hls = new Hls({debug:true});
