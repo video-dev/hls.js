@@ -185,7 +185,8 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       fpsDroppedMonitoringPeriod : 5000,
       fpsDroppedMonitoringThreshold : 0.2,
       appendErrorMaxRetry : 200,
-      loader : customLoader
+      loader : customLoader,
+      xhrSetup : XMLHttpRequestSetupCallback
     };
 
 
@@ -269,6 +270,22 @@ var customLoader = function() {
   /* destroy loading context */
   this.destroy = function() {}
   }
+```
+
+#### ```xhrSetup```
+(default : none)
+
+XmlHttpRequest customization callback for default loader.
+
+This could be function with single argument of type XMLHttpRequest.
+If specified, default loader will call this function before ```xhr.send()```, so that allow user to modify/setup xhr.
+
+```js
+var config = {
+  xhrSetup: function(xhr) {
+    xhr.withCredentials = true; // do send cookies
+  }
+}
 ```
 
 ## Video Binding/Unbinding API
