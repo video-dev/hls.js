@@ -275,10 +275,11 @@ var customLoader = function() {
 #### ```xhrSetup```
 (default : none)
 
-XmlHttpRequest customization callback for default loader.
+XmlHttpRequest customization callback for default XHR based loader.
 
-This could be function with single argument of type XMLHttpRequest.
-If specified, default loader will call this function before ```xhr.send()```, so that allow user to modify/setup xhr.
+parameter should be a function with one single argument (of type XMLHttpRequest).
+If ```xhrSetup``` is specified, default loader will invoke it before calling ```xhr.send()```.
+This allows user to easily modify/setup XHR. see example below.
 
 ```js
 var config = {
