@@ -5,7 +5,11 @@
 import { logger } from '../utils/logger';
 
 class XhrLoader {
-    constructor() {}
+    constructor(config) {
+        if (config && config.xhrSetup) {
+            this.xhrSetup = config.xhrSetup;
+        }
+    }
 
     destroy() {
         this.abort();
@@ -59,6 +63,9 @@ class XhrLoader {
         xhr.responseType = this.responseType;
         this.stats.tfirst = null;
         this.stats.loaded = 0;
+        if (this.xhrSetup) {
+            this.xhrSetup(xhr);
+        }
         xhr.send();
     }
 

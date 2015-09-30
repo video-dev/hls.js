@@ -26,7 +26,7 @@ class FragmentLoader {
         this.frag = frag;
         this.frag.loaded = 0;
         var config = this.hls.config;
-        frag.loader = this.loader = new config.loader();
+        frag.loader = this.loader = new config.loader(config);
         this.loader.load(
             frag.url,
             'arraybuffer',
