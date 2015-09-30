@@ -39,7 +39,7 @@ class PlaylistLoader {
         this.url = url;
         this.id = id1;
         this.id2 = id2;
-        this.loader = new config.loader();
+        this.loader = new config.loader(config);
         this.loader.load(
             url,
             '',
