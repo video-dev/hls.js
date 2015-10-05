@@ -1185,6 +1185,10 @@ class BufferController {
                     stats: this.stats,
                     frag: this.frag
                 });
+                logger.log(
+                    'video buffered :' +
+                        this.timeRangesToString(this.video.buffered)
+                );
                 this.state = this.IDLE;
             }
         }
@@ -1201,6 +1205,14 @@ class BufferController {
             frag: this.frag
         });
     }
-}
 
+    timeRangesToString(r) {
+        var log = '',
+            len = r.length;
+        for (var i = 0; i < len; i++) {
+            log += '[' + r.start(i) + ',' + r.end(i) + ']';
+        }
+        return log;
+    }
+}
 export default BufferController;
