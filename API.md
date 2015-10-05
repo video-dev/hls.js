@@ -175,6 +175,7 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       autoStartLoad : true,
       maxBufferLength : 30,
       maxBufferSize : 60*1000*1000,
+      liveSyncDurationCount : 3,
       enableWorker : true,
       fragLoadingTimeOut : 20000,
       fragLoadingMaxRetry : 6,
