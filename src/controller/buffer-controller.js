@@ -965,7 +965,7 @@ class BufferController {
       if (this.frag) {
         this.stats.tbuffered = new Date();
         observer.trigger(Event.FRAG_BUFFERED, {stats: this.stats, frag: this.frag});
-        logger.log("video buffered :" + this.timeRangesToString(this.video.buffered));
+        logger.log(`video buffered : ${this.timeRangesToString(this.video.buffered)}`);
         this.state = this.IDLE;
       }
     }
@@ -979,9 +979,9 @@ class BufferController {
   }
 
   timeRangesToString(r) {
-    var log = "", len = r.length;
+    var log = '', len = r.length;
     for (var i=0; i<len; i++) {
-      log += "[" + r.start(i) + "," + r.end(i) + "]";
+      log += '[' + r.start(i) + ',' + r.end(i) + ']';
     }
     return log;
   }
