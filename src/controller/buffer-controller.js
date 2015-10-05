@@ -1193,8 +1193,9 @@ class BufferController {
                     frag: this.frag
                 });
                 logger.log(
-                    'video buffered :' +
-                        this.timeRangesToString(this.video.buffered)
+                    `video buffered : ${this.timeRangesToString(
+                        this.video.buffered
+                    )}`
                 );
                 this.state = this.IDLE;
             }
