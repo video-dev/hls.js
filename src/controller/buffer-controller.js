@@ -952,6 +952,7 @@ class BufferController {
       if (this.frag) {
         this.stats.tbuffered = new Date();
         observer.trigger(Event.FRAG_BUFFERED, {stats: this.stats, frag: this.frag});
+        logger.log("video buffered :" + this.timeRangesToString(this.video.buffered));
         this.state = this.IDLE;
       }
     }
@@ -963,7 +964,14 @@ class BufferController {
     this.state = this.ERROR;
     observer.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_APPENDING_ERROR, fatal: true, frag: this.frag});
   }
-}
 
+  timeRangesToString(r) {
+    var log = "", len = r.length;
+    for (var i=0; i<len; i++) {
+      log += "[" + r.start(i) + "," + r.end(i) + "]";
+    }
+    return log;
+  }
+}
 export default BufferController;
 
