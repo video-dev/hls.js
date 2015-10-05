@@ -811,9 +811,9 @@ class BufferController {
     newLevel.details = newLevelDetails;
     newLevel.details.sliding = sliding;
     if (this.startLevelLoaded === false) {
-      // if live playlist, set start position to be fragment N-3
+      // if live playlist, set start position to be fragment N-this.config.liveSyncDurationCount (usually 3)
       if (newLevelDetails.live) {
-        this.startPosition = Math.max(0, duration - 3 * newLevelDetails.targetduration);
+        this.startPosition = Math.max(0, duration - this.config.liveSyncDurationCount * newLevelDetails.targetduration);
       }
       this.nextLoadPosition = this.startPosition;
       this.startLevelLoaded = true;

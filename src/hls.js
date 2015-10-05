@@ -39,6 +39,7 @@ class Hls {
       debug: false,
       maxBufferLength: 30,
       maxBufferSize: 60 * 1000 * 1000,
+      liveSyncDurationCount:3,
       maxMaxBufferLength: 600,
       enableWorker: true,
       fragLoadingTimeOut: 20000,
