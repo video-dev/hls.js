@@ -250,6 +250,15 @@ class ExpGolomb {
                 frameCropBottomOffset * 2
         };
     }
+
+    readSliceType() {
+        // skip NALu type
+        this.readUByte();
+        // discard first_mb_in_slice
+        this.readUEG();
+        // return slice_type
+        return this.readUEG();
+    }
 }
 
 export default ExpGolomb;
