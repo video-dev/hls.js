@@ -905,11 +905,23 @@ class TSDemuxer {
                 24000,
                 22050,
                 16000,
-                12000
+                12000,
+                11025,
+                8000,
+                7350
             ];
         // byte 2
         adtsObjectType = ((data[offset + 2] & 0xc0) >>> 6) + 1;
         adtsSampleingIndex = (data[offset + 2] & 0x3c) >>> 2;
+        if (adtsSampleingIndex > adtsSampleingRates.length - 1) {
+            observer.trigger(Event.ERROR, {
+                type: ErrorTypes.MEDIA_ERROR,
+                details: ErrorDetails.FRAG_PARSING_ERROR,
+                fatal: true,
+                reason: `invalid ADTS sampling index:${adtsSampleingIndex}`
+            });
+            return;
+        }
         adtsChanelConfig = (data[offset + 2] & 0x01) << 2;
         // byte 3
         adtsChanelConfig |= (data[offset + 3] & 0xc0) >>> 6;
