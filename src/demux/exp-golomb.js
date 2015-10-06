@@ -235,6 +235,15 @@ class ExpGolomb {
       height: ((2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16) - (frameCropTopOffset * 2) - (frameCropBottomOffset * 2)
     };
   }
+
+  readSliceType() {
+    // skip NALu type
+    this.readUByte();
+    // discard first_mb_in_slice
+    this.readUEG();
+    // return slice_type
+    return this.readUEG();
+  }
 }
 
 export default ExpGolomb;
