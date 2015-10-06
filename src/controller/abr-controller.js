@@ -50,7 +50,7 @@ class AbrController {
       maxAutoLevel = this._autoLevelCapping;
     }
 
-    if(this._nextAutoLevel !=-1) {
+    if (this._nextAutoLevel !== -1) {
       return Math.min(this._nextAutoLevel,maxAutoLevel);
     }
 
