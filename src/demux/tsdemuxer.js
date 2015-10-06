@@ -720,11 +720,16 @@
             64000, 48000,
             44100, 32000,
             24000, 22050,
-            16000, 12000
-          ];
+            16000, 12000,
+            11025, 8000,
+            7350];
     // byte 2
     adtsObjectType = ((data[offset + 2] & 0xC0) >>> 6) + 1;
     adtsSampleingIndex = ((data[offset + 2] & 0x3C) >>> 2);
+    if(adtsSampleingIndex > adtsSampleingRates.length-1) {
+      observer.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: `invalid ADTS sampling index:${adtsSampleingIndex}`});
+      return;
+    }
     adtsChanelConfig = ((data[offset + 2] & 0x01) << 2);
     // byte 3
     adtsChanelConfig |= ((data[offset + 3] & 0xC0) >>> 6);
