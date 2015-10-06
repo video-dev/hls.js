@@ -187,7 +187,8 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       fpsDroppedMonitoringThreshold : 0.2,
       appendErrorMaxRetry : 200,
       loader : customLoader,
-      xhrSetup : XMLHttpRequestSetupCallback
+      xhrSetup : XMLHttpRequestSetupCallback,
+      abrController : customAbrController
     };
 
 
@@ -298,6 +299,18 @@ var config = {
 }
 ```
 
+#### ```abrController```
+(default : internal ABR controller)
+
+customized Adaptive Bitrate Streaming Controller
+
+parameter should be a class providing 2 getter/setters and a destroy() method:
+
+ - get/set nextAutoLevel : get/set : return next auto-quality level/force next auto-quality level that should be returned (currently used for emergency switch down)
+ - get/set autoLevelCapping : get/set : capping/max level value that could be used by ABR Controller
+ - destroy() : should clean-up all used resources
+
+
 ## Video Binding/Unbinding API
 
 #### ```hls.attachVideo(videoElement)```
@@ -359,7 +372,7 @@ default value is firstLevel
 tell whether auto level selection is enabled or not
 
 #### ```hls.autoLevelCapping```
-get/set : capping/max level value that could be used by automatic level selection algorithm
+get/set : capping/max level value that could be used by ABR Controller
 
 default value is -1 (no level capping)
 

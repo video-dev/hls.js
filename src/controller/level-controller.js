@@ -13,11 +13,9 @@ class LevelController {
     this.hls = hls;
     this.onml = this.onManifestLoaded.bind(this);
     this.onll = this.onLevelLoaded.bind(this);
-    this.onflp = this.onFragmentLoadProgress.bind(this);
     this.onerr = this.onError.bind(this);
     this.ontick = this.tick.bind(this);
     observer.on(Event.MANIFEST_LOADED, this.onml);
-    observer.on(Event.FRAG_LOAD_PROGRESS, this.onflp);
     observer.on(Event.LEVEL_LOADED, this.onll);
     observer.on(Event.ERROR, this.onerr);
     this._manualLevel = this._autoLevelCapping = -1;
@@ -25,7 +23,6 @@ class LevelController {
 
   destroy() {
     observer.off(Event.MANIFEST_LOADED, this.onml);
-    observer.off(Event.FRAG_LOAD_PROGRESS, this.onflp);
     observer.off(Event.LEVEL_LOADED, this.onll);
     observer.off(Event.ERROR, this.onerr);
     if (this.timer) {
@@ -116,16 +113,6 @@ class LevelController {
     }
   }
 
-  /** Return the capping/max level value that could be used by automatic level selection algorithm **/
-  get autoLevelCapping() {
-    return this._autoLevelCapping;
-  }
-
-  /** set the capping/max level value that could be used by automatic level selection algorithm **/
-  set autoLevelCapping(newLevel) {
-    this._autoLevelCapping = newLevel;
-  }
-
   get firstLevel() {
     return this._firstLevel;
   }
@@ -144,16 +131,6 @@ class LevelController {
 
   set startLevel(newLevel) {
     this._startLevel = newLevel;
-  }
-
-  onFragmentLoadProgress(event, data) {
-    var stats = data.stats;
-    if (stats.aborted === undefined) {
-      this.lastfetchduration = (new Date() - stats.trequest) / 1000;
-      this.lastfetchlevel = data.frag.level;
-      this.lastbw = (stats.loaded * 8) / this.lastfetchduration;
-      //console.log('fetchDuration:${this.lastfetchduration},bw:${(this.lastbw/1000).toFixed(0)}/${stats.aborted}');
-    }
   }
 
   onError(event, data) {
@@ -187,8 +164,7 @@ class LevelController {
         let recoverable = ((this._manualLevel === -1) && levelId);
         if (recoverable) {
           logger.warn(`level controller,${details}: emergency switch-down for next fragment`);
-          this.lastbw = 0;
-          this.lastfetchduration = 0;
+          this.hls.abrController.nextAutoLevel = 0;
         } else {
           logger.error(`cannot recover ${details} error`);
           this._level = undefined;
@@ -226,34 +202,8 @@ class LevelController {
     if (this._manualLevel !== -1) {
       return this._manualLevel;
     } else {
-     return this.nextAutoLevel();
+     return this.hls.abrController.nextAutoLevel;
     }
-  }
-
-  nextAutoLevel() {
-    var lastbw = this.lastbw, adjustedbw, i, maxAutoLevel;
-    if (this._autoLevelCapping === -1) {
-      maxAutoLevel = this._levels.length - 1;
-    } else {
-      maxAutoLevel = this._autoLevelCapping;
-    }
-    // follow algorithm captured from stagefright :
-    // https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp
-    // Pick the highest bandwidth stream below or equal to estimated bandwidth.
-    for (i = 0; i <= maxAutoLevel; i++) {
-    // consider only 80% of the available bandwidth, but if we are switching up,
-    // be even more conservative (70%) to avoid overestimating and immediately
-    // switching back.
-      if (i <= this._level) {
-        adjustedbw = 0.8 * lastbw;
-      } else {
-        adjustedbw = 0.7 * lastbw;
-      }
-      if (adjustedbw < this._levels[i].bitrate) {
-        return Math.max(0, i - 1);
-      }
-    }
-    return i - 1;
   }
 }
 

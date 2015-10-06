@@ -9,8 +9,9 @@ import StatsHandler from './stats';
 import observer from './observer';
 import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
+import AbrController from    './controller/abr-controller';
 import BufferController from './controller/buffer-controller';
-import LevelController from './controller/level-controller';
+import LevelController from  './controller/level-controller';
 //import FPSController from './controller/fps-controller';
 import {logger, enableLogs} from './utils/logger';
 import XhrLoader from './utils/xhr-loader';
@@ -52,7 +53,8 @@ class Hls {
       fpsDroppedMonitoringPeriod: 5000,
       fpsDroppedMonitoringThreshold: 0.2,
       appendErrorMaxRetry: 200,
-      loader: XhrLoader
+      loader: XhrLoader,
+      abrController : AbrController
     };
     for (var prop in configDefault) {
         if (prop in config) { continue; }
@@ -63,6 +65,7 @@ class Hls {
     this.playlistLoader = new PlaylistLoader(this);
     this.fragmentLoader = new FragmentLoader(this);
     this.levelController = new LevelController(this);
+    this.abrController = new config.abrController(this);
     this.bufferController = new BufferController(this);
     //this.fpsController = new FPSController(this);
     this.statsHandler = new StatsHandler(this);
@@ -227,13 +230,13 @@ class Hls {
 
   /** Return the capping/max level value that could be used by automatic level selection algorithm **/
   get autoLevelCapping() {
-    return this.levelController.autoLevelCapping;
+    return this.abrController.autoLevelCapping;
   }
 
   /** set the capping/max level value that could be used by automatic level selection algorithm **/
   set autoLevelCapping(newLevel) {
     logger.log(`set autoLevelCapping:${newLevel}`);
-    this.levelController.autoLevelCapping = newLevel;
+    this.abrController.autoLevelCapping = newLevel;
   }
 
   /* check if we are in automatic level selection mode */
