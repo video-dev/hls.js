@@ -314,10 +314,13 @@
     //build sample from PES
     // Annex B to MP4 conversion to be done
     if (units.length) {
-      avcSample = {units: units, pts: pes.pts, dts: pes.dts, key: key};
-      this._avcSamples.push(avcSample);
-      this._avcSamplesLength += units.length;
-      this._avcSamplesNbNalu += units.units.length;
+      // only push AVC sample if keyframe already found. browsers expect a keyframe at first to start decoding
+      if (key === true || track.sps ) {
+        avcSample = {units: units, pts: pes.pts, dts: pes.dts, key: key};
+        this._avcSamples.push(avcSample);
+        this._avcSamplesLength += units.length;
+        this._avcSamplesNbNalu += units.units.length;
+      }
     }
   }
 
