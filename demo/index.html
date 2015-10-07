@@ -72,7 +72,8 @@ header {
       <div id="customButtons"></div>
       <select id="streamSelect" class="innerControls"><option value="" selected>(Enter custom URL below)</option></select>
       <input id="streamURL" class="innerControls" type=text value=""/>
-      <label class="innerControls"><input id="enableStream" type=checkbox checked=true/> Enable Streaming</label>
+      <label class="innerControls"><input id="enableStream" type=checkbox checked/> Enable Streaming</label>
+      <label class="innerControls"><input id="autoRecoverError" type=checkbox checked/> Auto-Recover Media Error</label>
       <div id="StreamPermalink" class="innerControls"></div>
       <div>
         <select id="videoSize" style="float:left">
@@ -199,10 +200,12 @@ $(document).ready(function() {
    $('#metricsButtonWindow').toggle(windowSliding);
    $('#metricsButtonFixed').toggle(!windowSliding);
    $('#enableStream').click(function()      { enableStreaming = this.checked; loadStream($('#streamURL').val());});
+   $('#autoRecoverError').prop( "checked", false );
+   $('#autoRecoverError').click(function()  { autoRecoverError = this.checked; });
 });
 
   'use strict';
-  var hls,events, enableStreaming = true;
+  var hls,events, enableStreaming = true, autoRecoverError = false;
   var video = $('#video')[0];
   video.volume = 0.05;
 
@@ -361,8 +364,10 @@ $(document).ready(function() {
         if(data.fatal) {
           switch(data.type) {
             case Hls.ErrorTypes.MEDIA_ERROR:
-              $("#HlsStatus").append(",try to recover media Error ...");
-              hls.recoverMediaError();
+              if(autoRecoverError) {
+                $("#HlsStatus").append(",try to recover media Error ...");
+                hls.recoverMediaError();
+              }
               break;
             case Hls.ErrorTypes.NETWORK_ERROR:
               $("#HlsStatus").append(",network error ...");
@@ -439,8 +444,11 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
                errorTxt = "You aborted the video playback";
               break;
             case mediaError.MEDIA_ERR_DECODE:
-              errorTxt = "The video playback was aborted due to a corruption problem or because the video used features your browser did not support,try to recover video Error";
-              hls.recoverMediaError();
+              errorTxt = "The video playback was aborted due to a corruption problem or because the video used features your browser did not support";
+              if(autoRecoverError) {
+                errorTxt+=",try to recover video Error";
+                hls.recoverMediaError();
+              }
               break;
             case mediaError.MEDIA_ERR_NETWORK:
               errorTxt = "A network error caused the video download to fail part-way";
