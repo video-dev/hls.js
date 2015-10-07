@@ -32,18 +32,32 @@ class LevelController {
   }
 
   onManifestLoaded(event, data) {
-    var levels = [], bitrateStart, i, bitrateSet = {};
+    var levels0 = [], levels = [], bitrateStart, i, bitrateSet = {}, videoCodecFound = false, audioCodecFound = false;
+
+    // regroup redundant level together
     data.levels.forEach(level => {
+      if(level.videoCodec) videoCodecFound = true;
+      if(level.audioCodec) audioCodecFound = true;
       var redundantLevelId = bitrateSet[level.bitrate];
       if (redundantLevelId === undefined) {
         bitrateSet[level.bitrate] = levels.length;
         level.url = [level.url];
         level.urlId = 0;
-        levels.push(level);
+        levels0.push(level);
       } else {
-        levels[redundantLevelId].url.push(level.url);
+        levels0[redundantLevelId].url.push(level.url);
       }
     });
+
+    // remove audio-only level if we also have levels with audio+video codecs signalled
+    if(videoCodecFound && audioCodecFound) {
+      levels0.forEach(level => {
+        if(level.videoCodec) {
+          levels.push(level);
+        }
+      });
+    }
+
     // start bitrate is the first bitrate of the manifest
     bitrateStart = levels[0].bitrate;
     // sort level on bitrate
