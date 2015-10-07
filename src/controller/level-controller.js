@@ -36,8 +36,12 @@ class LevelController {
 
     // regroup redundant level together
     data.levels.forEach(level => {
-      if(level.videoCodec) videoCodecFound = true;
-      if(level.audioCodec) audioCodecFound = true;
+      if(level.videoCodec) {
+        videoCodecFound = true;
+      }
+      if(level.audioCodec) {
+        audioCodecFound = true;
+      }
       var redundantLevelId = bitrateSet[level.bitrate];
       if (redundantLevelId === undefined) {
         bitrateSet[level.bitrate] = levels.length;
