@@ -1,5 +1,6 @@
  import Event from '../events';
  import TSDemuxer from '../demux/tsdemuxer';
+ import MP4Remuxer from '../remux/mp4-remuxer';
  import observer from '../observer';
 
 var TSDemuxerWorker = function (self) {
@@ -7,7 +8,7 @@ var TSDemuxerWorker = function (self) {
     //console.log('demuxer cmd:' + ev.data.cmd);
     switch (ev.data.cmd) {
       case 'init':
-        self.demuxer = new TSDemuxer();
+        self.demuxer = new TSDemuxer(MP4Remuxer);
         break;
       case 'demux':
         self.demuxer.push(new Uint8Array(ev.data.data), ev.data.audioCodec, ev.data.videoCodec, ev.data.timeOffset, ev.data.cc, ev.data.level, ev.data.duration);

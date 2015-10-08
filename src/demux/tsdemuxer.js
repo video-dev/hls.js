@@ -7,14 +7,14 @@
  import Event from '../events';
  import ExpGolomb from './exp-golomb';
 // import Hex from '../utils/hex';
- import MP4Remuxer from '../remux/mp4-remuxer';
  import observer from '../observer';
  import {logger} from '../utils/logger';
  import {ErrorTypes, ErrorDetails} from '../errors';
 
  class TSDemuxer {
 
-  constructor() {
+  constructor(remuxerClass) {
+    this.remuxerClass = remuxerClass;
     this.lastCC = 0;
     this.PES_TIMESCALE = 90000;
   }
@@ -24,7 +24,7 @@
     this._pmtId = -1;
     this._avcTrack = {type: 'video', id :-1, sequenceNumber: 0, samples : [], len : 0, nbNalu : 0};
     this._aacTrack = {type: 'audio', id :-1, sequenceNumber: 0, samples : [], len : 0};
-    this.remuxer = new MP4Remuxer();
+    this.remuxer = new this.remuxerClass();
   }
 
   insertDiscontinuity() {
