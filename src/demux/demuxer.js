@@ -62,7 +62,7 @@ class Demuxer {
                 level,
                 duration
             );
-            this.demuxer.end();
+            this.demuxer.remux();
         }
     }
 

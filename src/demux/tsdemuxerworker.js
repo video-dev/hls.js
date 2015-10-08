@@ -19,7 +19,7 @@ var TSDemuxerWorker = function(self) {
                     ev.data.level,
                     ev.data.duration
                 );
-                self.demuxer.end();
+                self.demuxer.remux();
                 break;
             default:
                 break;

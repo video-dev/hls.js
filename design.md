@@ -56,9 +56,14 @@ design idea is pretty simple :
   - [src/demux/exp-golomb.js][]
     - utility class to extract Exponential-Golomb coded data. needed by TS demuxer for SPS parsing.
   - [src/demux/tsdemuxer.js][]
-    - highly optimized TS demuxer, convert TS packet into ISO BMFF (MP4) boxes, notify demuxing completion using events.
-     - this demuxer is able to deal with small gaps between fragments and ensure timestamp continuity.
+    - highly optimized TS demuxer:
+     - parse PAT, PMT
+     - extract PES packet from audio and video PIDs
+     - extract AVC/H264 NAL units and AAC/ADTS samples from PES packet
+     - trigger the remuxer upon parsing completion
      - it also tries to workaround as best as it can audio codec switch (HE-AAC to AAC and vice versa), without having to restart the MediaSource.
+     - it also controls the remuxing process : 
+      - upon discontinuity or level switch detection, it will also notifies the remuxer so that it can reset its state.
   - [src/demux/tsdemuxerworker.js][]
     - TS demuxer web worker. 
     - listen to worker message, and trigger tsdemuxer upon reception of TS fragments.
@@ -68,10 +73,13 @@ design idea is pretty simple :
   - [src/loader/playlist-loader.js][]
    - in charge of loading manifest, and level playlists, use xhr-loader if not overrided by user config.
   - [src/remux/mp4-generator.js][]
-   - in charge of converting AVC/AAC samples in MP4 boxes
+   - in charge of generating MP4 boxes
      - generate Init Segment (moov)
      - generate samples Box (moof and mdat)
-
+  - [src/remux/mp4-remuxer.js][]
+   - in charge of converting AVC/AAC samples provided by demuxer into fragmented ISO BMFF boxes, compatible with MediaSource
+   - this remuxer is able to deal with small gaps between fragments and ensure timestamp continuity.
+   - it notifies remuxing completion using events (```FRAG_PARSING_INIT_SEGMENT```and ```FRAG_PARSING_DATA```)
   - [src/utils/hex.js][]
     - Hex dump utils, useful for debug
   - [src/utils/logger.js][]
@@ -98,6 +106,7 @@ design idea is pretty simple :
 [src/loader/fragment-loader.js]: src/loader/fragment-loader.js
 [src/loader/playlist-loader.js]: src/loader/playlist-loader.js
 [src/remux/mp4-generator.js]: src/remux/mp4-generator.js
+[src/remux/mp4-remuxer.js]: src/remux/mp4-remuxer.js
 [src/utils/hex.js]: src/utils/hex.js
 [src/utils/logger.js]: src/utils/logger.js
 [src/utils/xhr-loader.js]: src/utils/xhr-loader.js
