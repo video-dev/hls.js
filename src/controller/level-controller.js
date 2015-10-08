@@ -60,6 +60,8 @@ class LevelController {
           levels.push(level);
         }
       });
+    } else {
+      levels = levels0;
     }
 
     // start bitrate is the first bitrate of the manifest
