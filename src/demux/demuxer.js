@@ -41,7 +41,7 @@ class Demuxer {
       this.w.postMessage({cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, duration: duration}, [data]);
     } else {
       this.demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, duration);
-      this.demuxer.end();
+      this.demuxer.remux();
     }
   }
 
