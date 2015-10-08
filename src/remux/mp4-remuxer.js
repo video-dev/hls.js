@@ -28,28 +28,23 @@ class MP4Remuxer {
   }
 
   remux(audioTrack,videoTrack,timeOffset) {
-    this._aacTrack = audioTrack;
-    this._avcTrack = videoTrack;
-    this.timeOffset = timeOffset;
-
     // generate Init Segment if needed
     if (!this._initSegGenerated) {
-      this._generateInitSegment();
+      this._generateInitSegment(audioTrack,videoTrack,timeOffset);
     }
     //logger.log('nb AVC samples:' + videoTrack.samples.length);
     if (videoTrack.samples.length) {
-      this._remuxAVCSamples(videoTrack);
+      this._remuxAVCSamples(videoTrack,timeOffset);
     }
     //logger.log('nb AAC samples:' + audioTrack.samples.length);
     if (audioTrack.samples.length) {
-      this._remuxAACSamples(audioTrack);
+      this._remuxAACSamples(audioTrack,timeOffset);
     }
     //notify end of parsing
     observer.trigger(Event.FRAG_PARSED);
   }
 
-  _generateInitSegment() {
-    var audioTrack = this._aacTrack,videoTrack=this._avcTrack;
+  _generateInitSegment(audioTrack,videoTrack,timeOffset) {
     if (videoTrack.id === -1) {
       //audio only
       if (audioTrack.config) {
@@ -62,8 +57,8 @@ class MP4Remuxer {
       }
       if (this._initPTS === undefined) {
         // remember first PTS of this demuxing context
-        this._initPTS = audioTrack.samples[0].pts - this.PES_TIMESCALE * this.timeOffset;
-        this._initDTS = audioTrack.samples[0].dts - this.PES_TIMESCALE * this.timeOffset;
+        this._initPTS = audioTrack.samples[0].pts - this.PES_TIMESCALE * timeOffset;
+        this._initDTS = audioTrack.samples[0].dts - this.PES_TIMESCALE * timeOffset;
       }
     } else
     if (audioTrack.id === -1) {
@@ -78,8 +73,8 @@ class MP4Remuxer {
         this._initSegGenerated = true;
         if (this._initPTS === undefined) {
           // remember first PTS of this demuxing context
-          this._initPTS = videoTrack.samples[0].pts - this.PES_TIMESCALE * this.timeOffset;
-          this._initDTS = videoTrack.samples[0].dts - this.PES_TIMESCALE * this.timeOffset;
+          this._initPTS = videoTrack.samples[0].pts - this.PES_TIMESCALE * timeOffset;
+          this._initDTS = videoTrack.samples[0].dts - this.PES_TIMESCALE * timeOffset;
         }
       }
     } else {
@@ -97,14 +92,14 @@ class MP4Remuxer {
         this._initSegGenerated = true;
         if (this._initPTS === undefined) {
           // remember first PTS of this demuxing context
-          this._initPTS = Math.min(videoTrack.samples[0].pts, audioTrack.samples[0].pts) - this.PES_TIMESCALE * this.timeOffset;
-          this._initDTS = Math.min(videoTrack.samples[0].dts, audioTrack.samples[0].dts) - this.PES_TIMESCALE * this.timeOffset;
+          this._initPTS = Math.min(videoTrack.samples[0].pts, audioTrack.samples[0].pts) - this.PES_TIMESCALE * timeOffset;
+          this._initDTS = Math.min(videoTrack.samples[0].dts, audioTrack.samples[0].dts) - this.PES_TIMESCALE * timeOffset;
         }
       }
     }
   }
 
-  _remuxAVCSamples(track) {
+  _remuxAVCSamples(track, timeOffset) {
     var view, i = 8, avcSample, mp4Sample, mp4SampleLength, unit, lastSampleDTS, mdat, moof, firstPTS, firstDTS, pts, dts, ptsnorm, dtsnorm, samples = [];
     /* concatenate the video data and construct the mdat in place
       (need 8 more bytes to fill length and mpdat type) */
@@ -158,7 +153,7 @@ class MP4Remuxer {
           }
           else {
             // not contiguous timestamp, check if PTS is within acceptable range
-            var expectedPTS = this.PES_TIMESCALE * this.timeOffset;
+            var expectedPTS = this.PES_TIMESCALE * timeOffset;
             // check if there is any unexpected drift between expected timestamp and real one
             if (Math.abs(expectedPTS - ptsnorm) > (this.PES_TIMESCALE * 3600)) {
               //logger.log('PTS looping ??? AVC PTS delta:${expectedPTS-ptsnorm}');
@@ -223,7 +218,7 @@ class MP4Remuxer {
     });
   }
 
-  _remuxAACSamples(track) {
+  _remuxAACSamples(track,timeOffset) {
     var view, i = 8, aacSample, mp4Sample, unit, lastSampleDTS, mdat, moof, firstPTS, firstDTS, pts, dts, ptsnorm, dtsnorm, samples = [];
     /* concatenate the audio data and construct the mdat in place
       (need 8 more bytes to fill length and mpdat type) */
@@ -269,7 +264,7 @@ class MP4Remuxer {
           }
           else if (absdelta) {
             // not contiguous timestamp, check if PTS is within acceptable range
-            var expectedPTS = this.PES_TIMESCALE * this.timeOffset;
+            var expectedPTS = this.PES_TIMESCALE * timeOffset;
             //logger.log('expectedPTS/PTSnorm:${expectedPTS}/${ptsnorm}/${expectedPTS-ptsnorm}');
             // check if there is any unexpected drift between expected timestamp and real one
             if (Math.abs(expectedPTS - ptsnorm) > this.PES_TIMESCALE * 3600) {
