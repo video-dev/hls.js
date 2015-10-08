@@ -3,6 +3,7 @@ import TSDemuxer from './tsdemuxer';
 import TSDemuxerWorker from './tsdemuxerworker';
 import observer from '../observer';
 import { logger } from '../utils/logger';
+import MP4Remuxer from '../remux/mp4-remuxer';
 
 class Demuxer {
     constructor(config) {
@@ -18,10 +19,10 @@ class Demuxer {
                 logger.error(
                     'error while initializing TSDemuxerWorker, fallback on regular TSDemuxer'
                 );
-                this.demuxer = new TSDemuxer();
+                this.demuxer = new TSDemuxer(MP4Remuxer);
             }
         } else {
-            this.demuxer = new TSDemuxer();
+            this.demuxer = new TSDemuxer(MP4Remuxer);
         }
         this.demuxInitialized = true;
     }
