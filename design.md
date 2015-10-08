@@ -86,6 +86,7 @@ design idea is pretty simple :
 [src/errors.js]: src/errors.js
 [src/stats.js]: src/stats.js
 [src/observer.js]: src/observer.js
+[src/controller/abr-controller.js]: src/controller/abr-controller.js
 [src/controller/buffer-controller.js]: src/controller/buffer-controller.js
 [src/controller/level-controller.js]: src/controller/level-controller.js
 [src/controller/fps-controller.js]: src/controller/fps-controller.js
