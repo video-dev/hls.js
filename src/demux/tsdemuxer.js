@@ -22,14 +22,22 @@ class TSDemuxer {
 
     switchLevel() {
         this.pmtParsed = false;
-        this._pmtId = this._avcId = this._aacId = -1;
-        this._avcTrack = { type: 'video', sequenceNumber: 0 };
-        this._aacTrack = { type: 'audio', sequenceNumber: 0 };
-        this._avcSamples = [];
-        this._avcSamplesLength = 0;
-        this._avcSamplesNbNalu = 0;
-        this._aacSamples = [];
-        this._aacSamplesLength = 0;
+        this._pmtId = -1;
+        this._avcTrack = {
+            type: 'video',
+            id: -1,
+            sequenceNumber: 0,
+            samples: [],
+            len: 0,
+            nbNalu: 0
+        };
+        this._aacTrack = {
+            type: 'audio',
+            id: -1,
+            sequenceNumber: 0,
+            samples: [],
+            len: 0
+        };
         this._initSegGenerated = false;
     }
 
@@ -62,8 +70,8 @@ class TSDemuxer {
             this.lastLevel = level;
         }
         var pmtParsed = this.pmtParsed,
-            avcId = this._avcId,
-            aacId = this._aacId;
+            avcId = this._avcTrack.id,
+            aacId = this._aacTrack.id;
         // loop through TS packets
         for (start = 0; start < len; start += 188) {
             if (data[start] === 0x47) {
@@ -118,8 +126,8 @@ class TSDemuxer {
                     } else if (pid === this._pmtId) {
                         this._parsePMT(data, offset);
                         pmtParsed = this.pmtParsed = true;
-                        avcId = this._avcId;
-                        aacId = this._aacId;
+                        avcId = this._avcTrack.id;
+                        aacId = this._aacTrack.id;
                     }
                 }
             } else {
@@ -145,12 +153,12 @@ class TSDemuxer {
         if (!this._initSegGenerated) {
             this._generateInitSegment();
         }
-        //logger.log('nb AVC samples:' + this._avcSamples.length);
-        if (this._avcSamples.length) {
+        //logger.log('nb AVC samples:' + this._avcTrack.samples.length);
+        if (this._avcTrack.samples.length) {
             this._flushAVCSamples();
         }
-        //logger.log('nb AAC samples:' + this._aacSamples.length);
-        if (this._aacSamples.length) {
+        //logger.log('nb AAC samples:' + this._aacTrack.samples.length);
+        if (this._aacTrack.samples.length) {
             this._flushAACSamples();
         }
         //notify end of parsing
@@ -185,13 +193,11 @@ class TSDemuxer {
                 // ISO/IEC 13818-7 ADTS AAC (MPEG-2 lower bit-rate audio)
                 case 0x0f:
                     //logger.log('AAC PID:'  + pid);
-                    this._aacId = pid;
                     this._aacTrack.id = pid;
                     break;
                 // ITU-T Rec. H.264 and ISO/IEC 14496-10 (lower bit-rate video)
                 case 0x1b:
                     //logger.log('AVC PID:'  + pid);
-                    this._avcId = pid;
                     this._avcTrack.id = pid;
                     break;
                 default:
@@ -278,9 +284,11 @@ class TSDemuxer {
             key = false;
         units = this._parseAVCNALu(pes.data);
         // no NALu found
-        if ((units.length === 0) & (this._avcSamples.length > 0)) {
+        if ((units.length === 0) & (this._avcTrack.samples.length > 0)) {
             // append pes.data to previous NAL unit
-            var lastavcSample = this._avcSamples[this._avcSamples.length - 1];
+            var lastavcSample = this._avcTrack.samples[
+                this._avcTrack.samples.length - 1
+            ];
             var lastUnit =
                 lastavcSample.units.units[lastavcSample.units.units.length - 1];
             var tmp = new Uint8Array(
@@ -290,7 +298,7 @@ class TSDemuxer {
             tmp.set(pes.data, lastUnit.data.byteLength);
             lastUnit.data = tmp;
             lastavcSample.units.length += pes.data.byteLength;
-            this._avcSamplesLength += pes.data.byteLength;
+            this._avcTrack.len += pes.data.byteLength;
         }
         //free pes.data to save up some memory
         pes.data = null;
@@ -360,9 +368,9 @@ class TSDemuxer {
                     dts: pes.dts,
                     key: key
                 };
-                this._avcSamples.push(avcSample);
-                this._avcSamplesLength += units.length;
-                this._avcSamplesNbNalu += units.units.length;
+                this._avcTrack.samples.push(avcSample);
+                this._avcTrack.len += units.length;
+                this._avcTrack.nbNalu += units.units.length;
             }
         }
     }
@@ -388,13 +396,13 @@ class TSDemuxer {
         /* concatenate the video data and construct the mdat in place
       (need 8 more bytes to fill length and mpdat type) */
         mdat = new Uint8Array(
-            this._avcSamplesLength + 4 * this._avcSamplesNbNalu + 8
+            this._avcTrack.len + 4 * this._avcTrack.nbNalu + 8
         );
         view = new DataView(mdat.buffer);
         view.setUint32(0, mdat.byteLength);
         mdat.set(MP4.types.mdat, 4);
-        while (this._avcSamples.length) {
-            avcSample = this._avcSamples.shift();
+        while (this._avcTrack.samples.length) {
+            avcSample = this._avcTrack.samples.shift();
             mp4SampleLength = 0;
             // convert NALU bitstream to MP4 format (prepend NALU with size field)
             while (avcSample.units.units.length) {
@@ -496,8 +504,8 @@ class TSDemuxer {
         this.nextAvcPts =
             ptsnorm + mp4Sample.duration * this.PES2MP4SCALEFACTOR;
         //logger.log('Video/lastAvcDts/nextAvcPts:' + this.lastAvcDts + '/' + this.nextAvcPts);
-        this._avcSamplesLength = 0;
-        this._avcSamplesNbNalu = 0;
+        this._avcTrack.len = 0;
+        this._avcTrack.nbNalu = 0;
         track.samples = samples;
         moof = MP4.moof(
             track.sequenceNumber++,
@@ -571,9 +579,9 @@ class TSDemuxer {
                             overflow = i - state - 1;
                             if (overflow) {
                                 //logger.log('first NALU found with overflow:' + overflow);
-                                if (this._avcSamples.length) {
-                                    var lastavcSample = this._avcSamples[
-                                        this._avcSamples.length - 1
+                                if (this._avcTrack.samples.length) {
+                                    var lastavcSample = this._avcTrack.samples[
+                                        this._avcTrack.samples.length - 1
                                     ];
                                     var lastUnit =
                                         lastavcSample.units.units[
@@ -589,7 +597,7 @@ class TSDemuxer {
                                     );
                                     lastUnit.data = tmp;
                                     lastavcSample.units.length += overflow;
-                                    this._avcSamplesLength += overflow;
+                                    this._avcTrack.len += overflow;
                                 }
                             }
                         }
@@ -739,8 +747,8 @@ class TSDemuxer {
                     pts: stamp,
                     dts: stamp
                 };
-                this._aacSamples.push(aacSample);
-                this._aacSamplesLength += adtsFrameSize;
+                this._aacTrack.samples.push(aacSample);
+                this._aacTrack.len += adtsFrameSize;
                 adtsStartOffset += adtsFrameSize + adtsHeaderLen;
                 nbSamples++;
             } else {
@@ -773,12 +781,12 @@ class TSDemuxer {
             samples = [];
         /* concatenate the audio data and construct the mdat in place
       (need 8 more bytes to fill length and mpdat type) */
-        mdat = new Uint8Array(this._aacSamplesLength + 8);
+        mdat = new Uint8Array(this._aacTrack.len + 8);
         view = new DataView(mdat.buffer);
         view.setUint32(0, mdat.byteLength);
         mdat.set(MP4.types.mdat, 4);
-        while (this._aacSamples.length) {
-            aacSample = this._aacSamples.shift();
+        while (this._aacTrack.samples.length) {
+            aacSample = this._aacTrack.samples.shift();
             unit = aacSample.unit;
             mdat.set(unit, i);
             i += unit.byteLength;
@@ -874,7 +882,7 @@ class TSDemuxer {
         this.nextAacPts =
             ptsnorm + this.PES2MP4SCALEFACTOR * mp4Sample.duration;
         //logger.log('Audio/PTS/PTSend:' + aacSample.pts.toFixed(0) + '/' + this.nextAacDts.toFixed(0));
-        this._aacSamplesLength = 0;
+        this._aacTrack.len = 0;
         track.samples = samples;
         moof = MP4.moof(
             track.sequenceNumber++,
@@ -1043,7 +1051,7 @@ class TSDemuxer {
     }
 
     _generateInitSegment() {
-        if (this._avcId === -1) {
+        if (this._avcTrack.id === -1) {
             //audio only
             if (this._aacTrack.config) {
                 observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
@@ -1056,13 +1064,13 @@ class TSDemuxer {
             if (this._initPTS === undefined) {
                 // remember first PTS of this demuxing context
                 this._initPTS =
-                    this._aacSamples[0].pts -
+                    this._aacTrack.samples[0].pts -
                     this.PES_TIMESCALE * this.timeOffset;
                 this._initDTS =
-                    this._aacSamples[0].dts -
+                    this._aacTrack.samples[0].dts -
                     this.PES_TIMESCALE * this.timeOffset;
             }
-        } else if (this._aacId === -1) {
+        } else if (this._aacTrack.id === -1) {
             //video only
             if (this._avcTrack.sps && this._avcTrack.pps) {
                 observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
@@ -1075,10 +1083,10 @@ class TSDemuxer {
                 if (this._initPTS === undefined) {
                     // remember first PTS of this demuxing context
                     this._initPTS =
-                        this._avcSamples[0].pts -
+                        this._avcTrack.samples[0].pts -
                         this.PES_TIMESCALE * this.timeOffset;
                     this._initDTS =
-                        this._avcSamples[0].dts -
+                        this._avcTrack.samples[0].dts -
                         this.PES_TIMESCALE * this.timeOffset;
                 }
             }
@@ -1103,14 +1111,14 @@ class TSDemuxer {
                     // remember first PTS of this demuxing context
                     this._initPTS =
                         Math.min(
-                            this._avcSamples[0].pts,
-                            this._aacSamples[0].pts
+                            this._avcTrack.samples[0].pts,
+                            this._aacTrack.samples[0].pts
                         ) -
                         this.PES_TIMESCALE * this.timeOffset;
                     this._initDTS =
                         Math.min(
-                            this._avcSamples[0].dts,
-                            this._aacSamples[0].dts
+                            this._avcTrack.samples[0].dts,
+                            this._aacTrack.samples[0].dts
                         ) -
                         this.PES_TIMESCALE * this.timeOffset;
                 }
