@@ -3,7 +3,6 @@
 */
 
 import Event from './events';
-import observer from './observer';
 
 class StatsHandler {
 
@@ -15,21 +14,22 @@ class StatsHandler {
     this.onflea = this.onFragmentLoadEmergencyAborted.bind(this);
     this.onerr = this.onError.bind(this);
     this.onfpsd = this.onFPSDrop.bind(this);
-    observer.on(Event.MANIFEST_PARSED, this.onmp);
-    observer.on(Event.FRAG_BUFFERED, this.onfb);
-    observer.on(Event.FRAG_CHANGED, this.onfc);
-    observer.on(Event.ERROR, this.onerr);
-    observer.on(Event.FRAG_LOAD_EMERGENCY_ABORTED, this.onflea);
-    observer.on(Event.FPS_DROP, this.onfpsd);
+    hls.on(Event.MANIFEST_PARSED, this.onmp);
+    hls.on(Event.FRAG_BUFFERED, this.onfb);
+    hls.on(Event.FRAG_CHANGED, this.onfc);
+    hls.on(Event.ERROR, this.onerr);
+    hls.on(Event.FRAG_LOAD_EMERGENCY_ABORTED, this.onflea);
+    hls.on(Event.FPS_DROP, this.onfpsd);
   }
 
   destroy() {
-    observer.off(Event.MANIFEST_PARSED, this.onmp);
-    observer.off(Event.FRAG_BUFFERED, this.onfb);
-    observer.off(Event.FRAG_CHANGED, this.onfc);
-    observer.off(Event.ERROR, this.onerr);
-    observer.off(Event.FRAG_LOAD_EMERGENCY_ABORTED, this.onflea);
-    observer.off(Event.FPS_DROP, this.onfpsd);
+    var hls = this.hls;
+    hls.off(Event.MANIFEST_PARSED, this.onmp);
+    hls.off(Event.FRAG_BUFFERED, this.onfb);
+    hls.off(Event.FRAG_CHANGED, this.onfc);
+    hls.off(Event.ERROR, this.onerr);
+    hls.off(Event.FRAG_LOAD_EMERGENCY_ABORTED, this.onflea);
+    hls.off(Event.FPS_DROP, this.onfpsd);
   }
 
   attachVideo(video) {

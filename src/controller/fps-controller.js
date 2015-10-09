@@ -3,7 +3,6 @@
 */
 
 import Event from '../events';
-import observer from '../observer';
 import {logger} from '../utils/logger';
 
 class FPSController {
@@ -34,7 +33,7 @@ class FPSController {
             logger.log(`checkFPS : droppedFPS/decodedFPS:${droppedFPS.toFixed(1)}/${decodedFPS.toFixed(1)}`);
             if (currentDropped > this.hls.config.fpsDroppedMonitoringThreshold * currentDecoded) {
               logger.warn('drop FPS ratio greater than max allowed value');
-              observer.trigger(Event.FPS_DROP, {currentDropped: currentDropped, currentDecoded: currentDecoded, totalDroppedFrames: droppedFrames});
+              this.hls.trigger(Event.FPS_DROP, {currentDropped: currentDropped, currentDecoded: currentDecoded, totalDroppedFrames: droppedFrames});
             }
           }
         }

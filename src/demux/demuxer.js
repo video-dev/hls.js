@@ -1,14 +1,14 @@
 import Event from '../events';
 import TSDemuxer from './tsdemuxer';
 import TSDemuxerWorker from './tsdemuxerworker';
-import observer from '../observer';
 import {logger} from '../utils/logger';
 import MP4Remuxer from '../remux/mp4-remuxer';
 
 class Demuxer {
 
-  constructor(config) {
-    if (config.enableWorker && (typeof(Worker) !== 'undefined')) {
+  constructor(hls) {
+    this.hls = hls;
+    if (hls.config.enableWorker && (typeof(Worker) !== 'undefined')) {
         logger.log('TS demuxing in webworker');
         try {
           var work = require('webworkify');
@@ -18,10 +18,10 @@ class Demuxer {
           this.w.postMessage({cmd: 'init'});
         } catch(err) {
           logger.error('error while initializing TSDemuxerWorker, fallback on regular TSDemuxer');
-          this.demuxer = new TSDemuxer(MP4Remuxer);
+          this.demuxer = new TSDemuxer(hls,MP4Remuxer);
         }
       } else {
-        this.demuxer = new TSDemuxer(MP4Remuxer);
+        this.demuxer = new TSDemuxer(hls,MP4Remuxer);
       }
       this.demuxInitialized = true;
   }
@@ -62,10 +62,10 @@ class Demuxer {
           obj.videoWidth = ev.data.videoWidth;
           obj.videoHeight = ev.data.videoHeight;
         }
-        observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, obj);
+        this.hls.trigger(Event.FRAG_PARSING_INIT_SEGMENT, obj);
         break;
       case Event.FRAG_PARSING_DATA:
-        observer.trigger(Event.FRAG_PARSING_DATA,{
+        this.hls.trigger(Event.FRAG_PARSING_DATA,{
           moof: new Uint8Array(ev.data.moof),
           mdat: new Uint8Array(ev.data.mdat),
           startPTS: ev.data.startPTS,
@@ -77,7 +77,7 @@ class Demuxer {
         });
         break;
       default:
-        observer.trigger(ev.data.event, ev.data.data);
+        this.hls.trigger(ev.data.event, ev.data.data);
         break;
     }
   }

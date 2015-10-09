@@ -3,7 +3,6 @@
 */
 
 import Event from '../events';
-import observer from '../observer';
 
 class AbrController {
 
@@ -13,11 +12,11 @@ class AbrController {
     this._autoLevelCapping = -1;
     this._nextAutoLevel = -1;
     this.onflp = this.onFragmentLoadProgress.bind(this);
-    observer.on(Event.FRAG_LOAD_PROGRESS, this.onflp);
+    hls.on(Event.FRAG_LOAD_PROGRESS, this.onflp);
   }
 
   destroy() {
-    observer.off(Event.FRAG_LOAD_PROGRESS, this.onflp);
+    this.hls.off(Event.FRAG_LOAD_PROGRESS, this.onflp);
   }
 
   onFragmentLoadProgress(event, data) {

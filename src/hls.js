@@ -6,7 +6,6 @@
 import Event from './events';
 import {ErrorTypes, ErrorDetails} from './errors';
 import StatsHandler from './stats';
-import observer from './observer';
 import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
 import AbrController from    './controller/abr-controller';
@@ -15,6 +14,7 @@ import LevelController from  './controller/level-controller';
 //import FPSController from './controller/fps-controller';
 import {logger, enableLogs} from './utils/logger';
 import XhrLoader from './utils/xhr-loader';
+import EventEmitter from 'events';
 
 class Hls {
 
@@ -62,6 +62,18 @@ class Hls {
     }
     enableLogs(config.debug);
     this.config = config;
+    // observer setup
+    var observer = this.observer = new EventEmitter();
+    observer.trigger = function trigger (event, ...data) {
+      observer.emit(event, event, ...data);
+    };
+
+    observer.off = function off (event, ...data) {
+      observer.removeListener(event, ...data);
+    };
+    this.on = observer.on.bind(observer);
+    this.off = observer.off.bind(observer);
+    this.trigger = observer.trigger.bind(observer);
     this.playlistLoader = new PlaylistLoader(this);
     this.fragmentLoader = new FragmentLoader(this);
     this.levelController = new LevelController(this);
@@ -69,9 +81,6 @@ class Hls {
     this.bufferController = new BufferController(this);
     //this.fpsController = new FPSController(this);
     this.statsHandler = new StatsHandler(this);
-    // observer setup
-    this.on = observer.on.bind(observer);
-    this.off = observer.off.bind(observer);
   }
 
   destroy() {
@@ -84,7 +93,7 @@ class Hls {
     this.statsHandler.destroy();
     this.url = null;
     this.detachVideo();
-    observer.removeAllListeners();
+    this.observer.removeAllListeners();
   }
 
   attachVideo(video) {
@@ -121,7 +130,7 @@ class Hls {
       video.src = '';
       this.mediaSource = null;
       logger.log('trigger MSE_DETACHED');
-      observer.trigger(Event.MSE_DETACHED);
+      this.trigger(Event.MSE_DETACHED);
     }
     this.onmso = this.onmse = this.onmsc = null;
     if (video) {
@@ -133,7 +142,7 @@ class Hls {
     logger.log(`loadSource:${url}`);
     this.url = url;
     // when attaching to a source URL, trigger a playlist load
-    observer.trigger(Event.MANIFEST_LOADING, {url: url});
+    this.trigger(Event.MANIFEST_LOADING, {url: url});
   }
 
   startLoad() {
@@ -256,7 +265,7 @@ class Hls {
 
   onMediaSourceOpen() {
     logger.log('media source opened');
-    observer.trigger(Event.MSE_ATTACHED, {video: this.video, mediaSource: this.mediaSource});
+    this.trigger(Event.MSE_ATTACHED, {video: this.video, mediaSource: this.mediaSource});
     // once received, don't listen anymore to sourceopen event
     this.mediaSource.removeEventListener('sourceopen', this.onmso);
   }

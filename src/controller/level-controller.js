@@ -3,7 +3,6 @@
 */
 
 import Event from '../events';
-import observer from '../observer';
 import {logger} from '../utils/logger';
 import {ErrorTypes, ErrorDetails} from '../errors';
 
@@ -15,16 +14,17 @@ class LevelController {
     this.onll = this.onLevelLoaded.bind(this);
     this.onerr = this.onError.bind(this);
     this.ontick = this.tick.bind(this);
-    observer.on(Event.MANIFEST_LOADED, this.onml);
-    observer.on(Event.LEVEL_LOADED, this.onll);
-    observer.on(Event.ERROR, this.onerr);
+    hls.on(Event.MANIFEST_LOADED, this.onml);
+    hls.on(Event.LEVEL_LOADED, this.onll);
+    hls.on(Event.ERROR, this.onerr);
     this._manualLevel = this._autoLevelCapping = -1;
   }
 
   destroy() {
-    observer.off(Event.MANIFEST_LOADED, this.onml);
-    observer.off(Event.LEVEL_LOADED, this.onll);
-    observer.off(Event.ERROR, this.onerr);
+    var hls = this.hls;
+    hls.off(Event.MANIFEST_LOADED, this.onml);
+    hls.off(Event.LEVEL_LOADED, this.onll);
+    hls.off(Event.ERROR, this.onerr);
     if (this.timer) {
      clearInterval(this.timer);
     }
@@ -79,7 +79,7 @@ class LevelController {
         break;
       }
     }
-    observer.trigger(Event.MANIFEST_PARSED, {levels: this._levels, firstLevel: this._firstLevel, stats: data.stats});
+    this.hls.trigger(Event.MANIFEST_PARSED, {levels: this._levels, firstLevel: this._firstLevel, stats: data.stats});
     return;
   }
 
@@ -107,18 +107,18 @@ class LevelController {
       }
       this._level = newLevel;
       logger.log(`switching to level ${newLevel}`);
-      observer.trigger(Event.LEVEL_SWITCH, {level: newLevel});
+      this.hls.trigger(Event.LEVEL_SWITCH, {level: newLevel});
       var level = this._levels[newLevel];
        // check if we need to load playlist for this level
       if (level.details === undefined || level.details.live === true) {
         // level not retrieved yet, or live playlist we need to (re)load it
         logger.log(`(re)loading playlist for level ${newLevel}`);
         var urlId = level.urlId;
-        observer.trigger(Event.LEVEL_LOADING, {url: level.url[urlId], level: newLevel, id: urlId});
+        this.hls.trigger(Event.LEVEL_LOADING, {url: level.url[urlId], level: newLevel, id: urlId});
       }
     } else {
       // invalid level id given, trigger error
-      observer.trigger(Event.ERROR, {type : ErrorTypes.OTHER_ERROR, details: ErrorDetails.LEVEL_SWITCH_ERROR, level: newLevel, fatal: false, reason: 'invalid level idx'});
+      this.hls.trigger(Event.ERROR, {type : ErrorTypes.OTHER_ERROR, details: ErrorDetails.LEVEL_SWITCH_ERROR, level: newLevel, fatal: false, reason: 'invalid level idx'});
     }
  }
 
@@ -194,7 +194,7 @@ class LevelController {
             this.timer = null;
             // redispatch same error but with fatal set to true
             data.fatal = true;
-            observer.trigger(event, data);
+            this.hls.trigger(event, data);
           }
         }
       }
@@ -214,7 +214,7 @@ class LevelController {
     var levelId = this._level;
     if (levelId !== undefined) {
       var level = this._levels[levelId], urlId = level.urlId;
-      observer.trigger(Event.LEVEL_LOADING, {url: level.url[urlId], level: levelId, id: urlId});
+      this.hls.trigger(Event.LEVEL_LOADING, {url: level.url[urlId], level: levelId, id: urlId});
     }
   }
 

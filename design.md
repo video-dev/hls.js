@@ -8,15 +8,13 @@ design idea is pretty simple :
 ##code structure
 
   - [src/hls.js][]
-    - definition of Hls Class. instantiate all subcomponents, upon instantiation of an Hls object.
+    - definition of Hls Class. instantiate all subcomponents.
   - [src/events.js][]
     - definition of Hls.Events
   - [src/errors.js][]
     - definition of Hls.ErrorTypes and Hls.ErrorDetails
   - [src/stats.js][]
     - subsystem monitoring events, and aggregating them into an object, that could be retrieved through hls.stats getter
-  - [src/observer.js][]
-    -  abstracts [events.EventEmitter()](https://nodejs.org/api/events.html#events_class_events_eventemitter) class, used for event dispatching.
 
   - [src/controller/buffer-controller.js][]
     - in charge of:
@@ -93,7 +91,6 @@ design idea is pretty simple :
 [src/events.js]: src/events.js
 [src/errors.js]: src/errors.js
 [src/stats.js]: src/stats.js
-[src/observer.js]: src/observer.js
 [src/controller/abr-controller.js]: src/controller/abr-controller.js
 [src/controller/buffer-controller.js]: src/controller/buffer-controller.js
 [src/controller/level-controller.js]: src/controller/level-controller.js

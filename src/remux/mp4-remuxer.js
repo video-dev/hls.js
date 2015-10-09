@@ -4,12 +4,12 @@
 
 
 import Event from '../events';
-import observer from '../observer';
 import {logger} from '../utils/logger';
 import MP4 from '../remux/mp4-generator';
 
 class MP4Remuxer {
-  constructor() {
+  constructor(observer) {
+    this.observer = observer;
     this._initSegGenerated = false;
     this.PES2MP4SCALEFACTOR = 4;
     this.PES_TIMESCALE = 90000;
@@ -41,14 +41,14 @@ class MP4Remuxer {
       this._remuxAACSamples(audioTrack,timeOffset);
     }
     //notify end of parsing
-    observer.trigger(Event.FRAG_PARSED);
+    this.observer.trigger(Event.FRAG_PARSED);
   }
 
   _generateInitSegment(audioTrack,videoTrack,timeOffset) {
     if (videoTrack.id === -1) {
       //audio only
       if (audioTrack.config) {
-         observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
+         this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
           audioMoov: MP4.initSegment([audioTrack]),
           audioCodec : audioTrack.codec,
           audioChannelCount : audioTrack.channelCount
@@ -64,7 +64,7 @@ class MP4Remuxer {
     if (audioTrack.id === -1) {
       //video only
       if (videoTrack.sps && videoTrack.pps) {
-         observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
+         this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
           videoMoov: MP4.initSegment([videoTrack]),
           videoCodec: videoTrack.codec,
           videoWidth: videoTrack.width,
@@ -80,7 +80,7 @@ class MP4Remuxer {
     } else {
       //audio and video
       if (audioTrack.config && videoTrack.sps && videoTrack.pps) {
-         observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
+         this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
           audioMoov: MP4.initSegment([audioTrack]),
           audioCodec: audioTrack.codec,
           audioChannelCount: audioTrack.channelCount,
@@ -206,7 +206,7 @@ class MP4Remuxer {
     track.samples = samples;
     moof = MP4.moof(track.sequenceNumber++, firstDTS / this.PES2MP4SCALEFACTOR, track);
     track.samples = [];
-    observer.trigger(Event.FRAG_PARSING_DATA, {
+    this.observer.trigger(Event.FRAG_PARSING_DATA, {
       moof: moof,
       mdat: mdat,
       startPTS: firstPTS / this.PES_TIMESCALE,
@@ -311,7 +311,7 @@ class MP4Remuxer {
     track.samples = samples;
     moof = MP4.moof(track.sequenceNumber++, firstDTS / this.PES2MP4SCALEFACTOR, track);
     track.samples = [];
-    observer.trigger(Event.FRAG_PARSING_DATA, {
+    this.observer.trigger(Event.FRAG_PARSING_DATA, {
       moof: moof,
       mdat: mdat,
       startPTS: firstPTS / this.PES_TIMESCALE,

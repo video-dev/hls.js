@@ -3,7 +3,6 @@
 */
 
 import Event from '../events';
-import observer from '../observer';
 import {logger} from '../utils/logger';
 import Demuxer from '../demux/demuxer';
 import {ErrorTypes, ErrorDetails} from '../errors';
@@ -37,14 +36,14 @@ class BufferController {
     this.onfp = this.onFragmentParsed.bind(this);
     this.onerr = this.onError.bind(this);
     this.ontick = this.tick.bind(this);
-    observer.on(Event.MSE_ATTACHED, this.onmse);
-    observer.on(Event.MSE_DETACHED, this.onmsed);
-    observer.on(Event.MANIFEST_PARSED, this.onmp);
+    hls.on(Event.MSE_ATTACHED, this.onmse);
+    hls.on(Event.MSE_DETACHED, this.onmsed);
+    hls.on(Event.MANIFEST_PARSED, this.onmp);
   }
 
   destroy() {
     this.stop();
-    observer.off(Event.MANIFEST_PARSED, this.onmp);
+    this.hls.off(Event.MANIFEST_PARSED, this.onmp);
     // remove video listener
     if (this.video) {
       this.video.removeEventListener('seeking', this.onvseeking);
@@ -78,16 +77,17 @@ class BufferController {
   }
 
   startInternal() {
+    var hls = this.hls;
     this.stop();
-    this.demuxer = new Demuxer(this.config);
+    this.demuxer = new Demuxer(hls);
     this.timer = setInterval(this.ontick, 100);
     this.level = -1;
-    observer.on(Event.FRAG_LOADED, this.onfl);
-    observer.on(Event.FRAG_PARSING_INIT_SEGMENT, this.onis);
-    observer.on(Event.FRAG_PARSING_DATA, this.onfpg);
-    observer.on(Event.FRAG_PARSED, this.onfp);
-    observer.on(Event.ERROR, this.onerr);
-    observer.on(Event.LEVEL_LOADED, this.onll);
+    hls.on(Event.FRAG_LOADED, this.onfl);
+    hls.on(Event.FRAG_PARSING_INIT_SEGMENT, this.onis);
+    hls.on(Event.FRAG_PARSING_DATA, this.onfpg);
+    hls.on(Event.FRAG_PARSED, this.onfp);
+    hls.on(Event.ERROR, this.onerr);
+    hls.on(Event.LEVEL_LOADED, this.onll);
   }
 
   stop() {
@@ -120,12 +120,13 @@ class BufferController {
       this.demuxer.destroy();
       this.demuxer = null;
     }
-    observer.off(Event.FRAG_LOADED, this.onfl);
-    observer.off(Event.FRAG_PARSED, this.onfp);
-    observer.off(Event.FRAG_PARSING_DATA, this.onfpg);
-    observer.off(Event.LEVEL_LOADED, this.onll);
-    observer.off(Event.FRAG_PARSING_INIT_SEGMENT, this.onis);
-    observer.off(Event.ERROR, this.onerr);
+    var hls = this.hls;
+    hls.off(Event.FRAG_LOADED, this.onfl);
+    hls.off(Event.FRAG_PARSED, this.onfp);
+    hls.off(Event.FRAG_PARSING_DATA, this.onfpg);
+    hls.off(Event.LEVEL_LOADED, this.onll);
+    hls.off(Event.FRAG_PARSING_INIT_SEGMENT, this.onis);
+    hls.off(Event.ERROR, this.onerr);
   }
 
   tick() {
@@ -275,7 +276,7 @@ class BufferController {
             let maxThreshold = this.config.fragLoadingLoopThreshold;
             // if this frag has already been loaded 3 times, and if it has been reloaded recently
             if (frag.loadCounter > maxThreshold && (Math.abs(this.fragLoadIdx - frag.loadIdx) < maxThreshold)) {
-              observer.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal: false, frag: frag});
+              this.hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal: false, frag: frag});
               return;
             }
           } else {
@@ -284,7 +285,7 @@ class BufferController {
           frag.loadIdx = this.fragLoadIdx;
           this.frag = frag;
           this.startFragmentRequested = true;
-          observer.trigger(Event.FRAG_LOADING, {frag: frag});
+          this.hls.trigger(Event.FRAG_LOADING, {frag: frag});
           this.state = this.LOADING;
         }
         break;
@@ -325,7 +326,7 @@ class BufferController {
               //abort fragment loading
               frag.loader.abort();
               this.frag = null;
-              observer.trigger(Event.FRAG_LOAD_EMERGENCY_ABORTED, {frag: frag});
+              this.hls.trigger(Event.FRAG_LOAD_EMERGENCY_ABORTED, {frag: frag});
               // switch back to IDLE state to request new fragment at lowest level
               this.state = this.IDLE;
             }
@@ -365,12 +366,12 @@ class BufferController {
               if (this.appendError > this.config.appendErrorMaxRetry) {
                 logger.log(`fail ${this.config.appendErrorMaxRetry} times to append segment in sourceBuffer`);
                 event.fatal = true;
-                observer.trigger(Event.ERROR, event);
+                this.hls.trigger(Event.ERROR, event);
                 this.state = this.ERROR;
                 return;
               } else {
                 event.fatal = false;
-                observer.trigger(Event.ERROR, event);
+                this.hls.trigger(Event.ERROR, event);
               }
             }
             this.state = this.APPENDING;
@@ -515,7 +516,7 @@ class BufferController {
       if (rangeCurrent) {
         if (rangeCurrent.frag !== this.fragCurrent) {
           this.fragCurrent = rangeCurrent.frag;
-          observer.trigger(Event.FRAG_CHANGED, {frag: this.fragCurrent});
+          this.hls.trigger(Event.FRAG_CHANGED, {frag: this.fragCurrent});
         }
         // if stream is VOD (not live) and we reach End of Stream
         var level = this.levels[this.level];
@@ -833,7 +834,7 @@ class BufferController {
         this.state = this.IDLE;
         this.fragmentBitrateTest = false;
         data.stats.tparsed = data.stats.tbuffered = new Date();
-        observer.trigger(Event.FRAG_BUFFERED, {stats: data.stats, frag: this.frag});
+        this.hls.trigger(Event.FRAG_BUFFERED, {stats: data.stats, frag: this.frag});
         this.frag = null;
       } else {
         this.state = this.PARSING;
@@ -964,7 +965,7 @@ class BufferController {
     if (this.state === this.APPENDING && this.mp4segments.length === 0)  {
       if (this.frag) {
         this.stats.tbuffered = new Date();
-        observer.trigger(Event.FRAG_BUFFERED, {stats: this.stats, frag: this.frag});
+        this.hls.trigger(Event.FRAG_BUFFERED, {stats: this.stats, frag: this.frag});
         logger.log(`video buffered : ${this.timeRangesToString(this.video.buffered)}`);
         this.state = this.IDLE;
       }
@@ -975,7 +976,7 @@ class BufferController {
   onSourceBufferError(event) {
     logger.error(`sourceBuffer error:${event}`);
     this.state = this.ERROR;
-    observer.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_APPENDING_ERROR, fatal: true, frag: this.frag});
+    this.hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_APPENDING_ERROR, fatal: true, frag: this.frag});
   }
 
   timeRangesToString(r) {
