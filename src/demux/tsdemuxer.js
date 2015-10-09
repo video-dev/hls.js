@@ -16,6 +16,7 @@ class TSDemuxer {
         this.remuxerClass = remuxerClass;
         this.lastCC = 0;
         this.PES_TIMESCALE = 90000;
+        this.remuxer = new this.remuxerClass(this.observer);
     }
 
     switchLevel() {
@@ -36,7 +37,7 @@ class TSDemuxer {
             samples: [],
             len: 0
         };
-        this.remuxer = new this.remuxerClass(this.observer);
+        this.remuxer.switchLevel();
     }
 
     insertDiscontinuity() {
