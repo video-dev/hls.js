@@ -9,7 +9,7 @@ import MP4 from '../remux/mp4-generator';
 class MP4Remuxer {
     constructor(observer) {
         this.observer = observer;
-        this._initSegGenerated = false;
+        this.ISGenerated = false;
         this.PES2MP4SCALEFACTOR = 4;
         this.PES_TIMESCALE = 90000;
         this.MP4_TIMESCALE = this.PES_TIMESCALE / this.PES2MP4SCALEFACTOR;
@@ -27,31 +27,32 @@ class MP4Remuxer {
 
     remux(audioTrack, videoTrack, timeOffset) {
         // generate Init Segment if needed
-        if (!this._initSegGenerated) {
-            this._generateInitSegment(audioTrack, videoTrack, timeOffset);
+        if (!this.ISGenerated) {
+            this.generateIS(audioTrack, videoTrack, timeOffset);
         }
         //logger.log('nb AVC samples:' + videoTrack.samples.length);
         if (videoTrack.samples.length) {
-            this._remuxAVCSamples(videoTrack, timeOffset);
+            this.remuxVideo(videoTrack, timeOffset);
         }
         //logger.log('nb AAC samples:' + audioTrack.samples.length);
         if (audioTrack.samples.length) {
-            this._remuxAACSamples(audioTrack, timeOffset);
+            this.remuxAudio(audioTrack, timeOffset);
         }
         //notify end of parsing
         this.observer.trigger(Event.FRAG_PARSED);
     }
 
-    _generateInitSegment(audioTrack, videoTrack, timeOffset) {
+    generateIS(audioTrack, videoTrack, timeOffset) {
+        var observer = this.observer;
         if (videoTrack.id === -1) {
             //audio only
             if (audioTrack.config) {
-                this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
+                observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
                     audioMoov: MP4.initSegment([audioTrack]),
                     audioCodec: audioTrack.codec,
                     audioChannelCount: audioTrack.channelCount
                 });
-                this._initSegGenerated = true;
+                this.ISGenerated = true;
             }
             if (this._initPTS === undefined) {
                 // remember first PTS of this demuxing context
@@ -63,13 +64,13 @@ class MP4Remuxer {
         } else if (audioTrack.id === -1) {
             //video only
             if (videoTrack.sps && videoTrack.pps) {
-                this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
+                observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
                     videoMoov: MP4.initSegment([videoTrack]),
                     videoCodec: videoTrack.codec,
                     videoWidth: videoTrack.width,
                     videoHeight: videoTrack.height
                 });
-                this._initSegGenerated = true;
+                this.ISGenerated = true;
                 if (this._initPTS === undefined) {
                     // remember first PTS of this demuxing context
                     this._initPTS =
@@ -83,7 +84,7 @@ class MP4Remuxer {
         } else {
             //audio and video
             if (audioTrack.config && videoTrack.sps && videoTrack.pps) {
-                this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
+                observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
                     audioMoov: MP4.initSegment([audioTrack]),
                     audioCodec: audioTrack.codec,
                     audioChannelCount: audioTrack.channelCount,
@@ -92,7 +93,7 @@ class MP4Remuxer {
                     videoWidth: videoTrack.width,
                     videoHeight: videoTrack.height
                 });
-                this._initSegGenerated = true;
+                this.ISGenerated = true;
                 if (this._initPTS === undefined) {
                     // remember first PTS of this demuxing context
                     this._initPTS =
@@ -112,7 +113,7 @@ class MP4Remuxer {
         }
     }
 
-    _remuxAVCSamples(track, timeOffset) {
+    remuxVideo(track, timeOffset) {
         var view,
             i = 8,
             avcSample,
@@ -261,7 +262,7 @@ class MP4Remuxer {
         });
     }
 
-    _remuxAACSamples(track, timeOffset) {
+    remuxAudio(track, timeOffset) {
         var view,
             i = 8,
             aacSample,
