@@ -3,8 +3,9 @@
  */
 
 class DummyRemuxer {
-    constructor() {
+    constructor(observer) {
         this.PES_TIMESCALE = 90000;
+        this.observer = observer;
     }
 
     get timescale() {

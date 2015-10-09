@@ -3,14 +3,13 @@
 */
 
 import Event from '../events';
-import observer from '../observer';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
 class FragmentLoader {
     constructor(hls) {
         this.hls = hls;
         this.onfl = this.onFragLoading.bind(this);
-        observer.on(Event.FRAG_LOADING, this.onfl);
+        hls.on(Event.FRAG_LOADING, this.onfl);
     }
 
     destroy() {
@@ -18,7 +17,7 @@ class FragmentLoader {
             this.loader.destroy();
             this.loader = null;
         }
-        observer.off(Event.FRAG_LOADING, this.onfl);
+        this.hls.off(Event.FRAG_LOADING, this.onfl);
     }
 
     onFragLoading(event, data) {
@@ -45,7 +44,7 @@ class FragmentLoader {
         stats.length = payload.byteLength;
         // detach fragment loader on load success
         this.frag.loader = undefined;
-        observer.trigger(Event.FRAG_LOADED, {
+        this.hls.trigger(Event.FRAG_LOADED, {
             payload: payload,
             frag: this.frag,
             stats: stats
@@ -54,7 +53,7 @@ class FragmentLoader {
 
     loaderror(event) {
         this.loader.abort();
-        observer.trigger(Event.ERROR, {
+        this.hls.trigger(Event.ERROR, {
             type: ErrorTypes.NETWORK_ERROR,
             details: ErrorDetails.FRAG_LOAD_ERROR,
             fatal: false,
@@ -65,7 +64,7 @@ class FragmentLoader {
 
     loadtimeout() {
         this.loader.abort();
-        observer.trigger(Event.ERROR, {
+        this.hls.trigger(Event.ERROR, {
             type: ErrorTypes.NETWORK_ERROR,
             details: ErrorDetails.FRAG_LOAD_TIMEOUT,
             fatal: false,
@@ -75,7 +74,7 @@ class FragmentLoader {
 
     loadprogress(event, stats) {
         this.frag.loaded = stats.loaded;
-        observer.trigger(Event.FRAG_LOAD_PROGRESS, {
+        this.hls.trigger(Event.FRAG_LOAD_PROGRESS, {
             frag: this.frag,
             stats: stats
         });

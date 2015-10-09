@@ -3,7 +3,6 @@
  */
 
 import Event from '../events';
-import observer from '../observer';
 import { ErrorTypes, ErrorDetails } from '../errors';
 //import {logger} from '../utils/logger';
 
@@ -12,8 +11,8 @@ class PlaylistLoader {
         this.hls = hls;
         this.onml = this.onManifestLoading.bind(this);
         this.onll = this.onLevelLoading.bind(this);
-        observer.on(Event.MANIFEST_LOADING, this.onml);
-        observer.on(Event.LEVEL_LOADING, this.onll);
+        hls.on(Event.MANIFEST_LOADING, this.onml);
+        hls.on(Event.LEVEL_LOADING, this.onll);
     }
 
     destroy() {
@@ -22,8 +21,8 @@ class PlaylistLoader {
             this.loader = null;
         }
         this.url = this.id = null;
-        observer.off(Event.MANIFEST_LOADING, this.onml);
-        observer.off(Event.LEVEL_LOADING, this.onll);
+        this.hls.off(Event.MANIFEST_LOADING, this.onml);
+        this.hls.off(Event.LEVEL_LOADING, this.onll);
     }
 
     onManifestLoading(event, data) {
@@ -186,6 +185,7 @@ class PlaylistLoader {
             url = event.currentTarget.responseURL,
             id = this.id,
             id2 = this.id2,
+            hls = this.hls,
             levels;
         // responseURL not supported on some browsers (it is used to detect URL redirection)
         if (url === undefined) {
@@ -202,13 +202,13 @@ class PlaylistLoader {
                 // if first request, fire manifest loaded event, level will be reloaded afterwards
                 // (this is to have a uniform logic for 1 level/multilevel playlists)
                 if (this.id === null) {
-                    observer.trigger(Event.MANIFEST_LOADED, {
+                    hls.trigger(Event.MANIFEST_LOADED, {
                         levels: [{ url: url }],
                         url: url,
                         stats: stats
                     });
                 } else {
-                    observer.trigger(Event.LEVEL_LOADED, {
+                    hls.trigger(Event.LEVEL_LOADED, {
                         details: this.parseLevelPlaylist(string, url, id),
                         level: id,
                         id: id2,
@@ -219,13 +219,13 @@ class PlaylistLoader {
                 levels = this.parseMasterPlaylist(string, url);
                 // multi level playlist, parse level info
                 if (levels.length) {
-                    observer.trigger(Event.MANIFEST_LOADED, {
+                    hls.trigger(Event.MANIFEST_LOADED, {
                         levels: levels,
                         url: url,
                         stats: stats
                     });
                 } else {
-                    observer.trigger(Event.ERROR, {
+                    hls.trigger(Event.ERROR, {
                         type: ErrorTypes.NETWORK_ERROR,
                         details: ErrorDetails.MANIFEST_PARSING_ERROR,
                         fatal: true,
@@ -235,7 +235,7 @@ class PlaylistLoader {
                 }
             }
         } else {
-            observer.trigger(Event.ERROR, {
+            hls.trigger(Event.ERROR, {
                 type: ErrorTypes.NETWORK_ERROR,
                 details: ErrorDetails.MANIFEST_PARSING_ERROR,
                 fatal: true,
@@ -255,7 +255,7 @@ class PlaylistLoader {
             fatal = false;
         }
         this.loader.abort();
-        observer.trigger(Event.ERROR, {
+        this.hls.trigger(Event.ERROR, {
             type: ErrorTypes.NETWORK_ERROR,
             details: details,
             fatal: fatal,
@@ -277,7 +277,7 @@ class PlaylistLoader {
             fatal = false;
         }
         this.loader.abort();
-        observer.trigger(Event.ERROR, {
+        this.hls.trigger(Event.ERROR, {
             type: ErrorTypes.NETWORK_ERROR,
             details: details,
             fatal: fatal,

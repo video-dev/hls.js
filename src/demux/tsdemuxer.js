@@ -7,12 +7,12 @@
 import Event from '../events';
 import ExpGolomb from './exp-golomb';
 // import Hex from '../utils/hex';
-import observer from '../observer';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
 class TSDemuxer {
-    constructor(remuxerClass) {
+    constructor(observer, remuxerClass) {
+        this.observer = observer;
         this.remuxerClass = remuxerClass;
         this.lastCC = 0;
         this.PES_TIMESCALE = 90000;
@@ -36,7 +36,7 @@ class TSDemuxer {
             samples: [],
             len: 0
         };
-        this.remuxer = new this.remuxerClass();
+        this.remuxer = new this.remuxerClass(this.observer);
     }
 
     insertDiscontinuity() {
@@ -129,7 +129,7 @@ class TSDemuxer {
                     }
                 }
             } else {
-                observer.trigger(Event.ERROR, {
+                this.observer.trigger(Event.ERROR, {
                     type: ErrorTypes.MEDIA_ERROR,
                     details: ErrorDetails.FRAG_PARSING_ERROR,
                     fatal: false,
@@ -504,7 +504,7 @@ class TSDemuxer {
                 reason = 'no ADTS header found in AAC PES';
                 fatal = true;
             }
-            observer.trigger(Event.ERROR, {
+            this.observer.trigger(Event.ERROR, {
                 type: ErrorTypes.MEDIA_ERROR,
                 details: ErrorDetails.FRAG_PARSING_ERROR,
                 fatal: fatal,
@@ -601,7 +601,7 @@ class TSDemuxer {
         adtsObjectType = ((data[offset + 2] & 0xc0) >>> 6) + 1;
         adtsSampleingIndex = (data[offset + 2] & 0x3c) >>> 2;
         if (adtsSampleingIndex > adtsSampleingRates.length - 1) {
-            observer.trigger(Event.ERROR, {
+            this.observer.trigger(Event.ERROR, {
                 type: ErrorTypes.MEDIA_ERROR,
                 details: ErrorDetails.FRAG_PARSING_ERROR,
                 fatal: true,

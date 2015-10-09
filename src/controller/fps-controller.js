@@ -3,7 +3,6 @@
 */
 
 import Event from '../events';
-import observer from '../observer';
 import { logger } from '../utils/logger';
 
 class FPSController {
@@ -48,7 +47,7 @@ class FPSController {
                             logger.warn(
                                 'drop FPS ratio greater than max allowed value'
                             );
-                            observer.trigger(Event.FPS_DROP, {
+                            this.hls.trigger(Event.FPS_DROP, {
                                 currentDropped: currentDropped,
                                 currentDecoded: currentDecoded,
                                 totalDroppedFrames: droppedFrames
