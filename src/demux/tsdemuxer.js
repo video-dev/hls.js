@@ -37,6 +37,13 @@ class TSDemuxer {
             samples: [],
             len: 0
         };
+        this._id3Track = {
+            type: 'id3',
+            id: -1,
+            sequenceNumber: 0,
+            samples: [],
+            len: 0
+        };
         this.remuxer.switchLevel();
     }
 
@@ -49,6 +56,7 @@ class TSDemuxer {
     push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
         var avcData,
             aacData,
+            id3Data,
             start,
             len = data.length,
             stt,
@@ -70,7 +78,8 @@ class TSDemuxer {
         }
         var pmtParsed = this.pmtParsed,
             avcId = this._avcTrack.id,
-            aacId = this._aacTrack.id;
+            aacId = this._aacTrack.id,
+            id3Id = this._id3Track.id;
         // loop through TS packets
         for (start = 0; start < len; start += 188) {
             if (data[start] === 0x47) {
@@ -115,6 +124,19 @@ class TSDemuxer {
                             );
                             aacData.size += start + 188 - offset;
                         }
+                    } else if (pid === id3Id) {
+                        if (stt) {
+                            if (id3Data) {
+                                this._parseID3PES(this._parsePES(id3Data));
+                            }
+                            id3Data = { data: [], size: 0 };
+                        }
+                        if (id3Data) {
+                            id3Data.data.push(
+                                data.subarray(offset, start + 188)
+                            );
+                            id3Data.size += start + 188 - offset;
+                        }
                     }
                 } else {
                     if (stt) {
@@ -127,6 +149,7 @@ class TSDemuxer {
                         pmtParsed = this.pmtParsed = true;
                         avcId = this._avcTrack.id;
                         aacId = this._aacTrack.id;
+                        id3Id = this._id3Track.id;
                     }
                 }
             } else {
@@ -145,10 +168,18 @@ class TSDemuxer {
         if (aacData) {
             this._parseAACPES(this._parsePES(aacData));
         }
+        if (id3Data) {
+            this._parseID3PES(this._parsePES(id3Data));
+        }
     }
 
     remux() {
-        this.remuxer.remux(this._aacTrack, this._avcTrack, this.timeOffset);
+        this.remuxer.remux(
+            this._aacTrack,
+            this._avcTrack,
+            this._id3Track,
+            this.timeOffset
+        );
     }
 
     destroy() {
@@ -180,6 +211,11 @@ class TSDemuxer {
                 case 0x0f:
                     //logger.log('AAC PID:'  + pid);
                     this._aacTrack.id = pid;
+                    break;
+                // Packetized metadata (ID3)
+                case 0x15:
+                    //logger.log('ID3 PID:'  + pid);
+                    this._id3Track.id = pid;
                     break;
                 // ITU-T Rec. H.264 and ISO/IEC 14496-10 (lower bit-rate video)
                 case 0x1b:
@@ -720,6 +756,10 @@ class TSDemuxer {
             channelCount: adtsChanelConfig,
             codec: 'mp4a.40.' + adtsObjectType
         };
+    }
+
+    _parseID3PES(pes) {
+        this._id3Track.samples.push(pes);
     }
 }
 

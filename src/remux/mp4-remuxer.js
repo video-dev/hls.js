@@ -29,7 +29,7 @@ class MP4Remuxer {
         this.ISGenerated = false;
     }
 
-    remux(audioTrack, videoTrack, timeOffset) {
+    remux(audioTrack, videoTrack, id3Track, timeOffset) {
         // generate Init Segment if needed
         if (!this.ISGenerated) {
             this.generateIS(audioTrack, videoTrack, timeOffset);
@@ -41,6 +41,10 @@ class MP4Remuxer {
         //logger.log('nb AAC samples:' + audioTrack.samples.length);
         if (audioTrack.samples.length) {
             this.remuxAudio(audioTrack, timeOffset);
+        }
+        //logger.log('nb ID3 samples:' + audioTrack.samples.length);
+        if (id3Track.samples.length) {
+            this.remuxID3(id3Track, timeOffset);
         }
         //notify end of parsing
         this.observer.trigger(Event.FRAG_PARSED);
@@ -413,6 +417,13 @@ class MP4Remuxer {
             type: 'audio',
             nb: samples.length
         });
+    }
+
+    remuxID3(track, timeOffset) {
+        // consume samples
+        track.samples = [];
+        //please lint
+        timeOffset = timeOffset;
     }
 
     _PTSNormalize(value, reference) {
