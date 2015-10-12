@@ -667,7 +667,10 @@ function timeRangesToString(r) {
       } else {
         html1 += button_disabled;
       }
-      var levelName = i + '(' + level2label(i) + ')';
+      var levelName = i, label = level2label(i);
+      if(label) {
+        levelName += '(' + level2label(i) + ')';
+      }
       html1 += 'onclick="hls.currentLevel=' + i + '">' + levelName + '</button>';
 
       html2 += button_template;
@@ -713,7 +716,11 @@ function timeRangesToString(r) {
           if (level.height) {
               return(level.height + 'p / ' + Math.round(level.bitrate / 1024) + 'kb');
           } else {
-              return(Math.round(level.bitrate / 1024) + 'kb');
+              if(level.bitrate) {
+                return(Math.round(level.bitrate / 1024) + 'kb');
+              } else {
+                return null;
+              }
           }
       }
     }
