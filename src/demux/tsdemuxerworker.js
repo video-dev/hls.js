@@ -62,6 +62,11 @@ var TSDemuxerWorker = function (self) {
   observer.on(Event.ERROR, function(event, data) {
     self.postMessage({event: event, data: data});
   });
+
+  observer.on(Event.FRAG_PARSING_METADATA, function(event, data) {
+    var objData = {event: event, samples: data.samples};
+    self.postMessage(objData);
+  });
 };
 
 export default TSDemuxerWorker;
