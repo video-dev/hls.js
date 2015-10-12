@@ -70,6 +70,8 @@ design idea is pretty simple :
     - in charge of loading fragments, use xhr-loader if not overrided by user config
   - [src/loader/playlist-loader.js][]
    - in charge of loading manifest, and level playlists, use xhr-loader if not overrided by user config.
+  - [src/remux/dummy-remuxer.js][]
+   - example dummy remuxer
   - [src/remux/mp4-generator.js][]
    - in charge of generating MP4 boxes
      - generate Init Segment (moov)
@@ -102,6 +104,7 @@ design idea is pretty simple :
 [src/demux/tsdemuxerworker.js]: src/demux/tsdemuxerworker.js
 [src/loader/fragment-loader.js]: src/loader/fragment-loader.js
 [src/loader/playlist-loader.js]: src/loader/playlist-loader.js
+[src/remux/dummy-remuxer.js]: src/remux/dummy-remuxer.js
 [src/remux/mp4-generator.js]: src/remux/mp4-generator.js
 [src/remux/mp4-remuxer.js]: src/remux/mp4-remuxer.js
 [src/utils/hex.js]: src/utils/hex.js
