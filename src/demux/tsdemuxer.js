@@ -25,6 +25,7 @@
     this._pmtId = -1;
     this._avcTrack = {type: 'video', id :-1, sequenceNumber: 0, samples : [], len : 0, nbNalu : 0};
     this._aacTrack = {type: 'audio', id :-1, sequenceNumber: 0, samples : [], len : 0};
+    this._id3Track = {type: 'id3', id :-1, sequenceNumber: 0, samples : [], len : 0};
     this.remuxer.switchLevel();
   }
 
@@ -35,7 +36,8 @@
 
   // feed incoming data to the front of the parsing pipeline
   push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
-    var avcData, aacData, start, len = data.length, stt, pid, atf, offset;
+    var avcData, aacData, id3Data,
+        start, len = data.length, stt, pid, atf, offset;
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
     this.timeOffset = timeOffset;
@@ -49,7 +51,10 @@
       this.switchLevel();
       this.lastLevel = level;
     }
-    var pmtParsed = this.pmtParsed, avcId = this._avcTrack.id, aacId = this._aacTrack.id;
+    var pmtParsed = this.pmtParsed,
+        avcId = this._avcTrack.id,
+        aacId = this._aacTrack.id,
+        id3Id = this._id3Track.id;
     // loop through TS packets
     for (start = 0; start < len; start += 188) {
       if (data[start] === 0x47) {
@@ -90,6 +95,17 @@
               aacData.data.push(data.subarray(offset, start + 188));
               aacData.size += start + 188 - offset;
             }
+          } else if (pid === id3Id) {
+            if (stt) {
+              if (id3Data) {
+                this._parseID3PES(this._parsePES(id3Data));
+              }
+              id3Data = {data: [], size: 0};
+            }
+            if (id3Data) {
+              id3Data.data.push(data.subarray(offset, start + 188));
+              id3Data.size += start + 188 - offset;
+            }
           }
         } else {
           if (stt) {
@@ -102,6 +118,7 @@
             pmtParsed = this.pmtParsed = true;
             avcId = this._avcTrack.id;
             aacId = this._aacTrack.id;
+            id3Id = this._id3Track.id;
           }
         }
       } else {
@@ -115,10 +132,13 @@
     if (aacData) {
       this._parseAACPES(this._parsePES(aacData));
     }
+    if (id3Data) {
+      this._parseID3PES(this._parsePES(id3Data));
+    }
   }
 
   remux() {
-    this.remuxer.remux(this._aacTrack,this._avcTrack, this.timeOffset);
+    this.remuxer.remux(this._aacTrack,this._avcTrack, this._id3Track, this.timeOffset);
   }
 
   destroy() {
@@ -147,14 +167,19 @@
       switch(data[offset]) {
         // ISO/IEC 13818-7 ADTS AAC (MPEG-2 lower bit-rate audio)
         case 0x0f:
-        //logger.log('AAC PID:'  + pid);
+          //logger.log('AAC PID:'  + pid);
           this._aacTrack.id = pid;
-        break;
+          break;
+        // Packetized metadata (ID3)
+        case 0x15:
+          //logger.log('ID3 PID:'  + pid);
+          this._id3Track.id = pid;
+          break;
         // ITU-T Rec. H.264 and ISO/IEC 14496-10 (lower bit-rate video)
         case 0x1b:
-        //logger.log('AVC PID:'  + pid);
-        this._avcTrack.id = pid;
-        break;
+          //logger.log('AVC PID:'  + pid);
+          this._avcTrack.id = pid;
+          break;
         default:
         logger.log('unkown stream type:'  + data[offset]);
         break;
@@ -562,6 +587,10 @@
       config[3] = 0;
     }
     return {config: config, samplerate: adtsSampleingRates[adtsSampleingIndex], channelCount: adtsChanelConfig, codec: ('mp4a.40.' + adtsObjectType)};
+  }
+
+  _parseID3PES(pes) {
+    this._id3Track.samples.push(pes);
   }
 }
 
