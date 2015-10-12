@@ -54,7 +54,7 @@ class MP4Remuxer {
 
   generateIS(audioTrack,videoTrack,timeOffset) {
     var observer = this.observer;
-    if (videoTrack.id === -1 || videoTrack.samples.length === 0) {
+    if (videoTrack.samples.length === 0) {
       //audio only
       if (audioTrack.config) {
          observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
@@ -70,7 +70,7 @@ class MP4Remuxer {
         this._initDTS = audioTrack.samples[0].dts - this.PES_TIMESCALE * timeOffset;
       }
     } else
-    if (audioTrack.id === -1  || audioTrack.samples.length === 0) {
+    if (audioTrack.samples.length === 0) {
       //video only
       if (videoTrack.sps && videoTrack.pps) {
          observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
