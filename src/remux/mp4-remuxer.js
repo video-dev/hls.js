@@ -356,8 +356,21 @@ class MP4Remuxer {
 
   remuxID3(track,timeOffset) {
     // consume samples
+    if(track.samples.length) {
+      var length = track.samples.length, sample;
+      for(var index = 0; index < length; index++) {
+        sample = track.samples[index];
+        // setting id3 pts, dts to relative time
+        // using this._initPTS and this._initDTS to calculate relative time
+        sample.pts = ((sample.pts - this._initPTS) / this.PES_TIMESCALE);
+        sample.dts = ((sample.dts - this._initDTS) / this.PES_TIMESCALE);
+      }
+      this.observer.trigger(Event.FRAG_PARSING_METADATA, {
+        samples:track.samples
+      });
+    }
+
     track.samples = [];
-    //please lint
     timeOffset = timeOffset;
   }
 
@@ -385,4 +398,3 @@ class MP4Remuxer {
 }
 
 export default MP4Remuxer;
-
