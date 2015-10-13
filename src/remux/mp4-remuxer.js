@@ -432,7 +432,7 @@ class MP4Remuxer {
                 sample.dts = (sample.dts - this._initDTS) / this.PES_TIMESCALE;
             }
             this.observer.trigger(Event.FRAG_PARSING_METADATA, {
-                samples: track.samples.slice(0)
+                samples: track.samples
             });
         }
 
