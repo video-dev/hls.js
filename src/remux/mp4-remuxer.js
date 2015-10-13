@@ -420,10 +420,10 @@ class MP4Remuxer {
     }
 
     remuxID3(track, timeOffset) {
+        var length = track.samples.length,
+            sample;
         // consume samples
-        if (track.samples.length) {
-            var length = track.samples.length,
-                sample;
+        if (length) {
             for (var index = 0; index < length; index++) {
                 sample = track.samples[index];
                 // setting id3 pts, dts to relative time
