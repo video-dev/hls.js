@@ -199,7 +199,7 @@ class BufferController {
             break;
           }
           // find fragment index, contiguous with end of buffer position
-          let fragments = levelDetails.fragments, frag, sliding = levelDetails.sliding, start = fragments[0].start + sliding, drift = 0;
+          let fragments = levelDetails.fragments, frag, sliding = levelDetails.sliding, start = fragments[0].start + sliding;
           // check if requested position is within seekable boundaries :
           // in case of live playlist we need to ensure that requested position is not located before playlist start
           //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.video.seeking}`);
@@ -232,11 +232,7 @@ class BufferController {
             for (fragIdx = 0; fragIdx < fragments.length; fragIdx++) {
               frag = fragments[fragIdx];
               start = frag.start+sliding;
-              if (frag.drift) {
-                drift = frag.drift;
-              }
-              start += drift;
-              //logger.log('level/sn/sliding/drift/start/end/bufEnd:${level}/${frag.sn}/${sliding.toFixed(3)}/${drift.toFixed(3)}/${start.toFixed(3)}/${(start+frag.duration).toFixed(3)}/${bufferEnd.toFixed(3)}');
+              //logger.log('level/sn/sliding/start/end/bufEnd:${level}/${frag.sn}/${sliding.toFixed(3)}/${start.toFixed(3)}/${(start+frag.duration).toFixed(3)}/${bufferEnd.toFixed(3)}');
               // offset should be within fragment boundary
               if (start <= bufferEnd && (start + frag.duration) > bufferEnd) {
                 break;
@@ -259,7 +255,6 @@ class BufferController {
           }
           logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
           //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
-          frag.drift = drift;
           frag.autoLevel = this.hls.autoLevelEnabled;
           if (this.levels.length > 1) {
             frag.expectedLen = Math.round(frag.duration * this.levels[level].bitrate / 8);
@@ -845,9 +840,6 @@ class BufferController {
           duration += details.sliding;
           start += details.sliding;
         }
-        if (this.frag.drift) {
-          start += this.frag.drift;
-        }
         logger.log(`Demuxing ${this.frag.sn} of [${details.startSN} ,${details.endSN}],level ${this.level}`);
         this.demuxer.push(data.payload, currentLevel.audioCodec, currentLevel.videoCodec, start, this.frag.cc, this.level, duration);
       }
@@ -913,19 +905,10 @@ class BufferController {
         }
       }
       logger.log(`parsed data, type/startPTS/endPTS/startDTS/endDTS/nb:${data.type}/${data.startPTS.toFixed(3)}/${data.endPTS.toFixed(3)}/${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}/${data.nb}`);
-      //this.frag.drift=data.startPTS-this.frag.start;
-      this.frag.drift = 0;
-      // if(level.details.sliding) {
-      //   this.frag.drift-=level.details.sliding;
-      // }
-      //logger.log('      drift:${this.frag.drift.toFixed(3)}');
       this.mp4segments.push({type: data.type, data: data.moof});
       this.mp4segments.push({type: data.type, data: data.mdat});
       this.nextLoadPosition = data.endPTS;
       this.bufferRange.push({type: data.type, start: data.startPTS, end: data.endPTS, frag: this.frag});
-      // if(data.type === 'video') {
-      //   this.frag.fpsExpected = (data.nb-1) / (data.endPTS - data.startPTS);
-      // }
       //trigger handler right now
       this.tick();
     } else {
