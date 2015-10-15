@@ -999,8 +999,13 @@ class BufferController {
     }
 
     onFragmentLoaded(event, data) {
-        if (this.state === this.LOADING) {
-            var fragCurrent = this.fragCurrent;
+        var fragCurrent = this.fragCurrent;
+        if (
+            this.state === this.LOADING &&
+            fragCurrent &&
+            data.frag.level === fragCurrent.level &&
+            data.frag.sn === fragCurrent.sn
+        ) {
             if (this.fragmentBitrateTest === true) {
                 // switch back to IDLE state ... we just loaded a fragment to determine adequate start bitrate and initialize autoswitch algo
                 this.state = this.IDLE;
