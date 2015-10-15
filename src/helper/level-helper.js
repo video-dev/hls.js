@@ -53,16 +53,16 @@ class LevelHelper {
                 PTSFrag.startPTS,
                 PTSFrag.endPTS
             );
-            // known PTS
-            newDetails.PTSKnown = true;
         } else {
             // adjust start by sliding offset
             var sliding = oldfragments[delta].start;
             for (i = 0; i < newfragments.length; i++) {
                 newfragments[i].start += sliding;
             }
-            newDetails.PTSKnown = false;
         }
+        // if we are here, it means we have fragments overlapping between
+        // old and new level. reliable PTS info is thus relying on old level
+        newDetails.PTSKnown = oldDetails.PTSKnown;
         return;
     }
 
