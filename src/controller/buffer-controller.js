@@ -213,7 +213,7 @@ class BufferController {
             // check if requested position is within seekable boundaries :
             //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.video.seeking}`);
             if (bufferEnd < start) {
-                this.seekAfterStalling = this.startPosition;
+                this.seekAfterStalling = start + Math.max(0, levelDetails.totalduration - this.config.liveSyncDurationCount * levelDetails.targetduration);
                 logger.log(`buffer end: ${bufferEnd} is located before start of live sliding playlist, media position will be reseted to: ${this.seekAfterStalling.toFixed(3)}`);
                 bufferEnd = this.seekAfterStalling;
             }
@@ -803,11 +803,11 @@ class BufferController {
         if (newDetails.PTSKnown) {
           logger.log(`live playlist sliding:${newDetails.fragments[0].start.toFixed(3)}`);
         } else {
-          logger.log(`live playlist - outdated PTS, unknown sliding`);
+          logger.log('live playlist - outdated PTS, unknown sliding');
         }
       } else {
         newDetails.PTSKnown = false;
-        logger.log(`live playlist - first load, unknown sliding`);
+        logger.log('live playlist - first load, unknown sliding');
       }
     } else {
       newDetails.PTSKnown = false;
