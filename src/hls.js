@@ -45,6 +45,7 @@ class Hls {
             maxBufferLength: 30,
             maxBufferSize: 60 * 1000 * 1000,
             liveSyncDurationCount: 3,
+            liveMaxLatencyDurationCount: undefined, //useless, but here as a reminder that this conf parameter exists
             maxMaxBufferLength: 600,
             enableWorker: true,
             fragLoadingTimeOut: 20000,

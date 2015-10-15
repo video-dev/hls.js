@@ -215,7 +215,15 @@ class BufferController {
                     if (levelDetails.live) {
                         // check if requested position is within seekable boundaries :
                         //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.video.seeking}`);
-                        if (bufferEnd < start) {
+                        if (
+                            bufferEnd <
+                            Math.max(
+                                start,
+                                end -
+                                    this.config.liveMaxLatencyDurationCount *
+                                        levelDetails.targetduration
+                            )
+                        ) {
                             this.seekAfterBuffered =
                                 start +
                                 Math.max(
@@ -225,7 +233,7 @@ class BufferController {
                                             levelDetails.targetduration
                                 );
                             logger.log(
-                                `buffer end: ${bufferEnd} is located before start of live sliding playlist, media position will be reseted to: ${this.seekAfterBuffered.toFixed(
+                                `buffer end: ${bufferEnd} is located too far from the end of live sliding playlist, media position will be reseted to: ${this.seekAfterBuffered.toFixed(
                                     3
                                 )}`
                             );
