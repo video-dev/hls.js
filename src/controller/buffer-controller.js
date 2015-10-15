@@ -24,17 +24,17 @@ class BufferController {
     this.startPosition = 0;
     this.hls = hls;
     // Source Buffer listeners
-    this.onsbue = this.onSourceBufferUpdateEnd.bind(this);
-    this.onsbe  = this.onSourceBufferError.bind(this);
+    this.onsbue = this.onSBUpdateEnd.bind(this);
+    this.onsbe  = this.onSBUpdateError.bind(this);
     // internal listeners
     this.onmse = this.onMSEAttached.bind(this);
     this.onmsed = this.onMSEDetached.bind(this);
     this.onmp = this.onManifestParsed.bind(this);
     this.onll = this.onLevelLoaded.bind(this);
-    this.onfl = this.onFragmentLoaded.bind(this);
+    this.onfl = this.onFragLoaded.bind(this);
     this.onis = this.onInitSegment.bind(this);
-    this.onfpg = this.onFragmentParsing.bind(this);
-    this.onfp = this.onFragmentParsed.bind(this);
+    this.onfpg = this.onFragParsing.bind(this);
+    this.onfp = this.onFragParsed.bind(this);
     this.onerr = this.onError.bind(this);
     this.ontick = this.tick.bind(this);
     hls.on(Event.MSE_ATTACHED, this.onmse);
@@ -144,7 +144,7 @@ class BufferController {
         if (this.startLevel === -1) {
           // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
           this.startLevel = 0;
-          this.fragmentBitrateTest = true;
+          this.fragBitrateTest = true;
         }
         // set new level to playlist loader : this will trigger start level load
         this.level = this.hls.nextLoadLevel = this.startLevel;
@@ -832,16 +832,16 @@ class BufferController {
     this.tick();
   }
 
-  onFragmentLoaded(event, data) {
+  onFragLoaded(event, data) {
     var fragCurrent = this.fragCurrent;
     if (this.state === this.LOADING &&
         fragCurrent &&
         data.frag.level === fragCurrent.level &&
         data.frag.sn === fragCurrent.sn) {
-      if (this.fragmentBitrateTest === true) {
+      if (this.fragBitrateTest === true) {
         // switch back to IDLE state ... we just loaded a fragment to determine adequate start bitrate and initialize autoswitch algo
         this.state = this.IDLE;
-        this.fragmentBitrateTest = false;
+        this.fragBitrateTest = false;
         data.stats.tparsed = data.stats.tbuffered = new Date();
         this.hls.trigger(Event.FRAG_BUFFERED, {stats: data.stats, frag: fragCurrent});
       } else {
@@ -903,7 +903,7 @@ class BufferController {
     }
   }
 
-  onFragmentParsing(event, data) {
+  onFragParsing(event, data) {
     if (this.state === this.PARSING) {
       this.tparse2 = Date.now();
       var level = this.levels[this.level],
@@ -922,7 +922,7 @@ class BufferController {
     }
   }
 
-  onFragmentParsed() {
+  onFragParsed() {
     if (this.state === this.PARSING) {
       this.state = this.PARSED;
       this.stats.tparsed = new Date();
@@ -948,7 +948,7 @@ class BufferController {
     }
   }
 
-  onSourceBufferUpdateEnd() {
+  onSBUpdateEnd() {
     //trigger handler right now
     if (this.state === this.APPENDING && this.mp4segments.length === 0)  {
       var frag = this.fragCurrent;
@@ -963,7 +963,7 @@ class BufferController {
     this.tick();
   }
 
-  onSourceBufferError(event) {
+  onSBUpdateError(event) {
     logger.error(`sourceBuffer error:${event}`);
     this.state = this.ERROR;
     this.hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_APPENDING_ERROR, fatal: true, frag: this.fragCurrent});
