@@ -152,19 +152,9 @@ class BufferController {
                 this.loadedmetadata = false;
                 break;
             case this.IDLE:
-                // handle end of immediate switching if needed
-                if (this.immediateSwitch) {
-                    this.immediateLevelSwitchEnd();
-                    break;
-                }
                 // if video detached or unbound exit loop
                 if (!this.video) {
                     break;
-                }
-                // seek back to a expected position after video stalling
-                if (this.seekAfterStalling) {
-                    this.video.currentTime = this.seekAfterStalling;
-                    this.seekAfterStalling = undefined;
                 }
                 // determine next candidate fragment to be loaded, based on current position and
                 //  end of buffer position
@@ -182,7 +172,7 @@ class BufferController {
                     // we are not at playback start, get next load level from level Controller
                     level = this.hls.nextLoadLevel;
                 }
-                var bufferInfo = this.bufferInfo(pos),
+                var bufferInfo = this.bufferInfo(pos, 0.3),
                     bufferLen = bufferInfo.len,
                     bufferEnd = bufferInfo.end,
                     maxBufLen;
@@ -226,7 +216,7 @@ class BufferController {
                         // check if requested position is within seekable boundaries :
                         //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.video.seeking}`);
                         if (bufferEnd < start) {
-                            this.seekAfterStalling =
+                            this.seekAfterBuffered =
                                 start +
                                 Math.max(
                                     0,
@@ -235,11 +225,11 @@ class BufferController {
                                             levelDetails.targetduration
                                 );
                             logger.log(
-                                `buffer end: ${bufferEnd} is located before start of live sliding playlist, media position will be reseted to: ${this.seekAfterStalling.toFixed(
+                                `buffer end: ${bufferEnd} is located before start of live sliding playlist, media position will be reseted to: ${this.seekAfterBuffered.toFixed(
                                     3
                                 )}`
                             );
-                            bufferEnd = this.seekAfterStalling;
+                            bufferEnd = this.seekAfterBuffered;
                         }
                         if (
                             this.startFragmentRequested &&
@@ -401,7 +391,7 @@ class BufferController {
                         var fragLoadedDelay =
                             (frag.expectedLen - frag.loaded) / loadRate;
                         var bufferStarvationDelay =
-                            this.bufferInfo(pos).end - pos;
+                            this.bufferInfo(pos, 0.3).end - pos;
                         var fragLevelNextLoadedDelay =
                             frag.duration *
                             this.levels[this.hls.nextLoadLevel].bitrate /
@@ -519,6 +509,10 @@ class BufferController {
                     }
                 }
                 if (this.flushRange.length === 0) {
+                    // handle end of immediate switching if needed
+                    if (this.immediateSwitch) {
+                        this.immediateLevelSwitchEnd();
+                    }
                     // move to IDLE once flush complete. this should trigger new fragment loading
                     this.state = this.IDLE;
                     // reset reference to frag
@@ -535,13 +529,14 @@ class BufferController {
         this._checkFragmentChanged();
     }
 
-    bufferInfo(pos) {
+    bufferInfo(pos, maxHoleDuration) {
         var v = this.video,
             buffered = v.buffered,
             bufferLen,
             // bufferStart and bufferEnd are buffer boundaries around current video position
             bufferStart,
             bufferEnd,
+            bufferStartNext,
             i;
         var buffered2 = [];
         // there might be some small holes between buffer time range
@@ -551,7 +546,8 @@ class BufferController {
             //logger.log('buf start/end:' + buffered.start(i) + '/' + buffered.end(i));
             if (
                 buffered2.length &&
-                buffered.start(i) - buffered2[buffered2.length - 1].end < 0.3
+                buffered.start(i) - buffered2[buffered2.length - 1].end <
+                    maxHoleDuration
             ) {
                 buffered2[buffered2.length - 1].end = buffered.end(i);
             } else {
@@ -566,15 +562,24 @@ class BufferController {
             i < buffered2.length;
             i++
         ) {
+            var start = buffered2[i].start,
+                end = buffered2[i].end;
             //logger.log('buf start/end:' + buffered.start(i) + '/' + buffered.end(i));
-            if (pos + 0.3 >= buffered2[i].start && pos < buffered2[i].end) {
+            if (pos + maxHoleDuration >= start && pos < end) {
                 // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
-                bufferStart = buffered2[i].start;
-                bufferEnd = buffered2[i].end + 0.3;
+                bufferStart = start;
+                bufferEnd = end + maxHoleDuration;
                 bufferLen = bufferEnd - pos;
+            } else if (pos + maxHoleDuration < start) {
+                bufferStartNext = start;
             }
         }
-        return { len: bufferLen, start: bufferStart, end: bufferEnd };
+        return {
+            len: bufferLen,
+            start: bufferStart,
+            end: bufferEnd,
+            nextStart: bufferStartNext
+        };
     }
 
     getBufferRange(position) {
@@ -876,7 +881,7 @@ class BufferController {
         if (this.state === this.LOADING) {
             // check if currently loaded fragment is inside buffer.
             //if outside, cancel fragment loading, otherwise do nothing
-            if (this.bufferInfo(this.video.currentTime).len === 0) {
+            if (this.bufferInfo(this.video.currentTime, 0.3).len === 0) {
                 logger.log(
                     'seeking outside of buffer while fragment load in progress, cancel fragment load'
                 );
@@ -1193,6 +1198,34 @@ class BufferController {
                 );
                 this.state = this.IDLE;
             }
+            var video = this.video;
+            if (video) {
+                // seek back to a expected position after video buffered if needed
+                if (this.seekAfterBuffered) {
+                    video.currentTime = this.seekAfterBuffered;
+                } else {
+                    var currentTime = video.currentTime;
+                    var bufferInfo = this.bufferInfo(currentTime, 0);
+                    // check if current time is buffered or not
+                    if (bufferInfo.len === 0) {
+                        // no buffer available @ currentTime, check if next buffer is close (in a 300 ms range)
+                        var nextBufferStart = bufferInfo.nextStart;
+                        if (
+                            nextBufferStart &&
+                            nextBufferStart - currentTime < 0.3
+                        ) {
+                            // next buffer is close ! adjust currentTime to nextBufferStart
+                            // this will ensure effective video decoding
+                            logger.log(
+                                `adjust currentTime from ${currentTime} to ${nextBufferStart}`
+                            );
+                            video.currentTime = nextBufferStart;
+                        }
+                    }
+                }
+            }
+            // reset this variable, whether it was set or not
+            this.seekAfterBuffered = undefined;
         }
         this.tick();
     }
