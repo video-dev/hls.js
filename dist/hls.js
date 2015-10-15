@@ -715,7 +715,7 @@ var BufferController = (function () {
               // check if requested position is within seekable boundaries :
               //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.video.seeking}`);
               if (bufferEnd < start) {
-                this.seekAfterStalling = this.startPosition;
+                this.seekAfterStalling = start + Math.max(0, levelDetails.totalduration - this.config.liveSyncDurationCount * levelDetails.targetduration);
                 _utilsLogger.logger.log('buffer end: ' + bufferEnd + ' is located before start of live sliding playlist, media position will be reseted to: ' + this.seekAfterStalling.toFixed(3));
                 bufferEnd = this.seekAfterStalling;
               }
@@ -3142,16 +3142,16 @@ var LevelHelper = (function () {
       // if at least one fragment contains PTS info, recompute PTS information for all fragments
       if (PTSFrag) {
         LevelHelper.updateFragPTS(newDetails, PTSFrag.sn, PTSFrag.startPTS, PTSFrag.endPTS);
-        // known PTS
-        newDetails.PTSKnown = true;
       } else {
         // adjust start by sliding offset
         var sliding = oldfragments[delta].start;
         for (i = 0; i < newfragments.length; i++) {
           newfragments[i].start += sliding;
         }
-        newDetails.PTSKnown = false;
       }
+      // if we are here, it means we have fragments overlapping between
+      // old and new level. reliable PTS info is thus relying on old level
+      newDetails.PTSKnown = oldDetails.PTSKnown;
       return;
     }
   }, {
