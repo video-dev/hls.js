@@ -229,6 +229,7 @@ decreasing this value is likely to cause playback stalls.
 
 maximum delay allowed from edge of live, expressed in multiple of ```EXT-X-TARGETDURATION```.
 if set to 10, the player will seek back to ```liveSyncDurationCount``` whenever the next fragment to be loaded is older than N-10, N being the last fragment of the live playlist.
+If set, this value must be stricly superior to ```liveSyncDurationCount```
 a value too close from ```liveSyncDurationCount``` is likely to cause playback stalls.
 
 #### ```enableWorker```

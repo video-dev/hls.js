@@ -67,6 +67,16 @@ class Hls {
             }
             config[prop] = configDefault[prop];
         }
+
+        if (
+            config.liveMaxLatencyDurationCount !== undefined &&
+            config.liveMaxLatencyDurationCount <= config.liveSyncDurationCount
+        ) {
+            throw new Error(
+                'Illegal hls.js configuration: "liveMaxLatencyDurationCount" must be strictly superior to "liveSyncDurationCount" in player configuration'
+            );
+        }
+
         enableLogs(config.debug);
         this.config = config;
         // observer setup
