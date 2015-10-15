@@ -219,6 +219,10 @@ class LevelController {
                         `level controller,${details}: emergency switch-down for next fragment`
                     );
                     this.hls.abrController.nextAutoLevel = 0;
+                } else if (level && level.details && level.details.live) {
+                    logger.warn(
+                        `level controller,${details} on live stream, discard`
+                    );
                 } else {
                     logger.error(`cannot recover ${details} error`);
                     this._level = undefined;
