@@ -1696,6 +1696,8 @@ var LevelController = (function () {
           if (recoverable) {
             _utilsLogger.logger.warn('level controller,' + details + ': emergency switch-down for next fragment');
             this.hls.abrController.nextAutoLevel = 0;
+          } else if (level && level.details && level.details.live) {
+            _utilsLogger.logger.warn('level controller,' + details + ' on live stream, discard');
           } else {
             _utilsLogger.logger.error('cannot recover ' + details + ' error');
             this._level = undefined;
