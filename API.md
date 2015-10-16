@@ -176,6 +176,7 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       maxBufferLength : 30,
       maxBufferSize : 60*1000*1000,
       liveSyncDurationCount : 3,
+      liveMaxLatencyDurationCount: 10,
       enableWorker : true,
       fragLoadingTimeOut : 20000,
       fragLoadingMaxRetry : 6,
@@ -222,6 +223,14 @@ maximum buffer size in bytes. if buffer size upfront is bigger than this value, 
 edge of live delay, expressed in multiple of ```EXT-X-TARGETDURATION```.
 if set to 3, playback will start from fragment N-3, N being the last fragment of the live playlist.
 decreasing this value is likely to cause playback stalls.
+
+#### ```liveMaxLatencyDurationCount```
+(default Infinity)
+
+maximum delay allowed from edge of live, expressed in multiple of ```EXT-X-TARGETDURATION```.
+if set to 10, the player will seek back to ```liveSyncDurationCount``` whenever the next fragment to be loaded is older than N-10, N being the last fragment of the live playlist.
+If set, this value must be stricly superior to ```liveSyncDurationCount```
+a value too close from ```liveSyncDurationCount``` is likely to cause playback stalls.
 
 #### ```enableWorker```
 (default true)
