@@ -225,7 +225,7 @@ if set to 3, playback will start from fragment N-3, N being the last fragment of
 decreasing this value is likely to cause playback stalls.
 
 #### ```liveMaxLatencyDurationCount```
-(default undefined)
+(default Infinity)
 
 maximum delay allowed from edge of live, expressed in multiple of ```EXT-X-TARGETDURATION```.
 if set to 10, the player will seek back to ```liveSyncDurationCount``` whenever the next fragment to be loaded is older than N-10, N being the last fragment of the live playlist.
