@@ -26,8 +26,10 @@
       "babelify"
     ]
   },
+  "dependencies": {
+    "babelify": "^6.1.2"
+  },
   "devDependencies": {
-    "babelify": "^6.1.2",
     "browserify": "^8.1.1",
     "exorcist": "^0.4.0",
     "http-server": "^0.7.4",
