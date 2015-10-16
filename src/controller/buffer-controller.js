@@ -423,7 +423,7 @@ class BufferController {
         i;
     var buffered2 = [];
     // there might be some small holes between buffer time range
-    // consider that holes smaller than 300 ms are irrelevant and build another
+    // consider that holes smaller than maxHoleDuration are irrelevant and build another
     // buffer time range representations that discards those holes
     for (i = 0; i < buffered.length; i++) {
       //logger.log('buf start/end:' + buffered.start(i) + '/' + buffered.end(i));
