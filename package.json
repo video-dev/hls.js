@@ -27,7 +27,8 @@
     ]
   },
   "dependencies": {
-    "babelify": "^6.1.2"
+    "babelify": "^6.1.2",
+    "webworkify": "^1.0.2"
   },
   "devDependencies": {
     "browserify": "^8.1.1",
@@ -39,7 +40,6 @@
     "opener": "^1.4.0",
     "parallelshell": "^1.0.3",
     "uglify-js": "^2.4.23",
-    "watchify": "^2.2.1",
-    "webworkify": "^1.0.2"
+    "watchify": "^2.2.1"
   }
 }
