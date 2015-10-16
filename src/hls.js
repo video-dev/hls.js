@@ -41,6 +41,7 @@ class Hls {
       maxBufferLength: 30,
       maxBufferSize: 60 * 1000 * 1000,
       liveSyncDurationCount:3,
+      liveMaxLatencyDurationCount: Infinity,
       maxMaxBufferLength: 600,
       enableWorker: true,
       fragLoadingTimeOut: 20000,
@@ -60,6 +61,11 @@ class Hls {
         if (prop in config) { continue; }
         config[prop] = configDefault[prop];
     }
+    
+    if (config.liveMaxLatencyDurationCount !== undefined && config.liveMaxLatencyDurationCount <= config.liveSyncDurationCount) {
+      throw new Error('Illegal hls.js configuration: "liveMaxLatencyDurationCount" must be strictly superior to "liveSyncDurationCount" in player configuration');
+    }
+    
     enableLogs(config.debug);
     this.config = config;
     // observer setup
