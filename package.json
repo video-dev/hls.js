@@ -4,7 +4,7 @@
   "description": "Media Source Extension - HLS library, by/for Dailymotion",
   "homepage": "https://github.com/dailymotion/hls.js",
   "authors": "Guillaume du Pontavice <guillaume.dupontavice@dailymotion.com>",
-  "main": "dist/hls.js",
+  "main": "src/hls.js",
   "private": true,
   "scripts": {
     "clean": "find dist -mindepth 1 -delete",
@@ -26,8 +26,11 @@
       "babelify"
     ]
   },
-  "devDependencies": {
+  "dependencies": {
     "babelify": "^6.1.2",
+    "webworkify": "^1.0.2"
+  },
+  "devDependencies": {
     "browserify": "^8.1.1",
     "exorcist": "^0.4.0",
     "http-server": "^0.7.4",
@@ -37,7 +40,6 @@
     "opener": "^1.4.0",
     "parallelshell": "^1.0.3",
     "uglify-js": "^2.4.23",
-    "watchify": "^2.2.1",
-    "webworkify": "^1.0.2"
+    "watchify": "^2.2.1"
   }
 }
