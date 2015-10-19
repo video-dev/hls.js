@@ -27,7 +27,7 @@ class XhrLoader {
     }
   }
 
-  load(url, responseType, onSuccess, onError, onTimeout, timeout, maxRetry, retryDelay, onProgress = null) {
+  load(url, responseType, onSuccess, onError, onTimeout, timeout, maxRetry, retryDelay, onProgress = null, frag = null) {
     this.url = url;
     this.responseType = responseType;
     this.onSuccess = onSuccess;
