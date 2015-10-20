@@ -6,6 +6,7 @@
 import Event from '../events';
 import {logger} from '../utils/logger';
 import MP4 from '../remux/mp4-generator';
+import {ErrorTypes, ErrorDetails} from '../errors';
 
 class MP4Remuxer {
   constructor(observer) {
@@ -53,8 +54,16 @@ class MP4Remuxer {
   }
 
   generateIS(audioTrack,videoTrack,timeOffset) {
-    var observer = this.observer;
-    if (videoTrack.samples.length === 0) {
+    var observer = this.observer,
+        audioSamples = audioTrack.samples,
+        videoSamples = videoTrack.samples,
+        nbAudio = audioSamples.length,
+        nbVideo = videoSamples.length,
+        pesTimeScale = this.PES_TIMESCALE;
+
+    if(nbAudio === 0 && nbVideo === 0) {
+      observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'no audio/video samples found'});
+    } else if (nbVideo === 0) {
       //audio only
       if (audioTrack.config) {
          observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
@@ -66,11 +75,11 @@ class MP4Remuxer {
       }
       if (this._initPTS === undefined) {
         // remember first PTS of this demuxing context
-        this._initPTS = audioTrack.samples[0].pts - this.PES_TIMESCALE * timeOffset;
-        this._initDTS = audioTrack.samples[0].dts - this.PES_TIMESCALE * timeOffset;
+        this._initPTS = audioSamples[0].pts - pesTimeScale * timeOffset;
+        this._initDTS = audioSamples[0].dts - pesTimeScale * timeOffset;
       }
     } else
-    if (audioTrack.samples.length === 0) {
+    if (nbAudio === 0) {
       //video only
       if (videoTrack.sps && videoTrack.pps) {
          observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
@@ -82,8 +91,8 @@ class MP4Remuxer {
         this.ISGenerated = true;
         if (this._initPTS === undefined) {
           // remember first PTS of this demuxing context
-          this._initPTS = videoTrack.samples[0].pts - this.PES_TIMESCALE * timeOffset;
-          this._initDTS = videoTrack.samples[0].dts - this.PES_TIMESCALE * timeOffset;
+          this._initPTS = videoSamples[0].pts - pesTimeScale * timeOffset;
+          this._initDTS = videoSamples[0].dts - pesTimeScale * timeOffset;
         }
       }
     } else {
@@ -101,8 +110,8 @@ class MP4Remuxer {
         this.ISGenerated = true;
         if (this._initPTS === undefined) {
           // remember first PTS of this demuxing context
-          this._initPTS = Math.min(videoTrack.samples[0].pts, audioTrack.samples[0].pts) - this.PES_TIMESCALE * timeOffset;
-          this._initDTS = Math.min(videoTrack.samples[0].dts, audioTrack.samples[0].dts) - this.PES_TIMESCALE * timeOffset;
+          this._initPTS = Math.min(videoSamples[0].pts, audioSamples[0].pts) - pesTimeScale * timeOffset;
+          this._initDTS = Math.min(videoSamples[0].dts, audioSamples[0].dts) - pesTimeScale * timeOffset;
         }
       }
     }
