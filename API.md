@@ -450,7 +450,7 @@ hls.on(Hls.Events.LEVEL_LOADED,function(event,data) {
 full list of Events available below :
 
   - `Hls.Events.MSE_ATTACHED`  - fired when MediaSource has been succesfully attached to video element.
-    -  data: { mediaSource }
+    -  data: { video , mediaSource }
   - `Hls.Events.MSE_DETACHED`  - fired when MediaSource has been detached from video element.
     -  data: { }
   - `Hls.Events.MANIFEST_LOADING`  - fired to signal that a manifest loading starts
@@ -487,6 +487,8 @@ full list of Events available below :
     -  data: {curentDropped : nb of dropped frames in last monitoring period, currentDecoded: nb of decoded frames in last monitoring period, totalDropped : total dropped frames on this video element}
   - `Hls.Events.ERROR` -  Identifier for an error event
     - data: { type : error Type, details : error details, fatal : is error fatal or not, other error specific data} 
+  - `Hls.Events.DESTROYING` -  fired when hls.js instance starts destroying. Different from MSE_DETACHED as one could want to detach and reattach a video to the instance of hls.js to handle mid-rolls for example.
+    - data: { }
 
 
 ##Errors
