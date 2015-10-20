@@ -44,14 +44,6 @@ class BufferController {
     destroy() {
         this.stop();
         this.hls.off(Event.MANIFEST_PARSED, this.onmp);
-        // remove video listener
-        if (this.video) {
-            this.video.removeEventListener('seeking', this.onvseeking);
-            this.video.removeEventListener('seeked', this.onvseeked);
-            this.video.removeEventListener('loadedmetadata', this.onvmetadata);
-            this.video.removeEventListener('ended', this.onvended);
-            this.onvseeking = this.onvseeked = this.onvmetadata = null;
-        }
         this.state = this.IDLE;
     }
 
@@ -880,6 +872,14 @@ class BufferController {
     }
 
     onMSEDetached() {
+        // remove video listeners
+        if (this.video) {
+            this.video.removeEventListener('seeking', this.onvseeking);
+            this.video.removeEventListener('seeked', this.onvseeked);
+            this.video.removeEventListener('loadedmetadata', this.onvmetadata);
+            this.video.removeEventListener('ended', this.onvended);
+            this.onvseeking = this.onvseeked = this.onvmetadata = null;
+        }
         this.video = null;
         this.loadedmetadata = false;
         this.stop();
