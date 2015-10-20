@@ -450,7 +450,7 @@ hls.on(Hls.Events.LEVEL_LOADED,function(event,data) {
 full list of Events available below :
 
   - `Hls.Events.MSE_ATTACHED`  - fired when MediaSource has been succesfully attached to video element.
-    -  data: { mediaSource }
+    -  data: { video , mediaSource }
   - `Hls.Events.MSE_DETACHED`  - fired when MediaSource has been detached from video element.
     -  data: { }
   - `Hls.Events.MANIFEST_LOADING`  - fired to signal that a manifest loading starts
