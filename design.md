@@ -66,6 +66,8 @@ design idea is pretty simple :
     - TS demuxer web worker. 
     - listen to worker message, and trigger tsdemuxer upon reception of TS fragments.
     - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
+  - [src/helper/level-helper.js][]
+    - helper class providing methods dealing with playlist sliding and fragment duration drift computation : after fragment parsing, start/end fragment timestamp will be used to adjust potential playlist drifts and live playlist sliding.
   - [src/loader/fragment-loader.js][]
     - in charge of loading fragments, use xhr-loader if not overrided by user config
   - [src/loader/playlist-loader.js][]
@@ -102,6 +104,7 @@ design idea is pretty simple :
 [src/demux/exp-golomb.js]: src/demux/exp-golomb.js
 [src/demux/tsdemuxer.js]: src/demux/tsdemuxer.js
 [src/demux/tsdemuxerworker.js]: src/demux/tsdemuxerworker.js
+[src/helper/level-helper.js]: src/helper/level-helper.js
 [src/loader/fragment-loader.js]: src/loader/fragment-loader.js
 [src/loader/playlist-loader.js]: src/loader/playlist-loader.js
 [src/remux/dummy-remuxer.js]: src/remux/dummy-remuxer.js
