@@ -35,8 +35,7 @@ class XhrLoader {
         timeout,
         maxRetry,
         retryDelay,
-        onProgress = null,
-        frag = null
+        onProgress = null
     ) {
         this.url = url;
         this.responseType = responseType;
