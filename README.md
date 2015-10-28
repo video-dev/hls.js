@@ -34,7 +34,7 @@ hls.js is (being) integrated in the following players:
 
  it might also be integrated in the following players if you push for it !
 
- - [MediaElement.js] (https://www.flowplayer.org)  through [#1609
+ - [MediaElement.js] (http://mediaelementjs.com/)  through [#1609
 ] (https://github.com/johndyer/mediaelement/issues/1609)
  
 
