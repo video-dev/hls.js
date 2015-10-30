@@ -135,6 +135,8 @@ class Hls {
     detachVideo() {
         logger.log('detachVideo');
         var video = this.video;
+        logger.log('trigger MSE_DETACHING');
+        this.trigger(Event.MSE_DETACHING);
         this.statsHandler.detachVideo(video);
         var ms = this.mediaSource;
         if (ms) {

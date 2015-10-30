@@ -27,6 +27,7 @@ class BufferController {
         this.onsbe = this.onSBUpdateError.bind(this);
         // internal listeners
         this.onmse = this.onMSEAttached.bind(this);
+        this.onmsed0 = this.onMSEDetaching.bind(this);
         this.onmsed = this.onMSEDetached.bind(this);
         this.onmp = this.onManifestParsed.bind(this);
         this.onll = this.onLevelLoaded.bind(this);
@@ -37,13 +38,18 @@ class BufferController {
         this.onerr = this.onError.bind(this);
         this.ontick = this.tick.bind(this);
         hls.on(Event.MSE_ATTACHED, this.onmse);
+        hls.on(Event.MSE_DETACHING, this.onmsed0);
         hls.on(Event.MSE_DETACHED, this.onmsed);
         hls.on(Event.MANIFEST_PARSED, this.onmp);
     }
 
     destroy() {
         this.stop();
-        this.hls.off(Event.MANIFEST_PARSED, this.onmp);
+        var hls = this.hls;
+        hls.off(Event.MSE_ATTACHED, this.onmse);
+        hls.off(Event.MSE_DETACHING, this.onmsed0);
+        hls.off(Event.MSE_DETACHED, this.onmsed);
+        hls.off(Event.MANIFEST_PARSED, this.onmp);
         this.state = this.IDLE;
     }
 
@@ -856,28 +862,38 @@ class BufferController {
     }
 
     onMSEAttached(event, data) {
-        this.video = data.video;
+        var video = data.video;
+        this.video = video;
         this.mediaSource = data.mediaSource;
         this.onvseeking = this.onVideoSeeking.bind(this);
         this.onvseeked = this.onVideoSeeked.bind(this);
         this.onvmetadata = this.onVideoMetadata.bind(this);
         this.onvended = this.onVideoEnded.bind(this);
-        this.video.addEventListener('seeking', this.onvseeking);
-        this.video.addEventListener('seeked', this.onvseeked);
-        this.video.addEventListener('loadedmetadata', this.onvmetadata);
-        this.video.addEventListener('ended', this.onvended);
+        video.addEventListener('seeking', this.onvseeking);
+        video.addEventListener('seeked', this.onvseeked);
+        video.addEventListener('loadedmetadata', this.onvmetadata);
+        video.addEventListener('ended', this.onvended);
         if (this.levels && this.config.autoStartLoad) {
             this.startLoad();
         }
     }
 
+    onMSEDetaching() {
+        var video = this.video;
+        if (video && video.ended) {
+            logger.log('MSE detaching and video ended, reset startPosition');
+            this.startPosition = this.lastCurrentTime = 0;
+        }
+    }
+
     onMSEDetached() {
         // remove video listeners
-        if (this.video) {
-            this.video.removeEventListener('seeking', this.onvseeking);
-            this.video.removeEventListener('seeked', this.onvseeked);
-            this.video.removeEventListener('loadedmetadata', this.onvmetadata);
-            this.video.removeEventListener('ended', this.onvended);
+        var video = this.video;
+        if (video) {
+            video.removeEventListener('seeking', this.onvseeking);
+            video.removeEventListener('seeked', this.onvseeked);
+            video.removeEventListener('loadedmetadata', this.onvmetadata);
+            video.removeEventListener('ended', this.onvended);
             this.onvseeking = this.onvseeked = this.onvmetadata = null;
         }
         this.video = null;
