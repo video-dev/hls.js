@@ -324,10 +324,12 @@ class TSDemuxer {
         }
         //free pes.data to save up some memory
         pes.data = null;
+        //var debugString = '';
         units.units.forEach(unit => {
             switch (unit.type) {
                 //NDR
                 case 1:
+                    //debugString += 'NDR ';
                     // check if slice_type matches with a keyframe
                     var sliceType = new ExpGolomb(unit.data).readSliceType();
                     if (
@@ -342,10 +344,15 @@ class TSDemuxer {
                     break;
                 //IDR
                 case 5:
+                    //debugString += 'IDR ';
                     key = true;
                     break;
+                //case 6:
+                //  debugString += 'SEI ';
+                //  break;
                 //SPS
                 case 7:
+                    //debugString += 'SPS ';
                     if (!track.sps) {
                         var expGolombDecoder = new ExpGolomb(unit.data);
                         var config = expGolombDecoder.readSPS();
@@ -372,14 +379,18 @@ class TSDemuxer {
                     break;
                 //PPS
                 case 8:
+                    //debugString += 'PPS ';
                     if (!track.pps) {
                         track.pps = [unit.data];
                     }
                     break;
+                //case 9:
+                //  debugString += 'AUD ';
                 default:
                     break;
             }
         });
+        //logger.log(debugString);
         //build sample from PES
         // Annex B to MP4 conversion to be done
         if (units.length) {
