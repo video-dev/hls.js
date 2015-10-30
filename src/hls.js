@@ -61,11 +61,11 @@ class Hls {
         if (prop in config) { continue; }
         config[prop] = configDefault[prop];
     }
-    
+
     if (config.liveMaxLatencyDurationCount !== undefined && config.liveMaxLatencyDurationCount <= config.liveSyncDurationCount) {
       throw new Error('Illegal hls.js configuration: "liveMaxLatencyDurationCount" must be strictly superior to "liveSyncDurationCount" in player configuration');
     }
-    
+
     enableLogs(config.debug);
     this.config = config;
     // observer setup
@@ -124,6 +124,8 @@ class Hls {
   detachVideo() {
     logger.log('detachVideo');
     var video = this.video;
+    logger.log('trigger MSE_DETACHING');
+    this.trigger(Event.MSE_DETACHING);
     this.statsHandler.detachVideo(video);
     var ms = this.mediaSource;
     if (ms) {
