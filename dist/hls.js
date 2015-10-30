@@ -522,6 +522,7 @@ var BufferController = (function () {
     this.onsbe = this.onSBUpdateError.bind(this);
     // internal listeners
     this.onmse = this.onMSEAttached.bind(this);
+    this.onmsed0 = this.onMSEDetaching.bind(this);
     this.onmsed = this.onMSEDetached.bind(this);
     this.onmp = this.onManifestParsed.bind(this);
     this.onll = this.onLevelLoaded.bind(this);
@@ -532,6 +533,7 @@ var BufferController = (function () {
     this.onerr = this.onError.bind(this);
     this.ontick = this.tick.bind(this);
     hls.on(_events2['default'].MSE_ATTACHED, this.onmse);
+    hls.on(_events2['default'].MSE_DETACHING, this.onmsed0);
     hls.on(_events2['default'].MSE_DETACHED, this.onmsed);
     hls.on(_events2['default'].MANIFEST_PARSED, this.onmp);
   }
@@ -540,7 +542,11 @@ var BufferController = (function () {
     key: 'destroy',
     value: function destroy() {
       this.stop();
-      this.hls.off(_events2['default'].MANIFEST_PARSED, this.onmp);
+      var hls = this.hls;
+      hls.off(_events2['default'].MSE_ATTACHED, this.onmse);
+      hls.off(_events2['default'].MSE_DETACHING, this.onmsed0);
+      hls.off(_events2['default'].MSE_DETACHED, this.onmsed);
+      hls.off(_events2['default'].MANIFEST_PARSED, this.onmp);
       this.state = this.IDLE;
     }
   }, {
@@ -1179,29 +1185,40 @@ var BufferController = (function () {
   }, {
     key: 'onMSEAttached',
     value: function onMSEAttached(event, data) {
-      this.video = data.video;
+      var video = data.video;
+      this.video = video;
       this.mediaSource = data.mediaSource;
       this.onvseeking = this.onVideoSeeking.bind(this);
       this.onvseeked = this.onVideoSeeked.bind(this);
       this.onvmetadata = this.onVideoMetadata.bind(this);
       this.onvended = this.onVideoEnded.bind(this);
-      this.video.addEventListener('seeking', this.onvseeking);
-      this.video.addEventListener('seeked', this.onvseeked);
-      this.video.addEventListener('loadedmetadata', this.onvmetadata);
-      this.video.addEventListener('ended', this.onvended);
+      video.addEventListener('seeking', this.onvseeking);
+      video.addEventListener('seeked', this.onvseeked);
+      video.addEventListener('loadedmetadata', this.onvmetadata);
+      video.addEventListener('ended', this.onvended);
       if (this.levels && this.config.autoStartLoad) {
         this.startLoad();
+      }
+    }
+  }, {
+    key: 'onMSEDetaching',
+    value: function onMSEDetaching() {
+      var video = this.video;
+      if (video && video.ended) {
+        _utilsLogger.logger.log('MSE detaching and video ended, reset startPosition');
+        this.startPosition = this.lastCurrentTime = 0;
       }
     }
   }, {
     key: 'onMSEDetached',
     value: function onMSEDetached() {
       // remove video listeners
-      if (this.video) {
-        this.video.removeEventListener('seeking', this.onvseeking);
-        this.video.removeEventListener('seeked', this.onvseeked);
-        this.video.removeEventListener('loadedmetadata', this.onvmetadata);
-        this.video.removeEventListener('ended', this.onvended);
+      var video = this.video;
+      if (video) {
+        video.removeEventListener('seeking', this.onvseeking);
+        video.removeEventListener('seeked', this.onvseeked);
+        video.removeEventListener('loadedmetadata', this.onvmetadata);
+        video.removeEventListener('ended', this.onvended);
         this.onvseeking = this.onvseeked = this.onvmetadata = null;
       }
       this.video = null;
@@ -3075,6 +3092,8 @@ Object.defineProperty(exports, '__esModule', {
 exports['default'] = {
   // fired when MediaSource has been succesfully attached to video element - data: { video, mediaSource }
   MSE_ATTACHED: 'hlsMediaSourceAttached',
+  // fired before detaching MediaSource from video element - data: { }
+  MSE_DETACHING: 'hlsMediaSourceDetaching',
   // fired when MediaSource has been detached from video element - data: { }
   MSE_DETACHED: 'hlsMediaSourceDetached',
   // fired to signal that a manifest loading starts - data: { url : manifestURL}
@@ -3448,6 +3467,8 @@ var Hls = (function () {
     value: function detachVideo() {
       _utilsLogger.logger.log('detachVideo');
       var video = this.video;
+      _utilsLogger.logger.log('trigger MSE_DETACHING');
+      this.trigger(_events2['default'].MSE_DETACHING);
       this.statsHandler.detachVideo(video);
       var ms = this.mediaSource;
       if (ms) {
