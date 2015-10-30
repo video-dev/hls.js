@@ -541,14 +541,6 @@ var BufferController = (function () {
     value: function destroy() {
       this.stop();
       this.hls.off(_events2['default'].MANIFEST_PARSED, this.onmp);
-      // remove video listener
-      if (this.video) {
-        this.video.removeEventListener('seeking', this.onvseeking);
-        this.video.removeEventListener('seeked', this.onvseeked);
-        this.video.removeEventListener('loadedmetadata', this.onvmetadata);
-        this.video.removeEventListener('ended', this.onvended);
-        this.onvseeking = this.onvseeked = this.onvmetadata = null;
-      }
       this.state = this.IDLE;
     }
   }, {
@@ -704,9 +696,9 @@ var BufferController = (function () {
             if (levelDetails.live) {
               // check if requested position is within seekable boundaries :
               //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.video.seeking}`);
-              if (bufferEnd < start) {
+              if (bufferEnd < Math.max(start, end - this.config.liveMaxLatencyDurationCount * levelDetails.targetduration)) {
                 this.seekAfterBuffered = start + Math.max(0, levelDetails.totalduration - this.config.liveSyncDurationCount * levelDetails.targetduration);
-                _utilsLogger.logger.log('buffer end: ' + bufferEnd + ' is located before start of live sliding playlist, media position will be reseted to: ' + this.seekAfterBuffered.toFixed(3));
+                _utilsLogger.logger.log('buffer end: ' + bufferEnd + ' is located too far from the end of live sliding playlist, media position will be reseted to: ' + this.seekAfterBuffered.toFixed(3));
                 bufferEnd = this.seekAfterBuffered;
               }
               if (this.startFragmentRequested && !levelDetails.PTSKnown) {
@@ -929,7 +921,7 @@ var BufferController = (function () {
           i;
       var buffered2 = [];
       // there might be some small holes between buffer time range
-      // consider that holes smaller than 300 ms are irrelevant and build another
+      // consider that holes smaller than maxHoleDuration are irrelevant and build another
       // buffer time range representations that discards those holes
       for (i = 0; i < buffered.length; i++) {
         //logger.log('buf start/end:' + buffered.start(i) + '/' + buffered.end(i));
@@ -1204,6 +1196,14 @@ var BufferController = (function () {
   }, {
     key: 'onMSEDetached',
     value: function onMSEDetached() {
+      // remove video listeners
+      if (this.video) {
+        this.video.removeEventListener('seeking', this.onvseeking);
+        this.video.removeEventListener('seeked', this.onvseeked);
+        this.video.removeEventListener('loadedmetadata', this.onvmetadata);
+        this.video.removeEventListener('ended', this.onvended);
+        this.onvseeking = this.onvseeked = this.onvmetadata = null;
+      }
       this.video = null;
       this.loadedmetadata = false;
       this.stop();
@@ -2555,10 +2555,12 @@ var TSDemuxer = (function () {
       }
       //free pes.data to save up some memory
       pes.data = null;
+      //var debugString = '';
       units.units.forEach(function (unit) {
         switch (unit.type) {
           //NDR
           case 1:
+            //debugString += 'NDR ';
             // check if slice_type matches with a keyframe
             var sliceType = new _expGolomb2['default'](unit.data).readSliceType();
             if (sliceType === 2 || // I-slice
@@ -2571,10 +2573,15 @@ var TSDemuxer = (function () {
             break;
           //IDR
           case 5:
+            //debugString += 'IDR ';
             key = true;
             break;
+          //case 6:
+          //  debugString += 'SEI ';
+          //  break;
           //SPS
           case 7:
+            //debugString += 'SPS ';
             if (!track.sps) {
               var expGolombDecoder = new _expGolomb2['default'](unit.data);
               var config = expGolombDecoder.readSPS();
@@ -2600,14 +2607,18 @@ var TSDemuxer = (function () {
             break;
           //PPS
           case 8:
+            //debugString += 'PPS ';
             if (!track.pps) {
               track.pps = [unit.data];
             }
             break;
+          //case 9:
+          //  debugString += 'AUD ';
           default:
             break;
         }
       });
+      //logger.log(debugString);
       //build sample from PES
       // Annex B to MP4 conversion to be done
       if (units.length) {
@@ -3062,7 +3073,7 @@ Object.defineProperty(exports, '__esModule', {
   value: true
 });
 exports['default'] = {
-  // fired when MediaSource has been succesfully attached to video element - data: { mediaSource }
+  // fired when MediaSource has been succesfully attached to video element - data: { video, mediaSource }
   MSE_ATTACHED: 'hlsMediaSourceAttached',
   // fired when MediaSource has been detached from video element - data: { }
   MSE_DETACHED: 'hlsMediaSourceDetached',
@@ -3101,7 +3112,9 @@ exports['default'] = {
   // Identifier for a FPS drop event - data: {curentDropped, currentDecoded, totalDroppedFrames}
   FPS_DROP: 'hlsFPSDrop',
   // Identifier for an error event - data: { type : error type, details : error details, fatal : if true, hls.js cannot/will not try to recover, if false, hls.js will try to recover,other error specific data}
-  ERROR: 'hlsError'
+  ERROR: 'hlsError',
+  // fired when hls.js instance starts destroying. Different from MSE_DETACHED as one could want to detach and reattach a video to the instance of hls.js to handle mid-rolls for example
+  DESTROYING: 'hlsDestroying'
 };
 module.exports = exports['default'];
 
@@ -3338,6 +3351,7 @@ var Hls = (function () {
       maxBufferLength: 30,
       maxBufferSize: 60 * 1000 * 1000,
       liveSyncDurationCount: 3,
+      liveMaxLatencyDurationCount: Infinity,
       maxMaxBufferLength: 600,
       enableWorker: true,
       fragLoadingTimeOut: 20000,
@@ -3359,6 +3373,11 @@ var Hls = (function () {
       }
       config[prop] = configDefault[prop];
     }
+
+    if (config.liveMaxLatencyDurationCount !== undefined && config.liveMaxLatencyDurationCount <= config.liveSyncDurationCount) {
+      throw new Error('Illegal hls.js configuration: "liveMaxLatencyDurationCount" must be strictly superior to "liveSyncDurationCount" in player configuration');
+    }
+
     (0, _utilsLogger.enableLogs)(config.debug);
     this.config = config;
     // observer setup
@@ -3394,6 +3413,7 @@ var Hls = (function () {
     key: 'destroy',
     value: function destroy() {
       _utilsLogger.logger.log('destroy');
+      this.trigger(_events2['default'].DESTROYING);
       this.playlistLoader.destroy();
       this.fragmentLoader.destroy();
       this.levelController.destroy();
@@ -3431,7 +3451,7 @@ var Hls = (function () {
       this.statsHandler.detachVideo(video);
       var ms = this.mediaSource;
       if (ms) {
-        if (ms.readyState !== 'ended') {
+        if (ms.readyState === 'open') {
           ms.endOfStream();
         }
         ms.removeEventListener('sourceopen', this.onmso);
@@ -3673,7 +3693,7 @@ var FragmentLoader = (function () {
       this.frag.loaded = 0;
       var config = this.hls.config;
       frag.loader = this.loader = new config.loader(config);
-      this.loader.load(frag.url, 'arraybuffer', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.fragLoadingTimeOut, config.fragLoadingMaxRetry, config.fragLoadingRetryDelay, this.loadprogress.bind(this));
+      this.loader.load(frag.url, 'arraybuffer', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.fragLoadingTimeOut, config.fragLoadingMaxRetry, config.fragLoadingRetryDelay, this.loadprogress.bind(this), frag);
     }
   }, {
     key: 'loadsuccess',
@@ -4474,6 +4494,8 @@ var _remuxMp4Generator = require('../remux/mp4-generator');
 
 var _remuxMp4Generator2 = _interopRequireDefault(_remuxMp4Generator);
 
+var _errors = require('../errors');
+
 var MP4Remuxer = (function () {
   function MP4Remuxer(observer) {
     _classCallCheck(this, MP4Remuxer);
@@ -4523,8 +4545,16 @@ var MP4Remuxer = (function () {
   }, {
     key: 'generateIS',
     value: function generateIS(audioTrack, videoTrack, timeOffset) {
-      var observer = this.observer;
-      if (videoTrack.samples.length === 0) {
+      var observer = this.observer,
+          audioSamples = audioTrack.samples,
+          videoSamples = videoTrack.samples,
+          nbAudio = audioSamples.length,
+          nbVideo = videoSamples.length,
+          pesTimeScale = this.PES_TIMESCALE;
+
+      if (nbAudio === 0 && nbVideo === 0) {
+        observer.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'no audio/video samples found' });
+      } else if (nbVideo === 0) {
         //audio only
         if (audioTrack.config) {
           observer.trigger(_events2['default'].FRAG_PARSING_INIT_SEGMENT, {
@@ -4536,10 +4566,10 @@ var MP4Remuxer = (function () {
         }
         if (this._initPTS === undefined) {
           // remember first PTS of this demuxing context
-          this._initPTS = audioTrack.samples[0].pts - this.PES_TIMESCALE * timeOffset;
-          this._initDTS = audioTrack.samples[0].dts - this.PES_TIMESCALE * timeOffset;
+          this._initPTS = audioSamples[0].pts - pesTimeScale * timeOffset;
+          this._initDTS = audioSamples[0].dts - pesTimeScale * timeOffset;
         }
-      } else if (audioTrack.samples.length === 0) {
+      } else if (nbAudio === 0) {
         //video only
         if (videoTrack.sps && videoTrack.pps) {
           observer.trigger(_events2['default'].FRAG_PARSING_INIT_SEGMENT, {
@@ -4551,8 +4581,8 @@ var MP4Remuxer = (function () {
           this.ISGenerated = true;
           if (this._initPTS === undefined) {
             // remember first PTS of this demuxing context
-            this._initPTS = videoTrack.samples[0].pts - this.PES_TIMESCALE * timeOffset;
-            this._initDTS = videoTrack.samples[0].dts - this.PES_TIMESCALE * timeOffset;
+            this._initPTS = videoSamples[0].pts - pesTimeScale * timeOffset;
+            this._initDTS = videoSamples[0].dts - pesTimeScale * timeOffset;
           }
         }
       } else {
@@ -4570,8 +4600,8 @@ var MP4Remuxer = (function () {
           this.ISGenerated = true;
           if (this._initPTS === undefined) {
             // remember first PTS of this demuxing context
-            this._initPTS = Math.min(videoTrack.samples[0].pts, audioTrack.samples[0].pts) - this.PES_TIMESCALE * timeOffset;
-            this._initDTS = Math.min(videoTrack.samples[0].dts, audioTrack.samples[0].dts) - this.PES_TIMESCALE * timeOffset;
+            this._initPTS = Math.min(videoSamples[0].pts, audioSamples[0].pts) - pesTimeScale * timeOffset;
+            this._initDTS = Math.min(videoSamples[0].dts, audioSamples[0].dts) - pesTimeScale * timeOffset;
           }
         }
       }
@@ -4737,7 +4767,7 @@ var MP4Remuxer = (function () {
           dtsnorm,
           samples = [];
       /* concatenate the audio data and construct the mdat in place
-        (need 8 more bytes to fill length and mpdat type) */
+        (need 8 more bytes to fill length and mdat type) */
       mdat = new Uint8Array(track.len + 8);
       view = new DataView(mdat.buffer);
       view.setUint32(0, mdat.byteLength);
@@ -4772,12 +4802,13 @@ var MP4Remuxer = (function () {
               if (delta > 0) {
                 _utilsLogger.logger.log('AAC:' + delta + ' ms hole between fragments detected,filling it');
                 // set PTS to next PTS, and ensure PTS is greater or equal than last DTS
-                ptsnorm = Math.max(this.nextAacPts, this.lastAacDts);
-                dtsnorm = ptsnorm;
                 //logger.log('Audio/PTS/DTS adjusted:' + aacSample.pts + '/' + aacSample.dts);
               } else {
                   _utilsLogger.logger.log('AAC:' + -delta + ' ms overlapping between fragments detected');
                 }
+              // set DTS to next DTS
+              ptsnorm = dtsnorm = this.nextAacPts;
+              _utilsLogger.logger.log('Audio/PTS/DTS adjusted:' + ptsnorm + '/' + dtsnorm);
             } else if (absdelta) {
               // not contiguous timestamp, check if PTS is within acceptable range
               var expectedPTS = pesTimeScale * timeOffset;
@@ -4819,7 +4850,6 @@ var MP4Remuxer = (function () {
       if (samples.length >= 2) {
         mp4Sample.duration = samples[samples.length - 2].duration;
       }
-      this.lastAacDts = dtsnorm;
       // next aac sample PTS should be equal to last sample PTS + duration
       this.nextAacPts = ptsnorm + pes2mp4ScaleFactor * mp4Sample.duration;
       //logger.log('Audio/PTS/PTSend:' + aacSample.pts.toFixed(0) + '/' + this.nextAacDts.toFixed(0));
@@ -4895,7 +4925,7 @@ var MP4Remuxer = (function () {
 exports['default'] = MP4Remuxer;
 module.exports = exports['default'];
 
-},{"../events":11,"../remux/mp4-generator":16,"../utils/logger":19}],18:[function(require,module,exports){
+},{"../errors":10,"../events":11,"../remux/mp4-generator":16,"../utils/logger":19}],18:[function(require,module,exports){
 /**
  * Stats handler
 */
