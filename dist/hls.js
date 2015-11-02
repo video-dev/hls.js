@@ -515,7 +515,6 @@ var BufferController = (function () {
     this.APPENDING = 5;
     this.BUFFER_FLUSHING = 6;
     this.config = hls.config;
-    this.startPosition = 0;
     this.hls = hls;
     // Source Buffer listeners
     this.onsbue = this.onSBUpdateEnd.bind(this);
@@ -556,16 +555,16 @@ var BufferController = (function () {
         this.startInternal();
         if (this.lastCurrentTime) {
           _utilsLogger.logger.log('seeking @ ' + this.lastCurrentTime);
-          this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
           if (!this.lastPaused) {
             _utilsLogger.logger.log('resuming video');
             this.video.play();
           }
           this.state = this.IDLE;
         } else {
-          this.nextLoadPosition = this.startPosition;
+          this.lastCurrentTime = 0;
           this.state = this.STARTING;
         }
+        this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
         this.tick();
       } else {
         _utilsLogger.logger.warn('cannot start loading as either manifest not parsed or video not attached');
@@ -988,9 +987,20 @@ var BufferController = (function () {
   }, {
     key: '_checkFragmentChanged',
     value: function _checkFragmentChanged() {
-      var rangeCurrent, currentTime;
-      if (this.video && this.video.seeking === false) {
-        this.lastCurrentTime = currentTime = this.video.currentTime;
+      var rangeCurrent,
+          currentTime,
+          video = this.video;
+      if (video && video.seeking === false) {
+        currentTime = video.currentTime;
+        /* if video element is in seeked state, currentTime can only increase.
+          (assuming that playback rate is positive ...)
+          As sometimes currentTime jumps back to zero after a
+          media decode error, check this, to avoid seeking back to
+          wrong position after a media decode error
+        */
+        if (currentTime > Math.sign(video.playbackRate) * this.lastCurrentTime) {
+          this.lastCurrentTime = currentTime;
+        }
         if (this.isBuffered(currentTime)) {
           rangeCurrent = this.getBufferRange(currentTime);
         } else if (this.isBuffered(currentTime + 0.1)) {
@@ -1012,10 +1022,11 @@ var BufferController = (function () {
           if (levelDetails && !levelDetails.live) {
             // are we playing last fragment ?
             if (fragPlaying.sn === levelDetails.endSN) {
-              if (this.mediaSource && this.mediaSource.readyState === 'open') {
+              var mediaSource = this.mediaSource;
+              if (mediaSource && mediaSource.readyState === 'open') {
                 _utilsLogger.logger.log('all media data available, signal endOfStream() to MediaSource');
                 //Notify the media element that it now has all of the media data
-                this.mediaSource.endOfStream();
+                mediaSource.endOfStream();
               }
             }
           }
@@ -3372,7 +3383,7 @@ var Hls = (function () {
       liveSyncDurationCount: 3,
       liveMaxLatencyDurationCount: Infinity,
       maxMaxBufferLength: 600,
-      enableWorker: true,
+      enableWorker: false,
       fragLoadingTimeOut: 20000,
       fragLoadingMaxRetry: 1,
       fragLoadingRetryDelay: 1000,
