@@ -21,7 +21,6 @@ class BufferController {
     this.APPENDING = 5;
     this.BUFFER_FLUSHING = 6;
     this.config = hls.config;
-    this.startPosition;
     this.hls = hls;
     // Source Buffer listeners
     this.onsbue = this.onSBUpdateEnd.bind(this);
