@@ -17,7 +17,7 @@
   </div>
   <pre id='HlsDate'></pre>
   <pre id='StreamPermalink'></pre>
-    <canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)";></canvas> <br>
+  <input id="metricsData" class="innerControls" type=text value=""/>
     window size
     <div id="metricsButton">
     <button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(0)">window ALL</button>
@@ -48,7 +48,18 @@
   <script src="jsonpack.js"></script>
   <script>
 
-  var events = jsonpack.unpack(atob(decodeURIComponent(location.search.split('data=')[1])));
+
+$(document).ready(function() {
+  $('#metricsData').change(function()  { events = jsonpack.unpack(atob($('#metricsData').val())); updateMetrics(); });
+});
+
+var data = location.search.split('data=')[1],events;
+if (data) {
+  events = jsonpack.unpack(atob(decodeURIComponent(data)));
+  updateMetrics();  
+}
+
+function updateMetrics() {
   var hlsLink = document.URL.substr(0,document.URL.lastIndexOf("/")+1) + 'index.html?src=' + encodeURIComponent(events.url);
   var description = 'playlist: ' + "<a href=\"" + events.url + "\">" + events.url + "</a>" + '<br>replay: ' + "<a href=\"" + hlsLink + "\">" + hlsLink + "</a>";
   $("#StreamPermalink").html(description);
@@ -56,7 +67,8 @@
   metricsDisplayed=true;
   showMetrics();
   refreshCanvas();
-  </script>
+}
 
+  </script>
 
 </body>
