@@ -3445,7 +3445,7 @@ var Hls = (function () {
       liveSyncDurationCount: 3,
       liveMaxLatencyDurationCount: Infinity,
       maxMaxBufferLength: 600,
-      enableWorker: false,
+      enableWorker: true,
       fragLoadingTimeOut: 20000,
       fragLoadingMaxRetry: 1,
       fragLoadingRetryDelay: 1000,
