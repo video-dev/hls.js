@@ -20,7 +20,7 @@ class BufferController {
         this.APPENDING = 5;
         this.BUFFER_FLUSHING = 6;
         this.config = hls.config;
-        this.startPosition = 0;
+        this.startPosition;
         this.hls = hls;
         // Source Buffer listeners
         this.onsbue = this.onSBUpdateEnd.bind(this);
@@ -58,16 +58,16 @@ class BufferController {
             this.startInternal();
             if (this.lastCurrentTime) {
                 logger.log(`seeking @ ${this.lastCurrentTime}`);
-                this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
                 if (!this.lastPaused) {
                     logger.log('resuming video');
                     this.video.play();
                 }
                 this.state = this.IDLE;
             } else {
-                this.nextLoadPosition = this.startPosition;
+                this.lastCurrentTime = 0;
                 this.state = this.STARTING;
             }
+            this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
             this.tick();
         } else {
             logger.warn(
@@ -649,9 +649,23 @@ class BufferController {
     }
 
     _checkFragmentChanged() {
-        var rangeCurrent, currentTime;
-        if (this.video && this.video.seeking === false) {
-            this.lastCurrentTime = currentTime = this.video.currentTime;
+        var rangeCurrent,
+            currentTime,
+            video = this.video;
+        if (video && video.seeking === false) {
+            currentTime = video.currentTime;
+            /* if video element is in seeked state, currentTime can only increase.
+        (assuming that playback rate is positive ...)
+        As sometimes currentTime jumps back to zero after a
+        media decode error, check this, to avoid seeking back to
+        wrong position after a media decode error
+      */
+            if (
+                currentTime >
+                Math.sign(video.playbackRate) * this.lastCurrentTime
+            ) {
+                this.lastCurrentTime = currentTime;
+            }
             if (this.isBuffered(currentTime)) {
                 rangeCurrent = this.getBufferRange(currentTime);
             } else if (this.isBuffered(currentTime + 0.1)) {
@@ -673,15 +687,13 @@ class BufferController {
                 if (levelDetails && !levelDetails.live) {
                     // are we playing last fragment ?
                     if (fragPlaying.sn === levelDetails.endSN) {
-                        if (
-                            this.mediaSource &&
-                            this.mediaSource.readyState === 'open'
-                        ) {
+                        var mediaSource = this.mediaSource;
+                        if (mediaSource && mediaSource.readyState === 'open') {
                             logger.log(
                                 'all media data available, signal endOfStream() to MediaSource'
                             );
                             //Notify the media element that it now has all of the media data
-                            this.mediaSource.endOfStream();
+                            mediaSource.endOfStream();
                         }
                     }
                 }
