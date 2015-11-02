@@ -468,7 +468,7 @@ var AbrController = (function () {
 exports['default'] = AbrController;
 module.exports = exports['default'];
 
-},{"../events":11}],4:[function(require,module,exports){
+},{"../events":12}],4:[function(require,module,exports){
 /*
  * Buffer Controller
 */
@@ -1573,7 +1573,7 @@ var BufferController = (function () {
 exports['default'] = BufferController;
 module.exports = exports['default'];
 
-},{"../demux/demuxer":6,"../errors":10,"../events":11,"../helper/level-helper":12,"../utils/logger":19}],5:[function(require,module,exports){
+},{"../demux/demuxer":8,"../errors":11,"../events":12,"../helper/level-helper":13,"../utils/logger":20}],5:[function(require,module,exports){
 /*
  * Level Controller
 */
@@ -1846,7 +1846,166 @@ var LevelController = (function () {
 exports['default'] = LevelController;
 module.exports = exports['default'];
 
-},{"../errors":10,"../events":11,"../utils/logger":19}],6:[function(require,module,exports){
+},{"../errors":11,"../events":12,"../utils/logger":20}],6:[function(require,module,exports){
+/*  inline demuxer.
+ *   probe fragments and instantiate appropriate demuxer depending on content type (TSDemuxer, AACDemuxer, ...)
+ */
+
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+var _demuxTsdemuxer = require('../demux/tsdemuxer');
+
+var _demuxTsdemuxer2 = _interopRequireDefault(_demuxTsdemuxer);
+
+var DemuxerInline = (function () {
+  function DemuxerInline(hls, remuxer) {
+    _classCallCheck(this, DemuxerInline);
+
+    this.hls = hls;
+    this.demuxer = new _demuxTsdemuxer2['default'](hls, remuxer);
+  }
+
+  _createClass(DemuxerInline, [{
+    key: 'destroy',
+    value: function destroy() {
+      this.demuxer.destroy();
+    }
+  }, {
+    key: 'push',
+    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
+      this.demuxer.push(data, audioCodec, videoCodec, timeOffset, cc, level, duration);
+    }
+  }, {
+    key: 'remux',
+    value: function remux() {
+      this.demuxer.remux();
+    }
+  }]);
+
+  return DemuxerInline;
+})();
+
+exports['default'] = DemuxerInline;
+module.exports = exports['default'];
+
+},{"../demux/tsdemuxer":10}],7:[function(require,module,exports){
+/* demuxer web worker. 
+ *  - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
+ *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
+ */
+
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+var _demuxDemuxerInline = require('../demux/demuxer-inline');
+
+var _demuxDemuxerInline2 = _interopRequireDefault(_demuxDemuxerInline);
+
+var _events = require('../events');
+
+var _events2 = _interopRequireDefault(_events);
+
+var _events3 = require('events');
+
+var _events4 = _interopRequireDefault(_events3);
+
+var _remuxMp4Remuxer = require('../remux/mp4-remuxer');
+
+var _remuxMp4Remuxer2 = _interopRequireDefault(_remuxMp4Remuxer);
+
+var DemuxerWorker = function DemuxerWorker(self) {
+  // observer setup
+  var observer = new _events4['default']();
+  observer.trigger = function trigger(event) {
+    for (var _len = arguments.length, data = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+      data[_key - 1] = arguments[_key];
+    }
+
+    observer.emit.apply(observer, [event, event].concat(data));
+  };
+
+  observer.off = function off(event) {
+    for (var _len2 = arguments.length, data = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+      data[_key2 - 1] = arguments[_key2];
+    }
+
+    observer.removeListener.apply(observer, [event].concat(data));
+  };
+  self.addEventListener('message', function (ev) {
+    //console.log('demuxer cmd:' + ev.data.cmd);
+    switch (ev.data.cmd) {
+      case 'init':
+        self.demuxer = new _demuxDemuxerInline2['default'](observer, _remuxMp4Remuxer2['default']);
+        break;
+      case 'demux':
+        self.demuxer.push(new Uint8Array(ev.data.data), ev.data.audioCodec, ev.data.videoCodec, ev.data.timeOffset, ev.data.cc, ev.data.level, ev.data.duration);
+        self.demuxer.remux();
+        break;
+      default:
+        break;
+    }
+  });
+
+  // listen to events triggered by TS Demuxer
+  observer.on(_events2['default'].FRAG_PARSING_INIT_SEGMENT, function (ev, data) {
+    var objData = { event: ev };
+    var objTransferable = [];
+    if (data.audioCodec) {
+      objData.audioCodec = data.audioCodec;
+      objData.audioMoov = data.audioMoov.buffer;
+      objData.audioChannelCount = data.audioChannelCount;
+      objTransferable.push(objData.audioMoov);
+    }
+    if (data.videoCodec) {
+      objData.videoCodec = data.videoCodec;
+      objData.videoMoov = data.videoMoov.buffer;
+      objData.videoWidth = data.videoWidth;
+      objData.videoHeight = data.videoHeight;
+      objTransferable.push(objData.videoMoov);
+    }
+    // pass moov as transferable object (no copy)
+    self.postMessage(objData, objTransferable);
+  });
+
+  observer.on(_events2['default'].FRAG_PARSING_DATA, function (ev, data) {
+    var objData = { event: ev, type: data.type, startPTS: data.startPTS, endPTS: data.endPTS, startDTS: data.startDTS, endDTS: data.endDTS, moof: data.moof.buffer, mdat: data.mdat.buffer, nb: data.nb };
+    // pass moof/mdat data as transferable object (no copy)
+    self.postMessage(objData, [objData.moof, objData.mdat]);
+  });
+
+  observer.on(_events2['default'].FRAG_PARSED, function (event) {
+    self.postMessage({ event: event });
+  });
+
+  observer.on(_events2['default'].ERROR, function (event, data) {
+    self.postMessage({ event: event, data: data });
+  });
+
+  observer.on(_events2['default'].FRAG_PARSING_METADATA, function (event, data) {
+    var objData = { event: event, samples: data.samples };
+    self.postMessage(objData);
+  });
+};
+
+exports['default'] = DemuxerWorker;
+module.exports = exports['default'];
+
+},{"../demux/demuxer-inline":6,"../events":12,"../remux/mp4-remuxer":18,"events":1}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -1863,13 +2022,13 @@ var _events = require('../events');
 
 var _events2 = _interopRequireDefault(_events);
 
-var _tsdemuxer = require('./tsdemuxer');
+var _demuxDemuxerInline = require('../demux/demuxer-inline');
 
-var _tsdemuxer2 = _interopRequireDefault(_tsdemuxer);
+var _demuxDemuxerInline2 = _interopRequireDefault(_demuxDemuxerInline);
 
-var _tsdemuxerworker = require('./tsdemuxerworker');
+var _demuxDemuxerWorker = require('../demux/demuxer-worker');
 
-var _tsdemuxerworker2 = _interopRequireDefault(_tsdemuxerworker);
+var _demuxDemuxerWorker2 = _interopRequireDefault(_demuxDemuxerWorker);
 
 var _utilsLogger = require('../utils/logger');
 
@@ -1883,19 +2042,19 @@ var Demuxer = (function () {
 
     this.hls = hls;
     if (hls.config.enableWorker && typeof Worker !== 'undefined') {
-      _utilsLogger.logger.log('TS demuxing in webworker');
+      _utilsLogger.logger.log('demuxing in webworker');
       try {
         var work = require('webworkify');
-        this.w = work(_tsdemuxerworker2['default']);
+        this.w = work(_demuxDemuxerWorker2['default']);
         this.onwmsg = this.onWorkerMessage.bind(this);
         this.w.addEventListener('message', this.onwmsg);
         this.w.postMessage({ cmd: 'init' });
       } catch (err) {
-        _utilsLogger.logger.error('error while initializing TSDemuxerWorker, fallback on regular TSDemuxer');
-        this.demuxer = new _tsdemuxer2['default'](hls, _remuxMp4Remuxer2['default']);
+        _utilsLogger.logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
+        this.demuxer = new _demuxDemuxerInline2['default'](hls, _remuxMp4Remuxer2['default']);
       }
     } else {
-      this.demuxer = new _tsdemuxer2['default'](hls, _remuxMp4Remuxer2['default']);
+      this.demuxer = new _demuxDemuxerInline2['default'](hls, _remuxMp4Remuxer2['default']);
     }
     this.demuxInitialized = true;
   }
@@ -1972,7 +2131,7 @@ var Demuxer = (function () {
 exports['default'] = Demuxer;
 module.exports = exports['default'];
 
-},{"../events":11,"../remux/mp4-remuxer":17,"../utils/logger":19,"./tsdemuxer":8,"./tsdemuxerworker":9,"webworkify":2}],7:[function(require,module,exports){
+},{"../demux/demuxer-inline":6,"../demux/demuxer-worker":7,"../events":12,"../remux/mp4-remuxer":18,"../utils/logger":20,"webworkify":2}],9:[function(require,module,exports){
 /**
  * Parser for exponential Golomb codes, a variable-bitwidth number encoding scheme used by h264.
 */
@@ -2264,11 +2423,16 @@ var ExpGolomb = (function () {
 exports['default'] = ExpGolomb;
 module.exports = exports['default'];
 
-},{"../utils/logger":19}],8:[function(require,module,exports){
+},{"../utils/logger":20}],10:[function(require,module,exports){
 /**
- * A stream-based mp2ts to mp4 converter. This utility is used to
- * deliver mp4s to a SourceBuffer on platforms that support native
- * Media Source Extensions.
+ * highly optimized TS demuxer:
+ * parse PAT, PMT
+ * extract PES packet from audio and video PIDs
+ * extract AVC/H264 NAL units and AAC/ADTS samples from PES packet
+ * trigger the remuxer upon parsing completion
+ * it also tries to workaround as best as it can audio codec switch (HE-AAC to AAC and vice versa), without having to restart the MediaSource.
+ * it also controls the remuxing process :
+ * upon discontinuity or level switch detection, it will also notifies the remuxer so that it can reset its state.
 */
 
 'use strict';
@@ -2950,109 +3114,7 @@ var TSDemuxer = (function () {
 exports['default'] = TSDemuxer;
 module.exports = exports['default'];
 
-},{"../errors":10,"../events":11,"../utils/logger":19,"./exp-golomb":7}],9:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, '__esModule', {
-  value: true
-});
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-var _events = require('../events');
-
-var _events2 = _interopRequireDefault(_events);
-
-var _events3 = require('events');
-
-var _events4 = _interopRequireDefault(_events3);
-
-var _demuxTsdemuxer = require('../demux/tsdemuxer');
-
-var _demuxTsdemuxer2 = _interopRequireDefault(_demuxTsdemuxer);
-
-var _remuxMp4Remuxer = require('../remux/mp4-remuxer');
-
-var _remuxMp4Remuxer2 = _interopRequireDefault(_remuxMp4Remuxer);
-
-var TSDemuxerWorker = function TSDemuxerWorker(self) {
-  // observer setup
-  var observer = new _events4['default']();
-  observer.trigger = function trigger(event) {
-    for (var _len = arguments.length, data = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-      data[_key - 1] = arguments[_key];
-    }
-
-    observer.emit.apply(observer, [event, event].concat(data));
-  };
-
-  observer.off = function off(event) {
-    for (var _len2 = arguments.length, data = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-      data[_key2 - 1] = arguments[_key2];
-    }
-
-    observer.removeListener.apply(observer, [event].concat(data));
-  };
-  self.addEventListener('message', function (ev) {
-    //console.log('demuxer cmd:' + ev.data.cmd);
-    switch (ev.data.cmd) {
-      case 'init':
-        self.demuxer = new _demuxTsdemuxer2['default'](observer, _remuxMp4Remuxer2['default']);
-        break;
-      case 'demux':
-        self.demuxer.push(new Uint8Array(ev.data.data), ev.data.audioCodec, ev.data.videoCodec, ev.data.timeOffset, ev.data.cc, ev.data.level, ev.data.duration);
-        self.demuxer.remux();
-        break;
-      default:
-        break;
-    }
-  });
-
-  // listen to events triggered by TS Demuxer
-  observer.on(_events2['default'].FRAG_PARSING_INIT_SEGMENT, function (ev, data) {
-    var objData = { event: ev };
-    var objTransferable = [];
-    if (data.audioCodec) {
-      objData.audioCodec = data.audioCodec;
-      objData.audioMoov = data.audioMoov.buffer;
-      objData.audioChannelCount = data.audioChannelCount;
-      objTransferable.push(objData.audioMoov);
-    }
-    if (data.videoCodec) {
-      objData.videoCodec = data.videoCodec;
-      objData.videoMoov = data.videoMoov.buffer;
-      objData.videoWidth = data.videoWidth;
-      objData.videoHeight = data.videoHeight;
-      objTransferable.push(objData.videoMoov);
-    }
-    // pass moov as transferable object (no copy)
-    self.postMessage(objData, objTransferable);
-  });
-
-  observer.on(_events2['default'].FRAG_PARSING_DATA, function (ev, data) {
-    var objData = { event: ev, type: data.type, startPTS: data.startPTS, endPTS: data.endPTS, startDTS: data.startDTS, endDTS: data.endDTS, moof: data.moof.buffer, mdat: data.mdat.buffer, nb: data.nb };
-    // pass moof/mdat data as transferable object (no copy)
-    self.postMessage(objData, [objData.moof, objData.mdat]);
-  });
-
-  observer.on(_events2['default'].FRAG_PARSED, function (event) {
-    self.postMessage({ event: event });
-  });
-
-  observer.on(_events2['default'].ERROR, function (event, data) {
-    self.postMessage({ event: event, data: data });
-  });
-
-  observer.on(_events2['default'].FRAG_PARSING_METADATA, function (event, data) {
-    var objData = { event: event, samples: data.samples };
-    self.postMessage(objData);
-  });
-};
-
-exports['default'] = TSDemuxerWorker;
-module.exports = exports['default'];
-
-},{"../demux/tsdemuxer":8,"../events":11,"../remux/mp4-remuxer":17,"events":1}],10:[function(require,module,exports){
+},{"../errors":11,"../events":12,"../utils/logger":20,"./exp-golomb":9}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -3094,7 +3156,7 @@ var ErrorDetails = {
 };
 exports.ErrorDetails = ErrorDetails;
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -3148,7 +3210,7 @@ exports['default'] = {
 };
 module.exports = exports['default'];
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 /**
  * Level Helper class, providing methods dealing with playlist sliding and drift
 */
@@ -3289,7 +3351,7 @@ var LevelHelper = (function () {
 exports['default'] = LevelHelper;
 module.exports = exports['default'];
 
-},{"../utils/logger":19}],13:[function(require,module,exports){
+},{"../utils/logger":20}],14:[function(require,module,exports){
 /**
  * HLS interface
  */
@@ -3676,7 +3738,7 @@ var Hls = (function () {
 exports['default'] = Hls;
 module.exports = exports['default'];
 
-},{"./controller/abr-controller":3,"./controller/buffer-controller":4,"./controller/level-controller":5,"./errors":10,"./events":11,"./loader/fragment-loader":14,"./loader/playlist-loader":15,"./stats":18,"./utils/logger":19,"./utils/xhr-loader":20,"events":1}],14:[function(require,module,exports){
+},{"./controller/abr-controller":3,"./controller/buffer-controller":4,"./controller/level-controller":5,"./errors":11,"./events":12,"./loader/fragment-loader":15,"./loader/playlist-loader":16,"./stats":19,"./utils/logger":20,"./utils/xhr-loader":21,"events":1}],15:[function(require,module,exports){
 /*
  * Fragment Loader
 */
@@ -3762,7 +3824,7 @@ var FragmentLoader = (function () {
 exports['default'] = FragmentLoader;
 module.exports = exports['default'];
 
-},{"../errors":10,"../events":11}],15:[function(require,module,exports){
+},{"../errors":11,"../events":12}],16:[function(require,module,exports){
 /**
  * Playlist Loader
 */
@@ -4030,7 +4092,7 @@ var PlaylistLoader = (function () {
 exports['default'] = PlaylistLoader;
 module.exports = exports['default'];
 
-},{"../errors":10,"../events":11}],16:[function(require,module,exports){
+},{"../errors":11,"../events":12}],17:[function(require,module,exports){
 /**
  * Generate MP4 Box
 */
@@ -4499,7 +4561,7 @@ var MP4 = (function () {
 exports['default'] = MP4;
 module.exports = exports['default'];
 
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 /**
  * fMP4 remuxer
 */
@@ -4957,7 +5019,7 @@ var MP4Remuxer = (function () {
 exports['default'] = MP4Remuxer;
 module.exports = exports['default'];
 
-},{"../errors":10,"../events":11,"../remux/mp4-generator":16,"../utils/logger":19}],18:[function(require,module,exports){
+},{"../errors":11,"../events":12,"../remux/mp4-generator":17,"../utils/logger":20}],19:[function(require,module,exports){
 /**
  * Stats handler
 */
@@ -5176,7 +5238,7 @@ var StatsHandler = (function () {
 exports['default'] = StatsHandler;
 module.exports = exports['default'];
 
-},{"./events":11}],19:[function(require,module,exports){
+},{"./events":12}],20:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -5218,7 +5280,7 @@ exports.enableLogs = enableLogs;
 var logger = exportedLogger;
 exports.logger = logger;
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 /**
  * XHR based logger
 */
@@ -5344,6 +5406,6 @@ var XhrLoader = (function () {
 exports['default'] = XhrLoader;
 module.exports = exports['default'];
 
-},{"../utils/logger":19}]},{},[13])(13)
+},{"../utils/logger":20}]},{},[14])(14)
 });
 //# sourceMappingURL=hls.js.map
