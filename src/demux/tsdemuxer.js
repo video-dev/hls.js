@@ -1,7 +1,12 @@
 /**
- * A stream-based mp2ts to mp4 converter. This utility is used to
- * deliver mp4s to a SourceBuffer on platforms that support native
- * Media Source Extensions.
+ * highly optimized TS demuxer:
+ * parse PAT, PMT
+ * extract PES packet from audio and video PIDs
+ * extract AVC/H264 NAL units and AAC/ADTS samples from PES packet
+ * trigger the remuxer upon parsing completion
+ * it also tries to workaround as best as it can audio codec switch (HE-AAC to AAC and vice versa), without having to restart the MediaSource.
+ * it also controls the remuxing process :
+ * upon discontinuity or level switch detection, it will also notifies the remuxer so that it can reset its state.
 */
 
  import Event from '../events';

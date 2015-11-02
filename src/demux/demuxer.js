@@ -1,6 +1,6 @@
 import Event from '../events';
-import TSDemuxer from './tsdemuxer';
-import TSDemuxerWorker from './tsdemuxerworker';
+import DemuxerInline from '../demux/demuxer-inline';
+import DemuxerWorker from '../demux/demuxer-worker';
 import {logger} from '../utils/logger';
 import MP4Remuxer from '../remux/mp4-remuxer';
 
@@ -9,19 +9,19 @@ class Demuxer {
   constructor(hls) {
     this.hls = hls;
     if (hls.config.enableWorker && (typeof(Worker) !== 'undefined')) {
-        logger.log('TS demuxing in webworker');
+        logger.log('demuxing in webworker');
         try {
           var work = require('webworkify');
-          this.w = work(TSDemuxerWorker);
+          this.w = work(DemuxerWorker);
           this.onwmsg = this.onWorkerMessage.bind(this);
           this.w.addEventListener('message', this.onwmsg);
           this.w.postMessage({cmd: 'init'});
         } catch(err) {
-          logger.error('error while initializing TSDemuxerWorker, fallback on regular TSDemuxer');
-          this.demuxer = new TSDemuxer(hls,MP4Remuxer);
+          logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
+          this.demuxer = new DemuxerInline(hls,MP4Remuxer);
         }
       } else {
-        this.demuxer = new TSDemuxer(hls,MP4Remuxer);
+        this.demuxer = new DemuxerInline(hls,MP4Remuxer);
       }
       this.demuxInitialized = true;
   }
