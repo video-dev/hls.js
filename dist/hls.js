@@ -1576,7 +1576,7 @@ var BufferController = (function () {
 exports['default'] = BufferController;
 module.exports = exports['default'];
 
-},{"../demux/demuxer":8,"../errors":11,"../events":12,"../helper/level-helper":13,"../utils/logger":20}],5:[function(require,module,exports){
+},{"../demux/demuxer":8,"../errors":11,"../events":12,"../helper/level-helper":13,"../utils/logger":19}],5:[function(require,module,exports){
 /*
  * Level Controller
 */
@@ -1849,7 +1849,7 @@ var LevelController = (function () {
 exports['default'] = LevelController;
 module.exports = exports['default'];
 
-},{"../errors":11,"../events":12,"../utils/logger":20}],6:[function(require,module,exports){
+},{"../errors":11,"../events":12,"../utils/logger":19}],6:[function(require,module,exports){
 /*  inline demuxer.
  *   probe fragments and instantiate appropriate demuxer depending on content type (TSDemuxer, AACDemuxer, ...)
  */
@@ -2134,7 +2134,7 @@ var Demuxer = (function () {
 exports['default'] = Demuxer;
 module.exports = exports['default'];
 
-},{"../demux/demuxer-inline":6,"../demux/demuxer-worker":7,"../events":12,"../remux/mp4-remuxer":18,"../utils/logger":20,"webworkify":2}],9:[function(require,module,exports){
+},{"../demux/demuxer-inline":6,"../demux/demuxer-worker":7,"../events":12,"../remux/mp4-remuxer":18,"../utils/logger":19,"webworkify":2}],9:[function(require,module,exports){
 /**
  * Parser for exponential Golomb codes, a variable-bitwidth number encoding scheme used by h264.
 */
@@ -2426,7 +2426,7 @@ var ExpGolomb = (function () {
 exports['default'] = ExpGolomb;
 module.exports = exports['default'];
 
-},{"../utils/logger":20}],10:[function(require,module,exports){
+},{"../utils/logger":19}],10:[function(require,module,exports){
 /**
  * highly optimized TS demuxer:
  * parse PAT, PMT
@@ -3117,7 +3117,7 @@ var TSDemuxer = (function () {
 exports['default'] = TSDemuxer;
 module.exports = exports['default'];
 
-},{"../errors":11,"../events":12,"../utils/logger":20,"./exp-golomb":9}],11:[function(require,module,exports){
+},{"../errors":11,"../events":12,"../utils/logger":19,"./exp-golomb":9}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -3363,7 +3363,7 @@ var LevelHelper = (function () {
 exports['default'] = LevelHelper;
 module.exports = exports['default'];
 
-},{"../utils/logger":20}],14:[function(require,module,exports){
+},{"../utils/logger":19}],14:[function(require,module,exports){
 /**
  * HLS interface
  */
@@ -3384,10 +3384,6 @@ var _events = require('./events');
 var _events2 = _interopRequireDefault(_events);
 
 var _errors = require('./errors');
-
-var _stats = require('./stats');
-
-var _stats2 = _interopRequireDefault(_stats);
 
 var _loaderPlaylistLoader = require('./loader/playlist-loader');
 
@@ -3510,7 +3506,6 @@ var Hls = (function () {
     this.abrController = new config.abrController(this);
     this.bufferController = new _controllerBufferController2['default'](this);
     //this.fpsController = new FPSController(this);
-    this.statsHandler = new _stats2['default'](this);
   }
 
   _createClass(Hls, [{
@@ -3523,7 +3518,6 @@ var Hls = (function () {
       this.levelController.destroy();
       this.bufferController.destroy();
       //this.fpsController.destroy();
-      this.statsHandler.destroy();
       this.url = null;
       this.detachVideo();
       this.observer.removeAllListeners();
@@ -3533,7 +3527,6 @@ var Hls = (function () {
     value: function attachVideo(video) {
       _utilsLogger.logger.log('attachVideo');
       this.video = video;
-      this.statsHandler.attachVideo(video);
       // setup the media source
       var ms = this.mediaSource = new MediaSource();
       //Media Source listeners
@@ -3554,7 +3547,6 @@ var Hls = (function () {
       var video = this.video;
       _utilsLogger.logger.log('trigger MSE_DETACHING');
       this.trigger(_events2['default'].MSE_DETACHING);
-      this.statsHandler.detachVideo(video);
       var ms = this.mediaSource;
       if (ms) {
         if (ms.readyState === 'open') {
@@ -3735,13 +3727,6 @@ var Hls = (function () {
     get: function get() {
       return this.levelController.manualLevel;
     }
-
-    /* return playback session stats */
-  }, {
-    key: 'stats',
-    get: function get() {
-      return this.statsHandler.stats;
-    }
   }]);
 
   return Hls;
@@ -3750,7 +3735,7 @@ var Hls = (function () {
 exports['default'] = Hls;
 module.exports = exports['default'];
 
-},{"./controller/abr-controller":3,"./controller/buffer-controller":4,"./controller/level-controller":5,"./errors":11,"./events":12,"./loader/fragment-loader":15,"./loader/playlist-loader":16,"./stats":19,"./utils/logger":20,"./utils/xhr-loader":21,"events":1}],15:[function(require,module,exports){
+},{"./controller/abr-controller":3,"./controller/buffer-controller":4,"./controller/level-controller":5,"./errors":11,"./events":12,"./loader/fragment-loader":15,"./loader/playlist-loader":16,"./utils/logger":19,"./utils/xhr-loader":20,"events":1}],15:[function(require,module,exports){
 /*
  * Fragment Loader
 */
@@ -5031,226 +5016,7 @@ var MP4Remuxer = (function () {
 exports['default'] = MP4Remuxer;
 module.exports = exports['default'];
 
-},{"../errors":11,"../events":12,"../remux/mp4-generator":17,"../utils/logger":20}],19:[function(require,module,exports){
-/**
- * Stats handler
-*/
-
-'use strict';
-
-Object.defineProperty(exports, '__esModule', {
-  value: true
-});
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-var _events = require('./events');
-
-var _events2 = _interopRequireDefault(_events);
-
-var StatsHandler = (function () {
-  function StatsHandler(hls) {
-    _classCallCheck(this, StatsHandler);
-
-    this.hls = hls;
-    this.onmp = this.onManifestParsed.bind(this);
-    this.onfc = this.onFragmentChanged.bind(this);
-    this.onfb = this.onFragmentBuffered.bind(this);
-    this.onflea = this.onFragmentLoadEmergencyAborted.bind(this);
-    this.onerr = this.onError.bind(this);
-    this.onfpsd = this.onFPSDrop.bind(this);
-    hls.on(_events2['default'].MANIFEST_PARSED, this.onmp);
-    hls.on(_events2['default'].FRAG_BUFFERED, this.onfb);
-    hls.on(_events2['default'].FRAG_CHANGED, this.onfc);
-    hls.on(_events2['default'].ERROR, this.onerr);
-    hls.on(_events2['default'].FRAG_LOAD_EMERGENCY_ABORTED, this.onflea);
-    hls.on(_events2['default'].FPS_DROP, this.onfpsd);
-  }
-
-  _createClass(StatsHandler, [{
-    key: 'destroy',
-    value: function destroy() {
-      var hls = this.hls;
-      hls.off(_events2['default'].MANIFEST_PARSED, this.onmp);
-      hls.off(_events2['default'].FRAG_BUFFERED, this.onfb);
-      hls.off(_events2['default'].FRAG_CHANGED, this.onfc);
-      hls.off(_events2['default'].ERROR, this.onerr);
-      hls.off(_events2['default'].FRAG_LOAD_EMERGENCY_ABORTED, this.onflea);
-      hls.off(_events2['default'].FPS_DROP, this.onfpsd);
-    }
-  }, {
-    key: 'attachVideo',
-    value: function attachVideo(video) {
-      this.video = video;
-    }
-  }, {
-    key: 'detachVideo',
-    value: function detachVideo() {
-      this.video = null;
-    }
-
-    // reset stats on manifest parsed
-  }, {
-    key: 'onManifestParsed',
-    value: function onManifestParsed(event, data) {
-      this._stats = { tech: 'hls.js', levelNb: data.levels.length };
-    }
-
-    // on fragment changed is triggered whenever playback of a new fragment is starting ...
-  }, {
-    key: 'onFragmentChanged',
-    value: function onFragmentChanged(event, data) {
-      var stats = this._stats,
-          level = data.frag.level,
-          autoLevel = data.frag.autoLevel;
-      if (stats) {
-        if (stats.levelStart === undefined) {
-          stats.levelStart = level;
-        }
-        if (autoLevel) {
-          if (stats.fragChangedAuto) {
-            stats.autoLevelMin = Math.min(stats.autoLevelMin, level);
-            stats.autoLevelMax = Math.max(stats.autoLevelMax, level);
-            stats.fragChangedAuto++;
-            if (this.levelLastAuto && level !== stats.autoLevelLast) {
-              stats.autoLevelSwitch++;
-            }
-          } else {
-            stats.autoLevelMin = stats.autoLevelMax = level;
-            stats.autoLevelSwitch = 0;
-            stats.fragChangedAuto = 1;
-            this.sumAutoLevel = 0;
-          }
-          this.sumAutoLevel += level;
-          stats.autoLevelAvg = Math.round(1000 * this.sumAutoLevel / stats.fragChangedAuto) / 1000;
-          stats.autoLevelLast = level;
-        } else {
-          if (stats.fragChangedManual) {
-            stats.manualLevelMin = Math.min(stats.manualLevelMin, level);
-            stats.manualLevelMax = Math.max(stats.manualLevelMax, level);
-            stats.fragChangedManual++;
-            if (!this.levelLastAuto && level !== stats.manualLevelLast) {
-              stats.manualLevelSwitch++;
-            }
-          } else {
-            stats.manualLevelMin = stats.manualLevelMax = level;
-            stats.manualLevelSwitch = 0;
-            stats.fragChangedManual = 1;
-          }
-          stats.manualLevelLast = level;
-        }
-        this.levelLastAuto = autoLevel;
-      }
-    }
-
-    // triggered each time a new fragment is buffered
-  }, {
-    key: 'onFragmentBuffered',
-    value: function onFragmentBuffered(event, data) {
-      var stats = this._stats,
-          latency = data.stats.tfirst - data.stats.trequest,
-          process = data.stats.tbuffered - data.stats.trequest,
-          bitrate = Math.round(8 * data.stats.length / (data.stats.tbuffered - data.stats.tfirst));
-      if (stats.fragBuffered) {
-        stats.fragMinLatency = Math.min(stats.fragMinLatency, latency);
-        stats.fragMaxLatency = Math.max(stats.fragMaxLatency, latency);
-        stats.fragMinProcess = Math.min(stats.fragMinProcess, process);
-        stats.fragMaxProcess = Math.max(stats.fragMaxProcess, process);
-        stats.fragMinKbps = Math.min(stats.fragMinKbps, bitrate);
-        stats.fragMaxKbps = Math.max(stats.fragMaxKbps, bitrate);
-        stats.autoLevelCappingMin = Math.min(stats.autoLevelCappingMin, this.hls.autoLevelCapping);
-        stats.autoLevelCappingMax = Math.max(stats.autoLevelCappingMax, this.hls.autoLevelCapping);
-        stats.fragBuffered++;
-      } else {
-        stats.fragMinLatency = stats.fragMaxLatency = latency;
-        stats.fragMinProcess = stats.fragMaxProcess = process;
-        stats.fragMinKbps = stats.fragMaxKbps = bitrate;
-        stats.fragBuffered = 1;
-        stats.fragBufferedBytes = 0;
-        stats.autoLevelCappingMin = stats.autoLevelCappingMax = this.hls.autoLevelCapping;
-        this.sumLatency = 0;
-        this.sumKbps = 0;
-        this.sumProcess = 0;
-      }
-      stats.fraglastLatency = latency;
-      this.sumLatency += latency;
-      stats.fragAvgLatency = Math.round(this.sumLatency / stats.fragBuffered);
-      stats.fragLastProcess = process;
-      this.sumProcess += process;
-      stats.fragAvgProcess = Math.round(this.sumProcess / stats.fragBuffered);
-      stats.fragLastKbps = bitrate;
-      this.sumKbps += bitrate;
-      stats.fragAvgKbps = Math.round(this.sumKbps / stats.fragBuffered);
-      stats.fragBufferedBytes += data.stats.length;
-      stats.autoLevelCappingLast = this.hls.autoLevelCapping;
-    }
-  }, {
-    key: 'onFragmentLoadEmergencyAborted',
-    value: function onFragmentLoadEmergencyAborted() {
-      var stats = this._stats;
-      if (stats) {
-        if (stats.fragLoadEmergencyAborted === undefined) {
-          stats.fragLoadEmergencyAborted = 1;
-        } else {
-          stats.fragLoadEmergencyAborted++;
-        }
-      }
-    }
-  }, {
-    key: 'onError',
-    value: function onError(event, data) {
-      var stats = this._stats;
-      if (stats) {
-        // track all errors independently
-        if (stats[data.details] === undefined) {
-          stats[data.details] = 1;
-        } else {
-          stats[data.details] += 1;
-        }
-        // track fatal error
-        if (data.fatal) {
-          if (stats.fatalError === undefined) {
-            stats.fatalError = 1;
-          } else {
-            stats.fatalError += 1;
-          }
-        }
-      }
-    }
-  }, {
-    key: 'onFPSDrop',
-    value: function onFPSDrop(event, data) {
-      var stats = this._stats;
-      if (stats) {
-        if (stats.fpsDropEvent === undefined) {
-          stats.fpsDropEvent = 1;
-        } else {
-          stats.fpsDropEvent++;
-        }
-        stats.fpsTotalDroppedFrames = data.totalDroppedFrames;
-      }
-    }
-  }, {
-    key: 'stats',
-    get: function get() {
-      if (this.video) {
-        this._stats.lastPos = this.video.currentTime.toFixed(3);
-      }
-      return this._stats;
-    }
-  }]);
-
-  return StatsHandler;
-})();
-
-exports['default'] = StatsHandler;
-module.exports = exports['default'];
-
-},{"./events":12}],20:[function(require,module,exports){
+},{"../errors":11,"../events":12,"../remux/mp4-generator":17,"../utils/logger":19}],19:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -5292,7 +5058,7 @@ exports.enableLogs = enableLogs;
 var logger = exportedLogger;
 exports.logger = logger;
 
-},{}],21:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 /**
  * XHR based logger
 */
@@ -5418,6 +5184,6 @@ var XhrLoader = (function () {
 exports['default'] = XhrLoader;
 module.exports = exports['default'];
 
-},{"../utils/logger":20}]},{},[14])(14)
+},{"../utils/logger":19}]},{},[14])(14)
 });
 //# sourceMappingURL=hls.js.map
