@@ -163,10 +163,9 @@ header {
           <button type="button" class="btn btn-xs btn-info" onclick="windowEnd=$('#windowEnd').val()">fixed window end(ms)</button>
           <input type="text" id='windowEnd' defaultValue="10000" size="8" onkeydown="if(window.event.keyCode=='13'){windowEnd=$('#windowEnd').val();}"><br>
         </div>
-        <button type="button" class="btn btn-xs btn-success" onclick="goToMetrics()" style="font-size:18px">metrics link</button>        
+        <button type="button" class="btn btn-xs btn-success" onclick="goToMetrics()" style="font-size:18px">metrics link</button>
         <button type="button" class="btn btn-xs btn-success" onclick="goToMetricsPermaLink()" style="font-size:18px">metrics permalink</button>
-        <button type="button" class="btn btn-xs btn-success" onclick="$('#metrics_b64').text(getMetrics())" style="font-size:18px">metrics data</button>
-        <pre id='metrics_b64'></pre>
+        <button type="button" class="btn btn-xs btn-success" onclick="copyMetricsToClipBoard()" style="font-size:18px">copy metrics to clipboard</button>
         <canvas id="bufferTimerange_c" width="640" height="100" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
         <canvas id="bitrateTimerange_c" width="640" height="100" style="border:1px solid #000000";></canvas>
         <canvas id="bufferWindow_c" width="640" height="100" style="border:1px solid #000000" onmousemove="windowCanvasonMouseMove(event)";></canvas>
@@ -605,8 +604,27 @@ function timeRangesToString(r) {
   function getMetrics() {
     var json = JSON.stringify(events);
     var jsonpacked = jsonpack.pack(json);
-    console.log("packing JSON from " + json.length + " to " + jsonpacked.length + " bytes");    
+    console.log("packing JSON from " + json.length + " to " + jsonpacked.length + " bytes");
     return btoa(jsonpacked);
+  }
+
+  function copyMetricsToClipBoard() {
+    copyTextToClipboard(getMetrics());
+  }
+
+  function copyTextToClipboard(text) {
+    var textArea = document.createElement("textarea");
+    textArea.value = text;
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      var successful = document.execCommand('copy');
+      var msg = successful ? 'successful' : 'unsuccessful';
+      console.log('Copying text command was ' + msg);
+    } catch (err) {
+      console.log('Oops, unable to copy');
+    }
+    document.body.removeChild(textArea);
   }
 
   function goToMetrics() {
