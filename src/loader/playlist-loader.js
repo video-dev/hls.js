@@ -133,8 +133,10 @@ class PlaylistLoader {
           break;
         case 'INF':
           var duration = parseFloat(result[1]);
-          level.fragments.push({url: this.resolve(result[2], baseurl), duration: duration, start: totalduration, sn: currentSN++, level: id, cc: cc});
-          totalduration += duration;
+          if (!isNaN(duration)) {
+            level.fragments.push({url: this.resolve(result[2], baseurl), duration: duration, start: totalduration, sn: currentSN++, level: id, cc: cc});
+            totalduration += duration;
+          }
           break;
         default:
           break;

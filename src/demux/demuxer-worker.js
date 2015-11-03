@@ -1,9 +1,14 @@
+/* demuxer web worker. 
+ *  - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
+ *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
+ */
+ 
+ import DemuxerInline from '../demux/demuxer-inline';
  import Event from '../events';
  import EventEmitter from 'events';
- import TSDemuxer from '../demux/tsdemuxer';
  import MP4Remuxer from '../remux/mp4-remuxer';
 
-var TSDemuxerWorker = function (self) {
+var DemuxerWorker = function (self) {
   // observer setup
   var observer = new EventEmitter();
   observer.trigger = function trigger (event, ...data) {
@@ -17,7 +22,7 @@ var TSDemuxerWorker = function (self) {
     //console.log('demuxer cmd:' + ev.data.cmd);
     switch (ev.data.cmd) {
       case 'init':
-        self.demuxer = new TSDemuxer(observer,MP4Remuxer);
+        self.demuxer = new DemuxerInline(observer,MP4Remuxer);
         break;
       case 'demux':
         self.demuxer.push(new Uint8Array(ev.data.data), ev.data.audioCodec, ev.data.videoCodec, ev.data.timeOffset, ev.data.cc, ev.data.level, ev.data.duration);
@@ -62,7 +67,12 @@ var TSDemuxerWorker = function (self) {
   observer.on(Event.ERROR, function(event, data) {
     self.postMessage({event: event, data: data});
   });
+
+  observer.on(Event.FRAG_PARSING_METADATA, function(event, data) {
+    var objData = {event: event, samples: data.samples};
+    self.postMessage(objData);
+  });
 };
 
-export default TSDemuxerWorker;
+export default DemuxerWorker;
 

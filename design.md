@@ -50,7 +50,14 @@ design idea is pretty simple :
       - demuxer will instantiate a Worker
       - post/listen to Worker message, 
       - and redispatch events as expected by hls.js.
-    - TS fragments are sent as [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
+    - Fragments are sent as [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
+  - [src/demux/demuxer-inline.js][]
+    - inline demuxer.
+    - probe fragments and instantiate appropriate demuxer depending on content type (TSDemuxer, AACDemuxer, ...)
+  - [src/demux/demuxer-worker.js][]
+    - demuxer web worker. 
+    - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
+    - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
   - [src/demux/exp-golomb.js][]
     - utility class to extract Exponential-Golomb coded data. needed by TS demuxer for SPS parsing.
   - [src/demux/tsdemuxer.js][]
@@ -62,14 +69,14 @@ design idea is pretty simple :
      - it also tries to workaround as best as it can audio codec switch (HE-AAC to AAC and vice versa), without having to restart the MediaSource.
      - it also controls the remuxing process : 
       - upon discontinuity or level switch detection, it will also notifies the remuxer so that it can reset its state.
-  - [src/demux/tsdemuxerworker.js][]
-    - TS demuxer web worker. 
-    - listen to worker message, and trigger tsdemuxer upon reception of TS fragments.
-    - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
+  - [src/helper/level-helper.js][]
+    - helper class providing methods dealing with playlist sliding and fragment duration drift computation : after fragment parsing, start/end fragment timestamp will be used to adjust potential playlist drifts and live playlist sliding.
   - [src/loader/fragment-loader.js][]
     - in charge of loading fragments, use xhr-loader if not overrided by user config
   - [src/loader/playlist-loader.js][]
    - in charge of loading manifest, and level playlists, use xhr-loader if not overrided by user config.
+  - [src/remux/dummy-remuxer.js][]
+   - example dummy remuxer
   - [src/remux/mp4-generator.js][]
    - in charge of generating MP4 boxes
      - generate Init Segment (moov)
@@ -97,11 +104,14 @@ design idea is pretty simple :
 [src/controller/fps-controller.js]: src/controller/fps-controller.js
 [src/controller/level-controller.js]: src/controller/level-controller.js
 [src/demux/demuxer.js]: src/demux/demuxer.js
+[src/demux/demuxer-inline.js]: src/demux/demuxer-inline.js
+[src/demux/demuxer-worker.js]: src/demux/demuxer-worker.js
 [src/demux/exp-golomb.js]: src/demux/exp-golomb.js
 [src/demux/tsdemuxer.js]: src/demux/tsdemuxer.js
-[src/demux/tsdemuxerworker.js]: src/demux/tsdemuxerworker.js
+[src/helper/level-helper.js]: src/helper/level-helper.js
 [src/loader/fragment-loader.js]: src/loader/fragment-loader.js
 [src/loader/playlist-loader.js]: src/loader/playlist-loader.js
+[src/remux/dummy-remuxer.js]: src/remux/dummy-remuxer.js
 [src/remux/mp4-generator.js]: src/remux/mp4-generator.js
 [src/remux/mp4-remuxer.js]: src/remux/mp4-remuxer.js
 [src/utils/hex.js]: src/utils/hex.js
