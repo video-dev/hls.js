@@ -15,6 +15,10 @@ export default {
     LEVEL_LOADING: 'hlsLevelLoading',
     // fired when a level playlist loading finishes - data: { details : levelDetails object, level : id of loaded level, stats : { trequest, tfirst, tload, mtime} }
     LEVEL_LOADED: 'hlsLevelLoaded',
+    // fired when a level's details have been updated based on previous details, after it has been loaded. - data: { details : levelDetails object, level : id of updated level }
+    LEVEL_UPDATED: 'hlsLevelUpdated',
+    // fired when a level's PTS information has been updated after parsing a fragment - data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment }
+    LEVEL_PTS_UPDATED: 'hlsPTSUpdated',
     // fired when a level switch is requested - data: { level : id of new level }
     LEVEL_SWITCH: 'hlsLevelSwitch',
     // fired when a fragment loading starts - data: { frag : fragment object}

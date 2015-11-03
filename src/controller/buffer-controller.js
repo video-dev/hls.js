@@ -1022,6 +1022,10 @@ class BufferController {
         }
         // override level info
         curLevel.details = newDetails;
+        this.hls.trigger(Event.LEVEL_UPDATED, {
+            details: newDetails,
+            level: newLevelId
+        });
 
         // compute start position
         if (this.startLevelLoaded === false) {
@@ -1160,12 +1164,18 @@ class BufferController {
                     data.nb
                 }`
             );
-            LevelHelper.updateFragPTS(
+            var drift = LevelHelper.updateFragPTS(
                 level.details,
                 frag.sn,
                 data.startPTS,
                 data.endPTS
             );
+            this.hls.trigger(Event.LEVEL_PTS_UPDATED, {
+                details: level.details,
+                level: this.level,
+                drift: drift
+            });
+
             this.mp4segments.push({ type: data.type, data: data.moof });
             this.mp4segments.push({ type: data.type, data: data.mdat });
             this.nextLoadPosition = data.endPTS;
