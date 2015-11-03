@@ -465,6 +465,10 @@ full list of Events available below :
     -  data: { url : level URL, level : id of level being loaded}
   - `Hls.Events.LEVEL_LOADED`  - fired when a level playlist loading finishes
     -  data: { details : levelDetails object, levelId : id of loaded level, stats : { trequest, tfirst, tload, mtime} }
+  - `Hls.Events.LEVEL_UPDATED`  - fired when a level's details have been updated based on previous details, after it has been loaded
+    -  data: { details : levelDetails object, level : id of updated level }
+  - `Hls.Events.LEVEL_PTS_UPDATED`  - fired when a level's PTS information has been updated after parsing a fragment
+    -  data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment } 
   - `Hls.Events.LEVEL_SWITCH`  - fired when a level switch is requested
     -  data: { levelId : id of new level }
   - `Hls.Events.FRAG_LOADING`  - fired when a fragment loading starts
