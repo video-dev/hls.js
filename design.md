@@ -13,9 +13,6 @@ design idea is pretty simple :
     - definition of Hls.Events
   - [src/errors.js][]
     - definition of Hls.ErrorTypes and Hls.ErrorDetails
-  - [src/stats.js][]
-    - subsystem monitoring events, and aggregating them into an object, that could be retrieved through hls.stats getter
-
   - [src/controller/buffer-controller.js][]
     - in charge of:
       - ensuring that buffer is filled as per defined quality selection logic. 
