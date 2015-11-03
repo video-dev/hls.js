@@ -70,7 +70,7 @@ class LevelHelper {
         var fragIdx, fragments, frag, i;
         // exit if sn out of range
         if (sn < details.startSN || sn > details.endSN) {
-            return;
+            return 0;
         }
         fragIdx = sn - details.startSN;
         fragments = details.fragments;
