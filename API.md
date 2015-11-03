@@ -176,6 +176,7 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       maxBufferLength : 30,
       maxBufferSize : 60*1000*1000,
       liveSyncDurationCount : 3,
+      liveMaxLatencyDurationCount: 10,
       enableWorker : true,
       fragLoadingTimeOut : 20000,
       fragLoadingMaxRetry : 6,
@@ -222,6 +223,14 @@ maximum buffer size in bytes. if buffer size upfront is bigger than this value, 
 edge of live delay, expressed in multiple of ```EXT-X-TARGETDURATION```.
 if set to 3, playback will start from fragment N-3, N being the last fragment of the live playlist.
 decreasing this value is likely to cause playback stalls.
+
+#### ```liveMaxLatencyDurationCount```
+(default Infinity)
+
+maximum delay allowed from edge of live, expressed in multiple of ```EXT-X-TARGETDURATION```.
+if set to 10, the player will seek back to ```liveSyncDurationCount``` whenever the next fragment to be loaded is older than N-10, N being the last fragment of the live playlist.
+If set, this value must be stricly superior to ```liveSyncDurationCount```
+a value too close from ```liveSyncDurationCount``` is likely to cause playback stalls.
 
 #### ```enableWorker```
 (default true)
@@ -441,7 +450,9 @@ hls.on(Hls.Events.LEVEL_LOADED,function(event,data) {
 full list of Events available below :
 
   - `Hls.Events.MSE_ATTACHED`  - fired when MediaSource has been succesfully attached to video element.
-    -  data: { mediaSource }
+    -  data: { video , mediaSource }
+  - `Hls.Events.MSE_DETACHING`  - fired before detaching MediaSource from video element.
+    -  data: { }
   - `Hls.Events.MSE_DETACHED`  - fired when MediaSource has been detached from video element.
     -  data: { }
   - `Hls.Events.MANIFEST_LOADING`  - fired to signal that a manifest loading starts
@@ -454,6 +465,10 @@ full list of Events available below :
     -  data: { url : level URL, level : id of level being loaded}
   - `Hls.Events.LEVEL_LOADED`  - fired when a level playlist loading finishes
     -  data: { details : levelDetails object, levelId : id of loaded level, stats : { trequest, tfirst, tload, mtime} }
+  - `Hls.Events.LEVEL_UPDATED`  - fired when a level's details have been updated based on previous details, after it has been loaded
+    -  data: { details : levelDetails object, level : id of updated level }
+  - `Hls.Events.LEVEL_PTS_UPDATED`  - fired when a level's PTS information has been updated after parsing a fragment
+    -  data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment } 
   - `Hls.Events.LEVEL_SWITCH`  - fired when a level switch is requested
     -  data: { levelId : id of new level }
   - `Hls.Events.FRAG_LOADING`  - fired when a fragment loading starts
@@ -464,6 +479,8 @@ full list of Events available below :
     -  data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length}}
   - `Hls.Events.FRAG_PARSING_INIT_SEGMENT` - fired when Init Segment has been extracted from fragment
     -  data: { moov : moov MP4 box, codecs : codecs found while parsing fragment}    
+  - `Hls.Events.FRAG_PARSING_METADATA`  - fired when parsing id3 is completed
+      -  data: { samples : [ id3 pes - pts and dts timestamp are relative, values are in seconds]}
   - `Hls.Events.FRAG_PARSING_DATA`  - fired when moof/mdat have been extracted from fragment
     -  data: { moof : moof MP4 box, mdat : mdat MP4 box, startPTS : PTS of first sample, endPTS : PTS of last sample, startDTS : DTS of first sample, endDTS : DTS of last sample, type : stream type (audio or video), nb : number of samples}
   - `Hls.Events.FRAG_PARSED`  - fired when fragment parsing is completed
@@ -476,6 +493,8 @@ full list of Events available below :
     -  data: {curentDropped : nb of dropped frames in last monitoring period, currentDecoded: nb of decoded frames in last monitoring period, totalDropped : total dropped frames on this video element}
   - `Hls.Events.ERROR` -  Identifier for an error event
     - data: { type : error Type, details : error details, fatal : is error fatal or not, other error specific data} 
+  - `Hls.Events.DESTROYING` -  fired when hls.js instance starts destroying. Different from MSE_DETACHED as one could want to detach and reattach a video to the instance of hls.js to handle mid-rolls for example.
+    - data: { }
 
 
 ##Errors

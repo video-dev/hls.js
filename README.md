@@ -22,6 +22,22 @@ public demo : [http://dailymotion.github.io/hls.js/demo](http://dailymotion.gith
 
 private demo accessible from Dailymotion network: [http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html](http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html)
 
+
+## player integration
+
+hls.js is (being) integrated in the following players:
+
+ - [Clappr] (https://github.com/clappr/clappr), integrated in [master branch](https://github.com/clappr/clappr/commits/master)
+ - [Flowplayer] (https://www.flowplayer.org)  through [flowplayer-hlsjs
+] (https://github.com/flowplayer/flowplayer-hlsjs)
+ - [Videojs] (http://videojs.com) through [Videojs-hlsjs] (https://github.com/benjipott/videojs-hlsjs)
+
+ it might also be integrated in the following players if you push for it !
+
+ - [MediaElement.js] (http://mediaelementjs.com/)  through [#1609
+] (https://github.com/johndyer/mediaelement/issues/1609)
+ 
+
 ## Dependencies
 
 No external JS libs are needed. 
@@ -86,13 +102,13 @@ as of today, it is supported on:
     - retry mechanism embedded in the library
     - recovery actions could be triggered fix fatal media or network errors
   - [Redundant/Failover Playlists](https://developer.apple.com/library/ios/documentation/NetworkingInternet/Conceptual/StreamingMediaGuide/UsingHTTPLiveStreaming/UsingHTTPLiveStreaming.html#//apple_ref/doc/uid/TP40008332-CH102-SW22)
+  - Timed Metadata for HTTP Live Streaming (in ID3 format, carried in MPEG-2 TS)
 
 ## Not Supported (Yet)
 
   - AAC / MP3 / WebVTT container
   - AES-128 decryption
   - Alternate Audio Track Rendition (Master Playlist with alternative Audio)  
-  - Timed Metadata for HTTP Live Streaming (in ID3 format, carried in MPEG-2 TS)
 
 ### Supported M3U8 tags
 

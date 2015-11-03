@@ -1,7 +1,12 @@
 /**
- * A stream-based mp2ts to mp4 converter. This utility is used to
- * deliver mp4s to a SourceBuffer on platforms that support native
- * Media Source Extensions.
+ * highly optimized TS demuxer:
+ * parse PAT, PMT
+ * extract PES packet from audio and video PIDs
+ * extract AVC/H264 NAL units and AAC/ADTS samples from PES packet
+ * trigger the remuxer upon parsing completion
+ * it also tries to workaround as best as it can audio codec switch (HE-AAC to AAC and vice versa), without having to restart the MediaSource.
+ * it also controls the remuxing process :
+ * upon discontinuity or level switch detection, it will also notifies the remuxer so that it can reset its state.
  */
 
 import Event from '../events';
@@ -16,6 +21,7 @@ class TSDemuxer {
         this.remuxerClass = remuxerClass;
         this.lastCC = 0;
         this.PES_TIMESCALE = 90000;
+        this.remuxer = new this.remuxerClass(this.observer);
     }
 
     switchLevel() {
@@ -36,7 +42,14 @@ class TSDemuxer {
             samples: [],
             len: 0
         };
-        this.remuxer = new this.remuxerClass(this.observer);
+        this._id3Track = {
+            type: 'id3',
+            id: -1,
+            sequenceNumber: 0,
+            samples: [],
+            len: 0
+        };
+        this.remuxer.switchLevel();
     }
 
     insertDiscontinuity() {
@@ -48,6 +61,7 @@ class TSDemuxer {
     push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
         var avcData,
             aacData,
+            id3Data,
             start,
             len = data.length,
             stt,
@@ -69,7 +83,8 @@ class TSDemuxer {
         }
         var pmtParsed = this.pmtParsed,
             avcId = this._avcTrack.id,
-            aacId = this._aacTrack.id;
+            aacId = this._aacTrack.id,
+            id3Id = this._id3Track.id;
         // loop through TS packets
         for (start = 0; start < len; start += 188) {
             if (data[start] === 0x47) {
@@ -114,6 +129,19 @@ class TSDemuxer {
                             );
                             aacData.size += start + 188 - offset;
                         }
+                    } else if (pid === id3Id) {
+                        if (stt) {
+                            if (id3Data) {
+                                this._parseID3PES(this._parsePES(id3Data));
+                            }
+                            id3Data = { data: [], size: 0 };
+                        }
+                        if (id3Data) {
+                            id3Data.data.push(
+                                data.subarray(offset, start + 188)
+                            );
+                            id3Data.size += start + 188 - offset;
+                        }
                     }
                 } else {
                     if (stt) {
@@ -126,6 +154,7 @@ class TSDemuxer {
                         pmtParsed = this.pmtParsed = true;
                         avcId = this._avcTrack.id;
                         aacId = this._aacTrack.id;
+                        id3Id = this._id3Track.id;
                     }
                 }
             } else {
@@ -144,10 +173,18 @@ class TSDemuxer {
         if (aacData) {
             this._parseAACPES(this._parsePES(aacData));
         }
+        if (id3Data) {
+            this._parseID3PES(this._parsePES(id3Data));
+        }
     }
 
     remux() {
-        this.remuxer.remux(this._aacTrack, this._avcTrack, this.timeOffset);
+        this.remuxer.remux(
+            this._aacTrack,
+            this._avcTrack,
+            this._id3Track,
+            this.timeOffset
+        );
     }
 
     destroy() {
@@ -179,6 +216,11 @@ class TSDemuxer {
                 case 0x0f:
                     //logger.log('AAC PID:'  + pid);
                     this._aacTrack.id = pid;
+                    break;
+                // Packetized metadata (ID3)
+                case 0x15:
+                    //logger.log('ID3 PID:'  + pid);
+                    this._id3Track.id = pid;
                     break;
                 // ITU-T Rec. H.264 and ISO/IEC 14496-10 (lower bit-rate video)
                 case 0x1b:
@@ -287,10 +329,12 @@ class TSDemuxer {
         }
         //free pes.data to save up some memory
         pes.data = null;
+        //var debugString = '';
         units.units.forEach(unit => {
             switch (unit.type) {
                 //NDR
                 case 1:
+                    //debugString += 'NDR ';
                     // check if slice_type matches with a keyframe
                     var sliceType = new ExpGolomb(unit.data).readSliceType();
                     if (
@@ -305,10 +349,15 @@ class TSDemuxer {
                     break;
                 //IDR
                 case 5:
+                    //debugString += 'IDR ';
                     key = true;
                     break;
+                //case 6:
+                //  debugString += 'SEI ';
+                //  break;
                 //SPS
                 case 7:
+                    //debugString += 'SPS ';
                     if (!track.sps) {
                         var expGolombDecoder = new ExpGolomb(unit.data);
                         var config = expGolombDecoder.readSPS();
@@ -335,14 +384,18 @@ class TSDemuxer {
                     break;
                 //PPS
                 case 8:
+                    //debugString += 'PPS ';
                     if (!track.pps) {
                         track.pps = [unit.data];
                     }
                     break;
+                //case 9:
+                //  debugString += 'AUD ';
                 default:
                     break;
             }
         });
+        //logger.log(debugString);
         //build sample from PES
         // Annex B to MP4 conversion to be done
         if (units.length) {
@@ -719,6 +772,10 @@ class TSDemuxer {
             channelCount: adtsChanelConfig,
             codec: 'mp4a.40.' + adtsObjectType
         };
+    }
+
+    _parseID3PES(pes) {
+        this._id3Track.samples.push(pes);
     }
 }
 
