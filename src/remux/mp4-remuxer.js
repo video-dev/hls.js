@@ -234,7 +234,7 @@ class MP4Remuxer {
     this.nextAvcDts = dtsnorm + mp4Sample.duration * pes2mp4ScaleFactor;
     track.len = 0;
     track.nbNalu = 0;
-    if(!!window.chrome) {
+    if(navigator.userAgent.toLowerCase().indexOf("chrome") > -1) {
     // chrome workaround, mark first sample as being a Random Access Point to avoid sourcebuffer append issue
     // https://code.google.com/p/chromium/issues/detail?id=229412
       samples[0].flags.dependsOn = 2;
