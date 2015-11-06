@@ -22,7 +22,7 @@
     this.remuxerClass = remuxerClass;
     this.lastCC = 0;
     this.PES_TIMESCALE = 90000;
-    this.remuxer = new this.remuxerClass(this.observer);
+    this.remuxer = new this.remuxerClass(observer);
   }
 
   static probe(data) {
