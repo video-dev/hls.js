@@ -659,10 +659,7 @@ class BufferController {
         media decode error, check this, to avoid seeking back to
         wrong position after a media decode error
       */
-            if (
-                currentTime >
-                Math.sign(video.playbackRate) * this.lastCurrentTime
-            ) {
+            if (currentTime > video.playbackRate * this.lastCurrentTime) {
                 this.lastCurrentTime = currentTime;
             }
             if (this.isBuffered(currentTime)) {
