@@ -272,17 +272,9 @@
     units.units.forEach(unit => {
       switch(unit.type) {
         //NDR
-        case 1:
-          //debugString += 'NDR ';
-          // check if slice_type matches with a keyframe
-          var sliceType = new ExpGolomb(unit.data).readSliceType();
-          if(sliceType === 2 || // I-slice
-             sliceType === 4 || // SI-slice
-             sliceType === 7 || // I-slice
-             sliceType === 9) { // SI-slice
-            key = true;
-          }
-          break;
+        // case 1:
+        //   debugString += 'NDR ';
+        //   break;
         //IDR
         case 5:
           //debugString += 'IDR ';
