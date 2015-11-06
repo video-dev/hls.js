@@ -2754,18 +2754,9 @@ var TSDemuxer = (function () {
       units.units.forEach(function (unit) {
         switch (unit.type) {
           //NDR
-          case 1:
-            //debugString += 'NDR ';
-            // check if slice_type matches with a keyframe
-            var sliceType = new _expGolomb2['default'](unit.data).readSliceType();
-            if (sliceType === 2 || // I-slice
-            sliceType === 4 || // SI-slice
-            sliceType === 7 || // I-slice
-            sliceType === 9) {
-              // SI-slice
-              key = true;
-            }
-            break;
+          // case 1:
+          //   debugString += 'NDR ';
+          //   break;
           //IDR
           case 5:
             //debugString += 'IDR ';
@@ -4823,6 +4814,12 @@ var MP4Remuxer = (function () {
       this.nextAvcDts = dtsnorm + mp4Sample.duration * pes2mp4ScaleFactor;
       track.len = 0;
       track.nbNalu = 0;
+      if (!!window.chrome) {
+        // chrome workaround, mark first sample as being a Random Access Point to avoid sourcebuffer append issue
+        // https://code.google.com/p/chromium/issues/detail?id=229412
+        samples[0].flags.dependsOn = 2;
+        samples[0].flags.isNonSync = 0;
+      }
       track.samples = samples;
       moof = _remuxMp4Generator2['default'].moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
       track.samples = [];
