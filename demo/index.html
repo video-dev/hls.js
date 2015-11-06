@@ -466,6 +466,7 @@ $(document).ready(function() {
               break;
           }
         }
+        if(!stats) stats = {};
         // track all errors independently
         if (stats[data.details] === undefined) {
           stats[data.details] = 1;
@@ -480,6 +481,7 @@ $(document).ready(function() {
               stats.fatalError += 1;
           }
         }
+        $("#HlsStats").text(JSON.stringify(sortObject(stats),null,"\t"));
        });
 
        hls.on(Hls.Events.FPS_DROP,function(event,data) {
