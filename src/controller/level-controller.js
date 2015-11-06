@@ -210,6 +210,11 @@ class LevelController {
       // set reload period to playlist target duration
       this.timer = setInterval(this.ontick, 1000 * data.details.targetduration);
     }
+    if (!data.details.live && this.timer) {
+      // playlist is not live and timer is armed : stopping it
+      clearInterval(this.timer);
+      this.timer = null;
+    }
   }
 
   tick() {
