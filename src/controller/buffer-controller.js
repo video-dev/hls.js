@@ -513,7 +513,7 @@ class BufferController {
         media decode error, check this, to avoid seeking back to
         wrong position after a media decode error
       */
-      if(currentTime > Math.sign(video.playbackRate)*this.lastCurrentTime) {
+      if(currentTime > video.playbackRate*this.lastCurrentTime) {
         this.lastCurrentTime = currentTime;
       }
       if (this.isBuffered(currentTime)) {
@@ -935,7 +935,7 @@ class BufferController {
       logger.log(`parsed data, type/startPTS/endPTS/startDTS/endDTS/nb:${data.type}/${data.startPTS.toFixed(3)}/${data.endPTS.toFixed(3)}/${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}/${data.nb}`);
       var drift = LevelHelper.updateFragPTS(level.details,frag.sn,data.startPTS,data.endPTS);
       this.hls.trigger(Event.LEVEL_PTS_UPDATED, {details: level.details, level: this.level, drift: drift});
-      
+
       this.mp4segments.push({type: data.type, data: data.moof});
       this.mp4segments.push({type: data.type, data: data.mdat});
       this.nextLoadPosition = data.endPTS;
