@@ -24,6 +24,20 @@ class TSDemuxer {
         this.remuxer = new this.remuxerClass(this.observer);
     }
 
+    static probe(data) {
+        // a TS fragment should contain at least 3 TS packets, a PAT, a PMT, and one PID, each starting with 0x47
+        if (
+            data.length >= 3 * 188 &&
+            data[0] === 0x47 &&
+            data[188] === 0x47 &&
+            data[2 * 188] === 0x47
+        ) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     switchLevel() {
         this.pmtParsed = false;
         this._pmtId = -1;
