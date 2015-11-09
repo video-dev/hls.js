@@ -857,6 +857,12 @@ class BufferController {
                     start: nextRange.start,
                     end: Number.POSITIVE_INFINITY
                 });
+                // if we are here, we can also cancel any loading/demuxing in progress, as they are useless
+                var fragCurrent = this.fragCurrent;
+                if (fragCurrent && fragCurrent.loader) {
+                    fragCurrent.loader.abort();
+                }
+                this.fragCurrent = null;
             }
         }
         if (this.flushRange.length) {
