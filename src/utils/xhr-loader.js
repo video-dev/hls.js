@@ -36,16 +36,16 @@ class XhrLoader {
         maxRetry,
         retryDelay,
         onProgress = null,
-        frag
+        frag = null
     ) {
         this.url = url;
         if (
             frag &&
-            !isNaN(frag.byterange_start_offset) &&
-            !isNaN(frag.byterange_end_offset)
+            !isNaN(frag.byteRangeStartOffset) &&
+            !isNaN(frag.byteRangeEndOffset)
         ) {
             this.byteRange =
-                frag.byterange_start_offset + '-' + frag.byterange_end_offset;
+                frag.byteRangeStartOffset + '-' + frag.byteRangeEndOffset;
         }
         this.responseType = responseType;
         this.onSuccess = onSuccess;
