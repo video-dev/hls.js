@@ -113,7 +113,7 @@ class PlaylistLoader {
   }
 
   parseLevelPlaylist(string, baseurl, id) {
-    var currentSN = 0, totalduration = 0, level = {url: baseurl, fragments: [], live: true, startSN: 0}, result, regexp, cc = 0, frag, byterange_end_offset, byterange_start_offset;
+    var currentSN = 0, totalduration = 0, level = {url: baseurl, fragments: [], live: true, startSN: 0}, result, regexp, cc = 0, frag, byteRangeEndOffset, byteRangeStartOffset;
     regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))/g;
     while ((result = regexp.exec(string)) !== null) {
       result.shift();
@@ -134,24 +134,24 @@ class PlaylistLoader {
         case 'BYTERANGE':
           var params = result[1].split('@');
           if (params.length === 1) {
-            byterange_start_offset = byterange_end_offset;   
+            byteRangeStartOffset = byteRangeEndOffset;
           } else {
-            byterange_start_offset = parseInt(params[1]);
+            byteRangeStartOffset = parseInt(params[1]);
           }
-          byterange_end_offset = parseInt(params[0]) + byterange_start_offset;
+          byteRangeEndOffset = parseInt(params[0]) + byteRangeStartOffset;
           frag = level.fragments.length ? level.fragments[level.fragments.length - 1] : null;
           if (frag && !frag.url) {
-            frag.byterange_start_offset = byterange_start_offset;
-            frag.byterange_end_offset = byterange_end_offset;
+            frag.byteRangeStartOffset = byteRangeStartOffset;
+            frag.byteRangeEndOffset = byteRangeEndOffset;
             frag.url = this.resolve(result[2], baseurl);
           }
           break;
         case 'INF':
           var duration = parseFloat(result[1]);
           if (!isNaN(duration)) {
-            level.fragments.push({url: result[2] ? this.resolve(result[2], baseurl) : null, duration: duration, start: totalduration, sn: currentSN++, level: id, cc: cc, byterange_start_offset: byterange_start_offset, byterange_end_offset: byterange_end_offset});
+            level.fragments.push({url: result[2] ? this.resolve(result[2], baseurl) : null, duration: duration, start: totalduration, sn: currentSN++, level: id, cc: cc, byteRangeStartOffset: byteRangeStartOffset, byteRangeEndOffset: byteRangeEndOffset});
             totalduration += duration;
-            byterange_start_offset = null;
+            byteRangeStartOffset = null;
           }
           break;
         default:
