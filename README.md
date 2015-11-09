@@ -119,6 +119,7 @@ as of today, it is supported on:
   - `#EXT-X-MEDIA-SEQUENCE`
   - `#EXT-X-TARGETDURATION`
   - `#EXT-X-DISCONTINUITY`
+  - `#EXT-X-BYTERANGE`
 
 ## Getting Started
 
