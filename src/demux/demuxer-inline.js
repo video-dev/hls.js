@@ -4,6 +4,7 @@
 
 import Event from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
+import AACDemuxer from '../demux/aacdemuxer';
 import TSDemuxer from '../demux/tsdemuxer';
 
 class DemuxerInline {
@@ -25,6 +26,8 @@ class DemuxerInline {
             // probe for content type
             if (TSDemuxer.probe(data)) {
                 demuxer = this.demuxer = new TSDemuxer(this.hls, this.remuxer);
+            } else if (AACDemuxer.probe(data)) {
+                demuxer = this.demuxer = new AACDemuxer(this.hls, this.remuxer);
             } else {
                 this.hls.trigger(Event.ERROR, {
                     type: ErrorTypes.MEDIA_ERROR,
