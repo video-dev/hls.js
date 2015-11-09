@@ -1775,6 +1775,11 @@ var LevelController = (function () {
         // set reload period to playlist target duration
         this.timer = setInterval(this.ontick, 1000 * data.details.targetduration);
       }
+      if (!data.details.live && this.timer) {
+        // playlist is not live and timer is armed : stopping it
+        clearInterval(this.timer);
+        this.timer = null;
+      }
     }
   }, {
     key: 'tick',
@@ -1866,6 +1871,12 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'd
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
+var _events = require('../events');
+
+var _events2 = _interopRequireDefault(_events);
+
+var _errors = require('../errors');
+
 var _demuxTsdemuxer = require('../demux/tsdemuxer');
 
 var _demuxTsdemuxer2 = _interopRequireDefault(_demuxTsdemuxer);
@@ -1875,23 +1886,39 @@ var DemuxerInline = (function () {
     _classCallCheck(this, DemuxerInline);
 
     this.hls = hls;
-    this.demuxer = new _demuxTsdemuxer2['default'](hls, remuxer);
+    this.remuxer = remuxer;
   }
 
   _createClass(DemuxerInline, [{
     key: 'destroy',
     value: function destroy() {
-      this.demuxer.destroy();
+      var demuxer = this.demuxer;
+      if (demuxer) {
+        demuxer.destroy();
+      }
     }
   }, {
     key: 'push',
     value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
-      this.demuxer.push(data, audioCodec, videoCodec, timeOffset, cc, level, duration);
+      var demuxer = this.demuxer;
+      if (!demuxer) {
+        // probe for content type
+        if (_demuxTsdemuxer2['default'].probe(data)) {
+          demuxer = this.demuxer = new _demuxTsdemuxer2['default'](this.hls, this.remuxer);
+        } else {
+          this.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found' });
+          return;
+        }
+      }
+      demuxer.push(data, audioCodec, videoCodec, timeOffset, cc, level, duration);
     }
   }, {
     key: 'remux',
     value: function remux() {
-      this.demuxer.remux();
+      var demuxer = this.demuxer;
+      if (demuxer) {
+        demuxer.remux();
+      }
     }
   }]);
 
@@ -1901,7 +1928,7 @@ var DemuxerInline = (function () {
 exports['default'] = DemuxerInline;
 module.exports = exports['default'];
 
-},{"../demux/tsdemuxer":10}],7:[function(require,module,exports){
+},{"../demux/tsdemuxer":10,"../errors":11,"../events":12}],7:[function(require,module,exports){
 /* demuxer web worker. 
  *  - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
  *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
@@ -2472,7 +2499,7 @@ var TSDemuxer = (function () {
     this.remuxerClass = remuxerClass;
     this.lastCC = 0;
     this.PES_TIMESCALE = 90000;
-    this.remuxer = new this.remuxerClass(this.observer);
+    this.remuxer = new this.remuxerClass(observer);
   }
 
   _createClass(TSDemuxer, [{
@@ -3099,6 +3126,16 @@ var TSDemuxer = (function () {
     key: '_parseID3PES',
     value: function _parseID3PES(pes) {
       this._id3Track.samples.push(pes);
+    }
+  }], [{
+    key: 'probe',
+    value: function probe(data) {
+      // a TS fragment should contain at least 3 TS packets, a PAT, a PMT, and one PID, each starting with 0x47
+      if (data.length >= 3 * 188 && data[0] === 0x47 && data[188] === 0x47 && data[2 * 188] === 0x47) {
+        return true;
+      } else {
+        return false;
+      }
     }
   }]);
 
@@ -3969,8 +4006,11 @@ var PlaylistLoader = (function () {
           level = { url: baseurl, fragments: [], live: true, startSN: 0 },
           result,
           regexp,
-          cc = 0;
-      regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):([\d\.]+)[^\r\n]*[\r\n]+([^\r\n]+)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))/g;
+          cc = 0,
+          frag,
+          byteRangeEndOffset,
+          byteRangeStartOffset;
+      regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))/g;
       while ((result = regexp.exec(string)) !== null) {
         result.shift();
         result = result.filter(function (n) {
@@ -3989,11 +4029,27 @@ var PlaylistLoader = (function () {
           case 'DIS':
             cc++;
             break;
+          case 'BYTERANGE':
+            var params = result[1].split('@');
+            if (params.length === 1) {
+              byteRangeStartOffset = byteRangeEndOffset;
+            } else {
+              byteRangeStartOffset = parseInt(params[1]);
+            }
+            byteRangeEndOffset = parseInt(params[0]) + byteRangeStartOffset;
+            frag = level.fragments.length ? level.fragments[level.fragments.length - 1] : null;
+            if (frag && !frag.url) {
+              frag.byteRangeStartOffset = byteRangeStartOffset;
+              frag.byteRangeEndOffset = byteRangeEndOffset;
+              frag.url = this.resolve(result[2], baseurl);
+            }
+            break;
           case 'INF':
             var duration = parseFloat(result[1]);
             if (!isNaN(duration)) {
-              level.fragments.push({ url: this.resolve(result[2], baseurl), duration: duration, start: totalduration, sn: currentSN++, level: id, cc: cc });
+              level.fragments.push({ url: result[2] ? this.resolve(result[2], baseurl) : null, duration: duration, start: totalduration, sn: currentSN++, level: id, cc: cc, byteRangeStartOffset: byteRangeStartOffset, byteRangeEndOffset: byteRangeEndOffset });
               totalduration += duration;
+              byteRangeStartOffset = null;
             }
             break;
           default:
@@ -5102,8 +5158,12 @@ var XhrLoader = (function () {
     key: 'load',
     value: function load(url, responseType, onSuccess, onError, onTimeout, timeout, maxRetry, retryDelay) {
       var onProgress = arguments.length <= 8 || arguments[8] === undefined ? null : arguments[8];
+      var frag = arguments.length <= 9 || arguments[9] === undefined ? null : arguments[9];
 
       this.url = url;
+      if (frag && !isNaN(frag.byteRangeStartOffset) && !isNaN(frag.byteRangeEndOffset)) {
+        this.byteRange = frag.byteRangeStartOffset + '-' + frag.byteRangeEndOffset;
+      }
       this.responseType = responseType;
       this.onSuccess = onSuccess;
       this.onProgress = onProgress;
@@ -5124,6 +5184,9 @@ var XhrLoader = (function () {
       xhr.onerror = this.loaderror.bind(this);
       xhr.onprogress = this.loadprogress.bind(this);
       xhr.open('GET', this.url, true);
+      if (this.byteRange) {
+        xhr.setRequestHeader('Range', 'bytes=' + this.byteRange);
+      }
       xhr.responseType = this.responseType;
       this.stats.tfirst = null;
       this.stats.loaded = 0;
