@@ -2,27 +2,44 @@
  *   probe fragments and instantiate appropriate demuxer depending on content type (TSDemuxer, AACDemuxer, ...)
  */
 
+import Event from '../events';
+import {ErrorTypes, ErrorDetails} from '../errors';
 import TSDemuxer from '../demux/tsdemuxer';
 
 class DemuxerInline {
 
   constructor(hls,remuxer) {
     this.hls = hls;
-    this.demuxer = new TSDemuxer(hls,remuxer);
+    this.remuxer = remuxer;
   }
 
   destroy() {
-    this.demuxer.destroy();
+    var demuxer = this.demuxer;
+    if (demuxer) {
+      demuxer.destroy();
+    }
   }
 
   push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
-    this.demuxer.push(data,audioCodec,videoCodec,timeOffset,cc,level,duration);
+    var demuxer = this.demuxer;
+    if (!demuxer) {
+      // probe for content type
+      if(TSDemuxer.probe(data)) {
+        demuxer = this.demuxer = new TSDemuxer(this.hls,this.remuxer);
+      } else {
+        this.hls.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found'});
+        return;
+      }
+    }
+    demuxer.push(data,audioCodec,videoCodec,timeOffset,cc,level,duration);
   }
 
   remux() {
-    this.demuxer.remux();
+    var demuxer = this.demuxer;
+    if(demuxer) {
+      demuxer.remux();
+    }
   }
-
 }
 
 export default DemuxerInline;

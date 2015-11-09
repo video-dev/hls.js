@@ -1,6 +1,6 @@
 {
   "name": "hls.js",
-  "version": "0.2.1",
+  "version": "0.2.3",
   "description": "Media Source Extension - HLS library, by/for Dailymotion",
   "homepage": "https://github.com/dailymotion/hls.js",
   "authors": "Guillaume du Pontavice <guillaume.dupontavice@dailymotion.com>",
@@ -16,7 +16,7 @@
   "scripts": {
     "clean": "find dist -mindepth 1 -delete",
     "prebuild": "npm run clean & npm run test",
-    "build": "browserify -s Hls src/hls.js --debug | exorcist dist/hls.js.map > dist/hls.js",
+    "build": "browserify -s Hls src/hls.js --debug | exorcist dist/hls.js.map -b . > dist/hls.js",
     "postbuild": "npm run minify",
     "minify": "uglifyjs dist/hls.js -c sequences=true,dead_code=true,conditionals=true,booleans=true,unused=true,if_return=true,join_vars=true,drop_console=true -m sort --screw-ie8 > dist/hls.min.js",
     "watch": "watchify --debug -s Hls src/hls.js -o dist/hls.js",
