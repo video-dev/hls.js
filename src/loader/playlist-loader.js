@@ -138,8 +138,11 @@ class PlaylistLoader {
             level = { url: baseurl, fragments: [], live: true, startSN: 0 },
             result,
             regexp,
-            cc = 0;
-        regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):([\d\.]+)[^\r\n]*[\r\n]+([^\r\n]+)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))/g;
+            cc = 0,
+            frag,
+            byteRangeEndOffset,
+            byteRangeStartOffset;
+        regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))/g;
         while ((result = regexp.exec(string)) !== null) {
             result.shift();
             result = result.filter(function(n) {
@@ -158,18 +161,41 @@ class PlaylistLoader {
                 case 'DIS':
                     cc++;
                     break;
+                case 'BYTERANGE':
+                    var params = result[1].split('@');
+                    if (params.length === 1) {
+                        byteRangeStartOffset = byteRangeEndOffset;
+                    } else {
+                        byteRangeStartOffset = parseInt(params[1]);
+                    }
+                    byteRangeEndOffset =
+                        parseInt(params[0]) + byteRangeStartOffset;
+                    frag = level.fragments.length
+                        ? level.fragments[level.fragments.length - 1]
+                        : null;
+                    if (frag && !frag.url) {
+                        frag.byteRangeStartOffset = byteRangeStartOffset;
+                        frag.byteRangeEndOffset = byteRangeEndOffset;
+                        frag.url = this.resolve(result[2], baseurl);
+                    }
+                    break;
                 case 'INF':
                     var duration = parseFloat(result[1]);
                     if (!isNaN(duration)) {
                         level.fragments.push({
-                            url: this.resolve(result[2], baseurl),
+                            url: result[2]
+                                ? this.resolve(result[2], baseurl)
+                                : null,
                             duration: duration,
                             start: totalduration,
                             sn: currentSN++,
                             level: id,
-                            cc: cc
+                            cc: cc,
+                            byteRangeStartOffset: byteRangeStartOffset,
+                            byteRangeEndOffset: byteRangeEndOffset
                         });
                         totalduration += duration;
+                        byteRangeStartOffset = null;
                     }
                     break;
                 default:

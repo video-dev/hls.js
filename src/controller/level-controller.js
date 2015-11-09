@@ -249,6 +249,11 @@ class LevelController {
                 1000 * data.details.targetduration
             );
         }
+        if (!data.details.live && this.timer) {
+            // playlist is not live and timer is armed : stopping it
+            clearInterval(this.timer);
+            this.timer = null;
+        }
     }
 
     tick() {

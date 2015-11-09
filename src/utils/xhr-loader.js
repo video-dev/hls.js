@@ -35,9 +35,18 @@ class XhrLoader {
         timeout,
         maxRetry,
         retryDelay,
-        onProgress = null
+        onProgress = null,
+        frag = null
     ) {
         this.url = url;
+        if (
+            frag &&
+            !isNaN(frag.byteRangeStartOffset) &&
+            !isNaN(frag.byteRangeEndOffset)
+        ) {
+            this.byteRange =
+                frag.byteRangeStartOffset + '-' + frag.byteRangeEndOffset;
+        }
         this.responseType = responseType;
         this.onSuccess = onSuccess;
         this.onProgress = onProgress;
@@ -60,6 +69,9 @@ class XhrLoader {
         xhr.onerror = this.loaderror.bind(this);
         xhr.onprogress = this.loadprogress.bind(this);
         xhr.open('GET', this.url, true);
+        if (this.byteRange) {
+            xhr.setRequestHeader('Range', 'bytes=' + this.byteRange);
+        }
         xhr.responseType = this.responseType;
         this.stats.tfirst = null;
         this.stats.loaded = 0;

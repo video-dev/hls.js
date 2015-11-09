@@ -5,7 +5,6 @@
 
 import Event from './events';
 import { ErrorTypes, ErrorDetails } from './errors';
-import StatsHandler from './stats';
 import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
 import AbrController from './controller/abr-controller';
@@ -97,7 +96,6 @@ class Hls {
         this.abrController = new config.abrController(this);
         this.bufferController = new BufferController(this);
         //this.fpsController = new FPSController(this);
-        this.statsHandler = new StatsHandler(this);
     }
 
     destroy() {
@@ -108,7 +106,6 @@ class Hls {
         this.levelController.destroy();
         this.bufferController.destroy();
         //this.fpsController.destroy();
-        this.statsHandler.destroy();
         this.url = null;
         this.detachVideo();
         this.observer.removeAllListeners();
@@ -117,7 +114,6 @@ class Hls {
     attachVideo(video) {
         logger.log('attachVideo');
         this.video = video;
-        this.statsHandler.attachVideo(video);
         // setup the media source
         var ms = (this.mediaSource = new MediaSource());
         //Media Source listeners
@@ -137,7 +133,6 @@ class Hls {
         var video = this.video;
         logger.log('trigger MSE_DETACHING');
         this.trigger(Event.MSE_DETACHING);
-        this.statsHandler.detachVideo(video);
         var ms = this.mediaSource;
         if (ms) {
             if (ms.readyState === 'open') {
@@ -276,11 +271,6 @@ class Hls {
     /* return manual level */
     get manualLevel() {
         return this.levelController.manualLevel;
-    }
-
-    /* return playback session stats */
-    get stats() {
-        return this.statsHandler.stats;
     }
 
     onMediaSourceOpen() {

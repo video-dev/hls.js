@@ -659,10 +659,7 @@ class BufferController {
         media decode error, check this, to avoid seeking back to
         wrong position after a media decode error
       */
-            if (
-                currentTime >
-                Math.sign(video.playbackRate) * this.lastCurrentTime
-            ) {
+            if (currentTime > video.playbackRate * this.lastCurrentTime) {
                 this.lastCurrentTime = currentTime;
             }
             if (this.isBuffered(currentTime)) {
@@ -834,12 +831,13 @@ class BufferController {
         if (!this.video.paused) {
             // add a safety delay of 1s
             var nextLevelId = this.hls.nextLoadLevel,
-                nextLevel = this.levels[nextLevelId];
-            if (this.hls.stats.fragLastKbps && this.fragCurrent) {
+                nextLevel = this.levels[nextLevelId],
+                fragLastKbps = this.fragLastKbps;
+            if (fragLastKbps && this.fragCurrent) {
                 fetchdelay =
                     this.fragCurrent.duration *
                         nextLevel.bitrate /
-                        (1000 * this.hls.stats.fragLastKbps) +
+                        (1000 * fragLastKbps) +
                     1;
             } else {
                 fetchdelay = 0;
@@ -859,6 +857,12 @@ class BufferController {
                     start: nextRange.start,
                     end: Number.POSITIVE_INFINITY
                 });
+                // if we are here, we can also cancel any loading/demuxing in progress, as they are useless
+                var fragCurrent = this.fragCurrent;
+                if (fragCurrent && fragCurrent.loader) {
+                    fragCurrent.loader.abort();
+                }
+                this.fragCurrent = null;
             }
         }
         if (this.flushRange.length) {
@@ -1228,12 +1232,16 @@ class BufferController {
     onSBUpdateEnd() {
         //trigger handler right now
         if (this.state === this.APPENDING && this.mp4segments.length === 0) {
-            var frag = this.fragCurrent;
+            var frag = this.fragCurrent,
+                stats = this.stats;
             if (frag) {
                 this.fragPrevious = frag;
-                this.stats.tbuffered = new Date();
+                stats.tbuffered = new Date();
+                this.fragLastKbps = Math.round(
+                    8 * stats.length / (stats.tbuffered - stats.tfirst)
+                );
                 this.hls.trigger(Event.FRAG_BUFFERED, {
-                    stats: this.stats,
+                    stats: stats,
                     frag: frag
                 });
                 logger.log(
