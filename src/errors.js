@@ -1,4 +1,4 @@
-export var ErrorTypes = {
+export const ErrorTypes = {
   // Identifier for a network error (loading error / timeout ...)
   NETWORK_ERROR: 'hlsNetworkError',
   // Identifier for a media Error (video/parsing/mediasource error)
@@ -7,7 +7,7 @@ export var ErrorTypes = {
   OTHER_ERROR: 'hlsOtherError'
 };
 
-export var ErrorDetails = {
+export const ErrorDetails = {
   // Identifier for a manifest load error - data: { url : faulty URL, response : XHR response}
   MANIFEST_LOAD_ERROR: 'manifestLoadError',
   // Identifier for a manifest load timeout - data: { url : faulty URL, response : XHR response}
