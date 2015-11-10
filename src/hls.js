@@ -8,7 +8,7 @@ import {ErrorTypes, ErrorDetails} from './errors';
 import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
 import AbrController from    './controller/abr-controller';
-import BufferController from './controller/buffer-controller';
+import MSEBufferController from './controller/mse-buffer-controller';
 import LevelController from  './controller/level-controller';
 //import FPSController from './controller/fps-controller';
 import {logger, enableLogs} from './utils/logger';
@@ -54,7 +54,8 @@ class Hls {
       fpsDroppedMonitoringThreshold: 0.2,
       appendErrorMaxRetry: 200,
       loader: XhrLoader,
-      abrController : AbrController
+      abrController : AbrController,
+      bufferController: MSEBufferController
     };
     for (var prop in configDefault) {
         if (prop in config) { continue; }
@@ -83,7 +84,7 @@ class Hls {
     this.fragmentLoader = new FragmentLoader(this);
     this.levelController = new LevelController(this);
     this.abrController = new config.abrController(this);
-    this.bufferController = new BufferController(this);
+    this.bufferController = new config.bufferController(this);
     //this.fpsController = new FPSController(this);
   }
 
@@ -96,50 +97,21 @@ class Hls {
     this.bufferController.destroy();
     //this.fpsController.destroy();
     this.url = null;
-    this.detachVideo();
+    this.detachMediaElement();
     this.observer.removeAllListeners();
   }
 
-  attachVideo(video) {
-    logger.log('attachVideo');
-    this.video = video;
-    // setup the media source
-    var ms = this.mediaSource = new MediaSource();
-    //Media Source listeners
-    this.onmso = this.onMediaSourceOpen.bind(this);
-    this.onmse = this.onMediaSourceEnded.bind(this);
-    this.onmsc = this.onMediaSourceClose.bind(this);
-    ms.addEventListener('sourceopen', this.onmso);
-    ms.addEventListener('sourceended', this.onmse);
-    ms.addEventListener('sourceclose', this.onmsc);
-    // link video and media Source
-    video.src = URL.createObjectURL(ms);
-    video.addEventListener('error', this.onverror);
+  attachMediaElement(elem) {
+    logger.log('attachMediaElement');
+    this.mediaElem = elem;
+    this.trigger(Event.SOURCE_ATTACHED, {mediaElem: elem});
   }
 
-  detachVideo() {
-    logger.log('detachVideo');
-    var video = this.video;
-    logger.log('trigger MSE_DETACHING');
-    this.trigger(Event.MSE_DETACHING);
-    var ms = this.mediaSource;
-    if (ms) {
-      if (ms.readyState === 'open') {
-        ms.endOfStream();
-      }
-      ms.removeEventListener('sourceopen', this.onmso);
-      ms.removeEventListener('sourceended', this.onmse);
-      ms.removeEventListener('sourceclose', this.onmsc);
-      // unlink MediaSource from video tag
-      video.src = '';
-      this.mediaSource = null;
-      logger.log('trigger MSE_DETACHED');
-      this.trigger(Event.MSE_DETACHED);
-    }
-    this.onmso = this.onmse = this.onmsc = null;
-    if (video) {
-      this.video = null;
-    }
+  detachMediaElement() {
+    logger.log('detachMediaElement');
+    this.trigger(Event.SOURCE_DETACHING);
+    this.mediaElem = null;
+    this.trigger(Event.SOURCE_DETACHED);
   }
 
   loadSource(url) {
@@ -156,9 +128,9 @@ class Hls {
 
   recoverMediaError() {
     logger.log('recoverMediaError');
-    var video = this.video;
-    this.detachVideo();
-    this.attachVideo(video);
+    var elem = this.mediaElem;
+    this.detachMediaElement();
+    this.attachMediaElement(elem);
   }
 
   /** Return all quality levels **/
@@ -260,21 +232,6 @@ class Hls {
   /* return manual level */
   get manualLevel() {
     return this.levelController.manualLevel;
-  }
-
-  onMediaSourceOpen() {
-    logger.log('media source opened');
-    this.trigger(Event.MSE_ATTACHED, {video: this.video, mediaSource: this.mediaSource});
-    // once received, don't listen anymore to sourceopen event
-    this.mediaSource.removeEventListener('sourceopen', this.onmso);
-  }
-
-  onMediaSourceClose() {
-    logger.log('media source closed');
-  }
-
-  onMediaSourceEnded() {
-    logger.log('media source ended');
   }
 }
 

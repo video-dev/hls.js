@@ -1,4 +1,7 @@
 export default {
+  SOURCE_ATTACHED: 'sourceAttached',
+  SOURCE_DETACHED: 'sourceDetached',
+  SOURCE_DETACHING: 'sourceDetaching',
   // fired when MediaSource has been succesfully attached to video element - data: { video, mediaSource }
   MSE_ATTACHED: 'hlsMediaSourceAttached',
   // fired before detaching MediaSource from video element - data: { }
@@ -17,7 +20,7 @@ export default {
   LEVEL_LOADED: 'hlsLevelLoaded',
   // fired when a level's details have been updated based on previous details, after it has been loaded. - data: { details : levelDetails object, level : id of updated level }
   LEVEL_UPDATED: 'hlsLevelUpdated',
-  // fired when a level's PTS information has been updated after parsing a fragment - data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment } 
+  // fired when a level's PTS information has been updated after parsing a fragment - data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment }
   LEVEL_PTS_UPDATED: 'hlsPTSUpdated',
   // fired when a level switch is requested - data: { level : id of new level }
   LEVEL_SWITCH: 'hlsLevelSwitch',
