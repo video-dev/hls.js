@@ -4,7 +4,6 @@
 
 import Event from '../events';
 import { logger } from '../utils/logger';
-import Demuxer from '../demux/demuxer';
 import LevelHelper from '../helper/level-helper';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
@@ -923,10 +922,10 @@ class MSEBufferController {
     }
 
     onMSEAttached() {
-        this.onvseeking = this.onVideoSeeking.bind(this);
-        this.onvseeked = this.onVideoSeeked.bind(this);
-        this.onvmetadata = this.onVideoMetadata.bind(this);
-        this.onvended = this.onVideoEnded.bind(this);
+        this.onvseeking = this.onMediaSeeking.bind(this);
+        this.onvseeked = this.onMediaSeeked.bind(this);
+        this.onvmetadata = this.onMediaMetadata.bind(this);
+        this.onvended = this.onMediaEnded.bind(this);
         this.mediaElem.addEventListener('seeking', this.onvseeking);
         this.mediaElem.addEventListener('seeked', this.onvseeked);
         this.mediaElem.addEventListener('loadedmetadata', this.onvmetadata);
@@ -959,7 +958,7 @@ class MSEBufferController {
         this.stop();
     }
 
-    onVideoSeeking() {
+    onMediaSeeking() {
         if (this.state === this.LOADING) {
             // check if currently loaded fragment is inside buffer.
             //if outside, cancel fragment loading, otherwise do nothing
@@ -985,12 +984,12 @@ class MSEBufferController {
         this.tick();
     }
 
-    onVideoSeeked() {
+    onMediaSeeked() {
         // tick to speed up FRAGMENT_PLAYING triggering
         this.tick();
     }
 
-    onVideoMetadata() {
+    onMediaMetadata() {
         if (this.mediaElem.currentTime !== this.startPosition) {
             this.mediaElem.currentTime = this.startPosition;
         }
@@ -998,7 +997,7 @@ class MSEBufferController {
         this.tick();
     }
 
-    onVideoEnded() {
+    onMediaEnded() {
         logger.log('video ended');
         // reset startPosition and lastCurrentTime to restart playback @ stream beginning
         this.startPosition = this.lastCurrentTime = 0;
