@@ -927,8 +927,11 @@ class BufferController {
                 logger.log(
                     'seeking outside of buffer while fragment load in progress, cancel fragment load'
                 );
-                this.fragCurrent.loader.abort();
-                this.fragCurrent = null;
+                var fragCurrent = this.fragCurrent;
+                if (fragCurrent) {
+                    fragCurrent.loader.abort();
+                    this.fragCurrent = null;
+                }
                 this.fragPrevious = null;
                 // switch to IDLE state to load new fragment
                 this.state = State.IDLE;
@@ -1080,11 +1083,13 @@ class BufferController {
                 var currentLevel = this.levels[this.level],
                     details = currentLevel.details,
                     duration = details.totalduration,
-                    start = fragCurrent.start;
+                    start = fragCurrent.start,
+                    level = fragCurrent.level,
+                    sn = fragCurrent.sn;
                 logger.log(
-                    `Demuxing ${fragCurrent.sn} of [${details.startSN} ,${
+                    `Demuxing ${sn} of [${details.startSN} ,${
                         details.endSN
-                    }],level ${this.level}`
+                    }],level ${level}`
                 );
                 this.demuxer.push(
                     data.payload,
@@ -1092,7 +1097,7 @@ class BufferController {
                     currentLevel.videoCodec,
                     start,
                     fragCurrent.cc,
-                    this.level,
+                    level,
                     duration
                 );
             }
@@ -1117,11 +1122,12 @@ class BufferController {
             }
             // in case several audio codecs might be used, force HE-AAC for audio (some browsers don't support audio codec switch)
             //don't do it for mono streams ...
+            var ua = navigator.userAgent.toLowerCase();
             if (
                 this.audiocodecswitch &&
-                data.audioChannelCount === 2 &&
-                navigator.userAgent.toLowerCase().indexOf('android') === -1 &&
-                navigator.userAgent.toLowerCase().indexOf('firefox') === -1
+                data.audioChannelCount !== 1 &&
+                ua.indexOf('android') === -1 &&
+                ua.indexOf('firefox') === -1
             ) {
                 audioCodec = 'mp4a.40.5';
             }
