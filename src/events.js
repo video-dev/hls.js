@@ -1,4 +1,7 @@
 export default {
+    SOURCE_ATTACHED: 'sourceAttached',
+    SOURCE_DETACHED: 'sourceDetached',
+    SOURCE_DETACHING: 'sourceDetaching',
     // fired when MediaSource has been succesfully attached to video element - data: { video, mediaSource }
     MSE_ATTACHED: 'hlsMediaSourceAttached',
     // fired before detaching MediaSource from video element - data: { }
