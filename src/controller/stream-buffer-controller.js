@@ -1,14 +1,33 @@
 /*
- * Buffer Controller MSE
+ * Buffer Controller for Node-Streams
 */
 
-import Demuxer from './demux/demuxer';
+import Stream from 'stream-browserify';
+import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import { logger } from '../utils/logger';
 import LevelHelper from '../helper/level-helper';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
-class MSEBufferController {
+class ReadableStreamBuffer extends Stream.Readable {
+    constructor(streamOpts) {
+        super(streamOpts);
+        this.buffer = [];
+    }
+    getBufferList() {
+        return this.buffer;
+    }
+    _read() {
+        var buffer = this.buffer;
+        while (buffer.length) {
+            if (!this.push(buffer.unshift())) {
+                return;
+            }
+        }
+    }
+}
+
+class StreamBufferController {
     constructor(hls) {
         this.ERROR = -2;
         this.STARTING = -1;
@@ -21,15 +40,13 @@ class MSEBufferController {
         this.BUFFER_FLUSHING = 6;
         this.config = hls.config;
         this.hls = hls;
-        // Source Buffer listeners
-        this.onsbue = this.onSBUpdateEnd.bind(this);
-        this.onsbe = this.onSBUpdateError.bind(this);
+
+        // Readable stream implementation
+        this.readable = new ReadableStreamBuffer();
+
         // internal listeners
         this.onsrcatt = this.onSourceAttached.bind(this);
         this.onsrcdet = this.onSourceDetached.bind(this);
-        this.onmse = this.onMSEAttached.bind(this);
-        this.onmsed0 = this.onMSEDetaching.bind(this);
-        this.onmsed = this.onMSEDetached.bind(this);
         this.onmp = this.onManifestParsed.bind(this);
         this.onll = this.onLevelLoaded.bind(this);
         this.onfl = this.onFragLoaded.bind(this);
@@ -40,10 +57,11 @@ class MSEBufferController {
         this.ontick = this.tick.bind(this);
         hls.on(Event.SOURCE_ATTACHED, this.onsrcatt);
         hls.on(Event.SOURCE_DETACHED, this.onsrcdet);
-        hls.on(Event.MSE_ATTACHED, this.onmse);
-        hls.on(Event.MSE_DETACHING, this.onmsed0);
-        hls.on(Event.MSE_DETACHED, this.onmsed);
         hls.on(Event.MANIFEST_PARSED, this.onmp);
+    }
+
+    getReadableStream() {
+        return this.readable;
     }
 
     destroy() {
@@ -51,9 +69,6 @@ class MSEBufferController {
         var hls = this.hls;
         hls.off(Event.SOURCE_ATTACHED, this.onsrcatt);
         hls.off(Event.SOURCE_DETACHED, this.onsrcdet);
-        hls.off(Event.MSE_ATTACHED, this.onmse);
-        hls.off(Event.MSE_DETACHING, this.onmsed0);
-        hls.off(Event.MSE_DETACHED, this.onmsed);
         hls.off(Event.MANIFEST_PARSED, this.onmp);
         this.state = this.IDLE;
     }
@@ -107,17 +122,6 @@ class MSEBufferController {
             this.fragCurrent = null;
         }
         this.fragPrevious = null;
-        if (this.sourceBuffer) {
-            for (var type in this.sourceBuffer) {
-                var sb = this.sourceBuffer[type];
-                try {
-                    this.mediaSource.removeSourceBuffer(sb);
-                    sb.removeEventListener('updateend', this.onsbue);
-                    sb.removeEventListener('error', this.onsbe);
-                } catch (err) {}
-            }
-            this.sourceBuffer = null;
-        }
         if (this.timer) {
             clearInterval(this.timer);
             this.timer = null;
@@ -444,21 +448,10 @@ class MSEBufferController {
             case this.APPENDING:
                 if (this.sourceBuffer) {
                     // if MP4 segment appending in progress nothing to do
-                    if (
-                        (this.sourceBuffer.audio &&
-                            this.sourceBuffer.audio.updating) ||
-                        (this.sourceBuffer.video &&
-                            this.sourceBuffer.video.updating)
-                    ) {
-                        //logger.log('sb append in progress');
-                        // check if any MP4 segments left to append
-                    } else if (this.mp4segments.length) {
+                    if (this.mp4segments.length) {
                         var segment = this.mp4segments.shift();
                         try {
-                            //logger.log('appending ${segment.type} SB, size:${segment.data.length}');
-                            this.sourceBuffer[segment.type].appendBuffer(
-                                segment.data
-                            );
+                            this.readable.getBufferList().push(segment.data);
                             this.appendError = 0;
                         } catch (err) {
                             // in case any error occured while appending, put back segment in mp4segments table
@@ -689,14 +682,7 @@ class MSEBufferController {
                 if (levelDetails && !levelDetails.live) {
                     // are we playing last fragment ?
                     if (fragPlaying.sn === levelDetails.endSN) {
-                        var mediaSource = this.mediaSource;
-                        if (mediaSource && mediaSource.readyState === 'open') {
-                            logger.log(
-                                'all media data available, signal endOfStream() to MediaSource'
-                            );
-                            //Notify the media element that it now has all of the media data
-                            mediaSource.endOfStream();
-                        }
+                        // FIXME: signal EOS here
                     }
                 }
             }
@@ -885,78 +871,11 @@ class MSEBufferController {
     }
 
     onSourceAttached(event, data) {
-        var mediaElem = (this.mediaElem = data.mediaElem);
-        // setup the media source
-        var ms = (this.mediaSource = new MediaSource());
-        //Media Source listeners
-        this.onmso = this.onMediaSourceOpen.bind(this);
-        this.onmse = this.onMediaSourceEnded.bind(this);
-        this.onmsc = this.onMediaSourceClose.bind(this);
-        ms.addEventListener('sourceopen', this.onmso);
-        ms.addEventListener('sourceended', this.onmse);
-        ms.addEventListener('sourceclose', this.onmsc);
-        // link video and media Source
-        mediaElem.src = URL.createObjectURL(ms);
-        // FIXME: this was in code before but onverror was never set!
-        //mediaElem.addEventListener('error', this.onverror);
+        this.mediaElem = data.mediaElem;
     }
 
     onSourceDetached() {
-        logger.log('trigger MSE_DETACHING');
-        this.hls.trigger(Event.MSE_DETACHING);
-        var ms = this.mediaSource;
-        if (ms) {
-            if (ms.readyState === 'open') {
-                ms.endOfStream();
-            }
-            ms.removeEventListener('sourceopen', this.onmso);
-            ms.removeEventListener('sourceended', this.onmse);
-            ms.removeEventListener('sourceclose', this.onmsc);
-            // unlink MediaSource from video tag
-            this.mediaElem.src = '';
-            this.mediaSource = null;
-            this.mediaElem = null;
-            logger.log('trigger MSE_DETACHED');
-            this.hls.trigger(Event.MSE_DETACHED);
-        }
-        this.onmso = this.onmse = this.onmsc = null;
-    }
-
-    onMSEAttached() {
-        this.onvseeking = this.onMediaSeeking.bind(this);
-        this.onvseeked = this.onMediaSeeked.bind(this);
-        this.onvmetadata = this.onMediaMetadata.bind(this);
-        this.onvended = this.onMediaEnded.bind(this);
-        this.mediaElem.addEventListener('seeking', this.onvseeking);
-        this.mediaElem.addEventListener('seeked', this.onvseeked);
-        this.mediaElem.addEventListener('loadedmetadata', this.onvmetadata);
-        this.mediaElem.addEventListener('ended', this.onvended);
-        if (this.levels && this.config.autoStartLoad) {
-            this.startLoad();
-        }
-    }
-
-    onMSEDetaching() {
-        var mediaElem = this.mediaElem;
-        if (mediaElem && mediaElem.ended) {
-            logger.log('MSE detaching and video ended, reset startPosition');
-            this.startPosition = this.lastCurrentTime = 0;
-        }
-    }
-
-    onMSEDetached() {
-        // remove video listeners
-        var mediaElem = this.mediaElem;
-        if (mediaElem) {
-            mediaElem.removeEventListener('seeking', this.onvseeking);
-            mediaElem.removeEventListener('seeked', this.onvseeked);
-            mediaElem.removeEventListener('loadedmetadata', this.onvmetadata);
-            mediaElem.removeEventListener('ended', this.onvended);
-            this.onvseeking = this.onvseeked = this.onvmetadata = null;
-        }
         this.mediaElem = null;
-        this.loadedmetadata = false;
-        this.stop();
     }
 
     onMediaSeeking() {
@@ -1144,8 +1063,7 @@ class MSEBufferController {
             // check if codecs have been explicitely defined in the master playlist for this level;
             // if yes use these ones instead of the ones parsed from the demux
             var audioCodec = this.levels[this.level].audioCodec,
-                videoCodec = this.levels[this.level].videoCodec,
-                sb;
+                videoCodec = this.levels[this.level].videoCodec;
             //logger.log('playlist level A/V codecs:' + audioCodec + ',' + videoCodec);
             //logger.log('playlist codecs:' + codec);
             // if playlist does not specify codecs, use codecs found while parsing fragment
@@ -1164,27 +1082,6 @@ class MSEBufferController {
                 navigator.userAgent.toLowerCase().indexOf('firefox') === -1
             ) {
                 audioCodec = 'mp4a.40.5';
-            }
-            if (!this.sourceBuffer) {
-                this.sourceBuffer = {};
-                logger.log(
-                    `selected A/V codecs for sourceBuffers:${audioCodec},${videoCodec}`
-                );
-                // create source Buffer and link them to MediaSource
-                if (audioCodec) {
-                    sb = this.sourceBuffer.audio = this.mediaSource.addSourceBuffer(
-                        `video/mp4;codecs=${audioCodec}`
-                    );
-                    sb.addEventListener('updateend', this.onsbue);
-                    sb.addEventListener('error', this.onsbe);
-                }
-                if (videoCodec) {
-                    sb = this.sourceBuffer.video = this.mediaSource.addSourceBuffer(
-                        `video/mp4;codecs=${videoCodec}`
-                    );
-                    sb.addEventListener('updateend', this.onsbue);
-                    sb.addEventListener('error', this.onsbe);
-                }
             }
             if (audioCodec) {
                 this.mp4segments.push({ type: 'audio', data: data.audioMoov });
@@ -1345,20 +1242,5 @@ class MSEBufferController {
         }
         return log;
     }
-
-    onMediaSourceOpen() {
-        logger.log('media source opened');
-        this.hls.trigger(Event.MSE_ATTACHED);
-        // once received, don't listen anymore to sourceopen event
-        this.mediaSource.removeEventListener('sourceopen', this.onmso);
-    }
-
-    onMediaSourceClose() {
-        logger.log('media source closed');
-    }
-
-    onMediaSourceEnded() {
-        logger.log('media source ended');
-    }
 }
-export default MSEBufferController;
+export default StreamBufferController;

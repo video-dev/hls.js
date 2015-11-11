@@ -9,6 +9,7 @@ import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
 import AbrController from './controller/abr-controller';
 import MSEBufferController from './controller/mse-buffer-controller';
+//import StreamBufferController from './controller/stream-buffer-controller';
 import LevelController from './controller/level-controller';
 //import FPSController from './controller/fps-controller';
 import { logger, enableLogs } from './utils/logger';
@@ -59,7 +60,7 @@ class Hls {
             appendErrorMaxRetry: 200,
             loader: XhrLoader,
             abrController: AbrController,
-            bufferController: MSEBufferController
+            bufferController: StreamBufferController
         };
         for (var prop in configDefault) {
             if (prop in config) {

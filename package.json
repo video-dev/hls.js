@@ -4,12 +4,12 @@
   "description": "Media Source Extension - HLS library, by/for Dailymotion",
   "homepage": "https://github.com/dailymotion/hls.js",
   "authors": "Guillaume du Pontavice <guillaume.dupontavice@dailymotion.com>",
-  "repository" : {
-    "type" : "git",
-    "url" : "https://github.com/dailymotion/hls.js"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dailymotion/hls.js"
   },
-  "bugs" : {
-    "url" : "https://github.com/dailymotion/hls.js/issues"
+  "bugs": {
+    "url": "https://github.com/dailymotion/hls.js/issues"
   },
   "main": "src/hls.js",
   "private": true,
@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "babelify": "^6.1.2",
+    "stream-browserify": "^2.0.1",
     "webworkify": "^1.0.2"
   },
   "devDependencies": {
