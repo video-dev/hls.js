@@ -682,7 +682,7 @@ class BufferController {
                 var fragPlaying = rangeCurrent.frag;
                 if (fragPlaying !== this.fragPlaying) {
                     this.fragPlaying = fragPlaying;
-                    hls.trigger(Event.FRAG_CHANGED, { frag: fragPlaying });
+                    this.hls.trigger(Event.FRAG_CHANGED, { frag: fragPlaying });
                 }
                 // if stream is VOD (not live) and we reach End of Stream
                 var levelDetails = this.levels[this.level].details;
