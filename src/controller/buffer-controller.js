@@ -133,21 +133,25 @@ class BufferController {
     }
 
     tick() {
-        var pos, level, levelDetails, fragIdx;
+        var pos,
+            level,
+            levelDetails,
+            fragIdx,
+            hls = this.hls;
         switch (this.state) {
             case State.ERROR:
                 //don't do anything in error state to avoid breaking further ...
                 break;
             case State.STARTING:
                 // determine load level
-                this.startLevel = this.hls.startLevel;
+                this.startLevel = hls.startLevel;
                 if (this.startLevel === -1) {
                     // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
                     this.startLevel = 0;
                     this.fragBitrateTest = true;
                 }
                 // set new level to playlist loader : this will trigger start level load
-                this.level = this.hls.nextLoadLevel = this.startLevel;
+                this.level = hls.nextLoadLevel = this.startLevel;
                 this.state = State.WAITING_LEVEL;
                 this.loadedmetadata = false;
                 break;
@@ -170,7 +174,7 @@ class BufferController {
                     level = this.startLevel;
                 } else {
                     // we are not at playback start, get next load level from level Controller
-                    level = this.hls.nextLoadLevel;
+                    level = hls.nextLoadLevel;
                 }
                 var bufferInfo = this.bufferInfo(pos, 0.3),
                     bufferLen = bufferInfo.len,
@@ -194,7 +198,7 @@ class BufferController {
                 // if buffer length is less than maxBufLen try to load a new fragment
                 if (bufferLen < maxBufLen) {
                     // set next load level : this will trigger a playlist load if needed
-                    this.hls.nextLoadLevel = level;
+                    hls.nextLoadLevel = level;
                     this.level = level;
                     levelDetails = this.levels[level].details;
                     // if level info not retrieved yet, switch state and wait for level retrieval
@@ -324,7 +328,7 @@ class BufferController {
                         )}`
                     );
                     //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
-                    frag.autoLevel = this.hls.autoLevelEnabled;
+                    frag.autoLevel = hls.autoLevelEnabled;
                     if (this.levels.length > 1) {
                         frag.expectedLen = Math.round(
                             frag.duration * this.levels[level].bitrate / 8
@@ -346,7 +350,7 @@ class BufferController {
                             Math.abs(this.fragLoadIdx - frag.loadIdx) <
                                 maxThreshold
                         ) {
-                            this.hls.trigger(Event.ERROR, {
+                            hls.trigger(Event.ERROR, {
                                 type: ErrorTypes.MEDIA_ERROR,
                                 details: ErrorDetails.FRAG_LOOP_LOADING_ERROR,
                                 fatal: false,
@@ -360,7 +364,7 @@ class BufferController {
                     frag.loadIdx = this.fragLoadIdx;
                     this.fragCurrent = frag;
                     this.startFragmentRequested = true;
-                    this.hls.trigger(Event.FRAG_LOADING, { frag: frag });
+                    hls.trigger(Event.FRAG_LOADING, { frag: frag });
                     this.state = State.LOADING;
                 }
                 break;
@@ -402,7 +406,7 @@ class BufferController {
                             this.bufferInfo(pos, 0.3).end - pos;
                         var fragLevelNextLoadedDelay =
                             frag.duration *
-                            this.levels[this.hls.nextLoadLevel].bitrate /
+                            this.levels[hls.nextLoadLevel].bitrate /
                             (8 * loadRate); //bps/Bps
                         /* if we have less than 2 frag duration in buffer and if frag loaded delay is greater than buffer starvation delay
               ... and also bigger than duration needed to load fragment at next level ...*/
@@ -424,10 +428,9 @@ class BufferController {
                             );
                             //abort fragment loading
                             frag.loader.abort();
-                            this.hls.trigger(
-                                Event.FRAG_LOAD_EMERGENCY_ABORTED,
-                                { frag: frag }
-                            );
+                            hls.trigger(Event.FRAG_LOAD_EMERGENCY_ABORTED, {
+                                frag: frag
+                            });
                             // switch back to IDLE state to request new fragment at lowest level
                             this.state = State.IDLE;
                         }
@@ -488,12 +491,12 @@ class BufferController {
                                     } times to append segment in sourceBuffer`
                                 );
                                 event.fatal = true;
-                                this.hls.trigger(Event.ERROR, event);
+                                hls.trigger(Event.ERROR, event);
                                 this.state = State.ERROR;
                                 return;
                             } else {
                                 event.fatal = false;
-                                this.hls.trigger(Event.ERROR, event);
+                                hls.trigger(Event.ERROR, event);
                             }
                         }
                         this.state = State.APPENDING;
@@ -679,7 +682,7 @@ class BufferController {
                 var fragPlaying = rangeCurrent.frag;
                 if (fragPlaying !== this.fragPlaying) {
                     this.fragPlaying = fragPlaying;
-                    this.hls.trigger(Event.FRAG_CHANGED, { frag: fragPlaying });
+                    hls.trigger(Event.FRAG_CHANGED, { frag: fragPlaying });
                 }
                 // if stream is VOD (not live) and we reach End of Stream
                 var levelDetails = this.levels[this.level].details;
