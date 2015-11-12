@@ -405,8 +405,6 @@ var AbrController = (function () {
         this.lastfetchlevel = data.frag.level;
         this.lastbw = stats.loaded * 8 / this.lastfetchduration;
         //console.log('fetchDuration:${this.lastfetchduration},bw:${(this.lastbw/1000).toFixed(0)}/${stats.aborted}');
-        // unset forced auto level
-        this._nextAutoLevel = -1;
       }
     }
 
@@ -632,21 +630,25 @@ var BufferController = (function () {
   }, {
     key: 'tick',
     value: function tick() {
-      var pos, level, levelDetails, fragIdx;
+      var pos,
+          level,
+          levelDetails,
+          fragIdx,
+          hls = this.hls;
       switch (this.state) {
         case State.ERROR:
           //don't do anything in error state to avoid breaking further ...
           break;
         case State.STARTING:
           // determine load level
-          this.startLevel = this.hls.startLevel;
+          this.startLevel = hls.startLevel;
           if (this.startLevel === -1) {
             // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
             this.startLevel = 0;
             this.fragBitrateTest = true;
           }
           // set new level to playlist loader : this will trigger start level load
-          this.level = this.hls.nextLoadLevel = this.startLevel;
+          this.level = hls.nextLoadLevel = this.startLevel;
           this.state = State.WAITING_LEVEL;
           this.loadedmetadata = false;
           break;
@@ -669,7 +671,7 @@ var BufferController = (function () {
             level = this.startLevel;
           } else {
             // we are not at playback start, get next load level from level Controller
-            level = this.hls.nextLoadLevel;
+            level = hls.nextLoadLevel;
           }
           var bufferInfo = this.bufferInfo(pos, 0.3),
               bufferLen = bufferInfo.len,
@@ -685,7 +687,7 @@ var BufferController = (function () {
           // if buffer length is less than maxBufLen try to load a new fragment
           if (bufferLen < maxBufLen) {
             // set next load level : this will trigger a playlist load if needed
-            this.hls.nextLoadLevel = level;
+            hls.nextLoadLevel = level;
             this.level = level;
             levelDetails = this.levels[level].details;
             // if level info not retrieved yet, switch state and wait for level retrieval
@@ -762,7 +764,7 @@ var BufferController = (function () {
             }
             _utilsLogger.logger.log('Loading ' + _frag.sn + ' of [' + levelDetails.startSN + ' ,' + levelDetails.endSN + '],level ' + level + ', currentTime:' + pos + ',bufferEnd:' + bufferEnd.toFixed(3));
             //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
-            _frag.autoLevel = this.hls.autoLevelEnabled;
+            _frag.autoLevel = hls.autoLevelEnabled;
             if (this.levels.length > 1) {
               _frag.expectedLen = Math.round(_frag.duration * this.levels[level].bitrate / 8);
               _frag.trequest = new Date();
@@ -778,7 +780,7 @@ var BufferController = (function () {
               var maxThreshold = this.config.fragLoadingLoopThreshold;
               // if this frag has already been loaded 3 times, and if it has been reloaded recently
               if (_frag.loadCounter > maxThreshold && Math.abs(this.fragLoadIdx - _frag.loadIdx) < maxThreshold) {
-                this.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal: false, frag: _frag });
+                hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal: false, frag: _frag });
                 return;
               }
             } else {
@@ -787,7 +789,7 @@ var BufferController = (function () {
             _frag.loadIdx = this.fragLoadIdx;
             this.fragCurrent = _frag;
             this.startFragmentRequested = true;
-            this.hls.trigger(_events2['default'].FRAG_LOADING, { frag: _frag });
+            hls.trigger(_events2['default'].FRAG_LOADING, { frag: _frag });
             this.state = State.LOADING;
           }
           break;
@@ -819,7 +821,7 @@ var BufferController = (function () {
               pos = v.currentTime;
               var fragLoadedDelay = (frag.expectedLen - frag.loaded) / loadRate;
               var bufferStarvationDelay = this.bufferInfo(pos, 0.3).end - pos;
-              var fragLevelNextLoadedDelay = frag.duration * this.levels[this.hls.nextLoadLevel].bitrate / (8 * loadRate); //bps/Bps
+              var fragLevelNextLoadedDelay = frag.duration * this.levels[hls.nextLoadLevel].bitrate / (8 * loadRate); //bps/Bps
               /* if we have less than 2 frag duration in buffer and if frag loaded delay is greater than buffer starvation delay
                 ... and also bigger than duration needed to load fragment at next level ...*/
               if (bufferStarvationDelay < 2 * frag.duration && fragLoadedDelay > bufferStarvationDelay && fragLoadedDelay > fragLevelNextLoadedDelay) {
@@ -828,7 +830,7 @@ var BufferController = (function () {
                 _utilsLogger.logger.log('fragLoadedDelay/bufferStarvationDelay/fragLevelNextLoadedDelay :' + fragLoadedDelay.toFixed(1) + '/' + bufferStarvationDelay.toFixed(1) + '/' + fragLevelNextLoadedDelay.toFixed(1));
                 //abort fragment loading
                 frag.loader.abort();
-                this.hls.trigger(_events2['default'].FRAG_LOAD_EMERGENCY_ABORTED, { frag: frag });
+                hls.trigger(_events2['default'].FRAG_LOAD_EMERGENCY_ABORTED, { frag: frag });
                 // switch back to IDLE state to request new fragment at lowest level
                 this.state = State.IDLE;
               }
@@ -867,12 +869,12 @@ var BufferController = (function () {
                   if (this.appendError > this.config.appendErrorMaxRetry) {
                     _utilsLogger.logger.log('fail ' + this.config.appendErrorMaxRetry + ' times to append segment in sourceBuffer');
                     event.fatal = true;
-                    this.hls.trigger(_events2['default'].ERROR, event);
+                    hls.trigger(_events2['default'].ERROR, event);
                     this.state = State.ERROR;
                     return;
                   } else {
                     event.fatal = false;
-                    this.hls.trigger(_events2['default'].ERROR, event);
+                    hls.trigger(_events2['default'].ERROR, event);
                   }
                 }
                 this.state = State.APPENDING;
@@ -1734,7 +1736,12 @@ var LevelController = (function () {
   }, {
     key: 'onError',
     value: function onError(event, data) {
+      if (data.fatal) {
+        return;
+      }
+
       var details = data.details,
+          hls = this.hls,
           levelId,
           level;
       // try to recover not fatal errors
@@ -1766,7 +1773,7 @@ var LevelController = (function () {
           var recoverable = this._manualLevel === -1 && levelId;
           if (recoverable) {
             _utilsLogger.logger.warn('level controller,' + details + ': emergency switch-down for next fragment');
-            this.hls.abrController.nextAutoLevel = 0;
+            hls.abrController.nextAutoLevel = 0;
           } else if (level && level.details && level.details.live) {
             _utilsLogger.logger.warn('level controller,' + details + ' on live stream, discard');
           } else {
@@ -1776,10 +1783,10 @@ var LevelController = (function () {
             if (this.timer) {
               clearInterval(this.timer);
               this.timer = null;
-              // redispatch same error but with fatal set to true
-              data.fatal = true;
-              this.hls.trigger(event, data);
             }
+            // redispatch same error but with fatal set to true
+            data.fatal = true;
+            hls.trigger(event, data);
           }
         }
       }
