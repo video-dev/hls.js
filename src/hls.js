@@ -114,7 +114,6 @@ class Hls {
     ms.addEventListener('sourceclose', this.onmsc);
     // link video and media Source
     video.src = URL.createObjectURL(ms);
-    video.addEventListener('error', this.onverror);
   }
 
   detachVideo() {

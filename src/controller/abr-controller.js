@@ -26,8 +26,6 @@ class AbrController {
       this.lastfetchlevel = data.frag.level;
       this.lastbw = (stats.loaded * 8) / this.lastfetchduration;
       //console.log('fetchDuration:${this.lastfetchduration},bw:${(this.lastbw/1000).toFixed(0)}/${stats.aborted}');
-      // unset forced auto level
-      this._nextAutoLevel =-1;
     }
   }
 
