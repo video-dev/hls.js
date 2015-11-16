@@ -9,7 +9,6 @@ import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
 import AbrController from './controller/abr-controller';
 import MSEBufferController from './controller/mse-buffer-controller';
-//import StreamBufferController from './controller/stream-buffer-controller';
 import LevelController from './controller/level-controller';
 //import FPSController from './controller/fps-controller';
 import { logger, enableLogs } from './utils/logger';
@@ -60,7 +59,7 @@ class Hls {
             appendErrorMaxRetry: 200,
             loader: XhrLoader,
             abrController: AbrController,
-            bufferController: StreamBufferController
+            bufferController: MSEBufferController
         };
         for (var prop in configDefault) {
             if (prop in config) {
@@ -113,17 +112,17 @@ class Hls {
         this.observer.removeAllListeners();
     }
 
-    attachMediaElement(elem) {
+    attachMedia(media) {
         logger.log('attachMediaElement');
-        this.mediaElem = elem;
-        this.trigger(Event.SOURCE_ATTACHED, { mediaElem: elem });
+        this.media = media;
+        this.trigger(Event.MEDIA_ATTACHING, { media: media });
     }
 
     detachMediaElement() {
         logger.log('detachMediaElement');
-        this.trigger(Event.SOURCE_DETACHING);
-        this.mediaElem = null;
-        this.trigger(Event.SOURCE_DETACHED);
+        this.trigger(Event.MEDIA_DETACHING);
+        this.media = null;
+        this.trigger(Event.MEDIA_DETACHED);
     }
 
     loadSource(url) {
@@ -140,7 +139,7 @@ class Hls {
 
     recoverMediaError() {
         logger.log('recoverMediaError');
-        var elem = this.mediaElem;
+        var elem = this.media;
         this.detachMediaElement();
         this.attachMediaElement(elem);
     }

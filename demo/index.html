@@ -244,7 +244,7 @@ $(document).ready(function() {
        hls = new Hls({debug:true});
        $("#HlsStatus").text('loading manifest and attaching video element...');
        hls.loadSource(url);
-       hls.attachVideo(video);
+       hls.attachMedia(video);
        hls.on(Hls.Events.MSE_ATTACHED,function() {
         $("#HlsStatus").text('MediaSource attached...');
           bufferingIdx = -1;
