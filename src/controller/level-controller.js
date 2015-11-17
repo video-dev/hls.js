@@ -180,7 +180,12 @@ class LevelController {
     }
 
     onError(event, data) {
+        if (data.fatal) {
+            return;
+        }
+
         var details = data.details,
+            hls = this.hls,
             levelId,
             level;
         // try to recover not fatal errors
@@ -218,7 +223,7 @@ class LevelController {
                     logger.warn(
                         `level controller,${details}: emergency switch-down for next fragment`
                     );
-                    this.hls.abrController.nextAutoLevel = 0;
+                    hls.abrController.nextAutoLevel = 0;
                 } else if (level && level.details && level.details.live) {
                     logger.warn(
                         `level controller,${details} on live stream, discard`
@@ -230,10 +235,10 @@ class LevelController {
                     if (this.timer) {
                         clearInterval(this.timer);
                         this.timer = null;
-                        // redispatch same error but with fatal set to true
-                        data.fatal = true;
-                        this.hls.trigger(event, data);
                     }
+                    // redispatch same error but with fatal set to true
+                    data.fatal = true;
+                    hls.trigger(event, data);
                 }
             }
         }
