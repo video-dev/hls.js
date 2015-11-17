@@ -102,13 +102,13 @@ class Hls {
   }
 
   attachMedia(media) {
-    logger.log('attachMediaElement');
+    logger.log('attachMedia');
     this.media = media;
     this.trigger(Event.MEDIA_ATTACHING, {media: media});
   }
 
-  detachMediaElement() {
-    logger.log('detachMediaElement');
+  detachMedia() {
+    logger.log('detachMedia');
     this.trigger(Event.MEDIA_DETACHING);
     this.media = null;
     this.trigger(Event.MEDIA_DETACHED);

@@ -144,7 +144,7 @@ should be invoked to recover media error
       case Hls.ErrorTypes.NETWORK_ERROR:
       // try to recover network error
         console.log("fatal network error encountered, try to recover");
-        hls.recoverNetworkError();
+        hls.startLoad();
         break;
       case Hls.ErrorTypes.MEDIA_ERROR:
         console.log("fatal media error encountered, try to recover");
