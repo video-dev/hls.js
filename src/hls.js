@@ -108,7 +108,7 @@ class Hls {
         this.bufferController.destroy();
         //this.fpsController.destroy();
         this.url = null;
-        this.detachMediaElement();
+        this.detachMedia();
         this.observer.removeAllListeners();
     }
 
