@@ -757,7 +757,9 @@ class BufferController {
         logger.log('seeking outside of buffer while fragment load in progress, cancel fragment load');
         var fragCurrent = this.fragCurrent;
         if (fragCurrent) {
-          fragCurrent.loader.abort();
+          if (fragCurrent.loader) {
+            fragCurrent.loader.abort();
+          }
           this.fragCurrent = null;
         }
         this.fragPrevious = null;
@@ -891,7 +893,7 @@ class BufferController {
             level = fragCurrent.level,
             sn = fragCurrent.sn;
         logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],level ${level}`);
-        this.demuxer.push(data.payload, currentLevel.audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, duration);
+        this.demuxer.push(data.payload, currentLevel.audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, duration, fragCurrent.decryptdata);
       }
     }
   }
