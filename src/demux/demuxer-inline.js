@@ -19,11 +19,21 @@ class DemuxerInline {
         }
     }
 
-    push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
+    push(
+        data,
+        audioCodec,
+        videoCodec,
+        timeOffset,
+        cc,
+        level,
+        duration,
+        decryptdata
+    ) {
         var demuxer = this.demuxer;
         if (!demuxer) {
             // probe for content type
-            if (TSDemuxer.probe(data)) {
+            // by jsalaj - is not working on crypted data (MUST add decrypt first 16bytes)
+            if (TSDemuxer.probe(data) || decryptdata.key !== null) {
                 demuxer = this.demuxer = new TSDemuxer(this.hls, this.remuxer);
             } else {
                 this.hls.trigger(Event.ERROR, {
@@ -42,7 +52,8 @@ class DemuxerInline {
             timeOffset,
             cc,
             level,
-            duration
+            duration,
+            decryptdata
         );
     }
 

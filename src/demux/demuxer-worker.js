@@ -32,9 +32,9 @@ var DemuxerWorker = function(self) {
                     ev.data.timeOffset,
                     ev.data.cc,
                     ev.data.level,
-                    ev.data.duration
+                    ev.data.duration,
+                    ev.data.decryptdata
                 );
-                self.demuxer.remux();
                 break;
             default:
                 break;
