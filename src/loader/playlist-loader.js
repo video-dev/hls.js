@@ -12,8 +12,10 @@ class PlaylistLoader {
     this.hls = hls;
     this.onml = this.onManifestLoading.bind(this);
     this.onll = this.onLevelLoading.bind(this);
+    this.onkl = this.onKeyLoading.bind(this);
     hls.on(Event.MANIFEST_LOADING, this.onml);
     hls.on(Event.LEVEL_LOADING, this.onll);
+    hls.on(Event.KEY_LOADING, this.onkl);
   }
 
   destroy() {
@@ -24,6 +26,7 @@ class PlaylistLoader {
     this.url = this.id = null;
     this.hls.off(Event.MANIFEST_LOADING, this.onml);
     this.hls.off(Event.LEVEL_LOADING, this.onll);
+    this.hls.off(Event.KEY_LOADING, this.onkl);
   }
 
   onManifestLoading(event, data) {
@@ -33,14 +36,20 @@ class PlaylistLoader {
   onLevelLoading(event, data) {
     this.load(data.url, data.level, data.id);
   }
+  onKeyLoading(event, data) {
+    this.load(data.url, data, Event.KEY_LOADING, 'arraybuffer');
+  }
 
-  load(url, id1, id2) {
+  load(url, id1, id2, responseType) {
+    if (!responseType) {
+      responseType = '';
+    }
     var config = this.hls.config;
     this.url = url;
     this.id = id1;
     this.id2 = id2;
     this.loader = new config.loader(config);
-    this.loader.load(url, '', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.manifestLoadingTimeOut, config.manifestLoadingMaxRetry, config.manifestLoadingRetryDelay);
+    this.loader.load(url, responseType, this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.manifestLoadingTimeOut, config.manifestLoadingMaxRetry, config.manifestLoadingRetryDelay);
   }
 
   resolve(url, baseUrl) {
@@ -112,9 +121,93 @@ class PlaylistLoader {
     return result;
   }
 
+  ////////////////////////////////////
+  // ここから videojs/m3u8/m3u8-parse より
+  ////////////////////////////////////
+
+    parseAttributes(attributes) {
+      // "forgiving" attribute list psuedo-grammar:
+      // attributes -> keyvalue (',' keyvalue)*
+      // keyvalue   -> key '=' value
+      // key        -> [^=]*
+      // value      -> '"' [^"]* '"' | [^,]*
+      var attributeSeparator = (function() {
+        var
+          key = '[^=]*',
+          value = '"[^"]*"|[^,]*',
+          keyvalue = '(?:' + key + ')=(?:' + value + ')';
+
+        return new RegExp('(?:^|,)(' + keyvalue + ')');
+      })();
+
+      var
+        // split the string using attributes as the separator
+        attrs = attributes.split(attributeSeparator),
+        i = attrs.length,
+        result = {},
+        attr;
+
+      while (i--) {
+        // filter out unmatched portions of the string
+        if (attrs[i] === '') {
+          continue;
+        }
+
+        // split the key and value
+        attr = /([^=]*)=(.*)/.exec(attrs[i]).slice(1);
+        // trim whitespace and remove optional quotes around the value
+        attr[0] = attr[0].replace(/^\s+|\s+$/g, '');
+        attr[1] = attr[1].replace(/^\s+|\s+$/g, '');
+        attr[1] = attr[1].replace(/^['"](.*)['"]$/g, '$1');
+        result[attr[0]] = attr[1];
+      }
+      return result;
+    }
+
+    parseKey(match, baseurl, level) {
+      if (!match[1]) {
+        return;
+      }
+
+      var data = {
+        level: level,
+        attributes: this.parseAttributes(match[1]),
+        iv: null,
+        key: null,
+        url: null
+      };
+
+      // parse the IV string into a Uint32Array
+      if (!data.attributes.IV ||
+          !data.attributes.URI ||
+          !data.attributes.METHOD ||
+          data.attributes.METHOD !== 'AES-128') {
+        return;
+      }
+
+      var ivValue = data.attributes.IV;
+      if (ivValue.substring(0,2) === '0x') {
+        ivValue = ivValue.substring(2);
+      }
+
+      ivValue = ivValue.match(/.{8}/g);
+      ivValue[0] = parseInt(ivValue[0], 16);
+      ivValue[1] = parseInt(ivValue[1], 16);
+      ivValue[2] = parseInt(ivValue[2], 16);
+      ivValue[3] = parseInt(ivValue[3], 16);
+      data.iv = new Uint32Array(ivValue);
+         
+      data.url = this.resolve(data.attributes.URI, baseurl);
+      this.hls.trigger(Event.KEY_LOADING, data);
+    }
+
+  ////////////////////////////////////
+  // ここまで videojs/m3u8/m3u8-parse より
+  ////////////////////////////////////
+
   parseLevelPlaylist(string, baseurl, id) {
     var currentSN = 0, totalduration = 0, level = {url: baseurl, fragments: [], live: true, startSN: 0}, result, regexp, cc = 0, frag, byteRangeEndOffset, byteRangeStartOffset;
-    regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))/g;
+    regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(KEY):?(.*))/g;
     while ((result = regexp.exec(string)) !== null) {
       result.shift();
       result = result.filter(function(n) { return (n !== undefined); });
@@ -154,18 +247,40 @@ class PlaylistLoader {
             byteRangeStartOffset = null;
           }
           break;
+        case 'KEY':
+          this.parseKey(result, baseurl, level);
+          break;
         default:
           break;
       }
     }
+
     //logger.log('found ' + level.fragments.length + ' fragments');
     level.totalduration = totalduration;
     level.endSN = currentSN - 1;
     return level;
   }
 
+  loadKey(event, data, stats) {
+      var view = new DataView(event.currentTarget.response);
+      data.key = new Uint32Array([
+        view.getUint32(0),
+        view.getUint32(4),
+        view.getUint32(8),
+        view.getUint32(12)
+      ]);
+
+    data.stats = stats;
+    this.hls.trigger(Event.KEY_LOADED, data);
+  }
+
   loadsuccess(event, stats) {
-    var string = event.currentTarget.responseText, url = event.currentTarget.responseURL, id = this.id, id2 = this.id2, hls = this.hls, levels;
+    var url = event.currentTarget.responseURL, id = this.id, id2 = this.id2, hls = this.hls, levels;
+    var string = null;
+    if (event.currentTarget.responseType === '' || event.currentTarget.responseType === 'text') {
+      string = event.currentTarget.responseText;
+    }
+
     // responseURL not supported on some browsers (it is used to detect URL redirection)
     if (url === undefined) {
       // fallback to initial URL
@@ -173,7 +288,7 @@ class PlaylistLoader {
     }
     stats.tload = new Date();
     stats.mtime = new Date(event.currentTarget.getResponseHeader('Last-Modified'));
-    if (string.indexOf('#EXTM3U') === 0) {
+    if (string && string.indexOf('#EXTM3U') === 0) {
       if (string.indexOf('#EXTINF:') > 0) {
         // 1 level playlist
         // if first request, fire manifest loaded event, level will be reloaded afterwards
@@ -192,6 +307,9 @@ class PlaylistLoader {
           hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'no level found in manifest'});
         }
       }
+    }
+    else if (id2 === Event.KEY_LOADING) {
+      this.loadKey(event, id, stats);
     } else {
       hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'no EXTM3U delimiter'});
     }
