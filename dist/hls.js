@@ -1231,6 +1231,19 @@ var BufferController = (function () {
         _utilsLogger.logger.log('MSE detaching and video ended, reset startPosition');
         this.startPosition = this.lastCurrentTime = 0;
       }
+
+      // reset fragment loading counter on MSE detaching to avoid reporting FRAG_LOOP_LOADING_ERROR after error recovery
+      var levels = this._levels;
+      if (levels) {
+        // reset fragment load counter
+        levels.forEach(function (level) {
+          if (level.details) {
+            level.details.fragments.forEach(function (fragment) {
+              fragment.loadIdx = undefined;
+            });
+          }
+        });
+      }
     }
   }, {
     key: 'onMSEDetached',
@@ -4954,7 +4967,7 @@ var MP4Remuxer = (function () {
           // we use DTS to compute sample duration, but we use PTS to compute initPTS which is used to sync audio and video
           mp4Sample.duration = (dtsnorm - lastDTS) / pes2mp4ScaleFactor;
           if (mp4Sample.duration < 0) {
-            //logger.log('invalid sample duration at PTS/DTS::' + avcSample.pts + '/' + avcSample.dts + ':' + mp4Sample.duration);
+            //logger.log('invalid sample duration at PTS/DTS::' + aacSample.pts + '/' + aacSample.dts + ':' + mp4Sample.duration);
             mp4Sample.duration = 0;
           }
         } else {
