@@ -905,6 +905,19 @@ class BufferController {
             logger.log('MSE detaching and video ended, reset startPosition');
             this.startPosition = this.lastCurrentTime = 0;
         }
+
+        // reset fragment loading counter on MSE detaching to avoid reporting FRAG_LOOP_LOADING_ERROR after error recovery
+        var levels = this._levels;
+        if (levels) {
+            // reset fragment load counter
+            levels.forEach(level => {
+                if (level.details) {
+                    level.details.fragments.forEach(fragment => {
+                        fragment.loadIdx = undefined;
+                    });
+                }
+            });
+        }
     }
 
     onMSEDetached() {
