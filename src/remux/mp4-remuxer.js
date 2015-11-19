@@ -286,7 +286,7 @@ class MP4Remuxer {
         // we use DTS to compute sample duration, but we use PTS to compute initPTS which is used to sync audio and video
         mp4Sample.duration = (dtsnorm - lastDTS) / pes2mp4ScaleFactor;
         if (mp4Sample.duration < 0) {
-          //logger.log('invalid sample duration at PTS/DTS::' + avcSample.pts + '/' + avcSample.dts + ':' + mp4Sample.duration);
+          //logger.log('invalid sample duration at PTS/DTS::' + aacSample.pts + '/' + aacSample.dts + ':' + mp4Sample.duration);
           mp4Sample.duration = 0;
         }
       } else {
