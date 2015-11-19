@@ -41,6 +41,24 @@ export default {
   FRAG_BUFFERED: 'hlsFragBuffered',
   // fired when fragment matching with current video position is changing - data : { frag : fragment object }
   FRAG_CHANGED: 'hlsFragChanged',
+  // fired when a key file in a level playlist loading starts
+  // - data: {
+  //    attributes: { METHOD:"AES-128", URI="URI", IV="0x???" }
+  //    iv: ArrayBuffer,
+  //    key: null,
+  //    level : id of loaded level,
+  //    stats : { trequest, tfirst, tload, mtime}
+  // }
+  KEY_LOADING: 'hlsKeyLoading',
+  // fired when a key file in a level playlist loading finishes
+  // - data: {
+  //    attributes: { METHOD:"AES-128", URI="URI", IV="0x???" }
+  //    iv: ArrayBuffer,
+  //    key: ArrayBuffer,
+  //    level : id of loaded level,
+  //    stats : { trequest, tfirst, tload, mtime}
+  // }
+  KEY_LOADED: 'hlsKeyLoaded',
     // Identifier for a FPS drop event - data: {curentDropped, currentDecoded, totalDroppedFrames}
   FPS_DROP: 'hlsFPSDrop',
   // Identifier for an error event - data: { type : error type, details : error details, fatal : if true, hls.js cannot/will not try to recover, if false, hls.js will try to recover,other error specific data}

@@ -449,6 +449,10 @@ full list of Events available below :
     -  data: { frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length} }
   - `Hls.Events.FRAG_CHANGED`  - fired when fragment matching with current video position is changing
     -  data: { frag : fragment object }
+  - `Hls.Events.KEY_LOADING` - fired when a key file in a level playlist loading starts
+    - data: { attributes: { METHOD:"AES-128", URI="URI", IV="0x???" } iv: ArrayBuffer, key: null, level : id of loaded level, stats : { trequest, tfirst, tload, mtime} }
+  - `Hls.Events.KEY_LOADED` - fired when a key file in a level playlist loading finishes
+    - data: { attributes: { METHOD:"AES-128", URI="URI", IV="0x???" } iv: ArrayBuffer, key: ArrayBuffer, level : id of loaded level, stats : { trequest, tfirst, tload, mtime} }
   - `Hls.Events.FPS_DROP` - triggered when FPS drop in last monitoring period is higher than given threshold
     -  data: {curentDropped : nb of dropped frames in last monitoring period, currentDecoded: nb of decoded frames in last monitoring period, totalDropped : total dropped frames on this video element}
   - `Hls.Events.ERROR` -  Identifier for an error event
