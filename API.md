@@ -299,6 +299,7 @@ var customLoader = function() {
 
 #### ```fLoader```
 (default : undefined)
+
 This enables the manipulation of the fragment loader.
 Note: This will overwrite the default loader, as well as your own loader function (see above)
 ```js
@@ -309,6 +310,7 @@ var customFragmentLoader = function() {
 
 #### ```pLoader```
 (default : undefined)
+
 This enables the manipulation of the playlist loader.
 Note: This will overwrite the default loader, as well as your own loader function (see above)
 ```js
