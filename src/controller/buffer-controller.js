@@ -4,6 +4,7 @@
 
 import Event from '../events';
 import { logger } from '../utils/logger';
+import BinarySearch from '../utils/binary-search';
 import Demuxer from '../demux/demuxer';
 import LevelHelper from '../helper/level-helper';
 import { ErrorTypes, ErrorDetails } from '../errors';
@@ -291,17 +292,26 @@ class BufferController {
                             // reach end of playlist
                             break;
                         }
-                        for (fragIdx = 0; fragIdx < fragLen; fragIdx++) {
-                            frag = fragments[fragIdx];
-                            start = frag.start;
-                            //logger.log('level/sn/sliding/start/end/bufEnd:${level}/${frag.sn}/${sliding.toFixed(3)}/${start.toFixed(3)}/${(start+frag.duration).toFixed(3)}/${bufferEnd.toFixed(3)}');
-                            // offset should be within fragment boundary
-                            if (
-                                start <= bufferEnd &&
-                                start + frag.duration > bufferEnd
-                            ) {
-                                break;
+                        let foundFrag = BinarySearch.search(
+                            fragments,
+                            candidate => {
+                                //logger.log('level/sn/sliding/start/end/bufEnd:${level}/${candidate.sn}/${sliding.toFixed(3)}/${candidate.start.toFixed(3)}/${(candidate.start+candidate.duration).toFixed(3)}/${bufferEnd.toFixed(3)}');
+                                // offset should be within fragment boundary
+                                if (
+                                    candidate.start + candidate.duration <=
+                                    bufferEnd
+                                ) {
+                                    return 1;
+                                } else if (candidate.start > bufferEnd) {
+                                    return -1;
+                                }
+                                return 0;
                             }
+                        );
+
+                        if (foundFrag) {
+                            frag = foundFrag;
+                            start = foundFrag.start;
                         }
                         //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
                         if (
