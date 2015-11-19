@@ -271,7 +271,7 @@ could be useful for P2P or stubbing (testing).
 
 Use this, if you want to overwrite both the fragment and the playlist loader.
 
-Note: If fLoader or pLoader are used, they overwrite loader
+Note: If fLoader or pLoader are used, they overwrite loader!
 
 ```js
 var customLoader = function() {
@@ -301,7 +301,7 @@ var customLoader = function() {
 (default : undefined)
 
 This enables the manipulation of the fragment loader.
-Note: This will overwrite the default loader, as well as your own loader function (see above)
+Note: This will overwrite the default loader, as well as your own loader function (see above).
 ```js
 var customFragmentLoader = function() {
     //See loader for details
@@ -312,7 +312,7 @@ var customFragmentLoader = function() {
 (default : undefined)
 
 This enables the manipulation of the playlist loader.
-Note: This will overwrite the default loader, as well as your own loader function (see above)
+Note: This will overwrite the default loader, as well as your own loader function (see above).
 ```js
 var customPlaylistLoader = function() {
     //See loader for details
