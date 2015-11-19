@@ -1233,13 +1233,13 @@ var BufferController = (function () {
       }
 
       // reset fragment loading counter on MSE detaching to avoid reporting FRAG_LOOP_LOADING_ERROR after error recovery
-      var levels = this._levels;
+      var levels = this.levels;
       if (levels) {
         // reset fragment load counter
         levels.forEach(function (level) {
           if (level.details) {
             level.details.fragments.forEach(function (fragment) {
-              fragment.loadIdx = undefined;
+              fragment.loadCounter = undefined;
             });
           }
         });
