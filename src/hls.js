@@ -8,7 +8,7 @@ import { ErrorTypes, ErrorDetails } from './errors';
 import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
 import AbrController from './controller/abr-controller';
-import MSEBufferController from './controller/mse-buffer-controller';
+import MSEMediaController from './controller/mse-media-controller';
 import LevelController from './controller/level-controller';
 //import FPSController from './controller/fps-controller';
 import { logger, enableLogs } from './utils/logger';
@@ -59,7 +59,7 @@ class Hls {
             appendErrorMaxRetry: 200,
             loader: XhrLoader,
             abrController: AbrController,
-            bufferController: MSEBufferController
+            mediaController: MSEMediaController
         };
         for (var prop in configDefault) {
             if (prop in config) {
@@ -95,7 +95,7 @@ class Hls {
         this.fragmentLoader = new FragmentLoader(this);
         this.levelController = new LevelController(this);
         this.abrController = new config.abrController(this);
-        this.bufferController = new config.bufferController(this);
+        this.mediaController = new config.mediaController(this);
         //this.fpsController = new FPSController(this);
     }
 
@@ -105,7 +105,7 @@ class Hls {
         this.playlistLoader.destroy();
         this.fragmentLoader.destroy();
         this.levelController.destroy();
-        this.bufferController.destroy();
+        this.mediaController.destroy();
         //this.fpsController.destroy();
         this.url = null;
         this.detachMedia();
@@ -133,7 +133,7 @@ class Hls {
 
     startLoad() {
         logger.log('startLoad');
-        this.bufferController.startLoad();
+        this.mediaController.startLoad();
     }
 
     recoverMediaError() {
@@ -150,26 +150,26 @@ class Hls {
 
     /** Return current playback quality level **/
     get currentLevel() {
-        return this.bufferController.currentLevel;
+        return this.mediaController.currentLevel;
     }
 
     /* set quality level immediately (-1 for automatic level selection) */
     set currentLevel(newLevel) {
         logger.log(`set currentLevel:${newLevel}`);
         this.loadLevel = newLevel;
-        this.bufferController.immediateLevelSwitch();
+        this.mediaController.immediateLevelSwitch();
     }
 
     /** Return next playback quality level (quality level of next fragment) **/
     get nextLevel() {
-        return this.bufferController.nextLevel;
+        return this.mediaController.nextLevel;
     }
 
     /* set quality level for next fragment (-1 for automatic level selection) */
     set nextLevel(newLevel) {
         logger.log(`set nextLevel:${newLevel}`);
         this.levelController.manualLevel = newLevel;
-        this.bufferController.nextLevelSwitch();
+        this.mediaController.nextLevelSwitch();
     }
 
     /** Return the quality level of current/last loaded fragment **/
