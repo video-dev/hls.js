@@ -29,9 +29,7 @@ class MSEBufferController {
         this.onsbe = this.onSBUpdateError.bind(this);
         // internal listeners
         this.onmediaatt0 = this.onMediaAttaching.bind(this);
-        this.onmediaatt = this.onMediaAttached.bind(this);
         this.onmediadet0 = this.onMediaDetaching.bind(this);
-        this.onmediadet = this.onMediaDetached.bind(this);
         this.onmp = this.onManifestParsed.bind(this);
         this.onll = this.onLevelLoaded.bind(this);
         this.onfl = this.onFragLoaded.bind(this);
@@ -41,9 +39,7 @@ class MSEBufferController {
         this.onerr = this.onError.bind(this);
         this.ontick = this.tick.bind(this);
         hls.on(Event.MEDIA_ATTACHING, this.onmediaatt0);
-        hls.on(Event.MEDIA_ATTACHED, this.onmediaatt);
         hls.on(Event.MEDIA_DETACHING, this.onmediadet0);
-        hls.on(Event.MEDIA_DETACHED, this.onmediadet);
         hls.on(Event.MANIFEST_PARSED, this.onmp);
     }
 
@@ -51,9 +47,7 @@ class MSEBufferController {
         this.stop();
         var hls = this.hls;
         hls.off(Event.MEDIA_ATTACHING, this.onmediaatt0);
-        hls.off(Event.MEDIA_ATTACHED, this.onmediaatt);
         hls.off(Event.MEDIA_DETACHING, this.onmediadet0);
-        hls.off(Event.MEDIA_DETACHED, this.onmediadet);
         hls.off(Event.MANIFEST_PARSED, this.onmp);
         this.state = State.IDLE;
     }
@@ -902,20 +896,6 @@ class MSEBufferController {
         //media.addEventListener('error', this.onverror);
     }
 
-    onMediaAttached() {
-        this.onvseeking = this.onMediaSeeking.bind(this);
-        this.onvseeked = this.onMediaSeeked.bind(this);
-        this.onvmetadata = this.onMediaMetadata.bind(this);
-        this.onvended = this.onMediaEnded.bind(this);
-        this.media.addEventListener('seeking', this.onvseeking);
-        this.media.addEventListener('seeked', this.onvseeked);
-        this.media.addEventListener('loadedmetadata', this.onvmetadata);
-        this.media.addEventListener('ended', this.onvended);
-        if (this.levels && this.config.autoStartLoad) {
-            this.startLoad();
-        }
-    }
-
     onMediaDetaching() {
         var media = this.media;
         if (media && media.ended) {
@@ -935,9 +915,6 @@ class MSEBufferController {
                 }
             });
         }
-    }
-
-    onMediaDetached() {
         var ms = this.mediaSource;
         if (ms) {
             if (ms.readyState === 'open') {
@@ -964,6 +941,7 @@ class MSEBufferController {
             this.stop();
         }
         this.onmso = this.onmse = this.onmsc = null;
+        this.hls.trigger(Event.MEDIA_DETACHED);
     }
 
     onMediaSeeking() {
@@ -1364,6 +1342,17 @@ class MSEBufferController {
     onMediaSourceOpen() {
         logger.log('media source opened');
         this.hls.trigger(Event.MEDIA_ATTACHED);
+        this.onvseeking = this.onMediaSeeking.bind(this);
+        this.onvseeked = this.onMediaSeeked.bind(this);
+        this.onvmetadata = this.onMediaMetadata.bind(this);
+        this.onvended = this.onMediaEnded.bind(this);
+        this.media.addEventListener('seeking', this.onvseeking);
+        this.media.addEventListener('seeked', this.onvseeked);
+        this.media.addEventListener('loadedmetadata', this.onvmetadata);
+        this.media.addEventListener('ended', this.onvended);
+        if (this.levels && this.config.autoStartLoad) {
+            this.startLoad();
+        }
         // once received, don't listen anymore to sourceopen event
         this.mediaSource.removeEventListener('sourceopen', this.onmso);
     }
