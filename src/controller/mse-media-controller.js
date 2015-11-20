@@ -1,5 +1,5 @@
 /*
- * Buffer Controller MSE
+ * MSE Media Controller
 */
 
 import Demuxer from '../demux/demuxer';
