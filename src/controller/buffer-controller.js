@@ -945,7 +945,9 @@ class BufferController {
                 );
                 var fragCurrent = this.fragCurrent;
                 if (fragCurrent) {
-                    fragCurrent.loader.abort();
+                    if (fragCurrent.loader) {
+                        fragCurrent.loader.abort();
+                    }
                     this.fragCurrent = null;
                 }
                 this.fragPrevious = null;
