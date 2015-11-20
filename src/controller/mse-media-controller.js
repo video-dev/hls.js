@@ -926,9 +926,7 @@ class MSEMediaController {
             // unlink MediaSource from video tag
             this.media.src = '';
             this.mediaSource = null;
-            this.media = null;
             // remove video listeners
-            var media = this.media;
             if (media) {
                 media.removeEventListener('seeking', this.onvseeking);
                 media.removeEventListener('seeked', this.onvseeked);
