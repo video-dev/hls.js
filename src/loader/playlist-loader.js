@@ -181,7 +181,9 @@ class PlaylistLoader {
         if (this.id === null) {
           hls.trigger(Event.MANIFEST_LOADED, {levels: [{url: url}], url: url, stats: stats});
         } else {
-          hls.trigger(Event.LEVEL_LOADED, {details: this.parseLevelPlaylist(string, url, id), level: id, id: id2, stats: stats});
+          var levelDetails = this.parseLevelPlaylist(string, url, id);
+          stats.tparsed = new Date();
+          hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: id, id: id2, stats: stats});
         }
       } else {
         levels = this.parseMasterPlaylist(string, url);
