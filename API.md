@@ -188,6 +188,8 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       fpsDroppedMonitoringThreshold : 0.2,
       appendErrorMaxRetry : 200,
       loader : customLoader,
+      fLoader: customFragmentLoader,
+      pLoader: customPlaylistLoader,
       xhrSetup : XMLHttpRequestSetupCallback,
       abrController : customAbrController
     };
@@ -267,6 +269,10 @@ such error could happen in loop with UHD streams, when internal buffer is full. 
 override standard URL loader by a custom one.
 could be useful for P2P or stubbing (testing).
 
+Use this, if you want to overwrite both the fragment and the playlist loader.
+
+Note: If fLoader or pLoader are used, they overwrite loader!
+
 ```js
 var customLoader = function() {
 
@@ -288,6 +294,28 @@ var customLoader = function() {
   this.abort = function() {}
   /* destroy loading context */
   this.destroy = function() {}
+  }
+```
+
+#### ```fLoader```
+(default : undefined)
+
+This enables the manipulation of the fragment loader.
+Note: This will overwrite the default loader, as well as your own loader function (see above).
+```js
+var customFragmentLoader = function() {
+    //See loader for details
+  }
+```
+
+#### ```pLoader```
+(default : undefined)
+
+This enables the manipulation of the playlist loader.
+Note: This will overwrite the default loader, as well as your own loader function (see above).
+```js
+var customPlaylistLoader = function() {
+    //See loader for details
   }
 ```
 
