@@ -131,7 +131,7 @@ as of today, it is supported on:
     var video = document.getElementById('video');
     var hls = new Hls();
     hls.loadSource('http://www.streambox.fr/playlists/test_001/stream.m3u8');
-    hls.attachVideo(video);
+    hls.attachMedia(video);
     hls.on(Hls.Events.MANIFEST_PARSED,function() {
       video.play();
   });
