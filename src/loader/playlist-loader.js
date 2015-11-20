@@ -236,8 +236,10 @@ class PlaylistLoader {
                         stats: stats
                     });
                 } else {
+                    var levelDetails = this.parseLevelPlaylist(string, url, id);
+                    stats.tparsed = new Date();
                     hls.trigger(Event.LEVEL_LOADED, {
-                        details: this.parseLevelPlaylist(string, url, id),
+                        details: levelDetails,
                         level: id,
                         id: id2,
                         stats: stats

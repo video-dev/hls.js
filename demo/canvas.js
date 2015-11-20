@@ -435,18 +435,20 @@
     x_w = networkChartWidth*event.load/(maxTime-minTime);
     ctx.fillRect(x_start,yoffset,x_w, 15);
 
-    if(event.demux) {
-      //draw demux rectangle
+    if(event.parsing) {
+      //draw parsing rectangle
       ctx.fillStyle = "blue";
       x_start = networkChartStart + networkChartWidth*(event.time+event.latency+event.load-minTime)/(maxTime-minTime);
-      x_w = networkChartWidth*event.demux/(maxTime-minTime);
+      x_w = networkChartWidth*event.parsing/(maxTime-minTime);
       ctx.fillRect(x_start,yoffset,x_w, 15);
 
-      //draw buffering rectangle
-      ctx.fillStyle = "red";
-      x_start = networkChartStart + networkChartWidth*(event.time+event.latency+event.load+event.demux-minTime)/(maxTime-minTime);
-      x_w = networkChartWidth*event.buffer/(maxTime-minTime);
-      ctx.fillRect(x_start,yoffset,x_w, 15);
+      if(event.buffer) {
+        //draw buffering rectangle
+        ctx.fillStyle = "red";
+        x_start = networkChartStart + networkChartWidth*(event.time+event.latency+event.load+event.parsing-minTime)/(maxTime-minTime);
+        x_w = networkChartWidth*event.buffer/(maxTime-minTime);
+        ctx.fillRect(x_start,yoffset,x_w, 15);
+      }
     }
 
    //draw end time
@@ -463,21 +465,24 @@
     x_start += ctx.measureText(legend).width+5;
 
     legend = event.load;
-    if(!event.demux) legend += "]";
+    if(!event.parsing) legend += "]";
     ctx.fillStyle = "green";
     ctx.fillText(legend,x_start,yoffset+12);
     x_start += ctx.measureText(legend).width+5;
 
-    if(event.demux) {
-      legend = event.demux;
+    if(event.parsing) {
+      legend = event.parsing;
+      if(!event.buffer) legend +="]";
       ctx.fillStyle = "blue";
       ctx.fillText(legend,x_start,yoffset+12);
       x_start += ctx.measureText(legend).width+5;
 
-      legend = event.buffer + "]";
-      ctx.fillStyle = "red";
-      ctx.fillText(legend,x_start,yoffset+12);
-      x_start += ctx.measureText(legend).width+5;
+      if(event.buffer) {
+        legend = event.buffer + "]";
+        ctx.fillStyle = "red";
+        ctx.fillText(legend,x_start,yoffset+12);
+        x_start += ctx.measureText(legend).width+5;
+      }
     }
 
     if(event.size) {
