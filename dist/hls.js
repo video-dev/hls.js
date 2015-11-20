@@ -587,16 +587,18 @@ var LevelController = (function () {
           clearInterval(this.timer);
           this.timer = null;
         }
-        this._level = newLevel;
-        _utilsLogger.logger.log('switching to level ' + newLevel);
-        this.hls.trigger(_events2['default'].LEVEL_SWITCH, { level: newLevel });
-        var level = this._levels[newLevel];
-        // check if we need to load playlist for this level
-        if (level.details === undefined || level.details.live === true) {
-          // level not retrieved yet, or live playlist we need to (re)load it
-          _utilsLogger.logger.log('(re)loading playlist for level ' + newLevel);
-          var urlId = level.urlId;
-          this.hls.trigger(_events2['default'].LEVEL_LOADING, { url: level.url[urlId], level: newLevel, id: urlId });
+        if (this._level !== newLevel) {
+          this._level = newLevel;
+          _utilsLogger.logger.log('switching to level ' + newLevel);
+          this.hls.trigger(_events2['default'].LEVEL_SWITCH, { level: newLevel });
+          var level = this._levels[newLevel];
+          // check if we need to load playlist for this level
+          if (level.details === undefined || level.details.live === true) {
+            // level not retrieved yet, or live playlist we need to (re)load it
+            _utilsLogger.logger.log('(re)loading playlist for level ' + newLevel);
+            var urlId = level.urlId;
+            this.hls.trigger(_events2['default'].LEVEL_LOADING, { url: level.url[urlId], level: newLevel, id: urlId });
+          }
         }
       } else {
         // invalid level id given, trigger error
@@ -1123,42 +1125,48 @@ var MSEMediaController = (function () {
         case State.PARSED:
         case State.APPENDING:
           if (this.sourceBuffer) {
+            if (this.media.error) {
+              _utilsLogger.logger.error('trying to append although a media error occured');
+              hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_APPENDING_ERROR, frag: this.fragCurrent, fatal: true });
+              this.state = State.ERROR;
+              return;
+            }
             // if MP4 segment appending in progress nothing to do
-            if (this.sourceBuffer.audio && this.sourceBuffer.audio.updating || this.sourceBuffer.video && this.sourceBuffer.video.updating) {
-              //logger.log('sb append in progress');
-              // check if any MP4 segments left to append
-            } else if (this.mp4segments.length) {
-                var segment = this.mp4segments.shift();
-                try {
-                  //logger.log('appending ${segment.type} SB, size:${segment.data.length}');
-                  this.sourceBuffer[segment.type].appendBuffer(segment.data);
-                  this.appendError = 0;
-                } catch (err) {
-                  // in case any error occured while appending, put back segment in mp4segments table
-                  _utilsLogger.logger.error('error while trying to append buffer:' + err.message + ',try appending later');
-                  this.mp4segments.unshift(segment);
-                  if (this.appendError) {
-                    this.appendError++;
-                  } else {
-                    this.appendError = 1;
+            else if (this.sourceBuffer.audio && this.sourceBuffer.audio.updating || this.sourceBuffer.video && this.sourceBuffer.video.updating) {
+                //logger.log('sb append in progress');
+                // check if any MP4 segments left to append
+              } else if (this.mp4segments.length) {
+                  var segment = this.mp4segments.shift();
+                  try {
+                    //logger.log(`appending ${segment.type} SB, size:${segment.data.length});
+                    this.sourceBuffer[segment.type].appendBuffer(segment.data);
+                    this.appendError = 0;
+                  } catch (err) {
+                    // in case any error occured while appending, put back segment in mp4segments table
+                    //logger.error(`error while trying to append buffer:${err.message},try appending later`);
+                    this.mp4segments.unshift(segment);
+                    if (this.appendError) {
+                      this.appendError++;
+                    } else {
+                      this.appendError = 1;
+                    }
+                    var event = { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_APPENDING_ERROR, frag: this.fragCurrent };
+                    /* with UHD content, we could get loop of quota exceeded error until
+                      browser is able to evict some data from sourcebuffer. retrying help recovering this
+                    */
+                    if (this.appendError > this.config.appendErrorMaxRetry) {
+                      _utilsLogger.logger.log('fail ' + this.config.appendErrorMaxRetry + ' times to append segment in sourceBuffer');
+                      event.fatal = true;
+                      hls.trigger(_events2['default'].ERROR, event);
+                      this.state = State.ERROR;
+                      return;
+                    } else {
+                      event.fatal = false;
+                      hls.trigger(_events2['default'].ERROR, event);
+                    }
                   }
-                  var event = { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_APPENDING_ERROR, frag: this.fragCurrent };
-                  /* with UHD content, we could get loop of quota exceeded error until
-                    browser is able to evict some data from sourcebuffer. retrying help recovering this
-                  */
-                  if (this.appendError > this.config.appendErrorMaxRetry) {
-                    _utilsLogger.logger.log('fail ' + this.config.appendErrorMaxRetry + ' times to append segment in sourceBuffer');
-                    event.fatal = true;
-                    hls.trigger(_events2['default'].ERROR, event);
-                    this.state = State.ERROR;
-                    return;
-                  } else {
-                    event.fatal = false;
-                    hls.trigger(_events2['default'].ERROR, event);
-                  }
+                  this.state = State.APPENDING;
                 }
-                this.state = State.APPENDING;
-              }
           } else {
             // sourceBuffer undefined, switch back to IDLE state
             this.state = State.IDLE;
@@ -4115,7 +4123,9 @@ var PlaylistLoader = (function () {
           if (this.id === null) {
             hls.trigger(_events2['default'].MANIFEST_LOADED, { levels: [{ url: url }], url: url, stats: stats });
           } else {
-            hls.trigger(_events2['default'].LEVEL_LOADED, { details: this.parseLevelPlaylist(string, url, id), level: id, id: id2, stats: stats });
+            var levelDetails = this.parseLevelPlaylist(string, url, id);
+            stats.tparsed = new Date();
+            hls.trigger(_events2['default'].LEVEL_LOADED, { details: levelDetails, level: id, id: id2, stats: stats });
           }
         } else {
           levels = this.parseMasterPlaylist(string, url);
