@@ -440,30 +440,38 @@ class MSEMediaController {
             case State.PARSED:
             case State.APPENDING:
                 if (this.sourceBuffer) {
-                    // if MP4 segment appending in progress nothing to do
-                    if (
+                    if (this.media.error) {
+                        logger.error(
+                            'trying to append although a media error occured'
+                        );
+                        hls.trigger(Event.ERROR, {
+                            type: ErrorTypes.MEDIA_ERROR,
+                            details: ErrorDetails.FRAG_APPENDING_ERROR,
+                            frag: this.fragCurrent,
+                            fatal: true
+                        });
+                        this.state = State.ERROR;
+                        return;
+                    } else if (
                         (this.sourceBuffer.audio &&
                             this.sourceBuffer.audio.updating) ||
                         (this.sourceBuffer.video &&
                             this.sourceBuffer.video.updating)
                     ) {
+                        // if MP4 segment appending in progress nothing to do
                         //logger.log('sb append in progress');
                         // check if any MP4 segments left to append
                     } else if (this.mp4segments.length) {
                         var segment = this.mp4segments.shift();
                         try {
-                            //logger.log('appending ${segment.type} SB, size:${segment.data.length}');
+                            //logger.log(`appending ${segment.type} SB, size:${segment.data.length});
                             this.sourceBuffer[segment.type].appendBuffer(
                                 segment.data
                             );
                             this.appendError = 0;
                         } catch (err) {
                             // in case any error occured while appending, put back segment in mp4segments table
-                            logger.error(
-                                `error while trying to append buffer:${
-                                    err.message
-                                },try appending later`
-                            );
+                            //logger.error(`error while trying to append buffer:${err.message},try appending later`);
                             this.mp4segments.unshift(segment);
                             if (this.appendError) {
                                 this.appendError++;
