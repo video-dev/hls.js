@@ -111,7 +111,6 @@ class Hls {
     logger.log('detachMedia');
     this.trigger(Event.MEDIA_DETACHING);
     this.media = null;
-    this.trigger(Event.MEDIA_DETACHED);
   }
 
   loadSource(url) {
