@@ -223,7 +223,7 @@ class PlaylistLoader {
             // fallback to initial URL
             url = this.url;
         }
-        stats.tload = new Date();
+        stats.tload = performance.now();
         stats.mtime = new Date(
             event.currentTarget.getResponseHeader('Last-Modified')
         );
@@ -240,7 +240,7 @@ class PlaylistLoader {
                     });
                 } else {
                     var levelDetails = this.parseLevelPlaylist(string, url, id);
-                    stats.tparsed = new Date();
+                    stats.tparsed = performance.now();
                     hls.trigger(Event.LEVEL_LOADED, {
                         details: levelDetails,
                         level: id,

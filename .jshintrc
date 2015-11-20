@@ -23,6 +23,7 @@
   "white"     : true,
   "globals"   : {
     "console"     : true,
-    "MediaSource" : true
+    "MediaSource" : true,
+    "performance" : true
   }
 }

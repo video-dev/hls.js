@@ -240,7 +240,7 @@ $(document).ready(function() {
       }
 
       $("#HlsStatus").text('loading ' + url);
-       events = { url : url, t0 : Date.now(), load : [], buffer : [], video : [], level : [], bitrate : []};
+       events = { url : url, t0 : performance.now(), load : [], buffer : [], video : [], level : [], bitrate : []};
        hls = new Hls({debug:true});
        $("#HlsStatus").text('loading manifest and attaching video element...');
        hls.loadSource(url);
@@ -248,23 +248,23 @@ $(document).ready(function() {
        hls.on(Hls.Events.MEDIA_ATTACHED,function() {
         $("#HlsStatus").text('MediaSource attached...');
           bufferingIdx = -1;
-          events.video.push({time : Date.now() - events.t0, type : "Media attached"});
+          events.video.push({time : performance.now() - events.t0, type : "Media attached"});
        });
        hls.on(Hls.Events.MEDIA_DETACHED,function() {
         $("#HlsStatus").text('MediaSource detached...');
           bufferingIdx = -1;
-          events.video.push({time : Date.now() - events.t0, type : "Media detached"});
+          events.video.push({time : performance.now() - events.t0, type : "Media detached"});
        });
        hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT,function(event,data) {
           showCanvas();
-          var event = {time : Date.now() - events.t0, type : "init segment"};
+          var event = {time : performance.now() - events.t0, type : "init segment"};
           events.video.push(event);
        });
        hls.on(Hls.Events.FRAG_PARSING_METADATA, function(event, data) {
          console.log("Id3 samples ", data.samples);
        });
        hls.on(Hls.Events.LEVEL_SWITCH,function(event,data) {
-          events.level.push({time : Date.now() - events.t0, id : data.level, bitrate : Math.round(hls.levels[data.level].bitrate/1000)});
+          events.level.push({time : performance.now() - events.t0, id : data.level, bitrate : Math.round(hls.levels[data.level].bitrate/1000)});
           updateLevelInfo();
        });
        hls.on(Hls.Events.MANIFEST_PARSED,function(event,data) {
@@ -317,7 +317,7 @@ $(document).ready(function() {
             size : data.stats.length
           };
           events.load.push(event);
-          events.bitrate.push({time : Date.now() - events.t0, bitrate : event.bw , duration : data.frag.duration, level : event.id});
+          events.bitrate.push({time : performance.now() - events.t0, bitrate : event.bw , duration : data.frag.duration, level : event.id});
           if(hls.bufferTimer === undefined) {
             events.buffer.push({ time : 0, buffer : 0, pos: 0});
             hls.bufferTimer = window.setInterval(checkBuffer, 100);
@@ -360,7 +360,7 @@ $(document).ready(function() {
           stats.autoLevelCappingLast = hls.autoLevelCapping;
        });
        hls.on(Hls.Events.FRAG_CHANGED,function(event,data) {
-        var event = {time : Date.now() - events.t0, type : 'frag changed', name : data.frag.sn + ' @ ' + data.frag.level };
+        var event = {time : performance.now() - events.t0, type : 'frag changed', name : data.frag.sn + ' @ ' + data.frag.level };
         events.video.push(event);
         refreshCanvas();
         updateLevelInfo();
@@ -486,7 +486,7 @@ $(document).ready(function() {
        });
 
        hls.on(Hls.Events.FPS_DROP,function(event,data) {
-          var evt = {time : Date.now() - events.t0, type : "frame drop", name : data.currentDropped + "/" + data.currentDecoded};
+          var evt = {time : performance.now() - events.t0, type : "frame drop", name : data.currentDropped + "/" + data.currentDecoded};
           events.video.push(evt);
           if (stats) {
            if (stats.fpsDropEvent === undefined) {
@@ -580,7 +580,7 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
       default:
       break;
     }
-    var event = {time : Date.now() - events.t0, type : evt.type, name : data};
+    var event = {time : performance.now() - events.t0, type : evt.type, name : data};
     events.video.push(event);
     if(evt.type === 'seeking') {
       lastSeekingIdx = events.video.length-1;
@@ -630,11 +630,11 @@ function timeRangesToString(r) {
         } else {
          // we are not at the end of the playlist ... real buffering
           if(bufferingIdx !== -1) {
-            bufferingDuration = Date.now() - events.t0 - events.video[bufferingIdx].time;
+            bufferingDuration = performance.now() - events.t0 - events.video[bufferingIdx].time;
             events.video[bufferingIdx].duration = bufferingDuration;
             events.video[bufferingIdx].name = bufferingDuration;
           } else {
-            events.video.push({ type : 'buffering' , time : Date.now() - events.t0 });
+            events.video.push({ type : 'buffering' , time : performance.now() - events.t0 });
             // we are in buffering state
             bufferingIdx = events.video.length-1;
           }
@@ -642,7 +642,7 @@ function timeRangesToString(r) {
       }
 
       if(bufferLen > 0.1 && bufferingIdx !=-1) {
-          bufferingDuration = Date.now() - events.t0 - events.video[bufferingIdx].time;
+          bufferingDuration = performance.now() - events.t0 - events.video[bufferingIdx].time;
           events.video[bufferingIdx].duration = bufferingDuration;
           events.video[bufferingIdx].name = bufferingDuration;
         // we are out of buffering state
@@ -650,7 +650,7 @@ function timeRangesToString(r) {
       }
 
       // update buffer/position for current Time
-      var event = { time : Date.now() - events.t0, buffer : Math.round(bufferLen*1000), pos: Math.round(pos*1000)};
+      var event = { time : performance.now() - events.t0, buffer : Math.round(bufferLen*1000), pos: Math.round(pos*1000)};
       var bufEvents = events.buffer, bufEventLen = bufEvents.length;
       if(bufEventLen > 1) {
         var event0 = bufEvents[bufEventLen-2],event1 = bufEvents[bufEventLen-1];
