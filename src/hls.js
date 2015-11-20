@@ -8,7 +8,7 @@ import {ErrorTypes, ErrorDetails} from './errors';
 import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
 import AbrController from    './controller/abr-controller';
-import BufferController from './controller/buffer-controller';
+import MSEMediaController from './controller/mse-media-controller';
 import LevelController from  './controller/level-controller';
 //import FPSController from './controller/fps-controller';
 import {logger, enableLogs} from './utils/logger';
@@ -54,7 +54,8 @@ class Hls {
       fpsDroppedMonitoringThreshold: 0.2,
       appendErrorMaxRetry: 200,
       loader: XhrLoader,
-      abrController : AbrController
+      abrController : AbrController,
+      mediaController: MSEMediaController
     };
     for (var prop in configDefault) {
         if (prop in config) { continue; }
@@ -83,7 +84,7 @@ class Hls {
     this.fragmentLoader = new FragmentLoader(this);
     this.levelController = new LevelController(this);
     this.abrController = new config.abrController(this);
-    this.bufferController = new BufferController(this);
+    this.mediaController = new config.mediaController(this);
     //this.fpsController = new FPSController(this);
   }
 
@@ -93,52 +94,23 @@ class Hls {
     this.playlistLoader.destroy();
     this.fragmentLoader.destroy();
     this.levelController.destroy();
-    this.bufferController.destroy();
+    this.mediaController.destroy();
     //this.fpsController.destroy();
     this.url = null;
-    this.detachVideo();
+    this.detachMedia();
     this.observer.removeAllListeners();
   }
 
-  attachVideo(video) {
-    logger.log('attachVideo');
-    this.video = video;
-    // setup the media source
-    var ms = this.mediaSource = new MediaSource();
-    //Media Source listeners
-    this.onmso = this.onMediaSourceOpen.bind(this);
-    this.onmse = this.onMediaSourceEnded.bind(this);
-    this.onmsc = this.onMediaSourceClose.bind(this);
-    ms.addEventListener('sourceopen', this.onmso);
-    ms.addEventListener('sourceended', this.onmse);
-    ms.addEventListener('sourceclose', this.onmsc);
-    // link video and media Source
-    video.src = URL.createObjectURL(ms);
+  attachMedia(media) {
+    logger.log('attachMedia');
+    this.media = media;
+    this.trigger(Event.MEDIA_ATTACHING, {media: media});
   }
 
-  detachVideo() {
-    logger.log('detachVideo');
-    var video = this.video;
-    logger.log('trigger MSE_DETACHING');
-    this.trigger(Event.MSE_DETACHING);
-    var ms = this.mediaSource;
-    if (ms) {
-      if (ms.readyState === 'open') {
-        ms.endOfStream();
-      }
-      ms.removeEventListener('sourceopen', this.onmso);
-      ms.removeEventListener('sourceended', this.onmse);
-      ms.removeEventListener('sourceclose', this.onmsc);
-      // unlink MediaSource from video tag
-      video.src = '';
-      this.mediaSource = null;
-      logger.log('trigger MSE_DETACHED');
-      this.trigger(Event.MSE_DETACHED);
-    }
-    this.onmso = this.onmse = this.onmsc = null;
-    if (video) {
-      this.video = null;
-    }
+  detachMedia() {
+    logger.log('detachMedia');
+    this.trigger(Event.MEDIA_DETACHING);
+    this.media = null;
   }
 
   loadSource(url) {
@@ -150,14 +122,14 @@ class Hls {
 
   startLoad() {
     logger.log('startLoad');
-    this.bufferController.startLoad();
+    this.mediaController.startLoad();
   }
 
   recoverMediaError() {
     logger.log('recoverMediaError');
-    var video = this.video;
-    this.detachVideo();
-    this.attachVideo(video);
+    var media = this.media;
+    this.detachMedia();
+    this.attachMedia(media);
   }
 
   /** Return all quality levels **/
@@ -167,26 +139,26 @@ class Hls {
 
   /** Return current playback quality level **/
   get currentLevel() {
-    return this.bufferController.currentLevel;
+    return this.mediaController.currentLevel;
   }
 
   /* set quality level immediately (-1 for automatic level selection) */
   set currentLevel(newLevel) {
     logger.log(`set currentLevel:${newLevel}`);
     this.loadLevel = newLevel;
-    this.bufferController.immediateLevelSwitch();
+    this.mediaController.immediateLevelSwitch();
   }
 
   /** Return next playback quality level (quality level of next fragment) **/
   get nextLevel() {
-    return this.bufferController.nextLevel;
+    return this.mediaController.nextLevel;
   }
 
   /* set quality level for next fragment (-1 for automatic level selection) */
   set nextLevel(newLevel) {
     logger.log(`set nextLevel:${newLevel}`);
     this.levelController.manualLevel = newLevel;
-    this.bufferController.nextLevelSwitch();
+    this.mediaController.nextLevelSwitch();
   }
 
   /** Return the quality level of current/last loaded fragment **/
@@ -259,21 +231,6 @@ class Hls {
   /* return manual level */
   get manualLevel() {
     return this.levelController.manualLevel;
-  }
-
-  onMediaSourceOpen() {
-    logger.log('media source opened');
-    this.trigger(Event.MSE_ATTACHED, {video: this.video, mediaSource: this.mediaSource});
-    // once received, don't listen anymore to sourceopen event
-    this.mediaSource.removeEventListener('sourceopen', this.onmso);
-  }
-
-  onMediaSourceClose() {
-    logger.log('media source closed');
-  }
-
-  onMediaSourceEnded() {
-    logger.log('media source ended');
   }
 }
 

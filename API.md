@@ -32,7 +32,7 @@ let's
     var video = document.getElementById('video');
     var hls = new Hls();
     // bind them together
-    hls.attachVideo(video);
+    hls.attachMedia(video);
     // MSE_ATTACHED event is fired by hls object once MediaSource is ready
     hls.on(Hls.Events.MSE_ATTACHED,function() {
 		  console.log("video and hls.js are now bound together !");
@@ -53,7 +53,7 @@ you need to provide manifest URL as below:
     var video = document.getElementById('video');
     var hls = new Hls();
     // bind them together
-    hls.attachVideo(video);
+    hls.attachMedia(video);
     hls.on(Hls.Events.MSE_ATTACHED,function() {
 		console.log("video and hls.js are now bound together !");
 		hls.loadSource("http://my.streamURL.com/playlist.m3u8");
@@ -322,7 +322,7 @@ parameter should be a class providing 2 getter/setters and a destroy() method:
 
 ## Video Binding/Unbinding API
 
-#### ```hls.attachVideo(videoElement)```
+#### ```hls.attachMedia(videoElement)```
 calling this method will :
 
  - bind videoElement and hls instance, 
