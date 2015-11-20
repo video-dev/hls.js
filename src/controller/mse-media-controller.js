@@ -1,10 +1,10 @@
 /*
- * Buffer Controller
+ * Buffer Controller MSE
 */
 
+import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import { logger } from '../utils/logger';
-import Demuxer from '../demux/demuxer';
 import LevelHelper from '../helper/level-helper';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
@@ -20,7 +20,7 @@ const State = {
     BUFFER_FLUSHING: 6
 };
 
-class BufferController {
+class MSEMediaController {
     constructor(hls) {
         this.config = hls.config;
         this.hls = hls;
@@ -28,9 +28,8 @@ class BufferController {
         this.onsbue = this.onSBUpdateEnd.bind(this);
         this.onsbe = this.onSBUpdateError.bind(this);
         // internal listeners
-        this.onmse = this.onMSEAttached.bind(this);
-        this.onmsed0 = this.onMSEDetaching.bind(this);
-        this.onmsed = this.onMSEDetached.bind(this);
+        this.onmediaatt0 = this.onMediaAttaching.bind(this);
+        this.onmediadet0 = this.onMediaDetaching.bind(this);
         this.onmp = this.onManifestParsed.bind(this);
         this.onll = this.onLevelLoaded.bind(this);
         this.onfl = this.onFragLoaded.bind(this);
@@ -39,30 +38,28 @@ class BufferController {
         this.onfp = this.onFragParsed.bind(this);
         this.onerr = this.onError.bind(this);
         this.ontick = this.tick.bind(this);
-        hls.on(Event.MSE_ATTACHED, this.onmse);
-        hls.on(Event.MSE_DETACHING, this.onmsed0);
-        hls.on(Event.MSE_DETACHED, this.onmsed);
+        hls.on(Event.MEDIA_ATTACHING, this.onmediaatt0);
+        hls.on(Event.MEDIA_DETACHING, this.onmediadet0);
         hls.on(Event.MANIFEST_PARSED, this.onmp);
     }
 
     destroy() {
         this.stop();
         var hls = this.hls;
-        hls.off(Event.MSE_ATTACHED, this.onmse);
-        hls.off(Event.MSE_DETACHING, this.onmsed0);
-        hls.off(Event.MSE_DETACHED, this.onmsed);
+        hls.off(Event.MEDIA_ATTACHING, this.onmediaatt0);
+        hls.off(Event.MEDIA_DETACHING, this.onmediadet0);
         hls.off(Event.MANIFEST_PARSED, this.onmp);
         this.state = State.IDLE;
     }
 
     startLoad() {
-        if (this.levels && this.video) {
+        if (this.levels && this.media) {
             this.startInternal();
             if (this.lastCurrentTime) {
                 logger.log(`seeking @ ${this.lastCurrentTime}`);
                 if (!this.lastPaused) {
                     logger.log('resuming video');
-                    this.video.play();
+                    this.media.play();
                 }
                 this.state = State.IDLE;
             } else {
@@ -157,7 +154,7 @@ class BufferController {
                 break;
             case State.IDLE:
                 // if video detached or unbound exit loop
-                if (!this.video) {
+                if (!this.media) {
                     break;
                 }
                 // determine next candidate fragment to be loaded, based on current position and
@@ -165,7 +162,7 @@ class BufferController {
                 //  ensure 60s of buffer upfront
                 // if we have not yet loaded any fragment, start loading from start position
                 if (this.loadedmetadata) {
-                    pos = this.video.currentTime;
+                    pos = this.media.currentTime;
                 } else {
                     pos = this.nextLoadPosition;
                 }
@@ -218,7 +215,7 @@ class BufferController {
                     // in case of live playlist we need to ensure that requested position is not located before playlist start
                     if (levelDetails.live) {
                         // check if requested position is within seekable boundaries :
-                        //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.video.seeking}`);
+                        //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.media.seeking}`);
                         if (
                             bufferEnd <
                             Math.max(
@@ -381,7 +378,7 @@ class BufferController {
           we compute expected time of arrival of the complete fragment.
           we compare it to expected time of buffer starvation
         */
-                let v = this.video,
+                let v = this.media,
                     frag = this.fragCurrent;
                 /* only monitor frag retrieval time if
         (video not paused OR first fragment being loaded) AND autoswitching enabled AND not lowest level AND multiple levels */
@@ -541,7 +538,7 @@ class BufferController {
     }
 
     bufferInfo(pos, maxHoleDuration) {
-        var v = this.video,
+        var v = this.media,
             buffered = v.buffered,
             bufferLen,
             // bufferStart and bufferEnd are buffer boundaries around current video position
@@ -605,8 +602,8 @@ class BufferController {
     }
 
     get currentLevel() {
-        if (this.video) {
-            var range = this.getBufferRange(this.video.currentTime);
+        if (this.media) {
+            var range = this.getBufferRange(this.media.currentTime);
             if (range) {
                 return range.frag.level;
             }
@@ -615,10 +612,10 @@ class BufferController {
     }
 
     get nextBufferRange() {
-        if (this.video) {
+        if (this.media) {
             // first get end range of current fragment
             return this.followingBufferRange(
-                this.getBufferRange(this.video.currentTime)
+                this.getBufferRange(this.media.currentTime)
             );
         } else {
             return null;
@@ -643,7 +640,7 @@ class BufferController {
     }
 
     isBuffered(position) {
-        var v = this.video,
+        var v = this.media,
             buffered = v.buffered;
         for (var i = 0; i < buffered.length; i++) {
             if (position >= buffered.start(i) && position <= buffered.end(i)) {
@@ -656,7 +653,7 @@ class BufferController {
     _checkFragmentChanged() {
         var rangeCurrent,
             currentTime,
-            video = this.video;
+            video = this.media;
         if (video && video.seeking === false) {
             currentTime = video.currentTime;
             /* if video element is in seeked state, currentTime can only increase.
@@ -712,7 +709,7 @@ class BufferController {
   */
     flushBuffer(startOffset, endOffset) {
         var sb, i, bufStart, bufEnd, flushStart, flushEnd;
-        //logger.log('flushBuffer,pos/start/end: ' + this.video.currentTime + '/' + startOffset + '/' + endOffset);
+        //logger.log('flushBuffer,pos/start/end: ' + this.media.currentTime + '/' + startOffset + '/' + endOffset);
         // safeguard to avoid infinite looping
         if (
             this.flushBufferCounter++ < 2 * this.bufferRange.length &&
@@ -745,7 +742,7 @@ class BufferController {
                         if (flushEnd - flushStart > 0.5) {
                             logger.log(
                                 `flush ${type} [${flushStart},${flushEnd}], of [${bufStart},${bufEnd}], pos:${
-                                    this.video.currentTime
+                                    this.media.currentTime
                                 }`
                             );
                             sb.remove(flushStart, flushEnd);
@@ -789,8 +786,8 @@ class BufferController {
         logger.log('immediateLevelSwitch');
         if (!this.immediateSwitch) {
             this.immediateSwitch = true;
-            this.previouslyPaused = this.video.paused;
-            this.video.pause();
+            this.previouslyPaused = this.media.paused;
+            this.media.pause();
         }
         var fragCurrent = this.fragCurrent;
         if (fragCurrent && fragCurrent.loader) {
@@ -815,9 +812,9 @@ class BufferController {
   */
     immediateLevelSwitchEnd() {
         this.immediateSwitch = false;
-        this.video.currentTime -= 0.0001;
+        this.media.currentTime -= 0.0001;
         if (!this.previouslyPaused) {
-            this.video.play();
+            this.media.play();
         }
     }
 
@@ -828,13 +825,13 @@ class BufferController {
       we should take into account new segment fetch time
     */
         var fetchdelay, currentRange, nextRange;
-        currentRange = this.getBufferRange(this.video.currentTime);
+        currentRange = this.getBufferRange(this.media.currentTime);
         if (currentRange) {
             // flush buffer preceding current fragment (flush until current fragment start offset)
             // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
             this.flushRange.push({ start: 0, end: currentRange.start - 1 });
         }
-        if (!this.video.paused) {
+        if (!this.media.paused) {
             // add a safety delay of 1s
             var nextLevelId = this.hls.nextLoadLevel,
                 nextLevel = this.levels[nextLevelId],
@@ -853,7 +850,7 @@ class BufferController {
         }
         //logger.log('fetchdelay:'+fetchdelay);
         // find buffer range that will be reached once new fragment will be fetched
-        nextRange = this.getBufferRange(this.video.currentTime + fetchdelay);
+        nextRange = this.getBufferRange(this.media.currentTime + fetchdelay);
         if (nextRange) {
             // we can flush buffer range following this one without stalling playback
             nextRange = this.followingBufferRange(nextRange);
@@ -882,26 +879,26 @@ class BufferController {
         }
     }
 
-    onMSEAttached(event, data) {
-        var video = data.video;
-        this.video = video;
-        this.mediaSource = data.mediaSource;
-        this.onvseeking = this.onVideoSeeking.bind(this);
-        this.onvseeked = this.onVideoSeeked.bind(this);
-        this.onvmetadata = this.onVideoMetadata.bind(this);
-        this.onvended = this.onVideoEnded.bind(this);
-        video.addEventListener('seeking', this.onvseeking);
-        video.addEventListener('seeked', this.onvseeked);
-        video.addEventListener('loadedmetadata', this.onvmetadata);
-        video.addEventListener('ended', this.onvended);
-        if (this.levels && this.config.autoStartLoad) {
-            this.startLoad();
-        }
+    onMediaAttaching(event, data) {
+        var media = (this.media = data.media);
+        // setup the media source
+        var ms = (this.mediaSource = new MediaSource());
+        //Media Source listeners
+        this.onmso = this.onMediaSourceOpen.bind(this);
+        this.onmse = this.onMediaSourceEnded.bind(this);
+        this.onmsc = this.onMediaSourceClose.bind(this);
+        ms.addEventListener('sourceopen', this.onmso);
+        ms.addEventListener('sourceended', this.onmse);
+        ms.addEventListener('sourceclose', this.onmsc);
+        // link video and media Source
+        media.src = URL.createObjectURL(ms);
+        // FIXME: this was in code before but onverror was never set! can be removed or fixed?
+        //media.addEventListener('error', this.onverror);
     }
 
-    onMSEDetaching() {
-        var video = this.video;
-        if (video && video.ended) {
+    onMediaDetaching() {
+        var media = this.media;
+        if (media && media.ended) {
             logger.log('MSE detaching and video ended, reset startPosition');
             this.startPosition = this.lastCurrentTime = 0;
         }
@@ -918,28 +915,38 @@ class BufferController {
                 }
             });
         }
-    }
-
-    onMSEDetached() {
-        // remove video listeners
-        var video = this.video;
-        if (video) {
-            video.removeEventListener('seeking', this.onvseeking);
-            video.removeEventListener('seeked', this.onvseeked);
-            video.removeEventListener('loadedmetadata', this.onvmetadata);
-            video.removeEventListener('ended', this.onvended);
-            this.onvseeking = this.onvseeked = this.onvmetadata = null;
+        var ms = this.mediaSource;
+        if (ms) {
+            if (ms.readyState === 'open') {
+                ms.endOfStream();
+            }
+            ms.removeEventListener('sourceopen', this.onmso);
+            ms.removeEventListener('sourceended', this.onmse);
+            ms.removeEventListener('sourceclose', this.onmsc);
+            // unlink MediaSource from video tag
+            this.media.src = '';
+            this.mediaSource = null;
+            // remove video listeners
+            if (media) {
+                media.removeEventListener('seeking', this.onvseeking);
+                media.removeEventListener('seeked', this.onvseeked);
+                media.removeEventListener('loadedmetadata', this.onvmetadata);
+                media.removeEventListener('ended', this.onvended);
+                this.onvseeking = this.onvseeked = this.onvmetadata = null;
+            }
+            this.media = null;
+            this.loadedmetadata = false;
+            this.stop();
         }
-        this.video = null;
-        this.loadedmetadata = false;
-        this.stop();
+        this.onmso = this.onmse = this.onmsc = null;
+        this.hls.trigger(Event.MEDIA_DETACHED);
     }
 
-    onVideoSeeking() {
+    onMediaSeeking() {
         if (this.state === State.LOADING) {
             // check if currently loaded fragment is inside buffer.
             //if outside, cancel fragment loading, otherwise do nothing
-            if (this.bufferInfo(this.video.currentTime, 0.3).len === 0) {
+            if (this.bufferInfo(this.media.currentTime, 0.3).len === 0) {
                 logger.log(
                     'seeking outside of buffer while fragment load in progress, cancel fragment load'
                 );
@@ -955,8 +962,8 @@ class BufferController {
                 this.state = State.IDLE;
             }
         }
-        if (this.video) {
-            this.lastCurrentTime = this.video.currentTime;
+        if (this.media) {
+            this.lastCurrentTime = this.media.currentTime;
         }
         // avoid reporting fragment loop loading error in case user is seeking several times on same position
         if (this.fragLoadIdx !== undefined) {
@@ -966,20 +973,20 @@ class BufferController {
         this.tick();
     }
 
-    onVideoSeeked() {
+    onMediaSeeked() {
         // tick to speed up FRAGMENT_PLAYING triggering
         this.tick();
     }
 
-    onVideoMetadata() {
-        if (this.video.currentTime !== this.startPosition) {
-            this.video.currentTime = this.startPosition;
+    onMediaMetadata() {
+        if (this.media.currentTime !== this.startPosition) {
+            this.media.currentTime = this.startPosition;
         }
         this.loadedmetadata = true;
         this.tick();
     }
 
-    onVideoEnded() {
+    onMediaEnded() {
         logger.log('video ended');
         // reset startPosition and lastCurrentTime to restart playback @ stream beginning
         this.startPosition = this.lastCurrentTime = 0;
@@ -1010,7 +1017,7 @@ class BufferController {
         this.levels = data.levels;
         this.startLevelLoaded = false;
         this.startFragmentRequested = false;
-        if (this.video && this.config.autoStartLoad) {
+        if (this.media && this.config.autoStartLoad) {
             this.startLoad();
         }
     }
@@ -1272,13 +1279,13 @@ class BufferController {
                     frag: frag
                 });
                 logger.log(
-                    `video buffered : ${this.timeRangesToString(
-                        this.video.buffered
+                    `media buffered : ${this.timeRangesToString(
+                        this.media.buffered
                     )}`
                 );
                 this.state = State.IDLE;
             }
-            var video = this.video;
+            var video = this.media;
             if (video) {
                 // seek back to a expected position after video buffered if needed
                 if (this.seekAfterBuffered) {
@@ -1329,5 +1336,31 @@ class BufferController {
         }
         return log;
     }
+
+    onMediaSourceOpen() {
+        logger.log('media source opened');
+        this.hls.trigger(Event.MEDIA_ATTACHED);
+        this.onvseeking = this.onMediaSeeking.bind(this);
+        this.onvseeked = this.onMediaSeeked.bind(this);
+        this.onvmetadata = this.onMediaMetadata.bind(this);
+        this.onvended = this.onMediaEnded.bind(this);
+        this.media.addEventListener('seeking', this.onvseeking);
+        this.media.addEventListener('seeked', this.onvseeked);
+        this.media.addEventListener('loadedmetadata', this.onvmetadata);
+        this.media.addEventListener('ended', this.onvended);
+        if (this.levels && this.config.autoStartLoad) {
+            this.startLoad();
+        }
+        // once received, don't listen anymore to sourceopen event
+        this.mediaSource.removeEventListener('sourceopen', this.onmso);
+    }
+
+    onMediaSourceClose() {
+        logger.log('media source closed');
+    }
+
+    onMediaSourceEnded() {
+        logger.log('media source ended');
+    }
 }
-export default BufferController;
+export default MSEMediaController;

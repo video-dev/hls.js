@@ -63,7 +63,7 @@ var manifest;
        }
        hls = new Hls({debug:true, maxBufferLength : 60, maxBufferSize:100*1024*1024});
        hls.loadSource(url);
-       hls.attachVideo(video);
+       hls.attachMedia(video);
        window.setTimeout(testfunction,4000);
        hls.on(hls.Events.FRAG_BUFFERED,function(event,data) {
         if(video.paused)
