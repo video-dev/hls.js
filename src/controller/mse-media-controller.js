@@ -20,7 +20,7 @@ const State = {
   BUFFER_FLUSHING : 6
 };
 
-class MSEBufferController {
+class MSEMediaController {
 
   constructor(hls) {
     this.config = hls.config;
@@ -1095,5 +1095,5 @@ class MSEBufferController {
     logger.log('media source ended');
   }
 }
-export default MSEBufferController;
+export default MSEMediaController;
 
