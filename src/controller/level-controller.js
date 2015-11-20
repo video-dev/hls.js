@@ -121,25 +121,20 @@ class LevelController {
                 clearInterval(this.timer);
                 this.timer = null;
             }
-            if (this._level !== newLevel) {
-                this._level = newLevel;
-                logger.log(`switching to level ${newLevel}`);
-                this.hls.trigger(Event.LEVEL_SWITCH, { level: newLevel });
-                var level = this._levels[newLevel];
-                // check if we need to load playlist for this level
-                if (
-                    level.details === undefined ||
-                    level.details.live === true
-                ) {
-                    // level not retrieved yet, or live playlist we need to (re)load it
-                    logger.log(`(re)loading playlist for level ${newLevel}`);
-                    var urlId = level.urlId;
-                    this.hls.trigger(Event.LEVEL_LOADING, {
-                        url: level.url[urlId],
-                        level: newLevel,
-                        id: urlId
-                    });
-                }
+            this._level = newLevel;
+            logger.log(`switching to level ${newLevel}`);
+            this.hls.trigger(Event.LEVEL_SWITCH, { level: newLevel });
+            var level = this._levels[newLevel];
+            // check if we need to load playlist for this level
+            if (level.details === undefined || level.details.live === true) {
+                // level not retrieved yet, or live playlist we need to (re)load it
+                logger.log(`(re)loading playlist for level ${newLevel}`);
+                var urlId = level.urlId;
+                this.hls.trigger(Event.LEVEL_LOADING, {
+                    url: level.url[urlId],
+                    level: newLevel,
+                    id: urlId
+                });
             }
         } else {
             // invalid level id given, trigger error
