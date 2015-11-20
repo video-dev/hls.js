@@ -127,9 +127,9 @@ class Hls {
 
   recoverMediaError() {
     logger.log('recoverMediaError');
-    var elem = this.media;
+    var media = this.media;
     this.detachMedia();
-    this.attachMedia(elem);
+    this.attachMedia(media);
   }
 
   /** Return all quality levels **/
