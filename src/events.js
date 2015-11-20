@@ -1,10 +1,12 @@
 export default {
-  // fired when MediaSource has been succesfully attached to video element - data: { video, mediaSource }
-  MSE_ATTACHED: 'hlsMediaSourceAttached',
-  // fired before detaching MediaSource from video element - data: { }
-  MSE_DETACHING: 'hlsMediaSourceDetaching',
-  // fired when MediaSource has been detached from video element - data: { }
-  MSE_DETACHED: 'hlsMediaSourceDetached',
+  // fired before MediaSource is attaching to media element - data: { media }
+  MEDIA_ATTACHING: 'hlsMediaAttaching',
+  // fired when MediaSource has been succesfully attached to media element - data: { }
+  MEDIA_ATTACHED: 'hlsMediaAttached',
+  // fired before detaching MediaSource from media element - data: { }
+  MEDIA_DETACHING: 'hlsMediaDetaching',
+  // fired when MediaSource has been detached from media element - data: { }
+  MEDIA_DETACHED: 'hlsMediaDetached',
   // fired to signal that a manifest loading starts - data: { url : manifestURL}
   MANIFEST_LOADING: 'hlsManifestLoading',
   // fired after manifest has been loaded - data: { levels : [available quality levels] , url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
@@ -17,7 +19,7 @@ export default {
   LEVEL_LOADED: 'hlsLevelLoaded',
   // fired when a level's details have been updated based on previous details, after it has been loaded. - data: { details : levelDetails object, level : id of updated level }
   LEVEL_UPDATED: 'hlsLevelUpdated',
-  // fired when a level's PTS information has been updated after parsing a fragment - data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment } 
+  // fired when a level's PTS information has been updated after parsing a fragment - data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment }
   LEVEL_PTS_UPDATED: 'hlsPTSUpdated',
   // fired when a level switch is requested - data: { level : id of new level }
   LEVEL_SWITCH: 'hlsLevelSwitch',
@@ -39,12 +41,12 @@ export default {
   FRAG_PARSED: 'hlsFragParsed',
   // fired when fragment remuxed MP4 boxes have all been appended into SourceBuffer - data: { frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length} }
   FRAG_BUFFERED: 'hlsFragBuffered',
-  // fired when fragment matching with current video position is changing - data : { frag : fragment object }
+  // fired when fragment matching with current media position is changing - data : { frag : fragment object }
   FRAG_CHANGED: 'hlsFragChanged',
     // Identifier for a FPS drop event - data: {curentDropped, currentDecoded, totalDroppedFrames}
   FPS_DROP: 'hlsFPSDrop',
   // Identifier for an error event - data: { type : error type, details : error details, fatal : if true, hls.js cannot/will not try to recover, if false, hls.js will try to recover,other error specific data}
   ERROR: 'hlsError',
-  // fired when hls.js instance starts destroying. Different from MSE_DETACHED as one could want to detach and reattach a video to the instance of hls.js to handle mid-rolls for example
+  // fired when hls.js instance starts destroying. Different from MSE_DETACHED as one could want to detach and reattach a media to the instance of hls.js to handle mid-rolls for example
   DESTROYING: 'hlsDestroying',
 };
