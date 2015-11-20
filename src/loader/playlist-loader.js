@@ -39,7 +39,7 @@ class PlaylistLoader {
     this.url = url;
     this.id = id1;
     this.id2 = id2;
-    this.loader = new config.loader(config);
+    this.loader = typeof(config.pLoader) != 'undefined' ? new config.pLoader(config) : new config.loader(config);
     this.loader.load(url, '', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.manifestLoadingTimeOut, config.manifestLoadingMaxRetry, config.manifestLoadingRetryDelay);
   }
 
