@@ -58,6 +58,8 @@ class Hls {
             fpsDroppedMonitoringThreshold: 0.2,
             appendErrorMaxRetry: 200,
             loader: XhrLoader,
+            fLoader: undefined,
+            pLoader: undefined,
             abrController: AbrController,
             mediaController: MSEMediaController
         };
