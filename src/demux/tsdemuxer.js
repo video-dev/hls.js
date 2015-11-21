@@ -179,30 +179,9 @@
     }
   }
 
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, duration, decryptdata) {
-    if ((data.length > 0) && (decryptdata != null) && (decryptdata.key != null) && (decryptdata.method === 'AES-128')) {
-      var localthis = this;
-      window.crypto.subtle.importKey('raw', decryptdata.key, { name : 'AES-CBC', length : 128 }, false, ['decrypt']).
-        then(function (importedKey) {
-          decryptdata.iv = decryptdata.iv || new ArrayBuffer(16); 
-          window.crypto.subtle.decrypt({ name : 'AES-CBC', iv : decryptdata.iv }, importedKey, data).
-            then(function (result) {
-              localthis.pushDecrypted(new Uint8Array(result), audioCodec, videoCodec, timeOffset, cc, level, duration);
-              localthis.remux();
-            }).
-            catch (function (err) {
-              localthis.observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorTypes.FRAG_PARSING_ERROR, fatal : false, reason : err.message});
-              return;
-            });
-        }).
-        catch (function (err) {
-          localthis.observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorTypes.FRAG_PARSING_ERROR, fatal : false, reason : err.message});
-          return;
-        });
-    } else {
-      this.pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, duration);
-      this.remux();
-    }
+  push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
+    this.pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, duration);
+    this.remux();
   }
 							
   remux() {
@@ -278,7 +257,7 @@
       case AVStreamTypes.AV_CODEC_ID_METADATA: return 'AV_CODEC_ID_METADATA';
       case AVStreamTypes.AV_CODEC_ID_H264: return 'AV_CODEC_ID_H264';
       default: return streamType;
-	}	
+    }	
   }	  
 	
   _parsePAT(data, offset) {

@@ -20,19 +20,19 @@ class DemuxerInline {
     }
   }
 
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, duration, decryptdata) {
+  push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
     var demuxer = this.demuxer;
     if (!demuxer) {
       // probe for content type
       // by jsalaj - is not working on crypted data (MUST add decrypt first 16bytes)
-      if (TSDemuxer.probe(data) || (decryptdata.key !== null)) {
+      if (TSDemuxer.probe(data)) {
         demuxer = this.demuxer = new TSDemuxer(this.hls,this.remuxer);
       } else {
         this.hls.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found'});
         return;
       }
     }
-    demuxer.push(data,audioCodec,videoCodec,timeOffset,cc,level,duration,decryptdata);
+    demuxer.push(data,audioCodec,videoCodec,timeOffset,cc,level,duration);
   }
 
   remux() {

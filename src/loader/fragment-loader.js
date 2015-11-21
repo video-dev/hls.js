@@ -35,7 +35,7 @@ class FragmentLoader {
   onFragDecryptKeyLoading(event, data) {
     var frag = data.frag;
     this.frag = frag;
-    if ((frag.decryptdata.uri != null) & (frag.decryptdata.key == null)) {
+    if ((frag.decryptdata.uri != null) && (frag.decryptdata.key == null)) {
       if ((this.decrypturl == null) || (frag.decryptdata.uri !== this.decrypturl)) {
         var config = this.hls.config;
         frag.loader = this.loader = new config.loader(config);
