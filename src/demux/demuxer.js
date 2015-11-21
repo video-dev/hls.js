@@ -3,6 +3,7 @@ import DemuxerInline from '../demux/demuxer-inline';
 import DemuxerWorker from '../demux/demuxer-worker';
 import { logger } from '../utils/logger';
 import MP4Remuxer from '../remux/mp4-remuxer';
+import { ErrorTypes } from '../errors';
 
 class Demuxer {
     constructor(hls) {
@@ -37,15 +38,14 @@ class Demuxer {
         }
     }
 
-    push(
+    pushDecrypted(
         data,
         audioCodec,
         videoCodec,
         timeOffset,
         cc,
         level,
-        duration,
-        decryptdata
+        duration
     ) {
         if (this.w) {
             // post fragment payload as transferable objects (no copy)
@@ -58,8 +58,7 @@ class Demuxer {
                     timeOffset: timeOffset,
                     cc: cc,
                     level: level,
-                    duration: duration,
-                    decryptdata: decryptdata
+                    duration: duration
                 },
                 [data]
             );
@@ -71,8 +70,83 @@ class Demuxer {
                 timeOffset,
                 cc,
                 level,
-                duration,
-                decryptdata
+                duration
+            );
+        }
+    }
+
+    push(
+        data,
+        audioCodec,
+        videoCodec,
+        timeOffset,
+        cc,
+        level,
+        duration,
+        decryptdata
+    ) {
+        if (
+            data.byteLength > 0 &&
+            decryptdata != null &&
+            decryptdata.key != null &&
+            decryptdata.method === 'AES-128'
+        ) {
+            var localthis = this;
+            window.crypto.subtle
+                .importKey(
+                    'raw',
+                    decryptdata.key,
+                    { name: 'AES-CBC', length: 128 },
+                    false,
+                    ['decrypt']
+                )
+                .then(function(importedKey) {
+                    decryptdata.iv = decryptdata.iv || new ArrayBuffer(16);
+                    window.crypto.subtle
+                        .decrypt(
+                            { name: 'AES-CBC', iv: decryptdata.iv },
+                            importedKey,
+                            data
+                        )
+                        .then(function(result) {
+                            localthis.pushDecrypted(
+                                result,
+                                audioCodec,
+                                videoCodec,
+                                timeOffset,
+                                cc,
+                                level,
+                                duration
+                            );
+                        })
+                        .catch(function(err) {
+                            localthis.hls.trigger(Event.ERROR, {
+                                type: ErrorTypes.MEDIA_ERROR,
+                                details: ErrorTypes.FRAG_PARSING_ERROR,
+                                fatal: false,
+                                reason: err.message
+                            });
+                            return;
+                        });
+                })
+                .catch(function(err) {
+                    localthis.hls.trigger(Event.ERROR, {
+                        type: ErrorTypes.MEDIA_ERROR,
+                        details: ErrorTypes.FRAG_PARSING_ERROR,
+                        fatal: false,
+                        reason: err.message
+                    });
+                    return;
+                });
+        } else {
+            this.pushDecrypted(
+                data,
+                audioCodec,
+                videoCodec,
+                timeOffset,
+                cc,
+                level,
+                duration
             );
         }
     }

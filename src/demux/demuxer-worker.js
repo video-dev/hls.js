@@ -32,8 +32,7 @@ var DemuxerWorker = function(self) {
                     ev.data.timeOffset,
                     ev.data.cc,
                     ev.data.level,
-                    ev.data.duration,
-                    ev.data.decryptdata
+                    ev.data.duration
                 );
                 break;
             default:
