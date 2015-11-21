@@ -9,6 +9,7 @@ import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
 import AbrController from    './controller/abr-controller';
 import MSEMediaController from './controller/mse-media-controller';
+import NodeStreamMediaController from './controller/node-stream-media-controller';
 import LevelController from  './controller/level-controller';
 //import FPSController from './controller/fps-controller';
 import {logger, enableLogs} from './utils/logger';
@@ -57,7 +58,8 @@ class Hls {
       fLoader: undefined,
       pLoader: undefined,
       abrController : AbrController,
-      mediaController: MSEMediaController
+      //mediaController: MSEMediaController
+      mediaController: NodeStreamMediaController
     };
     for (var prop in configDefault) {
         if (prop in config) { continue; }
