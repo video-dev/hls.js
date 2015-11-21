@@ -23,7 +23,6 @@ class DemuxerInline {
         var demuxer = this.demuxer;
         if (!demuxer) {
             // probe for content type
-            // by jsalaj - is not working on crypted data (MUST add decrypt first 16bytes)
             if (TSDemuxer.probe(data)) {
                 demuxer = this.demuxer = new TSDemuxer(this.hls, this.remuxer);
             } else {
