@@ -364,7 +364,7 @@ class BufferController {
                     frag.loadIdx = this.fragLoadIdx;
                     this.fragCurrent = frag;
                     this.startFragmentRequested = true;
-                    hls.trigger(Event.FRAG_LOADING, { frag: frag });
+                    hls.trigger(Event.KEY_LOADING, { frag: frag });
                     this.state = State.LOADING;
                 }
                 break;
@@ -1229,6 +1229,8 @@ class BufferController {
             case ErrorDetails.FRAG_LOOP_LOADING_ERROR:
             case ErrorDetails.LEVEL_LOAD_ERROR:
             case ErrorDetails.LEVEL_LOAD_TIMEOUT:
+            case ErrorDetails.KEY_LOAD_ERROR:
+            case ErrorDetails.KEY_LOAD_TIMEOUT:
                 // if fatal error, stop processing, otherwise move to IDLE to retry loading
                 logger.warn(
                     `buffer controller: ${

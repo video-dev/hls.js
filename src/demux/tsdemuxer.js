@@ -15,21 +15,6 @@ import ExpGolomb from './exp-golomb';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
-const AVStreamTypes = {
-    STREAM_TYPE_PRIVATE_DATA: 0x06,
-    STREAM_AUDIO_LANG_TAG: 0x0a,
-    AV_CODEC_ID_MP3_1: 0x03,
-    AV_CODEC_ID_MP3_2: 0x04,
-    AV_CODEC_ID_AAC: 0x0f,
-    AV_CODEC_ID_AC3: 0x6a,
-    AV_CODEC_ID_EAC3: 0x7a,
-    AV_CODEC_ID_DTS: 0x7b,
-    AV_CODEC_ID_DVB_TELETEXT: 0x56,
-    AV_CODEC_ID_DVB_SUBTITLE: 0x59,
-    AV_CODEC_ID_METADATA: 0x15,
-    AV_CODEC_ID_H264: 0x1b
-};
-
 class TSDemuxer {
     constructor(observer, remuxerClass) {
         this.observer = observer;
@@ -53,48 +38,31 @@ class TSDemuxer {
         }
     }
 
-    createEmptyAudioTrack() {
-        return {
-            type: 'audio',
-            id: -1,
-            sequenceNumber: 0,
-            samples: [],
-            len: 0,
-            codecType: null,
-            lang: null
-        };
-    }
-
-    createEmptyVideoTrack() {
-        return {
+    switchLevel() {
+        this.pmtParsed = false;
+        this._pmtId = -1;
+        this._avcTrack = {
             type: 'video',
             id: -1,
             sequenceNumber: 0,
             samples: [],
             len: 0,
-            nbNalu: 0,
-            codecType: null
+            nbNalu: 0
         };
-    }
-
-    createEmptyID3Track() {
-        return {
+        this._aacTrack = {
+            type: 'audio',
+            id: -1,
+            sequenceNumber: 0,
+            samples: [],
+            len: 0
+        };
+        this._id3Track = {
             type: 'id3',
             id: -1,
             sequenceNumber: 0,
             samples: [],
-            len: 0,
-            codecType: null
+            len: 0
         };
-    }
-
-    switchLevel() {
-        this.pmtParsed = false;
-        this._pmtId = -1;
-        this._audioTracks = [];
-        this._avcTrack = this.createEmptyVideoTrack();
-        this._aacTrack = this.createEmptyAudioTrack();
-        this._id3Track = this.createEmptyID3Track();
         this.remuxer.switchLevel();
     }
 
@@ -221,16 +189,10 @@ class TSDemuxer {
             }
         }
         // parse last PES packet
-        if (
-            avcData &&
-            this._avcTrack.codecType === AVStreamTypes.AV_CODEC_ID_H264
-        ) {
+        if (avcData) {
             this._parseAVCPES(this._parsePES(avcData));
         }
-        if (
-            aacData &&
-            this._aacTrack.codecType === AVStreamTypes.AV_CODEC_ID_AAC
-        ) {
+        if (aacData) {
             this._parseAACPES(this._parsePES(aacData));
         }
         if (id3Data) {
@@ -266,86 +228,6 @@ class TSDemuxer {
         this._duration = 0;
     }
 
-    getStreamLang(data) {
-        var result = null;
-        if (data.length > 0) {
-            var len = data.length,
-                i = 0;
-            while (i < len) {
-                var descTag = data[i + 0];
-                var descLen = data[i + 1];
-                // audio language
-                if (descTag === AVStreamTypes.STREAM_AUDIO_LANG_TAG) {
-                    result = data.subarray(i + 2, i + 2 + 3);
-                    result = String.fromCharCode.apply(null, result);
-                    break;
-                } else if (descTag === AVStreamTypes.AV_CODEC_ID_DVB_SUBTITLE) {
-                    result = data.subarray(i + 2, i + 2 + 3);
-                    result = String.fromCharCode.apply(null, result);
-                    break;
-                }
-                // move to next section
-                i += descLen + 2;
-            }
-        }
-        return result;
-    }
-
-    getPrivateStreamType(data, streamType) {
-        var result = streamType;
-        if (streamType === AVStreamTypes.STREAM_TYPE_PRIVATE_DATA) {
-            if (data.length > 0) {
-                var len = data.length,
-                    i = 0;
-                while (i < len) {
-                    var descTag = data[i + 0];
-                    var descLen = data[i + 1];
-                    // valid stream type ???
-                    if (
-                        descTag === AVStreamTypes.AV_CODEC_ID_AC3 ||
-                        descTag === AVStreamTypes.AV_CODEC_ID_EAC3 ||
-                        descTag === AVStreamTypes.AV_CODEC_ID_DTS ||
-                        descTag === AVStreamTypes.AV_CODEC_ID_DVB_TELETEXT ||
-                        descTag === AVStreamTypes.AV_CODEC_ID_DVB_SUBTITLE
-                    ) {
-                        result = descTag;
-                        break;
-                    }
-                    // move to next section
-                    i += descLen + 2;
-                }
-            }
-        }
-        return result;
-    }
-
-    convertStreamTypeToName(streamType) {
-        switch (streamType) {
-            case AVStreamTypes.AV_CODEC_ID_MP3_1:
-                return 'AV_CODEC_ID_MP3_1';
-            case AVStreamTypes.AV_CODEC_ID_MP3_2:
-                return 'AV_CODEC_ID_MP3_2';
-            case AVStreamTypes.AV_CODEC_ID_AAC:
-                return 'AV_CODEC_ID_AAC';
-            case AVStreamTypes.AV_CODEC_ID_AC3:
-                return 'AV_CODEC_ID_AC3';
-            case AVStreamTypes.AV_CODEC_ID_EAC3:
-                return 'AV_CODEC_ID_EAC3';
-            case AVStreamTypes.AV_CODEC_ID_DTS:
-                return 'AV_CODEC_ID_DTS';
-            case AVStreamTypes.AV_CODEC_ID_DVB_TELETEXT:
-                return 'AV_CODEC_ID_DVB_TELETEXT';
-            case AVStreamTypes.AV_CODEC_ID_DVB_SUBTITLE:
-                return 'AV_CODEC_ID_DVB_SUBTITLE';
-            case AVStreamTypes.AV_CODEC_ID_METADATA:
-                return 'AV_CODEC_ID_METADATA';
-            case AVStreamTypes.AV_CODEC_ID_H264:
-                return 'AV_CODEC_ID_H264';
-            default:
-                return streamType;
-        }
-    }
-
     _parsePAT(data, offset) {
         // skip the PSI header and parse the first PMT entry
         this._pmtId = ((data[offset + 10] & 0x1f) << 8) | data[offset + 11];
@@ -353,14 +235,7 @@ class TSDemuxer {
     }
 
     _parsePMT(data, offset) {
-        var sectionLength,
-            tableEnd,
-            programInfoLength,
-            pid,
-            esInfoLength,
-            streamLang = null,
-            streamType,
-            audioTrack;
+        var sectionLength, tableEnd, programInfoLength, pid;
         sectionLength = ((data[offset + 1] & 0x0f) << 8) | data[offset + 2];
         tableEnd = offset + 3 + sectionLength - 4;
         // to determine where the table is, we have to figure out how
@@ -370,104 +245,30 @@ class TSDemuxer {
         // advance the offset to the first entry in the mapping table
         offset += 12 + programInfoLength;
         while (offset < tableEnd) {
-            streamType = data[offset];
             pid = ((data[offset + 1] & 0x1f) << 8) | data[offset + 2];
-            esInfoLength = ((data[offset + 3] & 0x0f) << 8) | data[offset + 4];
-            if (esInfoLength) {
-                var uint8Arr = data.subarray(
-                    offset + 5,
-                    offset + 5 + esInfoLength
-                );
-                // validate private stream type
-                streamType = this.getPrivateStreamType(uint8Arr, streamType);
-                // get audio language
-                streamLang = this.getStreamLang(uint8Arr);
-            } else {
-                streamLang = null;
-            }
-            switch (streamType) {
-                // ISO/IEC 11172 Audio (MPEG-1)
-                case AVStreamTypes.AV_CODEC_ID_MP3_1:
-                case AVStreamTypes.AV_CODEC_ID_MP3_2:
-                case AVStreamTypes.AV_CODEC_ID_AC3:
-                    logger.log(
-                        'audio stream: ' +
-                            this.convertStreamTypeToName(streamType) +
-                            ' (pid=' +
-                            pid +
-                            ', streamLang=' +
-                            streamLang +
-                            ')'
-                    );
-                    audioTrack = this.createEmptyAudioTrack();
-                    audioTrack.codecType = streamType;
-                    audioTrack.lang = streamLang;
-                    audioTrack.id = pid;
-                    // save stream to audio list
-                    this._audioTracks.push(audioTrack);
-                    break;
+            switch (data[offset]) {
                 // ISO/IEC 13818-7 ADTS AAC (MPEG-2 lower bit-rate audio)
-                case AVStreamTypes.AV_CODEC_ID_AAC:
-                    // save stream to audio list
-                    audioTrack = this.createEmptyAudioTrack();
-                    audioTrack.codecType = streamType;
-                    audioTrack.lang = streamLang;
-                    audioTrack.id = pid;
-                    // prepare AAC stream track
-                    this._audioTracks.push(audioTrack);
-                    this._aacTrack.codecType = streamType;
-                    this._aacTrack.lang = streamLang;
+                case 0x0f:
+                    //logger.log('AAC PID:'  + pid);
                     this._aacTrack.id = pid;
                     break;
                 // Packetized metadata (ID3)
-                case AVStreamTypes.AV_CODEC_ID_METADATA:
+                case 0x15:
                     //logger.log('ID3 PID:'  + pid);
-                    this._id3Track.codecType = streamType;
                     this._id3Track.id = pid;
                     break;
                 // ITU-T Rec. H.264 and ISO/IEC 14496-10 (lower bit-rate video)
-                case AVStreamTypes.AV_CODEC_ID_H264:
+                case 0x1b:
                     //logger.log('AVC PID:'  + pid);
-                    this._avcTrack.codecType = streamType;
                     this._avcTrack.id = pid;
                     break;
-                // subtitles
-                case AVStreamTypes.AV_CODEC_ID_DVB_SUBTITLE:
-                    logger.log(
-                        'subtitle stream: ' +
-                            this.convertStreamTypeToName(streamType) +
-                            ' (pid=' +
-                            pid +
-                            ', streamLang=' +
-                            streamLang +
-                            ')'
-                    );
-                    break;
-                // teletext
-                case AVStreamTypes.AV_CODEC_ID_DVB_TELETEXT:
-                    logger.log(
-                        'teletext stream: ' +
-                            this.convertStreamTypeToName(streamType) +
-                            ' (pid=' +
-                            pid +
-                            ')'
-                    );
-                    break;
                 default:
-                    logger.log(
-                        'unknown stream type: ' +
-                            streamType +
-                            ' (pid=' +
-                            pid +
-                            ', streamLang=' +
-                            streamLang +
-                            ')'
-                    );
+                    logger.log('unkown stream type:' + data[offset]);
                     break;
             }
             // move to the next table entry
             // skip past the elementary stream descriptors, if present
-            offset += esInfoLength + 5;
+            offset += (((data[offset + 3] & 0x0f) << 8) | data[offset + 4]) + 5;
         }
     }
 
@@ -539,17 +340,19 @@ class TSDemuxer {
     }
 
     _parseAVCPES(pes) {
-        var units,
-            track = this._avcTrack,
+        var track = this._avcTrack,
+            samples = track.samples,
+            units = this._parseAVCNALu(pes.data),
+            units2 = [],
+            debug = false,
+            key = false,
+            length = 0,
             avcSample,
-            key = false;
-        units = this._parseAVCNALu(pes.data);
+            push;
         // no NALu found
-        if ((units.length === 0) & (this._avcTrack.samples.length > 0)) {
+        if (units.length === 0 && samples.length > 0) {
             // append pes.data to previous NAL unit
-            var lastavcSample = this._avcTrack.samples[
-                this._avcTrack.samples.length - 1
-            ];
+            var lastavcSample = samples[samples.length - 1];
             var lastUnit =
                 lastavcSample.units.units[lastavcSample.units.units.length - 1];
             var tmp = new Uint8Array(
@@ -559,28 +362,40 @@ class TSDemuxer {
             tmp.set(pes.data, lastUnit.data.byteLength);
             lastUnit.data = tmp;
             lastavcSample.units.length += pes.data.byteLength;
-            this._avcTrack.len += pes.data.byteLength;
+            track.len += pes.data.byteLength;
         }
         //free pes.data to save up some memory
         pes.data = null;
-        //var debugString = '';
-        units.units.forEach(unit => {
+        var debugString = '';
+        units.forEach(unit => {
             switch (unit.type) {
                 //NDR
-                // case 1:
-                //   debugString += 'NDR ';
-                //   break;
+                case 1:
+                    push = true;
+                    if (debug) {
+                        debugString += 'NDR ';
+                    }
+                    break;
                 //IDR
                 case 5:
-                    //debugString += 'IDR ';
+                    push = true;
+                    if (debug) {
+                        debugString += 'IDR ';
+                    }
                     key = true;
                     break;
-                //case 6:
-                //  debugString += 'SEI ';
-                //  break;
+                case 6:
+                    push = true;
+                    if (debug) {
+                        debugString += 'SEI ';
+                    }
+                    break;
                 //SPS
                 case 7:
-                    //debugString += 'SPS ';
+                    push = true;
+                    if (debug) {
+                        debugString += 'SPS ';
+                    }
                     if (!track.sps) {
                         var expGolombDecoder = new ExpGolomb(unit.data);
                         var config = expGolombDecoder.readSPS();
@@ -607,32 +422,47 @@ class TSDemuxer {
                     break;
                 //PPS
                 case 8:
-                    //debugString += 'PPS ';
+                    push = true;
+                    if (debug) {
+                        debugString += 'PPS ';
+                    }
                     if (!track.pps) {
                         track.pps = [unit.data];
                     }
                     break;
-                //case 9:
-                //  debugString += 'AUD ';
+                case 9:
+                    push = true;
+                    if (debug) {
+                        debugString += 'AUD ';
+                    }
+                    break;
                 default:
+                    push = false;
+                    debugString += 'unknown NAL ' + unit.type + ' ';
                     break;
             }
+            if (push) {
+                units2.push(unit);
+                length += unit.data.byteLength;
+            }
         });
-        //logger.log(debugString);
+        if (debug || debugString.length) {
+            logger.log(debugString);
+        }
         //build sample from PES
         // Annex B to MP4 conversion to be done
-        if (units.length) {
+        if (units2.length) {
             // only push AVC sample if keyframe already found. browsers expect a keyframe at first to start decoding
             if (key === true || track.sps) {
                 avcSample = {
-                    units: units,
+                    units: { units: units2, length: length },
                     pts: pes.pts,
                     dts: pes.dts,
                     key: key
                 };
-                this._avcTrack.samples.push(avcSample);
-                this._avcTrack.len += units.length;
-                this._avcTrack.nbNalu += units.units.length;
+                samples.push(avcSample);
+                track.len += length;
+                track.nbNalu += units2.length;
             }
         }
     }
@@ -647,8 +477,7 @@ class TSDemuxer {
             unit,
             unitType,
             lastUnitStart,
-            lastUnitType,
-            length = 0;
+            lastUnitType;
         //logger.log('PES:' + Hex.hexDump(array));
         while (i < len) {
             value = array[i++];
@@ -681,7 +510,6 @@ class TSDemuxer {
                                 ),
                                 type: lastUnitType
                             };
-                            length += i - state - 1 - lastUnitStart;
                             //logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
                             units.push(unit);
                         } else {
@@ -731,11 +559,10 @@ class TSDemuxer {
                 data: array.subarray(lastUnitStart, len),
                 type: lastUnitType
             };
-            length += len - lastUnitStart;
             units.push(unit);
             //logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
         }
-        return { units: units, length: length };
+        return units;
     }
 
     _parseAACPES(pes) {

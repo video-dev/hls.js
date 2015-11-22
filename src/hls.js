@@ -14,6 +14,7 @@ import LevelController from './controller/level-controller';
 import { logger, enableLogs } from './utils/logger';
 import XhrLoader from './utils/xhr-loader';
 import EventEmitter from 'events';
+import KeyLoader from './loader/key-loader';
 
 class Hls {
     static isSupported() {
@@ -95,6 +96,7 @@ class Hls {
         this.levelController = new LevelController(this);
         this.abrController = new config.abrController(this);
         this.bufferController = new BufferController(this);
+        this.keyLoader = new KeyLoader(this);
         //this.fpsController = new FPSController(this);
     }
 
@@ -105,6 +107,7 @@ class Hls {
         this.fragmentLoader.destroy();
         this.levelController.destroy();
         this.bufferController.destroy();
+        this.keyLoader.destroy();
         //this.fpsController.destroy();
         this.url = null;
         this.detachVideo();

@@ -46,5 +46,9 @@ export default {
     // Identifier for an error event - data: { type : error type, details : error details, fatal : if true, hls.js cannot/will not try to recover, if false, hls.js will try to recover,other error specific data}
     ERROR: 'hlsError',
     // fired when hls.js instance starts destroying. Different from MSE_DETACHED as one could want to detach and reattach a video to the instance of hls.js to handle mid-rolls for example
-    DESTROYING: 'hlsDestroying'
+    DESTROYING: 'hlsDestroying',
+    // fired when a decrypt key loading starts - data: { frag : fragment object}
+    KEY_LOADING: 'hlsKeyLoading',
+    // fired when a decrypt key loading is completed - data: { frag : fragment object, payload : key payload, stats : { trequest, tfirst, tload, length}}
+    KEY_LOADED: 'hlsKeyLoaded'
 };
