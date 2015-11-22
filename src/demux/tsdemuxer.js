@@ -319,17 +319,19 @@ class TSDemuxer {
     }
 
     _parseAVCPES(pes) {
-        var units,
-            track = this._avcTrack,
+        var track = this._avcTrack,
+            samples = track.samples,
+            units = this._parseAVCNALu(pes.data),
+            units2 = [],
+            debug = false,
+            key = false,
+            length = 0,
             avcSample,
-            key = false;
-        units = this._parseAVCNALu(pes.data);
+            push;
         // no NALu found
-        if ((units.length === 0) & (this._avcTrack.samples.length > 0)) {
+        if (units.length === 0 && samples.length > 0) {
             // append pes.data to previous NAL unit
-            var lastavcSample = this._avcTrack.samples[
-                this._avcTrack.samples.length - 1
-            ];
+            var lastavcSample = samples[samples.length - 1];
             var lastUnit =
                 lastavcSample.units.units[lastavcSample.units.units.length - 1];
             var tmp = new Uint8Array(
@@ -339,28 +341,40 @@ class TSDemuxer {
             tmp.set(pes.data, lastUnit.data.byteLength);
             lastUnit.data = tmp;
             lastavcSample.units.length += pes.data.byteLength;
-            this._avcTrack.len += pes.data.byteLength;
+            track.len += pes.data.byteLength;
         }
         //free pes.data to save up some memory
         pes.data = null;
-        //var debugString = '';
-        units.units.forEach(unit => {
+        var debugString = '';
+        units.forEach(unit => {
             switch (unit.type) {
                 //NDR
-                // case 1:
-                //   debugString += 'NDR ';
-                //   break;
+                case 1:
+                    push = true;
+                    if (debug) {
+                        debugString += 'NDR ';
+                    }
+                    break;
                 //IDR
                 case 5:
-                    //debugString += 'IDR ';
+                    push = true;
+                    if (debug) {
+                        debugString += 'IDR ';
+                    }
                     key = true;
                     break;
-                //case 6:
-                //  debugString += 'SEI ';
-                //  break;
+                case 6:
+                    push = true;
+                    if (debug) {
+                        debugString += 'SEI ';
+                    }
+                    break;
                 //SPS
                 case 7:
-                    //debugString += 'SPS ';
+                    push = true;
+                    if (debug) {
+                        debugString += 'SPS ';
+                    }
                     if (!track.sps) {
                         var expGolombDecoder = new ExpGolomb(unit.data);
                         var config = expGolombDecoder.readSPS();
@@ -387,32 +401,47 @@ class TSDemuxer {
                     break;
                 //PPS
                 case 8:
-                    //debugString += 'PPS ';
+                    push = true;
+                    if (debug) {
+                        debugString += 'PPS ';
+                    }
                     if (!track.pps) {
                         track.pps = [unit.data];
                     }
                     break;
-                //case 9:
-                //  debugString += 'AUD ';
+                case 9:
+                    push = true;
+                    if (debug) {
+                        debugString += 'AUD ';
+                    }
+                    break;
                 default:
+                    push = false;
+                    debugString += 'unknown NAL ' + unit.type + ' ';
                     break;
             }
+            if (push) {
+                units2.push(unit);
+                length += unit.data.byteLength;
+            }
         });
-        //logger.log(debugString);
+        if (debug || debugString.length) {
+            logger.log(debugString);
+        }
         //build sample from PES
         // Annex B to MP4 conversion to be done
-        if (units.length) {
+        if (units2.length) {
             // only push AVC sample if keyframe already found. browsers expect a keyframe at first to start decoding
             if (key === true || track.sps) {
                 avcSample = {
-                    units: units,
+                    units: { units: units2, length: length },
                     pts: pes.pts,
                     dts: pes.dts,
                     key: key
                 };
-                this._avcTrack.samples.push(avcSample);
-                this._avcTrack.len += units.length;
-                this._avcTrack.nbNalu += units.units.length;
+                samples.push(avcSample);
+                track.len += length;
+                track.nbNalu += units2.length;
             }
         }
     }
@@ -427,8 +456,7 @@ class TSDemuxer {
             unit,
             unitType,
             lastUnitStart,
-            lastUnitType,
-            length = 0;
+            lastUnitType;
         //logger.log('PES:' + Hex.hexDump(array));
         while (i < len) {
             value = array[i++];
@@ -461,7 +489,6 @@ class TSDemuxer {
                                 ),
                                 type: lastUnitType
                             };
-                            length += i - state - 1 - lastUnitStart;
                             //logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
                             units.push(unit);
                         } else {
@@ -511,11 +538,10 @@ class TSDemuxer {
                 data: array.subarray(lastUnitStart, len),
                 type: lastUnitType
             };
-            length += len - lastUnitStart;
             units.push(unit);
             //logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
         }
-        return { units: units, length: length };
+        return units;
     }
 
     _parseAACPES(pes) {
