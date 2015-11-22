@@ -39,7 +39,7 @@ class PlaylistLoader {
         this.id = id1;
         this.id2 = id2;
         this.loader =
-            typeof config.pLoader != 'undefined'
+            typeof config.pLoader !== 'undefined'
                 ? new config.pLoader(config)
                 : new config.loader(config);
         this.loader.load(

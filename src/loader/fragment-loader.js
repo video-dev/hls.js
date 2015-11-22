@@ -26,7 +26,7 @@ class FragmentLoader {
         this.frag.loaded = 0;
         var config = this.hls.config;
         frag.loader = this.loader =
-            typeof config.fLoader != 'undefined'
+            typeof config.fLoader !== 'undefined'
                 ? new config.fLoader(config)
                 : new config.loader(config);
         this.loader.load(
