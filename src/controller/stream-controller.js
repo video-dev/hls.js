@@ -759,7 +759,7 @@ class StreamController {
   }
 
   onMediaEnded() {
-    logger.log('video ended');
+    logger.log('media ended');
     // reset startPosition and lastCurrentTime to restart playback @ stream beginning
     this.startPosition = this.lastCurrentTime = 0;
   }

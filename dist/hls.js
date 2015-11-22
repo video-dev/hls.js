@@ -587,18 +587,16 @@ var LevelController = (function () {
           clearInterval(this.timer);
           this.timer = null;
         }
-        if (this._level !== newLevel) {
-          this._level = newLevel;
-          _utilsLogger.logger.log('switching to level ' + newLevel);
-          this.hls.trigger(_events2['default'].LEVEL_SWITCH, { level: newLevel });
-          var level = this._levels[newLevel];
-          // check if we need to load playlist for this level
-          if (level.details === undefined || level.details.live === true) {
-            // level not retrieved yet, or live playlist we need to (re)load it
-            _utilsLogger.logger.log('(re)loading playlist for level ' + newLevel);
-            var urlId = level.urlId;
-            this.hls.trigger(_events2['default'].LEVEL_LOADING, { url: level.url[urlId], level: newLevel, id: urlId });
-          }
+        this._level = newLevel;
+        _utilsLogger.logger.log('switching to level ' + newLevel);
+        this.hls.trigger(_events2['default'].LEVEL_SWITCH, { level: newLevel });
+        var level = this._levels[newLevel];
+        // check if we need to load playlist for this level
+        if (level.details === undefined || level.details.live === true) {
+          // level not retrieved yet, or live playlist we need to (re)load it
+          _utilsLogger.logger.log('(re)loading playlist for level ' + newLevel);
+          var urlId = level.urlId;
+          this.hls.trigger(_events2['default'].LEVEL_LOADING, { url: level.url[urlId], level: newLevel, id: urlId });
         }
       } else {
         // invalid level id given, trigger error
@@ -1606,7 +1604,7 @@ var MSEMediaController = (function () {
   }, {
     key: 'onMediaEnded',
     value: function onMediaEnded() {
-      _utilsLogger.logger.log('video ended');
+      _utilsLogger.logger.log('media ended');
       // reset startPosition and lastCurrentTime to restart playback @ stream beginning
       this.startPosition = this.lastCurrentTime = 0;
     }
@@ -1878,10 +1876,11 @@ var MSEMediaController = (function () {
       this.onvseeked = this.onMediaSeeked.bind(this);
       this.onvmetadata = this.onMediaMetadata.bind(this);
       this.onvended = this.onMediaEnded.bind(this);
-      this.media.addEventListener('seeking', this.onvseeking);
-      this.media.addEventListener('seeked', this.onvseeked);
-      this.media.addEventListener('loadedmetadata', this.onvmetadata);
-      this.media.addEventListener('ended', this.onvended);
+      var media = this.media;
+      media.addEventListener('seeking', this.onvseeking);
+      media.addEventListener('seeked', this.onvseeked);
+      media.addEventListener('loadedmetadata', this.onvmetadata);
+      media.addEventListener('ended', this.onvended);
       if (this.levels && this.config.autoStartLoad) {
         this.startLoad();
       }
@@ -2841,43 +2840,59 @@ var TSDemuxer = (function () {
     value: function _parseAVCPES(pes) {
       var _this = this;
 
-      var units,
-          track = this._avcTrack,
+      var track = this._avcTrack,
+          samples = track.samples,
+          units = this._parseAVCNALu(pes.data),
+          units2 = [],
+          debug = false,
+          key = false,
+          length = 0,
           avcSample,
-          key = false;
-      units = this._parseAVCNALu(pes.data);
+          push;
       // no NALu found
-      if (units.length === 0 & this._avcTrack.samples.length > 0) {
+      if (units.length === 0 && samples.length > 0) {
         // append pes.data to previous NAL unit
-        var lastavcSample = this._avcTrack.samples[this._avcTrack.samples.length - 1];
+        var lastavcSample = samples[samples.length - 1];
         var lastUnit = lastavcSample.units.units[lastavcSample.units.units.length - 1];
         var tmp = new Uint8Array(lastUnit.data.byteLength + pes.data.byteLength);
         tmp.set(lastUnit.data, 0);
         tmp.set(pes.data, lastUnit.data.byteLength);
         lastUnit.data = tmp;
         lastavcSample.units.length += pes.data.byteLength;
-        this._avcTrack.len += pes.data.byteLength;
+        track.len += pes.data.byteLength;
       }
       //free pes.data to save up some memory
       pes.data = null;
-      //var debugString = '';
-      units.units.forEach(function (unit) {
+      var debugString = '';
+      units.forEach(function (unit) {
         switch (unit.type) {
           //NDR
-          // case 1:
-          //   debugString += 'NDR ';
-          //   break;
+          case 1:
+            push = true;
+            if (debug) {
+              debugString += 'NDR ';
+            }
+            break;
           //IDR
           case 5:
-            //debugString += 'IDR ';
+            push = true;
+            if (debug) {
+              debugString += 'IDR ';
+            }
             key = true;
             break;
-          //case 6:
-          //  debugString += 'SEI ';
-          //  break;
+          case 6:
+            push = true;
+            if (debug) {
+              debugString += 'SEI ';
+            }
+            break;
           //SPS
           case 7:
-            //debugString += 'SPS ';
+            push = true;
+            if (debug) {
+              debugString += 'SPS ';
+            }
             if (!track.sps) {
               var expGolombDecoder = new _expGolomb2['default'](unit.data);
               var config = expGolombDecoder.readSPS();
@@ -2903,27 +2918,42 @@ var TSDemuxer = (function () {
             break;
           //PPS
           case 8:
-            //debugString += 'PPS ';
+            push = true;
+            if (debug) {
+              debugString += 'PPS ';
+            }
             if (!track.pps) {
               track.pps = [unit.data];
             }
             break;
-          //case 9:
-          //  debugString += 'AUD ';
+          case 9:
+            push = true;
+            if (debug) {
+              debugString += 'AUD ';
+            }
+            break;
           default:
+            push = false;
+            debugString += 'unknown NAL ' + unit.type + ' ';
             break;
         }
+        if (push) {
+          units2.push(unit);
+          length += unit.data.byteLength;
+        }
       });
-      //logger.log(debugString);
+      if (debug || debugString.length) {
+        _utilsLogger.logger.log(debugString);
+      }
       //build sample from PES
       // Annex B to MP4 conversion to be done
-      if (units.length) {
+      if (units2.length) {
         // only push AVC sample if keyframe already found. browsers expect a keyframe at first to start decoding
         if (key === true || track.sps) {
-          avcSample = { units: units, pts: pes.pts, dts: pes.dts, key: key };
-          this._avcTrack.samples.push(avcSample);
-          this._avcTrack.len += units.length;
-          this._avcTrack.nbNalu += units.units.length;
+          avcSample = { units: { units: units2, length: length }, pts: pes.pts, dts: pes.dts, key: key };
+          samples.push(avcSample);
+          track.len += length;
+          track.nbNalu += units2.length;
         }
       }
     }
@@ -2939,8 +2969,7 @@ var TSDemuxer = (function () {
           unit,
           unitType,
           lastUnitStart,
-          lastUnitType,
-          length = 0;
+          lastUnitType;
       //logger.log('PES:' + Hex.hexDump(array));
       while (i < len) {
         value = array[i++];
@@ -2967,7 +2996,6 @@ var TSDemuxer = (function () {
               //logger.log('find NALU @ offset:' + i + ',type:' + unitType);
               if (lastUnitStart) {
                 unit = { data: array.subarray(lastUnitStart, i - state - 1), type: lastUnitType };
-                length += i - state - 1 - lastUnitStart;
                 //logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
                 units.push(unit);
               } else {
@@ -3004,11 +3032,10 @@ var TSDemuxer = (function () {
       }
       if (lastUnitStart) {
         unit = { data: array.subarray(lastUnitStart, len), type: lastUnitType };
-        length += len - lastUnitStart;
         units.push(unit);
         //logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
       }
-      return { units: units, length: length };
+      return units;
     }
   }, {
     key: '_parseAACPES',
@@ -3578,6 +3605,8 @@ var Hls = (function () {
       fpsDroppedMonitoringThreshold: 0.2,
       appendErrorMaxRetry: 200,
       loader: _utilsXhrLoader2['default'],
+      fLoader: undefined,
+      pLoader: undefined,
       abrController: _controllerAbrController2['default'],
       mediaController: _controllerMseMediaController2['default']
     };
@@ -3849,7 +3878,7 @@ var FragmentLoader = (function () {
       this.frag = frag;
       this.frag.loaded = 0;
       var config = this.hls.config;
-      frag.loader = this.loader = new config.loader(config);
+      frag.loader = this.loader = typeof config.fLoader !== 'undefined' ? new config.fLoader(config) : new config.loader(config);
       this.loader.load(frag.url, 'arraybuffer', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.fragLoadingTimeOut, config.fragLoadingMaxRetry, config.fragLoadingRetryDelay, this.loadprogress.bind(this), frag);
     }
   }, {
@@ -3951,7 +3980,7 @@ var PlaylistLoader = (function () {
       this.url = url;
       this.id = id1;
       this.id2 = id2;
-      this.loader = new config.loader(config);
+      this.loader = typeof config.pLoader !== 'undefined' ? new config.pLoader(config) : new config.loader(config);
       this.loader.load(url, '', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.manifestLoadingTimeOut, config.manifestLoadingMaxRetry, config.manifestLoadingRetryDelay);
     }
   }, {
