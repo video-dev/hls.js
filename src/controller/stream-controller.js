@@ -9,30 +9,11 @@
  *
 */
 
-import Stream from 'stream-browserify';
 import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import {logger} from '../utils/logger';
 import LevelHelper from '../helper/level-helper';
 import {ErrorTypes, ErrorDetails} from '../errors';
-
-class ReadableStreamBuffer extends Stream.Readable {
-  constructor(streamOpts) {
-    super(streamOpts);
-    this.buffer = [];
-  }
-  getBufferList() {
-    return this.buffer;
-  }
-  _read() {
-    var buffer = this.buffer;
-    while(buffer.length) {
-      if (!this.push(buffer.unshift())) {
-        return;
-      }
-    }
-  }
-}
 
 const State = {
   ERROR : 'ERROR',
@@ -72,13 +53,6 @@ class StreamController {
     hls.on(Event.MANIFEST_PARSED, this.onmp);
     hls.on(Event.BUFFER_APPENDED, this.onbufapp);
     hls.on(Event.BUFFER_APPEND_FAIL, this.onbuffail);
-
-    // Readable stream implementation
-    this.readable = new ReadableStreamBuffer();
-  }
-
-  getReadableStream() {
-    return this.readable;
   }
 
   destroy() {
