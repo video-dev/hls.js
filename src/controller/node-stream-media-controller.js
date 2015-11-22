@@ -129,12 +129,14 @@ class NodeStreamMediaController {
     if (this.sourceBuffer) {
       for(var type in this.sourceBuffer) {
         var sb = this.sourceBuffer[type];
+        /*
         try {
           this.mediaSource.removeSourceBuffer(sb);
           sb.removeEventListener('updateend', this.onsbue);
           sb.removeEventListener('error', this.onsbe);
         } catch(err) {
         }
+        */
       }
       this.sourceBuffer = null;
     }
@@ -157,6 +159,9 @@ class NodeStreamMediaController {
 
   tick() {
     var pos, level, levelDetails, fragIdx, hls = this.hls;
+
+    logger.log(this.state);
+
     switch(this.state) {
       case State.ERROR:
         //don't do anything in error state to avoid breaking further ...
@@ -569,12 +574,14 @@ class NodeStreamMediaController {
         if (levelDetails && !levelDetails.live) {
           // are we playing last fragment ?
           if (fragPlaying.sn === levelDetails.endSN) {
+            /*
             var mediaSource = this.mediaSource;
             if (mediaSource && mediaSource.readyState === 'open') {
               logger.log('all media data available, signal endOfStream() to MediaSource');
               //Notify the media element that it now has all of the media data
               mediaSource.endOfStream();
             }
+            */
           }
         }
       }
@@ -739,6 +746,7 @@ class NodeStreamMediaController {
   }
 
   onMediaAttaching(event, data) {
+    /*
     var media = this.media = data.media;
     // setup the media source
     var ms = this.mediaSource = new MediaSource();
@@ -753,9 +761,11 @@ class NodeStreamMediaController {
     media.src = URL.createObjectURL(ms);
     // FIXME: this was in code before but onverror was never set! can be removed or fixed?
     //media.addEventListener('error', this.onverror);
+    */
   }
 
   onMediaDetaching() {
+    /*
     var media = this.media;
     if (media && media.ended) {
       logger.log('MSE detaching and video ended, reset startPosition');
@@ -799,6 +809,7 @@ class NodeStreamMediaController {
     }
     this.onmso = this.onmse = this.onmsc = null;
     this.hls.trigger(Event.MEDIA_DETACHED);
+    */
   }
 
   onMediaSeeking() {
@@ -851,6 +862,7 @@ class NodeStreamMediaController {
 
 
   onManifestParsed(event, data) {
+    logger.log('onManifestParsed');
     var aac = false, heaac = false, codecs;
     data.levels.forEach(level => {
       // detect if we have different kind of audio codecs used amongst playlists
@@ -977,6 +989,7 @@ class NodeStreamMediaController {
         this.sourceBuffer = {};
         logger.log(`selected A/V codecs for sourceBuffers:${audioCodec},${videoCodec}`);
         // create source Buffer and link them to MediaSource
+        /*
         if (audioCodec) {
           sb = this.sourceBuffer.audio = this.mediaSource.addSourceBuffer(`video/mp4;codecs=${audioCodec}`);
           sb.addEventListener('updateend', this.onsbue);
@@ -987,6 +1000,7 @@ class NodeStreamMediaController {
           sb.addEventListener('updateend', this.onsbue);
           sb.addEventListener('error', this.onsbe);
         }
+        */
       }
       if (audioCodec) {
         this.mp4segments.push({type: 'audio', data: data.audioMoov});
@@ -1113,8 +1127,10 @@ class NodeStreamMediaController {
     if(this.levels && this.config.autoStartLoad) {
       this.startLoad();
     }
+    /*
     // once received, don't listen anymore to sourceopen event
     this.mediaSource.removeEventListener('sourceopen', this.onmso);
+    */
   }
 
   onMediaSourceClose() {
