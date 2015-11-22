@@ -995,7 +995,7 @@ class MSEMediaController {
     }
 
     onMediaEnded() {
-        logger.log('video ended');
+        logger.log('media ended');
         // reset startPosition and lastCurrentTime to restart playback @ stream beginning
         this.startPosition = this.lastCurrentTime = 0;
     }
@@ -1352,10 +1352,11 @@ class MSEMediaController {
         this.onvseeked = this.onMediaSeeked.bind(this);
         this.onvmetadata = this.onMediaMetadata.bind(this);
         this.onvended = this.onMediaEnded.bind(this);
-        this.media.addEventListener('seeking', this.onvseeking);
-        this.media.addEventListener('seeked', this.onvseeked);
-        this.media.addEventListener('loadedmetadata', this.onvmetadata);
-        this.media.addEventListener('ended', this.onvended);
+        var media = this.media;
+        media.addEventListener('seeking', this.onvseeking);
+        media.addEventListener('seeked', this.onvseeked);
+        media.addEventListener('loadedmetadata', this.onvmetadata);
+        media.addEventListener('ended', this.onvended);
         if (this.levels && this.config.autoStartLoad) {
             this.startLoad();
         }
