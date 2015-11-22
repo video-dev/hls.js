@@ -43,8 +43,12 @@ export default {
   FRAG_BUFFERED: 'hlsFragBuffered',
   // fired when fragment matching with current media position is changing - data : { frag : fragment object }
   FRAG_CHANGED: 'hlsFragChanged',
-    // Identifier for a FPS drop event - data: {curentDropped, currentDecoded, totalDroppedFrames}
+  // Identifier for a FPS drop event - data: {curentDropped, currentDecoded, totalDroppedFrames}
   FPS_DROP: 'hlsFPSDrop',
+  // when we append a segment to the buffer - data: { buffer: segment data }
+  BUFFER_APPENDING: 'hlsBufferAppend',
+  // when we are done with appending a media segment to the buffer
+  BUFFER_APPENDED: 'hlsBufferAppended',
   // Identifier for an error event - data: { type : error type, details : error details, fatal : if true, hls.js cannot/will not try to recover, if false, hls.js will try to recover,other error specific data}
   ERROR: 'hlsError',
   // fired when hls.js instance starts destroying. Different from MSE_DETACHED as one could want to detach and reattach a media to the instance of hls.js to handle mid-rolls for example

@@ -1,5 +1,12 @@
 /*
- * MSE Media Controller
+ * Stream Controller
+ *
+ * It's role is to schedule loading & demuxing of stream components based on the metadata information of the media stream.
+ *
+ * Once it has made stream data available for the buffer, it triggers `BUFFER_APPENDING` for the BufferController
+ * to apend the data to the local media.
+ *
+ *
 */
 
 import Stream from 'stream-browserify';
@@ -28,39 +35,39 @@ class ReadableStreamBuffer extends Stream.Readable {
 }
 
 const State = {
-  ERROR : -2,
-  STARTING : -1,
-  IDLE : 0,
-  LOADING : 1,
-  WAITING_LEVEL : 2,
-  PARSING : 3,
-  PARSED : 4,
-  APPENDING : 5,
-  BUFFER_FLUSHING : 6
+  ERROR : 'ERROR',
+  STARTING : 'STARTING',
+  IDLE : 'IDLE',
+  LOADING : 'LOADING',
+  WAITING_LEVEL : 'WAITING_LEVEL',
+  PARSING : 'PARSING',
+  PARSED : 'PARSED',
+  APPENDING : 'APPENDING',
+  BUFFER_FLUSHING : 'BUFFER_FLUSHING'
 };
 
-class NodeStreamMediaController {
+class StreamController {
 
   constructor(hls) {
     this.config = hls.config;
     this.hls = hls;
-    // Source Buffer listeners
-    this.onsbue = this.onSBUpdateEnd.bind(this);
-    this.onsbe  = this.onSBUpdateError.bind(this);
     // internal listeners
     this.onmediaatt0 = this.onMediaAttaching.bind(this);
     this.onmediadet0 = this.onMediaDetaching.bind(this);
     this.onmp = this.onManifestParsed.bind(this);
     this.onll = this.onLevelLoaded.bind(this);
+    this.onflp = this.onFragLoadProgress.bind(this);
     this.onfl = this.onFragLoaded.bind(this);
     this.onis = this.onInitSegment.bind(this);
     this.onfpg = this.onFragParsing.bind(this);
     this.onfp = this.onFragParsed.bind(this);
     this.onerr = this.onError.bind(this);
+    this.onbufapp = this.onBufferAppended.bind(this);
     this.ontick = this.tick.bind(this);
     hls.on(Event.MEDIA_ATTACHING, this.onmediaatt0);
     hls.on(Event.MEDIA_DETACHING, this.onmediadet0);
     hls.on(Event.MANIFEST_PARSED, this.onmp);
+    hls.on(Event.BUFFER_APPENDED, this.onbufapp);
 
     // Readable stream implementation
     this.readable = new ReadableStreamBuffer();
@@ -76,11 +83,12 @@ class NodeStreamMediaController {
     hls.off(Event.MEDIA_ATTACHING, this.onmediaatt0);
     hls.off(Event.MEDIA_DETACHING, this.onmediadet0);
     hls.off(Event.MANIFEST_PARSED, this.onmp);
+    hls.off(Event.BUFFER_APPENDED, this.onbufapp);
     this.state = State.IDLE;
   }
 
   startLoad() {
-    if (this.levels && this.media) {
+    //if (this.levels && this.media) {
       this.startInternal();
       if (this.lastCurrentTime) {
         logger.log(`seeking @ ${this.lastCurrentTime}`);
@@ -95,9 +103,9 @@ class NodeStreamMediaController {
       }
       this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
       this.tick();
-    } else {
+    //} else {
       logger.warn('cannot start loading as either manifest not parsed or video not attached');
-    }
+    //}
   }
 
   startInternal() {
@@ -106,6 +114,7 @@ class NodeStreamMediaController {
     this.demuxer = new Demuxer(hls);
     this.timer = setInterval(this.ontick, 100);
     this.level = -1;
+    hls.on(Event.FRAG_LOAD_PROGRESS, this.onflp);
     hls.on(Event.FRAG_LOADED, this.onfl);
     hls.on(Event.FRAG_PARSING_INIT_SEGMENT, this.onis);
     hls.on(Event.FRAG_PARSING_DATA, this.onfpg);
@@ -160,7 +169,7 @@ class NodeStreamMediaController {
   tick() {
     var pos, level, levelDetails, fragIdx, hls = this.hls;
 
-    logger.log(this.state);
+    logger.trace(this.state);
 
     switch(this.state) {
       case State.ERROR:
@@ -376,14 +385,16 @@ class NodeStreamMediaController {
           else if ((this.sourceBuffer.audio && this.sourceBuffer.audio.updating) ||
              (this.sourceBuffer.video && this.sourceBuffer.video.updating)) {
             //logger.log('sb append in progress');
-        // check if any MP4 segments left to append
+          // check if any MP4 segments left to append
           } else if (this.mp4segments.length) {
             var segment = this.mp4segments.shift();
             try {
-              //logger.log(`appending ${segment.type} SB, size:${segment.data.length});
-              this.sourceBuffer[segment.type].appendBuffer(segment.data);
+              logger.log(`appending ${segment.type} SB, size:${segment.data.length}`);
+              //this.sourceBuffer[segment.type].appendBuffer(segment.data);
+              hls.trigger(Event.BUFFER_APPENDING, segment.data);
               this.appendError = 0;
             } catch(err) {
+              logger.log('error while appending: ' + err.message);
               // in case any error occured while appending, put back segment in mp4segments table
               //logger.error(`error while trying to append buffer:${err.message},try appending later`);
               this.mp4segments.unshift(segment);
@@ -746,8 +757,8 @@ class NodeStreamMediaController {
   }
 
   onMediaAttaching(event, data) {
-    /*
     var media = this.media = data.media;
+    /*
     // setup the media source
     var ms = this.mediaSource = new MediaSource();
     //Media Source listeners
@@ -883,9 +894,9 @@ class NodeStreamMediaController {
     this.levels = data.levels;
     this.startLevelLoaded = false;
     this.startFragmentRequested = false;
-    if (this.media && this.config.autoStartLoad) {
+    //if (this.media && this.config.autoStartLoad) {
       this.startLoad();
-    }
+    //}
   }
 
   onLevelLoaded(event,data) {
@@ -932,6 +943,10 @@ class NodeStreamMediaController {
     }
     //trigger handler right now
     this.tick();
+  }
+
+  onFragLoadProgress(event, data) {
+    logger.trace('Loaded ' + data.stats.loaded + ' of ' + data.frag.expectedLen + ' bytes');
   }
 
   onFragLoaded(event, data) {
@@ -1060,7 +1075,7 @@ class NodeStreamMediaController {
     }
   }
 
-  onSBUpdateEnd() {
+  onBufferAppended() {
     //trigger handler right now
     if (this.state === State.APPENDING && this.mp4segments.length === 0)  {
       var frag = this.fragCurrent, stats = this.stats;
@@ -1099,12 +1114,6 @@ class NodeStreamMediaController {
     this.tick();
   }
 
-  onSBUpdateError(event) {
-    logger.error(`sourceBuffer error:${event}`);
-    this.state = State.ERROR;
-    this.hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_APPENDING_ERROR, fatal: true, frag: this.fragCurrent});
-  }
-
   timeRangesToString(r) {
     var log = '', len = r.length;
     for (var i=0; i<len; i++) {
@@ -1113,6 +1122,7 @@ class NodeStreamMediaController {
     return log;
   }
 
+  /*
   onMediaSourceOpen() {
     logger.log('media source opened');
     this.hls.trigger(Event.MEDIA_ATTACHED);
@@ -1127,10 +1137,9 @@ class NodeStreamMediaController {
     if(this.levels && this.config.autoStartLoad) {
       this.startLoad();
     }
-    /*
+
     // once received, don't listen anymore to sourceopen event
     this.mediaSource.removeEventListener('sourceopen', this.onmso);
-    */
   }
 
   onMediaSourceClose() {
@@ -1140,6 +1149,7 @@ class NodeStreamMediaController {
   onMediaSourceEnded() {
     logger.log('media source ended');
   }
+  */
 }
-export default NodeStreamMediaController;
+export default StreamController;
 
