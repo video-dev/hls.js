@@ -11,6 +11,8 @@ const fakeLogger = {
 
 let exportedLogger = fakeLogger;
 
+let lastCallTime;
+
 function noop() {}
 
 function consolePrintFn(type) {
@@ -18,8 +20,18 @@ function consolePrintFn(type) {
     if (func) {
         return function(...args) {
             if (args[0]) {
+                const now = Date.now();
+                const diff = lastCallTime ? '+' + (now - lastCallTime) : '0';
                 args[0] =
-                    new Date().toISOString() + ' | [' + type + '] > ' + args[0];
+                    new Date(now).toISOString() +
+                    ' | [' +
+                    type +
+                    '] > ' +
+                    args[0] +
+                    ' ( ' +
+                    diff +
+                    ' ms )';
+                lastCallTime = now;
             }
             func.apply(window.console, args);
         };
@@ -40,8 +52,8 @@ export var enableLogs = function(debugConfig) {
         exportLoggerFunctions(
             debugConfig,
             // Remove out from list here to hard-disable a log-level
-            'trace',
-            //'debug',
+            //'trace',
+            'debug',
             'log',
             'info',
             'warn',
