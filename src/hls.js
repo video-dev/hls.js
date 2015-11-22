@@ -8,7 +8,6 @@ import {ErrorTypes, ErrorDetails} from './errors';
 import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
 import AbrController from    './controller/abr-controller';
-import MSEMediaController from './controller/mse-media-controller';
 import StreamController from './controller/stream-controller';
 import BufferController from './controller/buffer-controller';
 import LevelController from  './controller/level-controller';
