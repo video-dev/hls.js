@@ -64,8 +64,7 @@ class XhrLoader {
     }
 
     loadInternal() {
-        // add support pro CORS request on FireFox OS TV
-        var xhr = (this.loader = new XMLHttpRequest({ mozSystem: true }));
+        var xhr = (this.loader = new XMLHttpRequest());
         xhr.onload = this.loadsuccess.bind(this);
         xhr.onerror = this.loaderror.bind(this);
         xhr.onprogress = this.loadprogress.bind(this);
