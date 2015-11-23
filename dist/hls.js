@@ -401,10 +401,10 @@ var AbrController = (function () {
     value: function onFragmentLoadProgress(event, data) {
       var stats = data.stats;
       if (stats.aborted === undefined) {
-        this.lastfetchduration = (new Date() - stats.trequest) / 1000;
+        this.lastfetchduration = (performance.now() - stats.trequest) / 1000;
         this.lastfetchlevel = data.frag.level;
         this.lastbw = stats.loaded * 8 / this.lastfetchduration;
-        //console.log('fetchDuration:${this.lastfetchduration},bw:${(this.lastbw/1000).toFixed(0)}/${stats.aborted}');
+        //console.log(`fetchDuration:${this.lastfetchduration},bw:${(this.lastbw/1000).toFixed(0)}/${stats.aborted}`);
       }
     }
 
@@ -1047,7 +1047,7 @@ var MSEMediaController = (function () {
             _frag.autoLevel = hls.autoLevelEnabled;
             if (this.levels.length > 1) {
               _frag.expectedLen = Math.round(_frag.duration * this.levels[level].bitrate / 8);
-              _frag.trequest = new Date();
+              _frag.trequest = performance.now();
             }
             // ensure that we are not reloading the same fragments in loop ...
             if (this.fragLoadIdx !== undefined) {
@@ -1091,7 +1091,7 @@ var MSEMediaController = (function () {
           /* only monitor frag retrieval time if
           (video not paused OR first fragment being loaded) AND autoswitching enabled AND not lowest level AND multiple levels */
           if (v && (!v.paused || this.loadedmetadata === false) && frag.autoLevel && this.level && this.levels.length > 1) {
-            var requestDelay = new Date() - frag.trequest;
+            var requestDelay = performance.now() - frag.trequest;
             // monitor fragment load progress after half of expected fragment duration,to stabilize bitrate
             if (requestDelay > 500 * frag.duration) {
               var loadRate = frag.loaded * 1000 / requestDelay; // byte/s
@@ -1693,7 +1693,7 @@ var MSEMediaController = (function () {
           // switch back to IDLE state ... we just loaded a fragment to determine adequate start bitrate and initialize autoswitch algo
           this.state = State.IDLE;
           this.fragBitrateTest = false;
-          data.stats.tparsed = data.stats.tbuffered = new Date();
+          data.stats.tparsed = data.stats.tbuffered = performance.now();
           this.hls.trigger(_events2['default'].FRAG_BUFFERED, { stats: data.stats, frag: fragCurrent });
         } else {
           this.state = State.PARSING;
@@ -1786,7 +1786,7 @@ var MSEMediaController = (function () {
     value: function onFragParsed() {
       if (this.state === State.PARSING) {
         this.state = State.PARSED;
-        this.stats.tparsed = new Date();
+        this.stats.tparsed = performance.now();
         //trigger handler right now
         this.tick();
       }
@@ -1818,7 +1818,7 @@ var MSEMediaController = (function () {
             stats = this.stats;
         if (frag) {
           this.fragPrevious = frag;
-          stats.tbuffered = new Date();
+          stats.tbuffered = performance.now();
           this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
           this.hls.trigger(_events2['default'].FRAG_BUFFERED, { stats: stats, frag: frag });
           _utilsLogger.logger.log('media buffered : ' + this.timeRangesToString(this.media.buffered));
@@ -3830,7 +3830,7 @@ var Hls = (function () {
 exports['default'] = Hls;
 module.exports = exports['default'];
 
-},{"./controller/abr-controller":3,"./controller/level-controller":4,"./controller/mse-media-controller":5,"./errors":11,"./events":12,"./loader/fragment-loader":15,"./loader/playlist-loader":16,"./utils/logger":19,"./utils/xhr-loader":20,"events":1}],15:[function(require,module,exports){
+},{"./controller/abr-controller":3,"./controller/level-controller":4,"./controller/mse-media-controller":5,"./errors":11,"./events":12,"./loader/fragment-loader":15,"./loader/playlist-loader":16,"./utils/logger":19,"./utils/xhr-loader":21,"events":1}],15:[function(require,module,exports){
 /*
  * Fragment Loader
 */
@@ -3939,6 +3939,10 @@ var _events2 = _interopRequireDefault(_events);
 
 var _errors = require('../errors');
 
+var _utilsUrl = require('../utils/url');
+
+var _utilsUrl2 = _interopRequireDefault(_utilsUrl);
+
 //import {logger} from '../utils/logger';
 
 var PlaylistLoader = (function () {
@@ -3986,22 +3990,7 @@ var PlaylistLoader = (function () {
   }, {
     key: 'resolve',
     value: function resolve(url, baseUrl) {
-      var doc = document,
-          oldBase = doc.getElementsByTagName('base')[0],
-          oldHref = oldBase && oldBase.href,
-          docHead = doc.head || doc.getElementsByTagName('head')[0],
-          ourBase = oldBase || docHead.appendChild(doc.createElement('base')),
-          resolver = doc.createElement('a'),
-          resolvedUrl;
-      ourBase.href = baseUrl;
-      resolver.href = url;
-      resolvedUrl = resolver.href; // browser magic at work here
-      if (oldBase) {
-        oldBase.href = oldHref;
-      } else {
-        docHead.removeChild(ourBase);
-      }
-      return resolvedUrl;
+      return _utilsUrl2['default'].buildAbsoluteURL(baseUrl, url);
     }
   }, {
     key: 'parseMasterPlaylist',
@@ -4142,7 +4131,7 @@ var PlaylistLoader = (function () {
         // fallback to initial URL
         url = this.url;
       }
-      stats.tload = new Date();
+      stats.tload = performance.now();
       stats.mtime = new Date(event.currentTarget.getResponseHeader('Last-Modified'));
       if (string.indexOf('#EXTM3U') === 0) {
         if (string.indexOf('#EXTINF:') > 0) {
@@ -4153,7 +4142,7 @@ var PlaylistLoader = (function () {
             hls.trigger(_events2['default'].MANIFEST_LOADED, { levels: [{ url: url }], url: url, stats: stats });
           } else {
             var levelDetails = this.parseLevelPlaylist(string, url, id);
-            stats.tparsed = new Date();
+            stats.tparsed = performance.now();
             hls.trigger(_events2['default'].LEVEL_LOADED, { details: levelDetails, level: id, id: id2, stats: stats });
           }
         } else {
@@ -4205,7 +4194,7 @@ var PlaylistLoader = (function () {
 exports['default'] = PlaylistLoader;
 module.exports = exports['default'];
 
-},{"../errors":11,"../events":12}],17:[function(require,module,exports){
+},{"../errors":11,"../events":12,"../utils/url":20}],17:[function(require,module,exports){
 /**
  * Generate MP4 Box
 */
@@ -5181,6 +5170,85 @@ var logger = exportedLogger;
 exports.logger = logger;
 
 },{}],20:[function(require,module,exports){
+'use strict';
+
+var URLHelper = {
+
+  // build an absolute URL from a relative one using the provided baseURL
+  // if relativeURL is an absolute URL it will be returned as is.
+  buildAbsoluteURL: function buildAbsoluteURL(baseURL, relativeURL) {
+    if (/^[a-z]+:/i.test(relativeURL)) {
+      // complete url, not relative
+      return relativeURL;
+    }
+
+    var relativeURLQuery = null;
+    var relativeURLHash = null;
+
+    var relativeURLHashSplit = /^([^#]*)(.*)$/.exec(relativeURL);
+    if (relativeURLHashSplit) {
+      relativeURLHash = relativeURLHashSplit[2];
+      relativeURL = relativeURLHashSplit[1];
+    }
+    var relativeURLQuerySplit = /^([^\?]*)(.*)$/.exec(relativeURL);
+    if (relativeURLQuerySplit) {
+      relativeURLQuery = relativeURLQuerySplit[2];
+      relativeURL = relativeURLQuerySplit[1];
+    }
+
+    var baseURLHashSplit = /^([^#]*)(.*)$/.exec(baseURL);
+    if (baseURLHashSplit) {
+      baseURL = baseURLHashSplit[1];
+    }
+    var baseURLQuerySplit = /^([^\?]*)(.*)$/.exec(baseURL);
+    if (baseURLQuerySplit) {
+      baseURL = baseURLQuerySplit[1];
+    }
+
+    var baseURLDomainSplit = /^((([a-z]+):)?\/\/[a-z0-9\.-]+(:[0-9]+)?\/)(.*)$/i.exec(baseURL);
+    var baseURLProtocol = baseURLDomainSplit[3];
+    var baseURLDomain = baseURLDomainSplit[1];
+    var baseURLPath = baseURLDomainSplit[5];
+
+    var builtURL = null;
+    if (/^\/\//.test(relativeURL)) {
+      builtURL = baseURLProtocol + '://' + URLHelper.buildAbsolutePath('', relativeURL.substring(2));
+    } else if (/^\//.test(relativeURL)) {
+      builtURL = baseURLDomain + URLHelper.buildAbsolutePath('', relativeURL.substring(1));
+    } else {
+      var newPath = URLHelper.buildAbsolutePath(baseURLPath, relativeURL);
+      builtURL = baseURLDomain + newPath;
+    }
+
+    // put the query and hash parts back
+    if (relativeURLQuery) {
+      builtURL += relativeURLQuery;
+    }
+    if (relativeURLHash) {
+      builtURL += relativeURLHash;
+    }
+    return builtURL;
+  },
+
+  // build an absolute path using the provided basePath
+  // adapted from https://developer.mozilla.org/en-US/docs/Web/API/document/cookie#Using_relative_URLs_in_the_path_parameter
+  // this does not handle the case where relativePath is "/" or "//". These cases should be handled outside this.
+  buildAbsolutePath: function buildAbsolutePath(basePath, relativePath) {
+    var sRelPath = relativePath;
+    var nUpLn,
+        sDir = '',
+        sPath = basePath.replace(/[^\/]*$/, sRelPath.replace(/(\/|^)(?:\.?\/+)+/g, '$1'));
+    for (var nEnd, nStart = 0; nEnd = sPath.indexOf('/../', nStart), nEnd > -1; nStart = nEnd + nUpLn) {
+      nUpLn = /^\/(?:\.\.\/)*/.exec(sPath.slice(nEnd))[0].length;
+      sDir = (sDir + sPath.substring(nStart, nEnd)).replace(new RegExp('(?:\\\/+[^\\\/]*){0,' + (nUpLn - 1) / 3 + '}$'), '/');
+    }
+    return sDir + sPath.substr(nStart);
+  }
+};
+
+module.exports = URLHelper;
+
+},{}],21:[function(require,module,exports){
 /**
  * XHR based logger
 */
@@ -5238,7 +5306,7 @@ var XhrLoader = (function () {
       this.onProgress = onProgress;
       this.onTimeout = onTimeout;
       this.onError = onError;
-      this.stats = { trequest: new Date(), retry: 0 };
+      this.stats = { trequest: performance.now(), retry: 0 };
       this.timeout = timeout;
       this.maxRetry = maxRetry;
       this.retryDelay = retryDelay;
@@ -5268,7 +5336,7 @@ var XhrLoader = (function () {
     key: 'loadsuccess',
     value: function loadsuccess(event) {
       window.clearTimeout(this.timeoutHandle);
-      this.stats.tload = new Date();
+      this.stats.tload = performance.now();
       this.onSuccess(event, this.stats);
     }
   }, {
@@ -5298,7 +5366,7 @@ var XhrLoader = (function () {
     value: function loadprogress(event) {
       var stats = this.stats;
       if (stats.tfirst === null) {
-        stats.tfirst = new Date();
+        stats.tfirst = performance.now();
       }
       stats.loaded = event.loaded;
       if (this.onProgress) {
