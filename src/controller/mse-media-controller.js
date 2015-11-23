@@ -260,7 +260,7 @@ class MSEMediaController {
           frag.autoLevel = hls.autoLevelEnabled;
           if (this.levels.length > 1) {
             frag.expectedLen = Math.round(frag.duration * this.levels[level].bitrate / 8);
-            frag.trequest = new Date();
+            frag.trequest = performance.now();
           }
           // ensure that we are not reloading the same fragments in loop ...
           if (this.fragLoadIdx !== undefined) {
@@ -303,7 +303,7 @@ class MSEMediaController {
         /* only monitor frag retrieval time if
         (video not paused OR first fragment being loaded) AND autoswitching enabled AND not lowest level AND multiple levels */
         if (v && (!v.paused || this.loadedmetadata === false) && frag.autoLevel && this.level && this.levels.length > 1) {
-          var requestDelay = new Date() - frag.trequest;
+          var requestDelay = performance.now() - frag.trequest;
           // monitor fragment load progress after half of expected fragment duration,to stabilize bitrate
           if (requestDelay > (500 * frag.duration)) {
             var loadRate = frag.loaded * 1000 / requestDelay; // byte/s
@@ -906,7 +906,7 @@ class MSEMediaController {
         // switch back to IDLE state ... we just loaded a fragment to determine adequate start bitrate and initialize autoswitch algo
         this.state = State.IDLE;
         this.fragBitrateTest = false;
-        data.stats.tparsed = data.stats.tbuffered = new Date();
+        data.stats.tparsed = data.stats.tbuffered = performance.now();
         this.hls.trigger(Event.FRAG_BUFFERED, {stats: data.stats, frag: fragCurrent});
       } else {
         this.state = State.PARSING;
@@ -997,7 +997,7 @@ class MSEMediaController {
   onFragParsed() {
     if (this.state === State.PARSING) {
       this.state = State.PARSED;
-      this.stats.tparsed = new Date();
+      this.stats.tparsed = performance.now();
       //trigger handler right now
       this.tick();
     }
@@ -1026,7 +1026,7 @@ class MSEMediaController {
       var frag = this.fragCurrent, stats = this.stats;
       if (frag) {
         this.fragPrevious = frag;
-        stats.tbuffered = new Date();
+        stats.tbuffered = performance.now();
         this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
         this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag});
         logger.log(`media buffered : ${this.timeRangesToString(this.media.buffered)}`);

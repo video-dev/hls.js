@@ -171,7 +171,7 @@ class PlaylistLoader {
       // fallback to initial URL
       url = this.url;
     }
-    stats.tload = new Date();
+    stats.tload = performance.now();
     stats.mtime = new Date(event.currentTarget.getResponseHeader('Last-Modified'));
     if (string.indexOf('#EXTM3U') === 0) {
       if (string.indexOf('#EXTINF:') > 0) {
@@ -182,7 +182,7 @@ class PlaylistLoader {
           hls.trigger(Event.MANIFEST_LOADED, {levels: [{url: url}], url: url, stats: stats});
         } else {
           var levelDetails = this.parseLevelPlaylist(string, url, id);
-          stats.tparsed = new Date();
+          stats.tparsed = performance.now();
           hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: id, id: id2, stats: stats});
         }
       } else {
