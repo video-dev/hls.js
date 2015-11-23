@@ -68,7 +68,7 @@ class StreamController {
   }
 
   startLoad() {
-    //if (this.levels && this.media) {
+    if (this.levels && this.media) {
       this.startInternal();
       if (this.lastCurrentTime) {
         logger.log(`seeking @ ${this.lastCurrentTime}`);
@@ -83,9 +83,9 @@ class StreamController {
       }
       this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
       this.tick();
-    //} else {
+    } else {
       logger.warn('cannot start loading as either manifest not parsed or video not attached');
-    //}
+    }
   }
 
   startInternal() {
