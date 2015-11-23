@@ -132,6 +132,20 @@ class PlaylistLoader {
         return result;
     }
 
+    parseKeyParamsByRegex(string, regexp) {
+        var result = regexp.exec(string);
+        if (result) {
+            result.shift();
+            result = result.filter(function(n) {
+                return n !== undefined;
+            });
+            if (result.length === 2) {
+                return result[1];
+            }
+        }
+        return null;
+    }
+
     parseLevelPlaylist(string, baseurl, id) {
         var currentSN = 0,
             totalduration = 0,
@@ -201,35 +215,35 @@ class PlaylistLoader {
                     }
                     break;
                 case 'KEY':
-                    var keyregexp = /(?:(METHOD)=(.*),(URI)=["](.*)["])|(?:(METHOD)=(.*),(IV)=(.*))/;
-                    var keyparams = keyregexp.exec(result[1]);
-                    keyparams.shift();
-                    keyparams = keyparams.filter(function(n) {
-                        return n !== undefined;
-                    });
-                    if (keyparams.length >= 4 && keyparams[0] === 'METHOD') {
+                    // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
+                    var decryptparams = result[1];
+                    var decryptmethod = this.parseKeyParamsByRegex(
+                            decryptparams,
+                            /(METHOD)=([^,]*)/
+                        ),
+                        decrypturi = this.parseKeyParamsByRegex(
+                            decryptparams,
+                            /(URI)=["]([^,]*)["]/
+                        ),
+                        decryptiv = this.parseKeyParamsByRegex(
+                            decryptparams,
+                            /(IV)=([^,]*)/
+                        );
+                    if (decryptmethod) {
                         levelkey = {
                             method: null,
                             key: null,
                             iv: null,
                             uri: null
                         };
-                        if (keyparams[1] === 'AES-128') {
-                            levelkey.method = keyparams[1];
+                        if (decrypturi && decryptmethod === 'AES-128') {
+                            levelkey.method = decryptmethod;
                             // URI to get the key
-                            if (keyparams[2] === 'URI') {
-                                levelkey.uri = this.resolve(
-                                    keyparams[3],
-                                    baseurl
-                                );
-                                levelkey.key = null;
-                            }
+                            levelkey.uri = this.resolve(decrypturi, baseurl);
+                            levelkey.key = null;
                             // Initialization Vector (IV)
-                            if (
-                                keyparams.length === 6 &&
-                                keyparams[4] === 'IV'
-                            ) {
-                                levelkey.iv = keyparams[5];
+                            if (decryptiv) {
+                                levelkey.iv = decryptiv;
                                 if (levelkey.iv.substring(0, 2) === '0x') {
                                     levelkey.iv = levelkey.iv.substring(2);
                                 }
