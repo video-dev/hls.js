@@ -51,7 +51,7 @@ class KeyLoader {
             this.decryptkey = frag.decryptdata.key;
         }
         this.frag.decryptdata.key = this.decryptkey;
-        this.hls.trigger(Event.FRAG_LOADING, { frag: this.frag });
+        this.hls.trigger(Event.KEY_LOADED, { frag: this.frag });
     }
 
     loadsuccess(event) {
@@ -61,7 +61,7 @@ class KeyLoader {
         this.decryptkey = this.frag.decryptdata.key;
         // detach fragment loader on load success
         this.frag.loader = undefined;
-        this.hls.trigger(Event.FRAG_LOADING, { frag: this.frag });
+        this.hls.trigger(Event.KEY_LOADED, { frag: this.frag });
     }
 
     loaderror(event) {

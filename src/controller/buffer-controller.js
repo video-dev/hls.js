@@ -12,12 +12,13 @@ const State = {
     ERROR: -2,
     STARTING: -1,
     IDLE: 0,
-    LOADING: 1,
-    WAITING_LEVEL: 2,
-    PARSING: 3,
-    PARSED: 4,
-    APPENDING: 5,
-    BUFFER_FLUSHING: 6
+    KEY_LOADING: 1,
+    FRAG_LOADING: 2,
+    WAITING_LEVEL: 3,
+    PARSING: 4,
+    PARSED: 5,
+    APPENDING: 6,
+    BUFFER_FLUSHING: 7
 };
 
 class BufferController {
@@ -39,6 +40,7 @@ class BufferController {
         this.onfp = this.onFragParsed.bind(this);
         this.onerr = this.onError.bind(this);
         this.ontick = this.tick.bind(this);
+        this.onkl = this.onKeyLoaded.bind(this);
         hls.on(Event.MSE_ATTACHED, this.onmse);
         hls.on(Event.MSE_DETACHING, this.onmsed0);
         hls.on(Event.MSE_DETACHED, this.onmsed);
@@ -90,6 +92,7 @@ class BufferController {
         hls.on(Event.FRAG_PARSED, this.onfp);
         hls.on(Event.ERROR, this.onerr);
         hls.on(Event.LEVEL_LOADED, this.onll);
+        hls.on(Event.KEY_LOADED, this.onkl);
     }
 
     stop() {
@@ -130,6 +133,7 @@ class BufferController {
         hls.off(Event.LEVEL_LOADED, this.onll);
         hls.off(Event.FRAG_PARSING_INIT_SEGMENT, this.onis);
         hls.off(Event.ERROR, this.onerr);
+        hls.off(Event.KEY_LOADED, this.onkl);
     }
 
     tick() {
@@ -363,9 +367,17 @@ class BufferController {
                     }
                     frag.loadIdx = this.fragLoadIdx;
                     this.fragCurrent = frag;
-                    this.startFragmentRequested = true;
-                    hls.trigger(Event.KEY_LOADING, { frag: frag });
-                    this.state = State.LOADING;
+                    if (
+                        frag.decryptdata.uri != null &&
+                        frag.decryptdata.key == null
+                    ) {
+                        this.state = State.KEY_LOADING;
+                        hls.trigger(Event.KEY_LOADING, { frag: frag });
+                    } else {
+                        this.state = State.FRAG_LOADING;
+                        this.startFragmentRequested = true;
+                        hls.trigger(Event.FRAG_LOADING, { frag: frag });
+                    }
                 }
                 break;
             case State.WAITING_LEVEL:
@@ -375,7 +387,7 @@ class BufferController {
                     this.state = State.IDLE;
                 }
                 break;
-            case State.LOADING:
+            case State.FRAG_LOADING:
                 /*
           monitor fragment retrieval time...
           we compute expected time of arrival of the complete fragment.
@@ -923,7 +935,7 @@ class BufferController {
     }
 
     onVideoSeeking() {
-        if (this.state === State.LOADING) {
+        if (this.state === State.FRAG_LOADING) {
             // check if currently loaded fragment is inside buffer.
             //if outside, cancel fragment loading, otherwise do nothing
             if (this.bufferInfo(this.video.currentTime, 0.3).len === 0) {
@@ -1064,10 +1076,18 @@ class BufferController {
         this.tick();
     }
 
+    onKeyLoaded(event, data) {
+        if (this.state === State.KEY_LOADING) {
+            this.state = State.FRAG_LOADING;
+            this.startFragmentRequested = true;
+            this.hls.trigger(Event.FRAG_LOADING, { frag: data.frag });
+        }
+    }
+
     onFragLoaded(event, data) {
         var fragCurrent = this.fragCurrent;
         if (
-            this.state === State.LOADING &&
+            this.state === State.FRAG_LOADING &&
             fragCurrent &&
             data.frag.level === fragCurrent.level &&
             data.frag.sn === fragCurrent.sn
