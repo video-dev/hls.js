@@ -14,30 +14,74 @@ class BufferController {
   constructor(hls) {
     this.hls = hls;
 
-    this.hls.on(Event.BUFFER_APPENDING, this.onBufferAppending.bind(this));
-    this.hls.on(Event.BUFFER_CODECS, this.onBufferCodecs.bind(this));
-    this.hls.on(Event.BUFFER_EOS, this.onBufferEOS.bind(this));
-    this.hls.on(Event.BUFFER_FLUSH, this.onBufferFlush.bind(this));
+    this.onEvent = this.onEvent.bind(this);
+    this.handledEvents = [Event.BUFFER_APPENDING,
+                        Event.BUFFER_CODECS,
+                        Event.BUFFER_EOS,
+                        Event.BUFFER_FLUSH,
+                        Event.MEDIA_ATTACHING,
+                        Event.MEDIA_DETACHING];
 
-    // fixme: we should find more elegant ways to manage
-    //        these function pointers
-    this.onmediaatt0 = this.onMediaAttaching.bind(this);
-    this.onmediadet0 = this.onMediaDetaching.bind(this);
-
-    hls.on(Event.MEDIA_ATTACHING, this.onmediaatt0);
-    hls.on(Event.MEDIA_DETACHING, this.onmediadet0);
+    this.registerListeners();
   }
 
-  onBufferCodecs(event, data) {}
-  onBufferAppending(event, data) {}
-  onBufferEOS() {}
+  destroy() {
+    this.unregisterListeners();
+  }
 
-  onMediaAttaching(event, data) {}
-  onMediaDetaching() {}
+  isEventHandler() {
+    return typeof this.handledEvents === 'object' && typeof this.onEvent === 'function'
+  }
+
+  registerListeners() {
+    if (this.isEventHandler()) {
+      this.handledEvents.forEach(function(event) {
+        this.hls.on(event, this.onEvent);
+      }.bind(this));
+    }
+  }
+
+  unregisterListeners() {
+    if (this.isEventHandler()) {
+      this.handledEvents.forEach(function(event) {
+        this.hls.off(event, this.onEvent);
+      }.bind(this));
+    }
+  }
+
+  onEvent(event, data) {
+    switch(event) {
+    case Event.BUFFER_APPENDING:
+      this.onBufferAppending(data);
+      break;
+    case Event.BUFFER_CODECS:
+      this.onBufferCodecs(data);
+      break;
+    case Event.BUFFER_EOS:
+      this.onBufferEOS(data);
+      break;
+    case Event.BUFFER_FLUSH:
+      this.onBufferFlush(data);
+      break;
+    case Event.MEDIA_ATTACHING:
+      this.onMediaAttaching(data);
+      break;
+    case Event.MEDIA_DETACHING:
+      this.onMediaDetaching(data);
+      break;
+    }
+  }
 
   finishAppending() {
     this.hls.trigger(Event.BUFFER_APPENDED);
   }
+
+  // implement these in specific class
+  onBufferCodecs(data) {}
+  onBufferAppending(data) {}
+  onBufferEOS() {}
+  onMediaAttaching(data) {}
+  onMediaDetaching() {}
 }
 
 class MSEBufferController extends BufferController {
@@ -54,7 +98,7 @@ class MSEBufferController extends BufferController {
     this.segmentQueue = [];
 	}
 
-  onMediaAttaching(event, data) {
+  onMediaAttaching(data) {
     var media = this.media = data.media;
     // setup the media source
     var ms = this.mediaSource = new MediaSource();
@@ -137,7 +181,7 @@ class MSEBufferController extends BufferController {
     this.finishAppending();
   }
 
-  onBufferCodecs(event, data) {
+  onBufferCodecs(data) {
     var audioCodec = data.audioCodec;
     var videoCodec = data.videoCodec;
     var sb;
@@ -161,7 +205,7 @@ class MSEBufferController extends BufferController {
     this.dequeueSegments();
   }
 
-  onBufferAppending(event, data) {
+  onBufferAppending(data) {
     var segment = data.segment;
     this.segmentQueue.push(segment);
     this.dequeueSegments();
@@ -226,7 +270,7 @@ class MSEBufferController extends BufferController {
     the idea is to call this function from tick() timer and call it again until all resources have been cleaned
     the timer is rearmed upon sourceBuffer updateend() event, so this should be optimal
   */
-  onBufferFlush(event, data) {
+  onBufferFlush(data) {
     var startOffset = data.startOffset;
     var endOffset = data.endOffset;
     var sb, i, bufStart, bufEnd, flushStart, flushEnd;
