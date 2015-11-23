@@ -98,6 +98,8 @@ class Hls {
     this.fragmentLoader.destroy();
     this.levelController.destroy();
     this.streamController.destroy();
+    this.bufferController.destroy();
+    this.abrController.destroy();
     //this.fpsController.destroy();
     this.url = null;
     this.detachMedia();
