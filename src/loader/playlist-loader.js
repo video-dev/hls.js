@@ -4,6 +4,7 @@
 
 import Event from '../events';
 import {ErrorTypes, ErrorDetails} from '../errors';
+import URLHelper from '../utils/url';
 //import {logger} from '../utils/logger';
 
 class PlaylistLoader {
@@ -44,19 +45,7 @@ class PlaylistLoader {
   }
 
   resolve(url, baseUrl) {
-    var doc      = document,
-        oldBase = doc.getElementsByTagName('base')[0],
-        oldHref = oldBase && oldBase.href,
-        docHead = doc.head || doc.getElementsByTagName('head')[0],
-        ourBase = oldBase || docHead.appendChild(doc.createElement('base')),
-        resolver = doc.createElement('a'),
-        resolvedUrl;
-    ourBase.href = baseUrl;
-    resolver.href = url;
-    resolvedUrl  = resolver.href; // browser magic at work here
-    if (oldBase) { oldBase.href = oldHref; }
-    else { docHead.removeChild(ourBase); }
-    return resolvedUrl;
+    return URLHelper.buildAbsoluteURL(baseUrl, url);
   }
 
   parseMasterPlaylist(string, baseurl) {
