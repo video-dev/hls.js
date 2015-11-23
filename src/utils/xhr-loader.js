@@ -52,7 +52,7 @@ class XhrLoader {
         this.onProgress = onProgress;
         this.onTimeout = onTimeout;
         this.onError = onError;
-        this.stats = { trequest: new Date(), retry: 0 };
+        this.stats = { trequest: performance.now(), retry: 0 };
         this.timeout = timeout;
         this.maxRetry = maxRetry;
         this.retryDelay = retryDelay;
@@ -83,7 +83,7 @@ class XhrLoader {
 
     loadsuccess(event) {
         window.clearTimeout(this.timeoutHandle);
-        this.stats.tload = new Date();
+        this.stats.tload = performance.now();
         this.onSuccess(event, this.stats);
     }
 
@@ -114,7 +114,7 @@ class XhrLoader {
     loadprogress(event) {
         var stats = this.stats;
         if (stats.tfirst === null) {
-            stats.tfirst = new Date();
+            stats.tfirst = performance.now();
         }
         stats.loaded = event.loaded;
         if (this.onProgress) {
