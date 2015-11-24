@@ -1,4 +1,4 @@
-/* demuxer web worker. 
+/* demuxer web worker.
  *  - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
  *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
  */
@@ -25,14 +25,16 @@ var DemuxerWorker = function(self) {
                 self.demuxer = new DemuxerInline(observer, MP4Remuxer);
                 break;
             case 'demux':
+                var data = ev.data;
                 self.demuxer.push(
-                    new Uint8Array(ev.data.data),
-                    ev.data.audioCodec,
-                    ev.data.videoCodec,
-                    ev.data.timeOffset,
-                    ev.data.cc,
-                    ev.data.level,
-                    ev.data.duration
+                    new Uint8Array(data.data),
+                    data.audioCodec,
+                    data.videoCodec,
+                    data.timeOffset,
+                    data.cc,
+                    data.level,
+                    data.sn,
+                    data.duration
                 );
                 self.demuxer.remux();
                 break;

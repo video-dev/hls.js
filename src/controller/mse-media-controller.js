@@ -1131,6 +1131,7 @@ class MSEMediaController {
                     start,
                     fragCurrent.cc,
                     level,
+                    sn,
                     duration
                 );
             }

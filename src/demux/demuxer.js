@@ -37,7 +37,7 @@ class Demuxer {
         }
     }
 
-    push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
+    push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
         if (this.w) {
             // post fragment payload as transferable objects (no copy)
             this.w.postMessage(
@@ -49,6 +49,7 @@ class Demuxer {
                     timeOffset: timeOffset,
                     cc: cc,
                     level: level,
+                    sn: sn,
                     duration: duration
                 },
                 [data]
@@ -61,6 +62,7 @@ class Demuxer {
                 timeOffset,
                 cc,
                 level,
+                sn,
                 duration
             );
             this.demuxer.remux();

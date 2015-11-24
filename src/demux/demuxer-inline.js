@@ -19,7 +19,7 @@ class DemuxerInline {
         }
     }
 
-    push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
+    push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
         var demuxer = this.demuxer;
         if (!demuxer) {
             // probe for content type
@@ -42,6 +42,7 @@ class DemuxerInline {
             timeOffset,
             cc,
             level,
+            sn,
             duration
         );
     }
