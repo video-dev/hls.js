@@ -1706,7 +1706,7 @@ var MSEMediaController = (function () {
               level = fragCurrent.level,
               sn = fragCurrent.sn;
           _utilsLogger.logger.log('Demuxing ' + sn + ' of [' + details.startSN + ' ,' + details.endSN + '],level ' + level);
-          this.demuxer.push(data.payload, currentLevel.audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, duration);
+          this.demuxer.push(data.payload, currentLevel.audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration);
         }
       }
     }
@@ -1981,7 +1981,7 @@ var DemuxerInline = (function () {
     }
   }, {
     key: 'push',
-    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
+    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
       var demuxer = this.demuxer;
       if (!demuxer) {
         // probe for content type
@@ -1992,7 +1992,7 @@ var DemuxerInline = (function () {
           return;
         }
       }
-      demuxer.push(data, audioCodec, videoCodec, timeOffset, cc, level, duration);
+      demuxer.push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
     }
   }, {
     key: 'remux',
@@ -2011,7 +2011,7 @@ exports['default'] = DemuxerInline;
 module.exports = exports['default'];
 
 },{"../demux/tsdemuxer":10,"../errors":11,"../events":12}],7:[function(require,module,exports){
-/* demuxer web worker. 
+/* demuxer web worker.
  *  - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
  *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
  */
@@ -2065,7 +2065,8 @@ var DemuxerWorker = function DemuxerWorker(self) {
         self.demuxer = new _demuxDemuxerInline2['default'](observer, _remuxMp4Remuxer2['default']);
         break;
       case 'demux':
-        self.demuxer.push(new Uint8Array(ev.data.data), ev.data.audioCodec, ev.data.videoCodec, ev.data.timeOffset, ev.data.cc, ev.data.level, ev.data.duration);
+        var data = ev.data;
+        self.demuxer.push(new Uint8Array(data.data), data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration);
         self.demuxer.remux();
         break;
       default:
@@ -2184,12 +2185,12 @@ var Demuxer = (function () {
     }
   }, {
     key: 'push',
-    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
+    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
       if (this.w) {
         // post fragment payload as transferable objects (no copy)
-        this.w.postMessage({ cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, duration: duration }, [data]);
+        this.w.postMessage({ cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn: sn, duration: duration }, [data]);
       } else {
-        this.demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, duration);
+        this.demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
         this.demuxer.remux();
       }
     }
@@ -2604,7 +2605,7 @@ var TSDemuxer = (function () {
     // feed incoming data to the front of the parsing pipeline
   }, {
     key: 'push',
-    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
+    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
       var avcData,
           aacData,
           id3Data,
@@ -2618,6 +2619,7 @@ var TSDemuxer = (function () {
       this.videoCodec = videoCodec;
       this.timeOffset = timeOffset;
       this._duration = duration;
+      this.contiguous = false;
       if (cc !== this.lastCC) {
         _utilsLogger.logger.log('discontinuity detected');
         this.insertDiscontinuity();
@@ -2626,7 +2628,16 @@ var TSDemuxer = (function () {
         _utilsLogger.logger.log('level switch detected');
         this.switchLevel();
         this.lastLevel = level;
+      } else if (sn === this.lastSN + 1) {
+        this.contiguous = true;
       }
+      this.lastSN = sn;
+
+      if (!this.contiguous) {
+        // flush any partial content
+        this.aacOverFlow = null;
+      }
+
       var pmtParsed = this.pmtParsed,
           avcId = this._avcTrack.id,
           aacId = this._aacTrack.id,
@@ -2715,7 +2726,7 @@ var TSDemuxer = (function () {
   }, {
     key: 'remux',
     value: function remux() {
-      this.remuxer.remux(this._aacTrack, this._avcTrack, this._id3Track, this.timeOffset);
+      this.remuxer.remux(this._aacTrack, this._avcTrack, this._id3Track, this.timeOffset, this.contiguous);
     }
   }, {
     key: 'destroy',
@@ -4718,18 +4729,18 @@ var MP4Remuxer = (function () {
     }
   }, {
     key: 'remux',
-    value: function remux(audioTrack, videoTrack, id3Track, timeOffset) {
+    value: function remux(audioTrack, videoTrack, id3Track, timeOffset, contiguous) {
       // generate Init Segment if needed
       if (!this.ISGenerated) {
         this.generateIS(audioTrack, videoTrack, timeOffset);
       }
       //logger.log('nb AVC samples:' + videoTrack.samples.length);
       if (videoTrack.samples.length) {
-        this.remuxVideo(videoTrack, timeOffset);
+        this.remuxVideo(videoTrack, timeOffset, contiguous);
       }
       //logger.log('nb AAC samples:' + audioTrack.samples.length);
       if (audioTrack.samples.length) {
-        this.remuxAudio(audioTrack, timeOffset);
+        this.remuxAudio(audioTrack, timeOffset, contiguous);
       }
       //logger.log('nb ID3 samples:' + audioTrack.samples.length);
       if (id3Track.samples.length) {
@@ -4804,7 +4815,7 @@ var MP4Remuxer = (function () {
     }
   }, {
     key: 'remuxVideo',
-    value: function remuxVideo(track, timeOffset) {
+    value: function remuxVideo(track, timeOffset, contiguous) {
       var view,
           i = 8,
           pesTimeScale = this.PES_TIMESCALE,
@@ -4855,43 +4866,25 @@ var MP4Remuxer = (function () {
             mp4Sample.duration = 0;
           }
         } else {
+          var nextAvcDts = this.nextAvcDts,
+              delta;
           // first AVC sample of video track, normalize PTS/DTS
-          ptsnorm = this._PTSNormalize(pts, this.nextAvcDts);
-          dtsnorm = this._PTSNormalize(dts, this.nextAvcDts);
-          // check if first AVC sample is contiguous with last sample of previous track
-          // delta between next DTS and dtsnorm should be less than 1
-          if (this.nextAvcDts) {
-            var delta = Math.round((dtsnorm - this.nextAvcDts) / 90),
-                absdelta = Math.abs(delta);
-            //logger.log('absdelta/dts:' + absdelta + '/' + dtsnorm);
-            // if delta is less than 300 ms, next loaded fragment is assumed to be contiguous with last one
-            if (absdelta < 300) {
+          ptsnorm = this._PTSNormalize(pts, nextAvcDts);
+          dtsnorm = this._PTSNormalize(dts, nextAvcDts);
+          delta = Math.round((dtsnorm - nextAvcDts) / 90);
+          // if fragment are contiguous, or delta less than 600ms, ensure there is no overlap/hole between fragments
+          if (contiguous || Math.abs(delta) < 600) {
+            if (delta) {
               if (delta > 1) {
                 _utilsLogger.logger.log('AVC:' + delta + ' ms hole between fragments detected,filling it');
               } else if (delta < -1) {
                 _utilsLogger.logger.log('AVC:' + -delta + ' ms overlapping between fragments detected');
               }
-              if (absdelta) {
-                // set DTS to next DTS
-                dtsnorm = this.nextAvcDts;
-                // offset PTS as well, ensure that PTS is smaller or equal than new DTS
-                ptsnorm = Math.max(ptsnorm - delta, dtsnorm);
-                _utilsLogger.logger.log('Video/PTS/DTS adjusted:' + ptsnorm + '/' + dtsnorm);
-              }
-            } else {
-              // not contiguous timestamp, check if DTS is within acceptable range
-              var expectedDTS = pesTimeScale * timeOffset;
-              // check if there is any unexpected drift between expected timestamp and real one
-              if (Math.abs(expectedDTS - dtsnorm) > pesTimeScale * 3600) {
-                //logger.log('PTS looping ??? AVC PTS delta:${expectedPTS-ptsnorm}');
-                var dtsOffset = expectedDTS - dtsnorm;
-                // set PTS to next expected PTS;
-                dtsnorm = expectedDTS;
-                ptsnorm = dtsnorm;
-                // offset initPTS/initDTS to fix computation for following samples
-                this._initPTS -= dtsOffset;
-                this._initDTS -= dtsOffset;
-              }
+              // set DTS to next DTS
+              dtsnorm = nextAvcDts;
+              // offset PTS as well, ensure that PTS is smaller or equal than new DTS
+              ptsnorm = Math.max(ptsnorm - delta, dtsnorm);
+              _utilsLogger.logger.log('Video/PTS/DTS adjusted:' + ptsnorm + '/' + dtsnorm);
             }
           }
           // remember first PTS of our avcSamples, ensure value is positive
@@ -4950,7 +4943,7 @@ var MP4Remuxer = (function () {
     }
   }, {
     key: 'remuxAudio',
-    value: function remuxAudio(track, timeOffset) {
+    value: function remuxAudio(track, timeOffset, contiguous) {
       var view,
           i = 8,
           pesTimeScale = this.PES_TIMESCALE,
@@ -4992,40 +4985,24 @@ var MP4Remuxer = (function () {
             mp4Sample.duration = 0;
           }
         } else {
-          ptsnorm = this._PTSNormalize(pts, this.nextAacPts);
-          dtsnorm = this._PTSNormalize(dts, this.nextAacPts);
-          // check if fragments are contiguous (i.e. no missing frames between fragment)
-          if (this.nextAacPts && this.nextAacPts !== ptsnorm) {
-            //logger.log('Audio next PTS:' + this.nextAacPts);
-            var delta = Math.round(1000 * (ptsnorm - this.nextAacPts) / pesTimeScale),
-                absdelta = Math.abs(delta);
-            // if delta is less than 300 ms, next loaded fragment is assumed to be contiguous with last one
-            if (absdelta > 1 && absdelta < 300) {
-              if (delta > 0) {
+          var nextAacPts = this.nextAacPts,
+              delta;
+          ptsnorm = this._PTSNormalize(pts, nextAacPts);
+          dtsnorm = this._PTSNormalize(dts, nextAacPts);
+          delta = Math.round(1000 * (ptsnorm - nextAacPts) / pesTimeScale);
+          // if fragment are contiguous, or delta less than 600ms, ensure there is no overlap/hole between fragments
+          if (contiguous || Math.abs(delta) < 600) {
+            // log delta
+            if (delta) {
+              if (delta > 1) {
                 _utilsLogger.logger.log('AAC:' + delta + ' ms hole between fragments detected,filling it');
                 // set PTS to next PTS, and ensure PTS is greater or equal than last DTS
                 //logger.log('Audio/PTS/DTS adjusted:' + aacSample.pts + '/' + aacSample.dts);
-              } else {
+              } else if (delta < -1) {
                   _utilsLogger.logger.log('AAC:' + -delta + ' ms overlapping between fragments detected');
                 }
               // set DTS to next DTS
-              ptsnorm = dtsnorm = this.nextAacPts;
-              _utilsLogger.logger.log('Audio/PTS/DTS adjusted:' + ptsnorm + '/' + dtsnorm);
-            } else if (absdelta) {
-              // not contiguous timestamp, check if PTS is within acceptable range
-              var expectedPTS = pesTimeScale * timeOffset;
-              //logger.log('expectedPTS/PTSnorm:${expectedPTS}/${ptsnorm}/${expectedPTS-ptsnorm}');
-              // check if there is any unexpected drift between expected timestamp and real one
-              if (Math.abs(expectedPTS - ptsnorm) > pesTimeScale * 3600) {
-                //logger.log('PTS looping ??? AAC PTS delta:${expectedPTS-ptsnorm}');
-                var ptsOffset = expectedPTS - ptsnorm;
-                // set PTS to next expected PTS;
-                ptsnorm = expectedPTS;
-                dtsnorm = ptsnorm;
-                // offset initPTS/initDTS to fix computation for following samples
-                this._initPTS -= ptsOffset;
-                this._initDTS -= ptsOffset;
-              }
+              ptsnorm = dtsnorm = nextAacPts;
             }
           }
           // remember first PTS of our aacSamples, ensure value is positive
@@ -5177,6 +5154,8 @@ var URLHelper = {
   // build an absolute URL from a relative one using the provided baseURL
   // if relativeURL is an absolute URL it will be returned as is.
   buildAbsoluteURL: function buildAbsoluteURL(baseURL, relativeURL) {
+    // remove any remaining space and CRLF
+    relativeURL = relativeURL.trim();
     if (/^[a-z]+:/i.test(relativeURL)) {
       // complete url, not relative
       return relativeURL;
