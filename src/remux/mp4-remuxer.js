@@ -32,18 +32,18 @@ class MP4Remuxer {
     this.ISGenerated = false;
   }
 
-  remux(audioTrack,videoTrack,id3Track,timeOffset) {
+  remux(audioTrack,videoTrack,id3Track,timeOffset, contiguous) {
     // generate Init Segment if needed
     if (!this.ISGenerated) {
       this.generateIS(audioTrack,videoTrack,timeOffset);
     }
     //logger.log('nb AVC samples:' + videoTrack.samples.length);
     if (videoTrack.samples.length) {
-      this.remuxVideo(videoTrack,timeOffset);
+      this.remuxVideo(videoTrack,timeOffset,contiguous);
     }
     //logger.log('nb AAC samples:' + audioTrack.samples.length);
     if (audioTrack.samples.length) {
-      this.remuxAudio(audioTrack,timeOffset);
+      this.remuxAudio(audioTrack,timeOffset,contiguous);
     }
     //logger.log('nb ID3 samples:' + audioTrack.samples.length);
     if (id3Track.samples.length) {
@@ -117,7 +117,7 @@ class MP4Remuxer {
     }
   }
 
-  remuxVideo(track, timeOffset) {
+  remuxVideo(track, timeOffset, contiguous) {
     var view,
         i = 8,
         pesTimeScale = this.PES_TIMESCALE,
@@ -162,42 +162,24 @@ class MP4Remuxer {
           mp4Sample.duration = 0;
         }
       } else {
+        var nextAvcDts = this.nextAvcDts,delta;
         // first AVC sample of video track, normalize PTS/DTS
-        ptsnorm = this._PTSNormalize(pts, this.nextAvcDts);
-        dtsnorm = this._PTSNormalize(dts, this.nextAvcDts);
-        // check if first AVC sample is contiguous with last sample of previous track
-        // delta between next DTS and dtsnorm should be less than 1
-        if (this.nextAvcDts) {
-          var delta = Math.round((dtsnorm - this.nextAvcDts) / 90), absdelta = Math.abs(delta);
-          //logger.log('absdelta/dts:' + absdelta + '/' + dtsnorm);
-          // if delta is less than 300 ms, next loaded fragment is assumed to be contiguous with last one
-          if (absdelta < 300) {
+        ptsnorm = this._PTSNormalize(pts, nextAvcDts);
+        dtsnorm = this._PTSNormalize(dts, nextAvcDts);
+        delta = Math.round((dtsnorm - nextAvcDts) / 90);
+        // if fragment are contiguous, or delta less than 600ms, ensure there is no overlap/hole between fragments
+        if (contiguous || Math.abs(delta) < 600) {
+          if (delta) {
             if (delta > 1) {
               logger.log(`AVC:${delta} ms hole between fragments detected,filling it`);
             } else if (delta < -1) {
               logger.log(`AVC:${(-delta)} ms overlapping between fragments detected`);
             }
-            if(absdelta) {
-              // set DTS to next DTS
-              dtsnorm = this.nextAvcDts;
-              // offset PTS as well, ensure that PTS is smaller or equal than new DTS
-              ptsnorm = Math.max(ptsnorm - delta, dtsnorm);
-              logger.log('Video/PTS/DTS adjusted:' + ptsnorm + '/' + dtsnorm);
-            }
-          } else {
-            // not contiguous timestamp, check if DTS is within acceptable range
-            var expectedDTS = pesTimeScale * timeOffset;
-            // check if there is any unexpected drift between expected timestamp and real one
-            if (Math.abs(expectedDTS - dtsnorm) > (pesTimeScale * 3600)) {
-              //logger.log('PTS looping ??? AVC PTS delta:${expectedPTS-ptsnorm}');
-              var dtsOffset = expectedDTS - dtsnorm;
-              // set PTS to next expected PTS;
-              dtsnorm = expectedDTS;
-              ptsnorm = dtsnorm;
-              // offset initPTS/initDTS to fix computation for following samples
-              this._initPTS -= dtsOffset;
-              this._initDTS -= dtsOffset;
-            }
+            // set DTS to next DTS
+            dtsnorm = nextAvcDts;
+            // offset PTS as well, ensure that PTS is smaller or equal than new DTS
+            ptsnorm = Math.max(ptsnorm - delta, dtsnorm);
+            logger.log('Video/PTS/DTS adjusted:' + ptsnorm + '/' + dtsnorm);
           }
         }
         // remember first PTS of our avcSamples, ensure value is positive
@@ -255,7 +237,7 @@ class MP4Remuxer {
     });
   }
 
-  remuxAudio(track,timeOffset) {
+  remuxAudio(track,timeOffset, contiguous) {
     var view,
         i = 8,
         pesTimeScale = this.PES_TIMESCALE,
@@ -290,40 +272,23 @@ class MP4Remuxer {
           mp4Sample.duration = 0;
         }
       } else {
-        ptsnorm = this._PTSNormalize(pts, this.nextAacPts);
-        dtsnorm = this._PTSNormalize(dts, this.nextAacPts);
-        // check if fragments are contiguous (i.e. no missing frames between fragment)
-        if (this.nextAacPts && this.nextAacPts !== ptsnorm) {
-          //logger.log('Audio next PTS:' + this.nextAacPts);
-          var delta = Math.round(1000 * (ptsnorm - this.nextAacPts) / pesTimeScale), absdelta = Math.abs(delta);
-          // if delta is less than 300 ms, next loaded fragment is assumed to be contiguous with last one
-          if (absdelta > 1 && absdelta < 300) {
-            if (delta > 0) {
+        var nextAacPts = this.nextAacPts,delta;
+        ptsnorm = this._PTSNormalize(pts, nextAacPts);
+        dtsnorm = this._PTSNormalize(dts, nextAacPts);
+        delta = Math.round(1000 * (ptsnorm - nextAacPts) / pesTimeScale);
+        // if fragment are contiguous, or delta less than 600ms, ensure there is no overlap/hole between fragments
+        if (contiguous || Math.abs(delta) < 600) {
+          // log delta
+          if (delta) {
+            if (delta > 1) {
               logger.log(`AAC:${delta} ms hole between fragments detected,filling it`);
               // set PTS to next PTS, and ensure PTS is greater or equal than last DTS
               //logger.log('Audio/PTS/DTS adjusted:' + aacSample.pts + '/' + aacSample.dts);
-            } else {
+            } else if (delta < -1) {
               logger.log(`AAC:${(-delta)} ms overlapping between fragments detected`);
             }
             // set DTS to next DTS
-            ptsnorm = dtsnorm = this.nextAacPts;
-            logger.log('Audio/PTS/DTS adjusted:' + ptsnorm + '/' + dtsnorm);
-          }
-          else if (absdelta) {
-            // not contiguous timestamp, check if PTS is within acceptable range
-            var expectedPTS = pesTimeScale * timeOffset;
-            //logger.log('expectedPTS/PTSnorm:${expectedPTS}/${ptsnorm}/${expectedPTS-ptsnorm}');
-            // check if there is any unexpected drift between expected timestamp and real one
-            if (Math.abs(expectedPTS - ptsnorm) > pesTimeScale * 3600) {
-              //logger.log('PTS looping ??? AAC PTS delta:${expectedPTS-ptsnorm}');
-              var ptsOffset = expectedPTS - ptsnorm;
-              // set PTS to next expected PTS;
-              ptsnorm = expectedPTS;
-              dtsnorm = ptsnorm;
-              // offset initPTS/initDTS to fix computation for following samples
-              this._initPTS -= ptsOffset;
-              this._initDTS -= ptsOffset;
-            }
+            ptsnorm = dtsnorm = nextAacPts;
           }
         }
         // remember first PTS of our aacSamples, ensure value is positive

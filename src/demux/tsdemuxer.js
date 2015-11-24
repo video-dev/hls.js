@@ -49,13 +49,14 @@
   }
 
   // feed incoming data to the front of the parsing pipeline
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
+  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
     var avcData, aacData, id3Data,
         start, len = data.length, stt, pid, atf, offset;
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
     this.timeOffset = timeOffset;
     this._duration = duration;
+    this.contiguous = false;
     if (cc !== this.lastCC) {
       logger.log('discontinuity detected');
       this.insertDiscontinuity();
@@ -64,7 +65,16 @@
       logger.log('level switch detected');
       this.switchLevel();
       this.lastLevel = level;
+    } else if (sn === (this.lastSN+1)) {
+      this.contiguous = true;
     }
+    this.lastSN = sn;
+
+    if(!this.contiguous) {
+      // flush any partial content
+      this.aacOverFlow = null;
+    }
+
     var pmtParsed = this.pmtParsed,
         avcId = this._avcTrack.id,
         aacId = this._aacTrack.id,
@@ -152,7 +162,7 @@
   }
 
   remux() {
-    this.remuxer.remux(this._aacTrack,this._avcTrack, this._id3Track, this.timeOffset);
+    this.remuxer.remux(this._aacTrack,this._avcTrack, this._id3Track, this.timeOffset, this.contiguous);
   }
 
   destroy() {
