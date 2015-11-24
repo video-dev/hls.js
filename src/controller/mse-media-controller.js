@@ -697,21 +697,6 @@ class MSEMediaController {
                     this.fragPlaying = fragPlaying;
                     this.hls.trigger(Event.FRAG_CHANGED, { frag: fragPlaying });
                 }
-                // if stream is VOD (not live) and we reach End of Stream
-                var levelDetails = this.levels[this.level].details;
-                if (levelDetails && !levelDetails.live) {
-                    // are we playing last fragment ?
-                    if (fragPlaying.sn === levelDetails.endSN) {
-                        var mediaSource = this.mediaSource;
-                        if (mediaSource && mediaSource.readyState === 'open') {
-                            logger.log(
-                                'all media data available, signal endOfStream() to MediaSource'
-                            );
-                            //Notify the media element that it now has all of the media data
-                            mediaSource.endOfStream();
-                        }
-                    }
-                }
             }
         }
     }
@@ -1300,6 +1285,22 @@ class MSEMediaController {
                         this.media.buffered
                     )}`
                 );
+
+                // if stream is VOD (not live) and we reach End of Stream
+                var levelDetails = this.levels[this.level].details;
+                if (levelDetails && !levelDetails.live) {
+                    // have we buffered last fragment ?
+                    if (frag.sn === levelDetails.endSN) {
+                        var mediaSource = this.mediaSource;
+                        if (mediaSource && mediaSource.readyState === 'open') {
+                            logger.log(
+                                'all media data available, signal endOfStream() to MediaSource'
+                            );
+                            //Notify the media element that it now has all of the media data
+                            mediaSource.endOfStream();
+                        }
+                    }
+                }
                 this.state = State.IDLE;
             }
             var video = this.media;
