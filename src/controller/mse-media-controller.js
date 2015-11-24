@@ -547,14 +547,25 @@ class MSEMediaController {
 
     bufferInfo(pos, maxHoleDuration) {
         var v = this.media,
-            buffered = v.buffered,
+            vbuffered = v.buffered,
             bufferLen,
             // bufferStart and bufferEnd are buffer boundaries around current video position
             bufferStart,
             bufferEnd,
             bufferStartNext,
-            i;
-        var buffered2 = [];
+            i,
+            buffered = [],
+            buffered2 = [];
+
+        for (i = 0; i < vbuffered.length; i++) {
+            buffered.push({ start: vbuffered.start(i), end: vbuffered.end(i) });
+        }
+
+        // sort on buffer.start (IE does not always return sorted buffered range)
+        buffered.sort(function(a, b) {
+            return a.start - b.start;
+        });
+
         // there might be some small holes between buffer time range
         // consider that holes smaller than maxHoleDuration are irrelevant and build another
         // buffer time range representations that discards those holes
@@ -562,15 +573,12 @@ class MSEMediaController {
             //logger.log('buf start/end:' + buffered.start(i) + '/' + buffered.end(i));
             if (
                 buffered2.length &&
-                buffered.start(i) - buffered2[buffered2.length - 1].end <
+                buffered[i].start - buffered2[buffered2.length - 1].end <
                     maxHoleDuration
             ) {
-                buffered2[buffered2.length - 1].end = buffered.end(i);
+                buffered2[buffered2.length - 1].end = buffered[i].end;
             } else {
-                buffered2.push({
-                    start: buffered.start(i),
-                    end: buffered.end(i)
-                });
+                buffered2.push(buffered[i]);
             }
         }
         for (
