@@ -3,6 +3,8 @@ var URLHelper = {
   // build an absolute URL from a relative one using the provided baseURL
   // if relativeURL is an absolute URL it will be returned as is.
   buildAbsoluteURL: function(baseURL, relativeURL) {
+    // remove any remaining space and CRLF
+    relativeURL = relativeURL.trim();
     if (/^[a-z]+:/i.test(relativeURL)) {
       // complete url, not relative
       return relativeURL;
@@ -47,7 +49,7 @@ var URLHelper = {
       var newPath = URLHelper.buildAbsolutePath(baseURLPath, relativeURL);
       builtURL = baseURLDomain + newPath;
     }
-    
+
     // put the query and hash parts back
     if (relativeURLQuery) {
       builtURL += relativeURLQuery;
