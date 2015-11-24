@@ -306,7 +306,7 @@ class MSEMediaController {
                             frag.level === this.fragPrevious.level &&
                             frag.sn === this.fragPrevious.sn
                         ) {
-                            if (fragIdx === fragLen - 1) {
+                            if (fragIdx >= fragLen - 1) {
                                 // we are at the end of the playlist and we already loaded last fragment, don't do anything
                                 break;
                             } else {
