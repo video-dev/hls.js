@@ -72,15 +72,7 @@ class TSDemuxer {
     }
 
     // feed incoming data to the front of the parsing pipeline
-    pushDecrypted(
-        data,
-        audioCodec,
-        videoCodec,
-        timeOffset,
-        cc,
-        level,
-        duration
-    ) {
+    push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
         var avcData,
             aacData,
             id3Data,
@@ -198,18 +190,6 @@ class TSDemuxer {
         if (id3Data) {
             this._parseID3PES(this._parsePES(id3Data));
         }
-    }
-
-    push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
-        this.pushDecrypted(
-            data,
-            audioCodec,
-            videoCodec,
-            timeOffset,
-            cc,
-            level,
-            duration
-        );
         this.remux();
     }
 
