@@ -592,7 +592,7 @@ class MSEMediaController {
             if (pos + maxHoleDuration >= start && pos < end) {
                 // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
                 bufferStart = start;
-                bufferEnd = end + maxHoleDuration;
+                bufferEnd = end;
                 bufferLen = bufferEnd - pos;
             } else if (pos + maxHoleDuration < start) {
                 bufferStartNext = start;
