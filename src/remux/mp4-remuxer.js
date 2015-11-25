@@ -304,7 +304,11 @@ class MP4Remuxer {
                 // we use DTS to compute sample duration, but we use PTS to compute initPTS which is used to sync audio and video
                 mp4Sample.duration = (dtsnorm - lastDTS) / pes2mp4ScaleFactor;
                 if (mp4Sample.duration < 0) {
-                    //logger.log('invalid sample duration at PTS/DTS::' + aacSample.pts + '/' + aacSample.dts + ':' + mp4Sample.duration);
+                    logger.log(
+                        `invalid AAC sample duration at PTS:${aacSample.pts}:${
+                            mp4Sample.duration
+                        }`
+                    );
                     mp4Sample.duration = 0;
                 }
             } else {
@@ -321,14 +325,14 @@ class MP4Remuxer {
                     if (delta) {
                         if (delta > 1) {
                             logger.log(
-                                `AAC:${delta} ms hole between fragments detected,filling it`
+                                `${delta} ms hole between AAC samples detected,filling it`
                             );
                             // set PTS to next PTS, and ensure PTS is greater or equal than last DTS
-                            //logger.log('Audio/PTS/DTS adjusted:' + aacSample.pts + '/' + aacSample.dts);
                         } else if (delta < -1) {
                             logger.log(
-                                `AAC:${-delta} ms overlapping between fragments detected`
+                                `${-delta} ms overlapping between AAC samples detected, dropping it`
                             );
+                            continue;
                         }
                         // set DTS to next DTS
                         ptsnorm = dtsnorm = nextAacPts;
