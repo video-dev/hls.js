@@ -83,7 +83,8 @@ class Demuxer {
         cc,
         level,
         duration,
-        decryptdata
+        decryptdata,
+        sn
     ) {
         if (
             data.byteLength > 0 &&
@@ -101,10 +102,11 @@ class Demuxer {
                     ['decrypt']
                 )
                 .then(function(importedKey) {
-                    decryptdata.iv = decryptdata.iv || new ArrayBuffer(16);
+                    var decryptiv =
+                        decryptdata.iv || new Uint32Array([0, 0, 0, sn]);
                     window.crypto.subtle
                         .decrypt(
-                            { name: 'AES-CBC', iv: decryptdata.iv },
+                            { name: 'AES-CBC', iv: decryptiv },
                             importedKey,
                             data
                         )
