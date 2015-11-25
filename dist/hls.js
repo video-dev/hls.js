@@ -2249,11 +2249,13 @@ var Demuxer = (function () {
           window.crypto.subtle.decrypt({ name: 'AES-CBC', iv: decryptdata.iv.buffer }, importedKey, data).then(function (result) {
             localthis.pushDecrypted(result, audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
           })['catch'](function (err) {
-            localthis.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorTypes.FRAG_PARSING_ERROR, fatal: false, reason: err.message });
+            _utilsLogger.logger.error('decrypting error : ' + err.message);
+            localthis.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_DECRYPT_ERROR, fatal: true, reason: err.message });
             return;
           });
         })['catch'](function (err) {
-          localthis.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorTypes.FRAG_PARSING_ERROR, fatal: false, reason: err.message });
+          _utilsLogger.logger.error('decrypting error : ' + err.message);
+          localthis.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_DECRYPT_ERROR, fatal: true, reason: err.message });
           return;
         });
       } else {
@@ -3374,6 +3376,8 @@ var ErrorDetails = {
   FRAG_LOOP_LOADING_ERROR: 'fragLoopLoadingError',
   // Identifier for fragment load timeout error - data: { frag : fragment object}
   FRAG_LOAD_TIMEOUT: 'fragLoadTimeOut',
+  // Identifier for a fragment decryption error event - data: parsing error description
+  FRAG_DECRYPT_ERROR: 'fragDecryptError',
   // Identifier for a fragment parsing error event - data: parsing error description
   FRAG_PARSING_ERROR: 'fragParsingError',
   // Identifier for a fragment appending error event - data: appending error description
