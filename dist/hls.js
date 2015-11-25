@@ -1148,8 +1148,7 @@ var MSEMediaController = (function () {
         case State.APPENDING:
           if (this.sourceBuffer) {
             if (this.media.error) {
-              _utilsLogger.logger.error('trying to append although a media error occured');
-              hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_APPENDING_ERROR, frag: this.fragCurrent, fatal: true });
+              _utilsLogger.logger.error('trying to append although a media error occured, switch to ERROR state');
               this.state = State.ERROR;
               return;
             }
@@ -5228,7 +5227,7 @@ var MP4Remuxer = (function () {
           // we use DTS to compute sample duration, but we use PTS to compute initPTS which is used to sync audio and video
           mp4Sample.duration = (dtsnorm - lastDTS) / pes2mp4ScaleFactor;
           if (mp4Sample.duration < 0) {
-            //logger.log('invalid sample duration at PTS/DTS::' + aacSample.pts + '/' + aacSample.dts + ':' + mp4Sample.duration);
+            _utilsLogger.logger.log('invalid AAC sample duration at PTS:' + aacSample.pts + ':' + mp4Sample.duration);
             mp4Sample.duration = 0;
           }
         } else {
@@ -5242,11 +5241,11 @@ var MP4Remuxer = (function () {
             // log delta
             if (delta) {
               if (delta > 1) {
-                _utilsLogger.logger.log('AAC:' + delta + ' ms hole between fragments detected,filling it');
+                _utilsLogger.logger.log(delta + ' ms hole between AAC samples detected,filling it');
                 // set PTS to next PTS, and ensure PTS is greater or equal than last DTS
-                //logger.log('Audio/PTS/DTS adjusted:' + aacSample.pts + '/' + aacSample.dts);
               } else if (delta < -1) {
-                  _utilsLogger.logger.log('AAC:' + -delta + ' ms overlapping between fragments detected');
+                  _utilsLogger.logger.log(-delta + ' ms overlapping between AAC samples detected, dropping it');
+                  continue;
                 }
               // set DTS to next DTS
               ptsnorm = dtsnorm = nextAacPts;
