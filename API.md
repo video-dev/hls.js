@@ -95,6 +95,7 @@ each error is categorized by :
     - ```Hls.ErrorDetails.FRAG_LOAD_ERROR```raised when fragment loading fails because of a network error
     - ```Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR```raised upon detection of same fragment being requested in loop
     - ```Hls.ErrorDetails.FRAG_LOAD_TIMEOUT```raised when fragment loading fails because of a timeout
+    - ```Hls.ErrorDetails.FRAG_DECRYPT_ERROR```raised when fragment decryption fails 
     - ```Hls.ErrorDetails.FRAG_PARSING_ERROR```raised when fragment parsing fails 
     - ```Hls.ErrorDetails.FRAG_APPENDING_ERROR```raised when mp4 boxes appending in SourceBuffer fails
   - its fatality:
@@ -437,11 +438,13 @@ hls.on(Hls.Events.LEVEL_LOADED,function(event,data) {
 ```
 full list of Events available below :
 
-  - `Hls.Events.MSE_ATTACHED`  - fired when MediaSource has been succesfully attached to video element.
+  - `Hls.Events.MEDIA_ATTACHING`  - fired to attach Media to hls instance.
     -  data: { video , mediaSource }
-  - `Hls.Events.MSE_DETACHING`  - fired before detaching MediaSource from video element.
+  - `Hls.Events.MEDIA_ATTACHED`  - fired when Media has been succesfully attached to hls instance
+    -  data: { video , mediaSource }
+  - `Hls.Events.MEDIA_DETACHING`  - fired before detaching Media from hls instance
     -  data: { }
-  - `Hls.Events.MSE_DETACHED`  - fired when MediaSource has been detached from video element.
+  - `Hls.Events.MEDIA_DETACHED`  - fired when Media has been detached from hls instance
     -  data: { }
   - `Hls.Events.MANIFEST_LOADING`  - fired to signal that a manifest loading starts
     -  data: { url : manifestURL}
@@ -459,6 +462,10 @@ full list of Events available below :
     -  data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment } 
   - `Hls.Events.LEVEL_SWITCH`  - fired when a level switch is requested
     -  data: { levelId : id of new level }
+  - `Hls.Events.KEY_LOADING`  - fired when a decryption key loading starts
+    -  data: { frag : fragment object}
+  - `Hls.Events.KEY_LOADED`  - fired when a decryption key loading is completed
+    -  data: { frag : fragment object}
   - `Hls.Events.FRAG_LOADING`  - fired when a fragment loading starts
     -  data: { frag : fragment object}
   - `Hls.Events.FRAG_LOAD_PROGRESS`  - fired when a fragment load is in progress
