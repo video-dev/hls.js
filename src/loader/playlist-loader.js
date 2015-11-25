@@ -146,6 +146,10 @@ class PlaylistLoader {
         return null;
     }
 
+    cloneObj(obj) {
+        return JSON.parse(JSON.stringify(obj));
+    }
+
     parseLevelPlaylist(string, baseurl, id) {
         var currentSN = 0,
             totalduration = 0,
@@ -197,18 +201,26 @@ class PlaylistLoader {
                 case 'INF':
                     var duration = parseFloat(result[1]);
                     if (!isNaN(duration)) {
+                        var fragdecryptdata,
+                            sn = currentSN++;
+                        if (levelkey.method && levelkey.uri && !levelkey.iv) {
+                            fragdecryptdata = this.cloneObj(levelkey);
+                            fragdecryptdata.iv = new Uint32Array([0, 0, 0, sn]);
+                        } else {
+                            fragdecryptdata = levelkey;
+                        }
                         level.fragments.push({
                             url: result[2]
                                 ? this.resolve(result[2], baseurl)
                                 : null,
                             duration: duration,
                             start: totalduration,
-                            sn: currentSN++,
+                            sn: sn,
                             level: id,
                             cc: cc,
                             byteRangeStartOffset: byteRangeStartOffset,
                             byteRangeEndOffset: byteRangeEndOffset,
-                            decryptdata: levelkey
+                            decryptdata: fragdecryptdata
                         });
                         totalduration += duration;
                         byteRangeStartOffset = null;

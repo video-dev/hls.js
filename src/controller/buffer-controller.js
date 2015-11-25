@@ -1124,8 +1124,7 @@ class BufferController {
                     fragCurrent.cc,
                     level,
                     duration,
-                    fragCurrent.decryptdata,
-                    sn
+                    fragCurrent.decryptdata
                 );
             }
         }
