@@ -200,6 +200,7 @@ class TSDemuxer {
         if (id3Data) {
             this._parseID3PES(this._parsePES(id3Data));
         }
+        this.remux();
     }
 
     remux() {
@@ -644,7 +645,10 @@ class TSDemuxer {
             );
             //stamp = pes.pts;
             //console.log('AAC frame, offset/length/pts:' + (adtsStartOffset+7) + '/' + adtsFrameSize + '/' + stamp.toFixed(0));
-            if (adtsStartOffset + adtsHeaderLen + adtsFrameSize <= len) {
+            if (
+                adtsFrameSize > 0 &&
+                adtsStartOffset + adtsHeaderLen + adtsFrameSize <= len
+            ) {
                 aacSample = {
                     unit: data.subarray(
                         adtsStartOffset + adtsHeaderLen,
@@ -657,6 +661,15 @@ class TSDemuxer {
                 this._aacTrack.len += adtsFrameSize;
                 adtsStartOffset += adtsFrameSize + adtsHeaderLen;
                 nbSamples++;
+                // look for ADTS header (0xFFFx)
+                for (; adtsStartOffset < len - 1; adtsStartOffset++) {
+                    if (
+                        data[adtsStartOffset] === 0xff &&
+                        (data[adtsStartOffset + 1] & 0xf0) === 0xf0
+                    ) {
+                        break;
+                    }
+                }
             } else {
                 break;
             }
