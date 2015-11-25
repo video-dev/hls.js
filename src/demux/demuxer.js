@@ -1,4 +1,5 @@
 import Event from '../events';
+import { ErrorTypes } from '../errors';
 import DemuxerInline from '../demux/demuxer-inline';
 import DemuxerWorker from '../demux/demuxer-worker';
 import { logger } from '../utils/logger';
@@ -37,7 +38,16 @@ class Demuxer {
         }
     }
 
-    push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
+    pushDecrypted(
+        data,
+        audioCodec,
+        videoCodec,
+        timeOffset,
+        cc,
+        level,
+        sn,
+        duration
+    ) {
         if (this.w) {
             // post fragment payload as transferable objects (no copy)
             this.w.postMessage(
@@ -65,7 +75,84 @@ class Demuxer {
                 sn,
                 duration
             );
-            this.demuxer.remux();
+        }
+    }
+
+    push(
+        data,
+        audioCodec,
+        videoCodec,
+        timeOffset,
+        cc,
+        level,
+        sn,
+        duration,
+        decryptdata
+    ) {
+        if (
+            data.byteLength > 0 &&
+            decryptdata != null &&
+            decryptdata.key != null &&
+            decryptdata.method === 'AES-128'
+        ) {
+            var localthis = this;
+            window.crypto.subtle
+                .importKey(
+                    'raw',
+                    decryptdata.key,
+                    { name: 'AES-CBC', length: 128 },
+                    false,
+                    ['decrypt']
+                )
+                .then(function(importedKey) {
+                    window.crypto.subtle
+                        .decrypt(
+                            { name: 'AES-CBC', iv: decryptdata.iv.buffer },
+                            importedKey,
+                            data
+                        )
+                        .then(function(result) {
+                            localthis.pushDecrypted(
+                                result,
+                                audioCodec,
+                                videoCodec,
+                                timeOffset,
+                                cc,
+                                level,
+                                sn,
+                                duration
+                            );
+                        })
+                        .catch(function(err) {
+                            localthis.hls.trigger(Event.ERROR, {
+                                type: ErrorTypes.MEDIA_ERROR,
+                                details: ErrorTypes.FRAG_PARSING_ERROR,
+                                fatal: false,
+                                reason: err.message
+                            });
+                            return;
+                        });
+                })
+                .catch(function(err) {
+                    localthis.hls.trigger(Event.ERROR, {
+                        type: ErrorTypes.MEDIA_ERROR,
+                        details: ErrorTypes.FRAG_PARSING_ERROR,
+                        fatal: false,
+                        reason: err.message
+                    });
+                    return;
+                });
+        } else {
+            this.pushDecrypted(
+                data,
+                audioCodec,
+                videoCodec,
+                timeOffset,
+                cc,
+                level,
+                sn,
+                duration
+            );
         }
     }
 

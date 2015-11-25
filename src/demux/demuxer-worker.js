@@ -36,7 +36,6 @@ var DemuxerWorker = function(self) {
                     data.sn,
                     data.duration
                 );
-                self.demuxer.remux();
                 break;
             default:
                 break;
