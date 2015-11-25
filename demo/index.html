@@ -89,7 +89,7 @@ header {
 
 
     <video id="video" controls autoplay class="videoCentered"></video><br>
-    <canvas id="buffered_c" height="15" class="videoCentered" onclick="buffered_seek(event)";></canvas><br><br>
+    <canvas id="buffered_c" height="15" class="videoCentered" onclick="buffered_seek(event);"></canvas><br><br>
     <pre id="HlsStatus" class="center"></pre>
 
     <div class="center" id="toggleButtons">
@@ -166,11 +166,11 @@ header {
         <button type="button" class="btn btn-xs btn-success" onclick="goToMetrics()" style="font-size:18px">metrics link</button>
         <button type="button" class="btn btn-xs btn-success" onclick="goToMetricsPermaLink()" style="font-size:18px">metrics permalink</button>
         <button type="button" class="btn btn-xs btn-success" onclick="copyMetricsToClipBoard()" style="font-size:18px">copy metrics to clipboard</button>
-        <canvas id="bufferTimerange_c" width="640" height="100" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
-        <canvas id="bitrateTimerange_c" width="640" height="100" style="border:1px solid #000000";></canvas>
-        <canvas id="bufferWindow_c" width="640" height="100" style="border:1px solid #000000" onmousemove="windowCanvasonMouseMove(event)";></canvas>
-        <canvas id="videoEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas>
-        <canvas id="loadEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
+        <canvas id="bufferTimerange_c" width="640" height="100" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event);"></canvas>
+        <canvas id="bitrateTimerange_c" width="640" height="100" style="border:1px solid #000000;"></canvas>
+        <canvas id="bufferWindow_c" width="640" height="100" style="border:1px solid #000000" onmousemove="windowCanvasonMouseMove(event);"></canvas>
+        <canvas id="videoEvent_c" width="640" height="15" style="border:1px solid #000000;"></canvas>
+        <canvas id="loadEvent_c" width="640" height="15" style="border:1px solid #000000;"></canvas><br>
       </div>
     </div>
 
