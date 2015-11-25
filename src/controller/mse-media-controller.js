@@ -482,14 +482,8 @@ class MSEMediaController {
                 if (this.sourceBuffer) {
                     if (this.media.error) {
                         logger.error(
-                            'trying to append although a media error occured'
+                            'trying to append although a media error occured, switch to ERROR state'
                         );
-                        hls.trigger(Event.ERROR, {
-                            type: ErrorTypes.MEDIA_ERROR,
-                            details: ErrorDetails.FRAG_APPENDING_ERROR,
-                            frag: this.fragCurrent,
-                            fatal: true
-                        });
                         this.state = State.ERROR;
                         return;
                     } else if (
