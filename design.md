@@ -13,7 +13,7 @@ design idea is pretty simple :
     - definition of Hls.Events
   - [src/errors.js][]
     - definition of Hls.ErrorTypes and Hls.ErrorDetails
-  - [src/controller/buffer-controller.js][]
+  - [src/controller/mse-media-controller.js][]
     - in charge of:
       - ensuring that buffer is filled as per defined quality selection logic. 
       - monitoring current playback quality level (buffer controller maintains a map between media position and quality level)
@@ -42,6 +42,7 @@ design idea is pretty simple :
 
   - [src/demux/demuxer.js][]
     - demuxer abstraction interface, that will either use a [Worker](https://en.wikipedia.org/wiki/Web_worker) to demux or demux inline depending on config/browser capabilities.
+    - also handle fragment decryption using WebCrypto API (fragment decryption is performed in main thread)
     - if Worker are disabled. demuxing will be performed in the main thread.
     - if Worker are available/enabled,
       - demuxer will instantiate a Worker
@@ -72,6 +73,8 @@ design idea is pretty simple :
     - in charge of loading fragments, use xhr-loader if not overrided by user config
   - [src/loader/playlist-loader.js][]
    - in charge of loading manifest, and level playlists, use xhr-loader if not overrided by user config.
+  - [src/loader/key-loader.js][]
+   - in charge of loading decryption key
   - [src/remux/dummy-remuxer.js][]
    - example dummy remuxer
   - [src/remux/mp4-generator.js][]
@@ -82,10 +85,14 @@ design idea is pretty simple :
    - in charge of converting AVC/AAC samples provided by demuxer into fragmented ISO BMFF boxes, compatible with MediaSource
    - this remuxer is able to deal with small gaps between fragments and ensure timestamp continuity.
    - it notifies remuxing completion using events (```FRAG_PARSING_INIT_SEGMENT```and ```FRAG_PARSING_DATA```)
+  - [src/utils/binary-search.js][]
+    - binary search helper class
   - [src/utils/hex.js][]
     - Hex dump utils, useful for debug
   - [src/utils/logger.js][]
     - logging utils, useful for debug
+  - [src/utils/url.js][]
+    - convert base+relative URL into absolute URL
   - [src/utils/xhr-loader.js][]
     - XmlHttpRequest wrapper. it handles standard HTTP GET but also retries and timeout. 
     - retries : if xhr fails, HTTP GET will be retried after a predetermined delay. this delay is increasing following an exponential backoff. after a predetemined max number of retries, an error callback will be triggered.
@@ -96,10 +103,9 @@ design idea is pretty simple :
 [src/errors.js]: src/errors.js
 [src/stats.js]: src/stats.js
 [src/controller/abr-controller.js]: src/controller/abr-controller.js
-[src/controller/buffer-controller.js]: src/controller/buffer-controller.js
-[src/controller/level-controller.js]: src/controller/level-controller.js
 [src/controller/fps-controller.js]: src/controller/fps-controller.js
 [src/controller/level-controller.js]: src/controller/level-controller.js
+[src/controller/mse-media-controller.js]: src/controller/mse-media-controller.js
 [src/demux/demuxer.js]: src/demux/demuxer.js
 [src/demux/demuxer-inline.js]: src/demux/demuxer-inline.js
 [src/demux/demuxer-worker.js]: src/demux/demuxer-worker.js
@@ -108,11 +114,14 @@ design idea is pretty simple :
 [src/helper/level-helper.js]: src/helper/level-helper.js
 [src/loader/fragment-loader.js]: src/loader/fragment-loader.js
 [src/loader/playlist-loader.js]: src/loader/playlist-loader.js
+[src/loader/key-loader.js]: src/loader/key-loader.js
 [src/remux/dummy-remuxer.js]: src/remux/dummy-remuxer.js
 [src/remux/mp4-generator.js]: src/remux/mp4-generator.js
 [src/remux/mp4-remuxer.js]: src/remux/mp4-remuxer.js
+[src/utils/binary-search.js]: src/utils/binary-search.js
 [src/utils/hex.js]: src/utils/hex.js
 [src/utils/logger.js]: src/utils/logger.js
+[src/utils/url.js]: src/utils/url.js
 [src/utils/xhr-loader.js]: src/utils/xhr-loader.js
 
 
@@ -134,4 +143,5 @@ design idea is pretty simple :
     - if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal: in that case [src/controller/level-controller.js][] will trigger an emergency switch down to level 0.
     - if frag level is 0 or auto level switch is disabled, this error is marked as fatal and a call to ```hls.startLoad()``` could help recover it.
   - ```FRAG_PARSING_ERROR``` is raised by [src/demux/tsdemuxer.js][] upon TS parsing error. this error is not fatal.
+  - ```FRAG_DECRYPT_ERROR``` is raised by [src/demux/demuxer.js][] upon fragment decrypting error. this error is fatal.
   - ```FRAG_APPENDING_ERROR``` is raised by [src/controller/buffer-controller.js][] after SourceBuffer appending error. this error is raised after 3 retries. this error is marked as fatal and a call to ```hls.recoverMediaError()``` could help recover it.
