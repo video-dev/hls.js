@@ -1,5 +1,5 @@
 import Event from '../events';
-import {ErrorTypes} from '../errors';
+import {ErrorTypes, ErrorDetails} from '../errors';
 import DemuxerInline from '../demux/demuxer-inline';
 import DemuxerWorker from '../demux/demuxer-worker';
 import {logger} from '../utils/logger';
@@ -56,12 +56,14 @@ class Demuxer {
               localthis.pushDecrypted(result, audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
             }).
             catch (function (err) {
-              localthis.hls.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorTypes.FRAG_PARSING_ERROR, fatal : false, reason : err.message});
+              logger.error(`decrypting error : ${err.message}`);
+              localthis.hls.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_DECRYPT_ERROR, fatal : true, reason : err.message});
               return;
             });
         }).
         catch (function (err) {
-          localthis.hls.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorTypes.FRAG_PARSING_ERROR, fatal : false, reason : err.message});
+          logger.error(`decrypting error : ${err.message}`);
+          localthis.hls.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_DECRYPT_ERROR, fatal : true, reason : err.message});
           return;
         });
     } else {

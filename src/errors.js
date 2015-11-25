@@ -26,6 +26,8 @@ export const ErrorDetails = {
   FRAG_LOOP_LOADING_ERROR: 'fragLoopLoadingError',
   // Identifier for fragment load timeout error - data: { frag : fragment object}
   FRAG_LOAD_TIMEOUT: 'fragLoadTimeOut',
+  // Identifier for a fragment decryption error event - data: parsing error description
+  FRAG_DECRYPT_ERROR: 'fragDecryptError',
   // Identifier for a fragment parsing error event - data: parsing error description
   FRAG_PARSING_ERROR: 'fragParsingError',
   // Identifier for a fragment appending error event - data: appending error description
