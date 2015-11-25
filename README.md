@@ -27,7 +27,7 @@ private demo accessible from Dailymotion network: [http://gdupontavice.dev.daily
 
 hls.js is (being) integrated in the following players:
 
- - [Clappr] (https://github.com/clappr/clappr), integrated in [master branch](https://github.com/clappr/clappr/commits/master)
+ - [Clappr] (https://github.com/clappr/clappr), integrated since [0.2.14](https://github.com/clappr/clappr/releases)
  - [Flowplayer] (https://www.flowplayer.org)  through [flowplayer-hlsjs
 ] (https://github.com/flowplayer/flowplayer-hlsjs)
  - [Videojs] (http://videojs.com) through [Videojs-hlsjs] (https://github.com/benjipott/videojs-hlsjs)
@@ -103,11 +103,11 @@ as of today, it is supported on:
     - recovery actions could be triggered fix fatal media or network errors
   - [Redundant/Failover Playlists](https://developer.apple.com/library/ios/documentation/NetworkingInternet/Conceptual/StreamingMediaGuide/UsingHTTPLiveStreaming/UsingHTTPLiveStreaming.html#//apple_ref/doc/uid/TP40008332-CH102-SW22)
   - Timed Metadata for HTTP Live Streaming (in ID3 format, carried in MPEG-2 TS)
+  - AES-128 decryption (AES-128 mode)
 
 ## Not Supported (Yet)
 
   - AAC / MP3 / WebVTT container
-  - AES-128 decryption
   - Alternate Audio Track Rendition (Master Playlist with alternative Audio)  
 
 ### Supported M3U8 tags
