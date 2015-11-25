@@ -101,9 +101,26 @@ class PlaylistLoader {
     return result;
   }
 
+  parseKeyParamsByRegex(string, regexp) {
+    var result = regexp.exec(string);
+    if (result) {
+      result.shift();
+      result = result.filter(function(n) { return (n !== undefined); });
+      if (result.length === 2) {
+        return result[1];
+      }
+    }
+    return null;
+  }
+
+  cloneObj(obj) {
+    return JSON.parse(JSON.stringify(obj));
+  }
+
   parseLevelPlaylist(string, baseurl, id) {
     var currentSN = 0, totalduration = 0, level = {url: baseurl, fragments: [], live: true, startSN: 0}, result, regexp, cc = 0, frag, byteRangeEndOffset, byteRangeStartOffset;
-    regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))/g;
+    var levelkey = {method : null, key : null, iv : null, uri : null};
+    regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))/g;
     while ((result = regexp.exec(string)) !== null) {
       result.shift();
       result = result.filter(function(n) { return (n !== undefined); });
@@ -138,9 +155,50 @@ class PlaylistLoader {
         case 'INF':
           var duration = parseFloat(result[1]);
           if (!isNaN(duration)) {
-            level.fragments.push({url: result[2] ? this.resolve(result[2], baseurl) : null, duration: duration, start: totalduration, sn: currentSN++, level: id, cc: cc, byteRangeStartOffset: byteRangeStartOffset, byteRangeEndOffset: byteRangeEndOffset});
+            var fragdecryptdata,
+                sn = currentSN++;
+            if (levelkey.method && levelkey.uri && !levelkey.iv) {
+              fragdecryptdata = this.cloneObj(levelkey);
+              var uint8View = new Uint8Array(16);
+              for (var i = 12; i < 16; i++) {
+                uint8View[i] = (sn >> 8*(15-i)) & 0xff;
+              }
+              fragdecryptdata.iv = uint8View;
+            } else {
+              fragdecryptdata = levelkey;
+            }
+            level.fragments.push({url: result[2] ? this.resolve(result[2], baseurl) : null, duration: duration, start: totalduration, sn: sn, level: id, cc: cc, byteRangeStartOffset: byteRangeStartOffset, byteRangeEndOffset: byteRangeEndOffset, decryptdata : fragdecryptdata});
             totalduration += duration;
             byteRangeStartOffset = null;
+          }
+          break;
+        case 'KEY':
+          // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
+          var decryptparams = result[1];
+          var decryptmethod = this.parseKeyParamsByRegex(decryptparams, /(METHOD)=([^,]*)/),
+              decrypturi = this.parseKeyParamsByRegex(decryptparams, /(URI)=["]([^,]*)["]/),
+              decryptiv = this.parseKeyParamsByRegex(decryptparams, /(IV)=([^,]*)/);
+          if (decryptmethod) {
+            levelkey = { method: null, key: null, iv: null, uri: null };
+            if ((decrypturi) && (decryptmethod === 'AES-128')) {
+              levelkey.method = decryptmethod;
+              // URI to get the key
+              levelkey.uri = this.resolve(decrypturi, baseurl);
+              levelkey.key = null;
+              // Initialization Vector (IV)
+              if (decryptiv) {
+                levelkey.iv = decryptiv;
+                if (levelkey.iv.substring(0, 2) === '0x') {
+                  levelkey.iv = levelkey.iv.substring(2);
+                }
+                levelkey.iv = levelkey.iv.match(/.{8}/g);
+                levelkey.iv[0] = parseInt(levelkey.iv[0], 16);
+                levelkey.iv[1] = parseInt(levelkey.iv[1], 16);
+                levelkey.iv[2] = parseInt(levelkey.iv[2], 16);
+                levelkey.iv[3] = parseInt(levelkey.iv[3], 16);
+                levelkey.iv = new Uint32Array(levelkey.iv);
+              }
+            }
           }
           break;
         default:

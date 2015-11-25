@@ -164,6 +164,8 @@ class LevelController {
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
       case ErrorDetails.FRAG_LOOP_LOADING_ERROR:
+      case ErrorDetails.KEY_LOAD_ERROR:
+      case ErrorDetails.KEY_LOAD_TIMEOUT:
          levelId = data.frag.level;
          break;
       case ErrorDetails.LEVEL_LOAD_ERROR:

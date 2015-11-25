@@ -13,12 +13,13 @@ const State = {
   ERROR : -2,
   STARTING : -1,
   IDLE : 0,
-  LOADING : 1,
-  WAITING_LEVEL : 2,
-  PARSING : 3,
-  PARSED : 4,
-  APPENDING : 5,
-  BUFFER_FLUSHING : 6
+  KEY_LOADING : 1,
+  FRAG_LOADING : 2,
+  WAITING_LEVEL : 3,
+  PARSING : 4,
+  PARSED : 5,
+  APPENDING : 6,
+  BUFFER_FLUSHING : 7
 };
 
 class MSEMediaController {
@@ -35,6 +36,7 @@ class MSEMediaController {
     this.onmp = this.onManifestParsed.bind(this);
     this.onll = this.onLevelLoaded.bind(this);
     this.onfl = this.onFragLoaded.bind(this);
+	this.onkl = this.onKeyLoaded.bind(this);
     this.onis = this.onInitSegment.bind(this);
     this.onfpg = this.onFragParsing.bind(this);
     this.onfp = this.onFragParsed.bind(this);
@@ -87,6 +89,7 @@ class MSEMediaController {
     hls.on(Event.FRAG_PARSED, this.onfp);
     hls.on(Event.ERROR, this.onerr);
     hls.on(Event.LEVEL_LOADED, this.onll);
+    hls.on(Event.KEY_LOADED, this.onkl);
   }
 
   stop() {
@@ -126,12 +129,13 @@ class MSEMediaController {
     hls.off(Event.FRAG_PARSED, this.onfp);
     hls.off(Event.FRAG_PARSING_DATA, this.onfpg);
     hls.off(Event.LEVEL_LOADED, this.onll);
+    hls.off(Event.KEY_LOADED, this.onkl);
     hls.off(Event.FRAG_PARSING_INIT_SEGMENT, this.onis);
     hls.off(Event.ERROR, this.onerr);
   }
 
   tick() {
-    var pos, level, levelDetails, fragIdx, hls = this.hls;
+    var pos, level, levelDetails, hls = this.hls;
     switch(this.state) {
       case State.ERROR:
         //don't do anything in error state to avoid breaking further ...
@@ -268,35 +272,41 @@ class MSEMediaController {
             }
           }
           if(frag) {
-            logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
             //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
-            frag.autoLevel = hls.autoLevelEnabled;
-            if (this.levels.length > 1) {
-              frag.expectedLen = Math.round(frag.duration * this.levels[level].bitrate / 8);
-              frag.trequest = performance.now();
-            }
-            // ensure that we are not reloading the same fragments in loop ...
-            if (this.fragLoadIdx !== undefined) {
-              this.fragLoadIdx++;
+            if ((frag.decryptdata.uri != null) && (frag.decryptdata.key == null)) {
+              logger.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
+              this.state = State.KEY_LOADING;
+              hls.trigger(Event.KEY_LOADING, {frag: frag});
             } else {
-              this.fragLoadIdx = 0;
-            }
-            if (frag.loadCounter) {
-              frag.loadCounter++;
-              let maxThreshold = this.config.fragLoadingLoopThreshold;
-              // if this frag has already been loaded 3 times, and if it has been reloaded recently
-              if (frag.loadCounter > maxThreshold && (Math.abs(this.fragLoadIdx - frag.loadIdx) < maxThreshold)) {
-                hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal: false, frag: frag});
-                return;
+              logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
+              frag.autoLevel = hls.autoLevelEnabled;
+              if (this.levels.length > 1) {
+                frag.expectedLen = Math.round(frag.duration * this.levels[level].bitrate / 8);
+                frag.trequest = performance.now();
               }
-            } else {
-              frag.loadCounter = 1;
+              // ensure that we are not reloading the same fragments in loop ...
+              if (this.fragLoadIdx !== undefined) {
+                this.fragLoadIdx++;
+              } else {
+                this.fragLoadIdx = 0;
+              }
+              if (frag.loadCounter) {
+                frag.loadCounter++;
+                let maxThreshold = this.config.fragLoadingLoopThreshold;
+                // if this frag has already been loaded 3 times, and if it has been reloaded recently
+                if (frag.loadCounter > maxThreshold && (Math.abs(this.fragLoadIdx - frag.loadIdx) < maxThreshold)) {
+                  hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal: false, frag: frag});
+                  return;
+                }
+              } else {
+                frag.loadCounter = 1;
+              }
+              frag.loadIdx = this.fragLoadIdx;
+              this.fragCurrent = frag;
+              this.startFragmentRequested = true;
+              hls.trigger(Event.FRAG_LOADING, {frag: frag});
+              this.state = State.FRAG_LOADING;
             }
-            frag.loadIdx = this.fragLoadIdx;
-            this.fragCurrent = frag;
-            this.startFragmentRequested = true;
-            hls.trigger(Event.FRAG_LOADING, {frag: frag});
-            this.state = State.LOADING;
           }
         }
         break;
@@ -307,7 +317,7 @@ class MSEMediaController {
           this.state = State.IDLE;
         }
         break;
-      case State.LOADING:
+      case State.FRAG_LOADING:
         /*
           monitor fragment retrieval time...
           we compute expected time of arrival of the complete fragment.
@@ -788,7 +798,7 @@ class MSEMediaController {
   }
 
   onMediaSeeking() {
-    if (this.state === State.LOADING) {
+    if (this.state === State.FRAG_LOADING) {
       // check if currently loaded fragment is inside buffer.
       //if outside, cancel fragment loading, otherwise do nothing
       if (this.bufferInfo(this.media.currentTime,0.3).len === 0) {
@@ -908,9 +918,16 @@ class MSEMediaController {
     this.tick();
   }
 
+  onKeyLoaded() {
+    if (this.state === State.KEY_LOADING) {
+      this.state = State.IDLE;
+      this.tick();
+    }
+  }
+
   onFragLoaded(event, data) {
     var fragCurrent = this.fragCurrent;
-    if (this.state === State.LOADING &&
+    if (this.state === State.FRAG_LOADING &&
         fragCurrent &&
         data.frag.level === fragCurrent.level &&
         data.frag.sn === fragCurrent.sn) {
@@ -931,7 +948,7 @@ class MSEMediaController {
             level = fragCurrent.level,
             sn = fragCurrent.sn;
         logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],level ${level}`);
-        this.demuxer.push(data.payload, currentLevel.audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration);
+        this.demuxer.push(data.payload, currentLevel.audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata);
       }
     }
   }
@@ -1023,6 +1040,8 @@ class MSEMediaController {
       case ErrorDetails.FRAG_LOOP_LOADING_ERROR:
       case ErrorDetails.LEVEL_LOAD_ERROR:
       case ErrorDetails.LEVEL_LOAD_TIMEOUT:
+      case ErrorDetails.KEY_LOAD_ERROR:
+      case ErrorDetails.KEY_LOAD_TIMEOUT:
         // if fatal error, stop processing, otherwise move to IDLE to retry loading
         logger.warn(`buffer controller: ${data.details} while loading frag,switch to ${data.fatal ? 'ERROR' : 'IDLE'} state ...`);
         this.state = data.fatal ? State.ERROR : State.IDLE;
