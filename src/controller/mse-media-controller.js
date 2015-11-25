@@ -170,7 +170,11 @@ class MSEMediaController {
           // we are not at playback start, get next load level from level Controller
           level = hls.nextLoadLevel;
         }
-        var bufferInfo = this.bufferInfo(pos,0.3), bufferLen = bufferInfo.len, bufferEnd = bufferInfo.end, maxBufLen;
+        var bufferInfo = this.bufferInfo(pos,0.3),
+            bufferLen = bufferInfo.len,
+            bufferEnd = bufferInfo.end,
+            fragPrevious = this.fragPrevious,
+            maxBufLen;
         // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
         if ((this.levels[level]).hasOwnProperty('bitrate')) {
           maxBufLen = Math.max(8 * this.config.maxBufferSize / this.levels[level].bitrate, this.config.maxBufferLength);
@@ -210,8 +214,8 @@ class MSEMediaController {
                  try to load frag matching with next SN.
                  even if SN are not synchronized between playlists, loading this frag will help us
                  compute playlist sliding and find the right one after in case it was not the right consecutive one */
-              if (this.fragPrevious) {
-                var targetSN = this.fragPrevious.sn + 1;
+              if (fragPrevious) {
+                var targetSN = fragPrevious.sn + 1;
                 if (targetSN >= levelDetails.startSN && targetSN <= levelDetails.endSN) {
                   frag = fragments[targetSN - levelDetails.startSN];
                   logger.log(`live playlist, switching playlist, load frag with next SN: ${frag.sn}`);
@@ -251,47 +255,49 @@ class MSEMediaController {
             if (foundFrag) {
               frag = foundFrag;
               start = foundFrag.start;
-            }
-            //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
-            if (this.fragPrevious && frag.level === this.fragPrevious.level && frag.sn === this.fragPrevious.sn) {
-              if (fragIdx >= (fragLen-1)) {
-                // we are at the end of the playlist and we already loaded last fragment, don't do anything
-                break;
-              } else {
-                frag = fragments[fragIdx + 1];
-                logger.log(`SN just loaded, load next one: ${frag.sn}`);
+              //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
+              if (fragPrevious && frag.level === fragPrevious.level && frag.sn === fragPrevious.sn) {
+                if (frag.sn < levelDetails.endSN) {
+                  frag = fragments[frag.sn + 1 - levelDetails.startSN];
+                  logger.log(`SN just loaded, load next one: ${frag.sn}`);
+                } else {
+                  // end of VOD playlist reached
+                  frag = null;
+                }
               }
             }
           }
-          logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
-          //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
-          frag.autoLevel = hls.autoLevelEnabled;
-          if (this.levels.length > 1) {
-            frag.expectedLen = Math.round(frag.duration * this.levels[level].bitrate / 8);
-            frag.trequest = performance.now();
-          }
-          // ensure that we are not reloading the same fragments in loop ...
-          if (this.fragLoadIdx !== undefined) {
-            this.fragLoadIdx++;
-          } else {
-            this.fragLoadIdx = 0;
-          }
-          if (frag.loadCounter) {
-            frag.loadCounter++;
-            let maxThreshold = this.config.fragLoadingLoopThreshold;
-            // if this frag has already been loaded 3 times, and if it has been reloaded recently
-            if (frag.loadCounter > maxThreshold && (Math.abs(this.fragLoadIdx - frag.loadIdx) < maxThreshold)) {
-              hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal: false, frag: frag});
-              return;
+          if(frag) {
+            logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
+            //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
+            frag.autoLevel = hls.autoLevelEnabled;
+            if (this.levels.length > 1) {
+              frag.expectedLen = Math.round(frag.duration * this.levels[level].bitrate / 8);
+              frag.trequest = performance.now();
             }
-          } else {
-            frag.loadCounter = 1;
+            // ensure that we are not reloading the same fragments in loop ...
+            if (this.fragLoadIdx !== undefined) {
+              this.fragLoadIdx++;
+            } else {
+              this.fragLoadIdx = 0;
+            }
+            if (frag.loadCounter) {
+              frag.loadCounter++;
+              let maxThreshold = this.config.fragLoadingLoopThreshold;
+              // if this frag has already been loaded 3 times, and if it has been reloaded recently
+              if (frag.loadCounter > maxThreshold && (Math.abs(this.fragLoadIdx - frag.loadIdx) < maxThreshold)) {
+                hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal: false, frag: frag});
+                return;
+              }
+            } else {
+              frag.loadCounter = 1;
+            }
+            frag.loadIdx = this.fragLoadIdx;
+            this.fragCurrent = frag;
+            this.startFragmentRequested = true;
+            hls.trigger(Event.FRAG_LOADING, {frag: frag});
+            this.state = State.LOADING;
           }
-          frag.loadIdx = this.fragLoadIdx;
-          this.fragCurrent = frag;
-          this.startFragmentRequested = true;
-          hls.trigger(Event.FRAG_LOADING, {frag: frag});
-          this.state = State.LOADING;
         }
         break;
       case State.WAITING_LEVEL:
