@@ -24,7 +24,7 @@ class DemuxerInline {
     var demuxer = this.demuxer;
     if (!demuxer) {
       // probe for content type
-      if(TSDemuxer.probe(data)) {
+      if (TSDemuxer.probe(data)) {
         demuxer = this.demuxer = new TSDemuxer(this.hls,this.remuxer);
       } else {
         this.hls.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found'});

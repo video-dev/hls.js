@@ -29,7 +29,7 @@ class FragmentLoader {
     frag.loader = this.loader = typeof(config.fLoader) !== 'undefined' ? new config.fLoader(config) : new config.loader(config);
     this.loader.load(frag.url, 'arraybuffer', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.fragLoadingTimeOut, config.fragLoadingMaxRetry, config.fragLoadingRetryDelay, this.loadprogress.bind(this), frag);
   }
-
+  
   loadsuccess(event, stats) {
     var payload = event.currentTarget.response;
     stats.length = payload.byteLength;
@@ -41,7 +41,7 @@ class FragmentLoader {
   loaderror(event) {
     this.loader.abort();
     this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.FRAG_LOAD_ERROR, fatal: false, frag: this.frag, response: event});
-  }
+  }  
 
   loadtimeout() {
     this.loader.abort();
@@ -50,7 +50,7 @@ class FragmentLoader {
 
   loadprogress(event, stats) {
     this.frag.loaded = stats.loaded;
-   this.hls.trigger(Event.FRAG_LOAD_PROGRESS, {frag: this.frag, stats: stats});
+    this.hls.trigger(Event.FRAG_LOAD_PROGRESS, {frag: this.frag, stats: stats});
   }
 }
 
