@@ -46,13 +46,13 @@ class Demuxer {
     }
   }
 
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, duration, decryptdata) {
+  push(data, audioCodec, videoCodec, timeOffset, cc, level, duration, decryptdata, sn) {
     if ((data.byteLength > 0) && (decryptdata != null) && (decryptdata.key != null) && (decryptdata.method === 'AES-128')) {
       var localthis = this;
       window.crypto.subtle.importKey('raw', decryptdata.key, { name : 'AES-CBC', length : 128 }, false, ['decrypt']).
         then(function (importedKey) {
-          decryptdata.iv = decryptdata.iv || new ArrayBuffer(16); 
-          window.crypto.subtle.decrypt({ name : 'AES-CBC', iv : decryptdata.iv }, importedKey, data).
+          var decryptiv = decryptdata.iv || new Uint32Array([0, 0, 0, sn]);
+          window.crypto.subtle.decrypt({ name : 'AES-CBC', iv : decryptiv }, importedKey, data).
             then(function (result) {
               localthis.pushDecrypted(result, audioCodec, videoCodec, timeOffset, cc, level, duration);
             }).

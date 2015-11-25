@@ -910,7 +910,7 @@ class BufferController {
             level = fragCurrent.level,
             sn = fragCurrent.sn;
         logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],level ${level}`);
-        this.demuxer.push(data.payload, currentLevel.audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, duration, fragCurrent.decryptdata);
+        this.demuxer.push(data.payload, currentLevel.audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, duration, fragCurrent.decryptdata, sn);
       }
     }
   }
