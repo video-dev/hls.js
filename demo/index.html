@@ -438,6 +438,9 @@ $(document).ready(function() {
           case Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT:
             $("#HlsStatus").text("timeout while trying to load level playlist");
             break;
+          case Hls.ErrorDetails.FRAG_DECRYPT_ERROR:
+            $("#HlsStatus").text("Decrypting Error:" + data.reason);
+            break;
           case Hls.ErrorDetails.FRAG_PARSING_ERROR:
             $("#HlsStatus").text("Parsing Error:" + data.reason);
             break;
