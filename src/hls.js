@@ -105,6 +105,7 @@ class Hls {
 
     destroy() {
         logger.log('destroy');
+        this.detachMedia();
         this.trigger(Event.DESTROYING);
         this.playlistLoader.destroy();
         this.fragmentLoader.destroy();
@@ -113,7 +114,6 @@ class Hls {
         this.keyLoader.destroy();
         //this.fpsController.destroy();
         this.url = null;
-        this.detachMedia();
         this.observer.removeAllListeners();
     }
 
