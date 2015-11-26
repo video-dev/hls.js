@@ -49,13 +49,6 @@ class DemuxerInline {
             duration
         );
     }
-
-    remux() {
-        var demuxer = this.demuxer;
-        if (demuxer) {
-            demuxer.remux();
-        }
-    }
 }
 
 export default DemuxerInline;

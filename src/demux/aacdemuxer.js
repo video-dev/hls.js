@@ -55,7 +55,6 @@ class AACDemuxer {
             adtsHeaderLen,
             stamp,
             aacSample;
-        this.timeOffset = timeOffset;
         // look for ADTS header (0xFFFx)
         for (
             adtsStartOffset = id3.length, len = data.length;
@@ -123,6 +122,12 @@ class AACDemuxer {
                 break;
             }
         }
+        this.remuxer.remux(
+            this._aacTrack,
+            { samples: [] },
+            { samples: [] },
+            timeOffset
+        );
     }
 
     _ADTStoAudioConfig(data, offset, audioCodec) {
@@ -269,15 +274,6 @@ class AACDemuxer {
             channelCount: adtsChanelConfig,
             codec: 'mp4a.40.' + adtsObjectType
         };
-    }
-
-    remux() {
-        this.remuxer.remux(
-            this._aacTrack,
-            { samples: [] },
-            { samples: [] },
-            this.timeOffset
-        );
     }
 
     destroy() {}
