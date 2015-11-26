@@ -36,13 +36,6 @@ class DemuxerInline {
     }
     demuxer.push(data,audioCodec,videoCodec,timeOffset,cc,level,sn,duration);
   }
-
-  remux() {
-    var demuxer = this.demuxer;
-    if(demuxer) {
-      demuxer.remux();
-    }
-  }
 }
 
 export default DemuxerInline;

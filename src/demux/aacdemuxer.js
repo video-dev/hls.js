@@ -32,7 +32,6 @@ import ID3 from '../demux/id3';
   // feed incoming data to the front of the parsing pipeline
   push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
     var id3 = new ID3(data), adtsStartOffset,len, track = this._aacTrack, pts = id3.timeStamp, config, nbSamples,adtsFrameSize,adtsHeaderLen,stamp,aacSample;
-    this.timeOffset = timeOffset;
     // look for ADTS header (0xFFFx)
     for (adtsStartOffset = id3.length, len = data.length; adtsStartOffset < len - 1; adtsStartOffset++) {
       if ((data[adtsStartOffset] === 0xff) && (data[adtsStartOffset+1] & 0xf0) === 0xf0) {
@@ -73,6 +72,7 @@ import ID3 from '../demux/id3';
         break;
       }
     }
+    this.remuxer.remux(this._aacTrack,{samples : []}, {samples : []}, timeOffset);
   }
 
   _ADTStoAudioConfig(data, offset, audioCodec) {
@@ -191,11 +191,6 @@ import ID3 from '../demux/id3';
       config[3] = 0;
     }
     return {config: config, samplerate: adtsSampleingRates[adtsSampleingIndex], channelCount: adtsChanelConfig, codec: ('mp4a.40.' + adtsObjectType)};
-  }
-
-
-  remux() {
-    this.remuxer.remux(this._aacTrack,{samples : []}, {samples : []}, this.timeOffset);
   }
 
   destroy() {
