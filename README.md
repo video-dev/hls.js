@@ -120,6 +120,7 @@ as of today, it is supported on:
   - `#EXT-X-TARGETDURATION`
   - `#EXT-X-DISCONTINUITY`
   - `#EXT-X-BYTERANGE`
+  - `#EXT-X-KEY` (https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4)
 
 ## Getting Started
 
