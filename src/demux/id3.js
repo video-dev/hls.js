@@ -86,10 +86,10 @@ import Hex from '../utils/hex';
                 var pts33Bit  = data[offset++] & 0x1;
                 this._hasTimeStamp = true;
 
-                timestamp = ((data[offset++] << 24) +
-                             (data[offset++] << 16) +
-                             (data[offset++] <<  8) +
-                             data[offset++]) /90;
+                timestamp = ((data[offset++] << 23) +
+                             (data[offset++] << 15) +
+                             (data[offset++] <<  7) +
+                             data[offset++]) /45;
 
                 logger.log('timestamp:'+ Math.round(timestamp));
 

@@ -3,6 +3,7 @@
  */
 import {logger} from '../utils/logger';
 import ID3 from '../demux/id3';
+import {ErrorTypes, ErrorDetails} from '../errors';
 
  class AACDemuxer {
 
@@ -30,7 +31,7 @@ import ID3 from '../demux/id3';
 
 
   // feed incoming data to the front of the parsing pipeline
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
+  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
     var id3 = new ID3(data), adtsStartOffset,len, track = this._aacTrack, pts = id3.timeStamp, config, nbSamples,adtsFrameSize,adtsHeaderLen,stamp,aacSample;
     // look for ADTS header (0xFFFx)
     for (adtsStartOffset = id3.length, len = data.length; adtsStartOffset < len - 1; adtsStartOffset++) {
@@ -59,15 +60,21 @@ import ID3 from '../demux/id3';
       adtsFrameSize |= ((data[adtsStartOffset + 5] & 0xE0) >>> 5);
       adtsHeaderLen = (!!(data[adtsStartOffset + 1] & 0x01) ? 7 : 9);
       adtsFrameSize -= adtsHeaderLen;
-      stamp = Math.round(pts + nbSamples * 1024 * 90000 / track.audiosamplerate);
+      stamp = Math.round(90*pts + nbSamples * 1024 * 90000 / track.audiosamplerate);
       //stamp = pes.pts;
-      console.log('AAC frame, offset/length/pts:' + (adtsStartOffset+7) + '/' + adtsFrameSize + '/' + stamp.toFixed(0));
-      if (adtsStartOffset + adtsHeaderLen + adtsFrameSize <= len) {
+      //console.log('AAC frame, offset/length/pts:' + (adtsStartOffset+7) + '/' + adtsFrameSize + '/' + stamp.toFixed(0));
+      if ((adtsFrameSize > 0) && ((adtsStartOffset + adtsHeaderLen + adtsFrameSize) <= len)) {
         aacSample = {unit: data.subarray(adtsStartOffset + adtsHeaderLen, adtsStartOffset + adtsHeaderLen + adtsFrameSize), pts: stamp, dts: stamp};
         track.samples.push(aacSample);
         track.len += adtsFrameSize;
         adtsStartOffset += adtsFrameSize + adtsHeaderLen;
         nbSamples++;
+        // look for ADTS header (0xFFFx)
+        for ( ; adtsStartOffset < (len - 1); adtsStartOffset++) {
+          if ((data[adtsStartOffset] === 0xff) && ((data[adtsStartOffset + 1] & 0xf0) === 0xf0)) {
+            break;
+          }
+        }
       } else {
         break;
       }
