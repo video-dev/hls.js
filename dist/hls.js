@@ -1229,8 +1229,8 @@ var MSEMediaController = (function () {
   }, {
     key: 'bufferInfo',
     value: function bufferInfo(pos, maxHoleDuration) {
-      var v = this.media,
-          vbuffered = v.buffered,
+      var sourceBuffer = this.sourceBuffer,
+          data,
           bufferLen,
 
       // bufferStart and bufferEnd are buffer boundaries around current video position
@@ -1241,23 +1241,43 @@ var MSEMediaController = (function () {
           buffered = [],
           buffered2 = [];
 
-      for (i = 0; i < vbuffered.length; i++) {
-        buffered.push({ start: vbuffered.start(i), end: vbuffered.end(i) });
+      for (var type in sourceBuffer) {
+        data = sourceBuffer[type].buffered;
+        for (i = 0; i < data.length; i++) {
+          buffered.push({ start: data.start(i), end: data.end(i) });
+        }
       }
-
-      // sort on buffer.start (IE does not always return sorted buffered range)
+      // sort on buffer.start/smaller end (IE does not always return sorted buffered range)
       buffered.sort(function (a, b) {
-        return a.start - b.start;
+        var diff = a.start - b.start;
+        if (diff) {
+          return diff;
+        } else {
+          return b.end - a.end;
+        }
       });
-
       // there might be some small holes between buffer time range
       // consider that holes smaller than maxHoleDuration are irrelevant and build another
       // buffer time range representations that discards those holes
       for (i = 0; i < buffered.length; i++) {
-        //logger.log('buf start/end:' + buffered.start(i) + '/' + buffered.end(i));
-        if (buffered2.length && buffered[i].start - buffered2[buffered2.length - 1].end < maxHoleDuration) {
-          buffered2[buffered2.length - 1].end = buffered[i].end;
+        var buf2len = buffered2.length;
+        if (buf2len) {
+          var buf2end = buffered2[buf2len - 1].end;
+          // if small hole (value between 0 or maxHoleDuration ) or overlapping (negative)
+          if (buffered[i].start - buf2end < maxHoleDuration) {
+            // merge overlapping time ranges
+            // update lastRange.end only if smaller than item.end
+            // e.g.  [ 1, 15] with  [ 2,8] => [ 1,15] (no need to modify lastRange.end)
+            // whereas [ 1, 8] with  [ 2,15] => [ 1,15] ( lastRange should switch from [1,8] to [1,15])
+            if (buffered[i].end > buf2end) {
+              buffered2[buf2len - 1].end = buffered[i].end;
+            }
+          } else {
+            // big hole
+            buffered2.push(buffered[i]);
+          }
         } else {
+          // first value
           buffered2.push(buffered[i]);
         }
       }
@@ -3749,6 +3769,7 @@ var Hls = (function () {
     key: 'destroy',
     value: function destroy() {
       _utilsLogger.logger.log('destroy');
+      this.detachMedia();
       this.trigger(_events2['default'].DESTROYING);
       this.playlistLoader.destroy();
       this.fragmentLoader.destroy();
@@ -3757,7 +3778,6 @@ var Hls = (function () {
       this.keyLoader.destroy();
       //this.fpsController.destroy();
       this.url = null;
-      this.detachMedia();
       this.observer.removeAllListeners();
     }
   }, {
