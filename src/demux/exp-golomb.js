@@ -237,9 +237,6 @@ class ExpGolomb {
             frameCropBottomOffset = this.readUEG();
         }
         return {
-            profileIdc: profileIdc,
-            profileCompat: profileCompat,
-            levelIdc: levelIdc,
             width:
                 (picWidthInMbsMinus1 + 1) * 16 -
                 frameCropLeftOffset * 2 -

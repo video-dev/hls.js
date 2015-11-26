@@ -392,9 +392,6 @@ class TSDemuxer {
                         var config = expGolombDecoder.readSPS();
                         track.width = config.width;
                         track.height = config.height;
-                        track.profileIdc = config.profileIdc;
-                        track.profileCompat = config.profileCompat;
-                        track.levelIdc = config.levelIdc;
                         track.sps = [unit.data];
                         track.timescale = this.remuxer.timescale;
                         track.duration =

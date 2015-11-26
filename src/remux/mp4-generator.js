@@ -2,6 +2,7 @@
  * Generate MP4 Box
  */
 
+//import Hex from '../utils/hex';
 class MP4 {
     static init() {
         MP4.types = {
@@ -527,19 +528,47 @@ class MP4 {
     static avc1(track) {
         var sps = [],
             pps = [],
-            i;
+            i,
+            data,
+            len;
         // assemble the SPSs
+
         for (i = 0; i < track.sps.length; i++) {
-            sps.push((track.sps[i].byteLength >>> 8) & 0xff);
-            sps.push(track.sps[i].byteLength & 0xff); // sequenceParameterSetLength
-            sps = sps.concat(Array.prototype.slice.call(track.sps[i])); // SPS
+            data = track.sps[i];
+            len = data.byteLength;
+            sps.push((len >>> 8) & 0xff);
+            sps.push(len & 0xff);
+            sps = sps.concat(Array.prototype.slice.call(data)); // SPS
         }
+
         // assemble the PPSs
         for (i = 0; i < track.pps.length; i++) {
-            pps.push((track.pps[i].byteLength >>> 8) & 0xff);
-            pps.push(track.pps[i].byteLength & 0xff);
-            pps = pps.concat(Array.prototype.slice.call(track.pps[i]));
+            data = track.pps[i];
+            len = data.byteLength;
+            pps.push((len >>> 8) & 0xff);
+            pps.push(len & 0xff);
+            pps = pps.concat(Array.prototype.slice.call(data));
         }
+
+        var avcc = MP4.box(
+            MP4.types.avcC,
+            new Uint8Array(
+                [
+                    0x01, // version
+                    sps[3], // profile
+                    sps[4], // profile compat
+                    sps[5], // level
+                    0xfc | 3, // lengthSizeMinusOne, hard-coded to 4 bytes
+                    0xe0 | track.sps.length // 3bit reserved (111) + numOfSequenceParameterSets
+                ]
+                    .concat(sps)
+                    .concat([
+                        track.pps.length // numOfPictureParameterSets
+                    ])
+                    .concat(pps)
+            )
+        ); // "PPS"
+        //console.log('avcc:' + Hex.hexDump(avcc));
         return MP4.box(
             MP4.types.avc1,
             new Uint8Array([
@@ -622,26 +651,7 @@ class MP4 {
                 0x11,
                 0x11
             ]), // pre_defined = -1
-            MP4.box(
-                MP4.types.avcC,
-                new Uint8Array(
-                    [
-                        0x01, // configurationVersion
-                        track.profileIdc, // AVCProfileIndication
-                        track.profileCompat, // profile_compatibility
-                        track.levelIdc, // AVCLevelIndication
-                        0xff // lengthSizeMinusOne, hard-coded to 4 bytes
-                    ]
-                        .concat([
-                            track.sps.length // numOfSequenceParameterSets
-                        ])
-                        .concat(sps)
-                        .concat([
-                            track.pps.length // numOfPictureParameterSets
-                        ])
-                        .concat(pps)
-                )
-            ), // "PPS"
+            avcc,
             MP4.box(
                 MP4.types.btrt,
                 new Uint8Array([
