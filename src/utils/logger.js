@@ -15,7 +15,7 @@ let lastCallTime;
 
 function noop() {}
 
-function formatMsgWithTimeInfo(msg) {
+function formatMsgWithTimeInfo(type, msg) {
     const now = Date.now();
     const diff = lastCallTime ? '+' + (now - lastCallTime) : '0';
     lastCallTime = now;
@@ -31,8 +31,8 @@ function formatMsgWithTimeInfo(msg) {
     return msg;
 }
 
-function formatMsg(msg) {
-    msg = '[' + type + '] > ' + msg + ' ( ' + diff + ' ms )';
+function formatMsg(type, msg) {
+    msg = '[' + type + '] > ' + msg;
     return msg;
 }
 
@@ -41,7 +41,7 @@ function consolePrintFn(type) {
     if (func) {
         return function(...args) {
             if (args[0]) {
-                args[0] = formatMsg(args[0]);
+                args[0] = formatMsg(type, args[0]);
             }
             func.apply(window.console, args);
         };
