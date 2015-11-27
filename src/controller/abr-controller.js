@@ -48,7 +48,12 @@ class AbrController {
     }
 
     if (this._nextAutoLevel !== -1) {
-      return Math.min(this._nextAutoLevel,maxAutoLevel);
+      var nextLevel = Math.min(this._nextAutoLevel,maxAutoLevel);
+      if (nextLevel === this.lastfetchlevel) {
+        this._nextAutoLevel = -1;
+      } else {
+        return nextLevel;
+      }
     }
 
     // follow algorithm captured from stagefright :
