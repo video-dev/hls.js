@@ -36,7 +36,7 @@ class MSEMediaController {
     this.onmp = this.onManifestParsed.bind(this);
     this.onll = this.onLevelLoaded.bind(this);
     this.onfl = this.onFragLoaded.bind(this);
-	this.onkl = this.onKeyLoaded.bind(this);
+    this.onkl = this.onKeyLoaded.bind(this);
     this.onis = this.onInitSegment.bind(this);
     this.onfpg = this.onFragParsing.bind(this);
     this.onfp = this.onFragParsed.bind(this);
@@ -438,24 +438,25 @@ class MSEMediaController {
     }
     // check/update current fragment
     this._checkFragmentChanged();
+    // check buffer
+    this._checkBuffer();
   }
 
-  bufferInfo(pos,maxHoleDuration) {
-    var sourceBuffer = this.sourceBuffer,
-        data,
-        bufferLen,
-        // bufferStart and bufferEnd are buffer boundaries around current video position
-        bufferStart, bufferEnd,bufferStartNext,
-        i,
-        buffered = [],
-        buffered2 = [];
 
-    for (var type in sourceBuffer) {
-      data = sourceBuffer[type].buffered;
-      for (i = 0; i < data.length; i++) {
-        buffered.push({start: data.start(i), end: data.end(i)});
-      }
+  bufferInfo(pos,maxHoleDuration) {
+    var media = this.media,
+        vbuffered = media.buffered,
+        buffered = [],i;
+    for (i = 0; i < vbuffered.length; i++) {
+      buffered.push({start: vbuffered.start(i), end: vbuffered.end(i)});
     }
+    return this.bufferedInfo(buffered,pos,maxHoleDuration);
+  }
+
+  bufferedInfo(buffered,pos,maxHoleDuration) {
+    var buffered2 = [],
+        // bufferStart and bufferEnd are buffer boundaries around current video position
+        bufferLen,bufferStart, bufferEnd,bufferStartNext,i;
     // sort on buffer.start/smaller end (IE does not always return sorted buffered range)
     buffered.sort(function (a, b) {
       var diff = a.start - b.start;
@@ -1096,13 +1097,33 @@ class MSEMediaController {
         }
         this.state = State.IDLE;
       }
-      var video = this.media;
-      if(video) {
-        // seek back to a expected position after video buffered if needed
-        if (this.seekAfterBuffered) {
-          video.currentTime = this.seekAfterBuffered;
-        } else {
-          var currentTime = video.currentTime;
+    }
+    this.tick();
+  }
+
+_checkBuffer() {
+    var media = this.media;
+    if(media) {
+      // compare readyState
+      var readyState = media.readyState;
+      //logger.log(`readyState:${readyState}`);
+      // if ready state different from HAVE_NOTHING (numeric value 0), we are allowed to seek
+      if(readyState) {
+        // if seek after buffered defined, let's seek if within acceptable range
+        var seekAfterBuffered = this.seekAfterBuffered;
+        if(seekAfterBuffered) {
+          if(media.duration >= seekAfterBuffered) {
+            media.currentTime = seekAfterBuffered;
+            this.seekAfterBuffered = undefined;
+          }
+        } else if(readyState < 3 ) {
+          // readyState = 1 or 2
+          //  HAVE_METADATA (numeric value 1)     Enough of the resource has been obtained that the duration of the resource is available.
+          //                                       The API will no longer throw an exception when seeking.
+          // HAVE_CURRENT_DATA (numeric value 2)  Data for the immediate current playback position is available,
+          //                                      but either not enough data is available that the user agent could
+          //                                      successfully advance the current playback position
+          var currentTime = media.currentTime;
           var bufferInfo = this.bufferInfo(currentTime,0);
           // check if current time is buffered or not
           if(bufferInfo.len === 0) {
@@ -1112,15 +1133,12 @@ class MSEMediaController {
               // next buffer is close ! adjust currentTime to nextBufferStart
               // this will ensure effective video decoding
               logger.log(`adjust currentTime from ${currentTime} to ${nextBufferStart}`);
-              video.currentTime = nextBufferStart;
+              media.currentTime = nextBufferStart;
             }
           }
         }
       }
-      // reset this variable, whether it was set or not
-      this.seekAfterBuffered = undefined;
     }
-    this.tick();
   }
 
   onSBUpdateError(event) {
