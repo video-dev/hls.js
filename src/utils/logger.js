@@ -15,15 +15,25 @@ let lastCallTime;
 
 function noop() {}
 
+function formatMsgWithTimeInfo(msg) {
+  const now = Date.now();
+  const diff = lastCallTime ? '+' + (now - lastCallTime) : '0';
+  lastCallTime = now;
+  msg = (new Date(now)).toISOString() + ' | [' +  type + '] > ' + msg + ' ( ' + diff + ' ms )';
+  return msg;
+}
+
+function formatMsg(msg) {
+  msg = '[' +  type + '] > ' + msg + ' ( ' + diff + ' ms )';
+  return msg;
+}
+
 function consolePrintFn(type) {
-  var func = window.console[type];
+  const func = window.console[type];
   if (func) {
     return function(...args) {
       if(args[0]) {
-        const now = Date.now();
-        const diff = lastCallTime ? '+' + (now - lastCallTime) : '0';
-        args[0] = (new Date(now)).toISOString() + ' | [' +  type + '] > ' + args[0] + ' ( ' + diff + ' ms )';
-        lastCallTime = now;
+        args[0] = formatMsg(args[0]);
       }
       func.apply(window.console, args);
     };
