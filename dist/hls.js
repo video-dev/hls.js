@@ -434,7 +434,12 @@ var AbrController = (function () {
       }
 
       if (this._nextAutoLevel !== -1) {
-        return Math.min(this._nextAutoLevel, maxAutoLevel);
+        var nextLevel = Math.min(this._nextAutoLevel, maxAutoLevel);
+        if (nextLevel === this.lastfetchlevel) {
+          this._nextAutoLevel = -1;
+        } else {
+          return nextLevel;
+        }
       }
 
       // follow algorithm captured from stagefright :
@@ -1171,7 +1176,7 @@ var MSEMediaController = (function () {
                     } else {
                       this.appendError = 1;
                     }
-                    var event = { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_APPENDING_ERROR, frag: this.fragCurrent };
+                    var event = { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_APPEND_ERROR, frag: this.fragCurrent };
                     /* with UHD content, we could get loop of quota exceeded error until
                       browser is able to evict some data from sourcebuffer. retrying help recovering this
                     */
@@ -1942,7 +1947,7 @@ var MSEMediaController = (function () {
     value: function onSBUpdateError(event) {
       _utilsLogger.logger.error('sourceBuffer error:' + event);
       this.state = State.ERROR;
-      this.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_APPENDING_ERROR, fatal: true, frag: this.fragCurrent });
+      this.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_APPENDING_ERROR, fatal: true, frag: this.fragCurrent });
     }
   }, {
     key: 'timeRangesToString',
@@ -3415,12 +3420,14 @@ var ErrorDetails = {
   FRAG_DECRYPT_ERROR: 'fragDecryptError',
   // Identifier for a fragment parsing error event - data: parsing error description
   FRAG_PARSING_ERROR: 'fragParsingError',
-  // Identifier for a fragment appending error event - data: appending error description
-  FRAG_APPENDING_ERROR: 'fragAppendingError',
   // Identifier for decrypt key load error - data: { frag : fragment object, response : XHR response}
   KEY_LOAD_ERROR: 'keyLoadError',
   // Identifier for decrypt key load timeout error - data: { frag : fragment object}
-  KEY_LOAD_TIMEOUT: 'keyLoadTimeOut'
+  KEY_LOAD_TIMEOUT: 'keyLoadTimeOut',
+  // Identifier for a buffer append error - data: append error description
+  BUFFER_APPEND_ERROR: 'bufferAppendError',
+  // Identifier for a buffer appending error event - data: appending error description
+  BUFFER_APPENDING_ERROR: 'bufferAppendingError'
 };
 exports.ErrorDetails = ErrorDetails;
 
@@ -5291,8 +5298,7 @@ var MP4Remuxer = (function () {
                 _utilsLogger.logger.log(delta + ' ms hole between AAC samples detected,filling it');
                 // set PTS to next PTS, and ensure PTS is greater or equal than last DTS
               } else if (delta < -1) {
-                  _utilsLogger.logger.log(-delta + ' ms overlapping between AAC samples detected, dropping it');
-                  continue;
+                  _utilsLogger.logger.log(-delta + ' ms overlapping between AAC samples detected');
                 }
               // set DTS to next DTS
               ptsnorm = dtsnorm = nextAacPts;
