@@ -330,9 +330,8 @@ class MP4Remuxer {
                             // set PTS to next PTS, and ensure PTS is greater or equal than last DTS
                         } else if (delta < -1) {
                             logger.log(
-                                `${-delta} ms overlapping between AAC samples detected, dropping it`
+                                `${-delta} ms overlapping between AAC samples detected`
                             );
-                            continue;
                         }
                         // set DTS to next DTS
                         ptsnorm = dtsnorm = nextAacPts;
