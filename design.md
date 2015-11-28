@@ -15,7 +15,7 @@ design idea is pretty simple :
     - definition of Hls.ErrorTypes and Hls.ErrorDetails
   - [src/controller/mse-media-controller.js][]
     - in charge of:
-      - ensuring that buffer is filled as per defined quality selection logic. 
+      - ensuring that buffer is filled as per defined quality selection logic.
       - monitoring current playback quality level (buffer controller maintains a map between media position and quality level)
     - if buffer is not filled up appropriately (i.e. as per defined maximum buffer size, or as per defined quality level), buffer controller will trigger the following actions:
         - retrieve "not buffered" media position greater then current playback position. this is performed by comparing video.buffered and video.currentTime.
@@ -46,14 +46,14 @@ design idea is pretty simple :
     - if Worker are disabled. demuxing will be performed in the main thread.
     - if Worker are available/enabled,
       - demuxer will instantiate a Worker
-      - post/listen to Worker message, 
+      - post/listen to Worker message,
       - and redispatch events as expected by hls.js.
     - Fragments are sent as [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
   - [src/demux/demuxer-inline.js][]
     - inline demuxer.
     - probe fragments and instantiate appropriate demuxer depending on content type (TSDemuxer, AACDemuxer, ...)
   - [src/demux/demuxer-worker.js][]
-    - demuxer web worker. 
+    - demuxer web worker.
     - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
     - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
   - [src/demux/exp-golomb.js][]
@@ -65,7 +65,7 @@ design idea is pretty simple :
      - extract AVC/H264 NAL units and AAC/ADTS samples from PES packet
      - trigger the remuxer upon parsing completion
      - it also tries to workaround as best as it can audio codec switch (HE-AAC to AAC and vice versa), without having to restart the MediaSource.
-     - it also controls the remuxing process : 
+     - it also controls the remuxing process :
       - upon discontinuity or level switch detection, it will also notifies the remuxer so that it can reset its state.
   - [src/helper/level-helper.js][]
     - helper class providing methods dealing with playlist sliding and fragment duration drift computation : after fragment parsing, start/end fragment timestamp will be used to adjust potential playlist drifts and live playlist sliding.
@@ -94,7 +94,7 @@ design idea is pretty simple :
   - [src/utils/url.js][]
     - convert base+relative URL into absolute URL
   - [src/utils/xhr-loader.js][]
-    - XmlHttpRequest wrapper. it handles standard HTTP GET but also retries and timeout. 
+    - XmlHttpRequest wrapper. it handles standard HTTP GET but also retries and timeout.
     - retries : if xhr fails, HTTP GET will be retried after a predetermined delay. this delay is increasing following an exponential backoff. after a predetemined max number of retries, an error callback will be triggered.
     - timeout: if load exceeds max allowed duration, a timeout callback will be triggered. it is up to the callback to decides whether the connection should be cancelled or not.
 
@@ -136,7 +136,7 @@ design idea is pretty simple :
   - ```FRAG_LOAD_ERROR``` is raised by [src/loader/fragment-loader.js][] upon xhr failure detected by [src/utils/xhr-loader.js][].
     - if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal: in that case [src/controller/level-controller.js][] will trigger an emergency switch down to level 0.
     - if frag level is 0 or auto level switch is disabled, this error is marked as fatal and a call to ```hls.startLoad()``` could help recover it.
-  - ```FRAG_LOOP_LOADING_ERROR``` is raised by [src/controller/buffer-controller.js][] upon detection of same fragment being requested in loop. this could happen with badly formatted fragments.
+  - ```FRAG_LOOP_LOADING_ERROR``` is raised by [src/controller/mse-media-controller.js][] upon detection of same fragment being requested in loop. this could happen with badly formatted fragments.
     - if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal: in that case [src/controller/level-controller.js][] will trigger an emergency switch down to level 0.
     - if frag level is 0 or auto level switch is disabled, this error is marked as fatal and a call to ```hls.startLoad()``` could help recover it.
   - ```FRAG_LOAD_TIMEOUT``` is raised by [src/loader/fragment-loader.js][] upon xhr timeout detected by [src/utils/xhr-loader.js][].
@@ -144,4 +144,5 @@ design idea is pretty simple :
     - if frag level is 0 or auto level switch is disabled, this error is marked as fatal and a call to ```hls.startLoad()``` could help recover it.
   - ```FRAG_PARSING_ERROR``` is raised by [src/demux/tsdemuxer.js][] upon TS parsing error. this error is not fatal.
   - ```FRAG_DECRYPT_ERROR``` is raised by [src/demux/demuxer.js][] upon fragment decrypting error. this error is fatal.
-  - ```FRAG_APPENDING_ERROR``` is raised by [src/controller/buffer-controller.js][] after SourceBuffer appending error. this error is raised after 3 retries. this error is marked as fatal and a call to ```hls.recoverMediaError()``` could help recover it.
+  - ```BUFFER_PREPARE_APPEND_ERROR``` is raised by [src/controller/mse-media-controller.js][] when an exception is raised when calling sourceBuffer.appendBuffer(). this error is non fatal and become fatal after config.appendErrorMaxRetry retries. when fatal, a call to ```hls.recoverMediaError()``` could help recover it.
+  - ```BUFFER_APPENDING_ERROR``` is raised by [src/controller/mse-media-controller.js][] after SourceBuffer appending error. this error is fatal and a call to ```hls.recoverMediaError()``` could help recover it.
