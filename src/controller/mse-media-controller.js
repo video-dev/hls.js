@@ -514,7 +514,7 @@ class MSEMediaController {
                             }
                             var event = {
                                 type: ErrorTypes.MEDIA_ERROR,
-                                details: ErrorDetails.FRAG_APPENDING_ERROR,
+                                details: ErrorDetails.BUFFER_APPEND_ERROR,
                                 frag: this.fragCurrent
                             };
                             /* with UHD content, we could get loop of quota exceeded error until
@@ -1420,7 +1420,7 @@ class MSEMediaController {
         this.state = State.ERROR;
         this.hls.trigger(Event.ERROR, {
             type: ErrorTypes.MEDIA_ERROR,
-            details: ErrorDetails.FRAG_APPENDING_ERROR,
+            details: ErrorDetails.BUFFER_APPENDING_ERROR,
             fatal: true,
             frag: this.fragCurrent
         });

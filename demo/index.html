@@ -444,8 +444,11 @@ $(document).ready(function() {
           case Hls.ErrorDetails.FRAG_PARSING_ERROR:
             $("#HlsStatus").text("Parsing Error:" + data.reason);
             break;
-          case Hls.ErrorDetails.FRAG_APPENDING_ERROR:
-            $("#HlsStatus").text("Frag Appending Error");
+          case Hls.ErrorDetails.BUFFER_APPEND_ERROR:
+            $("#HlsStatus").text("Buffer Append Error");
+            break;
+          case Hls.ErrorDetails.BUFFER_APPENDING_ERROR:
+            $("#HlsStatus").text("Buffer Appending Error");
             break;
           case Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR:
             $("#HlsStatus").text("Frag Loop Loading Error");

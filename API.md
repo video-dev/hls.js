@@ -8,7 +8,7 @@ just invoke the following static method : ```Hls.isSupported()```
 
 ```js
  <script src="dist/hls.{min}.js"></script>
-<script> 
+<script>
   if(Hls.isSupported()) {
  	console.log("hello hls.js!");
  }
@@ -25,7 +25,7 @@ let's
 
 ```js
  <script src="dist/hls.{min}.js"></script>
- 
+
 <video id="video"></video>
 <script>
   if(Hls.isSupported()) {
@@ -46,7 +46,7 @@ you need to provide manifest URL as below:
 
 ```js
  <script src="dist/hls.{min}.js"></script>
- 
+
 <video id="video"></video>
 <script>
   if(Hls.isSupported()) {
@@ -85,7 +85,7 @@ each error is categorized by :
     - ```Hls.ErrorTypes.NETWORK_ERROR```for network related errors
     - ```Hls.ErrorTypes.MEDIA_ERROR```for media/video related errors
     - ```Hls.ErrorTypes.OTHER_ERROR```for all other errors
-  - its details: 
+  - its details:
     - ```Hls.ErrorDetails.MANIFEST_LOAD_ERROR```raised when manifest loading fails because of a network error
     - ```Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT```raised when manifest loading fails because of a timeout
     - ```Hls.ErrorDetails.MANIFEST_PARSING_ERROR```raised when manifest parsing failed to find proper content
@@ -95,16 +95,17 @@ each error is categorized by :
     - ```Hls.ErrorDetails.FRAG_LOAD_ERROR```raised when fragment loading fails because of a network error
     - ```Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR```raised upon detection of same fragment being requested in loop
     - ```Hls.ErrorDetails.FRAG_LOAD_TIMEOUT```raised when fragment loading fails because of a timeout
-    - ```Hls.ErrorDetails.FRAG_DECRYPT_ERROR```raised when fragment decryption fails 
-    - ```Hls.ErrorDetails.FRAG_PARSING_ERROR```raised when fragment parsing fails 
-    - ```Hls.ErrorDetails.FRAG_APPENDING_ERROR```raised when mp4 boxes appending in SourceBuffer fails
+    - ```Hls.ErrorDetails.FRAG_DECRYPT_ERROR```raised when fragment decryption fails
+    - ```Hls.ErrorDetails.FRAG_PARSING_ERROR```raised when fragment parsing fails
+    - ```Hls.ErrorDetails.BUFFER_APPEND_ERROR```raised when exception is raised while preparing buffer append
+    - ```Hls.ErrorDetails.BUFFER_APPENDING_ERROR```raised when exception is raised during buffer appending
   - its fatality:
     - ```false```if error is not fatal, hls.js will try to recover it
     - ```true```if error is fatal, an action is required to (try to) recover it.
- 
+
  full details is described [below](##Errors)
- 
- 
+
+
  see sample code below to listen to errors:
 
 ```js
@@ -119,10 +120,10 @@ each error is categorized by :
         // ....
         break;
       default:
-        break;  
+        break;
     }
   }
-``` 
+```
 
 #### Fatal Error Recovery
 
@@ -136,7 +137,7 @@ should be invoked to recover network error.
 
 should be invoked to recover media error
 
-##### error recovery sample code 
+##### error recovery sample code
 
 ```js
   hls.on(Hls.Events.ERROR,function(event,data) {
@@ -154,7 +155,7 @@ should be invoked to recover media error
       default:
       // cannot recover
         hls.destroy();
-        break;  
+        break;
     }
   }
 ```
@@ -278,7 +279,7 @@ Note: If fLoader or pLoader are used, they overwrite loader!
 var customLoader = function() {
 
   /* calling load() will start retrieving content at given URL (HTTP GET)
-  params : 
+  params :
   url : URL to load
   responseType : xhr response Type (arraybuffer or default response Type for playlist)
   onSuccess : callback triggered upon successful loading of URL.
@@ -290,7 +291,7 @@ var customLoader = function() {
   retryDelay : delay between an I/O error and following connection retry (ms). this to avoid spamming the server.
   */
   this.load = function(url,responseType,onSuccess,onError,timeout,maxRetry,retryDelay) {}
-  
+
   /* abort any loading in progress */
   this.abort = function() {}
   /* destroy loading context */
@@ -354,14 +355,14 @@ parameter should be a class providing 2 getter/setters and a destroy() method:
 #### ```hls.attachMedia(videoElement)```
 calling this method will :
 
- - bind videoElement and hls instance, 
+ - bind videoElement and hls instance,
  - create MediaSource and set it as video source
  - once MediaSource object is successfully created, MSE_ATTACHED event will be fired.
 
 #### ```hls.detachVideo()```
 calling this method will :
 
- - unbind VideoElement from hls instance, 
+ - unbind VideoElement from hls instance,
  - signal the end of the stream on MediaSource
  - reset video source (```video.src = ''```)
 
@@ -459,7 +460,7 @@ full list of Events available below :
   - `Hls.Events.LEVEL_UPDATED`  - fired when a level's details have been updated based on previous details, after it has been loaded
     -  data: { details : levelDetails object, level : id of updated level }
   - `Hls.Events.LEVEL_PTS_UPDATED`  - fired when a level's PTS information has been updated after parsing a fragment
-    -  data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment } 
+    -  data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment }
   - `Hls.Events.LEVEL_SWITCH`  - fired when a level switch is requested
     -  data: { levelId : id of new level }
   - `Hls.Events.KEY_LOADING`  - fired when a decryption key loading starts
@@ -473,7 +474,7 @@ full list of Events available below :
   - `Hls.Events.FRAG_LOADED`  - fired when a fragment loading is completed
     -  data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length}}
   - `Hls.Events.FRAG_PARSING_INIT_SEGMENT` - fired when Init Segment has been extracted from fragment
-    -  data: { moov : moov MP4 box, codecs : codecs found while parsing fragment}    
+    -  data: { moov : moov MP4 box, codecs : codecs found while parsing fragment}
   - `Hls.Events.FRAG_PARSING_METADATA`  - fired when parsing id3 is completed
       -  data: { samples : [ id3 pes - pts and dts timestamp are relative, values are in seconds]}
   - `Hls.Events.FRAG_PARSING_DATA`  - fired when moof/mdat have been extracted from fragment
@@ -487,7 +488,7 @@ full list of Events available below :
   - `Hls.Events.FPS_DROP` - triggered when FPS drop in last monitoring period is higher than given threshold
     -  data: {curentDropped : nb of dropped frames in last monitoring period, currentDecoded: nb of decoded frames in last monitoring period, totalDropped : total dropped frames on this video element}
   - `Hls.Events.ERROR` -  Identifier for an error event
-    - data: { type : error Type, details : error details, fatal : is error fatal or not, other error specific data} 
+    - data: { type : error Type, details : error details, fatal : is error fatal or not, other error specific data}
   - `Hls.Events.DESTROYING` -  fired when hls.js instance starts destroying. Different from MSE_DETACHED as one could want to detach and reattach a video to the instance of hls.js to handle mid-rolls for example.
     - data: { }
 
@@ -516,9 +517,10 @@ full list of Errors is described below:
     - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.FRAG_LOAD_TIMEOUT```, fatal : ```true/false```,frag : fragment object}
   - ```Hls.ErrorDetails.FRAG_PARSING_ERROR```raised when fragment parsing fails
     - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.FRAG_PARSING_ERROR```, fatal : ```true/false```, reason : failure reason}
-  - ```Hls.ErrorDetails.FRAG_APPENDING_ERROR```raised when mp4 boxes appending in SourceBuffer fails
-    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.FRAG_APPENDING_ERROR```, fatal : ```true```, frag : fragment object}
-
+  - ```Hls.ErrorDetails.BUFFER_APPEND_ERROR```raised when exception is raised while calling buffer append
+    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.BUFFER_APPEND_ERROR```, fatal : ```true```, frag : fragment object}
+  - ```Hls.ErrorDetails.BUFFER_APPENDING_ERROR```raised when exception is raised during buffer appending
+    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.BUFFER_APPENDING_ERROR```, fatal : ```true```, frag : fragment object}
 
 ## Objects
 ### Level
@@ -564,7 +566,7 @@ see sample object below, available after corresponding LEVEL_LOADED event has be
   startSN: 0,
   endSN: 50,
   totalduration: 510,
-  targetduration: 10,   
+  targetduration: 10,
   fragments: Array[51],
   live: false
 }
