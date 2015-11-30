@@ -94,8 +94,8 @@ class Hls {
 
   destroy() {
     logger.log('destroy');
-    this.detachMedia();
     this.trigger(Event.DESTROYING);
+    this.detachMedia();
     this.playlistLoader.destroy();
     this.fragmentLoader.destroy();
     this.levelController.destroy();
