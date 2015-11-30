@@ -15,6 +15,7 @@ import { logger, enableLogs } from './utils/logger';
 import XhrLoader from './utils/xhr-loader';
 import EventEmitter from 'events';
 import KeyLoader from './loader/key-loader';
+import Decrypter from './crypt/decrypter';
 
 class Hls {
     static isSupported() {
@@ -48,6 +49,7 @@ class Hls {
             liveMaxLatencyDurationCount: Infinity,
             maxMaxBufferLength: 600,
             enableWorker: true,
+            enableSoftwareAES: true,
             fragLoadingTimeOut: 20000,
             fragLoadingMaxRetry: 1,
             fragLoadingRetryDelay: 1000,
@@ -101,6 +103,8 @@ class Hls {
         this.mediaController = new config.mediaController(this);
         this.keyLoader = new KeyLoader(this);
         //this.fpsController = new FPSController(this);
+
+        Decrypter.enableSoftware = config.enableSoftwareAES;
     }
 
     destroy() {
