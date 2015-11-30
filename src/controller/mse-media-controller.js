@@ -265,7 +265,19 @@ class MSEMediaController {
                   frag = fragments[frag.sn + 1 - levelDetails.startSN];
                   logger.log(`SN just loaded, load next one: ${frag.sn}`);
                 } else {
-                  // end of VOD playlist reached
+                  // have we reached end of VOD playlist ?
+                  if (!levelDetails.live) {
+                    var mediaSource = this.mediaSource;
+                    if (mediaSource && mediaSource.readyState === 'open') {
+                      // ensure sourceBuffer are not in updating stateyes
+                      var sb = this.sourceBuffer;
+                      if (!((sb.audio && sb.audio.updating) || (sb.video && sb.video.updating))) {
+                        logger.log('all media data available, signal endOfStream() to MediaSource');
+                        //Notify the media element that it now has all of the media data
+                        mediaSource.endOfStream();
+                      }
+                    }
+                  }
                   frag = null;
                 }
               }
@@ -1081,20 +1093,6 @@ class MSEMediaController {
         this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
         this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag});
         logger.log(`media buffered : ${this.timeRangesToString(this.media.buffered)}`);
-
-        // if stream is VOD (not live) and we reach End of Stream
-        var levelDetails = this.levels[this.level].details;
-        if (levelDetails && !levelDetails.live) {
-          // have we buffered last fragment ?
-          if (frag.sn === levelDetails.endSN) {
-            var mediaSource = this.mediaSource;
-            if (mediaSource && mediaSource.readyState === 'open') {
-              logger.log('all media data available, signal endOfStream() to MediaSource');
-              //Notify the media element that it now has all of the media data
-              mediaSource.endOfStream();
-            }
-          }
-        }
         this.state = State.IDLE;
       }
     }
