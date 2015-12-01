@@ -227,9 +227,9 @@ class MSEBufferController extends BufferController {
       return;
     }
     for(var segment = this.segmentQueue.shift(); !!segment; segment = this.segmentQueue.shift()) {
-      // if segment appending in progress nothing to do
-      if ((this.sourceBuffer.audio && this.sourceBuffer.audio.updating) ||
-         (this.sourceBuffer.video && this.sourceBuffer.video.updating)) {
+      var sb = this.sourceBuffer[segment.type];
+       // if segment appending in progress re-enqueue
+      if (sb && sb.updating) {
         this.segmentQueue.unshift(segment);
         break;
       }
