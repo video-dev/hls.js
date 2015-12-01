@@ -56,7 +56,9 @@ export default {
   // when the stream is finished and we want to notify the media buffer that there will be no more data
   BUFFER_EOS: 'hlsBufferEos',
   // when the media buffer should be flushed - data {startOffset, endOffset}
-  BUFFER_FLUSH: 'hlsBufferFlush',
+  BUFFER_FLUSHING: 'hlsBufferFlushing',
+  // when the media has been flushed
+  BUFFER_FLUSHED: 'hlsBufferFlushed',
   // Identifier for an error event - data: { type : error type, details : error details, fatal : if true, hls.js cannot/will not try to recover, if false, hls.js will try to recover,other error specific data}
   ERROR: 'hlsError',
   // fired when hls.js instance starts destroying. Different from MSE_DETACHED as one could want to detach and reattach a media to the instance of hls.js to handle mid-rolls for example

@@ -1,5 +1,7 @@
 'use strict';
 
+function noop() {}
+
 const fakeLogger = {
   trace: noop,
   debug: noop,
@@ -11,8 +13,6 @@ const fakeLogger = {
 
 let exportedLogger = fakeLogger;
 let lastCallTime;
-
-function noop() {}
 
 function consolePrintFn(type) {
   var func = window.console[type];

@@ -18,7 +18,8 @@ class BufferController {
     this.handledEvents = [Event.BUFFER_APPENDING,
                         Event.BUFFER_CODECS,
                         Event.BUFFER_EOS,
-                        Event.BUFFER_FLUSH,
+                        Event.BUFFER_FLUSHING,
+                        Event.BUFFER_FLUSHED,
                         Event.MEDIA_ATTACHING,
                         Event.MEDIA_DETACHING];
 
@@ -30,7 +31,7 @@ class BufferController {
   }
 
   isEventHandler() {
-    return typeof this.handledEvents === 'object' && typeof this.onEvent === 'function'
+    return typeof this.handledEvents === 'object' && typeof this.onEvent === 'function';
   }
 
   registerListeners() {
@@ -60,8 +61,11 @@ class BufferController {
     case Event.BUFFER_EOS:
       this.onBufferEOS(data);
       break;
-    case Event.BUFFER_FLUSH:
-      this.onBufferFlush(data);
+    case Event.BUFFER_FLUSHING:
+      this.onBufferFlushing(data);
+      break;
+    case Event.BUFFER_FLUSHED:
+      this.onBufferFlushed(data);
       break;
     case Event.MEDIA_ATTACHING:
       this.onMediaAttaching(data);
@@ -77,10 +81,10 @@ class BufferController {
   }
 
   // implement these in specific class
-  onBufferCodecs(data) {}
-  onBufferAppending(data) {}
+  onBufferCodecs() {}
+  onBufferAppending() {}
   onBufferEOS() {}
-  onMediaAttaching(data) {}
+  onMediaAttaching() {}
   onMediaDetaching() {}
 }
 
@@ -96,6 +100,7 @@ class MSEBufferController extends BufferController {
 
     this.appendError = 0;
     this.segmentQueue = [];
+    this.flushOperatioQueue = [];
 	}
 
   onMediaAttaching(data) {
@@ -170,11 +175,17 @@ class MSEBufferController extends BufferController {
 
   onSBUpdateError(event) {
     logger.error(`sourceBuffer error:${event}`);
-    this.state = State.ERROR;
     this.hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_APPENDING_ERROR, fatal: true, frag: this.fragCurrent});
   }
 
   onSBUpdateEnd() {
+
+    // make sure we have performed any pending flush operations
+    if (this.isFlushing()) {
+      this.ensureFlushed();
+      // don't dequeue any segment
+      return;
+    }
     // first try to append more segments if there are
     this.dequeueSegments();
     // now trigger next steps
@@ -245,11 +256,11 @@ class MSEBufferController extends BufferController {
       if (this.appendError > this.hls.config.appendErrorMaxRetry) {
         logger.log(`fail ${this.config.appendErrorMaxRetry} times to append segment in sourceBuffer`);
         event.fatal = true;
-        hls.trigger(Event.BUFFER_APPEND_FAIL, event);
+        this.hls.trigger(Event.BUFFER_APPEND_FAIL, event);
         return;
       } else {
         event.fatal = false;
-        hls.trigger(Event.BUFFER_APPEND_FAIL, event);
+        this.hls.trigger(Event.BUFFER_APPEND_FAIL, event);
       }
     }
   }
@@ -270,42 +281,99 @@ class MSEBufferController extends BufferController {
     the idea is to call this function from tick() timer and call it again until all resources have been cleaned
     the timer is rearmed upon sourceBuffer updateend() event, so this should be optimal
   */
-  onBufferFlush(data) {
+  onBufferFlushing(data) {
     var startOffset = data.startOffset;
     var endOffset = data.endOffset;
     var sb, i, bufStart, bufEnd, flushStart, flushEnd;
     //logger.log('flushBuffer,pos/start/end: ' + this.media.currentTime + '/' + startOffset + '/' + endOffset);
 
-    if (this.sourceBuffer) {
+    // clear anything that was in the segment queue (pending for appending) before the flush
+    this.segmentQueue = [];
 
+    if (this.sourceBuffer) {
       for (var type in this.sourceBuffer) {
         sb = this.sourceBuffer[type];
-        if (!sb.updating) {
-          for (i = 0; i < sb.buffered.length; i++) {
-            bufStart = sb.buffered.start(i);
-            bufEnd = sb.buffered.end(i);
-            // workaround firefox not able to properly flush multiple buffered range.
-            if (navigator.userAgent.toLowerCase().indexOf('firefox') !== -1 && endOffset === Number.POSITIVE_INFINITY) {
-              flushStart = startOffset;
-              flushEnd = endOffset;
-            } else {
-              flushStart = Math.max(bufStart, startOffset);
-              flushEnd = Math.min(bufEnd, endOffset);
-            }
-            /* sometimes sourcebuffer.remove() does not flush
-               the exact expected time range.
-               to avoid rounding issues/infinite loop,
-               only flush buffer range of length greater than 500ms.
-            */
-            if (flushEnd - flushStart > 0.5) {
-              logger.log(`flush ${type} [${flushStart},${flushEnd}], of [${bufStart},${bufEnd}], pos:${this.media.currentTime}`);
-              sb.remove(flushStart, flushEnd);
-            }
+
+        for (i = 0; i < sb.buffered.length; i++) {
+          bufStart = sb.buffered.start(i);
+          bufEnd = sb.buffered.end(i);
+          // workaround firefox not able to properly flush multiple buffered range.
+          if (navigator.userAgent.toLowerCase().indexOf('firefox') !== -1 && endOffset === Number.POSITIVE_INFINITY) {
+            flushStart = startOffset;
+            flushEnd = endOffset;
+          } else {
+            flushStart = Math.max(bufStart, startOffset);
+            flushEnd = Math.min(bufEnd, endOffset);
           }
+
+          this.enqueueFlushOperation(type, bufStart, bufEnd, sb, flushStart, flushEnd);
         }
+
       }
     }
   }
+
+  onBufferFlushed() {
+    logger.log('BufferController.onBufferFlushed');
+  }
+
+  ensureFlushed() {
+    this.flushOperatioQueue.slice().forEach(function(flushSourceBuffer, index) {
+      if (flushSourceBuffer()) {
+        // remove item from queue if operation succeeded
+        this.flushOperatioQueue.splice(index, 1);
+      }
+      // if we performed all flush operations trigger event to notify that we're done
+      if (this.flushOperatioQueue.length === 0) {
+        this.hls.trigger(Event.BUFFER_FLUSHED);
+      }
+    }.bind(this));
+  }
+
+  isFlushing() {
+    return this.flushOperatioQueue.length;
+  }
+
+  enqueueFlushOperation(type, bufStart, bufEnd, sb, flushStart, flushEnd) {
+
+    const currentTime = this.media.currentTime;
+
+    /*
+      abort any buffer append in progress, and flush all buffered data
+      return true once everything has been flushed.
+      sourceBuffer.abort() and sourceBuffer.remove() are asynchronous operations
+      the idea is to call this function from tick() timer and call it again until all resources have been cleaned
+      the timer is rearmed upon sourceBuffer updateend() event, so this should be optimal
+    */
+    function flushSourceBuffer(sb, flushStart, flushEnd) {
+      /* sometimes sourcebuffer.remove() does not flush
+         the exact expected time range.
+         to avoid rounding issues/infinite loop,
+         only flush buffer range of length greater than 500ms.
+      */
+      if (sb.updating) {
+        return false;
+      }
+      if (flushEnd - flushStart > 0.5) {
+        try {
+          sb.remove(flushStart, flushEnd);
+          logger.log(`flushed ${type} [${flushStart},${flushEnd}], of [${bufStart},${bufEnd}], pos:${currentTime}`);
+          return true;
+        } catch(e) {
+          return false;
+        }
+      }
+    }
+
+    // Enqueue the flush operation
+    this.flushOperatioQueue.push(function() {
+      return flushSourceBuffer(sb, flushStart, flushEnd);
+    });
+
+    // Attempt to run the flush operations right away!
+    this.ensureFlushed();
+  }
+
 }
 
 export default MSEBufferController;

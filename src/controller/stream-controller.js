@@ -24,7 +24,7 @@ const State = {
   PARSING : 'PARSING',
   PARSED : 'PARSED',
   APPENDING : 'APPENDING',
-  BUFFER_FLUSHING : 'BUFFER_FLUSHING'
+  BUFFER_FLUSH : 'BUFFER_FLUSH'
 };
 
 class StreamController {
@@ -46,6 +46,7 @@ class StreamController {
     this.onerr = this.onError.bind(this);
     this.onbufapp = this.onBufferAppended.bind(this);
     this.onbuffail = this.onBufferAppendFail.bind(this);
+    this.onbufflushed = this.onBufferFlushed.bind(this);
     this.ontick = this.tick.bind(this);
     hls.on(Event.MEDIA_ATTACHED, this.onmediaatt);
     hls.on(Event.MEDIA_ATTACHING, this.onmediaatt0);
@@ -53,6 +54,7 @@ class StreamController {
     hls.on(Event.MANIFEST_PARSED, this.onmp);
     hls.on(Event.BUFFER_APPENDED, this.onbufapp);
     hls.on(Event.BUFFER_APPEND_FAIL, this.onbuffail);
+    hls.on(Event.BUFFER_FLUSHED, this.onbufflushed);
   }
 
   destroy() {
@@ -64,6 +66,7 @@ class StreamController {
     hls.off(Event.MANIFEST_PARSED, this.onmp);
     hls.off(Event.BUFFER_APPENDED, this.onbufapp);
     hls.off(Event.BUFFER_APPEND_FAIL, this.onbuffail);
+    hls.off(Event.BUFFER_FLUSHED, this.onbufflushed);
     this.state = State.IDLE;
   }
 
@@ -351,32 +354,15 @@ class StreamController {
           this.state = State.APPENDING;
         }
         break;
-      case State.BUFFER_FLUSHING:
-        // loop through all buffer ranges to flush
-        while(this.flushRange.length) {
-          var range = this.flushRange[0];
-          // flushBuffer will abort any buffer append in progress and flush Audio/Video Buffer
-          if (this.flushBuffer(range.start, range.end)) {
-            // range flushed, remove from flush array
-            this.flushRange.shift();
-          } else {
-            // flush in progress, come back later
-            break;
-          }
+      case State.BUFFER_FLUSH:
+        // send flush events for all ranges
+        if (this.flushRange.length) {
+          logger.log('buffer flushing');
+          this.flushRange.forEach(function(range) {
+            this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: range.start, endOffset: range.end});
+          }.bind(this));
+          this.flushRange = [];
         }
-        if (this.flushRange.length === 0) {
-          // handle end of immediate switching if needed
-          if (this.immediateSwitch) {
-            this.immediateLevelSwitchEnd();
-          }
-          // move to IDLE once flush complete. this should trigger new fragment loading
-          this.state = State.IDLE;
-          // reset reference to frag
-          this.fragPrevious = null;
-        }
-         /* if not everything flushed, stay in BUFFER_FLUSHING state. we will come back here
-            each time sourceBuffer updateend() callback will be triggered
-            */
         break;
       default:
         break;
@@ -520,38 +506,6 @@ class StreamController {
   }
 
   /*
-    abort any buffer append in progress, and flush all buffered data
-    return true once everything has been flushed.
-    sourceBuffer.abort() and sourceBuffer.remove() are asynchronous operations
-    the idea is to call this function from tick() timer and call it again until all resources have been cleaned
-    the timer is rearmed upon sourceBuffer updateend() event, so this should be optimal
-  */
-  flushBuffer(startOffset, endOffset) {
-    // safeguard to avoid infinite looping
-    if (this.flushBufferCounter++ < (2 * this.bufferRange.length)) {
-      // trigger BUFFER_FLUSH
-      this.hls.trigger(Event.BUFFER_FLUSH, {startOffset: startOffset, endOffset: endOffset});
-      /* after successful buffer flushing, rebuild buffer Range array
-        loop through existing buffer range and check if
-        corresponding range is still buffered. only push to new array already buffered range
-      */
-      var newRange = [],range;
-      for (i = 0; i < this.bufferRange.length; i++) {
-        range = this.bufferRange[i];
-        if (this.isBuffered((range.start + range.end) / 2)) {
-          newRange.push(range);
-        }
-      }
-      this.bufferRange = newRange;
-      logger.log('buffer flushed');
-      // everything flushed !
-      return true;
-
-    }
-    return false;
-  }
-
-  /*
     on immediate level switch :
      - pause playback if playing
      - cancel any pending load request
@@ -570,10 +524,9 @@ class StreamController {
     }
     this.fragCurrent = null;
     // flush everything
-    this.flushBufferCounter = 0;
     this.flushRange.push({start: 0, end: Number.POSITIVE_INFINITY});
     // trigger a sourceBuffer flush
-    this.state = State.BUFFER_FLUSHING;
+    this.state = State.BUFFER_FLUSH;
     // increase fragment load Index to avoid frag loop loading error after buffer flush
     this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
     // speed up switching, trigger timer function
@@ -635,9 +588,8 @@ class StreamController {
       }
     }
     if (this.flushRange.length) {
-      this.flushBufferCounter = 0;
       // trigger a sourceBuffer flush
-      this.state = State.BUFFER_FLUSHING;
+      this.state = State.BUFFER_FLUSH;
       // increase fragment load Index to avoid frag loop loading error after buffer flush
       this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
       // speed up switching, trigger timer function
@@ -664,6 +616,7 @@ class StreamController {
   }
 
   onMediaDetached() {
+    var media = this.media;
     if (media) {
       media.removeEventListener('seeking', this.onvseeking);
       media.removeEventListener('seeked', this.onvseeked);
@@ -848,7 +801,7 @@ class StreamController {
     if (this.state === State.PARSING) {
       // check if codecs have been explicitely defined in the master playlist for this level;
       // if yes use these ones instead of the ones parsed from the demux
-      var audioCodec = this.levels[this.level].audioCodec, videoCodec = this.levels[this.level].videoCodec, sb;
+      var audioCodec = this.levels[this.level].audioCodec, videoCodec = this.levels[this.level].videoCodec;
       //logger.log('playlist level A/V codecs:' + audioCodec + ',' + videoCodec);
       //logger.log('playlist codecs:' + codec);
       // if playlist does not specify codecs, use codecs found while parsing fragment
@@ -868,7 +821,7 @@ class StreamController {
         audioCodec = 'mp4a.40.5';
       }
 
-      hls.trigger(Event.BUFFER_CODECS, {audioCodec: audioCodec, videoCodec: videoCodec});
+      this.hls.trigger(Event.BUFFER_CODECS, {audioCodec: audioCodec, videoCodec: videoCodec});
 
       if (audioCodec) {
         this.mp4segments.push({type: 'audio', data: data.audioMoov});
@@ -976,6 +929,33 @@ class StreamController {
     // update state & trigger
     this.state = State.ERROR;
     this.hls.trigger(Event.ERROR, data);
+  }
+
+  onBufferFlushed() {
+    logger.log('buffer flushed!');
+
+    /* after successful buffer flushing, rebuild buffer Range array
+      loop through existing buffer range and check if
+      corresponding range is still buffered. only push to new array already buffered range
+    */
+    var newRange = [],range;
+    for (var i = 0; i < this.bufferRange.length; i++) {
+      range = this.bufferRange[i];
+      if (this.isBuffered((range.start + range.end) / 2)) {
+        newRange.push(range);
+      }
+    }
+    this.bufferRange = newRange;
+    logger.log('updated buffered range');
+
+    // handle end of immediate switching if needed
+    if (this.immediateSwitch) {
+      this.immediateLevelSwitchEnd();
+    }
+    // move to IDLE once flush complete. this should trigger new fragment loading
+    this.state = State.IDLE;
+    // reset reference to frag
+    this.fragPrevious = null;
   }
 
   timeRangesToString(r) {
