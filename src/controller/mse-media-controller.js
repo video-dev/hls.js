@@ -274,7 +274,13 @@ class MSEMediaController {
                                 /* we have no idea about which fragment should be loaded.
                    so let's load mid fragment. it will help computing playlist sliding and find the right one
                 */
-                                frag = fragments[Math.round(fragLen / 2)];
+                                frag =
+                                    fragments[
+                                        Math.min(
+                                            fragLen - 1,
+                                            Math.round(fragLen / 2)
+                                        )
+                                    ];
                                 logger.log(
                                     `live playlist, switching playlist, unknown, load middle frag : ${
                                         frag.sn
