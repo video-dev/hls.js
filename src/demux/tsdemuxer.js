@@ -22,6 +22,7 @@ class TSDemuxer {
         this.lastCC = 0;
         this.PES_TIMESCALE = 90000;
         this.remuxer = new this.remuxerClass(observer);
+        this.userData = [];
     }
 
     static probe(data) {
@@ -375,10 +376,69 @@ class TSDemuxer {
                     }
                     key = true;
                     break;
+                //SEI
                 case 6:
                     push = true;
                     if (debug) {
                         debugString += 'SEI ';
+                    }
+                    var expGolombDecoder = new ExpGolomb(unit.data);
+
+                    // skip frameType
+                    expGolombDecoder.skipBits(8);
+
+                    var payloadType = expGolombDecoder.readUByte();
+
+                    if (payloadType === 4) {
+                        var payloadSize = 0;
+
+                        do {
+                            payloadSize = expGolombDecoder.readUByte();
+                        } while (payloadSize === 255);
+
+                        var countryCode = expGolombDecoder.readUByte();
+
+                        if (countryCode === 181) {
+                            var providerCode = expGolombDecoder.readUShort();
+
+                            if (providerCode === 49) {
+                                var userStructure = expGolombDecoder.readUInt();
+
+                                if (userStructure === 0x47413934) {
+                                    var userDataType = expGolombDecoder.readUByte();
+
+                                    // Raw CEA-608 bytes wrapped in CEA-708 packet
+                                    if (userDataType === 3) {
+                                        var firstByte = expGolombDecoder.readUByte();
+                                        var secondByte = expGolombDecoder.readUByte();
+
+                                        var totalCCs = 31 & firstByte;
+                                        var sizeOfCCs = totalCCs * 3;
+                                        var byteArray = [firstByte, secondByte];
+
+                                        for (var i = 0; i < totalCCs; i++) {
+                                            // 3 bytes per CC
+                                            byteArray.push(
+                                                expGolombDecoder.readUByte()
+                                            );
+                                            byteArray.push(
+                                                expGolombDecoder.readUByte()
+                                            );
+                                            byteArray.push(
+                                                expGolombDecoder.readUByte()
+                                            );
+                                        }
+
+                                        var userDataItem = {
+                                            type: 3,
+                                            bytes: byteArray
+                                        };
+                                        console.log(userDataItem);
+                                        this.userData.push(userDataItem);
+                                    }
+                                }
+                            }
+                        }
                     }
                     break;
                 //SPS
