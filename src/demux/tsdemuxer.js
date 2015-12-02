@@ -745,9 +745,11 @@ class TSDemuxer {
       */
             adtsObjectType = 5;
             config = new Array(4);
-            // if (manifest codec is HE-AAC) OR (manifest codec not specified AND frequency less than 24kHz)
+            // if (manifest codec is HE-AAC or HE-AACv2) OR (manifest codec not specified AND frequency less than 24kHz)
             if (
-                (audioCodec && audioCodec.indexOf('mp4a.40.5') !== -1) ||
+                (audioCodec &&
+                    (audioCodec.indexOf('mp4a.40.29') !== -1 ||
+                        audioCodec.indexOf('mp4a.40.5') !== -1)) ||
                 (!audioCodec && adtsSampleingIndex >= 6)
             ) {
                 // HE-AAC uses SBR (Spectral Band Replication) , high frequencies are constructed from low frequencies
