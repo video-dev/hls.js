@@ -5,6 +5,7 @@
 import Event from '../events';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import URLHelper from '../utils/url';
+import AttrList from '../utils/attr-list';
 //import {logger} from '../utils/logger';
 
 class PlaylistLoader {
@@ -49,42 +50,31 @@ class PlaylistLoader {
   }
 
   parseMasterPlaylist(string, baseurl) {
-    var levels = [], level =  {}, result, codecs, codec;
+    let levels = [], result;
+
     // https://regex101.com is your friend
-    var re = /#EXT-X-STREAM-INF:([^\n\r]*(BAND)WIDTH=(\d+))?([^\n\r]*(CODECS)=\"([^\"\n\r]*)\",?)?([^\n\r]*(RES)OLUTION=(\d+)x(\d+))?([^\n\r]*(NAME)=\"(.*)\")?[^\n\r]*[\r\n]+([^\r\n]+)/g;
+    const re = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
     while ((result = re.exec(string)) != null){
-      result.shift();
-      result = result.filter(function(n) { return (n !== undefined); });
-      level.url = this.resolve(result.pop(), baseurl);
-      while (result.length > 0) {
-        switch (result.shift()) {
-          case 'RES':
-            level.width = parseInt(result.shift());
-            level.height = parseInt(result.shift());
-            break;
-          case 'BAND':
-            level.bitrate = parseInt(result.shift());
-            break;
-          case 'NAME':
-            level.name = result.shift();
-            break;
-          case 'CODECS':
-            codecs = result.shift().split(',');
-            while (codecs.length > 0) {
-              codec = codecs.shift();
-              if (codec.indexOf('avc1') !== -1) {
-                level.videoCodec = this.avc1toavcoti(codec);
-              } else {
-                level.audioCodec = codec;
-              }
-            }
-            break;
-          default:
-            break;
+      const level = {};
+
+      level.attrs = new AttrList(result[1]);
+      level.url = this.resolve(result[2], baseurl);
+
+      Object.assign(level, level.attrs.decimalResolution('RESOLUTION'));
+      level.bitrate = level.attrs.decimalIntegerAsNumber('BANDWIDTH');
+      level.name = level.attrs.quotedString('NAME');
+
+      const codecs = (level.attrs.quotedString('CODECS') || '').split(',');
+      for (let i = 0; i < codecs.length; i++) {
+        const codec = codecs[i];
+        if (codec.indexOf('avc1') !== -1) {
+          level.videoCodec = this.avc1toavcoti(codec);
+        } else {
+          level.audioCodec = codec;
         }
       }
+
       levels.push(level);
-      level = {};
     }
     return levels;
   }
@@ -99,18 +89,6 @@ class PlaylistLoader {
       result = codec;
     }
     return result;
-  }
-
-  parseKeyParamsByRegex(string, regexp) {
-    var result = regexp.exec(string);
-    if (result) {
-      result.shift();
-      result = result.filter(function(n) { return (n !== undefined); });
-      if (result.length === 2) {
-        return result[1];
-      }
-    }
-    return null;
   }
 
   cloneObj(obj) {
@@ -175,9 +153,10 @@ class PlaylistLoader {
         case 'KEY':
           // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
           var decryptparams = result[1];
-          var decryptmethod = this.parseKeyParamsByRegex(decryptparams, /(METHOD)=([^,]*)/),
-              decrypturi = this.parseKeyParamsByRegex(decryptparams, /(URI)=["]([^,]*)["]/),
-              decryptiv = this.parseKeyParamsByRegex(decryptparams, /(IV)=([^,]*)/);
+          var keyAttrs = new AttrList(decryptparams);
+          var decryptmethod = keyAttrs.enumeratedString('METHOD'),
+              decrypturi = keyAttrs.quotedString('URI'),
+              decryptiv = keyAttrs.hexadecimalInteger('IV');
           if (decryptmethod) {
             levelkey = { method: null, key: null, iv: null, uri: null };
             if ((decrypturi) && (decryptmethod === 'AES-128')) {
@@ -186,18 +165,7 @@ class PlaylistLoader {
               levelkey.uri = this.resolve(decrypturi, baseurl);
               levelkey.key = null;
               // Initialization Vector (IV)
-              if (decryptiv) {
-                levelkey.iv = decryptiv;
-                if (levelkey.iv.substring(0, 2) === '0x') {
-                  levelkey.iv = levelkey.iv.substring(2);
-                }
-                levelkey.iv = levelkey.iv.match(/.{8}/g);
-                levelkey.iv[0] = parseInt(levelkey.iv[0], 16);
-                levelkey.iv[1] = parseInt(levelkey.iv[1], 16);
-                levelkey.iv[2] = parseInt(levelkey.iv[2], 16);
-                levelkey.iv[3] = parseInt(levelkey.iv[3], 16);
-                levelkey.iv = new Uint32Array(levelkey.iv);
-              }
+              levelkey.iv = decryptiv;
             }
           }
           break;
