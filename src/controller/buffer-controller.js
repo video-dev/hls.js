@@ -233,7 +233,13 @@ class MSEBufferController extends BufferController {
         this.segmentQueue.unshift(segment);
         break;
       }
-      this.tryAppending(segment);
+      /* with UHD content, we could get loop of quota exceeded error until
+        browser is able to evict some data from sourcebuffer. retrying help recovering this
+      */
+      if (!this.tryAppending(segment)) {
+        this.segmentQueue.unshift(segment);
+        break;
+      }
     }
   }
 
@@ -242,6 +248,7 @@ class MSEBufferController extends BufferController {
       logger.log(`appending ${segment.type} SB, size:${segment.data.length}`);
       this.sourceBuffer[segment.type].appendBuffer(segment.data);
       this.appendError = 0;
+      return true;
     } catch(err) {
       logger.log('error while appending: ' + err.message);
       if (this.appendError) {
@@ -249,19 +256,16 @@ class MSEBufferController extends BufferController {
       } else {
         this.appendError = 1;
       }
-      var event = {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_APPENDING_ERROR, segment: segment};
-      /* with UHD content, we could get loop of quota exceeded error until
-        browser is able to evict some data from sourcebuffer. retrying help recovering this
-      */
-      if (this.appendError > this.hls.config.appendErrorMaxRetry) {
-        logger.log(`fail ${this.config.appendErrorMaxRetry} times to append segment in sourceBuffer`);
-        event.fatal = true;
-        this.hls.trigger(Event.BUFFER_APPEND_FAIL, event);
-        return;
-      } else {
-        event.fatal = false;
-        this.hls.trigger(Event.BUFFER_APPEND_FAIL, event);
-      }
+      var fatal = this.appendError > this.hls.config.appendErrorMaxRetry;
+      var event = {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.FRAG_APPENDING_ERROR,
+        segment: segment,
+        fatal: fatal
+      };
+      if (fatal) { logger.log(`fail ${this.config.appendErrorMaxRetry} times to append segment in sourceBuffer`); }
+      this.hls.trigger(Event.BUFFER_APPEND_FAIL, event);
+      return false;
     }
   }
 
