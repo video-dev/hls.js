@@ -247,13 +247,13 @@ class PlaylistLoader {
   }
 
   loaderror(event) {
-    var details, fatal;
+    var
+      details,
+      fatal = true; // as the this function is invoked only when ".stats.retry >= .maxRetry" case
     if (this.id === null) {
       details = ErrorDetails.MANIFEST_LOAD_ERROR;
-      fatal = true;
     } else {
       details = ErrorDetails.LEVEL_LOAD_ERROR;
-      fatal = false;
     }
     this.loader.abort();
     this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: this.url, loader: this.loader, response: event.currentTarget, level: this.id, id: this.id2});
