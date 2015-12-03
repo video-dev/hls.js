@@ -471,7 +471,7 @@ var AbrController = (function () {
 exports['default'] = AbrController;
 module.exports = exports['default'];
 
-},{"../events":12}],4:[function(require,module,exports){
+},{"../events":15}],4:[function(require,module,exports){
 /*
  * Level Controller
 */
@@ -756,7 +756,7 @@ var LevelController = (function () {
 exports['default'] = LevelController;
 module.exports = exports['default'];
 
-},{"../errors":11,"../events":12,"../utils/logger":21}],5:[function(require,module,exports){
+},{"../errors":14,"../events":15,"../utils/logger":24}],5:[function(require,module,exports){
 /*
  * MSE Media Controller
 */
@@ -1022,7 +1022,7 @@ var MSEMediaController = (function () {
                   /* we have no idea about which fragment should be loaded.
                      so let's load mid fragment. it will help computing playlist sliding and find the right one
                   */
-                  _frag = fragments[Math.round(fragLen / 2)];
+                  _frag = fragments[Math.min(fragLen - 1, Math.round(fragLen / 2))];
                   _utilsLogger.logger.log('live playlist, switching playlist, unknown, load middle frag : ' + _frag.sn);
                 }
               }
@@ -2027,7 +2027,525 @@ var MSEMediaController = (function () {
 exports['default'] = MSEMediaController;
 module.exports = exports['default'];
 
-},{"../demux/demuxer":8,"../errors":11,"../events":12,"../helper/level-helper":13,"../utils/binary-search":20,"../utils/logger":21}],6:[function(require,module,exports){
+},{"../demux/demuxer":11,"../errors":14,"../events":15,"../helper/level-helper":16,"../utils/binary-search":23,"../utils/logger":24}],6:[function(require,module,exports){
+/*
+ *
+ * This file contains an adaptation of the AES decryption algorithm
+ * from the Standford Javascript Cryptography Library. That work is
+ * covered by the following copyright and permissions notice:
+ *
+ * Copyright 2009-2010 Emily Stark, Mike Hamburg, Dan Boneh.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above
+ *    copyright notice, this list of conditions and the following
+ *    disclaimer in the documentation and/or other materials provided
+ *    with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHORS ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+ * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+ * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * The views and conclusions contained in the software and documentation
+ * are those of the authors and should not be interpreted as representing
+ * official policies, either expressed or implied, of the authors.
+ */
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+var AES = (function () {
+
+  /**
+   * Schedule out an AES key for both encryption and decryption. This
+   * is a low-level class. Use a cipher mode to do bulk encryption.
+   *
+   * @constructor
+   * @param key {Array} The key as an array of 4, 6 or 8 words.
+   */
+
+  function AES(key) {
+    _classCallCheck(this, AES);
+
+    /**
+     * The expanded S-box and inverse S-box tables. These will be computed
+     * on the client so that we don't have to send them down the wire.
+     *
+     * There are two tables, _tables[0] is for encryption and
+     * _tables[1] is for decryption.
+     *
+     * The first 4 sub-tables are the expanded S-box with MixColumns. The
+     * last (_tables[01][4]) is the S-box itself.
+     *
+     * @private
+     */
+    this._tables = [[[], [], [], [], []], [[], [], [], [], []]];
+
+    this._precompute();
+
+    var i,
+        j,
+        tmp,
+        encKey,
+        decKey,
+        sbox = this._tables[0][4],
+        decTable = this._tables[1],
+        keyLen = key.length,
+        rcon = 1;
+
+    if (keyLen !== 4 && keyLen !== 6 && keyLen !== 8) {
+      throw new Error('Invalid aes key size=' + keyLen);
+    }
+
+    encKey = key.slice(0);
+    decKey = [];
+    this._key = [encKey, decKey];
+
+    // schedule encryption keys
+    for (i = keyLen; i < 4 * keyLen + 28; i++) {
+      tmp = encKey[i - 1];
+
+      // apply sbox
+      if (i % keyLen === 0 || keyLen === 8 && i % keyLen === 4) {
+        tmp = sbox[tmp >>> 24] << 24 ^ sbox[tmp >> 16 & 255] << 16 ^ sbox[tmp >> 8 & 255] << 8 ^ sbox[tmp & 255];
+
+        // shift rows and add rcon
+        if (i % keyLen === 0) {
+          tmp = tmp << 8 ^ tmp >>> 24 ^ rcon << 24;
+          rcon = rcon << 1 ^ (rcon >> 7) * 283;
+        }
+      }
+
+      encKey[i] = encKey[i - keyLen] ^ tmp;
+    }
+
+    // schedule decryption keys
+    for (j = 0; i; j++, i--) {
+      tmp = encKey[j & 3 ? i : i - 4];
+      if (i <= 4 || j < 4) {
+        decKey[j] = tmp;
+      } else {
+        decKey[j] = decTable[0][sbox[tmp >>> 24]] ^ decTable[1][sbox[tmp >> 16 & 255]] ^ decTable[2][sbox[tmp >> 8 & 255]] ^ decTable[3][sbox[tmp & 255]];
+      }
+    }
+  }
+
+  /**
+   * Expand the S-box tables.
+   *
+   * @private
+   */
+
+  _createClass(AES, [{
+    key: '_precompute',
+    value: function _precompute() {
+      var encTable = this._tables[0],
+          decTable = this._tables[1],
+          sbox = encTable[4],
+          sboxInv = decTable[4],
+          i,
+          x,
+          xInv,
+          d = [],
+          th = [],
+          x2,
+          x4,
+          x8,
+          s,
+          tEnc,
+          tDec;
+
+      // Compute double and third tables
+      for (i = 0; i < 256; i++) {
+        th[(d[i] = i << 1 ^ (i >> 7) * 283) ^ i] = i;
+      }
+
+      for (x = xInv = 0; !sbox[x]; x ^= x2 || 1, xInv = th[xInv] || 1) {
+        // Compute sbox
+        s = xInv ^ xInv << 1 ^ xInv << 2 ^ xInv << 3 ^ xInv << 4;
+        s = s >> 8 ^ s & 255 ^ 99;
+        sbox[x] = s;
+        sboxInv[s] = x;
+
+        // Compute MixColumns
+        x8 = d[x4 = d[x2 = d[x]]];
+        tDec = x8 * 0x1010101 ^ x4 * 0x10001 ^ x2 * 0x101 ^ x * 0x1010100;
+        tEnc = d[s] * 0x101 ^ s * 0x1010100;
+
+        for (i = 0; i < 4; i++) {
+          encTable[i][x] = tEnc = tEnc << 24 ^ tEnc >>> 8;
+          decTable[i][s] = tDec = tDec << 24 ^ tDec >>> 8;
+        }
+      }
+
+      // Compactify. Considerable speedup on Firefox.
+      for (i = 0; i < 5; i++) {
+        encTable[i] = encTable[i].slice(0);
+        decTable[i] = decTable[i].slice(0);
+      }
+    }
+
+    /**
+     * Decrypt 16 bytes, specified as four 32-bit words.
+     * @param encrypted0 {number} the first word to decrypt
+     * @param encrypted1 {number} the second word to decrypt
+     * @param encrypted2 {number} the third word to decrypt
+     * @param encrypted3 {number} the fourth word to decrypt
+     * @param out {Int32Array} the array to write the decrypted words
+     * into
+     * @param offset {number} the offset into the output array to start
+     * writing results
+     * @return {Array} The plaintext.
+     */
+  }, {
+    key: 'decrypt',
+    value: function decrypt(encrypted0, encrypted1, encrypted2, encrypted3, out, offset) {
+      var key = this._key[1],
+
+      // state variables a,b,c,d are loaded with pre-whitened data
+      a = encrypted0 ^ key[0],
+          b = encrypted3 ^ key[1],
+          c = encrypted2 ^ key[2],
+          d = encrypted1 ^ key[3],
+          a2,
+          b2,
+          c2,
+          nInnerRounds = key.length / 4 - 2,
+          // key.length === 2 ?
+      i,
+          kIndex = 4,
+          table = this._tables[1],
+
+      // load up the tables
+      table0 = table[0],
+          table1 = table[1],
+          table2 = table[2],
+          table3 = table[3],
+          sbox = table[4];
+
+      // Inner rounds. Cribbed from OpenSSL.
+      for (i = 0; i < nInnerRounds; i++) {
+        a2 = table0[a >>> 24] ^ table1[b >> 16 & 255] ^ table2[c >> 8 & 255] ^ table3[d & 255] ^ key[kIndex];
+        b2 = table0[b >>> 24] ^ table1[c >> 16 & 255] ^ table2[d >> 8 & 255] ^ table3[a & 255] ^ key[kIndex + 1];
+        c2 = table0[c >>> 24] ^ table1[d >> 16 & 255] ^ table2[a >> 8 & 255] ^ table3[b & 255] ^ key[kIndex + 2];
+        d = table0[d >>> 24] ^ table1[a >> 16 & 255] ^ table2[b >> 8 & 255] ^ table3[c & 255] ^ key[kIndex + 3];
+        kIndex += 4;
+        a = a2;b = b2;c = c2;
+      }
+
+      // Last round.
+      for (i = 0; i < 4; i++) {
+        out[(3 & -i) + offset] = sbox[a >>> 24] << 24 ^ sbox[b >> 16 & 255] << 16 ^ sbox[c >> 8 & 255] << 8 ^ sbox[d & 255] ^ key[kIndex++];
+        a2 = a;a = b;b = c;c = d;d = a2;
+      }
+    }
+  }]);
+
+  return AES;
+})();
+
+exports['default'] = AES;
+module.exports = exports['default'];
+
+},{}],7:[function(require,module,exports){
+/*
+ *
+ * This file contains an adaptation of the AES decryption algorithm
+ * from the Standford Javascript Cryptography Library. That work is
+ * covered by the following copyright and permissions notice:
+ *
+ * Copyright 2009-2010 Emily Stark, Mike Hamburg, Dan Boneh.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above
+ *    copyright notice, this list of conditions and the following
+ *    disclaimer in the documentation and/or other materials provided
+ *    with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHORS ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+ * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+ * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * The views and conclusions contained in the software and documentation
+ * are those of the authors and should not be interpreted as representing
+ * official policies, either expressed or implied, of the authors.
+ */
+
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+var _aes = require('./aes');
+
+var _aes2 = _interopRequireDefault(_aes);
+
+var AES128Decrypter = (function () {
+  function AES128Decrypter(key, initVector) {
+    _classCallCheck(this, AES128Decrypter);
+
+    this.key = key;
+    this.iv = initVector;
+  }
+
+  /**
+   * Convert network-order (big-endian) bytes into their little-endian
+   * representation.
+   */
+
+  _createClass(AES128Decrypter, [{
+    key: 'ntoh',
+    value: function ntoh(word) {
+      return word << 24 | (word & 0xff00) << 8 | (word & 0xff0000) >> 8 | word >>> 24;
+    }
+
+    /**
+     * Decrypt bytes using AES-128 with CBC and PKCS#7 padding.
+     * @param encrypted {Uint8Array} the encrypted bytes
+     * @param key {Uint32Array} the bytes of the decryption key
+     * @param initVector {Uint32Array} the initialization vector (IV) to
+     * use for the first round of CBC.
+     * @return {Uint8Array} the decrypted bytes
+     *
+     * @see http://en.wikipedia.org/wiki/Advanced_Encryption_Standard
+     * @see http://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Cipher_Block_Chaining_.28CBC.29
+     * @see https://tools.ietf.org/html/rfc2315
+     */
+  }, {
+    key: 'doDecrypt',
+    value: function doDecrypt(encrypted, key, initVector) {
+      var
+      // word-level access to the encrypted bytes
+      encrypted32 = new Int32Array(encrypted.buffer, encrypted.byteOffset, encrypted.byteLength >> 2),
+          decipher = new _aes2['default'](Array.prototype.slice.call(key)),
+
+      // byte and word-level access for the decrypted output
+      decrypted = new Uint8Array(encrypted.byteLength),
+          decrypted32 = new Int32Array(decrypted.buffer),
+
+      // temporary variables for working with the IV, encrypted, and
+      // decrypted data
+      init0,
+          init1,
+          init2,
+          init3,
+          encrypted0,
+          encrypted1,
+          encrypted2,
+          encrypted3,
+
+      // iteration variable
+      wordIx;
+
+      // pull out the words of the IV to ensure we don't modify the
+      // passed-in reference and easier access
+      init0 = initVector[0];
+      init1 = initVector[1];
+      init2 = initVector[2];
+      init3 = initVector[3];
+
+      // decrypt four word sequences, applying cipher-block chaining (CBC)
+      // to each decrypted block
+      for (wordIx = 0; wordIx < encrypted32.length; wordIx += 4) {
+        // convert big-endian (network order) words into little-endian
+        // (javascript order)
+        encrypted0 = this.ntoh(encrypted32[wordIx]);
+        encrypted1 = this.ntoh(encrypted32[wordIx + 1]);
+        encrypted2 = this.ntoh(encrypted32[wordIx + 2]);
+        encrypted3 = this.ntoh(encrypted32[wordIx + 3]);
+
+        // decrypt the block
+        decipher.decrypt(encrypted0, encrypted1, encrypted2, encrypted3, decrypted32, wordIx);
+
+        // XOR with the IV, and restore network byte-order to obtain the
+        // plaintext
+        decrypted32[wordIx] = this.ntoh(decrypted32[wordIx] ^ init0);
+        decrypted32[wordIx + 1] = this.ntoh(decrypted32[wordIx + 1] ^ init1);
+        decrypted32[wordIx + 2] = this.ntoh(decrypted32[wordIx + 2] ^ init2);
+        decrypted32[wordIx + 3] = this.ntoh(decrypted32[wordIx + 3] ^ init3);
+
+        // setup the IV for the next round
+        init0 = encrypted0;
+        init1 = encrypted1;
+        init2 = encrypted2;
+        init3 = encrypted3;
+      }
+
+      return decrypted;
+    }
+  }, {
+    key: 'localDecript',
+    value: function localDecript(encrypted, key, initVector, decrypted) {
+      var bytes = this.doDecrypt(encrypted, key, initVector);
+      decrypted.set(bytes, encrypted.byteOffset);
+    }
+  }, {
+    key: 'decrypt',
+    value: function decrypt(encrypted) {
+      var step = 4 * 8000,
+
+      //encrypted32 = new Int32Array(encrypted.buffer),
+      encrypted32 = new Int32Array(encrypted),
+          decrypted = new Uint8Array(encrypted.byteLength),
+          i = 0;
+
+      // split up the encryption job and do the individual chunks asynchronously
+      var key = this.key;
+      var initVector = this.iv;
+      this.localDecript(encrypted32.subarray(i, i + step), key, initVector, decrypted);
+
+      for (i = step; i < encrypted32.length; i += step) {
+        initVector = new Uint32Array([this.ntoh(encrypted32[i - 4]), this.ntoh(encrypted32[i - 3]), this.ntoh(encrypted32[i - 2]), this.ntoh(encrypted32[i - 1])]);
+        this.localDecript(encrypted32.subarray(i, i + step), key, initVector, decrypted);
+      }
+
+      return decrypted;
+    }
+  }]);
+
+  return AES128Decrypter;
+})();
+
+exports['default'] = AES128Decrypter;
+module.exports = exports['default'];
+
+},{"./aes":6}],8:[function(require,module,exports){
+/*
+ * AES128 decryption.
+ */
+
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+var _aes128Decrypter = require('./aes128-decrypter');
+
+var _aes128Decrypter2 = _interopRequireDefault(_aes128Decrypter);
+
+var _errors = require('../errors');
+
+var _utilsLogger = require('../utils/logger');
+
+var Decrypter = (function () {
+  function Decrypter(hls) {
+    _classCallCheck(this, Decrypter);
+
+    this.hls = hls;
+    this.disableWebCrypto = false;
+  }
+
+  _createClass(Decrypter, [{
+    key: 'destroy',
+    value: function destroy() {}
+  }, {
+    key: 'decrypt',
+    value: function decrypt(data, key, iv, callback) {
+      if (this.disableWebCrypto && this.hls.config.enableSoftwareAES) {
+        this.decryptBySoftware(data, key, iv, callback);
+      } else {
+        this.decryptByWebCrypto(data, key, iv, callback);
+      }
+    }
+  }, {
+    key: 'decryptByWebCrypto',
+    value: function decryptByWebCrypto(data, key, iv, callback) {
+      _utilsLogger.logger.log('decrypting by WebCrypto API');
+
+      var localthis = this;
+      window.crypto.subtle.importKey('raw', key, { name: 'AES-CBC', length: 128 }, false, ['decrypt']).then(function (importedKey) {
+        window.crypto.subtle.decrypt({ name: 'AES-CBC', iv: iv.buffer }, importedKey, data).then(callback)['catch'](function (err) {
+          localthis.onWebCryptoError(err, data, key, iv, callback);
+        });
+      })['catch'](function (err) {
+        localthis.onWebCryptoError(err, data, key, iv, callback);
+      });
+    }
+  }, {
+    key: 'decryptBySoftware',
+    value: function decryptBySoftware(data, key8, iv8, callback) {
+      _utilsLogger.logger.log('decrypting by JavaScript Implementation');
+
+      var view = new DataView(key8.buffer);
+      var key = new Uint32Array([view.getUint32(0), view.getUint32(4), view.getUint32(8), view.getUint32(12)]);
+
+      view = new DataView(iv8.buffer);
+      var iv = new Uint32Array([view.getUint32(0), view.getUint32(4), view.getUint32(8), view.getUint32(12)]);
+
+      var decrypter = new _aes128Decrypter2['default'](key, iv);
+      callback(decrypter.decrypt(data).buffer);
+    }
+  }, {
+    key: 'onWebCryptoError',
+    value: function onWebCryptoError(err, data, key, iv, callback) {
+      if (this.hls.config.enableSoftwareAES) {
+        _utilsLogger.logger.log('disabling to use WebCrypto API');
+        this.disableWebCrypto = true;
+        this.decryptBySoftware(data, key, iv, callback);
+      } else {
+        _utilsLogger.logger.error('decrypting error : ' + err.message);
+        this.hls.trigger(Event.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_DECRYPT_ERROR, fatal: true, reason: err.message });
+      }
+    }
+  }]);
+
+  return Decrypter;
+})();
+
+exports['default'] = Decrypter;
+module.exports = exports['default'];
+
+},{"../errors":14,"../utils/logger":24,"./aes128-decrypter":7}],9:[function(require,module,exports){
 /*  inline demuxer.
  *   probe fragments and instantiate appropriate demuxer depending on content type (TSDemuxer, AACDemuxer, ...)
  */
@@ -2101,7 +2619,7 @@ var DemuxerInline = (function () {
 exports['default'] = DemuxerInline;
 module.exports = exports['default'];
 
-},{"../demux/tsdemuxer":10,"../errors":11,"../events":12}],7:[function(require,module,exports){
+},{"../demux/tsdemuxer":13,"../errors":14,"../events":15}],10:[function(require,module,exports){
 /* demuxer web worker.
  *  - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
  *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
@@ -2208,7 +2726,7 @@ var DemuxerWorker = function DemuxerWorker(self) {
 exports['default'] = DemuxerWorker;
 module.exports = exports['default'];
 
-},{"../demux/demuxer-inline":6,"../events":12,"../remux/mp4-remuxer":19,"events":1}],8:[function(require,module,exports){
+},{"../demux/demuxer-inline":9,"../events":15,"../remux/mp4-remuxer":22,"events":1}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -2225,8 +2743,6 @@ var _events = require('../events');
 
 var _events2 = _interopRequireDefault(_events);
 
-var _errors = require('../errors');
-
 var _demuxDemuxerInline = require('../demux/demuxer-inline');
 
 var _demuxDemuxerInline2 = _interopRequireDefault(_demuxDemuxerInline);
@@ -2240,6 +2756,10 @@ var _utilsLogger = require('../utils/logger');
 var _remuxMp4Remuxer = require('../remux/mp4-remuxer');
 
 var _remuxMp4Remuxer2 = _interopRequireDefault(_remuxMp4Remuxer);
+
+var _cryptDecrypter = require('../crypt/decrypter');
+
+var _cryptDecrypter2 = _interopRequireDefault(_cryptDecrypter);
 
 var Demuxer = (function () {
   function Demuxer(hls) {
@@ -2289,19 +2809,13 @@ var Demuxer = (function () {
     key: 'push',
     value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata) {
       if (data.byteLength > 0 && decryptdata != null && decryptdata.key != null && decryptdata.method === 'AES-128') {
+        if (this.decrypter == null) {
+          this.decrypter = new _cryptDecrypter2['default'](this.hls);
+        }
+
         var localthis = this;
-        window.crypto.subtle.importKey('raw', decryptdata.key, { name: 'AES-CBC', length: 128 }, false, ['decrypt']).then(function (importedKey) {
-          window.crypto.subtle.decrypt({ name: 'AES-CBC', iv: decryptdata.iv.buffer }, importedKey, data).then(function (result) {
-            localthis.pushDecrypted(result, audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
-          })['catch'](function (err) {
-            _utilsLogger.logger.error('decrypting error : ' + err.message);
-            localthis.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_DECRYPT_ERROR, fatal: true, reason: err.message });
-            return;
-          });
-        })['catch'](function (err) {
-          _utilsLogger.logger.error('decrypting error : ' + err.message);
-          localthis.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_DECRYPT_ERROR, fatal: true, reason: err.message });
-          return;
+        this.decrypter.decrypt(data, decryptdata.key, decryptdata.iv, function (decryptedData) {
+          localthis.pushDecrypted(decryptedData, audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
         });
       } else {
         this.pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
@@ -2357,7 +2871,7 @@ var Demuxer = (function () {
 exports['default'] = Demuxer;
 module.exports = exports['default'];
 
-},{"../demux/demuxer-inline":6,"../demux/demuxer-worker":7,"../errors":11,"../events":12,"../remux/mp4-remuxer":19,"../utils/logger":21,"webworkify":2}],9:[function(require,module,exports){
+},{"../crypt/decrypter":8,"../demux/demuxer-inline":9,"../demux/demuxer-worker":10,"../events":15,"../remux/mp4-remuxer":22,"../utils/logger":24,"webworkify":2}],12:[function(require,module,exports){
 /**
  * Parser for exponential Golomb codes, a variable-bitwidth number encoding scheme used by h264.
 */
@@ -2646,7 +3160,7 @@ var ExpGolomb = (function () {
 exports['default'] = ExpGolomb;
 module.exports = exports['default'];
 
-},{"../utils/logger":21}],10:[function(require,module,exports){
+},{"../utils/logger":24}],13:[function(require,module,exports){
 /**
  * highly optimized TS demuxer:
  * parse PAT, PMT
@@ -3380,7 +3894,7 @@ var TSDemuxer = (function () {
 exports['default'] = TSDemuxer;
 module.exports = exports['default'];
 
-},{"../errors":11,"../events":12,"../utils/logger":21,"./exp-golomb":9}],11:[function(require,module,exports){
+},{"../errors":14,"../events":15,"../utils/logger":24,"./exp-golomb":12}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -3430,7 +3944,7 @@ var ErrorDetails = {
 };
 exports.ErrorDetails = ErrorDetails;
 
-},{}],12:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -3494,7 +4008,7 @@ exports['default'] = {
 };
 module.exports = exports['default'];
 
-},{}],13:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 /**
  * Level Helper class, providing methods dealing with playlist sliding and drift
 */
@@ -3640,7 +4154,7 @@ var LevelHelper = (function () {
 exports['default'] = LevelHelper;
 module.exports = exports['default'];
 
-},{"../utils/logger":21}],14:[function(require,module,exports){
+},{"../utils/logger":24}],17:[function(require,module,exports){
 /**
  * HLS interface
  */
@@ -3735,6 +4249,7 @@ var Hls = (function () {
       liveMaxLatencyDurationCount: Infinity,
       maxMaxBufferLength: 600,
       enableWorker: true,
+      enableSoftwareAES: true,
       fragLoadingTimeOut: 20000,
       fragLoadingMaxRetry: 1,
       fragLoadingRetryDelay: 1000,
@@ -3973,7 +4488,7 @@ var Hls = (function () {
 exports['default'] = Hls;
 module.exports = exports['default'];
 
-},{"./controller/abr-controller":3,"./controller/level-controller":4,"./controller/mse-media-controller":5,"./errors":11,"./events":12,"./loader/fragment-loader":15,"./loader/key-loader":16,"./loader/playlist-loader":17,"./utils/logger":21,"./utils/xhr-loader":23,"events":1}],15:[function(require,module,exports){
+},{"./controller/abr-controller":3,"./controller/level-controller":4,"./controller/mse-media-controller":5,"./errors":14,"./events":15,"./loader/fragment-loader":18,"./loader/key-loader":19,"./loader/playlist-loader":20,"./utils/logger":24,"./utils/xhr-loader":26,"events":1}],18:[function(require,module,exports){
 /*
  * Fragment Loader
 */
@@ -4059,7 +4574,7 @@ var FragmentLoader = (function () {
 exports['default'] = FragmentLoader;
 module.exports = exports['default'];
 
-},{"../errors":11,"../events":12}],16:[function(require,module,exports){
+},{"../errors":14,"../events":15}],19:[function(require,module,exports){
 /*
  * Decrypt key Loader
 */
@@ -4153,7 +4668,7 @@ var KeyLoader = (function () {
 exports['default'] = KeyLoader;
 module.exports = exports['default'];
 
-},{"../errors":11,"../events":12}],17:[function(require,module,exports){
+},{"../errors":14,"../events":15}],20:[function(require,module,exports){
 /**
  * Playlist Loader
 */
@@ -4493,7 +5008,7 @@ var PlaylistLoader = (function () {
 exports['default'] = PlaylistLoader;
 module.exports = exports['default'];
 
-},{"../errors":11,"../events":12,"../utils/url":22}],18:[function(require,module,exports){
+},{"../errors":14,"../events":15,"../utils/url":25}],21:[function(require,module,exports){
 /**
  * Generate MP4 Box
 */
@@ -4973,7 +5488,7 @@ var MP4 = (function () {
 exports['default'] = MP4;
 module.exports = exports['default'];
 
-},{}],19:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 /**
  * fMP4 remuxer
 */
@@ -5402,7 +5917,7 @@ var MP4Remuxer = (function () {
 exports['default'] = MP4Remuxer;
 module.exports = exports['default'];
 
-},{"../errors":11,"../events":12,"../remux/mp4-generator":18,"../utils/logger":21}],20:[function(require,module,exports){
+},{"../errors":14,"../events":15,"../remux/mp4-generator":21,"../utils/logger":24}],23:[function(require,module,exports){
 "use strict";
 
 var BinarySearch = {
@@ -5447,7 +5962,7 @@ var BinarySearch = {
 
 module.exports = BinarySearch;
 
-},{}],21:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -5456,6 +5971,8 @@ Object.defineProperty(exports, '__esModule', {
 function noop() {}
 
 var fakeLogger = {
+  trace: noop,
+  debug: noop,
   log: noop,
   warn: noop,
   info: noop,
@@ -5464,21 +5981,59 @@ var fakeLogger = {
 
 var exportedLogger = fakeLogger;
 
-var enableLogs = function enableLogs(debug) {
-  if (debug === true || typeof debug === 'object') {
-    exportedLogger.log = debug.log ? debug.log.bind(debug) : console.log.bind(console);
-    exportedLogger.info = debug.info ? debug.info.bind(debug) : console.info.bind(console);
-    exportedLogger.error = debug.error ? debug.error.bind(debug) : console.error.bind(console);
-    exportedLogger.warn = debug.warn ? debug.warn.bind(debug) : console.warn.bind(console);
+//let lastCallTime;
+// function formatMsgWithTimeInfo(type, msg) {
+//   const now = Date.now();
+//   const diff = lastCallTime ? '+' + (now - lastCallTime) : '0';
+//   lastCallTime = now;
+//   msg = (new Date(now)).toISOString() + ' | [' +  type + '] > ' + msg + ' ( ' + diff + ' ms )';
+//   return msg;
+// }
+
+function formatMsg(type, msg) {
+  msg = '[' + type + '] > ' + msg;
+  return msg;
+}
+
+function consolePrintFn(type) {
+  var func = window.console[type];
+  if (func) {
+    return function () {
+      for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
+        args[_key] = arguments[_key];
+      }
+
+      if (args[0]) {
+        args[0] = formatMsg(type, args[0]);
+      }
+      func.apply(window.console, args);
+    };
+  }
+  return noop;
+}
+
+function exportLoggerFunctions(debugConfig) {
+  for (var _len2 = arguments.length, functions = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+    functions[_key2 - 1] = arguments[_key2];
+  }
+
+  functions.forEach(function (type) {
+    exportedLogger[type] = debugConfig[type] ? debugConfig[type].bind(debugConfig) : consolePrintFn(type);
+  });
+}
+
+var enableLogs = function enableLogs(debugConfig) {
+  if (debugConfig === true || typeof debugConfig === 'object') {
+    exportLoggerFunctions(debugConfig,
+    // Remove out from list here to hard-disable a log-level
+    //'trace',
+    'debug', 'log', 'info', 'warn', 'error');
     // Some browsers don't allow to use bind on console object anyway
     // fallback to default if needed
     try {
       exportedLogger.log();
     } catch (e) {
-      exportedLogger.log = noop;
-      exportedLogger.info = noop;
-      exportedLogger.error = noop;
-      exportedLogger.warn = noop;
+      exportedLogger = fakeLogger;
     }
   } else {
     exportedLogger = fakeLogger;
@@ -5489,7 +6044,7 @@ exports.enableLogs = enableLogs;
 var logger = exportedLogger;
 exports.logger = logger;
 
-},{}],22:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 'use strict';
 
 var URLHelper = {
@@ -5570,7 +6125,7 @@ var URLHelper = {
 
 module.exports = URLHelper;
 
-},{}],23:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 /**
  * XHR based logger
 */
@@ -5703,6 +6258,6 @@ var XhrLoader = (function () {
 exports['default'] = XhrLoader;
 module.exports = exports['default'];
 
-},{"../utils/logger":21}]},{},[14])(14)
+},{"../utils/logger":24}]},{},[17])(17)
 });
 //# sourceMappingURL=hls.js.map
