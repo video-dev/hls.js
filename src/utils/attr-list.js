@@ -13,7 +13,7 @@ class AttrList {
   decimalInteger(attrName) {
     const intValue = parseInt(this[attrName], 10);
     if (intValue > Number.MAX_SAFE_INTEGER) {
-      throw new RangeError('Value is to large to represent without loss of precision');
+      return Infinity;
     }
     return intValue;
   }
@@ -32,7 +32,7 @@ class AttrList {
   hexadecimalIntegerAsNumber(attrName) {
     const intValue = parseInt(this[attrName], 16);
     if (intValue > Number.MAX_SAFE_INTEGER) {
-      throw new RangeError('Value is to large to represent without loss of precision');
+      return Infinity;
     }
     return intValue;
   }
