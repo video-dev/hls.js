@@ -49,10 +49,13 @@ class AttrList {
     }
 
     decimalResolution(attrName) {
-        const res = /(\d+)x(\d+)/.exec(this[attrName]);
+        const res = /^(\d+)x(\d+)$/.exec(this[attrName]);
+        if (res === null) {
+            return undefined;
+        }
         return {
-            width: res ? parseInt(res[1], 10) : null,
-            height: res ? parseInt(res[2], 10) : null
+            width: parseInt(res[1], 10),
+            height: parseInt(res[2], 10)
         };
     }
 
