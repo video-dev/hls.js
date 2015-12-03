@@ -154,11 +154,14 @@ class LevelController {
   }
 
   onError(event, data) {
+    var details = data.details, hls = this.hls, levelId, level;
+
     if(data.fatal) {
+      logger.error(`unrecovered fatal ${details} error`);
+      this.stop();
       return;
     }
 
-    var details = data.details, hls = this.hls, levelId, level;
     // try to recover not fatal errors
     switch(details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
@@ -195,12 +198,7 @@ class LevelController {
           logger.warn(`level controller,${details} on live stream, discard`);
         } else {
           logger.error(`cannot recover ${details} error`);
-          this._level = undefined;
-          // stopping live reloading timer if any
-          if (this.timer) {
-            clearInterval(this.timer);
-            this.timer = null;
-          }
+          this.stop();
           // redispatch same error but with fatal set to true
           data.fatal = true;
           hls.trigger(event, data);
@@ -236,6 +234,15 @@ class LevelController {
       return this._manualLevel;
     } else {
      return this.hls.abrController.nextAutoLevel;
+    }
+  }
+
+  stop() {
+    this._level = undefined;
+    // stopping live reloading timer if any
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
     }
   }
 }
