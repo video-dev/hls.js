@@ -61,7 +61,7 @@ class PlaylistLoader {
       level.url = this.resolve(result[2], baseurl);
 
       Object.assign(level, level.attrs.decimalResolution('RESOLUTION'));
-      level.bitrate = level.attrs.decimalIntegerAsNumber('BANDWIDTH');
+      level.bitrate = level.attrs.decimalInteger('BANDWIDTH');
       level.name = level.attrs.quotedString('NAME');
 
       const codecs = (level.attrs.quotedString('CODECS') || '').split(',');
