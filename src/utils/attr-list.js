@@ -8,8 +8,14 @@ class AttrList {
         Object.assign(this, attrs);
     }
 
-    decimalInteger(/*attrName*/) {
-        throw new Error('Not supported');
+    decimalInteger(attrName) {
+        const intValue = parseInt(this[attrName], 10);
+        if (intValue > Number.MAX_SAFE_INTEGER) {
+            throw new RangeError(
+                'Value is to large to represent without loss of precision'
+            );
+        }
+        return intValue;
     }
 
     hexadecimalInteger(attrName) {
@@ -23,19 +29,9 @@ class AttrList {
         return value;
     }
 
-    decimalIntegerAsNumber(attrName) {
-        const intValue = parseInt(this[attrName], 10);
-        if (intValue >= Number.MAX_VALUE) {
-            throw new RangeError(
-                'Value is to large to represent without loss of precision'
-            );
-        }
-        return intValue;
-    }
-
     hexadecimalIntegerAsNumber(attrName) {
         const intValue = parseInt(this[attrName], 16);
-        if (intValue >= Number.MAX_VALUE) {
+        if (intValue > Number.MAX_SAFE_INTEGER) {
             throw new RangeError(
                 'Value is to large to represent without loss of precision'
             );
