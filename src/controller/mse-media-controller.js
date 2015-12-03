@@ -240,22 +240,23 @@ class MSEMediaController {
             }
           }
           if (!frag) {
-            if (bufferEnd > end) {
+            var foundFrag;
+            if (bufferEnd < end) {
+              foundFrag = BinarySearch.search(fragments, (candidate) => {
+                //logger.log('level/sn/sliding/start/end/bufEnd:${level}/${candidate.sn}/${sliding.toFixed(3)}/${candidate.start.toFixed(3)}/${(candidate.start+candidate.duration).toFixed(3)}/${bufferEnd.toFixed(3)}');
+                // offset should be within fragment boundary
+                if ((candidate.start + candidate.duration) <= bufferEnd) {
+                  return 1;
+                }
+                else if (candidate.start > bufferEnd) {
+                  return -1;
+                }
+                return 0;
+              });
+            } else {
               // reach end of playlist
-              break;
+              foundFrag = fragments[fragLen-1];
             }
-            let foundFrag = BinarySearch.search(fragments, (candidate) => {
-              //logger.log('level/sn/sliding/start/end/bufEnd:${level}/${candidate.sn}/${sliding.toFixed(3)}/${candidate.start.toFixed(3)}/${(candidate.start+candidate.duration).toFixed(3)}/${bufferEnd.toFixed(3)}');
-              // offset should be within fragment boundary
-              if ((candidate.start + candidate.duration) <= bufferEnd) {
-                return 1;
-              }
-              else if (candidate.start > bufferEnd) {
-                return -1;
-              }
-              return 0;
-            });
-
             if (foundFrag) {
               frag = foundFrag;
               start = foundFrag.start;
