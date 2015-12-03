@@ -1033,21 +1033,22 @@ var MSEMediaController = (function () {
               }
             }
             if (!_frag) {
-              if (bufferEnd > end) {
+              var foundFrag;
+              if (bufferEnd < end) {
+                foundFrag = _utilsBinarySearch2['default'].search(fragments, function (candidate) {
+                  //logger.log('level/sn/sliding/start/end/bufEnd:${level}/${candidate.sn}/${sliding.toFixed(3)}/${candidate.start.toFixed(3)}/${(candidate.start+candidate.duration).toFixed(3)}/${bufferEnd.toFixed(3)}');
+                  // offset should be within fragment boundary
+                  if (candidate.start + candidate.duration <= bufferEnd) {
+                    return 1;
+                  } else if (candidate.start > bufferEnd) {
+                    return -1;
+                  }
+                  return 0;
+                });
+              } else {
                 // reach end of playlist
-                break;
+                foundFrag = fragments[fragLen - 1];
               }
-              var foundFrag = _utilsBinarySearch2['default'].search(fragments, function (candidate) {
-                //logger.log('level/sn/sliding/start/end/bufEnd:${level}/${candidate.sn}/${sliding.toFixed(3)}/${candidate.start.toFixed(3)}/${(candidate.start+candidate.duration).toFixed(3)}/${bufferEnd.toFixed(3)}');
-                // offset should be within fragment boundary
-                if (candidate.start + candidate.duration <= bufferEnd) {
-                  return 1;
-                } else if (candidate.start > bufferEnd) {
-                  return -1;
-                }
-                return 0;
-              });
-
               if (foundFrag) {
                 _frag = foundFrag;
                 start = foundFrag.start;
@@ -3290,8 +3291,8 @@ var TSDemuxer = (function () {
           */
           adtsObjectType = 5;
           config = new Array(4);
-          // if (manifest codec is HE-AAC) OR (manifest codec not specified AND frequency less than 24kHz)
-          if (audioCodec && audioCodec.indexOf('mp4a.40.5') !== -1 || !audioCodec && adtsSampleingIndex >= 6) {
+          // if (manifest codec is HE-AAC or HE-AACv2) OR (manifest codec not specified AND frequency less than 24kHz)
+          if (audioCodec && (audioCodec.indexOf('mp4a.40.29') !== -1 || audioCodec.indexOf('mp4a.40.5') !== -1) || !audioCodec && adtsSampleingIndex >= 6) {
             // HE-AAC uses SBR (Spectral Band Replication) , high frequencies are constructed from low frequencies
             // there is a factor 2 between frame sample rate and output sample rate
             // multiply frequency by 2 (see table below, equivalent to substract 3)
@@ -3796,8 +3797,8 @@ var Hls = (function () {
     key: 'destroy',
     value: function destroy() {
       _utilsLogger.logger.log('destroy');
-      this.detachMedia();
       this.trigger(_events2['default'].DESTROYING);
+      this.detachMedia();
       this.playlistLoader.destroy();
       this.fragmentLoader.destroy();
       this.levelController.destroy();
