@@ -385,7 +385,7 @@ class TSDemuxer {
                     var expGolombDecoder = new ExpGolomb(unit.data);
 
                     // skip frameType
-                    expGolombDecoder.skipBits(8);
+                    expGolombDecoder.readUByte();
 
                     var payloadType = expGolombDecoder.readUByte();
 
@@ -429,12 +429,10 @@ class TSDemuxer {
                                             );
                                         }
 
-                                        var userDataItem = {
+                                        this.userData.push({
                                             type: 3,
                                             bytes: byteArray
-                                        };
-                                        console.log(userDataItem);
-                                        this.userData.push(userDataItem);
+                                        });
                                     }
                                 }
                             }
