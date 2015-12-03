@@ -42,7 +42,7 @@ describe('AttrList', () => {
   it('parses valid enumeratedString attribute', () => {
     assert.strictEqual(new AttrList('ENUM=OK').enumeratedString('ENUM'), 'OK');
   });
-  it('parses exotic quotedString attribute', () => {
+  it('parses exotic enumeratedString attribute', () => {
     assert.strictEqual(new AttrList('ENUM=1').enumeratedString('ENUM'), '1');
     assert.strictEqual(new AttrList('ENUM=A=B').enumeratedString('ENUM'), 'A=B');
     assert.strictEqual(new AttrList('ENUM=A=B=C').enumeratedString('ENUM'), 'A=B=C');
@@ -54,6 +54,15 @@ describe('AttrList', () => {
     assert.deepStrictEqual(new AttrList('RES=400x200').decimalResolution('RES'), { width:400, height:200 });
     assert.deepStrictEqual(new AttrList('RES=0x0').decimalResolution('RES'), { width:0, height:0 });
   });
+  it('handles invalid decimalResolution attribute', () => {
+    assert.deepStrictEqual(new AttrList('RES=400x-200').decimalResolution('RES'), undefined);
+    assert.deepStrictEqual(new AttrList('RES=400.5x200').decimalResolution('RES'), undefined);
+    assert.deepStrictEqual(new AttrList('RES=400x200.5').decimalResolution('RES'), undefined);
+    assert.deepStrictEqual(new AttrList('RES=400').decimalResolution('RES'), undefined);
+    assert.deepStrictEqual(new AttrList('RES=400x').decimalResolution('RES'), undefined);
+    assert.deepStrictEqual(new AttrList('RES=x200').decimalResolution('RES'), undefined);
+    assert.deepStrictEqual(new AttrList('RES=x').decimalResolution('RES'), undefined);
+  });
 
   it('parses multiple attributes', () => {
     const list = new AttrList('INT=42,HEX=0x42,FLOAT=0.42,STRING="hi",ENUM=OK,RES=4x2');
@@ -64,6 +73,17 @@ describe('AttrList', () => {
     assert.strictEqual(list.enumeratedString('ENUM'), 'OK');
     assert.deepStrictEqual(list.decimalResolution('RES'), { width:4, height:2 });
     assert.strictEqual(Object.keys(list).length, 6);
+  });
+
+  it('handles missing attributes', () => {
+    const list = new AttrList();
+    assert(isNaN(list.decimalInteger('INT')));
+    assert(isNaN(list.hexadecimalIntegerAsNumber('HEX')));
+    assert(isNaN(list.decimalFloatingPoint('FLOAT')));
+    assert.strictEqual(list.quotedString('STRING'), undefined);
+    assert.strictEqual(list.enumeratedString('ENUM'), undefined);
+    assert.strictEqual(list.decimalResolution('RES'), undefined);
+    assert.strictEqual(Object.keys(list).length, 0);
   });
 
   it('parses dashed attribute names', () => {
