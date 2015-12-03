@@ -64,9 +64,14 @@ class XhrLoader {
   }
 
   loadsuccess(event) {
+    var xhr = event.target;
     window.clearTimeout(this.timeoutHandle);
-    this.stats.tload = performance.now();
-    this.onSuccess(event, this.stats);
+      this.stats.tload = performance.now();
+    if (xhr.status === 200) {
+      this.onSuccess(event, this.stats);
+    } else {
+      this.loaderror(event);
+    }
   }
 
   loaderror(event) {
