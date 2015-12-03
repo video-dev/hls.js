@@ -69,9 +69,9 @@ class LevelHelper {
       startPTS = Math.max(startPTS,frag.startPTS);
       endPTS = Math.min(endPTS, frag.endPTS);
     }
-      
+
     var drift = startPTS - frag.start;
-      
+
     frag.start = frag.startPTS = startPTS;
     frag.endPTS = endPTS;
     frag.duration = endPTS - startPTS;
@@ -86,7 +86,7 @@ class LevelHelper {
     }
     details.PTSKnown = true;
     //logger.log(`                                            frag start/end:${startPTS.toFixed(3)}/${endPTS.toFixed(3)}`);
-      
+
     return drift;
   }
 
