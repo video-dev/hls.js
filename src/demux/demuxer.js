@@ -1,9 +1,9 @@
 import Event from '../events';
-import {ErrorTypes, ErrorDetails} from '../errors';
 import DemuxerInline from '../demux/demuxer-inline';
 import DemuxerWorker from '../demux/demuxer-worker';
 import {logger} from '../utils/logger';
 import MP4Remuxer from '../remux/mp4-remuxer';
+import Decrypter from '../crypt/decrypter';
 
 class Demuxer {
 
@@ -48,24 +48,14 @@ class Demuxer {
 
   push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata) {
     if ((data.byteLength > 0) && (decryptdata != null) && (decryptdata.key != null) && (decryptdata.method === 'AES-128')) {
+      if (this.decrypter == null) {
+        this.decrypter = new Decrypter(this.hls);
+      }
+      
       var localthis = this;
-      window.crypto.subtle.importKey('raw', decryptdata.key, { name : 'AES-CBC', length : 128 }, false, ['decrypt']).
-        then(function (importedKey) {
-          window.crypto.subtle.decrypt({ name : 'AES-CBC', iv : decryptdata.iv.buffer }, importedKey, data).
-            then(function (result) {
-              localthis.pushDecrypted(result, audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
-            }).
-            catch (function (err) {
-              logger.error(`decrypting error : ${err.message}`);
-              localthis.hls.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_DECRYPT_ERROR, fatal : true, reason : err.message});
-              return;
-            });
-        }).
-        catch (function (err) {
-          logger.error(`decrypting error : ${err.message}`);
-          localthis.hls.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_DECRYPT_ERROR, fatal : true, reason : err.message});
-          return;
-        });
+      this.decrypter.decrypt(data, decryptdata.key, decryptdata.iv, function(decryptedData){
+        localthis.pushDecrypted(decryptedData, audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
+      });
     } else {
       this.pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
     }

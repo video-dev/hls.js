@@ -180,6 +180,7 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       liveSyncDurationCount : 3,
       liveMaxLatencyDurationCount: 10,
       enableWorker : true,
+      enableSoftwareAES: true,
       fragLoadingTimeOut : 20000,
       fragLoadingMaxRetry : 6,
       fragLoadingRetryDelay : 500,
@@ -240,6 +241,12 @@ a value too close from ```liveSyncDurationCount``` is likely to cause playback s
 (default true)
 
 enable webworker (if available on browser) for TS demuxing/MP4 remuxing, to improve performance and avoid lag/frame drops.
+
+#### ```enableSoftwareAES```
+(default true)
+
+enable to use JavaScript version AES decryption for fallback of WebCrypto API.
+
 #### ```fragLoadingTimeOut```/```manifestLoadingTimeOut```
 (default 60000ms for fragment/10000ms for manifest)
 
