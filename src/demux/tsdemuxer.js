@@ -23,7 +23,7 @@
     this.lastCC = 0;
     this.PES_TIMESCALE = 90000;
     this.remuxer = new this.remuxerClass(observer);
-    this.userData = [];
+    this._userData = [];
   }
 
   static probe(data) {
@@ -41,6 +41,7 @@
     this._avcTrack = {type: 'video', id :-1, sequenceNumber: 0, samples : [], len : 0, nbNalu : 0};
     this._aacTrack = {type: 'audio', id :-1, sequenceNumber: 0, samples : [], len : 0};
     this._id3Track = {type: 'id3', id :-1, sequenceNumber: 0, samples : [], len : 0};
+    this._txtTrack = {type: 'text', id: -1, sequenceNumber: 0, samples: [], len: 0}
     this.remuxer.switchLevel();
   }
 
@@ -164,7 +165,7 @@
   }
 
   remux() {
-    this.remuxer.remux(this._aacTrack,this._avcTrack, this._id3Track, this.timeOffset, this.contiguous);
+    this.remuxer.remux(this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous);
   }
 
   destroy() {
@@ -368,7 +369,7 @@
                       byteArray.push(expGolombDecoder.readUByte());
                     }
 
-                    this.userData.push({type: 3, bytes: byteArray});
+                    this._txtTrack.samples.push({type: 3, pts: pes.pts, bytes: byteArray});
                   }
                 }
               }
