@@ -598,7 +598,9 @@ class StreamController {
   }
 
   onMediaAttaching(event, data) {
-    var media = this.media = data.media;
+    var media = data.media;
+    this.media = media;
+    logger.log('attached media, type:{media.tagName}, id:{media.id}');
   }
 
   onMediaAttached() {
