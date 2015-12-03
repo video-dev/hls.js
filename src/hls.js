@@ -9,7 +9,7 @@ import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
 import AbrController from    './controller/abr-controller';
 import StreamController from './controller/stream-controller';
-import BufferController from './controller/buffer-controller';
+import MSEBufferController from './controller/mse-buffer-controller';
 import LevelController from  './controller/level-controller';
 //import FPSController from './controller/fps-controller';
 import {logger, enableLogs} from './utils/logger';
@@ -86,7 +86,7 @@ class Hls {
     this.fragmentLoader = new FragmentLoader(this);
     this.levelController = new LevelController(this);
     this.streamController = new StreamController(this);
-    this.bufferController = new BufferController(this);
+    this.bufferController = new MSEBufferController(this);
     this.abrController = new config.abrController(this);
     //this.fpsController = new FPSController(this);
   }
