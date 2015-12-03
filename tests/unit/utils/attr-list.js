@@ -83,13 +83,9 @@ describe('AttrList', () => {
     assert(bufferIsEqual(list.hexadecimalInteger('HEX3').buffer, new Uint8Array([0x0]).buffer));
   });
 
-  it('throws on large number conversions', () => {
+  it('returns infinity on large number conversions', () => {
     const list = new AttrList('VAL=12345678901234567890,HEX=0x0123456789abcdef0123456789abcdef');
-    assert.throws(() => {
-      list.decimalInteger('VAL');
-    }, RangeError);
-    assert.throws(() => {
-      list.hexadecimalIntegerAsNumber('HEX');
-    }, RangeError);
+    assert.strictEqual(list.decimalInteger('VAL'), Infinity);
+    assert.strictEqual(list.hexadecimalIntegerAsNumber('HEX'), Infinity);
   });
 });  
