@@ -1,5 +1,7 @@
 'use strict';
 
+function noop() {}
+
 const fakeLogger = {
   trace: noop,
   debug: noop,
@@ -11,17 +13,14 @@ const fakeLogger = {
 
 let exportedLogger = fakeLogger;
 
-let lastCallTime;
-
-function noop() {}
-
-function formatMsgWithTimeInfo(type, msg) {
-  const now = Date.now();
-  const diff = lastCallTime ? '+' + (now - lastCallTime) : '0';
-  lastCallTime = now;
-  msg = (new Date(now)).toISOString() + ' | [' +  type + '] > ' + msg + ' ( ' + diff + ' ms )';
-  return msg;
-}
+//let lastCallTime;
+// function formatMsgWithTimeInfo(type, msg) {
+//   const now = Date.now();
+//   const diff = lastCallTime ? '+' + (now - lastCallTime) : '0';
+//   lastCallTime = now;
+//   msg = (new Date(now)).toISOString() + ' | [' +  type + '] > ' + msg + ' ( ' + diff + ' ms )';
+//   return msg;
+// }
 
 function formatMsg(type, msg) {
   msg = '[' +  type + '] > ' + msg;
