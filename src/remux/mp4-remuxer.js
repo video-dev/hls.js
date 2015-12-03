@@ -30,7 +30,7 @@ class MP4Remuxer {
         this.ISGenerated = false;
     }
 
-    remux(audioTrack, videoTrack, id3Track, timeOffset, contiguous) {
+    remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous) {
         // generate Init Segment if needed
         if (!this.ISGenerated) {
             this.generateIS(audioTrack, videoTrack, timeOffset);
@@ -46,6 +46,10 @@ class MP4Remuxer {
         //logger.log('nb ID3 samples:' + audioTrack.samples.length);
         if (id3Track.samples.length) {
             this.remuxID3(id3Track, timeOffset);
+        }
+        //logger.log('nb ID3 samples:' + audioTrack.samples.length);
+        if (textTrack.samples.length) {
+            this.remuxText(textTrack, timeOffset);
         }
         //notify end of parsing
         this.observer.trigger(Event.FRAG_PARSED);
@@ -399,6 +403,36 @@ class MP4Remuxer {
                 sample.dts = (sample.dts - this._initDTS) / this.PES_TIMESCALE;
             }
             this.observer.trigger(Event.FRAG_PARSING_METADATA, {
+                samples: track.samples
+            });
+        }
+
+        track.samples = [];
+        timeOffset = timeOffset;
+    }
+
+    remuxText(track, timeOffset) {
+        track.samples.sort(function(a, b) {
+            if (a.pts < b.pts) {
+                return -1;
+            } else if (a.pts > b.pts) {
+                return 1;
+            } else {
+                return 0;
+            }
+        });
+
+        var length = track.samples.length,
+            sample;
+        // consume samples
+        if (length) {
+            for (var index = 0; index < length; index++) {
+                sample = track.samples[index];
+                // setting text pts, dts to relative time
+                // using this._initPTS and this._initDTS to calculate relative time
+                sample.pts = (sample.pts - this._initPTS) / this.PES_TIMESCALE;
+            }
+            this.observer.trigger(Event.FRAG_PARSING_USERDATA, {
                 samples: track.samples
             });
         }

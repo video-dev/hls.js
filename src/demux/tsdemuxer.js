@@ -22,7 +22,7 @@ class TSDemuxer {
         this.lastCC = 0;
         this.PES_TIMESCALE = 90000;
         this.remuxer = new this.remuxerClass(observer);
-        this.userData = [];
+        this._userData = [];
     }
 
     static probe(data) {
@@ -59,6 +59,13 @@ class TSDemuxer {
         };
         this._id3Track = {
             type: 'id3',
+            id: -1,
+            sequenceNumber: 0,
+            samples: [],
+            len: 0
+        };
+        this._txtTrack = {
+            type: 'text',
             id: -1,
             sequenceNumber: 0,
             samples: [],
@@ -209,6 +216,7 @@ class TSDemuxer {
             this._aacTrack,
             this._avcTrack,
             this._id3Track,
+            this._txtTrack,
             this.timeOffset,
             this.contiguous
         );
@@ -429,8 +437,9 @@ class TSDemuxer {
                                             );
                                         }
 
-                                        this.userData.push({
+                                        this._txtTrack.samples.push({
                                             type: 3,
+                                            pts: pes.pts,
                                             bytes: byteArray
                                         });
                                     }
