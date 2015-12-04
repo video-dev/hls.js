@@ -61,7 +61,7 @@ class StreamController extends EventHandler {
       this.startInternal();
       if (this.lastCurrentTime) {
         logger.log(`seeking @ ${this.lastCurrentTime}`);
-        if (!this.lastPaused) {o
+        if (!this.lastPaused) {
           logger.log('resuming video');
           this.media.play();
         }
@@ -81,7 +81,7 @@ class StreamController extends EventHandler {
     var hls = this.hls;
     this.stop();
     this.demuxer = new Demuxer(hls);
-    this.timer = setInterval(this.ontick, 100);
+    //this.timer = setInterval(this.ontick, 100);
     this.level = -1;
   }
 

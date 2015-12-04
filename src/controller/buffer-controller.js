@@ -60,7 +60,6 @@ class BufferController extends EventHandler {
   // implement these in specific class
   onBufferCodecs() {}
   onBufferAppending() {}
-  onBufferEOS() {}
   onMediaAttaching() {}
   onMediaDetaching() {}
   onBufferEOS() {}

@@ -22,7 +22,6 @@ class EventHandler {
   }
 
   isEventHandler() {
-    return true;
     return typeof this.handledEvents === 'object' && this.handledEvents.length && typeof this.onEvent === 'function';
   }
 
