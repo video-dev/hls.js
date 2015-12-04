@@ -60,7 +60,8 @@ class Hls {
       pLoader: undefined,
       abrController : AbrController,
       mediaController: MSEMediaController,
-      timelineController: TimelineController
+      timelineController: TimelineController,
+      enableCEA708Captions: true
     };
     for (var prop in configDefault) {
         if (prop in config) { continue; }
