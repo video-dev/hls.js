@@ -185,6 +185,7 @@ class CEA708Interpreter {
               case 0x21:
                 console.error("-BS-");
                 // BS: Backspace
+                this.cue.text = this.cue.text.substr(0, this.cue.text.length-1);
                 break;
               case 0x22:
                 console.error("-AOF-");
@@ -201,14 +202,17 @@ class CEA708Interpreter {
               case 0x25:
                 console.error("-RU2-");
                 // RU2: roll-up 2 rows
+                this._rollup(2);
                 break;
               case 0x26:
                 console.error("-RU3-");
                 // RU3: roll-up 3 rows
+                this._rollup(3);
                 break;
               case 0x27:
                 console.error("-RU4-");
                 // RU4: roll-up 4 rows
+                this._rollup(4);
                 break;
               case 0x28:
                 console.error("-FON-");
@@ -236,6 +240,7 @@ class CEA708Interpreter {
                 console.error("-CR-");
                 // CR: Carriage Return
                 // only affects roll-up
+                this._rollup(1);
                 break;
               case 0x2E:
                 console.error("-ENM-");
@@ -357,6 +362,11 @@ class CEA708Interpreter {
     }
 
     this.display = [];
+  }
+
+  _rollUp(n)
+  {
+    // TODO: implement roll-up captions
   }
 
   _clearBufferedCues()
