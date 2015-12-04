@@ -2,7 +2,9 @@
 
 function noop() {}
 
-let fakeLogger = {
+const fakeLogger = {
+  trace: noop,
+  debug: noop,
   log: noop,
   warn: noop,
   info: noop,
@@ -11,22 +13,56 @@ let fakeLogger = {
 
 let exportedLogger = fakeLogger;
 
-export var enableLogs = function(debug) {
-  if (debug === true || typeof debug === 'object') {
-    exportedLogger.log = debug.log ? debug.log.bind(debug) : console.log.bind(console);
-    exportedLogger.info = debug.info ? debug.info.bind(debug) : console.info.bind(console);
-    exportedLogger.error = debug.error ? debug.error.bind(debug) : console.error.bind(console);
-    exportedLogger.warn = debug.warn ? debug.warn.bind(debug) : console.warn.bind(console);
+//let lastCallTime;
+// function formatMsgWithTimeInfo(type, msg) {
+//   const now = Date.now();
+//   const diff = lastCallTime ? '+' + (now - lastCallTime) : '0';
+//   lastCallTime = now;
+//   msg = (new Date(now)).toISOString() + ' | [' +  type + '] > ' + msg + ' ( ' + diff + ' ms )';
+//   return msg;
+// }
+
+function formatMsg(type, msg) {
+  msg = '[' +  type + '] > ' + msg;
+  return msg;
+}
+
+function consolePrintFn(type) {
+  const func = window.console[type];
+  if (func) {
+    return function(...args) {
+      if(args[0]) {
+        args[0] = formatMsg(type, args[0]);
+      }
+      func.apply(window.console, args);
+    };
+  }
+  return noop;
+}
+
+function exportLoggerFunctions(debugConfig, ...functions) {
+  functions.forEach(function(type) {
+    exportedLogger[type] = debugConfig[type] ? debugConfig[type].bind(debugConfig) : consolePrintFn(type);
+  });
+}
+
+export var enableLogs = function(debugConfig) {
+  if (debugConfig === true || typeof debugConfig === 'object') {
+    exportLoggerFunctions(debugConfig,
+      // Remove out from list here to hard-disable a log-level
+      //'trace',
+      'debug',
+      'log',
+      'info',
+      'warn',
+      'error'
+    );
     // Some browsers don't allow to use bind on console object anyway
     // fallback to default if needed
     try {
      exportedLogger.log();
-    }
-    catch (e) {
-      exportedLogger.log = noop;
-      exportedLogger.info = noop;
-      exportedLogger.error = noop;
-      exportedLogger.warn = noop;
+    } catch (e) {
+      exportedLogger = fakeLogger;
     }
   }
   else {
