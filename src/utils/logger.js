@@ -12,6 +12,7 @@ const fakeLogger = {
 };
 
 let exportedLogger = fakeLogger;
+let lastCallTime;
 
 //let lastCallTime;
 // function formatMsgWithTimeInfo(type, msg) {
