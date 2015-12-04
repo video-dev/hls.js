@@ -5,6 +5,7 @@
  *
 */
 
+import Event from '../events';
 import {logger} from '../utils/logger';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import BufferController from './buffer-controller';

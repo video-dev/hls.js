@@ -12,6 +12,7 @@ class EventHandler {
     this.hls = hls;
     this.onEvent = this.onEvent.bind(this);
     this.handledEvents = events;
+    this.useGenericHandler = true;
 
     this.registerListeners();
   }
@@ -44,8 +45,19 @@ class EventHandler {
   /*
   * arguments: event (string), data (any)
   */
-  onEvent() {
-    throw new Error('onEvent should be overloaded');
+  onEvent(event, data) {
+    this.onEventGeneric(event, data);
+  }
+
+  onEventGeneric(event, data) {
+    function eventToFunction(event, data) {
+      var funcName = 'on' + event.replace('hls', '');
+      if (typeof this[funcName] !== 'function') {
+        throw new Error(`Event ${event} has no generic handler in this ${this.constructor.name} class (tried ${funcName})`);
+      }
+      return this[funcName].bind(this, data);
+    }
+    eventToFunction.call(this, event, data).call();
   }
 }
 

@@ -16,17 +16,16 @@ class BufferController extends EventHandler {
                 Event.BUFFER_EOS,
                 Event.BUFFER_FLUSHING,
                 Event.BUFFER_FLUSHED,
+                Event.BUFFER_EOS,
                 Event.MEDIA_ATTACHING,
                 Event.MEDIA_DETACHING);
-
-    debugger;
-
   }
 
   destroy() {
     EventHandler.prototype.destroy.call(this);
   }
 
+  /*
   onEvent(event, data) {
     switch(event) {
     case Event.BUFFER_APPENDING:
@@ -52,6 +51,7 @@ class BufferController extends EventHandler {
       break;
     }
   }
+  */
 
   finishAppending() {
     this.hls.trigger(Event.BUFFER_APPENDED);
@@ -63,6 +63,7 @@ class BufferController extends EventHandler {
   onBufferEOS() {}
   onMediaAttaching() {}
   onMediaDetaching() {}
+  onBufferEOS() {}
 }
 
 export default BufferController;
