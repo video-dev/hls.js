@@ -24,6 +24,7 @@
   "globals"   : {
     "console"     : true,
     "MediaSource" : true,
-    "performance" : true
+    "performance" : true,
+    "crypto"      : true
   }
 }
