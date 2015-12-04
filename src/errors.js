@@ -26,8 +26,16 @@ export const ErrorDetails = {
   FRAG_LOOP_LOADING_ERROR: 'fragLoopLoadingError',
   // Identifier for fragment load timeout error - data: { frag : fragment object}
   FRAG_LOAD_TIMEOUT: 'fragLoadTimeOut',
+  // Identifier for a fragment decryption error event - data: parsing error description
+  FRAG_DECRYPT_ERROR: 'fragDecryptError',
   // Identifier for a fragment parsing error event - data: parsing error description
   FRAG_PARSING_ERROR: 'fragParsingError',
-    // Identifier for a fragment appending error event - data: appending error description
-  FRAG_APPENDING_ERROR: 'fragAppendingError'
+  // Identifier for decrypt key load error - data: { frag : fragment object, response : XHR response}
+  KEY_LOAD_ERROR: 'keyLoadError',
+  // Identifier for decrypt key load timeout error - data: { frag : fragment object}
+  KEY_LOAD_TIMEOUT: 'keyLoadTimeOut',
+  // Identifier for a buffer append error - data: append error description
+  BUFFER_APPEND_ERROR: 'bufferAppendError',
+  // Identifier for a buffer appending error event - data: appending error description
+  BUFFER_APPENDING_ERROR: 'bufferAppendingError'
 };

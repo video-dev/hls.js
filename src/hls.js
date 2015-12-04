@@ -15,6 +15,7 @@ import LevelController from  './controller/level-controller';
 import {logger, enableLogs} from './utils/logger';
 import XhrLoader from './utils/xhr-loader';
 import EventEmitter from 'events';
+import KeyLoader from './loader/key-loader';
 
 class Hls {
 
@@ -44,6 +45,7 @@ class Hls {
       liveMaxLatencyDurationCount: Infinity,
       maxMaxBufferLength: 600,
       enableWorker: true,
+      enableSoftwareAES: true,
       fragLoadingTimeOut: 20000,
       fragLoadingMaxRetry: 1,
       fragLoadingRetryDelay: 1000,
@@ -88,21 +90,23 @@ class Hls {
     this.streamController = new StreamController(this);
     this.bufferController = new MSEBufferController(this);
     this.abrController = new config.abrController(this);
+    this.keyLoader = new KeyLoader(this);
     //this.fpsController = new FPSController(this);
   }
 
   destroy() {
     logger.log('destroy');
     this.trigger(Event.DESTROYING);
+    this.detachMedia();
     this.playlistLoader.destroy();
     this.fragmentLoader.destroy();
     this.levelController.destroy();
     this.streamController.destroy();
     this.bufferController.destroy();
     this.abrController.destroy();
+    this.keyLoader.destroy();
     //this.fpsController.destroy();
     this.url = null;
-    this.detachMedia();
     this.observer.removeAllListeners();
   }
 

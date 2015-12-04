@@ -49,13 +49,14 @@
   }
 
   // feed incoming data to the front of the parsing pipeline
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, duration) {
+  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
     var avcData, aacData, id3Data,
         start, len = data.length, stt, pid, atf, offset;
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
     this.timeOffset = timeOffset;
     this._duration = duration;
+    this.contiguous = false;
     if (cc !== this.lastCC) {
       logger.log('discontinuity detected');
       this.insertDiscontinuity();
@@ -64,7 +65,16 @@
       logger.log('level switch detected');
       this.switchLevel();
       this.lastLevel = level;
+    } else if (sn === (this.lastSN+1)) {
+      this.contiguous = true;
     }
+    this.lastSN = sn;
+
+    if(!this.contiguous) {
+      // flush any partial content
+      this.aacOverFlow = null;
+    }
+
     var pmtParsed = this.pmtParsed,
         avcId = this._avcTrack.id,
         aacId = this._aacTrack.id,
@@ -149,10 +159,11 @@
     if (id3Data) {
       this._parseID3PES(this._parsePES(id3Data));
     }
+    this.remux();
   }
 
   remux() {
-    this.remuxer.remux(this._aacTrack,this._avcTrack, this._id3Track, this.timeOffset);
+    this.remuxer.remux(this._aacTrack,this._avcTrack, this._id3Track, this.timeOffset, this.contiguous);
   }
 
   destroy() {
@@ -319,9 +330,6 @@
             var config = expGolombDecoder.readSPS();
             track.width = config.width;
             track.height = config.height;
-            track.profileIdc = config.profileIdc;
-            track.profileCompat = config.profileCompat;
-            track.levelIdc = config.levelIdc;
             track.sps = [unit.data];
             track.timescale = this.remuxer.timescale;
             track.duration = this.remuxer.timescale * this._duration;
@@ -503,12 +511,18 @@
       stamp = Math.round(pes.pts + nbSamples * 1024 * this.PES_TIMESCALE / track.audiosamplerate);
       //stamp = pes.pts;
       //console.log('AAC frame, offset/length/pts:' + (adtsStartOffset+7) + '/' + adtsFrameSize + '/' + stamp.toFixed(0));
-      if (adtsStartOffset + adtsHeaderLen + adtsFrameSize <= len) {
+      if ((adtsFrameSize > 0) && ((adtsStartOffset + adtsHeaderLen + adtsFrameSize) <= len)) {
         aacSample = {unit: data.subarray(adtsStartOffset + adtsHeaderLen, adtsStartOffset + adtsHeaderLen + adtsFrameSize), pts: stamp, dts: stamp};
         this._aacTrack.samples.push(aacSample);
         this._aacTrack.len += adtsFrameSize;
         adtsStartOffset += adtsFrameSize + adtsHeaderLen;
         nbSamples++;
+        // look for ADTS header (0xFFFx)
+        for ( ; adtsStartOffset < (len - 1); adtsStartOffset++) {
+          if ((data[adtsStartOffset] === 0xff) && ((data[adtsStartOffset + 1] & 0xf0) === 0xf0)) {
+            break;
+          }
+        }
       } else {
         break;
       }
@@ -571,8 +585,10 @@
       */
       adtsObjectType = 5;
       config = new Array(4);
-      // if (manifest codec is HE-AAC) OR (manifest codec not specified AND frequency less than 24kHz)
-      if ((audioCodec && audioCodec.indexOf('mp4a.40.5') !== -1) || (!audioCodec && adtsSampleingIndex >= 6)) {
+      // if (manifest codec is HE-AAC or HE-AACv2) OR (manifest codec not specified AND frequency less than 24kHz)
+      if ((audioCodec && ((audioCodec.indexOf('mp4a.40.29') !== -1) ||
+                          (audioCodec.indexOf('mp4a.40.5') !== -1))) ||
+          (!audioCodec && adtsSampleingIndex >= 6)) {
         // HE-AAC uses SBR (Spectral Band Replication) , high frequencies are constructed from low frequencies
         // there is a factor 2 between frame sample rate and output sample rate
         // multiply frequency by 2 (see table below, equivalent to substract 3)
