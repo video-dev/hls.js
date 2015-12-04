@@ -96,7 +96,7 @@ class MSEBufferController extends BufferController {
 
   onSBUpdateError(event) {
     logger.error(`sourceBuffer error:${event}`);
-    this.hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_APPENDING_ERROR, fatal: true, frag: this.fragCurrent});
+    this.hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_APPENDING_ERROR, fatal: true, frag: this.fragCurrent});
   }
 
   onSBUpdateEnd() {
