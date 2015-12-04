@@ -28,6 +28,9 @@ class EventHandler {
   registerListeners() {
     if (this.isEventHandler()) {
       this.handledEvents.forEach(function(event) {
+        if (event === 'hlsEventGeneric') {
+          throw new Error('Forbidden event name: ' + event);
+        }
         this.hls.on(event, this.onEvent);
       }.bind(this));
     }
