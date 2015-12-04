@@ -12,7 +12,7 @@ class Decrypter {
     this.hls = hls;
     try {
       const browserCrypto = window ? window.crypto : crypto;
-      this.subtle = browserCrypto.subtle;
+      this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
       this.disableWebCrypto = !this.subtle;
     } catch (e) {
       this.disableWebCrypto = true;
