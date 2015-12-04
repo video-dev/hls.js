@@ -25,34 +25,6 @@ class BufferController extends EventHandler {
     EventHandler.prototype.destroy.call(this);
   }
 
-  /*
-  onEvent(event, data) {
-    switch(event) {
-    case Event.BUFFER_APPENDING:
-      this.onBufferAppending(data);
-      break;
-    case Event.BUFFER_CODECS:
-      this.onBufferCodecs(data);
-      break;
-    case Event.BUFFER_EOS:
-      this.onBufferEOS(data);
-      break;
-    case Event.BUFFER_FLUSHING:
-      this.onBufferFlushing(data);
-      break;
-    case Event.BUFFER_FLUSHED:
-      this.onBufferFlushed(data);
-      break;
-    case Event.MEDIA_ATTACHING:
-      this.onMediaAttaching(data);
-      break;
-    case Event.MEDIA_DETACHING:
-      this.onMediaDetaching(data);
-      break;
-    }
-  }
-  */
-
   finishAppending() {
     this.hls.trigger(Event.BUFFER_APPENDED);
   }
