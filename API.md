@@ -339,7 +339,7 @@ This allows user to easily modify/setup XHR. see example below.
 
 ```js
 var config = {
-  xhrSetup: function(xhr) {
+  xhrSetup: function(xhr, url) {
     xhr.withCredentials = true; // do send cookies
   }
 }

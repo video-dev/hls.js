@@ -10,7 +10,13 @@ class Decrypter {
 
   constructor(hls) {
     this.hls = hls;
-    this.disableWebCrypto = false;
+    try {
+      const browserCrypto = window ? window.crypto : crypto;
+      this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
+      this.disableWebCrypto = !this.subtle;
+    } catch (e) {
+      this.disableWebCrypto = true;
+    }
   }
 
   destroy() {
@@ -27,17 +33,16 @@ class Decrypter {
   decryptByWebCrypto(data, key, iv, callback) {
     logger.log('decrypting by WebCrypto API');
 
-    var localthis = this;
-    window.crypto.subtle.importKey('raw', key, { name : 'AES-CBC', length : 128 }, false, ['decrypt']).
-      then(function (importedKey) {
-        window.crypto.subtle.decrypt({ name : 'AES-CBC', iv : iv.buffer }, importedKey, data).
+    this.subtle.importKey('raw', key, { name : 'AES-CBC', length : 128 }, false, ['decrypt']).
+      then((importedKey) => {
+        this.subtle.decrypt({ name : 'AES-CBC', iv : iv.buffer }, importedKey, data).
           then(callback).
-          catch (function (err) {
-            localthis.onWebCryptoError(err, data, key, iv, callback);
+          catch ((err) => {
+            this.onWebCryptoError(err, data, key, iv, callback);
           });
       }).
-    catch (function (err) {
-      localthis.onWebCryptoError(err, data, key, iv, callback);
+    catch ((err) => {
+      this.onWebCryptoError(err, data, key, iv, callback);
     });
   }
 
