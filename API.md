@@ -339,7 +339,7 @@ This allows user to easily modify/setup XHR. see example below.
 
 ```js
 var config = {
-  xhrSetup: function(xhr) {
+  xhrSetup: function(xhr, url) {
     xhr.withCredentials = true; // do send cookies
   }
 }
@@ -366,7 +366,7 @@ calling this method will :
  - create MediaSource and set it as video source
  - once MediaSource object is successfully created, MSE_ATTACHED event will be fired.
 
-#### ```hls.detachVideo()```
+#### ```hls.detachMedia()```
 calling this method will :
 
  - unbind VideoElement from hls instance,
