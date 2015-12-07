@@ -544,7 +544,7 @@ var LevelController = (function () {
         }
         var redundantLevelId = bitrateSet[level.bitrate];
         if (redundantLevelId === undefined) {
-          bitrateSet[level.bitrate] = levels.length;
+          bitrateSet[level.bitrate] = levels0.length;
           level.url = [level.url];
           level.urlId = 0;
           levels0.push(level);
@@ -811,6 +811,7 @@ var MSEMediaController = (function () {
     _classCallCheck(this, MSEMediaController);
 
     this.config = hls.config;
+    this.audioCodecSwap = false;
     this.hls = hls;
     // Source Buffer listeners
     this.onsbue = this.onSBUpdateEnd.bind(this);
@@ -1036,7 +1037,7 @@ var MSEMediaController = (function () {
               var foundFrag;
               if (bufferEnd < end) {
                 foundFrag = _utilsBinarySearch2['default'].search(fragments, function (candidate) {
-                  //logger.log('level/sn/sliding/start/end/bufEnd:${level}/${candidate.sn}/${sliding.toFixed(3)}/${candidate.start.toFixed(3)}/${(candidate.start+candidate.duration).toFixed(3)}/${bufferEnd.toFixed(3)}');
+                  //logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
                   // offset should be within fragment boundary
                   if (candidate.start + candidate.duration <= bufferEnd) {
                     return 1;
@@ -1310,7 +1311,7 @@ var MSEMediaController = (function () {
         if (pos + maxHoleDuration >= start && pos < end) {
           // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
           bufferStart = start;
-          bufferEnd = end;
+          bufferEnd = end + maxHoleDuration;
           bufferLen = bufferEnd - pos;
         } else if (pos + maxHoleDuration < start) {
           bufferStartNext = start;
@@ -1569,8 +1570,7 @@ var MSEMediaController = (function () {
       ms.addEventListener('sourceclose', this.onmsc);
       // link video and media Source
       media.src = URL.createObjectURL(ms);
-      // FIXME: this was in code before but onverror was never set! can be removed or fixed?
-      //media.addEventListener('error', this.onverror);
+      this.lastReadyState = 0;
     }
   }, {
     key: 'onMediaDetaching',
@@ -1806,6 +1806,14 @@ var MSEMediaController = (function () {
           audioCodec = 'mp4a.40.5';
         }
         if (!this.sourceBuffer) {
+          if (audioCodec && this.audioCodecSwap) {
+            _utilsLogger.logger.log('swapping audio codec');
+            if (audioCodec.indexOf('mp4a.40.5') !== -1) {
+              audioCodec = 'mp4a.40.2';
+            } else {
+              audioCodec = 'mp4a.40.5';
+            }
+          }
           this.sourceBuffer = {};
           _utilsLogger.logger.log('selected A/V codecs for sourceBuffers:' + audioCodec + ',' + videoCodec);
           // create source Buffer and link them to MediaSource
@@ -1875,7 +1883,7 @@ var MSEMediaController = (function () {
         case _errors.ErrorDetails.KEY_LOAD_ERROR:
         case _errors.ErrorDetails.KEY_LOAD_TIMEOUT:
           // if fatal error, stop processing, otherwise move to IDLE to retry loading
-          _utilsLogger.logger.warn('buffer controller: ' + data.details + ' while loading frag,switch to ' + (data.fatal ? 'ERROR' : 'IDLE') + ' state ...');
+          _utilsLogger.logger.warn('mediaController: ' + data.details + ' while loading frag,switch to ' + (data.fatal ? 'ERROR' : 'IDLE') + ' state ...');
           this.state = data.fatal ? State.ERROR : State.IDLE;
           break;
         default:
@@ -1907,6 +1915,7 @@ var MSEMediaController = (function () {
       if (media) {
         // compare readyState
         var readyState = media.readyState;
+        this.lastReadyState = readyState;
         //logger.log(`readyState:${readyState}`);
         // if ready state different from HAVE_NOTHING (numeric value 0), we are allowed to seek
         if (readyState) {
@@ -1939,6 +1948,18 @@ var MSEMediaController = (function () {
             }
           }
         }
+      }
+    }
+  }, {
+    key: 'recoverMediaError',
+    value: function recoverMediaError() {
+      // if player tries to recover a MediaError with last MediaElement.readyState being HAVE_NOTHING(0) or HAVE_METADATA(1)
+      // it means that we try to recover a media error, although no media has ever been played
+      // this usually happens when there is a mismatch between Init Segment and appended buffers
+      // this is the case when there is an audio codec mismatch
+      // try to swap audio codec, this could help recovering the playback in that specific case
+      if (this.lastReadyState < 2) {
+        this.audioCodecSwap = !this.audioCodecSwap;
       }
     }
   }, {
@@ -2456,20 +2477,20 @@ var AES128Decrypter = (function () {
 
       // pull out the words of the IV to ensure we don't modify the
       // passed-in reference and easier access
-      init0 = initVector[0];
-      init1 = initVector[1];
-      init2 = initVector[2];
-      init3 = initVector[3];
+      init0 = ~ ~initVector[0];
+      init1 = ~ ~initVector[1];
+      init2 = ~ ~initVector[2];
+      init3 = ~ ~initVector[3];
 
       // decrypt four word sequences, applying cipher-block chaining (CBC)
       // to each decrypted block
       for (wordIx = 0; wordIx < encrypted32.length; wordIx += 4) {
         // convert big-endian (network order) words into little-endian
         // (javascript order)
-        encrypted0 = this.ntoh(encrypted32[wordIx]);
-        encrypted1 = this.ntoh(encrypted32[wordIx + 1]);
-        encrypted2 = this.ntoh(encrypted32[wordIx + 2]);
-        encrypted3 = this.ntoh(encrypted32[wordIx + 3]);
+        encrypted0 = ~ ~this.ntoh(encrypted32[wordIx]);
+        encrypted1 = ~ ~this.ntoh(encrypted32[wordIx + 1]);
+        encrypted2 = ~ ~this.ntoh(encrypted32[wordIx + 2]);
+        encrypted3 = ~ ~this.ntoh(encrypted32[wordIx + 3]);
 
         // decrypt the block
         decipher.decrypt(encrypted0, encrypted1, encrypted2, encrypted3, decrypted32, wordIx);
@@ -2556,7 +2577,13 @@ var Decrypter = (function () {
     _classCallCheck(this, Decrypter);
 
     this.hls = hls;
-    this.disableWebCrypto = false;
+    try {
+      var browserCrypto = window ? window.crypto : crypto;
+      this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
+      this.disableWebCrypto = !this.subtle;
+    } catch (e) {
+      this.disableWebCrypto = true;
+    }
   }
 
   _createClass(Decrypter, [{
@@ -2574,15 +2601,16 @@ var Decrypter = (function () {
   }, {
     key: 'decryptByWebCrypto',
     value: function decryptByWebCrypto(data, key, iv, callback) {
+      var _this = this;
+
       _utilsLogger.logger.log('decrypting by WebCrypto API');
 
-      var localthis = this;
-      window.crypto.subtle.importKey('raw', key, { name: 'AES-CBC', length: 128 }, false, ['decrypt']).then(function (importedKey) {
-        window.crypto.subtle.decrypt({ name: 'AES-CBC', iv: iv.buffer }, importedKey, data).then(callback)['catch'](function (err) {
-          localthis.onWebCryptoError(err, data, key, iv, callback);
+      this.subtle.importKey('raw', key, { name: 'AES-CBC', length: 128 }, false, ['decrypt']).then(function (importedKey) {
+        _this.subtle.decrypt({ name: 'AES-CBC', iv: iv.buffer }, importedKey, data).then(callback)['catch'](function (err) {
+          _this.onWebCryptoError(err, data, key, iv, callback);
         });
       })['catch'](function (err) {
-        localthis.onWebCryptoError(err, data, key, iv, callback);
+        _this.onWebCryptoError(err, data, key, iv, callback);
       });
     }
   }, {
@@ -2872,6 +2900,11 @@ var Demuxer = (function () {
         this.w = null;
       } else {
         this.demuxer.destroy();
+        this.demuxer = null;
+      }
+      if (this.decrypter) {
+        this.decrypter.destroy();
+        this.decrypter = null;
       }
     }
   }, {
@@ -3167,6 +3200,7 @@ var ExpGolomb = (function () {
           frameCropRightOffset = 0,
           frameCropTopOffset = 0,
           frameCropBottomOffset = 0,
+          sarScale = 1,
           profileIdc,
           profileCompat,
           levelIdc,
@@ -3235,9 +3269,58 @@ var ExpGolomb = (function () {
         frameCropTopOffset = this.readUEG();
         frameCropBottomOffset = this.readUEG();
       }
+      if (this.readBoolean()) {
+        // vui_parameters_present_flag
+        if (this.readBoolean()) {
+          // aspect_ratio_info_present_flag
+          var sarRatio = undefined;
+          var aspectRatioIdc = this.readUByte();
+          switch (aspectRatioIdc) {
+            //case 1: sarRatio = [1,1]; break;
+            case 2:
+              sarRatio = [12, 11];break;
+            case 3:
+              sarRatio = [10, 11];break;
+            case 4:
+              sarRatio = [16, 11];break;
+            case 5:
+              sarRatio = [40, 33];break;
+            case 6:
+              sarRatio = [24, 11];break;
+            case 7:
+              sarRatio = [20, 11];break;
+            case 8:
+              sarRatio = [32, 11];break;
+            case 9:
+              sarRatio = [80, 33];break;
+            case 10:
+              sarRatio = [18, 11];break;
+            case 11:
+              sarRatio = [15, 11];break;
+            case 12:
+              sarRatio = [64, 33];break;
+            case 13:
+              sarRatio = [160, 99];break;
+            case 14:
+              sarRatio = [4, 3];break;
+            case 15:
+              sarRatio = [3, 2];break;
+            case 16:
+              sarRatio = [2, 1];break;
+            case 255:
+              {
+                sarRatio = [this.readUByte() << 8 | this.readUByte(), this.readUByte() << 8 | this.readUByte()];
+                break;
+              }
+          }
+          if (sarRatio) {
+            sarScale = sarRatio[0] / sarRatio[1];
+          }
+        }
+      }
       return {
-        width: (picWidthInMbsMinus1 + 1) * 16 - frameCropLeftOffset * 2 - frameCropRightOffset * 2,
-        height: (2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16 - frameCropTopOffset * 2 - frameCropBottomOffset * 2
+        width: ((picWidthInMbsMinus1 + 1) * 16 - frameCropLeftOffset * 2 - frameCropRightOffset * 2) * sarScale,
+        height: (2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16 - (frameMbsOnlyFlag ? 2 : 4) * (frameCropTopOffset + frameCropBottomOffset)
       };
     }
   }, {
@@ -4411,8 +4494,8 @@ var Hls = (function () {
       manifestLoadingTimeOut: 10000,
       manifestLoadingMaxRetry: 1,
       manifestLoadingRetryDelay: 1000,
-      fpsDroppedMonitoringPeriod: 5000,
-      fpsDroppedMonitoringThreshold: 0.2,
+      // fpsDroppedMonitoringPeriod: 5000,
+      // fpsDroppedMonitoringThreshold: 0.2,
       appendErrorMaxRetry: 200,
       loader: _utilsXhrLoader2['default'],
       fLoader: undefined,
@@ -4430,7 +4513,7 @@ var Hls = (function () {
     }
 
     if (config.liveMaxLatencyDurationCount !== undefined && config.liveMaxLatencyDurationCount <= config.liveSyncDurationCount) {
-      throw new Error('Illegal hls.js configuration: "liveMaxLatencyDurationCount" must be strictly superior to "liveSyncDurationCount" in player configuration');
+      throw new Error('Illegal hls.js config: "liveMaxLatencyDurationCount" must be gt "liveSyncDurationCount"');
     }
 
     (0, _utilsLogger.enableLogs)(config.debug);
@@ -4516,6 +4599,7 @@ var Hls = (function () {
       var media = this.media;
       this.detachMedia();
       this.attachMedia(media);
+      this.mediaController.recoverMediaError();
     }
 
     /** Return all quality levels **/
@@ -6756,7 +6840,7 @@ var XhrLoader = (function () {
       this.stats.tfirst = null;
       this.stats.loaded = 0;
       if (this.xhrSetup) {
-        this.xhrSetup(xhr);
+        this.xhrSetup(xhr, this.url);
       }
       xhr.send();
     }

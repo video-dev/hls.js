@@ -90,20 +90,20 @@ class AES128Decrypter {
 
     // pull out the words of the IV to ensure we don't modify the
     // passed-in reference and easier access
-    init0 = initVector[0];
-    init1 = initVector[1];
-    init2 = initVector[2];
-    init3 = initVector[3];
+    init0 = ~~initVector[0];
+    init1 = ~~initVector[1];
+    init2 = ~~initVector[2];
+    init3 = ~~initVector[3];
 
     // decrypt four word sequences, applying cipher-block chaining (CBC)
     // to each decrypted block
     for (wordIx = 0; wordIx < encrypted32.length; wordIx += 4) {
       // convert big-endian (network order) words into little-endian
       // (javascript order)
-      encrypted0 = this.ntoh(encrypted32[wordIx]);
-      encrypted1 = this.ntoh(encrypted32[wordIx + 1]);
-      encrypted2 = this.ntoh(encrypted32[wordIx + 2]);
-      encrypted3 = this.ntoh(encrypted32[wordIx + 3]);
+      encrypted0 = ~~this.ntoh(encrypted32[wordIx]);
+      encrypted1 = ~~this.ntoh(encrypted32[wordIx + 1]);
+      encrypted2 = ~~this.ntoh(encrypted32[wordIx + 2]);
+      encrypted3 = ~~this.ntoh(encrypted32[wordIx + 3]);
 
       // decrypt the block
       decipher.decrypt(encrypted0,

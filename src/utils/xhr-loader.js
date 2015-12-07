@@ -58,7 +58,7 @@ class XhrLoader {
     this.stats.tfirst = null;
     this.stats.loaded = 0;
     if (this.xhrSetup) {
-      this.xhrSetup(xhr);
+      this.xhrSetup(xhr, this.url);
     }
     xhr.send();
   }

@@ -34,6 +34,11 @@ class Demuxer {
       this.w = null;
     } else {
       this.demuxer.destroy();
+      this.demuxer = null;
+    }
+    if (this.decrypter) {
+      this.decrypter.destroy();
+      this.decrypter = null;
     }
   }
 
