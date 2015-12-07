@@ -77,7 +77,7 @@ class Hls {
             config.liveMaxLatencyDurationCount <= config.liveSyncDurationCount
         ) {
             throw new Error(
-                'Illegal hls.js configuration: "liveMaxLatencyDurationCount" must be strictly superior to "liveSyncDurationCount" in player configuration'
+                'Illegal hls.js config: "liveMaxLatencyDurationCount" must be gt "liveSyncDurationCount"'
             );
         }
 
