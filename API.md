@@ -366,7 +366,7 @@ calling this method will :
  - create MediaSource and set it as video source
  - once MediaSource object is successfully created, MSE_ATTACHED event will be fired.
 
-#### ```hls.detachVideo()```
+#### ```hls.detachMedia()```
 calling this method will :
 
  - unbind VideoElement from hls instance,
