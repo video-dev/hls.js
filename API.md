@@ -33,8 +33,8 @@ let's
     var hls = new Hls();
     // bind them together
     hls.attachMedia(video);
-    // MSE_ATTACHED event is fired by hls object once MediaSource is ready
-    hls.on(Hls.Events.MSE_ATTACHED,function() {
+    // MEDIA_ATTACHED event is fired by hls object once MediaSource is ready
+    hls.on(Hls.Events.MEDIA_ATTACHED,function() {
 		  console.log("video and hls.js are now bound together !");
     });
  }
@@ -54,7 +54,7 @@ you need to provide manifest URL as below:
     var hls = new Hls();
     // bind them together
     hls.attachMedia(video);
-    hls.on(Hls.Events.MSE_ATTACHED,function() {
+    hls.on(Hls.Events.MEDIA_ATTACHED,function() {
 		console.log("video and hls.js are now bound together !");
 		hls.loadSource("http://my.streamURL.com/playlist.m3u8");
 		hls.on(Hls.Events.MANIFEST_PARSED, function(event,data) {
@@ -364,7 +364,7 @@ calling this method will :
 
  - bind videoElement and hls instance,
  - create MediaSource and set it as video source
- - once MediaSource object is successfully created, MSE_ATTACHED event will be fired.
+ - once MediaSource object is successfully created, MEDIA_ATTACHED event will be fired.
 
 #### ```hls.detachMedia()```
 calling this method will :
@@ -496,7 +496,7 @@ full list of Events available below :
     -  data: {curentDropped : nb of dropped frames in last monitoring period, currentDecoded: nb of decoded frames in last monitoring period, totalDropped : total dropped frames on this video element}
   - `Hls.Events.ERROR` -  Identifier for an error event
     - data: { type : error Type, details : error details, fatal : is error fatal or not, other error specific data}
-  - `Hls.Events.DESTROYING` -  fired when hls.js instance starts destroying. Different from MSE_DETACHED as one could want to detach and reattach a video to the instance of hls.js to handle mid-rolls for example.
+  - `Hls.Events.DESTROYING` -  fired when hls.js instance starts destroying. Different from MEDIA_DETACHED as one could want to detach and reattach a video to the instance of hls.js to handle mid-rolls for example.
     - data: { }
 
 
