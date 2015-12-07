@@ -147,6 +147,7 @@ class Hls {
         var media = this.media;
         this.detachMedia();
         this.attachMedia(media);
+        this.mediaController.recoverMediaError();
     }
 
     /** Return all quality levels **/
