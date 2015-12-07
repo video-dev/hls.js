@@ -243,7 +243,7 @@ class MSEMediaController {
             var foundFrag;
             if (bufferEnd < end) {
               foundFrag = BinarySearch.search(fragments, (candidate) => {
-                //logger.log('level/sn/sliding/start/end/bufEnd:${level}/${candidate.sn}/${sliding.toFixed(3)}/${candidate.start.toFixed(3)}/${(candidate.start+candidate.duration).toFixed(3)}/${bufferEnd.toFixed(3)}');
+                //logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
                 // offset should be within fragment boundary
                 if ((candidate.start + candidate.duration) <= bufferEnd) {
                   return 1;
@@ -511,7 +511,7 @@ class MSEMediaController {
       if ((pos + maxHoleDuration) >= start && pos < end) {
         // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
         bufferStart = start;
-        bufferEnd = end;
+        bufferEnd = end + maxHoleDuration;
         bufferLen = bufferEnd - pos;
       } else if ((pos + maxHoleDuration) < start) {
         bufferStartNext = start;
