@@ -311,8 +311,8 @@ class ExpGolomb {
                 sarScale,
             height:
                 (2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16 -
-                frameCropTopOffset * 2 -
-                frameCropBottomOffset * 2
+                (frameMbsOnlyFlag ? 2 : 4) *
+                    (frameCropTopOffset + frameCropBottomOffset)
         };
     }
 
