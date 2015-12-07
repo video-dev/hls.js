@@ -202,12 +202,12 @@ $(document).ready(function() {
    $('#metricsButtonWindow').toggle(windowSliding);
    $('#metricsButtonFixed').toggle(!windowSliding);
    $('#enableStream').click(function()      { enableStreaming = this.checked; loadStream($('#streamURL').val());});
-   $('#autoRecoverError').prop( "checked", false );
+   $('#autoRecoverError').prop( "checked", true );
    $('#autoRecoverError').click(function()  { autoRecoverError = this.checked; });
 });
 
   'use strict';
-  var hls,events, stats, enableStreaming = true, autoRecoverError = false;
+  var hls,events, stats, enableStreaming = true, autoRecoverError = true;
   var video = $('#video')[0];
   video.volume = 0.05;
 
@@ -241,6 +241,7 @@ $(document).ready(function() {
 
       $("#HlsStatus").text('loading ' + url);
        events = { url : url, t0 : performance.now(), load : [], buffer : [], video : [], level : [], bitrate : []};
+       recoverDecodingErrorDate = null;
        hls = new Hls({debug:true});
        $("#HlsStatus").text('loading manifest and attaching video element...');
        hls.loadSource(url);
@@ -460,8 +461,14 @@ $(document).ready(function() {
           switch(data.type) {
             case Hls.ErrorTypes.MEDIA_ERROR:
               if(autoRecoverError) {
-                $("#HlsStatus").append(",try to recover media Error ...");
-                hls.recoverMediaError();
+                var now = performance.now();
+                if(!recoverDecodingErrorDate || (now - recoverDecodingErrorDate) > 3000) {
+                  recoverDecodingErrorDate = performance.now();
+                  $("#HlsStatus").append(",try to recover media Error ...");
+                  hls.recoverMediaError();
+                } else {
+                  $("#HlsStatus").append(",cannot recover, last media error recovery failed ...");
+                }
               }
               break;
             case Hls.ErrorTypes.NETWORK_ERROR:
@@ -567,8 +574,14 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
             case mediaError.MEDIA_ERR_DECODE:
               errorTxt = "The video playback was aborted due to a corruption problem or because the video used features your browser did not support";
               if(autoRecoverError) {
-                errorTxt+=",try to recover video Error";
-                hls.recoverMediaError();
+                var now = performance.now();
+                if(!recoverDecodingErrorDate || (now - recoverDecodingErrorDate) > 3000) {
+                  recoverDecodingErrorDate = performance.now();
+                  $("#HlsStatus").append(",try to recover media Error ...");
+                  hls.recoverMediaError();
+                } else {
+                  $("#HlsStatus").append(",cannot recover, last media error recovery failed ...");
+                }
               }
               break;
             case mediaError.MEDIA_ERR_NETWORK:
