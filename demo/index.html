@@ -241,7 +241,7 @@ $(document).ready(function() {
 
       $("#HlsStatus").text('loading ' + url);
        events = { url : url, t0 : performance.now(), load : [], buffer : [], video : [], level : [], bitrate : []};
-       hls = new Hls({debug:true, fragLoadingMaxRetry:0});
+       hls = new Hls({debug:true});
        $("#HlsStatus").text('loading manifest and attaching video element...');
        hls.loadSource(url);
        hls.attachMedia(video);
