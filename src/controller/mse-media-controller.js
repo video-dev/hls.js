@@ -1346,7 +1346,7 @@ class MSEMediaController {
             case ErrorDetails.KEY_LOAD_TIMEOUT:
                 // if fatal error, stop processing, otherwise move to IDLE to retry loading
                 logger.warn(
-                    `buffer controller: ${
+                    `mediaController: ${
                         data.details
                     } while loading frag,switch to ${
                         data.fatal ? 'ERROR' : 'IDLE'
