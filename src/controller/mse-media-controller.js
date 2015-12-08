@@ -991,13 +991,13 @@ class MSEMediaController {
       // check if codecs have been explicitely defined in the master playlist for this level;
       // if yes use these ones instead of the ones parsed from the demux
       var audioCodec = this.levels[this.level].audioCodec, videoCodec = this.levels[this.level].videoCodec, sb;
-      //logger.log('playlist level A/V codecs:' + audioCodec + ',' + videoCodec);
+      logger.log('playlist level A/V codecs:' + audioCodec + ',' + videoCodec);
       //logger.log('playlist codecs:' + codec);
       // if playlist does not specify codecs, use codecs found while parsing fragment
-      if (audioCodec === undefined || data.audiocodec === undefined) {
+      if (audioCodec === undefined && data.audioCodec !== undefined) {
         audioCodec = data.audioCodec;
       }
-      if (videoCodec === undefined || data.videocodec === undefined) {
+      if (videoCodec === undefined && data.videoCodec !== undefined) {
         videoCodec = data.videoCodec;
       }
       // in case several audio codecs might be used, force HE-AAC for audio (some browsers don't support audio codec switch)
