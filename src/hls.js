@@ -52,8 +52,8 @@ class Hls {
       manifestLoadingTimeOut: 10000,
       manifestLoadingMaxRetry: 1,
       manifestLoadingRetryDelay: 1000,
-      fpsDroppedMonitoringPeriod: 5000,
-      fpsDroppedMonitoringThreshold: 0.2,
+      // fpsDroppedMonitoringPeriod: 5000,
+      // fpsDroppedMonitoringThreshold: 0.2,
       appendErrorMaxRetry: 200,
       loader: XhrLoader,
       fLoader: undefined,
@@ -67,7 +67,7 @@ class Hls {
     }
 
     if (config.liveMaxLatencyDurationCount !== undefined && config.liveMaxLatencyDurationCount <= config.liveSyncDurationCount) {
-      throw new Error('Illegal hls.js configuration: "liveMaxLatencyDurationCount" must be strictly superior to "liveSyncDurationCount" in player configuration');
+      throw new Error('Illegal hls.js config: "liveMaxLatencyDurationCount" must be gt "liveSyncDurationCount"');
     }
 
     enableLogs(config.debug);
@@ -136,6 +136,7 @@ class Hls {
     var media = this.media;
     this.detachMedia();
     this.attachMedia(media);
+    this.mediaController.recoverMediaError();
   }
 
   /** Return all quality levels **/

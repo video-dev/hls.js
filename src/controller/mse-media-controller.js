@@ -26,6 +26,7 @@ class MSEMediaController {
 
   constructor(hls) {
     this.config = hls.config;
+    this.audioCodecSwap = false;
     this.hls = hls;
     // Source Buffer listeners
     this.onsbue = this.onSBUpdateEnd.bind(this);
@@ -243,7 +244,7 @@ class MSEMediaController {
             var foundFrag;
             if (bufferEnd < end) {
               foundFrag = BinarySearch.search(fragments, (candidate) => {
-                //logger.log('level/sn/sliding/start/end/bufEnd:${level}/${candidate.sn}/${sliding.toFixed(3)}/${candidate.start.toFixed(3)}/${(candidate.start+candidate.duration).toFixed(3)}/${bufferEnd.toFixed(3)}');
+                //logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
                 // offset should be within fragment boundary
                 if ((candidate.start + candidate.duration) <= bufferEnd) {
                   return 1;
@@ -511,7 +512,7 @@ class MSEMediaController {
       if ((pos + maxHoleDuration) >= start && pos < end) {
         // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
         bufferStart = start;
-        bufferEnd = end;
+        bufferEnd = end + maxHoleDuration;
         bufferLen = bufferEnd - pos;
       } else if ((pos + maxHoleDuration) < start) {
         bufferStartNext = start;
@@ -780,8 +781,7 @@ class MSEMediaController {
     ms.addEventListener('sourceclose', this.onmsc);
     // link video and media Source
     media.src = URL.createObjectURL(ms);
-    // FIXME: this was in code before but onverror was never set! can be removed or fixed?
-    //media.addEventListener('error', this.onverror);
+    this.lastReadyState = 0;
   }
 
   onMediaDetaching() {
@@ -1010,6 +1010,14 @@ class MSEMediaController {
         audioCodec = 'mp4a.40.5';
       }
       if (!this.sourceBuffer) {
+        if(audioCodec && this.audioCodecSwap) {
+          logger.log('swapping audio codec');
+          if(audioCodec.indexOf('mp4a.40.5') !==-1) {
+            audioCodec = 'mp4a.40.2';
+          } else {
+            audioCodec = 'mp4a.40.5';
+          }
+        }
         this.sourceBuffer = {};
         logger.log(`selected A/V codecs for sourceBuffers:${audioCodec},${videoCodec}`);
         // create source Buffer and link them to MediaSource
@@ -1076,7 +1084,7 @@ class MSEMediaController {
       case ErrorDetails.KEY_LOAD_ERROR:
       case ErrorDetails.KEY_LOAD_TIMEOUT:
         // if fatal error, stop processing, otherwise move to IDLE to retry loading
-        logger.warn(`buffer controller: ${data.details} while loading frag,switch to ${data.fatal ? 'ERROR' : 'IDLE'} state ...`);
+        logger.warn(`mediaController: ${data.details} while loading frag,switch to ${data.fatal ? 'ERROR' : 'IDLE'} state ...`);
         this.state = data.fatal ? State.ERROR : State.IDLE;
         break;
       default:
@@ -1105,6 +1113,7 @@ _checkBuffer() {
     if(media) {
       // compare readyState
       var readyState = media.readyState;
+      this.lastReadyState = readyState;
       //logger.log(`readyState:${readyState}`);
       // if ready state different from HAVE_NOTHING (numeric value 0), we are allowed to seek
       if(readyState) {
@@ -1137,6 +1146,17 @@ _checkBuffer() {
           }
         }
       }
+    }
+  }
+
+  recoverMediaError() {
+    // if player tries to recover a MediaError with last MediaElement.readyState being HAVE_NOTHING(0) or HAVE_METADATA(1)
+    // it means that we try to recover a media error, although no media has ever been played
+    // this usually happens when there is a mismatch between Init Segment and appended buffers
+    // this is the case when there is an audio codec mismatch
+    // try to swap audio codec, this could help recovering the playback in that specific case
+    if(this.lastReadyState < 2) {
+      this.audioCodecSwap = !this.audioCodecSwap;
     }
   }
 

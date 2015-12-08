@@ -44,7 +44,7 @@ class LevelController {
       }
       var redundantLevelId = bitrateSet[level.bitrate];
       if (redundantLevelId === undefined) {
-        bitrateSet[level.bitrate] = levels.length;
+        bitrateSet[level.bitrate] = levels0.length;
         level.url = [level.url];
         level.urlId = 0;
         levels0.push(level);
