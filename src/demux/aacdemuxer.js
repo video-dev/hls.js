@@ -21,7 +21,7 @@ import {ErrorTypes, ErrorDetails} from '../errors';
       // look for ADTS header (0xFFFx)
       for (adtsStartOffset = id3.length, len = data.length; adtsStartOffset < len - 1; adtsStartOffset++) {
         if ((data[adtsStartOffset] === 0xff) && (data[adtsStartOffset+1] & 0xf0) === 0xf0) {
-          logger.log('ADTS sync word found !');
+          //logger.log('ADTS sync word found !');
           return true;
         }
       }
