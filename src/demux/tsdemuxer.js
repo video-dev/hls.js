@@ -595,7 +595,7 @@
         adtsExtensionSampleingIndex = adtsSampleingIndex - 3;
       } else {
         // if (manifest codec is AAC) AND (frequency less than 24kHz OR nb channel is 1) OR (manifest codec not specified and mono audio)
-		// Chrome fails to play back with AAC LC mono when initialized with HE-AAC.  This is not a problem with stereo.
+        // Chrome fails to play back with AAC LC mono when initialized with HE-AAC.  This is not a problem with stereo.
         if (audioCodec && audioCodec.indexOf('mp4a.40.2') !== -1 && (adtsSampleingIndex >= 6 || adtsChanelConfig === 1) ||
             (!audioCodec && adtsChanelConfig === 1)) {
           adtsObjectType = 2;
