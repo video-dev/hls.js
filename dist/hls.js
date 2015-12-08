@@ -471,7 +471,7 @@ var AbrController = (function () {
 exports['default'] = AbrController;
 module.exports = exports['default'];
 
-},{"../events":15}],4:[function(require,module,exports){
+},{"../events":17}],4:[function(require,module,exports){
 /*
  * Level Controller
 */
@@ -756,7 +756,7 @@ var LevelController = (function () {
 exports['default'] = LevelController;
 module.exports = exports['default'];
 
-},{"../errors":14,"../events":15,"../utils/logger":24}],5:[function(require,module,exports){
+},{"../errors":16,"../events":17,"../utils/logger":26}],5:[function(require,module,exports){
 /*
  * MSE Media Controller
 */
@@ -2048,7 +2048,7 @@ var MSEMediaController = (function () {
 exports['default'] = MSEMediaController;
 module.exports = exports['default'];
 
-},{"../demux/demuxer":11,"../errors":14,"../events":15,"../helper/level-helper":16,"../utils/binary-search":23,"../utils/logger":24}],6:[function(require,module,exports){
+},{"../demux/demuxer":12,"../errors":16,"../events":17,"../helper/level-helper":18,"../utils/binary-search":25,"../utils/logger":26}],6:[function(require,module,exports){
 /*
  *
  * This file contains an adaptation of the AES decryption algorithm
@@ -2573,7 +2573,250 @@ var Decrypter = (function () {
 exports['default'] = Decrypter;
 module.exports = exports['default'];
 
-},{"../errors":14,"../utils/logger":24,"./aes128-decrypter":7}],9:[function(require,module,exports){
+},{"../errors":16,"../utils/logger":26,"./aes128-decrypter":7}],9:[function(require,module,exports){
+/**
+ * AAC demuxer
+ */
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+var _utilsLogger = require('../utils/logger');
+
+var _demuxId3 = require('../demux/id3');
+
+var _demuxId32 = _interopRequireDefault(_demuxId3);
+
+var _errors = require('../errors');
+
+var AACDemuxer = (function () {
+  function AACDemuxer(observer, remuxerClass) {
+    _classCallCheck(this, AACDemuxer);
+
+    this.observer = observer;
+    this.remuxerClass = remuxerClass;
+    this.remuxer = new this.remuxerClass(observer);
+    this._aacTrack = { type: 'audio', id: -1, sequenceNumber: 0, samples: [], len: 0 };
+  }
+
+  _createClass(AACDemuxer, [{
+    key: 'push',
+
+    // feed incoming data to the front of the parsing pipeline
+    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
+      var id3 = new _demuxId32['default'](data),
+          adtsStartOffset,
+          len,
+          track = this._aacTrack,
+          pts = id3.timeStamp,
+          config,
+          nbSamples,
+          adtsFrameSize,
+          adtsHeaderLen,
+          stamp,
+          aacSample;
+      // look for ADTS header (0xFFFx)
+      for (adtsStartOffset = id3.length, len = data.length; adtsStartOffset < len - 1; adtsStartOffset++) {
+        if (data[adtsStartOffset] === 0xff && (data[adtsStartOffset + 1] & 0xf0) === 0xf0) {
+          break;
+        }
+      }
+
+      if (!track.audiosamplerate) {
+        config = this._ADTStoAudioConfig(data, adtsStartOffset, audioCodec);
+        track.config = config.config;
+        track.audiosamplerate = config.samplerate;
+        track.channelCount = config.channelCount;
+        track.codec = config.codec;
+        track.timescale = this.remuxer.timescale;
+        track.duration = this.remuxer.timescale * duration;
+        _utilsLogger.logger.log('parsed codec:' + track.codec + ',rate:' + config.samplerate + ',nb channel:' + config.channelCount);
+      }
+      nbSamples = 0;
+      while (adtsStartOffset + 5 < len) {
+        // retrieve frame size
+        adtsFrameSize = (data[adtsStartOffset + 3] & 0x03) << 11;
+        // byte 4
+        adtsFrameSize |= data[adtsStartOffset + 4] << 3;
+        // byte 5
+        adtsFrameSize |= (data[adtsStartOffset + 5] & 0xE0) >>> 5;
+        adtsHeaderLen = !!(data[adtsStartOffset + 1] & 0x01) ? 7 : 9;
+        adtsFrameSize -= adtsHeaderLen;
+        stamp = Math.round(90 * pts + nbSamples * 1024 * 90000 / track.audiosamplerate);
+        //stamp = pes.pts;
+        //console.log('AAC frame, offset/length/pts:' + (adtsStartOffset+7) + '/' + adtsFrameSize + '/' + stamp.toFixed(0));
+        if (adtsFrameSize > 0 && adtsStartOffset + adtsHeaderLen + adtsFrameSize <= len) {
+          aacSample = { unit: data.subarray(adtsStartOffset + adtsHeaderLen, adtsStartOffset + adtsHeaderLen + adtsFrameSize), pts: stamp, dts: stamp };
+          track.samples.push(aacSample);
+          track.len += adtsFrameSize;
+          adtsStartOffset += adtsFrameSize + adtsHeaderLen;
+          nbSamples++;
+          // look for ADTS header (0xFFFx)
+          for (; adtsStartOffset < len - 1; adtsStartOffset++) {
+            if (data[adtsStartOffset] === 0xff && (data[adtsStartOffset + 1] & 0xf0) === 0xf0) {
+              break;
+            }
+          }
+        } else {
+          break;
+        }
+      }
+      this.remuxer.remux(this._aacTrack, { samples: [] }, { samples: [] }, timeOffset);
+    }
+  }, {
+    key: '_ADTStoAudioConfig',
+    value: function _ADTStoAudioConfig(data, offset, audioCodec) {
+      var adtsObjectType,
+          // :int
+      adtsSampleingIndex,
+          // :int
+      adtsExtensionSampleingIndex,
+          // :int
+      adtsChanelConfig,
+          // :int
+      config,
+          userAgent = navigator.userAgent.toLowerCase(),
+          adtsSampleingRates = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
+      // byte 2
+      adtsObjectType = ((data[offset + 2] & 0xC0) >>> 6) + 1;
+      adtsSampleingIndex = (data[offset + 2] & 0x3C) >>> 2;
+      if (adtsSampleingIndex > adtsSampleingRates.length - 1) {
+        this.observer.trigger(Event.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'invalid ADTS sampling index:' + adtsSampleingIndex });
+        return;
+      }
+      adtsChanelConfig = (data[offset + 2] & 0x01) << 2;
+      // byte 3
+      adtsChanelConfig |= (data[offset + 3] & 0xC0) >>> 6;
+      _utilsLogger.logger.log('manifest codec:' + audioCodec + ',ADTS data:type:' + adtsObjectType + ',sampleingIndex:' + adtsSampleingIndex + '[' + adtsSampleingRates[adtsSampleingIndex] + 'kHz],channelConfig:' + adtsChanelConfig);
+      // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
+      if (userAgent.indexOf('firefox') !== -1) {
+        if (adtsSampleingIndex >= 6) {
+          adtsObjectType = 5;
+          config = new Array(4);
+          // HE-AAC uses SBR (Spectral Band Replication) , high frequencies are constructed from low frequencies
+          // there is a factor 2 between frame sample rate and output sample rate
+          // multiply frequency by 2 (see table below, equivalent to substract 3)
+          adtsExtensionSampleingIndex = adtsSampleingIndex - 3;
+        } else {
+          adtsObjectType = 2;
+          config = new Array(2);
+          adtsExtensionSampleingIndex = adtsSampleingIndex;
+        }
+        // Android : always use AAC
+      } else if (userAgent.indexOf('android') !== -1) {
+          adtsObjectType = 2;
+          config = new Array(2);
+          adtsExtensionSampleingIndex = adtsSampleingIndex;
+        } else {
+          /*  for other browsers (chrome ...)
+              always force audio type to be HE-AAC SBR, as some browsers do not support audio codec switch properly (like Chrome ...)
+          */
+          adtsObjectType = 5;
+          config = new Array(4);
+          // if (manifest codec is HE-AAC) OR (manifest codec not specified AND frequency less than 24kHz)
+          if (audioCodec && audioCodec.indexOf('mp4a.40.5') !== -1 || !audioCodec && adtsSampleingIndex >= 6) {
+            // HE-AAC uses SBR (Spectral Band Replication) , high frequencies are constructed from low frequencies
+            // there is a factor 2 between frame sample rate and output sample rate
+            // multiply frequency by 2 (see table below, equivalent to substract 3)
+            adtsExtensionSampleingIndex = adtsSampleingIndex - 3;
+          } else {
+            // if (manifest codec is AAC) AND (frequency less than 24kHz OR nb channel is 1)
+            if (audioCodec && audioCodec.indexOf('mp4a.40.2') !== -1 && (adtsSampleingIndex >= 6 || adtsChanelConfig === 1)) {
+              adtsObjectType = 2;
+              config = new Array(2);
+            }
+            adtsExtensionSampleingIndex = adtsSampleingIndex;
+          }
+        }
+      /* refer to http://wiki.multimedia.cx/index.php?title=MPEG-4_Audio#Audio_Specific_Config
+          ISO 14496-3 (AAC).pdf - Table 1.13 — Syntax of AudioSpecificConfig()
+        Audio Profile / Audio Object Type
+        0: Null
+        1: AAC Main
+        2: AAC LC (Low Complexity)
+        3: AAC SSR (Scalable Sample Rate)
+        4: AAC LTP (Long Term Prediction)
+        5: SBR (Spectral Band Replication)
+        6: AAC Scalable
+       sampling freq
+        0: 96000 Hz
+        1: 88200 Hz
+        2: 64000 Hz
+        3: 48000 Hz
+        4: 44100 Hz
+        5: 32000 Hz
+        6: 24000 Hz
+        7: 22050 Hz
+        8: 16000 Hz
+        9: 12000 Hz
+        10: 11025 Hz
+        11: 8000 Hz
+        12: 7350 Hz
+        13: Reserved
+        14: Reserved
+        15: frequency is written explictly
+        Channel Configurations
+        These are the channel configurations:
+        0: Defined in AOT Specifc Config
+        1: 1 channel: front-center
+        2: 2 channels: front-left, front-right
+      */
+      // audioObjectType = profile => profile, the MPEG-4 Audio Object Type minus 1
+      config[0] = adtsObjectType << 3;
+      // samplingFrequencyIndex
+      config[0] |= (adtsSampleingIndex & 0x0E) >> 1;
+      config[1] |= (adtsSampleingIndex & 0x01) << 7;
+      // channelConfiguration
+      config[1] |= adtsChanelConfig << 3;
+      if (adtsObjectType === 5) {
+        // adtsExtensionSampleingIndex
+        config[1] |= (adtsExtensionSampleingIndex & 0x0E) >> 1;
+        config[2] = (adtsExtensionSampleingIndex & 0x01) << 7;
+        // adtsObjectType (force to 2, chrome is checking that object type is less than 5 ???
+        //    https://chromium.googlesource.com/chromium/src.git/+/master/media/formats/mp4/aac.cc
+        config[2] |= 2 << 2;
+        config[3] = 0;
+      }
+      return { config: config, samplerate: adtsSampleingRates[adtsSampleingIndex], channelCount: adtsChanelConfig, codec: 'mp4a.40.' + adtsObjectType };
+    }
+  }, {
+    key: 'destroy',
+    value: function destroy() {}
+  }], [{
+    key: 'probe',
+    value: function probe(data) {
+      // check if data contains ID3 timestamp and ADTS sync worc
+      var id3 = new _demuxId32['default'](data),
+          adtsStartOffset,
+          len;
+      if (id3.hasTimeStamp) {
+        // look for ADTS header (0xFFFx)
+        for (adtsStartOffset = id3.length, len = data.length; adtsStartOffset < len - 1; adtsStartOffset++) {
+          if (data[adtsStartOffset] === 0xff && (data[adtsStartOffset + 1] & 0xf0) === 0xf0) {
+            //logger.log('ADTS sync word found !');
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+  }]);
+
+  return AACDemuxer;
+})();
+
+exports['default'] = AACDemuxer;
+module.exports = exports['default'];
+
+},{"../demux/id3":14,"../errors":16,"../utils/logger":26}],10:[function(require,module,exports){
 /*  inline demuxer.
  *   probe fragments and instantiate appropriate demuxer depending on content type (TSDemuxer, AACDemuxer, ...)
  */
@@ -2595,6 +2838,10 @@ var _events = require('../events');
 var _events2 = _interopRequireDefault(_events);
 
 var _errors = require('../errors');
+
+var _demuxAacdemuxer = require('../demux/aacdemuxer');
+
+var _demuxAacdemuxer2 = _interopRequireDefault(_demuxAacdemuxer);
 
 var _demuxTsdemuxer = require('../demux/tsdemuxer');
 
@@ -2624,20 +2871,14 @@ var DemuxerInline = (function () {
         // probe for content type
         if (_demuxTsdemuxer2['default'].probe(data)) {
           demuxer = this.demuxer = new _demuxTsdemuxer2['default'](this.hls, this.remuxer);
+        } else if (_demuxAacdemuxer2['default'].probe(data)) {
+          demuxer = this.demuxer = new _demuxAacdemuxer2['default'](this.hls, this.remuxer);
         } else {
           this.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found' });
           return;
         }
       }
       demuxer.push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
-    }
-  }, {
-    key: 'remux',
-    value: function remux() {
-      var demuxer = this.demuxer;
-      if (demuxer) {
-        demuxer.remux();
-      }
     }
   }]);
 
@@ -2647,7 +2888,7 @@ var DemuxerInline = (function () {
 exports['default'] = DemuxerInline;
 module.exports = exports['default'];
 
-},{"../demux/tsdemuxer":13,"../errors":14,"../events":15}],10:[function(require,module,exports){
+},{"../demux/aacdemuxer":9,"../demux/tsdemuxer":15,"../errors":16,"../events":17}],11:[function(require,module,exports){
 /* demuxer web worker.
  *  - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
  *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
@@ -2754,7 +2995,7 @@ var DemuxerWorker = function DemuxerWorker(self) {
 exports['default'] = DemuxerWorker;
 module.exports = exports['default'];
 
-},{"../demux/demuxer-inline":9,"../events":15,"../remux/mp4-remuxer":22,"events":1}],11:[function(require,module,exports){
+},{"../demux/demuxer-inline":10,"../events":17,"../remux/mp4-remuxer":24,"events":1}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -2904,7 +3145,7 @@ var Demuxer = (function () {
 exports['default'] = Demuxer;
 module.exports = exports['default'];
 
-},{"../crypt/decrypter":8,"../demux/demuxer-inline":9,"../demux/demuxer-worker":10,"../events":15,"../remux/mp4-remuxer":22,"../utils/logger":24,"webworkify":2}],12:[function(require,module,exports){
+},{"../crypt/decrypter":8,"../demux/demuxer-inline":10,"../demux/demuxer-worker":11,"../events":17,"../remux/mp4-remuxer":24,"../utils/logger":26,"webworkify":2}],13:[function(require,module,exports){
 /**
  * Parser for exponential Golomb codes, a variable-bitwidth number encoding scheme used by h264.
 */
@@ -3243,7 +3484,155 @@ var ExpGolomb = (function () {
 exports['default'] = ExpGolomb;
 module.exports = exports['default'];
 
-},{"../utils/logger":24}],13:[function(require,module,exports){
+},{"../utils/logger":26}],14:[function(require,module,exports){
+/**
+ * ID3 parser
+ */
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+    value: true
+});
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+var _utilsLogger = require('../utils/logger');
+
+//import Hex from '../utils/hex';
+
+var ID3 = (function () {
+    function ID3(data) {
+        _classCallCheck(this, ID3);
+
+        this._hasTimeStamp = false;
+        var offset = 0,
+            byte1,
+            byte2,
+            byte3,
+            byte4,
+            tagSize,
+            endPos,
+            header,
+            len;
+        do {
+            header = this.readUTF(data, offset, 3);
+            offset += 3;
+            // first check for ID3 header
+            if (header === 'ID3') {
+                // skip 24 bits
+                offset += 3;
+                // retrieve tag(s) length
+                byte1 = data[offset++] & 0x7f;
+                byte2 = data[offset++] & 0x7f;
+                byte3 = data[offset++] & 0x7f;
+                byte4 = data[offset++] & 0x7f;
+                tagSize = (byte1 << 21) + (byte2 << 14) + (byte3 << 7) + byte4;
+                endPos = offset + tagSize;
+                //logger.log(`ID3 tag found, size/end: ${tagSize}/${endPos}`);
+
+                // read ID3 tags
+                this._parseID3Frames(data, offset, endPos);
+                offset = endPos;
+            } else if (header === '3DI') {
+                // http://id3.org/id3v2.4.0-structure chapter 3.4.   ID3v2 footer
+                offset += 7;
+                _utilsLogger.logger.log('3DI footer found, end: ' + offset);
+            } else {
+                offset -= 3;
+                len = offset;
+                if (len) {
+                    //logger.log(`ID3 len: ${len}`);
+                    if (!this.hasTimeStamp) {
+                        _utilsLogger.logger.warn('ID3 tag found, but no timestamp');
+                    }
+                    this._length = len;
+                }
+                return;
+            }
+        } while (true);
+    }
+
+    _createClass(ID3, [{
+        key: 'readUTF',
+        value: function readUTF(data, start, len) {
+
+            var result = '',
+                offset = start,
+                end = start + len;
+            do {
+                result += String.fromCharCode(data[offset++]);
+            } while (offset < end);
+            return result;
+        }
+    }, {
+        key: '_parseID3Frames',
+        value: function _parseID3Frames(data, offset, endPos) {
+            var tagId, tagLen, tagStart, tagFlags, timestamp;
+            while (offset + 8 <= endPos) {
+                tagId = this.readUTF(data, offset, 4);
+                offset += 4;
+
+                tagLen = data[offset++] << 24 + data[offset++] << 16 + data[offset++] << 8 + data[offset++];
+
+                tagFlags = data[offset++] << 8 + data[offset++];
+
+                tagStart = offset;
+                //logger.log("ID3 tag id:" + tagId);
+                switch (tagId) {
+                    case 'PRIV':
+                        //logger.log('parse frame:' + Hex.hexDump(data.subarray(offset,endPos)));
+                        // owner should be "com.apple.streaming.transportStreamTimestamp"
+                        if (this.readUTF(data, offset, 44) === 'com.apple.streaming.transportStreamTimestamp') {
+                            offset += 44;
+                            // smelling even better ! we found the right descriptor
+                            // skip null character (string end) + 3 first bytes
+                            offset += 4;
+
+                            // timestamp is 33 bit expressed as a big-endian eight-octet number, with the upper 31 bits set to zero.
+                            var pts33Bit = data[offset++] & 0x1;
+                            this._hasTimeStamp = true;
+
+                            timestamp = ((data[offset++] << 23) + (data[offset++] << 15) + (data[offset++] << 7) + data[offset++]) / 45;
+
+                            if (pts33Bit) {
+                                timestamp += 47721858.84; // 2^32 / 90
+                            }
+                            timestamp = Math.round(timestamp);
+                            _utilsLogger.logger.trace('ID3 timestamp found: ' + timestamp);
+                            this._timeStamp = timestamp;
+                        }
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+    }, {
+        key: 'hasTimeStamp',
+        get: function get() {
+            return this._hasTimeStamp;
+        }
+    }, {
+        key: 'timeStamp',
+        get: function get() {
+            return this._timeStamp;
+        }
+    }, {
+        key: 'length',
+        get: function get() {
+            return this._length;
+        }
+    }]);
+
+    return ID3;
+})();
+
+exports['default'] = ID3;
+module.exports = exports['default'];
+
+},{"../utils/logger":26}],15:[function(require,module,exports){
 /**
  * highly optimized TS demuxer:
  * parse PAT, PMT
@@ -3977,7 +4366,7 @@ var TSDemuxer = (function () {
 exports['default'] = TSDemuxer;
 module.exports = exports['default'];
 
-},{"../errors":14,"../events":15,"../utils/logger":24,"./exp-golomb":12}],14:[function(require,module,exports){
+},{"../errors":16,"../events":17,"../utils/logger":26,"./exp-golomb":13}],16:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -4027,7 +4416,7 @@ var ErrorDetails = {
 };
 exports.ErrorDetails = ErrorDetails;
 
-},{}],15:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -4082,7 +4471,7 @@ exports['default'] = {
   FPS_DROP: 'hlsFPSDrop',
   // Identifier for an error event - data: { type : error type, details : error details, fatal : if true, hls.js cannot/will not try to recover, if false, hls.js will try to recover,other error specific data}
   ERROR: 'hlsError',
-  // fired when hls.js instance starts destroying. Different from MSE_DETACHED as one could want to detach and reattach a media to the instance of hls.js to handle mid-rolls for example
+  // fired when hls.js instance starts destroying. Different from MEDIA_DETACHED as one could want to detach and reattach a media to the instance of hls.js to handle mid-rolls for example
   DESTROYING: 'hlsDestroying',
   // fired when a decrypt key loading starts - data: { frag : fragment object}
   KEY_LOADING: 'hlsKeyLoading',
@@ -4091,7 +4480,7 @@ exports['default'] = {
 };
 module.exports = exports['default'];
 
-},{}],16:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 /**
  * Level Helper class, providing methods dealing with playlist sliding and drift
 */
@@ -4237,7 +4626,7 @@ var LevelHelper = (function () {
 exports['default'] = LevelHelper;
 module.exports = exports['default'];
 
-},{"../utils/logger":24}],17:[function(require,module,exports){
+},{"../utils/logger":26}],19:[function(require,module,exports){
 /**
  * HLS interface
  */
@@ -4572,7 +4961,7 @@ var Hls = (function () {
 exports['default'] = Hls;
 module.exports = exports['default'];
 
-},{"./controller/abr-controller":3,"./controller/level-controller":4,"./controller/mse-media-controller":5,"./errors":14,"./events":15,"./loader/fragment-loader":18,"./loader/key-loader":19,"./loader/playlist-loader":20,"./utils/logger":24,"./utils/xhr-loader":26,"events":1}],18:[function(require,module,exports){
+},{"./controller/abr-controller":3,"./controller/level-controller":4,"./controller/mse-media-controller":5,"./errors":16,"./events":17,"./loader/fragment-loader":20,"./loader/key-loader":21,"./loader/playlist-loader":22,"./utils/logger":26,"./utils/xhr-loader":28,"events":1}],20:[function(require,module,exports){
 /*
  * Fragment Loader
 */
@@ -4658,7 +5047,7 @@ var FragmentLoader = (function () {
 exports['default'] = FragmentLoader;
 module.exports = exports['default'];
 
-},{"../errors":14,"../events":15}],19:[function(require,module,exports){
+},{"../errors":16,"../events":17}],21:[function(require,module,exports){
 /*
  * Decrypt key Loader
 */
@@ -4752,7 +5141,7 @@ var KeyLoader = (function () {
 exports['default'] = KeyLoader;
 module.exports = exports['default'];
 
-},{"../errors":14,"../events":15}],20:[function(require,module,exports){
+},{"../errors":16,"../events":17}],22:[function(require,module,exports){
 /**
  * Playlist Loader
 */
@@ -5092,7 +5481,7 @@ var PlaylistLoader = (function () {
 exports['default'] = PlaylistLoader;
 module.exports = exports['default'];
 
-},{"../errors":14,"../events":15,"../utils/url":25}],21:[function(require,module,exports){
+},{"../errors":16,"../events":17,"../utils/url":27}],23:[function(require,module,exports){
 /**
  * Generate MP4 Box
 */
@@ -5572,7 +5961,7 @@ var MP4 = (function () {
 exports['default'] = MP4;
 module.exports = exports['default'];
 
-},{}],22:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 /**
  * fMP4 remuxer
 */
@@ -6001,7 +6390,7 @@ var MP4Remuxer = (function () {
 exports['default'] = MP4Remuxer;
 module.exports = exports['default'];
 
-},{"../errors":14,"../events":15,"../remux/mp4-generator":21,"../utils/logger":24}],23:[function(require,module,exports){
+},{"../errors":16,"../events":17,"../remux/mp4-generator":23,"../utils/logger":26}],25:[function(require,module,exports){
 "use strict";
 
 var BinarySearch = {
@@ -6046,7 +6435,7 @@ var BinarySearch = {
 
 module.exports = BinarySearch;
 
-},{}],24:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -6128,7 +6517,7 @@ exports.enableLogs = enableLogs;
 var logger = exportedLogger;
 exports.logger = logger;
 
-},{}],25:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 'use strict';
 
 var URLHelper = {
@@ -6209,7 +6598,7 @@ var URLHelper = {
 
 module.exports = URLHelper;
 
-},{}],26:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 /**
  * XHR based logger
 */
@@ -6342,6 +6731,6 @@ var XhrLoader = (function () {
 exports['default'] = XhrLoader;
 module.exports = exports['default'];
 
-},{"../utils/logger":24}]},{},[17])(17)
+},{"../utils/logger":26}]},{},[19])(19)
 });
 //# sourceMappingURL=hls.js.map
