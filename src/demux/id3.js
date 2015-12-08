@@ -2,7 +2,7 @@
  * ID3 parser
  */
 import {logger} from '../utils/logger';
-import Hex from '../utils/hex';
+//import Hex from '../utils/hex';
 
  class ID3 {
 
@@ -91,13 +91,11 @@ import Hex from '../utils/hex';
                              (data[offset++] <<  7) +
                              data[offset++]) /45;
 
-                //logger.log('timestamp:'+ Math.round(timestamp));
-
                 if (pts33Bit) {
                     timestamp   += 47721858.84; // 2^32 / 90
                 }
                 timestamp = Math.round(timestamp);
-                logger.log(`ID3 timestamp found: ${timestamp}`);
+                logger.trace(`ID3 timestamp found: ${timestamp}`);
                 this._timeStamp = timestamp;
             }
             break;
