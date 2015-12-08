@@ -30,7 +30,7 @@ class ID3 {
                 byte4 = data[offset++] & 0x7f;
                 tagSize = (byte1 << 21) + (byte2 << 14) + (byte3 << 7) + byte4;
                 endPos = offset + tagSize;
-                logger.log(`ID3 tag found, size/end: ${tagSize}/${endPos}`);
+                //logger.log(`ID3 tag found, size/end: ${tagSize}/${endPos}`);
 
                 // read ID3 tags
                 this._parseID3Frames(data, offset, endPos);
@@ -43,7 +43,7 @@ class ID3 {
                 offset -= 3;
                 len = offset;
                 if (len) {
-                    logger.log(`ID3 len: ${len}`);
+                    //logger.log(`ID3 len: ${len}`);
                     if (!this.hasTimeStamp) {
                         logger.warn('ID3 tag found, but no timestamp');
                     }
@@ -81,10 +81,7 @@ class ID3 {
             //logger.log("ID3 tag id:" + tagId);
             switch (tagId) {
                 case 'PRIV':
-                    logger.log(
-                        'parse frame:' +
-                            Hex.hexDump(data.subarray(offset, endPos))
-                    );
+                    //logger.log('parse frame:' + Hex.hexDump(data.subarray(offset,endPos)));
                     // owner should be "com.apple.streaming.transportStreamTimestamp"
                     if (
                         this.readUTF(data, offset, 44) ===
@@ -106,7 +103,7 @@ class ID3 {
                                 data[offset++]) /
                             45;
 
-                        logger.log('timestamp:' + Math.round(timestamp));
+                        //logger.log('timestamp:'+ Math.round(timestamp));
 
                         if (pts33Bit) {
                             timestamp += 47721858.84; // 2^32 / 90

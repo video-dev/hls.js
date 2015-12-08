@@ -35,7 +35,7 @@ class AACDemuxer {
                     data[adtsStartOffset] === 0xff &&
                     (data[adtsStartOffset + 1] & 0xf0) === 0xf0
                 ) {
-                    logger.log('ADTS sync word found !');
+                    //logger.log('ADTS sync word found !');
                     return true;
                 }
             }
