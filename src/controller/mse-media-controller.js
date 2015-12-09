@@ -981,7 +981,7 @@ class MSEMediaController {
             sn = fragCurrent.sn,
             audioCodec = currentLevel.audioCodec;
         if(audioCodec && this.audioCodecSwap) {
-          logger.log('swapping audio codec');
+          logger.log('swapping playlist audio codec');
           if(audioCodec.indexOf('mp4a.40.5') !==-1) {
             audioCodec = 'mp4a.40.2';
           } else {
@@ -999,6 +999,14 @@ class MSEMediaController {
       // check if codecs have been explicitely defined in the master playlist for this level;
       // if yes use these ones instead of the ones parsed from the demux
       var audioCodec = this.levels[this.level].audioCodec, videoCodec = this.levels[this.level].videoCodec, sb;
+      if(audioCodec && this.audioCodecSwap) {
+        logger.log('swapping playlist audio codec');
+        if(audioCodec.indexOf('mp4a.40.5') !==-1) {
+          audioCodec = 'mp4a.40.2';
+        } else {
+          audioCodec = 'mp4a.40.5';
+        }
+      }
       logger.log(`playlist_level/init_segment codecs: video => ${videoCodec}/${data.videoCodec}; audio => ${audioCodec}/${data.audioCodec}`);
       // if playlist does not specify codecs, use codecs found while parsing fragment
       if (audioCodec === undefined) {
