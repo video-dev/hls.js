@@ -241,7 +241,7 @@ $(document).ready(function() {
 
       $("#HlsStatus").text('loading ' + url);
        events = { url : url, t0 : performance.now(), load : [], buffer : [], video : [], level : [], bitrate : []};
-       recoverDecodingErrorDate = null;
+       recoverDecodingErrorDate = recoverSwapAudioCodecDate = null;
        hls = new Hls({debug:true});
        $("#HlsStatus").text('loading manifest and attaching video element...');
        hls.loadSource(url);
@@ -460,16 +460,7 @@ $(document).ready(function() {
         if(data.fatal) {
           switch(data.type) {
             case Hls.ErrorTypes.MEDIA_ERROR:
-              if(autoRecoverError) {
-                var now = performance.now();
-                if(!recoverDecodingErrorDate || (now - recoverDecodingErrorDate) > 3000) {
-                  recoverDecodingErrorDate = performance.now();
-                  $("#HlsStatus").append(",try to recover media Error ...");
-                  hls.recoverMediaError();
-                } else {
-                  $("#HlsStatus").append(",cannot recover, last media error recovery failed ...");
-                }
-              }
+              handleMediaError();
               break;
             case Hls.ErrorTypes.NETWORK_ERROR:
               $("#HlsStatus").append(",network error ...");
@@ -573,16 +564,7 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
               break;
             case mediaError.MEDIA_ERR_DECODE:
               errorTxt = "The video playback was aborted due to a corruption problem or because the video used features your browser did not support";
-              if(autoRecoverError) {
-                var now = performance.now();
-                if(!recoverDecodingErrorDate || (now - recoverDecodingErrorDate) > 3000) {
-                  recoverDecodingErrorDate = performance.now();
-                  $("#HlsStatus").append(",try to recover media Error ...");
-                  hls.recoverMediaError();
-                } else {
-                  $("#HlsStatus").append(",cannot recover, last media error recovery failed ...");
-                }
-              }
+              handleMediaError();
               break;
             case mediaError.MEDIA_ERR_NETWORK:
               errorTxt = "A network error caused the video download to fail part-way";
@@ -610,6 +592,29 @@ var lastSeekingIdx, lastStartPosition,lastDuration;
       events.video[lastSeekingIdx].duration = event.time - events.video[lastSeekingIdx].time;
     }
   }
+
+
+var recoverDecodingErrorDate,recoverSwapAudioCodecDate;
+function handleMediaError() {
+  if(autoRecoverError) {
+    var now = performance.now();
+    if(!recoverDecodingErrorDate || (now - recoverDecodingErrorDate) > 3000) {
+      recoverDecodingErrorDate = performance.now();
+      $("#HlsStatus").append(",try to recover media Error ...");
+      hls.recoverMediaError();
+    } else {
+      if(!recoverSwapAudioCodecDate || (now - recoverSwapAudioCodecDate) > 3000) {
+        recoverSwapAudioCodecDate = performance.now();
+        $("#HlsStatus").append(",try to swap Audio Codec and recover media Error ...");
+        hls.swapAudioCodec();
+        hls.recoverMediaError();
+      } else {
+        $("#HlsStatus").append(",cannot recover, last media error recovery failed ...");
+      }
+    }
+  }
+}
+
 
 function timeRangesToString(r) {
   var log = "";

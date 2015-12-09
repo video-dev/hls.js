@@ -160,6 +160,14 @@ should be invoked to recover media error
   }
 ```
 
+##### ```hls.swapAudioCodec()```
+
+If media error are still raised after calling ```hls.recoverMediaError()```,
+calling this method, could be useful to workaround audio codec mismatch.
+the workflow should be :
+
+on Media Error : first call ```hls.swapAudioCodec()```, then call ```hls.recoverMediaError()```
+
 ###final step : destroying, switching between streams
 
 ```hls.destroy()``` should be called to free used resources and destroy hls context.

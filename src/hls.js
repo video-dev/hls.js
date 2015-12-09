@@ -142,12 +142,16 @@ class Hls {
         this.mediaController.startLoad();
     }
 
+    swapAudioCodec() {
+        logger.log('swapAudioCodec');
+        this.mediaController.swapAudioCodec();
+    }
+
     recoverMediaError() {
         logger.log('recoverMediaError');
         var media = this.media;
         this.detachMedia();
         this.attachMedia(media);
-        this.mediaController.recoverMediaError();
     }
 
     /** Return all quality levels **/
