@@ -991,8 +991,7 @@ class MSEMediaController {
       // check if codecs have been explicitely defined in the master playlist for this level;
       // if yes use these ones instead of the ones parsed from the demux
       var audioCodec = this.levels[this.level].audioCodec, videoCodec = this.levels[this.level].videoCodec, sb;
-      logger.log('playlist level A/V codecs:' + audioCodec + ',' + videoCodec);
-      //logger.log('playlist codecs:' + codec);
+      logger.log(`playlist_level/init_segment codecs: video => ${videoCodec}/${data.videoCodec}; audio => ${audioCodec}/${data.audioCodec}`);
       // if playlist does not specify codecs, use codecs found while parsing fragment
       if (audioCodec === undefined && data.audioCodec !== undefined) {
         audioCodec = data.audioCodec;
