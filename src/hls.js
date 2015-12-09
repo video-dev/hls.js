@@ -59,7 +59,8 @@ class Hls {
       fLoader: undefined,
       pLoader: undefined,
       abrController : AbrController,
-      mediaController: MSEMediaController
+      mediaController: MSEMediaController,
+      enableLowestBitrateFirst: false
     };
     for (var prop in configDefault) {
         if (prop in config) { continue; }
