@@ -12,9 +12,8 @@ const fakeLogger = {
 };
 
 let exportedLogger = fakeLogger;
-let lastCallTime;
 
-//let lastCallTime;
+// let lastCallTime;
 // function formatMsgWithTimeInfo(type, msg) {
 //   const now = Date.now();
 //   const diff = lastCallTime ? '+' + (now - lastCallTime) : '0';
