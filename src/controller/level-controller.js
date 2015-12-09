@@ -194,14 +194,13 @@ class LevelController {
         if (recoverable) {
           logger.warn(`level controller,${details}: emergency switch-down for next fragment`);
           hls.abrController.nextAutoLevel = 0;
-        } else if(level && level.details && level.details.live) {
-          logger.warn(`level controller,${details} on live stream, discard`);
         } else {
           logger.error(`cannot recover ${details} error`);
           this.stop();
-          // redispatch same error but with fatal set to true
+          // FIXME ugly hack
+          // modify event data for _latest_ Event.ERROR listeners
+          // (LevelController -> MSEMediaController -> frontend app)
           data.fatal = true;
-          hls.trigger(event, data);
         }
       }
     }
