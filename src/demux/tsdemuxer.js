@@ -559,7 +559,7 @@
     adtsChanelConfig = ((data[offset + 2] & 0x01) << 2);
     // byte 3
     adtsChanelConfig |= ((data[offset + 3] & 0xC0) >>> 6);
-    logger.log(`manifest codec:${audioCodec},ADTS data:type:${adtsObjectType},sampleingIndex:${adtsSampleingIndex}[${adtsSampleingRates[adtsSampleingIndex]}kHz],channelConfig:${adtsChanelConfig}`);
+    logger.log(`manifest codec:${audioCodec},ADTS data:type:${adtsObjectType},sampleingIndex:${adtsSampleingIndex}[${adtsSampleingRates[adtsSampleingIndex]}Hz],channelConfig:${adtsChanelConfig}`);
     // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
     if (userAgent.indexOf('firefox') !== -1) {
       if (adtsSampleingIndex >= 6) {
