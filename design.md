@@ -40,6 +40,9 @@ design idea is pretty simple :
     - in charge of determining auto quality level.
     - auto quality switch algorithm is pretty naive and simple ATM and similar to the one that could be found in google [StageFright](https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp)
 
+  - [src/demux/aacdemuxer.js][]
+    - AAC ES demuxer
+      - extract ADTS samples from AAC ES
   - [src/demux/demuxer.js][]
     - demuxer abstraction interface, that will either use a [Worker](https://en.wikipedia.org/wiki/Web_worker) to demux or demux inline depending on config/browser capabilities.
     - also handle fragment decryption using WebCrypto API (fragment decryption is performed in main thread)
@@ -58,6 +61,8 @@ design idea is pretty simple :
     - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
   - [src/demux/exp-golomb.js][]
     - utility class to extract Exponential-Golomb coded data. needed by TS demuxer for SPS parsing.
+  - [src/demux/id3.js][]
+    - utility class that detect and parse ID3 tags, used by AAC demuxer
   - [src/demux/tsdemuxer.js][]
     - highly optimized TS demuxer:
      - parse PAT, PMT
@@ -106,10 +111,12 @@ design idea is pretty simple :
 [src/controller/fps-controller.js]: src/controller/fps-controller.js
 [src/controller/level-controller.js]: src/controller/level-controller.js
 [src/controller/mse-media-controller.js]: src/controller/mse-media-controller.js
+[src/demux/aacdemuxer.js]: src/demux/aacdemuxer.js
 [src/demux/demuxer.js]: src/demux/demuxer.js
 [src/demux/demuxer-inline.js]: src/demux/demuxer-inline.js
 [src/demux/demuxer-worker.js]: src/demux/demuxer-worker.js
 [src/demux/exp-golomb.js]: src/demux/exp-golomb.js
+[src/demux/id3.js]: src/demux/id3.js
 [src/demux/tsdemuxer.js]: src/demux/tsdemuxer.js
 [src/helper/level-helper.js]: src/helper/level-helper.js
 [src/loader/fragment-loader.js]: src/loader/fragment-loader.js

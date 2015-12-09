@@ -781,7 +781,6 @@ class MSEMediaController {
     ms.addEventListener('sourceclose', this.onmsc);
     // link video and media Source
     media.src = URL.createObjectURL(ms);
-    this.lastReadyState = 0;
   }
 
   onMediaDetaching() {
@@ -979,9 +978,18 @@ class MSEMediaController {
             duration = details.totalduration,
             start = fragCurrent.start,
             level = fragCurrent.level,
-            sn = fragCurrent.sn;
+            sn = fragCurrent.sn,
+            audioCodec = currentLevel.audioCodec;
+        if(audioCodec && this.audioCodecSwap) {
+          logger.log('swapping audio codec');
+          if(audioCodec.indexOf('mp4a.40.5') !==-1) {
+            audioCodec = 'mp4a.40.2';
+          } else {
+            audioCodec = 'mp4a.40.5';
+          }
+        }
         logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],level ${level}`);
-        this.demuxer.push(data.payload, currentLevel.audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata);
+        this.demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata);
       }
     }
   }
@@ -1009,14 +1017,6 @@ class MSEMediaController {
         audioCodec = 'mp4a.40.5';
       }
       if (!this.sourceBuffer) {
-        if(audioCodec && this.audioCodecSwap) {
-          logger.log('swapping audio codec');
-          if(audioCodec.indexOf('mp4a.40.5') !==-1) {
-            audioCodec = 'mp4a.40.2';
-          } else {
-            audioCodec = 'mp4a.40.5';
-          }
-        }
         this.sourceBuffer = {};
         logger.log(`selected A/V codecs for sourceBuffers:${audioCodec},${videoCodec}`);
         // create source Buffer and link them to MediaSource
@@ -1112,8 +1112,6 @@ _checkBuffer() {
     if(media) {
       // compare readyState
       var readyState = media.readyState;
-      this.lastReadyState = readyState;
-      //logger.log(`readyState:${readyState}`);
       // if ready state different from HAVE_NOTHING (numeric value 0), we are allowed to seek
       if(readyState) {
         // if seek after buffered defined, let's seek if within acceptable range
@@ -1148,15 +1146,8 @@ _checkBuffer() {
     }
   }
 
-  recoverMediaError() {
-    // if player tries to recover a MediaError with last MediaElement.readyState being HAVE_NOTHING(0) or HAVE_METADATA(1)
-    // it means that we try to recover a media error, although no media has ever been played
-    // this usually happens when there is a mismatch between Init Segment and appended buffers
-    // this is the case when there is an audio codec mismatch
-    // try to swap audio codec, this could help recovering the playback in that specific case
-    if(this.lastReadyState < 2) {
-      this.audioCodecSwap = !this.audioCodecSwap;
-    }
+  swapAudioCodec() {
+    this.audioCodecSwap = !this.audioCodecSwap;
   }
 
   onSBUpdateError(event) {
