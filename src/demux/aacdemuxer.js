@@ -176,7 +176,7 @@ class AACDemuxer {
         logger.log(
             `manifest codec:${audioCodec},ADTS data:type:${adtsObjectType},sampleingIndex:${adtsSampleingIndex}[${
                 adtsSampleingRates[adtsSampleingIndex]
-            }kHz],channelConfig:${adtsChanelConfig}`
+            }Hz],channelConfig:${adtsChanelConfig}`
         );
         // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
         if (userAgent.indexOf('firefox') !== -1) {
