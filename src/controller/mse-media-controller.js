@@ -1231,9 +1231,10 @@ class MSEMediaController {
                 videoCodec = this.levels[this.level].videoCodec,
                 sb;
             logger.log(
-                'playlist level A/V codecs:' + audioCodec + ',' + videoCodec
+                `playlist_level/init_segment codecs: video => ${videoCodec}/${
+                    data.videoCodec
+                }; audio => ${audioCodec}/${data.audioCodec}`
             );
-            //logger.log('playlist codecs:' + codec);
             // if playlist does not specify codecs, use codecs found while parsing fragment
             if (audioCodec === undefined && data.audioCodec !== undefined) {
                 audioCodec = data.audioCodec;
