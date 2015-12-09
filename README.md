@@ -86,7 +86,8 @@ as of today, it is supported on:
 
   - VoD & Live playlists
     - DVR support on Live playlists
-  - MPEG-2 TS container  
+  - MPEG-2 TS container
+  - AAC container (audio only streams)
   - Adaptive streaming
     - Manual & Auto Quality Switching
       - 3 Quality Switching modes are available (controllable through API means)
@@ -108,7 +109,7 @@ as of today, it is supported on:
 
 ## Not Supported (Yet)
 
-  - AAC / MP3 / WebVTT container
+  - MP3 / WebVTT container
   - Alternate Audio Track Rendition (Master Playlist with alternative Audio)  
 
 ### Supported M3U8 tags
