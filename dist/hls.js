@@ -571,14 +571,22 @@ var LevelController = (function () {
         return a.bitrate - b.bitrate;
       });
       this._levels = levels;
-      // find index of first level in sorted levels
-      for (i = 0; i < levels.length; i++) {
-        if (levels[i].bitrate === bitrateStart) {
-          this._firstLevel = i;
-          _utilsLogger.logger.log('manifest loaded,' + levels.length + ' level(s) found, first bitrate:' + bitrateStart);
-          break;
+
+      // Check initial bitrate
+      if (this.hls.config.useLowestBitrate) {
+        // The list is sorted, so 0 is already the lowest bitrate
+        this._manualLevel = this._firstLevel = 0; // Also set manual level
+        bitrateStart = levels[0].bitrate;
+      } else {
+        // find index of first level in sorted levels
+        for (i = 0; i < levels.length; i++) {
+          if (levels[i].bitrate === bitrateStart) {
+            this._firstLevel = i;
+            break;
+          }
         }
       }
+      _utilsLogger.logger.log('manifest loaded, ' + levels.length + ' level(s) found, first bitrate: ' + bitrateStart);
       this.hls.trigger(_events2['default'].MANIFEST_PARSED, { levels: this._levels, firstLevel: this._firstLevel, stats: data.stats });
       return;
     }
@@ -2693,7 +2701,7 @@ var AACDemuxer = (function () {
       adtsChanelConfig = (data[offset + 2] & 0x01) << 2;
       // byte 3
       adtsChanelConfig |= (data[offset + 3] & 0xC0) >>> 6;
-      _utilsLogger.logger.log('manifest codec:' + audioCodec + ',ADTS data:type:' + adtsObjectType + ',sampleingIndex:' + adtsSampleingIndex + '[' + adtsSampleingRates[adtsSampleingIndex] + 'kHz],channelConfig:' + adtsChanelConfig);
+      _utilsLogger.logger.log('manifest codec:' + audioCodec + ',ADTS data:type:' + adtsObjectType + ',sampleingIndex:' + adtsSampleingIndex + '[' + adtsSampleingRates[adtsSampleingIndex] + 'Hz],channelConfig:' + adtsChanelConfig);
       // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
       if (userAgent.indexOf('firefox') !== -1) {
         if (adtsSampleingIndex >= 6) {
@@ -4249,7 +4257,7 @@ var TSDemuxer = (function () {
       adtsChanelConfig = (data[offset + 2] & 0x01) << 2;
       // byte 3
       adtsChanelConfig |= (data[offset + 3] & 0xC0) >>> 6;
-      _utilsLogger.logger.log('manifest codec:' + audioCodec + ',ADTS data:type:' + adtsObjectType + ',sampleingIndex:' + adtsSampleingIndex + '[' + adtsSampleingRates[adtsSampleingIndex] + 'kHz],channelConfig:' + adtsChanelConfig);
+      _utilsLogger.logger.log('manifest codec:' + audioCodec + ',ADTS data:type:' + adtsObjectType + ',sampleingIndex:' + adtsSampleingIndex + '[' + adtsSampleingRates[adtsSampleingIndex] + 'Hz],channelConfig:' + adtsChanelConfig);
       // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
       if (userAgent.indexOf('firefox') !== -1) {
         if (adtsSampleingIndex >= 6) {
@@ -4735,7 +4743,8 @@ var Hls = (function () {
       fLoader: undefined,
       pLoader: undefined,
       abrController: _controllerAbrController2['default'],
-      mediaController: _controllerMseMediaController2['default']
+      mediaController: _controllerMseMediaController2['default'],
+      useLowestBitrate: false
     };
     for (var prop in configDefault) {
       if (prop in config) {
