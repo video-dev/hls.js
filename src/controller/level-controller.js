@@ -71,14 +71,22 @@ class LevelController {
       return a.bitrate - b.bitrate;
     });
     this._levels = levels;
-    // find index of first level in sorted levels
-    for (i = 0; i < levels.length; i++) {
-      if (levels[i].bitrate === bitrateStart) {
-        this._firstLevel = i;
-        logger.log(`manifest loaded,${levels.length} level(s) found, first bitrate:${bitrateStart}`);
-        break;
+
+    // Check initial bitrate
+    if (this.hls.config.useLowestBitrate) {
+      // The list is sorted, so 0 is already the lowest bitrate
+      this._manualLevel = this._firstLevel = 0; // Also set manual level
+      bitrateStart = levels[0].bitrate;
+    } else {
+      // find index of first level in sorted levels
+      for (i = 0; i < levels.length; i++) {
+        if (levels[i].bitrate === bitrateStart) {
+          this._firstLevel = i;
+          break;
+        }
       }
     }
+    logger.log(`manifest loaded, ${levels.length} level(s) found, first bitrate: ${bitrateStart}`);
     this.hls.trigger(Event.MANIFEST_PARSED, {levels: this._levels, firstLevel: this._firstLevel, stats: data.stats});
     return;
   }

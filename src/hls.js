@@ -60,7 +60,7 @@ class Hls {
       pLoader: undefined,
       abrController : AbrController,
       mediaController: MSEMediaController,
-      enableLowestBitrateFirst: false
+      useLowestBitrate: false
     };
     for (var prop in configDefault) {
         if (prop in config) { continue; }
