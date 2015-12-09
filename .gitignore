@@ -4,3 +4,6 @@ bower_components/*
 /streams.js
 
 npm-debug.log
+
+# Vim swap files
+*.swp
