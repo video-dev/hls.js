@@ -993,10 +993,10 @@ class MSEMediaController {
       var audioCodec = this.levels[this.level].audioCodec, videoCodec = this.levels[this.level].videoCodec, sb;
       logger.log(`playlist_level/init_segment codecs: video => ${videoCodec}/${data.videoCodec}; audio => ${audioCodec}/${data.audioCodec}`);
       // if playlist does not specify codecs, use codecs found while parsing fragment
-      if (audioCodec === undefined && data.audioCodec !== undefined) {
+      if (audioCodec === undefined) {
         audioCodec = data.audioCodec;
       }
-      if (videoCodec === undefined && data.videoCodec !== undefined) {
+      if (videoCodec === undefined) {
         videoCodec = data.videoCodec;
       }
       // in case several audio codecs might be used, force HE-AAC for audio (some browsers don't support audio codec switch)
