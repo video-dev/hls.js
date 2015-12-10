@@ -271,7 +271,7 @@ class MSEMediaController {
                   if (!levelDetails.live) {
                     var mediaSource = this.mediaSource;
                     if (mediaSource && mediaSource.readyState === 'open') {
-                      // ensure sourceBuffer are not in updating stateyes
+                       // ensure sourceBuffer are not in updating states
                       var sb = this.sourceBuffer;
                       if (!((sb.audio && sb.audio.updating) || (sb.video && sb.video.updating))) {
                         logger.log('all media data available, signal endOfStream() to MediaSource');
@@ -805,7 +805,14 @@ class MSEMediaController {
     var ms = this.mediaSource;
     if (ms) {
       if (ms.readyState === 'open') {
-        ms.endOfStream();
+        try {
+          // endOfStream could trigger exception if any sourcebuffer is in updating state
+          // we don't really care about checking sourcebuffer state here,
+          // as we are anyway detaching the MediaSource
+          // let's just avoid this exception to propagate
+          ms.endOfStream();
+        } catch(err) {
+        }
       }
       ms.removeEventListener('sourceopen', this.onmso);
       ms.removeEventListener('sourceended', this.onmse);
