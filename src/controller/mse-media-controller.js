@@ -812,6 +812,7 @@ class MSEMediaController {
           // let's just avoid this exception to propagate
           ms.endOfStream();
         } catch(err) {
+          logger.warn(`onMediaDetaching:${err.message} while calling endOfStream`);
         }
       }
       ms.removeEventListener('sourceopen', this.onmso);
