@@ -535,7 +535,7 @@ full list of Errors is described below:
   - ```Hls.ErrorDetails.BUFFER_APPEND_ERROR```raised when exception is raised while calling buffer append
     - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.BUFFER_APPEND_ERROR```, fatal : ```true```, frag : fragment object}
   - ```Hls.ErrorDetails.BUFFER_APPENDING_ERROR```raised when exception is raised during buffer appending
-    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.BUFFER_APPENDING_ERROR```, fatal : ```true```, frag : fragment object}
+    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.BUFFER_APPENDING_ERROR```, fatal : ```false```, frag : fragment object}
 
 ## Objects
 ### Level

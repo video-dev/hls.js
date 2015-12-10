@@ -1469,10 +1469,13 @@ class MSEMediaController {
     onSBUpdateError(event) {
         logger.error(`sourceBuffer error:${event}`);
         this.state = State.ERROR;
+        // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
+        // this error might not always be fatal (it is fatal if decode error is set, in that case
+        // it will be followed by a mediaElement error ...)
         this.hls.trigger(Event.ERROR, {
             type: ErrorTypes.MEDIA_ERROR,
             details: ErrorDetails.BUFFER_APPENDING_ERROR,
-            fatal: true,
+            fatal: false,
             frag: this.fragCurrent
         });
     }
