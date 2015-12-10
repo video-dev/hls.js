@@ -1008,7 +1008,13 @@ class MSEMediaController {
                     // as we are anyway detaching the MediaSource
                     // let's just avoid this exception to propagate
                     ms.endOfStream();
-                } catch (err) {}
+                } catch (err) {
+                    logger.warn(
+                        `onMediaDetaching:${
+                            err.message
+                        } while calling endOfStream`
+                    );
+                }
             }
             ms.removeEventListener('sourceopen', this.onmso);
             ms.removeEventListener('sourceended', this.onmse);
