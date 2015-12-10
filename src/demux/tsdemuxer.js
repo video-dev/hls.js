@@ -559,7 +559,7 @@
     adtsChanelConfig = ((data[offset + 2] & 0x01) << 2);
     // byte 3
     adtsChanelConfig |= ((data[offset + 3] & 0xC0) >>> 6);
-    logger.log(`manifest codec:${audioCodec},ADTS data:type:${adtsObjectType},sampleingIndex:${adtsSampleingIndex}[${adtsSampleingRates[adtsSampleingIndex]}kHz],channelConfig:${adtsChanelConfig}`);
+    logger.log(`manifest codec:${audioCodec},ADTS data:type:${adtsObjectType},sampleingIndex:${adtsSampleingIndex}[${adtsSampleingRates[adtsSampleingIndex]}Hz],channelConfig:${adtsChanelConfig}`);
     // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
     if (userAgent.indexOf('firefox') !== -1) {
       if (adtsSampleingIndex >= 6) {
@@ -594,8 +594,10 @@
         // multiply frequency by 2 (see table below, equivalent to substract 3)
         adtsExtensionSampleingIndex = adtsSampleingIndex - 3;
       } else {
-        // if (manifest codec is AAC) AND (frequency less than 24kHz OR nb channel is 1)
-        if (audioCodec && audioCodec.indexOf('mp4a.40.2') !== -1 && (adtsSampleingIndex >= 6 || adtsChanelConfig === 1)) {
+        // if (manifest codec is AAC) AND (frequency less than 24kHz OR nb channel is 1) OR (manifest codec not specified and mono audio)
+        // Chrome fails to play back with AAC LC mono when initialized with HE-AAC.  This is not a problem with stereo.
+        if (audioCodec && audioCodec.indexOf('mp4a.40.2') !== -1 && (adtsSampleingIndex >= 6 || adtsChanelConfig === 1) ||
+            (!audioCodec && adtsChanelConfig === 1)) {
           adtsObjectType = 2;
           config = new Array(2);
         }

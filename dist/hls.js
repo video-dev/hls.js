@@ -1570,7 +1570,6 @@ var MSEMediaController = (function () {
       ms.addEventListener('sourceclose', this.onmsc);
       // link video and media Source
       media.src = URL.createObjectURL(ms);
-      this.lastReadyState = 0;
     }
   }, {
     key: 'onMediaDetaching',
@@ -1775,9 +1774,18 @@ var MSEMediaController = (function () {
               duration = details.totalduration,
               start = fragCurrent.start,
               level = fragCurrent.level,
-              sn = fragCurrent.sn;
+              sn = fragCurrent.sn,
+              audioCodec = currentLevel.audioCodec;
+          if (audioCodec && this.audioCodecSwap) {
+            _utilsLogger.logger.log('swapping playlist audio codec');
+            if (audioCodec.indexOf('mp4a.40.5') !== -1) {
+              audioCodec = 'mp4a.40.2';
+            } else {
+              audioCodec = 'mp4a.40.5';
+            }
+          }
           _utilsLogger.logger.log('Demuxing ' + sn + ' of [' + details.startSN + ' ,' + details.endSN + '],level ' + level);
-          this.demuxer.push(data.payload, currentLevel.audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata);
+          this.demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata);
         }
       }
     }
@@ -1790,13 +1798,22 @@ var MSEMediaController = (function () {
         var audioCodec = this.levels[this.level].audioCodec,
             videoCodec = this.levels[this.level].videoCodec,
             sb;
-        //logger.log('playlist level A/V codecs:' + audioCodec + ',' + videoCodec);
-        //logger.log('playlist codecs:' + codec);
+        if (audioCodec && this.audioCodecSwap) {
+          _utilsLogger.logger.log('swapping playlist audio codec');
+          if (audioCodec.indexOf('mp4a.40.5') !== -1) {
+            audioCodec = 'mp4a.40.2';
+          } else {
+            audioCodec = 'mp4a.40.5';
+          }
+        }
+        _utilsLogger.logger.log('playlist_level/init_segment codecs: video => ' + videoCodec + '/' + data.videoCodec + '; audio => ' + audioCodec + '/' + data.audioCodec);
         // if playlist does not specify codecs, use codecs found while parsing fragment
+        // if no codec found while parsing fragment, also set codec to undefined to avoid creating sourceBuffer
         if (audioCodec === undefined || data.audiocodec === undefined) {
           audioCodec = data.audioCodec;
         }
-        if (videoCodec === undefined || data.videocodec === undefined) {
+
+        if (videoCodec === undefined || data.videoCodec === undefined) {
           videoCodec = data.videoCodec;
         }
         // in case several audio codecs might be used, force HE-AAC for audio (some browsers don't support audio codec switch)
@@ -1806,14 +1823,6 @@ var MSEMediaController = (function () {
           audioCodec = 'mp4a.40.5';
         }
         if (!this.sourceBuffer) {
-          if (audioCodec && this.audioCodecSwap) {
-            _utilsLogger.logger.log('swapping audio codec');
-            if (audioCodec.indexOf('mp4a.40.5') !== -1) {
-              audioCodec = 'mp4a.40.2';
-            } else {
-              audioCodec = 'mp4a.40.5';
-            }
-          }
           this.sourceBuffer = {};
           _utilsLogger.logger.log('selected A/V codecs for sourceBuffers:' + audioCodec + ',' + videoCodec);
           // create source Buffer and link them to MediaSource
@@ -1915,8 +1924,6 @@ var MSEMediaController = (function () {
       if (media) {
         // compare readyState
         var readyState = media.readyState;
-        this.lastReadyState = readyState;
-        //logger.log(`readyState:${readyState}`);
         // if ready state different from HAVE_NOTHING (numeric value 0), we are allowed to seek
         if (readyState) {
           // if seek after buffered defined, let's seek if within acceptable range
@@ -1951,16 +1958,9 @@ var MSEMediaController = (function () {
       }
     }
   }, {
-    key: 'recoverMediaError',
-    value: function recoverMediaError() {
-      // if player tries to recover a MediaError with last MediaElement.readyState being HAVE_NOTHING(0) or HAVE_METADATA(1)
-      // it means that we try to recover a media error, although no media has ever been played
-      // this usually happens when there is a mismatch between Init Segment and appended buffers
-      // this is the case when there is an audio codec mismatch
-      // try to swap audio codec, this could help recovering the playback in that specific case
-      if (this.lastReadyState < 2) {
-        this.audioCodecSwap = !this.audioCodecSwap;
-      }
+    key: 'swapAudioCodec',
+    value: function swapAudioCodec() {
+      this.audioCodecSwap = !this.audioCodecSwap;
     }
   }, {
     key: 'onSBUpdateError',
@@ -2695,7 +2695,7 @@ var AACDemuxer = (function () {
       adtsChanelConfig = (data[offset + 2] & 0x01) << 2;
       // byte 3
       adtsChanelConfig |= (data[offset + 3] & 0xC0) >>> 6;
-      _utilsLogger.logger.log('manifest codec:' + audioCodec + ',ADTS data:type:' + adtsObjectType + ',sampleingIndex:' + adtsSampleingIndex + '[' + adtsSampleingRates[adtsSampleingIndex] + 'kHz],channelConfig:' + adtsChanelConfig);
+      _utilsLogger.logger.log('manifest codec:' + audioCodec + ',ADTS data:type:' + adtsObjectType + ',sampleingIndex:' + adtsSampleingIndex + '[' + adtsSampleingRates[adtsSampleingIndex] + 'Hz],channelConfig:' + adtsChanelConfig);
       // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
       if (userAgent.indexOf('firefox') !== -1) {
         if (adtsSampleingIndex >= 6) {
@@ -4251,7 +4251,7 @@ var TSDemuxer = (function () {
       adtsChanelConfig = (data[offset + 2] & 0x01) << 2;
       // byte 3
       adtsChanelConfig |= (data[offset + 3] & 0xC0) >>> 6;
-      _utilsLogger.logger.log('manifest codec:' + audioCodec + ',ADTS data:type:' + adtsObjectType + ',sampleingIndex:' + adtsSampleingIndex + '[' + adtsSampleingRates[adtsSampleingIndex] + 'kHz],channelConfig:' + adtsChanelConfig);
+      _utilsLogger.logger.log('manifest codec:' + audioCodec + ',ADTS data:type:' + adtsObjectType + ',sampleingIndex:' + adtsSampleingIndex + '[' + adtsSampleingRates[adtsSampleingIndex] + 'Hz],channelConfig:' + adtsChanelConfig);
       // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
       if (userAgent.indexOf('firefox') !== -1) {
         if (adtsSampleingIndex >= 6) {
@@ -4284,8 +4284,9 @@ var TSDemuxer = (function () {
             // multiply frequency by 2 (see table below, equivalent to substract 3)
             adtsExtensionSampleingIndex = adtsSampleingIndex - 3;
           } else {
-            // if (manifest codec is AAC) AND (frequency less than 24kHz OR nb channel is 1)
-            if (audioCodec && audioCodec.indexOf('mp4a.40.2') !== -1 && (adtsSampleingIndex >= 6 || adtsChanelConfig === 1)) {
+            // if (manifest codec is AAC) AND (frequency less than 24kHz OR nb channel is 1) OR (manifest codec not specified and mono audio)
+            // Chrome fails to play back with AAC LC mono when initialized with HE-AAC.  This is not a problem with stereo.
+            if (audioCodec && audioCodec.indexOf('mp4a.40.2') !== -1 && (adtsSampleingIndex >= 6 || adtsChanelConfig === 1) || !audioCodec && adtsChanelConfig === 1) {
               adtsObjectType = 2;
               config = new Array(2);
             }
@@ -4824,13 +4825,18 @@ var Hls = (function () {
       this.mediaController.startLoad();
     }
   }, {
+    key: 'swapAudioCodec',
+    value: function swapAudioCodec() {
+      _utilsLogger.logger.log('swapAudioCodec');
+      this.mediaController.swapAudioCodec();
+    }
+  }, {
     key: 'recoverMediaError',
     value: function recoverMediaError() {
       _utilsLogger.logger.log('recoverMediaError');
       var media = this.media;
       this.detachMedia();
       this.attachMedia(media);
-      this.mediaController.recoverMediaError();
     }
 
     /** Return all quality levels **/
