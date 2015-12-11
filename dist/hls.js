@@ -1975,7 +1975,10 @@ var MSEMediaController = (function () {
     value: function onSBUpdateError(event) {
       _utilsLogger.logger.error('sourceBuffer error:' + event);
       this.state = State.ERROR;
-      this.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_APPENDING_ERROR, fatal: true, frag: this.fragCurrent });
+      // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
+      // this error might not always be fatal (it is fatal if decode error is set, in that case
+      // it will be followed by a mediaElement error ...)
+      this.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_APPENDING_ERROR, fatal: false, frag: this.fragCurrent });
     }
   }, {
     key: 'timeRangesToString',
