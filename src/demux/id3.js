@@ -48,6 +48,7 @@ class ID3 {
                         logger.warn('ID3 tag found, but no timestamp');
                     }
                     this._length = len;
+                    this._payload = data.subarray(0, len);
                 }
                 return;
             }
@@ -127,6 +128,10 @@ class ID3 {
 
     get length() {
         return this._length;
+    }
+
+    get payload() {
+        return this._payload;
     }
 }
 

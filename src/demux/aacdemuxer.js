@@ -131,7 +131,7 @@ class AACDemuxer {
         this.remuxer.remux(
             this._aacTrack,
             { samples: [] },
-            { samples: [] },
+            { samples: [{ pts: pts, dts: pts, unit: id3.payload }] },
             timeOffset
         );
     }
