@@ -76,9 +76,11 @@ class LevelController {
             };
             var audioCodec = level.audioCodec,
                 videoCodec = level.videoCodec;
-            return;
-            ((audioCodec && checkSupported(audioCodec)) || !audioCodec) &&
-                ((videoCodec && checkSupported(videoCodec)) || !videoCodec);
+
+            return (
+                ((audioCodec && checkSupported(audioCodec)) || !audioCodec) &&
+                ((videoCodec && checkSupported(videoCodec)) || !videoCodec)
+            );
         });
 
         // start bitrate is the first bitrate of the manifest
