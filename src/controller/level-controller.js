@@ -69,9 +69,8 @@ class LevelController {
       var checkSupported = function(codec) { return MediaSource.isTypeSupported(`video/mp4;codecs=${codec}`);};
       var audioCodec = level.audioCodec, videoCodec = level.videoCodec;
 
-      return ((audioCodec && checkSupported(audioCodec)) || !audioCodec) &&
-             ((videoCodec && checkSupported(videoCodec)) || !videoCodec);
-
+      return (!audioCodec || checkSupported(audioCodec)) &&
+             (!videoCodec || checkSupported(videoCodec));
     });
 
     // start bitrate is the first bitrate of the manifest
