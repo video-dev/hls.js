@@ -564,6 +564,17 @@ var LevelController = (function () {
         levels = levels0;
       }
 
+      // only keep level with supported audio/video codecs
+      levels0 = levels0.filter(function (level) {
+        var checkSupported = function checkSupported(codec) {
+          return MediaSource.isTypeSupported('video/mp4;codecs=' + codec);
+        };
+        var audioCodec = level.audioCodec,
+            videoCodec = level.videoCodec;
+
+        return (audioCodec && checkSupported(audioCodec) || !audioCodec) && (videoCodec && checkSupported(videoCodec) || !videoCodec);
+      });
+
       // start bitrate is the first bitrate of the manifest
       bitrateStart = levels[0].bitrate;
       // sort level on bitrate
