@@ -78,8 +78,8 @@ class LevelController {
                 videoCodec = level.videoCodec;
 
             return (
-                ((audioCodec && checkSupported(audioCodec)) || !audioCodec) &&
-                ((videoCodec && checkSupported(videoCodec)) || !videoCodec)
+                (!audioCodec || checkSupported(audioCodec)) &&
+                (!videoCodec || checkSupported(videoCodec))
             );
         });
 
