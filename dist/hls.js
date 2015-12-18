@@ -572,7 +572,7 @@ var LevelController = (function () {
         var audioCodec = level.audioCodec,
             videoCodec = level.videoCodec;
 
-        return (audioCodec && checkSupported(audioCodec) || !audioCodec) && (videoCodec && checkSupported(videoCodec) || !videoCodec);
+        return (!audioCodec || checkSupported(audioCodec)) && (!videoCodec || checkSupported(videoCodec));
       });
 
       // start bitrate is the first bitrate of the manifest
@@ -5307,7 +5307,7 @@ var PlaylistLoader = (function () {
       if (avcdata.length > 2) {
         result = avcdata.shift() + '.';
         result += parseInt(avcdata.shift()).toString(16);
-        result += ('00' + parseInt(avcdata.shift()).toString(16)).substr(-4);
+        result += ('000' + parseInt(avcdata.shift()).toString(16)).substr(-4);
       } else {
         result = codec;
       }
