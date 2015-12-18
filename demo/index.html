@@ -74,6 +74,7 @@ header {
       <input id="streamURL" class="innerControls" type=text value=""/>
       <label class="innerControls"><input id="enableStream" type=checkbox checked/> Enable Streaming</label>
       <label class="innerControls"><input id="autoRecoverError" type=checkbox checked/> Auto-Recover Media Error</label>
+      <label class="innerControls"><input id="enableWorker" type=checkbox checked/> Enable Worker</label>
       <div id="StreamPermalink" class="innerControls"></div>
       <div>
         <select id="videoSize" style="float:left">
@@ -204,10 +205,12 @@ $(document).ready(function() {
    $('#enableStream').click(function()      { enableStreaming = this.checked; loadStream($('#streamURL').val());});
    $('#autoRecoverError').prop( "checked", true );
    $('#autoRecoverError').click(function()  { autoRecoverError = this.checked; });
+   $('#enableWorker').prop( "checked", true );
+   $('#enableWorker').click(function()  { enableWorker = this.checked; });
 });
 
   'use strict';
-  var hls,events, stats, enableStreaming = true, autoRecoverError = true;
+  var hls,events, stats, enableStreaming = true, autoRecoverError = true, enableWorker = true;
   var video = $('#video')[0];
   video.volume = 0.05;
 
@@ -242,7 +245,7 @@ $(document).ready(function() {
       $("#HlsStatus").text('loading ' + url);
        events = { url : url, t0 : performance.now(), load : [], buffer : [], video : [], level : [], bitrate : []};
        recoverDecodingErrorDate = recoverSwapAudioCodecDate = null;
-       hls = new Hls({debug:true});
+       hls = new Hls({debug:true, enableWorker : enableWorker});
        $("#HlsStatus").text('loading manifest and attaching video element...');
        hls.loadSource(url);
        hls.attachMedia(video);
