@@ -70,7 +70,7 @@ class LevelController {
         }
 
         // only keep level with supported audio/video codecs
-        levels0 = levels0.filter(function(level) {
+        levels = levels.filter(function(level) {
             var checkSupported = function(codec) {
                 return MediaSource.isTypeSupported(`video/mp4;codecs=${codec}`);
             };
