@@ -37,7 +37,8 @@ class LevelController {
             i,
             bitrateSet = {},
             videoCodecFound = false,
-            audioCodecFound = false;
+            audioCodecFound = false,
+            hls = this.hls;
 
         // regroup redundant level together
         data.levels.forEach(level => {
@@ -83,30 +84,40 @@ class LevelController {
             );
         });
 
-        // start bitrate is the first bitrate of the manifest
-        bitrateStart = levels[0].bitrate;
-        // sort level on bitrate
-        levels.sort(function(a, b) {
-            return a.bitrate - b.bitrate;
-        });
-        this._levels = levels;
-        // find index of first level in sorted levels
-        for (i = 0; i < levels.length; i++) {
-            if (levels[i].bitrate === bitrateStart) {
-                this._firstLevel = i;
-                logger.log(
-                    `manifest loaded,${
-                        levels.length
-                    } level(s) found, first bitrate:${bitrateStart}`
-                );
-                break;
+        if (levels.length) {
+            // start bitrate is the first bitrate of the manifest
+            bitrateStart = levels[0].bitrate;
+            // sort level on bitrate
+            levels.sort(function(a, b) {
+                return a.bitrate - b.bitrate;
+            });
+            this._levels = levels;
+            // find index of first level in sorted levels
+            for (i = 0; i < levels.length; i++) {
+                if (levels[i].bitrate === bitrateStart) {
+                    this._firstLevel = i;
+                    logger.log(
+                        `manifest loaded,${
+                            levels.length
+                        } level(s) found, first bitrate:${bitrateStart}`
+                    );
+                    break;
+                }
             }
+            hls.trigger(Event.MANIFEST_PARSED, {
+                levels: this._levels,
+                firstLevel: this._firstLevel,
+                stats: data.stats
+            });
+        } else {
+            hls.trigger(Event.ERROR, {
+                type: ErrorTypes.NETWORK_ERROR,
+                details: ErrorDetails.MANIFEST_PARSING_ERROR,
+                fatal: true,
+                url: hls.url,
+                reason: 'no compatible level found in manifest'
+            });
         }
-        this.hls.trigger(Event.MANIFEST_PARSED, {
-            levels: this._levels,
-            firstLevel: this._firstLevel,
-            stats: data.stats
-        });
         return;
     }
 
