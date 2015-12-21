@@ -35,10 +35,22 @@ class PlaylistLoader {
     }
 
     load(url, id1, id2) {
-        var config = this.hls.config;
+        var config = this.hls.config,
+            retry,
+            timeout,
+            retryDelay;
         this.url = url;
         this.id = id1;
         this.id2 = id2;
+        if (this.id === undefined) {
+            retry = config.manifestLoadingMaxRetry;
+            timeout = config.manifestLoadingTimeOut;
+            retryDelay = config.manifestLoadingRetryDelay;
+        } else {
+            retry = config.levelLoadingMaxRetry;
+            timeout = config.levelLoadingTimeOut;
+            retryDelay = config.levelLoadingRetryDelay;
+        }
         this.loader =
             typeof config.pLoader !== 'undefined'
                 ? new config.pLoader(config)
@@ -49,9 +61,9 @@ class PlaylistLoader {
             this.loadsuccess.bind(this),
             this.loaderror.bind(this),
             this.loadtimeout.bind(this),
-            config.manifestLoadingTimeOut,
-            config.manifestLoadingMaxRetry,
-            config.manifestLoadingRetryDelay
+            timeout,
+            retry,
+            retryDelay
         );
     }
 

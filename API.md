@@ -189,12 +189,15 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       liveMaxLatencyDurationCount: 10,
       enableWorker : true,
       enableSoftwareAES: true,
-      fragLoadingTimeOut : 20000,
-      fragLoadingMaxRetry : 6,
-      fragLoadingRetryDelay : 500,
       manifestLoadingTimeOut : 10000,
       manifestLoadingMaxRetry : 6,
       manifestLoadingRetryDelay : 500,
+      levelLoadingTimeOut : 10000,
+      levelLoadingMaxRetry : 6,
+      levelLoadingRetryDelay : 500,
+      fragLoadingTimeOut : 20000,
+      fragLoadingMaxRetry : 6,
+      fragLoadingRetryDelay : 500,
       fpsDroppedMonitoringPeriod : 5000,
       fpsDroppedMonitoringThreshold : 0.2,
       appendErrorMaxRetry : 3,
@@ -255,19 +258,19 @@ enable webworker (if available on browser) for TS demuxing/MP4 remuxing, to impr
 
 enable to use JavaScript version AES decryption for fallback of WebCrypto API.
 
-#### ```fragLoadingTimeOut```/```manifestLoadingTimeOut```
-(default 60000ms for fragment/10000ms for manifest)
+#### ```fragLoadingTimeOut```/```manifestLoadingTimeOut```/```levelLoadingTimeOut```
+(default 60000ms for fragment/10000ms for level and manifest)
 
 URL Loader timeout.
 A timeout callback will be triggered if loading duration exceeds this timeout.
 no further action will be done : the load operation will not be cancelled/aborted.
 It is up to the application to catch this event and treat it as needed.
-#### ```fragLoadingMaxRetry```/```manifestLoadingMaxRetry```
+#### ```fragLoadingMaxRetry```/```manifestLoadingMaxRetry```/```levelLoadingMaxRetry```
 (default 3)
 
 max nb of load retry
-#### ```fragLoadingRetryDelay```/```manifestLoadingRetryDelay```
-(default 500ms)
+#### ```fragLoadingRetryDelay```/```manifestLoadingRetryDelay```/```levelLoadingRetryDelay```
+(default 1000ms)
 
 initial delay between XmlHttpRequest error and first load retry (in ms)
 any I/O error will trigger retries every 500ms,1s,2s,4s,8s, ... capped to 64s (exponential backoff)
