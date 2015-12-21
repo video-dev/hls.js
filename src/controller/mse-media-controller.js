@@ -15,11 +15,12 @@ const State = {
   IDLE : 0,
   KEY_LOADING : 1,
   FRAG_LOADING : 2,
-  WAITING_LEVEL : 3,
-  PARSING : 4,
-  PARSED : 5,
-  APPENDING : 6,
-  BUFFER_FLUSHING : 7
+  FRAG_LOADING_WAITING_RETRY : 3,
+  WAITING_LEVEL : 4,
+  PARSING : 5,
+  PARSED : 6,
+  APPENDING : 7,
+  BUFFER_FLUSHING : 8
 };
 
 class MSEMediaController {
@@ -84,6 +85,7 @@ class MSEMediaController {
     this.demuxer = new Demuxer(hls);
     this.timer = setInterval(this.ontick, 100);
     this.level = -1;
+    this.fragLoadError = 0;
     hls.on(Event.FRAG_LOADED, this.onfl);
     hls.on(Event.FRAG_PARSING_INIT_SEGMENT, this.onis);
     hls.on(Event.FRAG_PARSING_DATA, this.onfpg);
@@ -365,6 +367,17 @@ class MSEMediaController {
               this.state = State.IDLE;
             }
           }
+        }
+        break;
+      case State.FRAG_LOADING_WAITING_RETRY:
+        var now = performance.now();
+        var retryDate = this.retryDate;
+        var media = this.media;
+        var isSeeking = media && media.seeking;
+        // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
+        if(!retryDate || (now >= retryDate) || isSeeking) {
+          logger.log(`mediaController: retryDate reached, switch back to IDLE state`);
+          this.state = State.IDLE;
         }
         break;
       case State.PARSING:
@@ -1097,25 +1110,32 @@ class MSEMediaController {
 
   onError(event, data) {
     switch(data.details) {
-      // abort fragment loading on errors
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
-      var loadError = this.fragLoadError;
-        if(loadError) {
-          loadError++;
-        } else {
-          loadError=1;
-        }
-        if (loadError <= this.config.fragLoadingMaxRetry) {
-          this.fragLoadError = loadError;
-          // retry loading
-          this.state = State.IDLE;
-        } else {
-          logger.error(`mediaController: ${data.details} reaches max retry, redispatch as fatal ...`);
-          // redispatch same error but with fatal set to true
-          data.fatal = true;
-          this.hls.trigger(event, data);
-          this.state = State.ERROR;
+        if(!data.fatal) {
+          var loadError = this.fragLoadError;
+          if(loadError) {
+            loadError++;
+          } else {
+            loadError=1;
+          }
+          if (loadError <= this.config.fragLoadingMaxRetry) {
+            this.fragLoadError = loadError;
+            // reset load counter to avoid frag loop loading error
+            data.frag.loadCounter = 0;
+            // exponential backoff capped to 64s
+            var delay = Math.min(Math.pow(2,loadError-1)*this.config.fragLoadingRetryDelay,64000);
+            logger.warn(`mediaController: frag loading failed, retry in ${delay} ms`);
+            this.retryDate = performance.now() + delay;
+            // retry loading state
+            this.state = State.FRAG_LOADING_WAITING_RETRY;
+          } else {
+            logger.error(`mediaController: ${data.details} reaches max retry, redispatch as fatal ...`);
+            // redispatch same error but with fatal set to true
+            data.fatal = true;
+            this.hls.trigger(event, data);
+            this.state = State.ERROR;
+          }
         }
         break;
       case ErrorDetails.FRAG_LOOP_LOADING_ERROR:
