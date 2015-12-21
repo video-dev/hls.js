@@ -231,7 +231,8 @@ class LevelController {
         }
         /* try to switch to a redundant stream if any available.
      * if no redundant stream available, emergency switch down (if in auto mode and current level not 0)
-     * otherwise, we cannot recover this network error ....
+     * otherwise, we cannot recover this network error ...
+     * don't raise FRAG_LOAD_ERROR and FRAG_LOAD_TIMEOUT as fatal, as it is handled by mediaController
      */
         if (levelId !== undefined) {
             level = this._levels[levelId];
@@ -255,7 +256,11 @@ class LevelController {
                     logger.warn(
                         `level controller,${details} on live stream, discard`
                     );
-                } else {
+                    // FRAG_LOAD_ERROR and FRAG_LOAD_TIMEOUT are handled by mediaController
+                } else if (
+                    details !== ErrorDetails.FRAG_LOAD_ERROR &&
+                    details !== ErrorDetails.FRAG_LOAD_TIMEOUT
+                ) {
                     logger.error(`cannot recover ${details} error`);
                     this._level = undefined;
                     // stopping live reloading timer if any

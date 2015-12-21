@@ -36,7 +36,7 @@ class FragmentLoader {
             this.loaderror.bind(this),
             this.loadtimeout.bind(this),
             config.fragLoadingTimeOut,
-            config.fragLoadingMaxRetry,
+            1,
             config.fragLoadingRetryDelay,
             this.loadprogress.bind(this),
             frag
