@@ -817,11 +817,12 @@ var State = {
   IDLE: 0,
   KEY_LOADING: 1,
   FRAG_LOADING: 2,
-  WAITING_LEVEL: 3,
-  PARSING: 4,
-  PARSED: 5,
-  APPENDING: 6,
-  BUFFER_FLUSHING: 7
+  FRAG_LOADING_WAITING_RETRY: 3,
+  WAITING_LEVEL: 4,
+  PARSING: 5,
+  PARSED: 6,
+  APPENDING: 7,
+  BUFFER_FLUSHING: 8
 };
 
 var MSEMediaController = (function () {
@@ -891,6 +892,7 @@ var MSEMediaController = (function () {
       this.demuxer = new _demuxDemuxer2['default'](hls);
       this.timer = setInterval(this.ontick, 100);
       this.level = -1;
+      this.fragLoadError = 0;
       hls.on(_events2['default'].FRAG_LOADED, this.onfl);
       hls.on(_events2['default'].FRAG_PARSING_INIT_SEGMENT, this.onis);
       hls.on(_events2['default'].FRAG_PARSING_DATA, this.onfpg);
@@ -1176,6 +1178,17 @@ var MSEMediaController = (function () {
                 this.state = State.IDLE;
               }
             }
+          }
+          break;
+        case State.FRAG_LOADING_WAITING_RETRY:
+          var now = performance.now();
+          var retryDate = this.retryDate;
+          var media = this.media;
+          var isSeeking = media && media.seeking;
+          // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
+          if (!retryDate || now >= retryDate || isSeeking) {
+            _utilsLogger.logger.log('mediaController: retryDate reached, switch back to IDLE state');
+            this.state = State.IDLE;
           }
           break;
         case State.PARSING:
@@ -1914,25 +1927,32 @@ var MSEMediaController = (function () {
     key: 'onError',
     value: function onError(event, data) {
       switch (data.details) {
-        // abort fragment loading on errors
         case _errors.ErrorDetails.FRAG_LOAD_ERROR:
         case _errors.ErrorDetails.FRAG_LOAD_TIMEOUT:
-          var loadError = this.fragLoadError;
-          if (loadError) {
-            loadError++;
-          } else {
-            loadError = 1;
-          }
-          if (loadError <= this.config.fragLoadingMaxRetry) {
-            this.fragLoadError = loadError;
-            // retry loading
-            this.state = State.IDLE;
-          } else {
-            _utilsLogger.logger.error('mediaController: ' + data.details + ' reaches max retry, redispatch as fatal ...');
-            // redispatch same error but with fatal set to true
-            data.fatal = true;
-            this.hls.trigger(event, data);
-            this.state = State.ERROR;
+          if (!data.fatal) {
+            var loadError = this.fragLoadError;
+            if (loadError) {
+              loadError++;
+            } else {
+              loadError = 1;
+            }
+            if (loadError <= this.config.fragLoadingMaxRetry) {
+              this.fragLoadError = loadError;
+              // reset load counter to avoid frag loop loading error
+              data.frag.loadCounter = 0;
+              // exponential backoff capped to 64s
+              var delay = Math.min(Math.pow(2, loadError - 1) * this.config.fragLoadingRetryDelay, 64000);
+              _utilsLogger.logger.warn('mediaController: frag loading failed, retry in ' + delay + ' ms');
+              this.retryDate = performance.now() + delay;
+              // retry loading state
+              this.state = State.FRAG_LOADING_WAITING_RETRY;
+            } else {
+              _utilsLogger.logger.error('mediaController: ' + data.details + ' reaches max retry, redispatch as fatal ...');
+              // redispatch same error but with fatal set to true
+              data.fatal = true;
+              this.hls.trigger(event, data);
+              this.state = State.ERROR;
+            }
           }
           break;
         case _errors.ErrorDetails.FRAG_LOOP_LOADING_ERROR:
@@ -2490,8 +2510,8 @@ var AES128Decrypter = (function () {
       return decrypted;
     }
   }, {
-    key: 'localDecript',
-    value: function localDecript(encrypted, key, initVector, decrypted) {
+    key: 'localDecrypt',
+    value: function localDecrypt(encrypted, key, initVector, decrypted) {
       var bytes = this.doDecrypt(encrypted, key, initVector);
       decrypted.set(bytes, encrypted.byteOffset);
     }
@@ -2508,11 +2528,11 @@ var AES128Decrypter = (function () {
       // split up the encryption job and do the individual chunks asynchronously
       var key = this.key;
       var initVector = this.iv;
-      this.localDecript(encrypted32.subarray(i, i + step), key, initVector, decrypted);
+      this.localDecrypt(encrypted32.subarray(i, i + step), key, initVector, decrypted);
 
       for (i = step; i < encrypted32.length; i += step) {
         initVector = new Uint32Array([this.ntoh(encrypted32[i - 4]), this.ntoh(encrypted32[i - 3]), this.ntoh(encrypted32[i - 2]), this.ntoh(encrypted32[i - 1])]);
-        this.localDecript(encrypted32.subarray(i, i + step), key, initVector, decrypted);
+        this.localDecrypt(encrypted32.subarray(i, i + step), key, initVector, decrypted);
       }
 
       return decrypted;
@@ -4781,13 +4801,16 @@ var Hls = (function () {
       maxMaxBufferLength: 600,
       enableWorker: true,
       enableSoftwareAES: true,
+      manifestLoadingTimeOut: 10000,
+      manifestLoadingMaxRetry: 1,
+      manifestLoadingRetryDelay: 1000,
+      levelLoadingTimeOut: 10000,
+      levelLoadingMaxRetry: 4,
+      levelLoadingRetryDelay: 1000,
       fragLoadingTimeOut: 20000,
       fragLoadingMaxRetry: 6,
       fragLoadingRetryDelay: 1000,
       fragLoadingLoopThreshold: 3,
-      manifestLoadingTimeOut: 10000,
-      manifestLoadingMaxRetry: 1,
-      manifestLoadingRetryDelay: 1000,
       // fpsDroppedMonitoringPeriod: 5000,
       // fpsDroppedMonitoringThreshold: 0.2,
       appendErrorMaxRetry: 3,
@@ -5074,7 +5097,7 @@ var FragmentLoader = (function () {
       this.frag.loaded = 0;
       var config = this.hls.config;
       frag.loader = this.loader = typeof config.fLoader !== 'undefined' ? new config.fLoader(config) : new config.loader(config);
-      this.loader.load(frag.url, 'arraybuffer', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.fragLoadingTimeOut, 1, config.fragLoadingRetryDelay, this.loadprogress.bind(this), frag);
+      this.loader.load(frag.url, 'arraybuffer', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.fragLoadingTimeOut, 1, 0, this.loadprogress.bind(this), frag);
     }
   }, {
     key: 'loadsuccess',
@@ -5269,12 +5292,24 @@ var PlaylistLoader = (function () {
   }, {
     key: 'load',
     value: function load(url, id1, id2) {
-      var config = this.hls.config;
+      var config = this.hls.config,
+          retry,
+          timeout,
+          retryDelay;
       this.url = url;
       this.id = id1;
       this.id2 = id2;
+      if (this.id === undefined) {
+        retry = config.manifestLoadingMaxRetry;
+        timeout = config.manifestLoadingTimeOut;
+        retryDelay = config.manifestLoadingRetryDelay;
+      } else {
+        retry = config.levelLoadingMaxRetry;
+        timeout = config.levelLoadingTimeOut;
+        retryDelay = config.levelLoadingRetryDelay;
+      }
       this.loader = typeof config.pLoader !== 'undefined' ? new config.pLoader(config) : new config.loader(config);
-      this.loader.load(url, '', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.manifestLoadingTimeOut, config.manifestLoadingMaxRetry, config.manifestLoadingRetryDelay);
+      this.loader.load(url, '', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), timeout, retry, retryDelay);
     }
   }, {
     key: 'resolve',
