@@ -41,6 +41,7 @@
     "arraybuffer-equal": "^1.0.4",
     "babel": "^5.8.34",
     "browserify": "^8.1.1",
+    "deep-strict-equal": "^0.1.0",
     "exorcist": "^0.4.0",
     "http-server": "^0.7.4",
     "jshint": "^2.5.11",
