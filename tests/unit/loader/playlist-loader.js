@@ -30,6 +30,22 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
     assert.strictEqual(result[0]['url'],'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core');
   });
 
+  it('parses manifest without codecs', () => {
+    var manifest = `#EXTM3U
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,RESOLUTION=848x360,NAME="480"
+http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
+
+    var result = new PlaylistLoader({on : function() { }}).parseMasterPlaylist(manifest, 'http://www.dailymotion.com');
+    assert.strictEqual(result.length,1);
+    assert.strictEqual(result[0]['bitrate'],836280);
+    assert.strictEqual(result[0]['audioCodec'],undefined);
+    assert.strictEqual(result[0]['videoCodec'],undefined);
+    assert.strictEqual(result[0]['width'],848);
+    assert.strictEqual(result[0]['height'],360);
+    assert.strictEqual(result[0]['name'],'480');
+    assert.strictEqual(result[0]['url'],'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core');
+  });
+
 
   it('does not care about the attribute order', () => {
     var manifest = `#EXTM3U
