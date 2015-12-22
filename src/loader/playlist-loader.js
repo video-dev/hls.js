@@ -133,9 +133,10 @@ class PlaylistLoader {
             cc = 0,
             frag,
             byteRangeEndOffset,
-            byteRangeStartOffset;
+            byteRangeStartOffset,
+            programDateTime = null;
         var levelkey = { method: null, key: null, iv: null, uri: null };
-        regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))/g;
+        regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*))/g;
         while ((result = regexp.exec(string)) !== null) {
             result.shift();
             result = result.filter(function(n) {
@@ -200,11 +201,13 @@ class PlaylistLoader {
                                 cc: cc,
                                 byteRangeStartOffset: byteRangeStartOffset,
                                 byteRangeEndOffset: byteRangeEndOffset,
-                                decryptdata: fragdecryptdata
+                                decryptdata: fragdecryptdata,
+                                programDateTime: programDateTime
                             });
                             totalduration += duration;
                         }
                         byteRangeStartOffset = null;
+                        programDateTime = null;
                     }
                     break;
                 case 'KEY':
@@ -230,6 +233,9 @@ class PlaylistLoader {
                             levelkey.iv = decryptiv;
                         }
                     }
+                    break;
+                case 'PROGRAM-DATE-TIME':
+                    programDateTime = new Date(Date.parse(result[1]));
                     break;
                 default:
                     break;
