@@ -774,7 +774,7 @@ var LevelController = (function () {
 exports['default'] = LevelController;
 module.exports = exports['default'];
 
-},{"../errors":17,"../events":18,"../utils/logger":27}],5:[function(require,module,exports){
+},{"../errors":17,"../events":18,"../utils/logger":28}],5:[function(require,module,exports){
 /*
  * MSE Media Controller
 */
@@ -832,6 +832,7 @@ var MSEMediaController = (function () {
     this.config = hls.config;
     this.audioCodecSwap = false;
     this.hls = hls;
+    this.ticks = 0;
     // Source Buffer listeners
     this.onsbue = this.onSBUpdateEnd.bind(this);
     this.onsbe = this.onSBUpdateError.bind(this);
@@ -946,6 +947,18 @@ var MSEMediaController = (function () {
   }, {
     key: 'tick',
     value: function tick() {
+      this.ticks++;
+      if (this.ticks === 1) {
+        this.doTick();
+        if (this.ticks > 1) {
+          setTimeout(this.tick, 1);
+        }
+        this.ticks = 0;
+      }
+    }
+  }, {
+    key: 'doTick',
+    value: function doTick() {
       var pos,
           level,
           levelDetails,
@@ -2120,7 +2133,7 @@ var MSEMediaController = (function () {
 exports['default'] = MSEMediaController;
 module.exports = exports['default'];
 
-},{"../demux/demuxer":13,"../errors":17,"../events":18,"../helper/level-helper":19,"../utils/binary-search":26,"../utils/logger":27}],6:[function(require,module,exports){
+},{"../demux/demuxer":13,"../errors":17,"../events":18,"../helper/level-helper":19,"../utils/binary-search":27,"../utils/logger":28}],6:[function(require,module,exports){
 /*
  *
  * This file contains an adaptation of the AES decryption algorithm
@@ -2645,7 +2658,7 @@ var Decrypter = (function () {
 exports['default'] = Decrypter;
 module.exports = exports['default'];
 
-},{"../errors":17,"../utils/logger":27,"./aes128-decrypter":7}],9:[function(require,module,exports){
+},{"../errors":17,"../utils/logger":28,"./aes128-decrypter":7}],9:[function(require,module,exports){
 /**
  * AAC demuxer
  */
@@ -2774,7 +2787,7 @@ var AACDemuxer = (function () {
 exports['default'] = AACDemuxer;
 module.exports = exports['default'];
 
-},{"../demux/id3":15,"../utils/logger":27,"./adts":10}],10:[function(require,module,exports){
+},{"../demux/id3":15,"../utils/logger":28,"./adts":10}],10:[function(require,module,exports){
 /**
  *  ADTS parser helper
  */
@@ -2922,7 +2935,7 @@ var ADTS = (function () {
 exports['default'] = ADTS;
 module.exports = exports['default'];
 
-},{"../errors":17,"../utils/logger":27}],11:[function(require,module,exports){
+},{"../errors":17,"../utils/logger":28}],11:[function(require,module,exports){
 /*  inline demuxer.
  *   probe fragments and instantiate appropriate demuxer depending on content type (TSDemuxer, AACDemuxer, ...)
  */
@@ -3251,7 +3264,7 @@ var Demuxer = (function () {
 exports['default'] = Demuxer;
 module.exports = exports['default'];
 
-},{"../crypt/decrypter":8,"../demux/demuxer-inline":11,"../demux/demuxer-worker":12,"../events":18,"../remux/mp4-remuxer":25,"../utils/logger":27,"webworkify":2}],14:[function(require,module,exports){
+},{"../crypt/decrypter":8,"../demux/demuxer-inline":11,"../demux/demuxer-worker":12,"../events":18,"../remux/mp4-remuxer":25,"../utils/logger":28,"webworkify":2}],14:[function(require,module,exports){
 /**
  * Parser for exponential Golomb codes, a variable-bitwidth number encoding scheme used by h264.
 */
@@ -3590,7 +3603,7 @@ var ExpGolomb = (function () {
 exports['default'] = ExpGolomb;
 module.exports = exports['default'];
 
-},{"../utils/logger":27}],15:[function(require,module,exports){
+},{"../utils/logger":28}],15:[function(require,module,exports){
 /**
  * ID3 parser
  */
@@ -3744,7 +3757,7 @@ var ID3 = (function () {
 exports['default'] = ID3;
 module.exports = exports['default'];
 
-},{"../utils/logger":27}],16:[function(require,module,exports){
+},{"../utils/logger":28}],16:[function(require,module,exports){
 /**
  * highly optimized TS demuxer:
  * parse PAT, PMT
@@ -4370,7 +4383,7 @@ var TSDemuxer = (function () {
 exports['default'] = TSDemuxer;
 module.exports = exports['default'];
 
-},{"../errors":17,"../events":18,"../utils/logger":27,"./adts":10,"./exp-golomb":14}],17:[function(require,module,exports){
+},{"../errors":17,"../events":18,"../utils/logger":28,"./adts":10,"./exp-golomb":14}],17:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -4630,7 +4643,7 @@ var LevelHelper = (function () {
 exports['default'] = LevelHelper;
 module.exports = exports['default'];
 
-},{"../utils/logger":27}],20:[function(require,module,exports){
+},{"../utils/logger":28}],20:[function(require,module,exports){
 /**
  * HLS interface
  */
@@ -4709,6 +4722,45 @@ var Hls = (function () {
     get: function get() {
       return _errors.ErrorDetails;
     }
+  }, {
+    key: 'DefaultConfig',
+    get: function get() {
+      if (!Hls.defaultConfig) {
+        Hls.defaultConfig = {
+          autoStartLoad: true,
+          debug: false,
+          maxBufferLength: 30,
+          maxBufferSize: 60 * 1000 * 1000,
+          liveSyncDurationCount: 3,
+          liveMaxLatencyDurationCount: Infinity,
+          maxMaxBufferLength: 600,
+          enableWorker: true,
+          enableSoftwareAES: true,
+          manifestLoadingTimeOut: 10000,
+          manifestLoadingMaxRetry: 1,
+          manifestLoadingRetryDelay: 1000,
+          levelLoadingTimeOut: 10000,
+          levelLoadingMaxRetry: 4,
+          levelLoadingRetryDelay: 1000,
+          fragLoadingTimeOut: 20000,
+          fragLoadingMaxRetry: 6,
+          fragLoadingRetryDelay: 1000,
+          fragLoadingLoopThreshold: 3,
+          // fpsDroppedMonitoringPeriod: 5000,
+          // fpsDroppedMonitoringThreshold: 0.2,
+          appendErrorMaxRetry: 3,
+          loader: _utilsXhrLoader2['default'],
+          fLoader: undefined,
+          pLoader: undefined,
+          abrController: _controllerAbrController2['default'],
+          mediaController: _controllerMseMediaController2['default']
+        };
+      }
+      return Hls.defaultConfig;
+    },
+    set: function set(defaultConfig) {
+      Hls.defaultConfig = defaultConfig;
+    }
   }]);
 
   function Hls() {
@@ -4716,40 +4768,12 @@ var Hls = (function () {
 
     _classCallCheck(this, Hls);
 
-    var configDefault = {
-      autoStartLoad: true,
-      debug: false,
-      maxBufferLength: 30,
-      maxBufferSize: 60 * 1000 * 1000,
-      liveSyncDurationCount: 3,
-      liveMaxLatencyDurationCount: Infinity,
-      maxMaxBufferLength: 600,
-      enableWorker: true,
-      enableSoftwareAES: true,
-      manifestLoadingTimeOut: 10000,
-      manifestLoadingMaxRetry: 1,
-      manifestLoadingRetryDelay: 1000,
-      levelLoadingTimeOut: 10000,
-      levelLoadingMaxRetry: 4,
-      levelLoadingRetryDelay: 1000,
-      fragLoadingTimeOut: 20000,
-      fragLoadingMaxRetry: 6,
-      fragLoadingRetryDelay: 1000,
-      fragLoadingLoopThreshold: 3,
-      // fpsDroppedMonitoringPeriod: 5000,
-      // fpsDroppedMonitoringThreshold: 0.2,
-      appendErrorMaxRetry: 3,
-      loader: _utilsXhrLoader2['default'],
-      fLoader: undefined,
-      pLoader: undefined,
-      abrController: _controllerAbrController2['default'],
-      mediaController: _controllerMseMediaController2['default']
-    };
-    for (var prop in configDefault) {
+    var defaultConfig = Hls.DefaultConfig;
+    for (var prop in defaultConfig) {
       if (prop in config) {
         continue;
       }
-      config[prop] = configDefault[prop];
+      config[prop] = defaultConfig[prop];
     }
 
     if (config.liveMaxLatencyDurationCount !== undefined && config.liveMaxLatencyDurationCount <= config.liveSyncDurationCount) {
@@ -4973,7 +4997,7 @@ var Hls = (function () {
 exports['default'] = Hls;
 module.exports = exports['default'];
 
-},{"./controller/abr-controller":3,"./controller/level-controller":4,"./controller/mse-media-controller":5,"./errors":17,"./events":18,"./loader/fragment-loader":21,"./loader/key-loader":22,"./loader/playlist-loader":23,"./utils/logger":27,"./utils/xhr-loader":29,"events":1}],21:[function(require,module,exports){
+},{"./controller/abr-controller":3,"./controller/level-controller":4,"./controller/mse-media-controller":5,"./errors":17,"./events":18,"./loader/fragment-loader":21,"./loader/key-loader":22,"./loader/playlist-loader":23,"./utils/logger":28,"./utils/xhr-loader":30,"events":1}],21:[function(require,module,exports){
 /*
  * Fragment Loader
 */
@@ -5180,6 +5204,10 @@ var _utilsUrl = require('../utils/url');
 
 var _utilsUrl2 = _interopRequireDefault(_utilsUrl);
 
+var _utilsAttrList = require('../utils/attr-list');
+
+var _utilsAttrList2 = _interopRequireDefault(_utilsAttrList);
+
 //import {logger} from '../utils/logger';
 
 var PlaylistLoader = (function () {
@@ -5245,47 +5273,31 @@ var PlaylistLoader = (function () {
     key: 'parseMasterPlaylist',
     value: function parseMasterPlaylist(string, baseurl) {
       var levels = [],
-          level = {},
-          result,
-          codecs,
-          codec;
+          result = undefined;
+
       // https://regex101.com is your friend
-      var re = /#EXT-X-STREAM-INF:([^\n\r]*(BAND)WIDTH=(\d+))?([^\n\r]*(CODECS)=\"([^\"\n\r]*)\",?)?([^\n\r]*(RES)OLUTION=(\d+)x(\d+))?([^\n\r]*(NAME)=\"(.*)\")?[^\n\r]*[\r\n]+([^\r\n]+)/g;
+      var re = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
       while ((result = re.exec(string)) != null) {
-        result.shift();
-        result = result.filter(function (n) {
-          return n !== undefined;
-        });
-        level.url = this.resolve(result.pop(), baseurl);
-        while (result.length > 0) {
-          switch (result.shift()) {
-            case 'RES':
-              level.width = parseInt(result.shift());
-              level.height = parseInt(result.shift());
-              break;
-            case 'BAND':
-              level.bitrate = parseInt(result.shift());
-              break;
-            case 'NAME':
-              level.name = result.shift();
-              break;
-            case 'CODECS':
-              codecs = result.shift().split(',');
-              while (codecs.length > 0) {
-                codec = codecs.shift();
-                if (codec.indexOf('avc1') !== -1) {
-                  level.videoCodec = this.avc1toavcoti(codec);
-                } else {
-                  level.audioCodec = codec;
-                }
-              }
-              break;
-            default:
-              break;
+        var level = {};
+
+        level.attrs = new _utilsAttrList2['default'](result[1]);
+        level.url = this.resolve(result[2], baseurl);
+
+        Object.assign(level, level.attrs.decimalResolution('RESOLUTION'));
+        level.bitrate = level.attrs.decimalInteger('BANDWIDTH');
+        level.name = level.attrs.quotedString('NAME');
+
+        var codecs = (level.attrs.quotedString('CODECS') || '').split(',');
+        for (var i = 0; i < codecs.length; i++) {
+          var codec = codecs[i];
+          if (codec.indexOf('avc1') !== -1) {
+            level.videoCodec = this.avc1toavcoti(codec);
+          } else {
+            level.audioCodec = codec;
           }
         }
+
         levels.push(level);
-        level = {};
       }
       return levels;
     }
@@ -5304,21 +5316,6 @@ var PlaylistLoader = (function () {
       return result;
     }
   }, {
-    key: 'parseKeyParamsByRegex',
-    value: function parseKeyParamsByRegex(string, regexp) {
-      var result = regexp.exec(string);
-      if (result) {
-        result.shift();
-        result = result.filter(function (n) {
-          return n !== undefined;
-        });
-        if (result.length === 2) {
-          return result[1];
-        }
-      }
-      return null;
-    }
-  }, {
     key: 'cloneObj',
     value: function cloneObj(obj) {
       return JSON.parse(JSON.stringify(obj));
@@ -5334,9 +5331,10 @@ var PlaylistLoader = (function () {
           cc = 0,
           frag,
           byteRangeEndOffset,
-          byteRangeStartOffset;
+          byteRangeStartOffset,
+          programDateTime = null;
       var levelkey = { method: null, key: null, iv: null, uri: null };
-      regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))/g;
+      regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*))/g;
       while ((result = regexp.exec(string)) !== null) {
         result.shift();
         result = result.filter(function (n) {
@@ -5385,17 +5383,22 @@ var PlaylistLoader = (function () {
               } else {
                 fragdecryptdata = levelkey;
               }
-              level.fragments.push({ url: result[2] ? this.resolve(result[2], baseurl) : null, duration: duration, start: totalduration, sn: sn, level: id, cc: cc, byteRangeStartOffset: byteRangeStartOffset, byteRangeEndOffset: byteRangeEndOffset, decryptdata: fragdecryptdata });
-              totalduration += duration;
+              var url = result[2] ? this.resolve(result[2], baseurl) : null;
+              if (url) {
+                level.fragments.push({ url: url, duration: duration, start: totalduration, sn: sn, level: id, cc: cc, byteRangeStartOffset: byteRangeStartOffset, byteRangeEndOffset: byteRangeEndOffset, decryptdata: fragdecryptdata, programDateTime: programDateTime });
+                totalduration += duration;
+              }
               byteRangeStartOffset = null;
+              programDateTime = null;
             }
             break;
           case 'KEY':
             // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
             var decryptparams = result[1];
-            var decryptmethod = this.parseKeyParamsByRegex(decryptparams, /(METHOD)=([^,]*)/),
-                decrypturi = this.parseKeyParamsByRegex(decryptparams, /(URI)=["]([^,]*)["]/),
-                decryptiv = this.parseKeyParamsByRegex(decryptparams, /(IV)=([^,]*)/);
+            var keyAttrs = new _utilsAttrList2['default'](decryptparams);
+            var decryptmethod = keyAttrs.enumeratedString('METHOD'),
+                decrypturi = keyAttrs.quotedString('URI'),
+                decryptiv = keyAttrs.hexadecimalInteger('IV');
             if (decryptmethod) {
               levelkey = { method: null, key: null, iv: null, uri: null };
               if (decrypturi && decryptmethod === 'AES-128') {
@@ -5404,20 +5407,12 @@ var PlaylistLoader = (function () {
                 levelkey.uri = this.resolve(decrypturi, baseurl);
                 levelkey.key = null;
                 // Initialization Vector (IV)
-                if (decryptiv) {
-                  levelkey.iv = decryptiv;
-                  if (levelkey.iv.substring(0, 2) === '0x') {
-                    levelkey.iv = levelkey.iv.substring(2);
-                  }
-                  levelkey.iv = levelkey.iv.match(/.{8}/g);
-                  levelkey.iv[0] = parseInt(levelkey.iv[0], 16);
-                  levelkey.iv[1] = parseInt(levelkey.iv[1], 16);
-                  levelkey.iv[2] = parseInt(levelkey.iv[2], 16);
-                  levelkey.iv[3] = parseInt(levelkey.iv[3], 16);
-                  levelkey.iv = new Uint32Array(levelkey.iv);
-                }
+                levelkey.iv = decryptiv;
               }
             }
+            break;
+          case 'PROGRAM-DATE-TIME':
+            programDateTime = new Date(Date.parse(result[1]));
             break;
           default:
             break;
@@ -5505,7 +5500,7 @@ var PlaylistLoader = (function () {
 exports['default'] = PlaylistLoader;
 module.exports = exports['default'];
 
-},{"../errors":17,"../events":18,"../utils/url":28}],24:[function(require,module,exports){
+},{"../errors":17,"../events":18,"../utils/attr-list":26,"../utils/url":29}],24:[function(require,module,exports){
 /**
  * Generate MP4 Box
 */
@@ -5573,13 +5568,7 @@ var MP4 = (function () {
         }
       }
 
-      MP4.MAJOR_BRAND = new Uint8Array(['i'.charCodeAt(0), 's'.charCodeAt(0), 'o'.charCodeAt(0), 'm'.charCodeAt(0)]);
-
-      MP4.AVC1_BRAND = new Uint8Array(['a'.charCodeAt(0), 'v'.charCodeAt(0), 'c'.charCodeAt(0), '1'.charCodeAt(0)]);
-
-      MP4.MINOR_VERSION = new Uint8Array([0, 0, 0, 1]);
-
-      MP4.VIDEO_HDLR = new Uint8Array([0x00, // version 0
+      var videoHdlr = new Uint8Array([0x00, // version 0
       0x00, 0x00, 0x00, // flags
       0x00, 0x00, 0x00, 0x00, // pre_defined
       0x76, 0x69, 0x64, 0x65, // handler_type: 'vide'
@@ -5589,7 +5578,7 @@ var MP4 = (function () {
       0x56, 0x69, 0x64, 0x65, 0x6f, 0x48, 0x61, 0x6e, 0x64, 0x6c, 0x65, 0x72, 0x00 // name: 'VideoHandler'
       ]);
 
-      MP4.AUDIO_HDLR = new Uint8Array([0x00, // version 0
+      var audioHdlr = new Uint8Array([0x00, // version 0
       0x00, 0x00, 0x00, // flags
       0x00, 0x00, 0x00, 0x00, // pre_defined
       0x73, 0x6f, 0x75, 0x6e, // handler_type: 'soun'
@@ -5600,11 +5589,11 @@ var MP4 = (function () {
       ]);
 
       MP4.HDLR_TYPES = {
-        'video': MP4.VIDEO_HDLR,
-        'audio': MP4.AUDIO_HDLR
+        'video': videoHdlr,
+        'audio': audioHdlr
       };
 
-      MP4.DREF = new Uint8Array([0x00, // version 0
+      var dref = new Uint8Array([0x00, // version 0
       0x00, 0x00, 0x00, // flags
       0x00, 0x00, 0x00, 0x01, // entry_count
       0x00, 0x00, 0x00, 0x0c, // entry_size
@@ -5612,12 +5601,14 @@ var MP4 = (function () {
       0x00, // version 0
       0x00, 0x00, 0x01 // entry_flags
       ]);
-      MP4.STCO = new Uint8Array([0x00, // version
+
+      var stco = new Uint8Array([0x00, // version
       0x00, 0x00, 0x00, // flags
       0x00, 0x00, 0x00, 0x00 // entry_count
       ]);
-      MP4.STSC = MP4.STCO;
-      MP4.STTS = MP4.STCO;
+
+      MP4.STTS = MP4.STSC = MP4.STCO = stco;
+
       MP4.STSZ = new Uint8Array([0x00, // version
       0x00, 0x00, 0x00, // flags
       0x00, 0x00, 0x00, 0x00, // sample_size
@@ -5638,28 +5629,34 @@ var MP4 = (function () {
       0x00, 0x00, 0x00, // flags
       0x00, 0x00, 0x00, 0x01]); // entry_count
 
-      MP4.FTYP = MP4.box(MP4.types.ftyp, MP4.MAJOR_BRAND, MP4.MINOR_VERSION, MP4.MAJOR_BRAND, MP4.AVC1_BRAND);
-      MP4.DINF = MP4.box(MP4.types.dinf, MP4.box(MP4.types.dref, MP4.DREF));
+      var majorBrand = new Uint8Array([105, 115, 111, 109]); // isom
+      var avc1Brand = new Uint8Array([97, 118, 99, 49]); // avc1
+      var minorVersion = new Uint8Array([0, 0, 0, 1]);
+
+      MP4.FTYP = MP4.box(MP4.types.ftyp, majorBrand, minorVersion, majorBrand, avc1Brand);
+      MP4.DINF = MP4.box(MP4.types.dinf, MP4.box(MP4.types.dref, dref));
     }
   }, {
     key: 'box',
     value: function box(type) {
       var payload = Array.prototype.slice.call(arguments, 1),
-          size = 0,
+          size = 8,
           i = payload.length,
           len = i,
-          result,
-          view;
+          result;
       // calculate the total size we need to allocate
       while (i--) {
         size += payload[i].byteLength;
       }
-      result = new Uint8Array(size + 8);
-      view = new DataView(result.buffer);
-      view.setUint32(0, result.byteLength);
+      result = new Uint8Array(size);
+      result[0] = size >> 24 & 0xff;
+      result[1] = size >> 16 & 0xff;
+      result[2] = size >> 8 & 0xff;
+      result[3] = size & 0xff;
       result.set(type, 4);
       // copy the payload into the result
       for (i = 0, size = 8; i < len; i++) {
+        // copy payload[i] array @ offset size
         result.set(payload[i], size);
         size += payload[i].byteLength;
       }
@@ -5981,7 +5978,7 @@ var MP4 = (function () {
         cts = sample.cts;
         array.set([duration >>> 24 & 0xFF, duration >>> 16 & 0xFF, duration >>> 8 & 0xFF, duration & 0xFF, // sample_duration
         size >>> 24 & 0xFF, size >>> 16 & 0xFF, size >>> 8 & 0xFF, size & 0xFF, // sample_size
-        flags.isLeading << 2 | sample.flags.dependsOn, flags.isDependedOn << 6 | flags.hasRedundancy << 4 | flags.paddingValue << 1 | flags.isNonSync, flags.degradPrio & 0xF0 << 8, flags.degradPrio & 0x0F, // sample_flags
+        flags.isLeading << 2 | flags.dependsOn, flags.isDependedOn << 6 | flags.hasRedundancy << 4 | flags.paddingValue << 1 | flags.isNonSync, flags.degradPrio & 0xF0 << 8, flags.degradPrio & 0x0F, // sample_flags
         cts >>> 24 & 0xFF, cts >>> 16 & 0xFF, cts >>> 8 & 0xFF, cts & 0xFF // sample_composition_time_offset
         ], 12 + 16 * i);
       }
@@ -6437,7 +6434,112 @@ var MP4Remuxer = (function () {
 exports['default'] = MP4Remuxer;
 module.exports = exports['default'];
 
-},{"../errors":17,"../events":18,"../remux/mp4-generator":24,"../utils/logger":27}],26:[function(require,module,exports){
+},{"../errors":17,"../events":18,"../remux/mp4-generator":24,"../utils/logger":28}],26:[function(require,module,exports){
+
+// adapted from https://github.com/kanongil/node-m3u8parse/blob/master/attrlist.js
+'use strict';
+
+Object.defineProperty(exports, '__esModule', {
+  value: true
+});
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+var AttrList = (function () {
+  function AttrList(attrs) {
+    _classCallCheck(this, AttrList);
+
+    if (typeof attrs === 'string') {
+      attrs = AttrList.parseAttrList(attrs);
+    }
+
+    Object.assign(this, attrs);
+  }
+
+  _createClass(AttrList, [{
+    key: 'decimalInteger',
+    value: function decimalInteger(attrName) {
+      var intValue = parseInt(this[attrName], 10);
+      if (intValue > Number.MAX_SAFE_INTEGER) {
+        return Infinity;
+      }
+      return intValue;
+    }
+  }, {
+    key: 'hexadecimalInteger',
+    value: function hexadecimalInteger(attrName) {
+      if (this[attrName]) {
+        var stringValue = (this[attrName] || '0x').slice(2);
+        stringValue = (stringValue.length & 1 ? '0' : '') + stringValue;
+
+        var value = new Uint8Array(stringValue.length / 2);
+        for (var i = 0; i < stringValue.length / 2; i++) {
+          value[i] = parseInt(stringValue.slice(i * 2, i * 2 + 2), 16);
+        }
+        return value;
+      } else {
+        return null;
+      }
+    }
+  }, {
+    key: 'hexadecimalIntegerAsNumber',
+    value: function hexadecimalIntegerAsNumber(attrName) {
+      var intValue = parseInt(this[attrName], 16);
+      if (intValue > Number.MAX_SAFE_INTEGER) {
+        return Infinity;
+      }
+      return intValue;
+    }
+  }, {
+    key: 'decimalFloatingPoint',
+    value: function decimalFloatingPoint(attrName) {
+      return parseFloat(this[attrName]);
+    }
+  }, {
+    key: 'quotedString',
+    value: function quotedString(attrName) {
+      var val = this[attrName];
+      return val ? val.slice(1, -1) : undefined;
+    }
+  }, {
+    key: 'enumeratedString',
+    value: function enumeratedString(attrName) {
+      return this[attrName];
+    }
+  }, {
+    key: 'decimalResolution',
+    value: function decimalResolution(attrName) {
+      var res = /^(\d+)x(\d+)$/.exec(this[attrName]);
+      if (res === null) {
+        return undefined;
+      }
+      return {
+        width: parseInt(res[1], 10),
+        height: parseInt(res[2], 10)
+      };
+    }
+  }], [{
+    key: 'parseAttrList',
+    value: function parseAttrList(input) {
+      var re = /(.+?)=((?:\".*?\")|.*?)(?:,|$)/g;
+      var match,
+          attrs = {};
+      while ((match = re.exec(input)) !== null) {
+        attrs[match[1]] = match[2];
+      }
+      return attrs;
+    }
+  }]);
+
+  return AttrList;
+})();
+
+exports['default'] = AttrList;
+module.exports = exports['default'];
+
+},{}],27:[function(require,module,exports){
 "use strict";
 
 var BinarySearch = {
@@ -6482,7 +6584,7 @@ var BinarySearch = {
 
 module.exports = BinarySearch;
 
-},{}],27:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -6564,7 +6666,7 @@ exports.enableLogs = enableLogs;
 var logger = exportedLogger;
 exports.logger = logger;
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 'use strict';
 
 var URLHelper = {
@@ -6645,7 +6747,7 @@ var URLHelper = {
 
 module.exports = URLHelper;
 
-},{}],29:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 /**
  * XHR based logger
 */
@@ -6778,6 +6880,6 @@ var XhrLoader = (function () {
 exports['default'] = XhrLoader;
 module.exports = exports['default'];
 
-},{"../utils/logger":27}]},{},[20])(20)
+},{"../utils/logger":28}]},{},[20])(20)
 });
 //# sourceMappingURL=hls.js.map
