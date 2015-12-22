@@ -642,10 +642,10 @@ class MSEMediaController {
             default:
                 break;
         }
-        // check/update current fragment
-        this._checkFragmentChanged();
         // check buffer
         this._checkBuffer();
+        // check/update current fragment
+        this._checkFragmentChanged();
     }
 
     bufferInfo(pos, maxHoleDuration) {
@@ -1506,29 +1506,46 @@ class MSEMediaController {
                         media.currentTime = seekAfterBuffered;
                         this.seekAfterBuffered = undefined;
                     }
-                } else if (readyState < 3) {
-                    // readyState = 1 or 2
-                    //  HAVE_METADATA (numeric value 1)     Enough of the resource has been obtained that the duration of the resource is available.
-                    //                                       The API will no longer throw an exception when seeking.
-                    // HAVE_CURRENT_DATA (numeric value 2)  Data for the immediate current playback position is available,
-                    //                                      but either not enough data is available that the user agent could
-                    //                                      successfully advance the current playback position
-                    var currentTime = media.currentTime;
-                    var bufferInfo = this.bufferInfo(currentTime, 0);
-                    // check if current time is buffered or not
-                    if (bufferInfo.len === 0) {
-                        // no buffer available @ currentTime, check if next buffer is close (in a 300 ms range)
-                        var nextBufferStart = bufferInfo.nextStart;
+                } else {
+                    var currentTime = media.currentTime,
+                        bufferInfo = this.bufferInfo(currentTime, 0),
+                        isPlaying = !(
+                            media.paused ||
+                            media.ended ||
+                            media.seeking ||
+                            readyState < 3
+                        ),
+                        jumpThreshold = 0.2;
+
+                    // check buffer upfront
+                    // if less than 200ms is buffered, and media is playing but playhead is not moving,
+                    // and we have a new buffer range available upfront, let's seek to that one
+                    if (bufferInfo.len <= jumpThreshold) {
                         if (
-                            nextBufferStart &&
-                            nextBufferStart - currentTime < 0.3
+                            currentTime >
+                                media.playbackRate * this.lastCurrentTime ||
+                            !isPlaying
                         ) {
-                            // next buffer is close ! adjust currentTime to nextBufferStart
-                            // this will ensure effective video decoding
-                            logger.log(
-                                `adjust currentTime from ${currentTime} to ${nextBufferStart}`
-                            );
-                            media.currentTime = nextBufferStart;
+                            // playhead moving or media not playing
+                            jumpThreshold = 0;
+                        } else {
+                            logger.trace('playback seems stuck');
+                        }
+                        // if we are below threshold, try to jump if next buffer range is close
+                        if (bufferInfo.len <= jumpThreshold) {
+                            // no buffer available @ currentTime, check if next buffer is close (in a 300 ms range)
+                            var nextBufferStart = bufferInfo.nextStart;
+                            if (
+                                nextBufferStart &&
+                                nextBufferStart - currentTime < 0.3
+                            ) {
+                                // next buffer is close ! adjust currentTime to nextBufferStart
+                                // this will ensure effective video decoding
+                                logger.log(
+                                    `adjust currentTime from ${currentTime} to ${nextBufferStart}`
+                                );
+                                media.currentTime = nextBufferStart;
+                            }
                         }
                     }
                 }
