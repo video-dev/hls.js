@@ -157,8 +157,11 @@ class PlaylistLoader {
             } else {
               fragdecryptdata = levelkey;
             }
-            level.fragments.push({url: result[2] ? this.resolve(result[2], baseurl) : null, duration: duration, start: totalduration, sn: sn, level: id, cc: cc, byteRangeStartOffset: byteRangeStartOffset, byteRangeEndOffset: byteRangeEndOffset, decryptdata : fragdecryptdata});
-            totalduration += duration;
+            var url = result[2] ? this.resolve(result[2], baseurl) : null;
+            if(url) {
+              level.fragments.push({url: url, duration: duration, start: totalduration, sn: sn, level: id, cc: cc, byteRangeStartOffset: byteRangeStartOffset, byteRangeEndOffset: byteRangeEndOffset, decryptdata : fragdecryptdata});
+              totalduration += duration;
+            }
             byteRangeStartOffset = null;
           }
           break;
