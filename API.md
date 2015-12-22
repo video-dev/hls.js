@@ -212,6 +212,10 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
 var hls = new Hls(config);
 ```
 
+#### ```Hls.DefaultConfig get/set```
+this getter/setter allows to retrieve and override Hls default configuration.
+this configuration will be applied by default to all instances.
+
 #### ```debug```
 (default false)
 
