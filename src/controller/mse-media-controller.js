@@ -1110,7 +1110,10 @@ class MSEMediaController {
     }
 
     onMediaMetadata() {
-        if (this.media.currentTime !== this.startPosition) {
+        var currentTime = this.media.currentTime;
+        // only adjust currentTime if not equal to 0
+        if (!currentTime && currentTime !== this.startPosition) {
+            logger.log('onMediaMetadata: adjust currentTime to startPosition');
             this.media.currentTime = this.startPosition;
         }
         this.loadedmetadata = true;
