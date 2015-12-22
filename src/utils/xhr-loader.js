@@ -94,7 +94,7 @@ class XhrLoader {
                 // error ...
                 if (this.stats.retry < this.maxRetry) {
                     logger.warn(
-                        `${event.type} while loading ${this.url}, retrying in ${
+                        `${xhr.status} while loading ${this.url}, retrying in ${
                             this.retryDelay
                         }...`
                     );
