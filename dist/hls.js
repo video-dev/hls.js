@@ -6816,9 +6816,9 @@ var XhrLoader = (function () {
     key: 'loadInternal',
     value: function loadInternal() {
       var xhr = this.loader = new XMLHttpRequest();
-      xhr.onload = this.loadsuccess.bind(this);
-      xhr.onerror = this.loaderror.bind(this);
+      xhr.onreadystatechange = this.statechange.bind(this);
       xhr.onprogress = this.loadprogress.bind(this);
+
       xhr.open('GET', this.url, true);
       if (this.byteRange) {
         xhr.setRequestHeader('Range', 'bytes=' + this.byteRange);
@@ -6832,26 +6832,31 @@ var XhrLoader = (function () {
       xhr.send();
     }
   }, {
-    key: 'loadsuccess',
-    value: function loadsuccess(event) {
-      window.clearTimeout(this.timeoutHandle);
-      this.stats.tload = performance.now();
-      this.onSuccess(event, this.stats);
-    }
-  }, {
-    key: 'loaderror',
-    value: function loaderror(event) {
-      if (this.stats.retry < this.maxRetry) {
-        _utilsLogger.logger.warn(event.type + ' while loading ' + this.url + ', retrying in ' + this.retryDelay + '...');
-        this.destroy();
-        window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
-        // exponential backoff
-        this.retryDelay = Math.min(2 * this.retryDelay, 64000);
-        this.stats.retry++;
-      } else {
-        window.clearTimeout(this.timeoutHandle);
-        _utilsLogger.logger.error(event.type + ' while loading ' + this.url);
-        this.onError(event);
+    key: 'statechange',
+    value: function statechange(event) {
+      var xhr = event.currentTarget;
+      // 4 = Response from server has been completely loaded.
+      if (xhr.readyState === 4) {
+        // http status between 200 to 299 are all successful
+        if (xhr.status === 200 && xhr.status < 300) {
+          window.clearTimeout(this.timeoutHandle);
+          this.stats.tload = performance.now();
+          this.onSuccess(event, this.stats);
+        } else {
+          // error ...
+          if (this.stats.retry < this.maxRetry) {
+            _utilsLogger.logger.warn(event.type + ' while loading ' + this.url + ', retrying in ' + this.retryDelay + '...');
+            this.destroy();
+            window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
+            // exponential backoff
+            this.retryDelay = Math.min(2 * this.retryDelay, 64000);
+            this.stats.retry++;
+          } else {
+            window.clearTimeout(this.timeoutHandle);
+            _utilsLogger.logger.error(event.type + ' while loading ' + this.url);
+            this.onError(event);
+          }
+        }
       }
     }
   }, {
