@@ -17,14 +17,18 @@ class AttrList {
     }
 
     hexadecimalInteger(attrName) {
-        let stringValue = (this[attrName] || '0x').slice(2);
-        stringValue = (stringValue.length & 1 ? '0' : '') + stringValue;
+        if (this[attrName]) {
+            let stringValue = (this[attrName] || '0x').slice(2);
+            stringValue = (stringValue.length & 1 ? '0' : '') + stringValue;
 
-        const value = new Uint8Array(stringValue.length / 2);
-        for (let i = 0; i < stringValue.length / 2; i++) {
-            value[i] = parseInt(stringValue.slice(i * 2, i * 2 + 2), 16);
+            const value = new Uint8Array(stringValue.length / 2);
+            for (let i = 0; i < stringValue.length / 2; i++) {
+                value[i] = parseInt(stringValue.slice(i * 2, i * 2 + 2), 16);
+            }
+            return value;
+        } else {
+            return null;
         }
-        return value;
     }
 
     hexadecimalIntegerAsNumber(attrName) {
