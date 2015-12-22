@@ -29,6 +29,7 @@ class MSEMediaController {
     this.config = hls.config;
     this.audioCodecSwap = false;
     this.hls = hls;
+    this.ticks = 0;
     // Source Buffer listeners
     this.onsbue = this.onSBUpdateEnd.bind(this);
     this.onsbe  = this.onSBUpdateError.bind(this);
@@ -138,6 +139,17 @@ class MSEMediaController {
   }
 
   tick() {
+    this.ticks++;
+    if (this.ticks === 1) {
+      this.doTick();
+      if (this.ticks > 1) {
+        setTimeout(this.tick, 1);
+      }
+      this.ticks = 0;
+    }
+  }
+
+  doTick() {
     var pos, level, levelDetails, hls = this.hls;
     switch(this.state) {
       case State.ERROR:
