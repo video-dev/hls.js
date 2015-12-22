@@ -88,15 +88,16 @@ class PlaylistLoader {
             level.bitrate = level.attrs.decimalInteger('BANDWIDTH');
             level.name = level.attrs.quotedString('NAME');
 
-            const codecs = (level.attrs.quotedString('CODECS') || '').split(
-                ','
-            );
-            for (let i = 0; i < codecs.length; i++) {
-                const codec = codecs[i];
-                if (codec.indexOf('avc1') !== -1) {
-                    level.videoCodec = this.avc1toavcoti(codec);
-                } else {
-                    level.audioCodec = codec;
+            var codecs = level.attrs.quotedString('CODECS');
+            if (codecs) {
+                codecs = codecs.split(',');
+                for (let i = 0; i < codecs.length; i++) {
+                    const codec = codecs[i];
+                    if (codec.indexOf('avc1') !== -1) {
+                        level.videoCodec = this.avc1toavcoti(codec);
+                    } else {
+                        level.audioCodec = codec;
+                    }
                 }
             }
 
