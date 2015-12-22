@@ -1713,7 +1713,10 @@ var MSEMediaController = (function () {
   }, {
     key: 'onMediaMetadata',
     value: function onMediaMetadata() {
-      if (this.media.currentTime !== this.startPosition) {
+      var currentTime = this.media.currentTime;
+      // only adjust currentTime if not equal to 0
+      if (!currentTime && currentTime !== this.startPosition) {
+        _utilsLogger.logger.log('onMediaMetadata: adjust currentTime to startPosition');
         this.media.currentTime = this.startPosition;
       }
       this.loadedmetadata = true;
@@ -5287,13 +5290,16 @@ var PlaylistLoader = (function () {
         level.bitrate = level.attrs.decimalInteger('BANDWIDTH');
         level.name = level.attrs.quotedString('NAME');
 
-        var codecs = (level.attrs.quotedString('CODECS') || '').split(',');
-        for (var i = 0; i < codecs.length; i++) {
-          var codec = codecs[i];
-          if (codec.indexOf('avc1') !== -1) {
-            level.videoCodec = this.avc1toavcoti(codec);
-          } else {
-            level.audioCodec = codec;
+        var codecs = level.attrs.quotedString('CODECS');
+        if (codecs) {
+          codecs = codecs.split(',');
+          for (var i = 0; i < codecs.length; i++) {
+            var codec = codecs[i];
+            if (codec.indexOf('avc1') !== -1) {
+              level.videoCodec = this.avc1toavcoti(codec);
+            } else {
+              level.audioCodec = codec;
+            }
           }
         }
 
