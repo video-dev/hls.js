@@ -3817,7 +3817,6 @@ var TSDemuxer = (function () {
     this.observer = observer;
     this.remuxerClass = remuxerClass;
     this.lastCC = 0;
-    this.PES_TIMESCALE = 90000;
     this.remuxer = new this.remuxerClass(observer);
   }
 
@@ -4247,16 +4246,18 @@ var TSDemuxer = (function () {
                 // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
                 overflow = i - state - 1;
                 if (overflow) {
+                  var track = this._avcTrack,
+                      samples = track.samples;
                   //logger.log('first NALU found with overflow:' + overflow);
-                  if (this._avcTrack.samples.length) {
-                    var lastavcSample = this._avcTrack.samples[this._avcTrack.samples.length - 1];
+                  if (samples.length) {
+                    var lastavcSample = samples[samples.length - 1];
                     var lastUnit = lastavcSample.units.units[lastavcSample.units.units.length - 1];
                     var tmp = new Uint8Array(lastUnit.data.byteLength + overflow);
                     tmp.set(lastUnit.data, 0);
                     tmp.set(array.subarray(0, overflow), lastUnit.data.byteLength);
                     lastUnit.data = tmp;
                     lastavcSample.units.length += overflow;
-                    this._avcTrack.len += overflow;
+                    track.len += overflow;
                   }
                 }
               }
@@ -5296,9 +5297,9 @@ var PlaylistLoader = (function () {
 
         Object.assign(level, level.attrs.decimalResolution('RESOLUTION'));
         level.bitrate = level.attrs.decimalInteger('BANDWIDTH');
-        level.name = level.attrs.quotedString('NAME');
+        level.name = level.attrs.NAME;
 
-        var codecs = level.attrs.quotedString('CODECS');
+        var codecs = level.attrs.CODECS;
         if (codecs) {
           codecs = codecs.split(',');
           for (var i = 0; i < codecs.length; i++) {
@@ -5411,7 +5412,7 @@ var PlaylistLoader = (function () {
             var decryptparams = result[1];
             var keyAttrs = new _utilsAttrList2['default'](decryptparams);
             var decryptmethod = keyAttrs.enumeratedString('METHOD'),
-                decrypturi = keyAttrs.quotedString('URI'),
+                decrypturi = keyAttrs.URI,
                 decryptiv = keyAttrs.hexadecimalInteger('IV');
             if (decryptmethod) {
               levelkey = { method: null, key: null, iv: null, uri: null };
@@ -6512,12 +6513,6 @@ var AttrList = (function () {
       return parseFloat(this[attrName]);
     }
   }, {
-    key: 'quotedString',
-    value: function quotedString(attrName) {
-      var val = this[attrName];
-      return val ? val.slice(1, -1) : undefined;
-    }
-  }, {
     key: 'enumeratedString',
     value: function enumeratedString(attrName) {
       return this[attrName];
@@ -6541,7 +6536,11 @@ var AttrList = (function () {
       var match,
           attrs = {};
       while ((match = re.exec(input)) !== null) {
-        attrs[match[1]] = match[2];
+        var value = match[2];
+        if (value.startsWith('"') && value.endsWith('"')) {
+          value = value.slice(1, -1);
+        }
+        attrs[match[1]] = value;
       }
       return attrs;
     }
@@ -6796,12 +6795,14 @@ var XhrLoader = (function () {
   }, {
     key: 'abort',
     value: function abort() {
-      if (this.loader && this.loader.readyState !== 4) {
+      var loader = this.loader,
+          timeoutHandle = this.timeoutHandle;
+      if (loader && loader.readyState !== 4) {
         this.stats.aborted = true;
-        this.loader.abort();
+        loader.abort();
       }
-      if (this.timeoutHandle) {
-        window.clearTimeout(this.timeoutHandle);
+      if (timeoutHandle) {
+        window.clearTimeout(timeoutHandle);
       }
     }
   }, {
@@ -6848,18 +6849,21 @@ var XhrLoader = (function () {
   }, {
     key: 'statechange',
     value: function statechange(event) {
-      var xhr = event.currentTarget;
+      var xhr = event.currentTarget,
+          status = xhr.status,
+          stats = this.stats;
+      // don't proceed if xhr has been aborted
       // 4 = Response from server has been completely loaded.
-      if (xhr.readyState === 4) {
+      if (!stats.aborted && xhr.readyState === 4) {
         // http status between 200 to 299 are all successful
-        if (xhr.status === 200 && xhr.status < 300) {
+        if (status === 200 && status < 300) {
           window.clearTimeout(this.timeoutHandle);
-          this.stats.tload = performance.now();
-          this.onSuccess(event, this.stats);
+          stats.tload = performance.now();
+          this.onSuccess(event, stats);
         } else {
           // error ...
-          if (this.stats.retry < this.maxRetry) {
-            _utilsLogger.logger.warn(xhr.status + ' while loading ' + this.url + ', retrying in ' + this.retryDelay + '...');
+          if (stats.retry < this.maxRetry) {
+            _utilsLogger.logger.warn(status + ' while loading ' + this.url + ', retrying in ' + this.retryDelay + '...');
             this.destroy();
             window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
             // exponential backoff
@@ -6867,7 +6871,7 @@ var XhrLoader = (function () {
             this.stats.retry++;
           } else {
             window.clearTimeout(this.timeoutHandle);
-            _utilsLogger.logger.error(event.type + ' while loading ' + this.url);
+            _utilsLogger.logger.error(status + ' while loading ' + this.url);
             this.onError(event);
           }
         }
