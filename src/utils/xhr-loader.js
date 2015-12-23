@@ -17,12 +17,14 @@ class XhrLoader {
     }
 
     abort() {
-        if (this.loader && this.loader.readyState !== 4) {
+        var loader = this.loader,
+            timeoutHandle = this.timeoutHandle;
+        if (loader && loader.readyState !== 4) {
             this.stats.aborted = true;
-            this.loader.abort();
+            loader.abort();
         }
-        if (this.timeoutHandle) {
-            window.clearTimeout(this.timeoutHandle);
+        if (timeoutHandle) {
+            window.clearTimeout(timeoutHandle);
         }
     }
 
@@ -82,19 +84,22 @@ class XhrLoader {
     }
 
     statechange(event) {
-        var xhr = event.currentTarget;
+        var xhr = event.currentTarget,
+            status = xhr.status,
+            stats = this.stats;
+        // don't proceed if xhr has been aborted
         // 4 = Response from server has been completely loaded.
-        if (xhr.readyState === 4) {
+        if (!stats.aborted && xhr.readyState === 4) {
             // http status between 200 to 299 are all successful
-            if (xhr.status === 200 && xhr.status < 300) {
+            if (status === 200 && status < 300) {
                 window.clearTimeout(this.timeoutHandle);
-                this.stats.tload = performance.now();
-                this.onSuccess(event, this.stats);
+                stats.tload = performance.now();
+                this.onSuccess(event, stats);
             } else {
                 // error ...
-                if (this.stats.retry < this.maxRetry) {
+                if (stats.retry < this.maxRetry) {
                     logger.warn(
-                        `${xhr.status} while loading ${this.url}, retrying in ${
+                        `${status} while loading ${this.url}, retrying in ${
                             this.retryDelay
                         }...`
                     );
@@ -108,7 +113,7 @@ class XhrLoader {
                     this.stats.retry++;
                 } else {
                     window.clearTimeout(this.timeoutHandle);
-                    logger.error(`${event.type} while loading ${this.url}`);
+                    logger.error(`${status} while loading ${this.url}`);
                     this.onError(event);
                 }
             }
