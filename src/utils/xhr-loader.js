@@ -91,7 +91,7 @@ class XhrLoader {
         // 4 = Response from server has been completely loaded.
         if (!stats.aborted && xhr.readyState === 4) {
             // http status between 200 to 299 are all successful
-            if (status === 200 && status < 300) {
+            if (status >= 200 && status < 300) {
                 window.clearTimeout(this.timeoutHandle);
                 stats.tload = performance.now();
                 this.onSuccess(event, stats);
