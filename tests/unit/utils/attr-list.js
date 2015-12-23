@@ -20,28 +20,32 @@ describe('AttrList', () => {
   it('parses valid decimalInteger attribute', () => {
     assert.strictEqual(new AttrList('INT=42').decimalInteger('INT'), 42);
     assert.strictEqual(new AttrList('INT=0').decimalInteger('INT'), 0);
+    assert.strictEqual(new AttrList('INT="42"').decimalInteger('INT'), 42);
   });
   it('parses valid hexadecimalInteger attribute', () => {
     assert.strictEqual(new AttrList('HEX=0x42').hexadecimalIntegerAsNumber('HEX'), 0x42);
     assert.strictEqual(new AttrList('HEX=0X42').hexadecimalIntegerAsNumber('HEX'), 0x42);
     assert.strictEqual(new AttrList('HEX=0x0').hexadecimalIntegerAsNumber('HEX'), 0);
+    assert.strictEqual(new AttrList('HEX="0x42"').hexadecimalIntegerAsNumber('HEX'), 0x42);
   });
   it('parses valid decimalFloatingPoint attribute', () => {
     assert.strictEqual(new AttrList('FLOAT=0.42').decimalFloatingPoint('FLOAT'), 0.42);
     assert.strictEqual(new AttrList('FLOAT=-0.42').decimalFloatingPoint('FLOAT'), -0.42);
     assert.strictEqual(new AttrList('FLOAT=0').decimalFloatingPoint('FLOAT'), 0);
+    assert.strictEqual(new AttrList('FLOAT="0.42"').decimalFloatingPoint('FLOAT'), 0.42);
   });
   it('parses valid quotedString attribute', () => {
-    assert.strictEqual(new AttrList('STRING="hi"').quotedString('STRING'), 'hi');
-    assert.strictEqual(new AttrList('STRING=""').quotedString('STRING'), '');
+    assert.strictEqual(new AttrList('STRING="hi"').STRING, 'hi');
+    assert.strictEqual(new AttrList('STRING=""').STRING, '');
   });
   it('parses exotic quotedString attribute', () => {
     const list = new AttrList('STRING="hi,ENUM=OK,RES=4x2"');
-    assert.strictEqual(list.quotedString('STRING'), 'hi,ENUM=OK,RES=4x2');
+    assert.strictEqual(list.STRING, 'hi,ENUM=OK,RES=4x2');
     assert.strictEqual(Object.keys(list).length, 1);
   });
   it('parses valid enumeratedString attribute', () => {
     assert.strictEqual(new AttrList('ENUM=OK').enumeratedString('ENUM'), 'OK');
+    assert.strictEqual(new AttrList('ENUM="OK"').enumeratedString('ENUM'), 'OK');
   });
   it('parses exotic enumeratedString attribute', () => {
     assert.strictEqual(new AttrList('ENUM=1').enumeratedString('ENUM'), '1');
@@ -54,6 +58,7 @@ describe('AttrList', () => {
   it('parses valid decimalResolution attribute', () => {
     assert(deepStrictEqual(new AttrList('RES=400x200').decimalResolution('RES'), { width:400, height:200 }));
     assert(deepStrictEqual(new AttrList('RES=0x0').decimalResolution('RES'), { width:0, height:0 }));
+    assert(deepStrictEqual(new AttrList('RES="400x200"').decimalResolution('RES'), { width:400, height:200 }));
   });
   it('handles invalid decimalResolution attribute', () => {
     assert(deepStrictEqual(new AttrList('RES=400x-200').decimalResolution('RES'), undefined));
@@ -70,7 +75,7 @@ describe('AttrList', () => {
     assert.strictEqual(list.decimalInteger('INT'), 42);
     assert.strictEqual(list.hexadecimalIntegerAsNumber('HEX'), 0x42);
     assert.strictEqual(list.decimalFloatingPoint('FLOAT'), 0.42);
-    assert.strictEqual(list.quotedString('STRING'), 'hi');
+    assert.strictEqual(list.STRING, 'hi');
     assert.strictEqual(list.enumeratedString('ENUM'), 'OK');
     assert(deepStrictEqual(list.decimalResolution('RES'), { width:4, height:2 }));
     assert.strictEqual(Object.keys(list).length, 6);
@@ -81,7 +86,7 @@ describe('AttrList', () => {
     assert(isNaN(list.decimalInteger('INT')));
     assert(isNaN(list.hexadecimalIntegerAsNumber('HEX')));
     assert(isNaN(list.decimalFloatingPoint('FLOAT')));
-    assert.strictEqual(list.quotedString('STRING'), undefined);
+    assert.strictEqual(list.STRING, undefined);
     assert.strictEqual(list.enumeratedString('ENUM'), undefined);
     assert.strictEqual(list.decimalResolution('RES'), undefined);
     assert.strictEqual(Object.keys(list).length, 0);
@@ -92,7 +97,7 @@ describe('AttrList', () => {
     assert.strictEqual(list.decimalInteger('INT-VALUE'), 42);
     assert.strictEqual(list.hexadecimalIntegerAsNumber('H-E-X'), 0x42);
     assert.strictEqual(list.decimalFloatingPoint('-FLOAT'), 0.42);
-    assert.strictEqual(list.quotedString('STRING-'), 'hi');
+    assert.strictEqual(list['STRING-'], 'hi');
     assert.strictEqual(list.enumeratedString('ENUM'), 'OK');
     assert.strictEqual(Object.keys(list).length, 5);
   });

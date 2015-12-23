@@ -86,9 +86,9 @@ class PlaylistLoader {
 
             Object.assign(level, level.attrs.decimalResolution('RESOLUTION'));
             level.bitrate = level.attrs.decimalInteger('BANDWIDTH');
-            level.name = level.attrs.quotedString('NAME');
+            level.name = level.attrs.NAME;
 
-            var codecs = level.attrs.quotedString('CODECS');
+            var codecs = level.attrs.CODECS;
             if (codecs) {
                 codecs = codecs.split(',');
                 for (let i = 0; i < codecs.length; i++) {
@@ -216,7 +216,7 @@ class PlaylistLoader {
                     var decryptparams = result[1];
                     var keyAttrs = new AttrList(decryptparams);
                     var decryptmethod = keyAttrs.enumeratedString('METHOD'),
-                        decrypturi = keyAttrs.quotedString('URI'),
+                        decrypturi = keyAttrs.URI,
                         decryptiv = keyAttrs.hexadecimalInteger('IV');
                     if (decryptmethod) {
                         levelkey = {
