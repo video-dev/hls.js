@@ -45,11 +45,6 @@ class AttrList {
     return parseFloat(this[attrName]);
   }
 
-  quotedString(attrName) {
-    const val = this[attrName];
-    return val ? val.slice(1, -1) : undefined;
-  }
-
   enumeratedString(attrName) {
     return this[attrName];
   }
@@ -69,7 +64,11 @@ class AttrList {
     const re = /(.+?)=((?:\".*?\")|.*?)(?:,|$)/g;
     var match, attrs = {};
     while ((match = re.exec(input)) !== null) {
-      attrs[match[1]] = match[2];
+      var value = match[2];
+      if (value.startsWith('"') && value.endsWith('"')) {
+        value = value.slice(1, -1);
+      }
+      attrs[match[1]] = value;
     }
     return attrs;
   }
