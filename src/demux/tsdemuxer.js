@@ -22,7 +22,6 @@
     this.observer = observer;
     this.remuxerClass = remuxerClass;
     this.lastCC = 0;
-    this.PES_TIMESCALE = 90000;
     this.remuxer = new this.remuxerClass(observer);
   }
 
@@ -424,16 +423,18 @@
               // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
               overflow  = i - state - 1;
               if (overflow) {
+                var track = this._avcTrack,
+                    samples = track.samples;
                 //logger.log('first NALU found with overflow:' + overflow);
-                if (this._avcTrack.samples.length) {
-                  var lastavcSample = this._avcTrack.samples[this._avcTrack.samples.length - 1];
+                if (samples.length) {
+                  var lastavcSample = samples[samples.length - 1];
                   var lastUnit = lastavcSample.units.units[lastavcSample.units.units.length - 1];
                   var tmp = new Uint8Array(lastUnit.data.byteLength + overflow);
                   tmp.set(lastUnit.data, 0);
                   tmp.set(array.subarray(0, overflow), lastUnit.data.byteLength);
                   lastUnit.data = tmp;
                   lastavcSample.units.length += overflow;
-                  this._avcTrack.len += overflow;
+                  track.len += overflow;
                 }
               }
             }
