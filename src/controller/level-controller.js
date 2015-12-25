@@ -167,11 +167,14 @@ class LevelController {
   }
 
   onError(event, data) {
+    var details = data.details, hls = this.hls, levelId, level;
+
     if(data.fatal) {
+      logger.error(`unrecovered fatal ${details} error`);
+      this.stop();
       return;
     }
 
-    var details = data.details, hls = this.hls, levelId, level;
     // try to recover not fatal errors
     switch(details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
@@ -205,20 +208,13 @@ class LevelController {
         if (recoverable) {
           logger.warn(`level controller,${details}: emergency switch-down for next fragment`);
           hls.abrController.nextAutoLevel = 0;
-        } else if(level && level.details && level.details.live) {
-          logger.warn(`level controller,${details} on live stream, discard`);
-        // FRAG_LOAD_ERROR and FRAG_LOAD_TIMEOUT are handled by mediaController
         } else if (details !== ErrorDetails.FRAG_LOAD_ERROR && details !== ErrorDetails.FRAG_LOAD_TIMEOUT) {
           logger.error(`cannot recover ${details} error`);
-          this._level = undefined;
-          // stopping live reloading timer if any
-          if (this.timer) {
-            clearInterval(this.timer);
-            this.timer = null;
-          }
-          // redispatch same error but with fatal set to true
+          this.stop();
+          // FIXME ugly hack
+          // modify event data for _latest_ Event.ERROR listeners
+          // (LevelController -> MSEMediaController -> frontend app)
           data.fatal = true;
-          hls.trigger(event, data);
         }
       }
     }
@@ -251,6 +247,15 @@ class LevelController {
       return this._manualLevel;
     } else {
      return this.hls.abrController.nextAutoLevel;
+    }
+  }
+
+  stop() {
+    this._level = undefined;
+    // stopping live reloading timer if any
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
     }
   }
 }
