@@ -81,14 +81,18 @@ class PlaylistLoader {
         while ((result = re.exec(string)) != null) {
             const level = {};
 
-            level.attrs = new AttrList(result[1]);
+            var attrs = (level.attrs = new AttrList(result[1]));
             level.url = this.resolve(result[2], baseurl);
 
-            Object.assign(level, level.attrs.decimalResolution('RESOLUTION'));
-            level.bitrate = level.attrs.decimalInteger('BANDWIDTH');
-            level.name = level.attrs.NAME;
+            var resolution = attrs.decimalResolution('RESOLUTION');
+            if (resolution) {
+                level.width = resolution.width;
+                level.height = resolution.height;
+            }
+            level.bitrate = attrs.decimalInteger('BANDWIDTH');
+            level.name = attrs.NAME;
 
-            var codecs = level.attrs.CODECS;
+            var codecs = attrs.CODECS;
             if (codecs) {
                 codecs = codecs.split(',');
                 for (let i = 0; i < codecs.length; i++) {
