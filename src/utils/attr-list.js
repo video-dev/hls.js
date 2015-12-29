@@ -63,10 +63,12 @@ class AttrList {
         var match,
             attrs = {};
         while ((match = re.exec(input)) !== null) {
-            var value = match[2];
+            var value = match[2],
+                quote = '"';
+
             if (
-                value.indexOf('"') === 0 &&
-                value.lastIndexOf('"') === value.length - 1
+                value.indexOf(quote) === 0 &&
+                value.lastIndexOf(quote) === value.length - 1
             ) {
                 value = value.slice(1, -1);
             }
