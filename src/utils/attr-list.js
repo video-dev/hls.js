@@ -6,8 +6,11 @@ class AttrList {
     if (typeof attrs === 'string') {
       attrs = AttrList.parseAttrList(attrs);
     }
-
-    Object.assign(this, attrs);
+    for(var attr in attrs){
+      if(attrs.hasOwnProperty(attr)) {
+        this[attr] = attrs[attr];
+      }
+    }
   }
 
   decimalInteger(attrName) {
