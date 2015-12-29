@@ -5292,14 +5292,18 @@ var PlaylistLoader = (function () {
       while ((result = re.exec(string)) != null) {
         var level = {};
 
-        level.attrs = new _utilsAttrList2['default'](result[1]);
+        var attrs = level.attrs = new _utilsAttrList2['default'](result[1]);
         level.url = this.resolve(result[2], baseurl);
 
-        Object.assign(level, level.attrs.decimalResolution('RESOLUTION'));
-        level.bitrate = level.attrs.decimalInteger('BANDWIDTH');
-        level.name = level.attrs.NAME;
+        var resolution = attrs.decimalResolution('RESOLUTION');
+        if (resolution) {
+          level.width = resolution.width;
+          level.height = resolution.height;
+        }
+        level.bitrate = attrs.decimalInteger('BANDWIDTH');
+        level.name = attrs.NAME;
 
-        var codecs = level.attrs.CODECS;
+        var codecs = attrs.CODECS;
         if (codecs) {
           codecs = codecs.split(',');
           for (var i = 0; i < codecs.length; i++) {
@@ -6469,8 +6473,11 @@ var AttrList = (function () {
     if (typeof attrs === 'string') {
       attrs = AttrList.parseAttrList(attrs);
     }
-
-    Object.assign(this, attrs);
+    for (var attr in attrs) {
+      if (attrs.hasOwnProperty(attr)) {
+        this[attr] = attrs[attr];
+      }
+    }
   }
 
   _createClass(AttrList, [{
@@ -6536,8 +6543,10 @@ var AttrList = (function () {
       var match,
           attrs = {};
       while ((match = re.exec(input)) !== null) {
-        var value = match[2];
-        if (value.indexOf('"') === 0 && value.lastIndexOf('"') === value.length - 1) {
+        var value = match[2],
+            quote = '"';
+
+        if (value.indexOf(quote) === 0 && value.lastIndexOf(quote) === value.length - 1) {
           value = value.slice(1, -1);
         }
         attrs[match[1]] = value;
