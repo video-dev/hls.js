@@ -64,9 +64,10 @@ class AttrList {
     const re = /(.+?)=((?:\".*?\")|.*?)(?:,|$)/g;
     var match, attrs = {};
     while ((match = re.exec(input)) !== null) {
-      var value = match[2];
-      if (value.indexOf('"') === 0 &&
-          value.lastIndexOf('"') === (value.length-1)) {
+      var value = match[2], quote = '"';
+
+      if (value.indexOf(quote) === 0 &&
+          value.lastIndexOf(quote) === (value.length-1)) {
         value = value.slice(1, -1);
       }
       attrs[match[1]] = value;
