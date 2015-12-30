@@ -3490,7 +3490,7 @@ var ExpGolomb = (function () {
       levelIdc = this.readUByte(); //level_idc u(8)
       this.skipUEG(); // seq_parameter_set_id
       // some profiles have more optional data we don't need
-      if (profileIdc === 100 || profileIdc === 110 || profileIdc === 122 || profileIdc === 144) {
+      if (profileIdc === 100 || profileIdc === 110 || profileIdc === 122 || profileIdc === 244 || profileIdc === 44 || profileIdc === 83 || profileIdc === 86 || profileIdc === 118 || profileIdc === 128) {
         var chromaFormatIdc = this.readUEG();
         if (chromaFormatIdc === 3) {
           this.skipBits(1); // separate_colour_plane_flag
@@ -6204,6 +6204,8 @@ var MP4Remuxer = (function () {
         }
         pts = avcSample.pts - this._initDTS;
         dts = avcSample.dts - this._initDTS;
+        // ensure DTS is not bigger than PTS
+        dts = Math.min(pts, dts);
         //logger.log('Video/PTS/DTS:' + pts + '/' + dts);
         // if not first AVC sample of video track, normalize PTS/DTS with previous sample value
         // and ensure that sample duration is positive
