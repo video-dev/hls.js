@@ -184,7 +184,12 @@ class ExpGolomb {
             profileIdc === 100 ||
             profileIdc === 110 ||
             profileIdc === 122 ||
-            profileIdc === 144
+            profileIdc === 244 ||
+            profileIdc === 44 ||
+            profileIdc === 83 ||
+            profileIdc === 86 ||
+            profileIdc === 118 ||
+            profileIdc === 128
         ) {
             var chromaFormatIdc = this.readUEG();
             if (chromaFormatIdc === 3) {
