@@ -150,6 +150,8 @@ class MP4Remuxer {
       }
       pts = avcSample.pts - this._initDTS;
       dts = avcSample.dts - this._initDTS;
+      // ensure DTS is not bigger than PTS
+      dts = Math.min(pts,dts);
       //logger.log('Video/PTS/DTS:' + pts + '/' + dts);
       // if not first AVC sample of video track, normalize PTS/DTS with previous sample value
       // and ensure that sample duration is positive
