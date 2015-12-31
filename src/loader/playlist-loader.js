@@ -133,14 +133,15 @@ class PlaylistLoader {
         var currentSN = 0,
             totalduration = 0,
             level = { url: baseurl, fragments: [], live: true, startSN: 0 },
+            levelkey = { method: null, key: null, iv: null, uri: null },
+            cc = 0,
+            programDateTime = null,
+            frag = null,
             result,
             regexp,
-            cc = 0,
-            frag,
             byteRangeEndOffset,
-            byteRangeStartOffset,
-            programDateTime = null;
-        var levelkey = { method: null, key: null, iv: null, uri: null };
+            byteRangeStartOffset;
+
         regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*))/g;
         while ((result = regexp.exec(string)) !== null) {
             result.shift();
@@ -169,9 +170,6 @@ class PlaylistLoader {
                     }
                     byteRangeEndOffset =
                         parseInt(params[0]) + byteRangeStartOffset;
-                    frag = level.fragments.length
-                        ? level.fragments[level.fragments.length - 1]
-                        : null;
                     if (frag && !frag.url) {
                         frag.byteRangeStartOffset = byteRangeStartOffset;
                         frag.byteRangeEndOffset = byteRangeEndOffset;
@@ -196,21 +194,20 @@ class PlaylistLoader {
                         var url = result[2]
                             ? this.resolve(result[2], baseurl)
                             : null;
-                        if (url) {
-                            level.fragments.push({
-                                url: url,
-                                duration: duration,
-                                start: totalduration,
-                                sn: sn,
-                                level: id,
-                                cc: cc,
-                                byteRangeStartOffset: byteRangeStartOffset,
-                                byteRangeEndOffset: byteRangeEndOffset,
-                                decryptdata: fragdecryptdata,
-                                programDateTime: programDateTime
-                            });
-                            totalduration += duration;
-                        }
+                        frag = {
+                            url: url,
+                            duration: duration,
+                            start: totalduration,
+                            sn: sn,
+                            level: id,
+                            cc: cc,
+                            byteRangeStartOffset: byteRangeStartOffset,
+                            byteRangeEndOffset: byteRangeEndOffset,
+                            decryptdata: fragdecryptdata,
+                            programDateTime: programDateTime
+                        };
+                        level.fragments.push(frag);
+                        totalduration += duration;
                         byteRangeStartOffset = null;
                         programDateTime = null;
                     }
@@ -247,6 +244,10 @@ class PlaylistLoader {
             }
         }
         //logger.log('found ' + level.fragments.length + ' fragments');
+        if (frag && !frag.url) {
+            level.fragments.pop();
+            totalduration -= frag.duration;
+        }
         level.totalduration = totalduration;
         level.endSN = currentSN - 1;
         return level;
