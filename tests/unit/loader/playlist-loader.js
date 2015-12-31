@@ -310,7 +310,6 @@ lo008ts
 lo008ts`;
 
     var result = new PlaylistLoader({on : function() { }}).parseLevelPlaylist(level, 'http://dummy.com/playlist.m3u8',0);
-    console.log(result);
     assert.strictEqual(result.fragments.length, 10);
     assert.strictEqual(result.fragments[0].url, 'http://dummy.com/lo007ts');
     assert.strictEqual(result.fragments[0].byteRangeStartOffset,803136);
