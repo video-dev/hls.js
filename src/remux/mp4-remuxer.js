@@ -274,7 +274,7 @@ class MP4Remuxer {
         dtsnorm = this._PTSNormalize(dts, nextAacPts);
         delta = Math.round(1000 * (ptsnorm - nextAacPts) / pesTimeScale);
         // if fragment are contiguous, or delta less than 600ms, ensure there is no overlap/hole between fragments
-        if (contiguous || Math.abs(delta) < 600) {
+        if (contiguous || Math.abs(delta) < 50) {
           // log delta
           if (delta) {
             if (delta > 0) {
