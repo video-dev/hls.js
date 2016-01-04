@@ -110,7 +110,7 @@ class XhrLoader {
                     );
                     // exponential backoff
                     this.retryDelay = Math.min(2 * this.retryDelay, 64000);
-                    this.stats.retry++;
+                    stats.retry++;
                 } else {
                     window.clearTimeout(this.timeoutHandle);
                     logger.error(`${status} while loading ${this.url}`);
