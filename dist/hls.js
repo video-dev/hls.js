@@ -6889,7 +6889,7 @@ var XhrLoader = (function () {
             window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
             // exponential backoff
             this.retryDelay = Math.min(2 * this.retryDelay, 64000);
-            this.stats.retry++;
+            stats.retry++;
           } else {
             window.clearTimeout(this.timeoutHandle);
             _utilsLogger.logger.error(status + ' while loading ' + this.url);
