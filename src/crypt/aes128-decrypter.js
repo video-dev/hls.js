@@ -143,7 +143,7 @@ class AES128Decrypter {
         return decrypted;
     }
 
-    localDecript(encrypted, key, initVector, decrypted) {
+    localDecrypt(encrypted, key, initVector, decrypted) {
         var bytes = this.doDecrypt(encrypted, key, initVector);
         decrypted.set(bytes, encrypted.byteOffset);
     }
@@ -158,7 +158,7 @@ class AES128Decrypter {
         // split up the encryption job and do the individual chunks asynchronously
         var key = this.key;
         var initVector = this.iv;
-        this.localDecript(
+        this.localDecrypt(
             encrypted32.subarray(i, i + step),
             key,
             initVector,
@@ -172,7 +172,7 @@ class AES128Decrypter {
                 this.ntoh(encrypted32[i - 2]),
                 this.ntoh(encrypted32[i - 1])
             ]);
-            this.localDecript(
+            this.localDecrypt(
                 encrypted32.subarray(i, i + step),
                 key,
                 initVector,

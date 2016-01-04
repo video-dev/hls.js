@@ -160,6 +160,14 @@ should be invoked to recover media error
   }
 ```
 
+##### ```hls.swapAudioCodec()```
+
+If media error are still raised after calling ```hls.recoverMediaError()```,
+calling this method, could be useful to workaround audio codec mismatch.
+the workflow should be :
+
+on Media Error : first call ```hls.swapAudioCodec()```, then call ```hls.recoverMediaError()```
+
 ###final step : destroying, switching between streams
 
 ```hls.destroy()``` should be called to free used resources and destroy hls context.
@@ -181,15 +189,18 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       liveMaxLatencyDurationCount: 10,
       enableWorker : true,
       enableSoftwareAES: true,
-      fragLoadingTimeOut : 20000,
-      fragLoadingMaxRetry : 6,
-      fragLoadingRetryDelay : 500,
       manifestLoadingTimeOut : 10000,
       manifestLoadingMaxRetry : 6,
       manifestLoadingRetryDelay : 500,
+      levelLoadingTimeOut : 10000,
+      levelLoadingMaxRetry : 6,
+      levelLoadingRetryDelay : 500,
+      fragLoadingTimeOut : 20000,
+      fragLoadingMaxRetry : 6,
+      fragLoadingRetryDelay : 500,
       fpsDroppedMonitoringPeriod : 5000,
       fpsDroppedMonitoringThreshold : 0.2,
-      appendErrorMaxRetry : 200,
+      appendErrorMaxRetry : 3,
       loader : customLoader,
       fLoader: customFragmentLoader,
       pLoader: customPlaylistLoader,
@@ -200,6 +211,10 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
 
 var hls = new Hls(config);
 ```
+
+#### ```Hls.DefaultConfig get/set```
+this getter/setter allows to retrieve and override Hls default configuration.
+this configuration will be applied by default to all instances.
 
 #### ```debug```
 (default false)
@@ -247,19 +262,19 @@ enable webworker (if available on browser) for TS demuxing/MP4 remuxing, to impr
 
 enable to use JavaScript version AES decryption for fallback of WebCrypto API.
 
-#### ```fragLoadingTimeOut```/```manifestLoadingTimeOut```
-(default 60000ms for fragment/10000ms for manifest)
+#### ```fragLoadingTimeOut```/```manifestLoadingTimeOut```/```levelLoadingTimeOut```
+(default 60000ms for fragment/10000ms for level and manifest)
 
 URL Loader timeout.
 A timeout callback will be triggered if loading duration exceeds this timeout.
 no further action will be done : the load operation will not be cancelled/aborted.
 It is up to the application to catch this event and treat it as needed.
-#### ```fragLoadingMaxRetry```/```manifestLoadingMaxRetry```
+#### ```fragLoadingMaxRetry```/```manifestLoadingMaxRetry```/```levelLoadingMaxRetry```
 (default 3)
 
 max nb of load retry
-#### ```fragLoadingRetryDelay```/```manifestLoadingRetryDelay```
-(default 500ms)
+#### ```fragLoadingRetryDelay```/```manifestLoadingRetryDelay```/```levelLoadingRetryDelay```
+(default 1000ms)
 
 initial delay between XmlHttpRequest error and first load retry (in ms)
 any I/O error will trigger retries every 500ms,1s,2s,4s,8s, ... capped to 64s (exponential backoff)
@@ -267,7 +282,7 @@ any I/O error will trigger retries every 500ms,1s,2s,4s,8s, ... capped to 64s (e
 
 max nb of append retry
 #### ```appendErrorMaxRetry```
-(default 200)
+(default 3)
 
 max number of sourceBuffer.appendBuffer() retry upon error.
 such error could happen in loop with UHD streams, when internal buffer is full. (Quota Exceeding Error will be triggered). in that case we need to wait for the browser to evict some data before being able to append buffer correctly.
@@ -477,7 +492,7 @@ full list of Events available below :
   - `Hls.Events.FRAG_LOADING`  - fired when a fragment loading starts
     -  data: { frag : fragment object}
   - `Hls.Events.FRAG_LOAD_PROGRESS`  - fired when a fragment load is in progress
-    - data: { frag : fragment object, stats : progress event }
+    - data: { frag : fragment object with frag.loaded=stats.loaded, stats : { trequest, tfirst, loaded} }
   - `Hls.Events.FRAG_LOADED`  - fired when a fragment loading is completed
     -  data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length}}
   - `Hls.Events.FRAG_PARSING_INIT_SEGMENT` - fired when Init Segment has been extracted from fragment
@@ -527,7 +542,7 @@ full list of Errors is described below:
   - ```Hls.ErrorDetails.BUFFER_APPEND_ERROR```raised when exception is raised while calling buffer append
     - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.BUFFER_APPEND_ERROR```, fatal : ```true```, frag : fragment object}
   - ```Hls.ErrorDetails.BUFFER_APPENDING_ERROR```raised when exception is raised during buffer appending
-    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.BUFFER_APPENDING_ERROR```, fatal : ```true```, frag : fragment object}
+    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.BUFFER_APPENDING_ERROR```, fatal : ```false```, frag : fragment object}
 
 ## Objects
 ### Level

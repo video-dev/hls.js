@@ -39,40 +39,54 @@ class Hls {
         return ErrorDetails;
     }
 
+    static get DefaultConfig() {
+        if (!Hls.defaultConfig) {
+            Hls.defaultConfig = {
+                autoStartLoad: true,
+                debug: false,
+                maxBufferLength: 30,
+                maxBufferSize: 60 * 1000 * 1000,
+                liveSyncDurationCount: 3,
+                liveMaxLatencyDurationCount: Infinity,
+                maxMaxBufferLength: 600,
+                enableWorker: true,
+                enableSoftwareAES: true,
+                manifestLoadingTimeOut: 10000,
+                manifestLoadingMaxRetry: 1,
+                manifestLoadingRetryDelay: 1000,
+                levelLoadingTimeOut: 10000,
+                levelLoadingMaxRetry: 4,
+                levelLoadingRetryDelay: 1000,
+                fragLoadingTimeOut: 20000,
+                fragLoadingMaxRetry: 6,
+                fragLoadingRetryDelay: 1000,
+                fragLoadingLoopThreshold: 3,
+                // fpsDroppedMonitoringPeriod: 5000,
+                // fpsDroppedMonitoringThreshold: 0.2,
+                appendErrorMaxRetry: 3,
+                loader: XhrLoader,
+                fLoader: undefined,
+                pLoader: undefined,
+                abrController: AbrController,
+                mediaController: MSEMediaController,
+                timelineController: TimelineController,
+                enableCEA708Captions: true
+            };
+        }
+        return Hls.defaultConfig;
+    }
+
+    static set DefaultConfig(defaultConfig) {
+        Hls.defaultConfig = defaultConfig;
+    }
+
     constructor(config = {}) {
-        var configDefault = {
-            autoStartLoad: true,
-            debug: false,
-            maxBufferLength: 30,
-            maxBufferSize: 60 * 1000 * 1000,
-            liveSyncDurationCount: 3,
-            liveMaxLatencyDurationCount: Infinity,
-            maxMaxBufferLength: 600,
-            enableWorker: true,
-            enableSoftwareAES: true,
-            fragLoadingTimeOut: 20000,
-            fragLoadingMaxRetry: 1,
-            fragLoadingRetryDelay: 1000,
-            fragLoadingLoopThreshold: 3,
-            manifestLoadingTimeOut: 10000,
-            manifestLoadingMaxRetry: 1,
-            manifestLoadingRetryDelay: 1000,
-            // fpsDroppedMonitoringPeriod: 5000,
-            // fpsDroppedMonitoringThreshold: 0.2,
-            appendErrorMaxRetry: 200,
-            loader: XhrLoader,
-            fLoader: undefined,
-            pLoader: undefined,
-            abrController: AbrController,
-            mediaController: MSEMediaController,
-            timelineController: TimelineController,
-            enableCEA708Captions: true
-        };
-        for (var prop in configDefault) {
+        var defaultConfig = Hls.DefaultConfig;
+        for (var prop in defaultConfig) {
             if (prop in config) {
                 continue;
             }
-            config[prop] = configDefault[prop];
+            config[prop] = defaultConfig[prop];
         }
 
         if (
@@ -147,12 +161,16 @@ class Hls {
         this.mediaController.startLoad();
     }
 
+    swapAudioCodec() {
+        logger.log('swapAudioCodec');
+        this.mediaController.swapAudioCodec();
+    }
+
     recoverMediaError() {
         logger.log('recoverMediaError');
         var media = this.media;
         this.detachMedia();
         this.attachMedia(media);
-        this.mediaController.recoverMediaError();
     }
 
     /** Return all quality levels **/
