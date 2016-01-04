@@ -4250,9 +4250,10 @@ var TSDemuxer = (function () {
                       samples = track.samples;
                   //logger.log('first NALU found with overflow:' + overflow);
                   if (samples.length) {
-                    var lastavcSample = samples[samples.length - 1];
-                    var lastUnit = lastavcSample.units.units[lastavcSample.units.units.length - 1];
-                    var tmp = new Uint8Array(lastUnit.data.byteLength + overflow);
+                    var lastavcSample = samples[samples.length - 1],
+                        lastUnits = lastavcSample.units.units,
+                        lastUnit = lastUnits[lastUnits.length - 1],
+                        tmp = new Uint8Array(lastUnit.data.byteLength + overflow);
                     tmp.set(lastUnit.data, 0);
                     tmp.set(array.subarray(0, overflow), lastUnit.data.byteLength);
                     lastUnit.data = tmp;
@@ -6170,7 +6171,7 @@ var MP4Remuxer = (function () {
     key: 'remuxVideo',
     value: function remuxVideo(track, timeOffset, contiguous) {
       var view,
-          i = 8,
+          offset = 8,
           pesTimeScale = this.PES_TIMESCALE,
           pes2mp4ScaleFactor = this.PES2MP4SCALEFACTOR,
           avcSample,
@@ -6199,27 +6200,28 @@ var MP4Remuxer = (function () {
         // convert NALU bitstream to MP4 format (prepend NALU with size field)
         while (avcSample.units.units.length) {
           unit = avcSample.units.units.shift();
-          view.setUint32(i, unit.data.byteLength);
-          i += 4;
-          mdat.set(unit.data, i);
-          i += unit.data.byteLength;
+          view.setUint32(offset, unit.data.byteLength);
+          offset += 4;
+          mdat.set(unit.data, offset);
+          offset += unit.data.byteLength;
           mp4SampleLength += 4 + unit.data.byteLength;
         }
         pts = avcSample.pts - this._initDTS;
         dts = avcSample.dts - this._initDTS;
         // ensure DTS is not bigger than PTS
         dts = Math.min(pts, dts);
-        //logger.log('Video/PTS/DTS:' + pts + '/' + dts);
+        //logger.log(`Video/PTS/DTS:${pts}/${dts}`);
         // if not first AVC sample of video track, normalize PTS/DTS with previous sample value
         // and ensure that sample duration is positive
         if (lastDTS !== undefined) {
           ptsnorm = this._PTSNormalize(pts, lastDTS);
           dtsnorm = this._PTSNormalize(dts, lastDTS);
-          mp4Sample.duration = (dtsnorm - lastDTS) / pes2mp4ScaleFactor;
-          if (mp4Sample.duration < 0) {
-            //logger.log('invalid sample duration at PTS/DTS::' + avcSample.pts + '/' + avcSample.dts + ':' + mp4Sample.duration);
-            mp4Sample.duration = 0;
+          var sampleDuration = (dtsnorm - lastDTS) / pes2mp4ScaleFactor;
+          if (sampleDuration <= 0) {
+            _utilsLogger.logger.log('invalid sample duration at PTS/DTS: ' + avcSample.pts + '/' + avcSample.dts + ':' + sampleDuration);
+            sampleDuration = 1;
           }
+          mp4Sample.duration = sampleDuration;
         } else {
           var nextAvcDts = this.nextAvcDts,
               delta;
@@ -6239,7 +6241,7 @@ var MP4Remuxer = (function () {
               dtsnorm = nextAvcDts;
               // offset PTS as well, ensure that PTS is smaller or equal than new DTS
               ptsnorm = Math.max(ptsnorm - delta, dtsnorm);
-              _utilsLogger.logger.log('Video/PTS/DTS adjusted:' + ptsnorm + '/' + dtsnorm);
+              _utilsLogger.logger.log('Video/PTS/DTS adjusted: ' + ptsnorm + '/' + dtsnorm + ',delta:' + delta);
             }
           }
           // remember first PTS of our avcSamples, ensure value is positive
