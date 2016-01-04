@@ -509,14 +509,13 @@ class TSDemuxer {
                                 //logger.log('first NALU found with overflow:' + overflow);
                                 if (samples.length) {
                                     var lastavcSample =
-                                        samples[samples.length - 1];
-                                    var lastUnit =
-                                        lastavcSample.units.units[
-                                            lastavcSample.units.units.length - 1
-                                        ];
-                                    var tmp = new Uint8Array(
-                                        lastUnit.data.byteLength + overflow
-                                    );
+                                            samples[samples.length - 1],
+                                        lastUnits = lastavcSample.units.units,
+                                        lastUnit =
+                                            lastUnits[lastUnits.length - 1],
+                                        tmp = new Uint8Array(
+                                            lastUnit.data.byteLength + overflow
+                                        );
                                     tmp.set(lastUnit.data, 0);
                                     tmp.set(
                                         array.subarray(0, overflow),
