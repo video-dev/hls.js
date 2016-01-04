@@ -241,7 +241,7 @@ class MP4Remuxer {
 
   remuxAudio(track,timeOffset, contiguous) {
     var view,
-        i = 8,
+        offset = 8,
         pesTimeScale = this.PES_TIMESCALE,
         pes2mp4ScaleFactor = this.PES2MP4SCALEFACTOR,
         aacSample, mp4Sample,
@@ -250,26 +250,21 @@ class MP4Remuxer {
         firstPTS, firstDTS, lastDTS,
         pts, dts, ptsnorm, dtsnorm,
         samples = [];
-    /* concatenate the audio data and construct the mdat in place
-      (need 8 more bytes to fill length and mdat type) */
-    mdat = new Uint8Array(track.len + 8);
-    view = new DataView(mdat.buffer);
-    view.setUint32(0, mdat.byteLength);
-    mdat.set(MP4.types.mdat, 4);
+
     while (track.samples.length) {
       aacSample = track.samples.shift();
       unit = aacSample.unit;
-      mdat.set(unit, i);
-      i += unit.byteLength;
       pts = aacSample.pts - this._initDTS;
       dts = aacSample.dts - this._initDTS;
       //logger.log('Audio/PTS:' + aacSample.pts.toFixed(0));
+      // if not first sample
       if (lastDTS !== undefined) {
         ptsnorm = this._PTSNormalize(pts, lastDTS);
         dtsnorm = this._PTSNormalize(dts, lastDTS);
-        // we use DTS to compute sample duration, but we use PTS to compute initPTS which is used to sync audio and video
+        // let's compute sample duration
         mp4Sample.duration = (dtsnorm - lastDTS) / pes2mp4ScaleFactor;
         if (mp4Sample.duration < 0) {
+          // not expected to happen ...
           logger.log(`invalid AAC sample duration at PTS:${aacSample.pts}:${mp4Sample.duration}`);
           mp4Sample.duration = 0;
         }
@@ -282,11 +277,13 @@ class MP4Remuxer {
         if (contiguous || Math.abs(delta) < 600) {
           // log delta
           if (delta) {
-            if (delta > 1) {
+            if (delta > 0) {
               logger.log(`${delta} ms hole between AAC samples detected,filling it`);
-              // set PTS to next PTS, and ensure PTS is greater or equal than last DTS
-            } else if (delta < -1) {
-              logger.log(`${(-delta)} ms overlapping between AAC samples detected`);
+            } else if (delta < 0) {
+              // drop overlapping audio frames... browser will deal with it
+              logger.log(`${(-delta)} ms overlapping between AAC samples detected, drop frame`);
+              track.len -= unit.byteLength;
+              continue;
             }
             // set DTS to next DTS
             ptsnorm = dtsnorm = nextAacPts;
@@ -295,7 +292,15 @@ class MP4Remuxer {
         // remember first PTS of our aacSamples, ensure value is positive
         firstPTS = Math.max(0, ptsnorm);
         firstDTS = Math.max(0, dtsnorm);
+        /* concatenate the audio data and construct the mdat in place
+          (need 8 more bytes to fill length and mdat type) */
+        mdat = new Uint8Array(track.len + 8);
+        view = new DataView(mdat.buffer);
+        view.setUint32(0, mdat.byteLength);
+        mdat.set(MP4.types.mdat, 4);
       }
+      mdat.set(unit, offset);
+      offset += unit.byteLength;
       //console.log('PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${aacSample.pts}/${aacSample.dts}/${this._initDTS}/${ptsnorm}/${dtsnorm}/${(aacSample.pts/4294967296).toFixed(3)}');
       mp4Sample = {
         size: unit.byteLength,
