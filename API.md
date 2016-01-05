@@ -469,6 +469,8 @@ full list of Events available below :
     -  data: { }
   - `Hls.Events.MEDIA_DETACHED`  - fired when Media has been detached from hls instance
     -  data: { }
+  - `Hls.Events.MEDIA_PLAYBACK_TYPE_DEFINED,`  - fired when Media has been determined its playback type: either "VOD" or "LIVE"
+    -  data: String
   - `Hls.Events.MANIFEST_LOADING`  - fired to signal that a manifest loading starts
     -  data: { url : manifestURL}
   - `Hls.Events.MANIFEST_LOADED`  - fired after manifest has been loaded
