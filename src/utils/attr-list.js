@@ -6,8 +6,11 @@ class AttrList {
     if (typeof attrs === 'string') {
       attrs = AttrList.parseAttrList(attrs);
     }
-
-    Object.assign(this, attrs);
+    for(var attr in attrs){
+      if(attrs.hasOwnProperty(attr)) {
+        this[attr] = attrs[attr];
+      }
+    }
   }
 
   decimalInteger(attrName) {
@@ -64,8 +67,10 @@ class AttrList {
     const re = /(.+?)=((?:\".*?\")|.*?)(?:,|$)/g;
     var match, attrs = {};
     while ((match = re.exec(input)) !== null) {
-      var value = match[2];
-      if (value.startsWith('"') && value.endsWith('"')) {
+      var value = match[2], quote = '"';
+
+      if (value.indexOf(quote) === 0 &&
+          value.lastIndexOf(quote) === (value.length-1)) {
         value = value.slice(1, -1);
       }
       attrs[match[1]] = value;

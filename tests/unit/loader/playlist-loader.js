@@ -221,4 +221,105 @@ oceans_aes-audio=65000-video=236000-3.ts
     }
     assert(bufferIsEqual(result.fragments[2].decryptdata.iv.buffer, uint8View.buffer));
   });
+
+
+  it('parse level with #EXT-X-BYTERANGE before #EXTINF', () => {
+    var level = `#EXTM3U
+#EXT-X-VERSION:4
+#EXT-X-ALLOW-CACHE:YES
+#EXT-X-TARGETDURATION:1
+#EXT-X-MEDIA-SEQUENCE:7478
+#EXT-X-BYTERANGE:140060@803136
+#EXTINF:1000000,
+lo007ts
+#EXT-X-BYTERANGE:96256@943196
+#EXTINF:1000000,
+lo007ts
+#EXT-X-BYTERANGE:143068@1039452
+#EXTINF:1000000,
+lo007ts
+#EXT-X-BYTERANGE:124080@0
+#EXTINF:1000000,
+lo008ts
+#EXT-X-BYTERANGE:117688@124080
+#EXTINF:1000000,
+lo008ts
+#EXT-X-BYTERANGE:102272@241768
+#EXTINF:1000000,
+lo008ts
+#EXT-X-BYTERANGE:100580@344040
+#EXTINF:1000000,
+lo008ts
+#EXT-X-BYTERANGE:113740@444620
+#EXTINF:1000000,
+lo008ts
+#EXT-X-BYTERANGE:126148@558360
+#EXTINF:1000000,
+lo008ts
+#EXT-X-BYTERANGE:133480@684508
+#EXTINF:1000000,
+lo008ts`;
+
+    var result = new PlaylistLoader({on : function() { }}).parseLevelPlaylist(level, 'http://dummy.com/playlist.m3u8',0);
+    assert.strictEqual(result.fragments.length, 10);
+    assert.strictEqual(result.fragments[0].url, 'http://dummy.com/lo007ts');
+    assert.strictEqual(result.fragments[0].byteRangeStartOffset,803136);
+    assert.strictEqual(result.fragments[0].byteRangeEndOffset,943196);
+    assert.strictEqual(result.fragments[1].byteRangeStartOffset,943196);
+    assert.strictEqual(result.fragments[1].byteRangeEndOffset,1039452);
+    assert.strictEqual(result.fragments[9].url, 'http://dummy.com/lo008ts');
+    assert.strictEqual(result.fragments[9].byteRangeStartOffset,684508);
+    assert.strictEqual(result.fragments[9].byteRangeEndOffset,817988);
+  });
+
+  it('parse level with #EXT-X-BYTERANGE after #EXTINF', () => {
+    var level = `#EXTM3U
+#EXT-X-VERSION:4
+#EXT-X-ALLOW-CACHE:YES
+#EXT-X-TARGETDURATION:1
+#EXT-X-MEDIA-SEQUENCE:7478
+#EXTINF:1000000,
+#EXT-X-BYTERANGE:140060@803136
+lo007ts
+#EXTINF:1000000,
+#EXT-X-BYTERANGE:96256@943196
+lo007ts
+#EXTINF:1000000,
+#EXT-X-BYTERANGE:143068@1039452
+lo007ts
+#EXTINF:1000000,
+#EXT-X-BYTERANGE:124080@0
+lo008ts
+#EXTINF:1000000,
+#EXT-X-BYTERANGE:117688@124080
+lo008ts
+#EXTINF:1000000,
+#EXT-X-BYTERANGE:102272@241768
+lo008ts
+#EXTINF:1000000,
+#EXT-X-BYTERANGE:100580@344040
+lo008ts
+#EXTINF:1000000,
+#EXT-X-BYTERANGE:113740@444620
+lo008ts
+#EXTINF:1000000,
+#EXT-X-BYTERANGE:126148@558360
+lo008ts
+#EXTINF:1000000,
+#EXT-X-BYTERANGE:133480@684508
+lo008ts`;
+
+    var result = new PlaylistLoader({on : function() { }}).parseLevelPlaylist(level, 'http://dummy.com/playlist.m3u8',0);
+    assert.strictEqual(result.fragments.length, 10);
+    assert.strictEqual(result.fragments[0].url, 'http://dummy.com/lo007ts');
+    assert.strictEqual(result.fragments[0].byteRangeStartOffset,803136);
+    assert.strictEqual(result.fragments[0].byteRangeEndOffset,943196);
+    assert.strictEqual(result.fragments[1].byteRangeStartOffset,943196);
+    assert.strictEqual(result.fragments[1].byteRangeEndOffset,1039452);
+    assert.strictEqual(result.fragments[9].url, 'http://dummy.com/lo008ts');
+    assert.strictEqual(result.fragments[9].byteRangeStartOffset,684508);
+    assert.strictEqual(result.fragments[9].byteRangeEndOffset,817988);
+  });
+
+
 });

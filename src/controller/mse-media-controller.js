@@ -901,11 +901,12 @@ class MSEMediaController {
   }
 
   onMediaMetadata() {
-    var currentTime = this.media.currentTime;
+    var media = this.media,
+        currentTime = media.currentTime;
     // only adjust currentTime if not equal to 0
     if (!currentTime && currentTime !== this.startPosition) {
       logger.log('onMediaMetadata: adjust currentTime to startPosition');
-      this.media.currentTime = this.startPosition;
+      media.currentTime = this.startPosition;
     }
     this.loadedmetadata = true;
     this.tick();
@@ -1098,7 +1099,7 @@ class MSEMediaController {
       this.tparse2 = Date.now();
       var level = this.levels[this.level],
           frag = this.fragCurrent;
-      logger.log(`parsed data, type/startPTS/endPTS/startDTS/endDTS/nb:${data.type}/${data.startPTS.toFixed(3)}/${data.endPTS.toFixed(3)}/${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}/${data.nb}`);
+      logger.log(`parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
       var drift = LevelHelper.updateFragPTS(level.details,frag.sn,data.startPTS,data.endPTS);
       this.hls.trigger(Event.LEVEL_PTS_UPDATED, {details: level.details, level: this.level, drift: drift});
 
@@ -1215,9 +1216,12 @@ _checkBuffer() {
             }
             // if we are below threshold, try to jump if next buffer range is close
             if(bufferInfo.len <= jumpThreshold) {
-              // no buffer available @ currentTime, check if next buffer is close (in a 300 ms range)
-              var nextBufferStart = bufferInfo.nextStart;
-              if(nextBufferStart && (nextBufferStart - currentTime < 0.3)) {
+              // no buffer available @ currentTime, check if next buffer is close (more than 5ms diff but within a 300 ms range)
+              var nextBufferStart = bufferInfo.nextStart, delta = nextBufferStart-currentTime;
+              if(nextBufferStart &&
+                 (delta < 0.3) &&
+                 (delta > 0.005)  &&
+                 !media.seeking) {
                 // next buffer is close ! adjust currentTime to nextBufferStart
                 // this will ensure effective video decoding
                 logger.log(`adjust currentTime from ${currentTime} to ${nextBufferStart}`);
