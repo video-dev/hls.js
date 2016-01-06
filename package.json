@@ -12,7 +12,7 @@
   "bugs": {
     "url": "https://github.com/dailymotion/hls.js/issues"
   },
-  "main": "src/hls.js",
+  "main": "index.js",
   "private": false,
   "scripts": {
     "clean": "find dist -mindepth 1 -delete",
@@ -27,7 +27,9 @@
     "serve": "http-server -p 8000 .",
     "open": "opener http://localhost:8000/demo/",
     "live-reload": "live-reload --port 8001 dist/",
-    "dev": "npm run open -s & parallelshell 'npm run live-reload -s' 'npm run serve -s' 'npm run watch -s'"
+    "dev": "npm run open -s & parallelshell 'npm run live-reload -s' 'npm run serve -s' 'npm run watch -s'",
+    "babel": "babel src --out-dir lib",
+	"prepublish": "npm run babel"
   },
   "babel": {
     "presets": [
@@ -47,8 +49,9 @@
   },
   "devDependencies": {
     "arraybuffer-equal": "^1.0.4",
-    "browserify": "^8.1.1",
     "babel": "^6.3.26",
+    "babel-cli": "^6.3.17",
+    "browserify": "^8.1.1",
     "deep-strict-equal": "^0.1.0",
     "exorcist": "^0.4.0",
     "http-server": "^0.7.4",
