@@ -66,8 +66,8 @@ class LevelHelper {
     fragments = details.fragments;
     frag = fragments[fragIdx];
     if(!isNaN(frag.startPTS)) {
-      startPTS = Math.max(startPTS,frag.startPTS);
-      endPTS = Math.min(endPTS, frag.endPTS);
+      startPTS = Math.min(startPTS,frag.startPTS);
+      endPTS = Math.max(endPTS, frag.endPTS);
     }
 
     var drift = startPTS - frag.start;
