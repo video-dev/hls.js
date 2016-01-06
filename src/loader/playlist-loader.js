@@ -66,7 +66,8 @@ class PlaylistLoader {
 
     // https://regex101.com is your friend
     const re = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
-    while ((result = re.exec(string)) != null){
+    result = re.exec(string);
+    while (result != null){
       const level = {};
 
       var attrs = level.attrs = new AttrList(result[1]);
