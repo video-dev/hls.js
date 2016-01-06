@@ -40,12 +40,12 @@
     ]
   },
   "dependencies": {
-    "babel-preset-es2015": "^6.3.13",
-    "babel-register": "^6.3.13",
-    "babelify": "^7.2.0",
     "webworkify": "^1.0.2"
   },
   "devDependencies": {
+    "babel-preset-es2015": "^6.3.13",
+    "babel-register": "^6.3.13",
+    "babelify": "^7.2.0",
     "arraybuffer-equal": "^1.0.4",
     "babel": "^6.3.26",
     "babel-cli": "^6.3.17",
