@@ -1713,11 +1713,12 @@ var MSEMediaController = (function () {
   }, {
     key: 'onMediaMetadata',
     value: function onMediaMetadata() {
-      var currentTime = this.media.currentTime;
+      var media = this.media,
+          currentTime = media.currentTime;
       // only adjust currentTime if not equal to 0
       if (!currentTime && currentTime !== this.startPosition) {
         _utilsLogger.logger.log('onMediaMetadata: adjust currentTime to startPosition');
-        this.media.currentTime = this.startPosition;
+        media.currentTime = this.startPosition;
       }
       this.loadedmetadata = true;
       this.tick();
@@ -1914,7 +1915,7 @@ var MSEMediaController = (function () {
         this.tparse2 = Date.now();
         var level = this.levels[this.level],
             frag = this.fragCurrent;
-        _utilsLogger.logger.log('parsed data, type/startPTS/endPTS/startDTS/endDTS/nb:' + data.type + '/' + data.startPTS.toFixed(3) + '/' + data.endPTS.toFixed(3) + '/' + data.startDTS.toFixed(3) + '/' + data.endDTS.toFixed(3) + '/' + data.nb);
+        _utilsLogger.logger.log('parsed ' + data.type + ',PTS:[' + data.startPTS.toFixed(3) + ',' + data.endPTS.toFixed(3) + '],DTS:[' + data.startDTS.toFixed(3) + '/' + data.endDTS.toFixed(3) + '],nb:' + data.nb);
         var drift = _helperLevelHelper2['default'].updateFragPTS(level.details, frag.sn, data.startPTS, data.endPTS);
         this.hls.trigger(_events2['default'].LEVEL_PTS_UPDATED, { details: level.details, level: this.level, drift: drift });
 
@@ -2036,9 +2037,10 @@ var MSEMediaController = (function () {
               }
               // if we are below threshold, try to jump if next buffer range is close
               if (bufferInfo.len <= jumpThreshold) {
-                // no buffer available @ currentTime, check if next buffer is close (in a 300 ms range)
-                var nextBufferStart = bufferInfo.nextStart;
-                if (nextBufferStart && nextBufferStart - currentTime < 0.3) {
+                // no buffer available @ currentTime, check if next buffer is close (more than 5ms diff but within a 300 ms range)
+                var nextBufferStart = bufferInfo.nextStart,
+                    delta = nextBufferStart - currentTime;
+                if (nextBufferStart && delta < 0.3 && delta > 0.005 && !media.seeking) {
                   // next buffer is close ! adjust currentTime to nextBufferStart
                   // this will ensure effective video decoding
                   _utilsLogger.logger.log('adjust currentTime from ' + currentTime + ' to ' + nextBufferStart);
@@ -4595,8 +4597,8 @@ var LevelHelper = (function () {
       fragments = details.fragments;
       frag = fragments[fragIdx];
       if (!isNaN(frag.startPTS)) {
-        startPTS = Math.max(startPTS, frag.startPTS);
-        endPTS = Math.min(endPTS, frag.endPTS);
+        startPTS = Math.min(startPTS, frag.startPTS);
+        endPTS = Math.max(endPTS, frag.endPTS);
       }
 
       var drift = startPTS - frag.start;
@@ -4631,12 +4633,12 @@ var LevelHelper = (function () {
         if (toIdx > fromIdx) {
           fragFrom.duration = fragToPTS - fragFrom.start;
           if (fragFrom.duration < 0) {
-            _utilsLogger.logger.error('negative duration computed for ' + fragFrom + ', there should be some duration drift between playlist and fragment!');
+            _utilsLogger.logger.error('negative duration computed for frag ' + fragFrom.sn + ',level ' + fragFrom.level + ', there should be some duration drift between playlist and fragment!');
           }
         } else {
           fragTo.duration = fragFrom.start - fragToPTS;
           if (fragTo.duration < 0) {
-            _utilsLogger.logger.error('negative duration computed for ' + fragTo + ', there should be some duration drift between playlist and fragment!');
+            _utilsLogger.logger.error('negative duration computed for frag ' + fragTo.sn + ',level ' + fragTo.level + ', there should be some duration drift between playlist and fragment!');
           }
         }
       } else {
