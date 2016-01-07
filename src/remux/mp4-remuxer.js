@@ -212,18 +212,21 @@ class MP4Remuxer {
       samples.push(mp4Sample);
       lastDTS = dtsnorm;
     }
+    var lastSampleDuration = 0;
     if (samples.length >= 2) {
-      mp4Sample.duration = samples[samples.length - 2].duration;
+      lastSampleDuration = samples[samples.length - 2].duration;
+      mp4Sample.duration = lastSampleDuration;
     }
     // next AVC sample DTS should be equal to last sample DTS + last sample duration
-    this.nextAvcDts = dtsnorm + mp4Sample.duration * pes2mp4ScaleFactor;
+    this.nextAvcDts = dtsnorm + lastSampleDuration * pes2mp4ScaleFactor;
     track.len = 0;
     track.nbNalu = 0;
-    if(navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
+    if(samples.length && navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
+      var flags = samples[0].flags;
     // chrome workaround, mark first sample as being a Random Access Point to avoid sourcebuffer append issue
     // https://code.google.com/p/chromium/issues/detail?id=229412
-      samples[0].flags.dependsOn = 2;
-      samples[0].flags.isNonSync = 0;
+      flags.dependsOn = 2;
+      flags.isNonSync = 0;
     }
     track.samples = samples;
     moof = MP4.moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
@@ -232,9 +235,9 @@ class MP4Remuxer {
       moof: moof,
       mdat: mdat,
       startPTS: firstPTS / pesTimeScale,
-      endPTS: (ptsnorm + pes2mp4ScaleFactor * mp4Sample.duration) / pesTimeScale,
+      endPTS: (ptsnorm + pes2mp4ScaleFactor * lastSampleDuration) / pesTimeScale,
       startDTS: firstDTS / pesTimeScale,
-      endDTS: (dtsnorm + pes2mp4ScaleFactor * mp4Sample.duration) / pesTimeScale,
+      endDTS: this.nextAvcDts / pesTimeScale,
       type: 'video',
       nb: samples.length
     });
@@ -318,12 +321,14 @@ class MP4Remuxer {
       samples.push(mp4Sample);
       lastDTS = dtsnorm;
     }
+    var lastSampleDuration = 0;
     //set last sample duration as being identical to previous sample
     if (samples.length >= 2) {
-      mp4Sample.duration = samples[samples.length - 2].duration;
+      lastSampleDuration = samples[samples.length - 2].duration;
+      mp4Sample.duration = lastSampleDuration;
     }
     // next aac sample PTS should be equal to last sample PTS + duration
-    this.nextAacPts = ptsnorm + pes2mp4ScaleFactor * mp4Sample.duration;
+    this.nextAacPts = ptsnorm + pes2mp4ScaleFactor * lastSampleDuration;
     //logger.log('Audio/PTS/PTSend:' + aacSample.pts.toFixed(0) + '/' + this.nextAacDts.toFixed(0));
     track.len = 0;
     track.samples = samples;
@@ -335,7 +340,7 @@ class MP4Remuxer {
       startPTS: firstPTS / pesTimeScale,
       endPTS: this.nextAacPts / pesTimeScale,
       startDTS: firstDTS / pesTimeScale,
-      endDTS: (dtsnorm + pes2mp4ScaleFactor * mp4Sample.duration) / pesTimeScale,
+      endDTS: (dtsnorm + pes2mp4ScaleFactor * lastSampleDuration) / pesTimeScale,
       type: 'audio',
       nb: samples.length
     });
