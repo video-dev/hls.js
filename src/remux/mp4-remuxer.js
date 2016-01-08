@@ -374,34 +374,37 @@ class MP4Remuxer {
             lastDTS = dtsnorm;
         }
         var lastSampleDuration = 0;
+        var nbSamples = samples.length;
         //set last sample duration as being identical to previous sample
-        if (samples.length >= 2) {
-            lastSampleDuration = samples[samples.length - 2].duration;
+        if (nbSamples >= 2) {
+            lastSampleDuration = samples[nbSamples - 2].duration;
             mp4Sample.duration = lastSampleDuration;
         }
-        // next aac sample PTS should be equal to last sample PTS + duration
-        this.nextAacPts = ptsnorm + pes2mp4ScaleFactor * lastSampleDuration;
-        //logger.log('Audio/PTS/PTSend:' + aacSample.pts.toFixed(0) + '/' + this.nextAacDts.toFixed(0));
-        track.len = 0;
-        track.samples = samples;
-        moof = MP4.moof(
-            track.sequenceNumber++,
-            firstDTS / pes2mp4ScaleFactor,
-            track
-        );
-        track.samples = [];
-        this.observer.trigger(Event.FRAG_PARSING_DATA, {
-            moof: moof,
-            mdat: mdat,
-            startPTS: firstPTS / pesTimeScale,
-            endPTS: this.nextAacPts / pesTimeScale,
-            startDTS: firstDTS / pesTimeScale,
-            endDTS:
-                (dtsnorm + pes2mp4ScaleFactor * lastSampleDuration) /
-                pesTimeScale,
-            type: 'audio',
-            nb: samples.length
-        });
+        if (nbSamples) {
+            // next aac sample PTS should be equal to last sample PTS + duration
+            this.nextAacPts = ptsnorm + pes2mp4ScaleFactor * lastSampleDuration;
+            //logger.log('Audio/PTS/PTSend:' + aacSample.pts.toFixed(0) + '/' + this.nextAacDts.toFixed(0));
+            track.len = 0;
+            track.samples = samples;
+            moof = MP4.moof(
+                track.sequenceNumber++,
+                firstDTS / pes2mp4ScaleFactor,
+                track
+            );
+            track.samples = [];
+            this.observer.trigger(Event.FRAG_PARSING_DATA, {
+                moof: moof,
+                mdat: mdat,
+                startPTS: firstPTS / pesTimeScale,
+                endPTS: this.nextAacPts / pesTimeScale,
+                startDTS: firstDTS / pesTimeScale,
+                endDTS:
+                    (dtsnorm + pes2mp4ScaleFactor * lastSampleDuration) /
+                    pesTimeScale,
+                type: 'audio',
+                nb: nbSamples
+            });
+        }
     }
 
     remuxID3(track, timeOffset) {
