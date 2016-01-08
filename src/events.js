@@ -14,6 +14,8 @@ export default {
   // fired after manifest has been parsed - data: { levels : [available quality levels] , firstLevel : index of first quality level appearing in Manifest}
   MANIFEST_PARSED: 'hlsManifestParsed',
   // fired when a level playlist loading starts - data: { url : level URL  level : id of level being loaded}
+  MEDIA_PLAYBACK_TYPE_DEFINED: 'hlsMediaPlaybackTypeDefined',
+  // fired to signal that a media type was defined (either "VOD" or "LIVE")
   LEVEL_LOADING: 'hlsLevelLoading',
   // fired when a level playlist loading finishes - data: { details : levelDetails object, level : id of loaded level, stats : { trequest, tfirst, tload, mtime} }
   LEVEL_LOADED: 'hlsLevelLoaded',

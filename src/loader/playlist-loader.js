@@ -237,6 +237,7 @@ class PlaylistLoader {
           var levelDetails = this.parseLevelPlaylist(string, url, id);
           stats.tparsed = performance.now();
           hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: id, id: id2, stats: stats});
+          hls.trigger(Event.MEDIA_PLAYBACK_TYPE_DEFINED, levelDetails.live === false ? 'VOD' : 'LIVE');
         }
       } else {
         levels = this.parseMasterPlaylist(string, url);
