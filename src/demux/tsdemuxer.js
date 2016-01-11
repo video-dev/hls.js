@@ -619,7 +619,7 @@ class TSDemuxer {
             track.channelCount = config.channelCount;
             track.codec = config.codec;
             track.timescale = this.remuxer.timescale;
-            track.duration = this.remuxer.timescale * duration;
+            track.duration = track.timescale * duration;
             logger.log(
                 `parsed codec:${track.codec},rate:${
                     config.samplerate
