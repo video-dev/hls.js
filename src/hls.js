@@ -60,6 +60,7 @@ class Hls {
           // fpsDroppedMonitoringThreshold: 0.2,
           appendErrorMaxRetry: 3,
           loader: XhrLoader,
+          withCredentials: false,
           fLoader: undefined,
           pLoader: undefined,
           abrController : AbrController,

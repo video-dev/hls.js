@@ -10,6 +10,7 @@ class XhrLoader {
     if (config && config.xhrSetup) {
       this.xhrSetup = config.xhrSetup;
     }
+    this.withCredentials = config.withCredentials;
   }
 
   destroy() {
@@ -51,6 +52,7 @@ class XhrLoader {
     var xhr = this.loader = new XMLHttpRequest();
     xhr.onreadystatechange = this.statechange.bind(this);
     xhr.onprogress = this.loadprogress.bind(this);
+    xhr.withCredentials = this.withCredentials;
 
     xhr.open('GET', this.url, true);
     if (this.byteRange) {

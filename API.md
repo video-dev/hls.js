@@ -203,6 +203,7 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       fpsDroppedMonitoringThreshold : 0.2,
       appendErrorMaxRetry : 3,
       loader : customLoader,
+      withCredentials: false,
       fLoader: customFragmentLoader,
       pLoader: customPlaylistLoader,
       xhrSetup : XMLHttpRequestSetupCallback,
@@ -335,6 +336,11 @@ var customLoader = function() {
   this.destroy = function() {}
   }
 ```
+
+#### `withCredentials`
+(default false)
+
+This enables XHR to use withCredentials which indicates whether or not cross-site Access-Control requests should be made using credentials such as cookies.
 
 #### ```fLoader```
 (default : undefined)
