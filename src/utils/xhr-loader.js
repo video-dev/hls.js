@@ -47,7 +47,7 @@ class XhrLoader {
             !isNaN(frag.byteRangeEndOffset)
         ) {
             this.byteRange =
-                frag.byteRangeStartOffset + '-' + frag.byteRangeEndOffset;
+                frag.byteRangeStartOffset + '-' + (frag.byteRangeEndOffset - 1);
         }
         this.responseType = responseType;
         this.onSuccess = onSuccess;
