@@ -561,11 +561,12 @@ class TSDemuxer {
             duration = this._duration,
             audioCodec = this.audioCodec,
             config,
-            adtsFrameSize,
-            adtsStartOffset,
-            adtsHeaderLen,
+            frameLength,
+            frameDuration,
+            frameIndex,
+            offset,
+            headerLength,
             stamp,
-            nbSamples,
             len,
             aacSample;
         if (this.aacOverFlow) {
@@ -578,22 +579,19 @@ class TSDemuxer {
         }
         // look for ADTS header (0xFFFx)
         for (
-            adtsStartOffset = startOffset, len = data.length;
-            adtsStartOffset < len - 1;
-            adtsStartOffset++
+            offset = startOffset, len = data.length;
+            offset < len - 1;
+            offset++
         ) {
-            if (
-                data[adtsStartOffset] === 0xff &&
-                (data[adtsStartOffset + 1] & 0xf0) === 0xf0
-            ) {
+            if (data[offset] === 0xff && (data[offset + 1] & 0xf0) === 0xf0) {
                 break;
             }
         }
         // if ADTS header does not start straight from the beginning of the PES payload, raise an error
-        if (adtsStartOffset) {
+        if (offset) {
             var reason, fatal;
-            if (adtsStartOffset < len - 1) {
-                reason = `AAC PES did not start with ADTS header,offset:${adtsStartOffset}`;
+            if (offset < len - 1) {
+                reason = `AAC PES did not start with ADTS header,offset:${offset}`;
                 fatal = false;
             } else {
                 reason = 'no ADTS header found in AAC PES';
@@ -613,7 +611,7 @@ class TSDemuxer {
             config = ADTS.getAudioConfig(
                 this.observer,
                 data,
-                adtsStartOffset,
+                offset,
                 audioCodec
             );
             track.config = config.config;
@@ -628,42 +626,39 @@ class TSDemuxer {
                 },nb channel:${config.channelCount}`
             );
         }
-        nbSamples = 0;
-        while (adtsStartOffset + 5 < len) {
+        frameIndex = 0;
+        frameDuration = 1024 * 90000 / track.audiosamplerate;
+        while (offset + 5 < len) {
+            // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
+            headerLength = !!(data[offset + 1] & 0x01) ? 7 : 9;
             // retrieve frame size
-            adtsFrameSize = (data[adtsStartOffset + 3] & 0x03) << 11;
-            // byte 4
-            adtsFrameSize |= data[adtsStartOffset + 4] << 3;
-            // byte 5
-            adtsFrameSize |= (data[adtsStartOffset + 5] & 0xe0) >>> 5;
-            adtsHeaderLen = !!(data[adtsStartOffset + 1] & 0x01) ? 7 : 9;
-            adtsFrameSize -= adtsHeaderLen;
-            stamp = Math.round(
-                pts + nbSamples * 1024 * 90000 / track.audiosamplerate
-            );
+            frameLength =
+                ((data[offset + 3] & 0x03) << 11) |
+                (data[offset + 4] << 3) |
+                ((data[offset + 5] & 0xe0) >>> 5);
+            frameLength -= headerLength;
+            stamp = Math.round(pts + frameIndex * frameDuration);
             //stamp = pes.pts;
-            //console.log('AAC frame, offset/length/pts:' + (adtsStartOffset+7) + '/' + adtsFrameSize + '/' + stamp.toFixed(0));
-            if (
-                adtsFrameSize > 0 &&
-                adtsStartOffset + adtsHeaderLen + adtsFrameSize <= len
-            ) {
+
+            //console.log('AAC frame, offset/length/pts:' + (offset+headerLength) + '/' + frameLength + '/' + stamp.toFixed(0));
+            if (frameLength > 0 && offset + headerLength + frameLength <= len) {
                 aacSample = {
                     unit: data.subarray(
-                        adtsStartOffset + adtsHeaderLen,
-                        adtsStartOffset + adtsHeaderLen + adtsFrameSize
+                        offset + headerLength,
+                        offset + headerLength + frameLength
                     ),
                     pts: stamp,
                     dts: stamp
                 };
                 track.samples.push(aacSample);
-                track.len += adtsFrameSize;
-                adtsStartOffset += adtsFrameSize + adtsHeaderLen;
-                nbSamples++;
+                track.len += frameLength;
+                offset += frameLength + headerLength;
+                frameIndex++;
                 // look for ADTS header (0xFFFx)
-                for (; adtsStartOffset < len - 1; adtsStartOffset++) {
+                for (; offset < len - 1; offset++) {
                     if (
-                        data[adtsStartOffset] === 0xff &&
-                        (data[adtsStartOffset + 1] & 0xf0) === 0xf0
+                        data[offset] === 0xff &&
+                        (data[offset + 1] & 0xf0) === 0xf0
                     ) {
                         break;
                     }
@@ -672,8 +667,8 @@ class TSDemuxer {
                 break;
             }
         }
-        if (adtsStartOffset < len) {
-            this.aacOverFlow = data.subarray(adtsStartOffset, len);
+        if (offset < len) {
+            this.aacOverFlow = data.subarray(offset, len);
         } else {
             this.aacOverFlow = null;
         }
