@@ -260,7 +260,7 @@ class MP4Remuxer {
       unit = aacSample.unit;
       pts = aacSample.pts - this._initDTS;
       dts = aacSample.dts - this._initDTS;
-      //logger.log('Audio/PTS:' + aacSample.pts.toFixed(0));
+      //logger.log(`Audio/PTS:${aacSample.pts.toFixed(0)}`);
       // if not first sample
       if (lastDTS !== undefined) {
         ptsnorm = this._PTSNormalize(pts, lastDTS);
