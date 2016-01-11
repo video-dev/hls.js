@@ -253,10 +253,20 @@ class MP4Remuxer {
         mdat, moof,
         firstPTS, firstDTS, lastDTS,
         pts, dts, ptsnorm, dtsnorm,
-        samples = [];
+        samples = [],
+        samples0 = [];
 
-    while (track.samples.length) {
-      aacSample = track.samples.shift();
+    track.samples.forEach(aacSample => {
+      if(pts === undefined || aacSample.pts > pts) {
+        samples0.push(aacSample);
+        pts = aacSample.pts;
+      } else {
+        logger.warn('dropping past audio frame');
+      }
+    });
+
+    while (samples0.length) {
+      aacSample = samples0.shift();
       unit = aacSample.unit;
       pts = aacSample.pts - this._initDTS;
       dts = aacSample.dts - this._initDTS;
