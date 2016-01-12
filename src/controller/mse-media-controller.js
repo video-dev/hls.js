@@ -1254,8 +1254,11 @@ class MSEMediaController {
                     level = fragCurrent.level,
                     sn = fragCurrent.sn,
                     audioCodec = currentLevel.audioCodec;
-                if (audioCodec && this.audioCodecSwap) {
+                if (this.audioCodecSwap) {
                     logger.log('swapping playlist audio codec');
+                    if (audioCodec === undefined) {
+                        audioCodec = this.lastAudioCodec;
+                    }
                     if (audioCodec.indexOf('mp4a.40.5') !== -1) {
                         audioCodec = 'mp4a.40.2';
                     } else {
@@ -1290,6 +1293,7 @@ class MSEMediaController {
             var audioCodec = this.levels[this.level].audioCodec,
                 videoCodec = this.levels[this.level].videoCodec,
                 sb;
+            this.lastAudioCodec = data.audioCodec;
             if (audioCodec && this.audioCodecSwap) {
                 logger.log('swapping playlist audio codec');
                 if (audioCodec.indexOf('mp4a.40.5') !== -1) {
