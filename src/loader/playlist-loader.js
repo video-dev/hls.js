@@ -254,8 +254,9 @@ class PlaylistLoader {
     }
 
     loadsuccess(event, stats) {
-        var string = event.currentTarget.responseText,
-            url = event.currentTarget.responseURL,
+        var target = event.currentTarget,
+            string = target.responseText,
+            url = target.responseURL,
             id = this.id,
             id2 = this.id2,
             hls = this.hls,
@@ -266,9 +267,7 @@ class PlaylistLoader {
             url = this.url;
         }
         stats.tload = performance.now();
-        stats.mtime = new Date(
-            event.currentTarget.getResponseHeader('Last-Modified')
-        );
+        stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
         if (string.indexOf('#EXTM3U') === 0) {
             if (string.indexOf('#EXTINF:') > 0) {
                 // 1 level playlist
