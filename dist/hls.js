@@ -1836,8 +1836,11 @@ var MSEMediaController = (function () {
               level = fragCurrent.level,
               sn = fragCurrent.sn,
               audioCodec = currentLevel.audioCodec;
-          if (audioCodec && this.audioCodecSwap) {
+          if (this.audioCodecSwap) {
             _utilsLogger.logger.log('swapping playlist audio codec');
+            if (audioCodec === undefined) {
+              audioCodec = this.lastAudioCodec;
+            }
             if (audioCodec.indexOf('mp4a.40.5') !== -1) {
               audioCodec = 'mp4a.40.2';
             } else {
@@ -1859,6 +1862,7 @@ var MSEMediaController = (function () {
         var audioCodec = this.levels[this.level].audioCodec,
             videoCodec = this.levels[this.level].videoCodec,
             sb;
+        this.lastAudioCodec = data.audioCodec;
         if (audioCodec && this.audioCodecSwap) {
           _utilsLogger.logger.log('swapping playlist audio codec');
           if (audioCodec.indexOf('mp4a.40.5') !== -1) {
@@ -4296,11 +4300,12 @@ var TSDemuxer = (function () {
           duration = this._duration,
           audioCodec = this.audioCodec,
           config,
-          adtsFrameSize,
-          adtsStartOffset,
-          adtsHeaderLen,
+          frameLength,
+          frameDuration,
+          frameIndex,
+          offset,
+          headerLength,
           stamp,
-          nbSamples,
           len,
           aacSample;
       if (this.aacOverFlow) {
@@ -4310,16 +4315,16 @@ var TSDemuxer = (function () {
         data = tmp;
       }
       // look for ADTS header (0xFFFx)
-      for (adtsStartOffset = startOffset, len = data.length; adtsStartOffset < len - 1; adtsStartOffset++) {
-        if (data[adtsStartOffset] === 0xff && (data[adtsStartOffset + 1] & 0xf0) === 0xf0) {
+      for (offset = startOffset, len = data.length; offset < len - 1; offset++) {
+        if (data[offset] === 0xff && (data[offset + 1] & 0xf0) === 0xf0) {
           break;
         }
       }
       // if ADTS header does not start straight from the beginning of the PES payload, raise an error
-      if (adtsStartOffset) {
+      if (offset) {
         var reason, fatal;
-        if (adtsStartOffset < len - 1) {
-          reason = 'AAC PES did not start with ADTS header,offset:' + adtsStartOffset;
+        if (offset < len - 1) {
+          reason = 'AAC PES did not start with ADTS header,offset:' + offset;
           fatal = false;
         } else {
           reason = 'no ADTS header found in AAC PES';
@@ -4331,37 +4336,36 @@ var TSDemuxer = (function () {
         }
       }
       if (!track.audiosamplerate) {
-        config = _adts2['default'].getAudioConfig(this.observer, data, adtsStartOffset, audioCodec);
+        config = _adts2['default'].getAudioConfig(this.observer, data, offset, audioCodec);
         track.config = config.config;
         track.audiosamplerate = config.samplerate;
         track.channelCount = config.channelCount;
         track.codec = config.codec;
         track.timescale = this.remuxer.timescale;
-        track.duration = this.remuxer.timescale * duration;
+        track.duration = track.timescale * duration;
         _utilsLogger.logger.log('parsed codec:' + track.codec + ',rate:' + config.samplerate + ',nb channel:' + config.channelCount);
       }
-      nbSamples = 0;
-      while (adtsStartOffset + 5 < len) {
+      frameIndex = 0;
+      frameDuration = 1024 * 90000 / track.audiosamplerate;
+      while (offset + 5 < len) {
+        // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
+        headerLength = !!(data[offset + 1] & 0x01) ? 7 : 9;
         // retrieve frame size
-        adtsFrameSize = (data[adtsStartOffset + 3] & 0x03) << 11;
-        // byte 4
-        adtsFrameSize |= data[adtsStartOffset + 4] << 3;
-        // byte 5
-        adtsFrameSize |= (data[adtsStartOffset + 5] & 0xE0) >>> 5;
-        adtsHeaderLen = !!(data[adtsStartOffset + 1] & 0x01) ? 7 : 9;
-        adtsFrameSize -= adtsHeaderLen;
-        stamp = Math.round(pts + nbSamples * 1024 * 90000 / track.audiosamplerate);
+        frameLength = (data[offset + 3] & 0x03) << 11 | data[offset + 4] << 3 | (data[offset + 5] & 0xE0) >>> 5;
+        frameLength -= headerLength;
+        stamp = Math.round(pts + frameIndex * frameDuration);
         //stamp = pes.pts;
-        //console.log('AAC frame, offset/length/pts:' + (adtsStartOffset+7) + '/' + adtsFrameSize + '/' + stamp.toFixed(0));
-        if (adtsFrameSize > 0 && adtsStartOffset + adtsHeaderLen + adtsFrameSize <= len) {
-          aacSample = { unit: data.subarray(adtsStartOffset + adtsHeaderLen, adtsStartOffset + adtsHeaderLen + adtsFrameSize), pts: stamp, dts: stamp };
+
+        //console.log('AAC frame, offset/length/pts:' + (offset+headerLength) + '/' + frameLength + '/' + stamp.toFixed(0));
+        if (frameLength > 0 && offset + headerLength + frameLength <= len) {
+          aacSample = { unit: data.subarray(offset + headerLength, offset + headerLength + frameLength), pts: stamp, dts: stamp };
           track.samples.push(aacSample);
-          track.len += adtsFrameSize;
-          adtsStartOffset += adtsFrameSize + adtsHeaderLen;
-          nbSamples++;
+          track.len += frameLength;
+          offset += frameLength + headerLength;
+          frameIndex++;
           // look for ADTS header (0xFFFx)
-          for (; adtsStartOffset < len - 1; adtsStartOffset++) {
-            if (data[adtsStartOffset] === 0xff && (data[adtsStartOffset + 1] & 0xf0) === 0xf0) {
+          for (; offset < len - 1; offset++) {
+            if (data[offset] === 0xff && (data[offset + 1] & 0xf0) === 0xf0) {
               break;
             }
           }
@@ -4369,8 +4373,8 @@ var TSDemuxer = (function () {
           break;
         }
       }
-      if (adtsStartOffset < len) {
-        this.aacOverFlow = data.subarray(adtsStartOffset, len);
+      if (offset < len) {
+        this.aacOverFlow = data.subarray(offset, len);
       } else {
         this.aacOverFlow = null;
       }
@@ -5451,8 +5455,9 @@ var PlaylistLoader = (function () {
   }, {
     key: 'loadsuccess',
     value: function loadsuccess(event, stats) {
-      var string = event.currentTarget.responseText,
-          url = event.currentTarget.responseURL,
+      var target = event.currentTarget,
+          string = target.responseText,
+          url = target.responseURL,
           id = this.id,
           id2 = this.id2,
           hls = this.hls,
@@ -5463,7 +5468,7 @@ var PlaylistLoader = (function () {
         url = this.url;
       }
       stats.tload = performance.now();
-      stats.mtime = new Date(event.currentTarget.getResponseHeader('Last-Modified'));
+      stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
       if (string.indexOf('#EXTM3U') === 0) {
         if (string.indexOf('#EXTINF:') > 0) {
           // 1 level playlist
@@ -6322,14 +6327,24 @@ var MP4Remuxer = (function () {
           dts,
           ptsnorm,
           dtsnorm,
-          samples = [];
+          samples = [],
+          samples0 = [];
 
-      while (track.samples.length) {
-        aacSample = track.samples.shift();
+      track.samples.forEach(function (aacSample) {
+        if (pts === undefined || aacSample.pts > pts) {
+          samples0.push(aacSample);
+          pts = aacSample.pts;
+        } else {
+          _utilsLogger.logger.warn('dropping past audio frame');
+        }
+      });
+
+      while (samples0.length) {
+        aacSample = samples0.shift();
         unit = aacSample.unit;
         pts = aacSample.pts - this._initDTS;
         dts = aacSample.dts - this._initDTS;
-        //logger.log('Audio/PTS:' + aacSample.pts.toFixed(0));
+        //logger.log(`Audio/PTS:${aacSample.pts.toFixed(0)}`);
         // if not first sample
         if (lastDTS !== undefined) {
           ptsnorm = this._PTSNormalize(pts, lastDTS);
@@ -6844,7 +6859,7 @@ var XhrLoader = (function () {
 
       this.url = url;
       if (frag && !isNaN(frag.byteRangeStartOffset) && !isNaN(frag.byteRangeEndOffset)) {
-        this.byteRange = frag.byteRangeStartOffset + '-' + frag.byteRangeEndOffset;
+        this.byteRange = frag.byteRangeStartOffset + '-' + (frag.byteRangeEndOffset - 1);
       }
       this.responseType = responseType;
       this.onSuccess = onSuccess;
