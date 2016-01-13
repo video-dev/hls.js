@@ -11,8 +11,7 @@
   "bugs": {
     "url": "https://github.com/dailymotion/hls.js/issues"
   },
-  "main": "src/hls.js",
-  "private": true,
+  "main": "index.js",
   "scripts": {
     "clean": "find dist -mindepth 1 -delete",
     "prebuild": "npm run clean & npm run test",
@@ -21,12 +20,19 @@
     "minify": "uglifyjs dist/hls.js -c sequences=true,dead_code=true,conditionals=true,booleans=true,unused=true,if_return=true,join_vars=true,drop_console=true -m sort --screw-ie8 > dist/hls.min.js",
     "watch": "watchify --debug -s Hls src/hls.js -o dist/hls.js",
     "pretest": "npm run lint",
-    "test": "mocha --compilers js:babel/register --recursive tests/unit",
+    "test": "mocha --compilers js:babel-register --recursive tests/unit",
     "lint": "jshint src/",
     "serve": "http-server -p 8000 .",
     "open": "opener http://localhost:8000/demo/",
     "live-reload": "live-reload --port 8001 dist/",
-    "dev": "npm run open -s & parallelshell 'npm run live-reload -s' 'npm run serve -s' 'npm run watch -s'"
+    "dev": "npm run open -s & parallelshell 'npm run live-reload -s' 'npm run serve -s' 'npm run watch -s'",
+    "babel": "babel src --out-dir lib",
+	"prepublish": "npm run babel"
+  },
+  "babel": {
+    "presets": [
+      "es2015"
+    ]
   },
   "browserify": {
     "transform": [
@@ -34,12 +40,15 @@
     ]
   },
   "dependencies": {
-    "babelify": "^6.1.2",
     "webworkify": "^1.0.2"
   },
   "devDependencies": {
+    "babel-preset-es2015": "^6.3.13",
+    "babel-register": "^6.3.13",
+    "babelify": "^7.2.0",
     "arraybuffer-equal": "^1.0.4",
-    "babel": "^5.8.34",
+    "babel": "^6.3.26",
+    "babel-cli": "^6.3.17",
     "browserify": "^8.1.1",
     "deep-strict-equal": "^0.1.0",
     "exorcist": "^0.4.0",
