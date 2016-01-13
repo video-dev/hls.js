@@ -499,7 +499,7 @@ full list of Events available below :
   - `Hls.Events.LEVEL_PTS_UPDATED`  - fired when a level's PTS information has been updated after parsing a fragment
     -  data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment }
   - `Hls.Events.LEVEL_SWITCH`  - fired when a level switch is requested
-    -  data: { levelId : id of new level }
+    -  data: { level : id of new level, it is the index of the array `Hls.levels` }
   - `Hls.Events.KEY_LOADING`  - fired when a decryption key loading starts
     -  data: { frag : fragment object}
   - `Hls.Events.KEY_LOADED`  - fired when a decryption key loading is completed
