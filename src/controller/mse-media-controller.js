@@ -208,7 +208,9 @@ class MSEMediaController {
           this.level = level;
           levelDetails = this.levels[level].details;
           // if level info not retrieved yet, switch state and wait for level retrieval
-          if (typeof levelDetails === 'undefined') {
+          // if live playlist, ensure that new playlist has been refreshed to avoid loading/try to load
+          // a useless and outdated fragment (that might even introduce load error if it is already out of the live playlist)
+          if (typeof levelDetails === 'undefined' || levelDetails.live && this.levelLastLoaded !== level) {
             this.state = State.WAITING_LEVEL;
             break;
           }
@@ -952,6 +954,7 @@ class MSEMediaController {
         duration = newDetails.totalduration;
 
     logger.log(`level ${newLevelId} loaded [${newDetails.startSN},${newDetails.endSN}],duration:${duration}`);
+    this.levelLastLoaded = newLevelId;
 
     if (newDetails.live) {
       var curDetails = curLevel.details;
