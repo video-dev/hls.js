@@ -189,7 +189,7 @@ class MSEMediaController {
           // we are not at playback start, get next load level from level Controller
           level = hls.nextLoadLevel;
         }
-        var bufferInfo = this.bufferInfo(pos,0.3),
+        var bufferInfo = this.bufferInfo(pos,this.config.maxBufferHole),
             bufferLen = bufferInfo.len,
             bufferEnd = bufferInfo.end,
             fragPrevious = this.fragPrevious,
@@ -364,7 +364,7 @@ class MSEMediaController {
             }
             pos = v.currentTime;
             var fragLoadedDelay = (frag.expectedLen - frag.loaded) / loadRate;
-            var bufferStarvationDelay = this.bufferInfo(pos,0.3).end - pos;
+            var bufferStarvationDelay = this.bufferInfo(pos,this.config.maxBufferHole).end - pos;
             var fragLevelNextLoadedDelay = frag.duration * this.levels[hls.nextLoadLevel].bitrate / (8 * loadRate); //bps/Bps
             /* if we have less than 2 frag duration in buffer and if frag loaded delay is greater than buffer starvation delay
               ... and also bigger than duration needed to load fragment at next level ...*/
@@ -870,7 +870,7 @@ class MSEMediaController {
     if (this.state === State.FRAG_LOADING) {
       // check if currently loaded fragment is inside buffer.
       //if outside, cancel fragment loading, otherwise do nothing
-      if (this.bufferInfo(this.media.currentTime,0.3).len === 0) {
+      if (this.bufferInfo(this.media.currentTime,this.config.maxBufferHole).len === 0) {
         logger.log('seeking outside of buffer while fragment load in progress, cancel fragment load');
         var fragCurrent = this.fragCurrent;
         if (fragCurrent) {
@@ -1220,10 +1220,10 @@ _checkBuffer() {
             }
             // if we are below threshold, try to jump if next buffer range is close
             if(bufferInfo.len <= jumpThreshold) {
-              // no buffer available @ currentTime, check if next buffer is close (more than 5ms diff but within a 300 ms range)
+              // no buffer available @ currentTime, check if next buffer is close (more than 5ms diff but within a config.maxSeekHole second range)
               var nextBufferStart = bufferInfo.nextStart, delta = nextBufferStart-currentTime;
               if(nextBufferStart &&
-                 (delta < 0.3) &&
+                 (delta < this.config.maxSeekHole) &&
                  (delta > 0.005)  &&
                  !media.seeking) {
                 // next buffer is close ! adjust currentTime to nextBufferStart
