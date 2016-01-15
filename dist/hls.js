@@ -1001,7 +1001,7 @@ var MSEMediaController = (function () {
             // we are not at playback start, get next load level from level Controller
             level = hls.nextLoadLevel;
           }
-          var bufferInfo = this.bufferInfo(pos, 0.3),
+          var bufferInfo = this.bufferInfo(pos, this.config.maxBufferHole),
               bufferLen = bufferInfo.len,
               bufferEnd = bufferInfo.end,
               fragPrevious = this.fragPrevious,
@@ -1176,7 +1176,7 @@ var MSEMediaController = (function () {
               }
               pos = v.currentTime;
               var fragLoadedDelay = (frag.expectedLen - frag.loaded) / loadRate;
-              var bufferStarvationDelay = this.bufferInfo(pos, 0.3).end - pos;
+              var bufferStarvationDelay = this.bufferInfo(pos, this.config.maxBufferHole).end - pos;
               var fragLevelNextLoadedDelay = frag.duration * this.levels[hls.nextLoadLevel].bitrate / (8 * loadRate); //bps/Bps
               /* if we have less than 2 frag duration in buffer and if frag loaded delay is greater than buffer starvation delay
                 ... and also bigger than duration needed to load fragment at next level ...*/
@@ -1680,7 +1680,7 @@ var MSEMediaController = (function () {
       if (this.state === State.FRAG_LOADING) {
         // check if currently loaded fragment is inside buffer.
         //if outside, cancel fragment loading, otherwise do nothing
-        if (this.bufferInfo(this.media.currentTime, 0.3).len === 0) {
+        if (this.bufferInfo(this.media.currentTime, this.config.maxBufferHole).len === 0) {
           _utilsLogger.logger.log('seeking outside of buffer while fragment load in progress, cancel fragment load');
           var fragCurrent = this.fragCurrent;
           if (fragCurrent) {
@@ -2041,10 +2041,10 @@ var MSEMediaController = (function () {
               }
               // if we are below threshold, try to jump if next buffer range is close
               if (bufferInfo.len <= jumpThreshold) {
-                // no buffer available @ currentTime, check if next buffer is close (more than 5ms diff but within a 300 ms range)
+                // no buffer available @ currentTime, check if next buffer is close (more than 5ms diff but within a config.maxSeekHole second range)
                 var nextBufferStart = bufferInfo.nextStart,
                     delta = nextBufferStart - currentTime;
-                if (nextBufferStart && delta < 0.3 && delta > 0.005 && !media.seeking) {
+                if (nextBufferStart && delta < this.config.maxSeekHole && delta > 0.005 && !media.seeking) {
                   // next buffer is close ! adjust currentTime to nextBufferStart
                   // this will ensure effective video decoding
                   _utilsLogger.logger.log('adjust currentTime from ' + currentTime + ' to ' + nextBufferStart);
@@ -4750,6 +4750,8 @@ var Hls = (function () {
           debug: false,
           maxBufferLength: 30,
           maxBufferSize: 60 * 1000 * 1000,
+          maxBufferHole: 0.3,
+          maxSeekHole: 2,
           liveSyncDurationCount: 3,
           liveMaxLatencyDurationCount: Infinity,
           maxMaxBufferLength: 600,
@@ -6194,6 +6196,7 @@ var MP4Remuxer = (function () {
           dts,
           ptsnorm,
           dtsnorm,
+          flags,
           samples = [];
       /* concatenate the video data and construct the mdat in place
         (need 8 more bytes to fill length and mpdat type) */
@@ -6217,7 +6220,7 @@ var MP4Remuxer = (function () {
         dts = avcSample.dts - this._initDTS;
         // ensure DTS is not bigger than PTS
         dts = Math.min(pts, dts);
-        //logger.log(`Video/PTS/DTS:${pts}/${dts}`);
+        //logger.log(`Video/PTS/DTS:${Math.round(pts/90)}/${Math.round(dts/90)}`);
         // if not first AVC sample of video track, normalize PTS/DTS with previous sample value
         // and ensure that sample duration is positive
         if (lastDTS !== undefined) {
@@ -6267,13 +6270,14 @@ var MP4Remuxer = (function () {
             degradPrio: 0
           }
         };
+        flags = mp4Sample.flags;
         if (avcSample.key === true) {
           // the current sample is a key frame
-          mp4Sample.flags.dependsOn = 2;
-          mp4Sample.flags.isNonSync = 0;
+          flags.dependsOn = 2;
+          flags.isNonSync = 0;
         } else {
-          mp4Sample.flags.dependsOn = 1;
-          mp4Sample.flags.isNonSync = 1;
+          flags.dependsOn = 1;
+          flags.isNonSync = 1;
         }
         samples.push(mp4Sample);
         lastDTS = dtsnorm;
@@ -6288,7 +6292,7 @@ var MP4Remuxer = (function () {
       track.len = 0;
       track.nbNalu = 0;
       if (samples.length && navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
-        var flags = samples[0].flags;
+        flags = samples[0].flags;
         // chrome workaround, mark first sample as being a Random Access Point to avoid sourcebuffer append issue
         // https://code.google.com/p/chromium/issues/detail?id=229412
         flags.dependsOn = 2;
@@ -6344,7 +6348,7 @@ var MP4Remuxer = (function () {
         unit = aacSample.unit;
         pts = aacSample.pts - this._initDTS;
         dts = aacSample.dts - this._initDTS;
-        //logger.log(`Audio/PTS:${aacSample.pts.toFixed(0)}`);
+        //logger.log(`Audio/PTS:${Math.round(pts/90)}`);
         // if not first sample
         if (lastDTS !== undefined) {
           ptsnorm = this._PTSNormalize(pts, lastDTS);
