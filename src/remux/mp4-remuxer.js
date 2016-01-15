@@ -167,7 +167,7 @@ class MP4Remuxer {
             dts = avcSample.dts - this._initDTS;
             // ensure DTS is not bigger than PTS
             dts = Math.min(pts, dts);
-            //logger.log(`Video/PTS/DTS:${pts}/${dts}`);
+            //logger.log(`Video/PTS/DTS:${Math.round(pts/90)}/${Math.round(dts/90)}`);
             // if not first AVC sample of video track, normalize PTS/DTS with previous sample value
             // and ensure that sample duration is positive
             if (lastDTS !== undefined) {
@@ -313,7 +313,7 @@ class MP4Remuxer {
             unit = aacSample.unit;
             pts = aacSample.pts - this._initDTS;
             dts = aacSample.dts - this._initDTS;
-            //logger.log(`Audio/PTS:${Math.round(aacSample.pts/90)}`);
+            //logger.log(`Audio/PTS:${Math.round(pts/90)}`);
             // if not first sample
             if (lastDTS !== undefined) {
                 ptsnorm = this._PTSNormalize(pts, lastDTS);
