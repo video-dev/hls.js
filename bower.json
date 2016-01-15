@@ -7,7 +7,7 @@
     "Guillaume du Pontavice <guillaume.dupontavice@dailymotion.com>"
   ],
   "main": "dist/hls.js",
-  "private": true,
+  "private": false,
   "ignore": [
     "**/.*",
     "node_modules",
