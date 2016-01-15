@@ -1,6 +1,5 @@
 import Event from '../events';
 import DemuxerInline from '../demux/demuxer-inline';
-import DemuxerWorker from '../demux/demuxer-worker';
 import {logger} from '../utils/logger';
 import MP4Remuxer from '../remux/mp4-remuxer';
 import Decrypter from '../crypt/decrypter';
@@ -12,8 +11,7 @@ class Demuxer {
     if (hls.config.enableWorker && (typeof(Worker) !== 'undefined')) {
         logger.log('demuxing in webworker');
         try {
-          var work = require('webworkify');
-          this.w = work(DemuxerWorker);
+          this.w = new Worker('../../demux/demuxer-worker');
           this.onwmsg = this.onWorkerMessage.bind(this);
           this.w.addEventListener('message', this.onwmsg);
           this.w.postMessage({cmd: 'init'});
@@ -56,7 +54,7 @@ class Demuxer {
       if (this.decrypter == null) {
         this.decrypter = new Decrypter(this.hls);
       }
-      
+
       var localthis = this;
       this.decrypter.decrypt(data, decryptdata.key, decryptdata.iv, function(decryptedData){
         localthis.pushDecrypted(decryptedData, audioCodec, videoCodec, timeOffset, cc, level, sn, duration);

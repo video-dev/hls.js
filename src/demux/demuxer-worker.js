@@ -2,13 +2,13 @@
  *  - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
  *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
  */
+/* jshint worker:true */
+import DemuxerInline from '../demux/demuxer-inline';
+import Event from '../events';
+import EventEmitter from 'events';
+import MP4Remuxer from '../remux/mp4-remuxer';
 
- import DemuxerInline from '../demux/demuxer-inline';
- import Event from '../events';
- import EventEmitter from 'events';
- import MP4Remuxer from '../remux/mp4-remuxer';
-
-var DemuxerWorker = function (self) {
+var demuxerWorker = function (self) {
   // observer setup
   var observer = new EventEmitter();
   observer.trigger = function trigger (event, ...data) {
@@ -74,5 +74,6 @@ var DemuxerWorker = function (self) {
   });
 };
 
-export default DemuxerWorker;
+// export default demuxerWorker;
+demuxerWorker(self);
 
