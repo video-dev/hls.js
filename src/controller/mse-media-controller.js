@@ -1134,7 +1134,7 @@ class MSEMediaController extends EventHandler {
             logger.error(`mediaController: ${data.details} reaches max retry, redispatch as fatal ...`);
             // redispatch same error but with fatal set to true
             data.fatal = true;
-            this.hls.trigger(event, data);
+            this.hls.trigger(Event.ERROR, data);
             this.state = State.ERROR;
           }
         }
