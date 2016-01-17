@@ -24,7 +24,7 @@ const State = {
     BUFFER_FLUSHING: 8
 };
 
-class MSEMediaController {
+class MSEMediaController extends EventHandler {
     constructor(hls) {
         super(
             hls,
