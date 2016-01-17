@@ -28,7 +28,8 @@ class LevelController extends EventHandler {
             i,
             bitrateSet = {},
             videoCodecFound = false,
-            audioCodecFound = false;
+            audioCodecFound = false,
+            hls = this.hls;
 
         // regroup redundant level together
         data.levels.forEach(level => {
@@ -40,7 +41,7 @@ class LevelController extends EventHandler {
             }
             var redundantLevelId = bitrateSet[level.bitrate];
             if (redundantLevelId === undefined) {
-                bitrateSet[level.bitrate] = levels.length;
+                bitrateSet[level.bitrate] = levels0.length;
                 level.url = [level.url];
                 level.urlId = 0;
                 levels0.push(level);
@@ -60,30 +61,54 @@ class LevelController extends EventHandler {
             levels = levels0;
         }
 
-        // start bitrate is the first bitrate of the manifest
-        bitrateStart = levels[0].bitrate;
-        // sort level on bitrate
-        levels.sort(function(a, b) {
-            return a.bitrate - b.bitrate;
+        // only keep level with supported audio/video codecs
+        levels = levels.filter(function(level) {
+            var checkSupported = function(codec) {
+                return MediaSource.isTypeSupported(`video/mp4;codecs=${codec}`);
+            };
+            var audioCodec = level.audioCodec,
+                videoCodec = level.videoCodec;
+
+            return (
+                (!audioCodec || checkSupported(audioCodec)) &&
+                (!videoCodec || checkSupported(videoCodec))
+            );
         });
-        this._levels = levels;
-        // find index of first level in sorted levels
-        for (i = 0; i < levels.length; i++) {
-            if (levels[i].bitrate === bitrateStart) {
-                this._firstLevel = i;
-                logger.log(
-                    `manifest loaded,${
-                        levels.length
-                    } level(s) found, first bitrate:${bitrateStart}`
-                );
-                break;
+
+        if (levels.length) {
+            // start bitrate is the first bitrate of the manifest
+            bitrateStart = levels[0].bitrate;
+            // sort level on bitrate
+            levels.sort(function(a, b) {
+                return a.bitrate - b.bitrate;
+            });
+            this._levels = levels;
+            // find index of first level in sorted levels
+            for (i = 0; i < levels.length; i++) {
+                if (levels[i].bitrate === bitrateStart) {
+                    this._firstLevel = i;
+                    logger.log(
+                        `manifest loaded,${
+                            levels.length
+                        } level(s) found, first bitrate:${bitrateStart}`
+                    );
+                    break;
+                }
             }
+            hls.trigger(Event.MANIFEST_PARSED, {
+                levels: this._levels,
+                firstLevel: this._firstLevel,
+                stats: data.stats
+            });
+        } else {
+            hls.trigger(Event.ERROR, {
+                type: ErrorTypes.NETWORK_ERROR,
+                details: ErrorDetails.MANIFEST_PARSING_ERROR,
+                fatal: true,
+                url: hls.url,
+                reason: 'no compatible level found in manifest'
+            });
         }
-        this.hls.trigger(Event.MANIFEST_PARSED, {
-            levels: this._levels,
-            firstLevel: this._firstLevel,
-            stats: data.stats
-        });
         return;
     }
 
@@ -197,7 +222,8 @@ class LevelController extends EventHandler {
         }
         /* try to switch to a redundant stream if any available.
      * if no redundant stream available, emergency switch down (if in auto mode and current level not 0)
-     * otherwise, we cannot recover this network error ....
+     * otherwise, we cannot recover this network error ...
+     * don't raise FRAG_LOAD_ERROR and FRAG_LOAD_TIMEOUT as fatal, as it is handled by mediaController
      */
         if (levelId !== undefined) {
             level = this._levels[levelId];
@@ -221,7 +247,11 @@ class LevelController extends EventHandler {
                     logger.warn(
                         `level controller,${details} on live stream, discard`
                     );
-                } else {
+                    // FRAG_LOAD_ERROR and FRAG_LOAD_TIMEOUT are handled by mediaController
+                } else if (
+                    details !== ErrorDetails.FRAG_LOAD_ERROR &&
+                    details !== ErrorDetails.FRAG_LOAD_TIMEOUT
+                ) {
                     logger.error(`cannot recover ${details} error`);
                     this._level = undefined;
                     // stopping live reloading timer if any

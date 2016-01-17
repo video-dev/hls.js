@@ -6,6 +6,7 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import URLHelper from '../utils/url';
+import AttrList from '../utils/attr-list';
 //import {logger} from '../utils/logger';
 
 class PlaylistLoader extends EventHandler {
@@ -31,10 +32,22 @@ class PlaylistLoader extends EventHandler {
     }
 
     load(url, id1, id2) {
-        var config = this.hls.config;
+        var config = this.hls.config,
+            retry,
+            timeout,
+            retryDelay;
         this.url = url;
         this.id = id1;
         this.id2 = id2;
+        if (this.id === undefined) {
+            retry = config.manifestLoadingMaxRetry;
+            timeout = config.manifestLoadingTimeOut;
+            retryDelay = config.manifestLoadingRetryDelay;
+        } else {
+            retry = config.levelLoadingMaxRetry;
+            timeout = config.levelLoadingTimeOut;
+            retryDelay = config.levelLoadingRetryDelay;
+        }
         this.loader =
             typeof config.pLoader !== 'undefined'
                 ? new config.pLoader(config)
@@ -45,9 +58,9 @@ class PlaylistLoader extends EventHandler {
             this.loadsuccess.bind(this),
             this.loaderror.bind(this),
             this.loadtimeout.bind(this),
-            config.manifestLoadingTimeOut,
-            config.manifestLoadingMaxRetry,
-            config.manifestLoadingRetryDelay
+            timeout,
+            retry,
+            retryDelay
         );
     }
 
@@ -56,48 +69,39 @@ class PlaylistLoader extends EventHandler {
     }
 
     parseMasterPlaylist(string, baseurl) {
-        var levels = [],
-            level = {},
-            result,
-            codecs,
-            codec;
+        let levels = [],
+            result;
+
         // https://regex101.com is your friend
-        var re = /#EXT-X-STREAM-INF:([^\n\r]*(BAND)WIDTH=(\d+))?([^\n\r]*(CODECS)=\"([^\"\n\r]*)\",?)?([^\n\r]*(RES)OLUTION=(\d+)x(\d+))?([^\n\r]*(NAME)=\"(.*)\")?[^\n\r]*[\r\n]+([^\r\n]+)/g;
+        const re = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
         while ((result = re.exec(string)) != null) {
-            result.shift();
-            result = result.filter(function(n) {
-                return n !== undefined;
-            });
-            level.url = this.resolve(result.pop(), baseurl);
-            while (result.length > 0) {
-                switch (result.shift()) {
-                    case 'RES':
-                        level.width = parseInt(result.shift());
-                        level.height = parseInt(result.shift());
-                        break;
-                    case 'BAND':
-                        level.bitrate = parseInt(result.shift());
-                        break;
-                    case 'NAME':
-                        level.name = result.shift();
-                        break;
-                    case 'CODECS':
-                        codecs = result.shift().split(',');
-                        while (codecs.length > 0) {
-                            codec = codecs.shift();
-                            if (codec.indexOf('avc1') !== -1) {
-                                level.videoCodec = this.avc1toavcoti(codec);
-                            } else {
-                                level.audioCodec = codec;
-                            }
-                        }
-                        break;
-                    default:
-                        break;
+            const level = {};
+
+            var attrs = (level.attrs = new AttrList(result[1]));
+            level.url = this.resolve(result[2], baseurl);
+
+            var resolution = attrs.decimalResolution('RESOLUTION');
+            if (resolution) {
+                level.width = resolution.width;
+                level.height = resolution.height;
+            }
+            level.bitrate = attrs.decimalInteger('BANDWIDTH');
+            level.name = attrs.NAME;
+
+            var codecs = attrs.CODECS;
+            if (codecs) {
+                codecs = codecs.split(',');
+                for (let i = 0; i < codecs.length; i++) {
+                    const codec = codecs[i];
+                    if (codec.indexOf('avc1') !== -1) {
+                        level.videoCodec = this.avc1toavcoti(codec);
+                    } else {
+                        level.audioCodec = codec;
+                    }
                 }
             }
+
             levels.push(level);
-            level = {};
         }
         return levels;
     }
@@ -108,27 +112,13 @@ class PlaylistLoader extends EventHandler {
         if (avcdata.length > 2) {
             result = avcdata.shift() + '.';
             result += parseInt(avcdata.shift()).toString(16);
-            result += ('00' + parseInt(avcdata.shift()).toString(16)).substr(
+            result += ('000' + parseInt(avcdata.shift()).toString(16)).substr(
                 -4
             );
         } else {
             result = codec;
         }
         return result;
-    }
-
-    parseKeyParamsByRegex(string, regexp) {
-        var result = regexp.exec(string);
-        if (result) {
-            result.shift();
-            result = result.filter(function(n) {
-                return n !== undefined;
-            });
-            if (result.length === 2) {
-                return result[1];
-            }
-        }
-        return null;
     }
 
     cloneObj(obj) {
@@ -139,14 +129,16 @@ class PlaylistLoader extends EventHandler {
         var currentSN = 0,
             totalduration = 0,
             level = { url: baseurl, fragments: [], live: true, startSN: 0 },
+            levelkey = { method: null, key: null, iv: null, uri: null },
+            cc = 0,
+            programDateTime = null,
+            frag = null,
             result,
             regexp,
-            cc = 0,
-            frag,
             byteRangeEndOffset,
             byteRangeStartOffset;
-        var levelkey = { method: null, key: null, iv: null, uri: null };
-        regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))/g;
+
+        regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*))/g;
         while ((result = regexp.exec(string)) !== null) {
             result.shift();
             result = result.filter(function(n) {
@@ -174,9 +166,6 @@ class PlaylistLoader extends EventHandler {
                     }
                     byteRangeEndOffset =
                         parseInt(params[0]) + byteRangeStartOffset;
-                    frag = level.fragments.length
-                        ? level.fragments[level.fragments.length - 1]
-                        : null;
                     if (frag && !frag.url) {
                         frag.byteRangeStartOffset = byteRangeStartOffset;
                         frag.byteRangeEndOffset = byteRangeEndOffset;
@@ -198,10 +187,11 @@ class PlaylistLoader extends EventHandler {
                         } else {
                             fragdecryptdata = levelkey;
                         }
-                        level.fragments.push({
-                            url: result[2]
-                                ? this.resolve(result[2], baseurl)
-                                : null,
+                        var url = result[2]
+                            ? this.resolve(result[2], baseurl)
+                            : null;
+                        frag = {
+                            url: url,
                             duration: duration,
                             start: totalduration,
                             sn: sn,
@@ -209,27 +199,22 @@ class PlaylistLoader extends EventHandler {
                             cc: cc,
                             byteRangeStartOffset: byteRangeStartOffset,
                             byteRangeEndOffset: byteRangeEndOffset,
-                            decryptdata: fragdecryptdata
-                        });
+                            decryptdata: fragdecryptdata,
+                            programDateTime: programDateTime
+                        };
+                        level.fragments.push(frag);
                         totalduration += duration;
                         byteRangeStartOffset = null;
+                        programDateTime = null;
                     }
                     break;
                 case 'KEY':
                     // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
                     var decryptparams = result[1];
-                    var decryptmethod = this.parseKeyParamsByRegex(
-                            decryptparams,
-                            /(METHOD)=([^,]*)/
-                        ),
-                        decrypturi = this.parseKeyParamsByRegex(
-                            decryptparams,
-                            /(URI)=["]([^,]*)["]/
-                        ),
-                        decryptiv = this.parseKeyParamsByRegex(
-                            decryptparams,
-                            /(IV)=([^,]*)/
-                        );
+                    var keyAttrs = new AttrList(decryptparams);
+                    var decryptmethod = keyAttrs.enumeratedString('METHOD'),
+                        decrypturi = keyAttrs.URI,
+                        decryptiv = keyAttrs.hexadecimalInteger('IV');
                     if (decryptmethod) {
                         levelkey = {
                             method: null,
@@ -243,34 +228,31 @@ class PlaylistLoader extends EventHandler {
                             levelkey.uri = this.resolve(decrypturi, baseurl);
                             levelkey.key = null;
                             // Initialization Vector (IV)
-                            if (decryptiv) {
-                                levelkey.iv = decryptiv;
-                                if (levelkey.iv.substring(0, 2) === '0x') {
-                                    levelkey.iv = levelkey.iv.substring(2);
-                                }
-                                levelkey.iv = levelkey.iv.match(/.{8}/g);
-                                levelkey.iv[0] = parseInt(levelkey.iv[0], 16);
-                                levelkey.iv[1] = parseInt(levelkey.iv[1], 16);
-                                levelkey.iv[2] = parseInt(levelkey.iv[2], 16);
-                                levelkey.iv[3] = parseInt(levelkey.iv[3], 16);
-                                levelkey.iv = new Uint32Array(levelkey.iv);
-                            }
+                            levelkey.iv = decryptiv;
                         }
                     }
+                    break;
+                case 'PROGRAM-DATE-TIME':
+                    programDateTime = new Date(Date.parse(result[1]));
                     break;
                 default:
                     break;
             }
         }
         //logger.log('found ' + level.fragments.length + ' fragments');
+        if (frag && !frag.url) {
+            level.fragments.pop();
+            totalduration -= frag.duration;
+        }
         level.totalduration = totalduration;
         level.endSN = currentSN - 1;
         return level;
     }
 
     loadsuccess(event, stats) {
-        var string = event.currentTarget.responseText,
-            url = event.currentTarget.responseURL,
+        var target = event.currentTarget,
+            string = target.responseText,
+            url = target.responseURL,
             id = this.id,
             id2 = this.id2,
             hls = this.hls,
@@ -281,9 +263,7 @@ class PlaylistLoader extends EventHandler {
             url = this.url;
         }
         stats.tload = performance.now();
-        stats.mtime = new Date(
-            event.currentTarget.getResponseHeader('Last-Modified')
-        );
+        stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
         if (string.indexOf('#EXTM3U') === 0) {
             if (string.indexOf('#EXTINF:') > 0) {
                 // 1 level playlist
