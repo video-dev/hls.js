@@ -1302,7 +1302,9 @@ class MSEMediaController {
             //trigger handler right now
             this.tick();
         } else {
-            logger.warn(`not in PARSING state, discarding ${event}`);
+            logger.warn(
+                `not in PARSING state, ignoring FRAG_PARSING_DATA event`
+            );
         }
     }
 
