@@ -90,20 +90,20 @@ class AES128Decrypter {
 
     // pull out the words of the IV to ensure we don't modify the
     // passed-in reference and easier access
-    init0 = initVector[0];
-    init1 = initVector[1];
-    init2 = initVector[2];
-    init3 = initVector[3];
+    init0 = ~~initVector[0];
+    init1 = ~~initVector[1];
+    init2 = ~~initVector[2];
+    init3 = ~~initVector[3];
 
     // decrypt four word sequences, applying cipher-block chaining (CBC)
     // to each decrypted block
     for (wordIx = 0; wordIx < encrypted32.length; wordIx += 4) {
       // convert big-endian (network order) words into little-endian
       // (javascript order)
-      encrypted0 = this.ntoh(encrypted32[wordIx]);
-      encrypted1 = this.ntoh(encrypted32[wordIx + 1]);
-      encrypted2 = this.ntoh(encrypted32[wordIx + 2]);
-      encrypted3 = this.ntoh(encrypted32[wordIx + 3]);
+      encrypted0 = ~~this.ntoh(encrypted32[wordIx]);
+      encrypted1 = ~~this.ntoh(encrypted32[wordIx + 1]);
+      encrypted2 = ~~this.ntoh(encrypted32[wordIx + 2]);
+      encrypted3 = ~~this.ntoh(encrypted32[wordIx + 3]);
 
       // decrypt the block
       decipher.decrypt(encrypted0,
@@ -130,7 +130,7 @@ class AES128Decrypter {
     return decrypted;
   }
 
-  localDecript(encrypted, key, initVector, decrypted) {
+  localDecrypt(encrypted, key, initVector, decrypted) {
     var bytes = this.doDecrypt(encrypted,
         key,
         initVector);
@@ -148,7 +148,7 @@ class AES128Decrypter {
     // split up the encryption job and do the individual chunks asynchronously
     var key = this.key;
     var initVector = this.iv;
-    this.localDecript(encrypted32.subarray(i, i + step), key, initVector, decrypted);
+    this.localDecrypt(encrypted32.subarray(i, i + step), key, initVector, decrypted);
 
     for (i = step; i < encrypted32.length; i += step) {
       initVector = new Uint32Array([
@@ -157,7 +157,7 @@ class AES128Decrypter {
           this.ntoh(encrypted32[i - 2]),
           this.ntoh(encrypted32[i - 1])
       ]);
-      this.localDecript(encrypted32.subarray(i, i + step), key, initVector, decrypted);
+      this.localDecrypt(encrypted32.subarray(i, i + step), key, initVector, decrypted);
     }
 
     return decrypted;

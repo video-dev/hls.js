@@ -33,8 +33,8 @@ let's
     var hls = new Hls();
     // bind them together
     hls.attachMedia(video);
-    // MSE_ATTACHED event is fired by hls object once MediaSource is ready
-    hls.on(Hls.Events.MSE_ATTACHED,function() {
+    // MEDIA_ATTACHED event is fired by hls object once MediaSource is ready
+    hls.on(Hls.Events.MEDIA_ATTACHED,function() {
 		  console.log("video and hls.js are now bound together !");
     });
  }
@@ -54,7 +54,7 @@ you need to provide manifest URL as below:
     var hls = new Hls();
     // bind them together
     hls.attachMedia(video);
-    hls.on(Hls.Events.MSE_ATTACHED,function() {
+    hls.on(Hls.Events.MEDIA_ATTACHED,function() {
 		console.log("video and hls.js are now bound together !");
 		hls.loadSource("http://my.streamURL.com/playlist.m3u8");
 		hls.on(Hls.Events.MANIFEST_PARSED, function(event,data) {
@@ -160,6 +160,14 @@ should be invoked to recover media error
   }
 ```
 
+##### ```hls.swapAudioCodec()```
+
+If media error are still raised after calling ```hls.recoverMediaError()```,
+calling this method, could be useful to workaround audio codec mismatch.
+the workflow should be :
+
+on Media Error : first call ```hls.swapAudioCodec()```, then call ```hls.recoverMediaError()```
+
 ###final step : destroying, switching between streams
 
 ```hls.destroy()``` should be called to free used resources and destroy hls context.
@@ -176,20 +184,26 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       debug : false,
       autoStartLoad : true,
       maxBufferLength : 30,
+      maxMaxBufferLength : 600,
       maxBufferSize : 60*1000*1000,
+      maxBufferHole : 0.3,
+      maxSeekHole : 2,
       liveSyncDurationCount : 3,
       liveMaxLatencyDurationCount: 10,
       enableWorker : true,
       enableSoftwareAES: true,
-      fragLoadingTimeOut : 20000,
-      fragLoadingMaxRetry : 6,
-      fragLoadingRetryDelay : 500,
       manifestLoadingTimeOut : 10000,
       manifestLoadingMaxRetry : 6,
       manifestLoadingRetryDelay : 500,
+      levelLoadingTimeOut : 10000,
+      levelLoadingMaxRetry : 6,
+      levelLoadingRetryDelay : 500,
+      fragLoadingTimeOut : 20000,
+      fragLoadingMaxRetry : 6,
+      fragLoadingRetryDelay : 500,
       fpsDroppedMonitoringPeriod : 5000,
       fpsDroppedMonitoringThreshold : 0.2,
-      appendErrorMaxRetry : 200,
+      appendErrorMaxRetry : 3,
       loader : customLoader,
       fLoader: customFragmentLoader,
       pLoader: customPlaylistLoader,
@@ -200,6 +214,10 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
 
 var hls = new Hls(config);
 ```
+
+#### ```Hls.DefaultConfig get/set```
+this getter/setter allows to retrieve and override Hls default configuration.
+this configuration will be applied by default to all instances.
 
 #### ```debug```
 (default false)
@@ -217,10 +235,38 @@ a logger object could also be provided for custom logging : ```config.debug=cust
 (default 30s)
 
 maximum buffer Length in seconds. if buffer length is/become less than this value, a new fragment will be loaded.
+this is the guaranteed buffer length hls.js will try to reach, regardless of maxBufferSize.
+
 #### ```maxBufferSize```
 (default 60 MB)
 
-maximum buffer size in bytes. if buffer size upfront is bigger than this value, no fragment will be loaded.
+'minimum' maximum buffer size in bytes. if buffer size upfront is bigger than this value, no fragment will be loaded.
+
+#### ```maxBufferHole```
+(default 0.3s)
+
+'maximum' inter-fragment buffer hole tolerance that hls.js can cope with.
+When switching between quality level, fragments might not be perfectly aligned.
+This could result in small overlapping or hole in media buffer. This tolerance factor helps cope with this.
+
+#### ```maxSeekHole```
+(default 2s)
+
+in case playback is stalled, and a buffered range is available upfront, less than maxSeekHole seconds from current media position,
+hls.js will jump over this buffer hole to reach the beginning of this following buffered range.
+```maxSeekHole``` allows to configure this jumpable threshold.
+
+#### ```maxMaxBufferLength```
+(default 600s)
+
+maximum buffer Length in seconds. hls.js will never exceed this value. even if maxBufferSize is not reached yet.
+
+hls.js tries to buffer up to a maximum number of bytes (60 MB by default) rather than to buffer up to a maximum nb of seconds.
+this is to mimic the browser behaviour (the buffer eviction algorithm is starting after the browser detects that video buffer size reaches a limit in bytes)
+
+config.maxBufferLength is the minimum guaranteed buffer length that hls.js will try to achieve, even if that value exceeds the amount of bytes 60 MB of memory.
+maxMaxBufferLength acts as a capping value, as if bitrate is really low, you could need more than one hour of buffer to fill 60 MB....
+
 
 #### ```liveSyncDurationCount```
 (default 3)
@@ -247,19 +293,19 @@ enable webworker (if available on browser) for TS demuxing/MP4 remuxing, to impr
 
 enable to use JavaScript version AES decryption for fallback of WebCrypto API.
 
-#### ```fragLoadingTimeOut```/```manifestLoadingTimeOut```
-(default 60000ms for fragment/10000ms for manifest)
+#### ```fragLoadingTimeOut```/```manifestLoadingTimeOut```/```levelLoadingTimeOut```
+(default 60000ms for fragment/10000ms for level and manifest)
 
 URL Loader timeout.
 A timeout callback will be triggered if loading duration exceeds this timeout.
 no further action will be done : the load operation will not be cancelled/aborted.
 It is up to the application to catch this event and treat it as needed.
-#### ```fragLoadingMaxRetry```/```manifestLoadingMaxRetry```
+#### ```fragLoadingMaxRetry```/```manifestLoadingMaxRetry```/```levelLoadingMaxRetry```
 (default 3)
 
 max nb of load retry
-#### ```fragLoadingRetryDelay```/```manifestLoadingRetryDelay```
-(default 500ms)
+#### ```fragLoadingRetryDelay```/```manifestLoadingRetryDelay```/```levelLoadingRetryDelay```
+(default 1000ms)
 
 initial delay between XmlHttpRequest error and first load retry (in ms)
 any I/O error will trigger retries every 500ms,1s,2s,4s,8s, ... capped to 64s (exponential backoff)
@@ -267,7 +313,7 @@ any I/O error will trigger retries every 500ms,1s,2s,4s,8s, ... capped to 64s (e
 
 max nb of append retry
 #### ```appendErrorMaxRetry```
-(default 200)
+(default 3)
 
 max number of sourceBuffer.appendBuffer() retry upon error.
 such error could happen in loop with UHD streams, when internal buffer is full. (Quota Exceeding Error will be triggered). in that case we need to wait for the browser to evict some data before being able to append buffer correctly.
@@ -339,7 +385,7 @@ This allows user to easily modify/setup XHR. see example below.
 
 ```js
 var config = {
-  xhrSetup: function(xhr) {
+  xhrSetup: function(xhr, url) {
     xhr.withCredentials = true; // do send cookies
   }
 }
@@ -364,9 +410,9 @@ calling this method will :
 
  - bind videoElement and hls instance,
  - create MediaSource and set it as video source
- - once MediaSource object is successfully created, MSE_ATTACHED event will be fired.
+ - once MediaSource object is successfully created, MEDIA_ATTACHED event will be fired.
 
-#### ```hls.detachVideo()```
+#### ```hls.detachMedia()```
 calling this method will :
 
  - unbind VideoElement from hls instance,
@@ -469,7 +515,7 @@ full list of Events available below :
   - `Hls.Events.LEVEL_PTS_UPDATED`  - fired when a level's PTS information has been updated after parsing a fragment
     -  data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment }
   - `Hls.Events.LEVEL_SWITCH`  - fired when a level switch is requested
-    -  data: { levelId : id of new level }
+    -  data: { level : id of new level, it is the index of the array `Hls.levels` }
   - `Hls.Events.KEY_LOADING`  - fired when a decryption key loading starts
     -  data: { frag : fragment object}
   - `Hls.Events.KEY_LOADED`  - fired when a decryption key loading is completed
@@ -477,7 +523,7 @@ full list of Events available below :
   - `Hls.Events.FRAG_LOADING`  - fired when a fragment loading starts
     -  data: { frag : fragment object}
   - `Hls.Events.FRAG_LOAD_PROGRESS`  - fired when a fragment load is in progress
-    - data: { frag : fragment object, stats : progress event }
+    - data: { frag : fragment object with frag.loaded=stats.loaded, stats : { trequest, tfirst, loaded} }
   - `Hls.Events.FRAG_LOADED`  - fired when a fragment loading is completed
     -  data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length}}
   - `Hls.Events.FRAG_PARSING_INIT_SEGMENT` - fired when Init Segment has been extracted from fragment
@@ -496,7 +542,7 @@ full list of Events available below :
     -  data: {curentDropped : nb of dropped frames in last monitoring period, currentDecoded: nb of decoded frames in last monitoring period, totalDropped : total dropped frames on this video element}
   - `Hls.Events.ERROR` -  Identifier for an error event
     - data: { type : error Type, details : error details, fatal : is error fatal or not, other error specific data}
-  - `Hls.Events.DESTROYING` -  fired when hls.js instance starts destroying. Different from MSE_DETACHED as one could want to detach and reattach a video to the instance of hls.js to handle mid-rolls for example.
+  - `Hls.Events.DESTROYING` -  fired when hls.js instance starts destroying. Different from MEDIA_DETACHED as one could want to detach and reattach a video to the instance of hls.js to handle mid-rolls for example.
     - data: { }
 
 
@@ -527,7 +573,7 @@ full list of Errors is described below:
   - ```Hls.ErrorDetails.BUFFER_APPEND_ERROR```raised when exception is raised while calling buffer append
     - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.BUFFER_APPEND_ERROR```, fatal : ```true```, frag : fragment object}
   - ```Hls.ErrorDetails.BUFFER_APPENDING_ERROR```raised when exception is raised during buffer appending
-    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.BUFFER_APPENDING_ERROR```, fatal : ```true```, frag : fragment object}
+    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.BUFFER_APPENDING_ERROR```, fatal : ```false```, frag : fragment object}
 
 ## Objects
 ### Level
