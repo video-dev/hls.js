@@ -371,34 +371,42 @@ Object.defineProperty(exports, '__esModule', {
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
+var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var _events = require('../events');
 
 var _events2 = _interopRequireDefault(_events);
 
-var AbrController = (function () {
+var _eventHandler = require('../event-handler');
+
+var _eventHandler2 = _interopRequireDefault(_eventHandler);
+
+var AbrController = (function (_EventHandler) {
+  _inherits(AbrController, _EventHandler);
+
   function AbrController(hls) {
     _classCallCheck(this, AbrController);
 
-    this.hls = hls;
+    _get(Object.getPrototypeOf(AbrController.prototype), 'constructor', this).call(this, hls, _events2['default'].FRAG_LOAD_PROGRESS);
     this.lastfetchlevel = 0;
     this._autoLevelCapping = -1;
     this._nextAutoLevel = -1;
-    this.onflp = this.onFragmentLoadProgress.bind(this);
-    hls.on(_events2['default'].FRAG_LOAD_PROGRESS, this.onflp);
   }
 
   _createClass(AbrController, [{
     key: 'destroy',
     value: function destroy() {
-      this.hls.off(_events2['default'].FRAG_LOAD_PROGRESS, this.onflp);
+      _eventHandler2['default'].prototype.destroy.call(this);
     }
   }, {
-    key: 'onFragmentLoadProgress',
-    value: function onFragmentLoadProgress(event, data) {
+    key: 'onFragLoadProgress',
+    value: function onFragLoadProgress(data) {
       var stats = data.stats;
       if (stats.aborted === undefined) {
         this.lastfetchduration = (performance.now() - stats.trequest) / 1000;
@@ -466,12 +474,12 @@ var AbrController = (function () {
   }]);
 
   return AbrController;
-})();
+})(_eventHandler2['default']);
 
 exports['default'] = AbrController;
 module.exports = exports['default'];
 
-},{"../events":18}],4:[function(require,module,exports){
+},{"../event-handler":18,"../events":19}],4:[function(require,module,exports){
 /*
  * Level Controller
 */
@@ -484,40 +492,40 @@ Object.defineProperty(exports, '__esModule', {
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
+var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var _events = require('../events');
 
 var _events2 = _interopRequireDefault(_events);
 
+var _eventHandler = require('../event-handler');
+
+var _eventHandler2 = _interopRequireDefault(_eventHandler);
+
 var _utilsLogger = require('../utils/logger');
 
 var _errors = require('../errors');
 
-var LevelController = (function () {
+var LevelController = (function (_EventHandler) {
+  _inherits(LevelController, _EventHandler);
+
   function LevelController(hls) {
     _classCallCheck(this, LevelController);
 
-    this.hls = hls;
-    this.onml = this.onManifestLoaded.bind(this);
-    this.onll = this.onLevelLoaded.bind(this);
-    this.onerr = this.onError.bind(this);
+    _get(Object.getPrototypeOf(LevelController.prototype), 'constructor', this).call(this, hls, _events2['default'].MANIFEST_LOADED, _events2['default'].LEVEL_LOADED, _events2['default'].ERROR);
     this.ontick = this.tick.bind(this);
-    hls.on(_events2['default'].MANIFEST_LOADED, this.onml);
-    hls.on(_events2['default'].LEVEL_LOADED, this.onll);
-    hls.on(_events2['default'].ERROR, this.onerr);
     this._manualLevel = this._autoLevelCapping = -1;
   }
 
   _createClass(LevelController, [{
     key: 'destroy',
     value: function destroy() {
-      var hls = this.hls;
-      hls.off(_events2['default'].MANIFEST_LOADED, this.onml);
-      hls.off(_events2['default'].LEVEL_LOADED, this.onll);
-      hls.off(_events2['default'].ERROR, this.onerr);
       if (this.timer) {
         clearInterval(this.timer);
       }
@@ -525,7 +533,7 @@ var LevelController = (function () {
     }
   }, {
     key: 'onManifestLoaded',
-    value: function onManifestLoaded(event, data) {
+    value: function onManifestLoaded(data) {
       var levels0 = [],
           levels = [],
           bitrateStart,
@@ -626,7 +634,7 @@ var LevelController = (function () {
     }
   }, {
     key: 'onError',
-    value: function onError(event, data) {
+    value: function onError(data) {
       if (data.fatal) {
         return;
       }
@@ -688,7 +696,7 @@ var LevelController = (function () {
     }
   }, {
     key: 'onLevelLoaded',
-    value: function onLevelLoaded(event, data) {
+    value: function onLevelLoaded(data) {
       // check if current playlist is a live playlist
       if (data.details.live && !this.timer) {
         // if live playlist we will have to reload it periodically
@@ -769,12 +777,12 @@ var LevelController = (function () {
   }]);
 
   return LevelController;
-})();
+})(_eventHandler2['default']);
 
 exports['default'] = LevelController;
 module.exports = exports['default'];
 
-},{"../errors":17,"../events":18,"../utils/logger":28}],5:[function(require,module,exports){
+},{"../errors":17,"../event-handler":18,"../events":19,"../utils/logger":29}],5:[function(require,module,exports){
 /*
  * MSE Media Controller
 */
@@ -787,9 +795,13 @@ Object.defineProperty(exports, '__esModule', {
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
+var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var _demuxDemuxer = require('../demux/demuxer');
 
@@ -798,6 +810,10 @@ var _demuxDemuxer2 = _interopRequireDefault(_demuxDemuxer);
 var _events = require('../events');
 
 var _events2 = _interopRequireDefault(_events);
+
+var _eventHandler = require('../event-handler');
+
+var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
 var _utilsLogger = require('../utils/logger');
 
@@ -825,42 +841,27 @@ var State = {
   BUFFER_FLUSHING: 8
 };
 
-var MSEMediaController = (function () {
+var MSEMediaController = (function (_EventHandler) {
+  _inherits(MSEMediaController, _EventHandler);
+
   function MSEMediaController(hls) {
     _classCallCheck(this, MSEMediaController);
 
+    _get(Object.getPrototypeOf(MSEMediaController.prototype), 'constructor', this).call(this, hls, _events2['default'].MEDIA_ATTACHING, _events2['default'].MEDIA_DETACHING, _events2['default'].MANIFEST_PARSED, _events2['default'].LEVEL_LOADED, _events2['default'].KEY_LOADED, _events2['default'].FRAG_LOADED, _events2['default'].FRAG_PARSING_INIT_SEGMENT, _events2['default'].FRAG_PARSING_DATA, _events2['default'].FRAG_PARSED, _events2['default'].ERROR);
     this.config = hls.config;
     this.audioCodecSwap = false;
-    this.hls = hls;
     this.ticks = 0;
     // Source Buffer listeners
     this.onsbue = this.onSBUpdateEnd.bind(this);
     this.onsbe = this.onSBUpdateError.bind(this);
-    // internal listeners
-    this.onmediaatt0 = this.onMediaAttaching.bind(this);
-    this.onmediadet0 = this.onMediaDetaching.bind(this);
-    this.onmp = this.onManifestParsed.bind(this);
-    this.onll = this.onLevelLoaded.bind(this);
-    this.onfl = this.onFragLoaded.bind(this);
-    this.onkl = this.onKeyLoaded.bind(this);
-    this.onis = this.onInitSegment.bind(this);
-    this.onfpg = this.onFragParsing.bind(this);
-    this.onfp = this.onFragParsed.bind(this);
-    this.onerr = this.onError.bind(this);
     this.ontick = this.tick.bind(this);
-    hls.on(_events2['default'].MEDIA_ATTACHING, this.onmediaatt0);
-    hls.on(_events2['default'].MEDIA_DETACHING, this.onmediadet0);
-    hls.on(_events2['default'].MANIFEST_PARSED, this.onmp);
   }
 
   _createClass(MSEMediaController, [{
     key: 'destroy',
     value: function destroy() {
       this.stop();
-      var hls = this.hls;
-      hls.off(_events2['default'].MEDIA_ATTACHING, this.onmediaatt0);
-      hls.off(_events2['default'].MEDIA_DETACHING, this.onmediadet0);
-      hls.off(_events2['default'].MANIFEST_PARSED, this.onmp);
+      _eventHandler2['default'].prototype.destroy.call(this);
       this.state = State.IDLE;
     }
   }, {
@@ -894,13 +895,6 @@ var MSEMediaController = (function () {
       this.timer = setInterval(this.ontick, 100);
       this.level = -1;
       this.fragLoadError = 0;
-      hls.on(_events2['default'].FRAG_LOADED, this.onfl);
-      hls.on(_events2['default'].FRAG_PARSING_INIT_SEGMENT, this.onis);
-      hls.on(_events2['default'].FRAG_PARSING_DATA, this.onfpg);
-      hls.on(_events2['default'].FRAG_PARSED, this.onfp);
-      hls.on(_events2['default'].ERROR, this.onerr);
-      hls.on(_events2['default'].LEVEL_LOADED, this.onll);
-      hls.on(_events2['default'].KEY_LOADED, this.onkl);
     }
   }, {
     key: 'stop',
@@ -935,14 +929,6 @@ var MSEMediaController = (function () {
         this.demuxer.destroy();
         this.demuxer = null;
       }
-      var hls = this.hls;
-      hls.off(_events2['default'].FRAG_LOADED, this.onfl);
-      hls.off(_events2['default'].FRAG_PARSED, this.onfp);
-      hls.off(_events2['default'].FRAG_PARSING_DATA, this.onfpg);
-      hls.off(_events2['default'].LEVEL_LOADED, this.onll);
-      hls.off(_events2['default'].KEY_LOADED, this.onkl);
-      hls.off(_events2['default'].FRAG_PARSING_INIT_SEGMENT, this.onis);
-      hls.off(_events2['default'].ERROR, this.onerr);
     }
   }, {
     key: 'tick',
@@ -1608,7 +1594,7 @@ var MSEMediaController = (function () {
     }
   }, {
     key: 'onMediaAttaching',
-    value: function onMediaAttaching(event, data) {
+    value: function onMediaAttaching(data) {
       var media = this.media = data.media;
       // setup the media source
       var ms = this.mediaSource = new MediaSource();
@@ -1735,7 +1721,7 @@ var MSEMediaController = (function () {
     }
   }, {
     key: 'onManifestParsed',
-    value: function onManifestParsed(event, data) {
+    value: function onManifestParsed(data) {
       var aac = false,
           heaac = false,
           codecs;
@@ -1764,7 +1750,7 @@ var MSEMediaController = (function () {
     }
   }, {
     key: 'onLevelLoaded',
-    value: function onLevelLoaded(event, data) {
+    value: function onLevelLoaded(data) {
       var newDetails = data.details,
           newLevelId = data.level,
           curLevel = this.levels[newLevelId],
@@ -1820,7 +1806,7 @@ var MSEMediaController = (function () {
     }
   }, {
     key: 'onFragLoaded',
-    value: function onFragLoaded(event, data) {
+    value: function onFragLoaded(data) {
       var fragCurrent = this.fragCurrent;
       if (this.state === State.FRAG_LOADING && fragCurrent && data.frag.level === fragCurrent.level && data.frag.sn === fragCurrent.sn) {
         if (this.fragBitrateTest === true) {
@@ -1858,8 +1844,8 @@ var MSEMediaController = (function () {
       this.fragLoadError = 0;
     }
   }, {
-    key: 'onInitSegment',
-    value: function onInitSegment(event, data) {
+    key: 'onFragParsingInitSegment',
+    value: function onFragParsingInitSegment(data) {
       if (this.state === State.PARSING) {
         // check if codecs have been explicitely defined in the master playlist for this level;
         // if yes use these ones instead of the ones parsed from the demux
@@ -1917,8 +1903,8 @@ var MSEMediaController = (function () {
       }
     }
   }, {
-    key: 'onFragParsing',
-    value: function onFragParsing(event, data) {
+    key: 'onFragParsingData',
+    value: function onFragParsingData(data) {
       if (this.state === State.PARSING) {
         this.tparse2 = Date.now();
         var level = this.levels[this.level],
@@ -1935,7 +1921,7 @@ var MSEMediaController = (function () {
         //trigger handler right now
         this.tick();
       } else {
-        _utilsLogger.logger.warn('not in PARSING state, discarding ' + event);
+        _utilsLogger.logger.warn('not in PARSING state, ignoring FRAG_PARSING_DATA event');
       }
     }
   }, {
@@ -1950,7 +1936,7 @@ var MSEMediaController = (function () {
     }
   }, {
     key: 'onError',
-    value: function onError(event, data) {
+    value: function onError(data) {
       switch (data.details) {
         case _errors.ErrorDetails.FRAG_LOAD_ERROR:
         case _errors.ErrorDetails.FRAG_LOAD_TIMEOUT:
@@ -1975,7 +1961,7 @@ var MSEMediaController = (function () {
               _utilsLogger.logger.error('mediaController: ' + data.details + ' reaches max retry, redispatch as fatal ...');
               // redispatch same error but with fatal set to true
               data.fatal = true;
-              this.hls.trigger(event, data);
+              this.hls.trigger(_events2['default'].ERROR, data);
               this.state = State.ERROR;
             }
           }
@@ -2149,12 +2135,12 @@ var MSEMediaController = (function () {
   }]);
 
   return MSEMediaController;
-})();
+})(_eventHandler2['default']);
 
 exports['default'] = MSEMediaController;
 module.exports = exports['default'];
 
-},{"../demux/demuxer":13,"../errors":17,"../events":18,"../helper/level-helper":19,"../utils/binary-search":27,"../utils/logger":28}],6:[function(require,module,exports){
+},{"../demux/demuxer":13,"../errors":17,"../event-handler":18,"../events":19,"../helper/level-helper":20,"../utils/binary-search":28,"../utils/logger":29}],6:[function(require,module,exports){
 /*
  *
  * This file contains an adaptation of the AES decryption algorithm
@@ -2679,7 +2665,7 @@ var Decrypter = (function () {
 exports['default'] = Decrypter;
 module.exports = exports['default'];
 
-},{"../errors":17,"../utils/logger":28,"./aes128-decrypter":7}],9:[function(require,module,exports){
+},{"../errors":17,"../utils/logger":29,"./aes128-decrypter":7}],9:[function(require,module,exports){
 /**
  * AAC demuxer
  */
@@ -2808,7 +2794,7 @@ var AACDemuxer = (function () {
 exports['default'] = AACDemuxer;
 module.exports = exports['default'];
 
-},{"../demux/id3":15,"../utils/logger":28,"./adts":10}],10:[function(require,module,exports){
+},{"../demux/id3":15,"../utils/logger":29,"./adts":10}],10:[function(require,module,exports){
 /**
  *  ADTS parser helper
  */
@@ -2956,7 +2942,7 @@ var ADTS = (function () {
 exports['default'] = ADTS;
 module.exports = exports['default'];
 
-},{"../errors":17,"../utils/logger":28}],11:[function(require,module,exports){
+},{"../errors":17,"../utils/logger":29}],11:[function(require,module,exports){
 /*  inline demuxer.
  *   probe fragments and instantiate appropriate demuxer depending on content type (TSDemuxer, AACDemuxer, ...)
  */
@@ -3028,7 +3014,7 @@ var DemuxerInline = (function () {
 exports['default'] = DemuxerInline;
 module.exports = exports['default'];
 
-},{"../demux/aacdemuxer":9,"../demux/tsdemuxer":16,"../errors":17,"../events":18}],12:[function(require,module,exports){
+},{"../demux/aacdemuxer":9,"../demux/tsdemuxer":16,"../errors":17,"../events":19}],12:[function(require,module,exports){
 /* demuxer web worker.
  *  - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
  *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
@@ -3135,7 +3121,7 @@ var DemuxerWorker = function DemuxerWorker(self) {
 exports['default'] = DemuxerWorker;
 module.exports = exports['default'];
 
-},{"../demux/demuxer-inline":11,"../events":18,"../remux/mp4-remuxer":25,"events":1}],13:[function(require,module,exports){
+},{"../demux/demuxer-inline":11,"../events":19,"../remux/mp4-remuxer":26,"events":1}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -3285,7 +3271,7 @@ var Demuxer = (function () {
 exports['default'] = Demuxer;
 module.exports = exports['default'];
 
-},{"../crypt/decrypter":8,"../demux/demuxer-inline":11,"../demux/demuxer-worker":12,"../events":18,"../remux/mp4-remuxer":25,"../utils/logger":28,"webworkify":2}],14:[function(require,module,exports){
+},{"../crypt/decrypter":8,"../demux/demuxer-inline":11,"../demux/demuxer-worker":12,"../events":19,"../remux/mp4-remuxer":26,"../utils/logger":29,"webworkify":2}],14:[function(require,module,exports){
 /**
  * Parser for exponential Golomb codes, a variable-bitwidth number encoding scheme used by h264.
 */
@@ -3624,7 +3610,7 @@ var ExpGolomb = (function () {
 exports['default'] = ExpGolomb;
 module.exports = exports['default'];
 
-},{"../utils/logger":28}],15:[function(require,module,exports){
+},{"../utils/logger":29}],15:[function(require,module,exports){
 /**
  * ID3 parser
  */
@@ -3778,7 +3764,7 @@ var ID3 = (function () {
 exports['default'] = ID3;
 module.exports = exports['default'];
 
-},{"../utils/logger":28}],16:[function(require,module,exports){
+},{"../utils/logger":29}],16:[function(require,module,exports){
 /**
  * highly optimized TS demuxer:
  * parse PAT, PMT
@@ -4406,7 +4392,7 @@ var TSDemuxer = (function () {
 exports['default'] = TSDemuxer;
 module.exports = exports['default'];
 
-},{"../errors":17,"../events":18,"../utils/logger":28,"./adts":10,"./exp-golomb":14}],17:[function(require,module,exports){
+},{"../errors":17,"../events":19,"../utils/logger":29,"./adts":10,"./exp-golomb":14}],17:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -4457,12 +4443,105 @@ var ErrorDetails = {
 exports.ErrorDetails = ErrorDetails;
 
 },{}],18:[function(require,module,exports){
+/*
+*
+* All objects in the event handling chain should inherit from this class
+*
+*/
+
+//import {logger} from './utils/logger';
+
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
   value: true
 });
-exports['default'] = {
+
+var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+var EventHandler = (function () {
+  function EventHandler(hls) {
+    _classCallCheck(this, EventHandler);
+
+    this.hls = hls;
+    this.onEvent = this.onEvent.bind(this);
+
+    for (var _len = arguments.length, events = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+      events[_key - 1] = arguments[_key];
+    }
+
+    this.handledEvents = events;
+    this.useGenericHandler = true;
+
+    this.registerListeners();
+  }
+
+  _createClass(EventHandler, [{
+    key: 'destroy',
+    value: function destroy() {
+      this.unregisterListeners();
+    }
+  }, {
+    key: 'isEventHandler',
+    value: function isEventHandler() {
+      return typeof this.handledEvents === 'object' && this.handledEvents.length && typeof this.onEvent === 'function';
+    }
+  }, {
+    key: 'registerListeners',
+    value: function registerListeners() {
+      if (this.isEventHandler()) {
+        this.handledEvents.forEach((function (event) {
+          if (event === 'hlsEventGeneric') {
+            throw new Error('Forbidden event name: ' + event);
+          }
+          this.hls.on(event, this.onEvent);
+        }).bind(this));
+      }
+    }
+  }, {
+    key: 'unregisterListeners',
+    value: function unregisterListeners() {
+      if (this.isEventHandler()) {
+        this.handledEvents.forEach((function (event) {
+          this.hls.off(event, this.onEvent);
+        }).bind(this));
+      }
+    }
+
+    /*
+    * arguments: event (string), data (any)
+    */
+  }, {
+    key: 'onEvent',
+    value: function onEvent(event, data) {
+      this.onEventGeneric(event, data);
+    }
+  }, {
+    key: 'onEventGeneric',
+    value: function onEventGeneric(event, data) {
+      var eventToFunction = function eventToFunction(event, data) {
+        var funcName = 'on' + event.replace('hls', '');
+        if (typeof this[funcName] !== 'function') {
+          throw new Error('Event ' + event + ' has no generic handler in this ' + this.constructor.name + ' class (tried ' + funcName + ')');
+        }
+        return this[funcName].bind(this, data);
+      };
+      eventToFunction.call(this, event, data).call();
+    }
+  }]);
+
+  return EventHandler;
+})();
+
+exports['default'] = EventHandler;
+module.exports = exports['default'];
+
+},{}],19:[function(require,module,exports){
+'use strict';
+
+module.exports = {
   // fired before MediaSource is attaching to media element - data: { media }
   MEDIA_ATTACHING: 'hlsMediaAttaching',
   // fired when MediaSource has been succesfully attached to media element - data: { }
@@ -4484,7 +4563,7 @@ exports['default'] = {
   // fired when a level's details have been updated based on previous details, after it has been loaded. - data: { details : levelDetails object, level : id of updated level }
   LEVEL_UPDATED: 'hlsLevelUpdated',
   // fired when a level's PTS information has been updated after parsing a fragment - data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment }
-  LEVEL_PTS_UPDATED: 'hlsPTSUpdated',
+  LEVEL_PTS_UPDATED: 'hlsLevelPtsUpdated',
   // fired when a level switch is requested - data: { level : id of new level }
   LEVEL_SWITCH: 'hlsLevelSwitch',
   // fired when a fragment loading starts - data: { frag : fragment object}
@@ -4498,7 +4577,7 @@ exports['default'] = {
   // fired when Init Segment has been extracted from fragment - data: { moov : moov MP4 box, codecs : codecs found while parsing fragment}
   FRAG_PARSING_INIT_SEGMENT: 'hlsFragParsingInitSegment',
   // fired when parsing id3 is completed - data: { samples : [ id3 samples pes ] }
-  FRAG_PARSING_METADATA: 'hlsFraParsingMetadata',
+  FRAG_PARSING_METADATA: 'hlsFragParsingMetadata',
   // fired when moof/mdat have been extracted from fragment - data: { moof : moof MP4 box, mdat : mdat MP4 box}
   FRAG_PARSING_DATA: 'hlsFragParsingData',
   // fired when fragment parsing is completed - data: undefined
@@ -4508,7 +4587,7 @@ exports['default'] = {
   // fired when fragment matching with current media position is changing - data : { frag : fragment object }
   FRAG_CHANGED: 'hlsFragChanged',
   // Identifier for a FPS drop event - data: {curentDropped, currentDecoded, totalDroppedFrames}
-  FPS_DROP: 'hlsFPSDrop',
+  FPS_DROP: 'hlsFpsDrop',
   // Identifier for an error event - data: { type : error type, details : error details, fatal : if true, hls.js cannot/will not try to recover, if false, hls.js will try to recover,other error specific data}
   ERROR: 'hlsError',
   // fired when hls.js instance starts destroying. Different from MEDIA_DETACHED as one could want to detach and reattach a media to the instance of hls.js to handle mid-rolls for example
@@ -4518,9 +4597,8 @@ exports['default'] = {
   // fired when a decrypt key loading is completed - data: { frag : fragment object, payload : key payload, stats : { trequest, tfirst, tload, length}}
   KEY_LOADED: 'hlsKeyLoaded'
 };
-module.exports = exports['default'];
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 /**
  * Level Helper class, providing methods dealing with playlist sliding and drift
 */
@@ -4666,7 +4744,7 @@ var LevelHelper = (function () {
 exports['default'] = LevelHelper;
 module.exports = exports['default'];
 
-},{"../utils/logger":28}],20:[function(require,module,exports){
+},{"../utils/logger":29}],21:[function(require,module,exports){
 /**
  * HLS interface
  */
@@ -5022,7 +5100,7 @@ var Hls = (function () {
 exports['default'] = Hls;
 module.exports = exports['default'];
 
-},{"./controller/abr-controller":3,"./controller/level-controller":4,"./controller/mse-media-controller":5,"./errors":17,"./events":18,"./loader/fragment-loader":21,"./loader/key-loader":22,"./loader/playlist-loader":23,"./utils/logger":28,"./utils/xhr-loader":30,"events":1}],21:[function(require,module,exports){
+},{"./controller/abr-controller":3,"./controller/level-controller":4,"./controller/mse-media-controller":5,"./errors":17,"./events":19,"./loader/fragment-loader":22,"./loader/key-loader":23,"./loader/playlist-loader":24,"./utils/logger":29,"./utils/xhr-loader":31,"events":1}],22:[function(require,module,exports){
 /*
  * Fragment Loader
 */
@@ -5035,23 +5113,31 @@ Object.defineProperty(exports, '__esModule', {
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
+var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var _events = require('../events');
 
 var _events2 = _interopRequireDefault(_events);
 
+var _eventHandler = require('../event-handler');
+
+var _eventHandler2 = _interopRequireDefault(_eventHandler);
+
 var _errors = require('../errors');
 
-var FragmentLoader = (function () {
+var FragmentLoader = (function (_EventHandler) {
+  _inherits(FragmentLoader, _EventHandler);
+
   function FragmentLoader(hls) {
     _classCallCheck(this, FragmentLoader);
 
-    this.hls = hls;
-    this.onfl = this.onFragLoading.bind(this);
-    hls.on(_events2['default'].FRAG_LOADING, this.onfl);
+    _get(Object.getPrototypeOf(FragmentLoader.prototype), 'constructor', this).call(this, hls, _events2['default'].FRAG_LOADING);
   }
 
   _createClass(FragmentLoader, [{
@@ -5061,11 +5147,11 @@ var FragmentLoader = (function () {
         this.loader.destroy();
         this.loader = null;
       }
-      this.hls.off(_events2['default'].FRAG_LOADING, this.onfl);
+      _eventHandler2['default'].prototype.destroy.call(this);
     }
   }, {
     key: 'onFragLoading',
-    value: function onFragLoading(event, data) {
+    value: function onFragLoading(data) {
       var frag = data.frag;
       this.frag = frag;
       this.frag.loaded = 0;
@@ -5103,12 +5189,12 @@ var FragmentLoader = (function () {
   }]);
 
   return FragmentLoader;
-})();
+})(_eventHandler2['default']);
 
 exports['default'] = FragmentLoader;
 module.exports = exports['default'];
 
-},{"../errors":17,"../events":18}],22:[function(require,module,exports){
+},{"../errors":17,"../event-handler":18,"../events":19}],23:[function(require,module,exports){
 /*
  * Decrypt key Loader
 */
@@ -5121,25 +5207,33 @@ Object.defineProperty(exports, '__esModule', {
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
+var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var _events = require('../events');
 
 var _events2 = _interopRequireDefault(_events);
 
+var _eventHandler = require('../event-handler');
+
+var _eventHandler2 = _interopRequireDefault(_eventHandler);
+
 var _errors = require('../errors');
 
-var KeyLoader = (function () {
+var KeyLoader = (function (_EventHandler) {
+  _inherits(KeyLoader, _EventHandler);
+
   function KeyLoader(hls) {
     _classCallCheck(this, KeyLoader);
 
-    this.hls = hls;
+    _get(Object.getPrototypeOf(KeyLoader.prototype), 'constructor', this).call(this, hls, _events2['default'].KEY_LOADING);
     this.decryptkey = null;
     this.decrypturl = null;
-    this.ondkl = this.onDecryptKeyLoading.bind(this);
-    hls.on(_events2['default'].KEY_LOADING, this.ondkl);
   }
 
   _createClass(KeyLoader, [{
@@ -5149,11 +5243,11 @@ var KeyLoader = (function () {
         this.loader.destroy();
         this.loader = null;
       }
-      this.hls.off(_events2['default'].KEY_LOADING, this.ondkl);
+      _eventHandler2['default'].prototype.destroy.call(this);
     }
   }, {
-    key: 'onDecryptKeyLoading',
-    value: function onDecryptKeyLoading(event, data) {
+    key: 'onKeyLoading',
+    value: function onKeyLoading(data) {
       var frag = this.frag = data.frag,
           decryptdata = frag.decryptdata,
           uri = decryptdata.uri;
@@ -5197,12 +5291,12 @@ var KeyLoader = (function () {
   }]);
 
   return KeyLoader;
-})();
+})(_eventHandler2['default']);
 
 exports['default'] = KeyLoader;
 module.exports = exports['default'];
 
-},{"../errors":17,"../events":18}],23:[function(require,module,exports){
+},{"../errors":17,"../event-handler":18,"../events":19}],24:[function(require,module,exports){
 /**
  * Playlist Loader
 */
@@ -5215,13 +5309,21 @@ Object.defineProperty(exports, '__esModule', {
 
 var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
 
+var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; desc = parent = getter = undefined; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
+function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
 var _events = require('../events');
 
 var _events2 = _interopRequireDefault(_events);
+
+var _eventHandler = require('../event-handler');
+
+var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
 var _errors = require('../errors');
 
@@ -5235,15 +5337,13 @@ var _utilsAttrList2 = _interopRequireDefault(_utilsAttrList);
 
 //import {logger} from '../utils/logger';
 
-var PlaylistLoader = (function () {
+var PlaylistLoader = (function (_EventHandler) {
+  _inherits(PlaylistLoader, _EventHandler);
+
   function PlaylistLoader(hls) {
     _classCallCheck(this, PlaylistLoader);
 
-    this.hls = hls;
-    this.onml = this.onManifestLoading.bind(this);
-    this.onll = this.onLevelLoading.bind(this);
-    hls.on(_events2['default'].MANIFEST_LOADING, this.onml);
-    hls.on(_events2['default'].LEVEL_LOADING, this.onll);
+    _get(Object.getPrototypeOf(PlaylistLoader.prototype), 'constructor', this).call(this, hls, _events2['default'].MANIFEST_LOADING, _events2['default'].LEVEL_LOADING);
   }
 
   _createClass(PlaylistLoader, [{
@@ -5254,17 +5354,16 @@ var PlaylistLoader = (function () {
         this.loader = null;
       }
       this.url = this.id = null;
-      this.hls.off(_events2['default'].MANIFEST_LOADING, this.onml);
-      this.hls.off(_events2['default'].LEVEL_LOADING, this.onll);
+      _eventHandler2['default'].prototype.destroy.call(this);
     }
   }, {
     key: 'onManifestLoading',
-    value: function onManifestLoading(event, data) {
+    value: function onManifestLoading(data) {
       this.load(data.url, null);
     }
   }, {
     key: 'onLevelLoading',
-    value: function onLevelLoading(event, data) {
+    value: function onLevelLoading(data) {
       this.load(data.url, data.level, data.id);
     }
   }, {
@@ -5531,12 +5630,12 @@ var PlaylistLoader = (function () {
   }]);
 
   return PlaylistLoader;
-})();
+})(_eventHandler2['default']);
 
 exports['default'] = PlaylistLoader;
 module.exports = exports['default'];
 
-},{"../errors":17,"../events":18,"../utils/attr-list":26,"../utils/url":29}],24:[function(require,module,exports){
+},{"../errors":17,"../event-handler":18,"../events":19,"../utils/attr-list":27,"../utils/url":30}],25:[function(require,module,exports){
 /**
  * Generate MP4 Box
 */
@@ -6041,7 +6140,7 @@ var MP4 = (function () {
 exports['default'] = MP4;
 module.exports = exports['default'];
 
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 /**
  * fMP4 remuxer
 */
@@ -6498,7 +6597,7 @@ var MP4Remuxer = (function () {
 exports['default'] = MP4Remuxer;
 module.exports = exports['default'];
 
-},{"../errors":17,"../events":18,"../remux/mp4-generator":24,"../utils/logger":28}],26:[function(require,module,exports){
+},{"../errors":17,"../events":19,"../remux/mp4-generator":25,"../utils/logger":29}],27:[function(require,module,exports){
 
 // adapted from https://github.com/kanongil/node-m3u8parse/blob/master/attrlist.js
 'use strict';
@@ -6606,7 +6705,7 @@ var AttrList = (function () {
 exports['default'] = AttrList;
 module.exports = exports['default'];
 
-},{}],27:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 "use strict";
 
 var BinarySearch = {
@@ -6651,7 +6750,7 @@ var BinarySearch = {
 
 module.exports = BinarySearch;
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, '__esModule', {
@@ -6733,7 +6832,7 @@ exports.enableLogs = enableLogs;
 var logger = exportedLogger;
 exports.logger = logger;
 
-},{}],29:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 'use strict';
 
 var URLHelper = {
@@ -6814,7 +6913,7 @@ var URLHelper = {
 
 module.exports = URLHelper;
 
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 /**
  * XHR based logger
 */
@@ -6885,7 +6984,7 @@ var XhrLoader = (function () {
     key: 'loadInternal',
     value: function loadInternal() {
       var xhr = this.loader = new XMLHttpRequest();
-      xhr.onreadystatechange = this.statechange.bind(this);
+      xhr.onloadend = this.loadend.bind(this);
       xhr.onprogress = this.loadprogress.bind(this);
 
       xhr.open('GET', this.url, true);
@@ -6901,14 +7000,13 @@ var XhrLoader = (function () {
       xhr.send();
     }
   }, {
-    key: 'statechange',
-    value: function statechange(event) {
+    key: 'loadend',
+    value: function loadend(event) {
       var xhr = event.currentTarget,
           status = xhr.status,
           stats = this.stats;
       // don't proceed if xhr has been aborted
-      // 4 = Response from server has been completely loaded.
-      if (!stats.aborted && xhr.readyState === 4) {
+      if (!stats.aborted) {
         // http status between 200 to 299 are all successful
         if (status >= 200 && status < 300) {
           window.clearTimeout(this.timeoutHandle);
@@ -6957,6 +7055,6 @@ var XhrLoader = (function () {
 exports['default'] = XhrLoader;
 module.exports = exports['default'];
 
-},{"../utils/logger":28}]},{},[20])(20)
+},{"../utils/logger":29}]},{},[21])(21)
 });
 //# sourceMappingURL=hls.js.map
