@@ -1365,6 +1365,7 @@ var MSEMediaController = (function () {
           bufferLen = bufferEnd - pos;
         } else if (pos + maxHoleDuration < start) {
           bufferStartNext = start;
+          break;
         }
       }
       return { len: bufferLen, start: bufferStart, end: bufferEnd, nextStart: bufferStartNext };
@@ -2040,7 +2041,7 @@ var MSEMediaController = (function () {
                 // playhead moving or media not playing
                 jumpThreshold = 0;
               } else {
-                _utilsLogger.logger.trace('playback seems stuck');
+                _utilsLogger.logger.log('playback seems stuck');
               }
               // if we are below threshold, try to jump if next buffer range is close
               if (bufferInfo.len <= jumpThreshold) {
