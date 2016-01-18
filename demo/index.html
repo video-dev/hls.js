@@ -727,10 +727,13 @@ function timeRangesToString(r) {
               + "Played:"
               + timeRangesToString(v.played) + "<br>";
 
-      var videoPlaybackQuality = v.getVideoPlaybackQuality();
-      if(videoPlaybackQuality) {
-        log+="Dropped Frames:"+ videoPlaybackQuality.droppedVideoFrames + "<br>";
-        log+="Corrupted Frames:"+ videoPlaybackQuality.corruptedVideoFrames + "<br>";
+
+      var videoPlaybackQuality = v.getVideoPlaybackQuality;
+      if(videoPlaybackQuality && typeof(videoPlaybackQuality) === typeof(Function)) {
+        log+="Dropped Frames:"+ videoPlaybackQuality().droppedVideoFrames + "<br>";
+        log+="Corrupted Frames:"+ videoPlaybackQuality().corruptedVideoFrames + "<br>";
+      } else if(v.webkitDroppedFrameCount) {
+        log+="Dropped Frames:"+ v.webkitDroppedFrameCount + "<br>";
       }
       $("#buffered_log").html(log);
       $("#HlsStats").text(JSON.stringify(sortObject(stats),null,"\t"));
