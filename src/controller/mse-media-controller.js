@@ -725,6 +725,7 @@ class MSEMediaController {
                 bufferLen = bufferEnd - pos;
             } else if (pos + maxHoleDuration < start) {
                 bufferStartNext = start;
+                break;
             }
         }
         return {
@@ -1547,7 +1548,7 @@ class MSEMediaController {
                             // playhead moving or media not playing
                             jumpThreshold = 0;
                         } else {
-                            logger.trace('playback seems stuck');
+                            logger.log('playback seems stuck');
                         }
                         // if we are below threshold, try to jump if next buffer range is close
                         if (bufferInfo.len <= jumpThreshold) {
