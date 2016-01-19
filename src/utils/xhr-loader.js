@@ -67,6 +67,10 @@ class XhrLoader {
 
     loadInternal() {
         var xhr = (this.loader = new XMLHttpRequest());
+
+        if (typeof XDomainRequest != 'undefined')
+            xhr = this.loader = new XDomainRequest();
+
         xhr.onloadend = this.loadend.bind(this);
         xhr.onprogress = this.loadprogress.bind(this);
 
