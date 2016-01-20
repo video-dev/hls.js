@@ -90,6 +90,7 @@ class MSEMediaController extends EventHandler {
         this.mp4segments = [];
         this.flushRange = [];
         this.bufferRange = [];
+        this.stalled = false;
         var frag = this.fragCurrent;
         if (frag) {
             if (frag.loader) {
@@ -1517,21 +1518,32 @@ class MSEMediaController extends EventHandler {
                             media.seeking ||
                             readyState < 3
                         ),
-                        jumpThreshold = 0.2;
+                        jumpThreshold = 0.2,
+                        playheadMoving =
+                            currentTime >
+                            media.playbackRate * this.lastCurrentTime;
+
+                    if (this.stalled && playheadMoving) {
+                        this.stalled = false;
+                    }
 
                     // check buffer upfront
                     // if less than 200ms is buffered, and media is playing but playhead is not moving,
                     // and we have a new buffer range available upfront, let's seek to that one
                     if (bufferInfo.len <= jumpThreshold) {
-                        if (
-                            currentTime >
-                                media.playbackRate * this.lastCurrentTime ||
-                            !isPlaying
-                        ) {
+                        if (playheadMoving || !isPlaying) {
                             // playhead moving or media not playing
                             jumpThreshold = 0;
                         } else {
                             logger.log('playback seems stuck');
+                            if (!this.stalled) {
+                                this.hls.trigger(Event.ERROR, {
+                                    type: ErrorTypes.MEDIA_ERROR,
+                                    details: ErrorDetails.BUFFER_STALLED_ERROR,
+                                    fatal: false
+                                });
+                                this.stalled = true;
+                            }
                         }
                         // if we are below threshold, try to jump if next buffer range is close
                         if (bufferInfo.len <= jumpThreshold) {
