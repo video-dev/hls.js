@@ -473,7 +473,7 @@
         audioCodec = this.audioCodec,
         aacOverFlow = this.aacOverFlow,
         lastAacPTS = this.lastAacPTS,
-        config, frameLength, frameDuration, frameIndex, offset, headerLength, stamp, len, aacSample
+        config, frameLength, frameDuration, frameIndex, offset, headerLength, stamp, len, aacSample;
     if (aacOverFlow) {
       var tmp = new Uint8Array(aacOverFlow.byteLength + data.byteLength);
       tmp.set(aacOverFlow, 0);
