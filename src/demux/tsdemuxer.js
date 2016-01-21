@@ -397,6 +397,8 @@ class TSDemuxer {
 
                     var payloadType = expGolombDecoder.readUByte();
 
+                    // TODO: there can be more than one payload in an SEI packet...
+                    // TODO: need to read type and size in a while loop to get them all
                     if (payloadType === 4) {
                         var payloadSize = 0;
 
@@ -440,6 +442,7 @@ class TSDemuxer {
                                         this._txtTrack.samples.push({
                                             type: 3,
                                             pts: pes.pts,
+                                            level: this.lastLevel,
                                             bytes: byteArray
                                         });
                                     }

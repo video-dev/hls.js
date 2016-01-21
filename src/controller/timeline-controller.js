@@ -15,10 +15,13 @@ class TimelineController {
             this.onmediaatt0 = this.onMediaAttaching.bind(this);
             this.onmediadet0 = this.onMediaDetaching.bind(this);
             this.onud = this.onFragParsingUserData.bind(this);
-            this.index = 0;
+            this.onml = this.onManifestLoading.bind(this);
+            this.onls = this.onLevelSwitch.bind(this);
             hls.on(Event.MEDIA_ATTACHING, this.onmediaatt0);
             hls.on(Event.MEDIA_DETACHING, this.onmediadet0);
             hls.on(Hls.Events.FRAG_PARSING_USERDATA, this.onud);
+            hls.on(Event.MANIFEST_LOADING, this.onml);
+            hls.on(Event.LEVEL_SWITCH, this.onls);
         }
     }
 
@@ -30,6 +33,14 @@ class TimelineController {
     }
 
     onMediaDetaching() {}
+
+    onManifestLoading() {
+        this.level = -1;
+    }
+
+    onLevelSwitch() {
+        this.cea708Interpreter.clear();
+    }
 
     onFragParsingUserData(event, data) {
         // push all of the CEA-708 messages into the interpreter
