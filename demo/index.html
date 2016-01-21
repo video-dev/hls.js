@@ -75,6 +75,7 @@ header {
       <label class="innerControls"><input id="enableStreaming" type=checkbox checked/> Enable Streaming</label>
       <label class="innerControls"><input id="autoRecoverError" type=checkbox checked/> Auto-Recover Media Error</label>
       <label class="innerControls"><input id="enableWorker" type=checkbox checked/> Enable Worker</label>
+      <label class="innerControls">Level Capping <input id="levelCapping" type=number/></label>
       <div id="StreamPermalink" class="innerControls"></div>
       <div>
         <select id="videoSize" style="float:left">
@@ -205,9 +206,11 @@ $(document).ready(function() {
    $('#enableStreaming').click(function()      { enableStreaming = this.checked; loadStream($('#streamURL').val()); });
    $('#autoRecoverError').click(function()  { autoRecoverError = this.checked; updatePermalink();});
    $('#enableWorker').click(function()  { enableWorker = this.checked; updatePermalink();});
+   $('#levelCapping').change(function()  { levelCapping = this.value; updatePermalink();});
    $('#enableStreaming').prop( "checked", enableStreaming );
    $('#autoRecoverError').prop( "checked", autoRecoverError );
    $('#enableWorker').prop( "checked", enableWorker );
+   $('#levelCapping').val(levelCapping);
 });
 
 
@@ -216,6 +219,7 @@ $(document).ready(function() {
       enableStreaming = JSON.parse(getURLParam('enableStreaming',true))
       autoRecoverError = JSON.parse(getURLParam('autoRecoverError',true)),
       enableWorker = JSON.parse(getURLParam('enableWorker',true));
+      levelCapping = JSON.parse(getURLParam('levelCapping',-1));
   var video = $('#video')[0];
   video.volume = 0.05;
 
@@ -247,6 +251,7 @@ $(document).ready(function() {
        hls = new Hls({debug:true, enableWorker : enableWorker});
        $("#HlsStatus").text('loading manifest and attaching video element...');
        hls.loadSource(url);
+       hls.autoLevelCapping = levelCapping;
        hls.attachMedia(video);
        hls.on(Hls.Events.MEDIA_ATTACHED,function() {
         $("#HlsStatus").text('MediaSource attached...');
@@ -713,14 +718,6 @@ function timeRangesToString(r) {
       events.buffer.push(event);
       refreshCanvas();
 
-      var decodedFrames, droppedFrames;
-      if(navigator.userAgent.toLowerCase().indexOf('firefox') !== -1) {
-        decodedFrames = v.mozDecodedFrames;
-        droppedFrames = v.mozParsedFrames-v.mozPresentedFrames;
-      } else {
-        decodedFrames = v.webkitDecodedFrameCount;
-        droppedFrames = v.webkitDroppedFrameCount;
-      }
       var log = "Duration:"
               + v.duration + "<br>"
               + "Buffered:"
@@ -728,11 +725,16 @@ function timeRangesToString(r) {
               + "Seekable:"
               + timeRangesToString(v.seekable) + "<br>"
               + "Played:"
-              + timeRangesToString(v.played) + "<br>"
-              + "Decoded Frames:"
-              + decodedFrames + "<br>"
-              + "Dropped Frames:"
-              + droppedFrames + "<br>";
+              + timeRangesToString(v.played) + "<br>";
+
+
+      var videoPlaybackQuality = v.getVideoPlaybackQuality;
+      if(videoPlaybackQuality && typeof(videoPlaybackQuality) === typeof(Function)) {
+        log+="Dropped Frames:"+ v.getVideoPlaybackQuality().droppedVideoFrames + "<br>";
+        log+="Corrupted Frames:"+ v.getVideoPlaybackQuality().corruptedVideoFrames + "<br>";
+      } else if(v.webkitDroppedFrameCount) {
+        log+="Dropped Frames:"+ v.webkitDroppedFrameCount + "<br>";
+      }
       $("#buffered_log").html(log);
       $("#HlsStats").text(JSON.stringify(sortObject(stats),null,"\t"));
       ctx.fillStyle = "blue";
@@ -850,7 +852,7 @@ function timeRangesToString(r) {
     } else {
       html3 += button_disabled;
     }
-    html3 += 'onclick="hls.autoLevelCapping=-1;updateLevelInfo()">auto</button>';
+    html3 += 'onclick="levelCapping=hls.autoLevelCapping=-1;updateLevelInfo();updatePermalink();">auto</button>';
 
     var html4 = button_template;
     if(hls.autoLevelEnabled) {
@@ -887,7 +889,7 @@ function timeRangesToString(r) {
       } else {
         html3 += button_disabled;
       }
-      html3 += 'onclick="hls.autoLevelCapping=' + i + ';updateLevelInfo()">' + levelName + '</button>';
+      html3 += 'onclick="levelCapping=hls.autoLevelCapping=' + i + ';updateLevelInfo();updatePermalink();">' + levelName + '</button>';
 
       html4 += button_template;
       if(hls.nextLevel === i) {
@@ -940,7 +942,11 @@ function timeRangesToString(r) {
 
   function updatePermalink() {
       var url = $('#streamURL').val();
-      var hlsLink = document.URL.split('?')[0] +  '?src=' + encodeURIComponent(url) + '&enableStreaming=' + enableStreaming + '&autoRecoverError=' + autoRecoverError + '&enableWorker=' + enableWorker;
+      var hlsLink = document.URL.split('?')[0] +  '?src=' + encodeURIComponent(url) +
+                    '&enableStreaming=' + enableStreaming +
+                    '&autoRecoverError=' + autoRecoverError +
+                    '&enableWorker=' + enableWorker +
+                    '&levelCapping=' + levelCapping;
       var description = 'permalink: ' + "<a href=\"" + hlsLink + "\">" + hlsLink + "</a>";
       $("#StreamPermalink").html(description);
   }

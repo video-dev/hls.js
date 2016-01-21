@@ -22,6 +22,19 @@ describe('AttrList', () => {
     assert.strictEqual(new AttrList('INT=0').decimalInteger('INT'), 0);
     assert.strictEqual(new AttrList('INT="42"').decimalInteger('INT'), 42);
   });
+
+  it('parses attribute with leading space', () => {
+    assert.strictEqual(new AttrList(' INT=42').decimalInteger('INT'), 42);
+    assert.strictEqual(new AttrList(' INT=0').decimalInteger('INT'), 0);
+    assert.strictEqual(new AttrList(' INT="42"').decimalInteger('INT'), 42);
+  });
+
+  it('parses attribute with trailing space', () => {
+    assert.strictEqual(new AttrList('INT =42').decimalInteger('INT'), 42);
+    assert.strictEqual(new AttrList('INT =0').decimalInteger('INT'), 0);
+    assert.strictEqual(new AttrList('INT ="42"').decimalInteger('INT'), 42);
+  });
+
   it('parses valid hexadecimalInteger attribute', () => {
     assert.strictEqual(new AttrList('HEX=0x42').hexadecimalIntegerAsNumber('HEX'), 0x42);
     assert.strictEqual(new AttrList('HEX=0X42').hexadecimalIntegerAsNumber('HEX'), 0x42);
