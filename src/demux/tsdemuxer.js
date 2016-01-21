@@ -42,6 +42,8 @@ class TSDemuxer {
     switchLevel() {
         this.pmtParsed = false;
         this._pmtId = -1;
+        this.lastAacPTS = null;
+        this.aacOverFlow = null;
         this._avcTrack = {
             type: 'video',
             id: -1,
@@ -630,40 +632,39 @@ class TSDemuxer {
             startOffset = 0,
             duration = this._duration,
             audioCodec = this.audioCodec,
+            aacOverFlow = this.aacOverFlow,
+            lastAacPTS = this.lastAacPTS,
             config,
-            adtsFrameSize,
-            adtsStartOffset,
-            adtsHeaderLen,
+            frameLength,
+            frameDuration,
+            frameIndex,
+            offset,
+            headerLength,
             stamp,
-            nbSamples,
             len,
             aacSample;
-        if (this.aacOverFlow) {
-            var tmp = new Uint8Array(
-                this.aacOverFlow.byteLength + data.byteLength
-            );
-            tmp.set(this.aacOverFlow, 0);
-            tmp.set(data, this.aacOverFlow.byteLength);
+        if (aacOverFlow) {
+            var tmp = new Uint8Array(aacOverFlow.byteLength + data.byteLength);
+            tmp.set(aacOverFlow, 0);
+            tmp.set(data, aacOverFlow.byteLength);
+            //logger.log(`AAC: append overflowing ${aacOverFlow.byteLength} bytes to beginning of new PES`);
             data = tmp;
         }
         // look for ADTS header (0xFFFx)
         for (
-            adtsStartOffset = startOffset, len = data.length;
-            adtsStartOffset < len - 1;
-            adtsStartOffset++
+            offset = startOffset, len = data.length;
+            offset < len - 1;
+            offset++
         ) {
-            if (
-                data[adtsStartOffset] === 0xff &&
-                (data[adtsStartOffset + 1] & 0xf0) === 0xf0
-            ) {
+            if (data[offset] === 0xff && (data[offset + 1] & 0xf0) === 0xf0) {
                 break;
             }
         }
         // if ADTS header does not start straight from the beginning of the PES payload, raise an error
-        if (adtsStartOffset) {
+        if (offset) {
             var reason, fatal;
-            if (adtsStartOffset < len - 1) {
-                reason = `AAC PES did not start with ADTS header,offset:${adtsStartOffset}`;
+            if (offset < len - 1) {
+                reason = `AAC PES did not start with ADTS header,offset:${offset}`;
                 fatal = false;
             } else {
                 reason = 'no ADTS header found in AAC PES';
@@ -683,7 +684,7 @@ class TSDemuxer {
             config = ADTS.getAudioConfig(
                 this.observer,
                 data,
-                adtsStartOffset,
+                offset,
                 audioCodec
             );
             track.config = config.config;
@@ -691,49 +692,61 @@ class TSDemuxer {
             track.channelCount = config.channelCount;
             track.codec = config.codec;
             track.timescale = this.remuxer.timescale;
-            track.duration = this.remuxer.timescale * duration;
+            track.duration = track.timescale * duration;
             logger.log(
                 `parsed codec:${track.codec},rate:${
                     config.samplerate
                 },nb channel:${config.channelCount}`
             );
         }
-        nbSamples = 0;
-        while (adtsStartOffset + 5 < len) {
+        frameIndex = 0;
+        frameDuration = 1024 * 90000 / track.audiosamplerate;
+
+        // if last AAC frame is overflowing, we should ensure timestamps are contiguous:
+        // first sample PTS should be equal to last sample PTS + frameDuration
+        if (aacOverFlow && lastAacPTS) {
+            var newPTS = lastAacPTS + frameDuration;
+            if (Math.abs(newPTS - pts) > 1) {
+                logger.log(
+                    `AAC: align PTS for overlapping frames by ${Math.round(
+                        (newPTS - pts) / 90
+                    )}`
+                );
+                pts = newPTS;
+            }
+        }
+
+        while (offset + 5 < len) {
+            // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
+            headerLength = !!(data[offset + 1] & 0x01) ? 7 : 9;
             // retrieve frame size
-            adtsFrameSize = (data[adtsStartOffset + 3] & 0x03) << 11;
-            // byte 4
-            adtsFrameSize |= data[adtsStartOffset + 4] << 3;
-            // byte 5
-            adtsFrameSize |= (data[adtsStartOffset + 5] & 0xe0) >>> 5;
-            adtsHeaderLen = !!(data[adtsStartOffset + 1] & 0x01) ? 7 : 9;
-            adtsFrameSize -= adtsHeaderLen;
-            stamp = Math.round(
-                pts + nbSamples * 1024 * 90000 / track.audiosamplerate
-            );
+            frameLength =
+                ((data[offset + 3] & 0x03) << 11) |
+                (data[offset + 4] << 3) |
+                ((data[offset + 5] & 0xe0) >>> 5);
+            frameLength -= headerLength;
             //stamp = pes.pts;
-            //console.log('AAC frame, offset/length/pts:' + (adtsStartOffset+7) + '/' + adtsFrameSize + '/' + stamp.toFixed(0));
-            if (
-                adtsFrameSize > 0 &&
-                adtsStartOffset + adtsHeaderLen + adtsFrameSize <= len
-            ) {
+
+            if (frameLength > 0 && offset + headerLength + frameLength <= len) {
+                stamp = Math.round(pts + frameIndex * frameDuration);
+                //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
                 aacSample = {
                     unit: data.subarray(
-                        adtsStartOffset + adtsHeaderLen,
-                        adtsStartOffset + adtsHeaderLen + adtsFrameSize
+                        offset + headerLength,
+                        offset + headerLength + frameLength
                     ),
                     pts: stamp,
                     dts: stamp
                 };
                 track.samples.push(aacSample);
-                track.len += adtsFrameSize;
-                adtsStartOffset += adtsFrameSize + adtsHeaderLen;
-                nbSamples++;
+                track.len += frameLength;
+                offset += frameLength + headerLength;
+                frameIndex++;
                 // look for ADTS header (0xFFFx)
-                for (; adtsStartOffset < len - 1; adtsStartOffset++) {
+                for (; offset < len - 1; offset++) {
                     if (
-                        data[adtsStartOffset] === 0xff &&
-                        (data[adtsStartOffset + 1] & 0xf0) === 0xf0
+                        data[offset] === 0xff &&
+                        (data[offset + 1] & 0xf0) === 0xf0
                     ) {
                         break;
                     }
@@ -742,11 +755,14 @@ class TSDemuxer {
                 break;
             }
         }
-        if (adtsStartOffset < len) {
-            this.aacOverFlow = data.subarray(adtsStartOffset, len);
+        if (offset < len) {
+            aacOverFlow = data.subarray(offset, len);
+            //logger.log(`AAC: overflow detected:${len-offset}`);
         } else {
-            this.aacOverFlow = null;
+            aacOverFlow = null;
         }
+        this.aacOverFlow = aacOverFlow;
+        this.lastAacPTS = stamp;
     }
 
     _parseID3PES(pes) {

@@ -99,6 +99,7 @@ each error is categorized by :
     - ```Hls.ErrorDetails.FRAG_PARSING_ERROR```raised when fragment parsing fails
     - ```Hls.ErrorDetails.BUFFER_APPEND_ERROR```raised when exception is raised while preparing buffer append
     - ```Hls.ErrorDetails.BUFFER_APPENDING_ERROR```raised when exception is raised during buffer appending
+    - ```Hls.ErrorDetails.BUFFER_STALLED_ERROR```raised when playback stalls because the buffer runs out
   - its fatality:
     - ```false```if error is not fatal, hls.js will try to recover it
     - ```true```if error is fatal, an action is required to (try to) recover it.
@@ -184,7 +185,10 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       debug : false,
       autoStartLoad : true,
       maxBufferLength : 30,
+      maxMaxBufferLength : 600,
       maxBufferSize : 60*1000*1000,
+      maxBufferHole : 0.3,
+      maxSeekHole : 2,
       liveSyncDurationCount : 3,
       liveMaxLatencyDurationCount: 10,
       enableWorker : true,
@@ -232,10 +236,38 @@ a logger object could also be provided for custom logging : ```config.debug=cust
 (default 30s)
 
 maximum buffer Length in seconds. if buffer length is/become less than this value, a new fragment will be loaded.
+this is the guaranteed buffer length hls.js will try to reach, regardless of maxBufferSize.
+
 #### ```maxBufferSize```
 (default 60 MB)
 
-maximum buffer size in bytes. if buffer size upfront is bigger than this value, no fragment will be loaded.
+'minimum' maximum buffer size in bytes. if buffer size upfront is bigger than this value, no fragment will be loaded.
+
+#### ```maxBufferHole```
+(default 0.3s)
+
+'maximum' inter-fragment buffer hole tolerance that hls.js can cope with.
+When switching between quality level, fragments might not be perfectly aligned.
+This could result in small overlapping or hole in media buffer. This tolerance factor helps cope with this.
+
+#### ```maxSeekHole```
+(default 2s)
+
+in case playback is stalled, and a buffered range is available upfront, less than maxSeekHole seconds from current media position,
+hls.js will jump over this buffer hole to reach the beginning of this following buffered range.
+```maxSeekHole``` allows to configure this jumpable threshold.
+
+#### ```maxMaxBufferLength```
+(default 600s)
+
+maximum buffer Length in seconds. hls.js will never exceed this value. even if maxBufferSize is not reached yet.
+
+hls.js tries to buffer up to a maximum number of bytes (60 MB by default) rather than to buffer up to a maximum nb of seconds.
+this is to mimic the browser behaviour (the buffer eviction algorithm is starting after the browser detects that video buffer size reaches a limit in bytes)
+
+config.maxBufferLength is the minimum guaranteed buffer length that hls.js will try to achieve, even if that value exceeds the amount of bytes 60 MB of memory.
+maxMaxBufferLength acts as a capping value, as if bitrate is really low, you could need more than one hour of buffer to fill 60 MB....
+
 
 #### ```liveSyncDurationCount```
 (default 3)
@@ -484,7 +516,7 @@ full list of Events available below :
   - `Hls.Events.LEVEL_PTS_UPDATED`  - fired when a level's PTS information has been updated after parsing a fragment
     -  data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment }
   - `Hls.Events.LEVEL_SWITCH`  - fired when a level switch is requested
-    -  data: { levelId : id of new level }
+    -  data: { level : id of new level, it is the index of the array `Hls.levels` }
   - `Hls.Events.KEY_LOADING`  - fired when a decryption key loading starts
     -  data: { frag : fragment object}
   - `Hls.Events.KEY_LOADED`  - fired when a decryption key loading is completed

@@ -3,18 +3,15 @@
  */
 
 import Event from '../events';
+import EventHandler from '../event-handler';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import URLHelper from '../utils/url';
 import AttrList from '../utils/attr-list';
 //import {logger} from '../utils/logger';
 
-class PlaylistLoader {
+class PlaylistLoader extends EventHandler {
     constructor(hls) {
-        this.hls = hls;
-        this.onml = this.onManifestLoading.bind(this);
-        this.onll = this.onLevelLoading.bind(this);
-        hls.on(Event.MANIFEST_LOADING, this.onml);
-        hls.on(Event.LEVEL_LOADING, this.onll);
+        super(hls, Event.MANIFEST_LOADING, Event.LEVEL_LOADING);
     }
 
     destroy() {
@@ -23,15 +20,14 @@ class PlaylistLoader {
             this.loader = null;
         }
         this.url = this.id = null;
-        this.hls.off(Event.MANIFEST_LOADING, this.onml);
-        this.hls.off(Event.LEVEL_LOADING, this.onll);
+        EventHandler.prototype.destroy.call(this);
     }
 
-    onManifestLoading(event, data) {
+    onManifestLoading(data) {
         this.load(data.url, null);
     }
 
-    onLevelLoading(event, data) {
+    onLevelLoading(data) {
         this.load(data.url, data.level, data.id);
     }
 
@@ -254,8 +250,9 @@ class PlaylistLoader {
     }
 
     loadsuccess(event, stats) {
-        var string = event.currentTarget.responseText,
-            url = event.currentTarget.responseURL,
+        var target = event.currentTarget,
+            string = target.responseText,
+            url = target.responseURL,
             id = this.id,
             id2 = this.id2,
             hls = this.hls,
@@ -266,9 +263,7 @@ class PlaylistLoader {
             url = this.url;
         }
         stats.tload = performance.now();
-        stats.mtime = new Date(
-            event.currentTarget.getResponseHeader('Last-Modified')
-        );
+        stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
         if (string.indexOf('#EXTM3U') === 0) {
             if (string.indexOf('#EXTINF:') > 0) {
                 // 1 level playlist
