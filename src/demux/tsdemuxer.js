@@ -328,6 +328,8 @@
 
           var payloadType = expGolombDecoder.readUByte();
 
+          // TODO: there can be more than one payload in an SEI packet...
+          // TODO: need to read type and size in a while loop to get them all
           if (payloadType === 4)
           {
             var payloadSize = 0;
@@ -369,7 +371,7 @@
                       byteArray.push(expGolombDecoder.readUByte());
                     }
 
-                    this._txtTrack.samples.push({type: 3, pts: pes.pts, bytes: byteArray});
+                    this._txtTrack.samples.push({type: 3, pts: pes.pts, level: this.lastLevel, bytes: byteArray});
                   }
                 }
               }

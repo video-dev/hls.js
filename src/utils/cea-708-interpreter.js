@@ -30,6 +30,17 @@ class CEA708Interpreter {
     this.memory.push(this.cue);
   }
 
+  clear()
+  {
+    if (this._textTrack && this._textTrack.cues)
+    {
+      while (this._textTrack.cues.length > 0)
+      {
+        this._textTrack.removeCue(this._textTrack.cues[0]);
+      }
+    }
+  }
+
   push(timestamp, bytes)
   {
     var count = bytes[0] & 31;
@@ -57,7 +68,7 @@ class CEA708Interpreter {
           if (0x20 & ccbyte1 || 0x40 & ccbyte1)
           {
             this.cue.text += this._fromCharCode(ccbyte1) + this._fromCharCode(ccbyte2);
-            console.error(this.cue.text);
+            console.log(this.cue.text);
           }
           // Special Characters
           else if ((ccbyte1 === 0x11 || ccbyte1 === 0x19) && ccbyte2 >= 0x30 && ccbyte2 <= 0x3F)
@@ -176,79 +187,79 @@ class CEA708Interpreter {
             switch (ccbyte2)
             {
               case 0x20:
-                console.error("-RCL-");
+                console.log("-RCL-");
                 // TODO: shouldn't affect roll-ups...
                 this._clearActiveCues(timestamp);
                 // RCL: Resume Caption Loading
                 // begin pop on
                 break;
               case 0x21:
-                console.error("-BS-");
+                console.log("-BS-");
                 // BS: Backspace
                 this.cue.text = this.cue.text.substr(0, this.cue.text.length-1);
                 break;
               case 0x22:
-                console.error("-AOF-");
+                console.log("-AOF-");
                 // AOF: reserved (formerly alarm off)
                 break;
               case 0x23:
-                console.error("-AON-");
+                console.log("-AON-");
                 // AON: reserved (formerly alarm on)
                 break;
               case 0x24:
-                console.error("-DER-");
+                console.log("-DER-");
                 // DER: Delete to end of row
                 break;
               case 0x25:
-                console.error("-RU2-");
+                console.log("-RU2-");
                 // RU2: roll-up 2 rows
                 this._rollup(2);
                 break;
               case 0x26:
-                console.error("-RU3-");
+                console.log("-RU3-");
                 // RU3: roll-up 3 rows
                 this._rollup(3);
                 break;
               case 0x27:
-                console.error("-RU4-");
+                console.log("-RU4-");
                 // RU4: roll-up 4 rows
                 this._rollup(4);
                 break;
               case 0x28:
-                console.error("-FON-");
+                console.log("-FON-");
                 // FON: Flash on
                 break;
               case 0x29:
-                console.error("-RDC-");
+                console.log("-RDC-");
                 // RDC: Resume direct captioning
                 this._clearActiveCues(timestamp);
                 break;
               case 0x2A:
-                console.error("-TR-");
+                console.log("-TR-");
                 // TR: Text Restart
                 break;
               case 0x2B:
-                console.error("-RTD-");
+                console.log("-RTD-");
                 // RTD: Resume Text Display
                 break;
               case 0x2C:
-                console.error("-EDM-");
+                console.log("-EDM-");
                 // EDM: Erase Displayed Memory
                 this._clearActiveCues(timestamp);
                 break;
               case 0x2D:
-                console.error("-CR-");
+                console.log("-CR-");
                 // CR: Carriage Return
                 // only affects roll-up
                 this._rollup(1);
                 break;
               case 0x2E:
-                console.error("-ENM-");
+                console.log("-ENM-");
                 // ENM: Erase non-displayed memory
                 this._text = "";
                 break;
               case 0x2F:
-                console.error("-EOC-: " + timestamp);
+                console.log("-EOC-: " + timestamp);
                 this._flipMemory(timestamp);
                 // EOC: End of caption
                 // hide any displayed captions and show any hidden one
@@ -344,9 +355,11 @@ class CEA708Interpreter {
 
     for (var i=0; i<this.memory.length; i++)
     {
+      console.error(this.memory[i].text);
+
       this.memory[i].startTime = timestamp;
       this._textTrack.addCue(this.memory[i]);
-      this.display.push(this.cue);
+      this.display.push(this.memory[i]);
     }
 
     this.memory = [];
