@@ -414,7 +414,7 @@
         case 3:
           if( value === 0) {
             state = 3;
-          } else if (value === 1) {
+          } else if (value === 1 && i < len) {
             unitType = array[i] & 0x1f;
             //logger.log('find NALU @ offset:' + i + ',type:' + unitType);
             if (lastUnitStart) {
