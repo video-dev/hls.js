@@ -838,7 +838,8 @@ var State = {
   PARSING: 5,
   PARSED: 6,
   APPENDING: 7,
-  BUFFER_FLUSHING: 8
+  BUFFER_FLUSHING: 8,
+  ENDED: 9
 };
 
 var MSEMediaController = (function (_EventHandler) {
@@ -1084,13 +1085,23 @@ var MSEMediaController = (function (_EventHandler) {
                     // have we reached end of VOD playlist ?
                     if (!levelDetails.live) {
                       var mediaSource = this.mediaSource;
-                      if (mediaSource && mediaSource.readyState === 'open') {
-                        // ensure sourceBuffer are not in updating states
-                        var sb = this.sourceBuffer;
-                        if (!(sb.audio && sb.audio.updating || sb.video && sb.video.updating)) {
-                          _utilsLogger.logger.log('all media data available, signal endOfStream() to MediaSource');
-                          //Notify the media element that it now has all of the media data
-                          mediaSource.endOfStream();
+                      if (mediaSource) {
+                        switch (mediaSource.readyState) {
+                          case 'open':
+                            var sb = this.sourceBuffer;
+                            if (!(sb.audio && sb.audio.updating || sb.video && sb.video.updating)) {
+                              _utilsLogger.logger.log('all media data available, signal endOfStream() to MediaSource and stop loading fragment');
+                              //Notify the media element that it now has all of the media data
+                              mediaSource.endOfStream();
+                              this.state = State.ENDED;
+                            }
+                            break;
+                          case 'ended':
+                            _utilsLogger.logger.log('all media data available and mediaSource ended, stop loading fragment');
+                            this.state = State.ENDED;
+                            break;
+                          default:
+                            break;
                         }
                       }
                     }
@@ -1275,6 +1286,8 @@ var MSEMediaController = (function (_EventHandler) {
           /* if not everything flushed, stay in BUFFER_FLUSHING state. we will come back here
              each time sourceBuffer updateend() callback will be triggered
              */
+          break;
+        case State.ENDED:
           break;
         default:
           break;
@@ -1683,6 +1696,9 @@ var MSEMediaController = (function (_EventHandler) {
           // switch to IDLE state to load new fragment
           this.state = State.IDLE;
         }
+      } else if (this.state === State.ENDED) {
+        // switch to IDLE state to check for potential new fragment
+        this.state = State.IDLE;
       }
       if (this.media) {
         this.lastCurrentTime = this.media.currentTime;
@@ -2033,6 +2049,7 @@ var MSEMediaController = (function (_EventHandler) {
                 // playhead moving or media not playing
                 jumpThreshold = 0;
               } else {
+                // playhead not moving AND media playing
                 _utilsLogger.logger.log('playback seems stuck');
                 if (!this.stalled) {
                   this.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_STALLED_ERROR, fatal: false });
@@ -4404,7 +4421,7 @@ var TSDemuxer = (function () {
           case 3:
             if (value === 0) {
               state = 3;
-            } else if (value === 1) {
+            } else if (value === 1 && i < len) {
               unitType = array[i] & 0x1f;
               //logger.log('find NALU @ offset:' + i + ',type:' + unitType);
               if (lastUnitStart) {
@@ -6664,12 +6681,13 @@ var MP4Remuxer = (function () {
             if (delta) {
               if (delta > 0) {
                 _utilsLogger.logger.log(delta + ' ms hole between AAC samples detected,filling it');
-              } else if (delta < 0) {
-                // drop overlapping audio frames... browser will deal with it
-                _utilsLogger.logger.log(-delta + ' ms overlapping between AAC samples detected, drop frame');
-                track.len -= unit.byteLength;
-                continue;
-              }
+                // if we have frame overlap, overlapping for more than half a frame duraion
+              } else if (delta < -12) {
+                  // drop overlapping audio frames... browser will deal with it
+                  _utilsLogger.logger.log(-delta + ' ms overlapping between AAC samples detected, drop frame');
+                  track.len -= unit.byteLength;
+                  continue;
+                }
               // set DTS to next DTS
               ptsnorm = dtsnorm = nextAacPts;
             }
