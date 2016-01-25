@@ -373,7 +373,7 @@
                       byteArray.push(expGolombDecoder.readUByte());
                     }
 
-                    this._txtTrack.samples.push({type: 3, pts: pes.pts, level: this.lastLevel, bytes: byteArray});
+                    this._txtTrack.samples.push({type: 3, pts: pes.pts, this.lastLevel, bytes: byteArray});
                   }
                 }
               }
