@@ -3,11 +3,17 @@
 */
 
 class CEA708Interpreter {
-    constructor(media) {
+    constructor() {}
+
+    attach(media) {
         this.media = media;
         this.display = [];
         this.memory = [];
         this._createCue();
+    }
+
+    detatch() {
+        this.clear();
     }
 
     destroy() {}

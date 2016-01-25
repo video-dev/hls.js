@@ -22,6 +22,8 @@ class TimelineController {
             hls.on(Hls.Events.FRAG_PARSING_USERDATA, this.onud);
             hls.on(Event.MANIFEST_LOADING, this.onml);
             hls.on(Event.FRAG_LOADED, this.onfl);
+
+            this.cea708Interpreter = new CEA708Interpreter();
         }
     }
 
@@ -29,10 +31,12 @@ class TimelineController {
 
     onMediaAttaching(event, data) {
         var media = (this.media = data.media);
-        this.cea708Interpreter = new CEA708Interpreter(this.media);
+        this.cea708Interpreter.attach(media);
     }
 
-    onMediaDetaching() {}
+    onMediaDetaching() {
+        this.cea708Interpreter.detatch();
+    }
 
     onManifestLoading() {
         this.lastPts = Number.POSITIVE_INFINITY;
