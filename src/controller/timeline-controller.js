@@ -15,13 +15,13 @@ class TimelineController {
             this.onmediaatt0 = this.onMediaAttaching.bind(this);
             this.onmediadet0 = this.onMediaDetaching.bind(this);
             this.onud = this.onFragParsingUserData.bind(this);
+            this.onfl = this.onFragLoaded.bind(this);
             this.onml = this.onManifestLoading.bind(this);
-            this.onls = this.onLevelSwitch.bind(this);
             hls.on(Event.MEDIA_ATTACHING, this.onmediaatt0);
             hls.on(Event.MEDIA_DETACHING, this.onmediadet0);
             hls.on(Hls.Events.FRAG_PARSING_USERDATA, this.onud);
             hls.on(Event.MANIFEST_LOADING, this.onml);
-            hls.on(Event.LEVEL_SWITCH, this.onls);
+            hls.on(Event.FRAG_LOADED, this.onfl);
         }
     }
 
@@ -35,11 +35,19 @@ class TimelineController {
     onMediaDetaching() {}
 
     onManifestLoading() {
-        this.level = -1;
+        this.lastPts = Number.POSITIVE_INFINITY;
     }
 
-    onLevelSwitch() {
-        this.cea708Interpreter.clear();
+    onFragLoaded(event, data) {
+        var pts = data.frag.start; //Number.POSITIVE_INFINITY;
+
+        // if this is a frag for a previously loaded timerange, remove all captions
+        // TODO: consider just removing captions for the timerange
+        if (pts < this.lastPts) {
+            this.cea708Interpreter.clear();
+        }
+
+        this.lastPts = pts;
     }
 
     onFragParsingUserData(event, data) {
