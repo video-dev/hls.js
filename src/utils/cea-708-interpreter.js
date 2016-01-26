@@ -19,6 +19,8 @@ class CEA708Interpreter {
     destroy() {}
 
     _createCue() {
+        var VTTCue = window.VTTCue;
+
         this.cue = new VTTCue(-1, -1, '');
         this.cue.text = '';
         this.cue.pauseOnExit = false;
@@ -50,7 +52,7 @@ class CEA708Interpreter {
             byte = bytes[position++];
             ccbyte1 = 0x7f & bytes[position++];
             ccbyte2 = 0x7f & bytes[position++];
-            ccValid = !((4 & byte) == 0);
+            ccValid = (4 & byte) === 0 ? false : true;
             ccType = 3 & byte;
 
             if (ccbyte1 === 0 && ccbyte2 === 0) {
