@@ -44,7 +44,7 @@ class CEA708Interpreter {
     push(timestamp, bytes) {
         var count = bytes[0] & 31;
         var position = 2;
-        var byte, ccbyte1, ccbyte2, ccdata1, ccdata2, ccValid, ccType;
+        var byte, ccbyte1, ccbyte2, ccValid, ccType;
 
         for (var j = 0; j < count; j++) {
             byte = bytes[position++];
@@ -65,7 +65,6 @@ class CEA708Interpreter {
                         this.cue.text +=
                             this._fromCharCode(ccbyte1) +
                             this._fromCharCode(ccbyte2);
-                        console.log(this.cue.text);
                     } else if (
                         (ccbyte1 === 0x11 || ccbyte1 === 0x19) &&
                         ccbyte2 >= 0x30 &&
@@ -189,14 +188,12 @@ class CEA708Interpreter {
                         // Mid-row codes: color/underline
                         switch (ccbyte2) {
                             case 0x20:
-                                console.log('-RCL-');
                                 // TODO: shouldn't affect roll-ups...
                                 this._clearActiveCues(timestamp);
                                 // RCL: Resume Caption Loading
                                 // begin pop on
                                 break;
                             case 0x21:
-                                console.log('-BS-');
                                 // BS: Backspace
                                 this.cue.text = this.cue.text.substr(
                                     0,
@@ -204,67 +201,53 @@ class CEA708Interpreter {
                                 );
                                 break;
                             case 0x22:
-                                console.log('-AOF-');
                                 // AOF: reserved (formerly alarm off)
                                 break;
                             case 0x23:
-                                console.log('-AON-');
                                 // AON: reserved (formerly alarm on)
                                 break;
                             case 0x24:
-                                console.log('-DER-');
                                 // DER: Delete to end of row
                                 break;
                             case 0x25:
-                                console.log('-RU2-');
                                 // RU2: roll-up 2 rows
-                                this._rollup(2);
+                                //this._rollup(2);
                                 break;
                             case 0x26:
-                                console.log('-RU3-');
                                 // RU3: roll-up 3 rows
-                                this._rollup(3);
+                                //this._rollup(3);
                                 break;
                             case 0x27:
-                                console.log('-RU4-');
                                 // RU4: roll-up 4 rows
-                                this._rollup(4);
+                                //this._rollup(4);
                                 break;
                             case 0x28:
-                                console.log('-FON-');
                                 // FON: Flash on
                                 break;
                             case 0x29:
-                                console.log('-RDC-');
                                 // RDC: Resume direct captioning
                                 this._clearActiveCues(timestamp);
                                 break;
                             case 0x2a:
-                                console.log('-TR-');
                                 // TR: Text Restart
                                 break;
                             case 0x2b:
-                                console.log('-RTD-');
                                 // RTD: Resume Text Display
                                 break;
                             case 0x2c:
-                                console.log('-EDM-');
                                 // EDM: Erase Displayed Memory
                                 this._clearActiveCues(timestamp);
                                 break;
                             case 0x2d:
-                                console.log('-CR-');
                                 // CR: Carriage Return
                                 // only affects roll-up
-                                this._rollup(1);
+                                //this._rollup(1);
                                 break;
                             case 0x2e:
-                                console.log('-ENM-');
                                 // ENM: Erase non-displayed memory
                                 this._text = '';
                                 break;
                             case 0x2f:
-                                console.log('-EOC-: ' + timestamp);
                                 this._flipMemory(timestamp);
                                 // EOC: End of caption
                                 // hide any displayed captions and show any hidden one
@@ -338,8 +321,6 @@ class CEA708Interpreter {
         }
 
         for (var i = 0; i < this.memory.length; i++) {
-            console.error(this.memory[i].text);
-
             this.memory[i].startTime = timestamp;
             this._textTrack.addCue(this.memory[i]);
             this.display.push(this.memory[i]);
@@ -358,10 +339,11 @@ class CEA708Interpreter {
         this.display = [];
     }
 
-    _rollUp(n) {
-        // TODO: implement roll-up captions
-    }
-
+    /*  _rollUp(n)
+  {
+    // TODO: implement roll-up captions
+  }
+*/
     _clearBufferedCues() {
         //remove them all...
     }

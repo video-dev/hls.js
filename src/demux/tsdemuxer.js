@@ -349,8 +349,10 @@ class TSDemuxer {
             debug = false,
             key = false,
             length = 0,
+            expGolombDecoder,
             avcSample,
-            push;
+            push,
+            i;
         // no NALu found
         if (units.length === 0 && samples.length > 0) {
             // append pes.data to previous NAL unit
@@ -369,6 +371,7 @@ class TSDemuxer {
         //free pes.data to save up some memory
         pes.data = null;
         var debugString = '';
+
         units.forEach(unit => {
             switch (unit.type) {
                 //NDR
@@ -392,7 +395,7 @@ class TSDemuxer {
                     if (debug) {
                         debugString += 'SEI ';
                     }
-                    var expGolombDecoder = new ExpGolomb(unit.data);
+                    expGolombDecoder = new ExpGolomb(unit.data);
 
                     // skip frameType
                     expGolombDecoder.readUByte();
@@ -425,10 +428,9 @@ class TSDemuxer {
                                         var secondByte = expGolombDecoder.readUByte();
 
                                         var totalCCs = 31 & firstByte;
-                                        var sizeOfCCs = totalCCs * 3;
                                         var byteArray = [firstByte, secondByte];
 
-                                        for (var i = 0; i < totalCCs; i++) {
+                                        for (i = 0; i < totalCCs; i++) {
                                             // 3 bytes per CC
                                             byteArray.push(
                                                 expGolombDecoder.readUByte()
@@ -459,7 +461,7 @@ class TSDemuxer {
                         debugString += 'SPS ';
                     }
                     if (!track.sps) {
-                        var expGolombDecoder = new ExpGolomb(unit.data);
+                        expGolombDecoder = new ExpGolomb(unit.data);
                         var config = expGolombDecoder.readSPS();
                         track.width = config.width;
                         track.height = config.height;
@@ -469,7 +471,7 @@ class TSDemuxer {
                             this.remuxer.timescale * this._duration;
                         var codecarray = unit.data.subarray(1, 4);
                         var codecstring = 'avc1.';
-                        for (var i = 0; i < 3; i++) {
+                        for (i = 0; i < 3; i++) {
                             var h = codecarray[i].toString(16);
                             if (h.length < 2) {
                                 h = '0' + h;
