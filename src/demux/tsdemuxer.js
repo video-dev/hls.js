@@ -43,7 +43,7 @@
     this._avcTrack = {type: 'video', id :-1, sequenceNumber: 0, samples : [], len : 0, nbNalu : 0};
     this._aacTrack = {type: 'audio', id :-1, sequenceNumber: 0, samples : [], len : 0};
     this._id3Track = {type: 'id3', id :-1, sequenceNumber: 0, samples : [], len : 0};
-    this._txtTrack = {type: 'text', id: -1, sequenceNumber: 0, samples: [], len: 0}
+    this._txtTrack = {type: 'text', id: -1, sequenceNumber: 0, samples: [], len: 0};
     this.remuxer.switchLevel();
   }
 
@@ -283,8 +283,10 @@
         debug = false,
         key = false,
         length = 0,
+        expGolombDecoder,
         avcSample,
-        push;
+        push,
+        i;
     // no NALu found
     if (units.length === 0 && samples.length > 0) {
       // append pes.data to previous NAL unit
@@ -300,6 +302,7 @@
     //free pes.data to save up some memory
     pes.data = null;
     var debugString = '';
+
     units.forEach(unit => {
       switch(unit.type) {
         //NDR
@@ -323,7 +326,7 @@
           if(debug) {
             debugString += 'SEI ';
           }
-          var expGolombDecoder = new ExpGolomb(unit.data);
+          expGolombDecoder = new ExpGolomb(unit.data);
 
           // skip frameType
           expGolombDecoder.readUByte();
@@ -339,7 +342,7 @@
             do {
               payloadSize = expGolombDecoder.readUByte();
             }
-            while (payloadSize === 255)
+            while (payloadSize === 255);
 
             var countryCode = expGolombDecoder.readUByte();
 
@@ -362,10 +365,9 @@
                     var secondByte = expGolombDecoder.readUByte();
 
                     var totalCCs = 31 & firstByte;
-                    var sizeOfCCs = totalCCs * 3;
                     var byteArray = [firstByte, secondByte];
 
-                    for (var i=0; i<totalCCs; i++)
+                    for (i=0; i<totalCCs; i++)
                     {
                       // 3 bytes per CC
                       byteArray.push(expGolombDecoder.readUByte());
@@ -387,7 +389,7 @@
             debugString += 'SPS ';
           }
           if(!track.sps) {
-            var expGolombDecoder = new ExpGolomb(unit.data);
+            expGolombDecoder = new ExpGolomb(unit.data);
             var config = expGolombDecoder.readSPS();
             track.width = config.width;
             track.height = config.height;
@@ -396,7 +398,7 @@
             track.duration = this.remuxer.timescale * this._duration;
             var codecarray = unit.data.subarray(1, 4);
             var codecstring = 'avc1.';
-            for (var i = 0; i < 3; i++) {
+            for (i = 0; i < 3; i++) {
               var h = codecarray[i].toString(16);
               if (h.length < 2) {
                 h = '0' + h;

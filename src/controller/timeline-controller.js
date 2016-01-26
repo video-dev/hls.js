@@ -3,7 +3,6 @@
 */
 
 import Event from '../events';
-import {logger} from '../utils/logger';
 import CEA708Interpreter from '../utils/cea-708-interpreter';
 
 class TimelineController {
@@ -21,7 +20,7 @@ class TimelineController {
       this.onml = this.onManifestLoading.bind(this);
       hls.on(Event.MEDIA_ATTACHING, this.onmediaatt0);
       hls.on(Event.MEDIA_DETACHING, this.onmediadet0);
-      hls.on(Hls.Events.FRAG_PARSING_USERDATA, this.onud);
+      hls.on(Event.FRAG_PARSING_USERDATA, this.onud);
       hls.on(Event.MANIFEST_LOADING, this.onml);
       hls.on(Event.FRAG_LOADED, this.onfl);
 
@@ -38,7 +37,7 @@ class TimelineController {
   }
 
   onMediaDetaching() {
-    this.cea708Interpreter.detatch()
+    this.cea708Interpreter.detatch();
   }
 
   onManifestLoading()

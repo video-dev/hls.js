@@ -62,7 +62,7 @@ class DummyRemuxer {
   }
 
   _remuxTextSamples(track,timeOffset) {
-    var textSample,unit;
+    var textSample,bytes;
     // loop through track.samples
     while (track.samples.length) {
       textSample = track.samples.shift();
