@@ -34,7 +34,7 @@ module.exports = {
   // fired when Init Segment has been extracted from fragment - data: { moov : moov MP4 box, codecs : codecs found while parsing fragment}
   FRAG_PARSING_INIT_SEGMENT: 'hlsFragParsingInitSegment',
   // fired when parsing sei text is completed - data: { samples : [ sei samples pes ] }
-  FRAG_PARSING_USERDATA: 'hlsFraParsingUserdata',
+  FRAG_PARSING_USERDATA: 'hlsFragParsingUserdata',
   // fired when parsing id3 is completed - data: { samples : [ id3 samples pes ] }
   FRAG_PARSING_METADATA: 'hlsFragParsingMetadata',
   // fired when moof/mdat have been extracted from fragment - data: { moof : moof MP4 box, mdat : mdat MP4 box}
