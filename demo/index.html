@@ -223,8 +223,7 @@ $(document).ready(function() {
   var video = $('#video')[0];
   video.volume = 0.05;
 
-  //'http://www.streambox.fr/playlists/x36xhzz/x36xhzz.m3u8';
-  loadStream(decodeURIComponent(getURLParam('src','http://test.theplatform.com.edgesuite.net/PDK_(VMS)/356/603/PrinceOfPersia_608-708CC.m3u8')));
+  loadStream(decodeURIComponent(getURLParam('src','http://www.streambox.fr/playlists/x36xhzz/x36xhzz.m3u8')));
 
   function loadStream(url) {
     hideCanvas();
