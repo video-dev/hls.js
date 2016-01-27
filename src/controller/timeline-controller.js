@@ -25,7 +25,9 @@ class TimelineController extends EventHandler {
         }
     }
 
-    destroy() {}
+    destroy() {
+        EventHandler.prototype.destroy.call(this);
+    }
 
     onMediaAttaching(data) {
         var media = (this.media = data.media);
@@ -45,7 +47,7 @@ class TimelineController extends EventHandler {
 
         // if this is a frag for a previously loaded timerange, remove all captions
         // TODO: consider just removing captions for the timerange
-        if (pts < this.lastPts) {
+        if (pts <= this.lastPts) {
             this.cea708Interpreter.clear();
         }
 
