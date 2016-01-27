@@ -388,18 +388,7 @@ class MP4Remuxer {
 
   remuxText(track,timeOffset) {
     track.samples.sort(function(a, b) {
-      if (a.pts < b.pts)
-      {
-        return -1;
-      }
-      else if (a.pts > b.pts)
-      {
-        return 1;
-      }
-      else
-      {
-        return 0;
-      }
+      return (a.pts-b.pts);
     });
 
     var length = track.samples.length, sample;
