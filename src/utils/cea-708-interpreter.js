@@ -9,7 +9,6 @@ class CEA708Interpreter {
         this.media = media;
         this.display = [];
         this.memory = [];
-        this._createCue();
     }
 
     detatch() {
@@ -19,7 +18,7 @@ class CEA708Interpreter {
     destroy() {}
 
     _createCue() {
-        var VTTCue = window.VTTCue;
+        var VTTCue = window.VTTCue || window.TextTrackCue;
 
         this.cue = new VTTCue(-1, -1, '');
         this.cue.text = '';
@@ -44,6 +43,10 @@ class CEA708Interpreter {
     }
 
     push(timestamp, bytes) {
+        if (!this.cue) {
+            this._createCue();
+        }
+
         var count = bytes[0] & 31;
         var position = 2;
         var byte, ccbyte1, ccbyte2, ccValid, ccType;
@@ -282,28 +285,42 @@ class CEA708Interpreter {
     }
 
     _fromCharCode(byte) {
-        if (byte === 42) {
-            return 'á';
-        } else if (byte === 92) {
-            return 'é';
-        } else if (byte === 94) {
-            return 'í';
-        } else if (byte === 95) {
-            return 'ó';
-        } else if (byte === 96) {
-            return 'ú';
-        } else if (byte === 123) {
-            return 'ç';
-        } else if (byte === 124) {
-            return '÷';
-        } else if (byte === 125) {
-            return 'Ñ';
-        } else if (byte === 126) {
-            return 'ñ';
-        } else if (byte === 127) {
-            return '█';
-        } else {
-            return String.fromCharCode(byte);
+        switch (byte) {
+            case 42:
+                return 'á';
+
+            case 2:
+                return 'á';
+
+            case 2:
+                return 'é';
+
+            case 4:
+                return 'í';
+
+            case 5:
+                return 'ó';
+
+            case 6:
+                return 'ú';
+
+            case 3:
+                return 'ç';
+
+            case 4:
+                return '÷';
+
+            case 5:
+                return 'Ñ';
+
+            case 6:
+                return 'ñ';
+
+            case 7:
+                return '█';
+
+            default:
+                return String.fromCharCode(byte);
         }
     }
 
@@ -329,8 +346,7 @@ class CEA708Interpreter {
         }
 
         this.memory = [];
-
-        this._createCue();
+        this.cue = null;
     }
 
     _clearActiveCues(timestamp) {
