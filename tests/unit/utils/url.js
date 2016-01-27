@@ -32,8 +32,10 @@ describe('utils', function() {
       e(fn("https://a.com/b/cd/e.m3u8?test=1#something", "../z.ts?abc=1#test"), "https://a.com/b/z.ts?abc=1#test");
       e(fn("https://a.com/b/cd/e.m3u8?test=1#something", "./../z.ts?abc=1#test"), "https://a.com/b/z.ts?abc=1#test");
       e(fn("https://a.com/b/cd/e.m3u8?test=1#something", "././z.ts?abc=1#test"), "https://a.com/b/cd/z.ts?abc=1#test");
-      e(fn("https://a.com/b/cd/e.m3u8?test=1#something", "../../z.ts?abc=1#test"), "https://a.com/b/z.ts?abc=1#test");
-      e(fn("https://a.com/b/cd/e.m3u8?test=1#something", "../../z.ts?abc=1&something=blah/./../test#test"), "https://a.com/b/z.ts?abc=1&something=blah/./../test#test");
+      e(fn("https://a.com/b/cd/e/f.m3u8?test=1#something", "../../z.ts?abc=1#test"), "https://a.com/b/z.ts?abc=1#test");
+      e(fn("https://a.com/b/cd/e.m3u8?test=1#something", "../../z.ts?abc=1#test"), "https://a.com/z.ts?abc=1#test");
+      e(fn("https://a.com/b/cd/e.m3u8?test=1#something", "../../z.ts?abc=1&something=blah/./../test#test"), "https://a.com/z.ts?abc=1&something=blah/./../test#test");
+      e(fn("https://a.com/b/cd/e/f.m3u8?test=1#something", "./../../z.ts?abc=1#test"), "https://a.com/b/z.ts?abc=1#test");
 
       e(fn("https://a.com/b/cd/e.m3u8?test=1#something", "subdir/pointless/../z.ts?abc=1#test"), "https://a.com/b/cd/subdir/z.ts?abc=1#test");
       e(fn("https://a.com/b/cd/e.m3u8?test=1#something", "/subdir/pointless/../z.ts?abc=1#test"), "https://a.com/subdir/z.ts?abc=1#test");
