@@ -358,7 +358,7 @@
           }
           break;
         case 9:
-          push = true;
+          push = false;
           if(debug) {
             debugString += 'AUD ';
           }
@@ -443,10 +443,6 @@
             }
             lastUnitStart = i;
             lastUnitType = unitType;
-            if (unitType === 1 || unitType === 5) {
-              // OPTI !!! if IDR/NDR unit, consider it is last NALu
-              i = len;
-            }
             state = 0;
           } else {
             state = 0;
