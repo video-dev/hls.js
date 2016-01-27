@@ -1351,7 +1351,7 @@ class MSEMediaController extends EventHandler {
                 // create source Buffer and link them to MediaSource
                 if (audioCodec) {
                     sb = this.sourceBuffer.audio = this.mediaSource.addSourceBuffer(
-                        `video/mp4;codecs=${audioCodec}`
+                        `audio/mp4;codecs=${audioCodec}`
                     );
                     sb.addEventListener('updateend', this.onsbue);
                     sb.addEventListener('error', this.onsbe);
