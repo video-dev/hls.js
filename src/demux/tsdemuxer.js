@@ -23,7 +23,6 @@
     this.remuxerClass = remuxerClass;
     this.lastCC = 0;
     this.remuxer = new this.remuxerClass(observer);
-    this._userData = [];
   }
 
   static probe(data) {
