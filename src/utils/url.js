@@ -50,8 +50,10 @@ var URLHelper = {
                 baseURLDomain +
                 URLHelper.buildAbsolutePath('', relativeURL.substring(1));
         } else {
-            var newPath = URLHelper.buildAbsolutePath(baseURLPath, relativeURL);
-            builtURL = baseURLDomain + newPath;
+            builtURL = URLHelper.buildAbsolutePath(
+                baseURLDomain + baseURLPath,
+                relativeURL
+            );
         }
 
         // put the query and hash parts back
