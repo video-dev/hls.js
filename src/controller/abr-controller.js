@@ -2,6 +2,7 @@
  * simple ABR Controller
 */
 
+import CappingMode from '../max-level-capping-mode';
 import Event from '../events';
 import EventHandler from '../event-handler';
 
@@ -37,14 +38,66 @@ class AbrController extends EventHandler {
   set autoLevelCapping(newLevel) {
     this._autoLevelCapping = newLevel;
   }
+  
+  get maxLevel() {
+    let level = this.hls.levels.length - 1, 
+        levelController = this.hls.levelController,
+        video = this.hls.media instanceof HTMLVideoElement ? this.hls.media : undefined;
+    
+    if (this._autoLevelCapping >= 0) {
+      level = this._autoLevelCapping;  
+    } else if (levelController.capLevelToPlayerSize && video) {
+      let maxLevelsCount = levelController.maxUniqueLevels ? levelController.maxUniqueLevels.length : 0;
+      if (maxLevelsCount) {
+        let maxLevel = levelController.maxUniqueLevels[0],
+            maxLevelIdx = maxLevel.index,
+            vWidth = video.clientWidth || video.width || video.offsetWidth,
+            vHeight = video.clientHeight || video.height || video.offsetHeight,
+            lWidth = 0,
+            lHeight = 0,
+            i = 0;
 
-  get nextAutoLevel() {
-    var lastbw = this.lastbw, hls = this.hls,adjustedbw, i, maxAutoLevel;
-    if (this._autoLevelCapping === -1) {
-      maxAutoLevel = hls.levels.length - 1;
-    } else {
-      maxAutoLevel = this._autoLevelCapping;
+        try {
+            let contentsScaleFactor =  window.devicePixelRatio;
+            vWidth *= contentsScaleFactor;
+            vHeight *= contentsScaleFactor;
+        } catch(e) {}
+            
+        if (this.hls.config.maxLevelCappingMode === CappingMode.DOWNSCALE) {
+          for (i = 0; i < maxLevelsCount; i++) {
+            maxLevel = levelController.maxUniqueLevels[i];
+            maxLevelIdx = maxLevel.index;
+            lWidth = maxLevel.width;
+            lHeight = maxLevel.height;
+            //console.log('video size: ' + vWidth + 'x' + vHeight + ' ,level' + maxLevelIdx + ' size: ' + lWidth + 'x' + lHeight);
+            if (vWidth <= lWidth || vHeight <= lHeight) {
+                break;
+            }
+          } 
+        } else {
+          for (i = maxLevelsCount - 1; i >= 0; i--) {
+            maxLevel = levelController.maxUniqueLevels[i];
+            maxLevelIdx = maxLevel.index;
+            lWidth = maxLevel.width;
+            lHeight = maxLevel.height;
+            //console.log('video size: ' + vWidth + 'x' + vHeight + ' ,level' + maxLevelIdx + ' size: ' + lWidth + 'x' + lHeight);
+            if (vWidth >= lWidth || vHeight >= lHeight) {
+              break;
+            }
+          }
+        } 
+        level = maxLevelIdx;      
+      }
     }
+    return level;  
+  }
+  
+  get nextAutoLevel() {
+    var lastbw = this.lastbw, 
+        hls = this.hls,
+        adjustedbw, 
+        i, 
+        maxAutoLevel = this.maxLevel; 
 
     if (this._nextAutoLevel !== -1) {
       var nextLevel = Math.min(this._nextAutoLevel,maxAutoLevel);

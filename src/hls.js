@@ -3,6 +3,7 @@
  */
 'use strict';
 
+import CappingMode from './max-level-capping-mode';
 import Event from './events';
 import {ErrorTypes, ErrorDetails} from './errors';
 import PlaylistLoader from './loader/playlist-loader';
@@ -21,7 +22,11 @@ class Hls {
   static isSupported() {
     return (window.MediaSource && window.MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"'));
   }
-
+  
+  static get CappingModes() {
+    return CappingMode;
+  }
+   
   static get Events() {
     return Event;
   }
@@ -38,6 +43,8 @@ class Hls {
     if(!Hls.defaultConfig) {
        Hls.defaultConfig = {
           autoStartLoad: true,
+          capLevelToPlayerSize: false,
+          maxLevelCappingMode: CappingMode.DOWNSCALE,
           debug: false,
           maxBufferLength: 30,
           maxBufferSize: 60 * 1000 * 1000,
@@ -249,7 +256,7 @@ class Hls {
     logger.log(`set autoLevelCapping:${newLevel}`);
     this.abrController.autoLevelCapping = newLevel;
   }
-
+  
   /* check if we are in automatic level selection mode */
   get autoLevelEnabled() {
     return (this.levelController.manualLevel === -1);

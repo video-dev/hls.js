@@ -184,6 +184,8 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
    var config = {
       debug : false,
       autoStartLoad : true,
+      capLevelToPlayerSize: false,
+      maxLevelCappingMode: Hls.CappingModes.DOWNSCALE,
       maxBufferLength : 30,
       maxMaxBufferLength : 600,
       maxBufferSize : 60*1000*1000,
@@ -232,6 +234,18 @@ a logger object could also be provided for custom logging : ```config.debug=cust
  - if set to true, start level playlist and first fragments will be loaded automatically, after triggering of ```Hls.Events.MANIFEST_PARSED``` event
  - if set to false, an explicit API call (```hls.startLoad()```) will be needed to start quality level/fragment loading.
 
+#### ```capLevelToPlayerSize```
+(default false)
+
+ - if set to true, the adaptive algorithm with limit levels usable in auto-quality by the HTML video element dimensions (width and height)
+ - if set to false, levels will not be limited. All available levels could be used in auto-quality mode taking only bandwidth into consideration.
+
+#### ```maxLevelCappingMode```
+(default Hls.CappingModes.DOWNSCALE)
+
+ - if set to Hls.CappingModes.DOWNSCALE, max capped level should be the one with the dimensions equal or greater than the HTML video element dimensions (so the video will be downscaled)
+ - if set to Hls.CappingModes.UPSCALE, max capped level should be the one with the dimensions equal or lower than the HTML video element dimensions (so the video will be upscaled).
+  
 #### ```maxBufferLength```
 (default 30s)
 
@@ -582,6 +596,7 @@ full list of Errors is described below:
 a level object represents a given quality level.
 it contains quality level related info, retrieved from manifest, such as
 
+* level index (sorted by bitrate)
 * level bitrate
 * used codecs
 * video width/height
@@ -593,6 +608,7 @@ see sample Level object below:
 ```js
 {
   url: ['http://levelURL.com','http://levelURLfailover.com']
+  index: 0,
   bitrate: 246440,
   name: "240",
   codecs: "mp4a.40.5,avc1.42000d",
