@@ -11,7 +11,7 @@ class CEA708Interpreter {
         this.memory = [];
     }
 
-    detatch() {
+    detach() {
         this.clear();
     }
 

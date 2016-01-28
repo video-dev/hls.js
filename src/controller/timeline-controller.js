@@ -35,7 +35,7 @@ class TimelineController extends EventHandler {
     }
 
     onMediaDetaching() {
-        this.cea708Interpreter.detatch();
+        this.cea708Interpreter.detach();
     }
 
     onManifestLoading() {
