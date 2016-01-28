@@ -49,13 +49,13 @@ class XhrLoader {
 
   loadInternal() {
     var xhr;
-    
+
     if (typeof XDomainRequest !== 'undefined') {
        xhr = this.loader = new XDomainRequest();
     } else {
        xhr = this.loader = new XMLHttpRequest();
     }
-    
+
     xhr.onloadend = this.loadend.bind(this);
     xhr.onprogress = this.loadprogress.bind(this);
 
@@ -73,7 +73,7 @@ class XhrLoader {
   }
 
   loadend(event) {
-    var xhr = event.currentTarget,
+    var xhr = this.loader,
         status = xhr.status,
         stats = this.stats;
     // don't proceed if xhr has been aborted
