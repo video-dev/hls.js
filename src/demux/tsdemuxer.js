@@ -22,6 +22,7 @@ class TSDemuxer {
         this.remuxerClass = remuxerClass;
         this.lastCC = 0;
         this.remuxer = new this.remuxerClass(observer);
+        this._userData = [];
     }
 
     static probe(data) {
@@ -60,6 +61,13 @@ class TSDemuxer {
         };
         this._id3Track = {
             type: 'id3',
+            id: -1,
+            sequenceNumber: 0,
+            samples: [],
+            len: 0
+        };
+        this._txtTrack = {
+            type: 'text',
             id: -1,
             sequenceNumber: 0,
             samples: [],
@@ -210,6 +218,7 @@ class TSDemuxer {
             this._aacTrack,
             this._avcTrack,
             this._id3Track,
+            this._txtTrack,
             this.timeOffset,
             this.contiguous
         );
@@ -340,8 +349,10 @@ class TSDemuxer {
             debug = false,
             key = false,
             length = 0,
+            expGolombDecoder,
             avcSample,
-            push;
+            push,
+            i;
         // no NALu found
         if (units.length === 0 && samples.length > 0) {
             // append pes.data to previous NAL unit
@@ -360,6 +371,7 @@ class TSDemuxer {
         //free pes.data to save up some memory
         pes.data = null;
         var debugString = '';
+
         units.forEach(unit => {
             switch (unit.type) {
                 //NDR
@@ -377,10 +389,69 @@ class TSDemuxer {
                     }
                     key = true;
                     break;
+                //SEI
                 case 6:
                     push = true;
                     if (debug) {
                         debugString += 'SEI ';
+                    }
+                    expGolombDecoder = new ExpGolomb(unit.data);
+
+                    // skip frameType
+                    expGolombDecoder.readUByte();
+
+                    var payloadType = expGolombDecoder.readUByte();
+
+                    // TODO: there can be more than one payload in an SEI packet...
+                    // TODO: need to read type and size in a while loop to get them all
+                    if (payloadType === 4) {
+                        var payloadSize = 0;
+
+                        do {
+                            payloadSize = expGolombDecoder.readUByte();
+                        } while (payloadSize === 255);
+
+                        var countryCode = expGolombDecoder.readUByte();
+
+                        if (countryCode === 181) {
+                            var providerCode = expGolombDecoder.readUShort();
+
+                            if (providerCode === 49) {
+                                var userStructure = expGolombDecoder.readUInt();
+
+                                if (userStructure === 0x47413934) {
+                                    var userDataType = expGolombDecoder.readUByte();
+
+                                    // Raw CEA-608 bytes wrapped in CEA-708 packet
+                                    if (userDataType === 3) {
+                                        var firstByte = expGolombDecoder.readUByte();
+                                        var secondByte = expGolombDecoder.readUByte();
+
+                                        var totalCCs = 31 & firstByte;
+                                        var byteArray = [firstByte, secondByte];
+
+                                        for (i = 0; i < totalCCs; i++) {
+                                            // 3 bytes per CC
+                                            byteArray.push(
+                                                expGolombDecoder.readUByte()
+                                            );
+                                            byteArray.push(
+                                                expGolombDecoder.readUByte()
+                                            );
+                                            byteArray.push(
+                                                expGolombDecoder.readUByte()
+                                            );
+                                        }
+
+                                        this._txtTrack.samples.push({
+                                            type: 3,
+                                            pts: pes.pts,
+                                            bytes: byteArray
+                                        });
+                                    }
+                                }
+                            }
+                        }
                     }
                     break;
                 //SPS
@@ -390,7 +461,7 @@ class TSDemuxer {
                         debugString += 'SPS ';
                     }
                     if (!track.sps) {
-                        var expGolombDecoder = new ExpGolomb(unit.data);
+                        expGolombDecoder = new ExpGolomb(unit.data);
                         var config = expGolombDecoder.readSPS();
                         track.width = config.width;
                         track.height = config.height;
@@ -400,7 +471,7 @@ class TSDemuxer {
                             this.remuxer.timescale * this._duration;
                         var codecarray = unit.data.subarray(1, 4);
                         var codecstring = 'avc1.';
-                        for (var i = 0; i < 3; i++) {
+                        for (i = 0; i < 3; i++) {
                             var h = codecarray[i].toString(16);
                             if (h.length < 2) {
                                 h = '0' + h;
