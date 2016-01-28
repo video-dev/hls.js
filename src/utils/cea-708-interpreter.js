@@ -13,7 +13,7 @@ class CEA708Interpreter {
     this.memory = [];
   }
 
-  detatch()
+  detach()
   {
     this.clear();
   }
@@ -24,7 +24,7 @@ class CEA708Interpreter {
   _createCue()
   {
     var VTTCue = window.VTTCue || window.TextTrackCue;
-    
+
     this.cue = new VTTCue(-1, -1, '');
     this.cue.text = '';
     this.cue.pauseOnExit = false;
@@ -193,7 +193,7 @@ class CEA708Interpreter {
                 // Italics Underline
                 break;
             }
-          }          
+          }
           if ((ccbyte1 === 0x14 || ccbyte1 === 0x1C) && ccbyte2 >= 0x20 && ccbyte2 <= 0x2F)
           {
             // Mid-row codes: color/underline
@@ -262,7 +262,7 @@ class CEA708Interpreter {
                 // hide any displayed captions and show any hidden one
                 break;
             }
-          }   
+          }
           if ((ccbyte1 === 0x17 || ccbyte1 === 0x1F) && ccbyte2 >= 0x21 && ccbyte2 <= 0x23)
           {
             // Mid-row codes: color/underline
@@ -281,10 +281,10 @@ class CEA708Interpreter {
           }
           else {
             // Probably a pre-amble address code
-          }        
+          }
         }
       }
-    }  
+    }
   }
 
   _fromCharCode(byte)
