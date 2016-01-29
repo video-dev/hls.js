@@ -381,57 +381,7 @@ class MSEMediaController extends EventHandler {
         break;
       case State.PARSED:
       case State.APPENDING:
-        if (this.sourceBuffer) {
-          if (this.media.error) {
-            logger.error('trying to append although a media error occured, switch to ERROR state');
-            this.state = State.ERROR;
-            return;
-          }
-          // if MP4 segment appending in progress nothing to do
-          else if ((this.sourceBuffer.audio && this.sourceBuffer.audio.updating) ||
-             (this.sourceBuffer.video && this.sourceBuffer.video.updating)) {
-            //logger.log('sb append in progress');
-        // check if any MP4 segments left to append
-          } else if (this.mp4segments.length) {
-            var segment = this.mp4segments.shift();
-            try {
-              //logger.log(`appending ${segment.type} SB, size:${segment.data.length});
-              this.sourceBuffer[segment.type].appendBuffer(segment.data);
-              this.appendError = 0;
-            } catch(err) {
-              // in case any error occured while appending, put back segment in mp4segments table
-              logger.error(`error while trying to append buffer:${err.message},try appending later`);
-              this.mp4segments.unshift(segment);
-                // just discard QuotaExceededError for now, and wait for the natural browser buffer eviction
-              //http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
-              if(err.code !== 22) {
-                if (this.appendError) {
-                  this.appendError++;
-                } else {
-                  this.appendError = 1;
-                }
-                var event = {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_APPEND_ERROR, frag: this.fragCurrent};
-                /* with UHD content, we could get loop of quota exceeded error until
-                  browser is able to evict some data from sourcebuffer. retrying help recovering this
-                */
-                if (this.appendError > this.config.appendErrorMaxRetry) {
-                  logger.log(`fail ${this.config.appendErrorMaxRetry} times to append segment in sourceBuffer`);
-                  event.fatal = true;
-                  hls.trigger(Event.ERROR, event);
-                  this.state = State.ERROR;
-                  return;
-                } else {
-                  event.fatal = false;
-                  hls.trigger(Event.ERROR, event);
-                }
-              }
-            }
-            this.state = State.APPENDING;
-          }
-        } else {
-          // sourceBuffer undefined, switch back to IDLE state
-          this.state = State.IDLE;
-        }
+        this.state = State.APPENDING;
         break;
       case State.ENDED:
         break;
@@ -1032,7 +982,7 @@ class MSEMediaController extends EventHandler {
       //trigger handler right now
       this.tick();
     } else {
-      logger.warn(`not in PARSING state, ignoring FRAG_PARSING_DATA event`);
+      logger.warn(`not in PARSING state but ${this.state}, ignoring FRAG_PARSING_DATA event`);
     }
   }
 
@@ -1199,6 +1149,8 @@ _checkBuffer() {
     }
 
     this.hls.trigger(Event.BUFFER_APPENDED);
+
+    this.doAppending();
   }
 
   onSBUpdateError(event) {
@@ -1264,6 +1216,8 @@ _checkBuffer() {
 
   onBufferAppending(data) {
     this.mp4segments.push(data);
+
+    this.doAppending();
   }
 
   onBufferAppended() {
@@ -1327,6 +1281,60 @@ _checkBuffer() {
       // everything flushed
       this._needsFlush = false;
       this.hls.trigger(Event.BUFFER_FLUSHED);
+    }
+  }
+
+  doAppending() {
+    var hls = this.hls;
+    if (this.sourceBuffer) {
+      if (this.media.error) {
+        logger.error('trying to append although a media error occured, switch to ERROR state');
+        this.state = State.ERROR;
+        return;
+      }
+      // if MP4 segment appending in progress nothing to do
+      else if ((this.sourceBuffer.audio && this.sourceBuffer.audio.updating) ||
+         (this.sourceBuffer.video && this.sourceBuffer.video.updating)) {
+        //logger.log('sb append in progress');
+    // check if any MP4 segments left to append
+      } else if (this.mp4segments.length) {
+        var segment = this.mp4segments.shift();
+        try {
+          //logger.log(`appending ${segment.type} SB, size:${segment.data.length});
+          this.sourceBuffer[segment.type].appendBuffer(segment.data);
+          this.appendError = 0;
+        } catch(err) {
+          // in case any error occured while appending, put back segment in mp4segments table
+          logger.error(`error while trying to append buffer:${err.message},try appending later`);
+          this.mp4segments.unshift(segment);
+            // just discard QuotaExceededError for now, and wait for the natural browser buffer eviction
+          //http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
+          if(err.code !== 22) {
+            if (this.appendError) {
+              this.appendError++;
+            } else {
+              this.appendError = 1;
+            }
+            var event = {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_APPEND_ERROR, frag: this.fragCurrent};
+            /* with UHD content, we could get loop of quota exceeded error until
+              browser is able to evict some data from sourcebuffer. retrying help recovering this
+            */
+            if (this.appendError > this.config.appendErrorMaxRetry) {
+              logger.log(`fail ${this.config.appendErrorMaxRetry} times to append segment in sourceBuffer`);
+              event.fatal = true;
+              hls.trigger(Event.ERROR, event);
+              this.state = State.ERROR;
+              return;
+            } else {
+              event.fatal = false;
+              hls.trigger(Event.ERROR, event);
+            }
+          }
+        }
+      }
+    } else {
+      // sourceBuffer undefined, switch back to IDLE state
+      this.state = State.IDLE;
     }
   }
 
