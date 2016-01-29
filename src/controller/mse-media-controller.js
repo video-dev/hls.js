@@ -11,18 +11,17 @@ import LevelHelper from '../helper/level-helper';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
 const State = {
-    ERROR: -2,
-    STARTING: -1,
-    IDLE: 0,
-    KEY_LOADING: 1,
-    FRAG_LOADING: 2,
-    FRAG_LOADING_WAITING_RETRY: 3,
-    WAITING_LEVEL: 4,
-    PARSING: 5,
-    PARSED: 6,
-    APPENDING: 7,
-    BUFFER_FLUSHING: 8,
-    ENDED: 9
+    ERROR: 'ERROR',
+    STARTING: 'STARTING',
+    IDLE: 'IDLE',
+    KEY_LOADING: 'KEY_LOADING',
+    FRAG_LOADING: 'FRAG_LOADING',
+    FRAG_LOADING_WAITING_RETRY: 'FRAG_LOADING_WAITING_RETRY',
+    WAITING_LEVEL: 'WAITING_LEVEL',
+    PARSING: 'PARSING',
+    PARSED: 'PARSED',
+    APPENDING: 'APPENDING',
+    ENDED: 'ENDED'
 };
 
 class MSEMediaController extends EventHandler {
@@ -356,25 +355,8 @@ class MSEMediaController extends EventHandler {
                                 } else {
                                     // have we reached end of VOD playlist ?
                                     if (!levelDetails.live) {
-                                        var mediaSource = this.mediaSource;
-                                        if (mediaSource) {
-                                            switch (mediaSource.readyState) {
-                                                case 'open':
-                                                    this.hls.trigger(
-                                                        Event.BUFFER_EOS
-                                                    );
-                                                    this.state = State.ENDED;
-                                                    break;
-                                                case 'ended':
-                                                    logger.log(
-                                                        'all media data available and mediaSource ended, stop loading fragment'
-                                                    );
-                                                    this.state = State.ENDED;
-                                                    break;
-                                                default:
-                                                    break;
-                                            }
-                                        }
+                                        this.hls.trigger(Event.BUFFER_EOS);
+                                        this.state = State.ENDED;
                                     }
                                     frag = null;
                                 }
@@ -619,33 +601,6 @@ class MSEMediaController extends EventHandler {
                     // sourceBuffer undefined, switch back to IDLE state
                     this.state = State.IDLE;
                 }
-                break;
-            case State.BUFFER_FLUSHING:
-                // loop through all buffer ranges to flush
-                while (this.flushRange.length) {
-                    var range = this.flushRange[0];
-                    // flushBuffer will abort any buffer append in progress and flush Audio/Video Buffer
-                    if (this.flushBuffer(range.start, range.end)) {
-                        // range flushed, remove from flush array
-                        this.flushRange.shift();
-                    } else {
-                        // flush in progress, come back later
-                        break;
-                    }
-                }
-                if (this.flushRange.length === 0) {
-                    // handle end of immediate switching if needed
-                    if (this.immediateSwitch) {
-                        this.immediateLevelSwitchEnd();
-                    }
-                    // move to IDLE once flush complete. this should trigger new fragment loading
-                    this.state = State.IDLE;
-                    // reset reference to frag
-                    this.fragPrevious = null;
-                }
-                /* if not everything flushed, stay in BUFFER_FLUSHING state. we will come back here
-            each time sourceBuffer updateend() callback will be triggered
-            */
                 break;
             case State.ENDED:
                 break;
@@ -929,10 +884,10 @@ class MSEMediaController extends EventHandler {
         }
         this.fragCurrent = null;
         // flush everything
-        this.flushBufferCounter = 0;
-        this.flushRange.push({ start: 0, end: Number.POSITIVE_INFINITY });
-        // trigger a sourceBuffer flush
-        this.state = State.BUFFER_FLUSHING;
+        this.hls.trigger(Event.BUFFER_FLUSHING, {
+            startOffset: 0,
+            endOffset: Number.POSITIVE_INFINITY
+        });
         // increase fragment load Index to avoid frag loop loading error after buffer flush
         this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
         // speed up switching, trigger timer function
@@ -963,7 +918,10 @@ class MSEMediaController extends EventHandler {
         if (currentRange) {
             // flush buffer preceding current fragment (flush until current fragment start offset)
             // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
-            this.flushRange.push({ start: 0, end: currentRange.start - 1 });
+            this.hls.trigger(Event.BUFFER_FLUSHING, {
+                startOffset: 0,
+                endOffset: currentRange.start - 1
+            });
         }
         if (!this.media.paused) {
             // add a safety delay of 1s
@@ -990,9 +948,9 @@ class MSEMediaController extends EventHandler {
             nextRange = this.followingBufferRange(nextRange);
             if (nextRange) {
                 // flush position is the start position of this new buffer
-                this.flushRange.push({
-                    start: nextRange.start,
-                    end: Number.POSITIVE_INFINITY
+                this.hls.trigger(Event.BUFFER_FLUSHING, {
+                    startOffset: nextRange.start,
+                    endOffset: Number.POSITIVE_INFINITY
                 });
                 // if we are here, we can also cancel any loading/demuxing in progress, as they are useless
                 var fragCurrent = this.fragCurrent;
@@ -1000,16 +958,9 @@ class MSEMediaController extends EventHandler {
                     fragCurrent.loader.abort();
                 }
                 this.fragCurrent = null;
+                // increase fragment load Index to avoid frag loop loading error after buffer flush
+                this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
             }
-        }
-        if (this.flushRange.length) {
-            this.flushBufferCounter = 0;
-            // trigger a sourceBuffer flush
-            this.state = State.BUFFER_FLUSHING;
-            // increase fragment load Index to avoid frag loop loading error after buffer flush
-            this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
-            // speed up switching, trigger timer function
-            this.tick();
         }
     }
 
@@ -1578,6 +1529,10 @@ class MSEMediaController extends EventHandler {
     }
 
     onSBUpdateEnd() {
+        if (this._needsFlush) {
+            this.doFlush();
+        }
+
         if (this._needsEos) {
             this.onBufferEOS();
         }
@@ -1702,8 +1657,9 @@ class MSEMediaController extends EventHandler {
         });
     }
 
-    onBufferEOS() {
+    onBufferEos() {
         var sb = this.sourceBuffer;
+        if (!this.mediaSource || this.mediaSource.readyState !== 'open') return;
         if (
             !(
                 (sb.audio && sb.audio.updating) ||
@@ -1719,6 +1675,43 @@ class MSEMediaController extends EventHandler {
         } else {
             this._needsEos = true;
         }
+    }
+
+    onBufferFlushing(data) {
+        this.flushRange.push({ start: data.startOffset, end: data.endOffset });
+        // attempt flush immediatly
+        this.flushBufferCounter = 0;
+        this.doFlush();
+    }
+
+    doFlush() {
+        // loop through all buffer ranges to flush
+        while (this.flushRange.length) {
+            var range = this.flushRange[0];
+            // flushBuffer will abort any buffer append in progress and flush Audio/Video Buffer
+            if (this.flushBuffer(range.start, range.end)) {
+                // range flushed, remove from flush array
+                this.flushRange.shift();
+            } else {
+                this._needsFlush = true;
+            }
+        }
+        if (this.flushRange.length === 0) {
+            // everything flushed
+            this._needsFlush = false;
+            this.hls.trigger(Event.BUFFER_FLUSHED);
+        }
+    }
+
+    onBufferFlushed() {
+        // handle end of immediate switching if needed
+        if (this.immediateSwitch) {
+            this.immediateLevelSwitchEnd();
+        }
+        // move to IDLE once flush complete. this should trigger new fragment loading
+        this.state = State.IDLE;
+        // reset reference to frag
+        this.fragPrevious = null;
     }
 }
 export default MSEMediaController;
