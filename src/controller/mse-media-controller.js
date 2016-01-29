@@ -1465,7 +1465,7 @@ class MSEMediaController extends EventHandler {
     }
 
     onSBUpdateError(event) {
-        this.hls.trigger(Event.BUFFER_APPEND_FAIL);
+        this.hls.trigger(Event.BUFFER_APPEND_FAIL, { event: event });
     }
 
     // implement these in specific class
@@ -1569,8 +1569,8 @@ class MSEMediaController extends EventHandler {
         this.tick();
     }
 
-    onBufferAppendFail() {
-        logger.error(`sourceBuffer error:${event}`);
+    onBufferAppendFail(data) {
+        logger.error(`sourceBuffer error:${data.event}`);
         this.state = State.ERROR;
         // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
         // this error might not always be fatal (it is fatal if decode error is set, in that case
@@ -1585,7 +1585,9 @@ class MSEMediaController extends EventHandler {
 
     onBufferEos() {
         var sb = this.sourceBuffer;
-        if (!this.mediaSource || this.mediaSource.readyState !== 'open') return;
+        if (!this.mediaSource || this.mediaSource.readyState !== 'open') {
+            return;
+        }
         if (
             !(
                 (sb.audio && sb.audio.updating) ||

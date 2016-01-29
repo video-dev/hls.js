@@ -3,7 +3,7 @@ module.exports = {
     BUFFER_CODECS: 'hlsBufferCodecs',
     // when we append a segment to the buffer - data: { segment: segment object }
     BUFFER_APPENDING: 'hlsBufferAppending',
-    // when buffer appending fails - data: { segment: segment object, type : error type, details : error details, fatal : if true, hls.js cannot/will not try to recover, if false, hls.js will try to recover,other error specific data}
+    // when buffer appending fails - data: {event: native error event}
     BUFFER_APPEND_FAIL: 'hlsBufferAppendFail',
     // when we are done with appending a media segment to the buffer
     BUFFER_APPENDED: 'hlsBufferAppended',
