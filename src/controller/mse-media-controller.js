@@ -38,8 +38,19 @@ class MSEMediaController extends EventHandler {
             Event.FRAG_PARSING_INIT_SEGMENT,
             Event.FRAG_PARSING_DATA,
             Event.FRAG_PARSED,
-            Event.ERROR
+            Event.ERROR,
+            Event.BUFFER_APPENDING,
+            Event.BUFFER_APPENDED,
+            Event.BUFFER_APPEND_FAIL,
+            Event.BUFFER_CODECS,
+            Event.BUFFER_EOS,
+            Event.BUFFER_FLUSHING,
+            Event.BUFFER_FLUSHED,
+            Event.BUFFER_EOS,
+            Event.MEDIA_ATTACHING,
+            Event.MEDIA_DETACHING
         );
+
         this.config = hls.config;
         this.audioCodecSwap = false;
         this.ticks = 0;
@@ -349,25 +360,10 @@ class MSEMediaController extends EventHandler {
                                         if (mediaSource) {
                                             switch (mediaSource.readyState) {
                                                 case 'open':
-                                                    var sb = this.sourceBuffer;
-                                                    if (
-                                                        !(
-                                                            (sb.audio &&
-                                                                sb.audio
-                                                                    .updating) ||
-                                                            (sb.video &&
-                                                                sb.video
-                                                                    .updating)
-                                                        )
-                                                    ) {
-                                                        logger.log(
-                                                            'all media data available, signal endOfStream() to MediaSource and stop loading fragment'
-                                                        );
-                                                        //Notify the media element that it now has all of the media data
-                                                        mediaSource.endOfStream();
-                                                        this.state =
-                                                            State.ENDED;
-                                                    }
+                                                    this.hls.trigger(
+                                                        Event.BUFFER_EOS
+                                                    );
+                                                    this.state = State.ENDED;
                                                     break;
                                                 case 'ended':
                                                     logger.log(
@@ -1319,69 +1315,15 @@ class MSEMediaController extends EventHandler {
             // check if codecs have been explicitely defined in the master playlist for this level;
             // if yes use these ones instead of the ones parsed from the demux
             var audioCodec = this.levels[this.level].audioCodec,
-                videoCodec = this.levels[this.level].videoCodec,
-                sb;
-            this.lastAudioCodec = data.audioCodec;
-            if (audioCodec && this.audioCodecSwap) {
-                logger.log('swapping playlist audio codec');
-                if (audioCodec.indexOf('mp4a.40.5') !== -1) {
-                    audioCodec = 'mp4a.40.2';
-                } else {
-                    audioCodec = 'mp4a.40.5';
-                }
-            }
-            logger.log(
-                `playlist_level/init_segment codecs: video => ${videoCodec}/${
-                    data.videoCodec
-                }; audio => ${audioCodec}/${data.audioCodec}`
-            );
-            // if playlist does not specify codecs, use codecs found while parsing fragment
-            // if no codec found while parsing fragment, also set codec to undefined to avoid creating sourceBuffer
-            if (audioCodec === undefined || data.audioCodec === undefined) {
-                audioCodec = data.audioCodec;
-            }
+                videoCodec = this.levels[this.level].videoCodec;
 
-            if (videoCodec === undefined || data.videoCodec === undefined) {
-                videoCodec = data.videoCodec;
-            }
-            // in case several audio codecs might be used, force HE-AAC for audio (some browsers don't support audio codec switch)
-            //don't do it for mono streams ...
-            var ua = navigator.userAgent.toLowerCase();
-            if (
-                this.audiocodecswitch &&
-                data.audioChannelCount !== 1 &&
-                ua.indexOf('android') === -1 &&
-                ua.indexOf('firefox') === -1
-            ) {
-                audioCodec = 'mp4a.40.5';
-            }
-            if (!this.sourceBuffer) {
-                this.sourceBuffer = {};
-                logger.log(
-                    `selected A/V codecs for sourceBuffers:${audioCodec},${videoCodec}`
-                );
-                // create source Buffer and link them to MediaSource
-                if (audioCodec) {
-                    sb = this.sourceBuffer.audio = this.mediaSource.addSourceBuffer(
-                        `audio/mp4;codecs=${audioCodec}`
-                    );
-                    sb.addEventListener('updateend', this.onsbue);
-                    sb.addEventListener('error', this.onsbe);
-                }
-                if (videoCodec) {
-                    sb = this.sourceBuffer.video = this.mediaSource.addSourceBuffer(
-                        `video/mp4;codecs=${videoCodec}`
-                    );
-                    sb.addEventListener('updateend', this.onsbue);
-                    sb.addEventListener('error', this.onsbe);
-                }
-            }
-            if (audioCodec) {
-                this.mp4segments.push({ type: 'audio', data: data.audioMoov });
-            }
-            if (videoCodec) {
-                this.mp4segments.push({ type: 'video', data: data.videoMoov });
-            }
+            this.hls.trigger(Event.BUFFER_CODECS, {
+                audioCodec: audioCodec,
+                audioMoov: data.audioMoov,
+                videoCodec: videoCodec,
+                videoMoov: data.videoMoov
+            });
+
             //trigger handler right now
             this.tick();
         }
@@ -1392,6 +1334,7 @@ class MSEMediaController extends EventHandler {
             this.tparse2 = Date.now();
             var level = this.levels[this.level],
                 frag = this.fragCurrent;
+
             logger.log(
                 `parsed ${data.type},PTS:[${data.startPTS.toFixed(
                     3
@@ -1399,6 +1342,7 @@ class MSEMediaController extends EventHandler {
                     3
                 )}/${data.endDTS.toFixed(3)}],nb:${data.nb}`
             );
+
             var drift = LevelHelper.updateFragPTS(
                 level.details,
                 frag.sn,
@@ -1411,8 +1355,15 @@ class MSEMediaController extends EventHandler {
                 drift: drift
             });
 
-            this.mp4segments.push({ type: data.type, data: data.moof });
-            this.mp4segments.push({ type: data.type, data: data.mdat });
+            this.hls.trigger(Event.BUFFER_APPENDING, {
+                type: data.type,
+                data: data.moof
+            });
+            this.hls.trigger(Event.BUFFER_APPENDING, {
+                type: data.type,
+                data: data.mdat
+            });
+
             this.nextLoadPosition = data.endPTS;
             this.bufferRange.push({
                 type: data.type,
@@ -1510,32 +1461,6 @@ class MSEMediaController extends EventHandler {
         }
     }
 
-    onSBUpdateEnd() {
-        //trigger handler right now
-        if (this.state === State.APPENDING && this.mp4segments.length === 0) {
-            var frag = this.fragCurrent,
-                stats = this.stats;
-            if (frag) {
-                this.fragPrevious = frag;
-                stats.tbuffered = performance.now();
-                this.fragLastKbps = Math.round(
-                    8 * stats.length / (stats.tbuffered - stats.tfirst)
-                );
-                this.hls.trigger(Event.FRAG_BUFFERED, {
-                    stats: stats,
-                    frag: frag
-                });
-                logger.log(
-                    `media buffered : ${this.timeRangesToString(
-                        this.media.buffered
-                    )}`
-                );
-                this.state = State.IDLE;
-            }
-        }
-        this.tick();
-    }
-
     _checkBuffer() {
         var media = this.media;
         if (media) {
@@ -1616,20 +1541,6 @@ class MSEMediaController extends EventHandler {
         this.audioCodecSwap = !this.audioCodecSwap;
     }
 
-    onSBUpdateError(event) {
-        logger.error(`sourceBuffer error:${event}`);
-        this.state = State.ERROR;
-        // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
-        // this error might not always be fatal (it is fatal if decode error is set, in that case
-        // it will be followed by a mediaElement error ...)
-        this.hls.trigger(Event.ERROR, {
-            type: ErrorTypes.MEDIA_ERROR,
-            details: ErrorDetails.BUFFER_APPENDING_ERROR,
-            fatal: false,
-            frag: this.fragCurrent
-        });
-    }
-
     timeRangesToString(r) {
         var log = '',
             len = r.length;
@@ -1664,6 +1575,150 @@ class MSEMediaController extends EventHandler {
 
     onMediaSourceEnded() {
         logger.log('media source ended');
+    }
+
+    onSBUpdateEnd() {
+        if (this._needsEos) {
+            this.onBufferEOS();
+        }
+
+        this.hls.trigger(Event.BUFFER_APPENDED);
+    }
+
+    onSBUpdateError(event) {
+        this.hls.trigger(Event.BUFFER_APPEND_FAIL);
+    }
+
+    // implement these in specific class
+    onBufferCodecs(data) {
+        var sb;
+        var audioCodec = data.audioCodec;
+        var videoCodec = data.videoCodec;
+
+        this.lastAudioCodec = data.audioCodec;
+        if (audioCodec && this.audioCodecSwap) {
+            logger.log('swapping playlist audio codec');
+            if (audioCodec.indexOf('mp4a.40.5') !== -1) {
+                audioCodec = 'mp4a.40.2';
+            } else {
+                audioCodec = 'mp4a.40.5';
+            }
+        }
+        logger.log(
+            `playlist_level/init_segment codecs: video => ${videoCodec}/${
+                data.videoCodec
+            }; audio => ${audioCodec}/${data.audioCodec}`
+        );
+        // if playlist does not specify codecs, use codecs found while parsing fragment
+        // if no codec found while parsing fragment, also set codec to undefined to avoid creating sourceBuffer
+        if (audioCodec === undefined || data.audioCodec === undefined) {
+            audioCodec = data.audioCodec;
+        }
+
+        if (videoCodec === undefined || data.videoCodec === undefined) {
+            videoCodec = data.videoCodec;
+        }
+        // in case several audio codecs might be used, force HE-AAC for audio (some browsers don't support audio codec switch)
+        //don't do it for mono streams ...
+        var ua = navigator.userAgent.toLowerCase();
+        if (
+            this.audiocodecswitch &&
+            data.audioChannelCount !== 1 &&
+            ua.indexOf('android') === -1 &&
+            ua.indexOf('firefox') === -1
+        ) {
+            audioCodec = 'mp4a.40.5';
+        }
+        if (!this.sourceBuffer) {
+            this.sourceBuffer = {};
+            logger.log(
+                `selected A/V codecs for sourceBuffers:${audioCodec},${videoCodec}`
+            );
+            // create source Buffer and link them to MediaSource
+            if (audioCodec) {
+                sb = this.sourceBuffer.audio = this.mediaSource.addSourceBuffer(
+                    `audio/mp4;codecs=${audioCodec}`
+                );
+                sb.addEventListener('updateend', this.onsbue);
+                sb.addEventListener('error', this.onsbe);
+            }
+            if (videoCodec) {
+                sb = this.sourceBuffer.video = this.mediaSource.addSourceBuffer(
+                    `video/mp4;codecs=${videoCodec}`
+                );
+                sb.addEventListener('updateend', this.onsbue);
+                sb.addEventListener('error', this.onsbe);
+            }
+        }
+        if (audioCodec) {
+            this.mp4segments.push({ type: 'audio', data: data.audioMoov });
+        }
+        if (videoCodec) {
+            this.mp4segments.push({ type: 'video', data: data.videoMoov });
+        }
+    }
+
+    onBufferAppending(data) {
+        this.mp4segments.push(data);
+    }
+
+    onBufferAppended() {
+        //trigger handler right now
+        if (this.state === State.APPENDING && this.mp4segments.length === 0) {
+            var frag = this.fragCurrent,
+                stats = this.stats;
+            if (frag) {
+                this.fragPrevious = frag;
+                stats.tbuffered = performance.now();
+                this.fragLastKbps = Math.round(
+                    8 * stats.length / (stats.tbuffered - stats.tfirst)
+                );
+                this.hls.trigger(Event.FRAG_BUFFERED, {
+                    stats: stats,
+                    frag: frag
+                });
+                logger.log(
+                    `media buffered : ${this.timeRangesToString(
+                        this.media.buffered
+                    )}`
+                );
+                this.state = State.IDLE;
+            }
+        }
+        this.tick();
+    }
+
+    onBufferAppendFail() {
+        logger.error(`sourceBuffer error:${event}`);
+        this.state = State.ERROR;
+        // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
+        // this error might not always be fatal (it is fatal if decode error is set, in that case
+        // it will be followed by a mediaElement error ...)
+        this.hls.trigger(Event.ERROR, {
+            type: ErrorTypes.MEDIA_ERROR,
+            details: ErrorDetails.BUFFER_APPENDING_ERROR,
+            fatal: false,
+            frag: this.fragCurrent
+        });
+    }
+
+    onBufferEOS() {
+        var sb = this.sourceBuffer;
+        if (
+            !(
+                (sb.audio && sb.audio.updating) ||
+                (sb.video && sb.video.updating)
+            )
+        ) {
+            logger.log(
+                'all media data available, signal endOfStream() to MediaSource and stop loading fragment'
+            );
+            //Notify the media element that it now has all of the media data
+            this.mediaSource.endOfStream();
+            this._needsEos = false;
+        } else {
+            this._needsEos = true;
+        }
     }
 }
 export default MSEMediaController;
