@@ -11,6 +11,7 @@ import FragmentLoader from './loader/fragment-loader';
 import AbrController from    './controller/abr-controller';
 import MSEMediaController from './controller/mse-media-controller';
 import LevelController from  './controller/level-controller';
+import TimelineController from './controller/timeline-controller';
 //import FPSController from './controller/fps-controller';
 import {logger, enableLogs} from './utils/logger';
 import XhrLoader from './utils/xhr-loader';
@@ -72,7 +73,9 @@ class Hls {
           fLoader: undefined,
           pLoader: undefined,
           abrController : AbrController,
-          mediaController: MSEMediaController
+          mediaController: MSEMediaController,
+          timelineController: TimelineController,
+          enableCEA708Captions: true
         };
     }
     return Hls.defaultConfig;
@@ -112,6 +115,7 @@ class Hls {
     this.levelController = new LevelController(this);
     this.abrController = new config.abrController(this);
     this.mediaController = new config.mediaController(this);
+    this.timelineController = new config.timelineController(this);
     this.keyLoader = new KeyLoader(this);
     //this.fpsController = new FPSController(this);
   }
@@ -124,6 +128,7 @@ class Hls {
     this.fragmentLoader.destroy();
     this.levelController.destroy();
     this.mediaController.destroy();
+    this.timelineController.destroy();
     this.keyLoader.destroy();
     //this.fpsController.destroy();
     this.url = null;
