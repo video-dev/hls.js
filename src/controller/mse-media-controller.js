@@ -1167,7 +1167,7 @@ _checkBuffer() {
   }
 
   onSBUpdateError(event) {
-    this.hls.trigger(Event.BUFFER_APPEND_FAIL);
+    this.hls.trigger(Event.BUFFER_APPEND_FAIL, {event: event});
   }
 
   // implement these in specific class
@@ -1249,8 +1249,8 @@ _checkBuffer() {
     this.tick();
   }
 
-  onBufferAppendFail() {
-    logger.error(`sourceBuffer error:${event}`);
+  onBufferAppendFail(data) {
+    logger.error(`sourceBuffer error:${data.event}`);
     this.state = State.ERROR;
     // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
     // this error might not always be fatal (it is fatal if decode error is set, in that case
@@ -1260,7 +1260,9 @@ _checkBuffer() {
 
   onBufferEos() {
     var sb = this.sourceBuffer;
-    if (!this.mediaSource || this.mediaSource.readyState !== 'open') return;
+    if (!this.mediaSource || this.mediaSource.readyState !== 'open') {
+      return;
+    }
     if (!((sb.audio && sb.audio.updating) || (sb.video && sb.video.updating))) {
       logger.log('all media data available, signal endOfStream() to MediaSource and stop loading fragment');
       //Notify the media element that it now has all of the media data
