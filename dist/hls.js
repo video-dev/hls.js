@@ -6691,15 +6691,10 @@ var MP4Remuxer = (function () {
           samples = [],
           samples0 = [];
 
-      track.samples.forEach(function (aacSample) {
-        if (pts === undefined || aacSample.pts > pts) {
-          samples0.push(aacSample);
-          pts = aacSample.pts;
-        } else {
-          _utilsLogger.logger.warn('dropping past audio frame');
-          track.len -= aacSample.unit.byteLength;
-        }
+      track.samples.sort(function (a, b) {
+        return a.pts - b.pts;
       });
+      samples0 = track.samples;
 
       while (samples0.length) {
         aacSample = samples0.shift();
