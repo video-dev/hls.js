@@ -4041,6 +4041,9 @@ var TSDemuxer = (function () {
           avcId = this._avcTrack.id,
           aacId = this._aacTrack.id,
           id3Id = this._id3Track.id;
+
+      // don't parse last TS packet if incomplete
+      len -= len % 188;
       // loop through TS packets
       for (start = 0; start < len; start += 188) {
         if (data[start] === 0x47) {
@@ -6693,6 +6696,7 @@ var MP4Remuxer = (function () {
           pts = aacSample.pts;
         } else {
           _utilsLogger.logger.warn('dropping past audio frame');
+          track.len -= aacSample.unit.byteLength;
         }
       });
 
@@ -6739,12 +6743,17 @@ var MP4Remuxer = (function () {
           // remember first PTS of our aacSamples, ensure value is positive
           firstPTS = Math.max(0, ptsnorm);
           firstDTS = Math.max(0, dtsnorm);
-          /* concatenate the audio data and construct the mdat in place
-            (need 8 more bytes to fill length and mdat type) */
-          mdat = new Uint8Array(track.len + 8);
-          view = new DataView(mdat.buffer);
-          view.setUint32(0, mdat.byteLength);
-          mdat.set(_remuxMp4Generator2['default'].types.mdat, 4);
+          if (track.len > 0) {
+            /* concatenate the audio data and construct the mdat in place
+              (need 8 more bytes to fill length and mdat type) */
+            mdat = new Uint8Array(track.len + 8);
+            view = new DataView(mdat.buffer);
+            view.setUint32(0, mdat.byteLength);
+            mdat.set(_remuxMp4Generator2['default'].types.mdat, 4);
+          } else {
+            // no audio samples
+            return;
+          }
         }
         mdat.set(unit, offset);
         offset += unit.byteLength;
