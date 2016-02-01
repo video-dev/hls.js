@@ -12,7 +12,7 @@
     "url": "https://github.com/dailymotion/hls.js/issues"
   },
   "main": "src/hls.js",
-  "private": true,
+  "private": false,
   "scripts": {
     "clean": "find dist -mindepth 1 -delete",
     "prebuild": "npm run clean & npm run test",
