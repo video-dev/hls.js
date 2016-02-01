@@ -309,6 +309,7 @@ class MP4Remuxer {
                 pts = aacSample.pts;
             } else {
                 logger.warn('dropping past audio frame');
+                track.len -= aacSample.unit.byteLength;
             }
         });
 
