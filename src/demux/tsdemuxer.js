@@ -83,6 +83,9 @@
         avcId = this._avcTrack.id,
         aacId = this._aacTrack.id,
         id3Id = this._id3Track.id;
+
+    // don't parse last TS packet if incomplete
+    len -= len % 188;
     // loop through TS packets
     for (start = 0; start < len; start += 188) {
       if (data[start] === 0x47) {
