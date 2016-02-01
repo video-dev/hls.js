@@ -6716,9 +6716,10 @@ var MP4Remuxer = (function () {
           mp4Sample.duration = (dtsnorm - lastDTS) / pes2mp4ScaleFactor;
           if (Math.abs(mp4Sample.duration - 1024) > 10) {
             // not expected to happen ...
-            _utilsLogger.logger.log('invalid AAC sample duration at PTS, should be 1024:' + aacSample.pts + ':' + mp4Sample.duration);
+            _utilsLogger.logger.log('invalid AAC sample duration at PTS ' + Math.round(pts / 90) + ',should be 1024,found :' + Math.round(mp4Sample.duration));
           }
           mp4Sample.duration = 1024;
+          dtsnorm = 1024 * pes2mp4ScaleFactor + lastDTS;
         } else {
           var nextAacPts = this.nextAacPts,
               delta;
