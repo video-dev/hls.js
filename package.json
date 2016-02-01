@@ -27,7 +27,7 @@
     "serve": "http-server -p 8000 .",
     "open": "opener http://localhost:8000/demo/",
     "live-reload": "live-reload --port 8001 dist/",
-    "dev": "npm run open -s & parallelshell 'npm run live-reload -s' 'npm run serve -s' 'npm run watch -s'",
+    "dev": "npm run build && npm run open -s & parallelshell 'npm run live-reload -s' 'npm run serve -s' 'npm run watch -s'",
     "babel": "babel src --out-dir lib"
   },
   "babel": {
