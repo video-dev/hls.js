@@ -366,12 +366,17 @@ class MP4Remuxer {
                 // remember first PTS of our aacSamples, ensure value is positive
                 firstPTS = Math.max(0, ptsnorm);
                 firstDTS = Math.max(0, dtsnorm);
-                /* concatenate the audio data and construct the mdat in place
-          (need 8 more bytes to fill length and mdat type) */
-                mdat = new Uint8Array(track.len + 8);
-                view = new DataView(mdat.buffer);
-                view.setUint32(0, mdat.byteLength);
-                mdat.set(MP4.types.mdat, 4);
+                if (track.len > 0) {
+                    /* concatenate the audio data and construct the mdat in place
+            (need 8 more bytes to fill length and mdat type) */
+                    mdat = new Uint8Array(track.len + 8);
+                    view = new DataView(mdat.buffer);
+                    view.setUint32(0, mdat.byteLength);
+                    mdat.set(MP4.types.mdat, 4);
+                } else {
+                    // no audio samples
+                    return;
+                }
             }
             mdat.set(unit, offset);
             offset += unit.byteLength;
