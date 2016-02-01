@@ -1554,7 +1554,7 @@ class MSEMediaController extends EventHandler {
                             jumpThreshold = 0;
                         } else {
                             // playhead not moving AND media playing
-                            logger.log('playback seems stuck');
+                            logger.log(`playback seems stuck @${currentTime}`);
                             if (!this.stalled) {
                                 this.hls.trigger(Event.ERROR, {
                                     type: ErrorTypes.MEDIA_ERROR,
