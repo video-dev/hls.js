@@ -22,18 +22,18 @@ class AACDemuxer {
     static probe(data) {
         // check if data contains ID3 timestamp and ADTS sync worc
         var id3 = new ID3(data),
-            adtsStartOffset,
+            offset,
             len;
         if (id3.hasTimeStamp) {
             // look for ADTS header (0xFFFx)
             for (
-                adtsStartOffset = id3.length, len = data.length;
-                adtsStartOffset < len - 1;
-                adtsStartOffset++
+                offset = id3.length, len = data.length;
+                offset < len - 1;
+                offset++
             ) {
                 if (
-                    data[adtsStartOffset] === 0xff &&
-                    (data[adtsStartOffset + 1] & 0xf0) === 0xf0
+                    data[offset] === 0xff &&
+                    (data[offset + 1] & 0xf0) === 0xf0
                 ) {
                     //logger.log('ADTS sync word found !');
                     return true;
@@ -49,23 +49,21 @@ class AACDemuxer {
             id3 = new ID3(data),
             pts = 90 * id3.timeStamp,
             config,
-            adtsFrameSize,
-            adtsStartOffset,
-            adtsHeaderLen,
+            frameLength,
+            frameDuration,
+            frameIndex,
+            offset,
+            headerLength,
             stamp,
-            nbSamples,
             len,
             aacSample;
         // look for ADTS header (0xFFFx)
         for (
-            adtsStartOffset = id3.length, len = data.length;
-            adtsStartOffset < len - 1;
-            adtsStartOffset++
+            offset = id3.length, len = data.length;
+            offset < len - 1;
+            offset++
         ) {
-            if (
-                data[adtsStartOffset] === 0xff &&
-                (data[adtsStartOffset + 1] & 0xf0) === 0xf0
-            ) {
+            if (data[offset] === 0xff && (data[offset + 1] & 0xf0) === 0xf0) {
                 break;
             }
         }
@@ -74,57 +72,54 @@ class AACDemuxer {
             config = ADTS.getAudioConfig(
                 this.observer,
                 data,
-                adtsStartOffset,
+                offset,
                 audioCodec
             );
             track.config = config.config;
             track.audiosamplerate = config.samplerate;
             track.channelCount = config.channelCount;
             track.codec = config.codec;
-            track.timescale = this.remuxer.timescale;
-            track.duration = this.remuxer.timescale * duration;
+            track.timescale = config.samplerate;
+            track.duration = config.samplerate * duration;
             logger.log(
                 `parsed codec:${track.codec},rate:${
                     config.samplerate
                 },nb channel:${config.channelCount}`
             );
         }
-        nbSamples = 0;
-        while (adtsStartOffset + 5 < len) {
+        frameIndex = 0;
+        frameDuration = 1024 * 90000 / track.audiosamplerate;
+        while (offset + 5 < len) {
+            // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
+            headerLength = !!(data[offset + 1] & 0x01) ? 7 : 9;
             // retrieve frame size
-            adtsFrameSize = (data[adtsStartOffset + 3] & 0x03) << 11;
-            // byte 4
-            adtsFrameSize |= data[adtsStartOffset + 4] << 3;
-            // byte 5
-            adtsFrameSize |= (data[adtsStartOffset + 5] & 0xe0) >>> 5;
-            adtsHeaderLen = !!(data[adtsStartOffset + 1] & 0x01) ? 7 : 9;
-            adtsFrameSize -= adtsHeaderLen;
-            stamp = Math.round(
-                pts + nbSamples * 1024 * 90000 / track.audiosamplerate
-            );
+            frameLength =
+                ((data[offset + 3] & 0x03) << 11) |
+                (data[offset + 4] << 3) |
+                ((data[offset + 5] & 0xe0) >>> 5);
+            frameLength -= headerLength;
             //stamp = pes.pts;
-            //console.log('AAC frame, offset/length/pts:' + (adtsStartOffset+7) + '/' + adtsFrameSize + '/' + stamp.toFixed(0));
-            if (
-                adtsFrameSize > 0 &&
-                adtsStartOffset + adtsHeaderLen + adtsFrameSize <= len
-            ) {
+
+            if (frameLength > 0 && offset + headerLength + frameLength <= len) {
+                stamp = pts + frameIndex * frameDuration;
+                //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
                 aacSample = {
                     unit: data.subarray(
-                        adtsStartOffset + adtsHeaderLen,
-                        adtsStartOffset + adtsHeaderLen + adtsFrameSize
+                        offset + headerLength,
+                        offset + headerLength + frameLength
                     ),
                     pts: stamp,
                     dts: stamp
                 };
                 track.samples.push(aacSample);
-                track.len += adtsFrameSize;
-                adtsStartOffset += adtsFrameSize + adtsHeaderLen;
-                nbSamples++;
+                track.len += frameLength;
+                offset += frameLength + headerLength;
+                frameIndex++;
                 // look for ADTS header (0xFFFx)
-                for (; adtsStartOffset < len - 1; adtsStartOffset++) {
+                for (; offset < len - 1; offset++) {
                     if (
-                        data[adtsStartOffset] === 0xff &&
-                        (data[adtsStartOffset + 1] & 0xf0) === 0xf0
+                        data[offset] === 0xff &&
+                        (data[offset + 1] & 0xf0) === 0xf0
                     ) {
                         break;
                     }
