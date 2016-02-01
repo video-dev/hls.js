@@ -263,15 +263,10 @@ class MP4Remuxer {
         samples = [],
         samples0 = [];
 
-    track.samples.forEach(aacSample => {
-      if(pts === undefined || aacSample.pts > pts) {
-        samples0.push(aacSample);
-        pts = aacSample.pts;
-      } else {
-        logger.warn('dropping past audio frame');
-        track.len -= aacSample.unit.byteLength;
-      }
+    track.samples.sort(function(a, b) {
+      return (a.pts-b.pts);
     });
+    samples0 = track.samples;
 
     while (samples0.length) {
       aacSample = samples0.shift();
