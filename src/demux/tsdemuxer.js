@@ -691,8 +691,8 @@ class TSDemuxer {
             track.audiosamplerate = config.samplerate;
             track.channelCount = config.channelCount;
             track.codec = config.codec;
-            track.timescale = this.remuxer.timescale;
-            track.duration = track.timescale * duration;
+            track.timescale = config.samplerate;
+            track.duration = config.samplerate * duration;
             logger.log(
                 `parsed codec:${track.codec},rate:${
                     config.samplerate
@@ -728,7 +728,7 @@ class TSDemuxer {
             //stamp = pes.pts;
 
             if (frameLength > 0 && offset + headerLength + frameLength <= len) {
-                stamp = Math.round(pts + frameIndex * frameDuration);
+                stamp = pts + frameIndex * frameDuration;
                 //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
                 aacSample = {
                     unit: data.subarray(

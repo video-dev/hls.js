@@ -287,7 +287,8 @@ class MP4Remuxer {
         var view,
             offset = 8,
             pesTimeScale = this.PES_TIMESCALE,
-            pes2mp4ScaleFactor = this.PES2MP4SCALEFACTOR,
+            mp4timeScale = track.timescale,
+            pes2mp4ScaleFactor = pesTimeScale / mp4timeScale,
             aacSample,
             mp4Sample,
             unit,
@@ -323,17 +324,18 @@ class MP4Remuxer {
             if (lastDTS !== undefined) {
                 ptsnorm = this._PTSNormalize(pts, lastDTS);
                 dtsnorm = this._PTSNormalize(dts, lastDTS);
-                // let's compute sample duration
+                // let's compute sample duration.
+                // there should be 1024 audio samples in one AAC frame
                 mp4Sample.duration = (dtsnorm - lastDTS) / pes2mp4ScaleFactor;
-                if (mp4Sample.duration < 0) {
+                if (Math.abs(mp4Sample.duration - 1024) > 10) {
                     // not expected to happen ...
                     logger.log(
-                        `invalid AAC sample duration at PTS:${aacSample.pts}:${
-                            mp4Sample.duration
-                        }`
+                        `invalid AAC sample duration at PTS, should be 1024:${
+                            aacSample.pts
+                        }:${mp4Sample.duration}`
                     );
-                    mp4Sample.duration = 0;
                 }
+                mp4Sample.duration = 1024;
             } else {
                 var nextAacPts = this.nextAacPts,
                     delta;
