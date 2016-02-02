@@ -1,17 +1,17 @@
 module.exports = {
-  // when we know about the codecs that we need buffers for to push into - data: {audioCodec, videoCodec}
+  // fired when we know about the codecs that we need buffers for to push into - data: {audioCodec, videoCodec, levelAudioCodec,levelVideoCodec,audioMoov,videoMoov}
   BUFFER_CODECS: 'hlsBufferCodecs',
-  // when we append a segment to the buffer - data: { segment: segment object }
+  // fired when we append a segment to the buffer - data: { segment: segment object }
   BUFFER_APPENDING: 'hlsBufferAppending',
-  // when buffer appending fails - data: {event: native error event}
+  // fired when buffer appending fails - data: {event: native error event}
   BUFFER_APPEND_FAIL: 'hlsBufferAppendFail',
-  // when we are done with appending a media segment to the buffer
+  // fired when we are done with appending a media segment to the buffer
   BUFFER_APPENDED: 'hlsBufferAppended',
-  // when the stream is finished and we want to notify the media buffer that there will be no more data
+  // fired when the stream is finished and we want to notify the media buffer that there will be no more data
   BUFFER_EOS: 'hlsBufferEos',
-  // when the media buffer should be flushed - data {startOffset, endOffset}
+  // fired when the media buffer should be flushed - data {startOffset, endOffset}
   BUFFER_FLUSHING: 'hlsBufferFlushing',
-  // when the media has been flushed
+  // fired when the media has been flushed
   BUFFER_FLUSHED: 'hlsBufferFlushed',
   // fired before MediaSource is attaching to media element - data: { media }
   MEDIA_ATTACHING: 'hlsMediaAttaching',
