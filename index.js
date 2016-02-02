@@ -1,4 +1,4 @@
 // This is mostly for support of the es6 module export
 // syntax with the babel compiler, it looks like it doesnt support
 // function exports like we are used to in node/commonjs
-module.exports = require('./lib/hls.js').default
+module.exports = require('./src/hls.js').default;
