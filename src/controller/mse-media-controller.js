@@ -1183,18 +1183,10 @@ class MSEMediaController extends EventHandler {
 
     onFragParsingInitSegment(data) {
         if (this.state === State.PARSING) {
-            // check if codecs have been explicitely defined in the master playlist for this level;
-            // if yes use these ones instead of the ones parsed from the demux
-            var audioCodec = this.levels[this.level].audioCodec,
-                videoCodec = this.levels[this.level].videoCodec;
-
-            this.hls.trigger(Event.BUFFER_CODECS, {
-                audioCodec: audioCodec,
-                audioMoov: data.audioMoov,
-                videoCodec: videoCodec,
-                videoMoov: data.videoMoov
-            });
-
+            // include codecs signalled from variant manifest
+            data.levelAudioCodec = this.levels[this.level].audioCodec;
+            data.levelVideoCodec = this.levels[this.level].videoCodec;
+            this.hls.trigger(Event.BUFFER_CODECS, data);
             //trigger handler right now
             this.tick();
         }
@@ -1470,9 +1462,9 @@ class MSEMediaController extends EventHandler {
 
     // implement these in specific class
     onBufferCodecs(data) {
-        var sb;
-        var audioCodec = data.audioCodec;
-        var videoCodec = data.videoCodec;
+        var sb,
+            audioCodec = data.levelAudioCodec,
+            videoCodec = data.levelVideoCodec;
 
         this.lastAudioCodec = data.audioCodec;
         if (audioCodec && this.audioCodecSwap) {
@@ -1509,25 +1501,27 @@ class MSEMediaController extends EventHandler {
             audioCodec = 'mp4a.40.5';
         }
         if (!this.sourceBuffer) {
-            this.sourceBuffer = {};
+            var sourceBuffer = {},
+                mediaSource = this.mediaSource;
             logger.log(
                 `selected A/V codecs for sourceBuffers:${audioCodec},${videoCodec}`
             );
             // create source Buffer and link them to MediaSource
             if (audioCodec) {
-                sb = this.sourceBuffer.audio = this.mediaSource.addSourceBuffer(
+                sb = sourceBuffer.audio = mediaSource.addSourceBuffer(
                     `audio/mp4;codecs=${audioCodec}`
                 );
                 sb.addEventListener('updateend', this.onsbue);
                 sb.addEventListener('error', this.onsbe);
             }
             if (videoCodec) {
-                sb = this.sourceBuffer.video = this.mediaSource.addSourceBuffer(
+                sb = sourceBuffer.video = mediaSource.addSourceBuffer(
                     `video/mp4;codecs=${videoCodec}`
                 );
                 sb.addEventListener('updateend', this.onsbue);
                 sb.addEventListener('error', this.onsbe);
             }
+            this.sourceBuffer = sourceBuffer;
         }
         if (audioCodec) {
             this.mp4segments.push({ type: 'audio', data: data.audioMoov });
