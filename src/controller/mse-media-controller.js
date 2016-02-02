@@ -1207,22 +1207,23 @@ class MSEMediaController extends EventHandler {
             );
 
             var drift = LevelHelper.updateFragPTS(
-                level.details,
-                frag.sn,
-                data.startPTS,
-                data.endPTS
-            );
-            this.hls.trigger(Event.LEVEL_PTS_UPDATED, {
+                    level.details,
+                    frag.sn,
+                    data.startPTS,
+                    data.endPTS
+                ),
+                hls = this.hls;
+            hls.trigger(Event.LEVEL_PTS_UPDATED, {
                 details: level.details,
                 level: this.level,
                 drift: drift
             });
 
-            this.hls.trigger(Event.BUFFER_APPENDING, {
+            hls.trigger(Event.BUFFER_APPENDING, {
                 type: data.type,
                 data: data.moof
             });
-            this.hls.trigger(Event.BUFFER_APPENDING, {
+            hls.trigger(Event.BUFFER_APPENDING, {
                 type: data.type,
                 data: data.mdat
             });
@@ -1578,8 +1579,9 @@ class MSEMediaController extends EventHandler {
     }
 
     onBufferEos() {
-        var sb = this.sourceBuffer;
-        if (!this.mediaSource || this.mediaSource.readyState !== 'open') {
+        var sb = this.sourceBuffer,
+            mediaSource = this.mediaSource;
+        if (!mediaSource || mediaSource.readyState !== 'open') {
             return;
         }
         if (
@@ -1592,7 +1594,7 @@ class MSEMediaController extends EventHandler {
                 'all media data available, signal endOfStream() to MediaSource and stop loading fragment'
             );
             //Notify the media element that it now has all of the media data
-            this.mediaSource.endOfStream();
+            mediaSource.endOfStream();
             this._needsEos = false;
         } else {
             this._needsEos = true;
