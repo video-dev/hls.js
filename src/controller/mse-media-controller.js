@@ -965,11 +965,12 @@ class MSEMediaController extends EventHandler {
 
       logger.log(`parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
 
-      var drift = LevelHelper.updateFragPTS(level.details,frag.sn,data.startPTS,data.endPTS);
-      this.hls.trigger(Event.LEVEL_PTS_UPDATED, {details: level.details, level: this.level, drift: drift});
+      var drift = LevelHelper.updateFragPTS(level.details,frag.sn,data.startPTS,data.endPTS),
+          hls = this.hls;
+      hls.trigger(Event.LEVEL_PTS_UPDATED, {details: level.details, level: this.level, drift: drift});
 
-      this.hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: data.moof});
-      this.hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: data.mdat});
+      hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: data.moof});
+      hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: data.mdat});
 
       this.nextLoadPosition = data.endPTS;
       this.bufferRange.push({type: data.type, start: data.startPTS, end: data.endPTS, frag: frag});
@@ -1252,14 +1253,14 @@ _checkBuffer() {
   }
 
   onBufferEos() {
-    var sb = this.sourceBuffer;
-    if (!this.mediaSource || this.mediaSource.readyState !== 'open') {
+    var sb = this.sourceBuffer, mediaSource = this.mediaSource;
+    if (!mediaSource || mediaSource.readyState !== 'open') {
       return;
     }
     if (!((sb.audio && sb.audio.updating) || (sb.video && sb.video.updating))) {
       logger.log('all media data available, signal endOfStream() to MediaSource and stop loading fragment');
       //Notify the media element that it now has all of the media data
-      this.mediaSource.endOfStream();
+      mediaSource.endOfStream();
       this._needsEos = false;
     } else {
       this._needsEos = true;
