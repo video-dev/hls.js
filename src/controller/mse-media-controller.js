@@ -54,13 +54,14 @@ class MSEMediaController extends EventHandler {
   }
 
   startLoad() {
-    if (this.levels && this.media) {
+    if (this.levels) {
       this.startInternal();
-      if (this.lastCurrentTime) {
-        logger.log(`seeking @ ${this.lastCurrentTime}`);
+      var media = this.media, lastCurrentTime = this.lastCurrentTime;
+      if (media && lastCurrentTime) {
+        logger.log(`seeking @ ${lastCurrentTime}`);
         if (!this.lastPaused) {
           logger.log('resuming video');
-          this.media.play();
+          media.play();
         }
         this.state = State.IDLE;
       } else {
@@ -70,7 +71,7 @@ class MSEMediaController extends EventHandler {
       this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
       this.tick();
     } else {
-      logger.warn('cannot start loading as either manifest not parsed or video not attached');
+      logger.warn('cannot start loading as manifest not parsed yet');
     }
   }
 
