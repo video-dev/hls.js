@@ -867,7 +867,7 @@ class MSEMediaController extends EventHandler {
                to avoid rounding issues/infinite loop,
                only flush buffer range of length greater than 500ms.
             */
-                        if (flushEnd - flushStart > 0.5) {
+                        if (Math.min(flushEnd, bufEnd) - flushStart > 0.5) {
                             logger.log(
                                 `flush ${type} [${flushStart},${flushEnd}], of [${bufStart},${bufEnd}], pos:${
                                     this.media.currentTime
