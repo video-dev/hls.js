@@ -14,6 +14,7 @@ const State = {
     ERROR: 'ERROR',
     STARTING: 'STARTING',
     IDLE: 'IDLE',
+    PAUSED: 'PAUSED',
     KEY_LOADING: 'KEY_LOADING',
     FRAG_LOADING: 'FRAG_LOADING',
     FRAG_LOADING_WAITING_RETRY: 'FRAG_LOADING_WAITING_RETRY',
@@ -149,7 +150,9 @@ class MSEMediaController extends EventHandler {
             hls = this.hls;
         switch (this.state) {
             case State.ERROR:
-                //don't do anything in error state to avoid breaking further ...
+            //don't do anything in error state to avoid breaking further ...
+            case State.PAUSED:
+                //don't do anything in paused state either ...
                 break;
             case State.STARTING:
                 // determine load level
@@ -808,6 +811,7 @@ class MSEMediaController extends EventHandler {
             startOffset: 0,
             endOffset: Number.POSITIVE_INFINITY
         });
+        this.state = State.PAUSED;
         // increase fragment load Index to avoid frag loop loading error after buffer flush
         this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
         // speed up switching, trigger timer function
@@ -842,6 +846,7 @@ class MSEMediaController extends EventHandler {
                 startOffset: 0,
                 endOffset: currentRange.start - 1
             });
+            this.state = State.PAUSED;
         }
         if (!this.media.paused) {
             // add a safety delay of 1s
@@ -872,6 +877,7 @@ class MSEMediaController extends EventHandler {
                     startOffset: nextRange.start,
                     endOffset: Number.POSITIVE_INFINITY
                 });
+                this.state = State.PAUSED;
                 // if we are here, we can also cancel any loading/demuxing in progress, as they are useless
                 var fragCurrent = this.fragCurrent;
                 if (fragCurrent && fragCurrent.loader) {
