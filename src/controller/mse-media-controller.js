@@ -884,6 +884,8 @@ class MSEMediaController extends EventHandler {
                     return false;
                 }
             }
+        } else {
+            logger.warn('abort flushing too many retries');
         }
 
         /* after successful buffer flushing, rebuild buffer Range array
