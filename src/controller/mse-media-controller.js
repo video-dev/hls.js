@@ -1667,8 +1667,6 @@ class MSEMediaController extends EventHandler {
                         },try appending later`
                     );
                     mp4segments.unshift(segment);
-                    // just discard QuotaExceededError for now, and wait for the natural browser buffer eviction
-                    //http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
                     if (err.code !== 22) {
                         if (this.appendError) {
                             this.appendError++;
@@ -1699,6 +1697,18 @@ class MSEMediaController extends EventHandler {
                             event.fatal = false;
                             hls.trigger(Event.ERROR, event);
                         }
+                    } else {
+                        // handle QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
+                        // let's stop appending any segments, and trigger a smooth level switch to empty buffers
+                        // also reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
+                        mp4segments = [];
+                        this.config.maxMaxBufferLength /= 2;
+                        logger.warn(
+                            `reduce max buffer length to ${
+                                this.config.maxMaxBufferLength
+                            }s and trigger a nextLevelSwitch to flush old buffer and fix QuotaExceededError`
+                        );
+                        this.nextLevelSwitch();
                     }
                 }
             }
