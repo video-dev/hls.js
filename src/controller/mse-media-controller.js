@@ -1022,7 +1022,7 @@ class MSEMediaController extends EventHandler {
             start = fragCurrent.start,
             level = fragCurrent.level,
             sn = fragCurrent.sn,
-            audioCodec = currentLevel.audioCodec;
+            audioCodec = currentLevel.audioCodec || this.config.defaultAudioCodec;
         if(this.audioCodecSwap) {
           logger.log('swapping playlist audio codec');
           if(audioCodec === undefined) {
