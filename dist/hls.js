@@ -881,13 +881,15 @@ var MSEMediaController = (function (_EventHandler) {
   }, {
     key: 'startLoad',
     value: function startLoad() {
-      if (this.levels && this.media) {
+      if (this.levels) {
         this.startInternal();
-        if (this.lastCurrentTime) {
-          _utilsLogger.logger.log('seeking @ ' + this.lastCurrentTime);
+        var media = this.media,
+            lastCurrentTime = this.lastCurrentTime;
+        if (media && lastCurrentTime) {
+          _utilsLogger.logger.log('seeking @ ' + lastCurrentTime);
           if (!this.lastPaused) {
             _utilsLogger.logger.log('resuming video');
-            this.media.play();
+            media.play();
           }
           this.state = State.IDLE;
         } else {
@@ -897,7 +899,7 @@ var MSEMediaController = (function (_EventHandler) {
         this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
         this.tick();
       } else {
-        _utilsLogger.logger.warn('cannot start loading as either manifest not parsed or video not attached');
+        _utilsLogger.logger.warn('cannot start loading as manifest not parsed yet');
       }
     }
   }, {
@@ -1486,7 +1488,7 @@ var MSEMediaController = (function (_EventHandler) {
                  to avoid rounding issues/infinite loop,
                  only flush buffer range of length greater than 500ms.
               */
-              if (flushEnd - flushStart > 0.5) {
+              if (Math.min(flushEnd, bufEnd) - flushStart > 0.5) {
                 _utilsLogger.logger.log('flush ' + type + ' [' + flushStart + ',' + flushEnd + '], of [' + bufStart + ',' + bufEnd + '], pos:' + this.media.currentTime);
                 sb.remove(flushStart, flushEnd);
                 return false;
@@ -1499,6 +1501,8 @@ var MSEMediaController = (function (_EventHandler) {
             return false;
           }
         }
+      } else {
+        _utilsLogger.logger.warn('abort flushing too many retries');
       }
 
       /* after successful buffer flushing, rebuild buffer Range array
