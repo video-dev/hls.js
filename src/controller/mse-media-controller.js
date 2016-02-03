@@ -1636,8 +1636,10 @@ class MSEMediaController extends EventHandler {
     }
 
     doAppending() {
-        var hls = this.hls;
-        if (this.sourceBuffer) {
+        var hls = this.hls,
+            sourceBuffer = this.sourceBuffer,
+            mp4segments = this.mp4segments;
+        if (sourceBuffer) {
             if (this.media.error) {
                 logger.error(
                     'trying to append although a media error occured, switch to ERROR state'
@@ -1645,17 +1647,17 @@ class MSEMediaController extends EventHandler {
                 this.state = State.ERROR;
                 return;
             } else if (
-                (this.sourceBuffer.audio && this.sourceBuffer.audio.updating) ||
-                (this.sourceBuffer.video && this.sourceBuffer.video.updating)
+                (sourceBuffer.audio && sourceBuffer.audio.updating) ||
+                (sourceBuffer.video && sourceBuffer.video.updating)
             ) {
                 // if MP4 segment appending in progress nothing to do
                 //logger.log('sb append in progress');
                 // check if any MP4 segments left to append
-            } else if (this.mp4segments.length) {
-                var segment = this.mp4segments.shift();
+            } else if (mp4segments.length) {
+                var segment = mp4segments.shift();
                 try {
                     //logger.log(`appending ${segment.type} SB, size:${segment.data.length});
-                    this.sourceBuffer[segment.type].appendBuffer(segment.data);
+                    sourceBuffer[segment.type].appendBuffer(segment.data);
                     this.appendError = 0;
                 } catch (err) {
                     // in case any error occured while appending, put back segment in mp4segments table
@@ -1664,7 +1666,7 @@ class MSEMediaController extends EventHandler {
                             err.message
                         },try appending later`
                     );
-                    this.mp4segments.unshift(segment);
+                    mp4segments.unshift(segment);
                     // just discard QuotaExceededError for now, and wait for the natural browser buffer eviction
                     //http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
                     if (err.code !== 22) {
