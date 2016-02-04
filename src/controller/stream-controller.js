@@ -1157,6 +1157,7 @@ class StreamController extends EventHandler {
             case State.PARSED:
                 this.pendingAppending--;
                 this._checkAppendedParsed();
+                break;
             default:
                 break;
         }
