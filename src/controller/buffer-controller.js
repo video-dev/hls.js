@@ -45,7 +45,6 @@ class BufferController extends EventHandler {
   }
 
   onMediaDetaching() {
-    var media = this.media;
     var ms = this.mediaSource;
     if (ms) {
       if (ms.readyState === 'open') {
@@ -113,7 +112,6 @@ class BufferController extends EventHandler {
   }
 
   onBufferReset() {
-    logger.log("onBufferReset");
     var sourceBuffer = this.sourceBuffer;
     if (sourceBuffer) {
       for(var type in sourceBuffer) {
@@ -134,7 +132,8 @@ class BufferController extends EventHandler {
   onBufferCodecs(data) {
     var sb,
         audioCodec = data.levelAudioCodec,
-        videoCodec = data.levelVideoCodec;
+        videoCodec = data.levelVideoCodec,
+        hls = this.hls;
     logger.log(`playlist_level/init_segment codecs: video => ${videoCodec}/${data.videoCodec}; audio => ${audioCodec}/${data.audioCodec}`);
     // if playlist does not specify codecs, use codecs found while parsing fragment
     // if no codec found while parsing fragment, also set codec to undefined to avoid creating sourceBuffer
@@ -189,7 +188,6 @@ class BufferController extends EventHandler {
 
   onBufferAppendFail(data) {
     logger.error(`sourceBuffer error:${data.event}`);
-    this.state = State.ERROR;
     // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
     // this error might not always be fatal (it is fatal if decode error is set, in that case
     // it will be followed by a mediaElement error ...)
@@ -259,8 +257,8 @@ class BufferController extends EventHandler {
     var hls = this.hls, sourceBuffer = this.sourceBuffer, mp4segments = this.mp4segments;
     if (sourceBuffer) {
       if (this.media.error) {
-        logger.error('trying to append although a media error occured, switch to ERROR state');
-        this.state = State.ERROR;
+        mp4segments = [];
+        logger.error('trying to append although a media error occured, flush segment and abort');
         return;
       }
       // if MP4 segment appending in progress nothing to do
@@ -293,9 +291,9 @@ class BufferController extends EventHandler {
             */
             if (this.appendError > this.config.appendErrorMaxRetry) {
               logger.log(`fail ${this.config.appendErrorMaxRetry} times to append segment in sourceBuffer`);
+              mp4segments = [];
               event.fatal = true;
               hls.trigger(Event.ERROR, event);
-              this.state = State.ERROR;
               return;
             } else {
               event.fatal = false;
@@ -310,9 +308,6 @@ class BufferController extends EventHandler {
           }
         }
       }
-    } else {
-      // sourceBuffer undefined, switch back to IDLE state
-      this.state = State.IDLE;
     }
   }
 
