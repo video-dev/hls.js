@@ -132,6 +132,7 @@ class AACDemuxer {
             this._aacTrack,
             { samples: [] },
             { samples: [{ pts: pts, dts: pts, unit: id3.payload }] },
+            { samples: [] },
             timeOffset
         );
     }
