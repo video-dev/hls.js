@@ -1,18 +1,4 @@
 module.exports = {
-  // fired when we know about the codecs that we need buffers for to push into - data: {audioCodec, videoCodec, levelAudioCodec,levelVideoCodec,audioMoov,videoMoov}
-  BUFFER_CODECS: 'hlsBufferCodecs',
-  // fired when we append a segment to the buffer - data: { segment: segment object }
-  BUFFER_APPENDING: 'hlsBufferAppending',
-  // fired when buffer appending fails - data: {event: native error event}
-  BUFFER_APPEND_FAIL: 'hlsBufferAppendFail',
-  // fired when we are done with appending a media segment to the buffer
-  BUFFER_APPENDED: 'hlsBufferAppended',
-  // fired when the stream is finished and we want to notify the media buffer that there will be no more data
-  BUFFER_EOS: 'hlsBufferEos',
-  // fired when the media buffer should be flushed - data {startOffset, endOffset}
-  BUFFER_FLUSHING: 'hlsBufferFlushing',
-  // fired when the media has been flushed
-  BUFFER_FLUSHED: 'hlsBufferFlushed',
   // fired before MediaSource is attaching to media element - data: { media }
   MEDIA_ATTACHING: 'hlsMediaAttaching',
   // fired when MediaSource has been succesfully attached to media element - data: { }
@@ -21,6 +7,20 @@ module.exports = {
   MEDIA_DETACHING: 'hlsMediaDetaching',
   // fired when MediaSource has been detached from media element - data: { }
   MEDIA_DETACHED: 'hlsMediaDetached',
+  // fired when we buffer is going to be resetted
+  BUFFER_RESET: 'hlsBufferReset',
+  // fired when we know about the codecs that we need buffers for to push into - data: {audioCodec, videoCodec, levelAudioCodec,levelVideoCodec,audioMoov,videoMoov}
+  BUFFER_CODECS: 'hlsBufferCodecs',
+  // fired when we append a segment to the buffer - data: { segment: segment object }
+  BUFFER_APPENDING: 'hlsBufferAppending',
+  // fired when we are done with appending a media segment to the buffer
+  BUFFER_APPENDED: 'hlsBufferAppended',
+  // fired when the stream is finished and we want to notify the media buffer that there will be no more data
+  BUFFER_EOS: 'hlsBufferEos',
+  // fired when the media buffer should be flushed - data {startOffset, endOffset}
+  BUFFER_FLUSHING: 'hlsBufferFlushing',
+  // fired when the media has been flushed
+  BUFFER_FLUSHED: 'hlsBufferFlushed',
   // fired to signal that a manifest loading starts - data: { url : manifestURL}
   MANIFEST_LOADING: 'hlsManifestLoading',
   // fired after manifest has been loaded - data: { levels : [available quality levels] , url : manifestURL, stats : { trequest, tfirst, tload, mtime}}

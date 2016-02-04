@@ -8,7 +8,8 @@ import {ErrorTypes, ErrorDetails} from './errors';
 import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
 import AbrController from    './controller/abr-controller';
-import MSEMediaController from './controller/mse-media-controller';
+import BufferController from  './controller/buffer-controller';
+import StreamController from  './controller/stream-controller';
 import LevelController from  './controller/level-controller';
 import TimelineController from './controller/timeline-controller';
 //import FPSController from './controller/fps-controller';
@@ -66,7 +67,8 @@ class Hls {
           fLoader: undefined,
           pLoader: undefined,
           abrController : AbrController,
-          mediaController: MSEMediaController,
+          bufferController : BufferController,
+          streamController: StreamController,
           timelineController: TimelineController,
           enableCEA708Captions: true
         };
@@ -107,7 +109,8 @@ class Hls {
     this.fragmentLoader = new FragmentLoader(this);
     this.levelController = new LevelController(this);
     this.abrController = new config.abrController(this);
-    this.mediaController = new config.mediaController(this);
+    this.bufferController = new config.bufferController(this);
+    this.streamController = new config.streamController(this);
     this.timelineController = new config.timelineController(this);
     this.keyLoader = new KeyLoader(this);
     //this.fpsController = new FPSController(this);
@@ -120,7 +123,8 @@ class Hls {
     this.playlistLoader.destroy();
     this.fragmentLoader.destroy();
     this.levelController.destroy();
-    this.mediaController.destroy();
+    this.bufferController.destroy();
+    this.streamController.destroy();
     this.timelineController.destroy();
     this.keyLoader.destroy();
     //this.fpsController.destroy();
@@ -149,12 +153,12 @@ class Hls {
 
   startLoad() {
     logger.log('startLoad');
-    this.mediaController.startLoad();
+    this.streamController.startLoad();
   }
 
   swapAudioCodec() {
     logger.log('swapAudioCodec');
-    this.mediaController.swapAudioCodec();
+    this.streamController.swapAudioCodec();
   }
 
   recoverMediaError() {
@@ -171,26 +175,26 @@ class Hls {
 
   /** Return current playback quality level **/
   get currentLevel() {
-    return this.mediaController.currentLevel;
+    return this.streamController.currentLevel;
   }
 
   /* set quality level immediately (-1 for automatic level selection) */
   set currentLevel(newLevel) {
     logger.log(`set currentLevel:${newLevel}`);
     this.loadLevel = newLevel;
-    this.mediaController.immediateLevelSwitch();
+    this.streamController.immediateLevelSwitch();
   }
 
   /** Return next playback quality level (quality level of next fragment) **/
   get nextLevel() {
-    return this.mediaController.nextLevel;
+    return this.streamController.nextLevel;
   }
 
   /* set quality level for next fragment (-1 for automatic level selection) */
   set nextLevel(newLevel) {
     logger.log(`set nextLevel:${newLevel}`);
     this.levelController.manualLevel = newLevel;
-    this.mediaController.nextLevelSwitch();
+    this.streamController.nextLevelSwitch();
   }
 
   /** Return the quality level of current/last loaded fragment **/

@@ -1,5 +1,5 @@
 /*
- * MSE Media Controller
+ * Stream Controller
 */
 
 import Demuxer from '../demux/demuxer';
@@ -21,14 +21,14 @@ const State = {
   WAITING_LEVEL : 'WAITING_LEVEL',
   PARSING : 'PARSING',
   PARSED : 'PARSED',
-  APPENDING : 'APPENDING',
   ENDED : 'ENDED'
 };
 
-class MSEMediaController extends EventHandler {
+class StreamController extends EventHandler {
 
   constructor(hls) {
-    super(hls, Event.MEDIA_ATTACHING,
+    super(hls,
+      Event.MEDIA_ATTACHED,
       Event.MEDIA_DETACHING,
       Event.MANIFEST_PARSED,
       Event.LEVEL_LOADED,
@@ -40,21 +40,11 @@ class MSEMediaController extends EventHandler {
       Event.ERROR,
       Event.BUFFER_APPENDING,
       Event.BUFFER_APPENDED,
-      Event.BUFFER_APPEND_FAIL,
-      Event.BUFFER_CODECS,
-      Event.BUFFER_EOS,
-      Event.BUFFER_FLUSHING,
-      Event.BUFFER_FLUSHED,
-      Event.BUFFER_EOS,
-      Event.MEDIA_ATTACHING,
-      Event.MEDIA_DETACHING);
+      Event.BUFFER_FLUSHED);
 
     this.config = hls.config;
     this.audioCodecSwap = false;
     this.ticks = 0;
-    // Source Buffer listeners
-    this.onsbue = this.onSBUpdateEnd.bind(this);
-    this.onsbe  = this.onSBUpdateError.bind(this);
     this.ontick = this.tick.bind(this);
   }
 
@@ -96,8 +86,6 @@ class MSEMediaController extends EventHandler {
   }
 
   stop() {
-    this.mp4segments = [];
-    this.flushRange = [];
     this.bufferRange = [];
     this.stalled = false;
     var frag = this.fragCurrent;
@@ -108,18 +96,8 @@ class MSEMediaController extends EventHandler {
       this.fragCurrent = null;
     }
     this.fragPrevious = null;
-    if (this.sourceBuffer) {
-      for(var type in this.sourceBuffer) {
-        var sb = this.sourceBuffer[type];
-        try {
-          this.mediaSource.removeSourceBuffer(sb);
-          sb.removeEventListener('updateend', this.onsbue);
-          sb.removeEventListener('error', this.onsbe);
-        } catch(err) {
-        }
-      }
-      this.sourceBuffer = null;
-    }
+    logger.log('trigger BUFFER_RESET');
+    this.hls.trigger(Event.BUFFER_RESET);
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
@@ -143,6 +121,7 @@ class MSEMediaController extends EventHandler {
 
   doTick() {
     var pos, level, levelDetails, hls = this.hls;
+    //logger.log(this.state);
     switch(this.state) {
       case State.ERROR:
         //don't do anything in error state to avoid breaking further ...
@@ -384,8 +363,7 @@ class MSEMediaController extends EventHandler {
         // nothing to do, wait for fragment being parsed
         break;
       case State.PARSED:
-      case State.APPENDING:
-        this.state = State.APPENDING;
+        // nothing to do, wait for all buffers to be appended
         break;
       case State.ENDED:
         break;
@@ -555,71 +533,6 @@ class MSEMediaController extends EventHandler {
   }
 
   /*
-    abort any buffer append in progress, and flush all buffered data
-    return true once everything has been flushed.
-    sourceBuffer.abort() and sourceBuffer.remove() are asynchronous operations
-    the idea is to call this function from tick() timer and call it again until all resources have been cleaned
-    the timer is rearmed upon sourceBuffer updateend() event, so this should be optimal
-  */
-  flushBuffer(startOffset, endOffset) {
-    var sb, i, bufStart, bufEnd, flushStart, flushEnd;
-    //logger.log('flushBuffer,pos/start/end: ' + this.media.currentTime + '/' + startOffset + '/' + endOffset);
-    // safeguard to avoid infinite looping
-    if (this.flushBufferCounter++ < (2 * this.bufferRange.length) && this.sourceBuffer) {
-      for (var type in this.sourceBuffer) {
-        sb = this.sourceBuffer[type];
-        if (!sb.updating) {
-          for (i = 0; i < sb.buffered.length; i++) {
-            bufStart = sb.buffered.start(i);
-            bufEnd = sb.buffered.end(i);
-            // workaround firefox not able to properly flush multiple buffered range.
-            if (navigator.userAgent.toLowerCase().indexOf('firefox') !== -1 && endOffset === Number.POSITIVE_INFINITY) {
-              flushStart = startOffset;
-              flushEnd = endOffset;
-            } else {
-              flushStart = Math.max(bufStart, startOffset);
-              flushEnd = Math.min(bufEnd, endOffset);
-            }
-            /* sometimes sourcebuffer.remove() does not flush
-               the exact expected time range.
-               to avoid rounding issues/infinite loop,
-               only flush buffer range of length greater than 500ms.
-            */
-            if (Math.min(flushEnd,bufEnd) - flushStart > 0.5 ) {
-              logger.log(`flush ${type} [${flushStart},${flushEnd}], of [${bufStart},${bufEnd}], pos:${this.media.currentTime}`);
-              sb.remove(flushStart, flushEnd);
-              return false;
-            }
-          }
-        } else {
-          //logger.log('abort ' + type + ' append in progress');
-          // this will abort any appending in progress
-          //sb.abort();
-          return false;
-        }
-      }
-    } else {
-      logger.warn('abort flushing too many retries');
-    }
-
-    /* after successful buffer flushing, rebuild buffer Range array
-      loop through existing buffer range and check if
-      corresponding range is still buffered. only push to new array already buffered range
-    */
-    var newRange = [],range;
-    for (i = 0; i < this.bufferRange.length; i++) {
-      range = this.bufferRange[i];
-      if (this.isBuffered((range.start + range.end) / 2)) {
-        newRange.push(range);
-      }
-    }
-    this.bufferRange = newRange;
-    logger.log('buffer flushed');
-    // everything flushed !
-    return true;
-  }
-
-  /*
     on immediate level switch :
      - pause playback if playing
      - cancel any pending load request
@@ -667,7 +580,7 @@ class MSEMediaController extends EventHandler {
     */
     var fetchdelay, currentRange, nextRange;
     currentRange = this.getBufferRange(this.media.currentTime);
-    if (currentRange) {
+    if (currentRange && currentRange.start > 1) {
     // flush buffer preceding current fragment (flush until current fragment start offset)
     // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
       this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0, endOffset: currentRange.start - 1});
@@ -706,19 +619,19 @@ class MSEMediaController extends EventHandler {
     }
   }
 
-  onMediaAttaching(data) {
+  onMediaAttached(data) {
     var media = this.media = data.media;
-    // setup the media source
-    var ms = this.mediaSource = new MediaSource();
-    //Media Source listeners
-    this.onmso = this.onMediaSourceOpen.bind(this);
-    this.onmse = this.onMediaSourceEnded.bind(this);
-    this.onmsc = this.onMediaSourceClose.bind(this);
-    ms.addEventListener('sourceopen', this.onmso);
-    ms.addEventListener('sourceended', this.onmse);
-    ms.addEventListener('sourceclose', this.onmsc);
-    // link video and media Source
-    media.src = URL.createObjectURL(ms);
+    this.onvseeking = this.onMediaSeeking.bind(this);
+    this.onvseeked = this.onMediaSeeked.bind(this);
+    this.onvmetadata = this.onMediaMetadata.bind(this);
+    this.onvended = this.onMediaEnded.bind(this);
+    media.addEventListener('seeking', this.onvseeking);
+    media.addEventListener('seeked', this.onvseeked);
+    media.addEventListener('loadedmetadata', this.onvmetadata);
+    media.addEventListener('ended', this.onvended);
+    if(this.levels && this.config.autoStartLoad) {
+      this.startLoad();
+    }
   }
 
   onMediaDetaching() {
@@ -740,39 +653,17 @@ class MSEMediaController extends EventHandler {
           }
       });
     }
-    var ms = this.mediaSource;
-    if (ms) {
-      if (ms.readyState === 'open') {
-        try {
-          // endOfStream could trigger exception if any sourcebuffer is in updating state
-          // we don't really care about checking sourcebuffer state here,
-          // as we are anyway detaching the MediaSource
-          // let's just avoid this exception to propagate
-          ms.endOfStream();
-        } catch(err) {
-          logger.warn(`onMediaDetaching:${err.message} while calling endOfStream`);
-        }
-      }
-      ms.removeEventListener('sourceopen', this.onmso);
-      ms.removeEventListener('sourceended', this.onmse);
-      ms.removeEventListener('sourceclose', this.onmsc);
-      // unlink MediaSource from video tag
-      this.media.src = '';
-      this.mediaSource = null;
-      // remove video listeners
-      if (media) {
-        media.removeEventListener('seeking', this.onvseeking);
-        media.removeEventListener('seeked', this.onvseeked);
-        media.removeEventListener('loadedmetadata', this.onvmetadata);
-        media.removeEventListener('ended', this.onvended);
-        this.onvseeking = this.onvseeked = this.onvmetadata = null;
-      }
-      this.media = null;
-      this.loadedmetadata = false;
-      this.stop();
+    // remove video listeners
+    if (media) {
+      media.removeEventListener('seeking', this.onvseeking);
+      media.removeEventListener('seeked', this.onvseeked);
+      media.removeEventListener('loadedmetadata', this.onvmetadata);
+      media.removeEventListener('ended', this.onvended);
+      this.onvseeking = this.onvseeked = this.onvmetadata = null;
     }
-    this.onmso = this.onmse = this.onmsc = null;
-    this.hls.trigger(Event.MEDIA_DETACHED);
+    this.media = null;
+    this.loadedmetadata = false;
+    this.stop();
   }
 
   onMediaSeeking() {
@@ -933,7 +824,7 @@ class MSEMediaController extends EventHandler {
             start = fragCurrent.start,
             level = fragCurrent.level,
             sn = fragCurrent.sn,
-            audioCodec = currentLevel.audioCodec || this.config.defaultAudioCodec;
+            audioCodec = currentLevel.audioCodec || this.config.defaultAudioCodec;
         if(this.audioCodecSwap) {
           logger.log('swapping playlist audio codec');
           if(audioCodec === undefined) {
@@ -945,6 +836,7 @@ class MSEMediaController extends EventHandler {
             audioCodec = 'mp4a.40.5';
           }
         }
+        this.pendingAppending = 0;
         logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],level ${level}`);
         this.demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata);
       }
@@ -954,9 +846,20 @@ class MSEMediaController extends EventHandler {
 
   onFragParsingInitSegment(data) {
     if (this.state === State.PARSING) {
-      // include codecs signalled from variant manifest
-      data.levelAudioCodec = this.levels[this.level].audioCodec;
-      data.levelVideoCodec = this.levels[this.level].videoCodec;
+      var levelAudioCodec = this.levels[this.level].audioCodec,
+          levelVideoCodec = this.levels[this.level].videoCodec;
+
+      if(levelAudioCodec && this.audioCodecSwap) {
+        logger.log('swapping playlist audio codec');
+        if(levelAudioCodec.indexOf('mp4a.40.5') !==-1) {
+          levelAudioCodec = 'mp4a.40.2';
+        } else {
+          levelAudioCodec = 'mp4a.40.5';
+        }
+      }
+      // include codecs signaled from variant manifest
+      data.levelAudioCodec = levelAudioCodec;
+      data.levelVideoCodec = levelVideoCodec;
       this.hls.trigger(Event.BUFFER_CODECS,data);
       //trigger handler right now
       this.tick();
@@ -991,18 +894,38 @@ class MSEMediaController extends EventHandler {
   onFragParsed() {
     if (this.state === State.PARSING) {
       this.stats.tparsed = performance.now();
+      this.state = State.PARSED;
+      this._checkAppendedParsed();
+    }
+  }
 
-      var sb = this.sourceBuffer,
-          appending = ((sb.audio && sb.audio.updating) ||
-                       (sb.video && sb.video.updating));
+  onBufferAppending() {
+    this.pendingAppending++;
+  }
 
-      // if fragment parsed, and all segments appended, and no appending in progress, we are done with this fragment
-      if (this.mp4segments.length === 0 && !appending) {
+  onBufferAppended() {
+    switch (this.state) {
+      case State.PARSING:
+      case State.PARSED:
+        this.pendingAppending--;
+        this._checkAppendedParsed();
+      default:
+        break;
+    }
+  }
+
+  _checkAppendedParsed() {
+    //trigger handler right now
+    if (this.state === State.PARSED && this.pendingAppending === 0)  {
+      var frag = this.fragCurrent, stats = this.stats;
+      if (frag) {
+        this.fragPrevious = frag;
+        stats.tbuffered = performance.now();
+        this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
+        this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag});
+        logger.log(`media buffered : ${this.timeRangesToString(this.media.buffered)}`);
         this.state = State.IDLE;
-      } else {
-        this.state = State.PARSED;
       }
-      //trigger handler right now
       this.tick();
     }
   }
@@ -1045,6 +968,13 @@ class MSEMediaController extends EventHandler {
         // if fatal error, stop processing, otherwise move to IDLE to retry loading
         logger.warn(`mediaController: ${data.details} while loading frag,switch to ${data.fatal ? 'ERROR' : 'IDLE'} state ...`);
         this.state = data.fatal ? State.ERROR : State.IDLE;
+        break;
+      case ErrorDetails.BUFFER_FULL:
+        // trigger a smooth level switch to empty buffers
+        // also reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
+        this.config.maxMaxBufferLength/=2;
+        logger.warn(`reduce max buffer length to ${this.config.maxMaxBufferLength}s and trigger a nextLevelSwitch to flush old buffer and fix QuotaExceededError`);
+        this.nextLevelSwitch();
         break;
       default:
         break;
@@ -1111,6 +1041,30 @@ _checkBuffer() {
     }
   }
 
+  onBufferFlushed() {
+    /* after successful buffer flushing, rebuild buffer Range array
+      loop through existing buffer range and check if
+      corresponding range is still buffered. only push to new array already buffered range
+    */
+    var newRange = [],range,i;
+    for (i = 0; i < this.bufferRange.length; i++) {
+      range = this.bufferRange[i];
+      if (this.isBuffered((range.start + range.end) / 2)) {
+        newRange.push(range);
+      }
+    }
+    this.bufferRange = newRange;
+
+    // handle end of immediate switching if needed
+    if (this.immediateSwitch) {
+      this.immediateLevelSwitchEnd();
+    }
+    // move to IDLE once flush complete. this should trigger new fragment loading
+    this.state = State.IDLE;
+    // reset reference to frag
+    this.fragPrevious = null;
+  }
+
   swapAudioCodec() {
     this.audioCodecSwap = !this.audioCodecSwap;
   }
@@ -1122,256 +1076,6 @@ _checkBuffer() {
     }
     return log;
   }
-
-  onMediaSourceOpen() {
-    logger.log('media source opened');
-    this.hls.trigger(Event.MEDIA_ATTACHED);
-    this.onvseeking = this.onMediaSeeking.bind(this);
-    this.onvseeked = this.onMediaSeeked.bind(this);
-    this.onvmetadata = this.onMediaMetadata.bind(this);
-    this.onvended = this.onMediaEnded.bind(this);
-    var media = this.media;
-    media.addEventListener('seeking', this.onvseeking);
-    media.addEventListener('seeked', this.onvseeked);
-    media.addEventListener('loadedmetadata', this.onvmetadata);
-    media.addEventListener('ended', this.onvended);
-    if(this.levels && this.config.autoStartLoad) {
-      this.startLoad();
-    }
-    // once received, don't listen anymore to sourceopen event
-    this.mediaSource.removeEventListener('sourceopen', this.onmso);
-  }
-
-  onMediaSourceClose() {
-    logger.log('media source closed');
-  }
-
-  onMediaSourceEnded() {
-    logger.log('media source ended');
-  }
-
-  onSBUpdateEnd() {
-
-    if (this._needsFlush) {
-      this.doFlush();
-    }
-
-    if (this._needsEos) {
-      this.onBufferEOS();
-    }
-
-    this.hls.trigger(Event.BUFFER_APPENDED);
-
-    this.doAppending();
-  }
-
-  onSBUpdateError(event) {
-    this.hls.trigger(Event.BUFFER_APPEND_FAIL, {event: event});
-  }
-
-  // implement these in specific class
-  onBufferCodecs(data) {
-    var sb,
-        audioCodec = data.levelAudioCodec,
-        videoCodec = data.levelVideoCodec;
-
-    this.lastAudioCodec = data.audioCodec;
-    if(audioCodec && this.audioCodecSwap) {
-      logger.log('swapping playlist audio codec');
-      if(audioCodec.indexOf('mp4a.40.5') !==-1) {
-        audioCodec = 'mp4a.40.2';
-      } else {
-        audioCodec = 'mp4a.40.5';
-      }
-    }
-    logger.log(`playlist_level/init_segment codecs: video => ${videoCodec}/${data.videoCodec}; audio => ${audioCodec}/${data.audioCodec}`);
-    // if playlist does not specify codecs, use codecs found while parsing fragment
-    // if no codec found while parsing fragment, also set codec to undefined to avoid creating sourceBuffer
-    if (audioCodec === undefined || data.audioCodec === undefined) {
-      audioCodec = data.audioCodec;
-    }
-
-    if (videoCodec === undefined  || data.videoCodec === undefined) {
-      videoCodec = data.videoCodec;
-    }
-    // in case several audio codecs might be used, force HE-AAC for audio (some browsers don't support audio codec switch)
-    //don't do it for mono streams ...
-    var ua = navigator.userAgent.toLowerCase();
-    if (this.audiocodecswitch &&
-       data.audioChannelCount !== 1 &&
-        ua.indexOf('android') === -1 &&
-        ua.indexOf('firefox') === -1) {
-      audioCodec = 'mp4a.40.5';
-    }
-    if (!this.sourceBuffer) {
-      var sourceBuffer = {}, mediaSource = this.mediaSource;
-      logger.log(`selected A/V codecs for sourceBuffers:${audioCodec},${videoCodec}`);
-      // create source Buffer and link them to MediaSource
-      if (audioCodec) {
-        sb = sourceBuffer.audio = mediaSource.addSourceBuffer(`audio/mp4;codecs=${audioCodec}`);
-        sb.addEventListener('updateend', this.onsbue);
-        sb.addEventListener('error', this.onsbe);
-      }
-      if (videoCodec) {
-        sb = sourceBuffer.video = mediaSource.addSourceBuffer(`video/mp4;codecs=${videoCodec}`);
-        sb.addEventListener('updateend', this.onsbue);
-        sb.addEventListener('error', this.onsbe);
-      }
-      this.sourceBuffer = sourceBuffer;
-    }
-    if (audioCodec) {
-      this.mp4segments.push({type: 'audio', data: data.audioMoov});
-    }
-    if(videoCodec) {
-      this.mp4segments.push({type: 'video', data: data.videoMoov});
-    }
-  }
-
-  onBufferAppending(data) {
-    this.mp4segments.push(data);
-
-    this.doAppending();
-  }
-
-  onBufferAppended() {
-    //trigger handler right now
-    if (this.state === State.APPENDING && this.mp4segments.length === 0)  {
-      var frag = this.fragCurrent, stats = this.stats;
-      if (frag) {
-        this.fragPrevious = frag;
-        stats.tbuffered = performance.now();
-        this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
-        this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag});
-        logger.log(`media buffered : ${this.timeRangesToString(this.media.buffered)}`);
-        this.state = State.IDLE;
-      }
-    }
-    this.tick();
-  }
-
-  onBufferAppendFail(data) {
-    logger.error(`sourceBuffer error:${data.event}`);
-    this.state = State.ERROR;
-    // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
-    // this error might not always be fatal (it is fatal if decode error is set, in that case
-    // it will be followed by a mediaElement error ...)
-    this.hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_APPENDING_ERROR, fatal: false, frag: this.fragCurrent});
-  }
-
-  onBufferEos() {
-    var sb = this.sourceBuffer, mediaSource = this.mediaSource;
-    if (!mediaSource || mediaSource.readyState !== 'open') {
-      return;
-    }
-    if (!((sb.audio && sb.audio.updating) || (sb.video && sb.video.updating))) {
-      logger.log('all media data available, signal endOfStream() to MediaSource and stop loading fragment');
-      //Notify the media element that it now has all of the media data
-      mediaSource.endOfStream();
-      this._needsEos = false;
-    } else {
-      this._needsEos = true;
-    }
-  }
-
-  onBufferFlushing(data) {
-    this.flushRange.push({start: data.startOffset, end: data.endOffset});
-    // attempt flush immediatly
-    this.flushBufferCounter = 0;
-    this.doFlush();
-  }
-
-  doFlush() {
-    // loop through all buffer ranges to flush
-    while(this.flushRange.length) {
-      var range = this.flushRange[0];
-      // flushBuffer will abort any buffer append in progress and flush Audio/Video Buffer
-      if (this.flushBuffer(range.start, range.end)) {
-        // range flushed, remove from flush array
-        this.flushRange.shift();
-      } else {
-        this._needsFlush = true;
-        // avoid looping, wait for SB update end to retrigger a flush
-        return;
-      }
-    }
-    if (this.flushRange.length === 0) {
-      // everything flushed
-      this._needsFlush = false;
-      this.hls.trigger(Event.BUFFER_FLUSHED);
-    }
-  }
-
-  doAppending() {
-    var hls = this.hls, sourceBuffer = this.sourceBuffer, mp4segments = this.mp4segments;
-    if (sourceBuffer) {
-      if (this.media.error) {
-        logger.error('trying to append although a media error occured, switch to ERROR state');
-        this.state = State.ERROR;
-        return;
-      }
-      // if MP4 segment appending in progress nothing to do
-      else if ((sourceBuffer.audio && sourceBuffer.audio.updating) ||
-         (sourceBuffer.video && sourceBuffer.video.updating)) {
-        //logger.log('sb append in progress');
-    // check if any MP4 segments left to append
-      } else if (mp4segments.length) {
-        var segment = mp4segments.shift();
-        try {
-          //logger.log(`appending ${segment.type} SB, size:${segment.data.length});
-          sourceBuffer[segment.type].appendBuffer(segment.data);
-          this.appendError = 0;
-        } catch(err) {
-          // in case any error occured while appending, put back segment in mp4segments table
-          logger.error(`error while trying to append buffer:${err.message},try appending later`);
-          mp4segments.unshift(segment);
-          if(err.code !== 22) {
-            if (this.appendError) {
-              this.appendError++;
-            } else {
-              this.appendError = 1;
-            }
-            var event = {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_APPEND_ERROR, frag: this.fragCurrent};
-            /* with UHD content, we could get loop of quota exceeded error until
-              browser is able to evict some data from sourcebuffer. retrying help recovering this
-            */
-            if (this.appendError > this.config.appendErrorMaxRetry) {
-              logger.log(`fail ${this.config.appendErrorMaxRetry} times to append segment in sourceBuffer`);
-              event.fatal = true;
-              hls.trigger(Event.ERROR, event);
-              this.state = State.ERROR;
-              return;
-            } else {
-              event.fatal = false;
-              hls.trigger(Event.ERROR, event);
-            }
-          } else {
-            // handle QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
-            // let's stop appending any segments, and trigger a smooth level switch to empty buffers
-            // also reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
-            mp4segments = [];
-            this.config.maxMaxBufferLength/=2;
-            logger.warn(`reduce max buffer length to ${this.config.maxMaxBufferLength}s and trigger a nextLevelSwitch to flush old buffer and fix QuotaExceededError`);
-            this.nextLevelSwitch();
-          }
-        }
-      }
-    } else {
-      // sourceBuffer undefined, switch back to IDLE state
-      this.state = State.IDLE;
-    }
-  }
-
-  onBufferFlushed() {
-    // handle end of immediate switching if needed
-    if (this.immediateSwitch) {
-      this.immediateLevelSwitchEnd();
-    }
-    // move to IDLE once flush complete. this should trigger new fragment loading
-    this.state = State.IDLE;
-    // reset reference to frag
-    this.fragPrevious = null;
-  }
-
 }
-export default MSEMediaController;
+export default StreamController;
 
