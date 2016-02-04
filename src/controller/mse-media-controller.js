@@ -542,7 +542,9 @@ class MSEMediaController extends EventHandler {
                 break;
             case State.PARSED:
             case State.APPENDING:
-                if (this.sourceBuffer) {
+                var sourceBuffer = this.sourceBuffer,
+                    mp4segments = this.mp4segments;
+                if (sourceBuffer) {
                     if (this.media.error) {
                         logger.error(
                             'trying to append although a media error occured, switch to ERROR state'
@@ -550,19 +552,17 @@ class MSEMediaController extends EventHandler {
                         this.state = State.ERROR;
                         return;
                     } else if (
-                        (this.sourceBuffer.audio &&
-                            this.sourceBuffer.audio.updating) ||
-                        (this.sourceBuffer.video &&
-                            this.sourceBuffer.video.updating)
+                        (sourceBuffer.audio && sourceBuffer.audio.updating) ||
+                        (sourceBuffer.video && sourceBuffer.video.updating)
                     ) {
                         // if MP4 segment appending in progress nothing to do
                         //logger.log('sb append in progress');
                         // check if any MP4 segments left to append
-                    } else if (this.mp4segments.length) {
-                        var segment = this.mp4segments.shift();
+                    } else if (mp4segments.length) {
+                        var segment = mp4segments.shift();
                         try {
                             //logger.log(`appending ${segment.type} SB, size:${segment.data.length});
-                            this.sourceBuffer[segment.type].appendBuffer(
+                            sourceBuffer[segment.type].appendBuffer(
                                 segment.data
                             );
                             this.appendError = 0;
@@ -573,9 +573,7 @@ class MSEMediaController extends EventHandler {
                                     err.message
                                 },try appending later`
                             );
-                            this.mp4segments.unshift(segment);
-                            // just discard QuotaExceededError for now, and wait for the natural browser buffer eviction
-                            //http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
+                            mp4segments.unshift(segment);
                             if (err.code !== 22) {
                                 if (this.appendError) {
                                     this.appendError++;
@@ -587,9 +585,6 @@ class MSEMediaController extends EventHandler {
                                     details: ErrorDetails.BUFFER_APPEND_ERROR,
                                     frag: this.fragCurrent
                                 };
-                                /* with UHD content, we could get loop of quota exceeded error until
-                  browser is able to evict some data from sourcebuffer. retrying help recovering this
-                */
                                 if (
                                     this.appendError >
                                     this.config.appendErrorMaxRetry
@@ -607,6 +602,19 @@ class MSEMediaController extends EventHandler {
                                     event.fatal = false;
                                     hls.trigger(Event.ERROR, event);
                                 }
+                            } else {
+                                // handle QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
+                                // let's stop appending any segments, and trigger a smooth level switch to empty buffers
+                                // also reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
+                                mp4segments = [];
+                                this.config.maxMaxBufferLength /= 2;
+                                logger.warn(
+                                    `reduce max buffer length to ${
+                                        this.config.maxMaxBufferLength
+                                    }s and trigger a nextLevelSwitch to flush old buffer and fix QuotaExceededError`
+                                );
+                                this.nextLevelSwitch();
+                                return;
                             }
                         }
                         this.state = State.APPENDING;
@@ -1424,8 +1432,19 @@ class MSEMediaController extends EventHandler {
 
     onFragParsed() {
         if (this.state === State.PARSING) {
-            this.state = State.PARSED;
             this.stats.tparsed = performance.now();
+
+            var sb = this.sourceBuffer,
+                appending =
+                    (sb.audio && sb.audio.updating) ||
+                    (sb.video && sb.video.updating);
+
+            // if fragment parsed, and all segments appended, and no appending in progress, we are done with this fragment
+            if (this.mp4segments.length === 0 && !appending) {
+                this.state = State.IDLE;
+            } else {
+                this.state = State.PARSED;
+            }
             //trigger handler right now
             this.tick();
         }
