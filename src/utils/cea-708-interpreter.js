@@ -20,24 +20,25 @@ class CEA708Interpreter {
     _createCue() {
         var VTTCue = window.VTTCue || window.TextTrackCue;
 
-        this.cue = new VTTCue(-1, -1, '');
-        this.cue.text = '';
-        this.cue.pauseOnExit = false;
+        var cue = (this.cue = new VTTCue(-1, -1, ''));
+        cue.text = '';
+        cue.pauseOnExit = false;
 
         // make sure it doesn't show up before it's ready
-        this.startTime = Number.MAX_VALUE;
+        cue.startTime = Number.MAX_VALUE;
 
         // show it 'forever' once we do show it
         // (we'll set the end time once we know it later)
-        this.cue.endTime = Number.MAX_VALUE;
+        cue.endTime = Number.MAX_VALUE;
 
-        this.memory.push(this.cue);
+        this.memory.push(cue);
     }
 
     clear() {
-        if (this._textTrack && this._textTrack.cues) {
-            while (this._textTrack.cues.length > 0) {
-                this._textTrack.removeCue(this._textTrack.cues[0]);
+        var textTrack = this._textTrack;
+        if (textTrack && textTrack.cues) {
+            while (textTrack.cues.length > 0) {
+                textTrack.removeCue(textTrack.cues[0]);
             }
         }
     }
@@ -49,14 +50,14 @@ class CEA708Interpreter {
 
         var count = bytes[0] & 31;
         var position = 2;
-        var byte, ccbyte1, ccbyte2, ccValid, ccType;
+        var tmpByte, ccbyte1, ccbyte2, ccValid, ccType;
 
         for (var j = 0; j < count; j++) {
-            byte = bytes[position++];
+            tmpByte = bytes[position++];
             ccbyte1 = 0x7f & bytes[position++];
             ccbyte2 = 0x7f & bytes[position++];
-            ccValid = (4 & byte) === 0 ? false : true;
-            ccType = 3 & byte;
+            ccValid = (4 & tmpByte) === 0 ? false : true;
+            ccType = 3 & tmpByte;
 
             if (ccbyte1 === 0 && ccbyte2 === 0) {
                 continue;
@@ -284,8 +285,8 @@ class CEA708Interpreter {
         }
     }
 
-    _fromCharCode(byte) {
-        switch (byte) {
+    _fromCharCode(tmpByte) {
+        switch (tmpByte) {
             case 42:
                 return 'á';
 
@@ -320,7 +321,7 @@ class CEA708Interpreter {
                 return '█';
 
             default:
-                return String.fromCharCode(byte);
+                return String.fromCharCode(tmpByte);
         }
     }
 
@@ -339,10 +340,10 @@ class CEA708Interpreter {
             this._has708 = true;
         }
 
-        for (var i = 0; i < this.memory.length; i++) {
-            this.memory[i].startTime = timestamp;
-            this._textTrack.addCue(this.memory[i]);
-            this.display.push(this.memory[i]);
+        for (let memoryItem of this.memory) {
+            memoryItem.startTime = timestamp;
+            this._textTrack.addCue(memoryItem);
+            this.display.push(memoryItem);
         }
 
         this.memory = [];
@@ -350,8 +351,8 @@ class CEA708Interpreter {
     }
 
     _clearActiveCues(timestamp) {
-        for (var i = 0; i < this.display.length; i++) {
-            this.display[i].endTime = timestamp;
+        for (let displayItem of this.display) {
+            displayItem.endTime = timestamp;
         }
 
         this.display = [];
