@@ -127,10 +127,10 @@ design idea is pretty simple :
 [src/errors.js]: src/errors.js
 [src/stats.js]: src/stats.js
 [src/controller/abr-controller.js]: src/controller/abr-controller.js
+[src/controller/buffer-controller.js]: src/controller/buffer-controller.js
 [src/controller/fps-controller.js]: src/controller/fps-controller.js
 [src/controller/level-controller.js]: src/controller/level-controller.js
 [src/controller/stream-controller.js]: src/controller/stream-controller.js
-[src/controller/buffer-controller.js]: src/controller/buffer-controller.js
 [src/crypt/aes.js]: src/crypt/aes.js
 [src/crypt/aes128-decrypter.js]: src/crypt/aes128-decrypter.js
 [src/crypt/decrypter.js]: src/crypt/decrypter.js
@@ -168,7 +168,7 @@ design idea is pretty simple :
   - ```FRAG_LOAD_ERROR``` is raised by [src/loader/fragment-loader.js][] upon xhr failure detected by [src/utils/xhr-loader.js][].
     - if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal: in that case [src/controller/level-controller.js][] will trigger an emergency switch down to level 0.
     - if frag level is 0 or auto level switch is disabled, this error is marked as fatal and a call to ```hls.startLoad()``` could help recover it.
-  - ```FRAG_LOOP_LOADING_ERROR``` is raised by [src/controller/mse-media-controller.js][] upon detection of same fragment being requested in loop. this could happen with badly formatted fragments.
+  - ```FRAG_LOOP_LOADING_ERROR``` is raised by [src/controller/stream-controller.js][] upon detection of same fragment being requested in loop. this could happen with badly formatted fragments.
     - if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal: in that case [src/controller/level-controller.js][] will trigger an emergency switch down to level 0.
     - if frag level is 0 or auto level switch is disabled, this error is marked as fatal and a call to ```hls.startLoad()``` could help recover it.
   - ```FRAG_LOAD_TIMEOUT``` is raised by [src/loader/fragment-loader.js][] upon xhr timeout detected by [src/utils/xhr-loader.js][].
@@ -176,5 +176,7 @@ design idea is pretty simple :
     - if frag level is 0 or auto level switch is disabled, this error is marked as fatal and a call to ```hls.startLoad()``` could help recover it.
   - ```FRAG_PARSING_ERROR``` is raised by [src/demux/tsdemuxer.js][] upon TS parsing error. this error is not fatal.
   - ```FRAG_DECRYPT_ERROR``` is raised by [src/demux/demuxer.js][] upon fragment decrypting error. this error is fatal.
-  - ```BUFFER_APPEND_ERROR``` is raised by [src/controller/mse-media-controller.js][] when an exception is raised when calling sourceBuffer.appendBuffer(). this error is non fatal and become fatal after config.appendErrorMaxRetry retries. when fatal, a call to ```hls.recoverMediaError()``` could help recover it.
-  - ```BUFFER_APPENDING_ERROR``` is raised by [src/controller/mse-media-controller.js][] after SourceBuffer appending error. this error is fatal and a call to ```hls.recoverMediaError()``` could help recover it.
+  - ```BUFFER_APPEND_ERROR``` is raised by [src/controller/buffer-controller.js][] when an exception is raised when calling sourceBuffer.appendBuffer(). this error is non fatal and become fatal after config.appendErrorMaxRetry retries. when fatal, a call to ```hls.recoverMediaError()``` could help recover it.
+  - ```BUFFER_APPENDING_ERROR``` is raised by [src/controller/buffer-controller.js][] after SourceBuffer appending error. this error is fatal and a call to ```hls.recoverMediaError()``` could help recover it.
+  - ```BUFFER_STALLED_ERROR``` is raised by [src/controller/stream-controller.js][] if playback is stalling because of buffer underrun
+  - ```BUFFER_FULL_ERROR``` is raised by [src/controller/buffer-controller.js][] if sourcebuffer is full
