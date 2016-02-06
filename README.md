@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/dailymotion/hls.js.svg?branch=master)](https://travis-ci.org/dailymotion/hls.js)
+[![npm][npm-image]][npm-url]
 # hls.js
 hls.js is a JavaScript library which implements an [HTTP Live Streaming] client.
 It relies on [HTML5 video][] and [MediaSource Extensions][] for playback.
@@ -7,7 +8,7 @@ it works by transmuxing MPEG-2 Transport Stream into ISO BMFF (MP4) fragments.
 this transmuxing could be performed asynchronously using [Web Worker] if available in the browser.
 
 hls.js does not need any player, it works directly on top of a standard HTML```<video>```element.
- 
+
 hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
 
 [HTML5 video]: http://www.html5rocks.com/en/tutorials/video/basics/
@@ -36,11 +37,11 @@ hls.js is (being) integrated in the following players:
 
  - [MediaElement.js] (http://mediaelementjs.com/)  through [#1609
 ] (https://github.com/johndyer/mediaelement/issues/1609)
- 
+
 
 ## Dependencies
 
-No external JS libs are needed. 
+No external JS libs are needed.
 prepackaged build is included in the [dist] (dist) folder:
 
  - [hls.js] (dist/hls.js)
@@ -172,3 +173,5 @@ Pull requests are welcome. Here is a quick guide on how to start.
 
 click [here](design.md) for details.
 
+[npm-image]: https://img.shields.io/npm/v/hls.js.svg?style=flat
+[npm-url]: https://npmjs.org/package/hls.js
