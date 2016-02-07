@@ -1,4 +1,12 @@
 !function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.Hls=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+'use strict';
+
+// This is mostly for support of the es6 module export
+// syntax with the babel compiler, it looks like it doesnt support
+// function exports like we are used to in node/commonjs
+module.exports = require('./src/hls.js').default;
+
+},{"./src/hls.js":23}],2:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -301,7 +309,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],2:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 var bundleFn = arguments[3];
 var sources = arguments[4];
 var cache = arguments[5];
@@ -368,26 +376,14 @@ module.exports = function (fn) {
     ));
 };
 
-},{}],3:[function(require,module,exports){
-/*
- * simple ABR Controller
-*/
-
+},{}],4:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var _events = require('../events');
 
@@ -397,22 +393,34 @@ var _eventHandler = require('../event-handler');
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var AbrController = (function (_EventHandler) {
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * simple ABR Controller
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
+
+var AbrController = function (_EventHandler) {
   _inherits(AbrController, _EventHandler);
 
   function AbrController(hls) {
     _classCallCheck(this, AbrController);
 
-    _get(Object.getPrototypeOf(AbrController.prototype), 'constructor', this).call(this, hls, _events2['default'].FRAG_LOAD_PROGRESS);
-    this.lastfetchlevel = 0;
-    this._autoLevelCapping = -1;
-    this._nextAutoLevel = -1;
+    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(AbrController).call(this, hls, _events2.default.FRAG_LOAD_PROGRESS));
+
+    _this.lastfetchlevel = 0;
+    _this._autoLevelCapping = -1;
+    _this._nextAutoLevel = -1;
+    return _this;
   }
 
   _createClass(AbrController, [{
     key: 'destroy',
     value: function destroy() {
-      _eventHandler2['default'].prototype.destroy.call(this);
+      _eventHandler2.default.prototype.destroy.call(this);
     }
   }, {
     key: 'onFragLoadProgress',
@@ -427,13 +435,15 @@ var AbrController = (function (_EventHandler) {
     }
 
     /** Return the capping/max level value that could be used by automatic level selection algorithm **/
+
   }, {
     key: 'autoLevelCapping',
     get: function get() {
       return this._autoLevelCapping;
-    },
+    }
 
     /** set the capping/max level value that could be used by automatic level selection algorithm **/
+    ,
     set: function set(newLevel) {
       this._autoLevelCapping = newLevel;
     }
@@ -484,31 +494,18 @@ var AbrController = (function (_EventHandler) {
   }]);
 
   return AbrController;
-})(_eventHandler2['default']);
+}(_eventHandler2.default);
 
-exports['default'] = AbrController;
-module.exports = exports['default'];
+exports.default = AbrController;
 
-},{"../event-handler":19,"../events":20}],4:[function(require,module,exports){
-/*
- * Level Controller
-*/
-
+},{"../event-handler":20,"../events":21}],5:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var _events = require('../events');
 
@@ -518,19 +515,31 @@ var _eventHandler = require('../event-handler');
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _utilsLogger = require('../utils/logger');
+var _logger = require('../utils/logger');
 
 var _errors = require('../errors');
 
-var LevelController = (function (_EventHandler) {
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Level Controller
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
+
+var LevelController = function (_EventHandler) {
   _inherits(LevelController, _EventHandler);
 
   function LevelController(hls) {
     _classCallCheck(this, LevelController);
 
-    _get(Object.getPrototypeOf(LevelController.prototype), 'constructor', this).call(this, hls, _events2['default'].MANIFEST_LOADED, _events2['default'].LEVEL_LOADED, _events2['default'].ERROR);
-    this.ontick = this.tick.bind(this);
-    this._manualLevel = this._autoLevelCapping = -1;
+    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(LevelController).call(this, hls, _events2.default.MANIFEST_LOADED, _events2.default.LEVEL_LOADED, _events2.default.ERROR));
+
+    _this.ontick = _this.tick.bind(_this);
+    _this._manualLevel = _this._autoLevelCapping = -1;
+    return _this;
   }
 
   _createClass(LevelController, [{
@@ -609,13 +618,13 @@ var LevelController = (function (_EventHandler) {
         for (i = 0; i < levels.length; i++) {
           if (levels[i].bitrate === bitrateStart) {
             this._firstLevel = i;
-            _utilsLogger.logger.log('manifest loaded,' + levels.length + ' level(s) found, first bitrate:' + bitrateStart);
+            _logger.logger.log('manifest loaded,' + levels.length + ' level(s) found, first bitrate:' + bitrateStart);
             break;
           }
         }
-        hls.trigger(_events2['default'].MANIFEST_PARSED, { levels: this._levels, firstLevel: this._firstLevel, stats: data.stats });
+        hls.trigger(_events2.default.MANIFEST_PARSED, { levels: this._levels, firstLevel: this._firstLevel, stats: data.stats });
       } else {
-        hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: hls.url, reason: 'no compatible level found in manifest' });
+        hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: hls.url, reason: 'no compatible level found in manifest' });
       }
       return;
     }
@@ -630,19 +639,19 @@ var LevelController = (function (_EventHandler) {
           this.timer = null;
         }
         this._level = newLevel;
-        _utilsLogger.logger.log('switching to level ' + newLevel);
-        this.hls.trigger(_events2['default'].LEVEL_SWITCH, { level: newLevel });
+        _logger.logger.log('switching to level ' + newLevel);
+        this.hls.trigger(_events2.default.LEVEL_SWITCH, { level: newLevel });
         var level = this._levels[newLevel];
         // check if we need to load playlist for this level
         if (level.details === undefined || level.details.live === true) {
           // level not retrieved yet, or live playlist we need to (re)load it
-          _utilsLogger.logger.log('(re)loading playlist for level ' + newLevel);
+          _logger.logger.log('(re)loading playlist for level ' + newLevel);
           var urlId = level.urlId;
-          this.hls.trigger(_events2['default'].LEVEL_LOADING, { url: level.url[urlId], level: newLevel, id: urlId });
+          this.hls.trigger(_events2.default.LEVEL_LOADING, { url: level.url[urlId], level: newLevel, id: urlId });
         }
       } else {
         // invalid level id given, trigger error
-        this.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.OTHER_ERROR, details: _errors.ErrorDetails.LEVEL_SWITCH_ERROR, level: newLevel, fatal: false, reason: 'invalid level idx' });
+        this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.OTHER_ERROR, details: _errors.ErrorDetails.LEVEL_SWITCH_ERROR, level: newLevel, fatal: false, reason: 'invalid level idx' });
       }
     }
   }, {
@@ -682,18 +691,18 @@ var LevelController = (function (_EventHandler) {
         if (level.urlId < level.url.length - 1) {
           level.urlId++;
           level.details = undefined;
-          _utilsLogger.logger.warn('level controller,' + details + ' for level ' + levelId + ': switching to redundant stream id ' + level.urlId);
+          _logger.logger.warn('level controller,' + details + ' for level ' + levelId + ': switching to redundant stream id ' + level.urlId);
         } else {
           // we could try to recover if in auto mode and current level not lowest level (0)
           var recoverable = this._manualLevel === -1 && levelId;
           if (recoverable) {
-            _utilsLogger.logger.warn('level controller,' + details + ': emergency switch-down for next fragment');
+            _logger.logger.warn('level controller,' + details + ': emergency switch-down for next fragment');
             hls.abrController.nextAutoLevel = 0;
           } else if (level && level.details && level.details.live) {
-            _utilsLogger.logger.warn('level controller,' + details + ' on live stream, discard');
+            _logger.logger.warn('level controller,' + details + ' on live stream, discard');
             // FRAG_LOAD_ERROR and FRAG_LOAD_TIMEOUT are handled by mediaController
           } else if (details !== _errors.ErrorDetails.FRAG_LOAD_ERROR && details !== _errors.ErrorDetails.FRAG_LOAD_TIMEOUT) {
-              _utilsLogger.logger.error('cannot recover ' + details + ' error');
+              _logger.logger.error('cannot recover ' + details + ' error');
               this._level = undefined;
               // stopping live reloading timer if any
               if (this.timer) {
@@ -729,7 +738,7 @@ var LevelController = (function (_EventHandler) {
       if (levelId !== undefined) {
         var level = this._levels[levelId],
             urlId = level.urlId;
-        this.hls.trigger(_events2['default'].LEVEL_LOADING, { url: level.url[urlId], level: levelId, id: urlId });
+        this.hls.trigger(_events2.default.LEVEL_LOADING, { url: level.url[urlId], level: levelId, id: urlId });
       }
     }
   }, {
@@ -790,35 +799,22 @@ var LevelController = (function (_EventHandler) {
   }]);
 
   return LevelController;
-})(_eventHandler2['default']);
+}(_eventHandler2.default);
 
-exports['default'] = LevelController;
-module.exports = exports['default'];
+exports.default = LevelController;
 
-},{"../errors":18,"../event-handler":19,"../events":20,"../utils/logger":31}],5:[function(require,module,exports){
-/*
- * MSE Media Controller
-*/
-
+},{"../errors":19,"../event-handler":20,"../events":21,"../utils/logger":32}],6:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+var _demuxer = require('../demux/demuxer');
 
-var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-var _demuxDemuxer = require('../demux/demuxer');
-
-var _demuxDemuxer2 = _interopRequireDefault(_demuxDemuxer);
+var _demuxer2 = _interopRequireDefault(_demuxer);
 
 var _events = require('../events');
 
@@ -828,17 +824,27 @@ var _eventHandler = require('../event-handler');
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _utilsLogger = require('../utils/logger');
+var _logger = require('../utils/logger');
 
-var _utilsBinarySearch = require('../utils/binary-search');
+var _binarySearch = require('../utils/binary-search');
 
-var _utilsBinarySearch2 = _interopRequireDefault(_utilsBinarySearch);
+var _binarySearch2 = _interopRequireDefault(_binarySearch);
 
-var _helperLevelHelper = require('../helper/level-helper');
+var _levelHelper = require('../helper/level-helper');
 
-var _helperLevelHelper2 = _interopRequireDefault(_helperLevelHelper);
+var _levelHelper2 = _interopRequireDefault(_levelHelper);
 
 var _errors = require('../errors');
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * MSE Media Controller
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
 
 var State = {
   ERROR: -2,
@@ -855,27 +861,29 @@ var State = {
   ENDED: 9
 };
 
-var MSEMediaController = (function (_EventHandler) {
+var MSEMediaController = function (_EventHandler) {
   _inherits(MSEMediaController, _EventHandler);
 
   function MSEMediaController(hls) {
     _classCallCheck(this, MSEMediaController);
 
-    _get(Object.getPrototypeOf(MSEMediaController.prototype), 'constructor', this).call(this, hls, _events2['default'].MEDIA_ATTACHING, _events2['default'].MEDIA_DETACHING, _events2['default'].MANIFEST_PARSED, _events2['default'].LEVEL_LOADED, _events2['default'].KEY_LOADED, _events2['default'].FRAG_LOADED, _events2['default'].FRAG_PARSING_INIT_SEGMENT, _events2['default'].FRAG_PARSING_DATA, _events2['default'].FRAG_PARSED, _events2['default'].ERROR);
-    this.config = hls.config;
-    this.audioCodecSwap = false;
-    this.ticks = 0;
+    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(MSEMediaController).call(this, hls, _events2.default.MEDIA_ATTACHING, _events2.default.MEDIA_DETACHING, _events2.default.MANIFEST_PARSED, _events2.default.LEVEL_LOADED, _events2.default.KEY_LOADED, _events2.default.FRAG_LOADED, _events2.default.FRAG_PARSING_INIT_SEGMENT, _events2.default.FRAG_PARSING_DATA, _events2.default.FRAG_PARSED, _events2.default.ERROR));
+
+    _this.config = hls.config;
+    _this.audioCodecSwap = false;
+    _this.ticks = 0;
     // Source Buffer listeners
-    this.onsbue = this.onSBUpdateEnd.bind(this);
-    this.onsbe = this.onSBUpdateError.bind(this);
-    this.ontick = this.tick.bind(this);
+    _this.onsbue = _this.onSBUpdateEnd.bind(_this);
+    _this.onsbe = _this.onSBUpdateError.bind(_this);
+    _this.ontick = _this.tick.bind(_this);
+    return _this;
   }
 
   _createClass(MSEMediaController, [{
     key: 'destroy',
     value: function destroy() {
       this.stop();
-      _eventHandler2['default'].prototype.destroy.call(this);
+      _eventHandler2.default.prototype.destroy.call(this);
       this.state = State.IDLE;
     }
   }, {
@@ -886,9 +894,9 @@ var MSEMediaController = (function (_EventHandler) {
         var media = this.media,
             lastCurrentTime = this.lastCurrentTime;
         if (media && lastCurrentTime) {
-          _utilsLogger.logger.log('seeking @ ' + lastCurrentTime);
+          _logger.logger.log('seeking @ ' + lastCurrentTime);
           if (!this.lastPaused) {
-            _utilsLogger.logger.log('resuming video');
+            _logger.logger.log('resuming video');
             media.play();
           }
           this.state = State.IDLE;
@@ -899,7 +907,7 @@ var MSEMediaController = (function (_EventHandler) {
         this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
         this.tick();
       } else {
-        _utilsLogger.logger.warn('cannot start loading as manifest not parsed yet');
+        _logger.logger.warn('cannot start loading as manifest not parsed yet');
       }
     }
   }, {
@@ -907,7 +915,7 @@ var MSEMediaController = (function (_EventHandler) {
     value: function startInternal() {
       var hls = this.hls;
       this.stop();
-      this.demuxer = new _demuxDemuxer2['default'](hls);
+      this.demuxer = new _demuxer2.default(hls);
       this.timer = setInterval(this.ontick, 100);
       this.level = -1;
       this.fragLoadError = 0;
@@ -1042,7 +1050,7 @@ var MSEMediaController = (function (_EventHandler) {
               //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.media.seeking}`);
               if (bufferEnd < Math.max(start, end - this.config.liveMaxLatencyDurationCount * levelDetails.targetduration)) {
                 this.seekAfterBuffered = start + Math.max(0, levelDetails.totalduration - this.config.liveSyncDurationCount * levelDetails.targetduration);
-                _utilsLogger.logger.log('buffer end: ' + bufferEnd + ' is located too far from the end of live sliding playlist, media position will be reseted to: ' + this.seekAfterBuffered.toFixed(3));
+                _logger.logger.log('buffer end: ' + bufferEnd + ' is located too far from the end of live sliding playlist, media position will be reseted to: ' + this.seekAfterBuffered.toFixed(3));
                 bufferEnd = this.seekAfterBuffered;
               }
               if (this.startFragmentRequested && !levelDetails.PTSKnown) {
@@ -1054,7 +1062,7 @@ var MSEMediaController = (function (_EventHandler) {
                   var targetSN = fragPrevious.sn + 1;
                   if (targetSN >= levelDetails.startSN && targetSN <= levelDetails.endSN) {
                     _frag = fragments[targetSN - levelDetails.startSN];
-                    _utilsLogger.logger.log('live playlist, switching playlist, load frag with next SN: ' + _frag.sn);
+                    _logger.logger.log('live playlist, switching playlist, load frag with next SN: ' + _frag.sn);
                   }
                 }
                 if (!_frag) {
@@ -1062,7 +1070,7 @@ var MSEMediaController = (function (_EventHandler) {
                      so let's load mid fragment. it will help computing playlist sliding and find the right one
                   */
                   _frag = fragments[Math.min(fragLen - 1, Math.round(fragLen / 2))];
-                  _utilsLogger.logger.log('live playlist, switching playlist, unknown, load middle frag : ' + _frag.sn);
+                  _logger.logger.log('live playlist, switching playlist, unknown, load middle frag : ' + _frag.sn);
                 }
               }
             } else {
@@ -1074,7 +1082,7 @@ var MSEMediaController = (function (_EventHandler) {
             if (!_frag) {
               var foundFrag;
               if (bufferEnd < end) {
-                foundFrag = _utilsBinarySearch2['default'].search(fragments, function (candidate) {
+                foundFrag = _binarySearch2.default.search(fragments, function (candidate) {
                   //logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
                   // offset should be within fragment boundary
                   if (candidate.start + candidate.duration <= bufferEnd) {
@@ -1095,7 +1103,7 @@ var MSEMediaController = (function (_EventHandler) {
                 if (fragPrevious && _frag.level === fragPrevious.level && _frag.sn === fragPrevious.sn) {
                   if (_frag.sn < levelDetails.endSN) {
                     _frag = fragments[_frag.sn + 1 - levelDetails.startSN];
-                    _utilsLogger.logger.log('SN just loaded, load next one: ' + _frag.sn);
+                    _logger.logger.log('SN just loaded, load next one: ' + _frag.sn);
                   } else {
                     // have we reached end of VOD playlist ?
                     if (!levelDetails.live) {
@@ -1105,14 +1113,14 @@ var MSEMediaController = (function (_EventHandler) {
                           case 'open':
                             var sb = this.sourceBuffer;
                             if (!(sb.audio && sb.audio.updating || sb.video && sb.video.updating)) {
-                              _utilsLogger.logger.log('all media data available, signal endOfStream() to MediaSource and stop loading fragment');
+                              _logger.logger.log('all media data available, signal endOfStream() to MediaSource and stop loading fragment');
                               //Notify the media element that it now has all of the media data
                               mediaSource.endOfStream();
                               this.state = State.ENDED;
                             }
                             break;
                           case 'ended':
-                            _utilsLogger.logger.log('all media data available and mediaSource ended, stop loading fragment');
+                            _logger.logger.log('all media data available and mediaSource ended, stop loading fragment');
                             this.state = State.ENDED;
                             break;
                           default:
@@ -1128,11 +1136,11 @@ var MSEMediaController = (function (_EventHandler) {
             if (_frag) {
               //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
               if (_frag.decryptdata.uri != null && _frag.decryptdata.key == null) {
-                _utilsLogger.logger.log('Loading key for ' + _frag.sn + ' of [' + levelDetails.startSN + ' ,' + levelDetails.endSN + '],level ' + level);
+                _logger.logger.log('Loading key for ' + _frag.sn + ' of [' + levelDetails.startSN + ' ,' + levelDetails.endSN + '],level ' + level);
                 this.state = State.KEY_LOADING;
-                hls.trigger(_events2['default'].KEY_LOADING, { frag: _frag });
+                hls.trigger(_events2.default.KEY_LOADING, { frag: _frag });
               } else {
-                _utilsLogger.logger.log('Loading ' + _frag.sn + ' of [' + levelDetails.startSN + ' ,' + levelDetails.endSN + '],level ' + level + ', currentTime:' + pos + ',bufferEnd:' + bufferEnd.toFixed(3));
+                _logger.logger.log('Loading ' + _frag.sn + ' of [' + levelDetails.startSN + ' ,' + levelDetails.endSN + '],level ' + level + ', currentTime:' + pos + ',bufferEnd:' + bufferEnd.toFixed(3));
                 _frag.autoLevel = hls.autoLevelEnabled;
                 if (this.levels.length > 1) {
                   _frag.expectedLen = Math.round(_frag.duration * this.levels[level].bitrate / 8);
@@ -1149,7 +1157,7 @@ var MSEMediaController = (function (_EventHandler) {
                   var maxThreshold = this.config.fragLoadingLoopThreshold;
                   // if this frag has already been loaded 3 times, and if it has been reloaded recently
                   if (_frag.loadCounter > maxThreshold && Math.abs(this.fragLoadIdx - _frag.loadIdx) < maxThreshold) {
-                    hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal: false, frag: _frag });
+                    hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal: false, frag: _frag });
                     return;
                   }
                 } else {
@@ -1158,7 +1166,7 @@ var MSEMediaController = (function (_EventHandler) {
                 _frag.loadIdx = this.fragLoadIdx;
                 this.fragCurrent = _frag;
                 this.startFragmentRequested = true;
-                hls.trigger(_events2['default'].FRAG_LOADING, { frag: _frag });
+                hls.trigger(_events2.default.FRAG_LOADING, { frag: _frag });
                 this.state = State.FRAG_LOADING;
               }
             }
@@ -1197,11 +1205,11 @@ var MSEMediaController = (function (_EventHandler) {
                 ... and also bigger than duration needed to load fragment at next level ...*/
               if (bufferStarvationDelay < 2 * frag.duration && fragLoadedDelay > bufferStarvationDelay && fragLoadedDelay > fragLevelNextLoadedDelay) {
                 // abort fragment loading ...
-                _utilsLogger.logger.warn('loading too slow, abort fragment loading');
-                _utilsLogger.logger.log('fragLoadedDelay/bufferStarvationDelay/fragLevelNextLoadedDelay :' + fragLoadedDelay.toFixed(1) + '/' + bufferStarvationDelay.toFixed(1) + '/' + fragLevelNextLoadedDelay.toFixed(1));
+                _logger.logger.warn('loading too slow, abort fragment loading');
+                _logger.logger.log('fragLoadedDelay/bufferStarvationDelay/fragLevelNextLoadedDelay :' + fragLoadedDelay.toFixed(1) + '/' + bufferStarvationDelay.toFixed(1) + '/' + fragLevelNextLoadedDelay.toFixed(1));
                 //abort fragment loading
                 frag.loader.abort();
-                hls.trigger(_events2['default'].FRAG_LOAD_EMERGENCY_ABORTED, { frag: frag });
+                hls.trigger(_events2.default.FRAG_LOAD_EMERGENCY_ABORTED, { frag: frag });
                 // switch back to IDLE state to request new fragment at lowest level
                 this.state = State.IDLE;
               }
@@ -1215,7 +1223,7 @@ var MSEMediaController = (function (_EventHandler) {
           var isSeeking = media && media.seeking;
           // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
           if (!retryDate || now >= retryDate || isSeeking) {
-            _utilsLogger.logger.log('mediaController: retryDate reached, switch back to IDLE state');
+            _logger.logger.log('mediaController: retryDate reached, switch back to IDLE state');
             this.state = State.IDLE;
           }
           break;
@@ -1228,7 +1236,7 @@ var MSEMediaController = (function (_EventHandler) {
               mp4segments = this.mp4segments;
           if (sourceBuffer) {
             if (this.media.error) {
-              _utilsLogger.logger.error('trying to append although a media error occured, switch to ERROR state');
+              _logger.logger.error('trying to append although a media error occured, switch to ERROR state');
               this.state = State.ERROR;
               return;
             }
@@ -1244,7 +1252,7 @@ var MSEMediaController = (function (_EventHandler) {
                     this.appendError = 0;
                   } catch (err) {
                     // in case any error occured while appending, put back segment in mp4segments table
-                    _utilsLogger.logger.error('error while trying to append buffer:' + err.message + ',try appending later');
+                    _logger.logger.error('error while trying to append buffer:' + err.message + ',try appending later');
                     mp4segments.unshift(segment);
                     if (err.code !== 22) {
                       if (this.appendError) {
@@ -1254,14 +1262,14 @@ var MSEMediaController = (function (_EventHandler) {
                       }
                       var event = { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_APPEND_ERROR, frag: this.fragCurrent };
                       if (this.appendError > this.config.appendErrorMaxRetry) {
-                        _utilsLogger.logger.log('fail ' + this.config.appendErrorMaxRetry + ' times to append segment in sourceBuffer');
+                        _logger.logger.log('fail ' + this.config.appendErrorMaxRetry + ' times to append segment in sourceBuffer');
                         event.fatal = true;
-                        hls.trigger(_events2['default'].ERROR, event);
+                        hls.trigger(_events2.default.ERROR, event);
                         this.state = State.ERROR;
                         return;
                       } else {
                         event.fatal = false;
-                        hls.trigger(_events2['default'].ERROR, event);
+                        hls.trigger(_events2.default.ERROR, event);
                       }
                     } else {
                       // handle QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
@@ -1269,7 +1277,7 @@ var MSEMediaController = (function (_EventHandler) {
                       // also reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
                       mp4segments = [];
                       this.config.maxMaxBufferLength /= 2;
-                      _utilsLogger.logger.warn('reduce max buffer length to ' + this.config.maxMaxBufferLength + 's and trigger a nextLevelSwitch to flush old buffer and fix QuotaExceededError');
+                      _logger.logger.warn('reduce max buffer length to ' + this.config.maxMaxBufferLength + 's and trigger a nextLevelSwitch to flush old buffer and fix QuotaExceededError');
                       this.nextLevelSwitch();
                       return;
                     }
@@ -1455,7 +1463,7 @@ var MSEMediaController = (function (_EventHandler) {
           var fragPlaying = rangeCurrent.frag;
           if (fragPlaying !== this.fragPlaying) {
             this.fragPlaying = fragPlaying;
-            this.hls.trigger(_events2['default'].FRAG_CHANGED, { frag: fragPlaying });
+            this.hls.trigger(_events2.default.FRAG_CHANGED, { frag: fragPlaying });
           }
         }
       }
@@ -1468,6 +1476,7 @@ var MSEMediaController = (function (_EventHandler) {
       the idea is to call this function from tick() timer and call it again until all resources have been cleaned
       the timer is rearmed upon sourceBuffer updateend() event, so this should be optimal
     */
+
   }, {
     key: 'flushBuffer',
     value: function flushBuffer(startOffset, endOffset) {
@@ -1495,7 +1504,7 @@ var MSEMediaController = (function (_EventHandler) {
                  only flush buffer range of length greater than 500ms.
               */
               if (Math.min(flushEnd, bufEnd) - flushStart > 0.5) {
-                _utilsLogger.logger.log('flush ' + type + ' [' + flushStart + ',' + flushEnd + '], of [' + bufStart + ',' + bufEnd + '], pos:' + this.media.currentTime);
+                _logger.logger.log('flush ' + type + ' [' + flushStart + ',' + flushEnd + '], of [' + bufStart + ',' + bufEnd + '], pos:' + this.media.currentTime);
                 sb.remove(flushStart, flushEnd);
                 return false;
               }
@@ -1508,7 +1517,7 @@ var MSEMediaController = (function (_EventHandler) {
           }
         }
       } else {
-        _utilsLogger.logger.warn('abort flushing too many retries');
+        _logger.logger.warn('abort flushing too many retries');
       }
 
       /* after successful buffer flushing, rebuild buffer Range array
@@ -1524,7 +1533,7 @@ var MSEMediaController = (function (_EventHandler) {
         }
       }
       this.bufferRange = newRange;
-      _utilsLogger.logger.log('buffer flushed');
+      _logger.logger.log('buffer flushed');
       // everything flushed !
       return true;
     }
@@ -1535,10 +1544,11 @@ var MSEMediaController = (function (_EventHandler) {
        - cancel any pending load request
        - and trigger a buffer flush
     */
+
   }, {
     key: 'immediateLevelSwitch',
     value: function immediateLevelSwitch() {
-      _utilsLogger.logger.log('immediateLevelSwitch');
+      _logger.logger.log('immediateLevelSwitch');
       if (!this.immediateSwitch) {
         this.immediateSwitch = true;
         this.previouslyPaused = this.media.paused;
@@ -1565,6 +1575,7 @@ var MSEMediaController = (function (_EventHandler) {
         - nudge video decoder by slightly adjusting video currentTime
         - resume the playback if needed
     */
+
   }, {
     key: 'immediateLevelSwitchEnd',
     value: function immediateLevelSwitchEnd() {
@@ -1650,7 +1661,7 @@ var MSEMediaController = (function (_EventHandler) {
     value: function onMediaDetaching() {
       var media = this.media;
       if (media && media.ended) {
-        _utilsLogger.logger.log('MSE detaching and video ended, reset startPosition');
+        _logger.logger.log('MSE detaching and video ended, reset startPosition');
         this.startPosition = this.lastCurrentTime = 0;
       }
 
@@ -1676,7 +1687,7 @@ var MSEMediaController = (function (_EventHandler) {
             // let's just avoid this exception to propagate
             ms.endOfStream();
           } catch (err) {
-            _utilsLogger.logger.warn('onMediaDetaching:' + err.message + ' while calling endOfStream');
+            _logger.logger.warn('onMediaDetaching:' + err.message + ' while calling endOfStream');
           }
         }
         ms.removeEventListener('sourceopen', this.onmso);
@@ -1698,7 +1709,7 @@ var MSEMediaController = (function (_EventHandler) {
         this.stop();
       }
       this.onmso = this.onmse = this.onmsc = null;
-      this.hls.trigger(_events2['default'].MEDIA_DETACHED);
+      this.hls.trigger(_events2.default.MEDIA_DETACHED);
     }
   }, {
     key: 'onMediaSeeking',
@@ -1707,7 +1718,7 @@ var MSEMediaController = (function (_EventHandler) {
         // check if currently loaded fragment is inside buffer.
         //if outside, cancel fragment loading, otherwise do nothing
         if (this.bufferInfo(this.media.currentTime, this.config.maxBufferHole).len === 0) {
-          _utilsLogger.logger.log('seeking outside of buffer while fragment load in progress, cancel fragment load');
+          _logger.logger.log('seeking outside of buffer while fragment load in progress, cancel fragment load');
           var fragCurrent = this.fragCurrent;
           if (fragCurrent) {
             if (fragCurrent.loader) {
@@ -1746,7 +1757,7 @@ var MSEMediaController = (function (_EventHandler) {
           currentTime = media.currentTime;
       // only adjust currentTime if not equal to 0
       if (!currentTime && currentTime !== this.startPosition) {
-        _utilsLogger.logger.log('onMediaMetadata: adjust currentTime to startPosition');
+        _logger.logger.log('onMediaMetadata: adjust currentTime to startPosition');
         media.currentTime = this.startPosition;
       }
       this.loadedmetadata = true;
@@ -1755,7 +1766,7 @@ var MSEMediaController = (function (_EventHandler) {
   }, {
     key: 'onMediaEnded',
     value: function onMediaEnded() {
-      _utilsLogger.logger.log('media ended');
+      _logger.logger.log('media ended');
       // reset startPosition and lastCurrentTime to restart playback @ stream beginning
       this.startPosition = this.lastCurrentTime = 0;
     }
@@ -1779,7 +1790,7 @@ var MSEMediaController = (function (_EventHandler) {
       });
       this.audiocodecswitch = aac && heaac;
       if (this.audiocodecswitch) {
-        _utilsLogger.logger.log('both AAC/HE-AAC audio found in levels; declaring audio codec as HE-AAC');
+        _logger.logger.log('both AAC/HE-AAC audio found in levels; declaring audio codec as HE-AAC');
       }
       this.levels = data.levels;
       this.startLevelLoaded = false;
@@ -1796,29 +1807,29 @@ var MSEMediaController = (function (_EventHandler) {
           curLevel = this.levels[newLevelId],
           duration = newDetails.totalduration;
 
-      _utilsLogger.logger.log('level ' + newLevelId + ' loaded [' + newDetails.startSN + ',' + newDetails.endSN + '],duration:' + duration);
+      _logger.logger.log('level ' + newLevelId + ' loaded [' + newDetails.startSN + ',' + newDetails.endSN + '],duration:' + duration);
       this.levelLastLoaded = newLevelId;
 
       if (newDetails.live) {
         var curDetails = curLevel.details;
         if (curDetails) {
           // we already have details for that level, merge them
-          _helperLevelHelper2['default'].mergeDetails(curDetails, newDetails);
+          _levelHelper2.default.mergeDetails(curDetails, newDetails);
           if (newDetails.PTSKnown) {
-            _utilsLogger.logger.log('live playlist sliding:' + newDetails.fragments[0].start.toFixed(3));
+            _logger.logger.log('live playlist sliding:' + newDetails.fragments[0].start.toFixed(3));
           } else {
-            _utilsLogger.logger.log('live playlist - outdated PTS, unknown sliding');
+            _logger.logger.log('live playlist - outdated PTS, unknown sliding');
           }
         } else {
           newDetails.PTSKnown = false;
-          _utilsLogger.logger.log('live playlist - first load, unknown sliding');
+          _logger.logger.log('live playlist - first load, unknown sliding');
         }
       } else {
         newDetails.PTSKnown = false;
       }
       // override level info
       curLevel.details = newDetails;
-      this.hls.trigger(_events2['default'].LEVEL_UPDATED, { details: newDetails, level: newLevelId });
+      this.hls.trigger(_events2.default.LEVEL_UPDATED, { details: newDetails, level: newLevelId });
 
       // compute start position
       if (this.startLevelLoaded === false) {
@@ -1854,7 +1865,7 @@ var MSEMediaController = (function (_EventHandler) {
           this.state = State.IDLE;
           this.fragBitrateTest = false;
           data.stats.tparsed = data.stats.tbuffered = performance.now();
-          this.hls.trigger(_events2['default'].FRAG_BUFFERED, { stats: data.stats, frag: fragCurrent });
+          this.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: data.stats, frag: fragCurrent });
         } else {
           this.state = State.PARSING;
           // transmux the MPEG-TS data to ISO-BMFF segments
@@ -1867,7 +1878,7 @@ var MSEMediaController = (function (_EventHandler) {
               sn = fragCurrent.sn,
               audioCodec = currentLevel.audioCodec || this.config.defaultAudioCodec;
           if (this.audioCodecSwap) {
-            _utilsLogger.logger.log('swapping playlist audio codec');
+            _logger.logger.log('swapping playlist audio codec');
             if (audioCodec === undefined) {
               audioCodec = this.lastAudioCodec;
             }
@@ -1877,7 +1888,7 @@ var MSEMediaController = (function (_EventHandler) {
               audioCodec = 'mp4a.40.5';
             }
           }
-          _utilsLogger.logger.log('Demuxing ' + sn + ' of [' + details.startSN + ' ,' + details.endSN + '],level ' + level);
+          _logger.logger.log('Demuxing ' + sn + ' of [' + details.startSN + ' ,' + details.endSN + '],level ' + level);
           this.demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata);
         }
       }
@@ -1894,14 +1905,14 @@ var MSEMediaController = (function (_EventHandler) {
             sb;
         this.lastAudioCodec = data.audioCodec;
         if (audioCodec && this.audioCodecSwap) {
-          _utilsLogger.logger.log('swapping playlist audio codec');
+          _logger.logger.log('swapping playlist audio codec');
           if (audioCodec.indexOf('mp4a.40.5') !== -1) {
             audioCodec = 'mp4a.40.2';
           } else {
             audioCodec = 'mp4a.40.5';
           }
         }
-        _utilsLogger.logger.log('playlist_level/init_segment codecs: video => ' + videoCodec + '/' + data.videoCodec + '; audio => ' + audioCodec + '/' + data.audioCodec);
+        _logger.logger.log('playlist_level/init_segment codecs: video => ' + videoCodec + '/' + data.videoCodec + '; audio => ' + audioCodec + '/' + data.audioCodec);
         // if playlist does not specify codecs, use codecs found while parsing fragment
         // if no codec found while parsing fragment, also set codec to undefined to avoid creating sourceBuffer
         if (audioCodec === undefined || data.audioCodec === undefined) {
@@ -1919,7 +1930,7 @@ var MSEMediaController = (function (_EventHandler) {
         }
         if (!this.sourceBuffer) {
           this.sourceBuffer = {};
-          _utilsLogger.logger.log('selected A/V codecs for sourceBuffers:' + audioCodec + ',' + videoCodec);
+          _logger.logger.log('selected A/V codecs for sourceBuffers:' + audioCodec + ',' + videoCodec);
           // create source Buffer and link them to MediaSource
           if (audioCodec) {
             sb = this.sourceBuffer.audio = this.mediaSource.addSourceBuffer('audio/mp4;codecs=' + audioCodec);
@@ -1949,9 +1960,9 @@ var MSEMediaController = (function (_EventHandler) {
         this.tparse2 = Date.now();
         var level = this.levels[this.level],
             frag = this.fragCurrent;
-        _utilsLogger.logger.log('parsed ' + data.type + ',PTS:[' + data.startPTS.toFixed(3) + ',' + data.endPTS.toFixed(3) + '],DTS:[' + data.startDTS.toFixed(3) + '/' + data.endDTS.toFixed(3) + '],nb:' + data.nb);
-        var drift = _helperLevelHelper2['default'].updateFragPTS(level.details, frag.sn, data.startPTS, data.endPTS);
-        this.hls.trigger(_events2['default'].LEVEL_PTS_UPDATED, { details: level.details, level: this.level, drift: drift });
+        _logger.logger.log('parsed ' + data.type + ',PTS:[' + data.startPTS.toFixed(3) + ',' + data.endPTS.toFixed(3) + '],DTS:[' + data.startDTS.toFixed(3) + '/' + data.endDTS.toFixed(3) + '],nb:' + data.nb);
+        var drift = _levelHelper2.default.updateFragPTS(level.details, frag.sn, data.startPTS, data.endPTS);
+        this.hls.trigger(_events2.default.LEVEL_PTS_UPDATED, { details: level.details, level: this.level, drift: drift });
 
         this.mp4segments.push({ type: data.type, data: data.moof });
         this.mp4segments.push({ type: data.type, data: data.mdat });
@@ -1961,7 +1972,7 @@ var MSEMediaController = (function (_EventHandler) {
         //trigger handler right now
         this.tick();
       } else {
-        _utilsLogger.logger.warn('not in PARSING state, ignoring FRAG_PARSING_DATA event');
+        _logger.logger.warn('not in PARSING state, ignoring FRAG_PARSING_DATA event');
       }
     }
   }, {
@@ -2002,15 +2013,15 @@ var MSEMediaController = (function (_EventHandler) {
               data.frag.loadCounter = 0;
               // exponential backoff capped to 64s
               var delay = Math.min(Math.pow(2, loadError - 1) * this.config.fragLoadingRetryDelay, 64000);
-              _utilsLogger.logger.warn('mediaController: frag loading failed, retry in ' + delay + ' ms');
+              _logger.logger.warn('mediaController: frag loading failed, retry in ' + delay + ' ms');
               this.retryDate = performance.now() + delay;
               // retry loading state
               this.state = State.FRAG_LOADING_WAITING_RETRY;
             } else {
-              _utilsLogger.logger.error('mediaController: ' + data.details + ' reaches max retry, redispatch as fatal ...');
+              _logger.logger.error('mediaController: ' + data.details + ' reaches max retry, redispatch as fatal ...');
               // redispatch same error but with fatal set to true
               data.fatal = true;
-              this.hls.trigger(_events2['default'].ERROR, data);
+              this.hls.trigger(_events2.default.ERROR, data);
               this.state = State.ERROR;
             }
           }
@@ -2021,7 +2032,7 @@ var MSEMediaController = (function (_EventHandler) {
         case _errors.ErrorDetails.KEY_LOAD_ERROR:
         case _errors.ErrorDetails.KEY_LOAD_TIMEOUT:
           // if fatal error, stop processing, otherwise move to IDLE to retry loading
-          _utilsLogger.logger.warn('mediaController: ' + data.details + ' while loading frag,switch to ' + (data.fatal ? 'ERROR' : 'IDLE') + ' state ...');
+          _logger.logger.warn('mediaController: ' + data.details + ' while loading frag,switch to ' + (data.fatal ? 'ERROR' : 'IDLE') + ' state ...');
           this.state = data.fatal ? State.ERROR : State.IDLE;
           break;
         default:
@@ -2039,8 +2050,8 @@ var MSEMediaController = (function (_EventHandler) {
           this.fragPrevious = frag;
           stats.tbuffered = performance.now();
           this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
-          this.hls.trigger(_events2['default'].FRAG_BUFFERED, { stats: stats, frag: frag });
-          _utilsLogger.logger.log('media buffered : ' + this.timeRangesToString(this.media.buffered));
+          this.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: stats, frag: frag });
+          _logger.logger.log('media buffered : ' + this.timeRangesToString(this.media.buffered));
           this.state = State.IDLE;
         }
       }
@@ -2082,9 +2093,9 @@ var MSEMediaController = (function (_EventHandler) {
                 jumpThreshold = 0;
               } else {
                 // playhead not moving AND media playing
-                _utilsLogger.logger.log('playback seems stuck @' + currentTime);
+                _logger.logger.log('playback seems stuck @' + currentTime);
                 if (!this.stalled) {
-                  this.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_STALLED_ERROR, fatal: false });
+                  this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_STALLED_ERROR, fatal: false });
                   this.stalled = true;
                 }
               }
@@ -2096,7 +2107,7 @@ var MSEMediaController = (function (_EventHandler) {
                 if (nextBufferStart && delta < this.config.maxSeekHole && delta > 0.005 && !media.seeking) {
                   // next buffer is close ! adjust currentTime to nextBufferStart
                   // this will ensure effective video decoding
-                  _utilsLogger.logger.log('adjust currentTime from ' + currentTime + ' to ' + nextBufferStart);
+                  _logger.logger.log('adjust currentTime from ' + currentTime + ' to ' + nextBufferStart);
                   media.currentTime = nextBufferStart;
                 }
               }
@@ -2113,12 +2124,12 @@ var MSEMediaController = (function (_EventHandler) {
   }, {
     key: 'onSBUpdateError',
     value: function onSBUpdateError(event) {
-      _utilsLogger.logger.error('sourceBuffer error:' + event);
+      _logger.logger.error('sourceBuffer error:' + event);
       this.state = State.ERROR;
       // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
       // this error might not always be fatal (it is fatal if decode error is set, in that case
       // it will be followed by a mediaElement error ...)
-      this.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_APPENDING_ERROR, fatal: false, frag: this.fragCurrent });
+      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_APPENDING_ERROR, fatal: false, frag: this.fragCurrent });
     }
   }, {
     key: 'timeRangesToString',
@@ -2133,8 +2144,8 @@ var MSEMediaController = (function (_EventHandler) {
   }, {
     key: 'onMediaSourceOpen',
     value: function onMediaSourceOpen() {
-      _utilsLogger.logger.log('media source opened');
-      this.hls.trigger(_events2['default'].MEDIA_ATTACHED);
+      _logger.logger.log('media source opened');
+      this.hls.trigger(_events2.default.MEDIA_ATTACHED);
       this.onvseeking = this.onMediaSeeking.bind(this);
       this.onvseeked = this.onMediaSeeked.bind(this);
       this.onvmetadata = this.onMediaMetadata.bind(this);
@@ -2153,12 +2164,12 @@ var MSEMediaController = (function (_EventHandler) {
   }, {
     key: 'onMediaSourceClose',
     value: function onMediaSourceClose() {
-      _utilsLogger.logger.log('media source closed');
+      _logger.logger.log('media source closed');
     }
   }, {
     key: 'onMediaSourceEnded',
     value: function onMediaSourceEnded() {
-      _utilsLogger.logger.log('media source ended');
+      _logger.logger.log('media source ended');
     }
   }, {
     key: 'currentLevel',
@@ -2194,31 +2205,18 @@ var MSEMediaController = (function (_EventHandler) {
   }]);
 
   return MSEMediaController;
-})(_eventHandler2['default']);
+}(_eventHandler2.default);
 
-exports['default'] = MSEMediaController;
-module.exports = exports['default'];
+exports.default = MSEMediaController;
 
-},{"../demux/demuxer":14,"../errors":18,"../event-handler":19,"../events":20,"../helper/level-helper":21,"../utils/binary-search":29,"../utils/logger":31}],6:[function(require,module,exports){
-/*
- * Timeline Controller
-*/
-
+},{"../demux/demuxer":15,"../errors":19,"../event-handler":20,"../events":21,"../helper/level-helper":22,"../utils/binary-search":30,"../utils/logger":32}],7:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var _events = require('../events');
 
@@ -2228,30 +2226,41 @@ var _eventHandler = require('../event-handler');
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _utilsCea708Interpreter = require('../utils/cea-708-interpreter');
+var _cea708Interpreter = require('../utils/cea-708-interpreter');
 
-var _utilsCea708Interpreter2 = _interopRequireDefault(_utilsCea708Interpreter);
+var _cea708Interpreter2 = _interopRequireDefault(_cea708Interpreter);
 
-var TimelineController = (function (_EventHandler) {
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Timeline Controller
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
+
+var TimelineController = function (_EventHandler) {
   _inherits(TimelineController, _EventHandler);
 
   function TimelineController(hls) {
     _classCallCheck(this, TimelineController);
 
-    _get(Object.getPrototypeOf(TimelineController.prototype), 'constructor', this).call(this, hls, _events2['default'].MEDIA_ATTACHING, _events2['default'].MEDIA_DETACHING, _events2['default'].FRAG_PARSING_USERDATA, _events2['default'].MANIFEST_LOADING, _events2['default'].FRAG_LOADED);
+    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(TimelineController).call(this, hls, _events2.default.MEDIA_ATTACHING, _events2.default.MEDIA_DETACHING, _events2.default.FRAG_PARSING_USERDATA, _events2.default.MANIFEST_LOADING, _events2.default.FRAG_LOADED));
 
-    this.hls = hls;
-    this.config = hls.config;
+    _this.hls = hls;
+    _this.config = hls.config;
 
-    if (this.config.enableCEA708Captions) {
-      this.cea708Interpreter = new _utilsCea708Interpreter2['default']();
+    if (_this.config.enableCEA708Captions) {
+      _this.cea708Interpreter = new _cea708Interpreter2.default();
     }
+    return _this;
   }
 
   _createClass(TimelineController, [{
     key: 'destroy',
     value: function destroy() {
-      _eventHandler2['default'].prototype.destroy.call(this);
+      _eventHandler2.default.prototype.destroy.call(this);
     }
   }, {
     key: 'onMediaAttaching',
@@ -2294,12 +2303,21 @@ var TimelineController = (function (_EventHandler) {
   }]);
 
   return TimelineController;
-})(_eventHandler2['default']);
+}(_eventHandler2.default);
 
-exports['default'] = TimelineController;
-module.exports = exports['default'];
+exports.default = TimelineController;
 
-},{"../event-handler":19,"../events":20,"../utils/cea-708-interpreter":30}],7:[function(require,module,exports){
+},{"../event-handler":20,"../events":21,"../utils/cea-708-interpreter":31}],8:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 /*
  *
  * This file contains an adaptation of the AES decryption algorithm
@@ -2337,17 +2355,8 @@ module.exports = exports['default'];
  * are those of the authors and should not be interpreted as representing
  * official policies, either expressed or implied, of the authors.
  */
-'use strict';
 
-Object.defineProperty(exports, '__esModule', {
-  value: true
-});
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-var AES = (function () {
+var AES = function () {
 
   /**
    * Schedule out an AES key for both encryption and decryption. This
@@ -2490,6 +2499,7 @@ var AES = (function () {
      * writing results
      * @return {Array} The plaintext.
      */
+
   }, {
     key: 'decrypt',
     value: function decrypt(encrypted0, encrypted1, encrypted2, encrypted3, out, offset) {
@@ -2535,67 +2545,64 @@ var AES = (function () {
   }]);
 
   return AES;
-})();
+}();
 
-exports['default'] = AES;
-module.exports = exports['default'];
+exports.default = AES;
 
-},{}],8:[function(require,module,exports){
-/*
- *
- * This file contains an adaptation of the AES decryption algorithm
- * from the Standford Javascript Cryptography Library. That work is
- * covered by the following copyright and permissions notice:
- *
- * Copyright 2009-2010 Emily Stark, Mike Hamburg, Dan Boneh.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above
- *    copyright notice, this list of conditions and the following
- *    disclaimer in the documentation and/or other materials provided
- *    with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHORS ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
- * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
- * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
- * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * The views and conclusions contained in the software and documentation
- * are those of the authors and should not be interpreted as representing
- * official policies, either expressed or implied, of the authors.
- */
-
+},{}],9:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * This file contains an adaptation of the AES decryption algorithm
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * from the Standford Javascript Cryptography Library. That work is
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * covered by the following copyright and permissions notice:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Copyright 2009-2010 Emily Stark, Mike Hamburg, Dan Boneh.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * All rights reserved.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Redistribution and use in source and binary forms, with or without
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * modification, are permitted provided that the following conditions are
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * met:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * 1. Redistributions of source code must retain the above copyright
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *    notice, this list of conditions and the following disclaimer.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * 2. Redistributions in binary form must reproduce the above
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *    copyright notice, this list of conditions and the following
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *    disclaimer in the documentation and/or other materials provided
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *    with the distribution.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * THIS SOFTWARE IS PROVIDED BY THE AUTHORS ``AS IS'' AND ANY EXPRESS OR
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> OR CONTRIBUTORS BE
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * The views and conclusions contained in the software and documentation
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * are those of the authors and should not be interpreted as representing
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * official policies, either expressed or implied, of the authors.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 var _aes = require('./aes');
 
 var _aes2 = _interopRequireDefault(_aes);
 
-var AES128Decrypter = (function () {
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var AES128Decrypter = function () {
   function AES128Decrypter(key, initVector) {
     _classCallCheck(this, AES128Decrypter);
 
@@ -2626,13 +2633,14 @@ var AES128Decrypter = (function () {
      * @see http://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Cipher_Block_Chaining_.28CBC.29
      * @see https://tools.ietf.org/html/rfc2315
      */
+
   }, {
     key: 'doDecrypt',
     value: function doDecrypt(encrypted, key, initVector) {
       var
       // word-level access to the encrypted bytes
       encrypted32 = new Int32Array(encrypted.buffer, encrypted.byteOffset, encrypted.byteLength >> 2),
-          decipher = new _aes2['default'](Array.prototype.slice.call(key)),
+          decipher = new _aes2.default(Array.prototype.slice.call(key)),
 
       // byte and word-level access for the decrypted output
       decrypted = new Uint8Array(encrypted.byteLength),
@@ -2719,27 +2727,20 @@ var AES128Decrypter = (function () {
   }]);
 
   return AES128Decrypter;
-})();
+}();
 
-exports['default'] = AES128Decrypter;
-module.exports = exports['default'];
+exports.default = AES128Decrypter;
 
-},{"./aes":7}],9:[function(require,module,exports){
-/*
- * AES128 decryption.
- */
-
+},{"./aes":8}],10:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * AES128 decryption.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 var _aes128Decrypter = require('./aes128-decrypter');
 
@@ -2747,9 +2748,13 @@ var _aes128Decrypter2 = _interopRequireDefault(_aes128Decrypter);
 
 var _errors = require('../errors');
 
-var _utilsLogger = require('../utils/logger');
+var _logger = require('../utils/logger');
 
-var Decrypter = (function () {
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var Decrypter = function () {
   function Decrypter(hls) {
     _classCallCheck(this, Decrypter);
 
@@ -2780,20 +2785,20 @@ var Decrypter = (function () {
     value: function decryptByWebCrypto(data, key, iv, callback) {
       var _this = this;
 
-      _utilsLogger.logger.log('decrypting by WebCrypto API');
+      _logger.logger.log('decrypting by WebCrypto API');
 
       this.subtle.importKey('raw', key, { name: 'AES-CBC', length: 128 }, false, ['decrypt']).then(function (importedKey) {
-        _this.subtle.decrypt({ name: 'AES-CBC', iv: iv.buffer }, importedKey, data).then(callback)['catch'](function (err) {
+        _this.subtle.decrypt({ name: 'AES-CBC', iv: iv.buffer }, importedKey, data).then(callback).catch(function (err) {
           _this.onWebCryptoError(err, data, key, iv, callback);
         });
-      })['catch'](function (err) {
+      }).catch(function (err) {
         _this.onWebCryptoError(err, data, key, iv, callback);
       });
     }
   }, {
     key: 'decryptBySoftware',
     value: function decryptBySoftware(data, key8, iv8, callback) {
-      _utilsLogger.logger.log('decrypting by JavaScript Implementation');
+      _logger.logger.log('decrypting by JavaScript Implementation');
 
       var view = new DataView(key8.buffer);
       var key = new Uint32Array([view.getUint32(0), view.getUint32(4), view.getUint32(8), view.getUint32(12)]);
@@ -2801,56 +2806,54 @@ var Decrypter = (function () {
       view = new DataView(iv8.buffer);
       var iv = new Uint32Array([view.getUint32(0), view.getUint32(4), view.getUint32(8), view.getUint32(12)]);
 
-      var decrypter = new _aes128Decrypter2['default'](key, iv);
+      var decrypter = new _aes128Decrypter2.default(key, iv);
       callback(decrypter.decrypt(data).buffer);
     }
   }, {
     key: 'onWebCryptoError',
     value: function onWebCryptoError(err, data, key, iv, callback) {
       if (this.hls.config.enableSoftwareAES) {
-        _utilsLogger.logger.log('disabling to use WebCrypto API');
+        _logger.logger.log('disabling to use WebCrypto API');
         this.disableWebCrypto = true;
         this.decryptBySoftware(data, key, iv, callback);
       } else {
-        _utilsLogger.logger.error('decrypting error : ' + err.message);
+        _logger.logger.error('decrypting error : ' + err.message);
         this.hls.trigger(Event.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_DECRYPT_ERROR, fatal: true, reason: err.message });
       }
     }
   }]);
 
   return Decrypter;
-})();
+}();
 
-exports['default'] = Decrypter;
-module.exports = exports['default'];
+exports.default = Decrypter;
 
-},{"../errors":18,"../utils/logger":31,"./aes128-decrypter":8}],10:[function(require,module,exports){
-/**
- * AAC demuxer
- */
+},{"../errors":19,"../utils/logger":32,"./aes128-decrypter":9}],11:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * AAC demuxer
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 var _adts = require('./adts');
 
 var _adts2 = _interopRequireDefault(_adts);
 
-var _utilsLogger = require('../utils/logger');
+var _logger = require('../utils/logger');
 
-var _demuxId3 = require('../demux/id3');
+var _id = require('../demux/id3');
 
-var _demuxId32 = _interopRequireDefault(_demuxId3);
+var _id2 = _interopRequireDefault(_id);
 
-var AACDemuxer = (function () {
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var AACDemuxer = function () {
   function AACDemuxer(observer, remuxerClass) {
     _classCallCheck(this, AACDemuxer);
 
@@ -2866,7 +2869,7 @@ var AACDemuxer = (function () {
     // feed incoming data to the front of the parsing pipeline
     value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
       var track = this._aacTrack,
-          id3 = new _demuxId32['default'](data),
+          id3 = new _id2.default(data),
           pts = 90 * id3.timeStamp,
           config,
           frameLength,
@@ -2885,14 +2888,14 @@ var AACDemuxer = (function () {
       }
 
       if (!track.audiosamplerate) {
-        config = _adts2['default'].getAudioConfig(this.observer, data, offset, audioCodec);
+        config = _adts2.default.getAudioConfig(this.observer, data, offset, audioCodec);
         track.config = config.config;
         track.audiosamplerate = config.samplerate;
         track.channelCount = config.channelCount;
         track.codec = config.codec;
         track.timescale = config.samplerate;
         track.duration = config.samplerate * duration;
-        _utilsLogger.logger.log('parsed codec:' + track.codec + ',rate:' + config.samplerate + ',nb channel:' + config.channelCount);
+        _logger.logger.log('parsed codec:' + track.codec + ',rate:' + config.samplerate + ',nb channel:' + config.channelCount);
       }
       frameIndex = 0;
       frameDuration = 1024 * 90000 / track.audiosamplerate;
@@ -2922,7 +2925,7 @@ var AACDemuxer = (function () {
           break;
         }
       }
-      this.remuxer.remux(this._aacTrack, { samples: [] }, { samples: [{ pts: pts, dts: pts, unit: id3.payload }] }, timeOffset);
+      this.remuxer.remux(this._aacTrack, { samples: [] }, { samples: [{ pts: pts, dts: pts, unit: id3.payload }] }, { samples: [] }, timeOffset);
     }
   }, {
     key: 'destroy',
@@ -2931,7 +2934,7 @@ var AACDemuxer = (function () {
     key: 'probe',
     value: function probe(data) {
       // check if data contains ID3 timestamp and ADTS sync worc
-      var id3 = new _demuxId32['default'](data),
+      var id3 = new _id2.default(data),
           offset,
           len;
       if (id3.hasTimeStamp) {
@@ -2948,30 +2951,28 @@ var AACDemuxer = (function () {
   }]);
 
   return AACDemuxer;
-})();
+}();
 
-exports['default'] = AACDemuxer;
-module.exports = exports['default'];
+exports.default = AACDemuxer;
 
-},{"../demux/id3":16,"../utils/logger":31,"./adts":11}],11:[function(require,module,exports){
-/**
- *  ADTS parser helper
- */
+},{"../demux/id3":17,"../utils/logger":32,"./adts":12}],12:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *  ADTS parser helper
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-var _utilsLogger = require('../utils/logger');
+var _logger = require('../utils/logger');
 
 var _errors = require('../errors');
 
-var ADTS = (function () {
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var ADTS = function () {
   function ADTS() {
     _classCallCheck(this, ADTS);
   }
@@ -3000,7 +3001,7 @@ var ADTS = (function () {
       adtsChanelConfig = (data[offset + 2] & 0x01) << 2;
       // byte 3
       adtsChanelConfig |= (data[offset + 3] & 0xC0) >>> 6;
-      _utilsLogger.logger.log('manifest codec:' + audioCodec + ',ADTS data:type:' + adtsObjectType + ',sampleingIndex:' + adtsSampleingIndex + '[' + adtsSampleingRates[adtsSampleingIndex] + 'Hz],channelConfig:' + adtsChanelConfig);
+      _logger.logger.log('manifest codec:' + audioCodec + ',ADTS data:type:' + adtsObjectType + ',sampleingIndex:' + adtsSampleingIndex + '[' + adtsSampleingRates[adtsSampleingIndex] + 'Hz],channelConfig:' + adtsChanelConfig);
       // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
       if (userAgent.indexOf('firefox') !== -1) {
         if (adtsSampleingIndex >= 6) {
@@ -3096,27 +3097,20 @@ var ADTS = (function () {
   }]);
 
   return ADTS;
-})();
+}();
 
-exports['default'] = ADTS;
-module.exports = exports['default'];
+exports.default = ADTS;
 
-},{"../errors":18,"../utils/logger":31}],12:[function(require,module,exports){
-/*  inline demuxer.
- *   probe fragments and instantiate appropriate demuxer depending on content type (TSDemuxer, AACDemuxer, ...)
- */
-
+},{"../errors":19,"../utils/logger":32}],13:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*  inline demuxer.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *   probe fragments and instantiate appropriate demuxer depending on content type (TSDemuxer, AACDemuxer, ...)
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 var _events = require('../events');
 
@@ -3124,15 +3118,19 @@ var _events2 = _interopRequireDefault(_events);
 
 var _errors = require('../errors');
 
-var _demuxAacdemuxer = require('../demux/aacdemuxer');
+var _aacdemuxer = require('../demux/aacdemuxer');
 
-var _demuxAacdemuxer2 = _interopRequireDefault(_demuxAacdemuxer);
+var _aacdemuxer2 = _interopRequireDefault(_aacdemuxer);
 
-var _demuxTsdemuxer = require('../demux/tsdemuxer');
+var _tsdemuxer = require('../demux/tsdemuxer');
 
-var _demuxTsdemuxer2 = _interopRequireDefault(_demuxTsdemuxer);
+var _tsdemuxer2 = _interopRequireDefault(_tsdemuxer);
 
-var DemuxerInline = (function () {
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var DemuxerInline = function () {
   function DemuxerInline(hls, remuxer) {
     _classCallCheck(this, DemuxerInline);
 
@@ -3154,12 +3152,12 @@ var DemuxerInline = (function () {
       var demuxer = this.demuxer;
       if (!demuxer) {
         // probe for content type
-        if (_demuxTsdemuxer2['default'].probe(data)) {
-          demuxer = this.demuxer = new _demuxTsdemuxer2['default'](this.hls, this.remuxer);
-        } else if (_demuxAacdemuxer2['default'].probe(data)) {
-          demuxer = this.demuxer = new _demuxAacdemuxer2['default'](this.hls, this.remuxer);
+        if (_tsdemuxer2.default.probe(data)) {
+          demuxer = this.demuxer = new _tsdemuxer2.default(this.hls, this.remuxer);
+        } else if (_aacdemuxer2.default.probe(data)) {
+          demuxer = this.demuxer = new _aacdemuxer2.default(this.hls, this.remuxer);
         } else {
-          this.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found' });
+          this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found' });
           return;
         }
       }
@@ -3168,28 +3166,20 @@ var DemuxerInline = (function () {
   }]);
 
   return DemuxerInline;
-})();
+}();
 
-exports['default'] = DemuxerInline;
-module.exports = exports['default'];
+exports.default = DemuxerInline;
 
-},{"../demux/aacdemuxer":10,"../demux/tsdemuxer":17,"../errors":18,"../events":20}],13:[function(require,module,exports){
-/* demuxer web worker.
- *  - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
- *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
- */
-
+},{"../demux/aacdemuxer":11,"../demux/tsdemuxer":18,"../errors":19,"../events":21}],14:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
+var _demuxerInline = require('../demux/demuxer-inline');
 
-var _demuxDemuxerInline = require('../demux/demuxer-inline');
-
-var _demuxDemuxerInline2 = _interopRequireDefault(_demuxDemuxerInline);
+var _demuxerInline2 = _interopRequireDefault(_demuxerInline);
 
 var _events = require('../events');
 
@@ -3199,13 +3189,20 @@ var _events3 = require('events');
 
 var _events4 = _interopRequireDefault(_events3);
 
-var _remuxMp4Remuxer = require('../remux/mp4-remuxer');
+var _mp4Remuxer = require('../remux/mp4-remuxer');
 
-var _remuxMp4Remuxer2 = _interopRequireDefault(_remuxMp4Remuxer);
+var _mp4Remuxer2 = _interopRequireDefault(_mp4Remuxer);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+/* demuxer web worker.
+ *  - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
+ *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
+ */
 
 var DemuxerWorker = function DemuxerWorker(self) {
   // observer setup
-  var observer = new _events4['default']();
+  var observer = new _events4.default();
   observer.trigger = function trigger(event) {
     for (var _len = arguments.length, data = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
       data[_key - 1] = arguments[_key];
@@ -3225,7 +3222,7 @@ var DemuxerWorker = function DemuxerWorker(self) {
     //console.log('demuxer cmd:' + ev.data.cmd);
     switch (ev.data.cmd) {
       case 'init':
-        self.demuxer = new _demuxDemuxerInline2['default'](observer, _remuxMp4Remuxer2['default']);
+        self.demuxer = new _demuxerInline2.default(observer, _mp4Remuxer2.default);
         break;
       case 'demux':
         var data = ev.data;
@@ -3237,7 +3234,7 @@ var DemuxerWorker = function DemuxerWorker(self) {
   });
 
   // listen to events triggered by TS Demuxer
-  observer.on(_events2['default'].FRAG_PARSING_INIT_SEGMENT, function (ev, data) {
+  observer.on(_events2.default.FRAG_PARSING_INIT_SEGMENT, function (ev, data) {
     var objData = { event: ev };
     var objTransferable = [];
     if (data.audioCodec) {
@@ -3257,88 +3254,87 @@ var DemuxerWorker = function DemuxerWorker(self) {
     self.postMessage(objData, objTransferable);
   });
 
-  observer.on(_events2['default'].FRAG_PARSING_DATA, function (ev, data) {
+  observer.on(_events2.default.FRAG_PARSING_DATA, function (ev, data) {
     var objData = { event: ev, type: data.type, startPTS: data.startPTS, endPTS: data.endPTS, startDTS: data.startDTS, endDTS: data.endDTS, moof: data.moof.buffer, mdat: data.mdat.buffer, nb: data.nb };
     // pass moof/mdat data as transferable object (no copy)
     self.postMessage(objData, [objData.moof, objData.mdat]);
   });
 
-  observer.on(_events2['default'].FRAG_PARSED, function (event) {
+  observer.on(_events2.default.FRAG_PARSED, function (event) {
     self.postMessage({ event: event });
   });
 
-  observer.on(_events2['default'].ERROR, function (event, data) {
+  observer.on(_events2.default.ERROR, function (event, data) {
     self.postMessage({ event: event, data: data });
   });
 
-  observer.on(_events2['default'].FRAG_PARSING_METADATA, function (event, data) {
+  observer.on(_events2.default.FRAG_PARSING_METADATA, function (event, data) {
     var objData = { event: event, samples: data.samples };
     self.postMessage(objData);
   });
 
-  observer.on(_events2['default'].FRAG_PARSING_USERDATA, function (event, data) {
+  observer.on(_events2.default.FRAG_PARSING_USERDATA, function (event, data) {
     var objData = { event: event, samples: data.samples };
     self.postMessage(objData);
   });
 };
 
-exports['default'] = DemuxerWorker;
-module.exports = exports['default'];
+exports.default = DemuxerWorker;
 
-},{"../demux/demuxer-inline":12,"../events":20,"../remux/mp4-remuxer":27,"events":1}],14:[function(require,module,exports){
+},{"../demux/demuxer-inline":13,"../events":21,"../remux/mp4-remuxer":28,"events":2}],15:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 var _events = require('../events');
 
 var _events2 = _interopRequireDefault(_events);
 
-var _demuxDemuxerInline = require('../demux/demuxer-inline');
+var _demuxerInline = require('../demux/demuxer-inline');
 
-var _demuxDemuxerInline2 = _interopRequireDefault(_demuxDemuxerInline);
+var _demuxerInline2 = _interopRequireDefault(_demuxerInline);
 
-var _demuxDemuxerWorker = require('../demux/demuxer-worker');
+var _demuxerWorker = require('../demux/demuxer-worker');
 
-var _demuxDemuxerWorker2 = _interopRequireDefault(_demuxDemuxerWorker);
+var _demuxerWorker2 = _interopRequireDefault(_demuxerWorker);
 
-var _utilsLogger = require('../utils/logger');
+var _logger = require('../utils/logger');
 
-var _remuxMp4Remuxer = require('../remux/mp4-remuxer');
+var _mp4Remuxer = require('../remux/mp4-remuxer');
 
-var _remuxMp4Remuxer2 = _interopRequireDefault(_remuxMp4Remuxer);
+var _mp4Remuxer2 = _interopRequireDefault(_mp4Remuxer);
 
-var _cryptDecrypter = require('../crypt/decrypter');
+var _decrypter = require('../crypt/decrypter');
 
-var _cryptDecrypter2 = _interopRequireDefault(_cryptDecrypter);
+var _decrypter2 = _interopRequireDefault(_decrypter);
 
-var Demuxer = (function () {
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var Demuxer = function () {
   function Demuxer(hls) {
     _classCallCheck(this, Demuxer);
 
     this.hls = hls;
     if (hls.config.enableWorker && typeof Worker !== 'undefined') {
-      _utilsLogger.logger.log('demuxing in webworker');
+      _logger.logger.log('demuxing in webworker');
       try {
         var work = require('webworkify');
-        this.w = work(_demuxDemuxerWorker2['default']);
+        this.w = work(_demuxerWorker2.default);
         this.onwmsg = this.onWorkerMessage.bind(this);
         this.w.addEventListener('message', this.onwmsg);
         this.w.postMessage({ cmd: 'init' });
       } catch (err) {
-        _utilsLogger.logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
-        this.demuxer = new _demuxDemuxerInline2['default'](hls, _remuxMp4Remuxer2['default']);
+        _logger.logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
+        this.demuxer = new _demuxerInline2.default(hls, _mp4Remuxer2.default);
       }
     } else {
-      this.demuxer = new _demuxDemuxerInline2['default'](hls, _remuxMp4Remuxer2['default']);
+      this.demuxer = new _demuxerInline2.default(hls, _mp4Remuxer2.default);
     }
     this.demuxInitialized = true;
   }
@@ -3374,7 +3370,7 @@ var Demuxer = (function () {
     value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata) {
       if (data.byteLength > 0 && decryptdata != null && decryptdata.key != null && decryptdata.method === 'AES-128') {
         if (this.decrypter == null) {
-          this.decrypter = new _cryptDecrypter2['default'](this.hls);
+          this.decrypter = new _decrypter2.default(this.hls);
         }
 
         var localthis = this;
@@ -3390,7 +3386,7 @@ var Demuxer = (function () {
     value: function onWorkerMessage(ev) {
       //console.log('onWorkerMessage:' + ev.data.event);
       switch (ev.data.event) {
-        case _events2['default'].FRAG_PARSING_INIT_SEGMENT:
+        case _events2.default.FRAG_PARSING_INIT_SEGMENT:
           var obj = {};
           if (ev.data.audioMoov) {
             obj.audioMoov = new Uint8Array(ev.data.audioMoov);
@@ -3403,10 +3399,10 @@ var Demuxer = (function () {
             obj.videoWidth = ev.data.videoWidth;
             obj.videoHeight = ev.data.videoHeight;
           }
-          this.hls.trigger(_events2['default'].FRAG_PARSING_INIT_SEGMENT, obj);
+          this.hls.trigger(_events2.default.FRAG_PARSING_INIT_SEGMENT, obj);
           break;
-        case _events2['default'].FRAG_PARSING_DATA:
-          this.hls.trigger(_events2['default'].FRAG_PARSING_DATA, {
+        case _events2.default.FRAG_PARSING_DATA:
+          this.hls.trigger(_events2.default.FRAG_PARSING_DATA, {
             moof: new Uint8Array(ev.data.moof),
             mdat: new Uint8Array(ev.data.mdat),
             startPTS: ev.data.startPTS,
@@ -3417,13 +3413,13 @@ var Demuxer = (function () {
             nb: ev.data.nb
           });
           break;
-        case _events2['default'].FRAG_PARSING_METADATA:
-          this.hls.trigger(_events2['default'].FRAG_PARSING_METADATA, {
+        case _events2.default.FRAG_PARSING_METADATA:
+          this.hls.trigger(_events2.default.FRAG_PARSING_METADATA, {
             samples: ev.data.samples
           });
           break;
-        case _events2['default'].FRAG_PARSING_USERDATA:
-          this.hls.trigger(_events2['default'].FRAG_PARSING_USERDATA, {
+        case _events2.default.FRAG_PARSING_USERDATA:
+          this.hls.trigger(_events2.default.FRAG_PARSING_USERDATA, {
             samples: ev.data.samples
           });
           break;
@@ -3435,29 +3431,26 @@ var Demuxer = (function () {
   }]);
 
   return Demuxer;
-})();
+}();
 
-exports['default'] = Demuxer;
-module.exports = exports['default'];
+exports.default = Demuxer;
 
-},{"../crypt/decrypter":9,"../demux/demuxer-inline":12,"../demux/demuxer-worker":13,"../events":20,"../remux/mp4-remuxer":27,"../utils/logger":31,"webworkify":2}],15:[function(require,module,exports){
-/**
- * Parser for exponential Golomb codes, a variable-bitwidth number encoding scheme used by h264.
-*/
-
+},{"../crypt/decrypter":10,"../demux/demuxer-inline":13,"../demux/demuxer-worker":14,"../events":21,"../remux/mp4-remuxer":28,"../utils/logger":32,"webworkify":3}],16:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Parser for exponential Golomb codes, a variable-bitwidth number encoding scheme used by h264.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+var _logger = require('../utils/logger');
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var _utilsLogger = require('../utils/logger');
-
-var ExpGolomb = (function () {
+var ExpGolomb = function () {
   function ExpGolomb(data) {
     _classCallCheck(this, ExpGolomb);
 
@@ -3489,6 +3482,7 @@ var ExpGolomb = (function () {
     }
 
     // (count:int):void
+
   }, {
     key: 'skipBits',
     value: function skipBits(count) {
@@ -3508,6 +3502,7 @@ var ExpGolomb = (function () {
     }
 
     // (size:int):uint
+
   }, {
     key: 'readBits',
     value: function readBits(size) {
@@ -3515,7 +3510,7 @@ var ExpGolomb = (function () {
           // :uint
       valu = this.word >>> 32 - bits; // :uint
       if (size > 32) {
-        _utilsLogger.logger.error('Cannot read more than 32 bits at a time');
+        _logger.logger.error('Cannot read more than 32 bits at a time');
       }
       this.bitsAvailable -= bits;
       if (this.bitsAvailable > 0) {
@@ -3532,6 +3527,7 @@ var ExpGolomb = (function () {
     }
 
     // ():uint
+
   }, {
     key: 'skipLZ',
     value: function skipLZ() {
@@ -3550,6 +3546,7 @@ var ExpGolomb = (function () {
     }
 
     // ():void
+
   }, {
     key: 'skipUEG',
     value: function skipUEG() {
@@ -3557,6 +3554,7 @@ var ExpGolomb = (function () {
     }
 
     // ():void
+
   }, {
     key: 'skipEG',
     value: function skipEG() {
@@ -3564,6 +3562,7 @@ var ExpGolomb = (function () {
     }
 
     // ():uint
+
   }, {
     key: 'readUEG',
     value: function readUEG() {
@@ -3572,6 +3571,7 @@ var ExpGolomb = (function () {
     }
 
     // ():int
+
   }, {
     key: 'readEG',
     value: function readEG() {
@@ -3586,6 +3586,7 @@ var ExpGolomb = (function () {
 
     // Some convenience functions
     // :Boolean
+
   }, {
     key: 'readBoolean',
     value: function readBoolean() {
@@ -3593,6 +3594,7 @@ var ExpGolomb = (function () {
     }
 
     // ():int
+
   }, {
     key: 'readUByte',
     value: function readUByte() {
@@ -3600,13 +3602,14 @@ var ExpGolomb = (function () {
     }
 
     // ():int
+
   }, {
     key: 'readUShort',
     value: function readUShort() {
       return this.readBits(16);
     }
-
     // ():int
+
   }, {
     key: 'readUInt',
     value: function readUInt() {
@@ -3620,6 +3623,7 @@ var ExpGolomb = (function () {
      * @param count {number} the number of entries in this scaling list
      * @see Recommendation ITU-T H.264, Section 7.3.2.1.1.1
      */
+
   }, {
     key: 'skipScalingList',
     value: function skipScalingList(count) {
@@ -3645,6 +3649,7 @@ var ExpGolomb = (function () {
      * sequence parameter set, including the dimensions of the
      * associated video frames.
      */
+
   }, {
     key: 'readSPS',
     value: function readSPS() {
@@ -3788,30 +3793,28 @@ var ExpGolomb = (function () {
   }]);
 
   return ExpGolomb;
-})();
+}();
 
-exports['default'] = ExpGolomb;
-module.exports = exports['default'];
+exports.default = ExpGolomb;
 
-},{"../utils/logger":31}],16:[function(require,module,exports){
-/**
- * ID3 parser
- */
+},{"../utils/logger":32}],17:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * ID3 parser
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+var _logger = require('../utils/logger');
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-var _utilsLogger = require('../utils/logger');
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 //import Hex from '../utils/hex';
 
-var ID3 = (function () {
+var ID3 = function () {
   function ID3(data) {
     _classCallCheck(this, ID3);
 
@@ -3847,14 +3850,14 @@ var ID3 = (function () {
       } else if (header === '3DI') {
         // http://id3.org/id3v2.4.0-structure chapter 3.4.   ID3v2 footer
         offset += 7;
-        _utilsLogger.logger.log('3DI footer found, end: ' + offset);
+        _logger.logger.log('3DI footer found, end: ' + offset);
       } else {
         offset -= 3;
         len = offset;
         if (len) {
           //logger.log(`ID3 len: ${len}`);
           if (!this.hasTimeStamp) {
-            _utilsLogger.logger.warn('ID3 tag found, but no timestamp');
+            _logger.logger.warn('ID3 tag found, but no timestamp');
           }
           this._length = len;
           this._payload = data.subarray(0, len);
@@ -3910,7 +3913,7 @@ var ID3 = (function () {
                 timestamp += 47721858.84; // 2^32 / 90
               }
               timestamp = Math.round(timestamp);
-              _utilsLogger.logger.trace('ID3 timestamp found: ' + timestamp);
+              _logger.logger.trace('ID3 timestamp found: ' + timestamp);
               this._timeStamp = timestamp;
             }
             break;
@@ -3942,34 +3945,29 @@ var ID3 = (function () {
   }]);
 
   return ID3;
-})();
+}();
 
-exports['default'] = ID3;
-module.exports = exports['default'];
+exports.default = ID3;
 
-},{"../utils/logger":31}],17:[function(require,module,exports){
-/**
- * highly optimized TS demuxer:
- * parse PAT, PMT
- * extract PES packet from audio and video PIDs
- * extract AVC/H264 NAL units and AAC/ADTS samples from PES packet
- * trigger the remuxer upon parsing completion
- * it also tries to workaround as best as it can audio codec switch (HE-AAC to AAC and vice versa), without having to restart the MediaSource.
- * it also controls the remuxing process :
- * upon discontinuity or level switch detection, it will also notifies the remuxer so that it can reset its state.
-*/
-
+},{"../utils/logger":32}],18:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * highly optimized TS demuxer:
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * parse PAT, PMT
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * extract PES packet from audio and video PIDs
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * extract AVC/H264 NAL units and AAC/ADTS samples from PES packet
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * trigger the remuxer upon parsing completion
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * it also tries to workaround as best as it can audio codec switch (HE-AAC to AAC and vice versa), without having to restart the MediaSource.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * it also controls the remuxing process :
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * upon discontinuity or level switch detection, it will also notifies the remuxer so that it can reset its state.
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
+
+// import Hex from '../utils/hex';
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 var _adts = require('./adts');
 
@@ -3983,13 +3981,15 @@ var _expGolomb = require('./exp-golomb');
 
 var _expGolomb2 = _interopRequireDefault(_expGolomb);
 
-// import Hex from '../utils/hex';
-
-var _utilsLogger = require('../utils/logger');
+var _logger = require('../utils/logger');
 
 var _errors = require('../errors');
 
-var TSDemuxer = (function () {
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var TSDemuxer = function () {
   function TSDemuxer(observer, remuxerClass) {
     _classCallCheck(this, TSDemuxer);
 
@@ -4021,6 +4021,7 @@ var TSDemuxer = (function () {
     }
 
     // feed incoming data to the front of the parsing pipeline
+
   }, {
     key: 'push',
     value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
@@ -4039,11 +4040,11 @@ var TSDemuxer = (function () {
       this._duration = duration;
       this.contiguous = false;
       if (cc !== this.lastCC) {
-        _utilsLogger.logger.log('discontinuity detected');
+        _logger.logger.log('discontinuity detected');
         this.insertDiscontinuity();
         this.lastCC = cc;
       } else if (level !== this.lastLevel) {
-        _utilsLogger.logger.log('level switch detected');
+        _logger.logger.log('level switch detected');
         this.switchLevel();
         this.lastLevel = level;
       } else if (sn === this.lastSN + 1) {
@@ -4130,7 +4131,7 @@ var TSDemuxer = (function () {
             }
           }
         } else {
-          this.observer.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47' });
+          this.observer.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47' });
         }
       }
       // parse last PES packet
@@ -4194,7 +4195,7 @@ var TSDemuxer = (function () {
             this._avcTrack.id = pid;
             break;
           default:
-            _utilsLogger.logger.log('unkown stream type:' + data[offset]);
+            _logger.logger.log('unkown stream type:' + data[offset]);
             break;
         }
         // move to the next table entry
@@ -4214,9 +4215,10 @@ var TSDemuxer = (function () {
           pesData,
           pesPts,
           pesDts,
-          payloadStartOffset;
+          payloadStartOffset,
+          data = stream.data;
       //retrieve PTS/DTS from first fragment
-      frag = stream.data[0];
+      frag = data[0];
       pesPrefix = (frag[0] << 16) + (frag[1] << 8) + frag[2];
       if (pesPrefix === 1) {
         pesLen = (frag[4] << 8) + frag[5];
@@ -4252,14 +4254,19 @@ var TSDemuxer = (function () {
         }
         pesHdrLen = frag[8];
         payloadStartOffset = pesHdrLen + 9;
-        // trim PES header
-        stream.data[0] = stream.data[0].subarray(payloadStartOffset);
+
         stream.size -= payloadStartOffset;
+        // trim PES header
+        while (data.length && payloadStartOffset > data[0].byteLength) {
+          payloadStartOffset -= data[0].byteLength;
+          data.shift();
+        }
+        data[0] = data[0].subarray(payloadStartOffset);
         //reassemble PES packet
         pesData = new Uint8Array(stream.size);
         // reassemble the packet
-        while (stream.data.length) {
-          frag = stream.data.shift();
+        while (data.length) {
+          frag = data.shift();
           pesData.set(frag, i);
           i += frag.byteLength;
         }
@@ -4323,7 +4330,7 @@ var TSDemuxer = (function () {
             if (debug) {
               debugString += 'SEI ';
             }
-            expGolombDecoder = new _expGolomb2['default'](unit.data);
+            expGolombDecoder = new _expGolomb2.default(unit.data);
 
             // skip frameType
             expGolombDecoder.readUByte();
@@ -4379,7 +4386,7 @@ var TSDemuxer = (function () {
               debugString += 'SPS ';
             }
             if (!track.sps) {
-              expGolombDecoder = new _expGolomb2['default'](unit.data);
+              expGolombDecoder = new _expGolomb2.default(unit.data);
               var config = expGolombDecoder.readSPS();
               track.width = config.width;
               track.height = config.height;
@@ -4425,7 +4432,7 @@ var TSDemuxer = (function () {
         }
       });
       if (debug || debugString.length) {
-        _utilsLogger.logger.log(debugString);
+        _logger.logger.log(debugString);
       }
       //build sample from PES
       // Annex B to MP4 conversion to be done
@@ -4561,20 +4568,20 @@ var TSDemuxer = (function () {
           reason = 'no ADTS header found in AAC PES';
           fatal = true;
         }
-        this.observer.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason });
+        this.observer.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason });
         if (fatal) {
           return;
         }
       }
       if (!track.audiosamplerate) {
-        config = _adts2['default'].getAudioConfig(this.observer, data, offset, audioCodec);
+        config = _adts2.default.getAudioConfig(this.observer, data, offset, audioCodec);
         track.config = config.config;
         track.audiosamplerate = config.samplerate;
         track.channelCount = config.channelCount;
         track.codec = config.codec;
         track.timescale = config.samplerate;
         track.duration = config.samplerate * duration;
-        _utilsLogger.logger.log('parsed codec:' + track.codec + ',rate:' + config.samplerate + ',nb channel:' + config.channelCount);
+        _logger.logger.log('parsed codec:' + track.codec + ',rate:' + config.samplerate + ',nb channel:' + config.channelCount);
       }
       frameIndex = 0;
       frameDuration = 1024 * 90000 / track.audiosamplerate;
@@ -4584,7 +4591,7 @@ var TSDemuxer = (function () {
       if (aacOverFlow && lastAacPTS) {
         var newPTS = lastAacPTS + frameDuration;
         if (Math.abs(newPTS - pts) > 1) {
-          _utilsLogger.logger.log('AAC: align PTS for overlapping frames by ' + Math.round((newPTS - pts) / 90));
+          _logger.logger.log('AAC: align PTS for overlapping frames by ' + Math.round((newPTS - pts) / 90));
           pts = newPTS;
         }
       }
@@ -4642,18 +4649,17 @@ var TSDemuxer = (function () {
   }]);
 
   return TSDemuxer;
-})();
+}();
 
-exports['default'] = TSDemuxer;
-module.exports = exports['default'];
+exports.default = TSDemuxer;
 
-},{"../errors":18,"../events":20,"../utils/logger":31,"./adts":11,"./exp-golomb":15}],18:[function(require,module,exports){
+},{"../errors":19,"../events":21,"../utils/logger":32,"./adts":12,"./exp-golomb":16}],19:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
-var ErrorTypes = {
+var ErrorTypes = exports.ErrorTypes = {
   // Identifier for a network error (loading error / timeout ...)
   NETWORK_ERROR: 'hlsNetworkError',
   // Identifier for a media Error (video/parsing/mediasource error)
@@ -4662,8 +4668,7 @@ var ErrorTypes = {
   OTHER_ERROR: 'hlsOtherError'
 };
 
-exports.ErrorTypes = ErrorTypes;
-var ErrorDetails = {
+var ErrorDetails = exports.ErrorDetails = {
   // Identifier for a manifest load error - data: { url : faulty URL, response : XHR response}
   MANIFEST_LOAD_ERROR: 'manifestLoadError',
   // Identifier for a manifest load timeout - data: { url : faulty URL, response : XHR response}
@@ -4697,9 +4702,20 @@ var ErrorDetails = {
   // Identifier for a buffer stalled error event
   BUFFER_STALLED_ERROR: 'bufferStalledError'
 };
-exports.ErrorDetails = ErrorDetails;
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
+'use strict';
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 /*
 *
 * All objects in the event handling chain should inherit from this class
@@ -4708,17 +4724,7 @@ exports.ErrorDetails = ErrorDetails;
 
 //import {logger} from './utils/logger';
 
-'use strict';
-
-Object.defineProperty(exports, '__esModule', {
-  value: true
-});
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-var EventHandler = (function () {
+var EventHandler = function () {
   function EventHandler(hls) {
     _classCallCheck(this, EventHandler);
 
@@ -4743,33 +4749,34 @@ var EventHandler = (function () {
   }, {
     key: 'isEventHandler',
     value: function isEventHandler() {
-      return typeof this.handledEvents === 'object' && this.handledEvents.length && typeof this.onEvent === 'function';
+      return _typeof(this.handledEvents) === 'object' && this.handledEvents.length && typeof this.onEvent === 'function';
     }
   }, {
     key: 'registerListeners',
     value: function registerListeners() {
       if (this.isEventHandler()) {
-        this.handledEvents.forEach((function (event) {
+        this.handledEvents.forEach(function (event) {
           if (event === 'hlsEventGeneric') {
             throw new Error('Forbidden event name: ' + event);
           }
           this.hls.on(event, this.onEvent);
-        }).bind(this));
+        }.bind(this));
       }
     }
   }, {
     key: 'unregisterListeners',
     value: function unregisterListeners() {
       if (this.isEventHandler()) {
-        this.handledEvents.forEach((function (event) {
+        this.handledEvents.forEach(function (event) {
           this.hls.off(event, this.onEvent);
-        }).bind(this));
+        }.bind(this));
       }
     }
 
     /*
     * arguments: event (string), data (any)
     */
+
   }, {
     key: 'onEvent',
     value: function onEvent(event, data) {
@@ -4790,12 +4797,11 @@ var EventHandler = (function () {
   }]);
 
   return EventHandler;
-})();
+}();
 
-exports['default'] = EventHandler;
-module.exports = exports['default'];
+exports.default = EventHandler;
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -4857,24 +4863,22 @@ module.exports = {
   KEY_LOADED: 'hlsKeyLoaded'
 };
 
-},{}],21:[function(require,module,exports){
-/**
- * Level Helper class, providing methods dealing with playlist sliding and drift
-*/
-
+},{}],22:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Level Helper class, providing methods dealing with playlist sliding and drift
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+var _logger = require('../utils/logger');
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var _utilsLogger = require('../utils/logger');
-
-var LevelHelper = (function () {
+var LevelHelper = function () {
   function LevelHelper() {
     _classCallCheck(this, LevelHelper);
   }
@@ -4909,7 +4913,7 @@ var LevelHelper = (function () {
       }
 
       if (ccOffset) {
-        _utilsLogger.logger.log('discontinuity sliding from playlist, take drift into account');
+        _logger.logger.log('discontinuity sliding from playlist, take drift into account');
         for (i = 0; i < newfragments.length; i++) {
           newfragments[i].cc += ccOffset;
         }
@@ -4978,12 +4982,12 @@ var LevelHelper = (function () {
         if (toIdx > fromIdx) {
           fragFrom.duration = fragToPTS - fragFrom.start;
           if (fragFrom.duration < 0) {
-            _utilsLogger.logger.error('negative duration computed for frag ' + fragFrom.sn + ',level ' + fragFrom.level + ', there should be some duration drift between playlist and fragment!');
+            _logger.logger.error('negative duration computed for frag ' + fragFrom.sn + ',level ' + fragFrom.level + ', there should be some duration drift between playlist and fragment!');
           }
         } else {
           fragTo.duration = fragFrom.start - fragToPTS;
           if (fragTo.duration < 0) {
-            _utilsLogger.logger.error('negative duration computed for frag ' + fragTo.sn + ',level ' + fragTo.level + ', there should be some duration drift between playlist and fragment!');
+            _logger.logger.error('negative duration computed for frag ' + fragTo.sn + ',level ' + fragTo.level + ', there should be some duration drift between playlist and fragment!');
           }
         }
       } else {
@@ -4998,26 +5002,22 @@ var LevelHelper = (function () {
   }]);
 
   return LevelHelper;
-})();
+}();
 
-exports['default'] = LevelHelper;
-module.exports = exports['default'];
+exports.default = LevelHelper;
 
-},{"../utils/logger":31}],22:[function(require,module,exports){
+},{"../utils/logger":32}],23:[function(require,module,exports){
 /**
  * HLS interface
  */
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+//import FPSController from './controller/fps-controller';
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 var _events = require('./events');
 
@@ -5025,47 +5025,49 @@ var _events2 = _interopRequireDefault(_events);
 
 var _errors = require('./errors');
 
-var _loaderPlaylistLoader = require('./loader/playlist-loader');
+var _playlistLoader = require('./loader/playlist-loader');
 
-var _loaderPlaylistLoader2 = _interopRequireDefault(_loaderPlaylistLoader);
+var _playlistLoader2 = _interopRequireDefault(_playlistLoader);
 
-var _loaderFragmentLoader = require('./loader/fragment-loader');
+var _fragmentLoader = require('./loader/fragment-loader');
 
-var _loaderFragmentLoader2 = _interopRequireDefault(_loaderFragmentLoader);
+var _fragmentLoader2 = _interopRequireDefault(_fragmentLoader);
 
-var _controllerAbrController = require('./controller/abr-controller');
+var _abrController = require('./controller/abr-controller');
 
-var _controllerAbrController2 = _interopRequireDefault(_controllerAbrController);
+var _abrController2 = _interopRequireDefault(_abrController);
 
-var _controllerMseMediaController = require('./controller/mse-media-controller');
+var _mseMediaController = require('./controller/mse-media-controller');
 
-var _controllerMseMediaController2 = _interopRequireDefault(_controllerMseMediaController);
+var _mseMediaController2 = _interopRequireDefault(_mseMediaController);
 
-var _controllerLevelController = require('./controller/level-controller');
+var _levelController = require('./controller/level-controller');
 
-var _controllerLevelController2 = _interopRequireDefault(_controllerLevelController);
+var _levelController2 = _interopRequireDefault(_levelController);
 
-var _controllerTimelineController = require('./controller/timeline-controller');
+var _timelineController = require('./controller/timeline-controller');
 
-var _controllerTimelineController2 = _interopRequireDefault(_controllerTimelineController);
+var _timelineController2 = _interopRequireDefault(_timelineController);
 
-//import FPSController from './controller/fps-controller';
+var _logger = require('./utils/logger');
 
-var _utilsLogger = require('./utils/logger');
+var _xhrLoader = require('./utils/xhr-loader');
 
-var _utilsXhrLoader = require('./utils/xhr-loader');
-
-var _utilsXhrLoader2 = _interopRequireDefault(_utilsXhrLoader);
+var _xhrLoader2 = _interopRequireDefault(_xhrLoader);
 
 var _events3 = require('events');
 
 var _events4 = _interopRequireDefault(_events3);
 
-var _loaderKeyLoader = require('./loader/key-loader');
+var _keyLoader = require('./loader/key-loader');
 
-var _loaderKeyLoader2 = _interopRequireDefault(_loaderKeyLoader);
+var _keyLoader2 = _interopRequireDefault(_keyLoader);
 
-var Hls = (function () {
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var Hls = function () {
   _createClass(Hls, null, [{
     key: 'isSupported',
     value: function isSupported() {
@@ -5074,7 +5076,7 @@ var Hls = (function () {
   }, {
     key: 'Events',
     get: function get() {
-      return _events2['default'];
+      return _events2.default;
     }
   }, {
     key: 'ErrorTypes',
@@ -5115,12 +5117,12 @@ var Hls = (function () {
           // fpsDroppedMonitoringPeriod: 5000,
           // fpsDroppedMonitoringThreshold: 0.2,
           appendErrorMaxRetry: 3,
-          loader: _utilsXhrLoader2['default'],
+          loader: _xhrLoader2.default,
           fLoader: undefined,
           pLoader: undefined,
-          abrController: _controllerAbrController2['default'],
-          mediaController: _controllerMseMediaController2['default'],
-          timelineController: _controllerTimelineController2['default'],
+          abrController: _abrController2.default,
+          mediaController: _mseMediaController2.default,
+          timelineController: _timelineController2.default,
           enableCEA708Captions: true
         };
       }
@@ -5148,10 +5150,10 @@ var Hls = (function () {
       throw new Error('Illegal hls.js config: "liveMaxLatencyDurationCount" must be gt "liveSyncDurationCount"');
     }
 
-    (0, _utilsLogger.enableLogs)(config.debug);
+    (0, _logger.enableLogs)(config.debug);
     this.config = config;
     // observer setup
-    var observer = this.observer = new _events4['default']();
+    var observer = this.observer = new _events4.default();
     observer.trigger = function trigger(event) {
       for (var _len = arguments.length, data = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
         data[_key - 1] = arguments[_key];
@@ -5170,21 +5172,21 @@ var Hls = (function () {
     this.on = observer.on.bind(observer);
     this.off = observer.off.bind(observer);
     this.trigger = observer.trigger.bind(observer);
-    this.playlistLoader = new _loaderPlaylistLoader2['default'](this);
-    this.fragmentLoader = new _loaderFragmentLoader2['default'](this);
-    this.levelController = new _controllerLevelController2['default'](this);
+    this.playlistLoader = new _playlistLoader2.default(this);
+    this.fragmentLoader = new _fragmentLoader2.default(this);
+    this.levelController = new _levelController2.default(this);
     this.abrController = new config.abrController(this);
     this.mediaController = new config.mediaController(this);
     this.timelineController = new config.timelineController(this);
-    this.keyLoader = new _loaderKeyLoader2['default'](this);
+    this.keyLoader = new _keyLoader2.default(this);
     //this.fpsController = new FPSController(this);
   }
 
   _createClass(Hls, [{
     key: 'destroy',
     value: function destroy() {
-      _utilsLogger.logger.log('destroy');
-      this.trigger(_events2['default'].DESTROYING);
+      _logger.logger.log('destroy');
+      this.trigger(_events2.default.DESTROYING);
       this.detachMedia();
       this.playlistLoader.destroy();
       this.fragmentLoader.destroy();
@@ -5199,47 +5201,48 @@ var Hls = (function () {
   }, {
     key: 'attachMedia',
     value: function attachMedia(media) {
-      _utilsLogger.logger.log('attachMedia');
+      _logger.logger.log('attachMedia');
       this.media = media;
-      this.trigger(_events2['default'].MEDIA_ATTACHING, { media: media });
+      this.trigger(_events2.default.MEDIA_ATTACHING, { media: media });
     }
   }, {
     key: 'detachMedia',
     value: function detachMedia() {
-      _utilsLogger.logger.log('detachMedia');
-      this.trigger(_events2['default'].MEDIA_DETACHING);
+      _logger.logger.log('detachMedia');
+      this.trigger(_events2.default.MEDIA_DETACHING);
       this.media = null;
     }
   }, {
     key: 'loadSource',
     value: function loadSource(url) {
-      _utilsLogger.logger.log('loadSource:' + url);
+      _logger.logger.log('loadSource:' + url);
       this.url = url;
       // when attaching to a source URL, trigger a playlist load
-      this.trigger(_events2['default'].MANIFEST_LOADING, { url: url });
+      this.trigger(_events2.default.MANIFEST_LOADING, { url: url });
     }
   }, {
     key: 'startLoad',
     value: function startLoad() {
-      _utilsLogger.logger.log('startLoad');
+      _logger.logger.log('startLoad');
       this.mediaController.startLoad();
     }
   }, {
     key: 'swapAudioCodec',
     value: function swapAudioCodec() {
-      _utilsLogger.logger.log('swapAudioCodec');
+      _logger.logger.log('swapAudioCodec');
       this.mediaController.swapAudioCodec();
     }
   }, {
     key: 'recoverMediaError',
     value: function recoverMediaError() {
-      _utilsLogger.logger.log('recoverMediaError');
+      _logger.logger.log('recoverMediaError');
       var media = this.media;
       this.detachMedia();
       this.attachMedia(media);
     }
 
     /** Return all quality levels **/
+
   }, {
     key: 'levels',
     get: function get() {
@@ -5247,70 +5250,80 @@ var Hls = (function () {
     }
 
     /** Return current playback quality level **/
+
   }, {
     key: 'currentLevel',
     get: function get() {
       return this.mediaController.currentLevel;
-    },
+    }
 
     /* set quality level immediately (-1 for automatic level selection) */
+    ,
     set: function set(newLevel) {
-      _utilsLogger.logger.log('set currentLevel:' + newLevel);
+      _logger.logger.log('set currentLevel:' + newLevel);
       this.loadLevel = newLevel;
       this.mediaController.immediateLevelSwitch();
     }
 
     /** Return next playback quality level (quality level of next fragment) **/
+
   }, {
     key: 'nextLevel',
     get: function get() {
       return this.mediaController.nextLevel;
-    },
+    }
 
     /* set quality level for next fragment (-1 for automatic level selection) */
+    ,
     set: function set(newLevel) {
-      _utilsLogger.logger.log('set nextLevel:' + newLevel);
+      _logger.logger.log('set nextLevel:' + newLevel);
       this.levelController.manualLevel = newLevel;
       this.mediaController.nextLevelSwitch();
     }
 
     /** Return the quality level of current/last loaded fragment **/
+
   }, {
     key: 'loadLevel',
     get: function get() {
       return this.levelController.level;
-    },
+    }
 
     /* set quality level for current/next loaded fragment (-1 for automatic level selection) */
+    ,
     set: function set(newLevel) {
-      _utilsLogger.logger.log('set loadLevel:' + newLevel);
+      _logger.logger.log('set loadLevel:' + newLevel);
       this.levelController.manualLevel = newLevel;
     }
 
     /** Return the quality level of next loaded fragment **/
+
   }, {
     key: 'nextLoadLevel',
     get: function get() {
       return this.levelController.nextLoadLevel();
-    },
+    }
 
     /** set quality level of next loaded fragment **/
+    ,
     set: function set(level) {
       this.levelController.level = level;
     }
 
     /** Return first level (index of first level referenced in manifest)
     **/
+
   }, {
     key: 'firstLevel',
     get: function get() {
       return this.levelController.firstLevel;
-    },
+    }
 
     /** set first level (index of first level referenced in manifest)
     **/
+    ,
     set: function set(newLevel) {
-      _utilsLogger.logger.log('set firstLevel:' + newLevel);
+      _logger.logger.log('set firstLevel:' + newLevel);
       this.levelController.firstLevel = newLevel;
     }
 
@@ -5318,35 +5331,40 @@ var Hls = (function () {
         if not overrided by user, first level appearing in manifest will be used as start level
         if -1 : automatic start level selection, playback will start from level matching download bandwidth (determined from download of first segment)
     **/
+
   }, {
     key: 'startLevel',
     get: function get() {
       return this.levelController.startLevel;
-    },
+    }
 
     /** set  start level (level of first fragment that will be played back)
         if not overrided by user, first level appearing in manifest will be used as start level
         if -1 : automatic start level selection, playback will start from level matching download bandwidth (determined from download of first segment)
     **/
+    ,
     set: function set(newLevel) {
-      _utilsLogger.logger.log('set startLevel:' + newLevel);
+      _logger.logger.log('set startLevel:' + newLevel);
       this.levelController.startLevel = newLevel;
     }
 
     /** Return the capping/max level value that could be used by automatic level selection algorithm **/
+
   }, {
     key: 'autoLevelCapping',
     get: function get() {
       return this.abrController.autoLevelCapping;
-    },
+    }
 
     /** set the capping/max level value that could be used by automatic level selection algorithm **/
+    ,
     set: function set(newLevel) {
-      _utilsLogger.logger.log('set autoLevelCapping:' + newLevel);
+      _logger.logger.log('set autoLevelCapping:' + newLevel);
       this.abrController.autoLevelCapping = newLevel;
     }
 
     /* check if we are in automatic level selection mode */
+
   }, {
     key: 'autoLevelEnabled',
     get: function get() {
@@ -5354,6 +5372,7 @@ var Hls = (function () {
     }
 
     /* return manual level */
+
   }, {
     key: 'manualLevel',
     get: function get() {
@@ -5362,31 +5381,18 @@ var Hls = (function () {
   }]);
 
   return Hls;
-})();
+}();
 
-exports['default'] = Hls;
-module.exports = exports['default'];
+exports.default = Hls;
 
-},{"./controller/abr-controller":3,"./controller/level-controller":4,"./controller/mse-media-controller":5,"./controller/timeline-controller":6,"./errors":18,"./events":20,"./loader/fragment-loader":23,"./loader/key-loader":24,"./loader/playlist-loader":25,"./utils/logger":31,"./utils/xhr-loader":33,"events":1}],23:[function(require,module,exports){
-/*
- * Fragment Loader
-*/
-
+},{"./controller/abr-controller":4,"./controller/level-controller":5,"./controller/mse-media-controller":6,"./controller/timeline-controller":7,"./errors":19,"./events":21,"./loader/fragment-loader":24,"./loader/key-loader":25,"./loader/playlist-loader":26,"./utils/logger":32,"./utils/xhr-loader":34,"events":2}],24:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var _events = require('../events');
 
@@ -5398,13 +5404,23 @@ var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
 var _errors = require('../errors');
 
-var FragmentLoader = (function (_EventHandler) {
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Fragment Loader
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
+
+var FragmentLoader = function (_EventHandler) {
   _inherits(FragmentLoader, _EventHandler);
 
   function FragmentLoader(hls) {
     _classCallCheck(this, FragmentLoader);
 
-    _get(Object.getPrototypeOf(FragmentLoader.prototype), 'constructor', this).call(this, hls, _events2['default'].FRAG_LOADING);
+    return _possibleConstructorReturn(this, Object.getPrototypeOf(FragmentLoader).call(this, hls, _events2.default.FRAG_LOADING));
   }
 
   _createClass(FragmentLoader, [{
@@ -5414,7 +5430,7 @@ var FragmentLoader = (function (_EventHandler) {
         this.loader.destroy();
         this.loader = null;
       }
-      _eventHandler2['default'].prototype.destroy.call(this);
+      _eventHandler2.default.prototype.destroy.call(this);
     }
   }, {
     key: 'onFragLoading',
@@ -5433,54 +5449,41 @@ var FragmentLoader = (function (_EventHandler) {
       stats.length = payload.byteLength;
       // detach fragment loader on load success
       this.frag.loader = undefined;
-      this.hls.trigger(_events2['default'].FRAG_LOADED, { payload: payload, frag: this.frag, stats: stats });
+      this.hls.trigger(_events2.default.FRAG_LOADED, { payload: payload, frag: this.frag, stats: stats });
     }
   }, {
     key: 'loaderror',
     value: function loaderror(event) {
       this.loader.abort();
-      this.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.FRAG_LOAD_ERROR, fatal: false, frag: this.frag, response: event });
+      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.FRAG_LOAD_ERROR, fatal: false, frag: this.frag, response: event });
     }
   }, {
     key: 'loadtimeout',
     value: function loadtimeout() {
       this.loader.abort();
-      this.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.FRAG_LOAD_TIMEOUT, fatal: false, frag: this.frag });
+      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.FRAG_LOAD_TIMEOUT, fatal: false, frag: this.frag });
     }
   }, {
     key: 'loadprogress',
     value: function loadprogress(event, stats) {
       this.frag.loaded = stats.loaded;
-      this.hls.trigger(_events2['default'].FRAG_LOAD_PROGRESS, { frag: this.frag, stats: stats });
+      this.hls.trigger(_events2.default.FRAG_LOAD_PROGRESS, { frag: this.frag, stats: stats });
     }
   }]);
 
   return FragmentLoader;
-})(_eventHandler2['default']);
+}(_eventHandler2.default);
 
-exports['default'] = FragmentLoader;
-module.exports = exports['default'];
+exports.default = FragmentLoader;
 
-},{"../errors":18,"../event-handler":19,"../events":20}],24:[function(require,module,exports){
-/*
- * Decrypt key Loader
-*/
-
+},{"../errors":19,"../event-handler":20,"../events":21}],25:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var _events = require('../events');
 
@@ -5492,15 +5495,27 @@ var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
 var _errors = require('../errors');
 
-var KeyLoader = (function (_EventHandler) {
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Decrypt key Loader
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
+
+var KeyLoader = function (_EventHandler) {
   _inherits(KeyLoader, _EventHandler);
 
   function KeyLoader(hls) {
     _classCallCheck(this, KeyLoader);
 
-    _get(Object.getPrototypeOf(KeyLoader.prototype), 'constructor', this).call(this, hls, _events2['default'].KEY_LOADING);
-    this.decryptkey = null;
-    this.decrypturl = null;
+    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(KeyLoader).call(this, hls, _events2.default.KEY_LOADING));
+
+    _this.decryptkey = null;
+    _this.decrypturl = null;
+    return _this;
   }
 
   _createClass(KeyLoader, [{
@@ -5510,7 +5525,7 @@ var KeyLoader = (function (_EventHandler) {
         this.loader.destroy();
         this.loader = null;
       }
-      _eventHandler2['default'].prototype.destroy.call(this);
+      _eventHandler2.default.prototype.destroy.call(this);
     }
   }, {
     key: 'onKeyLoading',
@@ -5528,7 +5543,7 @@ var KeyLoader = (function (_EventHandler) {
       } else if (this.decryptkey) {
         // we already loaded this key, return it
         decryptdata.key = this.decryptkey;
-        this.hls.trigger(_events2['default'].KEY_LOADED, { frag: frag });
+        this.hls.trigger(_events2.default.KEY_LOADED, { frag: frag });
       }
     }
   }, {
@@ -5538,19 +5553,19 @@ var KeyLoader = (function (_EventHandler) {
       this.decryptkey = frag.decryptdata.key = new Uint8Array(event.currentTarget.response);
       // detach fragment loader on load success
       frag.loader = undefined;
-      this.hls.trigger(_events2['default'].KEY_LOADED, { frag: frag });
+      this.hls.trigger(_events2.default.KEY_LOADED, { frag: frag });
     }
   }, {
     key: 'loaderror',
     value: function loaderror(event) {
       this.loader.abort();
-      this.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.KEY_LOAD_ERROR, fatal: false, frag: this.frag, response: event });
+      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.KEY_LOAD_ERROR, fatal: false, frag: this.frag, response: event });
     }
   }, {
     key: 'loadtimeout',
     value: function loadtimeout() {
       this.loader.abort();
-      this.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.KEY_LOAD_TIMEOUT, fatal: false, frag: this.frag });
+      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.KEY_LOAD_TIMEOUT, fatal: false, frag: this.frag });
     }
   }, {
     key: 'loadprogress',
@@ -5558,31 +5573,18 @@ var KeyLoader = (function (_EventHandler) {
   }]);
 
   return KeyLoader;
-})(_eventHandler2['default']);
+}(_eventHandler2.default);
 
-exports['default'] = KeyLoader;
-module.exports = exports['default'];
+exports.default = KeyLoader;
 
-},{"../errors":18,"../event-handler":19,"../events":20}],25:[function(require,module,exports){
-/**
- * Playlist Loader
-*/
-
+},{"../errors":19,"../event-handler":20,"../events":21}],26:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-var _get = function get(_x, _x2, _x3) { var _again = true; _function: while (_again) { var object = _x, property = _x2, receiver = _x3; _again = false; if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { _x = parent; _x2 = property; _x3 = receiver; _again = true; desc = parent = undefined; continue _function; } } else if ('value' in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } } };
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== 'function' && superClass !== null) { throw new TypeError('Super expression must either be null or a function, not ' + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 var _events = require('../events');
 
@@ -5594,23 +5596,33 @@ var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
 var _errors = require('../errors');
 
-var _utilsUrl = require('../utils/url');
+var _url = require('../utils/url');
 
-var _utilsUrl2 = _interopRequireDefault(_utilsUrl);
+var _url2 = _interopRequireDefault(_url);
 
-var _utilsAttrList = require('../utils/attr-list');
+var _attrList = require('../utils/attr-list');
 
-var _utilsAttrList2 = _interopRequireDefault(_utilsAttrList);
+var _attrList2 = _interopRequireDefault(_attrList);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Playlist Loader
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
 
 //import {logger} from '../utils/logger';
 
-var PlaylistLoader = (function (_EventHandler) {
+var PlaylistLoader = function (_EventHandler) {
   _inherits(PlaylistLoader, _EventHandler);
 
   function PlaylistLoader(hls) {
     _classCallCheck(this, PlaylistLoader);
 
-    _get(Object.getPrototypeOf(PlaylistLoader.prototype), 'constructor', this).call(this, hls, _events2['default'].MANIFEST_LOADING, _events2['default'].LEVEL_LOADING);
+    return _possibleConstructorReturn(this, Object.getPrototypeOf(PlaylistLoader).call(this, hls, _events2.default.MANIFEST_LOADING, _events2.default.LEVEL_LOADING));
   }
 
   _createClass(PlaylistLoader, [{
@@ -5621,7 +5633,7 @@ var PlaylistLoader = (function (_EventHandler) {
         this.loader = null;
       }
       this.url = this.id = null;
-      _eventHandler2['default'].prototype.destroy.call(this);
+      _eventHandler2.default.prototype.destroy.call(this);
     }
   }, {
     key: 'onManifestLoading',
@@ -5658,7 +5670,7 @@ var PlaylistLoader = (function (_EventHandler) {
   }, {
     key: 'resolve',
     value: function resolve(url, baseUrl) {
-      return _utilsUrl2['default'].buildAbsoluteURL(baseUrl, url);
+      return _url2.default.buildAbsoluteURL(baseUrl, url);
     }
   }, {
     key: 'parseMasterPlaylist',
@@ -5671,7 +5683,7 @@ var PlaylistLoader = (function (_EventHandler) {
       while ((result = re.exec(string)) != null) {
         var level = {};
 
-        var attrs = level.attrs = new _utilsAttrList2['default'](result[1]);
+        var attrs = level.attrs = new _attrList2.default(result[1]);
         level.url = this.resolve(result[2], baseurl);
 
         var resolution = attrs.decimalResolution('RESOLUTION');
@@ -5792,7 +5804,7 @@ var PlaylistLoader = (function (_EventHandler) {
           case 'KEY':
             // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
             var decryptparams = result[1];
-            var keyAttrs = new _utilsAttrList2['default'](decryptparams);
+            var keyAttrs = new _attrList2.default(decryptparams);
             var decryptmethod = keyAttrs.enumeratedString('METHOD'),
                 decrypturi = keyAttrs.URI,
                 decryptiv = keyAttrs.hexadecimalInteger('IV');
@@ -5847,23 +5859,23 @@ var PlaylistLoader = (function (_EventHandler) {
           // if first request, fire manifest loaded event, level will be reloaded afterwards
           // (this is to have a uniform logic for 1 level/multilevel playlists)
           if (this.id === null) {
-            hls.trigger(_events2['default'].MANIFEST_LOADED, { levels: [{ url: url }], url: url, stats: stats });
+            hls.trigger(_events2.default.MANIFEST_LOADED, { levels: [{ url: url }], url: url, stats: stats });
           } else {
             var levelDetails = this.parseLevelPlaylist(string, url, id);
             stats.tparsed = performance.now();
-            hls.trigger(_events2['default'].LEVEL_LOADED, { details: levelDetails, level: id, id: id2, stats: stats });
+            hls.trigger(_events2.default.LEVEL_LOADED, { details: levelDetails, level: id, id: id2, stats: stats });
           }
         } else {
           levels = this.parseMasterPlaylist(string, url);
           // multi level playlist, parse level info
           if (levels.length) {
-            hls.trigger(_events2['default'].MANIFEST_LOADED, { levels: levels, url: url, stats: stats });
+            hls.trigger(_events2.default.MANIFEST_LOADED, { levels: levels, url: url, stats: stats });
           } else {
-            hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'no level found in manifest' });
+            hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'no level found in manifest' });
           }
         }
       } else {
-        hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'no EXTM3U delimiter' });
+        hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'no EXTM3U delimiter' });
       }
     }
   }, {
@@ -5878,7 +5890,7 @@ var PlaylistLoader = (function (_EventHandler) {
         fatal = false;
       }
       this.loader.abort();
-      this.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: this.url, loader: this.loader, response: event.currentTarget, level: this.id, id: this.id2 });
+      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: this.url, loader: this.loader, response: event.currentTarget, level: this.id, id: this.id2 });
     }
   }, {
     key: 'loadtimeout',
@@ -5892,33 +5904,33 @@ var PlaylistLoader = (function (_EventHandler) {
         fatal = false;
       }
       this.loader.abort();
-      this.hls.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: this.url, loader: this.loader, level: this.id, id: this.id2 });
+      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: this.url, loader: this.loader, level: this.id, id: this.id2 });
     }
   }]);
 
   return PlaylistLoader;
-})(_eventHandler2['default']);
+}(_eventHandler2.default);
 
-exports['default'] = PlaylistLoader;
-module.exports = exports['default'];
+exports.default = PlaylistLoader;
 
-},{"../errors":18,"../event-handler":19,"../events":20,"../utils/attr-list":28,"../utils/url":32}],26:[function(require,module,exports){
+},{"../errors":19,"../event-handler":20,"../events":21,"../utils/attr-list":29,"../utils/url":33}],27:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 /**
  * Generate MP4 Box
 */
 
 //import Hex from '../utils/hex';
-'use strict';
 
-Object.defineProperty(exports, '__esModule', {
-  value: true
-});
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-var MP4 = (function () {
+var MP4 = function () {
   function MP4() {
     _classCallCheck(this, MP4);
   }
@@ -6112,10 +6124,10 @@ var MP4 = (function () {
     value: function moof(sn, baseMediaDecodeTime, track) {
       return MP4.box(MP4.types.moof, MP4.mfhd(sn), MP4.traf(track, baseMediaDecodeTime));
     }
-
     /**
      * @param tracks... (optional) {array} the tracks associated with this movie
      */
+
   }, {
     key: 'moov',
     value: function moov(tracks) {
@@ -6335,6 +6347,7 @@ var MP4 = (function () {
      * @param track {object} a track definition
      * @return {Uint8Array} the track box
      */
+
   }, {
     key: 'trak',
     value: function trak(track) {
@@ -6403,41 +6416,38 @@ var MP4 = (function () {
   }]);
 
   return MP4;
-})();
+}();
 
-exports['default'] = MP4;
-module.exports = exports['default'];
+exports.default = MP4;
 
-},{}],27:[function(require,module,exports){
-/**
- * fMP4 remuxer
-*/
-
+},{}],28:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * fMP4 remuxer
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
 var _events = require('../events');
 
 var _events2 = _interopRequireDefault(_events);
 
-var _utilsLogger = require('../utils/logger');
+var _logger = require('../utils/logger');
 
-var _remuxMp4Generator = require('../remux/mp4-generator');
+var _mp4Generator = require('../remux/mp4-generator');
 
-var _remuxMp4Generator2 = _interopRequireDefault(_remuxMp4Generator);
+var _mp4Generator2 = _interopRequireDefault(_mp4Generator);
 
 var _errors = require('../errors');
 
-var MP4Remuxer = (function () {
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var MP4Remuxer = function () {
   function MP4Remuxer(observer) {
     _classCallCheck(this, MP4Remuxer);
 
@@ -6485,7 +6495,7 @@ var MP4Remuxer = (function () {
         this.remuxText(textTrack, timeOffset);
       }
       //notify end of parsing
-      this.observer.trigger(_events2['default'].FRAG_PARSED);
+      this.observer.trigger(_events2.default.FRAG_PARSED);
     }
   }, {
     key: 'generateIS',
@@ -6498,12 +6508,12 @@ var MP4Remuxer = (function () {
           pesTimeScale = this.PES_TIMESCALE;
 
       if (nbAudio === 0 && nbVideo === 0) {
-        observer.trigger(_events2['default'].ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'no audio/video samples found' });
+        observer.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'no audio/video samples found' });
       } else if (nbVideo === 0) {
         //audio only
         if (audioTrack.config) {
-          observer.trigger(_events2['default'].FRAG_PARSING_INIT_SEGMENT, {
-            audioMoov: _remuxMp4Generator2['default'].initSegment([audioTrack]),
+          observer.trigger(_events2.default.FRAG_PARSING_INIT_SEGMENT, {
+            audioMoov: _mp4Generator2.default.initSegment([audioTrack]),
             audioCodec: audioTrack.codec,
             audioChannelCount: audioTrack.channelCount
           });
@@ -6517,8 +6527,8 @@ var MP4Remuxer = (function () {
       } else if (nbAudio === 0) {
         //video only
         if (videoTrack.sps && videoTrack.pps) {
-          observer.trigger(_events2['default'].FRAG_PARSING_INIT_SEGMENT, {
-            videoMoov: _remuxMp4Generator2['default'].initSegment([videoTrack]),
+          observer.trigger(_events2.default.FRAG_PARSING_INIT_SEGMENT, {
+            videoMoov: _mp4Generator2.default.initSegment([videoTrack]),
             videoCodec: videoTrack.codec,
             videoWidth: videoTrack.width,
             videoHeight: videoTrack.height
@@ -6533,11 +6543,11 @@ var MP4Remuxer = (function () {
       } else {
         //audio and video
         if (audioTrack.config && videoTrack.sps && videoTrack.pps) {
-          observer.trigger(_events2['default'].FRAG_PARSING_INIT_SEGMENT, {
-            audioMoov: _remuxMp4Generator2['default'].initSegment([audioTrack]),
+          observer.trigger(_events2.default.FRAG_PARSING_INIT_SEGMENT, {
+            audioMoov: _mp4Generator2.default.initSegment([audioTrack]),
             audioCodec: audioTrack.codec,
             audioChannelCount: audioTrack.channelCount,
-            videoMoov: _remuxMp4Generator2['default'].initSegment([videoTrack]),
+            videoMoov: _mp4Generator2.default.initSegment([videoTrack]),
             videoCodec: videoTrack.codec,
             videoWidth: videoTrack.width,
             videoHeight: videoTrack.height
@@ -6578,7 +6588,7 @@ var MP4Remuxer = (function () {
       mdat = new Uint8Array(track.len + 4 * track.nbNalu + 8);
       view = new DataView(mdat.buffer);
       view.setUint32(0, mdat.byteLength);
-      mdat.set(_remuxMp4Generator2['default'].types.mdat, 4);
+      mdat.set(_mp4Generator2.default.types.mdat, 4);
       while (track.samples.length) {
         avcSample = track.samples.shift();
         mp4SampleLength = 0;
@@ -6603,7 +6613,7 @@ var MP4Remuxer = (function () {
           dtsnorm = this._PTSNormalize(dts, lastDTS);
           var sampleDuration = (dtsnorm - lastDTS) / pes2mp4ScaleFactor;
           if (sampleDuration <= 0) {
-            _utilsLogger.logger.log('invalid sample duration at PTS/DTS: ' + avcSample.pts + '/' + avcSample.dts + ':' + sampleDuration);
+            _logger.logger.log('invalid sample duration at PTS/DTS: ' + avcSample.pts + '/' + avcSample.dts + ':' + sampleDuration);
             sampleDuration = 1;
           }
           mp4Sample.duration = sampleDuration;
@@ -6618,15 +6628,15 @@ var MP4Remuxer = (function () {
           if (contiguous || Math.abs(delta) < 600) {
             if (delta) {
               if (delta > 1) {
-                _utilsLogger.logger.log('AVC:' + delta + ' ms hole between fragments detected,filling it');
+                _logger.logger.log('AVC:' + delta + ' ms hole between fragments detected,filling it');
               } else if (delta < -1) {
-                _utilsLogger.logger.log('AVC:' + -delta + ' ms overlapping between fragments detected');
+                _logger.logger.log('AVC:' + -delta + ' ms overlapping between fragments detected');
               }
               // set DTS to next DTS
               dtsnorm = nextAvcDts;
               // offset PTS as well, ensure that PTS is smaller or equal than new DTS
               ptsnorm = Math.max(ptsnorm - delta, dtsnorm);
-              _utilsLogger.logger.log('Video/PTS/DTS adjusted: ' + ptsnorm + '/' + dtsnorm + ',delta:' + delta);
+              _logger.logger.log('Video/PTS/DTS adjusted: ' + ptsnorm + '/' + dtsnorm + ',delta:' + delta);
             }
           }
           // remember first PTS of our avcSamples, ensure value is positive
@@ -6674,9 +6684,9 @@ var MP4Remuxer = (function () {
         flags.isNonSync = 0;
       }
       track.samples = samples;
-      moof = _remuxMp4Generator2['default'].moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
+      moof = _mp4Generator2.default.moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
       track.samples = [];
-      this.observer.trigger(_events2['default'].FRAG_PARSING_DATA, {
+      this.observer.trigger(_events2.default.FRAG_PARSING_DATA, {
         moof: moof,
         mdat: mdat,
         startPTS: firstPTS / pesTimeScale,
@@ -6730,7 +6740,7 @@ var MP4Remuxer = (function () {
           mp4Sample.duration = (dtsnorm - lastDTS) / pes2mp4ScaleFactor;
           if (Math.abs(mp4Sample.duration - 1024) > 10) {
             // not expected to happen ...
-            _utilsLogger.logger.log('invalid AAC sample duration at PTS ' + Math.round(pts / 90) + ',should be 1024,found :' + Math.round(mp4Sample.duration));
+            _logger.logger.log('invalid AAC sample duration at PTS ' + Math.round(pts / 90) + ',should be 1024,found :' + Math.round(mp4Sample.duration));
           }
           mp4Sample.duration = 1024;
           dtsnorm = 1024 * pes2mp4ScaleFactor + lastDTS;
@@ -6745,11 +6755,11 @@ var MP4Remuxer = (function () {
             // log delta
             if (delta) {
               if (delta > 0) {
-                _utilsLogger.logger.log(delta + ' ms hole between AAC samples detected,filling it');
+                _logger.logger.log(delta + ' ms hole between AAC samples detected,filling it');
                 // if we have frame overlap, overlapping for more than half a frame duraion
               } else if (delta < -12) {
                   // drop overlapping audio frames... browser will deal with it
-                  _utilsLogger.logger.log(-delta + ' ms overlapping between AAC samples detected, drop frame');
+                  _logger.logger.log(-delta + ' ms overlapping between AAC samples detected, drop frame');
                   track.len -= unit.byteLength;
                   continue;
                 }
@@ -6766,7 +6776,7 @@ var MP4Remuxer = (function () {
             mdat = new Uint8Array(track.len + 8);
             view = new DataView(mdat.buffer);
             view.setUint32(0, mdat.byteLength);
-            mdat.set(_remuxMp4Generator2['default'].types.mdat, 4);
+            mdat.set(_mp4Generator2.default.types.mdat, 4);
           } else {
             // no audio samples
             return;
@@ -6803,9 +6813,9 @@ var MP4Remuxer = (function () {
         //logger.log('Audio/PTS/PTSend:' + aacSample.pts.toFixed(0) + '/' + this.nextAacDts.toFixed(0));
         track.len = 0;
         track.samples = samples;
-        moof = _remuxMp4Generator2['default'].moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
+        moof = _mp4Generator2.default.moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
         track.samples = [];
-        this.observer.trigger(_events2['default'].FRAG_PARSING_DATA, {
+        this.observer.trigger(_events2.default.FRAG_PARSING_DATA, {
           moof: moof,
           mdat: mdat,
           startPTS: firstPTS / pesTimeScale,
@@ -6831,7 +6841,7 @@ var MP4Remuxer = (function () {
           sample.pts = (sample.pts - this._initPTS) / this.PES_TIMESCALE;
           sample.dts = (sample.dts - this._initDTS) / this.PES_TIMESCALE;
         }
-        this.observer.trigger(_events2['default'].FRAG_PARSING_METADATA, {
+        this.observer.trigger(_events2.default.FRAG_PARSING_METADATA, {
           samples: track.samples
         });
       }
@@ -6856,7 +6866,7 @@ var MP4Remuxer = (function () {
           // using this._initPTS and this._initDTS to calculate relative time
           sample.pts = (sample.pts - this._initPTS) / this.PES_TIMESCALE;
         }
-        this.observer.trigger(_events2['default'].FRAG_PARSING_USERDATA, {
+        this.observer.trigger(_events2.default.FRAG_PARSING_USERDATA, {
           samples: track.samples
         });
       }
@@ -6894,25 +6904,24 @@ var MP4Remuxer = (function () {
   }]);
 
   return MP4Remuxer;
-})();
+}();
 
-exports['default'] = MP4Remuxer;
-module.exports = exports['default'];
+exports.default = MP4Remuxer;
 
-},{"../errors":18,"../events":20,"../remux/mp4-generator":26,"../utils/logger":31}],28:[function(require,module,exports){
-
-// adapted from https://github.com/kanongil/node-m3u8parse/blob/master/attrlist.js
+},{"../errors":19,"../events":21,"../remux/mp4-generator":27,"../utils/logger":32}],29:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+// adapted from https://github.com/kanongil/node-m3u8parse/blob/master/attrlist.js
 
-var AttrList = (function () {
+var AttrList = function () {
   function AttrList(attrs) {
     _classCallCheck(this, AttrList);
 
@@ -7002,12 +7011,11 @@ var AttrList = (function () {
   }]);
 
   return AttrList;
-})();
+}();
 
-exports['default'] = AttrList;
-module.exports = exports['default'];
+exports.default = AttrList;
 
-},{}],29:[function(require,module,exports){
+},{}],30:[function(require,module,exports){
 "use strict";
 
 var BinarySearch = {
@@ -7052,22 +7060,22 @@ var BinarySearch = {
 
 module.exports = BinarySearch;
 
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
 /*
  * CEA-708 interpreter
 */
 
-'use strict';
-
-Object.defineProperty(exports, '__esModule', {
-  value: true
-});
-
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-var CEA708Interpreter = (function () {
+var CEA708Interpreter = function () {
   function CEA708Interpreter() {
     _classCallCheck(this, CEA708Interpreter);
   }
@@ -7092,25 +7100,26 @@ var CEA708Interpreter = (function () {
     value: function _createCue() {
       var VTTCue = window.VTTCue || window.TextTrackCue;
 
-      this.cue = new VTTCue(-1, -1, '');
-      this.cue.text = '';
-      this.cue.pauseOnExit = false;
+      var cue = this.cue = new VTTCue(-1, -1, '');
+      cue.text = '';
+      cue.pauseOnExit = false;
 
       // make sure it doesn't show up before it's ready
-      this.startTime = Number.MAX_VALUE;
+      cue.startTime = Number.MAX_VALUE;
 
       // show it 'forever' once we do show it
       // (we'll set the end time once we know it later)
-      this.cue.endTime = Number.MAX_VALUE;
+      cue.endTime = Number.MAX_VALUE;
 
-      this.memory.push(this.cue);
+      this.memory.push(cue);
     }
   }, {
     key: 'clear',
     value: function clear() {
-      if (this._textTrack && this._textTrack.cues) {
-        while (this._textTrack.cues.length > 0) {
-          this._textTrack.removeCue(this._textTrack.cues[0]);
+      var textTrack = this._textTrack;
+      if (textTrack && textTrack.cues) {
+        while (textTrack.cues.length > 0) {
+          textTrack.removeCue(textTrack.cues[0]);
         }
       }
     }
@@ -7123,14 +7132,14 @@ var CEA708Interpreter = (function () {
 
       var count = bytes[0] & 31;
       var position = 2;
-      var byte, ccbyte1, ccbyte2, ccValid, ccType;
+      var tmpByte, ccbyte1, ccbyte2, ccValid, ccType;
 
       for (var j = 0; j < count; j++) {
-        byte = bytes[position++];
+        tmpByte = bytes[position++];
         ccbyte1 = 0x7F & bytes[position++];
         ccbyte2 = 0x7F & bytes[position++];
-        ccValid = (4 & byte) === 0 ? false : true;
-        ccType = 3 & byte;
+        ccValid = (4 & tmpByte) === 0 ? false : true;
+        ccType = 3 & tmpByte;
 
         if (ccbyte1 === 0 && ccbyte2 === 0) {
           continue;
@@ -7339,8 +7348,8 @@ var CEA708Interpreter = (function () {
     }
   }, {
     key: '_fromCharCode',
-    value: function _fromCharCode(byte) {
-      switch (byte) {
+    value: function _fromCharCode(tmpByte) {
+      switch (tmpByte) {
         case 42:
           return 'á';
 
@@ -7375,7 +7384,7 @@ var CEA708Interpreter = (function () {
           return '█';
 
         default:
-          return String.fromCharCode(byte);
+          return String.fromCharCode(tmpByte);
       }
     }
   }, {
@@ -7392,10 +7401,31 @@ var CEA708Interpreter = (function () {
         this._has708 = true;
       }
 
-      for (var i = 0; i < this.memory.length; i++) {
-        this.memory[i].startTime = timestamp;
-        this._textTrack.addCue(this.memory[i]);
-        this.display.push(this.memory[i]);
+      var _iteratorNormalCompletion = true;
+      var _didIteratorError = false;
+      var _iteratorError = undefined;
+
+      try {
+        for (var _iterator = this.memory[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+          var memoryItem = _step.value;
+
+          memoryItem.startTime = timestamp;
+          this._textTrack.addCue(memoryItem);
+          this.display.push(memoryItem);
+        }
+      } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion && _iterator.return) {
+            _iterator.return();
+          }
+        } finally {
+          if (_didIteratorError) {
+            throw _iteratorError;
+          }
+        }
       }
 
       this.memory = [];
@@ -7404,8 +7434,29 @@ var CEA708Interpreter = (function () {
   }, {
     key: '_clearActiveCues',
     value: function _clearActiveCues(timestamp) {
-      for (var i = 0; i < this.display.length; i++) {
-        this.display[i].endTime = timestamp;
+      var _iteratorNormalCompletion2 = true;
+      var _didIteratorError2 = false;
+      var _iteratorError2 = undefined;
+
+      try {
+        for (var _iterator2 = this.display[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+          var displayItem = _step2.value;
+
+          displayItem.endTime = timestamp;
+        }
+      } catch (err) {
+        _didIteratorError2 = true;
+        _iteratorError2 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion2 && _iterator2.return) {
+            _iterator2.return();
+          }
+        } finally {
+          if (_didIteratorError2) {
+            throw _iteratorError2;
+          }
+        }
       }
 
       this.display = [];
@@ -7416,6 +7467,7 @@ var CEA708Interpreter = (function () {
         // TODO: implement roll-up captions
       }
     */
+
   }, {
     key: '_clearBufferedCues',
     value: function _clearBufferedCues() {
@@ -7424,15 +7476,16 @@ var CEA708Interpreter = (function () {
   }]);
 
   return CEA708Interpreter;
-})();
+}();
 
-exports['default'] = CEA708Interpreter;
-module.exports = exports['default'];
+exports.default = CEA708Interpreter;
 
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 function noop() {}
@@ -7489,8 +7542,8 @@ function exportLoggerFunctions(debugConfig) {
   });
 }
 
-var enableLogs = function enableLogs(debugConfig) {
-  if (debugConfig === true || typeof debugConfig === 'object') {
+var enableLogs = exports.enableLogs = function enableLogs(debugConfig) {
+  if (debugConfig === true || (typeof debugConfig === 'undefined' ? 'undefined' : _typeof(debugConfig)) === 'object') {
     exportLoggerFunctions(debugConfig,
     // Remove out from list here to hard-disable a log-level
     //'trace',
@@ -7507,11 +7560,9 @@ var enableLogs = function enableLogs(debugConfig) {
   }
 };
 
-exports.enableLogs = enableLogs;
-var logger = exportedLogger;
-exports.logger = logger;
+var logger = exports.logger = exportedLogger;
 
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 'use strict';
 
 var URLHelper = {
@@ -7591,24 +7642,22 @@ var URLHelper = {
 
 module.exports = URLHelper;
 
-},{}],33:[function(require,module,exports){
-/**
- * XHR based logger
-*/
-
+},{}],34:[function(require,module,exports){
 'use strict';
 
-Object.defineProperty(exports, '__esModule', {
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * XHR based logger
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
+
+Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _createClass = (function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ('value' in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; })();
+var _logger = require('../utils/logger');
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var _utilsLogger = require('../utils/logger');
-
-var XhrLoader = (function () {
+var XhrLoader = function () {
   function XhrLoader(config) {
     _classCallCheck(this, XhrLoader);
 
@@ -7700,7 +7749,7 @@ var XhrLoader = (function () {
         } else {
           // error ...
           if (stats.retry < this.maxRetry) {
-            _utilsLogger.logger.warn(status + ' while loading ' + this.url + ', retrying in ' + this.retryDelay + '...');
+            _logger.logger.warn(status + ' while loading ' + this.url + ', retrying in ' + this.retryDelay + '...');
             this.destroy();
             window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
             // exponential backoff
@@ -7708,7 +7757,7 @@ var XhrLoader = (function () {
             stats.retry++;
           } else {
             window.clearTimeout(this.timeoutHandle);
-            _utilsLogger.logger.error(status + ' while loading ' + this.url);
+            _logger.logger.error(status + ' while loading ' + this.url);
             this.onError(event);
           }
         }
@@ -7717,7 +7766,7 @@ var XhrLoader = (function () {
   }, {
     key: 'loadtimeout',
     value: function loadtimeout(event) {
-      _utilsLogger.logger.warn('timeout while loading ' + this.url);
+      _logger.logger.warn('timeout while loading ' + this.url);
       this.onTimeout(event, this.stats);
     }
   }, {
@@ -7735,11 +7784,10 @@ var XhrLoader = (function () {
   }]);
 
   return XhrLoader;
-})();
+}();
 
-exports['default'] = XhrLoader;
-module.exports = exports['default'];
+exports.default = XhrLoader;
 
-},{"../utils/logger":31}]},{},[22])(22)
+},{"../utils/logger":32}]},{},[1])(1)
 });
 //# sourceMappingURL=hls.js.map
