@@ -223,9 +223,9 @@
   }
 
   _parsePES(stream) {
-    var i = 0, frag, pesFlags, pesPrefix, pesLen, pesHdrLen, pesData, pesPts, pesDts, payloadStartOffset;
+    var i = 0, frag, pesFlags, pesPrefix, pesLen, pesHdrLen, pesData, pesPts, pesDts, payloadStartOffset, data = stream.data;
     //retrieve PTS/DTS from first fragment
-    frag = stream.data[0];
+    frag = data[0];
     pesPrefix = (frag[0] << 16) + (frag[1] << 8) + frag[2];
     if (pesPrefix === 1) {
       pesLen = (frag[4] << 8) + frag[5];
@@ -261,14 +261,19 @@
       }
       pesHdrLen = frag[8];
       payloadStartOffset = pesHdrLen + 9;
-      // trim PES header
-      stream.data[0] = stream.data[0].subarray(payloadStartOffset);
+
       stream.size -= payloadStartOffset;
+      // trim PES header
+      while(data.length && payloadStartOffset > data[0].byteLength) {
+        payloadStartOffset-= data[0].byteLength;
+        data.shift();
+      }
+      data[0] = data[0].subarray(payloadStartOffset);
       //reassemble PES packet
       pesData = new Uint8Array(stream.size);
       // reassemble the packet
-      while (stream.data.length) {
-        frag = stream.data.shift();
+      while (data.length) {
+        frag = data.shift();
         pesData.set(frag, i);
         i += frag.byteLength;
       }
