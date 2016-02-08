@@ -136,53 +136,54 @@ class Demuxer {
     }
 
     onWorkerMessage(ev) {
-        //console.log('onWorkerMessage:' + ev.data.event);
-        switch (ev.data.event) {
+        var data = ev.data;
+        //console.log('onWorkerMessage:' + data.event);
+        switch (data.event) {
             case Event.FRAG_PARSING_INIT_SEGMENT:
                 var obj = {};
-                if (ev.data.audioInitSegment) {
+                if (data.audioInitSegment) {
                     obj.audioInitSegment = new Uint8Array(
-                        ev.data.audioInitSegment
+                        data.audioInitSegment
                     );
-                    obj.audioCodec = ev.data.audioCodec;
-                    obj.audioContainer = ev.data.audioContainer;
-                    obj.audioChannelCount = ev.data.audioChannelCount;
+                    obj.audioCodec = data.audioCodec;
+                    obj.audioContainer = data.audioContainer;
+                    obj.audioChannelCount = data.audioChannelCount;
                 }
                 if (ev.data.videoInitSegment) {
                     obj.videoInitSegment = new Uint8Array(
-                        ev.data.videoInitSegment
+                        data.videoInitSegment
                     );
-                    obj.videoContainer = ev.data.videoContainer;
-                    obj.videoCodec = ev.data.videoCodec;
-                    obj.videoWidth = ev.data.videoWidth;
-                    obj.videoHeight = ev.data.videoHeight;
+                    obj.videoContainer = data.videoContainer;
+                    obj.videoCodec = data.videoCodec;
+                    obj.videoWidth = data.videoWidth;
+                    obj.videoHeight = data.videoHeight;
                 }
                 this.hls.trigger(Event.FRAG_PARSING_INIT_SEGMENT, obj);
                 break;
             case Event.FRAG_PARSING_DATA:
                 this.hls.trigger(Event.FRAG_PARSING_DATA, {
-                    data1: new Uint8Array(ev.data.data1),
-                    data2: new Uint8Array(ev.data.data2),
-                    startPTS: ev.data.startPTS,
-                    endPTS: ev.data.endPTS,
-                    startDTS: ev.data.startDTS,
-                    endDTS: ev.data.endDTS,
-                    type: ev.data.type,
-                    nb: ev.data.nb
+                    data1: new Uint8Array(data.data1),
+                    data2: new Uint8Array(data.data2),
+                    startPTS: data.startPTS,
+                    endPTS: data.endPTS,
+                    startDTS: data.startDTS,
+                    endDTS: data.endDTS,
+                    type: data.type,
+                    nb: data.nb
                 });
                 break;
             case Event.FRAG_PARSING_METADATA:
                 this.hls.trigger(Event.FRAG_PARSING_METADATA, {
-                    samples: ev.data.samples
+                    samples: data.samples
                 });
                 break;
             case Event.FRAG_PARSING_USERDATA:
                 this.hls.trigger(Event.FRAG_PARSING_USERDATA, {
-                    samples: ev.data.samples
+                    samples: data.samples
                 });
                 break;
             default:
-                this.hls.trigger(ev.data.event, ev.data.data);
+                this.hls.trigger(data.event, data.data);
                 break;
         }
     }
