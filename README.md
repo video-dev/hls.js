@@ -49,17 +49,8 @@ prepackaged build is included in the [dist] (dist) folder:
 
 if you want to bundle the application yourself, use node
 
-```sh
-git clone https://github.com/dailymotion/hls.js.git
-# setup dev environnement
-cd hls.js
-npm install
-# build dist/hls.js, watch file change for rebuild and launch demo page
-npm run dev
-# lint
-npm run lint
-# minify
-npm run minify
+```
+npm install hls.js
 ```
 
 ## Installation
@@ -165,6 +156,17 @@ hls.js can be configured and controlled easily, click [here](API.md) for details
 
 Pull requests are welcome. Here is a quick guide on how to start.
 
+ - First, checkout the repository and install required dependencies
+```sh
+git clone https://github.com/dailymotion/hls.js.git
+# setup dev environnement
+cd hls.js
+npm install
+# build dist/hls.js, watch file change for rebuild and launch demo page
+npm run dev
+# lint
+npm run lint
+```
  - Use [EditorConfig](http://editorconfig.org/) or at least stay consistent to the file formats defined in the `.editorconfig` file.
  - Develop in a topic branch, not master
  - Don't commit the updated `dist/hls.js` file in your PR. We'll take care of generating an updated build right before releasing a new tagged version.
