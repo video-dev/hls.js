@@ -1,4 +1,4 @@
-!function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.Hls=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.Hls = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 'use strict';
 
 // This is mostly for support of the es6 module export
@@ -6,7 +6,7 @@
 // function exports like we are used to in node/commonjs
 module.exports = require('./src/hls.js').default;
 
-},{"./src/hls.js":23}],2:[function(require,module,exports){
+},{"./src/hls.js":24}],2:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -90,18 +90,11 @@ EventEmitter.prototype.emit = function(type) {
         break;
       // slower
       default:
-        len = arguments.length;
-        args = new Array(len - 1);
-        for (i = 1; i < len; i++)
-          args[i - 1] = arguments[i];
+        args = Array.prototype.slice.call(arguments, 1);
         handler.apply(this, args);
     }
   } else if (isObject(handler)) {
-    len = arguments.length;
-    args = new Array(len - 1);
-    for (i = 1; i < len; i++)
-      args[i - 1] = arguments[i];
-
+    args = Array.prototype.slice.call(arguments, 1);
     listeners = handler.slice();
     len = listeners.length;
     for (i = 0; i < len; i++)
@@ -139,7 +132,6 @@ EventEmitter.prototype.addListener = function(type, listener) {
 
   // Check for listener leak
   if (isObject(this._events[type]) && !this._events[type].warned) {
-    var m;
     if (!isUndefined(this._maxListeners)) {
       m = this._maxListeners;
     } else {
@@ -261,7 +253,7 @@ EventEmitter.prototype.removeAllListeners = function(type) {
 
   if (isFunction(listeners)) {
     this.removeListener(type, listeners);
-  } else {
+  } else if (listeners) {
     // LIFO order
     while (listeners.length)
       this.removeListener(type, listeners[listeners.length - 1]);
@@ -282,15 +274,20 @@ EventEmitter.prototype.listeners = function(type) {
   return ret;
 };
 
+EventEmitter.prototype.listenerCount = function(type) {
+  if (this._events) {
+    var evlistener = this._events[type];
+
+    if (isFunction(evlistener))
+      return 1;
+    else if (evlistener)
+      return evlistener.length;
+  }
+  return 0;
+};
+
 EventEmitter.listenerCount = function(emitter, type) {
-  var ret;
-  if (!emitter._events || !emitter._events[type])
-    ret = 0;
-  else if (isFunction(emitter._events[type]))
-    ret = 1;
-  else
-    ret = emitter._events[type].length;
-  return ret;
+  return emitter.listenerCount(type);
 };
 
 function isFunction(arg) {
@@ -498,7 +495,415 @@ var AbrController = function (_EventHandler) {
 
 exports.default = AbrController;
 
-},{"../event-handler":20,"../events":21}],5:[function(require,module,exports){
+},{"../event-handler":21,"../events":22}],5:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _events = require('../events');
+
+var _events2 = _interopRequireDefault(_events);
+
+var _eventHandler = require('../event-handler');
+
+var _eventHandler2 = _interopRequireDefault(_eventHandler);
+
+var _logger = require('../utils/logger');
+
+var _errors = require('../errors');
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Buffer Controller
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
+
+var BufferController = function (_EventHandler) {
+  _inherits(BufferController, _EventHandler);
+
+  function BufferController(hls) {
+    _classCallCheck(this, BufferController);
+
+    // Source Buffer listeners
+
+    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(BufferController).call(this, hls, _events2.default.MEDIA_ATTACHING, _events2.default.MEDIA_DETACHING, _events2.default.BUFFER_RESET, _events2.default.BUFFER_APPENDING, _events2.default.BUFFER_CODECS, _events2.default.BUFFER_EOS, _events2.default.BUFFER_FLUSHING));
+
+    _this.onsbue = _this.onSBUpdateEnd.bind(_this);
+    _this.onsbe = _this.onSBUpdateError.bind(_this);
+    return _this;
+  }
+
+  _createClass(BufferController, [{
+    key: 'destroy',
+    value: function destroy() {
+      _eventHandler2.default.prototype.destroy.call(this);
+    }
+  }, {
+    key: 'onMediaAttaching',
+    value: function onMediaAttaching(data) {
+      var media = this.media = data.media;
+      // setup the media source
+      var ms = this.mediaSource = new MediaSource();
+      //Media Source listeners
+      this.onmso = this.onMediaSourceOpen.bind(this);
+      this.onmse = this.onMediaSourceEnded.bind(this);
+      this.onmsc = this.onMediaSourceClose.bind(this);
+      ms.addEventListener('sourceopen', this.onmso);
+      ms.addEventListener('sourceended', this.onmse);
+      ms.addEventListener('sourceclose', this.onmsc);
+      // link video and media Source
+      media.src = URL.createObjectURL(ms);
+    }
+  }, {
+    key: 'onMediaDetaching',
+    value: function onMediaDetaching() {
+      var ms = this.mediaSource;
+      if (ms) {
+        if (ms.readyState === 'open') {
+          try {
+            // endOfStream could trigger exception if any sourcebuffer is in updating state
+            // we don't really care about checking sourcebuffer state here,
+            // as we are anyway detaching the MediaSource
+            // let's just avoid this exception to propagate
+            ms.endOfStream();
+          } catch (err) {
+            _logger.logger.warn('onMediaDetaching:' + err.message + ' while calling endOfStream');
+          }
+        }
+        ms.removeEventListener('sourceopen', this.onmso);
+        ms.removeEventListener('sourceended', this.onmse);
+        ms.removeEventListener('sourceclose', this.onmsc);
+        // unlink MediaSource from video tag
+        this.media.src = '';
+        this.mediaSource = null;
+        this.media = null;
+        this.loadedmetadata = false;
+      }
+      this.onmso = this.onmse = this.onmsc = null;
+      this.hls.trigger(_events2.default.MEDIA_DETACHED);
+    }
+  }, {
+    key: 'onMediaSourceOpen',
+    value: function onMediaSourceOpen() {
+      _logger.logger.log('media source opened');
+      this.hls.trigger(_events2.default.MEDIA_ATTACHED, { media: this.media });
+      // once received, don't listen anymore to sourceopen event
+      this.mediaSource.removeEventListener('sourceopen', this.onmso);
+    }
+  }, {
+    key: 'onMediaSourceClose',
+    value: function onMediaSourceClose() {
+      _logger.logger.log('media source closed');
+    }
+  }, {
+    key: 'onMediaSourceEnded',
+    value: function onMediaSourceEnded() {
+      _logger.logger.log('media source ended');
+    }
+  }, {
+    key: 'onSBUpdateEnd',
+    value: function onSBUpdateEnd() {
+
+      if (this._needsFlush) {
+        this.doFlush();
+      }
+
+      if (this._needsEos) {
+        this.onBufferEos();
+      }
+
+      this.hls.trigger(_events2.default.BUFFER_APPENDED);
+
+      this.doAppending();
+    }
+  }, {
+    key: 'onSBUpdateError',
+    value: function onSBUpdateError(event) {
+      _logger.logger.error('sourceBuffer error:' + event);
+      // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
+      // this error might not always be fatal (it is fatal if decode error is set, in that case
+      // it will be followed by a mediaElement error ...)
+      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_APPENDING_ERROR, fatal: false });
+      // we don't need to do more than that, as accordin to the spec, updateend will be fired just after
+    }
+  }, {
+    key: 'onBufferReset',
+    value: function onBufferReset() {
+      var sourceBuffer = this.sourceBuffer;
+      if (sourceBuffer) {
+        for (var type in sourceBuffer) {
+          var sb = sourceBuffer[type];
+          try {
+            this.mediaSource.removeSourceBuffer(sb);
+            sb.removeEventListener('updateend', this.onsbue);
+            sb.removeEventListener('error', this.onsbe);
+          } catch (err) {}
+        }
+        this.sourceBuffer = null;
+      }
+      this.flushRange = [];
+      this.appended = 0;
+    }
+  }, {
+    key: 'onBufferCodecs',
+    value: function onBufferCodecs(data) {
+      var sb,
+          audioCodec = data.levelAudioCodec,
+          videoCodec = data.levelVideoCodec,
+          hls = this.hls;
+      _logger.logger.log('playlist_level/init_segment codecs: video => ' + videoCodec + '/' + data.videoCodec + '; audio => ' + audioCodec + '/' + data.audioCodec);
+      // if playlist does not specify codecs, use codecs found while parsing fragment
+      // if no codec found while parsing fragment, also set codec to undefined to avoid creating sourceBuffer
+      if (audioCodec === undefined || data.audioCodec === undefined) {
+        audioCodec = data.audioCodec;
+      }
+
+      if (videoCodec === undefined || data.videoCodec === undefined) {
+        videoCodec = data.videoCodec;
+      }
+      // in case several audio codecs might be used, force HE-AAC for audio (some browsers don't support audio codec switch)
+      //don't do it for mono streams ...
+      var ua = navigator.userAgent.toLowerCase();
+      if (this.audiocodecswitch && data.audioChannelCount !== 1 && ua.indexOf('android') === -1 && ua.indexOf('firefox') === -1) {
+        audioCodec = 'mp4a.40.5';
+      }
+      if (!this.sourceBuffer) {
+        var sourceBuffer = {},
+            mediaSource = this.mediaSource;
+        _logger.logger.log('selected A/V codecs for sourceBuffers:' + audioCodec + ',' + videoCodec);
+        // create source Buffer and link them to MediaSource
+        if (audioCodec) {
+          sb = sourceBuffer.audio = mediaSource.addSourceBuffer(data.audioContainer + ';codecs=' + audioCodec);
+          sb.addEventListener('updateend', this.onsbue);
+          sb.addEventListener('error', this.onsbe);
+        }
+        if (videoCodec) {
+          sb = sourceBuffer.video = mediaSource.addSourceBuffer(data.videoContainer + ';codecs=' + videoCodec);
+          sb.addEventListener('updateend', this.onsbue);
+          sb.addEventListener('error', this.onsbe);
+        }
+        this.sourceBuffer = sourceBuffer;
+      }
+      if (audioCodec) {
+        hls.trigger(_events2.default.BUFFER_APPENDING, { type: 'audio', data: data.audioInitSegment });
+      }
+      if (videoCodec) {
+        hls.trigger(_events2.default.BUFFER_APPENDING, { type: 'video', data: data.videoInitSegment });
+      }
+    }
+  }, {
+    key: 'onBufferAppending',
+    value: function onBufferAppending(data) {
+      if (!this.segments) {
+        this.segments = [data];
+      } else {
+        this.segments.push(data);
+      }
+      this.doAppending();
+    }
+  }, {
+    key: 'onBufferAppendFail',
+    value: function onBufferAppendFail(data) {
+      _logger.logger.error('sourceBuffer error:' + data.event);
+      // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
+      // this error might not always be fatal (it is fatal if decode error is set, in that case
+      // it will be followed by a mediaElement error ...)
+      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_APPENDING_ERROR, fatal: false, frag: this.fragCurrent });
+    }
+  }, {
+    key: 'onBufferEos',
+    value: function onBufferEos() {
+      var sb = this.sourceBuffer,
+          mediaSource = this.mediaSource;
+      if (!mediaSource || mediaSource.readyState !== 'open') {
+        return;
+      }
+      if (!(sb.audio && sb.audio.updating || sb.video && sb.video.updating)) {
+        _logger.logger.log('all media data available, signal endOfStream() to MediaSource and stop loading fragment');
+        //Notify the media element that it now has all of the media data
+        mediaSource.endOfStream();
+        this._needsEos = false;
+      } else {
+        this._needsEos = true;
+      }
+    }
+  }, {
+    key: 'onBufferFlushing',
+    value: function onBufferFlushing(data) {
+      this.flushRange.push({ start: data.startOffset, end: data.endOffset });
+      // attempt flush immediatly
+      this.flushBufferCounter = 0;
+      this.doFlush();
+    }
+  }, {
+    key: 'doFlush',
+    value: function doFlush() {
+      // loop through all buffer ranges to flush
+      while (this.flushRange.length) {
+        var range = this.flushRange[0];
+        // flushBuffer will abort any buffer append in progress and flush Audio/Video Buffer
+        if (this.flushBuffer(range.start, range.end)) {
+          // range flushed, remove from flush array
+          this.flushRange.shift();
+          this.flushBufferCounter = 0;
+        } else {
+          this._needsFlush = true;
+          // avoid looping, wait for SB update end to retrigger a flush
+          return;
+        }
+      }
+      if (this.flushRange.length === 0) {
+        // everything flushed
+        this._needsFlush = false;
+
+        // let's recompute this.appended, which is used to avoid flush looping
+        var appended = 0;
+        var sourceBuffer = this.sourceBuffer;
+        if (sourceBuffer) {
+          var sb = sourceBuffer.audio;
+          if (sb) {
+            appended += sb.buffered.length;
+          }
+          sb = sourceBuffer.video;
+          if (sb) {
+            appended += sb.buffered.length;
+          }
+        }
+        this.appended = appended;
+        this.hls.trigger(_events2.default.BUFFER_FLUSHED);
+      }
+    }
+  }, {
+    key: 'doAppending',
+    value: function doAppending() {
+      var hls = this.hls,
+          sourceBuffer = this.sourceBuffer,
+          segments = this.segments;
+      if (sourceBuffer) {
+        if (this.media.error) {
+          segments = [];
+          _logger.logger.error('trying to append although a media error occured, flush segment and abort');
+          return;
+        }
+        // if MP4 segment appending in progress nothing to do
+        else if (sourceBuffer.audio && sourceBuffer.audio.updating || sourceBuffer.video && sourceBuffer.video.updating) {
+            //logger.log('sb append in progress');
+            // check if any MP4 segments left to append
+          } else if (segments.length) {
+              var segment = segments.shift();
+              try {
+                //logger.log(`appending ${segment.type} SB, size:${segment.data.length});
+                sourceBuffer[segment.type].appendBuffer(segment.data);
+                this.appendError = 0;
+                this.appended++;
+              } catch (err) {
+                // in case any error occured while appending, put back segment in segments table
+                _logger.logger.error('error while trying to append buffer:' + err.message);
+                segments.unshift(segment);
+                var event = { type: _errors.ErrorTypes.MEDIA_ERROR };
+                if (err.code !== 22) {
+                  if (this.appendError) {
+                    this.appendError++;
+                  } else {
+                    this.appendError = 1;
+                  }
+                  event.details = _errors.ErrorDetails.BUFFER_APPEND_ERROR;
+                  event.frag = this.fragCurrent;
+                  /* with UHD content, we could get loop of quota exceeded error until
+                    browser is able to evict some data from sourcebuffer. retrying help recovering this
+                  */
+                  if (this.appendError > this.config.appendErrorMaxRetry) {
+                    _logger.logger.log('fail ' + this.config.appendErrorMaxRetry + ' times to append segment in sourceBuffer');
+                    segments = [];
+                    event.fatal = true;
+                    hls.trigger(_events2.default.ERROR, event);
+                    return;
+                  } else {
+                    event.fatal = false;
+                    hls.trigger(_events2.default.ERROR, event);
+                  }
+                } else {
+                  // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
+                  // let's stop appending any segments, and report BUFFER_FULL error
+                  segments = [];
+                  event.details = _errors.ErrorDetails.BUFFER_FULL;
+                  hls.trigger(_events2.default.ERROR, event);
+                }
+              }
+            }
+      }
+    }
+
+    /*
+      flush specified buffered range,
+      return true once range has been flushed.
+      as sourceBuffer.remove() is asynchronous, flushBuffer will be retriggered on sourceBuffer update end
+    */
+
+  }, {
+    key: 'flushBuffer',
+    value: function flushBuffer(startOffset, endOffset) {
+      var sb, i, bufStart, bufEnd, flushStart, flushEnd;
+      //logger.log('flushBuffer,pos/start/end: ' + this.media.currentTime + '/' + startOffset + '/' + endOffset);
+      // safeguard to avoid infinite looping : don't try to flush more than the nb of appended segments
+      if (this.flushBufferCounter < this.appended && this.sourceBuffer) {
+        for (var type in this.sourceBuffer) {
+          sb = this.sourceBuffer[type];
+          if (!sb.updating) {
+            for (i = 0; i < sb.buffered.length; i++) {
+              bufStart = sb.buffered.start(i);
+              bufEnd = sb.buffered.end(i);
+              // workaround firefox not able to properly flush multiple buffered range.
+              if (navigator.userAgent.toLowerCase().indexOf('firefox') !== -1 && endOffset === Number.POSITIVE_INFINITY) {
+                flushStart = startOffset;
+                flushEnd = endOffset;
+              } else {
+                flushStart = Math.max(bufStart, startOffset);
+                flushEnd = Math.min(bufEnd, endOffset);
+              }
+              /* sometimes sourcebuffer.remove() does not flush
+                 the exact expected time range.
+                 to avoid rounding issues/infinite loop,
+                 only flush buffer range of length greater than 500ms.
+              */
+              if (Math.min(flushEnd, bufEnd) - flushStart > 0.5) {
+                this.flushBufferCounter++;
+                _logger.logger.log('flush ' + type + ' [' + flushStart + ',' + flushEnd + '], of [' + bufStart + ',' + bufEnd + '], pos:' + this.media.currentTime);
+                sb.remove(flushStart, flushEnd);
+                return false;
+              }
+            }
+          } else {
+            //logger.log('abort ' + type + ' append in progress');
+            // this will abort any appending in progress
+            //sb.abort();
+            _logger.logger.warn('cannot flush, sb updating in progress');
+            return false;
+          }
+        }
+      } else {
+        _logger.logger.warn('abort flushing too many retries');
+      }
+      _logger.logger.log('buffer flushed');
+      // everything flushed !
+      return true;
+    }
+  }]);
+
+  return BufferController;
+}(_eventHandler2.default);
+
+exports.default = BufferController;
+
+},{"../errors":20,"../event-handler":21,"../events":22,"../utils/logger":33}],6:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -803,7 +1208,7 @@ var LevelController = function (_EventHandler) {
 
 exports.default = LevelController;
 
-},{"../errors":19,"../event-handler":20,"../events":21,"../utils/logger":32}],6:[function(require,module,exports){
+},{"../errors":20,"../event-handler":21,"../events":22,"../utils/logger":33}],7:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -843,43 +1248,39 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * MSE Media Controller
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                * Stream Controller
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
 
 var State = {
-  ERROR: -2,
-  STARTING: -1,
-  IDLE: 0,
-  KEY_LOADING: 1,
-  FRAG_LOADING: 2,
-  FRAG_LOADING_WAITING_RETRY: 3,
-  WAITING_LEVEL: 4,
-  PARSING: 5,
-  PARSED: 6,
-  APPENDING: 7,
-  BUFFER_FLUSHING: 8,
-  ENDED: 9
+  ERROR: 'ERROR',
+  STARTING: 'STARTING',
+  IDLE: 'IDLE',
+  PAUSED: 'PAUSED',
+  KEY_LOADING: 'KEY_LOADING',
+  FRAG_LOADING: 'FRAG_LOADING',
+  FRAG_LOADING_WAITING_RETRY: 'FRAG_LOADING_WAITING_RETRY',
+  WAITING_LEVEL: 'WAITING_LEVEL',
+  PARSING: 'PARSING',
+  PARSED: 'PARSED',
+  ENDED: 'ENDED'
 };
 
-var MSEMediaController = function (_EventHandler) {
-  _inherits(MSEMediaController, _EventHandler);
+var StreamController = function (_EventHandler) {
+  _inherits(StreamController, _EventHandler);
 
-  function MSEMediaController(hls) {
-    _classCallCheck(this, MSEMediaController);
+  function StreamController(hls) {
+    _classCallCheck(this, StreamController);
 
-    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(MSEMediaController).call(this, hls, _events2.default.MEDIA_ATTACHING, _events2.default.MEDIA_DETACHING, _events2.default.MANIFEST_PARSED, _events2.default.LEVEL_LOADED, _events2.default.KEY_LOADED, _events2.default.FRAG_LOADED, _events2.default.FRAG_PARSING_INIT_SEGMENT, _events2.default.FRAG_PARSING_DATA, _events2.default.FRAG_PARSED, _events2.default.ERROR));
+    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(StreamController).call(this, hls, _events2.default.MEDIA_ATTACHED, _events2.default.MEDIA_DETACHING, _events2.default.MANIFEST_PARSED, _events2.default.LEVEL_LOADED, _events2.default.KEY_LOADED, _events2.default.FRAG_LOADED, _events2.default.FRAG_PARSING_INIT_SEGMENT, _events2.default.FRAG_PARSING_DATA, _events2.default.FRAG_PARSED, _events2.default.ERROR, _events2.default.BUFFER_APPENDING, _events2.default.BUFFER_APPENDED, _events2.default.BUFFER_FLUSHED));
 
     _this.config = hls.config;
     _this.audioCodecSwap = false;
     _this.ticks = 0;
-    // Source Buffer listeners
-    _this.onsbue = _this.onSBUpdateEnd.bind(_this);
-    _this.onsbe = _this.onSBUpdateError.bind(_this);
     _this.ontick = _this.tick.bind(_this);
     return _this;
   }
 
-  _createClass(MSEMediaController, [{
+  _createClass(StreamController, [{
     key: 'destroy',
     value: function destroy() {
       this.stop();
@@ -923,8 +1324,6 @@ var MSEMediaController = function (_EventHandler) {
   }, {
     key: 'stop',
     value: function stop() {
-      this.mp4segments = [];
-      this.flushRange = [];
       this.bufferRange = [];
       this.stalled = false;
       var frag = this.fragCurrent;
@@ -935,17 +1334,8 @@ var MSEMediaController = function (_EventHandler) {
         this.fragCurrent = null;
       }
       this.fragPrevious = null;
-      if (this.sourceBuffer) {
-        for (var type in this.sourceBuffer) {
-          var sb = this.sourceBuffer[type];
-          try {
-            this.mediaSource.removeSourceBuffer(sb);
-            sb.removeEventListener('updateend', this.onsbue);
-            sb.removeEventListener('error', this.onsbe);
-          } catch (err) {}
-        }
-        this.sourceBuffer = null;
-      }
+      _logger.logger.log('trigger BUFFER_RESET');
+      this.hls.trigger(_events2.default.BUFFER_RESET);
       if (this.timer) {
         clearInterval(this.timer);
         this.timer = null;
@@ -974,9 +1364,12 @@ var MSEMediaController = function (_EventHandler) {
           level,
           levelDetails,
           hls = this.hls;
+      //logger.log(this.state);
       switch (this.state) {
         case State.ERROR:
-          //don't do anything in error state to avoid breaking further ...
+        //don't do anything in error state to avoid breaking further ...
+        case State.PAUSED:
+          //don't do anything in paused state either ...
           break;
         case State.STARTING:
           // determine load level
@@ -1107,26 +1500,8 @@ var MSEMediaController = function (_EventHandler) {
                   } else {
                     // have we reached end of VOD playlist ?
                     if (!levelDetails.live) {
-                      var mediaSource = this.mediaSource;
-                      if (mediaSource) {
-                        switch (mediaSource.readyState) {
-                          case 'open':
-                            var sb = this.sourceBuffer;
-                            if (!(sb.audio && sb.audio.updating || sb.video && sb.video.updating)) {
-                              _logger.logger.log('all media data available, signal endOfStream() to MediaSource and stop loading fragment');
-                              //Notify the media element that it now has all of the media data
-                              mediaSource.endOfStream();
-                              this.state = State.ENDED;
-                            }
-                            break;
-                          case 'ended':
-                            _logger.logger.log('all media data available and mediaSource ended, stop loading fragment');
-                            this.state = State.ENDED;
-                            break;
-                          default:
-                            break;
-                        }
-                      }
+                      this.hls.trigger(_events2.default.BUFFER_EOS);
+                      this.state = State.ENDED;
                     }
                     _frag = null;
                   }
@@ -1231,90 +1606,7 @@ var MSEMediaController = function (_EventHandler) {
           // nothing to do, wait for fragment being parsed
           break;
         case State.PARSED:
-        case State.APPENDING:
-          var sourceBuffer = this.sourceBuffer,
-              mp4segments = this.mp4segments;
-          if (sourceBuffer) {
-            if (this.media.error) {
-              _logger.logger.error('trying to append although a media error occured, switch to ERROR state');
-              this.state = State.ERROR;
-              return;
-            }
-            // if MP4 segment appending in progress nothing to do
-            else if (sourceBuffer.audio && sourceBuffer.audio.updating || sourceBuffer.video && sourceBuffer.video.updating) {
-                //logger.log('sb append in progress');
-                // check if any MP4 segments left to append
-              } else if (mp4segments.length) {
-                  var segment = mp4segments.shift();
-                  try {
-                    //logger.log(`appending ${segment.type} SB, size:${segment.data.length});
-                    sourceBuffer[segment.type].appendBuffer(segment.data);
-                    this.appendError = 0;
-                  } catch (err) {
-                    // in case any error occured while appending, put back segment in mp4segments table
-                    _logger.logger.error('error while trying to append buffer:' + err.message + ',try appending later');
-                    mp4segments.unshift(segment);
-                    if (err.code !== 22) {
-                      if (this.appendError) {
-                        this.appendError++;
-                      } else {
-                        this.appendError = 1;
-                      }
-                      var event = { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_APPEND_ERROR, frag: this.fragCurrent };
-                      if (this.appendError > this.config.appendErrorMaxRetry) {
-                        _logger.logger.log('fail ' + this.config.appendErrorMaxRetry + ' times to append segment in sourceBuffer');
-                        event.fatal = true;
-                        hls.trigger(_events2.default.ERROR, event);
-                        this.state = State.ERROR;
-                        return;
-                      } else {
-                        event.fatal = false;
-                        hls.trigger(_events2.default.ERROR, event);
-                      }
-                    } else {
-                      // handle QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
-                      // let's stop appending any segments, and trigger a smooth level switch to empty buffers
-                      // also reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
-                      mp4segments = [];
-                      this.config.maxMaxBufferLength /= 2;
-                      _logger.logger.warn('reduce max buffer length to ' + this.config.maxMaxBufferLength + 's and trigger a nextLevelSwitch to flush old buffer and fix QuotaExceededError');
-                      this.nextLevelSwitch();
-                      return;
-                    }
-                  }
-                  this.state = State.APPENDING;
-                }
-          } else {
-            // sourceBuffer undefined, switch back to IDLE state
-            this.state = State.IDLE;
-          }
-          break;
-        case State.BUFFER_FLUSHING:
-          // loop through all buffer ranges to flush
-          while (this.flushRange.length) {
-            var range = this.flushRange[0];
-            // flushBuffer will abort any buffer append in progress and flush Audio/Video Buffer
-            if (this.flushBuffer(range.start, range.end)) {
-              // range flushed, remove from flush array
-              this.flushRange.shift();
-            } else {
-              // flush in progress, come back later
-              break;
-            }
-          }
-          if (this.flushRange.length === 0) {
-            // handle end of immediate switching if needed
-            if (this.immediateSwitch) {
-              this.immediateLevelSwitchEnd();
-            }
-            // move to IDLE once flush complete. this should trigger new fragment loading
-            this.state = State.IDLE;
-            // reset reference to frag
-            this.fragPrevious = null;
-          }
-          /* if not everything flushed, stay in BUFFER_FLUSHING state. we will come back here
-             each time sourceBuffer updateend() callback will be triggered
-             */
+          // nothing to do, wait for all buffers to be appended
           break;
         case State.ENDED:
           break;
@@ -1470,75 +1762,6 @@ var MSEMediaController = function (_EventHandler) {
     }
 
     /*
-      abort any buffer append in progress, and flush all buffered data
-      return true once everything has been flushed.
-      sourceBuffer.abort() and sourceBuffer.remove() are asynchronous operations
-      the idea is to call this function from tick() timer and call it again until all resources have been cleaned
-      the timer is rearmed upon sourceBuffer updateend() event, so this should be optimal
-    */
-
-  }, {
-    key: 'flushBuffer',
-    value: function flushBuffer(startOffset, endOffset) {
-      var sb, i, bufStart, bufEnd, flushStart, flushEnd;
-      //logger.log('flushBuffer,pos/start/end: ' + this.media.currentTime + '/' + startOffset + '/' + endOffset);
-      // safeguard to avoid infinite looping
-      if (this.flushBufferCounter++ < 2 * this.bufferRange.length && this.sourceBuffer) {
-        for (var type in this.sourceBuffer) {
-          sb = this.sourceBuffer[type];
-          if (!sb.updating) {
-            for (i = 0; i < sb.buffered.length; i++) {
-              bufStart = sb.buffered.start(i);
-              bufEnd = sb.buffered.end(i);
-              // workaround firefox not able to properly flush multiple buffered range.
-              if (navigator.userAgent.toLowerCase().indexOf('firefox') !== -1 && endOffset === Number.POSITIVE_INFINITY) {
-                flushStart = startOffset;
-                flushEnd = endOffset;
-              } else {
-                flushStart = Math.max(bufStart, startOffset);
-                flushEnd = Math.min(bufEnd, endOffset);
-              }
-              /* sometimes sourcebuffer.remove() does not flush
-                 the exact expected time range.
-                 to avoid rounding issues/infinite loop,
-                 only flush buffer range of length greater than 500ms.
-              */
-              if (Math.min(flushEnd, bufEnd) - flushStart > 0.5) {
-                _logger.logger.log('flush ' + type + ' [' + flushStart + ',' + flushEnd + '], of [' + bufStart + ',' + bufEnd + '], pos:' + this.media.currentTime);
-                sb.remove(flushStart, flushEnd);
-                return false;
-              }
-            }
-          } else {
-            //logger.log('abort ' + type + ' append in progress');
-            // this will abort any appending in progress
-            //sb.abort();
-            return false;
-          }
-        }
-      } else {
-        _logger.logger.warn('abort flushing too many retries');
-      }
-
-      /* after successful buffer flushing, rebuild buffer Range array
-        loop through existing buffer range and check if
-        corresponding range is still buffered. only push to new array already buffered range
-      */
-      var newRange = [],
-          range;
-      for (i = 0; i < this.bufferRange.length; i++) {
-        range = this.bufferRange[i];
-        if (this.isBuffered((range.start + range.end) / 2)) {
-          newRange.push(range);
-        }
-      }
-      this.bufferRange = newRange;
-      _logger.logger.log('buffer flushed');
-      // everything flushed !
-      return true;
-    }
-
-    /*
       on immediate level switch :
        - pause playback if playing
        - cancel any pending load request
@@ -1560,10 +1783,8 @@ var MSEMediaController = function (_EventHandler) {
       }
       this.fragCurrent = null;
       // flush everything
-      this.flushBufferCounter = 0;
-      this.flushRange.push({ start: 0, end: Number.POSITIVE_INFINITY });
-      // trigger a sourceBuffer flush
-      this.state = State.BUFFER_FLUSHING;
+      this.hls.trigger(_events2.default.BUFFER_FLUSHING, { startOffset: 0, endOffset: Number.POSITIVE_INFINITY });
+      this.state = State.PAUSED;
       // increase fragment load Index to avoid frag loop loading error after buffer flush
       this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
       // speed up switching, trigger timer function
@@ -1595,10 +1816,11 @@ var MSEMediaController = function (_EventHandler) {
       */
       var fetchdelay, currentRange, nextRange;
       currentRange = this.getBufferRange(this.media.currentTime);
-      if (currentRange) {
+      if (currentRange && currentRange.start > 1) {
         // flush buffer preceding current fragment (flush until current fragment start offset)
         // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
-        this.flushRange.push({ start: 0, end: currentRange.start - 1 });
+        this.hls.trigger(_events2.default.BUFFER_FLUSHING, { startOffset: 0, endOffset: currentRange.start - 1 });
+        this.state = State.PAUSED;
       }
       if (!this.media.paused) {
         // add a safety delay of 1s
@@ -1621,40 +1843,32 @@ var MSEMediaController = function (_EventHandler) {
         nextRange = this.followingBufferRange(nextRange);
         if (nextRange) {
           // flush position is the start position of this new buffer
-          this.flushRange.push({ start: nextRange.start, end: Number.POSITIVE_INFINITY });
+          this.hls.trigger(_events2.default.BUFFER_FLUSHING, { startOffset: nextRange.start, endOffset: Number.POSITIVE_INFINITY });
+          this.state = State.PAUSED;
           // if we are here, we can also cancel any loading/demuxing in progress, as they are useless
           var fragCurrent = this.fragCurrent;
           if (fragCurrent && fragCurrent.loader) {
             fragCurrent.loader.abort();
           }
           this.fragCurrent = null;
+          // increase fragment load Index to avoid frag loop loading error after buffer flush
+          this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
         }
-      }
-      if (this.flushRange.length) {
-        this.flushBufferCounter = 0;
-        // trigger a sourceBuffer flush
-        this.state = State.BUFFER_FLUSHING;
-        // increase fragment load Index to avoid frag loop loading error after buffer flush
-        this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
-        // speed up switching, trigger timer function
-        this.tick();
       }
     }
   }, {
-    key: 'onMediaAttaching',
-    value: function onMediaAttaching(data) {
+    key: 'onMediaAttached',
+    value: function onMediaAttached(data) {
       var media = this.media = data.media;
-      // setup the media source
-      var ms = this.mediaSource = new MediaSource();
-      //Media Source listeners
-      this.onmso = this.onMediaSourceOpen.bind(this);
-      this.onmse = this.onMediaSourceEnded.bind(this);
-      this.onmsc = this.onMediaSourceClose.bind(this);
-      ms.addEventListener('sourceopen', this.onmso);
-      ms.addEventListener('sourceended', this.onmse);
-      ms.addEventListener('sourceclose', this.onmsc);
-      // link video and media Source
-      media.src = URL.createObjectURL(ms);
+      this.onvseeking = this.onMediaSeeking.bind(this);
+      this.onvseeked = this.onMediaSeeked.bind(this);
+      this.onvended = this.onMediaEnded.bind(this);
+      media.addEventListener('seeking', this.onvseeking);
+      media.addEventListener('seeked', this.onvseeked);
+      media.addEventListener('ended', this.onvended);
+      if (this.levels && this.config.autoStartLoad) {
+        this.startLoad();
+      }
     }
   }, {
     key: 'onMediaDetaching',
@@ -1677,39 +1891,16 @@ var MSEMediaController = function (_EventHandler) {
           }
         });
       }
-      var ms = this.mediaSource;
-      if (ms) {
-        if (ms.readyState === 'open') {
-          try {
-            // endOfStream could trigger exception if any sourcebuffer is in updating state
-            // we don't really care about checking sourcebuffer state here,
-            // as we are anyway detaching the MediaSource
-            // let's just avoid this exception to propagate
-            ms.endOfStream();
-          } catch (err) {
-            _logger.logger.warn('onMediaDetaching:' + err.message + ' while calling endOfStream');
-          }
-        }
-        ms.removeEventListener('sourceopen', this.onmso);
-        ms.removeEventListener('sourceended', this.onmse);
-        ms.removeEventListener('sourceclose', this.onmsc);
-        // unlink MediaSource from video tag
-        this.media.src = '';
-        this.mediaSource = null;
-        // remove video listeners
-        if (media) {
-          media.removeEventListener('seeking', this.onvseeking);
-          media.removeEventListener('seeked', this.onvseeked);
-          media.removeEventListener('loadedmetadata', this.onvmetadata);
-          media.removeEventListener('ended', this.onvended);
-          this.onvseeking = this.onvseeked = this.onvmetadata = null;
-        }
-        this.media = null;
-        this.loadedmetadata = false;
-        this.stop();
+      // remove video listeners
+      if (media) {
+        media.removeEventListener('seeking', this.onvseeking);
+        media.removeEventListener('seeked', this.onvseeked);
+        media.removeEventListener('ended', this.onvended);
+        this.onvseeking = this.onvseeked = this.onvended = null;
       }
-      this.onmso = this.onmse = this.onmsc = null;
-      this.hls.trigger(_events2.default.MEDIA_DETACHED);
+      this.media = null;
+      this.loadedmetadata = false;
+      this.stop();
     }
   }, {
     key: 'onMediaSeeking',
@@ -1748,19 +1939,6 @@ var MSEMediaController = function (_EventHandler) {
     key: 'onMediaSeeked',
     value: function onMediaSeeked() {
       // tick to speed up FRAGMENT_PLAYING triggering
-      this.tick();
-    }
-  }, {
-    key: 'onMediaMetadata',
-    value: function onMediaMetadata() {
-      var media = this.media,
-          currentTime = media.currentTime;
-      // only adjust currentTime if not equal to 0
-      if (!currentTime && currentTime !== this.startPosition) {
-        _logger.logger.log('onMediaMetadata: adjust currentTime to startPosition');
-        media.currentTime = this.startPosition;
-      }
-      this.loadedmetadata = true;
       this.tick();
     }
   }, {
@@ -1888,6 +2066,7 @@ var MSEMediaController = function (_EventHandler) {
               audioCodec = 'mp4a.40.5';
             }
           }
+          this.pendingAppending = 0;
           _logger.logger.log('Demuxing ' + sn + ' of [' + details.startSN + ' ,' + details.endSN + '],level ' + level);
           this.demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata);
         }
@@ -1898,57 +2077,21 @@ var MSEMediaController = function (_EventHandler) {
     key: 'onFragParsingInitSegment',
     value: function onFragParsingInitSegment(data) {
       if (this.state === State.PARSING) {
-        // check if codecs have been explicitely defined in the master playlist for this level;
-        // if yes use these ones instead of the ones parsed from the demux
-        var audioCodec = this.levels[this.level].audioCodec,
-            videoCodec = this.levels[this.level].videoCodec,
-            sb;
-        this.lastAudioCodec = data.audioCodec;
-        if (audioCodec && this.audioCodecSwap) {
-          _logger.logger.log('swapping playlist audio codec');
-          if (audioCodec.indexOf('mp4a.40.5') !== -1) {
-            audioCodec = 'mp4a.40.2';
-          } else {
-            audioCodec = 'mp4a.40.5';
-          }
-        }
-        _logger.logger.log('playlist_level/init_segment codecs: video => ' + videoCodec + '/' + data.videoCodec + '; audio => ' + audioCodec + '/' + data.audioCodec);
-        // if playlist does not specify codecs, use codecs found while parsing fragment
-        // if no codec found while parsing fragment, also set codec to undefined to avoid creating sourceBuffer
-        if (audioCodec === undefined || data.audioCodec === undefined) {
-          audioCodec = data.audioCodec;
-        }
+        var levelAudioCodec = this.levels[this.level].audioCodec,
+            levelVideoCodec = this.levels[this.level].videoCodec;
 
-        if (videoCodec === undefined || data.videoCodec === undefined) {
-          videoCodec = data.videoCodec;
-        }
-        // in case several audio codecs might be used, force HE-AAC for audio (some browsers don't support audio codec switch)
-        //don't do it for mono streams ...
-        var ua = navigator.userAgent.toLowerCase();
-        if (this.audiocodecswitch && data.audioChannelCount !== 1 && ua.indexOf('android') === -1 && ua.indexOf('firefox') === -1) {
-          audioCodec = 'mp4a.40.5';
-        }
-        if (!this.sourceBuffer) {
-          this.sourceBuffer = {};
-          _logger.logger.log('selected A/V codecs for sourceBuffers:' + audioCodec + ',' + videoCodec);
-          // create source Buffer and link them to MediaSource
-          if (audioCodec) {
-            sb = this.sourceBuffer.audio = this.mediaSource.addSourceBuffer('audio/mp4;codecs=' + audioCodec);
-            sb.addEventListener('updateend', this.onsbue);
-            sb.addEventListener('error', this.onsbe);
-          }
-          if (videoCodec) {
-            sb = this.sourceBuffer.video = this.mediaSource.addSourceBuffer('video/mp4;codecs=' + videoCodec);
-            sb.addEventListener('updateend', this.onsbue);
-            sb.addEventListener('error', this.onsbe);
+        if (levelAudioCodec && this.audioCodecSwap) {
+          _logger.logger.log('swapping playlist audio codec');
+          if (levelAudioCodec.indexOf('mp4a.40.5') !== -1) {
+            levelAudioCodec = 'mp4a.40.2';
+          } else {
+            levelAudioCodec = 'mp4a.40.5';
           }
         }
-        if (audioCodec) {
-          this.mp4segments.push({ type: 'audio', data: data.audioMoov });
-        }
-        if (videoCodec) {
-          this.mp4segments.push({ type: 'video', data: data.videoMoov });
-        }
+        // include codecs signaled from variant manifest
+        data.levelAudioCodec = levelAudioCodec;
+        data.levelVideoCodec = levelVideoCodec;
+        this.hls.trigger(_events2.default.BUFFER_CODECS, data);
         //trigger handler right now
         this.tick();
       }
@@ -1960,19 +2103,26 @@ var MSEMediaController = function (_EventHandler) {
         this.tparse2 = Date.now();
         var level = this.levels[this.level],
             frag = this.fragCurrent;
-        _logger.logger.log('parsed ' + data.type + ',PTS:[' + data.startPTS.toFixed(3) + ',' + data.endPTS.toFixed(3) + '],DTS:[' + data.startDTS.toFixed(3) + '/' + data.endDTS.toFixed(3) + '],nb:' + data.nb);
-        var drift = _levelHelper2.default.updateFragPTS(level.details, frag.sn, data.startPTS, data.endPTS);
-        this.hls.trigger(_events2.default.LEVEL_PTS_UPDATED, { details: level.details, level: this.level, drift: drift });
 
-        this.mp4segments.push({ type: data.type, data: data.moof });
-        this.mp4segments.push({ type: data.type, data: data.mdat });
+        _logger.logger.log('parsed ' + data.type + ',PTS:[' + data.startPTS.toFixed(3) + ',' + data.endPTS.toFixed(3) + '],DTS:[' + data.startDTS.toFixed(3) + '/' + data.endDTS.toFixed(3) + '],nb:' + data.nb);
+
+        var drift = _levelHelper2.default.updateFragPTS(level.details, frag.sn, data.startPTS, data.endPTS),
+            hls = this.hls;
+        hls.trigger(_events2.default.LEVEL_PTS_UPDATED, { details: level.details, level: this.level, drift: drift });
+
+        [data.data1, data.data2].forEach(function (buffer) {
+          if (buffer) {
+            hls.trigger(_events2.default.BUFFER_APPENDING, { type: data.type, data: buffer });
+          }
+        });
+
         this.nextLoadPosition = data.endPTS;
         this.bufferRange.push({ type: data.type, start: data.startPTS, end: data.endPTS, frag: frag });
 
         //trigger handler right now
         this.tick();
       } else {
-        _logger.logger.warn('not in PARSING state, ignoring FRAG_PARSING_DATA event');
+        _logger.logger.warn('not in PARSING state but ' + this.state + ', ignoring FRAG_PARSING_DATA event');
       }
     }
   }, {
@@ -1980,17 +2130,43 @@ var MSEMediaController = function (_EventHandler) {
     value: function onFragParsed() {
       if (this.state === State.PARSING) {
         this.stats.tparsed = performance.now();
-
-        var sb = this.sourceBuffer,
-            appending = sb.audio && sb.audio.updating || sb.video && sb.video.updating;
-
-        // if fragment parsed, and all segments appended, and no appending in progress, we are done with this fragment
-        if (this.mp4segments.length === 0 && !appending) {
+        this.state = State.PARSED;
+        this._checkAppendedParsed();
+      }
+    }
+  }, {
+    key: 'onBufferAppending',
+    value: function onBufferAppending() {
+      this.pendingAppending++;
+    }
+  }, {
+    key: 'onBufferAppended',
+    value: function onBufferAppended() {
+      switch (this.state) {
+        case State.PARSING:
+        case State.PARSED:
+          this.pendingAppending--;
+          this._checkAppendedParsed();
+          break;
+        default:
+          break;
+      }
+    }
+  }, {
+    key: '_checkAppendedParsed',
+    value: function _checkAppendedParsed() {
+      //trigger handler right now
+      if (this.state === State.PARSED && this.pendingAppending === 0) {
+        var frag = this.fragCurrent,
+            stats = this.stats;
+        if (frag) {
+          this.fragPrevious = frag;
+          stats.tbuffered = performance.now();
+          this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
+          this.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: stats, frag: frag });
+          _logger.logger.log('media buffered : ' + this.timeRangesToString(this.media.buffered));
           this.state = State.IDLE;
-        } else {
-          this.state = State.PARSED;
         }
-        //trigger handler right now
         this.tick();
       }
     }
@@ -2035,27 +2211,16 @@ var MSEMediaController = function (_EventHandler) {
           _logger.logger.warn('mediaController: ' + data.details + ' while loading frag,switch to ' + (data.fatal ? 'ERROR' : 'IDLE') + ' state ...');
           this.state = data.fatal ? State.ERROR : State.IDLE;
           break;
+        case _errors.ErrorDetails.BUFFER_FULL:
+          // trigger a smooth level switch to empty buffers
+          // also reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
+          this.config.maxMaxBufferLength /= 2;
+          _logger.logger.warn('reduce max buffer length to ' + this.config.maxMaxBufferLength + 's and trigger a nextLevelSwitch to flush old buffer and fix QuotaExceededError');
+          this.nextLevelSwitch();
+          break;
         default:
           break;
       }
-    }
-  }, {
-    key: 'onSBUpdateEnd',
-    value: function onSBUpdateEnd() {
-      //trigger handler right now
-      if (this.state === State.APPENDING && this.mp4segments.length === 0) {
-        var frag = this.fragCurrent,
-            stats = this.stats;
-        if (frag) {
-          this.fragPrevious = frag;
-          stats.tbuffered = performance.now();
-          this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
-          this.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: stats, frag: frag });
-          _logger.logger.log('media buffered : ' + this.timeRangesToString(this.media.buffered));
-          this.state = State.IDLE;
-        }
-      }
-      this.tick();
     }
   }, {
     key: '_checkBuffer',
@@ -2075,7 +2240,18 @@ var MSEMediaController = function (_EventHandler) {
             }
           } else {
             var currentTime = media.currentTime,
-                bufferInfo = this.bufferInfo(currentTime, 0),
+                loadedmetadata = this.loadedmetadata;
+
+            // adjust currentTime to start position on loaded metadata
+            if (!loadedmetadata && media.buffered.length) {
+              this.loadedmetadata = true;
+              // only adjust currentTime if not equal to 0
+              if (!currentTime && currentTime !== this.startPosition) {
+                currentTime = this.startPosition;
+              }
+            }
+
+            var bufferInfo = this.bufferInfo(currentTime, 0),
                 isPlaying = !(media.paused || media.ended || media.seeking || readyState < 3),
                 jumpThreshold = 0.2,
                 playheadMoving = currentTime > media.playbackRate * this.lastCurrentTime;
@@ -2107,7 +2283,7 @@ var MSEMediaController = function (_EventHandler) {
                 if (nextBufferStart && delta < this.config.maxSeekHole && delta > 0.005 && !media.seeking) {
                   // next buffer is close ! adjust currentTime to nextBufferStart
                   // this will ensure effective video decoding
-                  _logger.logger.log('adjust currentTime from ' + currentTime + ' to ' + nextBufferStart);
+                  _logger.logger.log('adjust currentTime from ' + media.currentTime + ' to ' + nextBufferStart);
                   media.currentTime = nextBufferStart;
                 }
               }
@@ -2117,19 +2293,36 @@ var MSEMediaController = function (_EventHandler) {
       }
     }
   }, {
+    key: 'onBufferFlushed',
+    value: function onBufferFlushed() {
+      /* after successful buffer flushing, rebuild buffer Range array
+        loop through existing buffer range and check if
+        corresponding range is still buffered. only push to new array already buffered range
+      */
+      var newRange = [],
+          range,
+          i;
+      for (i = 0; i < this.bufferRange.length; i++) {
+        range = this.bufferRange[i];
+        if (this.isBuffered((range.start + range.end) / 2)) {
+          newRange.push(range);
+        }
+      }
+      this.bufferRange = newRange;
+
+      // handle end of immediate switching if needed
+      if (this.immediateSwitch) {
+        this.immediateLevelSwitchEnd();
+      }
+      // move to IDLE once flush complete. this should trigger new fragment loading
+      this.state = State.IDLE;
+      // reset reference to frag
+      this.fragPrevious = null;
+    }
+  }, {
     key: 'swapAudioCodec',
     value: function swapAudioCodec() {
       this.audioCodecSwap = !this.audioCodecSwap;
-    }
-  }, {
-    key: 'onSBUpdateError',
-    value: function onSBUpdateError(event) {
-      _logger.logger.error('sourceBuffer error:' + event);
-      this.state = State.ERROR;
-      // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
-      // this error might not always be fatal (it is fatal if decode error is set, in that case
-      // it will be followed by a mediaElement error ...)
-      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_APPENDING_ERROR, fatal: false, frag: this.fragCurrent });
     }
   }, {
     key: 'timeRangesToString',
@@ -2140,36 +2333,6 @@ var MSEMediaController = function (_EventHandler) {
         log += '[' + r.start(i) + ',' + r.end(i) + ']';
       }
       return log;
-    }
-  }, {
-    key: 'onMediaSourceOpen',
-    value: function onMediaSourceOpen() {
-      _logger.logger.log('media source opened');
-      this.hls.trigger(_events2.default.MEDIA_ATTACHED);
-      this.onvseeking = this.onMediaSeeking.bind(this);
-      this.onvseeked = this.onMediaSeeked.bind(this);
-      this.onvmetadata = this.onMediaMetadata.bind(this);
-      this.onvended = this.onMediaEnded.bind(this);
-      var media = this.media;
-      media.addEventListener('seeking', this.onvseeking);
-      media.addEventListener('seeked', this.onvseeked);
-      media.addEventListener('loadedmetadata', this.onvmetadata);
-      media.addEventListener('ended', this.onvended);
-      if (this.levels && this.config.autoStartLoad) {
-        this.startLoad();
-      }
-      // once received, don't listen anymore to sourceopen event
-      this.mediaSource.removeEventListener('sourceopen', this.onmso);
-    }
-  }, {
-    key: 'onMediaSourceClose',
-    value: function onMediaSourceClose() {
-      _logger.logger.log('media source closed');
-    }
-  }, {
-    key: 'onMediaSourceEnded',
-    value: function onMediaSourceEnded() {
-      _logger.logger.log('media source ended');
     }
   }, {
     key: 'currentLevel',
@@ -2204,12 +2367,12 @@ var MSEMediaController = function (_EventHandler) {
     }
   }]);
 
-  return MSEMediaController;
+  return StreamController;
 }(_eventHandler2.default);
 
-exports.default = MSEMediaController;
+exports.default = StreamController;
 
-},{"../demux/demuxer":15,"../errors":19,"../event-handler":20,"../events":21,"../helper/level-helper":22,"../utils/binary-search":30,"../utils/logger":32}],7:[function(require,module,exports){
+},{"../demux/demuxer":16,"../errors":20,"../event-handler":21,"../events":22,"../helper/level-helper":23,"../utils/binary-search":31,"../utils/logger":33}],8:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -2307,7 +2470,7 @@ var TimelineController = function (_EventHandler) {
 
 exports.default = TimelineController;
 
-},{"../event-handler":20,"../events":21,"../utils/cea-708-interpreter":31}],8:[function(require,module,exports){
+},{"../event-handler":21,"../events":22,"../utils/cea-708-interpreter":32}],9:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -2549,7 +2712,7 @@ var AES = function () {
 
 exports.default = AES;
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
@@ -2731,7 +2894,7 @@ var AES128Decrypter = function () {
 
 exports.default = AES128Decrypter;
 
-},{"./aes":8}],10:[function(require,module,exports){
+},{"./aes":9}],11:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
@@ -2828,7 +2991,7 @@ var Decrypter = function () {
 
 exports.default = Decrypter;
 
-},{"../errors":19,"../utils/logger":32,"./aes128-decrypter":9}],11:[function(require,module,exports){
+},{"../errors":20,"../utils/logger":33,"./aes128-decrypter":10}],12:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
@@ -2955,7 +3118,7 @@ var AACDemuxer = function () {
 
 exports.default = AACDemuxer;
 
-},{"../demux/id3":17,"../utils/logger":32,"./adts":12}],12:[function(require,module,exports){
+},{"../demux/id3":18,"../utils/logger":33,"./adts":13}],13:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
@@ -3101,7 +3264,7 @@ var ADTS = function () {
 
 exports.default = ADTS;
 
-},{"../errors":19,"../utils/logger":32}],13:[function(require,module,exports){
+},{"../errors":20,"../utils/logger":33}],14:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*  inline demuxer.
@@ -3126,16 +3289,19 @@ var _tsdemuxer = require('../demux/tsdemuxer');
 
 var _tsdemuxer2 = _interopRequireDefault(_tsdemuxer);
 
+var _mp4Remuxer = require('../remux/mp4-remuxer');
+
+var _mp4Remuxer2 = _interopRequireDefault(_mp4Remuxer);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var DemuxerInline = function () {
-  function DemuxerInline(hls, remuxer) {
+  function DemuxerInline(hls) {
     _classCallCheck(this, DemuxerInline);
 
     this.hls = hls;
-    this.remuxer = remuxer;
   }
 
   _createClass(DemuxerInline, [{
@@ -3151,15 +3317,20 @@ var DemuxerInline = function () {
     value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
       var demuxer = this.demuxer;
       if (!demuxer) {
+        var remuxer = _mp4Remuxer2.default,
+            hls = this.hls;
         // probe for content type
         if (_tsdemuxer2.default.probe(data)) {
-          demuxer = this.demuxer = new _tsdemuxer2.default(this.hls, this.remuxer);
+          // TODO : use TS Remuxer instead of MP4 Remuxer
+          // if (MediaSource.isTypeSupported('video/MP2T; codecs="avc1.42E01E,mp4a.40.2"')) equals true
+          demuxer = new _tsdemuxer2.default(hls, remuxer);
         } else if (_aacdemuxer2.default.probe(data)) {
-          demuxer = this.demuxer = new _aacdemuxer2.default(this.hls, this.remuxer);
+          demuxer = new _aacdemuxer2.default(hls, remuxer);
         } else {
-          this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found' });
+          hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found' });
           return;
         }
+        this.demuxer = demuxer;
       }
       demuxer.push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
     }
@@ -3170,7 +3341,7 @@ var DemuxerInline = function () {
 
 exports.default = DemuxerInline;
 
-},{"../demux/aacdemuxer":11,"../demux/tsdemuxer":18,"../errors":19,"../events":21}],14:[function(require,module,exports){
+},{"../demux/aacdemuxer":12,"../demux/tsdemuxer":19,"../errors":20,"../events":22,"../remux/mp4-remuxer":29}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3189,16 +3360,7 @@ var _events3 = require('events');
 
 var _events4 = _interopRequireDefault(_events3);
 
-var _mp4Remuxer = require('../remux/mp4-remuxer');
-
-var _mp4Remuxer2 = _interopRequireDefault(_mp4Remuxer);
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/* demuxer web worker.
- *  - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
- *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
- */
 
 var DemuxerWorker = function DemuxerWorker(self) {
   // observer setup
@@ -3222,7 +3384,7 @@ var DemuxerWorker = function DemuxerWorker(self) {
     //console.log('demuxer cmd:' + ev.data.cmd);
     switch (ev.data.cmd) {
       case 'init':
-        self.demuxer = new _demuxerInline2.default(observer, _mp4Remuxer2.default);
+        self.demuxer = new _demuxerInline2.default(observer);
         break;
       case 'demux':
         var data = ev.data;
@@ -3233,31 +3395,33 @@ var DemuxerWorker = function DemuxerWorker(self) {
     }
   });
 
-  // listen to events triggered by TS Demuxer
+  // listen to events triggered by Demuxer
   observer.on(_events2.default.FRAG_PARSING_INIT_SEGMENT, function (ev, data) {
     var objData = { event: ev };
     var objTransferable = [];
     if (data.audioCodec) {
+      objData.audioContainer = data.audioContainer;
       objData.audioCodec = data.audioCodec;
-      objData.audioMoov = data.audioMoov.buffer;
+      objData.audioInitSegment = data.audioInitSegment.buffer;
       objData.audioChannelCount = data.audioChannelCount;
-      objTransferable.push(objData.audioMoov);
+      objTransferable.push(objData.audioInitSegment);
     }
     if (data.videoCodec) {
+      objData.videoContainer = data.videoContainer;
       objData.videoCodec = data.videoCodec;
-      objData.videoMoov = data.videoMoov.buffer;
+      objData.videoInitSegment = data.videoInitSegment.buffer;
       objData.videoWidth = data.videoWidth;
       objData.videoHeight = data.videoHeight;
-      objTransferable.push(objData.videoMoov);
+      objTransferable.push(objData.videoInitSegment);
     }
     // pass moov as transferable object (no copy)
     self.postMessage(objData, objTransferable);
   });
 
   observer.on(_events2.default.FRAG_PARSING_DATA, function (ev, data) {
-    var objData = { event: ev, type: data.type, startPTS: data.startPTS, endPTS: data.endPTS, startDTS: data.startDTS, endDTS: data.endDTS, moof: data.moof.buffer, mdat: data.mdat.buffer, nb: data.nb };
-    // pass moof/mdat data as transferable object (no copy)
-    self.postMessage(objData, [objData.moof, objData.mdat]);
+    var objData = { event: ev, type: data.type, startPTS: data.startPTS, endPTS: data.endPTS, startDTS: data.startDTS, endDTS: data.endDTS, data1: data.data1.buffer, data2: data.data2.buffer, nb: data.nb };
+    // pass data1/data2 as transferable object (no copy)
+    self.postMessage(objData, [objData.data1, objData.data2]);
   });
 
   observer.on(_events2.default.FRAG_PARSED, function (event) {
@@ -3277,11 +3441,14 @@ var DemuxerWorker = function DemuxerWorker(self) {
     var objData = { event: event, samples: data.samples };
     self.postMessage(objData);
   });
-};
+}; /* demuxer web worker.
+    *  - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
+    *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
+    */
 
 exports.default = DemuxerWorker;
 
-},{"../demux/demuxer-inline":13,"../events":21,"../remux/mp4-remuxer":28,"events":2}],15:[function(require,module,exports){
+},{"../demux/demuxer-inline":14,"../events":22,"events":2}],16:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -3303,10 +3470,6 @@ var _demuxerWorker = require('../demux/demuxer-worker');
 var _demuxerWorker2 = _interopRequireDefault(_demuxerWorker);
 
 var _logger = require('../utils/logger');
-
-var _mp4Remuxer = require('../remux/mp4-remuxer');
-
-var _mp4Remuxer2 = _interopRequireDefault(_mp4Remuxer);
 
 var _decrypter = require('../crypt/decrypter');
 
@@ -3331,10 +3494,10 @@ var Demuxer = function () {
         this.w.postMessage({ cmd: 'init' });
       } catch (err) {
         _logger.logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
-        this.demuxer = new _demuxerInline2.default(hls, _mp4Remuxer2.default);
+        this.demuxer = new _demuxerInline2.default(hls);
       }
     } else {
-      this.demuxer = new _demuxerInline2.default(hls, _mp4Remuxer2.default);
+      this.demuxer = new _demuxerInline2.default(hls);
     }
     this.demuxInitialized = true;
   }
@@ -3384,47 +3547,50 @@ var Demuxer = function () {
   }, {
     key: 'onWorkerMessage',
     value: function onWorkerMessage(ev) {
-      //console.log('onWorkerMessage:' + ev.data.event);
-      switch (ev.data.event) {
+      var data = ev.data;
+      //console.log('onWorkerMessage:' + data.event);
+      switch (data.event) {
         case _events2.default.FRAG_PARSING_INIT_SEGMENT:
           var obj = {};
-          if (ev.data.audioMoov) {
-            obj.audioMoov = new Uint8Array(ev.data.audioMoov);
-            obj.audioCodec = ev.data.audioCodec;
-            obj.audioChannelCount = ev.data.audioChannelCount;
+          if (data.audioInitSegment) {
+            obj.audioInitSegment = new Uint8Array(data.audioInitSegment);
+            obj.audioCodec = data.audioCodec;
+            obj.audioContainer = data.audioContainer;
+            obj.audioChannelCount = data.audioChannelCount;
           }
-          if (ev.data.videoMoov) {
-            obj.videoMoov = new Uint8Array(ev.data.videoMoov);
-            obj.videoCodec = ev.data.videoCodec;
-            obj.videoWidth = ev.data.videoWidth;
-            obj.videoHeight = ev.data.videoHeight;
+          if (ev.data.videoInitSegment) {
+            obj.videoInitSegment = new Uint8Array(data.videoInitSegment);
+            obj.videoContainer = data.videoContainer;
+            obj.videoCodec = data.videoCodec;
+            obj.videoWidth = data.videoWidth;
+            obj.videoHeight = data.videoHeight;
           }
           this.hls.trigger(_events2.default.FRAG_PARSING_INIT_SEGMENT, obj);
           break;
         case _events2.default.FRAG_PARSING_DATA:
           this.hls.trigger(_events2.default.FRAG_PARSING_DATA, {
-            moof: new Uint8Array(ev.data.moof),
-            mdat: new Uint8Array(ev.data.mdat),
-            startPTS: ev.data.startPTS,
-            endPTS: ev.data.endPTS,
-            startDTS: ev.data.startDTS,
-            endDTS: ev.data.endDTS,
-            type: ev.data.type,
-            nb: ev.data.nb
+            data1: new Uint8Array(data.data1),
+            data2: new Uint8Array(data.data2),
+            startPTS: data.startPTS,
+            endPTS: data.endPTS,
+            startDTS: data.startDTS,
+            endDTS: data.endDTS,
+            type: data.type,
+            nb: data.nb
           });
           break;
         case _events2.default.FRAG_PARSING_METADATA:
           this.hls.trigger(_events2.default.FRAG_PARSING_METADATA, {
-            samples: ev.data.samples
+            samples: data.samples
           });
           break;
         case _events2.default.FRAG_PARSING_USERDATA:
           this.hls.trigger(_events2.default.FRAG_PARSING_USERDATA, {
-            samples: ev.data.samples
+            samples: data.samples
           });
           break;
         default:
-          this.hls.trigger(ev.data.event, ev.data.data);
+          this.hls.trigger(data.event, data.data);
           break;
       }
     }
@@ -3435,7 +3601,7 @@ var Demuxer = function () {
 
 exports.default = Demuxer;
 
-},{"../crypt/decrypter":10,"../demux/demuxer-inline":13,"../demux/demuxer-worker":14,"../events":21,"../remux/mp4-remuxer":28,"../utils/logger":32,"webworkify":3}],16:[function(require,module,exports){
+},{"../crypt/decrypter":11,"../demux/demuxer-inline":14,"../demux/demuxer-worker":15,"../events":22,"../utils/logger":33,"webworkify":3}],17:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
@@ -3797,7 +3963,7 @@ var ExpGolomb = function () {
 
 exports.default = ExpGolomb;
 
-},{"../utils/logger":32}],17:[function(require,module,exports){
+},{"../utils/logger":33}],18:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
@@ -3949,7 +4115,7 @@ var ID3 = function () {
 
 exports.default = ID3;
 
-},{"../utils/logger":32}],18:[function(require,module,exports){
+},{"../utils/logger":33}],19:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
@@ -4256,19 +4422,25 @@ var TSDemuxer = function () {
         payloadStartOffset = pesHdrLen + 9;
 
         stream.size -= payloadStartOffset;
-        // trim PES header
-        while (data.length && payloadStartOffset > data[0].byteLength) {
-          payloadStartOffset -= data[0].byteLength;
-          data.shift();
-        }
-        data[0] = data[0].subarray(payloadStartOffset);
         //reassemble PES packet
         pesData = new Uint8Array(stream.size);
-        // reassemble the packet
         while (data.length) {
           frag = data.shift();
+          var len = frag.byteLength;
+          if (payloadStartOffset) {
+            if (payloadStartOffset > len) {
+              // trim full frag if PES header bigger than frag
+              payloadStartOffset -= len;
+              continue;
+            } else {
+              // trim partial frag if PES header smaller than frag
+              frag = frag.subarray(payloadStartOffset);
+              len -= payloadStartOffset;
+              payloadStartOffset = 0;
+            }
+          }
           pesData.set(frag, i);
-          i += frag.byteLength;
+          i += len;
         }
         return { data: pesData, pts: pesPts, dts: pesDts, len: pesLen };
       } else {
@@ -4653,7 +4825,7 @@ var TSDemuxer = function () {
 
 exports.default = TSDemuxer;
 
-},{"../errors":19,"../events":21,"../utils/logger":32,"./adts":12,"./exp-golomb":16}],19:[function(require,module,exports){
+},{"../errors":20,"../events":22,"../utils/logger":33,"./adts":13,"./exp-golomb":17}],20:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4700,10 +4872,12 @@ var ErrorDetails = exports.ErrorDetails = {
   // Identifier for a buffer appending error event - data: appending error description
   BUFFER_APPENDING_ERROR: 'bufferAppendingError',
   // Identifier for a buffer stalled error event
-  BUFFER_STALLED_ERROR: 'bufferStalledError'
+  BUFFER_STALLED_ERROR: 'bufferStalledError',
+  // Identifier for a buffer full error event
+  BUFFER_FULL_ERROR: 'bufferFullError'
 };
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
@@ -4801,7 +4975,7 @@ var EventHandler = function () {
 
 exports.default = EventHandler;
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -4813,6 +4987,20 @@ module.exports = {
   MEDIA_DETACHING: 'hlsMediaDetaching',
   // fired when MediaSource has been detached from media element - data: { }
   MEDIA_DETACHED: 'hlsMediaDetached',
+  // fired when we buffer is going to be resetted
+  BUFFER_RESET: 'hlsBufferReset',
+  // fired when we know about the codecs that we need buffers for to push into - data: {audioCodec, videoCodec, levelAudioCodec,levelVideoCodec,audioInitSegment,videoInitSegment}
+  BUFFER_CODECS: 'hlsBufferCodecs',
+  // fired when we append a segment to the buffer - data: { segment: segment object }
+  BUFFER_APPENDING: 'hlsBufferAppending',
+  // fired when we are done with appending a media segment to the buffer
+  BUFFER_APPENDED: 'hlsBufferAppended',
+  // fired when the stream is finished and we want to notify the media buffer that there will be no more data
+  BUFFER_EOS: 'hlsBufferEos',
+  // fired when the media buffer should be flushed - data {startOffset, endOffset}
+  BUFFER_FLUSHING: 'hlsBufferFlushing',
+  // fired when the media has been flushed
+  BUFFER_FLUSHED: 'hlsBufferFlushed',
   // fired to signal that a manifest loading starts - data: { url : manifestURL}
   MANIFEST_LOADING: 'hlsManifestLoading',
   // fired after manifest has been loaded - data: { levels : [available quality levels] , url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
@@ -4843,7 +5031,7 @@ module.exports = {
   FRAG_PARSING_USERDATA: 'hlsFragParsingUserdata',
   // fired when parsing id3 is completed - data: { samples : [ id3 samples pes ] }
   FRAG_PARSING_METADATA: 'hlsFragParsingMetadata',
-  // fired when moof/mdat have been extracted from fragment - data: { moof : moof MP4 box, mdat : mdat MP4 box}
+  // fired when data have been extracted from fragment - data: { data1 : moof MP4 box or TS fragments, data2 : mdat MP4 box or null}
   FRAG_PARSING_DATA: 'hlsFragParsingData',
   // fired when fragment parsing is completed - data: undefined
   FRAG_PARSED: 'hlsFragParsed',
@@ -4863,7 +5051,7 @@ module.exports = {
   KEY_LOADED: 'hlsKeyLoaded'
 };
 
-},{}],22:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
@@ -5006,7 +5194,7 @@ var LevelHelper = function () {
 
 exports.default = LevelHelper;
 
-},{"../utils/logger":32}],23:[function(require,module,exports){
+},{"../utils/logger":33}],24:[function(require,module,exports){
 /**
  * HLS interface
  */
@@ -5037,9 +5225,13 @@ var _abrController = require('./controller/abr-controller');
 
 var _abrController2 = _interopRequireDefault(_abrController);
 
-var _mseMediaController = require('./controller/mse-media-controller');
+var _bufferController = require('./controller/buffer-controller');
 
-var _mseMediaController2 = _interopRequireDefault(_mseMediaController);
+var _bufferController2 = _interopRequireDefault(_bufferController);
+
+var _streamController = require('./controller/stream-controller');
+
+var _streamController2 = _interopRequireDefault(_streamController);
 
 var _levelController = require('./controller/level-controller');
 
@@ -5121,7 +5313,8 @@ var Hls = function () {
           fLoader: undefined,
           pLoader: undefined,
           abrController: _abrController2.default,
-          mediaController: _mseMediaController2.default,
+          bufferController: _bufferController2.default,
+          streamController: _streamController2.default,
           timelineController: _timelineController2.default,
           enableCEA708Captions: true
         };
@@ -5176,7 +5369,8 @@ var Hls = function () {
     this.fragmentLoader = new _fragmentLoader2.default(this);
     this.levelController = new _levelController2.default(this);
     this.abrController = new config.abrController(this);
-    this.mediaController = new config.mediaController(this);
+    this.bufferController = new config.bufferController(this);
+    this.streamController = new config.streamController(this);
     this.timelineController = new config.timelineController(this);
     this.keyLoader = new _keyLoader2.default(this);
     //this.fpsController = new FPSController(this);
@@ -5191,7 +5385,8 @@ var Hls = function () {
       this.playlistLoader.destroy();
       this.fragmentLoader.destroy();
       this.levelController.destroy();
-      this.mediaController.destroy();
+      this.bufferController.destroy();
+      this.streamController.destroy();
       this.timelineController.destroy();
       this.keyLoader.destroy();
       //this.fpsController.destroy();
@@ -5224,13 +5419,13 @@ var Hls = function () {
     key: 'startLoad',
     value: function startLoad() {
       _logger.logger.log('startLoad');
-      this.mediaController.startLoad();
+      this.streamController.startLoad();
     }
   }, {
     key: 'swapAudioCodec',
     value: function swapAudioCodec() {
       _logger.logger.log('swapAudioCodec');
-      this.mediaController.swapAudioCodec();
+      this.streamController.swapAudioCodec();
     }
   }, {
     key: 'recoverMediaError',
@@ -5254,7 +5449,7 @@ var Hls = function () {
   }, {
     key: 'currentLevel',
     get: function get() {
-      return this.mediaController.currentLevel;
+      return this.streamController.currentLevel;
     }
 
     /* set quality level immediately (-1 for automatic level selection) */
@@ -5262,7 +5457,7 @@ var Hls = function () {
     set: function set(newLevel) {
       _logger.logger.log('set currentLevel:' + newLevel);
       this.loadLevel = newLevel;
-      this.mediaController.immediateLevelSwitch();
+      this.streamController.immediateLevelSwitch();
     }
 
     /** Return next playback quality level (quality level of next fragment) **/
@@ -5270,7 +5465,7 @@ var Hls = function () {
   }, {
     key: 'nextLevel',
     get: function get() {
-      return this.mediaController.nextLevel;
+      return this.streamController.nextLevel;
     }
 
     /* set quality level for next fragment (-1 for automatic level selection) */
@@ -5278,7 +5473,7 @@ var Hls = function () {
     set: function set(newLevel) {
       _logger.logger.log('set nextLevel:' + newLevel);
       this.levelController.manualLevel = newLevel;
-      this.mediaController.nextLevelSwitch();
+      this.streamController.nextLevelSwitch();
     }
 
     /** Return the quality level of current/last loaded fragment **/
@@ -5385,7 +5580,7 @@ var Hls = function () {
 
 exports.default = Hls;
 
-},{"./controller/abr-controller":4,"./controller/level-controller":5,"./controller/mse-media-controller":6,"./controller/timeline-controller":7,"./errors":19,"./events":21,"./loader/fragment-loader":24,"./loader/key-loader":25,"./loader/playlist-loader":26,"./utils/logger":32,"./utils/xhr-loader":34,"events":2}],24:[function(require,module,exports){
+},{"./controller/abr-controller":4,"./controller/buffer-controller":5,"./controller/level-controller":6,"./controller/stream-controller":7,"./controller/timeline-controller":8,"./errors":20,"./events":22,"./loader/fragment-loader":25,"./loader/key-loader":26,"./loader/playlist-loader":27,"./utils/logger":33,"./utils/xhr-loader":35,"events":2}],25:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -5476,7 +5671,7 @@ var FragmentLoader = function (_EventHandler) {
 
 exports.default = FragmentLoader;
 
-},{"../errors":19,"../event-handler":20,"../events":21}],25:[function(require,module,exports){
+},{"../errors":20,"../event-handler":21,"../events":22}],26:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -5577,7 +5772,7 @@ var KeyLoader = function (_EventHandler) {
 
 exports.default = KeyLoader;
 
-},{"../errors":19,"../event-handler":20,"../events":21}],26:[function(require,module,exports){
+},{"../errors":20,"../event-handler":21,"../events":22}],27:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -5913,7 +6108,7 @@ var PlaylistLoader = function (_EventHandler) {
 
 exports.default = PlaylistLoader;
 
-},{"../errors":19,"../event-handler":20,"../events":21,"../utils/attr-list":29,"../utils/url":33}],27:[function(require,module,exports){
+},{"../errors":20,"../event-handler":21,"../events":22,"../utils/attr-list":30,"../utils/url":34}],28:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -6420,7 +6615,7 @@ var MP4 = function () {
 
 exports.default = MP4;
 
-},{}],28:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
@@ -6513,7 +6708,8 @@ var MP4Remuxer = function () {
         //audio only
         if (audioTrack.config) {
           observer.trigger(_events2.default.FRAG_PARSING_INIT_SEGMENT, {
-            audioMoov: _mp4Generator2.default.initSegment([audioTrack]),
+            audioInitSegment: _mp4Generator2.default.initSegment([audioTrack]),
+            audioContainer: 'audio/mp4',
             audioCodec: audioTrack.codec,
             audioChannelCount: audioTrack.channelCount
           });
@@ -6528,7 +6724,8 @@ var MP4Remuxer = function () {
         //video only
         if (videoTrack.sps && videoTrack.pps) {
           observer.trigger(_events2.default.FRAG_PARSING_INIT_SEGMENT, {
-            videoMoov: _mp4Generator2.default.initSegment([videoTrack]),
+            videoInitSegment: _mp4Generator2.default.initSegment([videoTrack]),
+            videoContainer: 'video/mp4',
             videoCodec: videoTrack.codec,
             videoWidth: videoTrack.width,
             videoHeight: videoTrack.height
@@ -6544,10 +6741,12 @@ var MP4Remuxer = function () {
         //audio and video
         if (audioTrack.config && videoTrack.sps && videoTrack.pps) {
           observer.trigger(_events2.default.FRAG_PARSING_INIT_SEGMENT, {
-            audioMoov: _mp4Generator2.default.initSegment([audioTrack]),
+            audioInitSegment: _mp4Generator2.default.initSegment([audioTrack]),
+            audioContainer: 'audio/mp4',
             audioCodec: audioTrack.codec,
             audioChannelCount: audioTrack.channelCount,
-            videoMoov: _mp4Generator2.default.initSegment([videoTrack]),
+            videoInitSegment: _mp4Generator2.default.initSegment([videoTrack]),
+            videoContainer: 'video/mp4',
             videoCodec: videoTrack.codec,
             videoWidth: videoTrack.width,
             videoHeight: videoTrack.height
@@ -6687,8 +6886,8 @@ var MP4Remuxer = function () {
       moof = _mp4Generator2.default.moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
       track.samples = [];
       this.observer.trigger(_events2.default.FRAG_PARSING_DATA, {
-        moof: moof,
-        mdat: mdat,
+        data1: moof,
+        data2: mdat,
         startPTS: firstPTS / pesTimeScale,
         endPTS: (ptsnorm + pes2mp4ScaleFactor * lastSampleDuration) / pesTimeScale,
         startDTS: firstDTS / pesTimeScale,
@@ -6816,8 +7015,8 @@ var MP4Remuxer = function () {
         moof = _mp4Generator2.default.moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
         track.samples = [];
         this.observer.trigger(_events2.default.FRAG_PARSING_DATA, {
-          moof: moof,
-          mdat: mdat,
+          data1: moof,
+          data2: mdat,
           startPTS: firstPTS / pesTimeScale,
           endPTS: this.nextAacPts / pesTimeScale,
           startDTS: firstDTS / pesTimeScale,
@@ -6908,7 +7107,7 @@ var MP4Remuxer = function () {
 
 exports.default = MP4Remuxer;
 
-},{"../errors":19,"../events":21,"../remux/mp4-generator":27,"../utils/logger":32}],29:[function(require,module,exports){
+},{"../errors":20,"../events":22,"../remux/mp4-generator":28,"../utils/logger":33}],30:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -7015,7 +7214,7 @@ var AttrList = function () {
 
 exports.default = AttrList;
 
-},{}],30:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 "use strict";
 
 var BinarySearch = {
@@ -7060,7 +7259,7 @@ var BinarySearch = {
 
 module.exports = BinarySearch;
 
-},{}],31:[function(require,module,exports){
+},{}],32:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -7480,7 +7679,7 @@ var CEA708Interpreter = function () {
 
 exports.default = CEA708Interpreter;
 
-},{}],32:[function(require,module,exports){
+},{}],33:[function(require,module,exports){
 'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
@@ -7562,7 +7761,7 @@ var enableLogs = exports.enableLogs = function enableLogs(debugConfig) {
 
 var logger = exports.logger = exportedLogger;
 
-},{}],33:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 'use strict';
 
 var URLHelper = {
@@ -7642,7 +7841,7 @@ var URLHelper = {
 
 module.exports = URLHelper;
 
-},{}],34:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
@@ -7788,6 +7987,6 @@ var XhrLoader = function () {
 
 exports.default = XhrLoader;
 
-},{"../utils/logger":32}]},{},[1])(1)
+},{"../utils/logger":33}]},{},[1])(1)
 });
 //# sourceMappingURL=hls.js.map
