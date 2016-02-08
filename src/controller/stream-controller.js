@@ -863,8 +863,11 @@ class StreamController extends EventHandler {
           hls = this.hls;
       hls.trigger(Event.LEVEL_PTS_UPDATED, {details: level.details, level: this.level, drift: drift});
 
-      hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: data.moof});
-      hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: data.mdat});
+      [data.data1, data.data2].forEach(buffer => {
+        if (buffer) {
+          hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer});
+        }
+      });
 
       this.nextLoadPosition = data.endPTS;
       this.bufferRange.push({type: data.type, start: data.startPTS, end: data.endPTS, frag: frag});
