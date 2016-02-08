@@ -74,7 +74,8 @@ class MP4Remuxer {
             //audio only
             if (audioTrack.config) {
                 observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
-                    audioMoov: MP4.initSegment([audioTrack]),
+                    audioInitSegment: MP4.initSegment([audioTrack]),
+                    audioContainer: 'audio/mp4',
                     audioCodec: audioTrack.codec,
                     audioChannelCount: audioTrack.channelCount
                 });
@@ -89,7 +90,8 @@ class MP4Remuxer {
             //video only
             if (videoTrack.sps && videoTrack.pps) {
                 observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
-                    videoMoov: MP4.initSegment([videoTrack]),
+                    videoInitSegment: MP4.initSegment([videoTrack]),
+                    videoContainer: 'video/mp4',
                     videoCodec: videoTrack.codec,
                     videoWidth: videoTrack.width,
                     videoHeight: videoTrack.height
@@ -107,10 +109,12 @@ class MP4Remuxer {
             //audio and video
             if (audioTrack.config && videoTrack.sps && videoTrack.pps) {
                 observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
-                    audioMoov: MP4.initSegment([audioTrack]),
+                    audioInitSegment: MP4.initSegment([audioTrack]),
+                    audioContainer: 'audio/mp4',
                     audioCodec: audioTrack.codec,
                     audioChannelCount: audioTrack.channelCount,
-                    videoMoov: MP4.initSegment([videoTrack]),
+                    videoInitSegment: MP4.initSegment([videoTrack]),
+                    videoContainer: 'video/mp4',
                     videoCodec: videoTrack.codec,
                     videoWidth: videoTrack.width,
                     videoHeight: videoTrack.height

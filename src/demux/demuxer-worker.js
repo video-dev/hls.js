@@ -42,22 +42,24 @@ var DemuxerWorker = function(self) {
         }
     });
 
-    // listen to events triggered by TS Demuxer
+    // listen to events triggered by Demuxer
     observer.on(Event.FRAG_PARSING_INIT_SEGMENT, function(ev, data) {
         var objData = { event: ev };
         var objTransferable = [];
         if (data.audioCodec) {
+            objData.audioContainer = data.audioContainer;
             objData.audioCodec = data.audioCodec;
-            objData.audioMoov = data.audioMoov.buffer;
+            objData.audioInitSegment = data.audioInitSegment.buffer;
             objData.audioChannelCount = data.audioChannelCount;
-            objTransferable.push(objData.audioMoov);
+            objTransferable.push(objData.audioInitSegment);
         }
         if (data.videoCodec) {
+            objData.videoContainer = data.videoContainer;
             objData.videoCodec = data.videoCodec;
-            objData.videoMoov = data.videoMoov.buffer;
+            objData.videoInitSegment = data.videoInitSegment.buffer;
             objData.videoWidth = data.videoWidth;
             objData.videoHeight = data.videoHeight;
-            objTransferable.push(objData.videoMoov);
+            objTransferable.push(objData.videoInitSegment);
         }
         // pass moov as transferable object (no copy)
         self.postMessage(objData, objTransferable);

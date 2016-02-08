@@ -141,13 +141,19 @@ class Demuxer {
         switch (ev.data.event) {
             case Event.FRAG_PARSING_INIT_SEGMENT:
                 var obj = {};
-                if (ev.data.audioMoov) {
-                    obj.audioMoov = new Uint8Array(ev.data.audioMoov);
+                if (ev.data.audioInitSegment) {
+                    obj.audioInitSegment = new Uint8Array(
+                        ev.data.audioInitSegment
+                    );
                     obj.audioCodec = ev.data.audioCodec;
+                    obj.audioContainer = ev.data.audioContainer;
                     obj.audioChannelCount = ev.data.audioChannelCount;
                 }
-                if (ev.data.videoMoov) {
-                    obj.videoMoov = new Uint8Array(ev.data.videoMoov);
+                if (ev.data.videoInitSegment) {
+                    obj.videoInitSegment = new Uint8Array(
+                        ev.data.videoInitSegment
+                    );
+                    obj.videoContainer = ev.data.videoContainer;
                     obj.videoCodec = ev.data.videoCodec;
                     obj.videoWidth = ev.data.videoWidth;
                     obj.videoHeight = ev.data.videoHeight;
