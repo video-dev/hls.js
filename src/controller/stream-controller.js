@@ -794,11 +794,9 @@ class StreamController extends EventHandler {
         var media = (this.media = data.media);
         this.onvseeking = this.onMediaSeeking.bind(this);
         this.onvseeked = this.onMediaSeeked.bind(this);
-        this.onvmetadata = this.onMediaMetadata.bind(this);
         this.onvended = this.onMediaEnded.bind(this);
         media.addEventListener('seeking', this.onvseeking);
         media.addEventListener('seeked', this.onvseeked);
-        media.addEventListener('loadedmetadata', this.onvmetadata);
         media.addEventListener('ended', this.onvended);
         if (this.levels && this.config.autoStartLoad) {
             this.startLoad();
@@ -828,9 +826,8 @@ class StreamController extends EventHandler {
         if (media) {
             media.removeEventListener('seeking', this.onvseeking);
             media.removeEventListener('seeked', this.onvseeked);
-            media.removeEventListener('loadedmetadata', this.onvmetadata);
             media.removeEventListener('ended', this.onvended);
-            this.onvseeking = this.onvseeked = this.onvmetadata = null;
+            this.onvseeking = this.onvseeked = this.onvended = null;
         }
         this.media = null;
         this.loadedmetadata = false;
@@ -878,18 +875,6 @@ class StreamController extends EventHandler {
 
     onMediaSeeked() {
         // tick to speed up FRAGMENT_PLAYING triggering
-        this.tick();
-    }
-
-    onMediaMetadata() {
-        var media = this.media,
-            currentTime = media.currentTime;
-        // only adjust currentTime if not equal to 0
-        if (!currentTime && currentTime !== this.startPosition) {
-            logger.log('onMediaMetadata: adjust currentTime to startPosition');
-            media.currentTime = this.startPosition;
-        }
-        this.loadedmetadata = true;
         this.tick();
     }
 
@@ -1276,7 +1261,21 @@ class StreamController extends EventHandler {
                     }
                 } else {
                     var currentTime = media.currentTime,
-                        bufferInfo = this.bufferInfo(currentTime, 0),
+                        loadedmetadata = this.loadedmetadata;
+
+                    // adjust currentTime to start position on loaded metadata
+                    if (!loadedmetadata && media.buffered.length) {
+                        this.loadedmetadata = true;
+                        // only adjust currentTime if not equal to 0
+                        if (
+                            !currentTime &&
+                            currentTime !== this.startPosition
+                        ) {
+                            currentTime = this.startPosition;
+                        }
+                    }
+
+                    var bufferInfo = this.bufferInfo(currentTime, 0),
                         isPlaying = !(
                             media.paused ||
                             media.ended ||
@@ -1325,7 +1324,9 @@ class StreamController extends EventHandler {
                                 // next buffer is close ! adjust currentTime to nextBufferStart
                                 // this will ensure effective video decoding
                                 logger.log(
-                                    `adjust currentTime from ${currentTime} to ${nextBufferStart}`
+                                    `adjust currentTime from ${
+                                        media.currentTime
+                                    } to ${nextBufferStart}`
                                 );
                                 media.currentTime = nextBufferStart;
                             }
