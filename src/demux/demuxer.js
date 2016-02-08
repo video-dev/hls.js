@@ -2,7 +2,6 @@ import Event from '../events';
 import DemuxerInline from '../demux/demuxer-inline';
 import DemuxerWorker from '../demux/demuxer-worker';
 import { logger } from '../utils/logger';
-import MP4Remuxer from '../remux/mp4-remuxer';
 import Decrypter from '../crypt/decrypter';
 
 class Demuxer {
@@ -20,10 +19,10 @@ class Demuxer {
                 logger.error(
                     'error while initializing DemuxerWorker, fallback on DemuxerInline'
                 );
-                this.demuxer = new DemuxerInline(hls, MP4Remuxer);
+                this.demuxer = new DemuxerInline(hls);
             }
         } else {
-            this.demuxer = new DemuxerInline(hls, MP4Remuxer);
+            this.demuxer = new DemuxerInline(hls);
         }
         this.demuxInitialized = true;
     }

@@ -6,7 +6,6 @@
 import DemuxerInline from '../demux/demuxer-inline';
 import Event from '../events';
 import EventEmitter from 'events';
-import MP4Remuxer from '../remux/mp4-remuxer';
 
 var DemuxerWorker = function(self) {
     // observer setup
@@ -22,7 +21,7 @@ var DemuxerWorker = function(self) {
         //console.log('demuxer cmd:' + ev.data.cmd);
         switch (ev.data.cmd) {
             case 'init':
-                self.demuxer = new DemuxerInline(observer, MP4Remuxer);
+                self.demuxer = new DemuxerInline(observer);
                 break;
             case 'demux':
                 var data = ev.data;
