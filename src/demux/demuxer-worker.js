@@ -73,12 +73,12 @@ var DemuxerWorker = function(self) {
             endPTS: data.endPTS,
             startDTS: data.startDTS,
             endDTS: data.endDTS,
-            moof: data.moof.buffer,
-            mdat: data.mdat.buffer,
+            data1: data.data1.buffer,
+            data2: data.data2.buffer,
             nb: data.nb
         };
-        // pass moof/mdat data as transferable object (no copy)
-        self.postMessage(objData, [objData.moof, objData.mdat]);
+        // pass data1/data2 as transferable object (no copy)
+        self.postMessage(objData, [objData.data1, objData.data2]);
     });
 
     observer.on(Event.FRAG_PARSED, function(event) {

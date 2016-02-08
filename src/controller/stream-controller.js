@@ -1096,13 +1096,13 @@ class StreamController extends EventHandler {
                 drift: drift
             });
 
-            hls.trigger(Event.BUFFER_APPENDING, {
-                type: data.type,
-                data: data.moof
-            });
-            hls.trigger(Event.BUFFER_APPENDING, {
-                type: data.type,
-                data: data.mdat
+            [data.data1, data.data2].forEach(buffer => {
+                if (buffer) {
+                    hls.trigger(Event.BUFFER_APPENDING, {
+                        type: data.type,
+                        data: buffer
+                    });
+                }
             });
 
             this.nextLoadPosition = data.endPTS;

@@ -162,8 +162,8 @@ class Demuxer {
                 break;
             case Event.FRAG_PARSING_DATA:
                 this.hls.trigger(Event.FRAG_PARSING_DATA, {
-                    moof: new Uint8Array(ev.data.moof),
-                    mdat: new Uint8Array(ev.data.mdat),
+                    data1: new Uint8Array(ev.data.data1),
+                    data2: new Uint8Array(ev.data.data2),
                     startPTS: ev.data.startPTS,
                     endPTS: ev.data.endPTS,
                     startDTS: ev.data.startDTS,

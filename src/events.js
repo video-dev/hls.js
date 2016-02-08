@@ -51,7 +51,7 @@ module.exports = {
     FRAG_PARSING_USERDATA: 'hlsFragParsingUserdata',
     // fired when parsing id3 is completed - data: { samples : [ id3 samples pes ] }
     FRAG_PARSING_METADATA: 'hlsFragParsingMetadata',
-    // fired when moof/mdat have been extracted from fragment - data: { moof : moof MP4 box, mdat : mdat MP4 box}
+    // fired when data have been extracted from fragment - data: { data1 : moof MP4 box or TS fragments, data2 : mdat MP4 box or null}
     FRAG_PARSING_DATA: 'hlsFragParsingData',
     // fired when fragment parsing is completed - data: undefined
     FRAG_PARSED: 'hlsFragParsed',
