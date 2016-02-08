@@ -330,19 +330,25 @@ class TSDemuxer {
             payloadStartOffset = pesHdrLen + 9;
 
             stream.size -= payloadStartOffset;
-            // trim PES header
-            while (data.length && payloadStartOffset > data[0].byteLength) {
-                payloadStartOffset -= data[0].byteLength;
-                data.shift();
-            }
-            data[0] = data[0].subarray(payloadStartOffset);
             //reassemble PES packet
             pesData = new Uint8Array(stream.size);
-            // reassemble the packet
             while (data.length) {
                 frag = data.shift();
+                var len = frag.byteLength;
+                if (payloadStartOffset) {
+                    if (payloadStartOffset > len) {
+                        // trim full frag if PES header bigger than frag
+                        payloadStartOffset -= len;
+                        continue;
+                    } else {
+                        // trim partial frag if PES header smaller than frag
+                        frag = frag.subarray(payloadStartOffset);
+                        len -= payloadStartOffset;
+                        payloadStartOffset = 0;
+                    }
+                }
                 pesData.set(frag, i);
-                i += frag.byteLength;
+                i += len;
             }
             return { data: pesData, pts: pesPts, dts: pesDts, len: pesLen };
         } else {

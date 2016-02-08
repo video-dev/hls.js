@@ -2,7 +2,6 @@ import Event from '../events';
 import DemuxerInline from '../demux/demuxer-inline';
 import DemuxerWorker from '../demux/demuxer-worker';
 import { logger } from '../utils/logger';
-import MP4Remuxer from '../remux/mp4-remuxer';
 import Decrypter from '../crypt/decrypter';
 
 class Demuxer {
@@ -20,10 +19,10 @@ class Demuxer {
                 logger.error(
                     'error while initializing DemuxerWorker, fallback on DemuxerInline'
                 );
-                this.demuxer = new DemuxerInline(hls, MP4Remuxer);
+                this.demuxer = new DemuxerInline(hls);
             }
         } else {
-            this.demuxer = new DemuxerInline(hls, MP4Remuxer);
+            this.demuxer = new DemuxerInline(hls);
         }
         this.demuxInitialized = true;
     }
@@ -137,47 +136,54 @@ class Demuxer {
     }
 
     onWorkerMessage(ev) {
-        //console.log('onWorkerMessage:' + ev.data.event);
-        switch (ev.data.event) {
+        var data = ev.data;
+        //console.log('onWorkerMessage:' + data.event);
+        switch (data.event) {
             case Event.FRAG_PARSING_INIT_SEGMENT:
                 var obj = {};
-                if (ev.data.audioMoov) {
-                    obj.audioMoov = new Uint8Array(ev.data.audioMoov);
-                    obj.audioCodec = ev.data.audioCodec;
-                    obj.audioChannelCount = ev.data.audioChannelCount;
+                if (data.audioInitSegment) {
+                    obj.audioInitSegment = new Uint8Array(
+                        data.audioInitSegment
+                    );
+                    obj.audioCodec = data.audioCodec;
+                    obj.audioContainer = data.audioContainer;
+                    obj.audioChannelCount = data.audioChannelCount;
                 }
-                if (ev.data.videoMoov) {
-                    obj.videoMoov = new Uint8Array(ev.data.videoMoov);
-                    obj.videoCodec = ev.data.videoCodec;
-                    obj.videoWidth = ev.data.videoWidth;
-                    obj.videoHeight = ev.data.videoHeight;
+                if (ev.data.videoInitSegment) {
+                    obj.videoInitSegment = new Uint8Array(
+                        data.videoInitSegment
+                    );
+                    obj.videoContainer = data.videoContainer;
+                    obj.videoCodec = data.videoCodec;
+                    obj.videoWidth = data.videoWidth;
+                    obj.videoHeight = data.videoHeight;
                 }
                 this.hls.trigger(Event.FRAG_PARSING_INIT_SEGMENT, obj);
                 break;
             case Event.FRAG_PARSING_DATA:
                 this.hls.trigger(Event.FRAG_PARSING_DATA, {
-                    moof: new Uint8Array(ev.data.moof),
-                    mdat: new Uint8Array(ev.data.mdat),
-                    startPTS: ev.data.startPTS,
-                    endPTS: ev.data.endPTS,
-                    startDTS: ev.data.startDTS,
-                    endDTS: ev.data.endDTS,
-                    type: ev.data.type,
-                    nb: ev.data.nb
+                    data1: new Uint8Array(data.data1),
+                    data2: new Uint8Array(data.data2),
+                    startPTS: data.startPTS,
+                    endPTS: data.endPTS,
+                    startDTS: data.startDTS,
+                    endDTS: data.endDTS,
+                    type: data.type,
+                    nb: data.nb
                 });
                 break;
             case Event.FRAG_PARSING_METADATA:
                 this.hls.trigger(Event.FRAG_PARSING_METADATA, {
-                    samples: ev.data.samples
+                    samples: data.samples
                 });
                 break;
             case Event.FRAG_PARSING_USERDATA:
                 this.hls.trigger(Event.FRAG_PARSING_USERDATA, {
-                    samples: ev.data.samples
+                    samples: data.samples
                 });
                 break;
             default:
-                this.hls.trigger(ev.data.event, ev.data.data);
+                this.hls.trigger(data.event, data.data);
                 break;
         }
     }
