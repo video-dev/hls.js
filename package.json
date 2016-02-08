@@ -1,7 +1,7 @@
 {
   "name": "hls.js",
   "version": "0.4.10",
-  "license" : "Apache-2.0",
+  "license": "Apache-2.0",
   "description": "Media Source Extension - HLS library, by/for Dailymotion",
   "homepage": "https://github.com/dailymotion/hls.js",
   "authors": "Guillaume du Pontavice <guillaume.dupontavice@dailymotion.com>",
@@ -40,16 +40,16 @@
     "arraybuffer-equal": "^1.0.4",
     "babel": "^6.3.26",
     "babel-cli": "^6.3.17",
-    "browserify": "^8.1.1",
+    "browserify": "^13.0.0",
     "deep-strict-equal": "^0.1.0",
     "exorcist": "^0.4.0",
-    "http-server": "^0.7.4",
+    "http-server": "^0.8.5",
     "jshint": "^2.5.11",
-    "live-reload": "^0.2.0",
+    "live-reload": "^1.1.0",
     "mocha": "^2.1.0",
     "opener": "^1.4.0",
-    "parallelshell": "^1.0.3",
+    "parallelshell": "^2.0.0",
     "uglify-js": "^2.4.23",
-    "watchify": "^2.2.1"
+    "watchify": "^3.7.0"
   }
 }
