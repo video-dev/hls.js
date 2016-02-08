@@ -275,7 +275,7 @@
             continue;
           } else {
             // trim partial frag if PES header smaller than frag
-            frag = frag.subarray(payloadStartOffset@);
+            frag = frag.subarray(payloadStartOffset);
             len-=payloadStartOffset;
             payloadStartOffset = 0;
           }
