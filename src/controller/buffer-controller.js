@@ -158,30 +158,30 @@ class BufferController extends EventHandler {
       logger.log(`selected A/V codecs for sourceBuffers:${audioCodec},${videoCodec}`);
       // create source Buffer and link them to MediaSource
       if (audioCodec) {
-        sb = sourceBuffer.audio = mediaSource.addSourceBuffer(`audio/mp4;codecs=${audioCodec}`);
+        sb = sourceBuffer.audio = mediaSource.addSourceBuffer(`${data.audioContainer};codecs=${audioCodec}`);
         sb.addEventListener('updateend', this.onsbue);
         sb.addEventListener('error', this.onsbe);
       }
       if (videoCodec) {
-        sb = sourceBuffer.video = mediaSource.addSourceBuffer(`video/mp4;codecs=${videoCodec}`);
+        sb = sourceBuffer.video = mediaSource.addSourceBuffer(`${data.videoContainer};codecs=${videoCodec}`);
         sb.addEventListener('updateend', this.onsbue);
         sb.addEventListener('error', this.onsbe);
       }
       this.sourceBuffer = sourceBuffer;
     }
     if (audioCodec) {
-      hls.trigger(Event.BUFFER_APPENDING, {type: 'audio', data: data.audioMoov});
+      hls.trigger(Event.BUFFER_APPENDING, {type: 'audio', data: data.audioInitSegment});
     }
     if(videoCodec) {
-      hls.trigger(Event.BUFFER_APPENDING, {type: 'video', data: data.videoMoov});
+      hls.trigger(Event.BUFFER_APPENDING, {type: 'video', data: data.videoInitSegment});
     }
   }
 
   onBufferAppending(data) {
-    if (!this.mp4segments) {
-      this.mp4segments = [ data ];
+    if (!this.segments) {
+      this.segments = [ data ];
     } else {
-      this.mp4segments.push(data);
+      this.segments.push(data);
     }
     this.doAppending();
   }
@@ -254,10 +254,10 @@ class BufferController extends EventHandler {
   }
 
   doAppending() {
-    var hls = this.hls, sourceBuffer = this.sourceBuffer, mp4segments = this.mp4segments;
+    var hls = this.hls, sourceBuffer = this.sourceBuffer, segments = this.segments;
     if (sourceBuffer) {
       if (this.media.error) {
-        mp4segments = [];
+        segments = [];
         logger.error('trying to append although a media error occured, flush segment and abort');
         return;
       }
@@ -266,17 +266,17 @@ class BufferController extends EventHandler {
          (sourceBuffer.video && sourceBuffer.video.updating)) {
         //logger.log('sb append in progress');
     // check if any MP4 segments left to append
-      } else if (mp4segments.length) {
-        var segment = mp4segments.shift();
+      } else if (segments.length) {
+        var segment = segments.shift();
         try {
           //logger.log(`appending ${segment.type} SB, size:${segment.data.length});
           sourceBuffer[segment.type].appendBuffer(segment.data);
           this.appendError = 0;
           this.appended++;
         } catch(err) {
-          // in case any error occured while appending, put back segment in mp4segments table
+          // in case any error occured while appending, put back segment in segments table
           logger.error(`error while trying to append buffer:${err.message}`);
-          mp4segments.unshift(segment);
+          segments.unshift(segment);
           var event = {type: ErrorTypes.MEDIA_ERROR};
           if(err.code !== 22) {
             if (this.appendError) {
@@ -291,7 +291,7 @@ class BufferController extends EventHandler {
             */
             if (this.appendError > this.config.appendErrorMaxRetry) {
               logger.log(`fail ${this.config.appendErrorMaxRetry} times to append segment in sourceBuffer`);
-              mp4segments = [];
+              segments = [];
               event.fatal = true;
               hls.trigger(Event.ERROR, event);
               return;
@@ -302,7 +302,7 @@ class BufferController extends EventHandler {
           } else {
             // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
             // let's stop appending any segments, and report BUFFER_FULL error
-            mp4segments = [];
+            segments = [];
             event.details = ErrorDetails.BUFFER_FULL;
             hls.trigger(Event.ERROR,event);
           }
