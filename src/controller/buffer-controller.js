@@ -169,10 +169,10 @@ class BufferController extends EventHandler {
       }
       this.sourceBuffer = sourceBuffer;
     }
-    if (audioCodec) {
+    if (audioCodec && data.audioInitSegment) {
       hls.trigger(Event.BUFFER_APPENDING, {type: 'audio', data: data.audioInitSegment});
     }
-    if(videoCodec) {
+    if(videoCodec && data.videoInitSegment) {
       hls.trigger(Event.BUFFER_APPENDING, {type: 'video', data: data.videoInitSegment});
     }
   }
