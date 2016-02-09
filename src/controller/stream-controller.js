@@ -59,7 +59,7 @@ class StreamController extends EventHandler {
       this.startInternal();
       var media = this.media, lastCurrentTime = this.lastCurrentTime;
       if (media && lastCurrentTime) {
-        logger.log(`seeking @ ${lastCurrentTime}`);
+        logger.log(`configure startPosition @${lastCurrentTime}`);
         if (!this.lastPaused) {
           logger.log('resuming video');
           media.play();
@@ -977,11 +977,12 @@ _checkBuffer() {
       var readyState = media.readyState;
       // if ready state different from HAVE_NOTHING (numeric value 0), we are allowed to seek
       if(readyState) {
+        var targetSeekPosition;
         // if seek after buffered defined, let's seek if within acceptable range
         var seekAfterBuffered = this.seekAfterBuffered;
         if(seekAfterBuffered) {
           if(media.duration >= seekAfterBuffered) {
-            media.currentTime = seekAfterBuffered;
+            targetSeekPosition = seekAfterBuffered;
             this.seekAfterBuffered = undefined;
           }
         } else {
@@ -993,10 +994,13 @@ _checkBuffer() {
             this.loadedmetadata = true;
             // only adjust currentTime if not equal to 0
             if (!currentTime && currentTime !== this.startPosition) {
-              currentTime = this.startPosition;
+              targetSeekPosition = this.startPosition;
             }
           }
-
+          if (targetSeekPosition) {
+            currentTime = targetSeekPosition;
+            logger.log(`target seek position:${targetSeekPosition}`);
+          }
           var bufferInfo = this.bufferInfo(currentTime,0),
               isPlaying = !(media.paused || media.ended || media.seeking || readyState < 3),
               jumpThreshold = 0.2,
@@ -1005,7 +1009,6 @@ _checkBuffer() {
           if (this.stalled && playheadMoving) {
             this.stalled = false;
           }
-
           // check buffer upfront
           // if less than 200ms is buffered, and media is playing but playhead is not moving,
           // and we have a new buffer range available upfront, let's seek to that one
@@ -1031,9 +1034,14 @@ _checkBuffer() {
                  !media.seeking) {
                 // next buffer is close ! adjust currentTime to nextBufferStart
                 // this will ensure effective video decoding
-                logger.log(`adjust currentTime from ${media.currentTime} to ${nextBufferStart}`);
+                logger.log(`adjust currentTime from ${media.currentTime} to next buffered @ ${nextBufferStart}`);
                 media.currentTime = nextBufferStart;
               }
+            }
+          } else {
+            if (targetSeekPosition && media.currentTime !== targetSeekPosition) {
+              logger.log(`adjust currentTime from ${media.currentTime} to ${targetSeekPosition}`);
+              media.currentTime = targetSeekPosition;
             }
           }
         }
