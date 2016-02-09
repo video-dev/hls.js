@@ -18,13 +18,13 @@ var DemuxerWorker = function(self) {
         observer.removeListener(event, ...data);
     };
     self.addEventListener('message', function(ev) {
-        //console.log('demuxer cmd:' + ev.data.cmd);
-        switch (ev.data.cmd) {
+        var data = ev.data;
+        //console.log('demuxer cmd:' + data.cmd);
+        switch (data.cmd) {
             case 'init':
-                self.demuxer = new DemuxerInline(observer);
+                self.demuxer = new DemuxerInline(observer, data.typeSupported);
                 break;
             case 'demux':
-                var data = ev.data;
                 self.demuxer.push(
                     new Uint8Array(data.data),
                     data.audioCodec,

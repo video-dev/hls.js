@@ -9,8 +9,9 @@ import TSDemuxer from '../demux/tsdemuxer';
 import MP4Remuxer from '../remux/mp4-remuxer';
 
 class DemuxerInline {
-    constructor(hls) {
+    constructor(hls, typeSupported) {
         this.hls = hls;
+        this.typeSupported = typeSupported;
     }
 
     destroy() {
@@ -28,7 +29,7 @@ class DemuxerInline {
             // probe for content type
             if (TSDemuxer.probe(data)) {
                 // TODO : use TS Remuxer instead of MP4 Remuxer
-                // if (MediaSource.isTypeSupported('video/MP2T; codecs="avc1.42E01E,mp4a.40.2"')) equals true
+                // if (this.typeSupported.mp2t === true)
                 demuxer = new TSDemuxer(hls, remuxer);
             } else if (AACDemuxer.probe(data)) {
                 demuxer = new AACDemuxer(hls, remuxer);

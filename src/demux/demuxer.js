@@ -7,6 +7,10 @@ import Decrypter from '../crypt/decrypter';
 class Demuxer {
     constructor(hls) {
         this.hls = hls;
+        var typeSupported = {
+            mp4: MediaSource.isTypeSupported('video/mp4'),
+            mp2t: MediaSource.isTypeSupported('video/mp2t')
+        };
         if (hls.config.enableWorker && typeof Worker !== 'undefined') {
             logger.log('demuxing in webworker');
             try {
@@ -14,15 +18,18 @@ class Demuxer {
                 this.w = work(DemuxerWorker);
                 this.onwmsg = this.onWorkerMessage.bind(this);
                 this.w.addEventListener('message', this.onwmsg);
-                this.w.postMessage({ cmd: 'init' });
+                this.w.postMessage({
+                    cmd: 'init',
+                    typeSupported: typeSupported
+                });
             } catch (err) {
                 logger.error(
                     'error while initializing DemuxerWorker, fallback on DemuxerInline'
                 );
-                this.demuxer = new DemuxerInline(hls);
+                this.demuxer = new DemuxerInline(hls, typeSupported);
             }
         } else {
-            this.demuxer = new DemuxerInline(hls);
+            this.demuxer = new DemuxerInline(hls, typeSupported);
         }
         this.demuxInitialized = true;
     }
