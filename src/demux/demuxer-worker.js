@@ -48,17 +48,21 @@ var DemuxerWorker = function(self) {
         if (data.audioCodec) {
             objData.audioContainer = data.audioContainer;
             objData.audioCodec = data.audioCodec;
-            objData.audioInitSegment = data.audioInitSegment.buffer;
             objData.audioChannelCount = data.audioChannelCount;
-            objTransferable.push(objData.audioInitSegment);
+            if (data.audioInitSegment) {
+                objData.audioInitSegment = data.audioInitSegment.buffer;
+                objTransferable.push(objData.audioInitSegment);
+            }
         }
         if (data.videoCodec) {
             objData.videoContainer = data.videoContainer;
             objData.videoCodec = data.videoCodec;
-            objData.videoInitSegment = data.videoInitSegment.buffer;
             objData.videoWidth = data.videoWidth;
             objData.videoHeight = data.videoHeight;
-            objTransferable.push(objData.videoInitSegment);
+            if (data.videoInitSegment) {
+                objData.videoInitSegment = data.videoInitSegment.buffer;
+                objTransferable.push(objData.videoInitSegment);
+            }
         }
         // pass moov as transferable object (no copy)
         self.postMessage(objData, objTransferable);
