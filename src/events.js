@@ -9,7 +9,7 @@ module.exports = {
     MEDIA_DETACHED: 'hlsMediaDetached',
     // fired when we buffer is going to be resetted
     BUFFER_RESET: 'hlsBufferReset',
-    // fired when we know about the codecs that we need buffers for to push into - data: {audioCodec, videoCodec, levelAudioCodec,levelVideoCodec,audioInitSegment,videoInitSegment}
+    // fired when we know about the codecs that we need buffers for to push into - data: {tracks : { container, codec, levelCodec, initSegment, metadata }}
     BUFFER_CODECS: 'hlsBufferCodecs',
     // fired when we append a segment to the buffer - data: { segment: segment object }
     BUFFER_APPENDING: 'hlsBufferAppending',

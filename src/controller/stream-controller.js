@@ -887,23 +887,23 @@ class StreamController extends EventHandler {
     onManifestParsed(data) {
         var aac = false,
             heaac = false,
-            codecs;
+            codec;
         data.levels.forEach(level => {
             // detect if we have different kind of audio codecs used amongst playlists
-            codecs = level.codecs;
-            if (codecs) {
-                if (codecs.indexOf('mp4a.40.2') !== -1) {
+            codec = level.audioCodec;
+            if (codec) {
+                if (codec.indexOf('mp4a.40.2') !== -1) {
                     aac = true;
                 }
-                if (codecs.indexOf('mp4a.40.5') !== -1) {
+                if (codec.indexOf('mp4a.40.5') !== -1) {
                     heaac = true;
                 }
             }
         });
-        this.audiocodecswitch = aac && heaac;
-        if (this.audiocodecswitch) {
+        this.audioCodecSwitch = aac && heaac;
+        if (this.audioCodecSwitch) {
             logger.log(
-                'both AAC/HE-AAC audio found in levels; declaring audio codec as HE-AAC'
+                'both AAC/HE-AAC audio found in levels; declaring level codec as HE-AAC'
             );
         }
         this.levels = data.levels;
@@ -1049,21 +1049,80 @@ class StreamController extends EventHandler {
 
     onFragParsingInitSegment(data) {
         if (this.state === State.PARSING) {
-            var levelAudioCodec = this.levels[this.level].audioCodec,
-                levelVideoCodec = this.levels[this.level].videoCodec;
+            var tracks = data.tracks,
+                trackName,
+                track;
 
-            if (levelAudioCodec && this.audioCodecSwap) {
-                logger.log('swapping playlist audio codec');
-                if (levelAudioCodec.indexOf('mp4a.40.5') !== -1) {
-                    levelAudioCodec = 'mp4a.40.2';
-                } else {
-                    levelAudioCodec = 'mp4a.40.5';
+            // include levelCodec in audio and video tracks
+            track = tracks.audio;
+            if (track) {
+                var audioCodec = this.levels[this.level].audioCodec;
+                if (audioCodec && this.audioCodecSwap) {
+                    logger.log('swapping playlist audio codec');
+                    if (audioCodec.indexOf('mp4a.40.5') !== -1) {
+                        audioCodec = 'mp4a.40.2';
+                    } else {
+                        audioCodec = 'mp4a.40.5';
+                    }
                 }
+                // in case AAC and HE-AAC audio codecs are signalled in manifest
+                // force HE-AAC , as it seems that most browsers prefers that way,
+                // except for mono streams OR on Android OR on FF
+                // these conditions might need to be reviewed ...
+                if (this.audioCodecSwitch) {
+                    var ua = navigator.userAgent.toLowerCase();
+                    // don't force HE-AAC if mono stream
+                    if (
+                        track.metadata.channelCount !== 1 &&
+                        // don't force HE-AAC if android
+                        ua.indexOf('android') === -1 &&
+                        // don't force HE-AAC if firefox
+                        ua.indexOf('firefox') === -1
+                    ) {
+                        audioCodec = 'mp4a.40.5';
+                    }
+                }
+                track.levelCodec = audioCodec;
             }
-            // include codecs signaled from variant manifest
-            data.levelAudioCodec = levelAudioCodec;
-            data.levelVideoCodec = levelVideoCodec;
-            this.hls.trigger(Event.BUFFER_CODECS, data);
+            track = tracks.video;
+            if (track) {
+                track.levelCodec = this.levels[this.level].videoCodec;
+            }
+
+            // if remuxer specify that a unique track needs to generated,
+            // let's merge all tracks together
+            if (data.unique) {
+                var mergedTrack = {
+                    codec: '',
+                    levelCodec: ''
+                };
+                for (trackName in data.tracks) {
+                    track = tracks[trackName];
+                    mergedTrack.container = track.container;
+                    if (mergedTrack.codec) {
+                        mergedTrack.codec += ',';
+                        mergedTrack.levelCodec += ',';
+                    }
+                    if (track.codec) {
+                        mergedTrack.codec += track.codec;
+                    }
+                    if (track.levelCodec) {
+                        mergedTrack.levelCodec += track.levelCodec;
+                    }
+                }
+                tracks = { audiovideo: mergedTrack };
+            }
+
+            // loop through tracks that are going to be provided to bufferController
+            for (trackName in tracks) {
+                track = tracks[trackName];
+                logger.log(
+                    `track:${trackName},container:${
+                        track.container
+                    },codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`
+                );
+            }
+            this.hls.trigger(Event.BUFFER_CODECS, tracks);
             //trigger handler right now
             this.tick();
         }

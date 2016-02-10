@@ -59,76 +59,68 @@ class MP4Remuxer {
         var observer = this.observer,
             audioSamples = audioTrack.samples,
             videoSamples = videoTrack.samples,
-            nbAudio = audioSamples.length,
-            nbVideo = videoSamples.length,
-            pesTimeScale = this.PES_TIMESCALE;
+            pesTimeScale = this.PES_TIMESCALE,
+            tracks = {},
+            data = { tracks: tracks, unique: false },
+            computePTSDTS = this._initPTS === undefined,
+            initPTS,
+            initDTS;
 
-        if (nbAudio === 0 && nbVideo === 0) {
+        if (computePTSDTS) {
+            initPTS = initDTS = Infinity;
+        }
+
+        if (audioTrack.config && audioSamples.length) {
+            tracks.audio = {
+                container: 'audio/mp4',
+                codec: audioTrack.codec,
+                initSegment: MP4.initSegment([audioTrack]),
+                metadata: {
+                    channelCount: audioTrack.channelCount
+                }
+            };
+            if (computePTSDTS) {
+                // remember first PTS of this demuxing context. for audio, PTS + DTS ...
+                initPTS = initDTS =
+                    audioSamples[0].pts - pesTimeScale * timeOffset;
+            }
+        }
+
+        if (videoTrack.sps && videoTrack.pps && videoSamples.length) {
+            tracks.video = {
+                container: 'video/mp4',
+                codec: videoTrack.codec,
+                initSegment: MP4.initSegment([videoTrack]),
+                metadata: {
+                    width: videoTrack.width,
+                    height: videoTrack.height
+                }
+            };
+            if (computePTSDTS) {
+                initPTS = Math.min(
+                    initPTS,
+                    videoSamples[0].pts - pesTimeScale * timeOffset
+                );
+                initDTS = Math.min(
+                    initDTS,
+                    videoSamples[0].dts - pesTimeScale * timeOffset
+                );
+            }
+        }
+
+        if (!Object.keys(tracks)) {
             observer.trigger(Event.ERROR, {
                 type: ErrorTypes.MEDIA_ERROR,
                 details: ErrorDetails.FRAG_PARSING_ERROR,
                 fatal: false,
                 reason: 'no audio/video samples found'
             });
-        } else if (nbVideo === 0) {
-            //audio only
-            if (audioTrack.config) {
-                observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
-                    audioInitSegment: MP4.initSegment([audioTrack]),
-                    audioContainer: 'audio/mp4',
-                    audioCodec: audioTrack.codec,
-                    audioChannelCount: audioTrack.channelCount
-                });
-                this.ISGenerated = true;
-            }
-            if (this._initPTS === undefined) {
-                // remember first PTS of this demuxing context
-                this._initPTS = audioSamples[0].pts - pesTimeScale * timeOffset;
-                this._initDTS = audioSamples[0].dts - pesTimeScale * timeOffset;
-            }
-        } else if (nbAudio === 0) {
-            //video only
-            if (videoTrack.sps && videoTrack.pps) {
-                observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
-                    videoInitSegment: MP4.initSegment([videoTrack]),
-                    videoContainer: 'video/mp4',
-                    videoCodec: videoTrack.codec,
-                    videoWidth: videoTrack.width,
-                    videoHeight: videoTrack.height
-                });
-                this.ISGenerated = true;
-                if (this._initPTS === undefined) {
-                    // remember first PTS of this demuxing context
-                    this._initPTS =
-                        videoSamples[0].pts - pesTimeScale * timeOffset;
-                    this._initDTS =
-                        videoSamples[0].dts - pesTimeScale * timeOffset;
-                }
-            }
         } else {
-            //audio and video
-            if (audioTrack.config && videoTrack.sps && videoTrack.pps) {
-                observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
-                    audioInitSegment: MP4.initSegment([audioTrack]),
-                    audioContainer: 'audio/mp4',
-                    audioCodec: audioTrack.codec,
-                    audioChannelCount: audioTrack.channelCount,
-                    videoInitSegment: MP4.initSegment([videoTrack]),
-                    videoContainer: 'video/mp4',
-                    videoCodec: videoTrack.codec,
-                    videoWidth: videoTrack.width,
-                    videoHeight: videoTrack.height
-                });
-                this.ISGenerated = true;
-                if (this._initPTS === undefined) {
-                    // remember first PTS of this demuxing context
-                    this._initPTS =
-                        Math.min(videoSamples[0].pts, audioSamples[0].pts) -
-                        pesTimeScale * timeOffset;
-                    this._initDTS =
-                        Math.min(videoSamples[0].dts, audioSamples[0].dts) -
-                        pesTimeScale * timeOffset;
-                }
+            observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, data);
+            this.ISGenerated = true;
+            if (computePTSDTS) {
+                this._initPTS = initPTS;
+                this._initDTS = initDTS;
             }
         }
     }
