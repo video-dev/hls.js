@@ -34,29 +34,7 @@ var DemuxerWorker = function (self) {
 
   // listen to events triggered by Demuxer
   observer.on(Event.FRAG_PARSING_INIT_SEGMENT, function(ev, data) {
-    var objData = {event: ev};
-    var objTransferable = [];
-    if (data.audioCodec) {
-      objData.audioContainer = data.audioContainer;
-      objData.audioCodec = data.audioCodec;
-      objData.audioChannelCount = data.audioChannelCount;
-      if (data.audioInitSegment) {
-        objData.audioInitSegment = data.audioInitSegment.buffer;
-        objTransferable.push(objData.audioInitSegment);
-      }
-    }
-    if (data.videoCodec) {
-      objData.videoContainer = data.videoContainer;
-      objData.videoCodec = data.videoCodec;
-      objData.videoWidth = data.videoWidth;
-      objData.videoHeight = data.videoHeight;
-      if (data.videoInitSegment) {
-        objData.videoInitSegment = data.videoInitSegment.buffer;
-        objTransferable.push(objData.videoInitSegment);
-      }
-    }
-    // pass moov as transferable object (no copy)
-    self.postMessage(objData,objTransferable);
+    self.postMessage({event: ev, tracks : data.tracks, unique : data.unique });
   });
 
   observer.on(Event.FRAG_PARSING_DATA, function(ev, data) {

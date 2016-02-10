@@ -72,19 +72,8 @@ class Demuxer {
     switch(data.event) {
       case Event.FRAG_PARSING_INIT_SEGMENT:
         var obj = {};
-        if (data.audioInitSegment) {
-          obj.audioInitSegment = new Uint8Array(data.audioInitSegment);
-          obj.audioCodec = data.audioCodec;
-          obj.audioContainer = data.audioContainer;
-          obj.audioChannelCount = data.audioChannelCount;
-        }
-        if (ev.data.videoInitSegment) {
-          obj.videoInitSegment = new Uint8Array(data.videoInitSegment);
-          obj.videoContainer = data.videoContainer;
-          obj.videoCodec = data.videoCodec;
-          obj.videoWidth = data.videoWidth;
-          obj.videoHeight = data.videoHeight;
-        }
+        obj.tracks = data.tracks;
+        obj.unique = data.unique;
         this.hls.trigger(Event.FRAG_PARSING_INIT_SEGMENT, obj);
         break;
       case Event.FRAG_PARSING_DATA:

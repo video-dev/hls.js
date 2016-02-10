@@ -129,51 +129,31 @@ class BufferController extends EventHandler {
     this.appended = 0;
   }
 
-  onBufferCodecs(data) {
-    var sb,
-        audioCodec = data.levelAudioCodec,
-        videoCodec = data.levelVideoCodec,
-        hls = this.hls;
-    logger.log(`playlist_level/init_segment codecs: video => ${videoCodec}/${data.videoCodec}; audio => ${audioCodec}/${data.audioCodec}`);
-    // if playlist does not specify codecs, use codecs found while parsing fragment
-    // if no codec found while parsing fragment, also set codec to undefined to avoid creating sourceBuffer
-    if (audioCodec === undefined || data.audioCodec === undefined) {
-      audioCodec = data.audioCodec;
-    }
+  onBufferCodecs(tracks) {
+    var hls = this.hls,
+        sb,trackName,track, initSegment, codec, mimeType;
 
-    if (videoCodec === undefined  || data.videoCodec === undefined) {
-      videoCodec = data.videoCodec;
-    }
-    // in case several audio codecs might be used, force HE-AAC for audio (some browsers don't support audio codec switch)
-    //don't do it for mono streams ...
-    var ua = navigator.userAgent.toLowerCase();
-    if (this.audiocodecswitch &&
-       data.audioChannelCount !== 1 &&
-        ua.indexOf('android') === -1 &&
-        ua.indexOf('firefox') === -1) {
-      audioCodec = 'mp4a.40.5';
-    }
     if (!this.sourceBuffer) {
       var sourceBuffer = {}, mediaSource = this.mediaSource;
-      logger.log(`selected A/V codecs for sourceBuffers:${audioCodec},${videoCodec}`);
-      // create source Buffer and link them to MediaSource
-      if (audioCodec) {
-        sb = sourceBuffer.audio = mediaSource.addSourceBuffer(`${data.audioContainer};codecs=${audioCodec}`);
-        sb.addEventListener('updateend', this.onsbue);
-        sb.addEventListener('error', this.onsbe);
-      }
-      if (videoCodec) {
-        sb = sourceBuffer.video = mediaSource.addSourceBuffer(`${data.videoContainer};codecs=${videoCodec}`);
+      for (trackName in tracks) {
+        track = tracks[trackName];
+        // use levelCodec as first priority
+        codec = track.levelCodec || track.codec;
+        mimeType = `${track.container};codecs=${codec}`;
+        logger.log(`creating sourceBuffer with mimeType:${mimeType}`);
+        sb = sourceBuffer[trackName] = mediaSource.addSourceBuffer(mimeType);
         sb.addEventListener('updateend', this.onsbue);
         sb.addEventListener('error', this.onsbe);
       }
       this.sourceBuffer = sourceBuffer;
     }
-    if (audioCodec && data.audioInitSegment) {
-      hls.trigger(Event.BUFFER_APPENDING, {type: 'audio', data: data.audioInitSegment});
-    }
-    if(videoCodec && data.videoInitSegment) {
-      hls.trigger(Event.BUFFER_APPENDING, {type: 'video', data: data.videoInitSegment});
+
+    for (trackName in tracks) {
+      track = tracks[trackName];
+      initSegment = track.initSegment;
+      if (initSegment) {
+        hls.trigger(Event.BUFFER_APPENDING, {type: trackName, data: initSegment});
+      }
     }
   }
 
@@ -239,13 +219,8 @@ class BufferController extends EventHandler {
       var appended = 0;
       var sourceBuffer = this.sourceBuffer;
       if (sourceBuffer) {
-        var sb = sourceBuffer.audio;
-        if (sb) {
-          appended += sb.buffered.length;
-        }
-        sb = sourceBuffer.video;
-        if (sb) {
-          appended += sb.buffered.length;
+        for (var type in sourceBuffer) {
+          appended += sourceBuffer[type].buffered.length;
         }
       }
       this.appended = appended;
@@ -261,12 +236,13 @@ class BufferController extends EventHandler {
         logger.error('trying to append although a media error occured, flush segment and abort');
         return;
       }
-      // if MP4 segment appending in progress nothing to do
-      else if ((sourceBuffer.audio && sourceBuffer.audio.updating) ||
-         (sourceBuffer.video && sourceBuffer.video.updating)) {
-        //logger.log('sb append in progress');
-    // check if any MP4 segments left to append
-      } else if (segments.length) {
+      for (var type in sourceBuffer) {
+        if (sourceBuffer[type].updating) {
+          //logger.log('sb update in progress');
+          return;
+        }
+      }
+      if (segments.length) {
         var segment = segments.shift();
         try {
           //logger.log(`appending ${segment.type} SB, size:${segment.data.length});
