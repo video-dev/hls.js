@@ -265,8 +265,8 @@ class BufferController extends EventHandler {
             /* with UHD content, we could get loop of quota exceeded error until
               browser is able to evict some data from sourcebuffer. retrying help recovering this
             */
-            if (this.appendError > this.config.appendErrorMaxRetry) {
-              logger.log(`fail ${this.config.appendErrorMaxRetry} times to append segment in sourceBuffer`);
+            if (this.appendError > hls.config.appendErrorMaxRetry) {
+              logger.log(`fail ${hls.config.appendErrorMaxRetry} times to append segment in sourceBuffer`);
               segments = [];
               event.fatal = true;
               hls.trigger(Event.ERROR, event);
