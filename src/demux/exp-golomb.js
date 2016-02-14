@@ -320,11 +320,12 @@ class ExpGolomb {
             }
         }
         return {
-            width:
+            width: Math.ceil(
                 ((picWidthInMbsMinus1 + 1) * 16 -
                     frameCropLeftOffset * 2 -
                     frameCropRightOffset * 2) *
-                sarScale,
+                    sarScale
+            ),
             height:
                 (2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16 -
                 (frameMbsOnlyFlag ? 2 : 4) *
