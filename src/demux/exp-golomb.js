@@ -249,7 +249,7 @@ class ExpGolomb {
         let sarRatio;
         const aspectRatioIdc = this.readUByte();
         switch (aspectRatioIdc) {
-          //case 1: sarRatio = [1,1]; break;
+          case 1: sarRatio = [1,1]; break;
           case 2: sarRatio = [12,11]; break;
           case 3: sarRatio = [10,11]; break;
           case 4: sarRatio = [16,11]; break;
