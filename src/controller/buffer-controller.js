@@ -69,7 +69,7 @@ class BufferController extends EventHandler {
             this.media.src = '';
             this.mediaSource = null;
             this.media = null;
-            this.loadedmetadata = false;
+            this.pendingTracks = null;
         }
         this.onmso = this.onmse = this.onmsc = null;
         this.hls.trigger(Event.MEDIA_DETACHED);
@@ -80,6 +80,13 @@ class BufferController extends EventHandler {
         this.hls.trigger(Event.MEDIA_ATTACHED, { media: this.media });
         // once received, don't listen anymore to sourceopen event
         this.mediaSource.removeEventListener('sourceopen', this.onmso);
+        // if any buffer codecs pending, treat it here.
+        var pendingTracks = this.pendingTracks;
+        if (pendingTracks) {
+            this.onBufferCodecs(pendingTracks);
+            this.pendingTracks = null;
+            this.doAppending();
+        }
     }
 
     onMediaSourceClose() {
@@ -135,13 +142,12 @@ class BufferController extends EventHandler {
     }
 
     onBufferCodecs(tracks) {
-        var hls = this.hls,
-            sb,
-            trackName,
-            track,
-            initSegment,
-            codec,
-            mimeType;
+        var sb, trackName, track, codec, mimeType;
+
+        if (!this.media) {
+            this.pendingTracks = tracks;
+            return;
+        }
 
         if (!this.sourceBuffer) {
             var sourceBuffer = {},
@@ -159,17 +165,6 @@ class BufferController extends EventHandler {
                 sb.addEventListener('error', this.onsbe);
             }
             this.sourceBuffer = sourceBuffer;
-        }
-
-        for (trackName in tracks) {
-            track = tracks[trackName];
-            initSegment = track.initSegment;
-            if (initSegment) {
-                hls.trigger(Event.BUFFER_APPENDING, {
-                    type: trackName,
-                    data: initSegment
-                });
-            }
         }
     }
 

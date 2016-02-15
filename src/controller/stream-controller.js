@@ -147,8 +147,14 @@ class StreamController extends EventHandler {
                 this.loadedmetadata = false;
                 break;
             case State.IDLE:
-                // if video detached or unbound exit loop
-                if (!this.media) {
+                // if video not attached AND
+                // start fragment already requested OR start frag prefetch disable
+                // exit loop
+                // => if media not attached but start frag prefetch is enabled and start frag not requested yet, we will not exit loop
+                if (
+                    !this.media &&
+                    (this.startFragRequested || !this.config.startFragPrefetch)
+                ) {
                     break;
                 }
                 // determine next candidate fragment to be loaded, based on current position and
@@ -161,7 +167,7 @@ class StreamController extends EventHandler {
                     pos = this.nextLoadPosition;
                 }
                 // determine next load level
-                if (this.startFragmentRequested === false) {
+                if (this.startFragRequested === false) {
                     level = this.startLevel;
                 } else {
                     // we are not at playback start, get next load level from level Controller
@@ -243,10 +249,7 @@ class StreamController extends EventHandler {
                             );
                             bufferEnd = this.seekAfterBuffered;
                         }
-                        if (
-                            this.startFragmentRequested &&
-                            !levelDetails.PTSKnown
-                        ) {
+                        if (this.startFragRequested && !levelDetails.PTSKnown) {
                             /* we are switching level on live playlist, but we don't have any PTS info for that quality level ...
                  try to load frag matching with next SN.
                  even if SN are not synchronized between playlists, loading this frag will help us
@@ -407,7 +410,7 @@ class StreamController extends EventHandler {
                             }
                             frag.loadIdx = this.fragLoadIdx;
                             this.fragCurrent = frag;
-                            this.startFragmentRequested = true;
+                            this.startFragRequested = true;
                             hls.trigger(Event.FRAG_LOADING, { frag: frag });
                             this.state = State.FRAG_LOADING;
                         }
@@ -515,14 +518,21 @@ class StreamController extends EventHandler {
     }
 
     bufferInfo(pos, maxHoleDuration) {
-        var media = this.media,
-            vbuffered = media.buffered,
-            buffered = [],
-            i;
-        for (i = 0; i < vbuffered.length; i++) {
-            buffered.push({ start: vbuffered.start(i), end: vbuffered.end(i) });
+        var media = this.media;
+        if (media) {
+            var vbuffered = media.buffered,
+                buffered = [],
+                i;
+            for (i = 0; i < vbuffered.length; i++) {
+                buffered.push({
+                    start: vbuffered.start(i),
+                    end: vbuffered.end(i)
+                });
+            }
+            return this.bufferedInfo(buffered, pos, maxHoleDuration);
+        } else {
+            return { len: 0, start: 0, end: 0, nextStart: undefined };
         }
-        return this.bufferedInfo(buffered, pos, maxHoleDuration);
     }
 
     bufferedInfo(buffered, pos, maxHoleDuration) {
@@ -908,8 +918,8 @@ class StreamController extends EventHandler {
         }
         this.levels = data.levels;
         this.startLevelLoaded = false;
-        this.startFragmentRequested = false;
-        if (this.media && this.config.autoStartLoad) {
+        this.startFragRequested = false;
+        if (this.config.autoStartLoad) {
             this.startLoad();
         }
     }
@@ -1112,7 +1122,7 @@ class StreamController extends EventHandler {
                 }
                 tracks = { audiovideo: mergedTrack };
             }
-
+            this.hls.trigger(Event.BUFFER_CODECS, tracks);
             // loop through tracks that are going to be provided to bufferController
             for (trackName in tracks) {
                 track = tracks[trackName];
@@ -1121,8 +1131,14 @@ class StreamController extends EventHandler {
                         track.container
                     },codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`
                 );
+                var initSegment = track.initSegment;
+                if (initSegment) {
+                    this.hls.trigger(Event.BUFFER_APPENDING, {
+                        type: trackName,
+                        data: initSegment
+                    });
+                }
             }
-            this.hls.trigger(Event.BUFFER_CODECS, tracks);
             //trigger handler right now
             this.tick();
         }
