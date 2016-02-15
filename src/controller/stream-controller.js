@@ -1357,11 +1357,11 @@ class StreamController extends EventHandler {
                         );
                     }
                     var bufferInfo = this.bufferInfo(currentTime, 0),
-                        isPlaying = !(
+                        expectedPlaying = !(
                             media.paused ||
                             media.ended ||
                             media.seeking ||
-                            readyState < 3
+                            readyState < 2
                         ),
                         jumpThreshold = 0.2,
                         playheadMoving =
@@ -1372,14 +1372,14 @@ class StreamController extends EventHandler {
                         this.stalled = false;
                     }
                     // check buffer upfront
-                    // if less than 200ms is buffered, and media is playing but playhead is not moving,
+                    // if less than 200ms is buffered, and media is expected to play but playhead is not moving,
                     // and we have a new buffer range available upfront, let's seek to that one
                     if (bufferInfo.len <= jumpThreshold) {
-                        if (playheadMoving || !isPlaying) {
+                        if (playheadMoving || !expectedPlaying) {
                             // playhead moving or media not playing
                             jumpThreshold = 0;
                         } else {
-                            // playhead not moving AND media playing
+                            // playhead not moving AND media expected to play
                             logger.log(`playback seems stuck @${currentTime}`);
                             if (!this.stalled) {
                                 this.hls.trigger(Event.ERROR, {
