@@ -69,7 +69,8 @@ as of today, it is supported on:
 
  * Chrome for Android 34+
  * Chrome for Desktop 34+
- * Firefox for Desktop 38+ (with ```media.mediasource.whitelist=false``` in about:config)
+ * Firefox for Android 41+
+ * Firefox for Desktop 42+
  * IE11+ for Windows 8.1
  * Safari for Mac 8+ (beta)
 
