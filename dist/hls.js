@@ -423,7 +423,10 @@ var AbrController = function (_EventHandler) {
     key: 'onFragLoadProgress',
     value: function onFragLoadProgress(data) {
       var stats = data.stats;
-      if (stats.aborted === undefined) {
+      // only update stats if first frag loading
+      // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
+      // and leading to wrong bw estimation
+      if (stats.aborted === undefined && data.frag.loadCounter === 1) {
         this.lastfetchduration = (performance.now() - stats.trequest) / 1000;
         this.lastfetchlevel = data.frag.level;
         this.lastbw = stats.loaded * 8 / this.lastfetchduration;
@@ -585,7 +588,7 @@ var BufferController = function (_EventHandler) {
         this.media.src = '';
         this.mediaSource = null;
         this.media = null;
-        this.loadedmetadata = false;
+        this.pendingTracks = null;
       }
       this.onmso = this.onmse = this.onmsc = null;
       this.hls.trigger(_events2.default.MEDIA_DETACHED);
@@ -597,6 +600,13 @@ var BufferController = function (_EventHandler) {
       this.hls.trigger(_events2.default.MEDIA_ATTACHED, { media: this.media });
       // once received, don't listen anymore to sourceopen event
       this.mediaSource.removeEventListener('sourceopen', this.onmso);
+      // if any buffer codecs pending, treat it here.
+      var pendingTracks = this.pendingTracks;
+      if (pendingTracks) {
+        this.onBufferCodecs(pendingTracks);
+        this.pendingTracks = null;
+        this.doAppending();
+      }
     }
   }, {
     key: 'onMediaSourceClose',
@@ -654,49 +664,28 @@ var BufferController = function (_EventHandler) {
     }
   }, {
     key: 'onBufferCodecs',
-    value: function onBufferCodecs(data) {
-      var sb,
-          audioCodec = data.levelAudioCodec,
-          videoCodec = data.levelVideoCodec,
-          hls = this.hls;
-      _logger.logger.log('playlist_level/init_segment codecs: video => ' + videoCodec + '/' + data.videoCodec + '; audio => ' + audioCodec + '/' + data.audioCodec);
-      // if playlist does not specify codecs, use codecs found while parsing fragment
-      // if no codec found while parsing fragment, also set codec to undefined to avoid creating sourceBuffer
-      if (audioCodec === undefined || data.audioCodec === undefined) {
-        audioCodec = data.audioCodec;
+    value: function onBufferCodecs(tracks) {
+      var sb, trackName, track, codec, mimeType;
+
+      if (!this.media) {
+        this.pendingTracks = tracks;
+        return;
       }
 
-      if (videoCodec === undefined || data.videoCodec === undefined) {
-        videoCodec = data.videoCodec;
-      }
-      // in case several audio codecs might be used, force HE-AAC for audio (some browsers don't support audio codec switch)
-      //don't do it for mono streams ...
-      var ua = navigator.userAgent.toLowerCase();
-      if (this.audiocodecswitch && data.audioChannelCount !== 1 && ua.indexOf('android') === -1 && ua.indexOf('firefox') === -1) {
-        audioCodec = 'mp4a.40.5';
-      }
       if (!this.sourceBuffer) {
         var sourceBuffer = {},
             mediaSource = this.mediaSource;
-        _logger.logger.log('selected A/V codecs for sourceBuffers:' + audioCodec + ',' + videoCodec);
-        // create source Buffer and link them to MediaSource
-        if (audioCodec) {
-          sb = sourceBuffer.audio = mediaSource.addSourceBuffer(data.audioContainer + ';codecs=' + audioCodec);
-          sb.addEventListener('updateend', this.onsbue);
-          sb.addEventListener('error', this.onsbe);
-        }
-        if (videoCodec) {
-          sb = sourceBuffer.video = mediaSource.addSourceBuffer(data.videoContainer + ';codecs=' + videoCodec);
+        for (trackName in tracks) {
+          track = tracks[trackName];
+          // use levelCodec as first priority
+          codec = track.levelCodec || track.codec;
+          mimeType = track.container + ';codecs=' + codec;
+          _logger.logger.log('creating sourceBuffer with mimeType:' + mimeType);
+          sb = sourceBuffer[trackName] = mediaSource.addSourceBuffer(mimeType);
           sb.addEventListener('updateend', this.onsbue);
           sb.addEventListener('error', this.onsbe);
         }
         this.sourceBuffer = sourceBuffer;
-      }
-      if (audioCodec) {
-        hls.trigger(_events2.default.BUFFER_APPENDING, { type: 'audio', data: data.audioInitSegment });
-      }
-      if (videoCodec) {
-        hls.trigger(_events2.default.BUFFER_APPENDING, { type: 'video', data: data.videoInitSegment });
       }
     }
   }, {
@@ -768,13 +757,8 @@ var BufferController = function (_EventHandler) {
         var appended = 0;
         var sourceBuffer = this.sourceBuffer;
         if (sourceBuffer) {
-          var sb = sourceBuffer.audio;
-          if (sb) {
-            appended += sb.buffered.length;
-          }
-          sb = sourceBuffer.video;
-          if (sb) {
-            appended += sb.buffered.length;
+          for (var type in sourceBuffer) {
+            appended += sourceBuffer[type].buffered.length;
           }
         }
         this.appended = appended;
@@ -793,52 +777,54 @@ var BufferController = function (_EventHandler) {
           _logger.logger.error('trying to append although a media error occured, flush segment and abort');
           return;
         }
-        // if MP4 segment appending in progress nothing to do
-        else if (sourceBuffer.audio && sourceBuffer.audio.updating || sourceBuffer.video && sourceBuffer.video.updating) {
-            //logger.log('sb append in progress');
-            // check if any MP4 segments left to append
-          } else if (segments.length) {
-              var segment = segments.shift();
-              try {
-                //logger.log(`appending ${segment.type} SB, size:${segment.data.length});
-                sourceBuffer[segment.type].appendBuffer(segment.data);
-                this.appendError = 0;
-                this.appended++;
-              } catch (err) {
-                // in case any error occured while appending, put back segment in segments table
-                _logger.logger.error('error while trying to append buffer:' + err.message);
-                segments.unshift(segment);
-                var event = { type: _errors.ErrorTypes.MEDIA_ERROR };
-                if (err.code !== 22) {
-                  if (this.appendError) {
-                    this.appendError++;
-                  } else {
-                    this.appendError = 1;
-                  }
-                  event.details = _errors.ErrorDetails.BUFFER_APPEND_ERROR;
-                  event.frag = this.fragCurrent;
-                  /* with UHD content, we could get loop of quota exceeded error until
-                    browser is able to evict some data from sourcebuffer. retrying help recovering this
-                  */
-                  if (this.appendError > this.config.appendErrorMaxRetry) {
-                    _logger.logger.log('fail ' + this.config.appendErrorMaxRetry + ' times to append segment in sourceBuffer');
-                    segments = [];
-                    event.fatal = true;
-                    hls.trigger(_events2.default.ERROR, event);
-                    return;
-                  } else {
-                    event.fatal = false;
-                    hls.trigger(_events2.default.ERROR, event);
-                  }
-                } else {
-                  // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
-                  // let's stop appending any segments, and report BUFFER_FULL error
-                  segments = [];
-                  event.details = _errors.ErrorDetails.BUFFER_FULL;
-                  hls.trigger(_events2.default.ERROR, event);
-                }
+        for (var type in sourceBuffer) {
+          if (sourceBuffer[type].updating) {
+            //logger.log('sb update in progress');
+            return;
+          }
+        }
+        if (segments.length) {
+          var segment = segments.shift();
+          try {
+            //logger.log(`appending ${segment.type} SB, size:${segment.data.length});
+            sourceBuffer[segment.type].appendBuffer(segment.data);
+            this.appendError = 0;
+            this.appended++;
+          } catch (err) {
+            // in case any error occured while appending, put back segment in segments table
+            _logger.logger.error('error while trying to append buffer:' + err.message);
+            segments.unshift(segment);
+            var event = { type: _errors.ErrorTypes.MEDIA_ERROR };
+            if (err.code !== 22) {
+              if (this.appendError) {
+                this.appendError++;
+              } else {
+                this.appendError = 1;
               }
+              event.details = _errors.ErrorDetails.BUFFER_APPEND_ERROR;
+              event.frag = this.fragCurrent;
+              /* with UHD content, we could get loop of quota exceeded error until
+                browser is able to evict some data from sourcebuffer. retrying help recovering this
+              */
+              if (this.appendError > hls.config.appendErrorMaxRetry) {
+                _logger.logger.log('fail ' + hls.config.appendErrorMaxRetry + ' times to append segment in sourceBuffer');
+                segments = [];
+                event.fatal = true;
+                hls.trigger(_events2.default.ERROR, event);
+                return;
+              } else {
+                event.fatal = false;
+                hls.trigger(_events2.default.ERROR, event);
+              }
+            } else {
+              // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
+              // let's stop appending any segments, and report BUFFER_FULL error
+              segments = [];
+              event.details = _errors.ErrorDetails.BUFFER_FULL;
+              hls.trigger(_events2.default.ERROR, event);
             }
+          }
+        }
       }
     }
 
@@ -1295,7 +1281,7 @@ var StreamController = function (_EventHandler) {
         var media = this.media,
             lastCurrentTime = this.lastCurrentTime;
         if (media && lastCurrentTime) {
-          _logger.logger.log('seeking @ ' + lastCurrentTime);
+          _logger.logger.log('configure startPosition @' + lastCurrentTime);
           if (!this.lastPaused) {
             _logger.logger.log('resuming video');
             media.play();
@@ -1385,8 +1371,11 @@ var StreamController = function (_EventHandler) {
           this.loadedmetadata = false;
           break;
         case State.IDLE:
-          // if video detached or unbound exit loop
-          if (!this.media) {
+          // if video not attached AND
+          // start fragment already requested OR start frag prefetch disable
+          // exit loop
+          // => if media not attached but start frag prefetch is enabled and start frag not requested yet, we will not exit loop
+          if (!this.media && (this.startFragRequested || !this.config.startFragPrefetch)) {
             break;
           }
           // determine next candidate fragment to be loaded, based on current position and
@@ -1399,7 +1388,7 @@ var StreamController = function (_EventHandler) {
             pos = this.nextLoadPosition;
           }
           // determine next load level
-          if (this.startFragmentRequested === false) {
+          if (this.startFragRequested === false) {
             level = this.startLevel;
           } else {
             // we are not at playback start, get next load level from level Controller
@@ -1446,7 +1435,7 @@ var StreamController = function (_EventHandler) {
                 _logger.logger.log('buffer end: ' + bufferEnd + ' is located too far from the end of live sliding playlist, media position will be reseted to: ' + this.seekAfterBuffered.toFixed(3));
                 bufferEnd = this.seekAfterBuffered;
               }
-              if (this.startFragmentRequested && !levelDetails.PTSKnown) {
+              if (this.startFragRequested && !levelDetails.PTSKnown) {
                 /* we are switching level on live playlist, but we don't have any PTS info for that quality level ...
                    try to load frag matching with next SN.
                    even if SN are not synchronized between playlists, loading this frag will help us
@@ -1540,7 +1529,7 @@ var StreamController = function (_EventHandler) {
                 }
                 _frag.loadIdx = this.fragLoadIdx;
                 this.fragCurrent = _frag;
-                this.startFragmentRequested = true;
+                this.startFragRequested = true;
                 hls.trigger(_events2.default.FRAG_LOADING, { frag: _frag });
                 this.state = State.FRAG_LOADING;
               }
@@ -1621,14 +1610,18 @@ var StreamController = function (_EventHandler) {
   }, {
     key: 'bufferInfo',
     value: function bufferInfo(pos, maxHoleDuration) {
-      var media = this.media,
-          vbuffered = media.buffered,
-          buffered = [],
-          i;
-      for (i = 0; i < vbuffered.length; i++) {
-        buffered.push({ start: vbuffered.start(i), end: vbuffered.end(i) });
+      var media = this.media;
+      if (media) {
+        var vbuffered = media.buffered,
+            buffered = [],
+            i;
+        for (i = 0; i < vbuffered.length; i++) {
+          buffered.push({ start: vbuffered.start(i), end: vbuffered.end(i) });
+        }
+        return this.bufferedInfo(buffered, pos, maxHoleDuration);
+      } else {
+        return { len: 0, start: 0, end: 0, nextStart: undefined };
       }
-      return this.bufferedInfo(buffered, pos, maxHoleDuration);
     }
   }, {
     key: 'bufferedInfo',
@@ -1953,27 +1946,27 @@ var StreamController = function (_EventHandler) {
     value: function onManifestParsed(data) {
       var aac = false,
           heaac = false,
-          codecs;
+          codec;
       data.levels.forEach(function (level) {
         // detect if we have different kind of audio codecs used amongst playlists
-        codecs = level.codecs;
-        if (codecs) {
-          if (codecs.indexOf('mp4a.40.2') !== -1) {
+        codec = level.audioCodec;
+        if (codec) {
+          if (codec.indexOf('mp4a.40.2') !== -1) {
             aac = true;
           }
-          if (codecs.indexOf('mp4a.40.5') !== -1) {
+          if (codec.indexOf('mp4a.40.5') !== -1) {
             heaac = true;
           }
         }
       });
-      this.audiocodecswitch = aac && heaac;
-      if (this.audiocodecswitch) {
-        _logger.logger.log('both AAC/HE-AAC audio found in levels; declaring audio codec as HE-AAC');
+      this.audioCodecSwitch = aac && heaac;
+      if (this.audioCodecSwitch) {
+        _logger.logger.log('both AAC/HE-AAC audio found in levels; declaring level codec as HE-AAC');
       }
       this.levels = data.levels;
       this.startLevelLoaded = false;
-      this.startFragmentRequested = false;
-      if (this.media && this.config.autoStartLoad) {
+      this.startFragRequested = false;
+      if (this.config.autoStartLoad) {
         this.startLoad();
       }
     }
@@ -2077,21 +2070,77 @@ var StreamController = function (_EventHandler) {
     key: 'onFragParsingInitSegment',
     value: function onFragParsingInitSegment(data) {
       if (this.state === State.PARSING) {
-        var levelAudioCodec = this.levels[this.level].audioCodec,
-            levelVideoCodec = this.levels[this.level].videoCodec;
+        var tracks = data.tracks,
+            trackName,
+            track;
 
-        if (levelAudioCodec && this.audioCodecSwap) {
-          _logger.logger.log('swapping playlist audio codec');
-          if (levelAudioCodec.indexOf('mp4a.40.5') !== -1) {
-            levelAudioCodec = 'mp4a.40.2';
-          } else {
-            levelAudioCodec = 'mp4a.40.5';
+        // include levelCodec in audio and video tracks
+        track = tracks.audio;
+        if (track) {
+          var audioCodec = this.levels[this.level].audioCodec;
+          if (audioCodec && this.audioCodecSwap) {
+            _logger.logger.log('swapping playlist audio codec');
+            if (audioCodec.indexOf('mp4a.40.5') !== -1) {
+              audioCodec = 'mp4a.40.2';
+            } else {
+              audioCodec = 'mp4a.40.5';
+            }
+          }
+          // in case AAC and HE-AAC audio codecs are signalled in manifest
+          // force HE-AAC , as it seems that most browsers prefers that way,
+          // except for mono streams OR on Android OR on FF
+          // these conditions might need to be reviewed ...
+          if (this.audioCodecSwitch) {
+            var ua = navigator.userAgent.toLowerCase();
+            // don't force HE-AAC if mono stream
+            if (track.metadata.channelCount !== 1 &&
+            // don't force HE-AAC if android
+            ua.indexOf('android') === -1 &&
+            // don't force HE-AAC if firefox
+            ua.indexOf('firefox') === -1) {
+              audioCodec = 'mp4a.40.5';
+            }
+          }
+          track.levelCodec = audioCodec;
+        }
+        track = tracks.video;
+        if (track) {
+          track.levelCodec = this.levels[this.level].videoCodec;
+        }
+
+        // if remuxer specify that a unique track needs to generated,
+        // let's merge all tracks together
+        if (data.unique) {
+          var mergedTrack = {
+            codec: '',
+            levelCodec: ''
+          };
+          for (trackName in data.tracks) {
+            track = tracks[trackName];
+            mergedTrack.container = track.container;
+            if (mergedTrack.codec) {
+              mergedTrack.codec += ',';
+              mergedTrack.levelCodec += ',';
+            }
+            if (track.codec) {
+              mergedTrack.codec += track.codec;
+            }
+            if (track.levelCodec) {
+              mergedTrack.levelCodec += track.levelCodec;
+            }
+          }
+          tracks = { audiovideo: mergedTrack };
+        }
+        this.hls.trigger(_events2.default.BUFFER_CODECS, tracks);
+        // loop through tracks that are going to be provided to bufferController
+        for (trackName in tracks) {
+          track = tracks[trackName];
+          _logger.logger.log('track:' + trackName + ',container:' + track.container + ',codecs[level/parsed]=[' + track.levelCodec + '/' + track.codec + ']');
+          var initSegment = track.initSegment;
+          if (initSegment) {
+            this.hls.trigger(_events2.default.BUFFER_APPENDING, { type: trackName, data: initSegment });
           }
         }
-        // include codecs signaled from variant manifest
-        data.levelAudioCodec = levelAudioCodec;
-        data.levelVideoCodec = levelVideoCodec;
-        this.hls.trigger(_events2.default.BUFFER_CODECS, data);
         //trigger handler right now
         this.tick();
       }
@@ -2231,11 +2280,12 @@ var StreamController = function (_EventHandler) {
         var readyState = media.readyState;
         // if ready state different from HAVE_NOTHING (numeric value 0), we are allowed to seek
         if (readyState) {
+          var targetSeekPosition;
           // if seek after buffered defined, let's seek if within acceptable range
           var seekAfterBuffered = this.seekAfterBuffered;
           if (seekAfterBuffered) {
             if (media.duration >= seekAfterBuffered) {
-              media.currentTime = seekAfterBuffered;
+              targetSeekPosition = seekAfterBuffered;
               this.seekAfterBuffered = undefined;
             }
           } else {
@@ -2247,10 +2297,13 @@ var StreamController = function (_EventHandler) {
               this.loadedmetadata = true;
               // only adjust currentTime if not equal to 0
               if (!currentTime && currentTime !== this.startPosition) {
-                currentTime = this.startPosition;
+                targetSeekPosition = this.startPosition;
               }
             }
-
+            if (targetSeekPosition) {
+              currentTime = targetSeekPosition;
+              _logger.logger.log('target seek position:' + targetSeekPosition);
+            }
             var bufferInfo = this.bufferInfo(currentTime, 0),
                 isPlaying = !(media.paused || media.ended || media.seeking || readyState < 3),
                 jumpThreshold = 0.2,
@@ -2259,7 +2312,6 @@ var StreamController = function (_EventHandler) {
             if (this.stalled && playheadMoving) {
               this.stalled = false;
             }
-
             // check buffer upfront
             // if less than 200ms is buffered, and media is playing but playhead is not moving,
             // and we have a new buffer range available upfront, let's seek to that one
@@ -2283,9 +2335,14 @@ var StreamController = function (_EventHandler) {
                 if (nextBufferStart && delta < this.config.maxSeekHole && delta > 0.005 && !media.seeking) {
                   // next buffer is close ! adjust currentTime to nextBufferStart
                   // this will ensure effective video decoding
-                  _logger.logger.log('adjust currentTime from ' + media.currentTime + ' to ' + nextBufferStart);
+                  _logger.logger.log('adjust currentTime from ' + media.currentTime + ' to next buffered @ ' + nextBufferStart);
                   media.currentTime = nextBufferStart;
                 }
+              }
+            } else {
+              if (targetSeekPosition && media.currentTime !== targetSeekPosition) {
+                _logger.logger.log('adjust currentTime from ' + media.currentTime + ' to ' + targetSeekPosition);
+                media.currentTime = targetSeekPosition;
               }
             }
           }
@@ -3298,10 +3355,11 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var DemuxerInline = function () {
-  function DemuxerInline(hls) {
+  function DemuxerInline(hls, typeSupported) {
     _classCallCheck(this, DemuxerInline);
 
     this.hls = hls;
+    this.typeSupported = typeSupported;
   }
 
   _createClass(DemuxerInline, [{
@@ -3322,7 +3380,7 @@ var DemuxerInline = function () {
         // probe for content type
         if (_tsdemuxer2.default.probe(data)) {
           // TODO : use TS Remuxer instead of MP4 Remuxer
-          // if (MediaSource.isTypeSupported('video/MP2T; codecs="avc1.42E01E,mp4a.40.2"')) equals true
+          // if (this.typeSupported.mp2t === true)
           demuxer = new _tsdemuxer2.default(hls, remuxer);
         } else if (_aacdemuxer2.default.probe(data)) {
           demuxer = new _aacdemuxer2.default(hls, remuxer);
@@ -3381,13 +3439,13 @@ var DemuxerWorker = function DemuxerWorker(self) {
     observer.removeListener.apply(observer, [event].concat(data));
   };
   self.addEventListener('message', function (ev) {
-    //console.log('demuxer cmd:' + ev.data.cmd);
-    switch (ev.data.cmd) {
+    var data = ev.data;
+    //console.log('demuxer cmd:' + data.cmd);
+    switch (data.cmd) {
       case 'init':
-        self.demuxer = new _demuxerInline2.default(observer);
+        self.demuxer = new _demuxerInline2.default(observer, data.typeSupported);
         break;
       case 'demux':
-        var data = ev.data;
         self.demuxer.push(new Uint8Array(data.data), data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration);
         break;
       default:
@@ -3397,25 +3455,7 @@ var DemuxerWorker = function DemuxerWorker(self) {
 
   // listen to events triggered by Demuxer
   observer.on(_events2.default.FRAG_PARSING_INIT_SEGMENT, function (ev, data) {
-    var objData = { event: ev };
-    var objTransferable = [];
-    if (data.audioCodec) {
-      objData.audioContainer = data.audioContainer;
-      objData.audioCodec = data.audioCodec;
-      objData.audioInitSegment = data.audioInitSegment.buffer;
-      objData.audioChannelCount = data.audioChannelCount;
-      objTransferable.push(objData.audioInitSegment);
-    }
-    if (data.videoCodec) {
-      objData.videoContainer = data.videoContainer;
-      objData.videoCodec = data.videoCodec;
-      objData.videoInitSegment = data.videoInitSegment.buffer;
-      objData.videoWidth = data.videoWidth;
-      objData.videoHeight = data.videoHeight;
-      objTransferable.push(objData.videoInitSegment);
-    }
-    // pass moov as transferable object (no copy)
-    self.postMessage(objData, objTransferable);
+    self.postMessage({ event: ev, tracks: data.tracks, unique: data.unique });
   });
 
   observer.on(_events2.default.FRAG_PARSING_DATA, function (ev, data) {
@@ -3484,6 +3524,7 @@ var Demuxer = function () {
     _classCallCheck(this, Demuxer);
 
     this.hls = hls;
+    var typeSupported = { mp4: MediaSource.isTypeSupported('video/mp4'), mp2t: MediaSource.isTypeSupported('video/mp2t') };
     if (hls.config.enableWorker && typeof Worker !== 'undefined') {
       _logger.logger.log('demuxing in webworker');
       try {
@@ -3491,13 +3532,13 @@ var Demuxer = function () {
         this.w = work(_demuxerWorker2.default);
         this.onwmsg = this.onWorkerMessage.bind(this);
         this.w.addEventListener('message', this.onwmsg);
-        this.w.postMessage({ cmd: 'init' });
+        this.w.postMessage({ cmd: 'init', typeSupported: typeSupported });
       } catch (err) {
         _logger.logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
-        this.demuxer = new _demuxerInline2.default(hls);
+        this.demuxer = new _demuxerInline2.default(hls, typeSupported);
       }
     } else {
-      this.demuxer = new _demuxerInline2.default(hls);
+      this.demuxer = new _demuxerInline2.default(hls, typeSupported);
     }
     this.demuxInitialized = true;
   }
@@ -3552,19 +3593,8 @@ var Demuxer = function () {
       switch (data.event) {
         case _events2.default.FRAG_PARSING_INIT_SEGMENT:
           var obj = {};
-          if (data.audioInitSegment) {
-            obj.audioInitSegment = new Uint8Array(data.audioInitSegment);
-            obj.audioCodec = data.audioCodec;
-            obj.audioContainer = data.audioContainer;
-            obj.audioChannelCount = data.audioChannelCount;
-          }
-          if (ev.data.videoInitSegment) {
-            obj.videoInitSegment = new Uint8Array(data.videoInitSegment);
-            obj.videoContainer = data.videoContainer;
-            obj.videoCodec = data.videoCodec;
-            obj.videoWidth = data.videoWidth;
-            obj.videoHeight = data.videoHeight;
-          }
+          obj.tracks = data.tracks;
+          obj.unique = data.unique;
           this.hls.trigger(_events2.default.FRAG_PARSING_INIT_SEGMENT, obj);
           break;
         case _events2.default.FRAG_PARSING_DATA:
@@ -3899,7 +3929,8 @@ var ExpGolomb = function () {
           var sarRatio = undefined;
           var aspectRatioIdc = this.readUByte();
           switch (aspectRatioIdc) {
-            //case 1: sarRatio = [1,1]; break;
+            case 1:
+              sarRatio = [1, 1];break;
             case 2:
               sarRatio = [12, 11];break;
             case 3:
@@ -3942,7 +3973,7 @@ var ExpGolomb = function () {
         }
       }
       return {
-        width: ((picWidthInMbsMinus1 + 1) * 16 - frameCropLeftOffset * 2 - frameCropRightOffset * 2) * sarScale,
+        width: Math.ceil(((picWidthInMbsMinus1 + 1) * 16 - frameCropLeftOffset * 2 - frameCropRightOffset * 2) * sarScale),
         height: (2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16 - (frameMbsOnlyFlag ? 2 : 4) * (frameCropTopOffset + frameCropBottomOffset)
       };
     }
@@ -4989,7 +5020,7 @@ module.exports = {
   MEDIA_DETACHED: 'hlsMediaDetached',
   // fired when we buffer is going to be resetted
   BUFFER_RESET: 'hlsBufferReset',
-  // fired when we know about the codecs that we need buffers for to push into - data: {audioCodec, videoCodec, levelAudioCodec,levelVideoCodec,audioInitSegment,videoInitSegment}
+  // fired when we know about the codecs that we need buffers for to push into - data: {tracks : { container, codec, levelCodec, initSegment, metadata }}
   BUFFER_CODECS: 'hlsBufferCodecs',
   // fired when we append a segment to the buffer - data: { segment: segment object }
   BUFFER_APPENDING: 'hlsBufferAppending',
@@ -5306,6 +5337,7 @@ var Hls = function () {
           fragLoadingMaxRetry: 6,
           fragLoadingRetryDelay: 1000,
           fragLoadingLoopThreshold: 3,
+          startFragPrefetch: false,
           // fpsDroppedMonitoringPeriod: 5000,
           // fpsDroppedMonitoringThreshold: 0.2,
           appendErrorMaxRetry: 3,
@@ -6698,65 +6730,56 @@ var MP4Remuxer = function () {
       var observer = this.observer,
           audioSamples = audioTrack.samples,
           videoSamples = videoTrack.samples,
-          nbAudio = audioSamples.length,
-          nbVideo = videoSamples.length,
-          pesTimeScale = this.PES_TIMESCALE;
+          pesTimeScale = this.PES_TIMESCALE,
+          tracks = {},
+          data = { tracks: tracks, unique: false },
+          computePTSDTS = this._initPTS === undefined,
+          initPTS,
+          initDTS;
 
-      if (nbAudio === 0 && nbVideo === 0) {
+      if (computePTSDTS) {
+        initPTS = initDTS = Infinity;
+      }
+
+      if (audioTrack.config && audioSamples.length) {
+        tracks.audio = {
+          container: 'audio/mp4',
+          codec: audioTrack.codec,
+          initSegment: _mp4Generator2.default.initSegment([audioTrack]),
+          metadata: {
+            channelCount: audioTrack.channelCount
+          }
+        };
+        if (computePTSDTS) {
+          // remember first PTS of this demuxing context. for audio, PTS + DTS ...
+          initPTS = initDTS = audioSamples[0].pts - pesTimeScale * timeOffset;
+        }
+      }
+
+      if (videoTrack.sps && videoTrack.pps && videoSamples.length) {
+        tracks.video = {
+          container: 'video/mp4',
+          codec: videoTrack.codec,
+          initSegment: _mp4Generator2.default.initSegment([videoTrack]),
+          metadata: {
+            width: videoTrack.width,
+            height: videoTrack.height
+          }
+        };
+        if (computePTSDTS) {
+          initPTS = Math.min(initPTS, videoSamples[0].pts - pesTimeScale * timeOffset);
+          initDTS = Math.min(initDTS, videoSamples[0].dts - pesTimeScale * timeOffset);
+        }
+      }
+
+      if (!Object.keys(tracks)) {
         observer.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'no audio/video samples found' });
-      } else if (nbVideo === 0) {
-        //audio only
-        if (audioTrack.config) {
-          observer.trigger(_events2.default.FRAG_PARSING_INIT_SEGMENT, {
-            audioInitSegment: _mp4Generator2.default.initSegment([audioTrack]),
-            audioContainer: 'audio/mp4',
-            audioCodec: audioTrack.codec,
-            audioChannelCount: audioTrack.channelCount
-          });
-          this.ISGenerated = true;
-        }
-        if (this._initPTS === undefined) {
-          // remember first PTS of this demuxing context
-          this._initPTS = audioSamples[0].pts - pesTimeScale * timeOffset;
-          this._initDTS = audioSamples[0].dts - pesTimeScale * timeOffset;
-        }
-      } else if (nbAudio === 0) {
-        //video only
-        if (videoTrack.sps && videoTrack.pps) {
-          observer.trigger(_events2.default.FRAG_PARSING_INIT_SEGMENT, {
-            videoInitSegment: _mp4Generator2.default.initSegment([videoTrack]),
-            videoContainer: 'video/mp4',
-            videoCodec: videoTrack.codec,
-            videoWidth: videoTrack.width,
-            videoHeight: videoTrack.height
-          });
-          this.ISGenerated = true;
-          if (this._initPTS === undefined) {
-            // remember first PTS of this demuxing context
-            this._initPTS = videoSamples[0].pts - pesTimeScale * timeOffset;
-            this._initDTS = videoSamples[0].dts - pesTimeScale * timeOffset;
-          }
-        }
       } else {
-        //audio and video
-        if (audioTrack.config && videoTrack.sps && videoTrack.pps) {
-          observer.trigger(_events2.default.FRAG_PARSING_INIT_SEGMENT, {
-            audioInitSegment: _mp4Generator2.default.initSegment([audioTrack]),
-            audioContainer: 'audio/mp4',
-            audioCodec: audioTrack.codec,
-            audioChannelCount: audioTrack.channelCount,
-            videoInitSegment: _mp4Generator2.default.initSegment([videoTrack]),
-            videoContainer: 'video/mp4',
-            videoCodec: videoTrack.codec,
-            videoWidth: videoTrack.width,
-            videoHeight: videoTrack.height
-          });
-          this.ISGenerated = true;
-          if (this._initPTS === undefined) {
-            // remember first PTS of this demuxing context
-            this._initPTS = Math.min(videoSamples[0].pts, audioSamples[0].pts) - pesTimeScale * timeOffset;
-            this._initDTS = Math.min(videoSamples[0].dts, audioSamples[0].dts) - pesTimeScale * timeOffset;
-          }
+        observer.trigger(_events2.default.FRAG_PARSING_INIT_SEGMENT, data);
+        this.ISGenerated = true;
+        if (computePTSDTS) {
+          this._initPTS = initPTS;
+          this._initDTS = initDTS;
         }
       }
     }
