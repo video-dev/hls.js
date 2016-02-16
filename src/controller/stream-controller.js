@@ -38,7 +38,6 @@ class StreamController extends EventHandler {
             Event.FRAG_PARSING_DATA,
             Event.FRAG_PARSED,
             Event.ERROR,
-            Event.BUFFER_APPENDING,
             Event.BUFFER_APPENDED,
             Event.BUFFER_FLUSHED
         );
@@ -1133,6 +1132,7 @@ class StreamController extends EventHandler {
                 );
                 var initSegment = track.initSegment;
                 if (initSegment) {
+                    this.pendingAppending++;
                     this.hls.trigger(Event.BUFFER_APPENDING, {
                         type: trackName,
                         data: initSegment
@@ -1173,6 +1173,7 @@ class StreamController extends EventHandler {
 
             [data.data1, data.data2].forEach(buffer => {
                 if (buffer) {
+                    this.pendingAppending++;
                     hls.trigger(Event.BUFFER_APPENDING, {
                         type: data.type,
                         data: buffer
@@ -1205,10 +1206,6 @@ class StreamController extends EventHandler {
             this.state = State.PARSED;
             this._checkAppendedParsed();
         }
-    }
-
-    onBufferAppending() {
-        this.pendingAppending++;
     }
 
     onBufferAppended() {
