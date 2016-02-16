@@ -1,12 +1,4 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.Hls = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-'use strict';
-
-// This is mostly for support of the es6 module export
-// syntax with the babel compiler, it looks like it doesnt support
-// function exports like we are used to in node/commonjs
-module.exports = require('./src/hls.js').default;
-
-},{"./src/hls.js":24}],2:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -306,7 +298,7 @@ function isUndefined(arg) {
   return arg === void 0;
 }
 
-},{}],3:[function(require,module,exports){
+},{}],2:[function(require,module,exports){
 var bundleFn = arguments[3];
 var sources = arguments[4];
 var cache = arguments[5];
@@ -373,7 +365,7 @@ module.exports = function (fn) {
     ));
 };
 
-},{}],4:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -498,7 +490,7 @@ var AbrController = function (_EventHandler) {
 
 exports.default = AbrController;
 
-},{"../event-handler":21,"../events":22}],5:[function(require,module,exports){
+},{"../event-handler":20,"../events":21}],4:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -889,7 +881,7 @@ var BufferController = function (_EventHandler) {
 
 exports.default = BufferController;
 
-},{"../errors":20,"../event-handler":21,"../events":22,"../utils/logger":33}],6:[function(require,module,exports){
+},{"../errors":19,"../event-handler":20,"../events":21,"../utils/logger":33}],5:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -1194,7 +1186,7 @@ var LevelController = function (_EventHandler) {
 
 exports.default = LevelController;
 
-},{"../errors":20,"../event-handler":21,"../events":22,"../utils/logger":33}],7:[function(require,module,exports){
+},{"../errors":19,"../event-handler":20,"../events":21,"../utils/logger":33}],6:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -1257,7 +1249,7 @@ var StreamController = function (_EventHandler) {
   function StreamController(hls) {
     _classCallCheck(this, StreamController);
 
-    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(StreamController).call(this, hls, _events2.default.MEDIA_ATTACHED, _events2.default.MEDIA_DETACHING, _events2.default.MANIFEST_PARSED, _events2.default.LEVEL_LOADED, _events2.default.KEY_LOADED, _events2.default.FRAG_LOADED, _events2.default.FRAG_PARSING_INIT_SEGMENT, _events2.default.FRAG_PARSING_DATA, _events2.default.FRAG_PARSED, _events2.default.ERROR, _events2.default.BUFFER_APPENDING, _events2.default.BUFFER_APPENDED, _events2.default.BUFFER_FLUSHED));
+    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(StreamController).call(this, hls, _events2.default.MEDIA_ATTACHED, _events2.default.MEDIA_DETACHING, _events2.default.MANIFEST_PARSED, _events2.default.LEVEL_LOADED, _events2.default.KEY_LOADED, _events2.default.FRAG_LOADED, _events2.default.FRAG_PARSING_INIT_SEGMENT, _events2.default.FRAG_PARSING_DATA, _events2.default.FRAG_PARSED, _events2.default.ERROR, _events2.default.BUFFER_APPENDED, _events2.default.BUFFER_FLUSHED));
 
     _this.config = hls.config;
     _this.audioCodecSwap = false;
@@ -2138,6 +2130,7 @@ var StreamController = function (_EventHandler) {
           _logger.logger.log('track:' + trackName + ',container:' + track.container + ',codecs[level/parsed]=[' + track.levelCodec + '/' + track.codec + ']');
           var initSegment = track.initSegment;
           if (initSegment) {
+            this.pendingAppending++;
             this.hls.trigger(_events2.default.BUFFER_APPENDING, { type: trackName, data: initSegment });
           }
         }
@@ -2148,6 +2141,8 @@ var StreamController = function (_EventHandler) {
   }, {
     key: 'onFragParsingData',
     value: function onFragParsingData(data) {
+      var _this2 = this;
+
       if (this.state === State.PARSING) {
         this.tparse2 = Date.now();
         var level = this.levels[this.level],
@@ -2161,6 +2156,7 @@ var StreamController = function (_EventHandler) {
 
         [data.data1, data.data2].forEach(function (buffer) {
           if (buffer) {
+            _this2.pendingAppending++;
             hls.trigger(_events2.default.BUFFER_APPENDING, { type: data.type, data: buffer });
           }
         });
@@ -2182,11 +2178,6 @@ var StreamController = function (_EventHandler) {
         this.state = State.PARSED;
         this._checkAppendedParsed();
       }
-    }
-  }, {
-    key: 'onBufferAppending',
-    value: function onBufferAppending() {
-      this.pendingAppending++;
     }
   }, {
     key: 'onBufferAppended',
@@ -2429,7 +2420,7 @@ var StreamController = function (_EventHandler) {
 
 exports.default = StreamController;
 
-},{"../demux/demuxer":16,"../errors":20,"../event-handler":21,"../events":22,"../helper/level-helper":23,"../utils/binary-search":31,"../utils/logger":33}],8:[function(require,module,exports){
+},{"../demux/demuxer":15,"../errors":19,"../event-handler":20,"../events":21,"../helper/level-helper":22,"../utils/binary-search":31,"../utils/logger":33}],7:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -2527,7 +2518,7 @@ var TimelineController = function (_EventHandler) {
 
 exports.default = TimelineController;
 
-},{"../event-handler":21,"../events":22,"../utils/cea-708-interpreter":32}],9:[function(require,module,exports){
+},{"../event-handler":20,"../events":21,"../utils/cea-708-interpreter":32}],8:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -2769,7 +2760,7 @@ var AES = function () {
 
 exports.default = AES;
 
-},{}],10:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
@@ -2951,7 +2942,7 @@ var AES128Decrypter = function () {
 
 exports.default = AES128Decrypter;
 
-},{"./aes":9}],11:[function(require,module,exports){
+},{"./aes":8}],10:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
@@ -3048,7 +3039,7 @@ var Decrypter = function () {
 
 exports.default = Decrypter;
 
-},{"../errors":20,"../utils/logger":33,"./aes128-decrypter":10}],12:[function(require,module,exports){
+},{"../errors":19,"../utils/logger":33,"./aes128-decrypter":9}],11:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
@@ -3175,7 +3166,7 @@ var AACDemuxer = function () {
 
 exports.default = AACDemuxer;
 
-},{"../demux/id3":18,"../utils/logger":33,"./adts":13}],13:[function(require,module,exports){
+},{"../demux/id3":17,"../utils/logger":33,"./adts":12}],12:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
@@ -3321,7 +3312,7 @@ var ADTS = function () {
 
 exports.default = ADTS;
 
-},{"../errors":20,"../utils/logger":33}],14:[function(require,module,exports){
+},{"../errors":19,"../utils/logger":33}],13:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*  inline demuxer.
@@ -3399,7 +3390,7 @@ var DemuxerInline = function () {
 
 exports.default = DemuxerInline;
 
-},{"../demux/aacdemuxer":12,"../demux/tsdemuxer":19,"../errors":20,"../events":22,"../remux/mp4-remuxer":29}],15:[function(require,module,exports){
+},{"../demux/aacdemuxer":11,"../demux/tsdemuxer":18,"../errors":19,"../events":21,"../remux/mp4-remuxer":29}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3488,7 +3479,7 @@ var DemuxerWorker = function DemuxerWorker(self) {
 
 exports.default = DemuxerWorker;
 
-},{"../demux/demuxer-inline":14,"../events":22,"events":2}],16:[function(require,module,exports){
+},{"../demux/demuxer-inline":13,"../events":21,"events":1}],15:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -3631,7 +3622,7 @@ var Demuxer = function () {
 
 exports.default = Demuxer;
 
-},{"../crypt/decrypter":11,"../demux/demuxer-inline":14,"../demux/demuxer-worker":15,"../events":22,"../utils/logger":33,"webworkify":3}],17:[function(require,module,exports){
+},{"../crypt/decrypter":10,"../demux/demuxer-inline":13,"../demux/demuxer-worker":14,"../events":21,"../utils/logger":33,"webworkify":2}],16:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
@@ -3994,7 +3985,7 @@ var ExpGolomb = function () {
 
 exports.default = ExpGolomb;
 
-},{"../utils/logger":33}],18:[function(require,module,exports){
+},{"../utils/logger":33}],17:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
@@ -4146,7 +4137,7 @@ var ID3 = function () {
 
 exports.default = ID3;
 
-},{"../utils/logger":33}],19:[function(require,module,exports){
+},{"../utils/logger":33}],18:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
@@ -4856,7 +4847,7 @@ var TSDemuxer = function () {
 
 exports.default = TSDemuxer;
 
-},{"../errors":20,"../events":22,"../utils/logger":33,"./adts":13,"./exp-golomb":17}],20:[function(require,module,exports){
+},{"../errors":19,"../events":21,"../utils/logger":33,"./adts":12,"./exp-golomb":16}],19:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4908,7 +4899,7 @@ var ErrorDetails = exports.ErrorDetails = {
   BUFFER_FULL_ERROR: 'bufferFullError'
 };
 
-},{}],21:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 'use strict';
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
@@ -5006,7 +4997,7 @@ var EventHandler = function () {
 
 exports.default = EventHandler;
 
-},{}],22:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -5082,7 +5073,7 @@ module.exports = {
   KEY_LOADED: 'hlsKeyLoaded'
 };
 
-},{}],23:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
@@ -5225,7 +5216,7 @@ var LevelHelper = function () {
 
 exports.default = LevelHelper;
 
-},{"../utils/logger":33}],24:[function(require,module,exports){
+},{"../utils/logger":33}],23:[function(require,module,exports){
 /**
  * HLS interface
  */
@@ -5612,7 +5603,15 @@ var Hls = function () {
 
 exports.default = Hls;
 
-},{"./controller/abr-controller":4,"./controller/buffer-controller":5,"./controller/level-controller":6,"./controller/stream-controller":7,"./controller/timeline-controller":8,"./errors":20,"./events":22,"./loader/fragment-loader":25,"./loader/key-loader":26,"./loader/playlist-loader":27,"./utils/logger":33,"./utils/xhr-loader":35,"events":2}],25:[function(require,module,exports){
+},{"./controller/abr-controller":3,"./controller/buffer-controller":4,"./controller/level-controller":5,"./controller/stream-controller":6,"./controller/timeline-controller":7,"./errors":19,"./events":21,"./loader/fragment-loader":25,"./loader/key-loader":26,"./loader/playlist-loader":27,"./utils/logger":33,"./utils/xhr-loader":35,"events":1}],24:[function(require,module,exports){
+'use strict';
+
+// This is mostly for support of the es6 module export
+// syntax with the babel compiler, it looks like it doesnt support
+// function exports like we are used to in node/commonjs
+module.exports = require('./hls.js').default;
+
+},{"./hls.js":23}],25:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -5703,7 +5702,7 @@ var FragmentLoader = function (_EventHandler) {
 
 exports.default = FragmentLoader;
 
-},{"../errors":20,"../event-handler":21,"../events":22}],26:[function(require,module,exports){
+},{"../errors":19,"../event-handler":20,"../events":21}],26:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -5804,7 +5803,7 @@ var KeyLoader = function (_EventHandler) {
 
 exports.default = KeyLoader;
 
-},{"../errors":20,"../event-handler":21,"../events":22}],27:[function(require,module,exports){
+},{"../errors":19,"../event-handler":20,"../events":21}],27:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -6140,7 +6139,7 @@ var PlaylistLoader = function (_EventHandler) {
 
 exports.default = PlaylistLoader;
 
-},{"../errors":20,"../event-handler":21,"../events":22,"../utils/attr-list":30,"../utils/url":34}],28:[function(require,module,exports){
+},{"../errors":19,"../event-handler":20,"../events":21,"../utils/attr-list":30,"../utils/url":34}],28:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -7130,7 +7129,7 @@ var MP4Remuxer = function () {
 
 exports.default = MP4Remuxer;
 
-},{"../errors":20,"../events":22,"../remux/mp4-generator":28,"../utils/logger":33}],30:[function(require,module,exports){
+},{"../errors":19,"../events":21,"../remux/mp4-generator":28,"../utils/logger":33}],30:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -8010,6 +8009,6 @@ var XhrLoader = function () {
 
 exports.default = XhrLoader;
 
-},{"../utils/logger":33}]},{},[1])(1)
+},{"../utils/logger":33}]},{},[24])(24)
 });
 //# sourceMappingURL=hls.js.map
