@@ -12,12 +12,12 @@
   "bugs": {
     "url": "https://github.com/dailymotion/hls.js/issues"
   },
-  "main": "./lib/hls.js",
+  "main": "./lib/index.js",
   "private": false,
   "scripts": {
     "clean": "find dist -mindepth 1 -delete",
     "prebuild": "npm run clean & npm run test",
-    "build": "npm run babel && browserify -t [babelify] -s Hls index.js --debug | exorcist dist/hls.js.map -b . > dist/hls.js",
+    "build": "npm run babel && browserify -t [babelify] -s Hls src/index.js --debug | exorcist dist/hls.js.map -b . > dist/hls.js",
     "postbuild": "npm run minify",
     "prerelease": "npm run prebuild && npm run build && npm run postbuild && git add dist/* && git commit -m 'update dist'",
     "patch": "npm run prerelease && mversion p",
