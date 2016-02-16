@@ -1,4 +1,8 @@
 language: node_js
- - "node"
+node_js:
+ - "5.4.1"
 
 script: npm install && npm run build
+
+addons:
+  sauce_connect: true
