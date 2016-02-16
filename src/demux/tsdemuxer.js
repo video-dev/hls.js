@@ -83,6 +83,9 @@
         avcId = this._avcTrack.id,
         aacId = this._aacTrack.id,
         id3Id = this._id3Track.id;
+
+    // don't parse last TS packet if incomplete
+    len -= len % 188;
     // loop through TS packets
     for (start = 0; start < len; start += 188) {
       if (data[start] === 0x47) {
@@ -220,9 +223,9 @@
   }
 
   _parsePES(stream) {
-    var i = 0, frag, pesFlags, pesPrefix, pesLen, pesHdrLen, pesData, pesPts, pesDts, payloadStartOffset;
+    var i = 0, frag, pesFlags, pesPrefix, pesLen, pesHdrLen, pesData, pesPts, pesDts, payloadStartOffset, data = stream.data;
     //retrieve PTS/DTS from first fragment
-    frag = stream.data[0];
+    frag = data[0];
     pesPrefix = (frag[0] << 16) + (frag[1] << 8) + frag[2];
     if (pesPrefix === 1) {
       pesLen = (frag[4] << 8) + frag[5];
@@ -258,16 +261,27 @@
       }
       pesHdrLen = frag[8];
       payloadStartOffset = pesHdrLen + 9;
-      // trim PES header
-      stream.data[0] = stream.data[0].subarray(payloadStartOffset);
+
       stream.size -= payloadStartOffset;
       //reassemble PES packet
       pesData = new Uint8Array(stream.size);
-      // reassemble the packet
-      while (stream.data.length) {
-        frag = stream.data.shift();
+      while (data.length) {
+        frag = data.shift();
+        var len = frag.byteLength;
+        if (payloadStartOffset) {
+          if (payloadStartOffset > len) {
+            // trim full frag if PES header bigger than frag
+            payloadStartOffset-=len;
+            continue;
+          } else {
+            // trim partial frag if PES header smaller than frag
+            frag = frag.subarray(payloadStartOffset);
+            len-=payloadStartOffset;
+            payloadStartOffset = 0;
+          }
+        }
         pesData.set(frag, i);
-        i += frag.byteLength;
+        i+=len;
       }
       return {data: pesData, pts: pesPts, dts: pesDts, len: pesLen};
     } else {
@@ -565,8 +579,8 @@
       track.audiosamplerate = config.samplerate;
       track.channelCount = config.channelCount;
       track.codec = config.codec;
-      track.timescale = this.remuxer.timescale;
-      track.duration = track.timescale * duration;
+      track.timescale = config.samplerate;
+      track.duration = config.samplerate * duration;
       logger.log(`parsed codec:${track.codec},rate:${config.samplerate},nb channel:${config.channelCount}`);
     }
     frameIndex = 0;
@@ -593,7 +607,7 @@
       //stamp = pes.pts;
 
       if ((frameLength > 0) && ((offset + headerLength + frameLength) <= len)) {
-        stamp = Math.round(pts + frameIndex * frameDuration);
+        stamp = pts + frameIndex * frameDuration;
         //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
         aacSample = {unit: data.subarray(offset + headerLength, offset + headerLength + frameLength), pts: stamp, dts: stamp};
         track.samples.push(aacSample);

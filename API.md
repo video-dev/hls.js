@@ -182,8 +182,9 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
 ```js
 
    var config = {
-      debug : false,
       autoStartLoad : true,
+      debug : false,
+      defaultAudioCodec : undefined,
       capLevelToPlayerSize: false,
       maxLevelCappingMode: Hls.CappingModes.DOWNSCALE,
       maxBufferLength : 30,
@@ -204,8 +205,7 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       fragLoadingTimeOut : 20000,
       fragLoadingMaxRetry : 6,
       fragLoadingRetryDelay : 500,
-      fpsDroppedMonitoringPeriod : 5000,
-      fpsDroppedMonitoringThreshold : 0.2,
+      startFragPrefech : false,
       appendErrorMaxRetry : 3,
       loader : customLoader,
       fLoader: customFragmentLoader,
@@ -235,6 +235,15 @@ a logger object could also be provided for custom logging : ```config.debug=cust
 
  - if set to true, start level playlist and first fragments will be loaded automatically, after triggering of ```Hls.Events.MANIFEST_PARSED``` event
  - if set to false, an explicit API call (```hls.startLoad()```) will be needed to start quality level/fragment loading.
+
+#### ```defaultAudioCodec```
+(default undefined)
+
+ if audio codec is not signaled in variant manifest, or if only a stream manifest is provided, hls.js tries to guess audio codec by parsing audio sampling rate in ADTS header. if sampling rate is less or equal than 22050 Hz, then hls.js assumes it is HE-AAC, otherwise it assumes it is AAC-LC. This could result in bad guess, leading to audio decode error, ending up in media error.
+ it is possible to hint default audiocodec to hls.js by configuring this value as below:
+  - ```mp4a.40.2``` (AAC-LC) or 
+  - ```mp4a.40.5``` (HE-AAC) or
+  - ```undefined``` (guess based on sampling rate)
 
 #### ```capLevelToPlayerSize```
 (default false)
@@ -327,6 +336,11 @@ max nb of load retry
 initial delay between XmlHttpRequest error and first load retry (in ms)
 any I/O error will trigger retries every 500ms,1s,2s,4s,8s, ... capped to 64s (exponential backoff)
 
+prefetch start fragment although media not attached
+#### ```startFragPrefetch```
+(default false)
+
+start prefetching start fragment although media not attached yet
 
 max nb of append retry
 #### ```appendErrorMaxRetry```
@@ -613,7 +627,6 @@ full list of Errors is described below:
 a level object represents a given quality level.
 it contains quality level related info, retrieved from manifest, such as
 
-* level index (sorted by bitrate)
 * level bitrate
 * used codecs
 * video width/height
@@ -625,7 +638,6 @@ see sample Level object below:
 ```js
 {
   url: ['http://levelURL.com','http://levelURLfailover.com']
-  index: 0,
   bitrate: 246440,
   name: "240",
   codecs: "mp4a.40.5,avc1.42000d",

@@ -61,62 +61,55 @@ class MP4Remuxer {
     var observer = this.observer,
         audioSamples = audioTrack.samples,
         videoSamples = videoTrack.samples,
-        nbAudio = audioSamples.length,
-        nbVideo = videoSamples.length,
-        pesTimeScale = this.PES_TIMESCALE;
+        pesTimeScale = this.PES_TIMESCALE,
+        tracks = {},
+        data = { tracks : tracks, unique : false },
+        computePTSDTS = (this._initPTS === undefined),
+        initPTS, initDTS;
 
-    if(nbAudio === 0 && nbVideo === 0) {
+    if (computePTSDTS) {
+      initPTS = initDTS = Infinity;
+    }
+
+    if (audioTrack.config && audioSamples.length) {
+      tracks.audio = {
+        container : 'audio/mp4',
+        codec :  audioTrack.codec,
+        initSegment : MP4.initSegment([audioTrack]),
+        metadata : {
+          channelCount : audioTrack.channelCount
+        }
+      };
+      if (computePTSDTS) {
+        // remember first PTS of this demuxing context. for audio, PTS + DTS ...
+        initPTS = initDTS = audioSamples[0].pts - pesTimeScale * timeOffset;
+      }
+    }
+
+    if (videoTrack.sps && videoTrack.pps && videoSamples.length) {
+      tracks.video = {
+        container : 'video/mp4',
+        codec :  videoTrack.codec,
+        initSegment : MP4.initSegment([videoTrack]),
+        metadata : {
+          width : videoTrack.width,
+          height : videoTrack.height
+        }
+      };
+      if (computePTSDTS) {
+        initPTS = Math.min(initPTS,videoSamples[0].pts - pesTimeScale * timeOffset);
+        initDTS = Math.min(initDTS,videoSamples[0].dts - pesTimeScale * timeOffset);
+      }
+    }
+
+    if(!Object.keys(tracks)) {
       observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'no audio/video samples found'});
-    } else if (nbVideo === 0) {
-      //audio only
-      if (audioTrack.config) {
-         observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
-          audioMoov: MP4.initSegment([audioTrack]),
-          audioCodec : audioTrack.codec,
-          audioChannelCount : audioTrack.channelCount
-        });
-        this.ISGenerated = true;
-      }
-      if (this._initPTS === undefined) {
-        // remember first PTS of this demuxing context
-        this._initPTS = audioSamples[0].pts - pesTimeScale * timeOffset;
-        this._initDTS = audioSamples[0].dts - pesTimeScale * timeOffset;
-      }
-    } else
-    if (nbAudio === 0) {
-      //video only
-      if (videoTrack.sps && videoTrack.pps) {
-         observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
-          videoMoov: MP4.initSegment([videoTrack]),
-          videoCodec: videoTrack.codec,
-          videoWidth: videoTrack.width,
-          videoHeight: videoTrack.height
-        });
-        this.ISGenerated = true;
-        if (this._initPTS === undefined) {
-          // remember first PTS of this demuxing context
-          this._initPTS = videoSamples[0].pts - pesTimeScale * timeOffset;
-          this._initDTS = videoSamples[0].dts - pesTimeScale * timeOffset;
-        }
-      }
     } else {
-      //audio and video
-      if (audioTrack.config && videoTrack.sps && videoTrack.pps) {
-          observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
-          audioMoov: MP4.initSegment([audioTrack]),
-          audioCodec: audioTrack.codec,
-          audioChannelCount: audioTrack.channelCount,
-          videoMoov: MP4.initSegment([videoTrack]),
-          videoCodec: videoTrack.codec,
-          videoWidth: videoTrack.width,
-          videoHeight: videoTrack.height
-        });
-        this.ISGenerated = true;
-        if (this._initPTS === undefined) {
-          // remember first PTS of this demuxing context
-          this._initPTS = Math.min(videoSamples[0].pts, audioSamples[0].pts) - pesTimeScale * timeOffset;
-          this._initDTS = Math.min(videoSamples[0].dts, audioSamples[0].dts) - pesTimeScale * timeOffset;
-        }
+      observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT,data);
+      this.ISGenerated = true;
+      if (computePTSDTS) {
+        this._initPTS = initPTS;
+        this._initDTS = initDTS;
       }
     }
   }
@@ -238,8 +231,8 @@ class MP4Remuxer {
     moof = MP4.moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
     track.samples = [];
     this.observer.trigger(Event.FRAG_PARSING_DATA, {
-      moof: moof,
-      mdat: mdat,
+      data1: moof,
+      data2: mdat,
       startPTS: firstPTS / pesTimeScale,
       endPTS: (ptsnorm + pes2mp4ScaleFactor * lastSampleDuration) / pesTimeScale,
       startDTS: firstDTS / pesTimeScale,
@@ -253,7 +246,8 @@ class MP4Remuxer {
     var view,
         offset = 8,
         pesTimeScale = this.PES_TIMESCALE,
-        pes2mp4ScaleFactor = this.PES2MP4SCALEFACTOR,
+        mp4timeScale = track.timescale,
+        pes2mp4ScaleFactor = pesTimeScale/mp4timeScale,
         aacSample, mp4Sample,
         unit,
         mdat, moof,
@@ -262,14 +256,10 @@ class MP4Remuxer {
         samples = [],
         samples0 = [];
 
-    track.samples.forEach(aacSample => {
-      if(pts === undefined || aacSample.pts > pts) {
-        samples0.push(aacSample);
-        pts = aacSample.pts;
-      } else {
-        logger.warn('dropping past audio frame');
-      }
+    track.samples.sort(function(a, b) {
+      return (a.pts-b.pts);
     });
+    samples0 = track.samples;
 
     while (samples0.length) {
       aacSample = samples0.shift();
@@ -281,13 +271,15 @@ class MP4Remuxer {
       if (lastDTS !== undefined) {
         ptsnorm = this._PTSNormalize(pts, lastDTS);
         dtsnorm = this._PTSNormalize(dts, lastDTS);
-        // let's compute sample duration
+        // let's compute sample duration.
+        // there should be 1024 audio samples in one AAC frame
         mp4Sample.duration = (dtsnorm - lastDTS) / pes2mp4ScaleFactor;
-        if (mp4Sample.duration < 0) {
+        if(Math.abs(mp4Sample.duration - 1024) > 10) {
           // not expected to happen ...
-          logger.log(`invalid AAC sample duration at PTS:${aacSample.pts}:${mp4Sample.duration}`);
-          mp4Sample.duration = 0;
+          logger.log(`invalid AAC sample duration at PTS ${Math.round(pts/90)},should be 1024,found :${Math.round(mp4Sample.duration)}`);
         }
+        mp4Sample.duration = 1024;
+        dtsnorm = 1024 * pes2mp4ScaleFactor + lastDTS;
       } else {
         var nextAacPts = this.nextAacPts,delta;
         ptsnorm = this._PTSNormalize(pts, nextAacPts);
@@ -313,12 +305,17 @@ class MP4Remuxer {
         // remember first PTS of our aacSamples, ensure value is positive
         firstPTS = Math.max(0, ptsnorm);
         firstDTS = Math.max(0, dtsnorm);
-        /* concatenate the audio data and construct the mdat in place
-          (need 8 more bytes to fill length and mdat type) */
-        mdat = new Uint8Array(track.len + 8);
-        view = new DataView(mdat.buffer);
-        view.setUint32(0, mdat.byteLength);
-        mdat.set(MP4.types.mdat, 4);
+        if(track.len > 0) {
+          /* concatenate the audio data and construct the mdat in place
+            (need 8 more bytes to fill length and mdat type) */
+          mdat = new Uint8Array(track.len + 8);
+          view = new DataView(mdat.buffer);
+          view.setUint32(0, mdat.byteLength);
+          mdat.set(MP4.types.mdat, 4);
+        } else {
+          // no audio samples
+          return;
+        }
       }
       mdat.set(unit, offset);
       offset += unit.byteLength;
@@ -354,8 +351,8 @@ class MP4Remuxer {
       moof = MP4.moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
       track.samples = [];
       this.observer.trigger(Event.FRAG_PARSING_DATA, {
-        moof: moof,
-        mdat: mdat,
+        data1: moof,
+        data2: mdat,
         startPTS: firstPTS / pesTimeScale,
         endPTS: this.nextAacPts / pesTimeScale,
         startDTS: firstDTS / pesTimeScale,
@@ -408,7 +405,7 @@ class MP4Remuxer {
     track.samples = [];
     timeOffset = timeOffset;
   }
-  
+
   _PTSNormalize(value, reference) {
     var offset;
     if (reference === undefined) {
