@@ -8,7 +8,10 @@ class Demuxer {
 
   constructor(hls) {
     this.hls = hls;
-    var typeSupported = { mp4 : MediaSource.isTypeSupported('video/mp4'), mp2t :MediaSource.isTypeSupported('video/mp2t')};
+    var typeSupported = {
+      mp4 : MediaSource.isTypeSupported('video/mp4'),
+      mp2t : hls.config.enableMP2TPassThrough && MediaSource.isTypeSupported('video/mp2t')
+    };
     if (hls.config.enableWorker && (typeof(Worker) !== 'undefined')) {
         logger.log('demuxing in webworker');
         try {
