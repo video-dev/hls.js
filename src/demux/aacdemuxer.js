@@ -11,6 +11,7 @@ class AACDemuxer {
         this.remuxerClass = remuxerClass;
         this.remuxer = new this.remuxerClass(observer);
         this._aacTrack = {
+            container: 'audio/adts',
             type: 'audio',
             id: -1,
             sequenceNumber: 0,

@@ -7,6 +7,7 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import AACDemuxer from '../demux/aacdemuxer';
 import TSDemuxer from '../demux/tsdemuxer';
 import MP4Remuxer from '../remux/mp4-remuxer';
+import PassThroughRemuxer from '../remux/passthrough-remuxer';
 
 class DemuxerInline {
     constructor(hls, typeSupported) {
@@ -24,15 +25,16 @@ class DemuxerInline {
     push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
         var demuxer = this.demuxer;
         if (!demuxer) {
-            var remuxer = MP4Remuxer,
-                hls = this.hls;
+            var hls = this.hls;
             // probe for content type
             if (TSDemuxer.probe(data)) {
-                // TODO : use TS Remuxer instead of MP4 Remuxer
-                // if (this.typeSupported.mp2t === true)
-                demuxer = new TSDemuxer(hls, remuxer);
+                if (this.typeSupported.mp2t === true) {
+                    demuxer = new TSDemuxer(hls, PassThroughRemuxer);
+                } else {
+                    demuxer = new TSDemuxer(hls, MP4Remuxer);
+                }
             } else if (AACDemuxer.probe(data)) {
-                demuxer = new AACDemuxer(hls, remuxer);
+                demuxer = new AACDemuxer(hls, MP4Remuxer);
             } else {
                 hls.trigger(Event.ERROR, {
                     type: ErrorTypes.MEDIA_ERROR,

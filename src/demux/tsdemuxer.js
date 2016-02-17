@@ -22,7 +22,6 @@ class TSDemuxer {
         this.remuxerClass = remuxerClass;
         this.lastCC = 0;
         this.remuxer = new this.remuxerClass(observer);
-        this._userData = [];
     }
 
     static probe(data) {
@@ -45,6 +44,7 @@ class TSDemuxer {
         this.lastAacPTS = null;
         this.aacOverFlow = null;
         this._avcTrack = {
+            container: 'video/mp2t',
             type: 'video',
             id: -1,
             sequenceNumber: 0,
@@ -53,6 +53,7 @@ class TSDemuxer {
             nbNalu: 0
         };
         this._aacTrack = {
+            container: 'video/mp2t',
             type: 'audio',
             id: -1,
             sequenceNumber: 0,
@@ -91,7 +92,9 @@ class TSDemuxer {
             stt,
             pid,
             atf,
-            offset;
+            offset,
+            codecsOnly = this.remuxer.passthrough;
+
         this.audioCodec = audioCodec;
         this.videoCodec = videoCodec;
         this.timeOffset = timeOffset;
@@ -144,6 +147,18 @@ class TSDemuxer {
                         if (stt) {
                             if (avcData) {
                                 this._parseAVCPES(this._parsePES(avcData));
+                                if (codecsOnly) {
+                                    // if we have video codec info AND
+                                    // if audio PID is undefined OR if we have audio codec info,
+                                    // we have all codec info !
+                                    if (
+                                        this._avcTrack.codec &&
+                                        (aacId === -1 || this._aacTrack.codec)
+                                    ) {
+                                        this.remux(data);
+                                        return;
+                                    }
+                                }
                             }
                             avcData = { data: [], size: 0 };
                         }
@@ -157,6 +172,18 @@ class TSDemuxer {
                         if (stt) {
                             if (aacData) {
                                 this._parseAACPES(this._parsePES(aacData));
+                                if (codecsOnly) {
+                                    // here we now that we have audio codec info
+                                    // if video PID is undefined OR if we have video codec info,
+                                    // we have all codec infos !
+                                    if (
+                                        this._aacTrack.codec &&
+                                        (avcId === -1 || this._avcTrack.codec)
+                                    ) {
+                                        this.remux(data);
+                                        return;
+                                    }
+                                }
                             }
                             aacData = { data: [], size: 0 };
                         }
@@ -213,17 +240,18 @@ class TSDemuxer {
         if (id3Data) {
             this._parseID3PES(this._parsePES(id3Data));
         }
-        this.remux();
+        this.remux(null);
     }
 
-    remux() {
+    remux(data) {
         this.remuxer.remux(
             this._aacTrack,
             this._avcTrack,
             this._id3Track,
             this._txtTrack,
             this.timeOffset,
-            this.contiguous
+            this.contiguous,
+            data
         );
     }
 
