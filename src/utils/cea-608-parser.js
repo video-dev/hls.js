@@ -1,4 +1,10 @@
 /**
+ *
+ * This code was ported from the dash.js project at:
+ *   https://github.com/Dash-Industry-Forum/dash.js/blob/development/externals/cea608-parser.js
+ *
+ * The original copyright appears below:
+ *
  * The copyright in this software is being made available under the BSD License,
  * included below. This software may be subject to other third party and contributor
  * rights, including patent rights, and no such rights are granted under this license.
