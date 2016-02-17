@@ -71,7 +71,10 @@ class Hls {
           bufferController : BufferController,
           streamController: StreamController,
           timelineController: TimelineController,
-          enableCEA708Captions: true,
+          cea708Enabled: true,
+          cea708MaxDisplayTime: 30,
+          cea708MinDisplayTime: 3,
+          cea708AllowedOverlapTime: 0.5,
           enableMP2TPassThrough : false
         };
     }
