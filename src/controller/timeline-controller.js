@@ -4,7 +4,7 @@
 
 import Event from '../events';
 import EventHandler from '../event-handler';
-import CEA708Interpreter from '../utils/cea-708-interpreter';
+//import Cea608Parser from '../utils/cea-608-parser';
 
 class TimelineController extends EventHandler {
 
@@ -20,7 +20,7 @@ class TimelineController extends EventHandler {
 
     if (this.config.enableCEA708Captions)
     {
-      this.cea708Interpreter = new CEA708Interpreter();
+      //this.cea608Parser = new Cea608Parser();
     }
   }
 
@@ -28,13 +28,10 @@ class TimelineController extends EventHandler {
     EventHandler.prototype.destroy.call(this);
   }
 
-  onMediaAttaching(data) {
-    var media = this.media = data.media;
-    this.cea708Interpreter.attach(media);
+  onMediaAttaching() {
   }
 
   onMediaDetaching() {
-    this.cea708Interpreter.detach();
   }
 
   onManifestLoading()
@@ -50,7 +47,7 @@ class TimelineController extends EventHandler {
     // TODO: consider just removing captions for the timerange
     if (pts <= this.lastPts)
     {
-      this.cea708Interpreter.clear();
+      //this.cea608Parser.clear();
     }
 
     this.lastPts = pts;
@@ -61,7 +58,7 @@ class TimelineController extends EventHandler {
     // immediately. It will create the proper timestamps based on our PTS value
     for (var i=0; i<data.samples.length; i++)
     {
-      this.cea708Interpreter.push(data.samples[i].pts, data.samples[i].bytes);
+      //this.cea608Parser.addData(data.samples[i].pts, data.samples[i].bytes);
     }
   }
 }
