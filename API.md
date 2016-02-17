@@ -627,6 +627,7 @@ full list of Errors is described below:
 a level object represents a given quality level.
 it contains quality level related info, retrieved from manifest, such as
 
+* level index (sorted by bitrate)
 * level bitrate
 * used codecs
 * video width/height
@@ -638,6 +639,7 @@ see sample Level object below:
 ```js
 {
   url: ['http://levelURL.com','http://levelURLfailover.com']
+  index: 0,
   bitrate: 246440,
   name: "240",
   codecs: "mp4a.40.5,avc1.42000d",
