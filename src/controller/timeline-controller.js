@@ -56,7 +56,7 @@ class TimelineController extends EventHandler {
           }
         }
         cue = new VTTCue(startTime, endTime, text.trim());
-        cue.line = r;
+        cue.line = r + (navigator.userAgent.match(/Firefox\//) ? 3 : 0);
         cue.align = 'left';
         cue.position = 100 * (indent / 32) + (navigator.userAgent.match(/Firefox\//) ? 50 : 0);
         this.textTrack.addCue(cue);
