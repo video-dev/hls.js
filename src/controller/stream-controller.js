@@ -738,13 +738,14 @@ class StreamController extends EventHandler {
     var newDetails = data.details,
         newLevelId = data.level,
         curLevel = this.levels[newLevelId],
-        duration = newDetails.totalduration;
+        duration = newDetails.totalduration,
+        sliding;
 
     logger.log(`level ${newLevelId} loaded [${newDetails.startSN},${newDetails.endSN}],duration:${duration}`);
     this.levelLastLoaded = newLevelId;
 
     if (newDetails.live) {
-      var curDetails = curLevel.details, sliding;
+      var curDetails = curLevel.details;
       if (curDetails) {
         // we already have details for that level, merge them
         LevelHelper.mergeDetails(curDetails,newDetails);
