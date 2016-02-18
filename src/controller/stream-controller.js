@@ -114,7 +114,7 @@ class StreamController extends EventHandler {
   }
 
   doTick() {
-    var pos, level, levelDetails, hls = this.hls;
+    var pos, level, levelDetails, hls = this.hls, config = hls.config;
     //logger.log(this.state);
     switch(this.state) {
       case State.ERROR:
@@ -141,7 +141,7 @@ class StreamController extends EventHandler {
         // exit loop
         // => if media not attached but start frag prefetch is enabled and start frag not requested yet, we will not exit loop
         if (!this.media &&
-          (this.startFragRequested || !this.config.startFragPrefetch)) {
+          (this.startFragRequested || !config.startFragPrefetch)) {
           break;
         }
         // determine next candidate fragment to be loaded, based on current position and
@@ -160,17 +160,17 @@ class StreamController extends EventHandler {
           // we are not at playback start, get next load level from level Controller
           level = hls.nextLoadLevel;
         }
-        var bufferInfo = this.bufferInfo(pos,this.config.maxBufferHole),
+        var bufferInfo = this.bufferInfo(pos,config.maxBufferHole),
             bufferLen = bufferInfo.len,
             bufferEnd = bufferInfo.end,
             fragPrevious = this.fragPrevious,
             maxBufLen;
         // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
         if ((this.levels[level]).hasOwnProperty('bitrate')) {
-          maxBufLen = Math.max(8 * this.config.maxBufferSize / this.levels[level].bitrate, this.config.maxBufferLength);
-          maxBufLen = Math.min(maxBufLen, this.config.maxMaxBufferLength);
+          maxBufLen = Math.max(8 * config.maxBufferSize / this.levels[level].bitrate, config.maxBufferLength);
+          maxBufLen = Math.min(maxBufLen, config.maxMaxBufferLength);
         } else {
-          maxBufLen = this.config.maxBufferLength;
+          maxBufLen = config.maxBufferLength;
         }
         // if buffer length is less than maxBufLen try to load a new fragment
         if (bufferLen < maxBufLen) {
@@ -196,8 +196,8 @@ class StreamController extends EventHandler {
           if (levelDetails.live) {
             // check if requested position is within seekable boundaries :
             //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.media.seeking}`);
-            if (bufferEnd < Math.max(start,end-this.config.liveMaxLatencyDurationCount*levelDetails.targetduration)) {
-                this.seekAfterBuffered = start + Math.max(0, levelDetails.totalduration - this.config.liveSyncDurationCount * levelDetails.targetduration);
+            if (bufferEnd < Math.max(start,end-config.liveMaxLatencyDurationCount*levelDetails.targetduration)) {
+                this.seekAfterBuffered = start + Math.max(0, levelDetails.totalduration - config.liveSyncDurationCount * levelDetails.targetduration);
                 logger.log(`buffer end: ${bufferEnd} is located too far from the end of live sliding playlist, media position will be reseted to: ${this.seekAfterBuffered.toFixed(3)}`);
                 bufferEnd = this.seekAfterBuffered;
             }
@@ -285,7 +285,7 @@ class StreamController extends EventHandler {
               }
               if (frag.loadCounter) {
                 frag.loadCounter++;
-                let maxThreshold = this.config.fragLoadingLoopThreshold;
+                let maxThreshold = config.fragLoadingLoopThreshold;
                 // if this frag has already been loaded 3 times, and if it has been reloaded recently
                 if (frag.loadCounter > maxThreshold && (Math.abs(this.fragLoadIdx - frag.loadIdx) < maxThreshold)) {
                   hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal: false, frag: frag});
@@ -329,7 +329,7 @@ class StreamController extends EventHandler {
             }
             pos = v.currentTime;
             var fragLoadedDelay = (frag.expectedLen - frag.loaded) / loadRate;
-            var bufferStarvationDelay = this.bufferInfo(pos,this.config.maxBufferHole).end - pos;
+            var bufferStarvationDelay = this.bufferInfo(pos,config.maxBufferHole).end - pos;
             var fragLevelNextLoadedDelay = frag.duration * this.levels[hls.nextLoadLevel].bitrate / (8 * loadRate); //bps/Bps
             /* if we have less than 2 frag duration in buffer and if frag loaded delay is greater than buffer starvation delay
               ... and also bigger than duration needed to load fragment at next level ...*/
