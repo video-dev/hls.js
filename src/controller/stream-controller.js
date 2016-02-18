@@ -67,7 +67,9 @@ class StreamController extends EventHandler {
                 }
                 this.state = State.IDLE;
             } else {
-                this.lastCurrentTime = 0;
+                this.lastCurrentTime = this.startPosition
+                    ? this.startPosition
+                    : 0;
                 this.state = State.STARTING;
             }
             this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
@@ -937,16 +939,14 @@ class StreamController extends EventHandler {
         this.levelLastLoaded = newLevelId;
 
         if (newDetails.live) {
-            var curDetails = curLevel.details;
+            var curDetails = curLevel.details,
+                sliding;
             if (curDetails) {
                 // we already have details for that level, merge them
                 LevelHelper.mergeDetails(curDetails, newDetails);
+                sliding = newDetails.fragments[0].start;
                 if (newDetails.PTSKnown) {
-                    logger.log(
-                        `live playlist sliding:${newDetails.fragments[0].start.toFixed(
-                            3
-                        )}`
-                    );
+                    logger.log(`live playlist sliding:${sliding.toFixed(3)}`);
                 } else {
                     logger.log('live playlist - outdated PTS, unknown sliding');
                 }
@@ -965,18 +965,18 @@ class StreamController extends EventHandler {
         });
 
         // compute start position
-        if (this.startLevelLoaded === false) {
+        if (this.startFragRequested === false) {
             // if live playlist, set start position to be fragment N-this.config.liveSyncDurationCount (usually 3)
             if (newDetails.live) {
                 this.startPosition = Math.max(
                     0,
-                    duration -
+                    sliding +
+                        duration -
                         this.config.liveSyncDurationCount *
                             newDetails.targetduration
                 );
             }
             this.nextLoadPosition = this.startPosition;
-            this.startLevelLoaded = true;
         }
         // only switch batck to IDLE state if we were waiting for level to start downloading a new fragment
         if (this.state === State.WAITING_LEVEL) {
