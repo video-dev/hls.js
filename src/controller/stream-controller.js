@@ -56,9 +56,13 @@ class StreamController extends EventHandler {
 
     startLoad() {
         if (this.levels) {
-            this.startInternal();
             var media = this.media,
                 lastCurrentTime = this.lastCurrentTime;
+            this.stop();
+            this.demuxer = new Demuxer(this.hls);
+            this.timer = setInterval(this.ontick, 100);
+            this.level = -1;
+            this.fragLoadError = 0;
             if (media && lastCurrentTime) {
                 logger.log(`configure startPosition @${lastCurrentTime}`);
                 if (!this.lastPaused) {
@@ -77,15 +81,6 @@ class StreamController extends EventHandler {
         } else {
             logger.warn('cannot start loading as manifest not parsed yet');
         }
-    }
-
-    startInternal() {
-        var hls = this.hls;
-        this.stop();
-        this.demuxer = new Demuxer(hls);
-        this.timer = setInterval(this.ontick, 100);
-        this.level = -1;
-        this.fragLoadError = 0;
     }
 
     stop() {
