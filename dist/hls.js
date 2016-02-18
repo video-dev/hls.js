@@ -1964,7 +1964,7 @@ var StreamController = function (_EventHandler) {
           newLevelId = data.level,
           curLevel = this.levels[newLevelId],
           duration = newDetails.totalduration,
-          sliding;
+          sliding = 0;
 
       _logger.logger.log('level ' + newLevelId + ' loaded [' + newDetails.startSN + ',' + newDetails.endSN + '],duration:' + duration);
       this.levelLastLoaded = newLevelId;
