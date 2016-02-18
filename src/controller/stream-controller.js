@@ -739,7 +739,7 @@ class StreamController extends EventHandler {
         newLevelId = data.level,
         curLevel = this.levels[newLevelId],
         duration = newDetails.totalduration,
-        sliding;
+        sliding = 0;
 
     logger.log(`level ${newLevelId} loaded [${newDetails.startSN},${newDetails.endSN}],duration:${duration}`);
     this.levelLastLoaded = newLevelId;
