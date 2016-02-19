@@ -2041,10 +2041,12 @@ var StreamController = function (_EventHandler) {
             if (audioCodec === undefined) {
               audioCodec = this.lastAudioCodec;
             }
-            if (audioCodec.indexOf('mp4a.40.5') !== -1) {
-              audioCodec = 'mp4a.40.2';
-            } else {
-              audioCodec = 'mp4a.40.5';
+            if (audioCodec) {
+              if (audioCodec.indexOf('mp4a.40.5') !== -1) {
+                audioCodec = 'mp4a.40.2';
+              } else {
+                audioCodec = 'mp4a.40.5';
+              }
             }
           }
           this.pendingAppending = 0;
