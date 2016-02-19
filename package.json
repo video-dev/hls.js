@@ -47,7 +47,7 @@
     "browserify": "^13.0.0",
     "deep-strict-equal": "^0.1.0",
     "exorcist": "^0.4.0",
-    "http-server": "^0.8.5",
+    "http-server": "^0.9.0",
     "jshint": "^2.5.11",
     "live-reload": "^1.1.0",
     "mocha": "^2.1.0",
