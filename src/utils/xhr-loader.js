@@ -58,10 +58,6 @@ class XhrLoader {
         this.timeout = timeout;
         this.maxRetry = maxRetry;
         this.retryDelay = retryDelay;
-        this.timeoutHandle = window.setTimeout(
-            this.loadtimeout.bind(this),
-            timeout
-        );
         this.loadInternal();
     }
 
@@ -87,6 +83,10 @@ class XhrLoader {
         if (this.xhrSetup) {
             this.xhrSetup(xhr, this.url);
         }
+        this.timeoutHandle = window.setTimeout(
+            this.loadtimeout.bind(this),
+            this.timeout
+        );
         xhr.send();
     }
 
