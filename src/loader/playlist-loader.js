@@ -39,7 +39,7 @@ class PlaylistLoader extends EventHandler {
         this.url = url;
         this.id = id1;
         this.id2 = id2;
-        if (this.id === undefined) {
+        if (this.id === null) {
             retry = config.manifestLoadingMaxRetry;
             timeout = config.manifestLoadingTimeOut;
             retryDelay = config.manifestLoadingRetryDelay;
