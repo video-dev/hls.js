@@ -594,10 +594,12 @@ class StreamController extends EventHandler {
 
     getBufferRange(position) {
         var i, range;
-        for (i = this.bufferRange.length - 1; i >= 0; i--) {
-            range = this.bufferRange[i];
-            if (position >= range.start && position <= range.end) {
-                return range;
+        if (this.bufferRange) {
+            for (i = this.bufferRange.length - 1; i >= 0; i--) {
+                range = this.bufferRange[i];
+                if (position >= range.start && position <= range.end) {
+                    return range;
+                }
             }
         }
         return null;
