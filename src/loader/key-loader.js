@@ -61,7 +61,9 @@ class KeyLoader extends EventHandler {
     }
 
     loaderror(event) {
-        this.loader.abort();
+        if (this.loader) {
+            this.loader.abort();
+        }
         this.hls.trigger(Event.ERROR, {
             type: ErrorTypes.NETWORK_ERROR,
             details: ErrorDetails.KEY_LOAD_ERROR,
@@ -72,7 +74,9 @@ class KeyLoader extends EventHandler {
     }
 
     loadtimeout() {
-        this.loader.abort();
+        if (this.loader) {
+            this.loader.abort();
+        }
         this.hls.trigger(Event.ERROR, {
             type: ErrorTypes.NETWORK_ERROR,
             details: ErrorDetails.KEY_LOAD_TIMEOUT,
