@@ -55,7 +55,9 @@ class FragmentLoader extends EventHandler {
     }
 
     loaderror(event) {
-        this.loader.abort();
+        if (this.loader) {
+            this.loader.abort();
+        }
         this.hls.trigger(Event.ERROR, {
             type: ErrorTypes.NETWORK_ERROR,
             details: ErrorDetails.FRAG_LOAD_ERROR,
@@ -66,7 +68,9 @@ class FragmentLoader extends EventHandler {
     }
 
     loadtimeout() {
-        this.loader.abort();
+        if (this.loader) {
+            this.loader.abort();
+        }
         this.hls.trigger(Event.ERROR, {
             type: ErrorTypes.NETWORK_ERROR,
             details: ErrorDetails.FRAG_LOAD_TIMEOUT,
