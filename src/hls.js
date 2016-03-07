@@ -100,7 +100,7 @@ class Hls {
       throw new Error('Illegal hls.js config: "liveMaxLatencyDurationCount" must be gt "liveSyncDurationCount"');
     }
 
-    if (config.liveMaxLatencyDuration !== undefined && config.liveMaxLatencyDuration <= config.liveSyncDuration) {
+    if (config.liveMaxLatencyDuration !== undefined && (config.liveMaxLatencyDuration <= config.liveSyncDuration || config.liveSyncDuration === undefined)) {
       throw new Error('Illegal hls.js config: "liveMaxLatencyDuration" must be gt "liveSyncDuration"');
     }
 
