@@ -265,7 +265,9 @@ class PlaylistLoader extends EventHandler {
       details = ErrorDetails.LEVEL_LOAD_ERROR;
       fatal = false;
     }
-    this.loader.abort();
+    if (this.loader) {
+      this.loader.abort();
+    }
     this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: this.url, loader: this.loader, response: event.currentTarget, level: this.id, id: this.id2});
   }
 
@@ -278,8 +280,10 @@ class PlaylistLoader extends EventHandler {
       details = ErrorDetails.LEVEL_LOAD_TIMEOUT;
       fatal = false;
     }
-   this.loader.abort();
-   this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: this.url, loader: this.loader, level: this.id, id: this.id2});
+    if (this.loader) {
+      this.loader.abort();
+    }
+    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: this.url, loader: this.loader, level: this.id, id: this.id2});
   }
 }
 
