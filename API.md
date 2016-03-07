@@ -295,6 +295,23 @@ if set to 10, the player will seek back to ```liveSyncDurationCount``` whenever 
 If set, this value must be stricly superior to ```liveSyncDurationCount```
 a value too close from ```liveSyncDurationCount``` is likely to cause playback stalls.
 
+#### ```liveSyncDuration```
+(default undefined)
+
+Alternative parameter to ```liveSyncDurationCount```, expressed in seconds vs number of segments.
+If defined in the configuration object, ```liveSyncDuration``` will take precedence over the default```liveSyncDurationCount```.
+You can't define this parameter and either ```liveSyncDurationCount``` or ```liveMaxLatencyDurationCount``` in your configuration object at the same time.
+A value too low (inferior to ~3 segment durations) is likely to cause playback stalls.
+
+#### ```liveMaxLatencyDuration```
+(default undefined)
+
+Alternative parameter to ```liveMaxLatencyDurationCount```, expressed in seconds vs number of segments.
+If defined in the configuration object, ```liveMaxLatencyDuration``` will take precedence over the default```liveMaxLatencyDurationCount```.
+If set, this value must be stricly superior to ```liveSyncDuration``` which must be defined as well.
+You can't define this parameter and either ```liveSyncDurationCount``` or ```liveMaxLatencyDurationCount``` in your configuration object at the same time.
+A value too close from ```liveSyncDuration``` is likely to cause playback stalls.
+
 #### ```enableWorker```
 (default true)
 
