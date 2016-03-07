@@ -67,6 +67,7 @@ class BufferController extends EventHandler {
             ms.removeEventListener('sourceclose', this.onmsc);
             // unlink MediaSource from video tag
             this.media.src = '';
+            this.media.removeAttribute('src');
             this.mediaSource = null;
             this.media = null;
             this.pendingTracks = null;
