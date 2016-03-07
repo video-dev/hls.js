@@ -257,7 +257,7 @@ this is the guaranteed buffer length hls.js will try to reach, regardless of max
 #### ```maxBufferHole```
 (default 0.3s)
 
-'maximum' inter-fragment buffer hole tolerance that hls.js can cope with.
+'maximum' inter-fragment buffer hole tolerance that hls.js can cope with when searching for the next fragment to load.
 When switching between quality level, fragments might not be perfectly aligned.
 This could result in small overlapping or hole in media buffer. This tolerance factor helps cope with this.
 
