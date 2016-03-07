@@ -119,7 +119,8 @@ class Hls {
 
         if (
             config.liveMaxLatencyDuration !== undefined &&
-            config.liveMaxLatencyDuration <= config.liveSyncDuration
+            (config.liveMaxLatencyDuration <= config.liveSyncDuration ||
+                config.liveSyncDuration === undefined)
         ) {
             throw new Error(
                 'Illegal hls.js config: "liveMaxLatencyDuration" must be gt "liveSyncDuration"'
