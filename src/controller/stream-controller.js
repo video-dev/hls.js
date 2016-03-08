@@ -1033,82 +1033,91 @@ class StreamController extends EventHandler {
     }
   }
 
-_checkBuffer() {
+  _checkBuffer() {
     var media = this.media;
-    if(media) {
-      // compare readyState
-      var readyState = media.readyState;
-      // if ready state different from HAVE_NOTHING (numeric value 0), we are allowed to seek
-      if(readyState) {
-        var targetSeekPosition, currentTime;
-        // if seek after buffered defined, let's seek if within acceptable range
-        var seekAfterBuffered = this.seekAfterBuffered;
-        if(seekAfterBuffered) {
-          if(media.duration >= seekAfterBuffered) {
-            targetSeekPosition = seekAfterBuffered;
-            this.seekAfterBuffered = undefined;
-          }
-        } else {
-          currentTime = media.currentTime;
-          var loadedmetadata = this.loadedmetadata;
+    if (!media) {
+      return;
+    }
 
-          // adjust currentTime to start position on loaded metadata
-          if(!loadedmetadata && media.buffered.length) {
-            this.loadedmetadata = true;
-            // only adjust currentTime if not equal to 0
-            if (!currentTime && currentTime !== this.startPosition) {
-              targetSeekPosition = this.startPosition;
-            }
-          }
-        }
-        if (targetSeekPosition) {
-          currentTime = targetSeekPosition;
-          logger.log(`target seek position:${targetSeekPosition}`);
-        }
-        var bufferInfo = this.bufferInfo(currentTime,0),
-            expectedPlaying = !(media.paused || media.ended || media.seeking || readyState < 2),
-            jumpThreshold = 0.4, // tolerance needed as some browsers stalls playback before reaching buffered range end
-            playheadMoving = currentTime > media.playbackRate*this.lastCurrentTime;
+    // if ready state different from HAVE_NOTHING (numeric value 0), we are allowed to seek
+    var readyState = media.readyState;
+    if(!readyState) {
+      return;
+    }
 
-        if (this.stalled && playheadMoving) {
-          this.stalled = false;
-        }
-        // check buffer upfront
-        // if less than 200ms is buffered, and media is expected to play but playhead is not moving,
-        // and we have a new buffer range available upfront, let's seek to that one
-        if(bufferInfo.len <= jumpThreshold) {
-          if(playheadMoving || !expectedPlaying) {
-            // playhead moving or media not playing
-            jumpThreshold = 0;
-          } else {
-            // playhead not moving AND media expected to play
-            logger.log(`playback seems stuck @${currentTime}`);
-            if(!this.stalled) {
-              this.hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_STALLED_ERROR, fatal: false});
-              this.stalled = true;
-            }
-          }
-          // if we are below threshold, try to jump if next buffer range is close
-          if(bufferInfo.len <= jumpThreshold) {
-            // no buffer available @ currentTime, check if next buffer is close (more than 5ms diff but within a config.maxSeekHole second range)
-            var nextBufferStart = bufferInfo.nextStart, delta = nextBufferStart-currentTime;
-            if(nextBufferStart &&
-               (delta < this.config.maxSeekHole) &&
-               (delta > 0.005)  &&
-               !media.seeking) {
-              // next buffer is close ! adjust currentTime to nextBufferStart
-              // this will ensure effective video decoding
-              logger.log(`adjust currentTime from ${media.currentTime} to next buffered @ ${nextBufferStart}`);
-              media.currentTime = nextBufferStart;
-            }
-          }
-        } else {
-          if (targetSeekPosition && media.currentTime !== targetSeekPosition) {
-            logger.log(`adjust currentTime from ${media.currentTime} to ${targetSeekPosition}`);
-            media.currentTime = targetSeekPosition;
-          }
+    var targetSeekPosition, currentTime;
+    // if seek after buffered defined, let's seek if within acceptable range
+    var seekAfterBuffered = this.seekAfterBuffered;
+    if(seekAfterBuffered) {
+      if(media.duration >= seekAfterBuffered) {
+        targetSeekPosition = seekAfterBuffered;
+        this.seekAfterBuffered = undefined;
+      }
+    } else {
+      currentTime = media.currentTime;
+      var loadedmetadata = this.loadedmetadata;
+
+      // adjust currentTime to start position on loaded metadata
+      if(!loadedmetadata && media.buffered.length) {
+        this.loadedmetadata = true;
+        // only adjust currentTime if not equal to 0
+        if (!currentTime && currentTime !== this.startPosition) {
+          targetSeekPosition = this.startPosition;
         }
       }
+    }
+    if (targetSeekPosition) {
+      currentTime = targetSeekPosition;
+      logger.log(`target seek position:${targetSeekPosition}`);
+    }
+
+    var bufferInfo = this.bufferInfo(currentTime,0),
+        expectedPlaying = !(media.paused || media.ended || media.seeking || readyState < 2),
+        jumpThreshold = 0.4, // tolerance needed as some browsers stalls playback before reaching buffered range end
+        playheadMoving = currentTime > media.playbackRate*this.lastCurrentTime;
+
+    if (this.stalled && playheadMoving) {
+      this.stalled = false;
+    }
+
+    // check buffer upfront
+    // if less than 200ms is buffered, and media is expected to play but playhead is not moving,
+    // and we have a new buffer range available upfront, let's seek to that one
+    if(bufferInfo.len <= jumpThreshold) {
+      if(playheadMoving || !expectedPlaying) {
+        // playhead moving or media not playing
+        jumpThreshold = 0;
+      } else {
+        // playhead not moving AND media expected to play
+        logger.log(`playback seems stuck @${currentTime}`);
+        if(!this.stalled) {
+          this.hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_STALLED_ERROR, fatal: false});
+          this.stalled = true;
+        }
+      }
+      // if we are below threshold, try to jump if next buffer range is close
+      if(bufferInfo.len <= jumpThreshold) {
+        // no buffer available @ currentTime, check if next buffer is close (more than 5ms diff but within a config.maxSeekHole second range)
+        var nextBufferStart = bufferInfo.nextStart, delta = nextBufferStart-currentTime;
+        if(nextBufferStart &&
+            (delta < this.config.maxSeekHole) &&
+            (delta > 0.005)  &&
+            !media.seeking) {
+          // next buffer is close ! adjust currentTime to nextBufferStart
+          // this will ensure effective video decoding
+          logger.log(`adjust currentTime from ${media.currentTime} to next buffered @ ${nextBufferStart}`);
+          media.currentTime = nextBufferStart;
+        }
+      }
+    } else if (targetSeekPosition && media.currentTime !== targetSeekPosition) {
+      logger.log(`adjust currentTime from ${media.currentTime} to ${targetSeekPosition}`);
+      media.currentTime = targetSeekPosition;
+    } else if (!playheadMoving && expectedPlaying && media.buffered.length && bufferInfo.nextStart) {
+      // If browser hits a break in the MP4 and stalls out, we can still detect and flush out.
+      // Note that this can happen if you have a playbackRate >> 1 and the browser decides to
+      // not play the last few frames of the buffer at the edge of a discontinuity.
+      logger.log(`stuck with buffer available; adjust currentTime from ${media.currentTime} to ${bufferInfo.nextStart}`);
+      media.currentTime = bufferInfo.nextStart;
     }
   }
 
