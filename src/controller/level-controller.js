@@ -16,6 +16,7 @@ class LevelController extends EventHandler {
       Event.ERROR);
     this.ontick = this.tick.bind(this);
     this._manualLevel = this._autoLevelCapping = -1;
+    this._capLevelToPlayerSize = this.hls.config.capLevelToPlayerSize;
   }
 
   destroy() {
@@ -26,7 +27,15 @@ class LevelController extends EventHandler {
   }
 
   onManifestLoaded(data) {
-    var levels0 = [], levels = [], bitrateStart, i, bitrateSet = {}, videoCodecFound = false, audioCodecFound = false, hls = this.hls;
+    var levels0 = [], 
+        levels = [], 
+        bitrateStart, 
+        i, 
+        bitrateSet = {}, 
+        videoCodecFound = false, 
+        audioCodecFound = false, 
+        firstLevelDetected = false,
+        hls = this.hls;
 
     // regroup redundant level together
     data.levels.forEach(level => {
@@ -78,19 +87,50 @@ class LevelController extends EventHandler {
       this._levels = levels;
       // find index of first level in sorted levels
       for (i = 0; i < levels.length; i++) {
-        if (levels[i].bitrate === bitrateStart) {
+        levels[i].index = i;
+        if (levels[i].bitrate === bitrateStart && !firstLevelDetected) {
+          firstLevelDetected = true;
           this._firstLevel = i;
           logger.log(`manifest loaded,${levels.length} level(s) found, first bitrate:${bitrateStart}`);
-          break;
         }
+      }
+      if (this.capLevelToPlayerSize) {
+        this._maxUniqueLevels = this.maxLevelsWithUniqueDimensions;
       }
       hls.trigger(Event.MANIFEST_PARSED, {levels: this._levels, firstLevel: this._firstLevel, stats: data.stats});
     } else {
       hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: hls.url, reason: 'no compatible level found in manifest'});
     }
     return;
+  } 
+  
+  get maxLevelsWithUniqueDimensions() {
+     let filter = function(level, i, arr) {
+      if (level.width > 0 && level.height > 0) {
+        if (i + 1 < arr.length) {
+            let nextLevel = arr[i + 1];
+            if (level.width !== nextLevel.width && level.height !== nextLevel.height) {
+                return true;
+            }
+        } else {
+            return true;
+        }
+      }
+      return false;
+    };
+    return this.levels.filter(filter);  
   }
-
+  
+  /** Return the array of the levels with the unique dimensions **/
+  get maxUniqueLevels() {
+     return this._maxUniqueLevels;   
+  }
+  
+  /** Return the capping level to player (HTML video tag) dimensions value **/
+  get capLevelToPlayerSize() {
+    return this._capLevelToPlayerSize;
+  }
+  
   get levels() {
     return this._levels;
   }
