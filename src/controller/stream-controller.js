@@ -1353,7 +1353,7 @@ class StreamController extends EventHandler {
                         media.seeking ||
                         readyState < 2
                     ),
-                    jumpThreshold = 0.2,
+                    jumpThreshold = 0.4, // tolerance needed as some browsers stalls playback before reaching buffered range end
                     playheadMoving =
                         currentTime > media.playbackRate * this.lastCurrentTime;
 
