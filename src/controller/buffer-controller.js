@@ -312,9 +312,9 @@ class BufferController extends EventHandler {
                         }
                     } else {
                         // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
-                        // let's stop appending any segments, and report BUFFER_FULL error
+                        // let's stop appending any segments, and report BUFFER_FULL_ERROR error
                         segments = [];
-                        event.details = ErrorDetails.BUFFER_FULL;
+                        event.details = ErrorDetails.BUFFER_FULL_ERROR;
                         hls.trigger(Event.ERROR, event);
                     }
                 }
