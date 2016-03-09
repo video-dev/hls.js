@@ -1021,7 +1021,7 @@ class StreamController extends EventHandler {
         logger.warn(`mediaController: ${data.details} while loading frag,switch to ${data.fatal ? 'ERROR' : 'IDLE'} state ...`);
         this.state = data.fatal ? State.ERROR : State.IDLE;
         break;
-      case ErrorDetails.BUFFER_FULL:
+      case ErrorDetails.BUFFER_FULL_ERROR:
         // trigger a smooth level switch to empty buffers
         // also reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
         this.config.maxMaxBufferLength/=2;
