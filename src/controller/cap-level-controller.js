@@ -8,16 +8,22 @@ import EventHandler from '../event-handler';
 class CapLevelController extends EventHandler {
     constructor(hls) {
         super(hls, Event.MEDIA_ATTACHING, Event.MANIFEST_PARSED);
-        try {
-            this.contentsScaleFactor = window.devicePixelRatio;
-        } catch (e) {}
-        this.autoLevelCapping = Number.POSITIVE_INFINITY;
     }
 
     destroy() {
-        this.media = null;
-        this.autoLevelCapping = Number.POSITIVE_INFINITY;
-        clearInterval(this.timer);
+        if (this.hls.config.capLevelToPlayerSize) {
+            this.media = null;
+            this.autoLevelCapping = Number.POSITIVE_INFINITY;
+            window.removeEventListener(
+                'resize',
+                this.detectPlayerSize.bind(this)
+            );
+            if (this.pixelRatioMatchMedia) {
+                this.pixelRatioMatchMedia.removeListener(
+                    this.onPixelRatioChanged
+                );
+            }
+        }
     }
 
     onMediaAttaching(data) {
@@ -25,14 +31,22 @@ class CapLevelController extends EventHandler {
     }
 
     onManifestParsed(data) {
-        if (!this.hls.config.capLevelToPlayerSize) {
-            return;
+        if (this.hls.config.capLevelToPlayerSize) {
+            this.autoLevelCapping = Number.POSITIVE_INFINITY;
+            this.levels = data.levels;
+            this.hls.firstLevel = this.getMaxLevel(data.firstLevel);
+            try {
+                this.contentsScaleFactor = window.devicePixelRatio;
+                this.pixelRatioMatchMedia = window.matchMedia(
+                    'screen and (min-resolution: 1dppx)'
+                );
+                this.pixelRatioMatchMedia.addListener(
+                    this.onPixelRatioChanged.bind(this)
+                );
+            } catch (e) {}
+            window.addEventListener('resize', this.detectPlayerSize.bind(this));
+            this.detectPlayerSize();
         }
-        this.levels = data.levels;
-        this.hls.firstLevel = this.getMaxLevel(data.firstLevel);
-        this.detectPlayerSize();
-        clearInterval(this.timer);
-        this.timer = setInterval(this.detectPlayerSize.bind(this), 1000);
     }
 
     attachMedia(media) {
@@ -104,6 +118,11 @@ class CapLevelController extends EventHandler {
             }
         }
         return height;
+    }
+
+    onPixelRatioChanged() {
+        this.contentsScaleFactor = window.devicePixelRatio;
+        this.detectPlayerSize();
     }
 }
 
