@@ -627,6 +627,8 @@ full list of Errors is described below:
     - data: { type : ```MEDIA_ERROR```, details : ```Hls.ErrorDetails.BUFFER_STALLED_ERROR```, fatal : ```false```}
   - ```Hls.ErrorDetails.BUFFER_FULL_ERROR```raised when no data can be appended anymore in media buffer because it is full. this error is recovered automatically by performing a smooth level switching that empty buffers (without disrupting the playback) and reducing the max buffer length.
     - data: { type : ```MEDIA_ERROR```, details : ```Hls.ErrorDetails.BUFFER_FULL_ERROR```, fatal : ```false```}
+  - ```Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE```raised after hls.js seeks over a buffer hole to unstuck the playback, 
+    - data: { type : ```MEDIA_ERROR```, details : ```Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE```, fatal : ```false```}
 
 ## Objects
 ### Level
