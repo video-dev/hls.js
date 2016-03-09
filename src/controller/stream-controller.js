@@ -1090,11 +1090,11 @@ _checkBuffer() {
           }
           // if we are below threshold, try to jump if next buffer range is close
           if(bufferInfo.len <= jumpThreshold) {
-            // no buffer available @ currentTime, check if next buffer is close (more than 5ms diff but within a config.maxSeekHole second range)
+            // no buffer available @ currentTime, check if next buffer is close (within a config.maxSeekHole second range)
             var nextBufferStart = bufferInfo.nextStart, delta = nextBufferStart-currentTime;
             if(nextBufferStart &&
                (delta < this.config.maxSeekHole) &&
-               (delta > 0.005)  &&
+               (delta > 0)  &&
                !media.seeking) {
               // next buffer is close ! adjust currentTime to nextBufferStart
               // this will ensure effective video decoding
