@@ -1401,6 +1401,11 @@ class StreamController extends EventHandler {
                                 } to next buffered @ ${nextBufferStart}`
                             );
                             media.currentTime = nextBufferStart;
+                            this.hls.trigger(Event.ERROR, {
+                                type: ErrorTypes.MEDIA_ERROR,
+                                details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
+                                fatal: false
+                            });
                         }
                     }
                 } else {
