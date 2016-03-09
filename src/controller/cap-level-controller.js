@@ -34,7 +34,7 @@ class CapLevelController extends EventHandler {
       this.hls.firstLevel = this.getMaxLevel(data.firstLevel);
       try {
         this.contentsScaleFactor =  window.devicePixelRatio;
-        this.pixelRatioMatchMedia = window.matchMedia('screen and (min-resolution: 1dppx)');
+        this.pixelRatioMatchMedia = window.matchMedia('screen and (min-resolution: 2dppx)');
         this.pixelRatioMatchMedia.addListener(this.onPixelRatioChanged.bind(this));
       } catch(e) {}
       window.addEventListener('resize', this.detectPlayerSize.bind(this));
@@ -109,7 +109,7 @@ class CapLevelController extends EventHandler {
   
   onPixelRatioChanged() {
     this.contentsScaleFactor =  window.devicePixelRatio;
-    this.detectPlayerSize();  
+    this.detectPlayerSize();
   }
 }
 
