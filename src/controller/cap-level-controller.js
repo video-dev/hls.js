@@ -38,7 +38,7 @@ class CapLevelController extends EventHandler {
             try {
                 this.contentsScaleFactor = window.devicePixelRatio;
                 this.pixelRatioMatchMedia = window.matchMedia(
-                    'screen and (min-resolution: 1dppx)'
+                    'screen and (min-resolution: 2dppx)'
                 );
                 this.pixelRatioMatchMedia.addListener(
                     this.onPixelRatioChanged.bind(this)
