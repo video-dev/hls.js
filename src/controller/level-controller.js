@@ -105,11 +105,11 @@ class LevelController extends EventHandler {
             });
         } else {
             hls.trigger(Event.ERROR, {
-                type: ErrorTypes.NETWORK_ERROR,
-                details: ErrorDetails.MANIFEST_PARSING_ERROR,
+                type: ErrorTypes.MEDIA_ERROR,
+                details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR,
                 fatal: true,
                 url: hls.url,
-                reason: 'no compatible level found in manifest'
+                reason: 'no level with compatible codecs found in manifest'
             });
         }
         return;
