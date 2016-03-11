@@ -295,6 +295,23 @@ if set to 10, the player will seek back to ```liveSyncDurationCount``` whenever 
 If set, this value must be stricly superior to ```liveSyncDurationCount```
 a value too close from ```liveSyncDurationCount``` is likely to cause playback stalls.
 
+#### ```liveSyncDuration```
+(default undefined)
+
+Alternative parameter to ```liveSyncDurationCount```, expressed in seconds vs number of segments.
+If defined in the configuration object, ```liveSyncDuration``` will take precedence over the default```liveSyncDurationCount```.
+You can't define this parameter and either ```liveSyncDurationCount``` or ```liveMaxLatencyDurationCount``` in your configuration object at the same time.
+A value too low (inferior to ~3 segment durations) is likely to cause playback stalls.
+
+#### ```liveMaxLatencyDuration```
+(default undefined)
+
+Alternative parameter to ```liveMaxLatencyDurationCount```, expressed in seconds vs number of segments.
+If defined in the configuration object, ```liveMaxLatencyDuration``` will take precedence over the default```liveMaxLatencyDurationCount```.
+If set, this value must be stricly superior to ```liveSyncDuration``` which must be defined as well.
+You can't define this parameter and either ```liveSyncDurationCount``` or ```liveMaxLatencyDurationCount``` in your configuration object at the same time.
+A value too close from ```liveSyncDuration``` is likely to cause playback stalls.
+
 #### ```enableWorker```
 (default true)
 
@@ -603,9 +620,15 @@ full list of Errors is described below:
   - ```Hls.ErrorDetails.FRAG_PARSING_ERROR```raised when fragment parsing fails
     - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.FRAG_PARSING_ERROR```, fatal : ```true/false```, reason : failure reason}
   - ```Hls.ErrorDetails.BUFFER_APPEND_ERROR```raised when exception is raised while calling buffer append
-    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.BUFFER_APPEND_ERROR```, fatal : ```true```, frag : fragment object}
+    - data: { type : ```MEDIA_ERROR```, details : ```Hls.ErrorDetails.BUFFER_APPEND_ERROR```, fatal : ```true```, frag : fragment object}
   - ```Hls.ErrorDetails.BUFFER_APPENDING_ERROR```raised when exception is raised during buffer appending
-    - data: { type : ```NETWORK_ERROR```, details : ```Hls.ErrorDetails.BUFFER_APPENDING_ERROR```, fatal : ```false```, frag : fragment object}
+    - data: { type : ```MEDIA_ERROR```, details : ```Hls.ErrorDetails.BUFFER_APPENDING_ERROR```, fatal : ```false```}
+  - ```Hls.ErrorDetails.BUFFER_STALLED_ERROR```raised when playback is stuck because buffer is running out of data
+    - data: { type : ```MEDIA_ERROR```, details : ```Hls.ErrorDetails.BUFFER_STALLED_ERROR```, fatal : ```false```}
+  - ```Hls.ErrorDetails.BUFFER_FULL_ERROR```raised when no data can be appended anymore in media buffer because it is full. this error is recovered automatically by performing a smooth level switching that empty buffers (without disrupting the playback) and reducing the max buffer length.
+    - data: { type : ```MEDIA_ERROR```, details : ```Hls.ErrorDetails.BUFFER_FULL_ERROR```, fatal : ```false```}
+  - ```Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE```raised after hls.js seeks over a buffer hole to unstuck the playback, 
+    - data: { type : ```MEDIA_ERROR```, details : ```Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE```, fatal : ```false```}
 
 ## Objects
 ### Level
