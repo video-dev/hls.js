@@ -14,6 +14,8 @@ export const ErrorDetails = {
   MANIFEST_LOAD_TIMEOUT: 'manifestLoadTimeOut',
   // Identifier for a manifest parsing error - data: { url : faulty URL, reason : error reason}
   MANIFEST_PARSING_ERROR: 'manifestParsingError',
+  // Identifier for a manifest with only incompatible codecs error - data: { url : faulty URL, reason : error reason}
+  MANIFEST_INCOMPATIBLE_CODECS_ERROR: 'manifestIncompatibleCodecsError',
   // Identifier for playlist load error - data: { url : faulty URL, response : XHR response}
   LEVEL_LOAD_ERROR: 'levelLoadError',
   // Identifier for playlist load timeout - data: { url : faulty URL, response : XHR response}
