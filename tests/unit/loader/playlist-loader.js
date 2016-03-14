@@ -321,5 +321,30 @@ lo008ts`;
     assert.strictEqual(result.fragments[9].byteRangeEndOffset,817988);
   });
 
+  it('parses discontinuity and maintains continuity counter', () => {
+    var level = `#EXTM3U
+#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-TARGETDURATION:10
+#EXT-X-MEDIA-SEQUENCE:0
+#EXTINF:10,
+0001.ts
+#EXTINF:10,
+0002.ts
+#EXTINF:5,
+0003.ts
+#EXT-X-DISCONTINUITY
+#EXTINF:10,
+0005.ts
+#EXTINF:10,
+0006.ts
+#EXT-X-ENDLIST
+    `;
+    var result = new PlaylistLoader({on : function() { }}).parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8',0);
+    assert.strictEqual(result.fragments.length, 5);
+    assert.strictEqual(result.totalduration, 45);
+    assert.strictEqual(result.fragments[2].cc, 0);
+    assert.strictEqual(result.fragments[3].cc, 1); //continuity counter should increase around discontinuity
+  });
 
 });
