@@ -14,14 +14,9 @@ class CapLevelController extends EventHandler {
         if (this.hls.config.capLevelToPlayerSize) {
             this.media = null;
             this.autoLevelCapping = Number.POSITIVE_INFINITY;
-            window.removeEventListener(
-                'resize',
-                this.detectPlayerSize.bind(this)
-            );
+            window.removeEventListener('resize', this.detectPlayerSize);
             if (this.pixelRatioMatchMedia) {
-                this.pixelRatioMatchMedia.removeListener(
-                    this.onPixelRatioChanged
-                );
+                this.pixelRatioMatchMedia.removeListener(this.detectPlayerSize);
             }
         }
     }
@@ -36,12 +31,11 @@ class CapLevelController extends EventHandler {
             this.levels = data.levels;
             this.hls.firstLevel = this.getMaxLevel(data.firstLevel);
             try {
-                this.contentsScaleFactor = window.devicePixelRatio;
                 this.pixelRatioMatchMedia = window.matchMedia(
                     'screen and (min-resolution: 2dppx)'
                 );
                 this.pixelRatioMatchMedia.addListener(
-                    this.onPixelRatioChanged.bind(this)
+                    this.detectPlayerSize.bind(this)
                 );
             } catch (e) {}
             window.addEventListener('resize', this.detectPlayerSize.bind(this));
@@ -92,6 +86,14 @@ class CapLevelController extends EventHandler {
         return result;
     }
 
+    get contentScaleFactor() {
+        let pixelRatio = 1;
+        try {
+            pixelRatio = window.devicePixelRatio;
+        } catch (e) {}
+        return pixelRatio;
+    }
+
     get mediaWidth() {
         let width;
         if (this.media) {
@@ -99,9 +101,7 @@ class CapLevelController extends EventHandler {
                 this.media.width ||
                 this.media.clientWidth ||
                 this.media.offsetWidth;
-            if (this.contentsScaleFactor) {
-                width *= this.contentsScaleFactor;
-            }
+            width *= this.contentScaleFactor;
         }
         return width;
     }
@@ -113,16 +113,9 @@ class CapLevelController extends EventHandler {
                 this.media.height ||
                 this.media.clientHeight ||
                 this.media.offsetHeight;
-            if (this.contentsScaleFactor) {
-                height *= this.contentsScaleFactor;
-            }
+            height *= this.contentScaleFactor;
         }
         return height;
-    }
-
-    onPixelRatioChanged() {
-        this.contentsScaleFactor = window.devicePixelRatio;
-        this.detectPlayerSize();
     }
 }
 
