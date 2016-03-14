@@ -1,10 +1,10 @@
 export const ErrorTypes = {
   // Identifier for a network error (loading error / timeout ...)
-  NETWORK_ERROR: 'hlsNetworkError',
+  NETWORK_ERROR: 'networkError',
   // Identifier for a media Error (video/parsing/mediasource error)
-  MEDIA_ERROR: 'hlsMediaError',
+  MEDIA_ERROR: 'mediaError',
   // Identifier for all other errors
-  OTHER_ERROR: 'hlsOtherError'
+  OTHER_ERROR: 'otherError'
 };
 
 export const ErrorDetails = {
