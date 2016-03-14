@@ -214,22 +214,23 @@ class StreamController extends EventHandler {
                     if (levelDetails.live) {
                         // check if requested position is within seekable boundaries :
                         //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.media.seeking}`);
-                        if (
-                            bufferEnd <
-                            Math.max(
-                                start,
-                                end -
-                                    config.liveMaxLatencyDurationCount *
-                                        levelDetails.targetduration
-                            )
-                        ) {
+                        let maxLatency =
+                            config.liveMaxLatencyDuration !== undefined
+                                ? config.liveMaxLatencyDuration
+                                : config.liveMaxLatencyDurationCount *
+                                  levelDetails.targetduration;
+
+                        if (bufferEnd < Math.max(start, end - maxLatency)) {
+                            let targetLatency =
+                                config.liveSyncDuration !== undefined
+                                    ? config.liveSyncDuration
+                                    : config.liveSyncDurationCount *
+                                      levelDetails.targetduration;
                             this.seekAfterBuffered =
                                 start +
                                 Math.max(
                                     0,
-                                    levelDetails.totalduration -
-                                        config.liveSyncDurationCount *
-                                            levelDetails.targetduration
+                                    levelDetails.totalduration - targetLatency
                                 );
                             logger.log(
                                 `buffer end: ${bufferEnd} is located too far from the end of live sliding playlist, media position will be reseted to: ${this.seekAfterBuffered.toFixed(
@@ -577,7 +578,7 @@ class StreamController extends EventHandler {
             if (pos + maxHoleDuration >= start && pos < end) {
                 // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
                 bufferStart = start;
-                bufferEnd = end + maxHoleDuration;
+                bufferEnd = end;
                 bufferLen = bufferEnd - pos;
             } else if (pos + maxHoleDuration < start) {
                 bufferStartNext = start;
@@ -593,11 +594,15 @@ class StreamController extends EventHandler {
     }
 
     getBufferRange(position) {
-        var i, range;
-        for (i = this.bufferRange.length - 1; i >= 0; i--) {
-            range = this.bufferRange[i];
-            if (position >= range.start && position <= range.end) {
-                return range;
+        var i,
+            range,
+            bufferRange = this.bufferRange;
+        if (bufferRange) {
+            for (i = bufferRange.length - 1; i >= 0; i--) {
+                range = bufferRange[i];
+                if (position >= range.start && position <= range.end) {
+                    return range;
+                }
             }
         }
         return null;
@@ -956,12 +961,14 @@ class StreamController extends EventHandler {
         if (this.startFragRequested === false) {
             // if live playlist, set start position to be fragment N-this.config.liveSyncDurationCount (usually 3)
             if (newDetails.live) {
+                let targetLatency =
+                    this.config.liveSyncDuration !== undefined
+                        ? this.config.liveSyncDuration
+                        : this.config.liveSyncDurationCount *
+                          newDetails.targetduration;
                 this.startPosition = Math.max(
                     0,
-                    sliding +
-                        duration -
-                        this.config.liveSyncDurationCount *
-                            newDetails.targetduration
+                    sliding + duration - targetLatency
                 );
             }
             this.nextLoadPosition = this.startPosition;
@@ -1055,7 +1062,8 @@ class StreamController extends EventHandler {
             // include levelCodec in audio and video tracks
             track = tracks.audio;
             if (track) {
-                var audioCodec = this.levels[this.level].audioCodec;
+                var audioCodec = this.levels[this.level].audioCodec,
+                    ua = navigator.userAgent.toLowerCase();
                 if (audioCodec && this.audioCodecSwap) {
                     logger.log('swapping playlist audio codec');
                     if (audioCodec.indexOf('mp4a.40.5') !== -1) {
@@ -1066,20 +1074,22 @@ class StreamController extends EventHandler {
                 }
                 // in case AAC and HE-AAC audio codecs are signalled in manifest
                 // force HE-AAC , as it seems that most browsers prefers that way,
-                // except for mono streams OR on Android OR on FF
+                // except for mono streams OR on FF
                 // these conditions might need to be reviewed ...
                 if (this.audioCodecSwitch) {
-                    var ua = navigator.userAgent.toLowerCase();
                     // don't force HE-AAC if mono stream
                     if (
                         track.metadata.channelCount !== 1 &&
-                        // don't force HE-AAC if android
-                        ua.indexOf('android') === -1 &&
                         // don't force HE-AAC if firefox
                         ua.indexOf('firefox') === -1
                     ) {
                         audioCodec = 'mp4a.40.5';
                     }
+                }
+                // HE-AAC is broken on Android, always signal audio codec as AAC even if variant manifest states otherwise
+                if (ua.indexOf('android') !== -1) {
+                    audioCodec = 'mp4a.40.2';
+                    logger.log(`Android: force audio codec to` + audioCodec);
                 }
                 track.levelCodec = audioCodec;
             }
@@ -1291,7 +1301,7 @@ class StreamController extends EventHandler {
                 );
                 this.state = data.fatal ? State.ERROR : State.IDLE;
                 break;
-            case ErrorDetails.BUFFER_FULL:
+            case ErrorDetails.BUFFER_FULL_ERROR:
                 // trigger a smooth level switch to empty buffers
                 // also reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
                 this.config.maxMaxBufferLength /= 2;
@@ -1349,7 +1359,7 @@ class StreamController extends EventHandler {
                         media.seeking ||
                         readyState < 2
                     ),
-                    jumpThreshold = 0.2,
+                    jumpThreshold = 0.4, // tolerance needed as some browsers stalls playback before reaching buffered range end
                     playheadMoving =
                         currentTime > media.playbackRate * this.lastCurrentTime;
 
@@ -1377,13 +1387,13 @@ class StreamController extends EventHandler {
                     }
                     // if we are below threshold, try to jump if next buffer range is close
                     if (bufferInfo.len <= jumpThreshold) {
-                        // no buffer available @ currentTime, check if next buffer is close (more than 5ms diff but within a config.maxSeekHole second range)
+                        // no buffer available @ currentTime, check if next buffer is close (within a config.maxSeekHole second range)
                         var nextBufferStart = bufferInfo.nextStart,
                             delta = nextBufferStart - currentTime;
                         if (
                             nextBufferStart &&
                             delta < this.config.maxSeekHole &&
-                            delta > 0.005 &&
+                            delta > 0 &&
                             !media.seeking
                         ) {
                             // next buffer is close ! adjust currentTime to nextBufferStart
@@ -1394,6 +1404,11 @@ class StreamController extends EventHandler {
                                 } to next buffered @ ${nextBufferStart}`
                             );
                             media.currentTime = nextBufferStart;
+                            this.hls.trigger(Event.ERROR, {
+                                type: ErrorTypes.MEDIA_ERROR,
+                                details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
+                                fatal: false
+                            });
                         }
                     }
                 } else {
