@@ -447,7 +447,6 @@ class StreamController extends EventHandler {
                         let bufferStarvationDelay =
                             this.bufferInfo(pos, config.maxBufferHole).end -
                             pos;
-                        let fragLevelNextLoadedDelay;
                         // consider emergency switch down only if we have less than 2 frag buffered AND
                         // time to finish loading current fragment is bigger than buffer starvation delay
                         // ie if we risk buffer starvation if bw does not increase quickly
@@ -455,7 +454,7 @@ class StreamController extends EventHandler {
                             bufferStarvationDelay < 2 * frag.duration &&
                             fragLoadedDelay > bufferStarvationDelay
                         ) {
-                            let nextLoadLevel;
+                            let fragLevelNextLoadedDelay, nextLoadLevel;
                             // lets iterate through lower level and try to find the biggest one that could avoid rebuffering
                             // we start from current level - 1 and we step down , until we find a matching level
                             for (
@@ -485,11 +484,11 @@ class StreamController extends EventHandler {
                                     break;
                                 }
                             }
-                            // ensure nextLoadLevel is not negative
-                            nextLoadLevel = Math.max(0, nextLoadLevel);
                             // only emergency switch down if it takes less time to load new fragment at lowest level instead
                             // of finishing loading current one ...
                             if (fragLevelNextLoadedDelay < fragLoadedDelay) {
+                                // ensure nextLoadLevel is not negative
+                                nextLoadLevel = Math.max(0, nextLoadLevel);
                                 // force next load level in auto mode
                                 hls.nextLoadLevel = nextLoadLevel;
                                 // abort fragment loading ...
@@ -501,7 +500,7 @@ class StreamController extends EventHandler {
                                 hls.trigger(Event.FRAG_LOAD_EMERGENCY_ABORTED, {
                                     frag: frag
                                 });
-                                // switch back to IDLE state to request new fragment at lowest level
+                                // switch back to IDLE state to request new fragment at lower level
                                 this.state = State.IDLE;
                             }
                         }
