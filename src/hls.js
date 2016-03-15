@@ -223,12 +223,12 @@ class Hls {
 
   /** Return the quality level of next loaded fragment **/
   get nextLoadLevel() {
-    return this.levelController.nextLoadLevel();
+    return this.levelController.nextLoadLevel;
   }
 
   /** set quality level of next loaded fragment **/
   set nextLoadLevel(level) {
-    this.levelController.level = level;
+    this.levelController.nextLoadLevel = level;
   }
 
   /** Return first level (index of first level referenced in manifest)
