@@ -234,7 +234,7 @@ class StreamController extends EventHandler {
             var foundFrag;
             if (bufferEnd < end) {
               foundFrag = BinarySearch.search(fragments, (candidate) => {
-                // offset should be within fragment boundary - config.maxfragLookUpTolerance
+                // offset should be within fragment boundary - config.maxFragLookUpTolerance
                 // this is to cope with situations like
                 // bufferEnd = 9.991
                 // frag[Ø] : [0,10]
@@ -247,10 +247,10 @@ class StreamController extends EventHandler {
                     // previous frag         matching fragment         next frag
                     //  return -1             return 0                 return 1
                 //logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
-                if ((candidate.start + candidate.duration - config.maxfragLookUpTolerance) <= bufferEnd) {
+                if ((candidate.start + candidate.duration - config.maxFragLookUpTolerance) <= bufferEnd) {
                   return 1;
                 }
-                else if (candidate.start - config.maxfragLookUpTolerance > bufferEnd) {
+                else if (candidate.start - config.maxFragLookUpTolerance > bufferEnd) {
                   return -1;
                 }
                 return 0;
