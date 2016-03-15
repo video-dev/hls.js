@@ -49,6 +49,7 @@ class Hls {
                 maxBufferSize: 60 * 1000 * 1000,
                 maxBufferHole: 0.5,
                 maxSeekHole: 2,
+                maxfragLookUpTolerance: 0.2,
                 liveSyncDurationCount: 3,
                 liveMaxLatencyDurationCount: Infinity,
                 liveSyncDuration: undefined,
