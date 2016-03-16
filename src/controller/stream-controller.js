@@ -11,7 +11,7 @@ import LevelHelper from '../helper/level-helper';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
 const State = {
-    ERROR: 'ERROR',
+    STOPPED: 'STOPPED',
     STARTING: 'STARTING',
     IDLE: 'IDLE',
     PAUSED: 'PAUSED',
@@ -21,7 +21,8 @@ const State = {
     WAITING_LEVEL: 'WAITING_LEVEL',
     PARSING: 'PARSING',
     PARSED: 'PARSED',
-    ENDED: 'ENDED'
+    ENDED: 'ENDED',
+    ERROR: 'ERROR'
 };
 
 class StreamController extends EventHandler {
@@ -30,6 +31,7 @@ class StreamController extends EventHandler {
             hls,
             Event.MEDIA_ATTACHED,
             Event.MEDIA_DETACHING,
+            Event.MANIFEST_LOADING,
             Event.MANIFEST_PARSED,
             Event.LEVEL_LOADED,
             Event.KEY_LOADED,
@@ -49,18 +51,24 @@ class StreamController extends EventHandler {
     }
 
     destroy() {
-        this.stop();
+        this.stopLoad();
+        if (this.timer) {
+            clearInterval(this.timer);
+            this.timer = null;
+        }
         EventHandler.prototype.destroy.call(this);
-        this.state = State.IDLE;
+        this.state = State.STOPPED;
     }
 
-    startLoad() {
+    startLoad(startPosition = 0) {
         if (this.levels) {
             var media = this.media,
                 lastCurrentTime = this.lastCurrentTime;
-            this.stop();
+            this.stopLoad();
             this.demuxer = new Demuxer(this.hls);
-            this.timer = setInterval(this.ontick, 100);
+            if (!this.timer) {
+                this.timer = setInterval(this.ontick, 100);
+            }
             this.level = -1;
             this.fragLoadError = 0;
             if (media && lastCurrentTime) {
@@ -73,19 +81,18 @@ class StreamController extends EventHandler {
             } else {
                 this.lastCurrentTime = this.startPosition
                     ? this.startPosition
-                    : 0;
+                    : startPosition;
                 this.state = State.STARTING;
             }
             this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
             this.tick();
         } else {
             logger.warn('cannot start loading as manifest not parsed yet');
+            this.state = State.STOPPED;
         }
     }
 
-    stop() {
-        this.bufferRange = [];
-        this.stalled = false;
+    stopLoad() {
         var frag = this.fragCurrent;
         if (frag) {
             if (frag.loader) {
@@ -94,16 +101,11 @@ class StreamController extends EventHandler {
             this.fragCurrent = null;
         }
         this.fragPrevious = null;
-        logger.log('trigger BUFFER_RESET');
-        this.hls.trigger(Event.BUFFER_RESET);
-        if (this.timer) {
-            clearInterval(this.timer);
-            this.timer = null;
-        }
         if (this.demuxer) {
             this.demuxer.destroy();
             this.demuxer = null;
         }
+        this.state = State.STOPPED;
     }
 
     tick() {
@@ -887,7 +889,7 @@ class StreamController extends EventHandler {
         }
         this.media = null;
         this.loadedmetadata = false;
-        this.stop();
+        this.stopLoad();
     }
 
     onMediaSeeking() {
@@ -938,6 +940,14 @@ class StreamController extends EventHandler {
         logger.log('media ended');
         // reset startPosition and lastCurrentTime to restart playback @ stream beginning
         this.startPosition = this.lastCurrentTime = 0;
+    }
+
+    onManifestLoading() {
+        // reset buffer on manifest loading
+        logger.log('trigger BUFFER_RESET');
+        this.hls.trigger(Event.BUFFER_RESET);
+        this.bufferRange = [];
+        this.stalled = false;
     }
 
     onManifestParsed(data) {
@@ -1417,6 +1427,7 @@ class StreamController extends EventHandler {
 
                 if (this.stalled && playheadMoving) {
                     this.stalled = false;
+                    logger.log(`playback not stuck anymore @${currentTime}`);
                 }
                 // check buffer upfront
                 // if less than 200ms is buffered, and media is expected to play but playhead is not moving,
@@ -1427,8 +1438,8 @@ class StreamController extends EventHandler {
                         jumpThreshold = 0;
                     } else {
                         // playhead not moving AND media expected to play
-                        logger.log(`playback seems stuck @${currentTime}`);
                         if (!this.stalled) {
+                            logger.log(`playback seems stuck @${currentTime}`);
                             this.hls.trigger(Event.ERROR, {
                                 type: ErrorTypes.MEDIA_ERROR,
                                 details: ErrorDetails.BUFFER_STALLED_ERROR,
