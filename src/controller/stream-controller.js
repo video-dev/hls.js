@@ -286,8 +286,13 @@ class StreamController extends EventHandler {
                         }
                     }
                     if (!frag) {
-                        var foundFrag;
+                        let foundFrag;
+                        let maxFragLookUpTolerance =
+                            config.maxFragLookUpTolerance;
                         if (bufferEnd < end) {
+                            if (bufferEnd > end - maxFragLookUpTolerance) {
+                                maxFragLookUpTolerance = 0;
+                            }
                             foundFrag = BinarySearch.search(
                                 fragments,
                                 candidate => {
@@ -307,13 +312,13 @@ class StreamController extends EventHandler {
                                     if (
                                         candidate.start +
                                             candidate.duration -
-                                            config.maxFragLookUpTolerance <=
+                                            maxFragLookUpTolerance <=
                                         bufferEnd
                                     ) {
                                         return 1;
                                     } else if (
                                         candidate.start -
-                                            config.maxFragLookUpTolerance >
+                                            maxFragLookUpTolerance >
                                         bufferEnd
                                     ) {
                                         return -1;
