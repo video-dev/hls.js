@@ -515,6 +515,12 @@ get : return last loaded fragment quality level.
 set : set quality level for next loaded fragment
 set to -1 for automatic level selection
 
+#### ```hls.nextLoadLevel```
+get : return quality level that will be used to load next fragment
+
+set : force quality level for next loaded fragment. quality level will be forced only for that fragment.
+after a fragment at this quality level has been loaded, ```hls.loadLevel``` will prevail.
+
 #### ```hls.firstLevel```
 
 get :  first level index (index of first level appearing in Manifest. it is usually defined as start level hint for player)
