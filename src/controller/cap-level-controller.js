@@ -14,6 +14,26 @@ class CapLevelController extends EventHandler {
         if (this.hls.config.capLevelToPlayerSize) {
             this.media = null;
             this.autoLevelCapping = Number.POSITIVE_INFINITY;
+            document.removeEventListener(
+                'fullscreenchange',
+                this.detectPlayerSize
+            );
+            document.removeEventListener(
+                'fullscreenChange',
+                this.detectPlayerSize
+            );
+            document.removeEventListener(
+                'webkitfullscreenchange',
+                this.detectPlayerSize
+            );
+            document.removeEventListener(
+                'mozfullscreenchange',
+                this.detectPlayerSize
+            );
+            document.removeEventListener(
+                'MSFullscreenChange',
+                this.detectPlayerSize
+            );
             window.removeEventListener('resize', this.detectPlayerSize);
             if (this.pixelRatioMatchMedia) {
                 this.pixelRatioMatchMedia.removeListener(this.detectPlayerSize);
@@ -38,6 +58,26 @@ class CapLevelController extends EventHandler {
                     this.detectPlayerSize.bind(this)
                 );
             } catch (e) {}
+            document.addEventListener(
+                'fullscreenchange',
+                this.detectPlayerSize.bind(this)
+            );
+            document.addEventListener(
+                'fullscreenChange',
+                this.detectPlayerSize.bind(this)
+            ); //MS Edge
+            document.addEventListener(
+                'webkitfullscreenchange',
+                this.detectPlayerSize.bind(this)
+            );
+            document.addEventListener(
+                'mozfullscreenchange',
+                this.detectPlayerSize.bind(this)
+            );
+            document.addEventListener(
+                'MSFullscreenChange',
+                this.detectPlayerSize.bind(this)
+            );
             window.addEventListener('resize', this.detectPlayerSize.bind(this));
             this.detectPlayerSize();
         }
