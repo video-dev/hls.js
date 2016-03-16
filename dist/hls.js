@@ -1339,6 +1339,8 @@ var StreamController = function (_EventHandler) {
   }, {
     key: 'doTick',
     value: function doTick() {
+      var _this2 = this;
+
       var pos,
           level,
           levelDetails,
@@ -1459,51 +1461,57 @@ var StreamController = function (_EventHandler) {
               }
             }
             if (!_frag) {
-              var foundFrag;
-              if (bufferEnd < end) {
-                foundFrag = _binarySearch2.default.search(fragments, function (candidate) {
-                  // offset should be within fragment boundary - config.maxFragLookUpTolerance
-                  // this is to cope with situations like
-                  // bufferEnd = 9.991
-                  // frag[Ø] : [0,10]
-                  // frag[1] : [10,20]
-                  // bufferEnd is within frag[0] range ... although what we are expecting is to return frag[1] here
-                  //              frag start               frag start+duration
-                  //                  |-----------------------------|
-                  //              <--->                         <--->
-                  //  ...--------><-----------------------------><---------....
-                  // previous frag         matching fragment         next frag
-                  //  return -1             return 0                 return 1
-                  //logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
-                  if (candidate.start + candidate.duration - config.maxFragLookUpTolerance <= bufferEnd) {
-                    return 1;
-                  } else if (candidate.start - config.maxFragLookUpTolerance > bufferEnd) {
-                    return -1;
+              (function () {
+                var foundFrag = undefined;
+                var maxFragLookUpTolerance = config.maxFragLookUpTolerance;
+                if (bufferEnd < end) {
+                  if (bufferEnd > end - maxFragLookUpTolerance) {
+                    maxFragLookUpTolerance = 0;
                   }
-                  return 0;
-                });
-              } else {
-                // reach end of playlist
-                foundFrag = fragments[fragLen - 1];
-              }
-              if (foundFrag) {
-                _frag = foundFrag;
-                start = foundFrag.start;
-                //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
-                if (fragPrevious && _frag.level === fragPrevious.level && _frag.sn === fragPrevious.sn) {
-                  if (_frag.sn < levelDetails.endSN) {
-                    _frag = fragments[_frag.sn + 1 - levelDetails.startSN];
-                    _logger.logger.log('SN just loaded, load next one: ' + _frag.sn);
-                  } else {
-                    // have we reached end of VOD playlist ?
-                    if (!levelDetails.live) {
-                      this.hls.trigger(_events2.default.BUFFER_EOS);
-                      this.state = State.ENDED;
+                  foundFrag = _binarySearch2.default.search(fragments, function (candidate) {
+                    // offset should be within fragment boundary - config.maxFragLookUpTolerance
+                    // this is to cope with situations like
+                    // bufferEnd = 9.991
+                    // frag[Ø] : [0,10]
+                    // frag[1] : [10,20]
+                    // bufferEnd is within frag[0] range ... although what we are expecting is to return frag[1] here
+                    //              frag start               frag start+duration
+                    //                  |-----------------------------|
+                    //              <--->                         <--->
+                    //  ...--------><-----------------------------><---------....
+                    // previous frag         matching fragment         next frag
+                    //  return -1             return 0                 return 1
+                    //logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
+                    if (candidate.start + candidate.duration - maxFragLookUpTolerance <= bufferEnd) {
+                      return 1;
+                    } else if (candidate.start - maxFragLookUpTolerance > bufferEnd) {
+                      return -1;
                     }
-                    _frag = null;
+                    return 0;
+                  });
+                } else {
+                  // reach end of playlist
+                  foundFrag = fragments[fragLen - 1];
+                }
+                if (foundFrag) {
+                  _frag = foundFrag;
+                  start = foundFrag.start;
+                  //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
+                  if (fragPrevious && _frag.level === fragPrevious.level && _frag.sn === fragPrevious.sn) {
+                    if (_frag.sn < levelDetails.endSN) {
+                      _frag = fragments[_frag.sn + 1 - levelDetails.startSN];
+                      _logger.logger.log('SN just loaded, load next one: ' + _frag.sn);
+                    } else {
+                      // have we reached end of VOD playlist ?
+                      if (!levelDetails.live) {
+                        _this2.hls.trigger(_events2.default.BUFFER_EOS);
+                        _this2.state = State.ENDED;
+                      }
+                      _frag = null;
+                    }
                   }
                 }
-              }
+              })();
             }
             if (_frag) {
               //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
@@ -2190,7 +2198,7 @@ var StreamController = function (_EventHandler) {
   }, {
     key: 'onFragParsingData',
     value: function onFragParsingData(data) {
-      var _this2 = this;
+      var _this3 = this;
 
       if (this.state === State.PARSING) {
         this.tparse2 = Date.now();
@@ -2205,7 +2213,7 @@ var StreamController = function (_EventHandler) {
 
         [data.data1, data.data2].forEach(function (buffer) {
           if (buffer) {
-            _this2.pendingAppending++;
+            _this3.pendingAppending++;
             hls.trigger(_events2.default.BUFFER_APPENDING, { type: data.type, data: buffer });
           }
         });
