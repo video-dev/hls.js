@@ -13,10 +13,6 @@ class PassThroughRemuxer {
         return true;
     }
 
-    get timescale() {
-        return 0;
-    }
-
     destroy() {}
 
     insertDiscontinuity() {}
