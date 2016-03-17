@@ -8,7 +8,7 @@ import EventHandler from '../event-handler';
 class CapLevelController extends EventHandler {
 	constructor(hls) {
     super(hls,
-		  Event.MEDIA_ATTACHING,
+      Event.MEDIA_ATTACHING,
       Event.MANIFEST_PARSED);   
 	}
 	
@@ -16,20 +16,14 @@ class CapLevelController extends EventHandler {
     if (this.hls.config.capLevelToPlayerSize) {
       this.media = null;
       this.autoLevelCapping = Number.POSITIVE_INFINITY;
-      document.removeEventListener('fullscreenchange', this.detectPlayerSize);
-      document.removeEventListener('fullscreenChange', this.detectPlayerSize);
-      document.removeEventListener('webkitfullscreenchange', this.detectPlayerSize);
-      document.removeEventListener('mozfullscreenchange', this.detectPlayerSize);
-      document.removeEventListener('MSFullscreenChange', this.detectPlayerSize);
-      window.removeEventListener('resize', this.detectPlayerSize);
-      if (this.pixelRatioMatchMedia) {
-        this.pixelRatioMatchMedia.removeListener(this.detectPlayerSize);
+      if (this.timer) {
+        this.timer = clearInterval(this.timer);
       }
     }
   }
 	  
 	onMediaAttaching(data) {
-    this.attachMedia(data.media);   
+    this.media = data.media instanceof HTMLVideoElement ? data.media : null;  
   }
 
   onManifestParsed(data) {
@@ -37,22 +31,10 @@ class CapLevelController extends EventHandler {
       this.autoLevelCapping = Number.POSITIVE_INFINITY;
       this.levels = data.levels;
       this.hls.firstLevel = this.getMaxLevel(data.firstLevel);
-      try {
-        this.pixelRatioMatchMedia = window.matchMedia('screen and (min-resolution: 2dppx)');
-        this.pixelRatioMatchMedia.addListener(this.detectPlayerSize.bind(this));
-      } catch(e) {}
-      document.addEventListener('fullscreenchange', this.detectPlayerSize.bind(this));
-      document.addEventListener('fullscreenChange', this.detectPlayerSize.bind(this));//MS Edge
-      document.addEventListener('webkitfullscreenchange', this.detectPlayerSize.bind(this));
-      document.addEventListener('mozfullscreenchange', this.detectPlayerSize.bind(this));
-      document.addEventListener('MSFullscreenChange', this.detectPlayerSize.bind(this));
-      window.addEventListener('resize', this.detectPlayerSize.bind(this));
+      clearInterval(this.timer);
+      this.timer = setInterval(this.detectPlayerSize.bind(this), 1000);
       this.detectPlayerSize();
     }
-  }
-  
-  attachMedia(media) {
-    this.media = media instanceof HTMLVideoElement ? media : null;
   }
   
   detectPlayerSize() {
