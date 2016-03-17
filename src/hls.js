@@ -45,8 +45,11 @@ class Hls {
           maxBufferSize: 60 * 1000 * 1000,
           maxBufferHole: 0.5,
           maxSeekHole: 2,
+          maxFragLookUpTolerance : 0.2,
           liveSyncDurationCount:3,
           liveMaxLatencyDurationCount: Infinity,
+          liveSyncDuration: undefined,
+          liveMaxLatencyDuration: undefined,
           maxMaxBufferLength: 600,
           enableWorker: true,
           enableSoftwareAES: true,
@@ -84,6 +87,11 @@ class Hls {
 
   constructor(config = {}) {
     var defaultConfig = Hls.DefaultConfig;
+
+    if ((config.liveSyncDurationCount || config.liveMaxLatencyDurationCount) && (config.liveSyncDuration || config.liveMaxLatencyDuration)) {
+      throw new Error('Illegal hls.js config: don\'t mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration');
+    }
+
     for (var prop in defaultConfig) {
         if (prop in config) { continue; }
         config[prop] = defaultConfig[prop];
@@ -91,6 +99,10 @@ class Hls {
 
     if (config.liveMaxLatencyDurationCount !== undefined && config.liveMaxLatencyDurationCount <= config.liveSyncDurationCount) {
       throw new Error('Illegal hls.js config: "liveMaxLatencyDurationCount" must be gt "liveSyncDurationCount"');
+    }
+
+    if (config.liveMaxLatencyDuration !== undefined && (config.liveMaxLatencyDuration <= config.liveSyncDuration || config.liveSyncDuration === undefined)) {
+      throw new Error('Illegal hls.js config: "liveMaxLatencyDuration" must be gt "liveSyncDuration"');
     }
 
     enableLogs(config.debug);
@@ -153,9 +165,16 @@ class Hls {
     this.trigger(Event.MANIFEST_LOADING, {url: url});
   }
 
-  startLoad() {
+  startLoad(startPosition=0) {
     logger.log('startLoad');
-    this.streamController.startLoad();
+    this.levelController.startLoad();
+    this.streamController.startLoad(startPosition);
+  }
+
+  stopLoad() {
+    logger.log('stopLoad');
+    this.levelController.stopLoad();
+    this.streamController.stopLoad();
   }
 
   swapAudioCodec() {
@@ -212,12 +231,12 @@ class Hls {
 
   /** Return the quality level of next loaded fragment **/
   get nextLoadLevel() {
-    return this.levelController.nextLoadLevel();
+    return this.levelController.nextLoadLevel;
   }
 
   /** set quality level of next loaded fragment **/
   set nextLoadLevel(level) {
-    this.levelController.level = level;
+    this.levelController.nextLoadLevel = level;
   }
 
   /** Return first level (index of first level referenced in manifest)

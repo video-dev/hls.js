@@ -23,7 +23,11 @@ describe('utils', function() {
       e(fn("http://a.com/b/cd?test=1#something", "z.ts?abc=1#test"), "http://a.com/b/z.ts?abc=1#test");
       e(fn("http://a.com/b/cd?test=1#something", ";x"), "http://a.com/b/;x");
       e(fn("http://a.com/b/cd?test=1#something", "g;x"), "http://a.com/b/g;x");
-      
+      e(fn("http://a_b.com/b/cd?test=1#something", "g;x"), "http://a_b.com/b/g;x");
+      e(fn("http://a-b.com/b/cd?test=1#something", "g;x"), "http://a-b.com/b/g;x");
+      e(fn("http://a.b.com/b/cd?test=1#something", "g;x"), "http://a.b.com/b/g;x");
+      e(fn("http://a~b.com/b/cd?test=1#something", "g;x"), "http://a~b.com/b/g;x");
+
       e(fn("http://a.com/b/cd/e.m3u8?test=1#something", "subdir/z.ts?abc=1#test"), "http://a.com/b/cd/subdir/z.ts?abc=1#test");
       e(fn("http://a.com/b/cd/e.m3u8?test=1#something", "/subdir/z.ts?abc=1#test"), "http://a.com/subdir/z.ts?abc=1#test");
       e(fn("http://a.com/b/cd/e.m3u8?test=1#something", "//example.com/z.ts?abc=1#test"), "http://example.com/z.ts?abc=1#test");
@@ -40,9 +44,9 @@ describe('utils', function() {
       e(fn("https://a.com/b/cd/e.m3u8?test=1#something", "subdir/pointless/../z.ts?abc=1#test"), "https://a.com/b/cd/subdir/z.ts?abc=1#test");
       e(fn("https://a.com/b/cd/e.m3u8?test=1#something", "/subdir/pointless/../z.ts?abc=1#test"), "https://a.com/subdir/z.ts?abc=1#test");
       e(fn("https://a.com/b/cd/e.m3u8?test=1#something", "//example.com/subdir/pointless/../z.ts?abc=1#test"), "https://example.com/subdir/z.ts?abc=1#test");
-      
+
       e(fn("https://a-b.something.com/b/cd/e.m3u8?test=1#something", "//example.com/subdir/pointless/../z.ts?abc=1#test"), "https://example.com/subdir/z.ts?abc=1#test");
-      
+
     });
   });
 });

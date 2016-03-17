@@ -11,7 +11,7 @@ import LevelHelper from '../helper/level-helper';
 import {ErrorTypes, ErrorDetails} from '../errors';
 
 const State = {
-  ERROR : 'ERROR',
+  STOPPED : 'STOPPED',
   STARTING : 'STARTING',
   IDLE : 'IDLE',
   PAUSED : 'PAUSED',
@@ -21,7 +21,8 @@ const State = {
   WAITING_LEVEL : 'WAITING_LEVEL',
   PARSING : 'PARSING',
   PARSED : 'PARSED',
-  ENDED : 'ENDED'
+  ENDED : 'ENDED',
+  ERROR : 'ERROR'
 };
 
 class StreamController extends EventHandler {
@@ -30,6 +31,7 @@ class StreamController extends EventHandler {
     super(hls,
       Event.MEDIA_ATTACHED,
       Event.MEDIA_DETACHING,
+      Event.MANIFEST_LOADING,
       Event.MANIFEST_PARSED,
       Event.LEVEL_LOADED,
       Event.KEY_LOADED,
@@ -48,17 +50,23 @@ class StreamController extends EventHandler {
   }
 
   destroy() {
-    this.stop();
+    this.stopLoad();
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
     EventHandler.prototype.destroy.call(this);
-    this.state = State.IDLE;
+    this.state = State.STOPPED;
   }
 
-  startLoad() {
+  startLoad(startPosition=0) {
     if (this.levels) {
       var media = this.media, lastCurrentTime = this.lastCurrentTime;
-      this.stop();
+      this.stopLoad();
       this.demuxer = new Demuxer(this.hls);
-      this.timer = setInterval(this.ontick, 100);
+      if (!this.timer) {
+        this.timer = setInterval(this.ontick, 100);
+      }
       this.level = -1;
       this.fragLoadError = 0;
       if (media && lastCurrentTime) {
@@ -69,19 +77,18 @@ class StreamController extends EventHandler {
         }
         this.state = State.IDLE;
       } else {
-        this.lastCurrentTime = this.startPosition ? this.startPosition : 0;
+        this.lastCurrentTime = this.startPosition ? this.startPosition : startPosition;
         this.state = State.STARTING;
       }
       this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
       this.tick();
     } else {
       logger.warn('cannot start loading as manifest not parsed yet');
+      this.state = State.STOPPED;
     }
   }
 
-  stop() {
-    this.bufferRange = [];
-    this.stalled = false;
+  stopLoad() {
     var frag = this.fragCurrent;
     if (frag) {
       if (frag.loader) {
@@ -90,16 +97,11 @@ class StreamController extends EventHandler {
       this.fragCurrent = null;
     }
     this.fragPrevious = null;
-    logger.log('trigger BUFFER_RESET');
-    this.hls.trigger(Event.BUFFER_RESET);
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
     if (this.demuxer) {
       this.demuxer.destroy();
       this.demuxer = null;
     }
+    this.state = State.STOPPED;
   }
 
   tick() {
@@ -196,8 +198,11 @@ class StreamController extends EventHandler {
           if (levelDetails.live) {
             // check if requested position is within seekable boundaries :
             //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.media.seeking}`);
-            if (bufferEnd < Math.max(start,end-config.liveMaxLatencyDurationCount*levelDetails.targetduration)) {
-                this.seekAfterBuffered = start + Math.max(0, levelDetails.totalduration - config.liveSyncDurationCount * levelDetails.targetduration);
+            let maxLatency = config.liveMaxLatencyDuration !== undefined ? config.liveMaxLatencyDuration : config.liveMaxLatencyDurationCount*levelDetails.targetduration;
+
+            if (bufferEnd < Math.max(start, end - maxLatency)) {
+                let targetLatency = config.liveSyncDuration !== undefined ? config.liveSyncDuration : config.liveSyncDurationCount * levelDetails.targetduration;
+                this.seekAfterBuffered = start + Math.max(0, levelDetails.totalduration - targetLatency);
                 logger.log(`buffer end: ${bufferEnd} is located too far from the end of live sliding playlist, media position will be reseted to: ${this.seekAfterBuffered.toFixed(3)}`);
                 bufferEnd = this.seekAfterBuffered;
             }
@@ -228,15 +233,30 @@ class StreamController extends EventHandler {
             }
           }
           if (!frag) {
-            var foundFrag;
+            let foundFrag;
+            let maxFragLookUpTolerance = config.maxFragLookUpTolerance;
             if (bufferEnd < end) {
+              if (bufferEnd > end - maxFragLookUpTolerance) {
+                maxFragLookUpTolerance = 0;
+              }
               foundFrag = BinarySearch.search(fragments, (candidate) => {
+                // offset should be within fragment boundary - config.maxFragLookUpTolerance
+                // this is to cope with situations like
+                // bufferEnd = 9.991
+                // frag[Ø] : [0,10]
+                // frag[1] : [10,20]
+                // bufferEnd is within frag[0] range ... although what we are expecting is to return frag[1] here
+                    //              frag start               frag start+duration
+                    //                  |-----------------------------|
+                    //              <--->                         <--->
+                    //  ...--------><-----------------------------><---------....
+                    // previous frag         matching fragment         next frag
+                    //  return -1             return 0                 return 1
                 //logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
-                // offset should be within fragment boundary
-                if ((candidate.start + candidate.duration) <= bufferEnd) {
+                if ((candidate.start + candidate.duration - maxFragLookUpTolerance) <= bufferEnd) {
                   return 1;
                 }
-                else if (candidate.start > bufferEnd) {
+                else if (candidate.start - maxFragLookUpTolerance > bufferEnd) {
                   return -1;
                 }
                 return 0;
@@ -320,28 +340,49 @@ class StreamController extends EventHandler {
         /* only monitor frag retrieval time if
         (video not paused OR first fragment being loaded) AND autoswitching enabled AND not lowest level AND multiple levels */
         if (v && (!v.paused || this.loadedmetadata === false) && frag.autoLevel && this.level && this.levels.length > 1) {
-          var requestDelay = performance.now() - frag.trequest;
+          let requestDelay = performance.now() - frag.trequest;
           // monitor fragment load progress after half of expected fragment duration,to stabilize bitrate
           if (requestDelay > (500 * frag.duration)) {
-            var loadRate = frag.loaded * 1000 / requestDelay; // byte/s
+            let loadRate = Math.max(1,frag.loaded * 1000 / requestDelay); // byte/s; at least 1 byte/s to avoid division by zero
             if (frag.expectedLen < frag.loaded) {
               frag.expectedLen = frag.loaded;
             }
             pos = v.currentTime;
-            var fragLoadedDelay = (frag.expectedLen - frag.loaded) / loadRate;
-            var bufferStarvationDelay = this.bufferInfo(pos,config.maxBufferHole).end - pos;
-            var fragLevelNextLoadedDelay = frag.duration * this.levels[hls.nextLoadLevel].bitrate / (8 * loadRate); //bps/Bps
-            /* if we have less than 2 frag duration in buffer and if frag loaded delay is greater than buffer starvation delay
-              ... and also bigger than duration needed to load fragment at next level ...*/
-            if (bufferStarvationDelay < (2 * frag.duration) && fragLoadedDelay > bufferStarvationDelay && fragLoadedDelay > fragLevelNextLoadedDelay) {
-              // abort fragment loading ...
-              logger.warn('loading too slow, abort fragment loading');
-              logger.log(`fragLoadedDelay/bufferStarvationDelay/fragLevelNextLoadedDelay :${fragLoadedDelay.toFixed(1)}/${bufferStarvationDelay.toFixed(1)}/${fragLevelNextLoadedDelay.toFixed(1)}`);
-              //abort fragment loading
-              frag.loader.abort();
-              hls.trigger(Event.FRAG_LOAD_EMERGENCY_ABORTED, {frag: frag});
-              // switch back to IDLE state to request new fragment at lowest level
-              this.state = State.IDLE;
+            let fragLoadedDelay = (frag.expectedLen - frag.loaded) / loadRate;
+            let bufferStarvationDelay = this.bufferInfo(pos,config.maxBufferHole).end - pos;
+            // consider emergency switch down only if we have less than 2 frag buffered AND
+            // time to finish loading current fragment is bigger than buffer starvation delay
+            // ie if we risk buffer starvation if bw does not increase quickly
+            if (bufferStarvationDelay < 2*frag.duration && fragLoadedDelay > bufferStarvationDelay) {
+              let fragLevelNextLoadedDelay, nextLoadLevel;
+              // lets iterate through lower level and try to find the biggest one that could avoid rebuffering
+              // we start from current level - 1 and we step down , until we find a matching level
+              for (nextLoadLevel = this.level - 1 ; nextLoadLevel >=0 ; nextLoadLevel--) {
+                // compute time to load next fragment at lower level
+                // 0.8 : consider only 80% of current bw to be conservative
+                // 8 = bits per byte (bps/Bps)
+                fragLevelNextLoadedDelay = frag.duration * this.levels[nextLoadLevel].bitrate / (8 * 0.8 * loadRate);
+                logger.log(`fragLoadedDelay/bufferStarvationDelay/fragLevelNextLoadedDelay[${nextLoadLevel}] :${fragLoadedDelay.toFixed(1)}/${bufferStarvationDelay.toFixed(1)}/${fragLevelNextLoadedDelay.toFixed(1)}`);
+                if (fragLevelNextLoadedDelay < bufferStarvationDelay) {
+                  // we found a lower level that be rebuffering free with current estimated bw !
+                  break;
+                }
+              }
+              // only emergency switch down if it takes less time to load new fragment at lowest level instead
+              // of finishing loading current one ...
+              if (fragLevelNextLoadedDelay < fragLoadedDelay) {
+                // ensure nextLoadLevel is not negative
+                nextLoadLevel = Math.max(0,nextLoadLevel);
+                // force next load level in auto mode
+                hls.nextLoadLevel = nextLoadLevel;
+                // abort fragment loading ...
+                logger.warn(`loading too slow, abort fragment loading and switch to level ${nextLoadLevel}`);
+                //abort fragment loading
+                frag.loader.abort();
+                hls.trigger(Event.FRAG_LOAD_EMERGENCY_ABORTED, {frag: frag});
+                // switch back to IDLE state to request new fragment at lower level
+                this.state = State.IDLE;
+              }
             }
           }
         }
@@ -433,7 +474,7 @@ class StreamController extends EventHandler {
       if ((pos + maxHoleDuration) >= start && pos < end) {
         // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
         bufferStart = start;
-        bufferEnd = end + maxHoleDuration;
+        bufferEnd = end;
         bufferLen = bufferEnd - pos;
       } else if ((pos + maxHoleDuration) < start) {
         bufferStartNext = start;
@@ -444,11 +485,14 @@ class StreamController extends EventHandler {
   }
 
   getBufferRange(position) {
-    var i, range;
-    for (i = this.bufferRange.length - 1; i >=0; i--) {
-      range = this.bufferRange[i];
-      if (position >= range.start && position <= range.end) {
-        return range;
+    var i, range,
+        bufferRange = this.bufferRange;
+    if (bufferRange) {
+      for (i = bufferRange.length - 1; i >=0; i--) {
+        range = bufferRange[i];
+        if (position >= range.start && position <= range.end) {
+          return range;
+        }
       }
     }
     return null;
@@ -629,7 +673,7 @@ class StreamController extends EventHandler {
     media.addEventListener('seeked', this.onvseeked);
     media.addEventListener('ended', this.onvended);
     if(this.levels && this.config.autoStartLoad) {
-      this.startLoad();
+      this.hls.startLoad();
     }
   }
 
@@ -661,7 +705,7 @@ class StreamController extends EventHandler {
     }
     this.media = null;
     this.loadedmetadata = false;
-    this.stop();
+    this.stopLoad();
   }
 
   onMediaSeeking() {
@@ -708,6 +752,14 @@ class StreamController extends EventHandler {
   }
 
 
+  onManifestLoading() {
+    // reset buffer on manifest loading
+    logger.log('trigger BUFFER_RESET');
+    this.hls.trigger(Event.BUFFER_RESET);
+    this.bufferRange = [];
+    this.stalled = false;
+  }
+
   onManifestParsed(data) {
     var aac = false, heaac = false, codec;
     data.levels.forEach(level => {
@@ -730,7 +782,7 @@ class StreamController extends EventHandler {
     this.startLevelLoaded = false;
     this.startFragRequested = false;
     if (this.config.autoStartLoad) {
-      this.startLoad();
+      this.hls.startLoad();
     }
   }
 
@@ -770,7 +822,8 @@ class StreamController extends EventHandler {
     if (this.startFragRequested === false) {
       // if live playlist, set start position to be fragment N-this.config.liveSyncDurationCount (usually 3)
       if (newDetails.live) {
-        this.startPosition = Math.max(0, sliding + duration - this.config.liveSyncDurationCount * newDetails.targetduration);
+        let targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * newDetails.targetduration;
+        this.startPosition = Math.max(0, sliding + duration - targetLatency);
       }
       this.nextLoadPosition = this.startPosition;
     }
@@ -840,7 +893,8 @@ class StreamController extends EventHandler {
       // include levelCodec in audio and video tracks
       track = tracks.audio;
       if(track) {
-        var audioCodec = this.levels[this.level].audioCodec;
+        var audioCodec = this.levels[this.level].audioCodec,
+            ua = navigator.userAgent.toLowerCase();
         if(audioCodec && this.audioCodecSwap) {
           logger.log('swapping playlist audio codec');
           if(audioCodec.indexOf('mp4a.40.5') !==-1) {
@@ -851,18 +905,20 @@ class StreamController extends EventHandler {
         }
         // in case AAC and HE-AAC audio codecs are signalled in manifest
         // force HE-AAC , as it seems that most browsers prefers that way,
-        // except for mono streams OR on Android OR on FF
+        // except for mono streams OR on FF
         // these conditions might need to be reviewed ...
         if (this.audioCodecSwitch) {
-            var ua = navigator.userAgent.toLowerCase();
             // don't force HE-AAC if mono stream
            if(track.metadata.channelCount !== 1 &&
-            // don't force HE-AAC if android
-            ua.indexOf('android') === -1 &&
             // don't force HE-AAC if firefox
             ua.indexOf('firefox') === -1) {
               audioCodec = 'mp4a.40.5';
           }
+        }
+        // HE-AAC is broken on Android, always signal audio codec as AAC even if variant manifest states otherwise
+        if(ua.indexOf('android') !== -1) {
+          audioCodec = 'mp4a.40.2';
+          logger.log(`Android: force audio codec to` + audioCodec);
         }
         track.levelCodec = audioCodec;
       }
@@ -1014,7 +1070,7 @@ class StreamController extends EventHandler {
         logger.warn(`mediaController: ${data.details} while loading frag,switch to ${data.fatal ? 'ERROR' : 'IDLE'} state ...`);
         this.state = data.fatal ? State.ERROR : State.IDLE;
         break;
-      case ErrorDetails.BUFFER_FULL:
+      case ErrorDetails.BUFFER_FULL_ERROR:
         // trigger a smooth level switch to empty buffers
         // also reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
         this.config.maxMaxBufferLength/=2;
@@ -1060,11 +1116,12 @@ _checkBuffer() {
         }
         var bufferInfo = this.bufferInfo(currentTime,0),
             expectedPlaying = !(media.paused || media.ended || media.seeking || readyState < 2),
-            jumpThreshold = 0.2,
+            jumpThreshold = 0.4, // tolerance needed as some browsers stalls playback before reaching buffered range end
             playheadMoving = currentTime > media.playbackRate*this.lastCurrentTime;
 
         if (this.stalled && playheadMoving) {
           this.stalled = false;
+          logger.log(`playback not stuck anymore @${currentTime}`);
         }
         // check buffer upfront
         // if less than 200ms is buffered, and media is expected to play but playhead is not moving,
@@ -1075,24 +1132,25 @@ _checkBuffer() {
             jumpThreshold = 0;
           } else {
             // playhead not moving AND media expected to play
-            logger.log(`playback seems stuck @${currentTime}`);
             if(!this.stalled) {
+              logger.log(`playback seems stuck @${currentTime}`);
               this.hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_STALLED_ERROR, fatal: false});
               this.stalled = true;
             }
           }
           // if we are below threshold, try to jump if next buffer range is close
           if(bufferInfo.len <= jumpThreshold) {
-            // no buffer available @ currentTime, check if next buffer is close (more than 5ms diff but within a config.maxSeekHole second range)
+            // no buffer available @ currentTime, check if next buffer is close (within a config.maxSeekHole second range)
             var nextBufferStart = bufferInfo.nextStart, delta = nextBufferStart-currentTime;
             if(nextBufferStart &&
                (delta < this.config.maxSeekHole) &&
-               (delta > 0.005)  &&
+               (delta > 0)  &&
                !media.seeking) {
               // next buffer is close ! adjust currentTime to nextBufferStart
               // this will ensure effective video decoding
               logger.log(`adjust currentTime from ${media.currentTime} to next buffered @ ${nextBufferStart}`);
               media.currentTime = nextBufferStart;
+              this.hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_SEEK_OVER_HOLE, fatal: false});
             }
           }
         } else {
