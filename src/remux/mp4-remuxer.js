@@ -201,8 +201,12 @@ class MP4Remuxer {
                 }
                 mp4Sample.duration = sampleDuration;
             } else {
-                var nextAvcDts = this.nextAvcDts,
-                    delta;
+                let nextAvcDts, delta;
+                if (contiguous) {
+                    nextAvcDts = this.nextAvcDts;
+                } else {
+                    nextAvcDts = timeOffset * pesTimeScale;
+                }
                 // first AVC sample of video track, normalize PTS/DTS
                 ptsnorm = this._PTSNormalize(pts, nextAvcDts);
                 dtsnorm = this._PTSNormalize(dts, nextAvcDts);
@@ -356,8 +360,12 @@ class MP4Remuxer {
                 mp4Sample.duration = expectedSampleDuration;
                 dtsnorm = expectedSampleDuration * pes2mp4ScaleFactor + lastDTS;
             } else {
-                var nextAacPts = this.nextAacPts,
-                    delta;
+                let nextAacPts, delta;
+                if (contiguous) {
+                    nextAacPts = this.nextAacPts;
+                } else {
+                    nextAacPts = timeOffset * pesTimeScale;
+                }
                 ptsnorm = this._PTSNormalize(pts, nextAacPts);
                 dtsnorm = this._PTSNormalize(dts, nextAacPts);
                 delta = Math.round(
