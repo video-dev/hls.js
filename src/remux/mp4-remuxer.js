@@ -21,10 +21,6 @@ class MP4Remuxer {
     return false;
   }
 
-  get timescale() {
-    return this.MP4_TIMESCALE;
-  }
-
   destroy() {
   }
 
@@ -76,6 +72,7 @@ class MP4Remuxer {
     }
 
     if (audioTrack.config && audioSamples.length) {
+      audioTrack.timescale = audioTrack.audiosamplerate;
       tracks.audio = {
         container : 'audio/mp4',
         codec :  audioTrack.codec,
@@ -91,6 +88,7 @@ class MP4Remuxer {
     }
 
     if (videoTrack.sps && videoTrack.pps && videoSamples.length) {
+      videoTrack.timescale = this.MP4_TIMESCALE;
       tracks.video = {
         container : 'video/mp4',
         codec :  videoTrack.codec,
@@ -250,7 +248,7 @@ class MP4Remuxer {
     var view,
         offset = 8,
         pesTimeScale = this.PES_TIMESCALE,
-        mp4timeScale = track.timescale,
+        mp4timeScale = track.audiosamplerate,
         pes2mp4ScaleFactor = pesTimeScale/mp4timeScale,
         aacSample, mp4Sample,
         unit,
