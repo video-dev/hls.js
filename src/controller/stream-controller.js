@@ -857,7 +857,7 @@ class StreamController extends EventHandler {
         media.addEventListener('seeked', this.onvseeked);
         media.addEventListener('ended', this.onvended);
         if (this.levels && this.config.autoStartLoad) {
-            this.startLoad();
+            this.hls.startLoad();
         }
     }
 
@@ -976,7 +976,7 @@ class StreamController extends EventHandler {
         this.startLevelLoaded = false;
         this.startFragRequested = false;
         if (this.config.autoStartLoad) {
-            this.startLoad();
+            this.hls.startLoad();
         }
     }
 
