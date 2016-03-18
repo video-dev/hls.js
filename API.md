@@ -572,6 +572,15 @@ start/restart playlist/fragment loading. this is only effective if MANIFEST_PARS
 #### ```hls.stopLoad()```
 stop playlist/fragment loading. could be resumed later on by calling ```hls.startLoad()```
 
+
+## Audio Tracks Control API
+
+#### ```hls.audioTracks```
+get : array of audio tracks exposed in manifest
+
+#### ```hls.audioTrack```
+get/set : audio track id (returned by)
+
 ## Runtime Events
 
 hls.js fires a bunch of events, that could be registered as below:
@@ -595,7 +604,7 @@ full list of Events available below :
   - `Hls.Events.MANIFEST_LOADING`  - fired to signal that a manifest loading starts
     -  data: { url : manifestURL}
   - `Hls.Events.MANIFEST_LOADED`  - fired after manifest has been loaded
-    -  data: { levels : [available quality levels] , url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
+    -  data: { levels : [available quality levels] , audioTracks : [ available audio tracks], url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
   - `Hls.Events.MANIFEST_PARSED`  - fired after manifest has been parsed
     -  data: { levels : [available quality levels] , firstLevel : index of first quality level appearing in Manifest}
   - `Hls.Events.LEVEL_LOADING`  - fired when a level playlist loading starts
