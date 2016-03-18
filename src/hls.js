@@ -14,6 +14,7 @@ import StreamController from  './controller/stream-controller';
 import LevelController from  './controller/level-controller';
 import TimelineController from './controller/timeline-controller';
 import FPSController from './controller/fps-controller';
+import AudioTrackController from './controller/audiotrack-controller';
 import {logger, enableLogs} from './utils/logger';
 import XhrLoader from './utils/xhr-loader';
 import EventEmitter from 'events';
@@ -143,6 +144,7 @@ class Hls {
     this.fpsController = new config.fpsController(this);
     this.streamController = new config.streamController(this);
     this.timelineController = new config.timelineController(this);
+    this.audioTrackController = new AudioTrackController(this);
     this.keyLoader = new KeyLoader(this);
   }
 
@@ -159,6 +161,7 @@ class Hls {
     this.fpsController.destroy();
     this.streamController.destroy();
     this.timelineController.destroy();
+    this.audioTrackController.destroy();
     this.keyLoader.destroy();
     this.url = null;
     this.observer.removeAllListeners();
@@ -306,6 +309,21 @@ class Hls {
   /* return manual level */
   get manualLevel() {
     return this.levelController.manualLevel;
+  }
+
+  /** get alternate audio tracks list from playlist **/
+  get audioTracks() {
+    return this.audioTrackController.audioTracks;
+  }
+
+  /** get index of the selected audio track (index in audio track lists) **/
+  get audioTrack() {
+   return this.audioTrackController.audioTrack;
+  }
+
+  /** select an audio track, based on its index in audio track lists**/
+  set audioTrack(audioTrackId) {
+    this.audioTrackController.audioTrack = audioTrackId;
   }
 }
 
