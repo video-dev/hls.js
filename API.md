@@ -397,7 +397,7 @@ var customLoader = function() {
   maxRetry : max nb of load retry
   retryDelay : delay between an I/O error and following connection retry (ms). this to avoid spamming the server.
   */
-  this.load = function(url,responseType,onSuccess,onError,timeout,maxRetry,retryDelay) {}
+  this.load = function(url,responseType,onSuccess,onError,onTimeOut,timeout,maxRetry,retryDelay) {}
 
   /* abort any loading in progress */
   this.abort = function() {}
