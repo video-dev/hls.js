@@ -83,7 +83,8 @@ class FragmentLoader extends EventHandler {
         this.frag.loaded = stats.loaded;
         this.hls.trigger(Event.FRAG_LOAD_PROGRESS, {
             frag: this.frag,
-            stats: stats
+            stats: stats,
+            event: event
         });
     }
 }
