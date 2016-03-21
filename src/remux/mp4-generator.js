@@ -273,6 +273,7 @@ class MP4 {
     }
 
     static mdhd(timescale, duration) {
+        duration *= timescale;
         return MP4.box(
             MP4.types.mdhd,
             new Uint8Array([
@@ -384,6 +385,7 @@ class MP4 {
     }
 
     static mvhd(timescale, duration) {
+        duration *= timescale;
         var bytes = new Uint8Array([
             0x00, // version 0
             0x00,
@@ -754,7 +756,7 @@ class MP4 {
 
     static tkhd(track) {
         var id = track.id,
-            duration = track.duration,
+            duration = track.duration * track.timescale,
             width = track.width,
             height = track.height;
         return MP4.box(

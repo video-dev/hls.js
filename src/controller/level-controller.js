@@ -21,6 +21,18 @@ class LevelController extends EventHandler {
         this._manualLevel = -1;
     }
 
+    startLoad() {
+        this.canload = true;
+        // speed up live playlist refresh if timer exists
+        if (this.timer) {
+            this.tick();
+        }
+    }
+
+    stopLoad() {
+        this.canload = false;
+    }
+
     onManifestLoaded(data) {
         var levels0 = [],
             levels = [],
@@ -289,7 +301,7 @@ class LevelController extends EventHandler {
 
     tick() {
         var levelId = this._level;
-        if (levelId !== undefined) {
+        if (levelId !== undefined && this.canload) {
             var level = this._levels[levelId],
                 urlId = level.urlId;
             this.hls.trigger(Event.LEVEL_LOADING, {
@@ -300,11 +312,18 @@ class LevelController extends EventHandler {
         }
     }
 
-    nextLoadLevel() {
+    get nextLoadLevel() {
         if (this._manualLevel !== -1) {
             return this._manualLevel;
         } else {
             return this.hls.abrController.nextAutoLevel;
+        }
+    }
+
+    set nextLoadLevel(nextLevel) {
+        this.level = nextLevel;
+        if (this._manualLevel === -1) {
+            this.hls.abrController.nextAutoLevel = nextLevel;
         }
     }
 }

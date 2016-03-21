@@ -80,8 +80,7 @@ class AACDemuxer {
             track.audiosamplerate = config.samplerate;
             track.channelCount = config.channelCount;
             track.codec = config.codec;
-            track.timescale = config.samplerate;
-            track.duration = config.samplerate * duration;
+            track.duration = duration;
             logger.log(
                 `parsed codec:${track.codec},rate:${
                     config.samplerate

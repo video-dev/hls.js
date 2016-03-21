@@ -183,6 +183,7 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
 
    var config = {
       autoStartLoad : true,
+      capLevelToPlayerSize: false,
       debug : false,
       defaultAudioCodec : undefined,
       maxBufferLength : 30,
@@ -190,6 +191,7 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       maxBufferSize : 60*1000*1000,
       maxBufferHole : 0.3,
       maxSeekHole : 2,
+      maxFragLookUpTolerance : 0.2,
       liveSyncDurationCount : 3,
       liveMaxLatencyDurationCount: 10,
       enableWorker : true,
@@ -222,6 +224,12 @@ var hls = new Hls(config);
 this getter/setter allows to retrieve and override Hls default configuration.
 this configuration will be applied by default to all instances.
 
+#### ```capLevelToPlayerSize```
+ (default false)
+ 
+  - if set to true, the adaptive algorithm with limit levels usable in auto-quality by the HTML video element dimensions (width and height)
+  - if set to false, levels will not be limited. All available levels could be used in auto-quality mode taking only bandwidth into consideration.
+ 
 #### ```debug```
 (default false)
 
@@ -267,6 +275,25 @@ This could result in small overlapping or hole in media buffer. This tolerance f
 in case playback is stalled, and a buffered range is available upfront, less than maxSeekHole seconds from current media position,
 hls.js will jump over this buffer hole to reach the beginning of this following buffered range.
 ```maxSeekHole``` allows to configure this jumpable threshold.
+
+#### ```maxFragLookUpTolerance```
+(default 0.2s)
+
+this tolerance factor is used during fragment lookup.
+instead of checking whether buffered.end is located within [start, end] range, frag lookup will be done by checking  within [start-maxFragLookUpTolerance, end-maxFragLookUpTolerance] range
+
+this tolerance factor is used to cope with situations like
+buffered.end = 9.991
+frag[Ø] : [0,10]
+frag[1] : [10,20]
+=> buffered.end is within frag[0] range, but as we are close to frag[1], frag[1] should be choosen instead
+
+
+if maxFragLookUpTolerance=0.2, 
+this lookup will be adjusted to 
+frag[Ø] : [-0.2,9.8]
+frag[1] : [9.8,19.8]
+=> this time, buffered.end is within frag[1] range, and frag[1] will be the next fragment to be loaded, as expected.
 
 #### ```maxMaxBufferLength```
 (default 600s)
@@ -377,7 +404,7 @@ var customLoader = function() {
   maxRetry : max nb of load retry
   retryDelay : delay between an I/O error and following connection retry (ms). this to avoid spamming the server.
   */
-  this.load = function(url,responseType,onSuccess,onError,timeout,maxRetry,retryDelay) {}
+  this.load = function(url,responseType,onSuccess,onError,onTimeOut,timeout,maxRetry,retryDelay) {}
 
   /* abort any loading in progress */
   this.abort = function() {}
@@ -495,6 +522,12 @@ get : return last loaded fragment quality level.
 set : set quality level for next loaded fragment
 set to -1 for automatic level selection
 
+#### ```hls.nextLoadLevel```
+get : return quality level that will be used to load next fragment
+
+set : force quality level for next loaded fragment. quality level will be forced only for that fragment.
+after a fragment at this quality level has been loaded, ```hls.loadLevel``` will prevail.
+
 #### ```hls.firstLevel```
 
 get :  first level index (index of first level appearing in Manifest. it is usually defined as start level hint for player)
@@ -528,6 +561,8 @@ however if ```config.autoStartLoad``` is set to ```false```, the following metho
 #### ```hls.startLoad()```
 start/restart playlist/fragment loading. this is only effective if MANIFEST_PARSED event has been triggered and video element has been attached to hls object.
 
+#### ```hls.stopLoad()```
+stop playlist/fragment loading. could be resumed later on by calling ```hls.startLoad()```
 
 ## Runtime Events
 
