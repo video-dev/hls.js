@@ -15,16 +15,12 @@ class FPSController extends EventHandler {
         if (this.timer) {
             clearInterval(this.timer);
         }
-        this.isVideoPlaybackQualityAvailable = false;
     }
 
     onMediaAttaching(data) {
         if (this.hls.config.capLevelOnFPSDrop) {
             this.video =
                 data.media instanceof HTMLVideoElement ? data.media : null;
-            if (typeof this.video.getVideoPlaybackQuality === 'function') {
-                this.isVideoPlaybackQualityAvailable = true;
-            }
             clearInterval(this.timer);
             this.timer = setInterval(
                 this.checkFPSInterval.bind(this),
@@ -63,7 +59,12 @@ class FPSController extends EventHandler {
                             (this.hls.autoLevelCapping === -1 ||
                                 this.hls.autoLevelCapping >= currentLevel)
                         ) {
-                            this.hls.autoLevelCapping = currentLevel - 1;
+                            currentLevel = currentLevel - 1;
+                            this.hls.trigger(Event.FPS_DROP_LEVEL_CAPPING, {
+                                level: currentLevel,
+                                droppedLevel: this.hls.currentLevel
+                            });
+                            this.hls.autoLevelCapping = currentLevel;
                             this.hls.streamController.nextLevelSwitch();
                         }
                     }
