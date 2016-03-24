@@ -227,8 +227,8 @@ class MP4Remuxer {
         }
       });
     }
-    // next AVC sample DTS should be equal to last sample DTS + last sample duration
-    this.nextAvcDts = lastDTS + mp4SampleDuration;
+    // next AVC sample DTS should be equal to last sample DTS + last sample duration (in PES timescale)
+    this.nextAvcDts = lastDTS + mp4SampleDuration*pes2mp4ScaleFactor;
     track.len = 0;
     track.nbNalu = 0;
     if(outputSamples.length && navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
