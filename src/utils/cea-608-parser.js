@@ -2,6 +2,7 @@
  *
  * This code was ported from the dash.js project at:
  *   https://github.com/Dash-Industry-Forum/dash.js/blob/development/externals/cea608-parser.js
+ *   https://github.com/Dash-Industry-Forum/dash.js/commit/8269b26a761e0853bb21d78780ed945144ecdd4d#diff-71bc295a2d6b6b7093a1d3290d53a4b2
  *
  * The original copyright appears below:
  *

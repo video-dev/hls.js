@@ -5,6 +5,7 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import Cea608Parser from '../utils/cea-608-parser';
+import Cues from '../utils/cues';
 
 class TimelineController extends EventHandler {
     constructor(hls) {
@@ -14,73 +15,61 @@ class TimelineController extends EventHandler {
             Event.MEDIA_DETACHING,
             Event.FRAG_PARSING_USERDATA,
             Event.MANIFEST_LOADING,
-            Event.FRAG_LOADED
+            Event.FRAG_LOADED,
+            Event.LEVEL_SWITCH
         );
 
         this.hls = hls;
         this.config = hls.config;
+        this.enabled = true;
 
         if (this.config.enableCEA708Captions) {
-            this.cea608Parser = new Cea608Parser(
-                0,
-                { newCue: this.newCue.bind(this) },
-                null
-            );
-        }
-    }
+            var self = this;
 
-    newCue(startTime, endTime, captionScreen) {
-        var row;
-        var cue;
-        var indenting;
-        var indent;
-        var text;
-        var VTTCue = window.VTTCue || window.TextTrackCue;
-
-        this.createTextTrack();
-
-        for (var r = 0; r < captionScreen.rows.length; r++) {
-            row = captionScreen.rows[r];
-            indenting = true;
-            indent = 0;
-            text = '';
-
-            if (!row.isEmpty()) {
-                for (var c = 0; c < row.chars.length; c++) {
-                    if (row.chars[c].uchar.match(/\s/) && indenting) {
-                        indent++;
-                    } else {
-                        text += row.chars[c].uchar;
-                        indenting = false;
+            var channel1 = {
+                newCue: function(startTime, endTime, screen) {
+                    if (!self.textTrack1) {
+                        self.textTrack1 = self.createTextTrack(
+                            'captions',
+                            'Unknown CC1',
+                            'en'
+                        );
+                        //            self.textTrack1.mode = 'showing';
                     }
+
+                    Cues.newCue(self.textTrack1, startTime, endTime, screen);
                 }
-                cue = new VTTCue(startTime, endTime, text.trim());
-                cue.line = r;
-                cue.align = 'left';
-                cue.position =
-                    100 * (indent / 32) +
-                    (navigator.userAgent.match(/Firefox\//) ? 50 : 0);
-                this.textTrack.addCue(cue);
+            };
+
+            var channel2 = {
+                newCue: function(startTime, endTime, screen) {
+                    if (!self.textTrack2) {
+                        self.textTrack2 = self.createTextTrack(
+                            'captions',
+                            'Unknown CC2',
+                            'es'
+                        );
+                    }
+
+                    Cues.newCue(self.textTrack2, startTime, endTime, screen);
+                }
+            };
+
+            this.cea608Parser = new Cea608Parser(0, channel1, channel2);
+        }
+    }
+
+    clearCurrentCues(track) {
+        if (track && track.cues) {
+            while (track.cues.length > 0) {
+                track.removeCue(track.cues[0]);
             }
         }
     }
 
-    clearCurrentCues() {
-        if (this.textTrack) {
-            while (this.textTrack.cues.length > 0) {
-                this.textTrack.removeCue(this.textTrack.cues[0]);
-            }
-        }
-    }
-
-    createTextTrack() {
-        if (this.media && !this.textTrack) {
-            this.textTrack = this.media.addTextTrack(
-                'captions',
-                'English',
-                'en'
-            );
-            this.textTrack.mode = 'showing';
+    createTextTrack(kind, label, lang) {
+        if (this.media) {
+            return this.media.addTextTrack(kind, label, lang);
         }
     }
 
@@ -98,13 +87,22 @@ class TimelineController extends EventHandler {
         this.lastPts = Number.NEGATIVE_INFINITY;
     }
 
+    onLevelSwitch() {
+        if (this.hls.currentLevel.closedCaptions === 'NONE') {
+            this.enabled = false;
+        } else {
+            this.enabled = true;
+        }
+    }
+
     onFragLoaded(data) {
         var pts = data.frag.start;
 
         // if this is a frag for a previously loaded timerange, remove all captions
         // TODO: consider just removing captions for the timerange
         if (pts <= this.lastPts) {
-            this.clearCurrentCues();
+            this.clearCurrentCues(this.textTrack1);
+            this.clearCurrentCues(this.textTrack2);
         }
 
         this.lastPts = pts;
@@ -113,9 +111,11 @@ class TimelineController extends EventHandler {
     onFragParsingUserdata(data) {
         // push all of the CEA-708 messages into the interpreter
         // immediately. It will create the proper timestamps based on our PTS value
-        for (var i = 0; i < data.samples.length; i++) {
-            var ccdatas = this.extractCea608Data(data.samples[i].bytes);
-            this.cea608Parser.addData(data.samples[i].pts, ccdatas);
+        if (this.enabled) {
+            for (var i = 0; i < data.samples.length; i++) {
+                var ccdatas = this.extractCea608Data(data.samples[i].bytes);
+                this.cea608Parser.addData(data.samples[i].pts, ccdatas);
+            }
         }
     }
 
