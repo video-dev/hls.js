@@ -1262,9 +1262,11 @@ class StreamController extends EventHandler {
                     if (playheadMoving || !expectedPlaying) {
                         // playhead moving or media not playing
                         jumpThreshold = 0;
+                        this.seekHoleNudgeDuration = 0;
                     } else {
                         // playhead not moving AND media expected to play
                         if (!this.stalled) {
+                            this.seekHoleNudgeDuration = 0;
                             logger.log(`playback seems stuck @${currentTime}`);
                             this.hls.trigger(Event.ERROR, {
                                 type: ErrorTypes.MEDIA_ERROR,
@@ -1272,6 +1274,8 @@ class StreamController extends EventHandler {
                                 fatal: false
                             });
                             this.stalled = true;
+                        } else {
+                            this.seekHoleNudgeDuration += this.config.seekHoleNudgeDuration;
                         }
                     }
                     // if we are below threshold, try to jump if next buffer range is close
@@ -1290,9 +1294,12 @@ class StreamController extends EventHandler {
                             logger.log(
                                 `adjust currentTime from ${
                                     media.currentTime
-                                } to next buffered @ ${nextBufferStart}`
+                                } to next buffered @ ${nextBufferStart} + nudge ${
+                                    this.seekHoleNudgeDuration
+                                }`
                             );
-                            media.currentTime = nextBufferStart;
+                            media.currentTime =
+                                nextBufferStart + this.seekHoleNudgeDuration;
                             this.hls.trigger(Event.ERROR, {
                                 type: ErrorTypes.MEDIA_ERROR,
                                 details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
