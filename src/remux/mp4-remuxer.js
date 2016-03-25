@@ -127,20 +127,20 @@ class MP4Remuxer {
             }
         }
 
-        if (!Object.keys(tracks)) {
-            observer.trigger(Event.ERROR, {
-                type: ErrorTypes.MEDIA_ERROR,
-                details: ErrorDetails.FRAG_PARSING_ERROR,
-                fatal: false,
-                reason: 'no audio/video samples found'
-            });
-        } else {
+        if (Object.keys(tracks).length) {
             observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, data);
             this.ISGenerated = true;
             if (computePTSDTS) {
                 this._initPTS = initPTS;
                 this._initDTS = initDTS;
             }
+        } else {
+            observer.trigger(Event.ERROR, {
+                type: ErrorTypes.MEDIA_ERROR,
+                details: ErrorDetails.FRAG_PARSING_ERROR,
+                fatal: false,
+                reason: 'no audio/video samples found'
+            });
         }
     }
 
