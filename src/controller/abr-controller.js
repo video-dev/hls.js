@@ -17,7 +17,7 @@ class AbrController extends EventHandler {
                Event.FRAG_LOAD_PROGRESS,
                Event.FRAG_LOADED,
                Event.ERROR);
-    this.lastfetchlevel = 0;
+    this.lastLoadedFragLevel = 0;
     this._autoLevelCapping = -1;
     this._nextAutoLevel = -1;
     this.hls = hls;
@@ -41,7 +41,6 @@ class AbrController extends EventHandler {
     // and leading to wrong bw estimation
     if (stats.aborted === undefined && data.frag.loadCounter === 1) {
       this.lastfetchduration = (performance.now() - stats.trequest) / 1000;
-      this.lastfetchlevel = data.frag.level;
       this.lastbw = (stats.loaded * 8) / this.lastfetchduration;
       //console.log(`fetchDuration:${this.lastfetchduration},bw:${(this.lastbw/1000).toFixed(0)}/${stats.aborted}`);
     }
@@ -104,9 +103,13 @@ class AbrController extends EventHandler {
     }
   }
 
-  onFragLoaded() {
+  onFragLoaded(data) {
     // stop monitoring bw once frag loaded
     this.clearTimer();
+    // store level id after successful fragment load
+    this.lastLoadedFragLevel = data.frag.level;
+    // reset forced auto level value so that next level will be selected
+    this._nextAutoLevel = -1;
   }
 
   onError(data) {
@@ -146,13 +149,9 @@ class AbrController extends EventHandler {
       maxAutoLevel = this._autoLevelCapping;
     }
 
+    // in case next auto level has been forced, return it straight-away (but capped)
     if (this._nextAutoLevel !== -1) {
-      var nextLevel = Math.min(this._nextAutoLevel,maxAutoLevel);
-      if (nextLevel === this.lastfetchlevel) {
-        this._nextAutoLevel = -1;
-      } else {
-        return nextLevel;
-      }
+      return Math.min(this._nextAutoLevel,maxAutoLevel);
     }
 
     // follow algorithm captured from stagefright :
@@ -162,7 +161,7 @@ class AbrController extends EventHandler {
     // consider only 80% of the available bandwidth, but if we are switching up,
     // be even more conservative (70%) to avoid overestimating and immediately
     // switching back.
-      if (i <= this.lastfetchlevel) {
+      if (i <= this.lastLoadedFragLevel) {
         adjustedbw = 0.8 * lastbw;
       } else {
         adjustedbw = 0.7 * lastbw;
