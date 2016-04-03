@@ -225,7 +225,7 @@ class PlaylistLoader extends EventHandler {
         levels;
     // responseURL not supported on some browsers (it is used to detect URL redirection)
     // data-uri mode also not supported (but no need to detect redirection)
-    if (url === undefined || url.indexOf("data:") === 0) {
+    if (url === undefined || url.indexOf('data:') === 0) {
       // fallback to initial URL
       url = this.url;
     }
