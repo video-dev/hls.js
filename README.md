@@ -78,6 +78,10 @@ as of today, it is supported on:
  * IE11+ for Windows 8.1
  * Safari for Mac 8+ (beta)
 
+## CORS
+
+All HLS resources must be delivered with [CORS headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS) permitting `GET` requests.
+
 ## Features
 
   - VoD & Live playlists
