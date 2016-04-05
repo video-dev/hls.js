@@ -184,6 +184,7 @@ class MP4Remuxer {
     mp4SampleDuration = Math.round((lastDTS-firstDTS)/(pes2mp4ScaleFactor*(inputSamples.length-1)));
 
     // normalize all PTS/DTS now ...
+    lastPTS = 0;
     for (let i = 0; i < inputSamples.length; i++) {
       let sample = inputSamples[i];
       // sample DTS is computed using a constant decoding offset (mp4SampleDuration) between samples
@@ -191,9 +192,9 @@ class MP4Remuxer {
       // we normalize PTS against nextAvcDts, we also substract initDTS (some streams don't start @ PTS O)
       // and we ensure that computed value is greater or equal than sample DTS
       sample.pts = Math.max(this._PTSNormalize(sample.pts,nextAvcDts) - this._initDTS, sample.dts);
+      lastPTS = sample.pts > lastPTS ? sample.pts : lastPTS;
     }
-    lastPTS = inputSamples[inputSamples.length-1].pts;
-
+    
     /* concatenate the video data and construct the mdat in place
       (need 8 more bytes to fill length and mpdat type) */
     mdat = new Uint8Array(track.len + (4 * track.nbNalu) + 8);
@@ -247,9 +248,9 @@ class MP4Remuxer {
       data1: moof,
       data2: mdat,
       startPTS: firstPTS / pesTimeScale,
-      endPTS: (lastPTS + pes2mp4ScaleFactor * mp4SampleDuration) / pesTimeScale,
+      endPTS: lastPTS / pesTimeScale,
       startDTS: firstDTS / pesTimeScale,
-      endDTS: this.nextAvcDts / pesTimeScale,
+      endDTS: lastDTS / pesTimeScale,
       type: 'video',
       nb: outputSamples.length
     });
@@ -287,14 +288,14 @@ class MP4Remuxer {
         dtsnorm = this._PTSNormalize(dts, lastDTS);
         // let's compute sample duration.
         // sample Duration should be close to expectedSampleDuration
-        mp4Sample.duration = (dtsnorm - lastDTS) / pes2mp4ScaleFactor;
+        mp4Sample.duration = track.audiosamplerate * (dtsnorm - lastDTS) / this.PES_TIMESCALE;
         if(Math.abs(mp4Sample.duration - expectedSampleDuration) > expectedSampleDuration/10) {
           // more than 10% diff between sample duration and expectedSampleDuration .... lets log that
           logger.trace(`invalid AAC sample duration at PTS ${Math.round(pts/90)},should be 1024,found :${Math.round(mp4Sample.duration*track.audiosamplerate/track.timescale)}`);
         }
-        // always adjust sample duration to avoid av sync issue
-        mp4Sample.duration = expectedSampleDuration;
-        dtsnorm = expectedSampleDuration * pes2mp4ScaleFactor + lastDTS;
+        //donot corrupt time-stamps some times there are PTS/DTS jumps in the stream
+        //mp4Sample.duration = expectedSampleDuration;
+        //dtsnorm = expectedSampleDuration * pes2mp4ScaleFactor + lastDTS;
       } else {
         let nextAacPts, delta;
         if (contiguous) {
@@ -319,7 +320,7 @@ class MP4Remuxer {
               continue;
             }
             // set DTS to next DTS
-            ptsnorm = dtsnorm = nextAacPts;
+            // ptsnorm = dtsnorm = nextAacPts;
           }
         }
         // remember first PTS of our aacSamples, ensure value is positive
@@ -374,9 +375,9 @@ class MP4Remuxer {
         data1: moof,
         data2: mdat,
         startPTS: firstPTS / pesTimeScale,
-        endPTS: this.nextAacPts / pesTimeScale,
+        endPTS: ptsnorm / pesTimeScale,
         startDTS: firstDTS / pesTimeScale,
-        endDTS: (dtsnorm + pes2mp4ScaleFactor * lastSampleDuration) / pesTimeScale,
+        endDTS: dtsnorm / pesTimeScale,
         type: 'audio',
         nb: nbSamples
       });
