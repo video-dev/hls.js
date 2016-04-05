@@ -993,8 +993,13 @@ _checkBuffer() {
         }
         var bufferInfo = BufferHelper.bufferInfo(media,currentTime,0),
             expectedPlaying = !(media.paused || media.ended || media.seeking || readyState < 2),
-            jumpThreshold = 0.4, // tolerance needed as some browsers stalls playback before reaching buffered range end
+            jumpThreshold = 1.6, // tolerance needed as some browsers stalls playback before reaching buffered range end
             playheadMoving = currentTime > media.playbackRate*this.lastCurrentTime;
+            if(playheadMoving){
+                this.waitforPlaying = 0;
+            }else{
+                this.waitforPlaying += 1;
+            }   
 
         if (this.stalled && playheadMoving) {
           this.stalled = false;
@@ -1034,6 +1039,9 @@ _checkBuffer() {
               this.hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_SEEK_OVER_HOLE, fatal: false});
             }
           }
+        } else if(!this.stalled && expectedPlaying && this.waitforPlaying > 5 && media.playbackRate === 1){
+            this.waitforPlaying = 0;
+            media.currentTime = media.currentTime + this.seekHoleNudgeDuration;            
         } else {
           if (targetSeekPosition && media.currentTime !== targetSeekPosition) {
             logger.log(`adjust currentTime from ${media.currentTime} to ${targetSeekPosition}`);
