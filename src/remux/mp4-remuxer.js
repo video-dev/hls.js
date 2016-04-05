@@ -26,6 +26,7 @@ class MP4Remuxer {
 
   insertDiscontinuity() {
     this._initPTS = this._initDTS = this.nextAacPts = this.nextAvcDts = undefined;
+    this.ISGenerated = false;
   }
 
   switchLevel() {
@@ -291,11 +292,11 @@ class MP4Remuxer {
         mp4Sample.duration = track.audiosamplerate * (dtsnorm - lastDTS) / this.PES_TIMESCALE;
         if(Math.abs(mp4Sample.duration - expectedSampleDuration) > expectedSampleDuration/10) {
           // more than 10% diff between sample duration and expectedSampleDuration .... lets log that
-          logger.trace(`invalid AAC sample duration at PTS ${Math.round(pts/90)},should be 1024,found :${Math.round(mp4Sample.duration*track.audiosamplerate/track.timescale)}`);
+          console.error(`invalid AAC sample duration at PTS ${Math.round(pts/90)},should be 1024,found :${Math.round(mp4Sample.duration*track.audiosamplerate/track.timescale)}`);
         }
-        //donot corrupt time-stamps some times there are PTS/DTS jumps in the stream
+        // always adjust sample duration to avoid av sync issue
         //mp4Sample.duration = expectedSampleDuration;
-        //dtsnorm = expectedSampleDuration * pes2mp4ScaleFactor + lastDTS;
+        dtsnorm = expectedSampleDuration * pes2mp4ScaleFactor + lastDTS;
       } else {
         let nextAacPts, delta;
         if (contiguous) {
