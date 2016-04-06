@@ -31,7 +31,7 @@ class XhrLoader {
 
   load(url, responseType, onSuccess, onError, onTimeout, timeout, maxRetry, retryDelay, onProgress = null, frag = null) {
     this.url = url;
-    if (frag && !isNaN(frag.byteRangeStartOffset) && !isNaN(frag.byteRangeEndOffset)) {
+    if (frag && !isNaN(frag.byteRangeStartOffset) && !isNaN(frag.byteRangeEndOffset) && frag.byteRangeStartOffset !== frag.byteRangeEndOffset-1) {
         this.byteRange = frag.byteRangeStartOffset + '-' + (frag.byteRangeEndOffset-1);
     }
     this.responseType = responseType;
