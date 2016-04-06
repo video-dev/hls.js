@@ -290,13 +290,16 @@ class MP4Remuxer {
         // let's compute sample duration.
         // sample Duration should be close to expectedSampleDuration
         mp4Sample.duration = track.audiosamplerate * (dtsnorm - lastDTS) / this.PES_TIMESCALE;
-        if(Math.abs(mp4Sample.duration - expectedSampleDuration) > expectedSampleDuration/10) {
-          // more than 10% diff between sample duration and expectedSampleDuration .... lets log that
+        if((1000 * Math.abs(mp4Sample.duration - expectedSampleDuration) / track.audiosamplerate) > 150) {
+          // more than 150ms diff between sample duration and expectedSampleDuration .... lets log that
           console.error(`invalid AAC sample duration at PTS ${Math.round(pts/90)},should be 1024,found :${Math.round(mp4Sample.duration*track.audiosamplerate/track.timescale)}`);
         }
-        // always adjust sample duration to avoid av sync issue
-        //mp4Sample.duration = expectedSampleDuration;
-        dtsnorm = expectedSampleDuration * pes2mp4ScaleFactor + lastDTS;
+        // always adjust sample duration to avoid av sync issue in chrome
+        //Firefox stalls if there is holes
+        if(navigator.userAgent.toLowerCase().indexOf('chrome') > -1){
+            mp4Sample.duration = expectedSampleDuration;
+        }
+        ptsnorm = dtsnorm = mp4Sample.duration * pes2mp4ScaleFactor + lastDTS;
       } else {
         let nextAacPts, delta;
         if (contiguous) {
