@@ -21,6 +21,11 @@ import KeyLoader from './loader/key-loader';
 
 class Hls {
 
+  static get version() {
+    // replaced with browserify-versionify transform
+    return '__VERSION__';
+  }
+
   static isSupported() {
     return (window.MediaSource && window.MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"'));
   }
