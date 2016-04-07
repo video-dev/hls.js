@@ -119,7 +119,6 @@ class StreamController extends EventHandler {
 
   doTick() {
     var pos, level, levelDetails, hls = this.hls, config = hls.config;
-    //logger.log(this.state);
     switch(this.state) {
       case State.ERROR:
         //don't do anything in error state to avoid breaking further ...
@@ -169,6 +168,7 @@ class StreamController extends EventHandler {
             bufferEnd = bufferInfo.end,
             fragPrevious = this.fragPrevious,
             maxBufLen;
+		// console.info(bufferInfo);
         // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
         if ((this.levels[level]).hasOwnProperty('bitrate')) {
           maxBufLen = Math.max(8 * config.maxBufferSize / this.levels[level].bitrate, config.maxBufferLength);
@@ -254,15 +254,17 @@ class StreamController extends EventHandler {
                     //  ...--------><-----------------------------><---------....
                     // previous frag         matching fragment         next frag
                     //  return -1             return 0                 return 1
-                //logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
+                // logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start - maxFragLookUpTolerance}/${(candidate.start+candidate.duration - maxFragLookUpTolerance)}/${bufferEnd}`);
                 if ((candidate.start + candidate.duration - maxFragLookUpTolerance) <= bufferEnd) {
                   return 1;
                 }
                 else if (candidate.start - maxFragLookUpTolerance > bufferEnd) {
                   return -1;
                 }
+			  	// console.info(candidate);
                 return 0;
               });
+			  // console.info(foundFrag);
             } else {
               // reach end of playlist
               foundFrag = fragments[fragLen-1];
@@ -756,8 +758,13 @@ class StreamController extends EventHandler {
           }
         }
         this.pendingAppending = 0;
-        logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],level ${level}`);
-        this.demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata);
+        // logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],level ${level}`);
+// 		var re = /(\d+)_\d+.ts/;
+// 		var t0 = 0;
+// 		var m = re.exec(fragCurrent.url);
+// 		var t0 = (m && m[1]) ? parseInt( m[1] )/1000 : 0;
+//
+        this.demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata, start);
       }
     }
     this.fragLoadError = 0;
@@ -901,6 +908,8 @@ class StreamController extends EventHandler {
         stats.tbuffered = performance.now();
         this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
         this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag});
+		// console.info(stats);
+		// console.info(frag);
         logger.log(`media buffered : ${this.timeRangesToString(this.media.buffered)}`);
         this.state = State.IDLE;
       }
@@ -1041,6 +1050,7 @@ _checkBuffer() {
   }
 
   onFragLoadEmergencyAborted() {
+	  debugger;
     this.state = State.IDLE;
     this.tick();
   }

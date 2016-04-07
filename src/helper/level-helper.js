@@ -65,16 +65,42 @@ class LevelHelper {
     fragIdx = sn - details.startSN;
     fragments = details.fragments;
     frag = fragments[fragIdx];
+
+	var prevFrag = fragments[fragIdx - 1];
+	var nextFrag = fragments[fragIdx + 1];
+
     if(!isNaN(frag.startPTS)) {
       startPTS = Math.min(startPTS,frag.startPTS);
       endPTS = Math.max(endPTS, frag.endPTS);
     }
+
+	if( prevFrag && Math.abs(prevFrag.start - startPTS) > 100) {
+		startPTS = prevFrag.start + prevFrag.duration;
+		// if (frag.duration > 100) debugger;
+		endPTS = startPTS + frag.duration;
+		console.info(frag.sn + ':  ' + startPTS + ' -> ' + endPTS + ' | ' + frag.duration);
+		// debugger;
+	} else if( nextFrag && Math.abs(nextFrag.start - startPTS) > 100) {
+		// startPTS = nextFrag.start + nextFrag.duration;
+		// endPTS = startPTS + frag.duration;
+		// console.log(frag.sn + ':  ' + startPTS + ' -> ' + endPTS + ' | ' + frag.duration);
+		// debugger;
+	}
+
+   if( Math.abs(startPTS - endPTS) > 100) {
+	   var old_endPTS = endPTS;
+	   endPTS = startPTS + frag.duration;
+	   console.info('adjusting endPTS: ' + old_endPTS + ' -> ' + endPTS);
+   }
 
     var drift = startPTS - frag.start;
 
     frag.start = frag.startPTS = startPTS;
     frag.endPTS = endPTS;
     frag.duration = endPTS - startPTS;
+
+	// if (frag.duration > 100) debugger;
+	
     // adjust fragment PTS/duration from seqnum-1 to frag 0
     for(i = fragIdx ; i > 0 ; i--) {
       LevelHelper.updatePTS(fragments,i,i-1);
@@ -100,11 +126,13 @@ class LevelHelper {
         fragFrom.duration = fragToPTS-fragFrom.start;
         if(fragFrom.duration < 0) {
           logger.error(`negative duration computed for frag ${fragFrom.sn},level ${fragFrom.level}, there should be some duration drift between playlist and fragment!`);
+		  debugger;
         }
       } else {
         fragTo.duration = fragFrom.start - fragToPTS;
         if(fragTo.duration < 0) {
           logger.error(`negative duration computed for frag ${fragTo.sn},level ${fragTo.level}, there should be some duration drift between playlist and fragment!`);
+		  debugger;
         }
       }
     } else {

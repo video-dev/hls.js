@@ -251,7 +251,17 @@ class BufferController extends EventHandler {
         var segment = segments.shift();
         try {
           //logger.log(`appending ${segment.type} SB, size:${segment.data.length});
+		  // if (sourceBuffer.firstLoaded && !sourceBuffer.video.updating) { 
+		  	// sourceBuffer[segment.type].timestampOffset += 10;
+		  // }
           sourceBuffer[segment.type].appendBuffer(segment.data);
+		  sourceBuffer.firstLoaded = true;
+
+		  // setTimeout( function() {
+		  // 	sourceBuffer[segment.type].timestampOffset = 15;
+		  // }, 5);
+
+		  console.info(segment);
           this.appendError = 0;
           this.appended++;
         } catch(err) {

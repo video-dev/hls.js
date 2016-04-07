@@ -41,11 +41,11 @@ class Hls {
     if(!Hls.defaultConfig) {
        Hls.defaultConfig = {
           autoStartLoad: true,
-          debug: false,
+          debug: true,
           capLevelToPlayerSize: false,
           maxBufferLength: 30,
           maxBufferSize: 60 * 1000 * 1000,
-          maxBufferHole: 0.5,
+          maxBufferHole: 5,
           maxSeekHole: 2,
           maxFragLookUpTolerance : 0.2,
           liveSyncDurationCount:3,
@@ -62,7 +62,7 @@ class Hls {
           levelLoadingMaxRetry: 4,
           levelLoadingRetryDelay: 1000,
           fragLoadingTimeOut: 20000,
-          fragLoadingMaxRetry: 6,
+          fragLoadingMaxRetry: 20,
           fragLoadingRetryDelay: 1000,
           fragLoadingLoopThreshold: 3,
           startFragPrefetch : false,

@@ -32,32 +32,34 @@ class MP4Remuxer {
     this.ISGenerated = false;
   }
 
-  remux(audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous) {
+  remux(audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous, data, t0) {
     // generate Init Segment if needed
     if (!this.ISGenerated) {
-      this.generateIS(audioTrack,videoTrack,timeOffset);
-    }
-    //logger.log('nb AVC samples:' + videoTrack.samples.length);
-    if (videoTrack.samples.length) {
-      this.remuxVideo(videoTrack,timeOffset,contiguous);
-    }
-    //logger.log('nb AAC samples:' + audioTrack.samples.length);
-    if (audioTrack.samples.length) {
-      this.remuxAudio(audioTrack,timeOffset,contiguous);
-    }
-    //logger.log('nb ID3 samples:' + audioTrack.samples.length);
-    if (id3Track.samples.length) {
-      this.remuxID3(id3Track,timeOffset);
-    }
-    //logger.log('nb ID3 samples:' + audioTrack.samples.length);
-    if (textTrack.samples.length) {
-      this.remuxText(textTrack,timeOffset);
-    }
+      this.generateIS(audioTrack,videoTrack,timeOffset, t0);
+	}
+	if (this.ISGenerated) {
+		//logger.log('nb AVC samples:' + videoTrack.samples.length);
+		if (videoTrack.samples.length) {
+		  this.remuxVideo(videoTrack,timeOffset,contiguous, t0);
+		}
+		//logger.log('nb AAC samples:' + audioTrack.samples.length);
+		if (audioTrack.samples.length) {
+		  this.remuxAudio(audioTrack,timeOffset,contiguous);
+		}
+		//logger.log('nb ID3 samples:' + audioTrack.samples.length);
+		if (id3Track.samples.length) {
+		  this.remuxID3(id3Track,timeOffset);
+		}
+		//logger.log('nb ID3 samples:' + audioTrack.samples.length);
+		if (textTrack.samples.length) {
+		  this.remuxText(textTrack,timeOffset);
+		}
+	}
     //notify end of parsing
     this.observer.trigger(Event.FRAG_PARSED);
   }
 
-  generateIS(audioTrack,videoTrack,timeOffset) {
+  generateIS(audioTrack,videoTrack,timeOffset, t0) {
     var observer = this.observer,
         audioSamples = audioTrack.samples,
         videoSamples = videoTrack.samples,
@@ -96,7 +98,9 @@ class MP4Remuxer {
       };
       if (computePTSDTS) {
         // remember first PTS of this demuxing context. for audio, PTS + DTS ...
-        initPTS = initDTS = audioSamples[0].pts - pesTimeScale * timeOffset;
+        // initPTS = initDTS = audioSamples[0].pts - pesTimeScale * timeOffset;
+        initPTS = initDTS = t0 * pesTimeScale;
+		// if (timeOffset != t0) debugger;
       }
     }
 
@@ -123,13 +127,18 @@ class MP4Remuxer {
       observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT,data);
       this.ISGenerated = true;
       if (computePTSDTS) {
+        // this._initPTS = t0*pesTimeScale;//initPTS;
+        // this._initDTS = t0*pesTimeScale;//initDTS;
+
+		  console.info("!!");
         this._initPTS = initPTS;
         this._initDTS = initDTS;
+		console.info('initPTS: ' + initPTS + ' t0*90000: ' + t0*90000);
       }
     }
   }
 
-  remuxVideo(track, timeOffset, contiguous) {
+  remuxVideo(track, timeOffset, contiguous, t0) {
     var offset = 8,
         pesTimeScale = this.PES_TIMESCALE,
         pes2mp4ScaleFactor = this.PES2MP4SCALEFACTOR,
@@ -148,38 +157,62 @@ class MP4Remuxer {
       nextAvcDts = this.nextAvcDts;
     } else {
       // if not contiguous, let's use target timeOffset
-      nextAvcDts = timeOffset*pesTimeScale;
+      nextAvcDts = t0*pesTimeScale;
     }
 
     // compute first DTS and last DTS, normalize them against reference value
     let sample = inputSamples[0];
+    // firstDTS =  Math.max(this._PTSNormalize(sample.dts,nextAvcDts) - this._initDTS,0);
+    // firstPTS =  Math.max(this._PTSNormalize(sample.pts,nextAvcDts) - this._initDTS,0);
+
     firstDTS =  Math.max(this._PTSNormalize(sample.dts,nextAvcDts) - this._initDTS,0);
     firstPTS =  Math.max(this._PTSNormalize(sample.pts,nextAvcDts) - this._initDTS,0);
 
-    // check timestamp continuity accross consecutive fragments (this is to remove inter-fragment gap/hole)
-    let delta = Math.round((firstDTS - nextAvcDts) / 90);
-    // if fragment are contiguous, or delta less than 600ms, ensure there is no overlap/hole between fragments
-    if (contiguous || Math.abs(delta) < 600) {
-      if (delta) {
-        if (delta > 1) {
-          logger.log(`AVC:${delta} ms hole between fragments detected,filling it`);
-        } else if (delta < -1) {
-          logger.log(`AVC:${(-delta)} ms overlapping between fragments detected`);
-        }
-        // remove hole/gap : set DTS to next expected DTS
-        firstDTS = inputSamples[0].dts = nextAvcDts;
-        // offset PTS as well, ensure that PTS is smaller or equal than new DTS
-        firstPTS = inputSamples[0].pts = Math.max(firstPTS - delta, nextAvcDts);
-        logger.log(`Video/PTS/DTS adjusted: ${firstPTS}/${firstDTS},delta:${delta}`);
-      }
-    }
+	var firstSampleDTS = sample.dts;
+	firstPTS = firstDTS = Math.round(t0 * pesTimeScale);
+	console.info( 'firstPTS #1: ' + firstPTS );
 
-    // sample duration (as expected by trun MP4 boxes), should be the delta between sample DTS
+    // check timestamp continuity accross consecutive fragments (this is to remove inter-fragment gap/hole)
+//     let delta = Math.round((firstDTS - nextAvcDts) / 90);
+//
+//     // if fragment are contiguous, or delta less than 600ms, ensure there is no overlap/hole between fragments
+//     if (contiguous || Math.abs(delta) < 600) {
+//       if (delta) {
+//         if (delta > 1) {
+//           logger.log(`AVC:${delta} ms hole between fragments detected,filling it`);
+//         } else if (delta < -1) {
+//           logger.log(`AVC:${(-delta)} ms overlapping between fragments detected`);
+//         }
+//         // remove hole/gap : set DTS to next expected DTS
+//         firstDTS = inputSamples[0].dts = nextAvcDts;
+//         // offset PTS as well, ensure that PTS is smaller or equal than new DTS
+//         firstPTS = inputSamples[0].pts = Math.max(firstPTS - delta, nextAvcDts);
+//         logger.log(`Video/PTS/DTS adjusted: ${firstPTS}/${firstDTS},delta:${delta}`);
+//       }
+//     }
+// 	console.info( 'firstPTS #2: ' + firstPTS );
+
+	// sample duration (as expected by trun MP4 boxes), should be the delta between sample DTS
     // let's signal the same sample duration for all samples
     // set this constant duration as being the avg delta between consecutive DTS.
     sample = inputSamples[inputSamples.length-1];
     lastDTS = Math.max(this._PTSNormalize(sample.dts,nextAvcDts) - this._initDTS,0);
+
+	lastDTS = (sample.dts - firstSampleDTS) + firstPTS;
     mp4SampleDuration = Math.round((lastDTS-firstDTS)/(pes2mp4ScaleFactor*(inputSamples.length-1)));
+
+	if (lastDTS <= firstDTS) {
+		debugger;
+		lastDTS = firstDTS;
+		mp4SampleDuration = 0;
+		console.warn('lastDTS < firstDTS');
+	};
+	console.info( '( lastDTS - firstDTS ) / 90000 : ' + (lastDTS - firstDTS)/90000);
+	var oldPTS = firstPTS;
+	// firstPTS = firstDTS = Math.round(t0*90000);
+	console.log('firstPTS: '  + oldPTS + ' -> ' + t0*90000);
+	if ( Math.abs(oldPTS - firstPTS) > 10000 ) console.warn('this could have caused a fragLoop error');
+
 
     // normalize all PTS/DTS now ...
     for (let i = 0; i < inputSamples.length; i++) {
@@ -188,7 +221,8 @@ class MP4Remuxer {
       sample.dts = firstDTS + i*pes2mp4ScaleFactor*mp4SampleDuration;
       // we normalize PTS against nextAvcDts, we also substract initDTS (some streams don't start @ PTS O)
       // and we ensure that computed value is greater or equal than sample DTS
-      sample.pts = Math.max(this._PTSNormalize(sample.pts,nextAvcDts) - this._initDTS, sample.dts);
+      // sample.pts = Math.max(this._PTSNormalize(sample.pts,nextAvcDts) - this._initDTS, sample.dts);
+	  sample.pts = sample.dts;
     }
     lastPTS = inputSamples[inputSamples.length-1].pts;
 
@@ -239,6 +273,7 @@ class MP4Remuxer {
       flags.isNonSync = 0;
     }
     track.samples = outputSamples;
+	// if (firstDTS/pesTimeScale > 100000) { debugger; }
     moof = MP4.moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
     track.samples = [];
     this.observer.trigger(Event.FRAG_PARSING_DATA, {
@@ -257,8 +292,6 @@ class MP4Remuxer {
     var view,
         offset = 8,
         pesTimeScale = this.PES_TIMESCALE,
-        mp4timeScale = track.timescale,
-        pes2mp4ScaleFactor = pesTimeScale/mp4timeScale,
         expectedSampleDuration = track.timescale * 1024 / track.audiosamplerate,
         aacSample, mp4Sample,
         unit,

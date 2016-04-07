@@ -143,6 +143,8 @@ header {
       </table>
     </div>
 
+	<div> http://10.126.140.240:8080/cameras/JQxQHZ3tqtavR7Mm/video.m3u8?begin=1459569600000&end=1459655999000&stream=0c689da4-b955-4517-801d-7658f7bd6f12 </div>
+
     <div id='MetricsDisplay'>
     <h4> Real Time Metrics Display </h4>
       <div id="metricsButton">
@@ -222,13 +224,13 @@ $(document).ready(function() {
   var hls,events, stats,
       enableStreaming = JSON.parse(getURLParam('enableStreaming',true))
       autoRecoverError = JSON.parse(getURLParam('autoRecoverError',true)),
-      enableWorker = JSON.parse(getURLParam('enableWorker',true)),
+      enableWorker = JSON.parse(getURLParam('enableWorker',false)),
       levelCapping = JSON.parse(getURLParam('levelCapping',-1)),
       defaultAudioCodec = getURLParam('defaultAudioCodec',undefined);
   var video = $('#video')[0];
   video.volume = 0.05;
 
-  loadStream(decodeURIComponent(getURLParam('src','http://www.streambox.fr/playlists/x36xhzz/x36xhzz.m3u8')));
+  loadStream(decodeURIComponent(getURLParam('src','http://10.126.140.241:8080/cameras/F0AU3r2mkPHwmtYJ/video.m3u8?begin=1458705600000&end=1458791999999&stream=9fea404d-0d97-4ab6-e7ac-b6c64e3af847')));
 
   function loadStream(url) {
     hideCanvas();

@@ -69,6 +69,7 @@ class BufferHelper {
         break;
       }
     }
+	// if( bufferStart == bufferEnd && bufferEnd != 0) { debugger; }
     return {len: bufferLen, start: bufferStart, end: bufferEnd, nextStart : bufferStartNext};
   }
 
