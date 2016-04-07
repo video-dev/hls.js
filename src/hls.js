@@ -20,6 +20,11 @@ import EventEmitter from 'events';
 import KeyLoader from './loader/key-loader';
 
 class Hls {
+    static get version() {
+        // replaced with browserify-versionify transform
+        return '__VERSION__';
+    }
+
     static isSupported() {
         return (
             window.MediaSource &&
