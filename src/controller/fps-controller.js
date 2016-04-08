@@ -16,11 +16,15 @@ class FPSController extends EventHandler{
     if (this.timer) {
       clearInterval(this.timer);
     }
+    this.isVideoPlaybackQualityAvailable = false;
   }
   
   onMediaAttaching(data) {
     if (this.hls.config.capLevelOnFPSDrop) {
       this.video = data.media instanceof HTMLVideoElement ? data.media : null;
+      if (typeof this.video.getVideoPlaybackQuality === 'function') {
+        this.isVideoPlaybackQualityAvailable = true;
+      }
       clearInterval(this.timer);
       this.timer = setInterval(this.checkFPSInterval.bind(this), this.hls.config.fpsDroppedMonitoringPeriod);
     } 
