@@ -236,7 +236,7 @@ class LevelController extends EventHandler {
     if (data.details.live && !this.timer) {
       // if live playlist we will have to reload it periodically
       // set reload period to playlist target duration
-      this.timer = setInterval(this.ontick, 1000 * data.details.targetduration);
+      this.timer = setInterval(this.ontick, 1000 * (data.details.avrtargetduration ? data.details.avrtargetduration : data.details.targetduration));
     }
     if (!data.details.live && this.timer) {
       // playlist is not live and timer is armed : stopping it
