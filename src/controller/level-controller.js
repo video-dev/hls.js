@@ -284,16 +284,17 @@ class LevelController extends EventHandler {
 
     onLevelLoaded(data) {
         // check if current playlist is a live playlist
-        if (data.details.live && !this.timer) {
+        if (data.details.live) {
             // if live playlist we will have to reload it periodically
-            // set reload period to playlist target duration
-            this.timer = setInterval(
-                this.ontick,
-                1000 *
-                    (data.details.avrtargetduration
-                        ? data.details.avrtargetduration
-                        : data.details.targetduration)
-            );
+            // set reload period to avarage of the frag duration, if avarage not set then use playlist target duration
+            let timerInterval = data.details.avrtargetduration
+                ? data.details.avrtargetduration
+                : data.details.targetduration;
+            if (!this.timer || timerInterval !== this.timerInterval) {
+                clearInterval(this.timer);
+                this.timer = setInterval(this.ontick, 1000 * timerInterval);
+                this.timerInterval = timerInterval;
+            }
         }
         if (!data.details.live && this.timer) {
             // playlist is not live and timer is armed : stopping it
