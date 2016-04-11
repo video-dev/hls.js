@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/dailymotion/hls.js.svg?branch=master)](https://travis-ci.org/dailymotion/hls.js)
+[![Coverage Status](https://coveralls.io/repos/github/dailymotion/hls.js/badge.svg?branch=master)](https://coveralls.io/github/dailymotion/hls.js?branch=master)
 [![npm][npm-image]][npm-url]
 # hls.js
 hls.js is a JavaScript library which implements an [HTTP Live Streaming] client.
