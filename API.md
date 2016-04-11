@@ -559,6 +559,10 @@ get/set : capping/max level value that could be used by ABR Controller
 default value is -1 (no level capping)
 
 
+## Version Control
+
+#### ```Hls.version```
+static getter: return hls.js dist version number
 
 ## Network Loading Control API
 
