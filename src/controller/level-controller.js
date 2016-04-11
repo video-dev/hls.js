@@ -215,7 +215,7 @@ class LevelController extends EventHandler {
         } else if(level && level.details && level.details.live) {
           logger.warn(`level controller,${details} on live stream, discard`);
         // FRAG_LOAD_ERROR and FRAG_LOAD_TIMEOUT are handled by mediaController
-        } else if (details !== ErrorDetails.FRAG_LOAD_ERROR && details !== ErrorDetails.FRAG_LOAD_TIMEOUT) {
+        } else if (details !== ErrorDetails.FRAG_LOAD_ERROR && details !== ErrorDetails.FRAG_LOAD_TIMEOUT && details !== ErrorDetails.FRAG_LOOP_LOADING_ERROR) {
           logger.error(`cannot recover ${details} error`);
           this._level = undefined;
           // stopping live reloading timer if any
