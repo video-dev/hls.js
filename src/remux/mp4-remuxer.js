@@ -153,6 +153,7 @@ class MP4Remuxer {
             moof,
             firstPTS,
             firstDTS,
+            nextDTS,
             lastPTS,
             lastDTS,
             inputSamples = track.samples,
@@ -206,33 +207,60 @@ class MP4Remuxer {
                 );
             }
         }
+        nextDTS = firstDTS;
 
-        // sample duration (as expected by trun MP4 boxes), should be the delta between sample DTS
-        // let's signal the same sample duration for all samples
-        // set this constant duration as being the avg delta between consecutive DTS.
+        // compute lastPTS/lastDTS
         sample = inputSamples[inputSamples.length - 1];
         lastDTS = Math.max(
             this._PTSNormalize(sample.dts, nextAvcDts) - this._initDTS,
             0
         );
-        mp4SampleDuration = Math.round(
-            (lastDTS - firstDTS) /
-                (pes2mp4ScaleFactor * (inputSamples.length - 1))
-        );
+        lastPTS = Math.max(sample.pts, lastDTS);
+
+        let vendor = navigator.vendor,
+            userAgent = navigator.userAgent,
+            isSafari =
+                vendor &&
+                vendor.indexOf('Apple') > -1 &&
+                userAgent &&
+                !userAgent.match('CriOS');
+
+        // on Safari let's signal the same sample duration for all samples
+        // sample duration (as expected by trun MP4 boxes), should be the delta between sample DTS
+        // set this constant duration as being the avg delta between consecutive DTS.
+        if (isSafari) {
+            mp4SampleDuration = Math.round(
+                (lastDTS - firstDTS) /
+                    (pes2mp4ScaleFactor * (inputSamples.length - 1))
+            );
+        }
 
         // normalize all PTS/DTS now ...
         for (let i = 0; i < inputSamples.length; i++) {
             let sample = inputSamples[i];
-            // sample DTS is computed using a constant decoding offset (mp4SampleDuration) between samples
-            sample.dts = firstDTS + i * pes2mp4ScaleFactor * mp4SampleDuration;
+            if (isSafari) {
+                // sample DTS is computed using a constant decoding offset (mp4SampleDuration) between samples
+                sample.dts =
+                    firstDTS + i * pes2mp4ScaleFactor * mp4SampleDuration;
+            } else {
+                sample.dts =
+                    this._PTSNormalize(sample.dts, nextAvcDts) - this._initDTS;
+                // ensure dts is a multiple of scale factor to avoid rounding issues
+                sample.dts =
+                    Math.round(sample.dts / pes2mp4ScaleFactor) *
+                    pes2mp4ScaleFactor;
+            }
             // we normalize PTS against nextAvcDts, we also substract initDTS (some streams don't start @ PTS O)
             // and we ensure that computed value is greater or equal than sample DTS
             sample.pts = Math.max(
                 this._PTSNormalize(sample.pts, nextAvcDts) - this._initDTS,
                 sample.dts
             );
+            // ensure pts is a multiple of scale factor to avoid rounding issues
+            sample.pts =
+                Math.round(sample.pts / pes2mp4ScaleFactor) *
+                pes2mp4ScaleFactor;
         }
-        lastPTS = inputSamples[inputSamples.length - 1].pts;
 
         /* concatenate the video data and construct the mdat in place
       (need 8 more bytes to fill length and mpdat type) */
@@ -240,9 +268,11 @@ class MP4Remuxer {
         let view = new DataView(mdat.buffer);
         view.setUint32(0, mdat.byteLength);
         mdat.set(MP4.types.mdat, 4);
-        while (inputSamples.length) {
-            let avcSample = inputSamples.shift(),
-                mp4SampleLength = 0;
+
+        for (let i = 0; i < inputSamples.length; i++) {
+            let avcSample = inputSamples[i],
+                mp4SampleLength = 0,
+                compositionTimeOffset;
             // convert NALU bitstream to MP4 format (prepend NALU with size field)
             while (avcSample.units.units.length) {
                 let unit = avcSample.units.units.shift();
@@ -252,20 +282,36 @@ class MP4Remuxer {
                 offset += unit.data.byteLength;
                 mp4SampleLength += 4 + unit.data.byteLength;
             }
-            //console.log('PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${avcSample.pts}/${avcSample.dts}/${this._initDTS}/${ptsnorm}/${dtsnorm}/${(avcSample.pts/4294967296).toFixed(3)}');
-            outputSamples.push({
-                size: mp4SampleLength,
-                // constant duration
-                duration: mp4SampleDuration,
-                // set composition time offset as a multiple of sample duration
-                cts: Math.max(
+
+            if (!isSafari) {
+                // expected sample duration is the Decoding Timestamp diff of consecutive samples
+                if (i < inputSamples.length - 1) {
+                    mp4SampleDuration = inputSamples[i + 1].dts - avcSample.dts;
+                } else {
+                    // last sample duration is same than previous one
+                    mp4SampleDuration = avcSample.dts - inputSamples[i - 1].dts;
+                }
+                mp4SampleDuration /= pes2mp4ScaleFactor;
+                compositionTimeOffset = Math.round(
+                    (avcSample.pts - avcSample.dts) / pes2mp4ScaleFactor
+                );
+            } else {
+                compositionTimeOffset = Math.max(
                     0,
                     mp4SampleDuration *
                         Math.round(
                             (avcSample.pts - avcSample.dts) /
                                 (pes2mp4ScaleFactor * mp4SampleDuration)
                         )
-                ),
+                );
+            }
+
+            //console.log('PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${avcSample.pts}/${avcSample.dts}/${this._initDTS}/${ptsnorm}/${dtsnorm}/${(avcSample.pts/4294967296).toFixed(3)}');
+            outputSamples.push({
+                size: mp4SampleLength,
+                // constant duration
+                duration: mp4SampleDuration,
+                cts: compositionTimeOffset,
                 flags: {
                     isLeading: 0,
                     isDependedOn: 0,
