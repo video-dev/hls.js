@@ -191,6 +191,7 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       maxBufferSize : 60*1000*1000,
       maxBufferHole : 0.3,
       maxSeekHole : 2,
+      seekHoleNudgeDuration : 0.01,
       maxFragLookUpTolerance : 0.2,
       liveSyncDurationCount : 3,
       liveMaxLatencyDurationCount: 10,
@@ -275,6 +276,13 @@ This could result in small overlapping or hole in media buffer. This tolerance f
 in case playback is stalled, and a buffered range is available upfront, less than maxSeekHole seconds from current media position,
 hls.js will jump over this buffer hole to reach the beginning of this following buffered range.
 ```maxSeekHole``` allows to configure this jumpable threshold.
+
+
+#### ```seekHoleNudgeDuration```
+(default 0.01s)
+
+ in case playback is still stalling although a seek over buffer hole just occured, hls.js will seek to next buffer start + (nb of consecutive stalls * seekHoleNudgeDuration to try to restore playback
+
 
 #### ```maxFragLookUpTolerance```
 (default 0.2s)
@@ -551,6 +559,10 @@ get/set : capping/max level value that could be used by ABR Controller
 default value is -1 (no level capping)
 
 
+## Version Control
+
+#### ```Hls.version```
+static getter: return hls.js dist version number
 
 ## Network Loading Control API
 
@@ -624,6 +636,8 @@ full list of Events available below :
     -  data: { frag : fragment object }
   - `Hls.Events.FPS_DROP` - triggered when FPS drop in last monitoring period is higher than given threshold
     -  data: {curentDropped : nb of dropped frames in last monitoring period, currentDecoded: nb of decoded frames in last monitoring period, totalDropped : total dropped frames on this video element}
+  - `Hls.Events.FPS_DROP_LEVEL_CAPPING` - triggered when FPS drop triggers auto level capping
+    - data: { level: suggested new auto level capping by fps controller, droppedLevel : level has to much dropped frame will be restricted }
   - `Hls.Events.ERROR` -  Identifier for an error event
     - data: { type : error Type, details : error details, fatal : is error fatal or not, other error specific data}
   - `Hls.Events.DESTROYING` -  fired when hls.js instance starts destroying. Different from MEDIA_DETACHED as one could want to detach and reattach a video to the instance of hls.js to handle mid-rolls for example.

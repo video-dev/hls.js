@@ -75,7 +75,7 @@ class PlaylistLoader extends EventHandler {
         level.width = resolution.width;
         level.height = resolution.height;
       }
-      level.bitrate = attrs.decimalInteger('BANDWIDTH');
+      level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
       level.name = attrs.NAME;
 
       var closedCaptions = attrs.enumeratedString('CLOSED-CAPTIONS');
@@ -230,7 +230,8 @@ class PlaylistLoader extends EventHandler {
         hls = this.hls,
         levels;
     // responseURL not supported on some browsers (it is used to detect URL redirection)
-    if (url === undefined) {
+    // data-uri mode also not supported (but no need to detect redirection)
+    if (url === undefined || url.indexOf('data:') === 0) {
       // fallback to initial URL
       url = this.url;
     }
