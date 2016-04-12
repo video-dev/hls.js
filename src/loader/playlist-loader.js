@@ -135,8 +135,6 @@ class PlaylistLoader extends EventHandler {
             cc = 0,
             programDateTime = null,
             frag = null,
-            maxFragDuration = 0,
-            minFragDuration = Infinity,
             result,
             regexp,
             byteRangeEndOffset,
@@ -208,14 +206,6 @@ class PlaylistLoader extends EventHandler {
                         };
                         level.fragments.push(frag);
                         totalduration += duration;
-                        minFragDuration =
-                            duration < minFragDuration
-                                ? duration
-                                : minFragDuration;
-                        maxFragDuration =
-                            duration > maxFragDuration
-                                ? duration
-                                : maxFragDuration;
                         byteRangeStartOffset = null;
                         programDateTime = null;
                     }
@@ -257,7 +247,8 @@ class PlaylistLoader extends EventHandler {
             totalduration -= frag.duration;
         }
         level.totalduration = totalduration;
-        level.avrtargetduration = (minFragDuration + maxFragDuration) / 2;
+        level.averagetargetduration =
+            level.totalduration / level.fragments.length;
         level.endSN = currentSN - 1;
         return level;
     }
