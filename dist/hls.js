@@ -5654,7 +5654,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.0';
+      return '0.6.1';
     }
   }, {
     key: 'Events',
@@ -7257,9 +7257,11 @@ var MP4Remuxer = function () {
             _logger.logger.log('AVC:' + -delta + ' ms overlapping between fragments detected');
           }
           // remove hole/gap : set DTS to next expected DTS
-          firstDTS = inputSamples[0].dts = nextAvcDts;
+          firstDTS = nextAvcDts;
+          inputSamples[0].dts = firstDTS + this._initDTS;
           // offset PTS as well, ensure that PTS is smaller or equal than new DTS
-          firstPTS = inputSamples[0].pts = Math.max(firstPTS - delta, nextAvcDts);
+          firstPTS = Math.max(firstPTS - delta, nextAvcDts);
+          inputSamples[0].pts = firstPTS + this._initDTS;
           _logger.logger.log('Video/PTS/DTS adjusted: ' + firstPTS + '/' + firstDTS + ',delta:' + delta);
         }
       }
@@ -7268,7 +7270,8 @@ var MP4Remuxer = function () {
       // compute lastPTS/lastDTS
       sample = inputSamples[inputSamples.length - 1];
       lastDTS = Math.max(this._PTSNormalize(sample.dts, nextAvcDts) - this._initDTS, 0);
-      lastPTS = Math.max(sample.pts, lastDTS);
+      lastPTS = Math.max(this._PTSNormalize(sample.pts, nextAvcDts) - this._initDTS, 0);
+      lastPTS = Math.max(lastPTS, lastDTS);
 
       var vendor = navigator.vendor,
           userAgent = navigator.userAgent,
