@@ -97,6 +97,7 @@ each error is categorized by :
     - ```Hls.ErrorDetails.FRAG_LOAD_TIMEOUT```raised when fragment loading fails because of a timeout
     - ```Hls.ErrorDetails.FRAG_DECRYPT_ERROR```raised when fragment decryption fails
     - ```Hls.ErrorDetails.FRAG_PARSING_ERROR```raised when fragment parsing fails
+    - ```Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR```raised when exception is raised while adding a new sourceBuffer to MediaSource
     - ```Hls.ErrorDetails.BUFFER_APPEND_ERROR```raised when exception is raised while preparing buffer append
     - ```Hls.ErrorDetails.BUFFER_APPENDING_ERROR```raised when exception is raised during buffer appending
     - ```Hls.ErrorDetails.BUFFER_STALLED_ERROR```raised when playback stalls because the buffer runs out
@@ -675,6 +676,8 @@ full list of Errors is described below:
 ### Media Errors
   - ```Hls.ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR```raised when manifest only contains quality level with codecs incompatible with MediaSource Engine.
     - data: { type : ```MEDIA_ERROR```, details : ```Hls.ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR```, fatal : ```true```, url : manifest URL}
+  - ```Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR```raised when MediaSource fails to add new sourceBuffer
+    - data: { type : ```MEDIA_ERROR```, details : ```Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR```, fatal : ```false```, err : error raised by MediaSource, mimeType: mimeType on which the failure happened}
   - ```Hls.ErrorDetails.BUFFER_APPEND_ERROR```raised when exception is raised while calling buffer append
     - data: { type : ```MEDIA_ERROR```, details : ```Hls.ErrorDetails.BUFFER_APPEND_ERROR```, fatal : ```true```, frag : fragment object}
   - ```Hls.ErrorDetails.BUFFER_APPENDING_ERROR```raised when exception is raised during buffer appending
