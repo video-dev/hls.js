@@ -170,9 +170,11 @@ class MP4Remuxer {
           logger.log(`AVC:${(-delta)} ms overlapping between fragments detected`);
         }
         // remove hole/gap : set DTS to next expected DTS
-        firstDTS = inputSamples[0].dts = nextAvcDts;
+        firstDTS = nextAvcDts;
+        inputSamples[0].dts = firstDTS + this._initDTS;
         // offset PTS as well, ensure that PTS is smaller or equal than new DTS
-        firstPTS = inputSamples[0].pts = Math.max(firstPTS - delta, nextAvcDts);
+        firstPTS = Math.max(firstPTS - delta, nextAvcDts);
+        inputSamples[0].pts = firstPTS + this._initDTS;
         logger.log(`Video/PTS/DTS adjusted: ${firstPTS}/${firstDTS},delta:${delta}`);
       }
     }
@@ -181,7 +183,8 @@ class MP4Remuxer {
     // compute lastPTS/lastDTS
     sample = inputSamples[inputSamples.length-1];
     lastDTS = Math.max(this._PTSNormalize(sample.dts,nextAvcDts) - this._initDTS,0);
-    lastPTS = Math.max(sample.pts, lastDTS);
+    lastPTS = Math.max(this._PTSNormalize(sample.pts,nextAvcDts) - this._initDTS,0);
+    lastPTS = Math.max(lastPTS, lastDTS);
 
     let vendor = navigator.vendor, userAgent = navigator.userAgent,
         isSafari = vendor && vendor.indexOf('Apple') > -1 && userAgent && !userAgent.match('CriOS');
