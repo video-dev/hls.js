@@ -137,8 +137,11 @@ class XhrLoader {
             stats.tfirst = performance.now();
         }
         stats.loaded = event.loaded;
+        if (event.lengthComputable) {
+            stats.total = event.total;
+        }
         if (this.onProgress) {
-            this.onProgress(event, stats);
+            this.onProgress(stats);
         }
     }
 }
