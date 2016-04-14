@@ -32,7 +32,9 @@ class AbrController extends EventHandler {
     }
 
     onFragLoading(data) {
-        this.timer = setInterval(this.onCheck, 100);
+        if (!this.timer) {
+            this.timer = setInterval(this.onCheck, 100);
+        }
         this.fragCurrent = data.frag;
     }
 
@@ -58,6 +60,15 @@ class AbrController extends EventHandler {
         let hls = this.hls,
             v = hls.media,
             frag = this.fragCurrent;
+
+        // if loader has been destroyed or loading has been aborted, stop timer and return
+        if (!frag.loader || (frag.loader.stats && frag.loader.stats.aborted)) {
+            logger.warn(
+                `frag loader destroy or aborted, disarm abandonRulesCheck`
+            );
+            this.clearTimer();
+            return;
+        }
         /* only monitor frag retrieval time if
     (video not paused OR first fragment being loaded(ready state === HAVE_NOTHING = 0)) AND autoswitching enabled AND not lowest level (=> means that we have several levels) */
         if (v && (!v.paused || !v.readyState) && frag.autoLevel && frag.level) {

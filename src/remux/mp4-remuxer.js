@@ -183,8 +183,8 @@ class MP4Remuxer {
 
         // check timestamp continuity accross consecutive fragments (this is to remove inter-fragment gap/hole)
         let delta = Math.round((firstDTS - nextAvcDts) / 90);
-        // if fragment are contiguous, or delta less than 600ms, ensure there is no overlap/hole between fragments
-        if (contiguous || Math.abs(delta) < 600) {
+        // if fragment are contiguous, or if there is a huge delta (more than 10s) between expected PTS and sample PTS
+        if (contiguous || Math.abs(delta) > 10000) {
             if (delta) {
                 if (delta > 1) {
                     logger.log(
@@ -196,12 +196,11 @@ class MP4Remuxer {
                     );
                 }
                 // remove hole/gap : set DTS to next expected DTS
-                firstDTS = inputSamples[0].dts = nextAvcDts;
+                firstDTS = nextAvcDts;
+                inputSamples[0].dts = firstDTS + this._initDTS;
                 // offset PTS as well, ensure that PTS is smaller or equal than new DTS
-                firstPTS = inputSamples[0].pts = Math.max(
-                    firstPTS - delta,
-                    nextAvcDts
-                );
+                firstPTS = Math.max(firstPTS - delta, nextAvcDts);
+                inputSamples[0].pts = firstPTS + this._initDTS;
                 logger.log(
                     `Video/PTS/DTS adjusted: ${firstPTS}/${firstDTS},delta:${delta}`
                 );
@@ -215,7 +214,11 @@ class MP4Remuxer {
             this._PTSNormalize(sample.dts, nextAvcDts) - this._initDTS,
             0
         );
-        lastPTS = Math.max(sample.pts, lastDTS);
+        lastPTS = Math.max(
+            this._PTSNormalize(sample.pts, nextAvcDts) - this._initDTS,
+            0
+        );
+        lastPTS = Math.max(lastPTS, lastDTS);
 
         let vendor = navigator.vendor,
             userAgent = navigator.userAgent,
@@ -428,8 +431,8 @@ class MP4Remuxer {
                 delta = Math.round(
                     1000 * (ptsnorm - nextAacPts) / pesTimeScale
                 );
-                // if fragment are contiguous, or delta less than 600ms, ensure there is no overlap/hole between fragments
-                if (contiguous || Math.abs(delta) < 600) {
+                // if fragment are contiguous, or if there is a huge delta (more than 10s) between expected PTS and sample PTS
+                if (contiguous || Math.abs(delta) > 10000) {
                     // log delta
                     if (delta) {
                         if (delta > 0) {
@@ -445,7 +448,7 @@ class MP4Remuxer {
                             track.len -= unit.byteLength;
                             continue;
                         }
-                        // set DTS to next DTS
+                        // set PTS/DTS to expected PTS/DTS
                         ptsnorm = dtsnorm = nextAacPts;
                     }
                 }
