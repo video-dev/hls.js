@@ -427,7 +427,9 @@ var AbrController = function (_EventHandler) {
   }, {
     key: 'onFragLoading',
     value: function onFragLoading(data) {
-      this.timer = setInterval(this.onCheck, 100);
+      if (!this.timer) {
+        this.timer = setInterval(this.onCheck, 100);
+      }
       this.fragCurrent = data.frag;
     }
   }, {
@@ -454,6 +456,13 @@ var AbrController = function (_EventHandler) {
       var hls = this.hls,
           v = hls.media,
           frag = this.fragCurrent;
+
+      // if loader has been destroyed or loading has been aborted, stop timer and return
+      if (!frag.loader || frag.loader.stats && frag.loader.stats.aborted) {
+        _logger.logger.warn('frag loader destroy or aborted, disarm abandonRulesCheck');
+        this.clearTimer();
+        return;
+      }
       /* only monitor frag retrieval time if
       (video not paused OR first fragment being loaded(ready state === HAVE_NOTHING = 0)) AND autoswitching enabled AND not lowest level (=> means that we have several levels) */
       if (v && (!v.paused || !v.readyState) && frag.autoLevel && frag.level) {
@@ -1314,6 +1323,7 @@ var LevelController = function (_EventHandler) {
     value: function destroy() {
       if (this.timer) {
         clearInterval(this.timer);
+        this.timer = null;
       }
       this._manualLevel = -1;
     }
@@ -1501,10 +1511,15 @@ var LevelController = function (_EventHandler) {
     key: 'onLevelLoaded',
     value: function onLevelLoaded(data) {
       // check if current playlist is a live playlist
-      if (data.details.live && !this.timer) {
+      if (data.details.live) {
         // if live playlist we will have to reload it periodically
-        // set reload period to playlist target duration
-        this.timer = setInterval(this.ontick, 1000 * data.details.targetduration);
+        // set reload period to average of the frag duration, if average not set then use playlist target duration
+        var timerInterval = data.details.averagetargetduration ? data.details.averagetargetduration : data.details.targetduration;
+        if (!this.timer || timerInterval !== this.timerInterval) {
+          clearInterval(this.timer);
+          this.timer = setInterval(this.ontick, 1000 * timerInterval);
+          this.timerInterval = timerInterval;
+        }
       }
       if (!data.details.live && this.timer) {
         // playlist is not live and timer is armed : stopping it
@@ -1838,6 +1853,20 @@ var StreamController = function (_EventHandler) {
                 _logger.logger.log('buffer end: ' + bufferEnd + ' is located too far from the end of live sliding playlist, media position will be reseted to: ' + this.seekAfterBuffered.toFixed(3));
                 bufferEnd = this.seekAfterBuffered;
               }
+
+              // if end of buffer greater than live edge, don't load any fragment
+              // this could happen if live playlist intermittently slides in the past.
+              // level 1 loaded [182580161,182580167]
+              // level 1 loaded [182580162,182580169]
+              // Loading 182580168 of [182580162 ,182580169],level 1 ..
+              // Loading 182580169 of [182580162 ,182580169],level 1 ..
+              // level 1 loaded [182580162,182580168] <============= here we should have bufferEnd > end. in that case break to avoid reloading 182580168
+              // level 1 loaded [182580164,182580171]
+              //
+              if (bufferEnd > end) {
+                break;
+              }
+
               if (this.startFragRequested && !levelDetails.PTSKnown) {
                 /* we are switching level on live playlist, but we don't have any PTS info for that quality level ...
                    try to load frag matching with next SN.
@@ -5628,10 +5657,14 @@ var LevelHelper = function () {
       if (PTSFrag) {
         LevelHelper.updateFragPTS(newDetails, PTSFrag.sn, PTSFrag.startPTS, PTSFrag.endPTS);
       } else {
-        // adjust start by sliding offset
-        var sliding = oldfragments[delta].start;
-        for (i = 0; i < newfragments.length; i++) {
-          newfragments[i].start += sliding;
+        // ensure that delta is within oldfragments range
+        // no need to offset start if delta === 0
+        if (delta > 0 && delta < oldfragments.length) {
+          // adjust start by sliding offset
+          var sliding = oldfragments[delta].start;
+          for (i = 0; i < newfragments.length; i++) {
+            newfragments[i].start += sliding;
+          }
         }
       }
       // if we are here, it means we have fragments overlapping between
@@ -5935,6 +5968,7 @@ var Hls = function () {
       this.playlistLoader.destroy();
       this.fragmentLoader.destroy();
       this.levelController.destroy();
+      this.abrController.destroy();
       this.bufferController.destroy();
       this.capLevelController.destroy();
       this.fpsController.destroy();
@@ -6233,9 +6267,9 @@ var FragmentLoader = function (_EventHandler) {
     }
   }, {
     key: 'loadprogress',
-    value: function loadprogress(event, stats) {
+    value: function loadprogress(stats) {
       this.frag.loaded = stats.loaded;
-      this.hls.trigger(_events2.default.FRAG_LOAD_PROGRESS, { frag: this.frag, stats: stats, event: event });
+      this.hls.trigger(_events2.default.FRAG_LOAD_PROGRESS, { frag: this.frag, stats: stats });
     }
   }]);
 
@@ -6605,6 +6639,7 @@ var PlaylistLoader = function (_EventHandler) {
         totalduration -= frag.duration;
       }
       level.totalduration = totalduration;
+      level.averagetargetduration = totalduration / level.fragments.length;
       level.endSN = currentSN - 1;
       return level;
     }
@@ -7432,7 +7467,8 @@ var MP4Remuxer = function () {
           // sample DTS is computed using a constant decoding offset (mp4SampleDuration) between samples
           _sample.dts = firstDTS + i * pes2mp4ScaleFactor * mp4SampleDuration;
         } else {
-          _sample.dts = this._PTSNormalize(_sample.dts, nextAvcDts) - this._initDTS;
+          // ensure sample monotonic DTS
+          _sample.dts = Math.max(this._PTSNormalize(_sample.dts, nextAvcDts) - this._initDTS, firstDTS);
           // ensure dts is a multiple of scale factor to avoid rounding issues
           _sample.dts = Math.round(_sample.dts / pes2mp4ScaleFactor) * pes2mp4ScaleFactor;
         }
@@ -8702,8 +8738,11 @@ var XhrLoader = function () {
         stats.tfirst = performance.now();
       }
       stats.loaded = event.loaded;
+      if (event.lengthComputable) {
+        stats.total = event.total;
+      }
       if (this.onProgress) {
-        this.onProgress(event, stats);
+        this.onProgress(stats);
       }
     }
   }]);
