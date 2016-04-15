@@ -247,6 +247,20 @@ class StreamController extends EventHandler {
                             );
                             bufferEnd = this.seekAfterBuffered;
                         }
+
+                        // if end of buffer greater than live edge, don't load any fragment
+                        // this could happen if live playlist intermittently slides in the past.
+                        // level 1 loaded [182580161,182580167]
+                        // level 1 loaded [182580162,182580169]
+                        // Loading 182580168 of [182580162 ,182580169],level 1 ..
+                        // Loading 182580169 of [182580162 ,182580169],level 1 ..
+                        // level 1 loaded [182580162,182580168] <============= here we should have bufferEnd > end. in that case break to avoid reloading 182580168
+                        // level 1 loaded [182580164,182580171]
+                        //
+                        if (bufferEnd > end) {
+                            break;
+                        }
+
                         if (this.startFragRequested && !levelDetails.PTSKnown) {
                             /* we are switching level on live playlist, but we don't have any PTS info for that quality level ...
                  try to load frag matching with next SN.
