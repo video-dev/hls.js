@@ -172,6 +172,7 @@ class Hls {
         this.playlistLoader.destroy();
         this.fragmentLoader.destroy();
         this.levelController.destroy();
+        this.abrController.destroy();
         this.bufferController.destroy();
         this.capLevelController.destroy();
         this.fpsController.destroy();
