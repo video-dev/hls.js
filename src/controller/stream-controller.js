@@ -1018,11 +1018,11 @@ _checkBuffer() {
           logger.log(`playback not stuck anymore @${currentTime}`);
         }
         // check buffer upfront
-        // if less than 200ms is buffered, and media is expected to play but playhead is not moving,
+        // if less than jumpThreshold second is buffered, and media is expected to play but playhead is not moving,
         // and we have a new buffer range available upfront, let's seek to that one
-        if(bufferInfo.len <= jumpThreshold) {
-          if(playheadMoving || !expectedPlaying) {
-            // playhead moving or media not playing
+        if(expectedPlaying && bufferInfo.len <= jumpThreshold) {
+          if(playheadMoving) {
+            // playhead moving
             jumpThreshold = 0;
             this.seekHoleNudgeDuration = 0;
           } else {
