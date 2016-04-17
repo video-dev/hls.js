@@ -918,8 +918,8 @@ class StreamController extends EventHandler {
                     level = fragCurrent.level,
                     sn = fragCurrent.sn,
                     audioCodec =
-                        currentLevel.audioCodec ||
-                        this.config.defaultAudioCodec;
+                        this.config.defaultAudioCodec ||
+                        currentLevel.audioCodec;
                 if (this.audioCodecSwap) {
                     logger.log('swapping playlist audio codec');
                     if (audioCodec === undefined) {
