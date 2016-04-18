@@ -1725,7 +1725,7 @@ var StreamController = function (_EventHandler) {
               // level 1 loaded [182580162,182580168] <============= here we should have bufferEnd > end. in that case break to avoid reloading 182580168
               // level 1 loaded [182580164,182580171]
               //
-              if (bufferEnd > end) {
+              if (levelDetails.PTSKnown && bufferEnd > end) {
                 break;
               }
 
@@ -7311,8 +7311,8 @@ var MP4Remuxer = function () {
           ptsnorm = this._PTSNormalize(pts, nextAvcDts);
           dtsnorm = this._PTSNormalize(dts, nextAvcDts);
           delta = Math.round((dtsnorm - nextAvcDts) / 90);
-          // if fragment are contiguous, or if there is a huge delta (more than 10s) between expected PTS and sample PTS
-          if (contiguous || Math.abs(delta) > 10000) {
+          // if fragment are contiguous, detect hole/overlapping between fragments
+          if (contiguous) {
             if (delta) {
               if (delta > 1) {
                 _logger.logger.log('AVC:' + delta + ' ms hole between fragments detected,filling it');
@@ -7444,13 +7444,13 @@ var MP4Remuxer = function () {
           ptsnorm = this._PTSNormalize(pts, nextAacPts);
           dtsnorm = this._PTSNormalize(dts, nextAacPts);
           delta = Math.round(1000 * (ptsnorm - nextAacPts) / pesTimeScale);
-          // if fragment are contiguous, or if there is a huge delta (more than 10s) between expected PTS and sample PTS
-          if (contiguous || Math.abs(delta) > 10000) {
+          // if fragment are contiguous, detect hole/overlapping between fragments
+          if (contiguous) {
             // log delta
             if (delta) {
               if (delta > 0) {
                 _logger.logger.log(delta + ' ms hole between AAC samples detected,filling it');
-                // if we have frame overlap, overlapping for more than half a frame duraion
+                // if we have frame overlap, overlapping for more than half a frame duration
               } else if (delta < -12) {
                   // drop overlapping audio frames... browser will deal with it
                   _logger.logger.log(-delta + ' ms overlapping between AAC samples detected, drop frame');
