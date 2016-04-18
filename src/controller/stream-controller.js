@@ -257,7 +257,7 @@ class StreamController extends EventHandler {
                         // level 1 loaded [182580162,182580168] <============= here we should have bufferEnd > end. in that case break to avoid reloading 182580168
                         // level 1 loaded [182580164,182580171]
                         //
-                        if (bufferEnd > end) {
+                        if (levelDetails.PTSKnown && bufferEnd > end) {
                             break;
                         }
 
