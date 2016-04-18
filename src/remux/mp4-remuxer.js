@@ -183,8 +183,8 @@ class MP4Remuxer {
 
         // check timestamp continuity accross consecutive fragments (this is to remove inter-fragment gap/hole)
         let delta = Math.round((firstDTS - nextAvcDts) / 90);
-        // if fragment are contiguous, or if there is a huge delta (more than 10s) between expected PTS and sample PTS
-        if (contiguous || Math.abs(delta) > 10000) {
+        // if fragment are contiguous, detect hole/overlapping between fragments
+        if (contiguous) {
             if (delta) {
                 if (delta > 1) {
                     logger.log(
@@ -434,8 +434,8 @@ class MP4Remuxer {
                 delta = Math.round(
                     1000 * (ptsnorm - nextAacPts) / pesTimeScale
                 );
-                // if fragment are contiguous, or if there is a huge delta (more than 10s) between expected PTS and sample PTS
-                if (contiguous || Math.abs(delta) > 10000) {
+                // if fragment are contiguous, detect hole/overlapping between fragments
+                if (contiguous) {
                     // log delta
                     if (delta) {
                         if (delta > 0) {
