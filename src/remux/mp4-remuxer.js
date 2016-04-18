@@ -206,7 +206,8 @@ class MP4Remuxer {
         // sample DTS is computed using a constant decoding offset (mp4SampleDuration) between samples
         sample.dts = firstDTS + i*pes2mp4ScaleFactor*mp4SampleDuration;
       } else {
-        sample.dts = this._PTSNormalize(sample.dts, nextAvcDts) - this._initDTS;
+        // ensure sample monotonic DTS
+        sample.dts = Math.max(this._PTSNormalize(sample.dts, nextAvcDts) - this._initDTS,firstDTS);
         // ensure dts is a multiple of scale factor to avoid rounding issues
         sample.dts = Math.round(sample.dts/pes2mp4ScaleFactor)*pes2mp4ScaleFactor;
       }
