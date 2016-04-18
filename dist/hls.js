@@ -688,7 +688,7 @@ var BufferController = function (_EventHandler) {
         this.mediaSource = null;
         this.media = null;
         this.pendingTracks = null;
-        this.sourceBuffer = null;
+        this.sourceBuffer = {};
       }
       this.onmso = this.onmse = this.onmsc = null;
       this.hls.trigger(_events2.default.MEDIA_DETACHED);
@@ -748,17 +748,15 @@ var BufferController = function (_EventHandler) {
     key: 'onBufferReset',
     value: function onBufferReset() {
       var sourceBuffer = this.sourceBuffer;
-      if (sourceBuffer) {
-        for (var type in sourceBuffer) {
-          var sb = sourceBuffer[type];
-          try {
-            this.mediaSource.removeSourceBuffer(sb);
-            sb.removeEventListener('updateend', this.onsbue);
-            sb.removeEventListener('error', this.onsbe);
-          } catch (err) {}
-        }
-        this.sourceBuffer = null;
+      for (var type in sourceBuffer) {
+        var sb = sourceBuffer[type];
+        try {
+          this.mediaSource.removeSourceBuffer(sb);
+          sb.removeEventListener('updateend', this.onsbue);
+          sb.removeEventListener('error', this.onsbe);
+        } catch (err) {}
       }
+      this.sourceBuffer = {};
       this.flushRange = [];
       this.appended = 0;
     }
@@ -772,20 +770,25 @@ var BufferController = function (_EventHandler) {
         return;
       }
 
-      if (!this.sourceBuffer) {
-        var sourceBuffer = {},
-            mediaSource = this.mediaSource;
-        for (trackName in tracks) {
+      var sourceBuffer = this.sourceBuffer,
+          mediaSource = this.mediaSource;
+
+      for (trackName in tracks) {
+        if (!sourceBuffer[trackName]) {
           track = tracks[trackName];
           // use levelCodec as first priority
           codec = track.levelCodec || track.codec;
           mimeType = track.container + ';codecs=' + codec;
           _logger.logger.log('creating sourceBuffer with mimeType:' + mimeType);
-          sb = sourceBuffer[trackName] = mediaSource.addSourceBuffer(mimeType);
-          sb.addEventListener('updateend', this.onsbue);
-          sb.addEventListener('error', this.onsbe);
+          try {
+            sb = sourceBuffer[trackName] = mediaSource.addSourceBuffer(mimeType);
+            sb.addEventListener('updateend', this.onsbue);
+            sb.addEventListener('error', this.onsbe);
+          } catch (err) {
+            _logger.logger.error('error while trying to add sourceBuffer:' + err.message);
+            this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_ADD_CODEC_ERROR, fatal: false, err: err, mimeType: mimeType });
+          }
         }
-        this.sourceBuffer = sourceBuffer;
       }
     }
   }, {
@@ -856,10 +859,8 @@ var BufferController = function (_EventHandler) {
         // let's recompute this.appended, which is used to avoid flush looping
         var appended = 0;
         var sourceBuffer = this.sourceBuffer;
-        if (sourceBuffer) {
-          for (var type in sourceBuffer) {
-            appended += sourceBuffer[type].buffered.length;
-          }
+        for (var type in sourceBuffer) {
+          appended += sourceBuffer[type].buffered.length;
         }
         this.appended = appended;
         this.hls.trigger(_events2.default.BUFFER_FLUSHED);
@@ -887,9 +888,16 @@ var BufferController = function (_EventHandler) {
           var segment = segments.shift();
           try {
             //logger.log(`appending ${segment.type} SB, size:${segment.data.length});
-            sourceBuffer[segment.type].appendBuffer(segment.data);
-            this.appendError = 0;
-            this.appended++;
+            if (sourceBuffer[segment.type]) {
+              sourceBuffer[segment.type].appendBuffer(segment.data);
+              this.appendError = 0;
+              this.appended++;
+            } else {
+              // in case we don't have any source buffer matching with this segment type,
+              // it means that Mediasource fails to create sourcebuffer
+              // discard this segment, and trigger update end
+              this.onSBUpdateEnd();
+            }
           } catch (err) {
             // in case any error occured while appending, put back segment in segments table
             _logger.logger.error('error while trying to append buffer:' + err.message);
@@ -5267,6 +5275,8 @@ var ErrorDetails = exports.ErrorDetails = {
   KEY_LOAD_ERROR: 'keyLoadError',
   // Identifier for decrypt key load timeout error - data: { frag : fragment object}
   KEY_LOAD_TIMEOUT: 'keyLoadTimeOut',
+  // Triggered when an exception occurs while adding a sourceBuffer to MediaSource - data : {  err : exception , mimeType : mimeType }
+  BUFFER_ADD_CODEC_ERROR: 'bufferAddCodecError',
   // Identifier for a buffer append error - data: append error description
   BUFFER_APPEND_ERROR: 'bufferAppendError',
   // Identifier for a buffer appending error event - data: appending error description
@@ -7248,16 +7258,13 @@ var MP4Remuxer = function () {
         this.generateIS(audioTrack, videoTrack, timeOffset);
       }
       if (this.ISGenerated) {
-        var videoData = void 0;
         //logger.log('nb AVC samples:' + videoTrack.samples.length);
         if (videoTrack.samples.length) {
-          videoData = this.remuxVideo(videoTrack, timeOffset, contiguous);
+          this.remuxVideo(videoTrack, timeOffset, contiguous);
         }
         //logger.log('nb AAC samples:' + audioTrack.samples.length);
         if (audioTrack.samples.length) {
           this.remuxAudio(audioTrack, timeOffset, contiguous);
-        } else if (videoData !== undefined) {
-          this.remuxEmptyAudio(audioTrack, timeOffset, contiguous, videoData);
         }
       }
       //logger.log('nb ID3 samples:' + audioTrack.samples.length);
@@ -7382,8 +7389,8 @@ var MP4Remuxer = function () {
 
       // check timestamp continuity accross consecutive fragments (this is to remove inter-fragment gap/hole)
       var delta = Math.round((firstDTS - nextAvcDts) / 90);
-      // if fragment are contiguous, or delta less than 600ms, ensure there is no overlap/hole between fragments
-      if (contiguous || Math.abs(delta) < 600) {
+      // if fragment are contiguous, or if there is a huge delta (more than 10s) between expected PTS and sample PTS
+      if (contiguous || Math.abs(delta) > 10000) {
         if (delta) {
           if (delta > 1) {
             _logger.logger.log('AVC:' + delta + ' ms hole between fragments detected,filling it');
@@ -7391,9 +7398,11 @@ var MP4Remuxer = function () {
             _logger.logger.log('AVC:' + -delta + ' ms overlapping between fragments detected');
           }
           // remove hole/gap : set DTS to next expected DTS
-          firstDTS = inputSamples[0].dts = nextAvcDts;
+          firstDTS = nextAvcDts;
+          inputSamples[0].dts = firstDTS + this._initDTS;
           // offset PTS as well, ensure that PTS is smaller or equal than new DTS
-          firstPTS = inputSamples[0].pts = Math.max(firstPTS - delta, nextAvcDts);
+          firstPTS = Math.max(firstPTS - delta, nextAvcDts);
+          inputSamples[0].pts = firstPTS + this._initDTS;
           _logger.logger.log('Video/PTS/DTS adjusted: ' + firstPTS + '/' + firstDTS + ',delta:' + delta);
         }
       }
@@ -7402,7 +7411,8 @@ var MP4Remuxer = function () {
       // compute lastPTS/lastDTS
       sample = inputSamples[inputSamples.length - 1];
       lastDTS = Math.max(this._PTSNormalize(sample.dts, nextAvcDts) - this._initDTS, 0);
-      lastPTS = Math.max(sample.pts, lastDTS);
+      lastPTS = Math.max(this._PTSNormalize(sample.pts, nextAvcDts) - this._initDTS, 0);
+      lastPTS = Math.max(lastPTS, lastDTS);
 
       var vendor = navigator.vendor,
           userAgent = navigator.userAgent,
@@ -7498,7 +7508,7 @@ var MP4Remuxer = function () {
       track.samples = outputSamples;
       moof = _mp4Generator2.default.moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
       track.samples = [];
-      var data = {
+      this.observer.trigger(_events2.default.FRAG_PARSING_DATA, {
         data1: moof,
         data2: mdat,
         startPTS: firstPTS / pesTimeScale,
@@ -7507,9 +7517,7 @@ var MP4Remuxer = function () {
         endDTS: this.nextAvcDts / pesTimeScale,
         type: 'video',
         nb: outputSamples.length
-      };
-      this.observer.trigger(_events2.default.FRAG_PARSING_DATA, data);
-      return data;
+      });
     }
   }, {
     key: 'remuxAudio',
@@ -7571,8 +7579,8 @@ var MP4Remuxer = function () {
           ptsnorm = this._PTSNormalize(pts, nextAacPts);
           dtsnorm = this._PTSNormalize(dts, nextAacPts);
           delta = Math.round(1000 * (ptsnorm - nextAacPts) / pesTimeScale);
-          // if fragment are contiguous, or delta less than 600ms, ensure there is no overlap/hole between fragments
-          if (contiguous || Math.abs(delta) < 600) {
+          // if fragment are contiguous, or if there is a huge delta (more than 10s) between expected PTS and sample PTS
+          if (contiguous || Math.abs(delta) > 10000) {
             // log delta
             if (delta) {
               if (delta > 0) {
@@ -7584,7 +7592,7 @@ var MP4Remuxer = function () {
                   track.len -= unit.byteLength;
                   continue;
                 }
-              // set DTS to next DTS
+              // set PTS/DTS to expected PTS/DTS
               ptsnorm = dtsnorm = nextAacPts;
             }
           }
@@ -7647,45 +7655,6 @@ var MP4Remuxer = function () {
           nb: nbSamples
         });
       }
-    }
-  }, {
-    key: 'remuxEmptyAudio',
-    value: function remuxEmptyAudio(track, timeOffset, contiguous, videoData) {
-      var pesTimeScale = this.PES_TIMESCALE,
-          mp4timeScale = track.timescale,
-          pes2mp4ScaleFactor = pesTimeScale / mp4timeScale,
-
-
-      // sync with video's timestamp
-      startDTS = videoData.startDTS * pesTimeScale,
-          endDTS = videoData.endDTS * pesTimeScale,
-
-      // one sample's duration value
-      sampleDuration = 1024,
-          frameDuration = pes2mp4ScaleFactor * sampleDuration,
-
-      // samples count of this segment's duration
-      nbSamples = Math.ceil((endDTS - startDTS) / frameDuration);
-
-      // silent empty sample unit
-      if (this.emptyAacSampleUnit === undefined) {
-        this.emptyAacSampleUnit = new Uint8Array([1, 64, 32, 6, 249].concat(new Array(158), 15));
-      }
-
-      var emptyUnit = this.emptyAacSampleUnit,
-          frameLength = emptyUnit.length,
-          i = void 0,
-          stamp = void 0,
-          samples = [];
-
-      for (i = 0; i < nbSamples; i++) {
-        stamp = startDTS + i * frameDuration;
-        samples.push({ unit: emptyUnit, pts: stamp, dts: stamp });
-        track.len += frameLength;
-      }
-      track.samples = samples;
-
-      this.remuxAudio(track, timeOffset, contiguous);
     }
   }, {
     key: 'remuxID3',

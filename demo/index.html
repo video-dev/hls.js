@@ -93,7 +93,7 @@ header {
 
     <video id="video" controls autoplay class="videoCentered"></video><br>
     <canvas id="buffered_c" height="15" class="videoCentered" onclick="buffered_seek(event);"></canvas><br><br>
-    <pre id="HlsStatus" class="center"></pre>
+    <pre id="HlsStatus" class="center" style="white-space: pre-wrap;"></pre>
 
     <div class="center" id="toggleButtons">
       <button type="button" class="btn btn-sm" onclick="$('#PlaybackControl').toggle();">toggle playback controls</button>
@@ -226,10 +226,9 @@ $(document).ready(function() {
       levelCapping = JSON.parse(getURLParam('levelCapping',-1)),
       defaultAudioCodec = getURLParam('defaultAudioCodec',undefined);
   var video = $('#video')[0];
-  video.volume = 0.5;
+  video.volume = 0.05;
 
-//  loadStream(decodeURIComponent(getURLParam('src','http://www.streambox.fr/playlists/x36xhzz/x36xhzz.m3u8')));
-  loadStream(decodeURIComponent(getURLParam('src','http://bdyne.net/hls/dbfcAFZes8F7wrNZQtfMoHczmQ_rmcvideo_480P_854_1024_128_adoptive.m3u8')));
+  loadStream(decodeURIComponent(getURLParam('src','http://www.streambox.fr/playlists/x36xhzz/x36xhzz.m3u8')));
 
   function loadStream(url) {
     hideCanvas();
@@ -477,6 +476,9 @@ $(document).ready(function() {
             break;
           case Hls.ErrorDetails.BUFFER_APPEND_ERROR:
             $("#HlsStatus").text("Buffer Append Error");
+            break;
+          case Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR:
+            $("#HlsStatus").text("Buffer Add Codec Error for " + data.mimeType + ":" + data.err.message);
             break;
           case Hls.ErrorDetails.BUFFER_APPENDING_ERROR:
             $("#HlsStatus").text("Buffer Appending Error");
