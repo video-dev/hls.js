@@ -295,7 +295,8 @@ class MP4Remuxer {
                     mp4SampleDuration = inputSamples[i + 1].dts - avcSample.dts;
                 } else {
                     // last sample duration is same than previous one
-                    mp4SampleDuration = avcSample.dts - inputSamples[i - 1].dts;
+                    mp4SampleDuration =
+                        avcSample.dts - inputSamples[i > 0 ? i - 1 : i].dts;
                 }
                 mp4SampleDuration /= pes2mp4ScaleFactor;
                 compositionTimeOffset = Math.round(
