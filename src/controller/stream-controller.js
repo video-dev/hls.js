@@ -1311,12 +1311,17 @@ class StreamController extends EventHandler {
                                     this.seekHoleNudgeDuration
                                 }`
                             );
+                            let hole =
+                                nextBufferStart +
+                                this.seekHoleNudgeDuration -
+                                media.currentTime;
                             media.currentTime =
                                 nextBufferStart + this.seekHoleNudgeDuration;
                             this.hls.trigger(Event.ERROR, {
                                 type: ErrorTypes.MEDIA_ERROR,
                                 details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
-                                fatal: false
+                                fatal: false,
+                                hole: hole
                             });
                         }
                     }
