@@ -907,10 +907,21 @@ function timeRangesToString(r) {
     if(v.videoWidth) {
       $("#currentResolution").html("video resolution:" + v.videoWidth + 'x' + v.videoHeight);
     }
-    $("#currentLevelControl").html(html1);
-    $("#loadLevelControl").html(html2);
-    $("#levelCappingControl").html(html3);
-    $("#nextLevelControl").html(html4);
+    if($("#currentLevelControl").html() != html1) {
+      $("#currentLevelControl").html(html1);
+    }
+
+    if($("#loadLevelControl").html() != html2) {
+      $("#loadLevelControl").html(html2);
+    }
+
+    if($("#levelCappingControl").html() != html3) {
+      $("#levelCappingControl").html(html3);
+    }
+
+    if($("#nextLevelControl").html() != html4) {
+      $("#nextLevelControl").html(html4);
+    }
   }
 
   function level2label(index) {
