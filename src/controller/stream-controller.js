@@ -486,13 +486,11 @@ class StreamController extends EventHandler {
       fragCurrent.loader.abort();
     }
     this.fragCurrent = null;
-    // flush everything
-    this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0, endOffset: Number.POSITIVE_INFINITY});
-    this.state = State.PAUSED;
     // increase fragment load Index to avoid frag loop loading error after buffer flush
     this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
-    // speed up switching, trigger timer function
-    this.tick();
+    this.state = State.PAUSED;
+    // flush everything
+    this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0, endOffset: Number.POSITIVE_INFINITY});
   }
 
   /*
@@ -515,12 +513,14 @@ class StreamController extends EventHandler {
       we should take into account new segment fetch time
     */
     var fetchdelay, currentRange, nextRange;
+    // increase fragment load Index to avoid frag loop loading error after buffer flush
+    this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
     currentRange = this.getBufferRange(this.media.currentTime);
     if (currentRange && currentRange.start > 1) {
     // flush buffer preceding current fragment (flush until current fragment start offset)
     // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
-      this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0, endOffset: currentRange.start - 1});
       this.state = State.PAUSED;
+      this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0, endOffset: currentRange.start - 1});
     }
     if (!this.media.paused) {
       // add a safety delay of 1s
@@ -540,17 +540,15 @@ class StreamController extends EventHandler {
       // we can flush buffer range following this one without stalling playback
       nextRange = this.followingBufferRange(nextRange);
       if (nextRange) {
-        // flush position is the start position of this new buffer
-        this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: nextRange.start, endOffset: Number.POSITIVE_INFINITY});
-        this.state = State.PAUSED;
         // if we are here, we can also cancel any loading/demuxing in progress, as they are useless
         var fragCurrent = this.fragCurrent;
         if (fragCurrent && fragCurrent.loader) {
           fragCurrent.loader.abort();
         }
         this.fragCurrent = null;
-        // increase fragment load Index to avoid frag loop loading error after buffer flush
-        this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+        // flush position is the start position of this new buffer
+        this.state = State.PAUSED;
+        this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: nextRange.start, endOffset: Number.POSITIVE_INFINITY});
       }
     }
   }
