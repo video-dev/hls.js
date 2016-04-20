@@ -1271,6 +1271,8 @@ class StreamController extends EventHandler {
                 // check buffer upfront
                 // if less than jumpThreshold second is buffered, and media is expected to play but playhead is not moving,
                 // and we have a new buffer range available upfront, let's seek to that one
+                let configSeekHoleNudgeDuration = this.config
+                    .seekHoleNudgeDuration;
                 if (expectedPlaying && bufferInfo.len <= jumpThreshold) {
                     if (playheadMoving) {
                         // playhead moving
@@ -1288,7 +1290,7 @@ class StreamController extends EventHandler {
                             });
                             this.stalled = true;
                         } else {
-                            this.seekHoleNudgeDuration += this.config.seekHoleNudgeDuration;
+                            this.seekHoleNudgeDuration += configSeekHoleNudgeDuration;
                         }
                     }
                     // if we are below threshold, try to jump if next buffer range is close
@@ -1325,6 +1327,8 @@ class StreamController extends EventHandler {
                             });
                         }
                     }
+                    // in any case reset stalledInBuffered
+                    this.stalledInBuffered = 0;
                 } else {
                     if (
                         targetSeekPosition &&
@@ -1336,6 +1340,36 @@ class StreamController extends EventHandler {
                             } to ${targetSeekPosition}`
                         );
                         media.currentTime = targetSeekPosition;
+                    } else if (expectedPlaying && !playheadMoving) {
+                        // if we are in this condition, it means that currentTime is in a buffered area, but playhead is not moving
+                        // if that happens, we wait for a couple of cycle (config.stalledInBufferedNudgeThreshold), then we nudge
+                        // media.currentTime to try to recover that situation.
+                        if (this.stalledInBuffered !== undefined) {
+                            this.stalledInBuffered++;
+                        } else {
+                            this.stalledInBuffered = 1;
+                        }
+                        if (
+                            this.stalledInBuffered >=
+                            this.config.stalledInBufferedNudgeThreshold
+                        ) {
+                            logger.log(
+                                `playback stuck @ ${
+                                    media.currentTime
+                                }, in buffered area, nudge currentTime by ${configSeekHoleNudgeDuration}`
+                            );
+                            this.hls.trigger(Event.ERROR, {
+                                type: ErrorTypes.MEDIA_ERROR,
+                                details:
+                                    ErrorDetails.BUFFER_SEEK_STUCK_IN_BUFFERED,
+                                fatal: false
+                            });
+                            media.currentTime += configSeekHoleNudgeDuration;
+                            this.stalledInBuffered = 0;
+                        }
+                    } else {
+                        // currentTime is buffered, playhead is moving or playback not expected... everything is fine
+                        this.stalledInBuffered = 0;
                     }
                 }
             }
