@@ -875,7 +875,9 @@ class StreamController extends EventHandler {
           hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer});
         }
       });
-
+      if (this.startPosition === this.nextLoadPosition) {
+        this.startPosition = data.startPTS;
+      }
       this.nextLoadPosition = data.endPTS;
       this.bufferRange.push({type: data.type, start: data.startPTS, end: data.endPTS, frag: frag});
 
@@ -1052,10 +1054,6 @@ _checkBuffer() {
             }
           }
         } else {
-          if (!media.paused && media.currentTime === 0 && bufferInfo.nextStart > 0) {
-            logger.log(`playback stuck on 0 try jump to ${bufferInfo.nextStart}`);
-            targetSeekPosition = bufferInfo.nextStart;
-          }
           if (targetSeekPosition && media.currentTime !== targetSeekPosition) {
             logger.log(`adjust currentTime from ${media.currentTime} to ${targetSeekPosition}`);
             media.currentTime = targetSeekPosition;
