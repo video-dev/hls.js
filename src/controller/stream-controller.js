@@ -47,7 +47,7 @@ class StreamController extends EventHandler {
 
     this.config = hls.config;
     this.audioCodecSwap = false;
-    this.ticks = 0;
+    this.ticks = this.stalledInBuffered = 0;
     this.ontick = this.tick.bind(this);
   }
 
@@ -625,11 +625,13 @@ class StreamController extends EventHandler {
     if (this.fragLoadIdx !== undefined) {
       this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
     }
+    this.seekingStalled = this.seekingStalled ? this.seekingStalled : 1;
     // tick to speed up processing
     this.tick();
   }
 
   onMediaSeeked() {
+    this.seekingStalled = 0;
     // tick to speed up FRAGMENT_PLAYING triggering
     this.tick();
   }
@@ -637,9 +639,8 @@ class StreamController extends EventHandler {
   onMediaEnded() {
     logger.log('media ended');
     // reset startPosition and lastCurrentTime to restart playback @ stream beginning
-    this.startPosition = this.lastCurrentTime = 0;
+    this.startPosition = this.seekingStalled = this.lastCurrentTime = 0;
   }
-
 
   onManifestLoading() {
     // reset buffer on manifest loading
@@ -873,7 +874,14 @@ class StreamController extends EventHandler {
           hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer});
         }
       });
-
+      if (this.startPosition === frag.start) {
+        if (!isNaN(this.prevLoadPosition)) {
+          this.startPosition = this.prevLoadPosition > data.startPTS ? this.prevLoadPosition : data.startPTS;
+          this.prevLoadPosition = undefined;
+        } else {
+          this.prevLoadPosition = data.startPTS;
+        }
+      }
       this.nextLoadPosition = data.endPTS;
       this.bufferRange.push({type: data.type, start: data.startPTS, end: data.endPTS, frag: frag});
 
@@ -994,8 +1002,10 @@ _checkBuffer() {
           var loadedmetadata = this.loadedmetadata;
 
           // adjust currentTime to start position on loaded metadata
-          if(!loadedmetadata && media.buffered.length) {
-            this.loadedmetadata = true;
+          if (media.buffered.length) {
+            if(!loadedmetadata) {
+              this.loadedmetadata = true;
+            }
             // only adjust currentTime if not equal to 0
             if (!currentTime && currentTime !== this.startPosition) {
               targetSeekPosition = this.startPosition;
@@ -1054,27 +1064,31 @@ _checkBuffer() {
           // in any case reset stalledInBuffered
           this.stalledInBuffered = 0;
         } else {
-          if (targetSeekPosition && media.currentTime !== targetSeekPosition) {
-            logger.log(`adjust currentTime from ${media.currentTime} to ${targetSeekPosition}`);
-            media.currentTime = targetSeekPosition;
+          if (this.seekingStalled && !playheadMoving && currentTime >= bufferInfo.start) {
+            if (((this.seekingStalled / this.config.stalledInBufferedNudgeThreshold) % 1) === 0) {
+              let seekingMultiply = Math.floor(this.seekingStalled / this.config.stalledInBufferedNudgeThreshold);
+              if (seekingMultiply > 3) {
+                seekingMultiply = 3;
+              }
+              targetSeekPosition = currentTime + (jumpThreshold * seekingMultiply);
+            }
+            this.seekingStalled++;
           } else if (expectedPlaying && !playheadMoving) {
             // if we are in this condition, it means that currentTime is in a buffered area, but playhead is not moving
             // if that happens, we wait for a couple of cycle (config.stalledInBufferedNudgeThreshold), then we nudge
             // media.currentTime to try to recover that situation.
-            if (this.stalledInBuffered !== undefined) {
-              this.stalledInBuffered++;
-            } else {
-              this.stalledInBuffered = 1;
-            }
+            this.stalledInBuffered++;
             if (this.stalledInBuffered >= this.config.stalledInBufferedNudgeThreshold) {
-              logger.log(`playback stuck @ ${media.currentTime}, in buffered area, nudge currentTime by ${configSeekHoleNudgeDuration}`);
-              this.hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_SEEK_STUCK_IN_BUFFERED, fatal: false});
-              media.currentTime+=configSeekHoleNudgeDuration;
               this.stalledInBuffered = 0;
+              targetSeekPosition = currentTime + jumpThreshold;
             }
           } else {
             // currentTime is buffered, playhead is moving or playback not expected... everything is fine
             this.stalledInBuffered = 0;
+          }
+          if (targetSeekPosition && media.currentTime !== targetSeekPosition) {
+            logger.log(`adjust currentTime from ${media.currentTime} to ${targetSeekPosition}`);
+            media.currentTime = targetSeekPosition;
           }
         }
       }
