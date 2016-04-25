@@ -1064,7 +1064,7 @@ _checkBuffer() {
           // in any case reset stalledInBuffered
           this.stalledInBuffered = 0;
         } else {
-          if (this.seekingStalled && !playheadMoving && currentTime >= bufferInfo.start) {
+          if (this.seekingStalled && !playheadMoving && currentTime >= bufferInfo.start && currentTime < bufferInfo.end) {
             if (((this.seekingStalled / this.config.stalledInBufferedNudgeThreshold) % 1) === 0) {
               let seekingMultiply = Math.floor(this.seekingStalled / this.config.stalledInBufferedNudgeThreshold);
               if (seekingMultiply > 3) {
