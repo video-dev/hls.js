@@ -30,6 +30,7 @@ class FragmentLoader extends EventHandler {
                 : new config.loader(config);
         this.loader.load(
             frag.url,
+            null,
             'arraybuffer',
             this.loadsuccess.bind(this),
             this.loaderror.bind(this),

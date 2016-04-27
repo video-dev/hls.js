@@ -30,6 +30,7 @@ class XhrLoader {
 
     load(
         url,
+        context,
         responseType,
         onSuccess,
         onError,
@@ -41,6 +42,10 @@ class XhrLoader {
         frag = null
     ) {
         this.url = url;
+        this.context = context;
+        if (context) {
+            context.url = url;
+        }
         if (
             frag &&
             !isNaN(frag.byteRangeStartOffset) &&
@@ -93,14 +98,15 @@ class XhrLoader {
     loadend(event) {
         var xhr = event.currentTarget,
             status = xhr.status,
-            stats = this.stats;
+            stats = this.stats,
+            context = this.context;
         // don't proceed if xhr has been aborted
         if (!stats.aborted) {
             // http status between 200 to 299 are all successful
             if (status >= 200 && status < 300) {
                 window.clearTimeout(this.timeoutHandle);
                 stats.tload = performance.now();
-                this.onSuccess(event, stats);
+                this.onSuccess(event, stats, context);
             } else {
                 // error ...
                 if (stats.retry < this.maxRetry) {
@@ -120,7 +126,7 @@ class XhrLoader {
                 } else {
                     window.clearTimeout(this.timeoutHandle);
                     logger.error(`${status} while loading ${this.url}`);
-                    this.onError(event);
+                    this.onError(event, context);
                 }
             }
         }
@@ -128,7 +134,7 @@ class XhrLoader {
 
     loadtimeout(event) {
         logger.warn(`timeout while loading ${this.url}`);
-        this.onTimeout(event, this.stats);
+        this.onTimeout(event, this.stats, this.context);
     }
 
     loadprogress(event) {
@@ -141,7 +147,7 @@ class XhrLoader {
             stats.total = event.total;
         }
         if (this.onProgress) {
-            this.onProgress(stats);
+            this.onProgress(event, stats, this.context);
         }
     }
 }

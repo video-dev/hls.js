@@ -42,7 +42,7 @@ header {
 }
 
 #customButtons input { width: 25%; display : inline-block; text-align: center; font-size: 8pt;}
-#toggleButtons button { width: 24%; display : inline-block; text-align: center; font-size: 8pt; background-color: #A0A0A0 }
+#toggleButtons button { width: 19%; display : inline-block; text-align: center; font-size: 8pt; background-color: #A0A0A0 }
 
 </style>
   <title>hls.js demo</title>
@@ -98,6 +98,7 @@ header {
     <div class="center" id="toggleButtons">
       <button type="button" class="btn btn-sm" onclick="$('#PlaybackControl').toggle();">toggle playback controls</button>
       <button type="button" class="btn btn-sm" onclick="$('#QualityLevelControl').toggle();">toggle Quality Level controls</button>
+      <button type="button" class="btn btn-sm" onclick="$('#AudioTrackControl').toggle();">toggle Audio Track controls</button>
       <button type="button" class="btn btn-sm" onclick="$('#MetricsDisplay').toggle();toggleMetricsDisplay();">toggle Metrics Display</button>
       <button type="button" class="btn btn-sm" onclick="$('#StatsDisplay').toggle();">toggle Stats Display</button>
     </div>
@@ -139,6 +140,17 @@ header {
           <td> <p>cap level</p></td>
           <td> </td>
           <td> <div id="levelCappingControl" style="display: inline;"></div> </td>
+        </tr>
+      </table>
+    </div>
+
+    <div id='AudioTrackControl'>
+    <h4> Audio Track Control </h4>
+      <table>
+        <tr>
+          <td>current audio track</td>
+          <td width=10px></td>
+          <td> <div id="audioTrackControl" style="display: inline;"></div> </td>
         </tr>
       </table>
     </div>
@@ -201,6 +213,7 @@ $(document).ready(function() {
   $('#videoSize').change(function()          {  $('#video').width($('#videoSize').val()); $('#buffered_c').width($('#videoSize').val());  });
    $("#PlaybackControl").hide();
    $("#QualityLevelControl").hide();
+   $("#AudioTrackControl").hide();
    $("#MetricsDisplay").hide();
    $("#StatsDisplay").hide();
    $('#metricsButtonWindow').toggle(windowSliding);
@@ -297,6 +310,10 @@ $(document).ready(function() {
          $("#HlsStatus").text("manifest successfully loaded," + hls.levels.length + " levels found");
          stats = {levelNb: data.levels.length};
          updateLevelInfo();
+       });
+       hls.on(Hls.Events.AUDIO_TRACKS_UPDATED,function(event,data) {
+          $("#HlsStatus").text(data.audioTracks.length + " audio tracks found");
+          updateAudioTrackInfo();
        });
        hls.on(Hls.Events.LEVEL_LOADED,function(event,data) {
           events.isLive = data.details.live;
@@ -926,6 +943,26 @@ function timeRangesToString(r) {
       $("#nextLevelControl").html(html4);
     }
   }
+
+function updateAudioTrackInfo() {
+    var button_template = '<button type="button" class="btn btn-sm ';
+    var button_enabled  = 'btn-primary" ';
+    var button_disabled = 'btn-success" ';
+    var html1 = '';
+    var audioTrackId = hls.audioTrack, len = hls.audioTracks.length;
+
+    for (var i=0; i < len; i++) {
+      html1 += button_template;
+      if(audioTrackId === i) {
+        html1 += button_enabled;
+      } else {
+        html1 += button_disabled;
+      }
+      html1 += 'onclick="hls.audioTrack=' + i + '">' + hls.audioTracks[i].name + '</button>';
+    }
+    $("#audioTrackControl").html(html1);
+  }
+
 
   function level2label(index) {
     if(hls && hls.levels.length-1 >= index) {
