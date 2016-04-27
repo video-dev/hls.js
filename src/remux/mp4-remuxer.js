@@ -410,7 +410,7 @@ class MP4Remuxer {
                     expectedSampleDuration / 10
                 ) {
                     // more than 10% diff between sample duration and expectedSampleDuration .... lets log that
-                    logger.trace(
+                    logger.log(
                         `invalid AAC sample duration at PTS ${Math.round(
                             pts / 90
                         )},should be 1024,found :${Math.round(
