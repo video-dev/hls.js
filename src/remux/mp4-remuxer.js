@@ -330,9 +330,6 @@ class MP4Remuxer {
           // more than 10% diff between sample duration and expectedSampleDuration .... lets log that
           logger.trace(`invalid AAC sample duration at PTS ${Math.round(pts/90)},should be 1024,found :${Math.round(mp4Sample.duration*track.audiosamplerate/track.timescale)}`);
         }
-        // always adjust sample duration to avoid av sync issue
-        mp4Sample.duration = expectedSampleDuration;
-        dtsnorm = expectedSampleDuration * pes2mp4ScaleFactor + lastDTS;
       } else {
         let nextAacPts, delta;
         if (contiguous) {
