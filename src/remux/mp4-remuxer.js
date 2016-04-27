@@ -420,9 +420,6 @@ class MP4Remuxer {
                         )}`
                     );
                 }
-                // always adjust sample duration to avoid av sync issue
-                mp4Sample.duration = expectedSampleDuration;
-                dtsnorm = expectedSampleDuration * pes2mp4ScaleFactor + lastDTS;
             } else {
                 let nextAacPts, delta;
                 if (contiguous) {
