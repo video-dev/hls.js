@@ -657,7 +657,7 @@
               missing = Math.round(delta / 1920.0) - 1;
           if (missing > 0) {
             var j;
-            logger.log(`Injecting ${missing} packets of missing audio.`)
+            logger.log(`Injecting ${missing} packets of missing audio.`);
             for (j = 0; j < missing; j++) {
               var newStamp = lastAacSample.pts + (j + 1) * 1920,
                   newAacSample = {unit: this.ZERO_AUDIO_FRAME.slice(0), pts: newStamp, dts: newStamp};
