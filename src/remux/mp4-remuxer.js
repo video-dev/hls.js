@@ -11,8 +11,9 @@ import {ErrorTypes, ErrorDetails} from '../errors';
 import '../utils/polyfill';
 
 class MP4Remuxer {
-  constructor(observer) {
+  constructor(observer, config) {
     this.observer = observer;
+    this.config = config;
     this.ISGenerated = false;
     this.PES2MP4SCALEFACTOR = 4;
     this.PES_TIMESCALE = 90000;
@@ -39,17 +40,19 @@ class MP4Remuxer {
     if (!this.ISGenerated) {
       this.generateIS(audioTrack,videoTrack,timeOffset);
     }
+
     if (this.ISGenerated) {
-      let videoData;
-      //logger.log('nb AVC samples:' + videoTrack.samples.length);
-      if (videoTrack.samples.length) {
-        videoData = this.remuxVideo(videoTrack,timeOffset,contiguous);
-      }
+      // Purposefully remuxing audio before video, so that remuxVideo can use nextAacPts, which is
+      // calculated in remuxAudio.
       //logger.log('nb AAC samples:' + audioTrack.samples.length);
       if (audioTrack.samples.length) {
         this.remuxAudio(audioTrack, timeOffset, contiguous);
       } else if ((videoData !== undefined) && audioTrack.codec) {
         this.remuxEmptyAudio(audioTrack, timeOffset, contiguous, videoData);
+      }
+      //logger.log('nb AVC samples:' + videoTrack.samples.length);
+      if (videoTrack.samples.length) {
+        this.remuxVideo(videoTrack,timeOffset,contiguous);
       }
     }
     //logger.log('nb ID3 samples:' + audioTrack.samples.length);
@@ -246,8 +249,29 @@ class MP4Remuxer {
         if (i < inputSamples.length - 1) {
           mp4SampleDuration = inputSamples[i+1].dts - avcSample.dts;
         } else {
-          // last sample duration is same than previous one
-          mp4SampleDuration = avcSample.dts - inputSamples[i > 0 ? i-1 : i].dts;
+          // In some cases, a segment's audio track duration may exceed the video track duration.
+          // Since we've already remuxed audio, and we know when the next AAC PTS should be (which
+          // is an estimate of this segment's total duration), we look to see if the delta to the
+          // next segment is longer than the minimum of maxBufferHole and maxSeekHole. If so,
+          // playback would potentially get stuck, so we artificially inflate the duration of the
+          // last frame to minimize any potential gap between segments.
+          var config = this.config,
+              maxBufferHole = config.maxBufferHole,
+              maxSeekHole = config.maxSeekHole,
+              gapTolerance = Math.floor(Math.min(maxBufferHole, maxSeekHole) * pesTimeScale),
+              deltaToNextAacPts = this.nextAacPts - avcSample.pts,
+              lastFrameDuration = avcSample.dts - inputSamples[i > 0 ? i-1 : i].dts;
+          if (deltaToNextAacPts > gapTolerance) {
+            // We subtract lastFrameDuration from deltaToNextAacPts to try to prevent any video
+            // frame overlap. maxBufferHole/maxSeekHole should be >> lastFrameDuration anyway.
+            mp4SampleDuration = deltaToNextAacPts - lastFrameDuration;
+            if (mp4SampleDuration < 0) {
+              mp4SampleDuration = lastFrameDuration;
+            }
+            logger.log(`It is approximately ${deltaToNextAacPts/90} ms to the next segment; using duration ${mp4SampleDuration/90} ms for the last video frame.`);
+          } else {
+            mp4SampleDuration = lastFrameDuration;
+          }
         }
         mp4SampleDuration /= pes2mp4ScaleFactor;
         compositionTimeOffset = Math.round((avcSample.pts - avcSample.dts) / pes2mp4ScaleFactor);
