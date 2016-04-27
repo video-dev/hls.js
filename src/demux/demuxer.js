@@ -22,7 +22,8 @@ class Demuxer {
                 this.w.addEventListener('message', this.onwmsg);
                 this.w.postMessage({
                     cmd: 'init',
-                    typeSupported: typeSupported
+                    typeSupported: typeSupported,
+                    config: JSON.stringify(hls.config)
                 });
             } catch (err) {
                 logger.error(

@@ -6,10 +6,11 @@ import { logger } from '../utils/logger';
 import ID3 from '../demux/id3';
 
 class AACDemuxer {
-    constructor(observer, remuxerClass) {
+    constructor(observer, remuxerClass, config) {
         this.observer = observer;
         this.remuxerClass = remuxerClass;
-        this.remuxer = new this.remuxerClass(observer);
+        this.config = config;
+        this.remuxer = new this.remuxerClass(observer, config);
         this._aacTrack = {
             container: 'audio/adts',
             type: 'audio',

@@ -22,7 +22,11 @@ var DemuxerWorker = function(self) {
         //console.log('demuxer cmd:' + data.cmd);
         switch (data.cmd) {
             case 'init':
-                self.demuxer = new DemuxerInline(observer, data.typeSupported);
+                self.demuxer = new DemuxerInline(
+                    observer,
+                    data.typeSupported,
+                    JSON.parse(data.config)
+                );
                 break;
             case 'demux':
                 self.demuxer.push(
