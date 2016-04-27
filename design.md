@@ -21,11 +21,8 @@ design idea is pretty simple :
         - retrieve "not buffered" media position greater then current playback position. this is performed by comparing video.buffered and video.currentTime.
           - if there are holes in video.buffered, smaller than config.maxBufferHole, they will be ignored.
         - retrieve URL of fragment matching with this media position, and appropriate quality level
+        - trigger KEY_LOADING event (only if fragment is encrypted)
         - trigger FRAG_LOADING event
-        - **monitor fragment loading speed** (by monitoring data received from FRAG_LOAD_PROGRESS event)
-         - "expected time of fragment load completion" is computed using "fragment loading instant bandwidth".
-         - this time is compared to the "expected time of buffer starvation".
-         - if we have less than 2 fragments buffered and if "expected time of fragment load completion" is bigger than "expected time of buffer starvation" and also bigger than duration needed to load fragment at next quality level (determined by auto quality switch algorithm), current fragment loading is aborted, stream-controller will **trigger an emergency switch down**.
         - **trigger fragment demuxing** on FRAG_LOADED
         - trigger BUFFER_RESET on MANIFEST_PARSED or startLoad()        
         - trigger BUFFER_CODECS on FRAG_PARSING_INIT_SEGMENT
@@ -51,8 +48,12 @@ design idea is pretty simple :
     - a timer is armed to periodically refresh active live playlist.
 
   - [src/controller/abr-controller.js][]
-    - in charge of determining auto quality level.
-    - auto quality switch algorithm is pretty naive and simple ATM and similar to the one that could be found in google [StageFright](https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp)
+    - in charge of determining auto quality level and monitoring fragment loading speed
+      - **fragment loading speed is monitored every 100ms, based on inputs received from FRAG_LOAD_PROGRESS event
+       - "expected time of fragment load completion" is computed using "fragment loading instant bandwidth".
+       - this time is compared to the "expected time of buffer starvation".
+       - if we have less than 2 fragments buffered and if "expected time of fragment load completion" is bigger than "expected time of buffer starvation" and also bigger than duration needed to load fragment at next quality level (determined by auto quality switch algorithm), current fragment loading is aborted, stream-controller will **trigger an emergency switch down**.
+    - auto quality switch algorithm is pretty naive and simple ATM and similar to the one that could be found in google [StageFright](https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp)   
   - [src/controller/cap-level-controller.js][]
     - in charge of determining best quality level to actual size (dimensions: width and height) of the player 
   - [src/controller/timeline-controller.js][]
