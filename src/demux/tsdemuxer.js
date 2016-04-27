@@ -15,6 +15,7 @@
 // import Hex from '../utils/hex';
  import {logger} from '../utils/logger';
  import {ErrorTypes, ErrorDetails} from '../errors';
+ import '../utils/polyfill';
 
  class TSDemuxer {
 
@@ -654,12 +655,13 @@
         if (track.samples.length > 0) {
           var lastAacSample = track.samples[track.samples.length - 1],
               delta = aacSample.pts - lastAacSample.pts,
-              missing = Math.round(delta / 1920.0) - 1;
+              AAC_SAMPLE_DURATION = 1920.0, // 1024 samples in 90 kHz timebase
+              missing = Math.round(delta / AAC_SAMPLE_DURATION) - 1;
           if (missing > 0) {
             var j;
             logger.log(`Injecting ${missing} packets of missing audio.`);
             for (j = 0; j < missing; j++) {
-              var newStamp = lastAacSample.pts + (j + 1) * 1920,
+              var newStamp = Math.round(lastAacSample.pts + (j + 1) * AAC_SAMPLE_DURATION),
                   newAacSample = {unit: this.ZERO_AUDIO_FRAME.slice(0), pts: newStamp, dts: newStamp};
               track.samples.push(newAacSample);
               track.len += newAacSample.unit.length;
