@@ -290,10 +290,6 @@ $(document).ready(function() {
             load : data.stats.tload - data.stats.tfirst,
             duration : data.stats.tload - data.stats.tfirst,
           };
-
-          hls.startLevel = 1;
-          hls.autoLevelCapping = 1;
-
           events.load.push(event);
           refreshCanvas();
        });
