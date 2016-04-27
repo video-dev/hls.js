@@ -15,7 +15,7 @@
   "main": "./lib/index.js",
   "private": false,
   "scripts": {
-    "clean": "find dist -mindepth 1 -delete",
+    "clean": "rimraf dist/*",
     "prebuild": "npm run clean & npm run test",
     "build": "npm run babel && browserify -t browserify-versionify -t [babelify] -s Hls src/index.js --debug | exorcist dist/hls.js.map -b . > dist/hls.js",
     "postbuild": "npm run minify",
@@ -55,6 +55,7 @@
     "mversion": "^1.10.1",
     "opener": "^1.4.0",
     "parallelshell": "^2.0.0",
+    "rimraf": "^2.5.1",
     "uglify-js": "^2.4.23",
     "watchify": "^3.7.0"
   }
