@@ -18,11 +18,12 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import '../utils/polyfill';
 
 class TSDemuxer {
-    constructor(observer, remuxerClass) {
+    constructor(observer, remuxerClass, config) {
         this.observer = observer;
         this.remuxerClass = remuxerClass;
+        this.config = config;
         this.lastCC = 0;
-        this.remuxer = new this.remuxerClass(observer);
+        this.remuxer = new this.remuxerClass(observer, config);
         this.ZERO_AUDIO_FRAME = new Uint8Array([
             0x21,
             0x10,
