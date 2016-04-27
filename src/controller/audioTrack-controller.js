@@ -4,12 +4,15 @@
 
 import Event from '../events';
 import EventHandler from '../event-handler';
+import {logger} from '../utils/logger';
 
 class AudioTrackController extends EventHandler {
 
   constructor(hls) {
     super(hls, Event.MANIFEST_LOADING,
-               Event.MANIFEST_LOADED);
+               Event.MANIFEST_LOADED,
+               Event.AUDIO_TRACK_LOADED
+               );
     this.tracks = [];
     this.trackId = 0;
   }
@@ -26,6 +29,25 @@ class AudioTrackController extends EventHandler {
 
   onManifestLoaded(data) {
     this.tracks = data.audioTracks || [];
+    this.hls.trigger(Event.AUDIO_TRACKS_UPDATED, {audioTracks : this.tracks});
+  }
+
+  onAudioTrackLoaded(data) {
+    if (data.id < this.tracks.length) {
+      logger.log(`audioTrack ${data.id} loaded`);
+      this.tracks[data.id].details = data.details;
+      // check if current playlist is a live playlist
+      if (data.details.live && !this.timer) {
+        // if live playlist we will have to reload it periodically
+        // set reload period to playlist target duration
+        this.timer = setInterval(this.ontick, 1000 * data.details.targetduration);
+      }
+      if (!data.details.live && this.timer) {
+        // playlist is not live and timer is armed : stopping it
+        clearInterval(this.timer);
+        this.timer = null;
+      }
+    }
   }
 
   /** get alternate audio tracks list from playlist **/
@@ -40,7 +62,30 @@ class AudioTrackController extends EventHandler {
 
   /** select an audio track, based on its index in audio track lists**/
   set audioTrack(audioTrackId) {
-    this.trackId = audioTrackId;
+    if (this.trackId !== audioTrackId || this.tracks[audioTrackId].details === undefined) {
+      this.setAudioTrackInternal(audioTrackId);
+    }
+  }
+
+ setAudioTrackInternal(newId) {
+    // check if level idx is valid
+    if (newId >= 0 && newId < this.tracks.length) {
+      // stopping live reloading timer if any
+      if (this.timer) {
+       clearInterval(this.timer);
+       this.timer = null;
+      }
+      this.trackId = newId;
+      logger.log(`switching to audioTrack ${newId}`);
+      this.hls.trigger(Event.AUDIO_TRACK_SWITCH, {id: newId});
+      var audioTrack = this.tracks[newId];
+       // check if we need to load playlist for this audio Track
+      if (audioTrack.details === undefined || audioTrack.details.live === true) {
+        // track not retrieved yet, or live playlist we need to (re)load it
+        logger.log(`(re)loading playlist for audioTrack ${newId}`);
+        this.hls.trigger(Event.AUDIO_TRACK_LOADING, {url: audioTrack.url, id: newId});
+      }
+    }
   }
 }
 

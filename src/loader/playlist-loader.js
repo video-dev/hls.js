@@ -14,7 +14,8 @@ class PlaylistLoader extends EventHandler {
   constructor(hls) {
     super(hls,
       Event.MANIFEST_LOADING,
-      Event.LEVEL_LOADING);
+      Event.LEVEL_LOADING,
+      Event.AUDIO_TRACK_LOADING);
   }
 
   destroy() {
@@ -22,38 +23,27 @@ class PlaylistLoader extends EventHandler {
       this.loader.destroy();
       this.loader = null;
     }
-    this.url = this.id = null;
     EventHandler.prototype.destroy.call(this);
   }
 
   onManifestLoading(data) {
-    this.load(data.url, null);
+    this.load(data.url, { type : 'manifest'});
   }
 
   onLevelLoading(data) {
-    this.load(data.url, data.level, data.id);
+    this.load(data.url, { type : 'level', level : data.level, id : data.id});
   }
 
-  load(url, id1, id2) {
+  onAudioTrackLoading(data) {
+    this.load(data.url, { type : 'audioTrack', id : data.id});
+  }
+
+  load(url, context) {
     var config = this.hls.config,
         retry,
         timeout,
         retryDelay;
-
-    if (this.loading && this.loader) {
-      if (this.url === url && this.id === id1 && this.id2 === id2) {
-        // same request than last pending one, don't do anything
-        return;
-      } else {
-        // one playlist load request is pending, but with different params, abort it before loading new playlist
-        this.loader.abort();
-      }
-    }
-
-    this.url = url;
-    this.id = id1;
-    this.id2 = id2;
-    if(this.id === null) {
+    if(context.type.indexOf('manifest') === 0) {
       retry = config.manifestLoadingMaxRetry;
       timeout = config.manifestLoadingTimeOut;
       retryDelay = config.manifestLoadingRetryDelay;
@@ -62,9 +52,8 @@ class PlaylistLoader extends EventHandler {
       timeout = config.levelLoadingTimeOut;
       retryDelay = config.levelLoadingRetryDelay;
     }
-    this.loader = typeof(config.pLoader) !== 'undefined' ? new config.pLoader(config) : new config.loader(config);
-    this.loading = true;
-    this.loader.load(url, '', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), timeout, retry, retryDelay);
+    let loader = this.loader = typeof(config.pLoader) !== 'undefined' ? new config.pLoader(config) : new config.loader(config);
+    loader.load(url, context, '', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), timeout, retry, retryDelay);
   }
 
   resolve(url, baseUrl) {
@@ -89,12 +78,6 @@ class PlaylistLoader extends EventHandler {
       }
       level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
       level.name = attrs.NAME;
-
-      var closedCaptions = attrs.enumeratedString('CLOSED-CAPTIONS');
-
-      if (closedCaptions) {
-        level.closedCaptions = closedCaptions;
-      }
 
       var codecs = attrs.CODECS;
       if(codecs) {
@@ -259,21 +242,19 @@ class PlaylistLoader extends EventHandler {
     return level;
   }
 
-  loadsuccess(event, stats) {
+  loadsuccess(event, stats, context) {
     var target = event.currentTarget,
         string = target.responseText,
         url = target.responseURL,
-        id = this.id,
-        id2 = this.id2,
-        hls = this.hls,
-        levels, audiotracks;
-
-    this.loading = false;
+        type = context.type,
+        id = context.id,
+        level = context.level,
+        hls = this.hls;
     // responseURL not supported on some browsers (it is used to detect URL redirection)
     // data-uri mode also not supported (but no need to detect redirection)
     if (url === undefined || url.indexOf('data:') === 0) {
       // fallback to initial URL
-      url = this.url;
+      url = context.url;
     }
     stats.tload = performance.now();
     stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
@@ -282,16 +263,20 @@ class PlaylistLoader extends EventHandler {
         // 1 level playlist
         // if first request, fire manifest loaded event, level will be reloaded afterwards
         // (this is to have a uniform logic for 1 level/multilevel playlists)
-        if (this.id === null) {
+        if (type.indexOf('manifest') === 0) {
           hls.trigger(Event.MANIFEST_LOADED, {levels: [{url: url}], url: url, stats: stats});
         } else {
           var levelDetails = this.parseLevelPlaylist(string, url, id);
           stats.tparsed = performance.now();
-          hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: id, id: id2, stats: stats});
+          if (type.indexOf('level') === 0) {
+            hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: level, id: id, stats: stats});
+          } else {
+            hls.trigger(Event.AUDIO_TRACK_LOADED, {details: levelDetails, id: id, stats: stats});
+          }
         }
       } else {
-        levels = this.parseMasterPlaylist(string, url);
-        audiotracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO');
+        let levels = this.parseMasterPlaylist(string, url),
+            audiotracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO');
         // multi level playlist, parse level info
         if (levels.length) {
           hls.trigger(Event.MANIFEST_LOADED, {levels: levels, audioTracks : audiotracks, url: url, stats: stats});
@@ -304,36 +289,48 @@ class PlaylistLoader extends EventHandler {
     }
   }
 
-  loaderror(event) {
-    var details, fatal;
-    if (this.id === null) {
-      details = ErrorDetails.MANIFEST_LOAD_ERROR;
-      fatal = true;
-    } else {
-      details = ErrorDetails.LEVEL_LOAD_ERROR;
-      fatal = false;
+  loaderror(event, context) {
+    var details, fatal,loader = this.loader;
+    switch(context.type) {
+      case 'manifest':
+        details = ErrorDetails.MANIFEST_LOAD_ERROR;
+        fatal = true;
+        break;
+      case 'level':
+        details = ErrorDetails.LEVEL_LOAD_ERROR;
+        fatal = false;
+        break;
+      case 'audioTrack':
+        details = ErrorDetails.AUDIOTRACK_LOAD_ERROR;
+        fatal = false;
+        break;
     }
-    if (this.loader) {
-      this.loader.abort();
+    if (loader) {
+      loader.abort();
     }
-    this.loading = false;
-    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: this.url, loader: this.loader, response: event.currentTarget, level: this.id, id: this.id2});
+    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: loader.url, loader: loader, response: event.currentTarget, context : context});
   }
 
-  loadtimeout() {
-    var details, fatal;
-    if (this.id === null) {
-      details = ErrorDetails.MANIFEST_LOAD_TIMEOUT;
-      fatal = true;
-    } else {
-      details = ErrorDetails.LEVEL_LOAD_TIMEOUT;
-      fatal = false;
+  loadtimeout(event, stats, context) {
+    var details, fatal, loader = this.loader;
+    switch(context.type) {
+      case 'manifest':
+        details = ErrorDetails.MANIFEST_LOAD_TIMEOUT;
+        fatal = true;
+        break;
+      case 'level':
+        details = ErrorDetails.LEVEL_LOAD_TIMEOUT;
+        fatal = false;
+        break;
+      case 'audioTrack':
+        details = ErrorDetails.AUDIOTRACK_LOAD_TIMEOUT;
+        fatal = false;
+        break;
     }
-    if (this.loader) {
-      this.loader.abort();
+    if (loader) {
+      loader.abort();
     }
-    this.loading = false;
-    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: this.url, loader: this.loader, level: this.id, id: this.id2});
+    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: loader.url, loader: loader, context : context});
   }
 }
 
