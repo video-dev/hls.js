@@ -425,7 +425,6 @@
             }
             else if (payloadSize < expGolombDecoder.bytesAvailable)
             {
-              console.error('skipping: ' + payloadSize);
               for (i = 0; i<payloadSize; i++)
               {
                 expGolombDecoder.readUByte();
