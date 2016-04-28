@@ -7,7 +7,7 @@ import EventHandler from '../event-handler';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import URLHelper from '../utils/url';
 import AttrList from '../utils/attr-list';
-//import {logger} from '../utils/logger';
+import { logger } from '../utils/logger';
 
 class PlaylistLoader extends EventHandler {
     constructor(hls) {
@@ -17,13 +17,17 @@ class PlaylistLoader extends EventHandler {
             Event.LEVEL_LOADING,
             Event.AUDIO_TRACK_LOADING
         );
+        this.loaders = {};
     }
 
     destroy() {
-        if (this.loader) {
-            this.loader.destroy();
-            this.loader = null;
+        for (let loaderName in this.loaders) {
+            let loader = this.loaders[loaderName];
+            if (loader) {
+                loader.destroy();
+            }
         }
+        this.loaders = {};
         EventHandler.prototype.destroy.call(this);
     }
 
@@ -53,10 +57,15 @@ class PlaylistLoader extends EventHandler {
             timeout = config.levelLoadingTimeOut;
             retryDelay = config.levelLoadingRetryDelay;
         }
-        let loader = (this.loader =
+        let loader = this.loaders[context.type];
+        if (loader) {
+            logger.warn(`abort previous loader for type:${context.type}`);
+            loader.abort();
+        }
+        loader = this.loaders[context.type] = context.loader =
             typeof config.pLoader !== 'undefined'
                 ? new config.pLoader(config)
-                : new config.loader(config));
+                : new config.loader(config);
         loader.load(
             url,
             context,
@@ -292,6 +301,8 @@ class PlaylistLoader extends EventHandler {
             id = context.id,
             level = context.level,
             hls = this.hls;
+
+        this.loaders[type] = undefined;
         // responseURL not supported on some browsers (it is used to detect URL redirection)
         // data-uri mode also not supported (but no need to detect redirection)
         if (url === undefined || url.indexOf('data:') === 0) {
@@ -372,7 +383,7 @@ class PlaylistLoader extends EventHandler {
     loaderror(event, context) {
         var details,
             fatal,
-            loader = this.loader;
+            loader = context.loader;
         switch (context.type) {
             case 'manifest':
                 details = ErrorDetails.MANIFEST_LOAD_ERROR;
@@ -389,6 +400,7 @@ class PlaylistLoader extends EventHandler {
         }
         if (loader) {
             loader.abort();
+            this.loaders[context.type] = undefined;
         }
         this.hls.trigger(Event.ERROR, {
             type: ErrorTypes.NETWORK_ERROR,
@@ -404,7 +416,7 @@ class PlaylistLoader extends EventHandler {
     loadtimeout(event, stats, context) {
         var details,
             fatal,
-            loader = this.loader;
+            loader = context.loader;
         switch (context.type) {
             case 'manifest':
                 details = ErrorDetails.MANIFEST_LOAD_TIMEOUT;
@@ -421,6 +433,7 @@ class PlaylistLoader extends EventHandler {
         }
         if (loader) {
             loader.abort();
+            this.loaders[context.type] = undefined;
         }
         this.hls.trigger(Event.ERROR, {
             type: ErrorTypes.NETWORK_ERROR,
