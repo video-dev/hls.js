@@ -745,6 +745,7 @@ class StreamController extends EventHandler {
     var fragCurrent = this.fragCurrent;
     if (this.state === State.FRAG_LOADING &&
         fragCurrent &&
+        data.frag.type === 'main' &&
         data.frag.level === fragCurrent.level &&
         data.frag.sn === fragCurrent.sn) {
       if (this.fragBitrateTest === true) {

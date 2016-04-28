@@ -30,21 +30,25 @@ class AbrController extends EventHandler {
   }
 
   onFragLoading(data) {
-    if (!this.timer) {
-      this.timer = setInterval(this.onCheck, 100);
+    if (data.frag.type === 'main') {
+      if (!this.timer) {
+        this.timer = setInterval(this.onCheck, 100);
+      }
+      this.fragCurrent = data.frag;
     }
-    this.fragCurrent = data.frag;
   }
 
   onFragLoadProgress(data) {
-    var stats = data.stats;
-    // only update stats if first frag loading
-    // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
-    // and leading to wrong bw estimation
-    if (stats.aborted === undefined && data.frag.loadCounter === 1) {
-      this.lastfetchduration = (performance.now() - stats.trequest) / 1000;
-      this.lastbw = (stats.loaded * 8) / this.lastfetchduration;
-      //console.log(`fetchDuration:${this.lastfetchduration},bw:${(this.lastbw/1000).toFixed(0)}/${stats.aborted}`);
+    if (data.frag.type === 'main') {
+      let stats = data.stats;
+      // only update stats if first frag loading
+      // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
+      // and leading to wrong bw estimation
+      if (stats.aborted === undefined && data.frag.loadCounter === 1) {
+        this.lastfetchduration = (performance.now() - stats.trequest) / 1000;
+        this.lastbw = (stats.loaded * 8) / this.lastfetchduration;
+        //console.log(`fetchDuration:${this.lastfetchduration},bw:${(this.lastbw/1000).toFixed(0)}/${stats.aborted}`);
+      }
     }
   }
 
@@ -113,12 +117,14 @@ class AbrController extends EventHandler {
   }
 
   onFragLoaded(data) {
-    // stop monitoring bw once frag loaded
-    this.clearTimer();
-    // store level id after successful fragment load
-    this.lastLoadedFragLevel = data.frag.level;
-    // reset forced auto level value so that next level will be selected
-    this._nextAutoLevel = -1;
+    if (data.frag.type === 'main') {
+      // stop monitoring bw once frag loaded
+      this.clearTimer();
+      // store level id after successful fragment load
+      this.lastLoadedFragLevel = data.frag.level;
+      // reset forced auto level value so that next level will be selected
+      this._nextAutoLevel = -1;
+    }
   }
 
   onError(data) {
