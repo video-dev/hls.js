@@ -6,8 +6,9 @@ import Decrypter from '../crypt/decrypter';
 
 class Demuxer {
 
-  constructor(hls) {
+  constructor(hls, id) {
     this.hls = hls;
+    this.id = id;
     var typeSupported = {
       mp4 : MediaSource.isTypeSupported('video/mp4'),
       mp2t : hls.config.enableMP2TPassThrough && MediaSource.isTypeSupported('video/mp2t')
@@ -19,13 +20,13 @@ class Demuxer {
           this.w = work(DemuxerWorker);
           this.onwmsg = this.onWorkerMessage.bind(this);
           this.w.addEventListener('message', this.onwmsg);
-          this.w.postMessage({cmd: 'init', typeSupported : typeSupported, config: JSON.stringify(hls.config)});
+          this.w.postMessage({cmd: 'init', typeSupported : typeSupported, id : id, config: JSON.stringify(hls.config)});
         } catch(err) {
           logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
-          this.demuxer = new DemuxerInline(hls,typeSupported);
+          this.demuxer = new DemuxerInline(hls,id,typeSupported);
         }
       } else {
-        this.demuxer = new DemuxerInline(hls,typeSupported);
+        this.demuxer = new DemuxerInline(hls,id,typeSupported);
       }
       this.demuxInitialized = true;
   }
@@ -70,17 +71,18 @@ class Demuxer {
   }
 
   onWorkerMessage(ev) {
-    var data = ev.data;
+    let data = ev.data,
+        hls = this.hls,
+        id = data.id;
+
     //console.log('onWorkerMessage:' + data.event);
     switch(data.event) {
       case Event.FRAG_PARSING_INIT_SEGMENT:
-        var obj = {};
-        obj.tracks = data.tracks;
-        obj.unique = data.unique;
-        this.hls.trigger(Event.FRAG_PARSING_INIT_SEGMENT, obj);
+        hls.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {id : id, tracks : data.tracks, unique : data.unique});
         break;
       case Event.FRAG_PARSING_DATA:
-        this.hls.trigger(Event.FRAG_PARSING_DATA,{
+        hls.trigger(Event.FRAG_PARSING_DATA,{
+          id : id,
           data1: new Uint8Array(data.data1),
           data2: new Uint8Array(data.data2),
           startPTS: data.startPTS,
@@ -92,17 +94,19 @@ class Demuxer {
         });
         break;
         case Event.FRAG_PARSING_METADATA:
-        this.hls.trigger(Event.FRAG_PARSING_METADATA, {
+        hls.trigger(Event.FRAG_PARSING_METADATA, {
+          id : id,
           samples: data.samples
         });
         break;
         case Event.FRAG_PARSING_USERDATA:
-        this.hls.trigger(Event.FRAG_PARSING_USERDATA, {
+        hls.trigger(Event.FRAG_PARSING_USERDATA, {
+          id : id,
           samples: data.samples
         });
         break;
       default:
-        this.hls.trigger(data.event, data.data);
+        hls.trigger(data.event, data.data);
         break;
     }
   }

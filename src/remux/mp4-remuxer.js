@@ -11,8 +11,9 @@ import {ErrorTypes, ErrorDetails} from '../errors';
 import '../utils/polyfill';
 
 class MP4Remuxer {
-  constructor(observer, config) {
+  constructor(observer, id, config) {
     this.observer = observer;
+    this.id = id;
     this.config = config;
     this.ISGenerated = false;
     this.PES2MP4SCALEFACTOR = 4;
@@ -67,7 +68,7 @@ class MP4Remuxer {
       this.remuxText(textTrack,timeOffset);
     }
     //notify end of parsing
-    this.observer.trigger(Event.FRAG_PARSED);
+    this.observer.trigger(Event.FRAG_PARSED, { id : this.id });
   }
 
   generateIS(audioTrack,videoTrack,timeOffset) {
@@ -76,7 +77,7 @@ class MP4Remuxer {
         videoSamples = videoTrack.samples,
         pesTimeScale = this.PES_TIMESCALE,
         tracks = {},
-        data = { tracks : tracks, unique : false },
+        data = { id : this.id, tracks : tracks, unique : false },
         computePTSDTS = (this._initPTS === undefined),
         initPTS, initDTS;
 
@@ -138,7 +139,7 @@ class MP4Remuxer {
         this._initDTS = initDTS;
       }
     } else {
-      observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'no audio/video samples found'});
+      observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, id : this.id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'no audio/video samples found'});
     }
   }
 
@@ -316,7 +317,9 @@ class MP4Remuxer {
     track.samples = outputSamples;
     moof = MP4.moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
     track.samples = [];
+
     let data = {
+      id : this.id,
       data1: moof,
       data2: mdat,
       startPTS: firstPTS / pesTimeScale,
@@ -486,6 +489,7 @@ class MP4Remuxer {
       moof = MP4.moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
       track.samples = [];
       let audioData = {
+        id : this.id,
         data1: moof,
         data2: mdat,
         startPTS: firstPTS / pesTimeScale,
@@ -549,6 +553,7 @@ class MP4Remuxer {
         sample.dts = ((sample.dts - this._initDTS) / this.PES_TIMESCALE);
       }
       this.observer.trigger(Event.FRAG_PARSING_METADATA, {
+        id : this.id,
         samples:track.samples
       });
     }
@@ -572,6 +577,7 @@ class MP4Remuxer {
         sample.pts = ((sample.pts - this._initPTS) / this.PES_TIMESCALE);
       }
       this.observer.trigger(Event.FRAG_PARSING_USERDATA, {
+        id : this.id,
         samples:track.samples
       });
     }

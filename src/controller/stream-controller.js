@@ -65,7 +65,7 @@ class StreamController extends EventHandler {
     if (this.levels) {
       var media = this.media, lastCurrentTime = this.lastCurrentTime;
       this.stopLoad();
-      this.demuxer = new Demuxer(this.hls);
+      this.demuxer = new Demuxer(this.hls,0);
       if (!this.timer) {
         this.timer = setInterval(this.ontick, 100);
       }
@@ -752,7 +752,7 @@ class StreamController extends EventHandler {
         this.state = State.IDLE;
         this.fragBitrateTest = false;
         data.stats.tparsed = data.stats.tbuffered = performance.now();
-        this.hls.trigger(Event.FRAG_BUFFERED, {stats: data.stats, frag: fragCurrent});
+        this.hls.trigger(Event.FRAG_BUFFERED, {stats: data.stats, frag: fragCurrent, id : 0});
       } else {
         this.state = State.PARSING;
         // transmux the MPEG-TS data to ISO-BMFF segments
@@ -789,7 +789,7 @@ class StreamController extends EventHandler {
   }
 
   onFragParsingInitSegment(data) {
-    if (this.state === State.PARSING) {
+    if (data.id === 0 && this.state === State.PARSING) {
       var tracks = data.tracks, trackName, track;
 
       // include levelCodec in audio and video tracks
@@ -869,7 +869,7 @@ class StreamController extends EventHandler {
   }
 
   onFragParsingData(data) {
-    if (this.state === State.PARSING) {
+    if (data.id === 0 && this.state === State.PARSING) {
       this.tparse2 = Date.now();
       var level = this.levels[this.level],
           frag = this.fragCurrent;
@@ -897,8 +897,8 @@ class StreamController extends EventHandler {
     }
   }
 
-  onFragParsed() {
-    if (this.state === State.PARSING) {
+  onFragParsed(data) {
+    if (data.id === 0 && this.state === State.PARSING) {
       this.stats.tparsed = performance.now();
       this.state = State.PARSED;
       this._checkAppendedParsed();
@@ -925,7 +925,7 @@ class StreamController extends EventHandler {
         this.fragPrevious = frag;
         stats.tbuffered = performance.now();
         this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
-        this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag});
+        this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag, id : 0});
         logger.log(`media buffered : ${this.timeRangesToString(this.media.buffered)}`);
         this.state = State.IDLE;
       }
