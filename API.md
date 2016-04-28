@@ -2,12 +2,12 @@
 ##Hello hls.js !
 
 ###first step : setup and support
-first include ```dist/hls.{min}.js``` in your web page and check whether your browser is supporting [MediaSource Extensions][].
+first include ```https://cdn.jsdelivr.net/hls.js/latest/hls{.min}.js``` in your web page and check whether your browser is supporting [MediaSource Extensions][].
 [MediaSource Extensions]: http://w3c.github.io/media-source/
 just invoke the following static method : ```Hls.isSupported()```
 
 ```js
- <script src="dist/hls.{min}.js"></script>
+ <script src="https://cdn.jsdelivr.net/hls.js/latest/hls{.min}.js"></script>
 <script>
   if(Hls.isSupported()) {
  	console.log("hello hls.js!");
