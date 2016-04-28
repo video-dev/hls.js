@@ -905,6 +905,7 @@ class StreamController extends EventHandler {
         if (
             this.state === State.FRAG_LOADING &&
             fragCurrent &&
+            data.frag.type === 'main' &&
             data.frag.level === fragCurrent.level &&
             data.frag.sn === fragCurrent.sn
         ) {
