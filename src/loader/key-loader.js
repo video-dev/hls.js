@@ -5,6 +5,7 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import {ErrorTypes, ErrorDetails} from '../errors';
+import {logger} from '../utils/logger';
 
 class KeyLoader extends EventHandler {
 
