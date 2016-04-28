@@ -925,7 +925,7 @@ class StreamController extends EventHandler {
         this.fragPrevious = frag;
         stats.tbuffered = performance.now();
         this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
-        this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag, id : 0});
+        this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag, type : 'main', id : 0});
         logger.log(`media buffered : ${this.timeRangesToString(this.media.buffered)}`);
         this.state = State.IDLE;
       }
