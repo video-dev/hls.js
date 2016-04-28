@@ -25,12 +25,12 @@ class FragmentLoader extends EventHandler {
     }
 
     onFragLoading(data) {
-        let frag = (this.frag = data.frag);
+        let frag = data.frag,
+            type = frag.type,
+            loader = this.loaders[type],
+            config = this.hls.config;
+
         frag.loaded = 0;
-        let config = this.hls.config;
-        let context = { frag: frag };
-        let type = frag.type;
-        let loader = this.loaders[type];
         if (loader) {
             logger.warn(`abort previous fragment loader for type:${type}`);
             loader.abort();
@@ -41,7 +41,7 @@ class FragmentLoader extends EventHandler {
                 : new config.loader(config);
         loader.load(
             frag.url,
-            context,
+            { frag: frag },
             'arraybuffer',
             this.loadsuccess.bind(this),
             this.loaderror.bind(this),
