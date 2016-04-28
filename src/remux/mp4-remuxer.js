@@ -2,6 +2,7 @@
  * fMP4 remuxer
  */
 
+import ADTS from '../demux/adts';
 import Event from '../events';
 import { logger } from '../utils/logger';
 import MP4 from '../remux/mp4-generator';
@@ -37,26 +38,48 @@ class MP4Remuxer {
             this.generateIS(audioTrack, videoTrack, timeOffset);
         }
 
-        let audioData;
         if (this.ISGenerated) {
             // Purposefully remuxing audio before video, so that remuxVideo can use nextAacPts, which is
             // calculated in remuxAudio.
             //logger.log('nb AAC samples:' + audioTrack.samples.length);
             if (audioTrack.samples.length) {
-                audioData = this.remuxAudio(audioTrack, timeOffset, contiguous);
-            }
-            //logger.log('nb AVC samples:' + videoTrack.samples.length);
-            if (videoTrack.samples.length) {
-                let audioTrackLength;
-                if (audioData) {
-                    audioTrackLength = audioData.endPTS - audioData.startPTS;
-                }
-                this.remuxVideo(
-                    videoTrack,
+                let audioData = this.remuxAudio(
+                    audioTrack,
                     timeOffset,
-                    contiguous,
-                    audioTrackLength
+                    contiguous
                 );
+                //logger.log('nb AVC samples:' + videoTrack.samples.length);
+                if (videoTrack.samples.length) {
+                    let audioTrackLength;
+                    if (audioData) {
+                        audioTrackLength =
+                            audioData.endPTS - audioData.startPTS;
+                    }
+                    this.remuxVideo(
+                        videoTrack,
+                        timeOffset,
+                        contiguous,
+                        audioTrackLength
+                    );
+                }
+            } else {
+                let videoData;
+                //logger.log('nb AVC samples:' + videoTrack.samples.length);
+                if (videoTrack.samples.length) {
+                    videoData = this.remuxVideo(
+                        videoTrack,
+                        timeOffset,
+                        contiguous
+                    );
+                }
+                if (videoData && audioTrack.codec) {
+                    this.remuxEmptyAudio(
+                        audioTrack,
+                        timeOffset,
+                        contiguous,
+                        videoData
+                    );
+                }
             }
         }
         //logger.log('nb ID3 samples:' + audioTrack.samples.length);
@@ -393,7 +416,7 @@ class MP4Remuxer {
             track
         );
         track.samples = [];
-        this.observer.trigger(Event.FRAG_PARSING_DATA, {
+        let data = {
             data1: moof,
             data2: mdat,
             startPTS: firstPTS / pesTimeScale,
@@ -404,7 +427,9 @@ class MP4Remuxer {
             endDTS: this.nextAvcDts / pesTimeScale,
             type: 'video',
             nb: outputSamples.length
-        });
+        };
+        this.observer.trigger(Event.FRAG_PARSING_DATA, data);
+        return data;
     }
 
     remuxAudio(track, timeOffset, contiguous) {
@@ -434,6 +459,51 @@ class MP4Remuxer {
             return a.pts - b.pts;
         });
         samples0 = track.samples;
+
+        // If the audio track is missing samples, the frames seem to get "left-shifted" within the
+        // resulting mp4 segment, causing sync issues and leaving gaps at the end of the audio segment.
+        // In an effort to prevent this from happening, we inject frames here where there are gaps.
+        // When possible, we inject a silent frame; when that's not possible, we duplicate the last
+        // frame.
+        for (var i = 0; i < samples0.length - 1; i++) {
+            var sample0 = samples0[i],
+                sample1 = samples0[i + 1],
+                pts0 = sample0.pts - this._initDTS,
+                pts1 = sample1.pts - this._initDTS,
+                nextAacPts = contiguous
+                    ? this.nextAacPts
+                    : timeOffset * pesTimeScale,
+                ptsnorm0 = this._PTSNormalize(pts0, nextAacPts),
+                ptsnorm1 = this._PTSNormalize(pts1, nextAacPts),
+                missing =
+                    Math.round(
+                        (ptsnorm1 - ptsnorm0) / pes2mp4ScaleFactor / 1024.0
+                    ) - 1;
+            if (missing > 0) {
+                logger.log(`Injecting ${missing} packets of missing audio.`);
+                for (var j = 0; j < missing; j++) {
+                    var newStamp = Math.round(
+                            sample0.pts + (j + 1) * 1024 * pes2mp4ScaleFactor
+                        ),
+                        fillFrame = ADTS.getSilentFrame(track.channelCount),
+                        newAacSample;
+                    if (!fillFrame) {
+                        logger.log(
+                            'Unable to get silent frame for given audio codec; duplicating last frame instead.'
+                        );
+                        fillFrame = sample0.unit.slice(0);
+                    }
+                    newAacSample = {
+                        unit: fillFrame,
+                        pts: newStamp,
+                        dts: newStamp
+                    };
+                    samples0.splice(i + 1, 0, newAacSample);
+                    i += 1;
+                    track.len += newAacSample.unit.length;
+                }
+            }
+        }
 
         while (samples0.length) {
             aacSample = samples0.shift();
@@ -564,6 +634,44 @@ class MP4Remuxer {
             return audioData;
         }
         return null;
+    }
+
+    remuxEmptyAudio(track, timeOffset, contiguous, videoData) {
+        let pesTimeScale = this.PES_TIMESCALE,
+            mp4timeScale = track.timescale,
+            pes2mp4ScaleFactor = pesTimeScale / mp4timeScale,
+            // sync with video's timestamp
+            startDTS = videoData.startDTS * pesTimeScale,
+            endDTS = videoData.endDTS * pesTimeScale,
+            // one sample's duration value
+            sampleDuration = 1024,
+            frameDuration = pes2mp4ScaleFactor * sampleDuration,
+            // samples count of this segment's duration
+            nbSamples = Math.ceil((endDTS - startDTS) / frameDuration),
+            // silent frame
+            silentFrame = ADTS.getSilentFrame(track.channelCount);
+
+        // Can't remux if we can't generate a silent frame...
+        if (!silentFrame) {
+            logger.trace(
+                'Unable to remuxEmptyAudio since we were unable to get a silent frame for given audio codec!'
+            );
+            return;
+        }
+
+        let samples = [];
+        for (var i = 0; i < nbSamples; i++) {
+            var stamp = startDTS + i * frameDuration;
+            samples.push({
+                unit: silentFrame.slice(0),
+                pts: stamp,
+                dts: stamp
+            });
+            track.len += silentFrame.length;
+        }
+        track.samples = samples;
+
+        this.remuxAudio(track, timeOffset, contiguous);
     }
 
     remuxID3(track, timeOffset) {
