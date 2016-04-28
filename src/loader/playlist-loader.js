@@ -47,7 +47,7 @@ class PlaylistLoader extends EventHandler {
         retry,
         timeout,
         retryDelay;
-    if(context.type.indexOf('manifest') === 0) {
+    if(context.type === 'manifest') {
       retry = config.manifestLoadingMaxRetry;
       timeout = config.manifestLoadingTimeOut;
       retryDelay = config.manifestLoadingRetryDelay;
@@ -284,13 +284,13 @@ class PlaylistLoader extends EventHandler {
         // 1 level playlist
         // if first request, fire manifest loaded event, level will be reloaded afterwards
         // (this is to have a uniform logic for 1 level/multilevel playlists)
-        if (type.indexOf('manifest') === 0) {
+        if (type === 'manifest') {
           hls.trigger(Event.MANIFEST_LOADED, {levels: [{url: url}], url: url, stats: stats});
         } else {
-          let fragType = type.indexOf('level') === 0 ? 'main' : 'audio';
-          let levelDetails = this.parseLevelPlaylist(string, url, level, fragType);
+          let isLevel = (type === 'level'),
+              levelDetails = this.parseLevelPlaylist(string, url, level, isLevel ? 'main' : 'audio');
           stats.tparsed = performance.now();
-          if (type.indexOf('level') === 0) {
+          if (isLevel) {
             hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: level, id: id, stats: stats});
           } else {
             hls.trigger(Event.AUDIO_TRACK_LOADED, {details: levelDetails, id: id, stats: stats});
