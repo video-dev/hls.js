@@ -4,8 +4,9 @@
 import Event from '../events';
 
 class PassThroughRemuxer {
-    constructor(observer) {
+    constructor(observer, id) {
         this.observer = observer;
+        this.id = id;
         this.ISGenerated = false;
     }
 
@@ -26,7 +27,7 @@ class PassThroughRemuxer {
         // generate Init Segment if needed
         if (!this.ISGenerated) {
             var tracks = {},
-                data = { tracks: tracks, unique: true },
+                data = { id: this.id, tracks: tracks, unique: true },
                 track = videoTrack,
                 codec = track.codec;
 
@@ -56,6 +57,7 @@ class PassThroughRemuxer {
             observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, data);
         }
         observer.trigger(Event.FRAG_PARSING_DATA, {
+            id: this.id,
             data1: rawData,
             startPTS: timeOffset,
             startDTS: timeOffset,

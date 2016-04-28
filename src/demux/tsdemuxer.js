@@ -17,12 +17,13 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
 class TSDemuxer {
-    constructor(observer, remuxerClass, config) {
+    constructor(observer, id, remuxerClass, config) {
         this.observer = observer;
+        this.id = id;
         this.remuxerClass = remuxerClass;
         this.config = config;
         this.lastCC = 0;
-        this.remuxer = new this.remuxerClass(observer, config);
+        this.remuxer = new this.remuxerClass(observer, id, config);
     }
 
     static probe(data) {
@@ -225,6 +226,7 @@ class TSDemuxer {
             } else {
                 this.observer.trigger(Event.ERROR, {
                     type: ErrorTypes.MEDIA_ERROR,
+                    id: this.id,
                     details: ErrorDetails.FRAG_PARSING_ERROR,
                     fatal: false,
                     reason: 'TS packet did not start with 0x47'
@@ -810,6 +812,7 @@ class TSDemuxer {
             }
             this.observer.trigger(Event.ERROR, {
                 type: ErrorTypes.MEDIA_ERROR,
+                id: this.id,
                 details: ErrorDetails.FRAG_PARSING_ERROR,
                 fatal: fatal,
                 reason: reason
