@@ -83,7 +83,7 @@ class FragmentLoader extends EventHandler {
         });
     }
 
-    loadtimeout() {
+    loadtimeout(event, stats, context) {
         let loader = context.loader;
         if (loader) {
             loader.abort();
