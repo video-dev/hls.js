@@ -288,7 +288,7 @@ class PlaylistLoader extends EventHandler {
           hls.trigger(Event.MANIFEST_LOADED, {levels: [{url: url}], url: url, stats: stats});
         } else {
           let isLevel = (type === 'level'),
-              levelDetails = this.parseLevelPlaylist(string, url, level, isLevel ? 'main' : 'audio');
+              levelDetails = this.parseLevelPlaylist(string, url, level || id, isLevel ? 'main' : 'audio');
           stats.tparsed = performance.now();
           if (isLevel) {
             hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: level, id: id, stats: stats});
