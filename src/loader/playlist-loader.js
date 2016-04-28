@@ -312,7 +312,11 @@ class PlaylistLoader extends EventHandler {
                         stats: stats
                     });
                 } else {
-                    var levelDetails = this.parseLevelPlaylist(string, url, id);
+                    var levelDetails = this.parseLevelPlaylist(
+                        string,
+                        url,
+                        level
+                    );
                     stats.tparsed = performance.now();
                     if (type.indexOf('level') === 0) {
                         hls.trigger(Event.LEVEL_LOADED, {
