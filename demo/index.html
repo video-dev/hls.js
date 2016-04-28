@@ -333,7 +333,7 @@ $(document).ready(function() {
        });
        hls.on(Hls.Events.FRAG_BUFFERED,function(event,data) {
           var event = {
-            type : "fragment",
+            type : data.type + " fragment",
             id : data.frag.level,
             id2 : data.frag.sn,
             time : data.stats.trequest - events.t0,
