@@ -168,7 +168,7 @@ class PlaylistLoader extends EventHandler {
         return JSON.parse(JSON.stringify(obj));
     }
 
-    parseLevelPlaylist(string, baseurl, id) {
+    parseLevelPlaylist(string, baseurl, id, type) {
         var currentSN = 0,
             totalduration = 0,
             level = { url: baseurl, fragments: [], live: true, startSN: 0 },
@@ -235,6 +235,7 @@ class PlaylistLoader extends EventHandler {
                             : null;
                         frag = {
                             url: url,
+                            type: type,
                             duration: duration,
                             start: totalduration,
                             sn: sn,
@@ -323,10 +324,13 @@ class PlaylistLoader extends EventHandler {
                         stats: stats
                     });
                 } else {
-                    var levelDetails = this.parseLevelPlaylist(
+                    let fragType =
+                        type.indexOf('level') === 0 ? 'main' : 'audio';
+                    let levelDetails = this.parseLevelPlaylist(
                         string,
                         url,
-                        level
+                        level,
+                        fragType
                     );
                     stats.tparsed = performance.now();
                     if (type.indexOf('level') === 0) {
