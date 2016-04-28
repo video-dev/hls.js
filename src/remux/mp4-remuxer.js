@@ -39,16 +39,21 @@ class MP4Remuxer {
       this.generateIS(audioTrack,videoTrack,timeOffset);
     }
 
+    let audioData;
     if (this.ISGenerated) {
       // Purposefully remuxing audio before video, so that remuxVideo can use nextAacPts, which is
       // calculated in remuxAudio.
       //logger.log('nb AAC samples:' + audioTrack.samples.length);
       if (audioTrack.samples.length) {
-        this.remuxAudio(audioTrack,timeOffset,contiguous);
+        audioData = this.remuxAudio(audioTrack,timeOffset,contiguous);
       }
       //logger.log('nb AVC samples:' + videoTrack.samples.length);
       if (videoTrack.samples.length) {
-        this.remuxVideo(videoTrack,timeOffset,contiguous);
+        let audioTrackLength;
+        if (audioData) {
+          audioTrackLength = audioData.endPTS - audioData.startPTS;
+        }
+        this.remuxVideo(videoTrack,timeOffset,contiguous,audioTrackLength);
       }
     }
     //logger.log('nb ID3 samples:' + audioTrack.samples.length);
@@ -135,7 +140,7 @@ class MP4Remuxer {
     }
   }
 
-  remuxVideo(track, timeOffset, contiguous) {
+  remuxVideo(track, timeOffset, contiguous, audioTrackLength) {
     var offset = 8,
         pesTimeScale = this.PES_TIMESCALE,
         pes2mp4ScaleFactor = this.PES2MP4SCALEFACTOR,
@@ -246,25 +251,24 @@ class MP4Remuxer {
           mp4SampleDuration = inputSamples[i+1].dts - avcSample.dts;
         } else {
           // In some cases, a segment's audio track duration may exceed the video track duration.
-          // Since we've already remuxed audio, and we know when the next AAC PTS should be (which
-          // is an estimate of this segment's total duration), we look to see if the delta to the
-          // next segment is longer than the minimum of maxBufferHole and maxSeekHole. If so,
-          // playback would potentially get stuck, so we artificially inflate the duration of the
-          // last frame to minimize any potential gap between segments.
+          // Since we've already remuxed audio, and we know how long the audio track is, we look to
+          // see if the delta to the next segment is longer than the minimum of maxBufferHole and
+          // maxSeekHole. If so, playback would potentially get stuck, so we artificially inflate
+          // the duration of the last frame to minimize any potential gap between segments.
           var config = this.config,
               maxBufferHole = config.maxBufferHole,
               maxSeekHole = config.maxSeekHole,
               gapTolerance = Math.floor(Math.min(maxBufferHole, maxSeekHole) * pesTimeScale),
-              deltaToNextAacPts = this.nextAacPts - avcSample.pts,
+              deltaToFrameEnd = (audioTrackLength ? firstPTS + audioTrackLength * pesTimeScale : this.nextAacPts) - avcSample.pts,
               lastFrameDuration = avcSample.dts - inputSamples[i > 0 ? i-1 : i].dts;
-          if (deltaToNextAacPts > gapTolerance) {
-            // We subtract lastFrameDuration from deltaToNextAacPts to try to prevent any video
+          if (deltaToFrameEnd > gapTolerance) {
+            // We subtract lastFrameDuration from deltaToFrameEnd to try to prevent any video
             // frame overlap. maxBufferHole/maxSeekHole should be >> lastFrameDuration anyway.
-            mp4SampleDuration = deltaToNextAacPts - lastFrameDuration;
+            mp4SampleDuration = deltaToFrameEnd - lastFrameDuration;
             if (mp4SampleDuration < 0) {
               mp4SampleDuration = lastFrameDuration;
             }
-            logger.log(`It is approximately ${deltaToNextAacPts/90} ms to the next segment; using duration ${mp4SampleDuration/90} ms for the last video frame.`);
+            logger.log(`It is approximately ${deltaToFrameEnd/90} ms to the next segment; using duration ${mp4SampleDuration/90} ms for the last video frame.`);
           } else {
             mp4SampleDuration = lastFrameDuration;
           }
@@ -430,7 +434,7 @@ class MP4Remuxer {
       track.samples = samples;
       moof = MP4.moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
       track.samples = [];
-      this.observer.trigger(Event.FRAG_PARSING_DATA, {
+      let audioData = {
         data1: moof,
         data2: mdat,
         startPTS: firstPTS / pesTimeScale,
@@ -439,8 +443,11 @@ class MP4Remuxer {
         endDTS: (dtsnorm + pes2mp4ScaleFactor * lastSampleDuration) / pesTimeScale,
         type: 'audio',
         nb: nbSamples
-      });
+      };
+      this.observer.trigger(Event.FRAG_PARSING_DATA, audioData);
+      return audioData;
     }
+    return null;
   }
 
   remuxID3(track,timeOffset) {
