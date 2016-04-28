@@ -450,7 +450,7 @@ class MP4Remuxer {
       this.observer.trigger(Event.FRAG_PARSING_DATA, audioData);
       return audioData;
     }
-    return nil;
+    return null;
   }
 
   remuxID3(track,timeOffset) {
