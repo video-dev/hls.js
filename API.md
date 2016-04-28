@@ -201,7 +201,8 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       xhrSetup : XMLHttpRequestSetupCallback,
       abrController : customAbrController,
       timelineController: TimelineController,
-      enableCEA708Captions: true
+      enableCEA708Captions: true,
+      stretchShortVideoTrack: false,
     };
 
 
@@ -471,6 +472,14 @@ parameter should be a class a destroy() method:
 (default : true)
 
 whether or not to enable CEA-708 captions
+
+parameter should be a boolean
+
+#### ```stretchShortVideoTrack```
+(default : false)
+
+if a segment's video track is shorter than its audio track by > ```min(maxSeekHole, maxBufferHole)```, extend the final video frame's duration to match the audio track's duration.
+this helps playback continue in certain cases that might otherwise get stuck.
 
 parameter should be a boolean
 

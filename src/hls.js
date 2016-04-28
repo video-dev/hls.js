@@ -93,7 +93,8 @@ class Hls {
                 timelineController: TimelineController,
                 cueHandler: Cues,
                 enableCEA708Captions: true,
-                enableMP2TPassThrough: false
+                enableMP2TPassThrough: false,
+                stretchShortVideoTrack: false
             };
         }
         return Hls.defaultConfig;

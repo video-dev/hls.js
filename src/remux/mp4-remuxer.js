@@ -327,7 +327,10 @@ class MP4Remuxer {
                                 : this.nextAacPts) - avcSample.pts,
                         lastFrameDuration =
                             avcSample.dts - inputSamples[i > 0 ? i - 1 : i].dts;
-                    if (deltaToFrameEnd > gapTolerance) {
+                    if (
+                        config.stretchShortVideoTrack &&
+                        deltaToFrameEnd > gapTolerance
+                    ) {
                         // We subtract lastFrameDuration from deltaToFrameEnd to try to prevent any video
                         // frame overlap. maxBufferHole/maxSeekHole should be >> lastFrameDuration anyway.
                         mp4SampleDuration = deltaToFrameEnd - lastFrameDuration;
