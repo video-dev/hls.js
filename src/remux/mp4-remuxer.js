@@ -39,13 +39,16 @@ class MP4Remuxer {
       this.generateIS(audioTrack,videoTrack,timeOffset);
     }
     if (this.ISGenerated) {
+      let videoData;
       //logger.log('nb AVC samples:' + videoTrack.samples.length);
       if (videoTrack.samples.length) {
-        this.remuxVideo(videoTrack,timeOffset,contiguous);
+        videoData = this.remuxVideo(videoTrack,timeOffset,contiguous);
       }
       //logger.log('nb AAC samples:' + audioTrack.samples.length);
       if (audioTrack.samples.length) {
-        this.remuxAudio(audioTrack,timeOffset,contiguous);
+        this.remuxAudio(audioTrack, timeOffset, contiguous);
+      } else if ((videoData !== undefined) && audioTrack.codec) {
+        this.remuxEmptyAudio(audioTrack, timeOffset, contiguous, videoData);
       }
     }
     //logger.log('nb ID3 samples:' + audioTrack.samples.length);
@@ -282,7 +285,7 @@ class MP4Remuxer {
     track.samples = outputSamples;
     moof = MP4.moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
     track.samples = [];
-    this.observer.trigger(Event.FRAG_PARSING_DATA, {
+    let data = {
       data1: moof,
       data2: mdat,
       startPTS: firstPTS / pesTimeScale,
@@ -291,10 +294,12 @@ class MP4Remuxer {
       endDTS: this.nextAvcDts / pesTimeScale,
       type: 'video',
       nb: outputSamples.length
-    });
+    };
+    this.observer.trigger(Event.FRAG_PARSING_DATA, data);
+    return data;
   }
 
-  remuxAudio(track,timeOffset, contiguous) {
+  remuxAudio(track, timeOffset, contiguous) {
     var view,
         offset = 8,
         pesTimeScale = this.PES_TIMESCALE,
@@ -449,6 +454,42 @@ class MP4Remuxer {
         nb: nbSamples
       });
     }
+  }
+
+  remuxEmptyAudio(track, timeOffset, contiguous, videoData) {
+    let pesTimeScale = this.PES_TIMESCALE,
+        mp4timeScale = track.timescale,
+        pes2mp4ScaleFactor = pesTimeScale/mp4timeScale,
+
+        // sync with video's timestamp
+        startDTS = videoData.startDTS * pesTimeScale,
+        endDTS = videoData.endDTS * pesTimeScale,
+
+        // one sample's duration value
+        sampleDuration = 1024,
+        frameDuration = pes2mp4ScaleFactor * sampleDuration,
+
+        // samples count of this segment's duration
+        nbSamples = Math.ceil((endDTS - startDTS) / frameDuration),
+
+        // silent frame
+        silentFrame = ADTS.getSilentFrame(track.channelCount);
+
+    // Can't remux if we can't generate a silent frame...
+    if (!silentFrame) {
+      logger.trace('Unable to remuxEmptyAudio since we were unable to get a silent frame for given audio codec!');
+      return;
+    }
+
+    let samples = [];
+    for(var i = 0; i < nbSamples; i++) {
+      var stamp = startDTS + i * frameDuration;
+      samples.push({unit: silentFrame.slice(0), pts: stamp, dts: stamp});
+      track.len += silentFrame.length;
+    }
+    track.samples = samples;
+
+    this.remuxAudio(track, timeOffset, contiguous);
   }
 
   remuxID3(track,timeOffset) {
