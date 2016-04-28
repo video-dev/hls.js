@@ -58,7 +58,7 @@ class FragmentLoader extends EventHandler {
     this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.FRAG_LOAD_ERROR, fatal: false, frag: context.frag, response: event});
   }
 
-  loadtimeout() {
+  loadtimeout(event, stats, context) {
     let loader = context.loader;
     if (loader) {
       loader.abort();
