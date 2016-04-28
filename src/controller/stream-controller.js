@@ -1150,7 +1150,6 @@ class StreamController extends EventHandler {
                 this.hls.trigger(Event.FRAG_BUFFERED, {
                     stats: stats,
                     frag: frag,
-                    type: 'main',
                     id: 0
                 });
                 logger.log(
