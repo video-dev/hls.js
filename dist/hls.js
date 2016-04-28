@@ -605,7 +605,7 @@ var AbrController = function (_EventHandler) {
 
 exports.default = AbrController;
 
-},{"../errors":21,"../event-handler":22,"../events":23,"../helper/buffer-helper":24,"../utils/logger":38}],4:[function(require,module,exports){
+},{"../errors":21,"../event-handler":22,"../events":23,"../helper/buffer-helper":24,"../utils/logger":37}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1006,7 +1006,7 @@ var BufferController = function (_EventHandler) {
 
 exports.default = BufferController;
 
-},{"../errors":21,"../event-handler":22,"../events":23,"../utils/logger":38}],5:[function(require,module,exports){
+},{"../errors":21,"../event-handler":22,"../events":23,"../utils/logger":37}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1274,7 +1274,7 @@ var FPSController = function (_EventHandler) {
 
 exports.default = FPSController;
 
-},{"../event-handler":22,"../events":23,"../utils/logger":38}],7:[function(require,module,exports){
+},{"../event-handler":22,"../events":23,"../utils/logger":37}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1605,7 +1605,7 @@ var LevelController = function (_EventHandler) {
 
 exports.default = LevelController;
 
-},{"../errors":21,"../event-handler":22,"../events":23,"../utils/logger":38}],8:[function(require,module,exports){
+},{"../errors":21,"../event-handler":22,"../events":23,"../utils/logger":37}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1863,7 +1863,7 @@ var StreamController = function (_EventHandler) {
               // level 1 loaded [182580162,182580168] <============= here we should have bufferEnd > end. in that case break to avoid reloading 182580168
               // level 1 loaded [182580164,182580171]
               //
-              if (levelDetails.PTSKnown && bufferEnd > end) {
+              if (bufferEnd > end) {
                 break;
               }
 
@@ -2395,7 +2395,7 @@ var StreamController = function (_EventHandler) {
               start = fragCurrent.start,
               level = fragCurrent.level,
               sn = fragCurrent.sn,
-              audioCodec = this.config.defaultAudioCodec || currentLevel.audioCodec;
+              audioCodec = currentLevel.audioCodec || this.config.defaultAudioCodec;
           if (this.audioCodecSwap) {
             _logger.logger.log('swapping playlist audio codec');
             if (audioCodec === undefined) {
@@ -2671,11 +2671,11 @@ var StreamController = function (_EventHandler) {
             _logger.logger.log('playback not stuck anymore @' + currentTime);
           }
           // check buffer upfront
-          // if less than jumpThreshold second is buffered, and media is expected to play but playhead is not moving,
+          // if less than 200ms is buffered, and media is expected to play but playhead is not moving,
           // and we have a new buffer range available upfront, let's seek to that one
-          if (expectedPlaying && bufferInfo.len <= jumpThreshold) {
-            if (playheadMoving) {
-              // playhead moving
+          if (bufferInfo.len <= jumpThreshold) {
+            if (playheadMoving || !expectedPlaying) {
+              // playhead moving or media not playing
               jumpThreshold = 0;
               this.seekHoleNudgeDuration = 0;
             } else {
@@ -2797,7 +2797,7 @@ var StreamController = function (_EventHandler) {
 
 exports.default = StreamController;
 
-},{"../demux/demuxer":17,"../errors":21,"../event-handler":22,"../events":23,"../helper/buffer-helper":24,"../helper/level-helper":25,"../utils/binary-search":35,"../utils/logger":38}],9:[function(require,module,exports){
+},{"../demux/demuxer":17,"../errors":21,"../event-handler":22,"../events":23,"../helper/buffer-helper":24,"../helper/level-helper":25,"../utils/binary-search":35,"../utils/logger":37}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2814,13 +2814,9 @@ var _eventHandler = require('../event-handler');
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _cea608Parser = require('../utils/cea-608-parser');
+var _cea708Interpreter = require('../utils/cea-708-interpreter');
 
-var _cea608Parser2 = _interopRequireDefault(_cea608Parser);
-
-var _cues = require('../utils/cues');
-
-var _cues2 = _interopRequireDefault(_cues);
+var _cea708Interpreter2 = _interopRequireDefault(_cea708Interpreter);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -2838,58 +2834,18 @@ var TimelineController = function (_EventHandler) {
   function TimelineController(hls) {
     _classCallCheck(this, TimelineController);
 
-    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(TimelineController).call(this, hls, _events2.default.MEDIA_ATTACHING, _events2.default.MEDIA_DETACHING, _events2.default.FRAG_PARSING_USERDATA, _events2.default.MANIFEST_LOADING, _events2.default.FRAG_LOADED, _events2.default.LEVEL_SWITCH));
+    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(TimelineController).call(this, hls, _events2.default.MEDIA_ATTACHING, _events2.default.MEDIA_DETACHING, _events2.default.FRAG_PARSING_USERDATA, _events2.default.MANIFEST_LOADING, _events2.default.FRAG_LOADED));
 
     _this.hls = hls;
     _this.config = hls.config;
-    _this.enabled = true;
 
     if (_this.config.enableCEA708Captions) {
-      var self = _this;
-
-      var channel1 = {
-        'newCue': function newCue(startTime, endTime, screen) {
-          if (!self.textTrack1) {
-            self.textTrack1 = self.createTextTrack('captions', 'Unknown CC1', 'en');
-            //            self.textTrack1.mode = 'showing';
-          }
-
-          _cues2.default.newCue(self.textTrack1, startTime, endTime, screen);
-        }
-      };
-
-      var channel2 = {
-        'newCue': function newCue(startTime, endTime, screen) {
-          if (!self.textTrack2) {
-            self.textTrack2 = self.createTextTrack('captions', 'Unknown CC2', 'es');
-          }
-
-          _cues2.default.newCue(self.textTrack2, startTime, endTime, screen);
-        }
-      };
-
-      _this.cea608Parser = new _cea608Parser2.default(0, channel1, channel2);
+      _this.cea708Interpreter = new _cea708Interpreter2.default();
     }
     return _this;
   }
 
   _createClass(TimelineController, [{
-    key: 'clearCurrentCues',
-    value: function clearCurrentCues(track) {
-      if (track && track.cues) {
-        while (track.cues.length > 0) {
-          track.removeCue(track.cues[0]);
-        }
-      }
-    }
-  }, {
-    key: 'createTextTrack',
-    value: function createTextTrack(kind, label, lang) {
-      if (this.media) {
-        return this.media.addTextTrack(kind, label, lang);
-      }
-    }
-  }, {
     key: 'destroy',
     value: function destroy() {
       _eventHandler2.default.prototype.destroy.call(this);
@@ -2897,35 +2853,28 @@ var TimelineController = function (_EventHandler) {
   }, {
     key: 'onMediaAttaching',
     value: function onMediaAttaching(data) {
-      this.media = data.media;
+      var media = this.media = data.media;
+      this.cea708Interpreter.attach(media);
     }
   }, {
     key: 'onMediaDetaching',
-    value: function onMediaDetaching() {}
+    value: function onMediaDetaching() {
+      this.cea708Interpreter.detach();
+    }
   }, {
     key: 'onManifestLoading',
     value: function onManifestLoading() {
-      this.lastPts = Number.NEGATIVE_INFINITY;
-    }
-  }, {
-    key: 'onLevelSwitch',
-    value: function onLevelSwitch() {
-      if (this.hls.currentLevel.closedCaptions === 'NONE') {
-        this.enabled = false;
-      } else {
-        this.enabled = true;
-      }
+      this.lastPts = Number.POSITIVE_INFINITY;
     }
   }, {
     key: 'onFragLoaded',
     value: function onFragLoaded(data) {
-      var pts = data.frag.start;
+      var pts = data.frag.start; //Number.POSITIVE_INFINITY;
 
       // if this is a frag for a previously loaded timerange, remove all captions
       // TODO: consider just removing captions for the timerange
       if (pts <= this.lastPts) {
-        this.clearCurrentCues(this.textTrack1);
-        this.clearCurrentCues(this.textTrack2);
+        this.cea708Interpreter.clear();
       }
 
       this.lastPts = pts;
@@ -2935,41 +2884,9 @@ var TimelineController = function (_EventHandler) {
     value: function onFragParsingUserdata(data) {
       // push all of the CEA-708 messages into the interpreter
       // immediately. It will create the proper timestamps based on our PTS value
-      if (this.enabled) {
-        for (var i = 0; i < data.samples.length; i++) {
-          var ccdatas = this.extractCea608Data(data.samples[i].bytes);
-          this.cea608Parser.addData(data.samples[i].pts, ccdatas);
-        }
+      for (var i = 0; i < data.samples.length; i++) {
+        this.cea708Interpreter.push(data.samples[i].pts, data.samples[i].bytes);
       }
-    }
-  }, {
-    key: 'extractCea608Data',
-    value: function extractCea608Data(byteArray) {
-      var count = byteArray[0] & 31;
-      var position = 2;
-      var tmpByte, ccbyte1, ccbyte2, ccValid, ccType;
-      var actualCCBytes = [];
-
-      for (var j = 0; j < count; j++) {
-        tmpByte = byteArray[position++];
-        ccbyte1 = 0x7F & byteArray[position++];
-        ccbyte2 = 0x7F & byteArray[position++];
-        ccValid = (4 & tmpByte) === 0 ? false : true;
-        ccType = 3 & tmpByte;
-
-        if (ccbyte1 === 0 && ccbyte2 === 0) {
-          continue;
-        }
-
-        if (ccValid) {
-          if (ccType === 0) // || ccType === 1
-            {
-              actualCCBytes.push(ccbyte1);
-              actualCCBytes.push(ccbyte2);
-            }
-        }
-      }
-      return actualCCBytes;
     }
   }]);
 
@@ -2978,7 +2895,7 @@ var TimelineController = function (_EventHandler) {
 
 exports.default = TimelineController;
 
-},{"../event-handler":22,"../events":23,"../utils/cea-608-parser":36,"../utils/cues":37}],10:[function(require,module,exports){
+},{"../event-handler":22,"../events":23,"../utils/cea-708-interpreter":36}],10:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3505,7 +3422,7 @@ var Decrypter = function () {
 
 exports.default = Decrypter;
 
-},{"../errors":21,"../utils/logger":38,"./aes128-decrypter":11}],13:[function(require,module,exports){
+},{"../errors":21,"../utils/logger":37,"./aes128-decrypter":11}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3633,7 +3550,7 @@ var AACDemuxer = function () {
 
 exports.default = AACDemuxer;
 
-},{"../demux/id3":19,"../utils/logger":38,"./adts":14}],14:[function(require,module,exports){
+},{"../demux/id3":19,"../utils/logger":37,"./adts":14}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3780,7 +3697,7 @@ var ADTS = function () {
 
 exports.default = ADTS;
 
-},{"../errors":21,"../utils/logger":38}],15:[function(require,module,exports){
+},{"../errors":21,"../utils/logger":37}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4098,7 +4015,7 @@ var Demuxer = function () {
 
 exports.default = Demuxer;
 
-},{"../crypt/decrypter":12,"../demux/demuxer-inline":15,"../demux/demuxer-worker":16,"../events":23,"../utils/logger":38,"webworkify":2}],18:[function(require,module,exports){
+},{"../crypt/decrypter":12,"../demux/demuxer-inline":15,"../demux/demuxer-worker":16,"../events":23,"../utils/logger":37,"webworkify":2}],18:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4462,7 +4379,7 @@ var ExpGolomb = function () {
 
 exports.default = ExpGolomb;
 
-},{"../utils/logger":38}],19:[function(require,module,exports){
+},{"../utils/logger":37}],19:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4615,7 +4532,7 @@ var ID3 = function () {
 
 exports.default = ID3;
 
-},{"../utils/logger":38}],20:[function(require,module,exports){
+},{"../utils/logger":37}],20:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5022,72 +4939,51 @@ var TSDemuxer = function () {
             if (debug) {
               debugString += 'SEI ';
             }
-            unit.data = _this.discardEPB(unit.data);
             expGolombDecoder = new _expGolomb2.default(unit.data);
 
             // skip frameType
             expGolombDecoder.readUByte();
 
-            var payloadType = 0;
-            var payloadSize = 0;
-            var endOfCaptions = false;
+            var payloadType = expGolombDecoder.readUByte();
 
-            while (!endOfCaptions && expGolombDecoder.bytesAvailable > 1) {
-              payloadType = 0;
+            // TODO: there can be more than one payload in an SEI packet...
+            // TODO: need to read type and size in a while loop to get them all
+            if (payloadType === 4) {
+              var payloadSize = 0;
+
               do {
-                if (expGolombDecoder.bytesAvailable !== 0) {
-                  payloadType += expGolombDecoder.readUByte();
-                }
-              } while (payloadType === 0xFF);
+                payloadSize = expGolombDecoder.readUByte();
+              } while (payloadSize === 255);
 
-              // Parse payload size.
-              payloadSize = 0;
-              do {
-                if (expGolombDecoder.bytesAvailable !== 0) {
-                  payloadSize += expGolombDecoder.readUByte();
-                }
-              } while (payloadSize === 0xFF);
+              var countryCode = expGolombDecoder.readUByte();
 
-              // TODO: there can be more than one payload in an SEI packet...
-              // TODO: need to read type and size in a while loop to get them all
-              if (payloadType === 4 && expGolombDecoder.bytesAvailable !== 0) {
+              if (countryCode === 181) {
+                var providerCode = expGolombDecoder.readUShort();
 
-                endOfCaptions = true;
+                if (providerCode === 49) {
+                  var userStructure = expGolombDecoder.readUInt();
 
-                var countryCode = expGolombDecoder.readUByte();
+                  if (userStructure === 0x47413934) {
+                    var userDataType = expGolombDecoder.readUByte();
 
-                if (countryCode === 181) {
-                  var providerCode = expGolombDecoder.readUShort();
+                    // Raw CEA-608 bytes wrapped in CEA-708 packet
+                    if (userDataType === 3) {
+                      var firstByte = expGolombDecoder.readUByte();
+                      var secondByte = expGolombDecoder.readUByte();
 
-                  if (providerCode === 49) {
-                    var userStructure = expGolombDecoder.readUInt();
+                      var totalCCs = 31 & firstByte;
+                      var byteArray = [firstByte, secondByte];
 
-                    if (userStructure === 0x47413934) {
-                      var userDataType = expGolombDecoder.readUByte();
-
-                      // Raw CEA-608 bytes wrapped in CEA-708 packet
-                      if (userDataType === 3) {
-                        var firstByte = expGolombDecoder.readUByte();
-                        var secondByte = expGolombDecoder.readUByte();
-
-                        var totalCCs = 31 & firstByte;
-                        var byteArray = [firstByte, secondByte];
-
-                        for (i = 0; i < totalCCs; i++) {
-                          // 3 bytes per CC
-                          byteArray.push(expGolombDecoder.readUByte());
-                          byteArray.push(expGolombDecoder.readUByte());
-                          byteArray.push(expGolombDecoder.readUByte());
-                        }
-
-                        _this._insertSampleInOrder(_this._txtTrack.samples, { type: 3, pts: pes.pts, bytes: byteArray });
+                      for (i = 0; i < totalCCs; i++) {
+                        // 3 bytes per CC
+                        byteArray.push(expGolombDecoder.readUByte());
+                        byteArray.push(expGolombDecoder.readUByte());
+                        byteArray.push(expGolombDecoder.readUByte());
                       }
+
+                      _this._txtTrack.samples.push({ type: 3, pts: pes.pts, bytes: byteArray });
                     }
                   }
-                }
-              } else if (payloadSize < expGolombDecoder.bytesAvailable) {
-                for (i = 0; i < payloadSize; i++) {
-                  expGolombDecoder.readUByte();
                 }
               }
             }
@@ -5156,25 +5052,6 @@ var TSDemuxer = function () {
           track.len += length;
           track.nbNalu += units2.length;
         }
-      }
-    }
-  }, {
-    key: '_insertSampleInOrder',
-    value: function _insertSampleInOrder(arr, data) {
-      var len = arr.length;
-      if (len > 0) {
-        if (data.pts >= arr[len - 1].pts) {
-          arr.push(data);
-        } else {
-          for (var pos = len - 1; pos >= 0; pos--) {
-            if (data.pts < arr[pos].pts) {
-              arr.splice(pos, 0, data);
-              break;
-            }
-          }
-        }
-      } else {
-        arr.push(data);
       }
     }
   }, {
@@ -5255,52 +5132,6 @@ var TSDemuxer = function () {
         //logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
       }
       return units;
-    }
-
-    /**
-     * remove Emulation Prevention bytes from a RBSP
-     */
-
-  }, {
-    key: 'discardEPB',
-    value: function discardEPB(data) {
-      var length = data.byteLength,
-          EPBPositions = [],
-          i = 1,
-          newLength,
-          newData;
-
-      // Find all `Emulation Prevention Bytes`
-      while (i < length - 2) {
-        if (data[i] === 0 && data[i + 1] === 0 && data[i + 2] === 0x03) {
-          EPBPositions.push(i + 2);
-          i += 2;
-        } else {
-          i++;
-        }
-      }
-
-      // If no Emulation Prevention Bytes were found just return the original
-      // array
-      if (EPBPositions.length === 0) {
-        return data;
-      }
-
-      // Create a new array to hold the NAL unit data
-      newLength = length - EPBPositions.length;
-      newData = new Uint8Array(newLength);
-      var sourceIndex = 0;
-
-      for (i = 0; i < newLength; sourceIndex++, i++) {
-        if (sourceIndex === EPBPositions[0]) {
-          // Skip this byte
-          sourceIndex++;
-          // Remove this position index
-          EPBPositions.shift();
-        }
-        newData[i] = data[sourceIndex];
-      }
-      return newData;
     }
   }, {
     key: '_parseAACPES',
@@ -5429,7 +5260,7 @@ var TSDemuxer = function () {
 
 exports.default = TSDemuxer;
 
-},{"../errors":21,"../events":23,"../utils/logger":38,"./adts":14,"./exp-golomb":18}],21:[function(require,module,exports){
+},{"../errors":21,"../events":23,"../utils/logger":37,"./adts":14,"./exp-golomb":18}],21:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5484,9 +5315,7 @@ var ErrorDetails = exports.ErrorDetails = {
   // Identifier for a buffer full event
   BUFFER_FULL_ERROR: 'bufferFullError',
   // Identifier for a buffer seek over hole event
-  BUFFER_SEEK_OVER_HOLE: 'bufferSeekOverHole',
-  // Identifier for an internal exception happening inside hls.js while handling an event
-  INTERNAL_EXCEPTION: 'internalException'
+  BUFFER_SEEK_OVER_HOLE: 'bufferSeekOverHole'
 };
 
 },{}],22:[function(require,module,exports){
@@ -5498,17 +5327,17 @@ Object.defineProperty(exports, "__esModule", {
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     * All objects in the event handling chain should inherit from this class
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
-
-var _logger = require('./utils/logger');
-
-var _errors = require('./errors');
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/*
+*
+* All objects in the event handling chain should inherit from this class
+*
+*/
+
+//import {logger} from './utils/logger';
 
 var EventHandler = function () {
   function EventHandler(hls) {
@@ -5578,12 +5407,7 @@ var EventHandler = function () {
         }
         return this[funcName].bind(this, data);
       };
-      try {
-        eventToFunction.call(this, event, data).call();
-      } catch (err) {
-        _logger.logger.error('internal error happened while processing ' + event + ':' + err.message);
-        this.hls.trigger(Event.ERROR, { type: _errors.ErrorTypes.OTHER_ERROR, details: _errors.ErrorDetails.INTERNAL_EXCEPTION, fatal: false, event: event, err: err });
-      }
+      eventToFunction.call(this, event, data).call();
     }
   }]);
 
@@ -5592,7 +5416,7 @@ var EventHandler = function () {
 
 exports.default = EventHandler;
 
-},{"./errors":21,"./utils/logger":38}],23:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -5834,9 +5658,8 @@ var LevelHelper = function () {
         LevelHelper.updateFragPTS(newDetails, PTSFrag.sn, PTSFrag.startPTS, PTSFrag.endPTS);
       } else {
         // ensure that delta is within oldfragments range
-        // also adjust sliding in case delta is 0 (we could have old=[50-60] and new=old=[50-61])
-        // in that case we also need to adjust start offset of all fragments
-        if (delta >= 0 && delta < oldfragments.length) {
+        // no need to offset start if delta === 0
+        if (delta > 0 && delta < oldfragments.length) {
           // adjust start by sliding offset
           var sliding = oldfragments[delta].start;
           for (i = 0; i < newfragments.length; i++) {
@@ -5921,7 +5744,7 @@ var LevelHelper = function () {
 
 exports.default = LevelHelper;
 
-},{"../utils/logger":38}],26:[function(require,module,exports){
+},{"../utils/logger":37}],26:[function(require,module,exports){
 /**
  * HLS interface
  */
@@ -5988,10 +5811,6 @@ var _events4 = _interopRequireDefault(_events3);
 var _keyLoader = require('./loader/key-loader');
 
 var _keyLoader2 = _interopRequireDefault(_keyLoader);
-
-var _cues = require('./utils/cues');
-
-var _cues2 = _interopRequireDefault(_cues);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -6069,7 +5888,6 @@ var Hls = function () {
           fpsController: _fpsController2.default,
           streamController: _streamController2.default,
           timelineController: _timelineController2.default,
-          cueHandler: _cues2.default,
           enableCEA708Captions: true,
           enableMP2TPassThrough: false
         };
@@ -6357,7 +6175,7 @@ var Hls = function () {
 
 exports.default = Hls;
 
-},{"./controller/abr-controller":3,"./controller/buffer-controller":4,"./controller/cap-level-controller":5,"./controller/fps-controller":6,"./controller/level-controller":7,"./controller/stream-controller":8,"./controller/timeline-controller":9,"./errors":21,"./events":23,"./loader/fragment-loader":28,"./loader/key-loader":29,"./loader/playlist-loader":30,"./utils/cues":37,"./utils/logger":38,"./utils/xhr-loader":40,"events":1}],27:[function(require,module,exports){
+},{"./controller/abr-controller":3,"./controller/buffer-controller":4,"./controller/cap-level-controller":5,"./controller/fps-controller":6,"./controller/level-controller":7,"./controller/stream-controller":8,"./controller/timeline-controller":9,"./errors":21,"./events":23,"./loader/fragment-loader":28,"./loader/key-loader":29,"./loader/playlist-loader":30,"./utils/logger":37,"./utils/xhr-loader":39,"events":1}],27:[function(require,module,exports){
 'use strict';
 
 // This is mostly for support of the es6 module export
@@ -6682,12 +6500,6 @@ var PlaylistLoader = function (_EventHandler) {
         level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
         level.name = attrs.NAME;
 
-        var closedCaptions = attrs.enumeratedString('CLOSED-CAPTIONS');
-
-        if (closedCaptions) {
-          level.closedCaptions = closedCaptions;
-        }
-
         var codecs = attrs.CODECS;
         if (codecs) {
           codecs = codecs.split(',');
@@ -6913,7 +6725,7 @@ var PlaylistLoader = function (_EventHandler) {
 
 exports.default = PlaylistLoader;
 
-},{"../errors":21,"../event-handler":22,"../events":23,"../utils/attr-list":34,"../utils/url":39}],31:[function(require,module,exports){
+},{"../errors":21,"../event-handler":22,"../events":23,"../utils/attr-list":34,"../utils/url":38}],31:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7612,8 +7424,8 @@ var MP4Remuxer = function () {
 
       // check timestamp continuity accross consecutive fragments (this is to remove inter-fragment gap/hole)
       var delta = Math.round((firstDTS - nextAvcDts) / 90);
-      // if fragment are contiguous, detect hole/overlapping between fragments
-      if (contiguous) {
+      // if fragment are contiguous, or if there is a huge delta (more than 10s) between expected PTS and sample PTS
+      if (contiguous || Math.abs(delta) > 10000) {
         if (delta) {
           if (delta > 1) {
             _logger.logger.log('AVC:' + delta + ' ms hole between fragments detected,filling it');
@@ -7629,7 +7441,6 @@ var MP4Remuxer = function () {
           _logger.logger.log('Video/PTS/DTS adjusted: ' + firstPTS + '/' + firstDTS + ',delta:' + delta);
         }
       }
-
       nextDTS = firstDTS;
 
       // compute lastPTS/lastDTS
@@ -7674,6 +7485,7 @@ var MP4Remuxer = function () {
       var view = new DataView(mdat.buffer);
       view.setUint32(0, mdat.byteLength);
       mdat.set(_mp4Generator2.default.types.mdat, 4);
+
       for (var _i = 0; _i < inputSamples.length; _i++) {
         var avcSample = inputSamples[_i],
             mp4SampleLength = 0,
@@ -7694,7 +7506,7 @@ var MP4Remuxer = function () {
             mp4SampleDuration = inputSamples[_i + 1].dts - avcSample.dts;
           } else {
             // last sample duration is same than previous one
-            mp4SampleDuration = avcSample.dts - inputSamples[_i > 0 ? _i - 1 : _i].dts;
+            mp4SampleDuration = avcSample.dts - inputSamples[_i - 1].dts;
           }
           mp4SampleDuration /= pes2mp4ScaleFactor;
           compositionTimeOffset = Math.round((avcSample.pts - avcSample.dts) / pes2mp4ScaleFactor);
@@ -7803,8 +7615,8 @@ var MP4Remuxer = function () {
           ptsnorm = this._PTSNormalize(pts, nextAacPts);
           dtsnorm = this._PTSNormalize(dts, nextAacPts);
           delta = Math.round(1000 * (ptsnorm - nextAacPts) / pesTimeScale);
-          // if fragment are contiguous, detect hole/overlapping between fragments
-          if (contiguous) {
+          // if fragment are contiguous, or if there is a huge delta (more than 10s) between expected PTS and sample PTS
+          if (contiguous || Math.abs(delta) > 10000) {
             // log delta
             if (delta) {
               if (delta > 0) {
@@ -7961,7 +7773,7 @@ var MP4Remuxer = function () {
 
 exports.default = MP4Remuxer;
 
-},{"../errors":21,"../events":23,"../remux/mp4-generator":31,"../utils/logger":38}],33:[function(require,module,exports){
+},{"../errors":21,"../events":23,"../remux/mp4-generator":31,"../utils/logger":37}],33:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8212,1360 +8024,423 @@ module.exports = BinarySearch;
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
-    value: true
+  value: true
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-/**
- *
- * This code was ported from the dash.js project at:
- *   https://github.com/Dash-Industry-Forum/dash.js/blob/development/externals/cea608-parser.js
- *   https://github.com/Dash-Industry-Forum/dash.js/commit/8269b26a761e0853bb21d78780ed945144ecdd4d#diff-71bc295a2d6b6b7093a1d3290d53a4b2 
- *
- * The original copyright appears below:
- *
- * The copyright in this software is being made available under the BSD License,
- * included below. This software may be subject to other third party and contributor
- * rights, including patent rights, and no such rights are granted under this license.
- *
- * Copyright (c) 2015-2016, DASH Industry Forum.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted provided that the following conditions are met:
- *  1. Redistributions of source code must retain the above copyright notice, this
- *  list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright notice,
- *  this list of conditions and the following disclaimer in the documentation and/or
- *  other materials provided with the distribution.
- *  2. Neither the name of Dash Industry Forum nor the names of its
- *  contributors may be used to endorse or promote products derived from this software
- *  without specific prior written permission.
- *
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS AS IS AND ANY
- *  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- *  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
- *  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
- *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
- *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- *  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- *  POSSIBILITY OF SUCH DAMAGE.
- */
-/**
- *  Exceptions from regular ASCII. CodePoints are mapped to UTF-16 codes
- */
-
-var specialCea608CharsCodes = {
-    0x2a: 0xe1, // lowercase a, acute accent
-    0x5c: 0xe9, // lowercase e, acute accent
-    0x5e: 0xed, // lowercase i, acute accent
-    0x5f: 0xf3, // lowercase o, acute accent
-    0x60: 0xfa, // lowercase u, acute accent
-    0x7b: 0xe7, // lowercase c with cedilla
-    0x7c: 0xf7, // division symbol
-    0x7d: 0xd1, // uppercase N tilde
-    0x7e: 0xf1, // lowercase n tilde
-    0x7f: 0x2588, // Full block
-    // THIS BLOCK INCLUDES THE 16 EXTENDED (TWO-BYTE) LINE 21 CHARACTERS
-    // THAT COME FROM HI BYTE=0x11 AND LOW BETWEEN 0x30 AND 0x3F
-    // THIS MEANS THAT \x50 MUST BE ADDED TO THE VALUES
-    0x80: 0xae, // Registered symbol (R)
-    0x81: 0xb0, // degree sign
-    0x82: 0xbd, // 1/2 symbol
-    0x83: 0xbf, // Inverted (open) question mark
-    0x84: 0x2122, // Trademark symbol (TM)
-    0x85: 0xa2, // Cents symbol
-    0x86: 0xa3, // Pounds sterling
-    0x87: 0x266a, // Music 8'th note
-    0x88: 0xe0, // lowercase a, grave accent
-    0x89: 0x20, // transparent space (regular)
-    0x8a: 0xe8, // lowercase e, grave accent
-    0x8b: 0xe2, // lowercase a, circumflex accent
-    0x8c: 0xea, // lowercase e, circumflex accent
-    0x8d: 0xee, // lowercase i, circumflex accent
-    0x8e: 0xf4, // lowercase o, circumflex accent
-    0x8f: 0xfb, // lowercase u, circumflex accent
-    // THIS BLOCK INCLUDES THE 32 EXTENDED (TWO-BYTE) LINE 21 CHARACTERS
-    // THAT COME FROM HI BYTE=0x12 AND LOW BETWEEN 0x20 AND 0x3F
-    0x90: 0xc1, // capital letter A with acute
-    0x91: 0xc9, // capital letter E with acute
-    0x92: 0xd3, // capital letter O with acute
-    0x93: 0xda, // capital letter U with acute
-    0x94: 0xdc, // capital letter U with diaresis
-    0x95: 0xfc, // lowercase letter U with diaeresis
-    0x96: 0x2018, // opening single quote
-    0x97: 0xa1, // inverted exclamation mark
-    0x98: 0x2a, // asterisk
-    0x99: 0x2019, // closing single quote
-    0x9a: 0x2501, // box drawings heavy horizontal
-    0x9b: 0xa9, // copyright sign
-    0x9c: 0x2120, // Service mark
-    0x9d: 0x2022, // (round) bullet
-    0x9e: 0x201c, // Left double quotation mark
-    0x9f: 0x201d, // Right double quotation mark
-    0xa0: 0xc0, // uppercase A, grave accent
-    0xa1: 0xc2, // uppercase A, circumflex
-    0xa2: 0xc7, // uppercase C with cedilla
-    0xa3: 0xc8, // uppercase E, grave accent
-    0xa4: 0xca, // uppercase E, circumflex
-    0xa5: 0xcb, // capital letter E with diaresis
-    0xa6: 0xeb, // lowercase letter e with diaresis
-    0xa7: 0xce, // uppercase I, circumflex
-    0xa8: 0xcf, // uppercase I, with diaresis
-    0xa9: 0xef, // lowercase i, with diaresis
-    0xaa: 0xd4, // uppercase O, circumflex
-    0xab: 0xd9, // uppercase U, grave accent
-    0xac: 0xf9, // lowercase u, grave accent
-    0xad: 0xdb, // uppercase U, circumflex
-    0xae: 0xab, // left-pointing double angle quotation mark
-    0xaf: 0xbb, // right-pointing double angle quotation mark
-    // THIS BLOCK INCLUDES THE 32 EXTENDED (TWO-BYTE) LINE 21 CHARACTERS
-    // THAT COME FROM HI BYTE=0x13 AND LOW BETWEEN 0x20 AND 0x3F
-    0xb0: 0xc3, // Uppercase A, tilde
-    0xb1: 0xe3, // Lowercase a, tilde
-    0xb2: 0xcd, // Uppercase I, acute accent
-    0xb3: 0xcc, // Uppercase I, grave accent
-    0xb4: 0xec, // Lowercase i, grave accent
-    0xb5: 0xd2, // Uppercase O, grave accent
-    0xb6: 0xf2, // Lowercase o, grave accent
-    0xb7: 0xd5, // Uppercase O, tilde
-    0xb8: 0xf5, // Lowercase o, tilde
-    0xb9: 0x7b, // Open curly brace
-    0xba: 0x7d, // Closing curly brace
-    0xbb: 0x5c, // Backslash
-    0xbc: 0x5e, // Caret
-    0xbd: 0x5f, // Underscore
-    0xbe: 0x7c, // Pipe (vertical line)
-    0xbf: 0x223c, // Tilde operator
-    0xc0: 0xc4, // Uppercase A, umlaut
-    0xc1: 0xe4, // Lowercase A, umlaut
-    0xc2: 0xd6, // Uppercase O, umlaut
-    0xc3: 0xf6, // Lowercase o, umlaut
-    0xc4: 0xdf, // Esszett (sharp S)
-    0xc5: 0xa5, // Yen symbol
-    0xc6: 0xa4, // Generic currency sign
-    0xc7: 0x2503, // Box drawings heavy vertical
-    0xc8: 0xc5, // Uppercase A, ring
-    0xc9: 0xe5, // Lowercase A, ring
-    0xca: 0xd8, // Uppercase O, stroke
-    0xcb: 0xf8, // Lowercase o, strok
-    0xcc: 0x250f, // Box drawings heavy down and right
-    0xcd: 0x2513, // Box drawings heavy down and left
-    0xce: 0x2517, // Box drawings heavy up and right
-    0xcf: 0x251b // Box drawings heavy up and left
-};
-
-/**
- * Utils
- */
-var getCharForByte = function getCharForByte(byte) {
-    var charCode = byte;
-    if (specialCea608CharsCodes.hasOwnProperty(byte)) {
-        charCode = specialCea608CharsCodes[byte];
-    }
-    return String.fromCharCode(charCode);
-};
-
-var NR_ROWS = 15,
-    NR_COLS = 32;
-// Tables to look up row from PAC data
-var rowsLowCh1 = { 0x11: 1, 0x12: 3, 0x15: 5, 0x16: 7, 0x17: 9, 0x10: 11, 0x13: 12, 0x14: 14 };
-var rowsHighCh1 = { 0x11: 2, 0x12: 4, 0x15: 6, 0x16: 8, 0x17: 10, 0x13: 13, 0x14: 15 };
-var rowsLowCh2 = { 0x19: 1, 0x1A: 3, 0x1D: 5, 0x1E: 7, 0x1F: 9, 0x18: 11, 0x1B: 12, 0x1C: 14 };
-var rowsHighCh2 = { 0x19: 2, 0x1A: 4, 0x1D: 6, 0x1E: 8, 0x1F: 10, 0x1B: 13, 0x1C: 15 };
-
-var backgroundColors = ['white', 'green', 'blue', 'cyan', 'red', 'yellow', 'magenta', 'black', 'transparent'];
-
-/**
- * Simple logger class to be able to write with time-stamps and filter on level.
- */
-var logger = {
-    verboseFilter: { 'DATA': 3, 'DEBUG': 3, 'INFO': 2, 'WARNING': 2, 'TEXT': 1, 'ERROR': 0 },
-    time: null,
-    verboseLevel: 0, // Only write errors
-    setTime: function setTime(newTime) {
-        this.time = newTime;
-    },
-    log: function log(severity, msg) {
-        var minLevel = this.verboseFilter[severity];
-        if (this.verboseLevel >= minLevel) {
-            console.log(this.time + ' [' + severity + '] ' + msg);
-        }
-    }
-};
-
-var numArrayToHexArray = function numArrayToHexArray(numArray) {
-    var hexArray = [];
-    for (var j = 0; j < numArray.length; j++) {
-        hexArray.push(numArray[j].toString(16));
-    }
-    return hexArray;
-};
-
-var PenState = function () {
-    function PenState(foreground, underline, italics, background, flash) {
-        _classCallCheck(this, PenState);
-
-        this.foreground = foreground || 'white';
-        this.underline = underline || false;
-        this.italics = italics || false;
-        this.background = background || 'black';
-        this.flash = flash || false;
-    }
-
-    _createClass(PenState, [{
-        key: 'reset',
-        value: function reset() {
-            this.foreground = 'white';
-            this.underline = false;
-            this.italics = false;
-            this.background = 'black';
-            this.flash = false;
-        }
-    }, {
-        key: 'setStyles',
-        value: function setStyles(styles) {
-            var attribs = ['foreground', 'underline', 'italics', 'background', 'flash'];
-            for (var i = 0; i < attribs.length; i++) {
-                var style = attribs[i];
-                if (styles.hasOwnProperty(style)) {
-                    this[style] = styles[style];
-                }
-            }
-        }
-    }, {
-        key: 'isDefault',
-        value: function isDefault() {
-            return this.foreground === 'white' && !this.underline && !this.italics && this.background === 'black' && !this.flash;
-        }
-    }, {
-        key: 'equals',
-        value: function equals(other) {
-            return this.foreground === other.foreground && this.underline === other.underline && this.italics === other.italics && this.background === other.background && this.flash === other.flash;
-        }
-    }, {
-        key: 'copy',
-        value: function copy(newPenState) {
-            this.foreground = newPenState.foreground;
-            this.underline = newPenState.underline;
-            this.italics = newPenState.italics;
-            this.background = newPenState.background;
-            this.flash = newPenState.flash;
-        }
-    }, {
-        key: 'toString',
-        value: function toString() {
-            return 'color=' + this.foreground + ', underline=' + this.underline + ', italics=' + this.italics + ', background=' + this.background + ', flash=' + this.flash;
-        }
-    }]);
-
-    return PenState;
-}();
-
-/**
- * Unicode character with styling and background.
- * @constructor
- */
-
-
-var StyledUnicodeChar = function () {
-    function StyledUnicodeChar(uchar, foreground, underline, italics, background, flash) {
-        _classCallCheck(this, StyledUnicodeChar);
-
-        this.uchar = uchar || ' '; // unicode character
-        this.penState = new PenState(foreground, underline, italics, background, flash);
-    }
-
-    _createClass(StyledUnicodeChar, [{
-        key: 'reset',
-        value: function reset() {
-            this.uchar = ' ';
-            this.penState.reset();
-        }
-    }, {
-        key: 'setChar',
-        value: function setChar(uchar, newPenState) {
-            this.uchar = uchar;
-            this.penState.copy(newPenState);
-        }
-    }, {
-        key: 'setPenState',
-        value: function setPenState(newPenState) {
-            this.penState.copy(newPenState);
-        }
-    }, {
-        key: 'equals',
-        value: function equals(other) {
-            return this.uchar === other.uchar && this.penState.equals(other.penState);
-        }
-    }, {
-        key: 'copy',
-        value: function copy(newChar) {
-            this.uchar = newChar.uchar;
-            this.penState.copy(newChar.penState);
-        }
-    }, {
-        key: 'isEmpty',
-        value: function isEmpty() {
-            return this.uchar === ' ' && this.penState.isDefault();
-        }
-    }]);
-
-    return StyledUnicodeChar;
-}();
-
-/**
- * CEA-608 row consisting of NR_COLS instances of StyledUnicodeChar.
- * @constructor
- */
-
-
-var Row = function () {
-    function Row() {
-        _classCallCheck(this, Row);
-
-        this.chars = [];
-        for (var i = 0; i < NR_COLS; i++) {
-            this.chars.push(new StyledUnicodeChar());
-        }
-        this.pos = 0;
-        this.currPenState = new PenState();
-    }
-
-    _createClass(Row, [{
-        key: 'equals',
-        value: function equals(other) {
-            var equal = true;
-            for (var i = 0; i < NR_COLS; i++) {
-                if (!this.chars[i].equals(other.chars[i])) {
-                    equal = false;
-                    break;
-                }
-            }
-            return equal;
-        }
-    }, {
-        key: 'copy',
-        value: function copy(other) {
-            for (var i = 0; i < NR_COLS; i++) {
-                this.chars[i].copy(other.chars[i]);
-            }
-        }
-    }, {
-        key: 'isEmpty',
-        value: function isEmpty() {
-            var empty = true;
-            for (var i = 0; i < NR_COLS; i++) {
-                if (!this.chars[i].isEmpty()) {
-                    empty = false;
-                    break;
-                }
-            }
-            return empty;
-        }
-
-        /**
-         *  Set the cursor to a valid column.
-         */
-
-    }, {
-        key: 'setCursor',
-        value: function setCursor(absPos) {
-            if (this.pos !== absPos) {
-                this.pos = absPos;
-            }
-            if (this.pos < 0) {
-                logger.log('ERROR', 'Negative cursor position ' + this.pos);
-                this.pos = 0;
-            } else if (this.pos > NR_COLS) {
-                logger.log('ERROR', 'Too large cursor position ' + this.pos);
-                this.pos = NR_COLS;
-            }
-        }
-
-        /** 
-         * Move the cursor relative to current position.
-         */
-
-    }, {
-        key: 'moveCursor',
-        value: function moveCursor(relPos) {
-            var newPos = this.pos + relPos;
-            if (relPos > 1) {
-                for (var i = this.pos + 1; i < newPos + 1; i++) {
-                    this.chars[i].setPenState(this.currPenState);
-                }
-            }
-            this.setCursor(newPos);
-        }
-
-        /**
-         * Backspace, move one step back and clear character.
-         */
-
-    }, {
-        key: 'backSpace',
-        value: function backSpace() {
-            this.moveCursor(-1);
-            this.chars[this.pos].setChar(' ', this.currPenState);
-        }
-    }, {
-        key: 'insertChar',
-        value: function insertChar(byte) {
-            if (byte >= 0x90) {
-                //Extended char
-                this.backSpace();
-            }
-            var char = getCharForByte(byte);
-            if (this.pos >= NR_COLS) {
-                logger.log('ERROR', 'Cannot insert ' + byte.toString(16) + ' (' + char + ') at position ' + this.pos + '. Skipping it!');
-                return;
-            }
-            this.chars[this.pos].setChar(char, this.currPenState);
-            this.moveCursor(1);
-        }
-    }, {
-        key: 'clearFromPos',
-        value: function clearFromPos(startPos) {
-            var i;
-            for (i = startPos; i < NR_COLS; i++) {
-                this.chars[i].reset();
-            }
-        }
-    }, {
-        key: 'clear',
-        value: function clear() {
-            this.clearFromPos(0);
-            this.pos = 0;
-            this.currPenState.reset();
-        }
-    }, {
-        key: 'clearToEndOfRow',
-        value: function clearToEndOfRow() {
-            this.clearFromPos(this.pos);
-        }
-    }, {
-        key: 'getTextString',
-        value: function getTextString() {
-            var chars = [];
-            var empty = true;
-            for (var i = 0; i < NR_COLS; i++) {
-                var char = this.chars[i].uchar;
-                if (char !== ' ') {
-                    empty = false;
-                }
-                chars.push(char);
-            }
-            if (empty) {
-                return '';
-            } else {
-                return chars.join('');
-            }
-        }
-    }, {
-        key: 'setPenStyles',
-        value: function setPenStyles(styles) {
-            this.currPenState.setStyles(styles);
-            var currChar = this.chars[this.pos];
-            currChar.setPenState(this.currPenState);
-        }
-    }]);
-
-    return Row;
-}();
-
-/**
- * Keep a CEA-608 screen of 32x15 styled characters
- * @constructor
+/*
+ * CEA-708 interpreter
 */
 
-
-var CaptionScreen = function () {
-    function CaptionScreen() {
-        _classCallCheck(this, CaptionScreen);
-
-        this.rows = [];
-        for (var i = 0; i < NR_ROWS; i++) {
-            this.rows.push(new Row()); // Note that we use zero-based numbering (0-14)
-        }
-        this.currRow = NR_ROWS - 1;
-        this.nrRollUpRows = null;
-        this.reset();
-    }
-
-    _createClass(CaptionScreen, [{
-        key: 'reset',
-        value: function reset() {
-            for (var i = 0; i < NR_ROWS; i++) {
-                this.rows[i].clear();
-            }
-            this.currRow = NR_ROWS - 1;
-        }
-    }, {
-        key: 'equals',
-        value: function equals(other) {
-            var equal = true;
-            for (var i = 0; i < NR_ROWS; i++) {
-                if (!this.rows[i].equals(other.rows[i])) {
-                    equal = false;
-                    break;
-                }
-            }
-            return equal;
-        }
-    }, {
-        key: 'copy',
-        value: function copy(other) {
-            for (var i = 0; i < NR_ROWS; i++) {
-                this.rows[i].copy(other.rows[i]);
-            }
-        }
-    }, {
-        key: 'isEmpty',
-        value: function isEmpty() {
-            var empty = true;
-            for (var i = 0; i < NR_ROWS; i++) {
-                if (!this.rows[i].isEmpty()) {
-                    empty = false;
-                    break;
-                }
-            }
-            return empty;
-        }
-    }, {
-        key: 'backSpace',
-        value: function backSpace() {
-            var row = this.rows[this.currRow];
-            row.backSpace();
-        }
-    }, {
-        key: 'clearToEndOfRow',
-        value: function clearToEndOfRow() {
-            var row = this.rows[this.currRow];
-            row.clearToEndOfRow();
-        }
-
-        /**
-         * Insert a character (without styling) in the current row.
-         */
-
-    }, {
-        key: 'insertChar',
-        value: function insertChar(char) {
-            var row = this.rows[this.currRow];
-            row.insertChar(char);
-        }
-    }, {
-        key: 'setPen',
-        value: function setPen(styles) {
-            var row = this.rows[this.currRow];
-            row.setPenStyles(styles);
-        }
-    }, {
-        key: 'moveCursor',
-        value: function moveCursor(relPos) {
-            var row = this.rows[this.currRow];
-            row.moveCursor(relPos);
-        }
-    }, {
-        key: 'setCursor',
-        value: function setCursor(absPos) {
-            logger.log('INFO', 'setCursor: ' + absPos);
-            var row = this.rows[this.currRow];
-            row.setCursor(absPos);
-        }
-    }, {
-        key: 'setPAC',
-        value: function setPAC(pacData) {
-            logger.log('INFO', 'pacData = ' + JSON.stringify(pacData));
-            var newRow = pacData.row - 1;
-            if (this.nrRollUpRows && newRow < this.nrRollUpRows - 1) {
-                newRow = this.nrRollUpRows - 1;
-            }
-            this.currRow = newRow;
-            var row = this.rows[this.currRow];
-            if (pacData.indent !== null) {
-                var indent = pacData.indent;
-                var prevPos = Math.max(indent - 1, 0);
-                row.setCursor(pacData.indent);
-                pacData.color = row.chars[prevPos].penState.foreground;
-            }
-            var styles = { foreground: pacData.color, underline: pacData.underline, italics: pacData.italics, background: 'black', flash: false };
-            this.setPen(styles);
-        }
-
-        /**
-         * Set background/extra foreground, but first do back_space, and then insert space (backwards compatibility).
-         */
-
-    }, {
-        key: 'setBkgData',
-        value: function setBkgData(bkgData) {
-
-            logger.log('INFO', 'bkgData = ' + JSON.stringify(bkgData));
-            this.backSpace();
-            this.setPen(bkgData);
-            this.insertChar(0x20); //Space
-        }
-    }, {
-        key: 'setRollUpRows',
-        value: function setRollUpRows(nrRows) {
-            this.nrRollUpRows = nrRows;
-        }
-    }, {
-        key: 'rollUp',
-        value: function rollUp() {
-            if (this.nrRollUpRows === null) {
-                logger.log('DEBUG', 'roll_up but nrRollUpRows not set yet');
-                return; //Not properly setup
-            }
-            logger.log('TEXT', this.getDisplayText());
-            var topRowIndex = this.currRow + 1 - this.nrRollUpRows;
-            var topRow = this.rows.splice(topRowIndex, 1)[0];
-            topRow.clear();
-            this.rows.splice(this.currRow, 0, topRow);
-            logger.log('INFO', 'Rolling up');
-            //logger.log('TEXT', this.get_display_text())
-        }
-
-        /**
-         * Get all non-empty rows with as unicode text. 
-         */
-
-    }, {
-        key: 'getDisplayText',
-        value: function getDisplayText(asOneRow) {
-            asOneRow = asOneRow || false;
-            var displayText = [];
-            var text = '';
-            var rowNr = -1;
-            for (var i = 0; i < NR_ROWS; i++) {
-                var rowText = this.rows[i].getTextString();
-                if (rowText) {
-                    rowNr = i + 1;
-                    if (asOneRow) {
-                        displayText.push('Row ' + rowNr + ': \'' + rowText + '\'');
-                    } else {
-                        displayText.push(rowText.trim());
-                    }
-                }
-            }
-            if (displayText.length > 0) {
-                if (asOneRow) {
-                    text = '[' + displayText.join(' | ') + ']';
-                } else {
-                    text = displayText.join('\n');
-                }
-            }
-            return text;
-        }
-    }, {
-        key: 'getTextAndFormat',
-        value: function getTextAndFormat() {
-            return this.rows;
-        }
-    }]);
-
-    return CaptionScreen;
-}();
-
-//var modes = ['MODE_ROLL-UP', 'MODE_POP-ON', 'MODE_PAINT-ON', 'MODE_TEXT'];
-
-var Cea608Channel = function () {
-    function Cea608Channel(channelNumber, outputFilter) {
-        _classCallCheck(this, Cea608Channel);
-
-        this.chNr = channelNumber;
-        this.outputFilter = outputFilter;
-        this.mode = null;
-        this.verbose = 0;
-        this.displayedMemory = new CaptionScreen();
-        this.nonDisplayedMemory = new CaptionScreen();
-        this.lastOutputScreen = new CaptionScreen();
-        this.currRollUpRow = this.displayedMemory.rows[NR_ROWS - 1];
-        this.writeScreen = this.displayedMemory;
-        this.mode = null;
-        this.cueStartTime = null; // Keeps track of where a cue started.
-    }
-
-    _createClass(Cea608Channel, [{
-        key: 'reset',
-        value: function reset() {
-            this.mode = null;
-            this.displayedMemory.reset();
-            this.nonDisplayedMemory.reset();
-            this.lastOutputScreen.reset();
-            this.currRollUpRow = this.displayedMemory.rows[NR_ROWS - 1];
-            this.writeScreen = this.displayedMemory;
-            this.mode = null;
-            this.cueStartTime = null;
-            this.lastCueEndTime = null;
-        }
-    }, {
-        key: 'getHandler',
-        value: function getHandler() {
-            return this.outputFilter;
-        }
-    }, {
-        key: 'setHandler',
-        value: function setHandler(newHandler) {
-            this.outputFilter = newHandler;
-        }
-    }, {
-        key: 'setPAC',
-        value: function setPAC(pacData) {
-            this.writeScreen.setPAC(pacData);
-        }
-    }, {
-        key: 'setBkgData',
-        value: function setBkgData(bkgData) {
-            this.writeScreen.setBkgData(bkgData);
-        }
-    }, {
-        key: 'setMode',
-        value: function setMode(newMode) {
-            if (newMode === this.mode) {
-                return;
-            }
-            this.mode = newMode;
-            logger.log('INFO', 'MODE=' + newMode);
-            if (this.mode === 'MODE_POP-ON') {
-                this.writeScreen = this.nonDisplayedMemory;
-            } else {
-                this.writeScreen = this.displayedMemory;
-                this.writeScreen.reset();
-            }
-            if (this.mode !== 'MODE_ROLL-UP') {
-                this.displayedMemory.nrRollUpRows = null;
-                this.nonDisplayedMemory.nrRollUpRows = null;
-            }
-            this.mode = newMode;
-        }
-    }, {
-        key: 'insertChars',
-        value: function insertChars(chars) {
-            for (var i = 0; i < chars.length; i++) {
-                this.writeScreen.insertChar(chars[i]);
-            }
-            var screen = this.writeScreen === this.displayedMemory ? 'DISP' : 'NON_DISP';
-            logger.log('INFO', screen + ': ' + this.writeScreen.getDisplayText(true));
-            if (this.mode === 'MODE_PAINT-ON' || this.mode === 'MODE_ROLL-UP') {
-                logger.log('TEXT', 'DISPLAYED: ' + this.displayedMemory.getDisplayText(true));
-                this.outputDataUpdate();
-            }
-        }
-    }, {
-        key: 'ccRCL',
-        value: function ccRCL() {
-            // Resume Caption Loading (switch mode to Pop On)
-            logger.log('INFO', 'RCL - Resume Caption Loading');
-            this.setMode('MODE_POP-ON');
-        }
-    }, {
-        key: 'ccBS',
-        value: function ccBS() {
-            // BackSpace
-            logger.log('INFO', 'BS - BackSpace');
-            if (this.mode === 'MODE_TEXT') {
-                return;
-            }
-            this.writeScreen.backSpace();
-            if (this.writeScreen === this.displayedMemory) {
-                this.outputDataUpdate();
-            }
-        }
-    }, {
-        key: 'ccAOF',
-        value: function ccAOF() {
-            // Reserved (formerly Alarm Off)
-            return;
-        }
-    }, {
-        key: 'ccAON',
-        value: function ccAON() {
-            // Reserved (formerly Alarm On)
-            return;
-        }
-    }, {
-        key: 'ccDER',
-        value: function ccDER() {
-            // Delete to End of Row
-            logger.log('INFO', 'DER- Delete to End of Row');
-            this.writeScreen.clearToEndOfRow();
-            this.outputDataUpdate();
-        }
-    }, {
-        key: 'ccRU',
-        value: function ccRU(nrRows) {
-            //Roll-Up Captions-2,3,or 4 Rows
-            logger.log('INFO', 'RU(' + nrRows + ') - Roll Up');
-            this.writeScreen = this.displayedMemory;
-            this.setMode('MODE_ROLL-UP');
-            this.writeScreen.setRollUpRows(nrRows);
-        }
-    }, {
-        key: 'ccFON',
-        value: function ccFON() {
-            //Flash On
-            logger.log('INFO', 'FON - Flash On');
-            this.writeScreen.setPen({ flash: true });
-        }
-    }, {
-        key: 'ccRDC',
-        value: function ccRDC() {
-            // Resume Direct Captioning (switch mode to PaintOn)
-            logger.log('INFO', 'RDC - Resume Direct Captioning');
-            this.setMode('MODE_PAINT-ON');
-        }
-    }, {
-        key: 'ccTR',
-        value: function ccTR() {
-            // Text Restart in text mode (not supported, however)
-            logger.log('INFO', 'TR');
-            this.setMode('MODE_TEXT');
-        }
-    }, {
-        key: 'ccRTD',
-        value: function ccRTD() {
-            // Resume Text Display in Text mode (not supported, however)
-            logger.log('INFO', 'RTD');
-            this.setMode('MODE_TEXT');
-        }
-    }, {
-        key: 'ccEDM',
-        value: function ccEDM() {
-            // Erase Displayed Memory
-            logger.log('INFO', 'EDM - Erase Displayed Memory');
-            this.displayedMemory.reset();
-            this.outputDataUpdate();
-        }
-    }, {
-        key: 'ccCR',
-        value: function ccCR() {
-            // Carriage Return
-            logger.log('CR - Carriage Return');
-            this.writeScreen.rollUp();
-            this.outputDataUpdate();
-        }
-    }, {
-        key: 'ccENM',
-        value: function ccENM() {
-            //Erase Non-Displayed Memory
-            logger.log('INFO', 'ENM - Erase Non-displayed Memory');
-            this.nonDisplayedMemory.reset();
-        }
-    }, {
-        key: 'ccEOC',
-        value: function ccEOC() {
-            //End of Caption (Flip Memories)
-            logger.log('INFO', 'EOC - End Of Caption');
-            if (this.mode === 'MODE_POP-ON') {
-                var tmp = this.displayedMemory;
-                this.displayedMemory = this.nonDisplayedMemory;
-                this.nonDisplayedMemory = tmp;
-                this.writeScreen = this.nonDisplayedMemory;
-                logger.log('TEXT', 'DISP: ' + this.displayedMemory.getDisplayText());
-            }
-            this.outputDataUpdate();
-        }
-    }, {
-        key: 'ccTO',
-        value: function ccTO(nrCols) {
-            // Tab Offset 1,2, or 3 columns
-            logger.log('INFO', 'TO(' + nrCols + ') - Tab Offset');
-            this.writeScreen.moveCursor(nrCols);
-        }
-    }, {
-        key: 'ccMIDROW',
-        value: function ccMIDROW(secondByte) {
-            // Parse MIDROW command
-            var styles = { flash: false };
-            styles.underline = secondByte % 2 === 1;
-            styles.italics = secondByte >= 0x2e;
-            if (!styles.italics) {
-                var colorIndex = Math.floor(secondByte / 2) - 0x10;
-                var colors = ['white', 'green', 'blue', 'cyan', 'red', 'yellow', 'magenta'];
-                styles.foreground = colors[colorIndex];
-            } else {
-                styles.foreground = 'white';
-            }
-            logger.log('INFO', 'MIDROW: ' + JSON.stringify(styles));
-            this.writeScreen.setPen(styles);
-        }
-    }, {
-        key: 'outputDataUpdate',
-        value: function outputDataUpdate() {
-            var t = logger.time;
-            if (t === null) {
-                return;
-            }
-            if (this.outputFilter) {
-                if (this.outputFilter.updateData) {
-                    this.outputFilter.updateData(t, this.displayedMemory);
-                }
-                if (this.cueStartTime === null && !this.displayedMemory.isEmpty()) {
-                    // Start of a new cue
-                    this.cueStartTime = t;
-                } else {
-                    if (!this.displayedMemory.equals(this.lastOutputScreen)) {
-                        if (this.outputFilter.newCue) {
-                            this.outputFilter.newCue(this.cueStartTime, t, this.lastOutputScreen);
-                        }
-                        this.cueStartTime = this.displayedMemory.isEmpty() ? null : t;
-                    }
-                }
-                this.lastOutputScreen.copy(this.displayedMemory);
-            }
-        }
-    }, {
-        key: 'cueSplitAtTime',
-        value: function cueSplitAtTime(t) {
-            if (this.outputFilter) {
-                if (!this.displayedMemory.isEmpty()) {
-                    if (this.outputFilter.newCue) {
-                        this.outputFilter.newCue(this.cueStartTime, t, this.displayedMemory);
-                    }
-                    this.cueStartTime = t;
-                }
-            }
-        }
-    }]);
-
-    return Cea608Channel;
-}();
-
-var Cea608Parser = function () {
-    function Cea608Parser(field, out1, out2) {
-        _classCallCheck(this, Cea608Parser);
-
-        this.field = field || 1;
-        this.outputs = [out1, out2];
-        this.channels = [new Cea608Channel(1, out1), new Cea608Channel(2, out2)];
-        this.currChNr = -1; // Will be 1 or 2
-        this.lastCmdA = null; // First byte of last command
-        this.lastCmdB = null; // Second byte of last command
-        this.bufferedData = [];
-        this.startTime = null;
-        this.lastTime = null;
-        this.dataCounters = { 'padding': 0, 'char': 0, 'cmd': 0, 'other': 0 };
-    }
-
-    _createClass(Cea608Parser, [{
-        key: 'getHandler',
-        value: function getHandler(index) {
-            return this.channels[index].getHandler();
-        }
-    }, {
-        key: 'setHandler',
-        value: function setHandler(index, newHandler) {
-            this.channels[index].setHandler(newHandler);
-        }
-
-        /**
-         * Add data for time t in forms of list of bytes (unsigned ints). The bytes are treated as pairs.
-         */
-
-    }, {
-        key: 'addData',
-        value: function addData(t, byteList) {
-            var cmdFound,
-                a,
-                b,
-                charsFound = false;
-
-            this.lastTime = t;
-            logger.setTime(t);
-
-            for (var i = 0; i < byteList.length; i += 2) {
-                a = byteList[i] & 0x7f;
-                b = byteList[i + 1] & 0x7f;
-                if (a === 0 && b === 0) {
-                    this.dataCounters.padding += 2;
-                    continue;
-                } else {
-                    logger.log('DATA', '[' + numArrayToHexArray([byteList[i], byteList[i + 1]]) + '] -> (' + numArrayToHexArray([a, b]) + ')');
-                }
-                cmdFound = this.parseCmd(a, b);
-                if (!cmdFound) {
-                    cmdFound = this.parseMidrow(a, b);
-                }
-                if (!cmdFound) {
-                    cmdFound = this.parsePAC(a, b);
-                }
-                if (!cmdFound) {
-                    cmdFound = this.parseBackgroundAttributes(a, b);
-                }
-                if (!cmdFound) {
-                    charsFound = this.parseChars(a, b);
-                    if (charsFound) {
-                        if (this.currChNr && this.currChNr >= 0) {
-                            var channel = this.channels[this.currChNr - 1];
-                            channel.insertChars(charsFound);
-                        } else {
-                            logger.log('WARNING', 'No channel found yet. TEXT-MODE?');
-                        }
-                    }
-                }
-                if (cmdFound) {
-                    this.dataCounters.cmd += 2;
-                } else if (charsFound) {
-                    this.dataCounters.char += 2;
-                } else {
-                    this.dataCounters.other += 2;
-                    logger.log('WARNING', 'Couldn\'t parse cleaned data ' + numArrayToHexArray([a, b]) + ' orig: ' + numArrayToHexArray([byteList[i], byteList[i + 1]]));
-                }
-            }
-        }
-
-        /**
-         * Parse Command.
-         * @returns {Boolean} Tells if a command was found
-         */
-
-    }, {
-        key: 'parseCmd',
-        value: function parseCmd(a, b) {
-            var chNr = null;
-
-            var cond1 = (a === 0x14 || a === 0x1C) && 0x20 <= b && b <= 0x2F;
-            var cond2 = (a === 0x17 || a === 0x1F) && 0x21 <= b && b <= 0x23;
-            if (!(cond1 || cond2)) {
-                return false;
-            }
-
-            if (a === this.lastCmdA && b === this.lastCmdB) {
-                this.lastCmdA = null;
-                this.lastCmdB = null; // Repeated commands are dropped (once)
-                logger.log('DEBUG', 'Repeated command (' + numArrayToHexArray([a, b]) + ') is dropped');
-                return true;
-            }
-
-            if (a === 0x14 || a === 0x17) {
-                chNr = 1;
-            } else {
-                chNr = 2; // (a === 0x1C || a=== 0x1f)
-            }
-
-            var channel = this.channels[chNr - 1];
-
-            if (a === 0x14 || a === 0x1C) {
-                if (b === 0x20) {
-                    channel.ccRCL();
-                } else if (b === 0x21) {
-                    channel.ccBS();
-                } else if (b === 0x22) {
-                    channel.ccAOF();
-                } else if (b === 0x23) {
-                    channel.ccAON();
-                } else if (b === 0x24) {
-                    channel.ccDER();
-                } else if (b === 0x25) {
-                    channel.ccRU(2);
-                } else if (b === 0x26) {
-                    channel.ccRU(3);
-                } else if (b === 0x27) {
-                    channel.ccRU(4);
-                } else if (b === 0x28) {
-                    channel.ccFON();
-                } else if (b === 0x29) {
-                    channel.ccRDC();
-                } else if (b === 0x2A) {
-                    channel.ccTR();
-                } else if (b === 0x2B) {
-                    channel.ccRTD();
-                } else if (b === 0x2C) {
-                    channel.ccEDM();
-                } else if (b === 0x2D) {
-                    channel.ccCR();
-                } else if (b === 0x2E) {
-                    channel.ccENM();
-                } else if (b === 0x2F) {
-                    channel.ccEOC();
-                }
-            } else {
-                //a == 0x17 || a == 0x1F
-                channel.ccTO(b - 0x20);
-            }
-            this.lastCmdA = a;
-            this.lastCmdB = b;
-            this.currChNr = chNr;
-            return true;
-        }
-
-        /**
-         * Parse midrow styling command
-         * @returns {Boolean}
-         */
-
-    }, {
-        key: 'parseMidrow',
-        value: function parseMidrow(a, b) {
-            var chNr = null;
-
-            if ((a === 0x11 || a === 0x19) && 0x20 <= b && b <= 0x2f) {
-                if (a === 0x11) {
-                    chNr = 1;
-                } else {
-                    chNr = 2;
-                }
-                if (chNr !== this.currChNr) {
-                    logger.log('ERROR', 'Mismatch channel in midrow parsing');
-                    return false;
-                }
-                var channel = this.channels[chNr - 1];
-                channel.ccMIDROW(b);
-                logger.log('DEBUG', 'MIDROW (' + numArrayToHexArray([a, b]) + ')');
-                return true;
-            }
-            return false;
-        }
-        /**
-         * Parse Preable Access Codes (Table 53).
-         * @returns {Boolean} Tells if PAC found
-         */
-
-    }, {
-        key: 'parsePAC',
-        value: function parsePAC(a, b) {
-
-            var chNr = null;
-            var row = null;
-
-            var case1 = (0x11 <= a && a <= 0x17 || 0x19 <= a && a <= 0x1F) && 0x40 <= b && b <= 0x7F;
-            var case2 = (a === 0x10 || a === 0x18) && 0x40 <= b && b <= 0x5F;
-            if (!(case1 || case2)) {
-                return false;
-            }
-
-            if (a === this.lastCmdA && b === this.lastCmdB) {
-                this.lastCmdA = null;
-                this.lastCmdB = null;
-                return true; // Repeated commands are dropped (once)
-            }
-
-            chNr = a <= 0x17 ? 1 : 2;
-
-            if (0x40 <= b && b <= 0x5F) {
-                row = chNr === 1 ? rowsLowCh1[a] : rowsLowCh2[a];
-            } else {
-                // 0x60 <= b <= 0x7F
-                row = chNr === 1 ? rowsHighCh1[a] : rowsHighCh2[a];
-            }
-            var pacData = this.interpretPAC(row, b);
-            var channel = this.channels[chNr - 1];
-            channel.setPAC(pacData);
-            this.lastCmdA = a;
-            this.lastCmdB = b;
-            this.currChNr = chNr;
-            return true;
-        }
-
-        /**
-         * Interpret the second byte of the pac, and return the information.
-         * @returns {Object} pacData with style parameters.
-         */
-
-    }, {
-        key: 'interpretPAC',
-        value: function interpretPAC(row, byte) {
-            var pacIndex = byte;
-            var pacData = { color: null, italics: false, indent: null, underline: false, row: row };
-
-            if (byte > 0x5F) {
-                pacIndex = byte - 0x60;
-            } else {
-                pacIndex = byte - 0x40;
-            }
-            pacData.underline = (pacIndex & 1) === 1;
-            if (pacIndex <= 0xd) {
-                pacData.color = ['white', 'green', 'blue', 'cyan', 'red', 'yellow', 'magenta', 'white'][Math.floor(pacIndex / 2)];
-            } else if (pacIndex <= 0xf) {
-                pacData.italics = true;
-                pacData.color = 'white';
-            } else {
-                pacData.indent = Math.floor((pacIndex - 0x10) / 2) * 4;
-            }
-            return pacData; // Note that row has zero offset. The spec uses 1.
-        }
-
-        /**
-         * Parse characters.
-         * @returns An array with 1 to 2 codes corresponding to chars, if found. null otherwise.
-         */
-
-    }, {
-        key: 'parseChars',
-        value: function parseChars(a, b) {
-
-            var channelNr = null,
-                charCodes = null,
-                charCode1 = null;
-
-            if (a >= 0x19) {
-                channelNr = 2;
-                charCode1 = a - 8;
-            } else {
-                channelNr = 1;
-                charCode1 = a;
-            }
-            if (0x11 <= charCode1 && charCode1 <= 0x13) {
-                // Special character
-                var oneCode = b;
-                if (charCode1 === 0x11) {
-                    oneCode = b + 0x50;
-                } else if (charCode1 === 0x12) {
-                    oneCode = b + 0x70;
-                } else {
-                    oneCode = b + 0x90;
-                }
-                logger.log('INFO', 'Special char \'' + getCharForByte(oneCode) + '\' in channel ' + channelNr);
-                charCodes = [oneCode];
-            } else if (0x20 <= a && a <= 0x7f) {
-                charCodes = b === 0 ? [a] : [a, b];
-            }
-            if (charCodes) {
-                var hexCodes = numArrayToHexArray(charCodes);
-                logger.log('DEBUG', 'Char codes =  ' + hexCodes.join(','));
-                this.lastCmdA = null;
-                this.lastCmdB = null;
-            }
-            return charCodes;
-        }
-
-        /**
-        * Parse extended background attributes as well as new foreground color black.
-        * @returns{Boolean} Tells if background attributes are found
-        */
-
-    }, {
-        key: 'parseBackgroundAttributes',
-        value: function parseBackgroundAttributes(a, b) {
-            var bkgData, index, chNr, channel;
-
-            var case1 = (a === 0x10 || a === 0x18) && 0x20 <= b && b <= 0x2f;
-            var case2 = (a === 0x17 || a === 0x1f) && 0x2d <= b && b <= 0x2f;
-            if (!(case1 || case2)) {
-                return false;
-            }
-            bkgData = {};
-            if (a === 0x10 || a === 0x18) {
-                index = Math.floor((b - 0x20) / 2);
-                bkgData.background = backgroundColors[index];
-                if (b % 2 === 1) {
-                    bkgData.background = bkgData.background + '_semi';
-                }
-            } else if (b === 0x2d) {
-                bkgData.background = 'transparent';
-            } else {
-                bkgData.foreground = 'black';
-                if (b === 0x2f) {
-                    bkgData.underline = true;
-                }
-            }
-            chNr = a < 0x18 ? 1 : 2;
-            channel = this.channels[chNr - 1];
-            channel.setBkgData(bkgData);
-            this.lastCmdA = null;
-            this.lastCmdB = null;
-            return true;
-        }
-
-        /**
-         * Reset state of parser and its channels.
-         */
-
-    }, {
-        key: 'reset',
-        value: function reset() {
-            for (var i = 0; i < this.channels.length; i++) {
-                if (this.channels[i]) {
-                    this.channels[i].reset();
-                }
-            }
-            this.lastCmdA = null;
-            this.lastCmdB = null;
-        }
-
-        /**
-         * Trigger the generation of a cue, and the start of a new one if displayScreens are not empty.
-         */
-
-    }, {
-        key: 'cueSplitAtTime',
-        value: function cueSplitAtTime(t) {
-            for (var i = 0; i < this.channels.length; i++) {
-                if (this.channels[i]) {
-                    this.channels[i].cueSplitAtTime(t);
-                }
-            }
-        }
-    }]);
-
-    return Cea608Parser;
-}();
-
-exports.default = Cea608Parser;
-
-},{}],37:[function(require,module,exports){
-'use strict';
-
-var Cues = {
-
-  newCue: function newCue(track, startTime, endTime, captionScreen) {
-    var row;
-    var cue;
-    var indenting;
-    var indent;
-    var text;
-    var VTTCue = window.VTTCue || window.TextTrackCue;
-
-    for (var r = 0; r < captionScreen.rows.length; r++) {
-      row = captionScreen.rows[r];
-      indenting = true;
-      indent = 0;
-      text = '';
-
-      if (!row.isEmpty()) {
-        for (var c = 0; c < row.chars.length; c++) {
-          if (row.chars[c].uchar.match(/\s/) && indenting) {
-            indent++;
-          } else {
-            text += row.chars[c].uchar;
-            indenting = false;
-          }
-        }
-        cue = new VTTCue(startTime, endTime, text.trim());
-
-        if (indent >= 16) {
-          indent--;
-        } else {
-          indent++;
-        }
-
-        // VTTCue.line get's flakey when using controls, so let's now include line 13&14
-        // also, drop line 1 since it's to close to the top
-        if (navigator.userAgent.match(/Firefox\//)) {
-          cue.line = r + 1;
-        } else {
-          cue.line = r > 7 ? r - 2 : r + 1;
-        }
-        cue.align = 'left';
-        cue.position = 100 * (indent / 32) + (navigator.userAgent.match(/Firefox\//) ? 50 : 0);
-        track.addCue(cue);
-      }
-    }
+var CEA708Interpreter = function () {
+  function CEA708Interpreter() {
+    _classCallCheck(this, CEA708Interpreter);
   }
 
-};
+  _createClass(CEA708Interpreter, [{
+    key: 'attach',
+    value: function attach(media) {
+      this.media = media;
+      this.display = [];
+      this.memory = [];
+    }
+  }, {
+    key: 'detach',
+    value: function detach() {
+      this.clear();
+    }
+  }, {
+    key: 'destroy',
+    value: function destroy() {}
+  }, {
+    key: '_createCue',
+    value: function _createCue() {
+      var VTTCue = window.VTTCue || window.TextTrackCue;
 
-module.exports = Cues;
+      var cue = this.cue = new VTTCue(-1, -1, '');
+      cue.text = '';
+      cue.pauseOnExit = false;
 
-},{}],38:[function(require,module,exports){
+      // make sure it doesn't show up before it's ready
+      cue.startTime = Number.MAX_VALUE;
+
+      // show it 'forever' once we do show it
+      // (we'll set the end time once we know it later)
+      cue.endTime = Number.MAX_VALUE;
+
+      this.memory.push(cue);
+    }
+  }, {
+    key: 'clear',
+    value: function clear() {
+      var textTrack = this._textTrack;
+      if (textTrack && textTrack.cues) {
+        while (textTrack.cues.length > 0) {
+          textTrack.removeCue(textTrack.cues[0]);
+        }
+      }
+    }
+  }, {
+    key: 'push',
+    value: function push(timestamp, bytes) {
+      if (!this.cue) {
+        this._createCue();
+      }
+
+      var count = bytes[0] & 31;
+      var position = 2;
+      var tmpByte, ccbyte1, ccbyte2, ccValid, ccType;
+
+      for (var j = 0; j < count; j++) {
+        tmpByte = bytes[position++];
+        ccbyte1 = 0x7F & bytes[position++];
+        ccbyte2 = 0x7F & bytes[position++];
+        ccValid = (4 & tmpByte) === 0 ? false : true;
+        ccType = 3 & tmpByte;
+
+        if (ccbyte1 === 0 && ccbyte2 === 0) {
+          continue;
+        }
+
+        if (ccValid) {
+          if (ccType === 0) // || ccType === 1
+            {
+              // Standard Characters
+              if (0x20 & ccbyte1 || 0x40 & ccbyte1) {
+                this.cue.text += this._fromCharCode(ccbyte1) + this._fromCharCode(ccbyte2);
+              }
+              // Special Characters
+              else if ((ccbyte1 === 0x11 || ccbyte1 === 0x19) && ccbyte2 >= 0x30 && ccbyte2 <= 0x3F) {
+                  // extended chars, e.g. musical note, accents
+                  switch (ccbyte2) {
+                    case 48:
+                      this.cue.text += '®';
+                      break;
+                    case 49:
+                      this.cue.text += '°';
+                      break;
+                    case 50:
+                      this.cue.text += '½';
+                      break;
+                    case 51:
+                      this.cue.text += '¿';
+                      break;
+                    case 52:
+                      this.cue.text += '™';
+                      break;
+                    case 53:
+                      this.cue.text += '¢';
+                      break;
+                    case 54:
+                      this.cue.text += '';
+                      break;
+                    case 55:
+                      this.cue.text += '£';
+                      break;
+                    case 56:
+                      this.cue.text += '♪';
+                      break;
+                    case 57:
+                      this.cue.text += ' ';
+                      break;
+                    case 58:
+                      this.cue.text += 'è';
+                      break;
+                    case 59:
+                      this.cue.text += 'â';
+                      break;
+                    case 60:
+                      this.cue.text += 'ê';
+                      break;
+                    case 61:
+                      this.cue.text += 'î';
+                      break;
+                    case 62:
+                      this.cue.text += 'ô';
+                      break;
+                    case 63:
+                      this.cue.text += 'û';
+                      break;
+                  }
+                }
+              if ((ccbyte1 === 0x11 || ccbyte1 === 0x19) && ccbyte2 >= 0x20 && ccbyte2 <= 0x2F) {
+                // Mid-row codes: color/underline
+                switch (ccbyte2) {
+                  case 0x20:
+                    // White
+                    break;
+                  case 0x21:
+                    // White Underline
+                    break;
+                  case 0x22:
+                    // Green
+                    break;
+                  case 0x23:
+                    // Green Underline
+                    break;
+                  case 0x24:
+                    // Blue
+                    break;
+                  case 0x25:
+                    // Blue Underline
+                    break;
+                  case 0x26:
+                    // Cyan
+                    break;
+                  case 0x27:
+                    // Cyan Underline
+                    break;
+                  case 0x28:
+                    // Red
+                    break;
+                  case 0x29:
+                    // Red Underline
+                    break;
+                  case 0x2A:
+                    // Yellow
+                    break;
+                  case 0x2B:
+                    // Yellow Underline
+                    break;
+                  case 0x2C:
+                    // Magenta
+                    break;
+                  case 0x2D:
+                    // Magenta Underline
+                    break;
+                  case 0x2E:
+                    // Italics
+                    break;
+                  case 0x2F:
+                    // Italics Underline
+                    break;
+                }
+              }
+              if ((ccbyte1 === 0x14 || ccbyte1 === 0x1C) && ccbyte2 >= 0x20 && ccbyte2 <= 0x2F) {
+                // Mid-row codes: color/underline
+                switch (ccbyte2) {
+                  case 0x20:
+                    // TODO: shouldn't affect roll-ups...
+                    this._clearActiveCues(timestamp);
+                    // RCL: Resume Caption Loading
+                    // begin pop on
+                    break;
+                  case 0x21:
+                    // BS: Backspace
+                    this.cue.text = this.cue.text.substr(0, this.cue.text.length - 1);
+                    break;
+                  case 0x22:
+                    // AOF: reserved (formerly alarm off)
+                    break;
+                  case 0x23:
+                    // AON: reserved (formerly alarm on)
+                    break;
+                  case 0x24:
+                    // DER: Delete to end of row
+                    break;
+                  case 0x25:
+                    // RU2: roll-up 2 rows
+                    //this._rollup(2);
+                    break;
+                  case 0x26:
+                    // RU3: roll-up 3 rows
+                    //this._rollup(3);
+                    break;
+                  case 0x27:
+                    // RU4: roll-up 4 rows
+                    //this._rollup(4);
+                    break;
+                  case 0x28:
+                    // FON: Flash on
+                    break;
+                  case 0x29:
+                    // RDC: Resume direct captioning
+                    this._clearActiveCues(timestamp);
+                    break;
+                  case 0x2A:
+                    // TR: Text Restart
+                    break;
+                  case 0x2B:
+                    // RTD: Resume Text Display
+                    break;
+                  case 0x2C:
+                    // EDM: Erase Displayed Memory
+                    this._clearActiveCues(timestamp);
+                    break;
+                  case 0x2D:
+                    // CR: Carriage Return
+                    // only affects roll-up
+                    //this._rollup(1);
+                    break;
+                  case 0x2E:
+                    // ENM: Erase non-displayed memory
+                    this._text = '';
+                    break;
+                  case 0x2F:
+                    this._flipMemory(timestamp);
+                    // EOC: End of caption
+                    // hide any displayed captions and show any hidden one
+                    break;
+                }
+              }
+              if ((ccbyte1 === 0x17 || ccbyte1 === 0x1F) && ccbyte2 >= 0x21 && ccbyte2 <= 0x23) {
+                // Mid-row codes: color/underline
+                switch (ccbyte2) {
+                  case 0x21:
+                    // TO1: tab offset 1 column
+                    break;
+                  case 0x22:
+                    // TO1: tab offset 2 column
+                    break;
+                  case 0x23:
+                    // TO1: tab offset 3 column
+                    break;
+                }
+              } else {
+                // Probably a pre-amble address code
+              }
+            }
+        }
+      }
+    }
+  }, {
+    key: '_fromCharCode',
+    value: function _fromCharCode(tmpByte) {
+      switch (tmpByte) {
+        case 42:
+          return 'á';
+
+        case 2:
+          return 'á';
+
+        case 2:
+          return 'é';
+
+        case 4:
+          return 'í';
+
+        case 5:
+          return 'ó';
+
+        case 6:
+          return 'ú';
+
+        case 3:
+          return 'ç';
+
+        case 4:
+          return '÷';
+
+        case 5:
+          return 'Ñ';
+
+        case 6:
+          return 'ñ';
+
+        case 7:
+          return '█';
+
+        default:
+          return String.fromCharCode(tmpByte);
+      }
+    }
+  }, {
+    key: '_flipMemory',
+    value: function _flipMemory(timestamp) {
+      this._clearActiveCues(timestamp);
+      this._flushCaptions(timestamp);
+    }
+  }, {
+    key: '_flushCaptions',
+    value: function _flushCaptions(timestamp) {
+      if (!this._has708) {
+        this._textTrack = this.media.addTextTrack('captions', 'English', 'en');
+        this._has708 = true;
+      }
+
+      var _iteratorNormalCompletion = true;
+      var _didIteratorError = false;
+      var _iteratorError = undefined;
+
+      try {
+        for (var _iterator = this.memory[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+          var memoryItem = _step.value;
+
+          memoryItem.startTime = timestamp;
+          this._textTrack.addCue(memoryItem);
+          this.display.push(memoryItem);
+        }
+      } catch (err) {
+        _didIteratorError = true;
+        _iteratorError = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion && _iterator.return) {
+            _iterator.return();
+          }
+        } finally {
+          if (_didIteratorError) {
+            throw _iteratorError;
+          }
+        }
+      }
+
+      this.memory = [];
+      this.cue = null;
+    }
+  }, {
+    key: '_clearActiveCues',
+    value: function _clearActiveCues(timestamp) {
+      var _iteratorNormalCompletion2 = true;
+      var _didIteratorError2 = false;
+      var _iteratorError2 = undefined;
+
+      try {
+        for (var _iterator2 = this.display[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+          var displayItem = _step2.value;
+
+          displayItem.endTime = timestamp;
+        }
+      } catch (err) {
+        _didIteratorError2 = true;
+        _iteratorError2 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion2 && _iterator2.return) {
+            _iterator2.return();
+          }
+        } finally {
+          if (_didIteratorError2) {
+            throw _iteratorError2;
+          }
+        }
+      }
+
+      this.display = [];
+    }
+
+    /*  _rollUp(n)
+      {
+        // TODO: implement roll-up captions
+      }
+    */
+
+  }, {
+    key: '_clearBufferedCues',
+    value: function _clearBufferedCues() {
+      //remove them all...
+    }
+  }]);
+
+  return CEA708Interpreter;
+}();
+
+exports.default = CEA708Interpreter;
+
+},{}],37:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9648,7 +8523,7 @@ var enableLogs = exports.enableLogs = function enableLogs(debugConfig) {
 
 var logger = exports.logger = exportedLogger;
 
-},{}],39:[function(require,module,exports){
+},{}],38:[function(require,module,exports){
 'use strict';
 
 var URLHelper = {
@@ -9728,7 +8603,7 @@ var URLHelper = {
 
 module.exports = URLHelper;
 
-},{}],40:[function(require,module,exports){
+},{}],39:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9877,6 +8752,6 @@ var XhrLoader = function () {
 
 exports.default = XhrLoader;
 
-},{"../utils/logger":38}]},{},[27])(27)
+},{"../utils/logger":37}]},{},[27])(27)
 });
 //# sourceMappingURL=hls.js.map
