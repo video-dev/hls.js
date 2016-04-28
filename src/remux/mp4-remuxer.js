@@ -2,6 +2,7 @@
  * fMP4 remuxer
  */
 
+import ADTS from '../demux/adts';
 import Event from '../events';
 import { logger } from '../utils/logger';
 import MP4 from '../remux/mp4-generator';
@@ -391,6 +392,51 @@ class MP4Remuxer {
             return a.pts - b.pts;
         });
         samples0 = track.samples;
+
+        // If the audio track is missing samples, the frames seem to get "left-shifted" within the
+        // resulting mp4 segment, causing sync issues and leaving gaps at the end of the audio segment.
+        // In an effort to prevent this from happening, we inject frames here where there are gaps.
+        // When possible, we inject a silent frame; when that's not possible, we duplicate the last
+        // frame.
+        for (var i = 0; i < samples0.length - 1; i++) {
+            var sample0 = samples0[i],
+                sample1 = samples0[i + 1],
+                pts0 = sample0.pts - this._initDTS,
+                pts1 = sample1.pts - this._initDTS,
+                nextAacPts = contiguous
+                    ? this.nextAacPts
+                    : timeOffset * pesTimeScale,
+                ptsnorm0 = this._PTSNormalize(pts0, nextAacPts),
+                ptsnorm1 = this._PTSNormalize(pts1, nextAacPts),
+                missing =
+                    Math.round(
+                        (ptsnorm1 - ptsnorm0) / pes2mp4ScaleFactor / 1024.0
+                    ) - 1;
+            if (missing > 0) {
+                logger.log(`Injecting ${missing} packets of missing audio.`);
+                for (var j = 0; j < missing; j++) {
+                    var newStamp = Math.round(
+                            sample0.pts + (j + 1) * 1024 * pes2mp4ScaleFactor
+                        ),
+                        fillFrame = ADTS.getSilentFrame(track.channelCount),
+                        newAacSample;
+                    if (!fillFrame) {
+                        logger.log(
+                            'Unable to get silent frame for given audio codec; duplicating last frame instead.'
+                        );
+                        fillFrame = sample0.unit.slice(0);
+                    }
+                    newAacSample = {
+                        unit: fillFrame,
+                        pts: newStamp,
+                        dts: newStamp
+                    };
+                    samples0.splice(i + 1, 0, newAacSample);
+                    i += 1;
+                    track.len += newAacSample.unit.length;
+                }
+            }
+        }
 
         while (samples0.length) {
             aacSample = samples0.shift();
