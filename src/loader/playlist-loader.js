@@ -147,7 +147,7 @@ class PlaylistLoader extends EventHandler {
     return JSON.parse(JSON.stringify(obj));
   }
 
-  parseLevelPlaylist(string, baseurl, id) {
+  parseLevelPlaylist(string, baseurl, id, type) {
     var currentSN = 0,
         totalduration = 0,
         level = {url: baseurl, fragments: [], live: true, startSN: 0},
@@ -207,7 +207,17 @@ class PlaylistLoader extends EventHandler {
               fragdecryptdata = levelkey;
             }
             var url = result[2] ? this.resolve(result[2], baseurl) : null;
-            frag = {url: url, duration: duration, start: totalduration, sn: sn, level: id, cc: cc, byteRangeStartOffset: byteRangeStartOffset, byteRangeEndOffset: byteRangeEndOffset, decryptdata : fragdecryptdata, programDateTime: programDateTime};
+            frag = {url: url,
+                    type : type,
+                    duration: duration,
+                    start: totalduration,
+                    sn: sn,
+                    level: id,
+                    cc: cc,
+                    byteRangeStartOffset: byteRangeStartOffset,
+                    byteRangeEndOffset: byteRangeEndOffset,
+                    decryptdata : fragdecryptdata,
+                    programDateTime: programDateTime};
             level.fragments.push(frag);
             totalduration += duration;
             byteRangeStartOffset = null;
@@ -277,7 +287,8 @@ class PlaylistLoader extends EventHandler {
         if (type.indexOf('manifest') === 0) {
           hls.trigger(Event.MANIFEST_LOADED, {levels: [{url: url}], url: url, stats: stats});
         } else {
-          var levelDetails = this.parseLevelPlaylist(string, url, level);
+          let fragType = type.indexOf('level') === 0 ? 'main' : 'audio';
+          let levelDetails = this.parseLevelPlaylist(string, url, level, fragType);
           stats.tparsed = performance.now();
           if (type.indexOf('level') === 0) {
             hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: level, id: id, stats: stats});
