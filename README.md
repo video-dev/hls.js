@@ -131,7 +131,7 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
 ## Getting Started
 
 ```js
-<script src="dist/hls.js"></script>
+<script src="https://cdn.jsdelivr.net/hls.js/latest/hls.min.js"></script>
 <video id="video"></video>
 <script>
   if(Hls.isSupported()) {
