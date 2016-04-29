@@ -60,6 +60,22 @@ class AACDemuxer {
             stamp,
             len,
             aacSample;
+
+        let contiguous = false;
+        if (cc !== this.lastCC) {
+            logger.log('audio discontinuity detected');
+            this.lastCC = cc;
+            this.remuxer.switchLevel();
+            this.remuxer.insertDiscontinuity();
+        } else if (level !== this.lastLevel) {
+            logger.log('audio track switch detected');
+            this.lastLevel = level;
+        } else if (sn === this.lastSN + 1) {
+            contiguous = true;
+        }
+        this.lastSN = sn;
+        this.lastLevel = level;
+
         // look for ADTS header (0xFFFx)
         for (
             offset = id3.length, len = data.length;
@@ -135,7 +151,8 @@ class AACDemuxer {
             { samples: [] },
             { samples: [{ pts: pts, dts: pts, unit: id3.payload }] },
             { samples: [] },
-            timeOffset
+            timeOffset,
+            contiguous
         );
     }
 
