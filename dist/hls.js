@@ -798,7 +798,7 @@ var AudioStreamController = function (_EventHandler) {
               bufferLen = bufferInfo.len,
               bufferEnd = bufferInfo.end,
               fragPrevious = this.fragPrevious,
-              maxBufLen = config.maxBufferLength;
+              maxBufLen = config.maxMaxBufferLength;
 
           // if buffer length is less than maxBufLen try to load a new fragment
           if (bufferLen < maxBufLen) {
@@ -862,7 +862,6 @@ var AudioStreamController = function (_EventHandler) {
                     } else {
                       // have we reached end of VOD playlist ?
                       if (!trackDetails.live) {
-                        _this2.hls.trigger(_events2.default.BUFFER_EOS);
                         _this2.state = State.ENDED;
                       }
                       frag = null;
