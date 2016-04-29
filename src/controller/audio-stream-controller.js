@@ -142,7 +142,7 @@ class AudioStreamController extends EventHandler {
         } else {
           pos = this.nextLoadPosition;
         }
-        let media = this.sourceBuffer ? this.sourceBuffer['audio'] : this.media;
+        let media = this.sourceBuffer ? this.sourceBuffer.audio : this.media;
         var bufferInfo = BufferHelper.bufferInfo(media,pos,config.maxBufferHole),
             bufferLen = bufferInfo.len,
             bufferEnd = bufferInfo.end,
@@ -263,7 +263,7 @@ class AudioStreamController extends EventHandler {
       case State.FRAG_LOADING_WAITING_RETRY:
         var now = performance.now();
         var retryDate = this.retryDate;
-        var media = this.media;
+        media = this.media;
         var isSeeking = media && media.seeking;
         // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
         if(!retryDate || (now >= retryDate) || isSeeking) {
@@ -493,7 +493,7 @@ class AudioStreamController extends EventHandler {
         stats.tbuffered = performance.now();
         this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
         this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag, id : 0});
-        logger.log(`audio buffered : ${this.timeRangesToString(this.sourceBuffer['audio'].buffered)}`);
+        logger.log(`audio buffered : ${this.timeRangesToString(this.sourceBuffer.audio.buffered)}`);
         this.state = State.IDLE;
       }
       this.tick();
