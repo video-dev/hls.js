@@ -38,6 +38,22 @@ import ID3 from '../demux/id3';
         id3 = new ID3(data),
         pts = 90*id3.timeStamp,
         config, frameLength, frameDuration, frameIndex, offset, headerLength, stamp, len, aacSample;
+
+    let contiguous = false;
+    if (cc !== this.lastCC) {
+      logger.log('audio discontinuity detected');
+      this.lastCC = cc;
+      this.remuxer.switchLevel();
+      this.remuxer.insertDiscontinuity();
+    } else if (level !== this.lastLevel) {
+      logger.log('audio track switch detected');
+      this.lastLevel = level;
+    } else if (sn === (this.lastSN+1)) {
+      contiguous = true;
+    }
+    this.lastSN = sn;
+    this.lastLevel = level;
+
     // look for ADTS header (0xFFFx)
     for (offset = id3.length, len = data.length; offset < len - 1; offset++) {
       if ((data[offset] === 0xff) && (data[offset+1] & 0xf0) === 0xf0) {
@@ -84,7 +100,7 @@ import ID3 from '../demux/id3';
         break;
       }
     }
-    this.remuxer.remux(this._aacTrack,{samples : []}, {samples : [ { pts: pts, dts : pts, unit : id3.payload} ]}, { samples: [] }, timeOffset);
+    this.remuxer.remux(this._aacTrack,{samples : []}, {samples : [ { pts: pts, dts : pts, unit : id3.payload} ]}, { samples: [] }, timeOffset, contiguous);
   }
 
   destroy() {
