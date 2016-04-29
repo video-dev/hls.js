@@ -286,7 +286,7 @@ $(document).ready(function() {
           events.video.push(event);
        });
        hls.on(Hls.Events.FRAG_PARSING_METADATA, function(event, data) {
-         console.log("Id3 samples ", data.samples);
+         //console.log("Id3 samples ", data.samples);
        });
        hls.on(Hls.Events.LEVEL_SWITCH,function(event,data) {
           events.level.push({time : performance.now() - events.t0, id : data.level, bitrate : Math.round(hls.levels[data.level].bitrate/1000)});
