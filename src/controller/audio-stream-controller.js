@@ -153,7 +153,7 @@ class AudioStreamController extends EventHandler {
                     pos = this.nextLoadPosition;
                 }
                 let media = this.sourceBuffer
-                    ? this.sourceBuffer['audio']
+                    ? this.sourceBuffer.audio
                     : this.media;
                 var bufferInfo = BufferHelper.bufferInfo(
                         media,
@@ -330,7 +330,7 @@ class AudioStreamController extends EventHandler {
             case State.FRAG_LOADING_WAITING_RETRY:
                 var now = performance.now();
                 var retryDate = this.retryDate;
-                var media = this.media;
+                media = this.media;
                 var isSeeking = media && media.seeking;
                 // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
                 if (!retryDate || now >= retryDate || isSeeking) {
@@ -616,7 +616,7 @@ class AudioStreamController extends EventHandler {
                 });
                 logger.log(
                     `audio buffered : ${this.timeRangesToString(
-                        this.sourceBuffer['audio'].buffered
+                        this.sourceBuffer.audio.buffered
                     )}`
                 );
                 this.state = State.IDLE;
