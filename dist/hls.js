@@ -704,7 +704,7 @@ var AudioStreamController = function (_EventHandler) {
     value: function startLoad() {
       var startPosition = arguments.length <= 0 || arguments[0] === undefined ? 0 : arguments[0];
 
-      if (this.audioTracks) {
+      if (this.tracks) {
         var media = this.media,
             lastCurrentTime = this.lastCurrentTime;
         this.stopLoad();
@@ -940,8 +940,8 @@ var AudioStreamController = function (_EventHandler) {
       this.onvended = this.onMediaEnded.bind(this);
       media.addEventListener('seeking', this.onvseeking);
       media.addEventListener('ended', this.onvended);
-      if (this.levels && this.config.autoStartLoad) {
-        this.hls.startLoad();
+      if (this.tracks && this.config.autoStartLoad) {
+        this.startLoad();
       }
     }
   }, {
@@ -1008,6 +1008,7 @@ var AudioStreamController = function (_EventHandler) {
   }, {
     key: 'onAudioTracksUpdated',
     value: function onAudioTracksUpdated(data) {
+      _logger.logger.log('audio tracks updated');
       this.tracks = data.audioTracks;
     }
   }, {
