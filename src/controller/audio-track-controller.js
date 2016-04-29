@@ -29,9 +29,15 @@ class AudioTrackController extends EventHandler {
     }
 
     onManifestLoaded(data) {
-        this.tracks = data.audioTracks || [];
-        this.hls.trigger(Event.AUDIO_TRACKS_UPDATED, {
-            audioTracks: this.tracks
+        let tracks = data.audioTracks || [];
+        this.tracks = tracks;
+        this.hls.trigger(Event.AUDIO_TRACKS_UPDATED, { audioTracks: tracks });
+        // loop through available audio tracks and autoselect default if needed
+        tracks.forEach(track => {
+            if (track.default) {
+                this.audioTrack = track.id;
+                return;
+            }
         });
     }
 

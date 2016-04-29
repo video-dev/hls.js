@@ -125,7 +125,8 @@ class PlaylistLoader extends EventHandler {
 
     parseMasterPlaylistMedia(string, baseurl, type) {
         let medias = [],
-            result;
+            result,
+            id = 0;
 
         // https://regex101.com is your friend
         const re = /#EXT-X-MEDIA:(.*)/g;
@@ -143,6 +144,7 @@ class PlaylistLoader extends EventHandler {
                 if (!media.name) {
                     media.name = media.lang;
                 }
+                media.id = id++;
                 medias.push(media);
             }
         }
