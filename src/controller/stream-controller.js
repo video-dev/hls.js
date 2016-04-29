@@ -65,7 +65,7 @@ class StreamController extends EventHandler {
     if (this.levels) {
       var media = this.media, lastCurrentTime = this.lastCurrentTime;
       this.stopLoad();
-      this.demuxer = new Demuxer(this.hls,0);
+      this.demuxer = new Demuxer(this.hls,'main');
       if (!this.timer) {
         this.timer = setInterval(this.ontick, 100);
       }
@@ -790,7 +790,7 @@ class StreamController extends EventHandler {
   }
 
   onFragParsingInitSegment(data) {
-    if (data.id === 0 && this.state === State.PARSING) {
+    if (data.id === 'main' && this.state === State.PARSING) {
       var tracks = data.tracks, trackName, track;
 
       // include levelCodec in audio and video tracks
@@ -861,7 +861,7 @@ class StreamController extends EventHandler {
         var initSegment = track.initSegment;
         if (initSegment) {
           this.pendingAppending++;
-          this.hls.trigger(Event.BUFFER_APPENDING, {type: trackName, data: initSegment});
+          this.hls.trigger(Event.BUFFER_APPENDING, {type: trackName, data: initSegment, parent : 'main'});
         }
       }
       //trigger handler right now
@@ -870,7 +870,7 @@ class StreamController extends EventHandler {
   }
 
   onFragParsingData(data) {
-    if (data.id === 0 && this.state === State.PARSING) {
+    if (data.id === 'main' && this.state === State.PARSING) {
       this.tparse2 = Date.now();
       var level = this.levels[this.level],
           frag = this.fragCurrent;
@@ -884,7 +884,7 @@ class StreamController extends EventHandler {
       [data.data1, data.data2].forEach(buffer => {
         if (buffer) {
           this.pendingAppending++;
-          hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer});
+          hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer, parent : 'main'});
         }
       });
 
@@ -899,22 +899,24 @@ class StreamController extends EventHandler {
   }
 
   onFragParsed(data) {
-    if (data.id === 0 && this.state === State.PARSING) {
+    if (data.id === 'main' && this.state === State.PARSING) {
       this.stats.tparsed = performance.now();
       this.state = State.PARSED;
       this._checkAppendedParsed();
     }
   }
 
-  onBufferAppended() {
-    switch (this.state) {
-      case State.PARSING:
-      case State.PARSED:
-        this.pendingAppending--;
-        this._checkAppendedParsed();
-        break;
-      default:
-        break;
+  onBufferAppended(data) {
+    if (data.parent === 'main') {
+      switch (this.state) {
+        case State.PARSING:
+        case State.PARSED:
+          this.pendingAppending--;
+          this._checkAppendedParsed();
+          break;
+        default:
+          break;
+      }
     }
   }
 

@@ -136,7 +136,7 @@ class BufferController extends EventHandler {
       this.onBufferEos();
     }
 
-    this.hls.trigger(Event.BUFFER_APPENDED);
+    this.hls.trigger(Event.BUFFER_APPENDED, { parent : this.parent});
 
     this.doAppending();
   }
@@ -289,8 +289,9 @@ class BufferController extends EventHandler {
       if (segments && segments.length) {
         var segment = segments.shift();
         try {
-          //logger.log(`appending ${segment.type} SB, size:${segment.data.length}`);
           if(sourceBuffer[segment.type]) {
+            //logger.log(`appending ${segment.type} SB, size:${segment.data.length}`);
+            this.parent = segment.parent;
             sourceBuffer[segment.type].appendBuffer(segment.data);
             this.appendError = 0;
             this.appended++;
