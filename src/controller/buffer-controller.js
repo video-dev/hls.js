@@ -201,6 +201,7 @@ class BufferController extends EventHandler {
         }
       }
     }
+    this.hls.trigger(Event.BUFFER_CREATED, { buffers : this.sourceBuffer } );
   }
 
   onBufferAppending(data) {
