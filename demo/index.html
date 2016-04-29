@@ -331,6 +331,22 @@ $(document).ready(function() {
           events.load.push(event);
           refreshCanvas();
        });
+       hls.on(Hls.Events.AUDIO_TRACK_LOADED,function(event,data) {
+          events.isLive = data.details.live;
+          var event = {
+            type : "audio track",
+            id : data.id,
+            start : data.details.startSN,
+            end : data.details.endSN,
+            time : data.stats.trequest - events.t0,
+            latency : data.stats.tfirst - data.stats.trequest,
+            load : data.stats.tload - data.stats.tfirst,
+            parsing : data.stats.tparsed - data.stats.tload,
+            duration : data.stats.tload - data.stats.tfirst
+          };
+          events.load.push(event);
+          refreshCanvas();
+       });
        hls.on(Hls.Events.FRAG_BUFFERED,function(event,data) {
           var event = {
             type : data.frag.type + " fragment",
