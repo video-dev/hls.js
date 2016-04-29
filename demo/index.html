@@ -282,7 +282,7 @@ $(document).ready(function() {
        });
        hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT,function(event,data) {
           showCanvas();
-          var event = {time : performance.now() - events.t0, type : "init segment"};
+          var event = {time : performance.now() - events.t0, type : data.id + " init segment"};
           events.video.push(event);
        });
        hls.on(Hls.Events.FRAG_PARSING_METADATA, function(event, data) {
