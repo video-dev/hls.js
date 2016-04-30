@@ -1110,12 +1110,6 @@ class StreamController extends EventHandler {
 
             //trigger handler right now
             this.tick();
-        } else {
-            logger.warn(
-                `not in PARSING state but ${
-                    this.state
-                }, ignoring FRAG_PARSING_DATA event`
-            );
         }
     }
 
