@@ -12,7 +12,11 @@ import ID3 from '../demux/id3';
     this.id = id;
     this.remuxerClass = remuxerClass;
     this.config = config;
-    this.remuxer = new this.remuxerClass(observer, id, config);
+    this.remuxer = new this.remuxerClass(observer,id, config);
+    this.insertDiscontinuity();
+  }
+
+  insertDiscontinuity() {
     this._aacTrack = {container : 'audio/adts', type: 'audio', id :-1, sequenceNumber: 0, samples : [], len : 0};
   }
 
@@ -34,23 +38,26 @@ import ID3 from '../demux/id3';
 
   // feed incoming data to the front of the parsing pipeline
   push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
-    var track = this._aacTrack,
+    var track,
         id3 = new ID3(data),
         pts = 90*id3.timeStamp,
         config, frameLength, frameDuration, frameIndex, offset, headerLength, stamp, len, aacSample;
 
     let contiguous = false;
     if (cc !== this.lastCC) {
-      logger.log('audio discontinuity detected');
+      logger.log(`${this.id} discontinuity detected`);
       this.lastCC = cc;
+      this.insertDiscontinuity();
       this.remuxer.switchLevel();
       this.remuxer.insertDiscontinuity();
     } else if (level !== this.lastLevel) {
       logger.log('audio track switch detected');
       this.lastLevel = level;
+      this.insertDiscontinuity();
     } else if (sn === (this.lastSN+1)) {
       contiguous = true;
     }
+    track = this._aacTrack;
     this.lastSN = sn;
     this.lastLevel = level;
 
