@@ -199,9 +199,10 @@ class BufferController extends EventHandler {
           logger.error(`error while trying to add sourceBuffer:${err.message}`);
           this.hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_ADD_CODEC_ERROR, fatal: false, err: err, mimeType : mimeType});
         }
+        track.buffer = sb;
       }
     }
-    this.hls.trigger(Event.BUFFER_CREATED, { buffers : this.sourceBuffer } );
+    this.hls.trigger(Event.BUFFER_CREATED, { tracks : tracks } );
   }
 
   onBufferAppending(data) {

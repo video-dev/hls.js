@@ -42,6 +42,7 @@ class StreamController extends EventHandler {
       Event.FRAG_PARSING_DATA,
       Event.FRAG_PARSED,
       Event.ERROR,
+      Event.BUFFER_CREATED,
       Event.BUFFER_APPENDED,
       Event.BUFFER_FLUSHED);
 
@@ -164,7 +165,7 @@ class StreamController extends EventHandler {
           // we are not at playback start, get next load level from level Controller
           level = hls.nextLoadLevel;
         }
-        var bufferInfo = BufferHelper.bufferInfo(this.media,pos,config.maxBufferHole),
+        var bufferInfo = BufferHelper.bufferInfo(this.mediaBuffer ? this.mediaBuffer : this.media,pos,config.maxBufferHole),
             bufferLen = bufferInfo.len,
             bufferEnd = bufferInfo.end,
             fragPrevious = this.fragPrevious,
@@ -824,10 +825,12 @@ class StreamController extends EventHandler {
           logger.log(`Android: force audio codec to` + audioCodec);
         }
         track.levelCodec = audioCodec;
+        track.id = data.id;
       }
       track = tracks.video;
       if(track) {
         track.levelCodec = this.levels[this.level].videoCodec;
+        track.id = data.id;
       }
 
       // if remuxer specify that a unique track needs to generated,
@@ -904,6 +907,25 @@ class StreamController extends EventHandler {
     }
   }
 
+  onBufferCreated(data) {
+    let tracks = data.tracks, mediaTrack, name, alternate = false;
+    for(var type in tracks) {
+      let track = tracks[type];
+      if (track.id === 'main') {
+        name = type;
+        mediaTrack = track;
+      } else {
+        alternate = true;
+      }
+    }
+    if (alternate && mediaTrack) {
+      logger.log(`alternate track found, use ${name}.buffered to schedule main fragment loading`);
+      this.mediaBuffer = mediaTrack.buffer;
+    } else {
+      this.mediaBuffer = this.media;
+    }
+  }
+
   onBufferAppended(data) {
     if (data.parent === 'main') {
       switch (this.state) {
@@ -927,7 +949,8 @@ class StreamController extends EventHandler {
         stats.tbuffered = performance.now();
         this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
         this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag, id : 0});
-        logger.log(`media buffered : ${this.timeRangesToString(this.media.buffered)}`);
+        let media = this.mediaBuffer ? this.mediaBuffer : this.media;
+        logger.log(`main buffered : ${this.timeRangesToString(media.buffered)}`);
         this.state = State.IDLE;
       }
       this.tick();
