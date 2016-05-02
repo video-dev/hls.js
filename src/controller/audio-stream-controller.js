@@ -152,9 +152,7 @@ class AudioStreamController extends EventHandler {
                 } else {
                     pos = this.nextLoadPosition;
                 }
-                let media = this.sourceBuffer
-                    ? this.sourceBuffer.audio
-                    : this.media;
+                let media = this.mediaBuffer ? this.mediaBuffer : this.media;
                 var bufferInfo = BufferHelper.bufferInfo(
                         media,
                         pos,
@@ -413,11 +411,6 @@ class AudioStreamController extends EventHandler {
         this.startPosition = this.lastCurrentTime = 0;
     }
 
-    onBufferCreated(data) {
-        this.sourceBuffer = data.buffers;
-        this.loadedmetadata = true;
-    }
-
     onAudioTracksUpdated(data) {
         logger.log('audio tracks updated');
         this.tracks = data.audioTracks;
@@ -507,36 +500,32 @@ class AudioStreamController extends EventHandler {
 
     onFragParsingInitSegment(data) {
         if (data.id === 'audio' && this.state === State.PARSING) {
-            var tracks = data.tracks,
-                trackName,
+            let tracks = data.tracks,
                 track;
 
             // include levelCodec in audio and video tracks
             track = tracks.audio;
             if (track) {
                 track.levelCodec = 'mp4a.40.2';
-            }
-            this.hls.trigger(Event.BUFFER_CODECS, tracks);
-            // loop through tracks that are going to be provided to bufferController
-            for (trackName in tracks) {
-                track = tracks[trackName];
+                track.id = data.id;
+                this.hls.trigger(Event.BUFFER_CODECS, tracks);
                 logger.log(
-                    `track:${trackName},container:${
+                    `track:audio,container:${
                         track.container
                     },codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`
                 );
-                var initSegment = track.initSegment;
+                let initSegment = track.initSegment;
                 if (initSegment) {
                     this.pendingAppending++;
                     this.hls.trigger(Event.BUFFER_APPENDING, {
-                        type: trackName,
+                        type: 'audio',
                         data: initSegment,
                         parent: 'audio'
                     });
                 }
+                //trigger handler right now
+                this.tick();
             }
-            //trigger handler right now
-            this.tick();
         }
     }
 
@@ -584,6 +573,11 @@ class AudioStreamController extends EventHandler {
         }
     }
 
+    onBufferCreated(data) {
+        this.mediaBuffer = data.tracks.audio.buffer;
+        this.loadedmetadata = true;
+    }
+
     onBufferAppended(data) {
         if (data.parent === 'audio') {
             switch (this.state) {
@@ -614,9 +608,10 @@ class AudioStreamController extends EventHandler {
                     frag: frag,
                     id: 0
                 });
+                let media = this.mediaBuffer ? this.mediaBuffer : this.media;
                 logger.log(
                     `audio buffered : ${this.timeRangesToString(
-                        this.sourceBuffer.audio.buffered
+                        media.buffered
                     )}`
                 );
                 this.state = State.IDLE;

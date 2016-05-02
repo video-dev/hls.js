@@ -220,9 +220,10 @@ class BufferController extends EventHandler {
                         mimeType: mimeType
                     });
                 }
+                track.buffer = sb;
             }
         }
-        this.hls.trigger(Event.BUFFER_CREATED, { buffers: this.sourceBuffer });
+        this.hls.trigger(Event.BUFFER_CREATED, { tracks: tracks });
     }
 
     onBufferAppending(data) {
