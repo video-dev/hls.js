@@ -540,11 +540,16 @@ class StreamController extends EventHandler {
     }
 
     isBuffered(position) {
-        var v = this.media,
-            buffered = v.buffered;
-        for (var i = 0; i < buffered.length; i++) {
-            if (position >= buffered.start(i) && position <= buffered.end(i)) {
-                return true;
+        let media = this.media;
+        if (media) {
+            let buffered = media.buffered;
+            for (let i = 0; i < buffered.length; i++) {
+                if (
+                    position >= buffered.start(i) &&
+                    position <= buffered.end(i)
+                ) {
+                    return true;
+                }
             }
         }
         return false;
@@ -937,17 +942,20 @@ class StreamController extends EventHandler {
                         details.endSN
                     }],level ${level}`
                 );
-                this.demuxer.push(
-                    data.payload,
-                    audioCodec,
-                    currentLevel.videoCodec,
-                    start,
-                    fragCurrent.cc,
-                    level,
-                    sn,
-                    duration,
-                    fragCurrent.decryptdata
-                );
+                let demuxer = this.demuxer;
+                if (demuxer) {
+                    demuxer.push(
+                        data.payload,
+                        audioCodec,
+                        currentLevel.videoCodec,
+                        start,
+                        fragCurrent.cc,
+                        level,
+                        sn,
+                        duration,
+                        fragCurrent.decryptdata
+                    );
+                }
             }
         }
         this.fragLoadError = 0;
