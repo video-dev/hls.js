@@ -30,18 +30,20 @@ class BufferController extends EventHandler {
   }
 
   onMediaAttaching(data) {
-    var media = this.media = data.media;
-    // setup the media source
-    var ms = this.mediaSource = new MediaSource();
-    //Media Source listeners
-    this.onmso = this.onMediaSourceOpen.bind(this);
-    this.onmse = this.onMediaSourceEnded.bind(this);
-    this.onmsc = this.onMediaSourceClose.bind(this);
-    ms.addEventListener('sourceopen', this.onmso);
-    ms.addEventListener('sourceended', this.onmse);
-    ms.addEventListener('sourceclose', this.onmsc);
-    // link video and media Source
-    media.src = URL.createObjectURL(ms);
+    let media = this.media = data.media;
+    if (media) {
+      // setup the media source
+      var ms = this.mediaSource = new MediaSource();
+      //Media Source listeners
+      this.onmso = this.onMediaSourceOpen.bind(this);
+      this.onmse = this.onMediaSourceEnded.bind(this);
+      this.onmsc = this.onMediaSourceClose.bind(this);
+      ms.addEventListener('sourceopen', this.onmso);
+      ms.addEventListener('sourceended', this.onmse);
+      ms.addEventListener('sourceclose', this.onmsc);
+      // link video and media Source
+      media.src = URL.createObjectURL(ms);
+    }
   }
 
   onMediaDetaching() {
