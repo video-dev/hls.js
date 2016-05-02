@@ -793,7 +793,7 @@ var AudioStreamController = function (_EventHandler) {
           } else {
             pos = this.nextLoadPosition;
           }
-          var media = this.sourceBuffer ? this.sourceBuffer.audio : this.media;
+          var media = this.mediaBuffer ? this.mediaBuffer : this.media;
           var bufferInfo = _bufferHelper2.default.bufferInfo(media, pos, config.maxBufferHole),
               bufferLen = bufferInfo.len,
               bufferEnd = bufferInfo.end,
@@ -1000,12 +1000,6 @@ var AudioStreamController = function (_EventHandler) {
       this.startPosition = this.lastCurrentTime = 0;
     }
   }, {
-    key: 'onBufferCreated',
-    value: function onBufferCreated(data) {
-      this.sourceBuffer = data.buffers;
-      this.loadedmetadata = true;
-    }
-  }, {
     key: 'onAudioTracksUpdated',
     value: function onAudioTracksUpdated(data) {
       _logger.logger.log('audio tracks updated');
@@ -1078,27 +1072,23 @@ var AudioStreamController = function (_EventHandler) {
     value: function onFragParsingInitSegment(data) {
       if (data.id === 'audio' && this.state === State.PARSING) {
         var tracks = data.tracks,
-            trackName,
-            track;
+            track = void 0;
 
         // include levelCodec in audio and video tracks
         track = tracks.audio;
         if (track) {
           track.levelCodec = 'mp4a.40.2';
-        }
-        this.hls.trigger(_events2.default.BUFFER_CODECS, tracks);
-        // loop through tracks that are going to be provided to bufferController
-        for (trackName in tracks) {
-          track = tracks[trackName];
-          _logger.logger.log('track:' + trackName + ',container:' + track.container + ',codecs[level/parsed]=[' + track.levelCodec + '/' + track.codec + ']');
+          track.id = data.id;
+          this.hls.trigger(_events2.default.BUFFER_CODECS, tracks);
+          _logger.logger.log('track:audio,container:' + track.container + ',codecs[level/parsed]=[' + track.levelCodec + '/' + track.codec + ']');
           var initSegment = track.initSegment;
           if (initSegment) {
             this.pendingAppending++;
-            this.hls.trigger(_events2.default.BUFFER_APPENDING, { type: trackName, data: initSegment, parent: 'audio' });
+            this.hls.trigger(_events2.default.BUFFER_APPENDING, { type: 'audio', data: initSegment, parent: 'audio' });
           }
+          //trigger handler right now
+          this.tick();
         }
-        //trigger handler right now
-        this.tick();
       }
     }
   }, {
@@ -1135,6 +1125,12 @@ var AudioStreamController = function (_EventHandler) {
       }
     }
   }, {
+    key: 'onBufferCreated',
+    value: function onBufferCreated(data) {
+      this.mediaBuffer = data.tracks.audio.buffer;
+      this.loadedmetadata = true;
+    }
+  }, {
     key: 'onBufferAppended',
     value: function onBufferAppended(data) {
       if (data.parent === 'audio') {
@@ -1161,7 +1157,8 @@ var AudioStreamController = function (_EventHandler) {
           stats.tbuffered = performance.now();
           this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
           this.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: stats, frag: frag, id: 0 });
-          _logger.logger.log('audio buffered : ' + this.timeRangesToString(this.sourceBuffer.audio.buffered));
+          var media = this.mediaBuffer ? this.mediaBuffer : this.media;
+          _logger.logger.log('audio buffered : ' + this.timeRangesToString(media.buffered));
           this.state = State.IDLE;
         }
         this.tick();
@@ -1605,9 +1602,10 @@ var BufferController = function (_EventHandler) {
             _logger.logger.error('error while trying to add sourceBuffer:' + err.message);
             this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_ADD_CODEC_ERROR, fatal: false, err: err, mimeType: mimeType });
           }
+          track.buffer = sb;
         }
       }
-      this.hls.trigger(_events2.default.BUFFER_CREATED, { buffers: this.sourceBuffer });
+      this.hls.trigger(_events2.default.BUFFER_CREATED, { tracks: tracks });
     }
   }, {
     key: 'onBufferAppending',
@@ -2483,7 +2481,7 @@ var StreamController = function (_EventHandler) {
   function StreamController(hls) {
     _classCallCheck(this, StreamController);
 
-    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(StreamController).call(this, hls, _events2.default.MEDIA_ATTACHED, _events2.default.MEDIA_DETACHING, _events2.default.MANIFEST_LOADING, _events2.default.MANIFEST_PARSED, _events2.default.LEVEL_LOADED, _events2.default.KEY_LOADED, _events2.default.FRAG_LOADED, _events2.default.FRAG_LOAD_EMERGENCY_ABORTED, _events2.default.FRAG_PARSING_INIT_SEGMENT, _events2.default.FRAG_PARSING_DATA, _events2.default.FRAG_PARSED, _events2.default.ERROR, _events2.default.BUFFER_APPENDED, _events2.default.BUFFER_FLUSHED));
+    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(StreamController).call(this, hls, _events2.default.MEDIA_ATTACHED, _events2.default.MEDIA_DETACHING, _events2.default.MANIFEST_LOADING, _events2.default.MANIFEST_PARSED, _events2.default.LEVEL_LOADED, _events2.default.KEY_LOADED, _events2.default.FRAG_LOADED, _events2.default.FRAG_LOAD_EMERGENCY_ABORTED, _events2.default.FRAG_PARSING_INIT_SEGMENT, _events2.default.FRAG_PARSING_DATA, _events2.default.FRAG_PARSED, _events2.default.ERROR, _events2.default.BUFFER_CREATED, _events2.default.BUFFER_APPENDED, _events2.default.BUFFER_FLUSHED));
 
     _this.config = hls.config;
     _this.audioCodecSwap = false;
@@ -2619,7 +2617,7 @@ var StreamController = function (_EventHandler) {
             // we are not at playback start, get next load level from level Controller
             level = hls.nextLoadLevel;
           }
-          var bufferInfo = _bufferHelper2.default.bufferInfo(this.media, pos, config.maxBufferHole),
+          var bufferInfo = _bufferHelper2.default.bufferInfo(this.mediaBuffer ? this.mediaBuffer : this.media, pos, config.maxBufferHole),
               bufferLen = bufferInfo.len,
               bufferEnd = bufferInfo.end,
               fragPrevious = this.fragPrevious,
@@ -3265,10 +3263,12 @@ var StreamController = function (_EventHandler) {
             _logger.logger.log('Android: force audio codec to' + audioCodec);
           }
           track.levelCodec = audioCodec;
+          track.id = data.id;
         }
         track = tracks.video;
         if (track) {
           track.levelCodec = this.levels[this.level].videoCodec;
+          track.id = data.id;
         }
 
         // if remuxer specify that a unique track needs to generated,
@@ -3337,8 +3337,6 @@ var StreamController = function (_EventHandler) {
 
         //trigger handler right now
         this.tick();
-      } else {
-        _logger.logger.warn('not in PARSING state but ' + this.state + ', ignoring FRAG_PARSING_DATA event');
       }
     }
   }, {
@@ -3348,6 +3346,29 @@ var StreamController = function (_EventHandler) {
         this.stats.tparsed = performance.now();
         this.state = State.PARSED;
         this._checkAppendedParsed();
+      }
+    }
+  }, {
+    key: 'onBufferCreated',
+    value: function onBufferCreated(data) {
+      var tracks = data.tracks,
+          mediaTrack = void 0,
+          name = void 0,
+          alternate = false;
+      for (var type in tracks) {
+        var track = tracks[type];
+        if (track.id === 'main') {
+          name = type;
+          mediaTrack = track;
+        } else {
+          alternate = true;
+        }
+      }
+      if (alternate && mediaTrack) {
+        _logger.logger.log('alternate track found, use ' + name + '.buffered to schedule main fragment loading');
+        this.mediaBuffer = mediaTrack.buffer;
+      } else {
+        this.mediaBuffer = this.media;
       }
     }
   }, {
@@ -3377,7 +3398,8 @@ var StreamController = function (_EventHandler) {
           stats.tbuffered = performance.now();
           this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
           this.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: stats, frag: frag, id: 0 });
-          _logger.logger.log('media buffered : ' + this.timeRangesToString(this.media.buffered));
+          var media = this.mediaBuffer ? this.mediaBuffer : this.media;
+          _logger.logger.log('main buffered : ' + this.timeRangesToString(media.buffered));
           this.state = State.IDLE;
         }
         this.tick();
@@ -4268,16 +4290,21 @@ var AACDemuxer = function () {
     this.id = id;
     this.remuxerClass = remuxerClass;
     this.remuxer = new this.remuxerClass(observer, id);
-    this._aacTrack = { container: 'audio/adts', type: 'audio', id: -1, sequenceNumber: 0, samples: [], len: 0 };
+    this.insertDiscontinuity();
   }
 
   _createClass(AACDemuxer, [{
+    key: 'insertDiscontinuity',
+    value: function insertDiscontinuity() {
+      this._aacTrack = { container: 'audio/adts', type: 'audio', id: -1, sequenceNumber: 0, samples: [], len: 0 };
+    }
+  }, {
     key: 'push',
 
 
     // feed incoming data to the front of the parsing pipeline
     value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
-      var track = this._aacTrack,
+      var track,
           id3 = new _id2.default(data),
           pts = 90 * id3.timeStamp,
           config,
@@ -4292,16 +4319,19 @@ var AACDemuxer = function () {
 
       var contiguous = false;
       if (cc !== this.lastCC) {
-        _logger.logger.log('audio discontinuity detected');
+        _logger.logger.log(this.id + ' discontinuity detected');
         this.lastCC = cc;
+        this.insertDiscontinuity();
         this.remuxer.switchLevel();
         this.remuxer.insertDiscontinuity();
       } else if (level !== this.lastLevel) {
         _logger.logger.log('audio track switch detected');
         this.lastLevel = level;
+        this.insertDiscontinuity();
       } else if (sn === this.lastSN + 1) {
         contiguous = true;
       }
+      track = this._aacTrack;
       this.lastSN = sn;
       this.lastLevel = level;
 
@@ -6279,7 +6309,7 @@ module.exports = {
   BUFFER_RESET: 'hlsBufferReset',
   // fired when we know about the codecs that we need buffers for to push into - data: {tracks : { container, codec, levelCodec, initSegment, metadata }}
   BUFFER_CODECS: 'hlsBufferCodecs',
-  // fired when sourcebuffers have been created data: { buffers : sourcebuffers}
+  // fired when sourcebuffers have been created data: { tracks : tracks}
   BUFFER_CREATED: 'hlsBufferCreated',
   // fired when we append a segment to the buffer - data: { segment: segment object }
   BUFFER_APPENDING: 'hlsBufferAppending',
