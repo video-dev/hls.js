@@ -229,7 +229,9 @@
         // ITU-T Rec. H.264 and ISO/IEC 14496-10 (lower bit-rate video)
         case 0x1b:
           //logger.log('AVC PID:'  + pid);
-          this._avcTrack.id = pid;
+          if  (this._avcTrack.id === -1) {
+            this._avcTrack.id = pid;
+          }
           break;
         default:
         logger.log('unkown stream type:'  + data[offset]);
@@ -657,4 +659,3 @@
 }
 
 export default TSDemuxer;
-
