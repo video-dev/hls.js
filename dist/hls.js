@@ -1534,7 +1534,7 @@ var BufferController = function (_EventHandler) {
       if (this._needsEos) {
         this.onBufferEos();
       }
-
+      this.appending = false;
       this.hls.trigger(_events2.default.BUFFER_APPENDED, { parent: this.parent });
 
       this.doAppending();
@@ -1694,11 +1694,9 @@ var BufferController = function (_EventHandler) {
           _logger.logger.error('trying to append although a media error occured, flush segment and abort');
           return;
         }
-        for (var type in sourceBuffer) {
-          if (sourceBuffer[type].updating) {
-            //logger.log('sb update in progress');
-            return;
-          }
+        if (this.appending) {
+          //logger.log(`sb appending in progress`);
+          return;
         }
         if (segments && segments.length) {
           var segment = segments.shift();
@@ -1709,6 +1707,7 @@ var BufferController = function (_EventHandler) {
               sourceBuffer[segment.type].appendBuffer(segment.data);
               this.appendError = 0;
               this.appended++;
+              this.appending = true;
             } else {
               // in case we don't have any source buffer matching with this segment type,
               // it means that Mediasource fails to create sourcebuffer
