@@ -141,7 +141,7 @@ class BufferController extends EventHandler {
         if (this._needsEos) {
             this.onBufferEos();
         }
-
+        this.appending = false;
         this.hls.trigger(Event.BUFFER_APPENDED, { parent: this.parent });
 
         this.doAppending();
@@ -320,11 +320,9 @@ class BufferController extends EventHandler {
                 );
                 return;
             }
-            for (var type in sourceBuffer) {
-                if (sourceBuffer[type].updating) {
-                    //logger.log('sb update in progress');
-                    return;
-                }
+            if (this.appending) {
+                //logger.log(`sb appending in progress`);
+                return;
             }
             if (segments && segments.length) {
                 var segment = segments.shift();
@@ -335,6 +333,7 @@ class BufferController extends EventHandler {
                         sourceBuffer[segment.type].appendBuffer(segment.data);
                         this.appendError = 0;
                         this.appended++;
+                        this.appending = true;
                     } else {
                         // in case we don't have any source buffer matching with this segment type,
                         // it means that Mediasource fails to create sourcebuffer
