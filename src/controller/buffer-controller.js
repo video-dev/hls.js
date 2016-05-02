@@ -141,22 +141,23 @@ class BufferController extends EventHandler {
   }
 
   onBufferCodecs(tracks) {
-    var sb,trackName,track, codec, mimeType;
+    let mediaSource = this.mediaSource;
 
-    if (!this.media) {
+    // delay sourcebuffer creation if media source not opened yet
+    if(!mediaSource || mediaSource.readyState !== 'open') {
       this.pendingTracks = tracks;
       return;
     }
 
     if (!this.sourceBuffer) {
-      var sourceBuffer = {}, mediaSource = this.mediaSource;
-      for (trackName in tracks) {
-        track = tracks[trackName];
+      let sourceBuffer = {};
+      for (let trackName in tracks) {
+        let track = tracks[trackName];
         // use levelCodec as first priority
-        codec = track.levelCodec || track.codec;
-        mimeType = `${track.container};codecs=${codec}`;
+        let codec = track.levelCodec || track.codec;
+        let mimeType = `${track.container};codecs=${codec}`;
         logger.log(`creating sourceBuffer with mimeType:${mimeType}`);
-        sb = sourceBuffer[trackName] = mediaSource.addSourceBuffer(mimeType);
+        let sb = sourceBuffer[trackName] = mediaSource.addSourceBuffer(mimeType);
         sb.addEventListener('updateend', this.onsbue);
         sb.addEventListener('error', this.onsbe);
       }
