@@ -503,9 +503,12 @@ class StreamController extends EventHandler {
   */
   immediateLevelSwitchEnd() {
     this.immediateSwitch = false;
-    this.media.currentTime -= 0.0001;
-    if (!this.previouslyPaused) {
-      this.media.play();
+    let media = this.media;
+    if (media && media.readyState) {
+      media.currentTime -= 0.0001;
+      if (!this.previouslyPaused) {
+        media.play();
+      }
     }
   }
 
