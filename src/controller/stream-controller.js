@@ -637,55 +637,59 @@ class StreamController extends EventHandler {
       we need to find the next flushable buffer range
       we should take into account new segment fetch time
     */
-        var fetchdelay, currentRange, nextRange;
-        // increase fragment load Index to avoid frag loop loading error after buffer flush
-        this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
-        currentRange = this.getBufferRange(this.media.currentTime);
-        if (currentRange && currentRange.start > 1) {
-            // flush buffer preceding current fragment (flush until current fragment start offset)
-            // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
-            this.state = State.PAUSED;
-            this.hls.trigger(Event.BUFFER_FLUSHING, {
-                startOffset: 0,
-                endOffset: currentRange.start - 1
-            });
-        }
-        if (!this.media.paused) {
-            // add a safety delay of 1s
-            var nextLevelId = this.hls.nextLoadLevel,
-                nextLevel = this.levels[nextLevelId],
-                fragLastKbps = this.fragLastKbps;
-            if (fragLastKbps && this.fragCurrent) {
-                fetchdelay =
-                    this.fragCurrent.duration *
-                        nextLevel.bitrate /
-                        (1000 * fragLastKbps) +
-                    1;
+        let media = this.media;
+        // ensure that media is defined and that metadata are available (to retrieve currentTime)
+        if (media && media.readyState) {
+            let fetchdelay, currentRange, nextRange;
+            // increase fragment load Index to avoid frag loop loading error after buffer flush
+            this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+            currentRange = this.getBufferRange(media.currentTime);
+            if (currentRange && currentRange.start > 1) {
+                // flush buffer preceding current fragment (flush until current fragment start offset)
+                // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
+                this.state = State.PAUSED;
+                this.hls.trigger(Event.BUFFER_FLUSHING, {
+                    startOffset: 0,
+                    endOffset: currentRange.start - 1
+                });
+            }
+            if (!media.paused) {
+                // add a safety delay of 1s
+                var nextLevelId = this.hls.nextLoadLevel,
+                    nextLevel = this.levels[nextLevelId],
+                    fragLastKbps = this.fragLastKbps;
+                if (fragLastKbps && this.fragCurrent) {
+                    fetchdelay =
+                        this.fragCurrent.duration *
+                            nextLevel.bitrate /
+                            (1000 * fragLastKbps) +
+                        1;
+                } else {
+                    fetchdelay = 0;
+                }
             } else {
                 fetchdelay = 0;
             }
-        } else {
-            fetchdelay = 0;
-        }
-        //logger.log('fetchdelay:'+fetchdelay);
-        // find buffer range that will be reached once new fragment will be fetched
-        nextRange = this.getBufferRange(this.media.currentTime + fetchdelay);
-        if (nextRange) {
-            // we can flush buffer range following this one without stalling playback
-            nextRange = this.followingBufferRange(nextRange);
+            //logger.log('fetchdelay:'+fetchdelay);
+            // find buffer range that will be reached once new fragment will be fetched
+            nextRange = this.getBufferRange(media.currentTime + fetchdelay);
             if (nextRange) {
-                // if we are here, we can also cancel any loading/demuxing in progress, as they are useless
-                var fragCurrent = this.fragCurrent;
-                if (fragCurrent && fragCurrent.loader) {
-                    fragCurrent.loader.abort();
+                // we can flush buffer range following this one without stalling playback
+                nextRange = this.followingBufferRange(nextRange);
+                if (nextRange) {
+                    // if we are here, we can also cancel any loading/demuxing in progress, as they are useless
+                    var fragCurrent = this.fragCurrent;
+                    if (fragCurrent && fragCurrent.loader) {
+                        fragCurrent.loader.abort();
+                    }
+                    this.fragCurrent = null;
+                    // flush position is the start position of this new buffer
+                    this.state = State.PAUSED;
+                    this.hls.trigger(Event.BUFFER_FLUSHING, {
+                        startOffset: nextRange.start,
+                        endOffset: Number.POSITIVE_INFINITY
+                    });
                 }
-                this.fragCurrent = null;
-                // flush position is the start position of this new buffer
-                this.state = State.PAUSED;
-                this.hls.trigger(Event.BUFFER_FLUSHING, {
-                    startOffset: nextRange.start,
-                    endOffset: Number.POSITIVE_INFINITY
-                });
             }
         }
     }
