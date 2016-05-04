@@ -219,7 +219,9 @@
         // ISO/IEC 13818-7 ADTS AAC (MPEG-2 lower bit-rate audio)
         case 0x0f:
           //logger.log('AAC PID:'  + pid);
-          this._aacTrack.id = pid;
+          if  (this._aacTrack.id === -1) {
+            this._aacTrack.id = pid;
+          }
           break;
         // Packetized metadata (ID3)
         case 0x15:
