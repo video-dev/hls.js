@@ -2,7 +2,7 @@
  * fMP4 remuxer
  */
 
-import ADTS from '../demux/adts';
+import AAC from '../helper/aac';
 import Event from '../events';
 import { logger } from '../utils/logger';
 import MP4 from '../remux/mp4-generator';
@@ -428,7 +428,7 @@ class MP4Remuxer {
                     var newStamp = Math.round(
                             sample0.pts + (j + 1) * 1024 * pes2mp4ScaleFactor
                         ),
-                        fillFrame = ADTS.getSilentFrame(track.channelCount),
+                        fillFrame = AAC.getSilentFrame(track.channelCount),
                         newAacSample;
                     if (!fillFrame) {
                         logger.log(
@@ -589,7 +589,7 @@ class MP4Remuxer {
             // samples count of this segment's duration
             nbSamples = Math.ceil((endDTS - startDTS) / frameDuration),
             // silent frame
-            silentFrame = ADTS.getSilentFrame(track.channelCount);
+            silentFrame = AAC.getSilentFrame(track.channelCount);
 
         // Can't remux if we can't generate a silent frame...
         if (!silentFrame) {
