@@ -38,7 +38,13 @@ class PlaylistLoader extends EventHandler {
             retryDelay;
 
         if (this.loading && this.loader) {
-            this.loader.abort();
+            if (this.url === url && this.id === id1 && this.id2 === id2) {
+                // same request than last pending one, don't do anything
+                return;
+            } else {
+                // one playlist load request is pending, but with different params, abort it before loading new playlist
+                this.loader.abort();
+            }
         }
 
         this.url = url;
