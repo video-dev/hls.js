@@ -36,6 +36,11 @@ class PlaylistLoader extends EventHandler {
             retry,
             timeout,
             retryDelay;
+
+        if (this.loading && this.loader) {
+            this.loader.abort();
+        }
+
         this.url = url;
         this.id = id1;
         this.id2 = id2;
@@ -52,6 +57,7 @@ class PlaylistLoader extends EventHandler {
             typeof config.pLoader !== 'undefined'
                 ? new config.pLoader(config)
                 : new config.loader(config);
+        this.loading = true;
         this.loader.load(
             url,
             '',
@@ -260,6 +266,8 @@ class PlaylistLoader extends EventHandler {
             id2 = this.id2,
             hls = this.hls,
             levels;
+
+        this.loading = false;
         // responseURL not supported on some browsers (it is used to detect URL redirection)
         // data-uri mode also not supported (but no need to detect redirection)
         if (url === undefined || url.indexOf('data:') === 0) {
@@ -331,6 +339,7 @@ class PlaylistLoader extends EventHandler {
         if (this.loader) {
             this.loader.abort();
         }
+        this.loading = false;
         this.hls.trigger(Event.ERROR, {
             type: ErrorTypes.NETWORK_ERROR,
             details: details,
@@ -355,6 +364,7 @@ class PlaylistLoader extends EventHandler {
         if (this.loader) {
             this.loader.abort();
         }
+        this.loading = false;
         this.hls.trigger(Event.ERROR, {
             type: ErrorTypes.NETWORK_ERROR,
             details: details,
