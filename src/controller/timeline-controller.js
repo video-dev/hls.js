@@ -5,6 +5,7 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import CEA708Interpreter from '../utils/cea-708-interpreter';
+import {logger} from '../utils/logger';
 
 class TimelineController extends EventHandler {
 
@@ -18,9 +19,16 @@ class TimelineController extends EventHandler {
     this.hls = hls;
     this.config = hls.config;
 
-    if (this.config.enableCEA708Captions)
-    {
-      this.cea708Interpreter = new CEA708Interpreter();
+    if (this.config.cea708Enabled) {
+      let cea708config = {
+        maxDisplayTime: this.config.cea708MaxDisplayTime,
+        minDisplayTime: this.config.cea708MinDisplayTime,
+        allowedOverlapTime: this.config.cea708AllowedOverlapTime
+      };
+
+      logger.log('CEA-708 caption interpreter enabled with config:', JSON.stringify(cea708config));
+
+      this.cea708Interpreter = new CEA708Interpreter(cea708config);
     }
   }
 
@@ -30,27 +38,31 @@ class TimelineController extends EventHandler {
 
   onMediaAttaching(data) {
     var media = this.media = data.media;
-    this.cea708Interpreter.attach(media);
+
+    if (this.cea708Interpreter) {
+      this.cea708Interpreter.attach(media);
+    }
   }
 
   onMediaDetaching() {
-    this.cea708Interpreter.detach();
+    if (this.cea708Interpreter) {
+      this.cea708Interpreter.detach();
+    }
   }
 
-  onManifestLoading()
-  {
+  onManifestLoading() {
     this.lastPts = Number.POSITIVE_INFINITY;
   }
 
-  onFragLoaded(data)
-  {
+  onFragLoaded(data) {
     var pts = data.frag.start; //Number.POSITIVE_INFINITY;
 
     // if this is a frag for a previously loaded timerange, remove all captions
     // TODO: consider just removing captions for the timerange
-    if (pts <= this.lastPts)
-    {
-      this.cea708Interpreter.clear();
+    if (pts <= this.lastPts) {
+      if (this.cea708Interpreter) {
+        this.cea708Interpreter.clear();
+      }
     }
 
     this.lastPts = pts;
@@ -59,9 +71,13 @@ class TimelineController extends EventHandler {
   onFragParsingUserdata(data) {
     // push all of the CEA-708 messages into the interpreter
     // immediately. It will create the proper timestamps based on our PTS value
-    for (var i=0; i<data.samples.length; i++)
-    {
-      this.cea708Interpreter.push(data.samples[i].pts, data.samples[i].bytes);
+    for (let i = 0; i < data.samples.length; i++) {
+      let pts = data.samples[i].pts;
+      let bytes = data.samples[i].bytes;
+
+      if (this.cea708Interpreter) {
+        this.cea708Interpreter.push(pts, bytes);
+      }
     }
   }
 }
