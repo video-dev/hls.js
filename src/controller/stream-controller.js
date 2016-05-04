@@ -1303,7 +1303,7 @@ class StreamController extends EventHandler {
                             });
                             this.stalled = true;
                         } else {
-                            this.seekHoleNudgeDuration += this.config.SeekHoleNudgeDuration;
+                            this.seekHoleNudgeDuration += this.config.seekHoleNudgeDuration;
                         }
                     }
                     // if we are below threshold, try to jump if next buffer range is close
