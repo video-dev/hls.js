@@ -190,6 +190,9 @@ class LevelController extends EventHandler {
 
     set manualLevel(newLevel) {
         this._manualLevel = newLevel;
+        if (this._startLevel === undefined) {
+            this._startLevel = newLevel;
+        }
         if (newLevel !== -1) {
             this.level = newLevel;
         }
