@@ -259,25 +259,29 @@ class MP4Remuxer {
         if (i < inputSamples.length - 1) {
           mp4SampleDuration = inputSamples[i+1].dts - avcSample.dts;
         } else {
-          // In some cases, a segment's audio track duration may exceed the video track duration.
-          // Since we've already remuxed audio, and we know how long the audio track is, we look to
-          // see if the delta to the next segment is longer than the minimum of maxBufferHole and
-          // maxSeekHole. If so, playback would potentially get stuck, so we artificially inflate
-          // the duration of the last frame to minimize any potential gap between segments.
-          var config = this.config,
-              maxBufferHole = config.maxBufferHole,
-              maxSeekHole = config.maxSeekHole,
-              gapTolerance = Math.floor(Math.min(maxBufferHole, maxSeekHole) * pesTimeScale),
-              deltaToFrameEnd = (audioTrackLength ? firstPTS + audioTrackLength * pesTimeScale : this.nextAacPts) - avcSample.pts,
+          let config = this.config,
               lastFrameDuration = avcSample.dts - inputSamples[i > 0 ? i-1 : i].dts;
-          if (config.stretchShortVideoTrack && (deltaToFrameEnd > gapTolerance)) {
-            // We subtract lastFrameDuration from deltaToFrameEnd to try to prevent any video
-            // frame overlap. maxBufferHole/maxSeekHole should be >> lastFrameDuration anyway.
-            mp4SampleDuration = deltaToFrameEnd - lastFrameDuration;
-            if (mp4SampleDuration < 0) {
+          if (config.stretchShortVideoTrack) {
+            // In some cases, a segment's audio track duration may exceed the video track duration.
+            // Since we've already remuxed audio, and we know how long the audio track is, we look to
+            // see if the delta to the next segment is longer than the minimum of maxBufferHole and
+            // maxSeekHole. If so, playback would potentially get stuck, so we artificially inflate
+            // the duration of the last frame to minimize any potential gap between segments.
+            let maxBufferHole = config.maxBufferHole,
+                maxSeekHole = config.maxSeekHole,
+                gapTolerance = Math.floor(Math.min(maxBufferHole, maxSeekHole) * pesTimeScale),
+                deltaToFrameEnd = (audioTrackLength ? firstPTS + audioTrackLength * pesTimeScale : this.nextAacPts) - avcSample.pts;
+            if (deltaToFrameEnd > gapTolerance) {
+              // We subtract lastFrameDuration from deltaToFrameEnd to try to prevent any video
+              // frame overlap. maxBufferHole/maxSeekHole should be >> lastFrameDuration anyway.
+              mp4SampleDuration = deltaToFrameEnd - lastFrameDuration;
+              if (mp4SampleDuration < 0) {
+                mp4SampleDuration = lastFrameDuration;
+              }
+              logger.log(`It is approximately ${deltaToFrameEnd/90} ms to the next segment; using duration ${mp4SampleDuration/90} ms for the last video frame.`);
+            } else {
               mp4SampleDuration = lastFrameDuration;
             }
-            logger.log(`It is approximately ${deltaToFrameEnd/90} ms to the next segment; using duration ${mp4SampleDuration/90} ms for the last video frame.`);
           } else {
             mp4SampleDuration = lastFrameDuration;
           }
