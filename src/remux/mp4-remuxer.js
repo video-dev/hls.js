@@ -7,6 +7,7 @@ import Event from '../events';
 import { logger } from '../utils/logger';
 import MP4 from '../remux/mp4-generator';
 import { ErrorTypes, ErrorDetails } from '../errors';
+import '../utils/polyfill';
 
 class MP4Remuxer {
     constructor(observer, config) {
