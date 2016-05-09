@@ -375,8 +375,20 @@ lo008ts`;
     assert.strictEqual(result.fragments.length, 8);
     assert.strictEqual(result.totalduration, 80);
 
-    result.fragments.forEach((fragment, idx) => {
+    var decryptdata = result.fragments[0].decryptdata;
+
+    result.fragments.forEach(function (fragment, idx) {
       assert.strictEqual(fragment.url, 'http://dummy.com/000' + (idx + 1) + '.ts');
+
+      //decryptdata should persist across all fragments
+      assert.strictEqual(fragment.decryptdata.method, decryptdata.method);
+      assert.strictEqual(fragment.decryptdata.uri, decryptdata.uri);
+      assert.strictEqual(fragment.key, decryptdata.key);
+
+      //iv is correctly generated
+      assert.strictEqual(fragment.iv[fragment.length - 1], idx);
+
+      decryptdata = fragment.decryptdata;
     });
 
   });
