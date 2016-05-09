@@ -197,6 +197,14 @@ class PlaylistLoader extends EventHandler {
               levelkey.iv = decryptiv;
             }
           }
+
+          if (frag && !frag.url) {
+            //once the regexp is working, url should be set to an item in result
+            frag.url = "something";
+
+            //also need to do the iv check
+            frag.decryptdata = this.clone(levelkey);
+          }
           break;
         case 'PROGRAM-DATE-TIME':
           programDateTime = new Date(Date.parse(result[1]));

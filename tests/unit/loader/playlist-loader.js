@@ -347,7 +347,7 @@ lo008ts`;
     assert.strictEqual(result.fragments[3].cc, 1); //continuity counter should increase around discontinuity
   });
 
-  //issue #425
+  //issue #425 - first fragment has null url and no decryptdata if EXT-X-KEY follows EXTINF
   it('parse level with #EXT-X-KEY after #EXTINF', () => {
     var level = `#EXTM3U
 #EXT-X-TARGETDURATION:10
@@ -371,9 +371,6 @@ lo008ts`;
 0007.ts
 #EXTINF:10,
 0008.ts`;
-
-    console.log(level);
-
     var result = new PlaylistLoader({on: function () { }}).parseLevelPlaylist(level, 'http://dummy.com/playlist.m3u8', 0);
     assert.strictEqual(result.fragments.length, 8);
     assert.strictEqual(result.totalduration, 80);
