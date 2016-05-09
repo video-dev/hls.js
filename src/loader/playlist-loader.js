@@ -125,7 +125,7 @@ class PlaylistLoader extends EventHandler {
         byteRangeEndOffset,
         byteRangeStartOffset;
 
-    regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*))/g;
+    regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*)[\r\n]+([^#|\r\n]+)?)|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*))/g;
     while ((result = regexp.exec(string)) !== null) {
       result.shift();
       result = result.filter(function(n) { return (n !== undefined); });
@@ -198,12 +198,28 @@ class PlaylistLoader extends EventHandler {
             }
           }
 
-          if (frag && !frag.url) {
-            //once the regexp is working, url should be set to an item in result
-            frag.url = "something";
+          //issue #425, applying url and decrypt data in instances where EXT-KEY immediately follow EXT-INF
+          if (frag && !frag.url && result.length >= 3) {
+            frag.url = this.resolve(result[2], baseurl);
 
-            //also need to do the iv check
-            frag.decryptdata = this.clone(levelkey);
+            //apply decrypt data if available
+            if (levelkey) {
+
+              var fragdecryptdata;
+
+              if (levelkey.method && levelkey.uri && !levelkey.iv) {
+                fragdecryptdata = this.cloneObj(levelkey);
+                var uint8View = new Uint8Array(16);
+                for (var i = 12; i < 16; i++) {
+                  uint8View[i] = (sn >> 8 * (15 - i)) & 0xff;
+                }
+                fragdecryptdata.iv = uint8View;
+              } else {
+                fragdecryptdata = levelkey;
+              }
+
+              frag.decryptdata = fragdecryptdata;
+            }
           }
           break;
         case 'PROGRAM-DATE-TIME':

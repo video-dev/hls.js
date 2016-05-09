@@ -376,7 +376,7 @@ lo008ts`;
     assert.strictEqual(result.totalduration, 80);
 
     result.fragments.forEach((fragment, idx) => {
-      assert.strictEqual(fragment.url, '000' + idx + '.ts');
+      assert.strictEqual(fragment.url, 'http://dummy.com/000' + (idx + 1) + '.ts');
     });
 
   });
