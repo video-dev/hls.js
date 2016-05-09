@@ -87,7 +87,8 @@ class Hls {
           streamController: StreamController,
           timelineController: TimelineController,
           enableCEA708Captions: true,
-          enableMP2TPassThrough : false
+          enableMP2TPassThrough : false,
+          stretchShortVideoTrack: false,
         };
     }
     return Hls.defaultConfig;
@@ -156,7 +157,7 @@ class Hls {
     this.fpsController.destroy();
     this.streamController.destroy();
     this.timelineController.destroy();
-    this.keyLoader.destroy();  
+    this.keyLoader.destroy();
     this.url = null;
     this.observer.removeAllListeners();
   }

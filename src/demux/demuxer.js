@@ -19,7 +19,7 @@ class Demuxer {
           this.w = work(DemuxerWorker);
           this.onwmsg = this.onWorkerMessage.bind(this);
           this.w.addEventListener('message', this.onwmsg);
-          this.w.postMessage({cmd: 'init', typeSupported : typeSupported});
+          this.w.postMessage({cmd: 'init', typeSupported : typeSupported, config: JSON.stringify(hls.config)});
         } catch(err) {
           logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
           this.demuxer = new DemuxerInline(hls,typeSupported);

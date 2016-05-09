@@ -18,11 +18,12 @@
 
  class TSDemuxer {
 
-  constructor(observer,remuxerClass) {
+  constructor(observer, remuxerClass, config) {
     this.observer = observer;
     this.remuxerClass = remuxerClass;
+    this.config = config;
     this.lastCC = 0;
-    this.remuxer = new this.remuxerClass(observer);
+    this.remuxer = new this.remuxerClass(observer, config);
   }
 
   static probe(data) {
