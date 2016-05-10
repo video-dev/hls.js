@@ -375,21 +375,25 @@ lo008ts`;
     assert.strictEqual(result.fragments.length, 8);
     assert.strictEqual(result.totalduration, 80);
 
-    var decryptdata = result.fragments[0].decryptdata;
+    var fragdecryptdata, decryptdata = result.fragments[0].decryptdata, sn = 0;
 
     result.fragments.forEach(function (fragment, idx) {
-      assert.strictEqual(fragment.url, 'http://dummy.com/000' + (idx + 1) + '.ts');
+      sn = idx + 1;
+
+      assert.strictEqual(fragment.url, 'http://dummy.com/000' + sn + '.ts');
 
       //decryptdata should persist across all fragments
-      assert.strictEqual(fragment.decryptdata.method, decryptdata.method);
-      assert.strictEqual(fragment.decryptdata.uri, decryptdata.uri);
-      assert.strictEqual(fragment.key, decryptdata.key);
+      fragdecryptdata = fragment.decryptdata;
+      assert.strictEqual(fragdecryptdata.method, decryptdata.method);
+      assert.strictEqual(fragdecryptdata.uri, decryptdata.uri);
+      assert.strictEqual(fragdecryptdata.key, decryptdata.key);
 
-      //iv is correctly generated
-      assert.strictEqual(fragment.iv[fragment.length - 1], idx);
+      //initialization vector is correctly generated since it wasn't declared in the playlist
+      var iv = fragdecryptdata.iv;
+      assert.strictEqual(iv[15], idx);
 
+      //hold this decrypt data to compare to the next fragment's decrypt data
       decryptdata = fragment.decryptdata;
     });
-
   });
 });
