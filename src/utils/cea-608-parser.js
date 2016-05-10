@@ -642,7 +642,6 @@ class CaptionScreen {
     /**
      * Get all non-empty rows with as unicode text.
      */
-
     getDisplayText(asOneRow) {
         asOneRow = asOneRow || false;
         var displayText = [];
