@@ -191,7 +191,6 @@ class BufferController extends EventHandler {
     }
 
     createSourceBuffers(tracks) {
-        var sb, trackName, track, codec, mimeType;
         var sourceBuffer = this.sourceBuffer,
             mediaSource = this.mediaSource;
 
@@ -208,6 +207,7 @@ class BufferController extends EventHandler {
                     ] = mediaSource.addSourceBuffer(mimeType));
                     sb.addEventListener('updateend', this.onsbue);
                     sb.addEventListener('error', this.onsbe);
+                    track.buffer = sb;
                 } catch (err) {
                     logger.error(
                         `error while trying to add sourceBuffer:${err.message}`
@@ -220,7 +220,6 @@ class BufferController extends EventHandler {
                         mimeType: mimeType
                     });
                 }
-                track.buffer = sb;
             }
         }
         this.hls.trigger(Event.BUFFER_CREATED, { tracks: tracks });
