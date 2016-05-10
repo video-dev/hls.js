@@ -183,6 +183,7 @@ class MP4Remuxer {
         logger.log(`Video/PTS/DTS adjusted: ${firstPTS}/${firstDTS},delta:${delta}`);
       }
     }
+
     nextDTS = firstDTS;
 
     // compute lastPTS/lastDTS
@@ -226,7 +227,6 @@ class MP4Remuxer {
     let view = new DataView(mdat.buffer);
     view.setUint32(0, mdat.byteLength);
     mdat.set(MP4.types.mdat, 4);
-
     for (let i = 0; i < inputSamples.length; i++) {
       let avcSample = inputSamples[i],
           mp4SampleLength = 0,
@@ -254,7 +254,6 @@ class MP4Remuxer {
       } else {
         compositionTimeOffset = Math.max(0,mp4SampleDuration*Math.round((avcSample.pts - avcSample.dts)/(pes2mp4ScaleFactor*mp4SampleDuration)));
       }
-
 
       //console.log('PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${avcSample.pts}/${avcSample.dts}/${this._initDTS}/${ptsnorm}/${dtsnorm}/${(avcSample.pts/4294967296).toFixed(3)}');
       outputSamples.push({
