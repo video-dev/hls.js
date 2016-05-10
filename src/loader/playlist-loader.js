@@ -108,6 +108,37 @@ class PlaylistLoader extends EventHandler {
     return levels;
   }
 
+  /**
+   * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
+   * @returns {Uint8Array}
+   */
+  createInitializationVector (segmentNumber) {
+    var uint8View = new Uint8Array(16);
+
+    for (var i = 12; i < 16; i++) {
+      uint8View[i] = (segmentNumber >> 8 * (15 - i)) & 0xff;
+    }
+
+    return uint8View;
+  }
+
+  /**
+   * Utility method for parseLevelPlaylist to get a fragment's decryption data from the currently parsed encryption key data
+   * @param levelkey - a playlist's encryption info
+   * @param segmentNumber - the fragment's segment number
+   * @returns {*} - an object to be applied as a fragment's decryptdata
+   */
+  fragmentDecryptdataFromLevelkey (levelkey, segmentNumber) {
+    var decryptdata = levelkey;
+
+    if (levelkey && levelkey.method && levelkey.uri && !levelkey.iv) {
+      decryptdata = this.cloneObj(levelkey);
+      decryptdata.iv = this.createInitializationVector(segmentNumber);
+    }
+
+    return decryptdata;
+  }
+
   avc1toavcoti(codec) {
     var result, avcdata = codec.split('.');
     if (avcdata.length > 2) {
@@ -126,6 +157,7 @@ class PlaylistLoader extends EventHandler {
 
   parseLevelPlaylist(string, baseurl, id) {
     var currentSN = 0,
+        fragdecryptdata,
         totalduration = 0,
         level = {url: baseurl, fragments: [], live: true, startSN: 0},
         levelkey = {method : null, key : null, iv : null, uri : null},
@@ -171,18 +203,8 @@ class PlaylistLoader extends EventHandler {
         case 'INF':
           var duration = parseFloat(result[1]);
           if (!isNaN(duration)) {
-            var fragdecryptdata,
-                sn = currentSN++;
-            if (levelkey.method && levelkey.uri && !levelkey.iv) {
-              fragdecryptdata = this.cloneObj(levelkey);
-              var uint8View = new Uint8Array(16);
-              for (var i = 12; i < 16; i++) {
-                uint8View[i] = (sn >> 8*(15-i)) & 0xff;
-              }
-              fragdecryptdata.iv = uint8View;
-            } else {
-              fragdecryptdata = levelkey;
-            }
+            var sn = currentSN++;
+            fragdecryptdata = this.fragmentDecryptdataFromLevelkey(levelkey, sn);
             var url = result[2] ? this.resolve(result[2], baseurl) : null;
             frag = {url: url, duration: duration, start: totalduration, sn: sn, level: id, cc: cc, byteRangeStartOffset: byteRangeStartOffset, byteRangeEndOffset: byteRangeEndOffset, decryptdata : fragdecryptdata, programDateTime: programDateTime};
             level.fragments.push(frag);
@@ -214,24 +236,9 @@ class PlaylistLoader extends EventHandler {
           if (frag && !frag.url && result.length >= 3) {
             frag.url = this.resolve(result[2], baseurl);
 
-            //apply decrypt data if available
-            if (levelkey) {
-
-              var fragdecryptdata;
-
-              if (levelkey.method && levelkey.uri && !levelkey.iv) {
-                fragdecryptdata = this.cloneObj(levelkey);
-                var uint8View = new Uint8Array(16);
-                for (var i = 12; i < 16; i++) {
-                  uint8View[i] = (sn >> 8 * (15 - i)) & 0xff;
-                }
-                fragdecryptdata.iv = uint8View;
-              } else {
-                fragdecryptdata = levelkey;
-              }
-
-              frag.decryptdata = fragdecryptdata;
-            }
+            //we have not moved onto another segment, we are still parsing one
+            fragdecryptdata = this.fragmentDecryptdataFromLevelkey(levelkey, currentSN - 1);
+            frag.decryptdata = fragdecryptdata;
           }
           break;
         case 'PROGRAM-DATE-TIME':
