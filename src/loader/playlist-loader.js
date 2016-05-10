@@ -90,6 +90,12 @@ class PlaylistLoader extends EventHandler {
       level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
       level.name = attrs.NAME;
 
+      var closedCaptions = attrs.enumeratedString('CLOSED-CAPTIONS');
+
+      if (closedCaptions) {
+        level.closedCaptions = closedCaptions;
+      }
+
       var codecs = attrs.CODECS;
       if(codecs) {
         codecs = codecs.split(',');
