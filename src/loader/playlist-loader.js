@@ -91,7 +91,7 @@ class PlaylistLoader extends EventHandler {
       level.name = attrs.NAME;
 
       var closedCaptions = attrs.enumeratedString('CLOSED-CAPTIONS');
-      
+
       if (closedCaptions) {
         level.closedCaptions = closedCaptions;
       }

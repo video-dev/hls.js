@@ -2,7 +2,7 @@
  *
  * This code was ported from the dash.js project at:
  *   https://github.com/Dash-Industry-Forum/dash.js/blob/development/externals/cea608-parser.js
- *   https://github.com/Dash-Industry-Forum/dash.js/commit/8269b26a761e0853bb21d78780ed945144ecdd4d#diff-71bc295a2d6b6b7093a1d3290d53a4b2 
+ *   https://github.com/Dash-Industry-Forum/dash.js/commit/8269b26a761e0853bb21d78780ed945144ecdd4d#diff-71bc295a2d6b6b7093a1d3290d53a4b2
  *
  * The original copyright appears below:
  *
@@ -195,7 +195,7 @@ class PenState {
         this.background = background || 'black';
         this.flash = flash || false;
     }
-        
+
     reset() {
         this.foreground = 'white';
         this.underline = false;
@@ -203,7 +203,7 @@ class PenState {
         this.background = 'black';
         this.flash = false;
     }
-        
+
     setStyles(styles) {
         var attribs = ['foreground', 'underline', 'italics', 'background', 'flash'];
         for (var i = 0 ; i < attribs.length; i++) {
@@ -213,14 +213,14 @@ class PenState {
             }
         }
     }
-    
+
     isDefault() {
-        return (this.foreground === 'white' && !this.underline && !this.italics && 
+        return (this.foreground === 'white' && !this.underline && !this.italics &&
                 this.background === 'black' && !this.flash);
     }
 
     equals(other) {
-        return ( (this.foreground === other.foreground) && 
+        return ( (this.foreground === other.foreground) &&
                  (this.underline === other.underline) &&
                  (this.italics === other.italics) &&
                  (this.background === other.background) &&
@@ -234,7 +234,7 @@ class PenState {
         this.background = newPenState.background;
         this.flash = newPenState.flash;
     }
-    
+
     toString() {
         return ('color=' + this.foreground + ', underline=' + this.underline + ', italics=' + this.italics +
             ', background=' + this.background + ', flash=' + this.flash);
@@ -252,30 +252,30 @@ class StyledUnicodeChar
         this.uchar = uchar || ' '; // unicode character
         this.penState = new PenState(foreground, underline,italics, background, flash);
     }
-    
+
     reset() {
         this.uchar = ' ';
         this.penState.reset();
     }
-    
+
     setChar(uchar, newPenState) {
         this.uchar = uchar;
         this.penState.copy(newPenState);
     }
-    
+
     setPenState(newPenState) {
         this.penState.copy(newPenState);
     }
-    
+
     equals(other) {
         return this.uchar === other.uchar && this.penState.equals(other.penState);
     }
-    
+
     copy(newChar) {
         this.uchar = newChar.uchar;
         this.penState.copy(newChar.penState);
     }
-    
+
     isEmpty() {
         return this.uchar === ' ' && this.penState.isDefault();
     }
@@ -294,7 +294,7 @@ class Row {
         this.pos = 0;
         this.currPenState = new PenState();
     }
-    
+
     equals(other) {
         var equal = true;
         for (var i = 0 ; i < NR_COLS; i ++) {
@@ -305,13 +305,13 @@ class Row {
         }
         return equal;
     }
-    
+
     copy(other) {
         for (var i = 0 ; i < NR_COLS; i ++) {
             this.chars[i].copy(other.chars[i]);
         }
     }
-    
+
     isEmpty() {
         var empty = true;
         for (var i = 0 ; i < NR_COLS; i ++) {
@@ -339,7 +339,7 @@ class Row {
         }
     }
 
-    /** 
+    /**
      * Move the cursor relative to current position.
      */
     moveCursor(relPos) {
@@ -366,7 +366,7 @@ class Row {
         }
         var char = getCharForByte(byte);
         if (this.pos >= NR_COLS) {
-            logger.log('ERROR', 'Cannot insert ' + byte.toString(16) +  
+            logger.log('ERROR', 'Cannot insert ' + byte.toString(16) +
                         ' (' + char + ') at position ' + this.pos + '. Skipping it!');
             return;
         }
@@ -467,7 +467,7 @@ class CaptionScreen {
     }
 
     backSpace() {
-        var row = this.rows[this.currRow]; 
+        var row = this.rows[this.currRow];
         row.backSpace();
     }
 
@@ -491,7 +491,7 @@ class CaptionScreen {
 
     moveCursor(relPos) {
         var row = this.rows[this.currRow];
-        row.moveCursor(relPos); 
+        row.moveCursor(relPos);
     }
 
     setCursor(absPos) {
@@ -548,8 +548,8 @@ class CaptionScreen {
     }
 
    /**
-    * Get all non-empty rows with as unicode text. 
-    */        
+    * Get all non-empty rows with as unicode text.
+    */
     getDisplayText(asOneRow) {
         asOneRow = asOneRow || false;
         var displayText = [];
@@ -599,7 +599,7 @@ class Cea608Channel
         this.mode = null;
         this.cueStartTime = null; // Keeps track of where a cue started.
     }
-        
+
     reset() {
         this.mode = null;
         this.displayedMemory.reset();
@@ -777,7 +777,7 @@ class Cea608Channel
             if (this.cueStartTime === null && !this.displayedMemory.isEmpty()) { // Start of a new cue
                 this.cueStartTime = t;
             } else {
-                if (!this.displayedMemory.equals(this.lastOutputScreen)) { 
+                if (!this.displayedMemory.equals(this.lastOutputScreen)) {
                     if (this.outputFilter.newCue) {
                         this.outputFilter.newCue(this.cueStartTime, t, this.lastOutputScreen);
                     }
@@ -814,11 +814,11 @@ class Cea608Parser {
         this.lastTime = null;
         this.dataCounters = {'padding' : 0, 'char' : 0, 'cmd' : 0, 'other' : 0};
     }
-    
+
     getHandler(index) {
         return this.channels[index].getHandler();
     }
-    
+
     setHandler(index, newHandler) {
         this.channels[index].setHandler(newHandler);
     }
@@ -827,9 +827,9 @@ class Cea608Parser {
      * Add data for time t in forms of list of bytes (unsigned ints). The bytes are treated as pairs.
      */
     addData(t, byteList) {
-        var cmdFound, a, b, 
+        var cmdFound, a, b,
         charsFound = false;
-        
+
         this.lastTime = t;
         logger.setTime(t);
 
@@ -887,7 +887,7 @@ class Cea608Parser {
         if (!(cond1 || cond2)) {
             return false;
         }
-             
+
         if (a === this.lastCmdA && b === this.lastCmdB) {
             this.lastCmdA = null;
             this.lastCmdB = null; // Repeated commands are dropped (once)
@@ -952,7 +952,7 @@ class Cea608Parser {
      */
     parseMidrow(a, b) {
         var chNr = null;
-            
+
         if ( ((a === 0x11) || (a === 0x19)) && 0x20 <= b && b <= 0x2f) {
             if (a === 0x11) {
                 chNr = 1;
@@ -978,7 +978,7 @@ class Cea608Parser {
 
        var chNr = null;
        var row = null;
-        
+
         var case1 = ((0x11 <= a  && a <= 0x17) || (0x19 <= a && a <= 0x1F)) && (0x40 <= b && b <= 0x7F);
         var case2 = (a === 0x10 || a === 0x18) && (0x40 <= b && b <= 0x5F);
         if (! (case1 || case2)) {
@@ -1014,7 +1014,7 @@ class Cea608Parser {
     interpretPAC(row, byte) {
         var pacIndex = byte;
         var pacData = {color : null, italics : false, indent : null, underline : false, row : row};
-        
+
         if (byte > 0x5F) {
             pacIndex = byte - 0x60;
         } else {
@@ -1072,7 +1072,7 @@ class Cea608Parser {
         }
         return charCodes;
     }
-    
+
     /**
     * Parse extended background attributes as well as new foreground color black.
     * @returns{Boolean} Tells if background attributes are found

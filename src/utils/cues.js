@@ -7,7 +7,7 @@ var Cues = {
     var indent;
     var text;
     var VTTCue = window.VTTCue || window.TextTrackCue;
-  
+
     for (var r=0; r<captionScreen.rows.length; r++)
     {
       row = captionScreen.rows[r];
@@ -30,7 +30,7 @@ var Cues = {
           }
         }
         cue = new VTTCue(startTime, endTime, text.trim());
-        
+
         if (indent >= 16)
         {
           indent--;
@@ -56,7 +56,7 @@ var Cues = {
       }
     }
   }
-  
+
 };
 
 module.exports = Cues;
