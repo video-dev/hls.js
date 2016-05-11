@@ -492,6 +492,7 @@ class StreamController extends EventHandler {
                 this.state = State.FRAG_LOADING;
             }
         }
+        return true;
     }
 
     set state(nextState) {
