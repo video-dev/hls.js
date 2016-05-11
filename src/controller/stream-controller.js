@@ -341,7 +341,8 @@ class StreamController extends EventHandler {
                                     } else if (
                                         candidate.start -
                                             maxFragLookUpTolerance >
-                                        bufferEnd
+                                            bufferEnd &&
+                                        candidate.start
                                     ) {
                                         return -1;
                                     }
