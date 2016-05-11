@@ -28,7 +28,7 @@ var BinarySearch = {
             if (comparisonResult > 0) {
                 minIndex = currentIndex + 1;
             }
-            else if (comparisonResult < 0) {
+            else if (comparisonResult < 0 && currentIndex) {
                 maxIndex = currentIndex - 1;
             }
             else {
