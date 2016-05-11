@@ -184,10 +184,8 @@ class StreamController extends EventHandler {
 
     // Ironically the "idle" state is the on we do the most logic in it seems ....
     doTickIdle() {
-        var pos,
-            level,
-            levelDetails,
-            hls = this.hls,
+        let pos, level, levelDetails;
+        const hls = this.hls,
             config = hls.config;
         // if video not attached AND
         // start fragment already requested OR start frag prefetch disable
@@ -199,6 +197,7 @@ class StreamController extends EventHandler {
         ) {
             return true;
         }
+
         // determine next candidate fragment to be loaded, based on current position and
         //  end of buffer position
         //  ensure 60s of buffer upfront
@@ -208,6 +207,7 @@ class StreamController extends EventHandler {
         } else {
             pos = this.nextLoadPosition;
         }
+
         // determine next load level
         if (this.startFragRequested === false) {
             level = this.startLevel;
@@ -215,16 +215,16 @@ class StreamController extends EventHandler {
             // we are not at playback start, get next load level from level Controller
             level = hls.nextLoadLevel;
         }
-        var bufferInfo = BufferHelper.bufferInfo(
+
+        const bufferInfo = BufferHelper.bufferInfo(
                 this.media,
                 pos,
                 config.maxBufferHole
             ),
-            bufferLen = bufferInfo.len,
-            bufferEnd = bufferInfo.end,
-            fragPrevious = this.fragPrevious,
-            maxBufLen;
+            bufferLen = bufferInfo.len;
+
         // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
+        let maxBufLen;
         if (this.levels[level].hasOwnProperty('bitrate')) {
             maxBufLen = Math.max(
                 8 * config.maxBufferSize / this.levels[level].bitrate,
@@ -234,243 +234,260 @@ class StreamController extends EventHandler {
         } else {
             maxBufLen = config.maxBufferLength;
         }
-        // if buffer length is less than maxBufLen try to load a new fragment
-        if (bufferLen < maxBufLen) {
-            // set next load level : this will trigger a playlist load if needed
-            hls.nextLoadLevel = level;
-            this.level = level;
-            levelDetails = this.levels[level].details;
-            // if level info not retrieved yet, switch state and wait for level retrieval
-            // if live playlist, ensure that new playlist has been refreshed to avoid loading/try to load
-            // a useless and outdated fragment (that might even introduce load error if it is already out of the live playlist)
-            if (
-                typeof levelDetails === 'undefined' ||
-                (levelDetails.live && this.levelLastLoaded !== level)
-            ) {
-                this.updateState(State.WAITING_LEVEL);
+
+        // Stay idle if we are still with buffer margins
+        if (bufferLen >= maxBufLen) {
+            return true;
+        }
+
+        // if buffer length is less than maxBufLen try to load a new fragment ...
+        logger.log(
+            `buffer length of ${bufferLen.toFixed(
+                3
+            )} is below max of ${maxBufLen.toFixed(
+                3
+            )}. checking for more payload ...`
+        );
+
+        // set next load level : this will trigger a playlist load if needed
+        hls.nextLoadLevel = level;
+        this.level = level;
+        levelDetails = this.levels[level].details;
+
+        // if level info not retrieved yet, switch state and wait for level retrieval
+        // if live playlist, ensure that new playlist has been refreshed to avoid loading/try to load
+        // a useless and outdated fragment (that might even introduce load error if it is already out of the live playlist)
+        if (
+            typeof levelDetails === 'undefined' ||
+            (levelDetails.live && this.levelLastLoaded !== level)
+        ) {
+            this.updateState(State.WAITING_LEVEL);
+            return true;
+        }
+
+        // if we have the levelDetails for the selected variant, lets continue enrichen our stream (load keys/fragments or trigger EOS, etc..)
+        return this._fetchPayloadOrEos(pos, bufferInfo, levelDetails);
+    }
+
+    _fetchPayloadOrEos(pos, bufferInfo, levelDetails) {
+        const hls = this.hls,
+            config = hls.config,
+            fragPrevious = this.fragPrevious,
+            level = this.level;
+
+        // find fragment index, contiguous with end of buffer position
+        let fragments = levelDetails.fragments,
+            fragLen = fragments.length,
+            start = fragments[0].start,
+            end =
+                fragments[fragLen - 1].start + fragments[fragLen - 1].duration,
+            bufferEnd = bufferInfo.end,
+            frag;
+
+        // in case of live playlist we need to ensure that requested position is not located before playlist start
+        if (levelDetails.live) {
+            // check if requested position is within seekable boundaries :
+            //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.media.seeking}`);
+            let maxLatency =
+                config.liveMaxLatencyDuration !== undefined
+                    ? config.liveMaxLatencyDuration
+                    : config.liveMaxLatencyDurationCount *
+                      levelDetails.targetduration;
+
+            if (bufferEnd < Math.max(start, end - maxLatency)) {
+                let targetLatency =
+                    config.liveSyncDuration !== undefined
+                        ? config.liveSyncDuration
+                        : config.liveSyncDurationCount *
+                          levelDetails.targetduration;
+                this.seekAfterBuffered =
+                    start +
+                    Math.max(0, levelDetails.totalduration - targetLatency);
+                logger.log(
+                    `buffer end: ${bufferEnd} is located too far from the end of live sliding playlist, media position will be reseted to: ${this.seekAfterBuffered.toFixed(
+                        3
+                    )}`
+                );
+                bufferEnd = this.seekAfterBuffered;
+            }
+
+            // if end of buffer greater than live edge, don't load any fragment
+            // this could happen if live playlist intermittently slides in the past.
+            // level 1 loaded [182580161,182580167]
+            // level 1 loaded [182580162,182580169]
+            // Loading 182580168 of [182580162 ,182580169],level 1 ..
+            // Loading 182580169 of [182580162 ,182580169],level 1 ..
+            // level 1 loaded [182580162,182580168] <============= here we should have bufferEnd > end. in that case break to avoid reloading 182580168
+            // level 1 loaded [182580164,182580171]
+            //
+            if (levelDetails.PTSKnown && bufferEnd > end) {
                 return true;
             }
-            // find fragment index, contiguous with end of buffer position
-            let fragments = levelDetails.fragments,
-                fragLen = fragments.length,
-                start = fragments[0].start,
-                end =
-                    fragments[fragLen - 1].start +
-                    fragments[fragLen - 1].duration,
-                frag;
 
-            // in case of live playlist we need to ensure that requested position is not located before playlist start
-            if (levelDetails.live) {
-                // check if requested position is within seekable boundaries :
-                //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.media.seeking}`);
-                let maxLatency =
-                    config.liveMaxLatencyDuration !== undefined
-                        ? config.liveMaxLatencyDuration
-                        : config.liveMaxLatencyDurationCount *
-                          levelDetails.targetduration;
-
-                if (bufferEnd < Math.max(start, end - maxLatency)) {
-                    let targetLatency =
-                        config.liveSyncDuration !== undefined
-                            ? config.liveSyncDuration
-                            : config.liveSyncDurationCount *
-                              levelDetails.targetduration;
-                    this.seekAfterBuffered =
-                        start +
-                        Math.max(0, levelDetails.totalduration - targetLatency);
-                    logger.log(
-                        `buffer end: ${bufferEnd} is located too far from the end of live sliding playlist, media position will be reseted to: ${this.seekAfterBuffered.toFixed(
-                            3
-                        )}`
-                    );
-                    bufferEnd = this.seekAfterBuffered;
-                }
-
-                // if end of buffer greater than live edge, don't load any fragment
-                // this could happen if live playlist intermittently slides in the past.
-                // level 1 loaded [182580161,182580167]
-                // level 1 loaded [182580162,182580169]
-                // Loading 182580168 of [182580162 ,182580169],level 1 ..
-                // Loading 182580169 of [182580162 ,182580169],level 1 ..
-                // level 1 loaded [182580162,182580168] <============= here we should have bufferEnd > end. in that case break to avoid reloading 182580168
-                // level 1 loaded [182580164,182580171]
-                //
-                if (levelDetails.PTSKnown && bufferEnd > end) {
-                    return true;
-                }
-
-                if (this.startFragRequested && !levelDetails.PTSKnown) {
-                    /* we are switching level on live playlist, but we don't have any PTS info for that quality level ...
-             try to load frag matching with next SN.
-             even if SN are not synchronized between playlists, loading this frag will help us
-             compute playlist sliding and find the right one after in case it was not the right consecutive one */
-                    if (fragPrevious) {
-                        var targetSN = fragPrevious.sn + 1;
-                        if (
-                            targetSN >= levelDetails.startSN &&
-                            targetSN <= levelDetails.endSN
-                        ) {
-                            frag = fragments[targetSN - levelDetails.startSN];
-                            logger.log(
-                                `live playlist, switching playlist, load frag with next SN: ${
-                                    frag.sn
-                                }`
-                            );
-                        }
-                    }
-                    if (!frag) {
-                        /* we have no idea about which fragment should be loaded.
-               so let's load mid fragment. it will help computing playlist sliding and find the right one
-            */
-                        frag =
-                            fragments[
-                                Math.min(fragLen - 1, Math.round(fragLen / 2))
-                            ];
+            if (this.startFragRequested && !levelDetails.PTSKnown) {
+                /* we are switching level on live playlist, but we don't have any PTS info for that quality level ...
+           try to load frag matching with next SN.
+           even if SN are not synchronized between playlists, loading this frag will help us
+           compute playlist sliding and find the right one after in case it was not the right consecutive one */
+                if (fragPrevious) {
+                    var targetSN = fragPrevious.sn + 1;
+                    if (
+                        targetSN >= levelDetails.startSN &&
+                        targetSN <= levelDetails.endSN
+                    ) {
+                        frag = fragments[targetSN - levelDetails.startSN];
                         logger.log(
-                            `live playlist, switching playlist, unknown, load middle frag : ${
+                            `live playlist, switching playlist, load frag with next SN: ${
                                 frag.sn
                             }`
                         );
                     }
                 }
-            } else {
-                // VoD playlist: if bufferEnd before start of playlist, load first fragment
-                if (bufferEnd < start) {
-                    frag = fragments[0];
+                if (!frag) {
+                    /* we have no idea about which fragment should be loaded.
+             so let's load mid fragment. it will help computing playlist sliding and find the right one
+          */
+                    frag =
+                        fragments[
+                            Math.min(fragLen - 1, Math.round(fragLen / 2))
+                        ];
+                    logger.log(
+                        `live playlist, switching playlist, unknown, load middle frag : ${
+                            frag.sn
+                        }`
+                    );
                 }
             }
-            if (!frag) {
-                let foundFrag;
-                let maxFragLookUpTolerance = config.maxFragLookUpTolerance;
-                if (bufferEnd < end) {
-                    if (bufferEnd > end - maxFragLookUpTolerance) {
-                        maxFragLookUpTolerance = 0;
-                    }
-                    foundFrag = BinarySearch.search(fragments, candidate => {
-                        // offset should be within fragment boundary - config.maxFragLookUpTolerance
-                        // this is to cope with situations like
-                        // bufferEnd = 9.991
-                        // frag[Ø] : [0,10]
-                        // frag[1] : [10,20]
-                        // bufferEnd is within frag[0] range ... although what we are expecting is to return frag[1] here
-                        //              frag start               frag start+duration
-                        //                  |-----------------------------|
-                        //              <--->                         <--->
-                        //  ...--------><-----------------------------><---------....
-                        // previous frag         matching fragment         next frag
-                        //  return -1             return 0                 return 1
-                        //logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
-                        if (
-                            candidate.start +
-                                candidate.duration -
-                                maxFragLookUpTolerance <=
-                            bufferEnd
-                        ) {
-                            return 1;
-                        } else if (
-                            candidate.start - maxFragLookUpTolerance >
-                            bufferEnd
-                        ) {
-                            return -1;
-                        }
-                        return 0;
-                    });
-                } else {
-                    // reach end of playlist
-                    foundFrag = fragments[fragLen - 1];
+        } else {
+            // VoD playlist: if bufferEnd before start of playlist, load first fragment
+            if (bufferEnd < start) {
+                frag = fragments[0];
+            }
+        }
+        if (!frag) {
+            let foundFrag;
+            let maxFragLookUpTolerance = config.maxFragLookUpTolerance;
+            if (bufferEnd < end) {
+                if (bufferEnd > end - maxFragLookUpTolerance) {
+                    maxFragLookUpTolerance = 0;
                 }
-                if (foundFrag) {
-                    frag = foundFrag;
-                    start = foundFrag.start;
-                    //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
+                foundFrag = BinarySearch.search(fragments, candidate => {
+                    // offset should be within fragment boundary - config.maxFragLookUpTolerance
+                    // this is to cope with situations like
+                    // bufferEnd = 9.991
+                    // frag[Ø] : [0,10]
+                    // frag[1] : [10,20]
+                    // bufferEnd is within frag[0] range ... although what we are expecting is to return frag[1] here
+                    //              frag start               frag start+duration
+                    //                  |-----------------------------|
+                    //              <--->                         <--->
+                    //  ...--------><-----------------------------><---------....
+                    // previous frag         matching fragment         next frag
+                    //  return -1             return 0                 return 1
+                    //logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
                     if (
-                        fragPrevious &&
-                        frag.level === fragPrevious.level &&
-                        frag.sn === fragPrevious.sn
+                        candidate.start +
+                            candidate.duration -
+                            maxFragLookUpTolerance <=
+                        bufferEnd
                     ) {
-                        if (frag.sn < levelDetails.endSN) {
-                            frag =
-                                fragments[frag.sn + 1 - levelDetails.startSN];
-                            logger.log(
-                                `SN just loaded, load next one: ${frag.sn}`
-                            );
-                        } else {
-                            // have we reached end of VOD playlist ?
-                            if (!levelDetails.live) {
-                                // Finalize the media stream
-                                this.hls.trigger(Event.BUFFER_EOS);
-                            }
-                            // We might be loading the last fragment but actually the media
-                            // is currently processing a seek command and waiting for new data to resume at another point.
-                            // Going to ended state while media is seeking can spawn an infinite buffering broken state.
-                            if (!this.media.seeking) {
-                                this.updateState(State.ENDED);
-                            }
-                            frag = null;
+                        return 1;
+                    } else if (
+                        candidate.start - maxFragLookUpTolerance >
+                        bufferEnd
+                    ) {
+                        return -1;
+                    }
+                    return 0;
+                });
+            } else {
+                // reach end of playlist
+                foundFrag = fragments[fragLen - 1];
+            }
+            if (foundFrag) {
+                frag = foundFrag;
+                start = foundFrag.start;
+                //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
+                if (
+                    fragPrevious &&
+                    frag.level === fragPrevious.level &&
+                    frag.sn === fragPrevious.sn
+                ) {
+                    if (frag.sn < levelDetails.endSN) {
+                        frag = fragments[frag.sn + 1 - levelDetails.startSN];
+                        logger.log(`SN just loaded, load next one: ${frag.sn}`);
+                    } else {
+                        // have we reached end of VOD playlist ?
+                        if (!levelDetails.live) {
+                            // Finalize the media stream
+                            this.hls.trigger(Event.BUFFER_EOS);
                         }
+                        // We might be loading the last fragment but actually the media
+                        // is currently processing a seek command and waiting for new data to resume at another point.
+                        // Going to ended state while media is seeking can spawn an infinite buffering broken state.
+                        if (!this.media.seeking) {
+                            this.updateState(State.ENDED);
+                        }
+                        frag = null;
                     }
                 }
             }
-            if (frag) {
-                //logger.log('loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
-                if (
-                    frag.decryptdata.uri != null &&
-                    frag.decryptdata.key == null
-                ) {
-                    logger.log(
-                        `Loading key for ${frag.sn} of [${
-                            levelDetails.startSN
-                        } ,${levelDetails.endSN}],level ${level}`
+        }
+        if (frag) {
+            //logger.log('loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
+            if (frag.decryptdata.uri != null && frag.decryptdata.key == null) {
+                logger.log(
+                    `Loading key for ${frag.sn} of [${levelDetails.startSN} ,${
+                        levelDetails.endSN
+                    }],level ${level}`
+                );
+                this.updateState(State.KEY_LOADING);
+                hls.trigger(Event.KEY_LOADING, { frag: frag });
+            } else {
+                logger.log(
+                    `Loading ${frag.sn} of [${levelDetails.startSN} ,${
+                        levelDetails.endSN
+                    }],level ${level}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(
+                        3
+                    )}`
+                );
+                frag.autoLevel = hls.autoLevelEnabled;
+                if (this.levels.length > 1) {
+                    frag.expectedLen = Math.round(
+                        frag.duration * this.levels[level].bitrate / 8
                     );
-                    this.updateState(State.KEY_LOADING);
-                    hls.trigger(Event.KEY_LOADING, { frag: frag });
-                } else {
-                    logger.log(
-                        `Loading ${frag.sn} of [${levelDetails.startSN} ,${
-                            levelDetails.endSN
-                        }],level ${level}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(
-                            3
-                        )}`
-                    );
-                    frag.autoLevel = hls.autoLevelEnabled;
-                    if (this.levels.length > 1) {
-                        frag.expectedLen = Math.round(
-                            frag.duration * this.levels[level].bitrate / 8
-                        );
-                        frag.trequest = performance.now();
-                    }
-                    // ensure that we are not reloading the same fragments in loop ...
-                    if (this.fragLoadIdx !== undefined) {
-                        this.fragLoadIdx++;
-                    } else {
-                        this.fragLoadIdx = 0;
-                    }
-                    if (frag.loadCounter) {
-                        frag.loadCounter++;
-                        let maxThreshold = config.fragLoadingLoopThreshold;
-                        // if this frag has already been loaded 3 times, and if it has been reloaded recently
-                        if (
-                            frag.loadCounter > maxThreshold &&
-                            Math.abs(this.fragLoadIdx - frag.loadIdx) <
-                                maxThreshold
-                        ) {
-                            hls.trigger(Event.ERROR, {
-                                type: ErrorTypes.MEDIA_ERROR,
-                                details: ErrorDetails.FRAG_LOOP_LOADING_ERROR,
-                                fatal: false,
-                                frag: frag
-                            });
-                            return false;
-                        }
-                    } else {
-                        frag.loadCounter = 1;
-                    }
-                    frag.loadIdx = this.fragLoadIdx;
-                    this.fragCurrent = frag;
-                    this.startFragRequested = true;
-                    hls.trigger(Event.FRAG_LOADING, { frag: frag });
-                    this.updateState(State.FRAG_LOADING);
+                    frag.trequest = performance.now();
                 }
+                // ensure that we are not reloading the same fragments in loop ...
+                if (this.fragLoadIdx !== undefined) {
+                    this.fragLoadIdx++;
+                } else {
+                    this.fragLoadIdx = 0;
+                }
+                if (frag.loadCounter) {
+                    frag.loadCounter++;
+                    let maxThreshold = config.fragLoadingLoopThreshold;
+                    // if this frag has already been loaded 3 times, and if it has been reloaded recently
+                    if (
+                        frag.loadCounter > maxThreshold &&
+                        Math.abs(this.fragLoadIdx - frag.loadIdx) < maxThreshold
+                    ) {
+                        hls.trigger(Event.ERROR, {
+                            type: ErrorTypes.MEDIA_ERROR,
+                            details: ErrorDetails.FRAG_LOOP_LOADING_ERROR,
+                            fatal: false,
+                            frag: frag
+                        });
+                        return false;
+                    }
+                } else {
+                    frag.loadCounter = 1;
+                }
+                frag.loadIdx = this.fragLoadIdx;
+                this.fragCurrent = frag;
+                this.startFragRequested = true;
+                hls.trigger(Event.FRAG_LOADING, { frag: frag });
+                this.updateState(State.FRAG_LOADING);
             }
         }
     }
