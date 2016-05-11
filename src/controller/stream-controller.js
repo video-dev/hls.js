@@ -136,7 +136,7 @@ class StreamController extends EventHandler {
       case State.IDLE:
         // when this returns false there was an error and we shall return immediatly
         // from current tick
-        if (!this.doTickIdle()) {
+        if (!this._doTickIdle()) {
           return;
         }
         break;
@@ -178,9 +178,10 @@ class StreamController extends EventHandler {
   // Ironically the "idle" state is the on we do the most logic in it seems ....
   // NOTE: Maybe we could rather schedule a check for buffer length after half of the currently
   //       played segment, or on pause/play/seek instead of naively checking every 100ms?
-  doTickIdle() {
+  _doTickIdle() {
     const hls = this.hls,
           config = hls.config;
+
     // if video not attached AND
     // start fragment already requested OR start frag prefetch disable
     // exit loop
@@ -190,9 +191,6 @@ class StreamController extends EventHandler {
       return true;
     }
 
-    // determine next candidate fragment to be loaded, based on current position and
-    //  end of buffer position
-    //  ensure 60s of buffer upfront
     // if we have not yet loaded any fragment, start loading from start position
     let pos;
     if (this.loadedmetadata) {
@@ -218,6 +216,9 @@ class StreamController extends EventHandler {
     } else {
       maxBufLen = config.maxBufferLength;
     }
+
+    // determine next candidate fragment to be loaded, based on current position and end of buffer position
+    // ensure up to `config.maxMaxBufferLength` of buffer upfront
 
     const bufferInfo = BufferHelper.bufferInfo(this.media, pos, config.maxBufferHole),
           bufferLen = bufferInfo.len;
