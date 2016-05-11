@@ -71,4 +71,6 @@ module.exports = {
   KEY_LOADING: 'hlsKeyLoading',
   // fired when a decrypt key loading is completed - data: { frag : fragment object, payload : key payload, stats : { trequest, tfirst, tload, length}}
   KEY_LOADED: 'hlsKeyLoaded',
+  // fired upon stream controller state transitions
+  STREAM_STATE_TRANSITION: 'hlsStreamStateTransition'
 };

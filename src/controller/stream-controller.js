@@ -118,10 +118,10 @@ class StreamController extends EventHandler {
   }
 
   doTick() {
-    var level, hls = this.hls;
     //logger.log(this.state);
     switch(this.state) {
       case State.STARTING:
+        var hls = this.hls;
         // determine load level
         this.startLevel = hls.startLevel;
         if (this.startLevel === -1) {
@@ -142,7 +142,7 @@ class StreamController extends EventHandler {
         }
         break;
       case State.WAITING_LEVEL:
-        level = this.levels[this.level];
+        var level = this.levels[this.level];
         // check if playlist is already loaded
         if (level && level.details) {
           this.updateState(State.IDLE);
@@ -389,6 +389,7 @@ class StreamController extends EventHandler {
     this.state = state;
     if (this.previousState !== this.state) {
       logger.log(`engine state transition from ${this.previousState} to ${this.state}`);
+      this.hls.trigger(State.STREAM_STATE_TRANSITION, {previousState: this.previousState, state: this.state});
     }
     this.previousState = state;
   }
