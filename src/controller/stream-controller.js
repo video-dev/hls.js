@@ -184,7 +184,6 @@ class StreamController extends EventHandler {
 
     // Ironically the "idle" state is the on we do the most logic in it seems ....
     doTickIdle() {
-        let pos, level, levelDetails;
         const hls = this.hls,
             config = hls.config;
         // if video not attached AND
@@ -202,6 +201,7 @@ class StreamController extends EventHandler {
         //  end of buffer position
         //  ensure 60s of buffer upfront
         // if we have not yet loaded any fragment, start loading from start position
+        let pos;
         if (this.loadedmetadata) {
             pos = this.media.currentTime;
         } else {
@@ -209,19 +209,13 @@ class StreamController extends EventHandler {
         }
 
         // determine next load level
+        let level;
         if (this.startFragRequested === false) {
             level = this.startLevel;
         } else {
             // we are not at playback start, get next load level from level Controller
             level = hls.nextLoadLevel;
         }
-
-        const bufferInfo = BufferHelper.bufferInfo(
-                this.media,
-                pos,
-                config.maxBufferHole
-            ),
-            bufferLen = bufferInfo.len;
 
         // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
         let maxBufLen;
@@ -235,6 +229,12 @@ class StreamController extends EventHandler {
             maxBufLen = config.maxBufferLength;
         }
 
+        const bufferInfo = BufferHelper.bufferInfo(
+                this.media,
+                pos,
+                config.maxBufferHole
+            ),
+            bufferLen = bufferInfo.len;
         // Stay idle if we are still with buffer margins
         if (bufferLen >= maxBufLen) {
             return true;
@@ -252,8 +252,8 @@ class StreamController extends EventHandler {
         // set next load level : this will trigger a playlist load if needed
         hls.nextLoadLevel = level;
         this.level = level;
-        levelDetails = this.levels[level].details;
 
+        const levelDetails = this.levels[level].details;
         // if level info not retrieved yet, switch state and wait for level retrieval
         // if live playlist, ensure that new playlist has been refreshed to avoid loading/try to load
         // a useless and outdated fragment (that might even introduce load error if it is already out of the live playlist)
