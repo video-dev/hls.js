@@ -183,6 +183,8 @@ class StreamController extends EventHandler {
     }
 
     // Ironically the "idle" state is the on we do the most logic in it seems ....
+    // NOTE: Maybe we could rather schedule a check for buffer length after half of the currently
+    //       played segment, or on pause/play/seek instead of naively checking every 100ms?
     doTickIdle() {
         const hls = this.hls,
             config = hls.config;
