@@ -59,7 +59,7 @@ class StreamController extends EventHandler {
             this.timer = null;
         }
         EventHandler.prototype.destroy.call(this);
-        this.updateState(State.STOPPED);
+        this.state = State.STOPPED;
     }
 
     startLoad(startPosition = 0) {
@@ -79,18 +79,18 @@ class StreamController extends EventHandler {
                     logger.log('resuming video');
                     media.play();
                 }
-                this.updateState(State.IDLE);
+                this.state = State.IDLE;
             } else {
                 this.lastCurrentTime = this.startPosition
                     ? this.startPosition
                     : startPosition;
-                this.updateState(State.STARTING);
+                this.state = State.STARTING;
             }
             this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
             this.tick();
         } else {
             logger.warn('cannot start loading as manifest not parsed yet');
-            this.updateState(State.STOPPED);
+            this.state = State.STOPPED;
         }
     }
 
@@ -107,7 +107,7 @@ class StreamController extends EventHandler {
             this.demuxer.destroy();
             this.demuxer = null;
         }
-        this.updateState(State.STOPPED);
+        this.state = State.STOPPED;
     }
 
     tick() {
@@ -122,7 +122,6 @@ class StreamController extends EventHandler {
     }
 
     doTick() {
-        //logger.log(this.state);
         switch (this.state) {
             case State.STARTING:
                 var hls = this.hls;
@@ -135,7 +134,7 @@ class StreamController extends EventHandler {
                 }
                 // set new level to playlist loader : this will trigger start level load
                 this.level = hls.nextLoadLevel = this.startLevel;
-                this.updateState(State.WAITING_LEVEL);
+                this.state = State.WAITING_LEVEL;
                 this.loadedmetadata = false;
                 break;
             case State.IDLE:
@@ -149,7 +148,7 @@ class StreamController extends EventHandler {
                 var level = this.levels[this.level];
                 // check if playlist is already loaded
                 if (level && level.details) {
-                    this.updateState(State.IDLE);
+                    this.state = State.IDLE;
                 }
                 break;
             case State.FRAG_LOADING_WAITING_RETRY:
@@ -162,7 +161,7 @@ class StreamController extends EventHandler {
                     logger.log(
                         `mediaController: retryDate reached, switch back to IDLE state`
                     );
-                    this.updateState(State.IDLE);
+                    this.state = State.IDLE;
                 }
                 break;
             case State.ERROR:
@@ -263,7 +262,7 @@ class StreamController extends EventHandler {
             typeof levelDetails === 'undefined' ||
             (levelDetails.live && this.levelLastLoaded !== level)
         ) {
-            this.updateState(State.WAITING_LEVEL);
+            this.state = State.WAITING_LEVEL;
             return true;
         }
 
@@ -428,7 +427,7 @@ class StreamController extends EventHandler {
                         // is currently processing a seek command and waiting for new data to resume at another point.
                         // Going to ended state while media is seeking can spawn an infinite buffering broken state.
                         if (!this.media.seeking) {
-                            this.updateState(State.ENDED);
+                            this.state = State.ENDED;
                         }
                         frag = null;
                     }
@@ -443,7 +442,7 @@ class StreamController extends EventHandler {
                         levelDetails.endSN
                     }],level ${level}`
                 );
-                this.updateState(State.KEY_LOADING);
+                this.state = State.KEY_LOADING;
                 hls.trigger(Event.KEY_LOADING, { frag: frag });
             } else {
                 logger.log(
@@ -489,25 +488,27 @@ class StreamController extends EventHandler {
                 this.fragCurrent = frag;
                 this.startFragRequested = true;
                 hls.trigger(Event.FRAG_LOADING, { frag: frag });
-                this.updateState(State.FRAG_LOADING);
+                this.state = State.FRAG_LOADING;
             }
         }
     }
 
-    updateState(state) {
-        this.state = state;
-        if (this.previousState !== this.state) {
+    set state(nextState) {
+        if (this.state !== nextState) {
+            const previousState = this.state;
+            this._state = nextState;
             logger.log(
-                `engine state transition from ${this.previousState} to ${
-                    this.state
-                }`
+                `engine state transition from ${previousState} to ${nextState}`
             );
             this.hls.trigger(State.STREAM_STATE_TRANSITION, {
-                previousState: this.previousState,
-                state: this.state
+                previousState,
+                nextState
             });
         }
-        this.previousState = state;
+    }
+
+    get state() {
+        return this._state;
     }
 
     getBufferRange(position) {
@@ -634,7 +635,7 @@ class StreamController extends EventHandler {
         this.fragCurrent = null;
         // increase fragment load Index to avoid frag loop loading error after buffer flush
         this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
-        this.updateState(State.PAUSED);
+        this.state = State.PAUSED;
         // flush everything
         this.hls.trigger(Event.BUFFER_FLUSHING, {
             startOffset: 0,
@@ -674,7 +675,7 @@ class StreamController extends EventHandler {
             if (currentRange && currentRange.start > 1) {
                 // flush buffer preceding current fragment (flush until current fragment start offset)
                 // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
-                this.updateState(State.PAUSED);
+                this.state = State.PAUSED;
                 this.hls.trigger(Event.BUFFER_FLUSHING, {
                     startOffset: 0,
                     endOffset: currentRange.start - 1
@@ -711,7 +712,7 @@ class StreamController extends EventHandler {
                     }
                     this.fragCurrent = null;
                     // flush position is the start position of this new buffer
-                    this.updateState(State.PAUSED);
+                    this.state = State.PAUSED;
                     this.hls.trigger(Event.BUFFER_FLUSHING, {
                         startOffset: nextRange.start,
                         endOffset: Number.POSITIVE_INFINITY
@@ -789,11 +790,11 @@ class StreamController extends EventHandler {
                 }
                 this.fragPrevious = null;
                 // switch to IDLE state to load new fragment
-                this.updateState(State.IDLE);
+                this.state = State.IDLE;
             }
         } else if (this.state === State.ENDED) {
             // switch to IDLE state to check for potential new fragment
-            this.updateState(State.IDLE);
+            this.state = State.IDLE;
         }
         if (this.media) {
             this.lastCurrentTime = this.media.currentTime;
@@ -913,7 +914,7 @@ class StreamController extends EventHandler {
         }
         // only switch batck to IDLE state if we were waiting for level to start downloading a new fragment
         if (this.state === State.WAITING_LEVEL) {
-            this.updateState(State.IDLE);
+            this.state = State.IDLE;
         }
         //trigger handler right now
         this.tick();
@@ -921,7 +922,7 @@ class StreamController extends EventHandler {
 
     onKeyLoaded() {
         if (this.state === State.KEY_LOADING) {
-            this.updateState(State.IDLE);
+            this.state = State.IDLE;
             this.tick();
         }
     }
@@ -936,7 +937,7 @@ class StreamController extends EventHandler {
         ) {
             if (this.fragBitrateTest === true) {
                 // switch back to IDLE state ... we just loaded a fragment to determine adequate start bitrate and initialize autoswitch algo
-                this.updateState(State.IDLE);
+                this.state = State.IDLE;
                 this.fragBitrateTest = false;
                 data.stats.tparsed = data.stats.tbuffered = performance.now();
                 this.hls.trigger(Event.FRAG_BUFFERED, {
@@ -944,7 +945,7 @@ class StreamController extends EventHandler {
                     frag: fragCurrent
                 });
             } else {
-                this.updateState(State.PARSING);
+                this.state = State.PARSING;
                 // transmux the MPEG-TS data to ISO-BMFF segments
                 this.stats = data.stats;
                 var currentLevel = this.levels[this.level],
@@ -1144,7 +1145,7 @@ class StreamController extends EventHandler {
     onFragParsed() {
         if (this.state === State.PARSING) {
             this.stats.tparsed = performance.now();
-            this.updateState(State.PARSED);
+            this.state = State.PARSED;
             this._checkAppendedParsed();
         }
     }
@@ -1181,7 +1182,7 @@ class StreamController extends EventHandler {
                         this.media.buffered
                     )}`
                 );
-                this.updateState(State.IDLE);
+                this.state = State.IDLE;
             }
             this.tick();
         }
@@ -1213,7 +1214,7 @@ class StreamController extends EventHandler {
                         );
                         this.retryDate = performance.now() + delay;
                         // retry loading state
-                        this.updateState(State.FRAG_LOADING_WAITING_RETRY);
+                        this.state = State.FRAG_LOADING_WAITING_RETRY;
                     } else {
                         logger.error(
                             `mediaController: ${
@@ -1223,7 +1224,7 @@ class StreamController extends EventHandler {
                         // redispatch same error but with fatal set to true
                         data.fatal = true;
                         this.hls.trigger(Event.ERROR, data);
-                        this.updateState(State.ERROR);
+                        this.state = State.ERROR;
                     }
                 }
                 break;
@@ -1235,7 +1236,7 @@ class StreamController extends EventHandler {
                 //  when in ERROR state, don't switch back to IDLE state in case a non-fatal error is received
                 if (this.state !== State.ERROR) {
                     // if fatal error, stop processing, otherwise move to IDLE to retry loading
-                    this.updateState(data.fatal ? State.ERROR : State.IDLE);
+                    this.state = data.fatal ? State.ERROR : State.IDLE;
                     logger.warn(
                         `mediaController: ${
                             data.details
@@ -1384,7 +1385,7 @@ class StreamController extends EventHandler {
     }
 
     onFragLoadEmergencyAborted() {
-        this.updateState(State.IDLE);
+        this.state = State.IDLE;
         this.tick();
     }
 
@@ -1409,7 +1410,7 @@ class StreamController extends EventHandler {
             this.immediateLevelSwitchEnd();
         }
         // move to IDLE once flush complete. this should trigger new fragment loading
-        this.updateState(State.IDLE);
+        this.state = State.IDLE;
         // reset reference to frag
         this.fragPrevious = null;
     }
