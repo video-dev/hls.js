@@ -1437,6 +1437,12 @@ class StreamController extends EventHandler {
                         targetSeekPosition &&
                         media.currentTime !== targetSeekPosition
                     ) {
+                        if (bufferInfo.len === 0) {
+                            targetSeekPosition = bufferInfo.nextStart;
+                            logger.log(
+                                `target seek position not buffered, seek to next buffered ${targetSeekPosition}`
+                            );
+                        }
                         logger.log(
                             `adjust currentTime from ${
                                 media.currentTime
