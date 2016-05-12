@@ -47,6 +47,7 @@ class BufferController extends EventHandler {
     }
 
     onMediaDetaching() {
+        logger.log('media source detaching');
         var ms = this.mediaSource;
         if (ms) {
             if (ms.readyState === 'open') {
