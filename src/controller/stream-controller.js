@@ -292,7 +292,13 @@ class StreamController extends EventHandler {
                 } else {
                   // have we reached end of VOD playlist ?
                   if (!levelDetails.live) {
+                    // Finalize the media stream
                     this.hls.trigger(Event.BUFFER_EOS);
+                  }
+                  // We might be loading the last fragment but actually the media
+                  // is currently processing a seek command and waiting for new data to resume at another point.
+                  // Going to ended state while media is seeking can spawn an infinite buffering broken state.
+                  if (!this.media.seeking) {
                     this.state = State.ENDED;
                   }
                   frag = null;
