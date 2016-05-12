@@ -122,14 +122,15 @@ class StreamController extends EventHandler {
       case State.STARTING:
         var hls = this.hls;
         // determine load level
-        this.startLevel = hls.startLevel;
-        if (this.startLevel === -1) {
+        let startLevel = hls.startLevel;
+        if (startLevel === -1) {
           // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
-          this.startLevel = 0;
+          startLevel = 0;
           this.fragBitrateTest = true;
         }
         // set new level to playlist loader : this will trigger start level load
-        this.level = hls.nextLoadLevel = this.startLevel;
+        // hls.nextLoadLevel remains until it is set to a new value or until a new frag is successfully loaded
+        this.level = hls.nextLoadLevel = startLevel;
         this.state = State.WAITING_LEVEL;
         this.loadedmetadata = false;
         break;
@@ -198,15 +199,8 @@ class StreamController extends EventHandler {
     } else {
       pos = this.nextLoadPosition;
     }
-
     // determine next load level
-    let level;
-    if (this.startFragRequested === false) {
-      level = this.startLevel;
-    } else {
-      // we are not at playback start, get next load level from level Controller
-      level = hls.nextLoadLevel;
-    }
+    let level = hls.nextLoadLevel;
 
     // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
     let maxBufLen;
@@ -228,7 +222,7 @@ class StreamController extends EventHandler {
     }
 
     // if buffer length is less than maxBufLen try to load a new fragment ...
-    logger.log(`buffer length of ${bufferLen.toFixed(3)} is below max of ${maxBufLen.toFixed(3)}. checking for more payload ...`);
+    logger.trace(`buffer length of ${bufferLen.toFixed(3)} is below max of ${maxBufLen.toFixed(3)}. checking for more payload ...`);
 
     // set next load level : this will trigger a playlist load if needed
     hls.nextLoadLevel = level;
@@ -832,6 +826,7 @@ class StreamController extends EventHandler {
         // switch back to IDLE state ... we just loaded a fragment to determine adequate start bitrate and initialize autoswitch algo
         this.state = State.IDLE;
         this.fragBitrateTest = false;
+        this.startFragRequested = false;
         data.stats.tparsed = data.stats.tbuffered = performance.now();
         this.hls.trigger(Event.FRAG_BUFFERED, {stats: data.stats, frag: fragCurrent});
       } else {
@@ -1145,12 +1140,17 @@ _checkBuffer() {
             }
           }
         } else {
-          if (targetSeekPosition && media.currentTime !== targetSeekPosition) {
-            if(bufferInfo.len === 0 && bufferInfo.nextStart !== undefined) {
-              targetSeekPosition = bufferInfo.nextStart;
-              logger.log(`target seek position not buffered, seek to next buffered ${targetSeekPosition}`);
+          let currentTime = media.currentTime;
+          if (targetSeekPosition && currentTime !== targetSeekPosition) {
+            if(bufferInfo.len === 0) {
+              let nextStart = bufferInfo.nextStart;
+              if (nextStart !== undefined &&
+                 (nextStart - targetSeekPosition) < this.config.maxSeekHole) {
+                targetSeekPosition = nextStart;
+                logger.log(`target seek position not buffered, seek to next buffered ${targetSeekPosition}`);
+              }
             }
-            logger.log(`adjust currentTime from ${media.currentTime} to ${targetSeekPosition}`);
+            logger.log(`adjust currentTime from ${currentTime} to ${targetSeekPosition}`);
             media.currentTime = targetSeekPosition;
           }
         }
