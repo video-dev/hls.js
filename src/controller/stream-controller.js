@@ -292,7 +292,13 @@ class StreamController extends EventHandler {
                 } else {
                   // have we reached end of VOD playlist ?
                   if (!levelDetails.live) {
+                    // Finalize the media stream
                     this.hls.trigger(Event.BUFFER_EOS);
+                  }
+                  // We might be loading the last fragment but actually the media
+                  // is currently processing a seek command and waiting for new data to resume at another point.
+                  // Going to ended state while media is seeking can spawn an infinite buffering broken state.
+                  if (!this.media.seeking) {
                     this.state = State.ENDED;
                   }
                   frag = null;
@@ -608,6 +614,7 @@ class StreamController extends EventHandler {
   }
 
   onMediaSeeking() {
+    logger.log('media seeking to ' + this.media.currentTime);
     if (this.state === State.FRAG_LOADING) {
       // check if currently loaded fragment is inside buffer.
       //if outside, cancel fragment loading, otherwise do nothing
@@ -640,6 +647,7 @@ class StreamController extends EventHandler {
   }
 
   onMediaSeeked() {
+    logger.log('media seeked to ' + this.media.currentTime);
     // tick to speed up FRAGMENT_PLAYING triggering
     this.tick();
   }
