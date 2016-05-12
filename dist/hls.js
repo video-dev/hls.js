@@ -1774,14 +1774,15 @@ var StreamController = function (_EventHandler) {
           break;
         case State.STARTING:
           // determine load level
-          this.startLevel = hls.startLevel;
-          if (this.startLevel === -1) {
+          var startLevel = hls.startLevel;
+          if (startLevel === -1) {
             // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
-            this.startLevel = 0;
+            startLevel = 0;
             this.fragBitrateTest = true;
           }
           // set new level to playlist loader : this will trigger start level load
-          this.level = hls.nextLoadLevel = this.startLevel;
+          // hls.nextLoadLevel remains until it is set to a new value or until a new frag is successfully loaded
+          this.level = hls.nextLoadLevel = startLevel;
           this.state = State.WAITING_LEVEL;
           this.loadedmetadata = false;
           break;
@@ -1802,13 +1803,7 @@ var StreamController = function (_EventHandler) {
           } else {
             pos = this.nextLoadPosition;
           }
-          // determine next load level
-          if (this.startFragRequested === false) {
-            level = this.startLevel;
-          } else {
-            // we are not at playback start, get next load level from level Controller
-            level = hls.nextLoadLevel;
-          }
+          level = hls.nextLoadLevel;
           var bufferInfo = _bufferHelper2.default.bufferInfo(this.media, pos, config.maxBufferHole),
               bufferLen = bufferInfo.len,
               bufferEnd = bufferInfo.end,
@@ -1937,8 +1932,14 @@ var StreamController = function (_EventHandler) {
                     } else {
                       // have we reached end of VOD playlist ?
                       if (!levelDetails.live) {
+                        // Finalize the media stream
                         _this2.hls.trigger(_events2.default.BUFFER_EOS);
-                        _this2.state = State.ENDED;
+                        // We might be loading the last fragment but actually the media
+                        // is currently processing a seek command and waiting for new data to resume at another point.
+                        // Going to ended state while media is seeking can spawn an infinite buffering broken state.
+                        if (!_this2.media.seeking) {
+                          _this2.state = State.ENDED;
+                        }
                       }
                       frag = null;
                     }
@@ -2377,10 +2378,13 @@ var StreamController = function (_EventHandler) {
     value: function onFragLoaded(data) {
       var fragCurrent = this.fragCurrent;
       if (this.state === State.FRAG_LOADING && fragCurrent && data.frag.level === fragCurrent.level && data.frag.sn === fragCurrent.sn) {
+
+        _logger.logger.log('Loaded  ' + fragCurrent.sn + ' of level ' + fragCurrent.level);
         if (this.fragBitrateTest === true) {
           // switch back to IDLE state ... we just loaded a fragment to determine adequate start bitrate and initialize autoswitch algo
           this.state = State.IDLE;
           this.fragBitrateTest = false;
+          this.startFragRequested = false;
           data.stats.tparsed = data.stats.tbuffered = performance.now();
           this.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: data.stats, frag: fragCurrent });
         } else {
@@ -2702,8 +2706,16 @@ var StreamController = function (_EventHandler) {
               }
             }
           } else {
-            if (targetSeekPosition && media.currentTime !== targetSeekPosition) {
-              _logger.logger.log('adjust currentTime from ' + media.currentTime + ' to ' + targetSeekPosition);
+            var _currentTime = media.currentTime;
+            if (targetSeekPosition && _currentTime !== targetSeekPosition) {
+              if (bufferInfo.len === 0) {
+                var nextStart = bufferInfo.nextStart;
+                if (nextStart !== undefined && nextStart - targetSeekPosition < this.config.maxSeekHole) {
+                  targetSeekPosition = nextStart;
+                  _logger.logger.log('target seek position not buffered, seek to next buffered ' + targetSeekPosition);
+                }
+              }
+              _logger.logger.log('adjust currentTime from ' + _currentTime + ' to ' + targetSeekPosition);
               media.currentTime = targetSeekPosition;
             }
           }
@@ -8549,7 +8561,6 @@ var logger = exports.logger = exportedLogger;
 'use strict';
 
 var URLHelper = {
-
   // build an absolute URL from a relative one using the provided baseURL
   // if relativeURL is an absolute URL it will be returned as is.
   buildAbsoluteURL: function buildAbsoluteURL(baseURL, relativeURL) {
@@ -8583,18 +8594,27 @@ var URLHelper = {
       baseURL = baseURLQuerySplit[1];
     }
 
-    var baseURLDomainSplit = /^((([a-z]+):)?\/\/[a-z0-9\.\-_~]+(:[0-9]+)?\/)(.*)$/i.exec(baseURL);
-    var baseURLProtocol = baseURLDomainSplit[3];
-    var baseURLDomain = baseURLDomainSplit[1];
-    var baseURLPath = baseURLDomainSplit[5];
+    var baseURLDomainSplit = /^(([a-z]+:)?\/\/[a-z0-9\.\-_~]+(:[0-9]+)?)?(\/.*)$/i.exec(baseURL);
+    if (!baseURLDomainSplit) {
+      throw new Error('Error trying to parse base URL.');
+    }
+
+    // e.g. 'http:', 'https:', ''
+    var baseURLProtocol = baseURLDomainSplit[2] || '';
+    // e.g. 'http://example.com', '//example.com', ''
+    var baseURLProtocolDomain = baseURLDomainSplit[1] || '';
+    // e.g. '/a/b/c/playlist.m3u8'
+    var baseURLPath = baseURLDomainSplit[4];
 
     var builtURL = null;
     if (/^\/\//.test(relativeURL)) {
-      builtURL = baseURLProtocol + '://' + URLHelper.buildAbsolutePath('', relativeURL.substring(2));
+      // relative url starts wth '//' so copy protocol (which may be '' if baseUrl didn't provide one)
+      builtURL = baseURLProtocol + '//' + URLHelper.buildAbsolutePath('', relativeURL.substring(2));
     } else if (/^\//.test(relativeURL)) {
-      builtURL = baseURLDomain + URLHelper.buildAbsolutePath('', relativeURL.substring(1));
+      // relative url starts with '/' so start from root of domain
+      builtURL = baseURLProtocolDomain + '/' + URLHelper.buildAbsolutePath('', relativeURL.substring(1));
     } else {
-      builtURL = URLHelper.buildAbsolutePath(baseURLDomain + baseURLPath, relativeURL);
+      builtURL = URLHelper.buildAbsolutePath(baseURLProtocolDomain + baseURLPath, relativeURL);
     }
 
     // put the query and hash parts back
