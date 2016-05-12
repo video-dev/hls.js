@@ -1145,7 +1145,7 @@ _checkBuffer() {
           }
         } else {
           if (targetSeekPosition && media.currentTime !== targetSeekPosition) {
-            if(bufferInfo.len === 0) {
+            if(bufferInfo.len === 0 && bufferInfo.nextStart !== undefined) {
               targetSeekPosition = bufferInfo.nextStart;
               logger.log(`target seek position not buffered, seek to next buffered ${targetSeekPosition}`);
             }
