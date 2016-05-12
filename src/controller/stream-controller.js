@@ -482,12 +482,12 @@ class StreamController extends EventHandler {
                     if (!levelDetails.live) {
                         // Finalize the media stream
                         this.hls.trigger(Event.BUFFER_EOS);
-                    }
-                    // We might be loading the last fragment but actually the media
-                    // is currently processing a seek command and waiting for new data to resume at another point.
-                    // Going to ended state while media is seeking can spawn an infinite buffering broken state.
-                    if (!this.media.seeking) {
-                        this.state = State.ENDED;
+                        // We might be loading the last fragment but actually the media
+                        // is currently processing a seek command and waiting for new data to resume at another point.
+                        // Going to ended state while media is seeking can spawn an infinite buffering broken state.
+                        if (!this.media.seeking) {
+                            this.state = State.ENDED;
+                        }
                     }
                     frag = null;
                 }
@@ -1000,6 +1000,9 @@ class StreamController extends EventHandler {
             data.frag.level === fragCurrent.level &&
             data.frag.sn === fragCurrent.sn
         ) {
+            logger.log(
+                `Loaded  ${fragCurrent.sn} of level ${fragCurrent.level}`
+            );
             if (this.fragBitrateTest === true) {
                 // switch back to IDLE state ... we just loaded a fragment to determine adequate start bitrate and initialize autoswitch algo
                 this.state = State.IDLE;
