@@ -39,6 +39,17 @@ class PlaylistLoader extends EventHandler {
         retry,
         timeout,
         retryDelay;
+
+    if (this.loading && this.loader) {
+      if (this.url === url && this.id === id1 && this.id2 === id2) {
+        // same request than last pending one, don't do anything
+        return;
+      } else {
+        // one playlist load request is pending, but with different params, abort it before loading new playlist
+        this.loader.abort();
+      }
+    }
+
     this.url = url;
     this.id = id1;
     this.id2 = id2;
@@ -52,6 +63,7 @@ class PlaylistLoader extends EventHandler {
       retryDelay = config.levelLoadingRetryDelay;
     }
     this.loader = typeof(config.pLoader) !== 'undefined' ? new config.pLoader(config) : new config.loader(config);
+    this.loading = true;
     this.loader.load(url, '', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), timeout, retry, retryDelay);
   }
 
@@ -78,6 +90,12 @@ class PlaylistLoader extends EventHandler {
       level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
       level.name = attrs.NAME;
 
+      var closedCaptions = attrs.enumeratedString('CLOSED-CAPTIONS');
+
+      if (closedCaptions) {
+        level.closedCaptions = closedCaptions;
+      }
+
       var codecs = attrs.CODECS;
       if(codecs) {
         codecs = codecs.split(',');
@@ -94,6 +112,37 @@ class PlaylistLoader extends EventHandler {
       levels.push(level);
     }
     return levels;
+  }
+
+  /**
+   * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
+   * @returns {Uint8Array}
+   */
+  createInitializationVector (segmentNumber) {
+    var uint8View = new Uint8Array(16);
+
+    for (var i = 12; i < 16; i++) {
+      uint8View[i] = (segmentNumber >> 8 * (15 - i)) & 0xff;
+    }
+
+    return uint8View;
+  }
+
+  /**
+   * Utility method for parseLevelPlaylist to get a fragment's decryption data from the currently parsed encryption key data
+   * @param levelkey - a playlist's encryption info
+   * @param segmentNumber - the fragment's segment number
+   * @returns {*} - an object to be applied as a fragment's decryptdata
+   */
+  fragmentDecryptdataFromLevelkey (levelkey, segmentNumber) {
+    var decryptdata = levelkey;
+
+    if (levelkey && levelkey.method && levelkey.uri && !levelkey.iv) {
+      decryptdata = this.cloneObj(levelkey);
+      decryptdata.iv = this.createInitializationVector(segmentNumber);
+    }
+
+    return decryptdata;
   }
 
   avc1toavcoti(codec) {
@@ -114,6 +163,7 @@ class PlaylistLoader extends EventHandler {
 
   parseLevelPlaylist(string, baseurl, id) {
     var currentSN = 0,
+        fragdecryptdata,
         totalduration = 0,
         level = {url: baseurl, fragments: [], live: true, startSN: 0},
         levelkey = {method : null, key : null, iv : null, uri : null},
@@ -125,7 +175,7 @@ class PlaylistLoader extends EventHandler {
         byteRangeEndOffset,
         byteRangeStartOffset;
 
-    regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*))/g;
+    regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*)[\r\n]+([^#|\r\n]+)?)|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*))/g;
     while ((result = regexp.exec(string)) !== null) {
       result.shift();
       result = result.filter(function(n) { return (n !== undefined); });
@@ -159,18 +209,8 @@ class PlaylistLoader extends EventHandler {
         case 'INF':
           var duration = parseFloat(result[1]);
           if (!isNaN(duration)) {
-            var fragdecryptdata,
-                sn = currentSN++;
-            if (levelkey.method && levelkey.uri && !levelkey.iv) {
-              fragdecryptdata = this.cloneObj(levelkey);
-              var uint8View = new Uint8Array(16);
-              for (var i = 12; i < 16; i++) {
-                uint8View[i] = (sn >> 8*(15-i)) & 0xff;
-              }
-              fragdecryptdata.iv = uint8View;
-            } else {
-              fragdecryptdata = levelkey;
-            }
+            var sn = currentSN++;
+            fragdecryptdata = this.fragmentDecryptdataFromLevelkey(levelkey, sn);
             var url = result[2] ? this.resolve(result[2], baseurl) : null;
             frag = {url: url, duration: duration, start: totalduration, sn: sn, level: id, cc: cc, byteRangeStartOffset: byteRangeStartOffset, byteRangeEndOffset: byteRangeEndOffset, decryptdata : fragdecryptdata, programDateTime: programDateTime};
             level.fragments.push(frag);
@@ -196,6 +236,15 @@ class PlaylistLoader extends EventHandler {
               // Initialization Vector (IV)
               levelkey.iv = decryptiv;
             }
+          }
+
+          //issue #425, applying url and decrypt data in instances where EXT-KEY immediately follow EXT-INF
+          if (frag && !frag.url && result.length >= 3) {
+            frag.url = this.resolve(result[2], baseurl);
+
+            //we have not moved onto another segment, we are still parsing one
+            fragdecryptdata = this.fragmentDecryptdataFromLevelkey(levelkey, currentSN - 1);
+            frag.decryptdata = fragdecryptdata;
           }
           break;
         case 'PROGRAM-DATE-TIME':
@@ -224,6 +273,8 @@ class PlaylistLoader extends EventHandler {
         id2 = this.id2,
         hls = this.hls,
         levels;
+
+    this.loading = false;
     // responseURL not supported on some browsers (it is used to detect URL redirection)
     // data-uri mode also not supported (but no need to detect redirection)
     if (url === undefined || url.indexOf('data:') === 0) {
@@ -270,6 +321,7 @@ class PlaylistLoader extends EventHandler {
     if (this.loader) {
       this.loader.abort();
     }
+    this.loading = false;
     this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: this.url, loader: this.loader, response: event.currentTarget, level: this.id, id: this.id2});
   }
 
@@ -285,6 +337,7 @@ class PlaylistLoader extends EventHandler {
     if (this.loader) {
       this.loader.abort();
     }
+    this.loading = false;
     this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: this.url, loader: this.loader, level: this.id, id: this.id2});
   }
 }

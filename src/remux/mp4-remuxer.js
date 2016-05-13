@@ -511,7 +511,7 @@ class MP4Remuxer {
 
   remuxEmptyAudio(track, timeOffset, contiguous, videoData) {
     let pesTimeScale = this.PES_TIMESCALE,
-        mp4timeScale = track.timescale,
+        mp4timeScale = track.timescale ? track.timescale : track.audiosamplerate,
         pes2mp4ScaleFactor = pesTimeScale/mp4timeScale,
 
         // sync with video's timestamp

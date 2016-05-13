@@ -30,21 +30,24 @@ class BufferController extends EventHandler {
   }
 
   onMediaAttaching(data) {
-    var media = this.media = data.media;
-    // setup the media source
-    var ms = this.mediaSource = new MediaSource();
-    //Media Source listeners
-    this.onmso = this.onMediaSourceOpen.bind(this);
-    this.onmse = this.onMediaSourceEnded.bind(this);
-    this.onmsc = this.onMediaSourceClose.bind(this);
-    ms.addEventListener('sourceopen', this.onmso);
-    ms.addEventListener('sourceended', this.onmse);
-    ms.addEventListener('sourceclose', this.onmsc);
-    // link video and media Source
-    media.src = URL.createObjectURL(ms);
+    let media = this.media = data.media;
+    if (media) {
+      // setup the media source
+      var ms = this.mediaSource = new MediaSource();
+      //Media Source listeners
+      this.onmso = this.onMediaSourceOpen.bind(this);
+      this.onmse = this.onMediaSourceEnded.bind(this);
+      this.onmsc = this.onMediaSourceClose.bind(this);
+      ms.addEventListener('sourceopen', this.onmso);
+      ms.addEventListener('sourceended', this.onmse);
+      ms.addEventListener('sourceclose', this.onmsc);
+      // link video and media Source
+      media.src = URL.createObjectURL(ms);
+    }
   }
 
   onMediaDetaching() {
+    logger.log('media source detaching');
     var ms = this.mediaSource;
     if (ms) {
       if (ms.readyState === 'open') {
@@ -61,9 +64,14 @@ class BufferController extends EventHandler {
       ms.removeEventListener('sourceopen', this.onmso);
       ms.removeEventListener('sourceended', this.onmse);
       ms.removeEventListener('sourceclose', this.onmsc);
-      // unlink MediaSource from video tag
-      this.media.src = '';
-      this.media.removeAttribute('src');
+
+      try {
+        // unlink MediaSource from video tag
+        this.media.src = '';
+        this.media.removeAttribute('src');
+      } catch(err) {
+        logger.warn(`onMediaDetaching:${err.message} while unlinking video.src`);
+      }
       this.mediaSource = null;
       this.media = null;
       this.pendingTracks = null;
@@ -137,24 +145,25 @@ class BufferController extends EventHandler {
   }
 
   onBufferCodecs(tracks) {
-    var sb,trackName,track, codec, mimeType;
+    let mediaSource = this.mediaSource;
 
-    if (!this.media) {
+    // delay sourcebuffer creation if media source not opened yet
+    if(!mediaSource || mediaSource.readyState !== 'open') {
       this.pendingTracks = tracks;
       return;
     }
 
-    var sourceBuffer = this.sourceBuffer,mediaSource = this.mediaSource;
+    let sourceBuffer = this.sourceBuffer;
 
-    for (trackName in tracks) {
+    for (let trackName in tracks) {
       if(!sourceBuffer[trackName]) {
-        track = tracks[trackName];
+        let track = tracks[trackName];
         // use levelCodec as first priority
-        codec = track.levelCodec || track.codec;
-        mimeType = `${track.container};codecs=${codec}`;
+        let codec = track.levelCodec || track.codec;
+        let mimeType = `${track.container};codecs=${codec}`;
         logger.log(`creating sourceBuffer with mimeType:${mimeType}`);
         try {
-          sb = sourceBuffer[trackName] = mediaSource.addSourceBuffer(mimeType);
+          let sb = sourceBuffer[trackName] = mediaSource.addSourceBuffer(mimeType);
           sb.addEventListener('updateend', this.onsbue);
           sb.addEventListener('error', this.onsbe);
         } catch(err) {

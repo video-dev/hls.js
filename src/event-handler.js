@@ -6,6 +6,7 @@
 
 import {logger} from './utils/logger';
 import {ErrorTypes, ErrorDetails} from './errors';
+import Event from './events';
 
 class EventHandler {
 
@@ -45,9 +46,9 @@ class EventHandler {
     }
   }
 
-  /*
-  * arguments: event (string), data (any)
-  */
+  /**
+   * arguments: event (string), data (any)
+   */
   onEvent(event, data) {
     this.onEventGeneric(event, data);
   }
