@@ -18,6 +18,7 @@ import { logger, enableLogs } from './utils/logger';
 import XhrLoader from './utils/xhr-loader';
 import EventEmitter from 'events';
 import KeyLoader from './loader/key-loader';
+import Cues from './utils/cues';
 
 class Hls {
     static get version() {
@@ -58,6 +59,7 @@ class Hls {
                 maxBufferHole: 0.5,
                 maxSeekHole: 2,
                 seekHoleNudgeDuration: 0.01,
+                stalledInBufferedNudgeThreshold: 10,
                 maxFragLookUpTolerance: 0.2,
                 liveSyncDurationCount: 3,
                 liveMaxLatencyDurationCount: Infinity,
@@ -89,6 +91,7 @@ class Hls {
                 fpsController: FPSController,
                 streamController: StreamController,
                 timelineController: TimelineController,
+                cueHandler: Cues,
                 enableCEA708Captions: true,
                 enableMP2TPassThrough: false,
                 stretchShortVideoTrack: false
