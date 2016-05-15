@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/dailymotion/hls.js.svg?branch=master)](https://travis-ci.org/dailymotion/hls.js)
+[![Coverage Status](https://coveralls.io/repos/github/dailymotion/hls.js/badge.svg?branch=master)](https://coveralls.io/github/dailymotion/hls.js?branch=master)
 [![npm][npm-image]][npm-url]
 # hls.js
 hls.js is a JavaScript library which implements an [HTTP Live Streaming] client.
@@ -43,6 +44,10 @@ hls.js is (being) integrated in the following players:
 
  - [native-hls] (https://chrome.google.com/webstore/detail/native-hls-playback/emnphkkblegpebimobpbekeedfgemhof), plays hls from address bar and m3u8 links 
 
+## Firefox integration
+
+ - [firefox-hls] (https://github.com/mangui/firefox-hls), plays hls from address bar and m3u8 links (alpha stage)
+
 ## Dependencies
 
 No external JS libs are needed.
@@ -77,6 +82,10 @@ as of today, it is supported on:
  * Firefox for Desktop 42+
  * IE11+ for Windows 8.1
  * Safari for Mac 8+ (beta)
+
+## CORS
+
+All HLS resources must be delivered with [CORS headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS) permitting `GET` requests.
 
 ## Features
 
@@ -126,7 +135,7 @@ as of today, it is supported on:
 ## Getting Started
 
 ```js
-<script src="dist/hls.js"></script>
+<script src="https://cdn.jsdelivr.net/hls.js/latest/hls.min.js"></script>
 <video id="video"></video>
 <script>
   if(Hls.isSupported()) {

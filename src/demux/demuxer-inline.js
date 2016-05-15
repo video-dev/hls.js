@@ -11,8 +11,9 @@ import PassThroughRemuxer from '../remux/passthrough-remuxer';
 
 class DemuxerInline {
 
-  constructor(hls,typeSupported) {
+  constructor(hls,typeSupported, config=null) {
     this.hls = hls;
+    this.config = this.hls.config || config;
     this.typeSupported = typeSupported;
   }
 
@@ -30,12 +31,12 @@ class DemuxerInline {
       // probe for content type
       if (TSDemuxer.probe(data)) {
         if (this.typeSupported.mp2t === true) {
-          demuxer = new TSDemuxer(hls,PassThroughRemuxer);
+          demuxer = new TSDemuxer(hls, PassThroughRemuxer, this.config);
         } else {
-          demuxer = new TSDemuxer(hls,MP4Remuxer);
+          demuxer = new TSDemuxer(hls, MP4Remuxer, this.config);
         }
       } else if(AACDemuxer.probe(data)) {
-        demuxer = new AACDemuxer(hls,MP4Remuxer);
+        demuxer = new AACDemuxer(hls, MP4Remuxer, this.config);
       } else {
         hls.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found'});
         return;
