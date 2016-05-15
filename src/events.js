@@ -59,8 +59,10 @@ module.exports = {
   FRAG_BUFFERED: 'hlsFragBuffered',
   // fired when fragment matching with current media position is changing - data : { frag : fragment object }
   FRAG_CHANGED: 'hlsFragChanged',
-    // Identifier for a FPS drop event - data: {curentDropped, currentDecoded, totalDroppedFrames}
+  // Identifier for a FPS drop event - data: {curentDropped, currentDecoded, totalDroppedFrames}
   FPS_DROP: 'hlsFpsDrop',
+  //triggered when FPS drop triggers auto level capping - data: {level, droppedlevel}
+  FPS_DROP_LEVEL_CAPPING: 'hlsFpsDropLevelCapping',
   // Identifier for an error event - data: { type : error type, details : error details, fatal : if true, hls.js cannot/will not try to recover, if false, hls.js will try to recover,other error specific data}
   ERROR: 'hlsError',
   // fired when hls.js instance starts destroying. Different from MEDIA_DETACHED as one could want to detach and reattach a media to the instance of hls.js to handle mid-rolls for example
@@ -69,4 +71,6 @@ module.exports = {
   KEY_LOADING: 'hlsKeyLoading',
   // fired when a decrypt key loading is completed - data: { frag : fragment object, payload : key payload, stats : { trequest, tfirst, tload, length}}
   KEY_LOADED: 'hlsKeyLoaded',
+  // fired upon stream controller state transitions - data: {previousState, nextState}
+  STREAM_STATE_TRANSITION: 'hlsStreamStateTransition'
 };
