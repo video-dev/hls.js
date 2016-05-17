@@ -116,7 +116,7 @@
                   // if audio PID is undefined OR if we have audio codec info,
                   // we have all codec info !
                   if (this._avcTrack.codec && (aacId === -1 || this._aacTrack.codec)) {
-                    this.remux(data);
+                    this.remux(level,sn,data);
                     return;
                   }
                 }
@@ -136,7 +136,7 @@
                   // if video PID is undefined OR if we have video codec info,
                   // we have all codec infos !
                   if (this._aacTrack.codec && (avcId === -1 || this._avcTrack.codec)) {
-                    this.remux(data);
+                    this.remux(level,sn,data);
                     return;
                   }
                 }
@@ -187,11 +187,11 @@
     if (id3Data) {
       this._parseID3PES(this._parsePES(id3Data));
     }
-    this.remux(null);
+    this.remux(level,sn,null);
   }
 
-  remux(data) {
-    this.remuxer.remux(this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data);
+  remux(level, sn, data) {
+    this.remuxer.remux(level, sn, this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data);
   }
 
   destroy() {

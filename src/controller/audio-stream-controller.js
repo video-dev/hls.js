@@ -150,7 +150,7 @@ class AudioStreamController extends EventHandler {
             maxBufLen = config.maxMaxBufferLength;
 
         // if buffer length is less than maxBufLen try to load a new fragment
-        if (bufferLen < maxBufLen) {
+        if (bufferLen < maxBufLen && this.trackId < this.tracks.length) {
           trackDetails = this.tracks[this.trackId].details;
           // if track info not retrieved yet, switch state and wait for track retrieval
           if (typeof trackDetails === 'undefined') {
@@ -339,7 +339,6 @@ class AudioStreamController extends EventHandler {
   }
 
   onMediaEnded() {
-    logger.log('media ended');
     // reset startPosition and lastCurrentTime to restart playback @ stream beginning
     this.startPosition = this.lastCurrentTime = 0;
   }
@@ -413,7 +412,12 @@ class AudioStreamController extends EventHandler {
   }
 
   onFragParsingInitSegment(data) {
-    if (data.id === 'audio' && this.state === State.PARSING) {
+    let fragCurrent = this.fragCurrent;
+    if (fragCurrent &&
+        data.id === 'audio' &&
+        data.sn === fragCurrent.sn &&
+        data.level === fragCurrent.level &&
+        this.state === State.PARSING) {
       let tracks = data.tracks, track;
 
       // include levelCodec in audio and video tracks
@@ -435,8 +439,12 @@ class AudioStreamController extends EventHandler {
   }
 
   onFragParsingData(data) {
-    if (data.id === 'audio' && this.state === State.PARSING) {
-      this.tparse2 = Date.now();
+    let fragCurrent = this.fragCurrent;
+    if (fragCurrent &&
+        data.id === 'audio' &&
+        data.sn === fragCurrent.sn &&
+        data.level === fragCurrent.level &&
+        this.state === State.PARSING) {
       var track = this.tracks[this.trackId],
           frag = this.fragCurrent;
 
@@ -456,7 +464,12 @@ class AudioStreamController extends EventHandler {
   }
 
   onFragParsed(data) {
-    if (data.id === 'audio' && this.state === State.PARSING) {
+    let fragCurrent = this.fragCurrent;
+    if (fragCurrent &&
+        data.id === 'audio' &&
+        data.sn === fragCurrent.sn &&
+        data.level === fragCurrent.level &&
+        this.state === State.PARSING) {
       this.stats.tparsed = performance.now();
       this.state = State.PARSED;
       this._checkAppendedParsed();
@@ -491,7 +504,7 @@ class AudioStreamController extends EventHandler {
         this.fragPrevious = frag;
         stats.tbuffered = performance.now();
         this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
-        this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag, id : 0});
+        this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag, id : 'audio'});
         let media = this.mediaBuffer ? this.mediaBuffer : this.media;
         logger.log(`audio buffered : ${this.timeRangesToString(media.buffered)}`);
         this.state = State.IDLE;

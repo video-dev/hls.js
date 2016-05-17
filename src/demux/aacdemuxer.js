@@ -107,7 +107,7 @@ import ID3 from '../demux/id3';
         break;
       }
     }
-    this.remuxer.remux(this._aacTrack,{samples : []}, {samples : [ { pts: pts, dts : pts, unit : id3.payload} ]}, { samples: [] }, timeOffset, contiguous);
+    this.remuxer.remux(level, sn , this._aacTrack,{samples : []}, {samples : [ { pts: pts, dts : pts, unit : id3.payload} ]}, { samples: [] }, timeOffset, contiguous);
   }
 
   destroy() {

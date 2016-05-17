@@ -633,7 +633,7 @@ class StreamController extends EventHandler {
       this.lastCurrentTime = this.media.currentTime;
     }
     // avoid reporting fragment loop loading error in case user is seeking several times on same position
-    if (this.fragLoadIdx !== undefined) {
+    if (this.state !== State.FRAG_LOADING && this.fragLoadIdx !== undefined) {
       this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
     }
     // tick to speed up processing
@@ -754,7 +754,7 @@ class StreamController extends EventHandler {
         this.state = State.IDLE;
         this.fragBitrateTest = false;
         data.stats.tparsed = data.stats.tbuffered = performance.now();
-        this.hls.trigger(Event.FRAG_BUFFERED, {stats: data.stats, frag: fragCurrent, id : 0});
+        this.hls.trigger(Event.FRAG_BUFFERED, {stats: data.stats, frag: fragCurrent, id : 'main'});
       } else {
         this.state = State.PARSING;
         // transmux the MPEG-TS data to ISO-BMFF segments
@@ -791,7 +791,12 @@ class StreamController extends EventHandler {
   }
 
   onFragParsingInitSegment(data) {
-    if (data.id === 'main' && this.state === State.PARSING) {
+    let fragCurrent = this.fragCurrent;
+    if (fragCurrent &&
+        data.id === 'main' &&
+        data.sn === fragCurrent.sn &&
+        data.level === fragCurrent.level &&
+        this.state === State.PARSING) {
       var tracks = data.tracks, trackName, track;
 
       // include levelCodec in audio and video tracks
@@ -873,8 +878,12 @@ class StreamController extends EventHandler {
   }
 
   onFragParsingData(data) {
-    if (data.id === 'main' && this.state === State.PARSING) {
-      this.tparse2 = Date.now();
+    let fragCurrent = this.fragCurrent;
+    if (fragCurrent &&
+        data.id === 'main' &&
+        data.sn === fragCurrent.sn &&
+        data.level === fragCurrent.level &&
+        this.state === State.PARSING) {
       var level = this.levels[this.level],
           frag = this.fragCurrent;
 
@@ -900,7 +909,12 @@ class StreamController extends EventHandler {
   }
 
   onFragParsed(data) {
-    if (data.id === 'main' && this.state === State.PARSING) {
+    let fragCurrent = this.fragCurrent;
+    if (fragCurrent &&
+        data.id === 'main' &&
+        data.sn === fragCurrent.sn &&
+        data.level === fragCurrent.level &&
+        this.state === State.PARSING) {
       this.stats.tparsed = performance.now();
       this.state = State.PARSED;
       this._checkAppendedParsed();
@@ -948,7 +962,7 @@ class StreamController extends EventHandler {
         this.fragPrevious = frag;
         stats.tbuffered = performance.now();
         this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
-        this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag, id : 0});
+        this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag, id : 'main'});
         let media = this.mediaBuffer ? this.mediaBuffer : this.media;
         logger.log(`main buffered : ${this.timeRangesToString(media.buffered)}`);
         this.state = State.IDLE;

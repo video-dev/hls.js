@@ -73,16 +73,20 @@ class Demuxer {
   onWorkerMessage(ev) {
     let data = ev.data,
         hls = this.hls,
-        id = data.id;
+        id = data.id,
+        level = data.level,
+        sn = data.sn;
 
     //console.log('onWorkerMessage:' + data.event);
     switch(data.event) {
       case Event.FRAG_PARSING_INIT_SEGMENT:
-        hls.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {id : id, tracks : data.tracks, unique : data.unique});
+        hls.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {id : id, level : level, sn : sn, tracks : data.tracks, unique : data.unique});
         break;
       case Event.FRAG_PARSING_DATA:
         hls.trigger(Event.FRAG_PARSING_DATA,{
           id : id,
+          level : level,
+          sn : sn,
           data1: new Uint8Array(data.data1),
           data2: new Uint8Array(data.data2),
           startPTS: data.startPTS,
@@ -96,12 +100,16 @@ class Demuxer {
         case Event.FRAG_PARSING_METADATA:
         hls.trigger(Event.FRAG_PARSING_METADATA, {
           id : id,
+          level : level,
+          sn : sn,
           samples: data.samples
         });
         break;
         case Event.FRAG_PARSING_USERDATA:
         hls.trigger(Event.FRAG_PARSING_USERDATA, {
           id : id,
+          level : level,
+          sn : sn,
           samples: data.samples
         });
         break;
