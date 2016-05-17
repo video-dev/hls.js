@@ -18,7 +18,15 @@ class BufferController extends EventHandler {
       Event.BUFFER_APPENDING,
       Event.BUFFER_CODECS,
       Event.BUFFER_EOS,
-      Event.BUFFER_FLUSHING);
+      Event.BUFFER_FLUSHING,
+      Event.LEVEL_UPDATED);
+
+    // the value that we have set mediasource.duration to
+    // (the actual duration may be tweaked slighly by the browser)
+    this.duration = null;
+    // the value that we want to set mediaSource.duration to
+    this.queuedDuration = null;
+    this.durationUpdateTimerId = setInterval(this.updateMediaElementDuration.bind(this), 100);
 
     // Source Buffer listeners
     this.onsbue = this.onSBUpdateEnd.bind(this);
@@ -26,6 +34,7 @@ class BufferController extends EventHandler {
   }
 
   destroy() {
+    clearTimeout(this.durationUpdateTimerId);
     EventHandler.prototype.destroy.call(this);
   }
 
@@ -211,6 +220,41 @@ class BufferController extends EventHandler {
     // attempt flush immediatly
     this.flushBufferCounter = 0;
     this.doFlush();
+  }
+
+  onLevelUpdated(event) {
+    var details = event.details;
+    if (details.fragments.length === 0) {
+      return;
+    }
+    this.queuedDuration = details.totalduration + details.fragments[0].start;
+    this.updateMediaElementDuration();
+  }
+
+  // https://github.com/dailymotion/hls.js/issues/355
+  updateMediaElementDuration() {
+    var media = this.media;
+    var mediaSource = this.mediaSource;
+    if (!media || !mediaSource || media.readyState === 0 || mediaSource.readyState !== 'open') {
+      return;
+    }
+    for (var type in mediaSource.sourceBuffers) {
+      if (mediaSource.sourceBuffers[type].updating) {
+        // can't set duration whilst a buffer is updating
+        return;
+      }
+    }
+    if (this.queuedDuration === null) {
+      // initialise to the value that the media source is reporting
+      this.queuedDuration = mediaSource.duration;
+    }
+    // this.queuedDuration was the last value we set.
+    // not using mediaSource.duration as the browser may tweak this value
+    if (this.queuedDuration !== this.duration) {
+      logger.log(`Updating mediasource duration to ${this.queuedDuration}`);
+      mediaSource.duration = this.queuedDuration;
+      this.duration = this.queuedDuration;
+    }
   }
 
   doFlush() {
