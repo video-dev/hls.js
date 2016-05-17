@@ -138,7 +138,10 @@ class BufferController extends EventHandler {
     this.appending = false;
     this.hls.trigger(Event.BUFFER_APPENDED, { parent : this.parent});
 
-    this.doAppending();
+    // don't append in flushing mode
+    if (!this._needsFlush) {
+      this.doAppending();
+    }
   }
 
   onSBUpdateError(event) {
@@ -205,12 +208,14 @@ class BufferController extends EventHandler {
   }
 
   onBufferAppending(data) {
-    if (!this.segments) {
-      this.segments = [ data ];
-    } else {
-      this.segments.push(data);
+    if (!this._needsFlush) {
+      if (!this.segments) {
+        this.segments = [ data ];
+      } else {
+        this.segments.push(data);
+      }
+      this.doAppending();
     }
-    this.doAppending();
   }
 
   onBufferAppendFail(data) {
@@ -277,7 +282,7 @@ class BufferController extends EventHandler {
     var hls = this.hls, sourceBuffer = this.sourceBuffer, segments = this.segments;
     if (Object.keys(sourceBuffer).length) {
       if (this.media.error) {
-        segments = [];
+        this.segments = [];
         logger.error('trying to append although a media error occured, flush segment and abort');
         return;
       }
