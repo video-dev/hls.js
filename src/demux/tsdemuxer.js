@@ -597,8 +597,13 @@ class TSDemuxer {
         //build sample from PES
         // Annex B to MP4 conversion to be done
         if (units2.length) {
-            // only push AVC sample if keyframe already found. browsers expect a keyframe at first to start decoding
-            if (key === true || track.sps) {
+            // only push AVC sample if keyframe already found in this fragment OR
+            //    keyframe found in last fragment (track.sps) AND
+            //        samples already appended (we already found a keyframe in this fragment) OR fragment is contiguous
+            if (
+                key === true ||
+                (track.sps && (samples.length || this.contiguous))
+            ) {
                 avcSample = {
                     units: { units: units2, length: length },
                     pts: pes.pts,
