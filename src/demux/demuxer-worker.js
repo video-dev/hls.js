@@ -51,6 +51,8 @@ var DemuxerWorker = function(self) {
         self.postMessage({
             event: ev,
             id: data.id,
+            level: data.level,
+            sn: data.sn,
             tracks: data.tracks,
             unique: data.unique
         });
@@ -60,6 +62,8 @@ var DemuxerWorker = function(self) {
         var objData = {
             event: ev,
             id: data.id,
+            level: data.level,
+            sn: data.sn,
             type: data.type,
             startPTS: data.startPTS,
             endPTS: data.endPTS,

@@ -154,6 +154,8 @@ class AACDemuxer {
             }
         }
         this.remuxer.remux(
+            level,
+            sn,
             this._aacTrack,
             { samples: [] },
             { samples: [{ pts: pts, dts: pts, unit: id3.payload }] },

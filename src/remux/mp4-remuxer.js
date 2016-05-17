@@ -34,7 +34,18 @@ class MP4Remuxer {
         this.ISGenerated = false;
     }
 
-    remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous) {
+    remux(
+        level,
+        sn,
+        audioTrack,
+        videoTrack,
+        id3Track,
+        textTrack,
+        timeOffset,
+        contiguous
+    ) {
+        this.level = level;
+        this.sn = sn;
         // generate Init Segment if needed
         if (!this.ISGenerated) {
             this.generateIS(audioTrack, videoTrack, timeOffset);
@@ -71,7 +82,11 @@ class MP4Remuxer {
             this.remuxText(textTrack, timeOffset);
         }
         //notify end of parsing
-        this.observer.trigger(Event.FRAG_PARSED, { id: this.id });
+        this.observer.trigger(Event.FRAG_PARSED, {
+            id: this.id,
+            level: this.level,
+            sn: this.sn
+        });
     }
 
     generateIS(audioTrack, videoTrack, timeOffset) {
@@ -80,7 +95,13 @@ class MP4Remuxer {
             videoSamples = videoTrack.samples,
             pesTimeScale = this.PES_TIMESCALE,
             tracks = {},
-            data = { id: this.id, tracks: tracks, unique: false },
+            data = {
+                id: this.id,
+                level: this.level,
+                sn: this.sn,
+                tracks: tracks,
+                unique: false
+            },
             computePTSDTS = this._initPTS === undefined,
             initPTS,
             initDTS;
@@ -406,6 +427,8 @@ class MP4Remuxer {
 
         let data = {
             id: this.id,
+            level: this.level,
+            sn: this.sn,
             data1: moof,
             data2: mdat,
             startPTS: firstPTS / pesTimeScale,
@@ -620,6 +643,8 @@ class MP4Remuxer {
             track.samples = [];
             let audioData = {
                 id: this.id,
+                level: this.level,
+                sn: this.sn,
                 data1: moof,
                 data2: mdat,
                 startPTS: firstPTS / pesTimeScale,
@@ -691,6 +716,8 @@ class MP4Remuxer {
             }
             this.observer.trigger(Event.FRAG_PARSING_METADATA, {
                 id: this.id,
+                level: this.level,
+                sn: this.sn,
                 samples: track.samples
             });
         }
@@ -716,6 +743,8 @@ class MP4Remuxer {
             }
             this.observer.trigger(Event.FRAG_PARSING_USERDATA, {
                 id: this.id,
+                level: this.level,
+                sn: this.sn,
                 samples: track.samples
             });
         }
