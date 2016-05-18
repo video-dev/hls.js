@@ -244,9 +244,9 @@ class BufferController extends EventHandler {
         return;
       }
     }
-    if (this._levelDuration === null) {
+    if (this._msDuration === null) {
       // initialise to the value that the media source is reporting
-      this._levelDuration = mediaSource.duration;
+      this._msDuration = mediaSource.duration;
     }
     // this._levelDuration was the last value we set.
     // not using mediaSource.duration as the browser may tweak this value
