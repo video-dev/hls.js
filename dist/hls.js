@@ -1329,8 +1329,9 @@ var LevelController = function (_EventHandler) {
 
       var details = data.details,
           hls = this.hls,
-          levelId,
-          level;
+          levelId = void 0,
+          level = void 0,
+          levelError = false;
       // try to recover not fatal errors
       switch (details) {
         case _errors.ErrorDetails.FRAG_LOAD_ERROR:
@@ -1343,6 +1344,7 @@ var LevelController = function (_EventHandler) {
         case _errors.ErrorDetails.LEVEL_LOAD_ERROR:
         case _errors.ErrorDetails.LEVEL_LOAD_TIMEOUT:
           levelId = data.level;
+          levelError = true;
           break;
         default:
           break;
@@ -1366,6 +1368,10 @@ var LevelController = function (_EventHandler) {
             hls.abrController.nextAutoLevel = 0;
           } else if (level && level.details && level.details.live) {
             _logger.logger.warn('level controller,' + details + ' on live stream, discard');
+            if (levelError) {
+              // reset this._level so that another call to set level() will retrigger a frag load
+              this._level = undefined;
+            }
             // FRAG_LOAD_ERROR and FRAG_LOAD_TIMEOUT are handled by mediaController
           } else if (details !== _errors.ErrorDetails.FRAG_LOAD_ERROR && details !== _errors.ErrorDetails.FRAG_LOAD_TIMEOUT) {
               _logger.logger.error('cannot recover ' + details + ' error');
@@ -4960,8 +4966,10 @@ var TSDemuxer = function () {
       //build sample from PES
       // Annex B to MP4 conversion to be done
       if (units2.length) {
-        // only push AVC sample if keyframe already found. browsers expect a keyframe at first to start decoding
-        if (key === true || track.sps) {
+        // only push AVC sample if keyframe already found in this fragment OR
+        //    keyframe found in last fragment (track.sps) AND
+        //        samples already appended (we already found a keyframe in this fragment) OR fragment is contiguous
+        if (key === true || track.sps && (samples.length || this.contiguous)) {
           avcSample = { units: { units: units2, length: length }, pts: pes.pts, dts: pes.dts, key: key };
           samples.push(avcSample);
           track.len += length;
