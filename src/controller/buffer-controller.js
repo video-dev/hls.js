@@ -23,18 +23,16 @@ class BufferController extends EventHandler {
 
     // the value that we have set mediasource.duration to
     // (the actual duration may be tweaked slighly by the browser)
-    this.duration = null;
+    this._duration = null;
     // the value that we want to set mediaSource.duration to
-    this.queuedDuration = null;
-    this.durationUpdateTimerId = setInterval(this.updateMediaElementDuration.bind(this), 100);
-
+    this._queuedDuration = null;
+   
     // Source Buffer listeners
     this.onsbue = this.onSBUpdateEnd.bind(this);
     this.onsbe  = this.onSBUpdateError.bind(this);
   }
 
   destroy() {
-    clearTimeout(this.durationUpdateTimerId);
     EventHandler.prototype.destroy.call(this);
   }
 
@@ -122,6 +120,8 @@ class BufferController extends EventHandler {
     if (this._needsEos) {
       this.onBufferEos();
     }
+
+    this.updateMediaElementDuration();
 
     this.hls.trigger(Event.BUFFER_APPENDED);
 
@@ -227,7 +227,7 @@ class BufferController extends EventHandler {
     if (details.fragments.length === 0) {
       return;
     }
-    this.queuedDuration = details.totalduration + details.fragments[0].start;
+    this._queuedDuration = details.totalduration + details.fragments[0].start;
     this.updateMediaElementDuration();
   }
 
@@ -244,16 +244,16 @@ class BufferController extends EventHandler {
         return;
       }
     }
-    if (this.queuedDuration === null) {
+    if (this._queuedDuration === null) {
       // initialise to the value that the media source is reporting
-      this.queuedDuration = mediaSource.duration;
+      this._queuedDuration = mediaSource.duration;
     }
-    // this.queuedDuration was the last value we set.
+    // this._queuedDuration was the last value we set.
     // not using mediaSource.duration as the browser may tweak this value
-    if (this.queuedDuration !== this.duration) {
-      logger.log(`Updating mediasource duration to ${this.queuedDuration}`);
-      mediaSource.duration = this.queuedDuration;
-      this.duration = this.queuedDuration;
+    if (this._queuedDuration !== this._duration) {
+      logger.log(`Updating mediasource duration to ${this._queuedDuration}`);
+      mediaSource.duration = this._queuedDuration;
+      this._duration = this._queuedDuration;
     }
   }
 
