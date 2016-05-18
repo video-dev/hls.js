@@ -23,9 +23,9 @@ class BufferController extends EventHandler {
 
     // the value that we have set mediasource.duration to
     // (the actual duration may be tweaked slighly by the browser)
-    this._duration = null;
+    this._msDuration = null;
     // the value that we want to set mediaSource.duration to
-    this._queuedDuration = null;
+    this._levelDuration = null;
    
     // Source Buffer listeners
     this.onsbue = this.onSBUpdateEnd.bind(this);
@@ -223,37 +223,37 @@ class BufferController extends EventHandler {
   }
 
   onLevelUpdated(event) {
-    var details = event.details;
+    let details = event.details;
     if (details.fragments.length === 0) {
       return;
     }
-    this._queuedDuration = details.totalduration + details.fragments[0].start;
+    this._levelDuration = details.totalduration + details.fragments[0].start;
     this.updateMediaElementDuration();
   }
 
   // https://github.com/dailymotion/hls.js/issues/355
   updateMediaElementDuration() {
-    var media = this.media;
-    var mediaSource = this.mediaSource;
+    let media = this.media;
+    let mediaSource = this.mediaSource;
     if (!media || !mediaSource || media.readyState === 0 || mediaSource.readyState !== 'open') {
       return;
     }
-    for (var type in mediaSource.sourceBuffers) {
+    for (let type in mediaSource.sourceBuffers) {
       if (mediaSource.sourceBuffers[type].updating) {
         // can't set duration whilst a buffer is updating
         return;
       }
     }
-    if (this._queuedDuration === null) {
+    if (this._levelDuration === null) {
       // initialise to the value that the media source is reporting
-      this._queuedDuration = mediaSource.duration;
+      this._levelDuration = mediaSource.duration;
     }
-    // this._queuedDuration was the last value we set.
+    // this._levelDuration was the last value we set.
     // not using mediaSource.duration as the browser may tweak this value
-    if (this._queuedDuration !== this._duration) {
-      logger.log(`Updating mediasource duration to ${this._queuedDuration}`);
-      mediaSource.duration = this._queuedDuration;
-      this._duration = this._queuedDuration;
+    if (this._levelDuration !== this._msDuration) {
+      logger.log(`Updating mediasource duration to ${this._levelDuration}`);
+      mediaSource.duration = this._levelDuration;
+      this._msDuration = this._levelDuration;
     }
   }
 
