@@ -228,6 +228,9 @@ class BufferController extends EventHandler {
 
   // https://github.com/dailymotion/hls.js/issues/355
   updateMediaElementDuration() {
+    if (this._levelDuration === null) {
+      return;
+    }
     let media = this.media;
     let mediaSource = this.mediaSource;
     if (!media || !mediaSource || media.readyState === 0 || mediaSource.readyState !== 'open') {
