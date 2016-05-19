@@ -355,8 +355,8 @@ class StreamController extends EventHandler {
         //logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
         if ((candidate.start + candidate.duration - maxFragLookUpTolerance) <= bufferEnd) {
           return 1;
-        }
-        else if (candidate.start - maxFragLookUpTolerance > bufferEnd) {
+        }// if maxFragLookUpTolerance will have negative value then don't return -1 for first element
+        else if (candidate.start - maxFragLookUpTolerance > bufferEnd && candidate.start) {
           return -1;
         }
         return 0;
