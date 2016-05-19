@@ -47,6 +47,17 @@ describe('utils', function() {
 
       e(fn("https://a-b.something.com/b/cd/e.m3u8?test=1#something", "//example.com/subdir/pointless/../z.ts?abc=1#test"), "https://example.com/subdir/z.ts?abc=1#test");
 
+      e(fn("//a.com/b/cd/e.m3u8", "https://example.com/z.ts"), "https://example.com/z.ts");
+      e(fn("//a.com/b/cd/e.m3u8", "g:h"), "g:h");
+      e(fn("//a.com/b/cd/e.m3u8", "https://example.com:8080/z.ts"), "https://example.com:8080/z.ts");
+      e(fn("//a.com/b/cd/e.m3u8", "z.ts"), "//a.com/b/cd/z.ts");
+      e(fn("//a.com/b/cd/e.m3u8", "../../z.ts"), "//a.com/z.ts");
+
+      e(fn("/a/b/cd/e.m3u8", "https://example.com/z.ts"), "https://example.com/z.ts");
+      e(fn("/a/b/cd/e.m3u8", "g:h"), "g:h");
+      e(fn("/a/b/cd/e.m3u8", "https://example.com:8080/z.ts"), "https://example.com:8080/z.ts");
+      e(fn("/a/b/cd/e.m3u8", "z.ts"), "/a/b/cd/z.ts");
+      e(fn("/a/b/cd/e.m3u8", "../../../z.ts"), "/z.ts");
     });
   });
 });

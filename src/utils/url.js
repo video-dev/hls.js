@@ -32,26 +32,36 @@ var URLHelper = {
             baseURL = baseURLQuerySplit[1];
         }
 
-        var baseURLDomainSplit = /^((([a-z]+):)?\/\/[a-z0-9\.\-_~]+(:[0-9]+)?\/)(.*)$/i.exec(
+        var baseURLDomainSplit = /^(([a-z]+:)?\/\/[a-z0-9\.\-_~]+(:[0-9]+)?)?(\/.*)$/i.exec(
             baseURL
         );
-        var baseURLProtocol = baseURLDomainSplit[3];
-        var baseURLDomain = baseURLDomainSplit[1];
-        var baseURLPath = baseURLDomainSplit[5];
+        if (!baseURLDomainSplit) {
+            throw new Error('Error trying to parse base URL.');
+        }
+
+        // e.g. 'http:', 'https:', ''
+        var baseURLProtocol = baseURLDomainSplit[2] || '';
+        // e.g. 'http://example.com', '//example.com', ''
+        var baseURLProtocolDomain = baseURLDomainSplit[1] || '';
+        // e.g. '/a/b/c/playlist.m3u8'
+        var baseURLPath = baseURLDomainSplit[4];
 
         var builtURL = null;
         if (/^\/\//.test(relativeURL)) {
+            // relative url starts wth '//' so copy protocol (which may be '' if baseUrl didn't provide one)
             builtURL =
                 baseURLProtocol +
-                '://' +
+                '//' +
                 URLHelper.buildAbsolutePath('', relativeURL.substring(2));
         } else if (/^\//.test(relativeURL)) {
+            // relative url starts with '/' so start from root of domain
             builtURL =
-                baseURLDomain +
+                baseURLProtocolDomain +
+                '/' +
                 URLHelper.buildAbsolutePath('', relativeURL.substring(1));
         } else {
             builtURL = URLHelper.buildAbsolutePath(
-                baseURLDomain + baseURLPath,
+                baseURLProtocolDomain + baseURLPath,
                 relativeURL
             );
         }
