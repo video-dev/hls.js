@@ -189,6 +189,8 @@ class PlaylistLoader extends EventHandler {
           break;
         case 'VERSION':
           break;
+        case 'EXTM3U':
+          break;
         case 'ENDLIST':
           level.live = false;
           break;

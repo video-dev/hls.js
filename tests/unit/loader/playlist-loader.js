@@ -396,4 +396,48 @@ lo008ts`;
       decryptdata = fragment.decryptdata;
     });
   });
+
+  //PR #454 - Add support for custom tags in fragment object
+  it('return custom tags in fragment object', () => {
+    var level = `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-TARGETDURATION:10
+#EXT-X-MEDIA-SEQUENCE:719926
+#EXTINF:9.40,
+http://dummy.url.com/hls/live/segment/segment_022916_164500865_719926.ts
+#EXTINF:9.56,
+http://dummy.url.com/hls/live/segment/segment_022916_164500865_719927.ts
+#EXT-X-CUE-OUT:DURATION=150,BREAKID=0x0
+#EXTINF:9.23,
+http://dummy.url.com/hls/live/segment/segment_022916_164500865_719928.ts
+#EXTINF:0.50,
+http://dummy.url.com/hls/live/segment/segment_022916_164500865_719929.ts
+#EXT-X-CUE-IN
+#EXTINF:8.50,
+http://dummy.url.com/hls/live/segment/segment_022916_164500865_719930.ts
+#EXTINF:9.43,
+http://dummy.url.com/hls/live/segment/segment_022916_164500865_719931.ts
+#EXTINF:9.78,
+http://dummy.url.com/hls/live/segment/segment_022916_164500865_719932.ts
+#EXTINF:9.31,
+http://dummy.url.com/hls/live/segment/segment_022916_164500865_719933.ts
+#EXTINF:9.98,
+http://dummy.url.com/hls/live/segment/segment_022916_164500865_719934.ts
+#EXTINF:9.25,
+http://dummy.url.com/hls/live/segment/segment_022916_164500865_719935.ts`;
+    var result = new PlaylistLoader({on: function () { }}).parseLevelPlaylist(level, 'http://dummy.url.com/playlist.m3u8', 0);
+    assert.strictEqual(result.fragments.length, 10);
+    assert.strictEqual(result.totalduration, 84.94);
+    assert.strictEqual(result.targetduration, 10);
+    assert.strictEqual(result.fragments[0].url, 'http://dummy.url.com/hls/live/segment/segment_022916_164500865_719926.ts');
+    assert.strictEqual(result.fragments[0].tagList.length,1);
+    assert.strictEqual(result.fragments[2].tagList[0][0],'EXT-X-CUE-OUT');
+    assert.strictEqual(result.fragments[2].tagList[0][1],'DURATION=150,BREAKID=0x0');
+    assert.strictEqual(result.fragments[3].tagList[0][1],'0.50');
+    assert.strictEqual(result.fragments[4].tagList.length,2);
+    assert.strictEqual(result.fragments[4].tagList[0][0],'EXT-X-CUE-IN');
+    assert.strictEqual(result.fragments[7].tagList[0][0],'INF');
+    assert.strictEqual(result.fragments[8].url, 'http://dummy.url.com/hls/live/segment/segment_022916_164500865_719934.ts');
+  });
+
 });
