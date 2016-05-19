@@ -44,6 +44,10 @@ hls.js is (being) integrated in the following players:
 
  - [native-hls] (https://chrome.google.com/webstore/detail/native-hls-playback/emnphkkblegpebimobpbekeedfgemhof), plays hls from address bar and m3u8 links 
 
+## Firefox integration
+
+ - [firefox-hls] (https://github.com/mangui/firefox-hls), plays hls from address bar and m3u8 links (alpha stage)
+
 ## Dependencies
 
 No external JS libs are needed.
@@ -131,7 +135,7 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
 ## Getting Started
 
 ```js
-<script src="dist/hls.js"></script>
+<script src="https://cdn.jsdelivr.net/hls.js/latest/hls.min.js"></script>
 <video id="video"></video>
 <script>
   if(Hls.isSupported()) {
