@@ -347,4 +347,53 @@ lo008ts`;
     assert.strictEqual(result.fragments[3].cc, 1); //continuity counter should increase around discontinuity
   });
 
+  //issue #425 - first fragment has null url and no decryptdata if EXT-X-KEY follows EXTINF
+  it('parse level with #EXT-X-KEY after #EXTINF', () => {
+    var level = `#EXTM3U
+#EXT-X-TARGETDURATION:10
+#EXT-X-VERSION:3
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXTINF:10,
+#EXT-X-KEY:METHOD=AES-128,URI="https://dummy.com/crypt-0.key"
+0001.ts
+#EXTINF:10,
+0002.ts
+#EXTINF:10,
+0003.ts
+#EXTINF:10,
+0004.ts
+#EXTINF:10,
+0005.ts
+#EXTINF:10,
+0006.ts
+#EXTINF:10,
+0007.ts
+#EXTINF:10,
+0008.ts`;
+    var result = new PlaylistLoader({on: function () { }}).parseLevelPlaylist(level, 'http://dummy.com/playlist.m3u8', 0);
+    assert.strictEqual(result.fragments.length, 8);
+    assert.strictEqual(result.totalduration, 80);
+
+    var fragdecryptdata, decryptdata = result.fragments[0].decryptdata, sn = 0;
+
+    result.fragments.forEach(function (fragment, idx) {
+      sn = idx + 1;
+
+      assert.strictEqual(fragment.url, 'http://dummy.com/000' + sn + '.ts');
+
+      //decryptdata should persist across all fragments
+      fragdecryptdata = fragment.decryptdata;
+      assert.strictEqual(fragdecryptdata.method, decryptdata.method);
+      assert.strictEqual(fragdecryptdata.uri, decryptdata.uri);
+      assert.strictEqual(fragdecryptdata.key, decryptdata.key);
+
+      //initialization vector is correctly generated since it wasn't declared in the playlist
+      var iv = fragdecryptdata.iv;
+      assert.strictEqual(iv[15], idx);
+
+      //hold this decrypt data to compare to the next fragment's decrypt data
+      decryptdata = fragment.decryptdata;
+    });
+  });
 });
