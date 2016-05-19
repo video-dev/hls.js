@@ -376,6 +376,7 @@ $(document).ready(function() {
         events.video.push(event);
         refreshCanvas();
         updateLevelInfo();
+        stats.tagList = data.frag.tagList;
 
         var level = data.frag.level, autoLevel = data.frag.autoLevel;
         if (stats.levelStart === undefined) {
