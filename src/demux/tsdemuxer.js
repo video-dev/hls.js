@@ -94,7 +94,8 @@ class TSDemuxer {
             pid,
             atf,
             offset,
-            codecsOnly = this.remuxer.passthrough;
+            codecsOnly = this.remuxer.passthrough,
+            unknownPIDs = false;
 
         this.audioCodec = audioCodec;
         this.videoCodec = videoCodec;
@@ -220,6 +221,15 @@ class TSDemuxer {
                         avcId = this._avcTrack.id;
                         aacId = this._aacTrack.id;
                         id3Id = this._id3Track.id;
+                        if (unknownPIDs) {
+                            logger.log('reparse from beginning');
+                            unknownPIDs = false;
+                            // we set it to -188, the += 188 in the for loop will reset start to 0
+                            start = -188;
+                        }
+                    } else {
+                        logger.log('unknown PID found before PAT/PMT');
+                        unknownPIDs = true;
                     }
                 }
             } else {
