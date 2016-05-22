@@ -33,7 +33,6 @@ class BufferController extends EventHandler {
   }
 
   destroy() {
-    clearTimeout(this.durationUpdateTimerId);
     EventHandler.prototype.destroy.call(this);
   }
 
