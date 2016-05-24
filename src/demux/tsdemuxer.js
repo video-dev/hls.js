@@ -75,6 +75,8 @@ class TSDemuxer {
             samples: [],
             len: 0
         };
+        // flush any partial content
+        this.aacOverFlow = null;
         this.remuxer.switchLevel();
     }
 
@@ -106,7 +108,8 @@ class TSDemuxer {
             logger.log('discontinuity detected');
             this.insertDiscontinuity();
             this.lastCC = cc;
-        } else if (level !== this.lastLevel) {
+        }
+        if (level !== this.lastLevel) {
             logger.log('level switch detected');
             this.switchLevel();
             this.lastLevel = level;
@@ -114,11 +117,6 @@ class TSDemuxer {
             this.contiguous = true;
         }
         this.lastSN = sn;
-
-        if (!this.contiguous) {
-            // flush any partial content
-            this.aacOverFlow = null;
-        }
 
         var pmtParsed = this.pmtParsed,
             avcId = this._avcTrack.id,
