@@ -439,7 +439,7 @@ class StreamController extends EventHandler {
       const previousState = this.state;
       this._state = nextState;
       logger.log(`engine state transition from ${previousState} to ${nextState}`);
-      this.hls.trigger(State.STREAM_STATE_TRANSITION, {previousState, nextState});
+      this.hls.trigger(Event.STREAM_STATE_TRANSITION, {previousState, nextState});
     }
   }
 
