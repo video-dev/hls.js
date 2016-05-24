@@ -4515,6 +4515,8 @@ var TSDemuxer = function () {
       this._aacTrack = { container: 'video/mp2t', type: 'audio', id: -1, sequenceNumber: 0, samples: [], len: 0 };
       this._id3Track = { type: 'id3', id: -1, sequenceNumber: 0, samples: [], len: 0 };
       this._txtTrack = { type: 'text', id: -1, sequenceNumber: 0, samples: [], len: 0 };
+      // flush any partial content
+      this.aacOverFlow = null;
       this.remuxer.switchLevel();
     }
   }, {
@@ -4550,7 +4552,8 @@ var TSDemuxer = function () {
         _logger.logger.log('discontinuity detected');
         this.insertDiscontinuity();
         this.lastCC = cc;
-      } else if (level !== this.lastLevel) {
+      }
+      if (level !== this.lastLevel) {
         _logger.logger.log('level switch detected');
         this.switchLevel();
         this.lastLevel = level;
@@ -4558,11 +4561,6 @@ var TSDemuxer = function () {
         this.contiguous = true;
       }
       this.lastSN = sn;
-
-      if (!this.contiguous) {
-        // flush any partial content
-        this.aacOverFlow = null;
-      }
 
       var pmtParsed = this.pmtParsed,
           avcId = this._avcTrack.id,
@@ -7226,7 +7224,7 @@ var MP4Remuxer = function () {
   }, {
     key: 'insertDiscontinuity',
     value: function insertDiscontinuity() {
-      this._initPTS = this._initDTS = this.nextAacPts = this.nextAvcDts = undefined;
+      this._initPTS = this._initDTS = undefined;
     }
   }, {
     key: 'switchLevel',
