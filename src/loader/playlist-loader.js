@@ -173,9 +173,10 @@ class PlaylistLoader extends EventHandler {
         result,
         regexp,
         byteRangeEndOffset,
-        byteRangeStartOffset;
+        byteRangeStartOffset,
+        tagList = [];
 
-    regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*)[\r\n]+([^#|\r\n]+)?)|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*))/g;
+    regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*)[\r\n]+([^#|\r\n]+)?)|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*))|(?:#EXT-X-(VERSION):(.*))|(?:#(.*):(.*))|(?:#(.*))/g;
     while ((result = regexp.exec(string)) !== null) {
       result.shift();
       result = result.filter(function(n) { return (n !== undefined); });
@@ -186,11 +187,16 @@ class PlaylistLoader extends EventHandler {
         case 'TARGETDURATION':
           level.targetduration = parseFloat(result[1]);
           break;
+        case 'VERSION':
+          break;
+        case 'EXTM3U':
+          break;
         case 'ENDLIST':
           level.live = false;
           break;
         case 'DIS':
           cc++;
+          tagList.push(result);
           break;
         case 'BYTERANGE':
           var params = result[1].split('@');
@@ -204,6 +210,7 @@ class PlaylistLoader extends EventHandler {
             frag.byteRangeStartOffset = byteRangeStartOffset;
             frag.byteRangeEndOffset = byteRangeEndOffset;
             frag.url = this.resolve(result[2], baseurl);
+            tagList.push(result);
           }
           break;
         case 'INF':
@@ -212,11 +219,13 @@ class PlaylistLoader extends EventHandler {
             var sn = currentSN++;
             fragdecryptdata = this.fragmentDecryptdataFromLevelkey(levelkey, sn);
             var url = result[2] ? this.resolve(result[2], baseurl) : null;
-            frag = {url: url, duration: duration, start: totalduration, sn: sn, level: id, cc: cc, byteRangeStartOffset: byteRangeStartOffset, byteRangeEndOffset: byteRangeEndOffset, decryptdata : fragdecryptdata, programDateTime: programDateTime};
+            tagList.push(result);
+            frag = {url: url, duration: duration, start: totalduration, sn: sn, level: id, cc: cc, byteRangeStartOffset: byteRangeStartOffset, byteRangeEndOffset: byteRangeEndOffset, decryptdata : fragdecryptdata, programDateTime: programDateTime, tagList: tagList};
             level.fragments.push(frag);
             totalduration += duration;
             byteRangeStartOffset = null;
             programDateTime = null;
+            tagList = [];
           }
           break;
         case 'KEY':
@@ -245,12 +254,15 @@ class PlaylistLoader extends EventHandler {
             //we have not moved onto another segment, we are still parsing one
             fragdecryptdata = this.fragmentDecryptdataFromLevelkey(levelkey, currentSN - 1);
             frag.decryptdata = fragdecryptdata;
+            tagList.push(result);
           }
           break;
         case 'PROGRAM-DATE-TIME':
           programDateTime = new Date(Date.parse(result[1]));
+          tagList.push(result);
           break;
         default:
+          tagList.push(result);
           break;
       }
     }
