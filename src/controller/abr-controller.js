@@ -65,20 +65,21 @@ class AbrController extends EventHandler {
     /* only monitor frag retrieval time if
     (video not paused OR first fragment being loaded(ready state === HAVE_NOTHING = 0)) AND autoswitching enabled AND not lowest level (=> means that we have several levels) */
     if (v && (!v.paused || !v.readyState) && frag.autoLevel && frag.level) {
-      let requestDelay = performance.now() - frag.trequest;
+      let requestDelay = performance.now() - frag.trequest,
+          playbackRate = ((v.playbackRate !== 0) ? Math.abs(v.playbackRate) : 1.0);
       // monitor fragment load progress after half of expected fragment duration,to stabilize bitrate
-      if (requestDelay > (500 * frag.duration / v.playbackRate)) {
+      if (requestDelay > (500 * frag.duration / playbackRate)) {
         let loadRate = Math.max(1,frag.loaded * 1000 / requestDelay); // byte/s; at least 1 byte/s to avoid division by zero
         if (frag.expectedLen < frag.loaded) {
           frag.expectedLen = frag.loaded;
         }
         let pos = v.currentTime;
         let fragLoadedDelay = (frag.expectedLen - frag.loaded) / loadRate;
-        let bufferStarvationDelay = (BufferHelper.bufferInfo(v,pos,hls.config.maxBufferHole).end - pos) / v.playbackRate;
+        let bufferStarvationDelay = (BufferHelper.bufferInfo(v,pos,hls.config.maxBufferHole).end - pos) / playbackRate;
         // consider emergency switch down only if we have less than 2 frag buffered AND
         // time to finish loading current fragment is bigger than buffer starvation delay
         // ie if we risk buffer starvation if bw does not increase quickly
-        if ((bufferStarvationDelay < (2 * frag.duration / v.playbackRate)) && (fragLoadedDelay > bufferStarvationDelay)) {
+        if ((bufferStarvationDelay < (2 * frag.duration / playbackRate)) && (fragLoadedDelay > bufferStarvationDelay)) {
           let fragLevelNextLoadedDelay, nextLoadLevel;
           // lets iterate through lower level and try to find the biggest one that could avoid rebuffering
           // we start from current level - 1 and we step down , until we find a matching level
