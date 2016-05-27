@@ -167,12 +167,12 @@ class AbrController extends EventHandler {
 
     let v = hls.media,
         frag = this.fragCurrent,
-        pos = v.currentTime,
+        pos = (v ? v.currentTime : 0),
         lastbw = this.lastbw,
 
     // playbackRate is the absolute value of the playback rate; if v.playbackRate is 0, we use 1 to load as
     // if we're playing back at the normal rate.
-    playbackRate = ((v.playbackRate !== 0) ? Math.abs(v.playbackRate) : 1.0),
+    playbackRate = ((v && (v.playbackRate !== 0)) ? Math.abs(v.playbackRate) : 1.0),
 
     // bufferStarvationDelay is the wall-clock time left until the playback buffer is exhausted.
     bufferStarvationDelay = (BufferHelper.bufferInfo(v, pos, hls.config.maxBufferHole).end - pos) / playbackRate,
