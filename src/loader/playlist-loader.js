@@ -260,6 +260,10 @@ class PlaylistLoader extends EventHandler {
         case 'PROGRAM-DATE-TIME':
           programDateTime = new Date(Date.parse(result[1]));
           tagList.push(result);
+          if (frag && !frag.url && result.length >= 3) {
+            frag.url = this.resolve(result[2], baseurl);
+            frag.programDateTime = programDateTime;
+          }
           break;
         default:
           tagList.push(result);
