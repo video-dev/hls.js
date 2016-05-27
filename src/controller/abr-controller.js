@@ -71,10 +71,14 @@ class AbrController extends EventHandler {
         }
         /* only monitor frag retrieval time if
     (video not paused OR first fragment being loaded(ready state === HAVE_NOTHING = 0)) AND autoswitching enabled AND not lowest level (=> means that we have several levels) */
-        if (v && (!v.paused || !v.readyState) && frag.autoLevel && frag.level) {
+        if (
+            v &&
+            ((!v.paused && v.playbackRate !== 0) || !v.readyState) &&
+            frag.autoLevel &&
+            frag.level
+        ) {
             let requestDelay = performance.now() - frag.trequest,
-                playbackRate =
-                    v.playbackRate !== 0 ? Math.abs(v.playbackRate) : 1.0;
+                playbackRate = Math.abs(v.playbackRate);
             // monitor fragment load progress after half of expected fragment duration,to stabilize bitrate
             if (requestDelay > 500 * frag.duration / playbackRate) {
                 let loadRate = Math.max(1, frag.loaded * 1000 / requestDelay); // byte/s; at least 1 byte/s to avoid division by zero
