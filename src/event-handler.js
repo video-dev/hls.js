@@ -4,7 +4,9 @@
 *
 */
 
-//import {logger} from './utils/logger';
+import {logger} from './utils/logger';
+import {ErrorTypes, ErrorDetails} from './errors';
+import Event from './events';
 
 class EventHandler {
 
@@ -44,9 +46,9 @@ class EventHandler {
     }
   }
 
-  /*
-  * arguments: event (string), data (any)
-  */
+  /**
+   * arguments: event (string), data (any)
+   */
   onEvent(event, data) {
     this.onEventGeneric(event, data);
   }
@@ -59,7 +61,12 @@ class EventHandler {
       }
       return this[funcName].bind(this, data);
     };
-    eventToFunction.call(this, event, data).call();
+    try {
+      eventToFunction.call(this, event, data).call();
+    } catch (err) {
+      logger.error(`internal error happened while processing ${event}:${err.message}`);
+      this.hls.trigger(Event.ERROR, {type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: false, event : event, err : err});
+    }
   }
 }
 

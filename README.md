@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/dailymotion/hls.js.svg?branch=master)](https://travis-ci.org/dailymotion/hls.js)
+[![Coverage Status](https://coveralls.io/repos/github/dailymotion/hls.js/badge.svg?branch=master)](https://coveralls.io/github/dailymotion/hls.js?branch=master)
 [![npm][npm-image]][npm-url]
 # hls.js
 hls.js is a JavaScript library which implements an [HTTP Live Streaming] client.
@@ -39,6 +40,13 @@ hls.js is (being) integrated in the following players:
  - [MediaElement.js] (http://mediaelementjs.com/)  through [#1609
 ] (https://github.com/johndyer/mediaelement/issues/1609)
 
+## Chrome integration
+
+ - [native-hls] (https://chrome.google.com/webstore/detail/native-hls-playback/emnphkkblegpebimobpbekeedfgemhof), plays hls from address bar and m3u8 links 
+
+## Firefox integration
+
+ - [firefox-hls] (https://github.com/mangui/firefox-hls), plays hls from address bar and m3u8 links (alpha stage)
 
 ## Dependencies
 
@@ -61,7 +69,7 @@ either directly include dist/hls.js or dist/hls.min.js
 or type
 
 ```sh
-npm install --save https://github.com/dailymotion/hls.js
+npm install --save hls.js
 ```
 
 ## Compatibility
@@ -74,6 +82,10 @@ as of today, it is supported on:
  * Firefox for Desktop 42+
  * IE11+ for Windows 8.1
  * Safari for Mac 8+ (beta)
+
+## CORS
+
+All HLS resources must be delivered with [CORS headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS) permitting `GET` requests.
 
 ## Features
 
@@ -105,7 +117,7 @@ as of today, it is supported on:
 
   - CEA-708 captions (roll-up, paint-on, channel 2)
   - MP3 / WebVTT container
-  - Alternate Audio Track Rendition (Master Playlist with alternative Audio)  
+  - Alternate Audio Track Rendition (Master Playlist with alternative Audio)
 
 ### Supported M3U8 tags
 
@@ -123,7 +135,7 @@ as of today, it is supported on:
 ## Getting Started
 
 ```js
-<script src="dist/hls.js"></script>
+<script src="https://cdn.jsdelivr.net/hls.js/latest/hls.min.js"></script>
 <video id="video"></video>
 <script>
   if(Hls.isSupported()) {

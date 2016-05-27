@@ -1,10 +1,10 @@
 export const ErrorTypes = {
   // Identifier for a network error (loading error / timeout ...)
-  NETWORK_ERROR: 'hlsNetworkError',
+  NETWORK_ERROR: 'networkError',
   // Identifier for a media Error (video/parsing/mediasource error)
-  MEDIA_ERROR: 'hlsMediaError',
+  MEDIA_ERROR: 'mediaError',
   // Identifier for all other errors
-  OTHER_ERROR: 'hlsOtherError'
+  OTHER_ERROR: 'otherError'
 };
 
 export const ErrorDetails = {
@@ -14,6 +14,8 @@ export const ErrorDetails = {
   MANIFEST_LOAD_TIMEOUT: 'manifestLoadTimeOut',
   // Identifier for a manifest parsing error - data: { url : faulty URL, reason : error reason}
   MANIFEST_PARSING_ERROR: 'manifestParsingError',
+  // Identifier for a manifest with only incompatible codecs error - data: { url : faulty URL, reason : error reason}
+  MANIFEST_INCOMPATIBLE_CODECS_ERROR: 'manifestIncompatibleCodecsError',
   // Identifier for playlist load error - data: { url : faulty URL, response : XHR response}
   LEVEL_LOAD_ERROR: 'levelLoadError',
   // Identifier for playlist load timeout - data: { url : faulty URL, response : XHR response}
@@ -34,6 +36,8 @@ export const ErrorDetails = {
   KEY_LOAD_ERROR: 'keyLoadError',
   // Identifier for decrypt key load timeout error - data: { frag : fragment object}
   KEY_LOAD_TIMEOUT: 'keyLoadTimeOut',
+  // Triggered when an exception occurs while adding a sourceBuffer to MediaSource - data : {  err : exception , mimeType : mimeType }
+  BUFFER_ADD_CODEC_ERROR: 'bufferAddCodecError',
   // Identifier for a buffer append error - data: append error description
   BUFFER_APPEND_ERROR: 'bufferAppendError',
   // Identifier for a buffer appending error event - data: appending error description
@@ -43,5 +47,7 @@ export const ErrorDetails = {
   // Identifier for a buffer full event
   BUFFER_FULL_ERROR: 'bufferFullError',
   // Identifier for a buffer seek over hole event
-  BUFFER_SEEK_OVER_HOLE: 'bufferSeekOverHole'
+  BUFFER_SEEK_OVER_HOLE: 'bufferSeekOverHole',
+  // Identifier for an internal exception happening inside hls.js while handling an event
+  INTERNAL_EXCEPTION: 'internalException'
 };

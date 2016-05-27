@@ -18,11 +18,12 @@
 
  class TSDemuxer {
 
-  constructor(observer,remuxerClass) {
+  constructor(observer, remuxerClass, config) {
     this.observer = observer;
     this.remuxerClass = remuxerClass;
+    this.config = config;
     this.lastCC = 0;
-    this.remuxer = new this.remuxerClass(observer);
+    this.remuxer = new this.remuxerClass(observer, config);
   }
 
   static probe(data) {
@@ -219,7 +220,9 @@
         // ISO/IEC 13818-7 ADTS AAC (MPEG-2 lower bit-rate audio)
         case 0x0f:
           //logger.log('AAC PID:'  + pid);
-          this._aacTrack.id = pid;
+          if  (this._aacTrack.id === -1) {
+            this._aacTrack.id = pid;
+          }
           break;
         // Packetized metadata (ID3)
         case 0x15:
@@ -229,7 +232,9 @@
         // ITU-T Rec. H.264 and ISO/IEC 14496-10 (lower bit-rate video)
         case 0x1b:
           //logger.log('AVC PID:'  + pid);
-          this._avcTrack.id = pid;
+          if  (this._avcTrack.id === -1) {
+            this._avcTrack.id = pid;
+          }
           break;
         default:
         logger.log('unkown stream type:'  + data[offset]);
@@ -359,58 +364,75 @@
           if(debug) {
             debugString += 'SEI ';
           }
+          unit.data = this.discardEPB(unit.data);
           expGolombDecoder = new ExpGolomb(unit.data);
 
           // skip frameType
           expGolombDecoder.readUByte();
 
-          var payloadType = expGolombDecoder.readUByte();
+          var payloadType = 0;
+          var payloadSize = 0;
+          var endOfCaptions = false;
 
-          // TODO: there can be more than one payload in an SEI packet...
-          // TODO: need to read type and size in a while loop to get them all
-          if (payloadType === 4)
-          {
-            var payloadSize = 0;
-
+          while (!endOfCaptions && expGolombDecoder.bytesAvailable > 1) {
+            payloadType = 0;
             do {
-              payloadSize = expGolombDecoder.readUByte();
-            }
-            while (payloadSize === 255);
+                if (expGolombDecoder.bytesAvailable!==0) {
+                  payloadType += expGolombDecoder.readUByte();
+                }
+            } while (payloadType === 0xFF);
 
-            var countryCode = expGolombDecoder.readUByte();
+            // Parse payload size.
+            payloadSize = 0;
+            do {
+                if (expGolombDecoder.bytesAvailable!==0) {
+                  payloadSize += expGolombDecoder.readUByte();
+                }
+            } while (payloadSize === 0xFF);
 
-            if (countryCode === 181)
-            {
-              var providerCode = expGolombDecoder.readUShort();
+            // TODO: there can be more than one payload in an SEI packet...
+            // TODO: need to read type and size in a while loop to get them all
+            if (payloadType === 4 && expGolombDecoder.bytesAvailable !== 0) {
 
-              if (providerCode === 49)
-              {
-                var userStructure = expGolombDecoder.readUInt();
+              endOfCaptions = true;
 
-                if (userStructure === 0x47413934)
-                {
-                  var userDataType = expGolombDecoder.readUByte();
+              var countryCode = expGolombDecoder.readUByte();
 
-                  // Raw CEA-608 bytes wrapped in CEA-708 packet
-                  if (userDataType === 3)
-                  {
-                    var firstByte = expGolombDecoder.readUByte();
-                    var secondByte = expGolombDecoder.readUByte();
+              if (countryCode === 181) {
+                var providerCode = expGolombDecoder.readUShort();
 
-                    var totalCCs = 31 & firstByte;
-                    var byteArray = [firstByte, secondByte];
+                if (providerCode === 49) {
+                  var userStructure = expGolombDecoder.readUInt();
 
-                    for (i=0; i<totalCCs; i++)
-                    {
-                      // 3 bytes per CC
-                      byteArray.push(expGolombDecoder.readUByte());
-                      byteArray.push(expGolombDecoder.readUByte());
-                      byteArray.push(expGolombDecoder.readUByte());
+                  if (userStructure === 0x47413934) {
+                    var userDataType = expGolombDecoder.readUByte();
+
+                    // Raw CEA-608 bytes wrapped in CEA-708 packet
+                    if (userDataType === 3) {
+                      var firstByte = expGolombDecoder.readUByte();
+                      var secondByte = expGolombDecoder.readUByte();
+
+                      var totalCCs = 31 & firstByte;
+                      var byteArray = [firstByte, secondByte];
+
+                      for (i = 0; i < totalCCs; i++) {
+                        // 3 bytes per CC
+                        byteArray.push(expGolombDecoder.readUByte());
+                        byteArray.push(expGolombDecoder.readUByte());
+                        byteArray.push(expGolombDecoder.readUByte());
+                      }
+
+                      this._insertSampleInOrder(this._txtTrack.samples, { type: 3, pts: pes.pts, bytes: byteArray });
                     }
-
-                    this._txtTrack.samples.push({type: 3, pts: pes.pts, bytes: byteArray});
                   }
                 }
+              }
+            }
+            else if (payloadSize < expGolombDecoder.bytesAvailable)
+            {
+              for (i = 0; i<payloadSize; i++)
+              {
+                expGolombDecoder.readUByte();
               }
             }
           }
@@ -427,8 +449,7 @@
             track.width = config.width;
             track.height = config.height;
             track.sps = [unit.data];
-            track.timescale = this.remuxer.timescale;
-            track.duration = this.remuxer.timescale * this._duration;
+            track.duration = this._duration;
             var codecarray = unit.data.subarray(1, 4);
             var codecstring = 'avc1.';
             for (i = 0; i < 3; i++) {
@@ -473,8 +494,11 @@
     //build sample from PES
     // Annex B to MP4 conversion to be done
     if (units2.length) {
-      // only push AVC sample if keyframe already found. browsers expect a keyframe at first to start decoding
-      if (key === true || track.sps ) {
+      // only push AVC sample if keyframe already found in this fragment OR
+      //    keyframe found in last fragment (track.sps) AND
+      //        samples already appended (we already found a keyframe in this fragment) OR fragment is contiguous
+      if (key === true ||
+          (track.sps && (samples.length || this.contiguous))) {
         avcSample = {units: { units : units2, length : length}, pts: pes.pts, dts: pes.dts, key: key};
         samples.push(avcSample);
         track.len += length;
@@ -483,6 +507,26 @@
     }
   }
 
+  _insertSampleInOrder(arr, data) {
+    var len = arr.length;
+    if (len > 0) {
+      if (data.pts >= arr[len-1].pts)
+      {
+        arr.push(data);
+      }
+      else {
+        for (var pos = len - 1; pos >= 0; pos--) {
+          if (data.pts < arr[pos].pts) {
+            arr.splice(pos, 0, data);
+            break;
+          }
+        }
+      }
+    }
+    else {
+      arr.push(data);
+    }
+  }
 
   _parseAVCNALu(array) {
     var i = 0, len = array.byteLength, value, overflow, state = 0;
@@ -554,6 +598,50 @@
     return units;
   }
 
+  /**
+   * remove Emulation Prevention bytes from a RBSP
+   */
+  discardEPB(data) {
+    var length = data.byteLength,
+        EPBPositions = [],
+        i = 1,
+        newLength, newData;
+
+    // Find all `Emulation Prevention Bytes`
+    while (i < length - 2) {
+      if (data[i] === 0 &&
+          data[i + 1] === 0 &&
+          data[i + 2] === 0x03) {
+        EPBPositions.push(i + 2);
+        i += 2;
+      } else {
+        i++;
+      }
+    }
+
+    // If no Emulation Prevention Bytes were found just return the original
+    // array
+    if (EPBPositions.length === 0) {
+      return data;
+    }
+
+    // Create a new array to hold the NAL unit data
+    newLength = length - EPBPositions.length;
+    newData = new Uint8Array(newLength);
+    var sourceIndex = 0;
+
+    for (i = 0; i < newLength; sourceIndex++, i++) {
+      if (sourceIndex === EPBPositions[0]) {
+        // Skip this byte
+        sourceIndex++;
+        // Remove this position index
+        EPBPositions.shift();
+      }
+      newData[i] = data[sourceIndex];
+    }
+    return newData;
+  }
+
   _parseAACPES(pes) {
     var track = this._aacTrack,
         data = pes.data,
@@ -598,8 +686,7 @@
       track.audiosamplerate = config.samplerate;
       track.channelCount = config.channelCount;
       track.codec = config.codec;
-      track.timescale = config.samplerate;
-      track.duration = config.samplerate * duration;
+      track.duration = duration;
       logger.log(`parsed codec:${track.codec},rate:${config.samplerate},nb channel:${config.channelCount}`);
     }
     frameIndex = 0;
@@ -659,4 +746,3 @@
 }
 
 export default TSDemuxer;
-

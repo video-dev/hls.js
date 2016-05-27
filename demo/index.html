@@ -93,7 +93,7 @@ header {
 
     <video id="video" controls autoplay class="videoCentered"></video><br>
     <canvas id="buffered_c" height="15" class="videoCentered" onclick="buffered_seek(event);"></canvas><br><br>
-    <pre id="HlsStatus" class="center"></pre>
+    <pre id="HlsStatus" class="center" style="white-space: pre-wrap;"></pre>
 
     <div class="center" id="toggleButtons">
       <button type="button" class="btn btn-sm" onclick="$('#PlaybackControl').toggle();">toggle playback controls</button>
@@ -111,8 +111,9 @@ header {
       <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime=$('#seek_pos').val()">seek to </button>
        <input type="text" id='seek_pos' size="8" onkeydown="if(window.event.keyCode=='13'){$('#video')[0].currentTime=$('#seek_pos').val();}"><br><br>
       <button type="button" class="btn btn-xs btn-warning" onclick="hls.attachMedia($('#video')[0])">attach Video</button>
-      <button type="button" class="btn btn-xs btn-warning" onclick="hls.detachVideo()">detach Video</button><br>
-      <button type="button" class="btn btn-xs btn-warning" onclick="hls.startLoad()">recover Network Error</button>
+      <button type="button" class="btn btn-xs btn-warning" onclick="hls.detachMedia()">detach Video</button><br>
+      <button type="button" class="btn btn-xs btn-warning" onclick="hls.startLoad()">start Load</button>
+      <button type="button" class="btn btn-xs btn-warning" onclick="hls.stopLoad()">stop Load</button>
       <button type="button" class="btn btn-xs btn-warning" onclick="hls.recoverMediaError()">recover Media Error</button><br>
     </div>
 
@@ -375,6 +376,7 @@ $(document).ready(function() {
         events.video.push(event);
         refreshCanvas();
         updateLevelInfo();
+        stats.tagList = data.frag.tagList;
 
         var level = data.frag.level, autoLevel = data.frag.autoLevel;
         if (stats.levelStart === undefined) {
@@ -475,6 +477,9 @@ $(document).ready(function() {
             break;
           case Hls.ErrorDetails.BUFFER_APPEND_ERROR:
             $("#HlsStatus").text("Buffer Append Error");
+            break;
+          case Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR:
+            $("#HlsStatus").text("Buffer Add Codec Error for " + data.mimeType + ":" + data.err.message);
             break;
           case Hls.ErrorDetails.BUFFER_APPENDING_ERROR:
             $("#HlsStatus").text("Buffer Appending Error");
@@ -906,10 +911,21 @@ function timeRangesToString(r) {
     if(v.videoWidth) {
       $("#currentResolution").html("video resolution:" + v.videoWidth + 'x' + v.videoHeight);
     }
-    $("#currentLevelControl").html(html1);
-    $("#loadLevelControl").html(html2);
-    $("#levelCappingControl").html(html3);
-    $("#nextLevelControl").html(html4);
+    if($("#currentLevelControl").html() != html1) {
+      $("#currentLevelControl").html(html1);
+    }
+
+    if($("#loadLevelControl").html() != html2) {
+      $("#loadLevelControl").html(html2);
+    }
+
+    if($("#levelCappingControl").html() != html3) {
+      $("#levelCappingControl").html(html3);
+    }
+
+    if($("#nextLevelControl").html() != html4) {
+      $("#nextLevelControl").html(html4);
+    }
   }
 
   function level2label(index) {

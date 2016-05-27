@@ -7,10 +7,11 @@ import ID3 from '../demux/id3';
 
  class AACDemuxer {
 
-  constructor(observer,remuxerClass) {
+  constructor(observer, remuxerClass, config) {
     this.observer = observer;
     this.remuxerClass = remuxerClass;
-    this.remuxer = new this.remuxerClass(observer);
+    this.config = config;
+    this.remuxer = new this.remuxerClass(observer, config);
     this._aacTrack = {container : 'audio/adts', type: 'audio', id :-1, sequenceNumber: 0, samples : [], len : 0};
   }
 
@@ -49,8 +50,7 @@ import ID3 from '../demux/id3';
       track.audiosamplerate = config.samplerate;
       track.channelCount = config.channelCount;
       track.codec = config.codec;
-      track.timescale = config.samplerate;
-      track.duration = config.samplerate * duration;
+      track.duration = duration;
       logger.log(`parsed codec:${track.codec},rate:${config.samplerate},nb channel:${config.channelCount}`);
     }
     frameIndex = 0;
