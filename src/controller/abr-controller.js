@@ -175,7 +175,7 @@ class AbrController extends EventHandler {
 
     let v = hls.media,
         frag = this.fragCurrent,
-        pos = v.currentTime || 0,
+        pos = (v ? v.currentTime : 0),
         lastbw = this.lastbw,
 
     // playbackRate is the absolute value of the playback rate; if v.playbackRate is 0, we use 1 to load as
