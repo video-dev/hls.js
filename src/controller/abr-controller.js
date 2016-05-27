@@ -152,11 +152,8 @@ class AbrController extends EventHandler {
   }
 
   get nextAutoLevel() {
-    let hls = this.hls,
-        v = hls.media,
-        playbackRate = ((v && v.playbackRate !== 0) ? Math.abs(v.playbackRate) : 1.0),
-        lastbw = this.lastbw / playbackRate;
-    var adjustedbw, i, maxAutoLevel;
+    let hls = this.hls;
+    var maxAutoLevel;
     if (this._autoLevelCapping === -1 && hls.levels && hls.levels.length) {
       maxAutoLevel = hls.levels.length - 1;
     } else {
@@ -168,23 +165,65 @@ class AbrController extends EventHandler {
       return Math.min(this._nextAutoLevel,maxAutoLevel);
     }
 
-    // follow algorithm captured from stagefright :
-    // https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp
-    // Pick the highest bandwidth stream below or equal to estimated bandwidth.
-    for (i = 0; i <= maxAutoLevel; i++) {
-    // consider only 80% of the available bandwidth, but if we are switching up,
-    // be even more conservative (70%) to avoid overestimating and immediately
-    // switching back.
-      if (i <= this.lastLoadedFragLevel) {
-        adjustedbw = 0.8 * lastbw;
-      } else {
-        adjustedbw = 0.7 * lastbw;
-      }
-      if (adjustedbw < hls.levels[i].bitrate) {
-        return Math.max(0, i - 1);
+    let v = hls.media,
+        frag = this.fragCurrent,
+        pos = v.currentTime,
+        lastbw = this.lastbw,
+
+    // playbackRate is the absolute value of the playback rate; if v.playbackRate is 0, we use 1 to load as
+    // if we're playing back at the normal rate.
+    playbackRate = ((v.playbackRate !== 0) ? Math.abs(v.playbackRate) : 1.0),
+
+    // bufferStarvationDelay is the wall-clock time left until the playback buffer is exhausted.
+    bufferStarvationDelay = (BufferHelper.bufferInfo(v, pos, hls.config.maxBufferHole).end - pos) / playbackRate,
+
+    // targetMinBuffered is the wall-clock time of two segments' worth of media. We aim to maintain this
+    // much buffered data (minimum) while choosing the next level.
+    targetMinBuffered = 2 * frag.duration / playbackRate,
+
+    // availableFetchTime is how much "free time" we have to load the next segment in order to preserve
+    // the minimum amount of buffered data. This can be negative, meaning we're below our target minimum
+    // buffered threshold.
+    availableFetchTime = bufferStarvationDelay - targetMinBuffered;
+
+    var i;
+
+    logger.trace(`bufferStarvationDelay/targetMinBuffered/availableFetchTime: ${bufferStarvationDelay}/${targetMinBuffered}/${availableFetchTime}`);
+
+    // If availableFetchTime is positive, we have a relatively easy choice to make -- find the highest level
+    // that can (most likely) be fetched in availableFetchTime seconds.
+    if (availableFetchTime > 0) {
+      for (i = maxAutoLevel; i >= 0 ; i--) {
+        let bitrate = hls.levels[i].bitrate,
+            fetchTime = bitrate * frag.duration / lastbw;
+        logger.trace(`level/bitrate/lastbw/fetchTime/return: ${i}/${bitrate}/${lastbw}/${fetchTime}/${fetchTime < availableFetchTime}`);
+        if (fetchTime < availableFetchTime) {
+          return i;
+        }
       }
     }
-    return i - 1;
+
+    // If we get here, then availableFetchTime is either negative or so small that we couldn't expect to
+    // fetch any of the levels in time. We don't necessarily have to switch down to zero, but should choose
+    // a level that can be fetched faster than playback so we build our buffer back up to targetMinBuffered.
+    for (i = maxAutoLevel; i >= 0 ; i--) {
+      let bitrate = hls.levels[i].bitrate,
+          fetchTime = bitrate * frag.duration / lastbw,
+
+          // timeRecovered is the amount of buffered time that will be "recovered" assuming we're able to
+          // fetch the segment in the expected time.
+          timeRecovered = frag.duration - fetchTime;
+
+      logger.trace(`level/bitrate/lastbw/fetchTime/timeRecovered/return: ${i}/${bitrate}/${lastbw}/${fetchTime}/${timeRecovered}/${availableFetchTime + timeRecovered > 0}`);
+      if (availableFetchTime + timeRecovered > 0) {
+        return i;
+      }
+    }
+
+    // If we get here, we're struggling to find a level that can be reasonably loaded in time. We'll return
+    // 0 as a last resort.
+    logger.warn('Unable to find a segment we can reasonably expect to fetch in time; returning level 0.');
+    return 0;
   }
 
   set nextAutoLevel(nextLevel) {
