@@ -152,7 +152,11 @@ class AbrController extends EventHandler {
   }
 
   get nextAutoLevel() {
-    var lastbw = this.lastbw, hls = this.hls,adjustedbw, i, maxAutoLevel;
+    let hls = this.hls,
+        v = hls.media,
+        playbackRate = ((v && v.playbackRate !== 0) ? Math.abs(v.playbackRate) : 1.0),
+        lastbw = this.lastbw / playbackRate;
+    var adjustedbw, i, maxAutoLevel;
     if (this._autoLevelCapping === -1 && hls.levels && hls.levels.length) {
       maxAutoLevel = hls.levels.length - 1;
     } else {
