@@ -440,4 +440,29 @@ http://dummy.url.com/hls/live/segment/segment_022916_164500865_719935.ts`;
     assert.strictEqual(result.fragments[8].url, 'http://dummy.url.com/hls/live/segment/segment_022916_164500865_719934.ts');
   });
 
+  it('parses playlists with #EXT-X-PROGRAM-DATE-TIME after #EXTINF before fragment URL', () => {
+    var level = `#EXTM3U
+#EXT-X-VERSION:2
+#EXT-X-TARGETDURATION:10
+#EXT-X-MEDIA-SEQUENCE:69844067
+#EXTINF:10, no desc
+#EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:34:44Z
+Rollover38803/20160525T064049-01-69844067.ts
+#EXTINF:10, no desc
+#EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:34:54Z
+Rollover38803/20160525T064049-01-69844068.ts
+#EXTINF:10, no desc
+#EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:35:04Z
+Rollover38803/20160525T064049-01-69844069.ts
+    `;
+    var result = new PlaylistLoader({on : function() { }}).parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8',0);
+    assert.strictEqual(result.fragments.length, 3);
+    assert.strictEqual(result.totalduration, 30);
+    assert.strictEqual(result.fragments[0].url, 'http://video.example.com/Rollover38803/20160525T064049-01-69844067.ts');
+    assert.strictEqual(result.fragments[0].programDateTime.getTime(), 1464366884000);
+    assert.strictEqual(result.fragments[1].url, 'http://video.example.com/Rollover38803/20160525T064049-01-69844068.ts');
+    assert.strictEqual(result.fragments[1].programDateTime.getTime(), 1464366894000);
+    assert.strictEqual(result.fragments[2].url, 'http://video.example.com/Rollover38803/20160525T064049-01-69844069.ts');
+    assert.strictEqual(result.fragments[2].programDateTime.getTime(), 1464366904000);
+  });
 });
