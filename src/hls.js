@@ -91,6 +91,7 @@ class Hls {
           enableCEA708Captions: true,
           enableMP2TPassThrough : false,
           stretchShortVideoTrack: false,
+          abrControllerBandwidthWeight: 1.0
         };
     }
     return Hls.defaultConfig;
