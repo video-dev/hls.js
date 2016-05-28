@@ -94,7 +94,8 @@ class Hls {
                 cueHandler: Cues,
                 enableCEA708Captions: true,
                 enableMP2TPassThrough: false,
-                stretchShortVideoTrack: false
+                stretchShortVideoTrack: false,
+                abrControllerBandwidthWeight: 1.0
             };
         }
         return Hls.defaultConfig;
