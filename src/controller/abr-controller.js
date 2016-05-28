@@ -22,9 +22,6 @@ class AbrController extends EventHandler {
     this._nextAutoLevel = -1;
     this.hls = hls;
     this.onCheck = this.abandonRulesCheck.bind(this);
-
-    // This factor weights the last bandwidth measurement as an exponential moving average.
-    this.exponentialWeighting = 0.8;
   }
 
   destroy() {
@@ -48,7 +45,8 @@ class AbrController extends EventHandler {
       this.lastfetchduration = (performance.now() - stats.trequest) / 1000;
       let thisbw = (stats.loaded * 8) / this.lastfetchduration;
       if (this.lastbw) {
-        this.lastbw = this.exponentialWeighting * thisbw + (1 - this.exponentialWeighting) * this.lastbw;
+        let w = this.hls.config.abrControllerBandwidthWeight;
+        this.lastbw = (w * thisbw) + (1.0 - w) * this.lastbw;
       } else {
         this.lastbw = thisbw;
       }
