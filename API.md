@@ -474,6 +474,15 @@ whether or not to enable CEA-708 captions
 
 parameter should be a boolean
 
+#### ```abrControllerBandwidthWeight```
+(default : 1.0)
+
+The weight to apply to the current bandwidth measurement when calculating the Exponentially-Weighted Moving Average (EWMA) of the bandwidth in the ABR controller.
+
+If ```α := abrControllerBandwidthWeight```, then ```bandwidth average := (α * latest bandwidth measurement) + ((1 - α) * previous bandwidth average)```.
+
+parameter should be a float in the range (0.0, 1.0]
+
 ## Video Binding/Unbinding API
 
 #### ```hls.attachMedia(videoElement)```

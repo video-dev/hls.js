@@ -43,7 +43,13 @@ class AbrController extends EventHandler {
     // and leading to wrong bw estimation
     if (stats.aborted === undefined && data.frag.loadCounter === 1) {
       this.lastfetchduration = (performance.now() - stats.trequest) / 1000;
-      this.lastbw = (stats.loaded * 8) / this.lastfetchduration;
+      let thisbw = (stats.loaded * 8) / this.lastfetchduration;
+      if (this.lastbw) {
+        let w = this.hls.config.abrControllerBandwidthWeight;
+        this.lastbw = (w * thisbw) + (1.0 - w) * this.lastbw;
+      } else {
+        this.lastbw = thisbw;
+      }
       //console.log(`fetchDuration:${this.lastfetchduration},bw:${(this.lastbw/1000).toFixed(0)}/${stats.aborted}`);
     }
   }

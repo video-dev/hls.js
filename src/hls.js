@@ -80,7 +80,8 @@ class Hls {
           streamController: StreamController,
           timelineController: TimelineController,
           enableCEA708Captions: true,
-          enableMP2TPassThrough : false
+          enableMP2TPassThrough : false,
+          abrControllerBandwidthWeight: 1.0
         };
     }
     return Hls.defaultConfig;
