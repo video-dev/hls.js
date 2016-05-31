@@ -166,7 +166,8 @@ class AbrController extends EventHandler {
     }
 
     let v = hls.media,
-        frag = this.fragCurrent,
+        currentLevel = this.fragCurrent.level,
+        avgDuration = ((hls.levels && hls.levels.length && (currentLevel >= 0) && (currentLevel < hls.levels.length)) ? hls.levels[currentLevel].details.averagetargetduration : this.fragCurrent.duration),
         pos = (v ? v.currentTime : 0),
         lastbw = this.lastbw,
 
@@ -179,7 +180,7 @@ class AbrController extends EventHandler {
 
     // targetMinBuffered is the wall-clock time of two segments' worth of media. We aim to maintain this
     // much buffered data (minimum) while choosing the next level.
-    targetMinBuffered = 2 * frag.duration / playbackRate,
+    targetMinBuffered = 2 * avgDuration / playbackRate,
 
     // availableFetchTime is how much "free time" we have to load the next segment in order to preserve
     // the minimum amount of buffered data. This can be negative, meaning we're below our target minimum
@@ -195,7 +196,7 @@ class AbrController extends EventHandler {
     if (availableFetchTime > 0) {
       for (i = maxAutoLevel; i >= 0 ; i--) {
         let bitrate = hls.levels[i].bitrate,
-            fetchTime = bitrate * frag.duration / lastbw;
+            fetchTime = bitrate * avgDuration / lastbw;
         logger.trace(`level/bitrate/lastbw/fetchTime/return: ${i}/${bitrate}/${lastbw}/${fetchTime}/${fetchTime < availableFetchTime}`);
         if (fetchTime < availableFetchTime) {
           return i;
@@ -208,11 +209,11 @@ class AbrController extends EventHandler {
     // a level that can be fetched faster than playback so we build our buffer back up to targetMinBuffered.
     for (i = maxAutoLevel; i >= 0 ; i--) {
       let bitrate = hls.levels[i].bitrate,
-          fetchTime = bitrate * frag.duration / lastbw,
+          fetchTime = bitrate * avgDuration / lastbw,
 
           // timeRecovered is the amount of buffered time that will be "recovered" assuming we're able to
           // fetch the segment in the expected time.
-          timeRecovered = frag.duration - fetchTime;
+          timeRecovered = avgDuration - fetchTime;
 
       logger.trace(`level/bitrate/lastbw/fetchTime/timeRecovered/return: ${i}/${bitrate}/${lastbw}/${fetchTime}/${timeRecovered}/${availableFetchTime + timeRecovered > 0}`);
       if (availableFetchTime + timeRecovered > 0) {
