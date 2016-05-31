@@ -48,7 +48,7 @@ class AbrController extends EventHandler {
                 (performance.now() - stats.trequest) / 1000;
             let thisbw = stats.loaded * 8 / this.lastfetchduration;
             if (this.lastbw) {
-                let w = this.hls.config.abrControllerBandwidthWeight;
+                let w = this.hls.config.abrBandwidthWeight;
                 this.lastbw = w * thisbw + (1.0 - w) * this.lastbw;
             } else {
                 this.lastbw = thisbw;
@@ -220,11 +220,11 @@ class AbrController extends EventHandler {
             // be even more conservative (70%) to avoid overestimating and immediately
             // switching back.
             if (i <= this.lastLoadedFragLevel) {
-                adjustedbw = 0.8 * lastbw;
+                adjustedbw = config.abrBandWidthFactor * lastbw;
             } else {
-                adjustedbw = 0.7 * lastbw;
+                adjustedbw = config.abrBandWidthUpFactor * lastbw;
             }
-            if (adjustedbw < hls.levels[i].bitrate) {
+            if (adjustedbw < levels[i].bitrate) {
                 return Math.max(0, i - 1);
             }
         }
