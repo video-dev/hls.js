@@ -474,14 +474,26 @@ whether or not to enable CEA-708 captions
 
 parameter should be a boolean
 
-#### ```abrControllerBandwidthWeight```
+#### ```abrBandwidthWeight```
 (default : 1.0)
 
 The weight to apply to the current bandwidth measurement when calculating the Exponentially-Weighted Moving Average (EWMA) of the bandwidth in the ABR controller.
 
-If ```α := abrControllerBandwidthWeight```, then ```bandwidth average := (α * latest bandwidth measurement) + ((1 - α) * previous bandwidth average)```.
+If ```α := abrBandwidthWeight```, then ```bandwidth average := (α * latest bandwidth measurement) + ((1 - α) * previous bandwidth average)```.
 
 parameter should be a float in the range (0.0, 1.0]
+
+#### ```abrBandWidthFactor```
+(default : 0.8)
+
+scale factor to be applied against measured bandwidth average, to determine whether we can stay on current or lower quality level
+If ``` abrBandWidthFactor * bandwidth average < level.bitrate ``` then ABR can switch to that level providing that it is equal or less than current level
+
+#### ```abrBandWidthUpFactor```
+(default : 0.7)
+
+scale factor to be applied against measured bandwidth average, to determine whether  we can switch up to a higher quality level
+If ``` abrBandWidthUpFactor * bandwidth average < level.bitrate ``` then ABR can switch up to that quality level
 
 ## Video Binding/Unbinding API
 
