@@ -9,18 +9,19 @@ import EventHandler from '../event-handler';
 import BufferHelper from '../helper/buffer-helper';
 import {ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
+import EwmaBandWidthEstimator from './ewma-bandwidth-estimator';
 
 class AbrController extends EventHandler {
 
   constructor(hls) {
     super(hls, Event.FRAG_LOADING,
-               Event.FRAG_LOAD_PROGRESS,
                Event.FRAG_LOADED,
                Event.ERROR);
     this.lastLoadedFragLevel = 0;
     this._autoLevelCapping = -1;
     this._nextAutoLevel = -1;
     this.hls = hls;
+    this.bwEstimator = new EwmaBandWidthEstimator(hls);
     this.onCheck = this.abandonRulesCheck.bind(this);
   }
 
@@ -34,24 +35,6 @@ class AbrController extends EventHandler {
       this.timer = setInterval(this.onCheck, 100);
     }
     this.fragCurrent = data.frag;
-  }
-
-  onFragLoadProgress(data) {
-    var stats = data.stats;
-    // only update stats if first frag loading
-    // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
-    // and leading to wrong bw estimation
-    if (stats.aborted === undefined && data.frag.loadCounter === 1) {
-      this.lastfetchduration = (performance.now() - stats.trequest) / 1000;
-      let thisbw = (stats.loaded * 8) / this.lastfetchduration;
-      if (this.lastbw) {
-        let w = this.hls.config.abrBandwidthWeight;
-        this.lastbw = (w * thisbw) + (1.0 - w) * this.lastbw;
-      } else {
-        this.lastbw = thisbw;
-      }
-      //console.log(`fetchDuration:${this.lastfetchduration},bw:${(this.lastbw/1000).toFixed(0)}/${stats.aborted}`);
-    }
   }
 
   abandonRulesCheck() {
@@ -107,6 +90,8 @@ class AbrController extends EventHandler {
             nextLoadLevel = Math.max(0,nextLoadLevel);
             // force next load level in auto mode
             hls.nextLoadLevel = nextLoadLevel;
+            // update bw estimate for this fragment before cancelling load (this will help reducing the bw)
+            this.bwEstimator.sample(requestDelay,frag.loaded);
             // abort fragment loading ...
             logger.warn(`loading too slow, abort fragment loading and switch to level ${nextLoadLevel}`);
             //abort fragment loading
@@ -120,6 +105,14 @@ class AbrController extends EventHandler {
   }
 
   onFragLoaded(data) {
+    var stats = data.stats;
+    // only update stats on first frag loading
+    // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
+    // and leading to wrong bw estimation
+    if (stats.aborted === undefined && data.frag.loadCounter === 1) {
+      this.bwEstimator.sample(performance.now() - stats.trequest,stats.loaded);
+    }
+
     // stop monitoring bw once frag loaded
     this.clearTimer();
     // store level id after successful fragment load
@@ -174,6 +167,7 @@ class AbrController extends EventHandler {
       return Math.min(this._nextAutoLevel,maxAutoLevel);
     }
 
+    let avgbw = this.bwEstimator.getEstimate(),adjustedbw;
     // follow algorithm captured from stagefright :
     // https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp
     // Pick the highest bandwidth stream below or equal to estimated bandwidth.
@@ -182,9 +176,9 @@ class AbrController extends EventHandler {
     // be even more conservative (70%) to avoid overestimating and immediately
     // switching back.
       if (i <= this.lastLoadedFragLevel) {
-        adjustedbw = config.abrBandWidthFactor * lastbw;
+        adjustedbw = config.abrBandWidthFactor * avgbw;
       } else {
-        adjustedbw = config.abrBandWidthUpFactor * lastbw;
+        adjustedbw = config.abrBandWidthUpFactor * avgbw;
       }
       if (adjustedbw < levels[i].bitrate) {
         return Math.max(0, i - 1);

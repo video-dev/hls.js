@@ -483,14 +483,20 @@ this helps playback continue in certain cases that might otherwise get stuck.
 
 parameter should be a boolean
 
-#### ```abrBandwidthWeight```
-(default : 1.0)
+#### ```abrEwmaFast```
+(default : 0.0)
 
-The weight to apply to the current bandwidth measurement when calculating the Exponentially-Weighted Moving Average (EWMA) of the bandwidth in the ABR controller.
+Fast bitrate Exponential moving average half-life , used to compute average bitrate 
+Half of the estimate is based on the last abrEwmaFast seconds of sample history.
+parameter should be a float greater than 0
 
-If ```α := abrBandwidthWeight```, then ```bandwidth average := (α * latest bandwidth measurement) + ((1 - α) * previous bandwidth average)```.
+#### ```abrEwmaSlow```
+(default : 0.0)
 
-parameter should be a float in the range (0.0, 1.0]
+Slow bitrate Exponential moving average half-life , used to compute average bitrate 
+Half of the estimate is based on the last abrEwmaFast seconds of sample history.
+parameter should be a float greater than abrEwmaFast
+
 
 #### ```abrBandWidthFactor```
 (default : 0.8)
