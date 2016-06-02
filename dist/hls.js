@@ -2645,7 +2645,7 @@ var StreamController = function (_EventHandler) {
             _logger.logger.log('target seek position:' + targetSeekPosition);
           }
           var bufferInfo = _bufferHelper2.default.bufferInfo(media, currentTime, 0),
-              expectedPlaying = !(media.paused || media.ended || media.seeking || readyState < 2),
+              expectedPlaying = !(media.paused || media.ended || media.seeking || media.buffered.length === 0),
               jumpThreshold = 0.4,
               // tolerance needed as some browsers stalls playback before reaching buffered range end
           playheadMoving = currentTime > media.playbackRate * this.lastCurrentTime;
