@@ -42,8 +42,6 @@ class TSDemuxer {
     switchLevel() {
         this.pmtParsed = false;
         this._pmtId = -1;
-        this.lastAacPTS = null;
-        this.aacOverFlow = null;
         this._avcTrack = {
             container: 'video/mp2t',
             type: 'video',
@@ -77,6 +75,8 @@ class TSDemuxer {
         };
         // flush any partial content
         this.aacOverFlow = null;
+        this.aacLastPTS = null;
+        this.avcNaluState = 0;
         this.remuxer.switchLevel();
     }
 
@@ -428,6 +428,30 @@ class TSDemuxer {
         pes.data = null;
         var debugString = '';
 
+        var pushAccesUnit = function() {
+            if (units2.length) {
+                // only push AVC sample if keyframe already found in this fragment OR
+                //    keyframe found in last fragment (track.sps) AND
+                //        samples already appended (we already found a keyframe in this fragment) OR fragment is contiguous
+                if (
+                    key === true ||
+                    (track.sps && (samples.length || this.contiguous))
+                ) {
+                    avcSample = {
+                        units: { units: units2, length: length },
+                        pts: pes.pts,
+                        dts: pes.dts,
+                        key: key
+                    };
+                    samples.push(avcSample);
+                    track.len += length;
+                    track.nbNalu += units2.length;
+                }
+                units2 = [];
+                length = 0;
+            }
+        };
+
         units.forEach(unit => {
             switch (unit.type) {
                 //NDR
@@ -584,6 +608,7 @@ class TSDemuxer {
                     if (debug) {
                         debugString += 'AUD ';
                     }
+                    pushAccesUnit();
                     break;
                 default:
                     push = false;
@@ -598,27 +623,7 @@ class TSDemuxer {
         if (debug || debugString.length) {
             logger.log(debugString);
         }
-        //build sample from PES
-        // Annex B to MP4 conversion to be done
-        if (units2.length) {
-            // only push AVC sample if keyframe already found in this fragment OR
-            //    keyframe found in last fragment (track.sps) AND
-            //        samples already appended (we already found a keyframe in this fragment) OR fragment is contiguous
-            if (
-                key === true ||
-                (track.sps && (samples.length || this.contiguous))
-            ) {
-                avcSample = {
-                    units: { units: units2, length: length },
-                    pts: pes.pts,
-                    dts: pes.dts,
-                    key: key
-                };
-                samples.push(avcSample);
-                track.len += length;
-                track.nbNalu += units2.length;
-            }
-        }
+        pushAccesUnit();
     }
 
     _insertSampleInOrder(arr, data) {
@@ -644,7 +649,7 @@ class TSDemuxer {
             len = array.byteLength,
             value,
             overflow,
-            state = 0;
+            state = this.avcNaluState;
         var units = [],
             unit,
             unitType,
@@ -685,14 +690,42 @@ class TSDemuxer {
                             //logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
                             units.push(unit);
                         } else {
+                            // lastUnitStart is undefined => this is the first start code found in this PES packet
+                            // first check if start code delimiter is overlapping between 2 PES packets,
+                            // ie it started in last packet (lastState not zero)
+                            // and ended at the beginning of this PES packet (i <= 4 - lastState)
+                            let lastState = this.avcNaluState;
+                            if (lastState && i <= 4 - lastState) {
+                                // start delimiter overlapping between PES packets
+                                // strip start delimiter bytes from the end of last NAL unit
+                                let track = this._avcTrack,
+                                    samples = track.samples;
+                                if (samples.length) {
+                                    let lastavcSample =
+                                            samples[samples.length - 1],
+                                        lastUnits = lastavcSample.units.units,
+                                        lastUnit =
+                                            lastUnits[lastUnits.length - 1];
+                                    // check if lastUnit had a state different from zero
+                                    if (lastUnit.state) {
+                                        // strip last bytes
+                                        lastUnit.data = lastUnit.data.subarray(
+                                            0,
+                                            lastUnit.data.byteLength - lastState
+                                        );
+                                        lastavcSample.units.length -= lastState;
+                                        track.len -= lastState;
+                                    }
+                                }
+                            }
                             // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
                             overflow = i - state - 1;
-                            if (overflow) {
-                                var track = this._avcTrack,
+                            if (overflow > 0) {
+                                let track = this._avcTrack,
                                     samples = track.samples;
                                 //logger.log('first NALU found with overflow:' + overflow);
                                 if (samples.length) {
-                                    var lastavcSample =
+                                    let lastavcSample =
                                             samples[samples.length - 1],
                                         lastUnits = lastavcSample.units.units,
                                         lastUnit =
@@ -725,10 +758,12 @@ class TSDemuxer {
         if (lastUnitStart) {
             unit = {
                 data: array.subarray(lastUnitStart, len),
-                type: lastUnitType
+                type: lastUnitType,
+                state: state
             };
             units.push(unit);
-            //logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
+            //logger.log('pushing NALU, type/size/state:' + unit.type + '/' + unit.data.byteLength + '/' + state);
+            this.avcNaluState = state;
         }
         return units;
     }
@@ -784,7 +819,7 @@ class TSDemuxer {
             duration = this._duration,
             audioCodec = this.audioCodec,
             aacOverFlow = this.aacOverFlow,
-            lastAacPTS = this.lastAacPTS,
+            aacLastPTS = this.aacLastPTS,
             config,
             frameLength,
             frameDuration,
@@ -854,8 +889,8 @@ class TSDemuxer {
 
         // if last AAC frame is overflowing, we should ensure timestamps are contiguous:
         // first sample PTS should be equal to last sample PTS + frameDuration
-        if (aacOverFlow && lastAacPTS) {
-            var newPTS = lastAacPTS + frameDuration;
+        if (aacOverFlow && aacLastPTS) {
+            var newPTS = aacLastPTS + frameDuration;
             if (Math.abs(newPTS - pts) > 1) {
                 logger.log(
                     `AAC: align PTS for overlapping frames by ${Math.round(
@@ -912,7 +947,7 @@ class TSDemuxer {
             aacOverFlow = null;
         }
         this.aacOverFlow = aacOverFlow;
-        this.lastAacPTS = stamp;
+        this.aacLastPTS = stamp;
     }
 
     _parseID3PES(pes) {
