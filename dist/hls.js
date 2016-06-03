@@ -2373,7 +2373,7 @@ var StreamController = function (_EventHandler) {
           var currentLevel = this.levels[this.level],
               details = currentLevel.details,
               duration = details.totalduration,
-              start = fragCurrent.start,
+              start = fragCurrent.startDTS !== undefined ? fragCurrent.startDTS : fragCurrent.start,
               level = fragCurrent.level,
               sn = fragCurrent.sn,
               audioCodec = currentLevel.audioCodec || this.config.defaultAudioCodec;
@@ -2495,7 +2495,7 @@ var StreamController = function (_EventHandler) {
 
         _logger.logger.log('parsed ' + data.type + ',PTS:[' + data.startPTS.toFixed(3) + ',' + data.endPTS.toFixed(3) + '],DTS:[' + data.startDTS.toFixed(3) + '/' + data.endDTS.toFixed(3) + '],nb:' + data.nb);
 
-        var drift = _levelHelper2.default.updateFragPTS(level.details, frag.sn, data.startPTS, data.endPTS),
+        var drift = _levelHelper2.default.updateFragPTSDTS(level.details, frag.sn, data.startPTS, data.endPTS, data.startDTS, data.endDTS),
             hls = this.hls;
         hls.trigger(_events2.default.LEVEL_PTS_UPDATED, { details: level.details, level: this.level, drift: drift });
 
@@ -5696,7 +5696,7 @@ var LevelHelper = function () {
 
       // if at least one fragment contains PTS info, recompute PTS information for all fragments
       if (PTSFrag) {
-        LevelHelper.updateFragPTS(newDetails, PTSFrag.sn, PTSFrag.startPTS, PTSFrag.endPTS);
+        LevelHelper.updateFragPTSDTS(newDetails, PTSFrag.sn, PTSFrag.startPTS, PTSFrag.endPTS, PTSFrag.startDTS, PTSFrag.endDTS);
       } else {
         // ensure that delta is within oldfragments range
         // also adjust sliding in case delta is 0 (we could have old=[50-60] and new=old=[50-61])
@@ -5715,8 +5715,8 @@ var LevelHelper = function () {
       return;
     }
   }, {
-    key: 'updateFragPTS',
-    value: function updateFragPTS(details, sn, startPTS, endPTS) {
+    key: 'updateFragPTSDTS',
+    value: function updateFragPTSDTS(details, sn, startPTS, endPTS, startDTS, endDTS) {
       var fragIdx, fragments, frag, i;
       // exit if sn out of range
       if (sn < details.startSN || sn > details.endSN) {
@@ -5728,12 +5728,16 @@ var LevelHelper = function () {
       if (!isNaN(frag.startPTS)) {
         startPTS = Math.min(startPTS, frag.startPTS);
         endPTS = Math.max(endPTS, frag.endPTS);
+        startDTS = Math.min(startDTS, frag.startDTS);
+        endDTS = Math.max(endDTS, frag.endDTS);
       }
 
       var drift = startPTS - frag.start;
 
       frag.start = frag.startPTS = startPTS;
       frag.endPTS = endPTS;
+      frag.startDTS = startDTS;
+      frag.endDTS = endDTS;
       frag.duration = endPTS - startPTS;
       // adjust fragment PTS/duration from seqnum-1 to frag 0
       for (i = fragIdx; i > 0; i--) {
