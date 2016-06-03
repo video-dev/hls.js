@@ -836,7 +836,7 @@ class StreamController extends EventHandler {
         var currentLevel = this.levels[this.level],
             details = currentLevel.details,
             duration = details.totalduration,
-            start = fragCurrent.start,
+            start = fragCurrent.startDTS !== undefined ? fragCurrent.startDTS  : fragCurrent.start,
             level = fragCurrent.level,
             sn = fragCurrent.sn,
             audioCodec = this.config.defaultAudioCodec || currentLevel.audioCodec;
@@ -952,7 +952,7 @@ class StreamController extends EventHandler {
 
       logger.log(`parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
 
-      var drift = LevelHelper.updateFragPTS(level.details,frag.sn,data.startPTS,data.endPTS),
+      var drift = LevelHelper.updateFragPTSDTS(level.details,frag.sn,data.startPTS,data.endPTS,data.startDTS,data.endDTS),
           hls = this.hls;
       hls.trigger(Event.LEVEL_PTS_UPDATED, {details: level.details, level: this.level, drift: drift});
 
