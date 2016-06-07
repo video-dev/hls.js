@@ -450,7 +450,7 @@ class TSDemuxer {
                 units2 = [];
                 length = 0;
             }
-        };
+        }.bind(this);
 
         units.forEach(unit => {
             switch (unit.type) {
