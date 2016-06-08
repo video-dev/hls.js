@@ -869,6 +869,8 @@ class StreamController extends EventHandler {
 
     onMediaSeeked() {
         logger.log('media seeked to ' + this.media.currentTime);
+        // reset flag, used to potentially recover fragLoopLoadingError on seeking
+        this.fragLoopLoadingErrorOnSeeking = false;
         // tick to speed up FRAGMENT_PLAYING triggering
         this.tick();
     }
@@ -1298,6 +1300,11 @@ class StreamController extends EventHandler {
                 }
                 break;
             case ErrorDetails.FRAG_LOOP_LOADING_ERROR:
+                let media = this.media;
+                if (media && media.seeking) {
+                    this.fragLoopLoadingErrorOnSeeking = true;
+                }
+            /* falls through */
             case ErrorDetails.LEVEL_LOAD_ERROR:
             case ErrorDetails.LEVEL_LOAD_TIMEOUT:
             case ErrorDetails.KEY_LOAD_ERROR:
@@ -1366,11 +1373,12 @@ class StreamController extends EventHandler {
                 }
                 var bufferInfo = BufferHelper.bufferInfo(media, currentTime, 0),
                     expectedPlaying = !(
-                        media.paused ||
-                        media.ended ||
-                        media.seeking ||
+                        media.paused || // not playing when media is paused
+                        media.ended || // not playing when media is ended
+                        (media.seeking &&
+                            !this.fragLoopLoadingErrorOnSeeking) || // not playing when media is seeking AND no fragLoopLoadingError on seeking
                         media.buffered.length === 0
-                    ),
+                    ), // not playing if nothing buffered
                     jumpThreshold = 0.4, // tolerance needed as some browsers stalls playback before reaching buffered range end
                     playheadMoving =
                         currentTime > media.playbackRate * this.lastCurrentTime;
@@ -1411,8 +1419,10 @@ class StreamController extends EventHandler {
                             nextBufferStart &&
                             delta < this.config.maxSeekHole &&
                             delta > 0 &&
-                            !media.seeking
+                            (!media.seeking ||
+                                this.fragLoopLoadingErrorOnSeeking)
                         ) {
+                            // allow adjusting currentTime if we faced a fragLoopLoading error on seeking
                             // next buffer is close ! adjust currentTime to nextBufferStart
                             // this will ensure effective video decoding
                             logger.log(
