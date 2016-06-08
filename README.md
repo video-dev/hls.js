@@ -5,7 +5,7 @@
 hls.js is a JavaScript library which implements an [HTTP Live Streaming] client.
 It relies on [HTML5 video][] and [MediaSource Extensions][] for playback.
 
-it works by transmuxing MPEG-2 Transport Stream into ISO BMFF (MP4) fragments.
+It works by transmuxing MPEG-2 Transport Stream into ISO BMFF (MP4) fragments.
 this transmuxing could be performed asynchronously using [Web Worker] if available in the browser.
 
 hls.js does not need any player, it works directly on top of a standard HTML```<video>```element.
@@ -21,12 +21,12 @@ hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
 
 ## Demo
 
-public demo : [http://dailymotion.github.io/hls.js/demo](http://dailymotion.github.io/hls.js/demo)
+Public demo : [http://dailymotion.github.io/hls.js/demo](http://dailymotion.github.io/hls.js/demo)
 
-private demo accessible from Dailymotion network: [http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html](http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html)
+Private demo accessible from Dailymotion network: [http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html](http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html)
 
 
-## player integration
+## Player Integration
 
 hls.js is (being) integrated in the following players:
 
@@ -35,7 +35,7 @@ hls.js is (being) integrated in the following players:
  - [Videojs] (http://videojs.com) through [Videojs-hlsjs] (https://github.com/benjipott/videojs-hlsjs)
  - [Videojs] (http://videojs.com) through [videojs-hls.js] (https://github.com/streamroot/videojs-hls.js). hls.js is integrated as a SourceHandler -- new feature in Video.js 5.
 
- it might also be integrated in the following players if you push for it !
+ It might also be integrated in the following players if you push for it !
 
  - [MediaElement.js] (http://mediaelementjs.com/)  through [#1609
 ] (https://github.com/johndyer/mediaelement/issues/1609)
@@ -51,12 +51,12 @@ hls.js is (being) integrated in the following players:
 ## Dependencies
 
 No external JS libs are needed.
-prepackaged build is included in the [dist] (dist) folder:
+Prepackaged build is included in the [dist] (dist) folder:
 
  - [hls.js] (dist/hls.js)
  - [hls.min.js] (dist/hls.min.js)
 
-if you want to bundle the application yourself, use node
+If you want to bundle the application yourself, use node
 
 ```
 npm install hls.js
@@ -64,17 +64,17 @@ npm install hls.js
 
 ## Installation
 
-either directly include dist/hls.js or dist/hls.min.js
+Either directly include dist/hls.js or dist/hls.min.js
 
-or type
+Or type
 
 ```sh
 npm install --save hls.js
 ```
 
 ## Compatibility
- hls.js is compatible with browsers supporting MSE with 'video/MP4' inputs.
-as of today, it is supported on:
+hls.js is compatible with browsers supporting MSE with 'video/MP4' inputs.
+As of today, it is supported on:
 
  * Chrome for Android 34+
  * Chrome for Desktop 34+
@@ -96,26 +96,25 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - Adaptive streaming
     - Manual & Auto Quality Switching
       - 3 Quality Switching modes are available (controllable through API means)
-      	- instant switching (immediate quality switch at current video position)
-      	- smooth switching (quality switch for next loaded fragment)
-      	- bandwidth conservative switching (quality switch change for next loaded fragment, without flushing the buffer)
-      - in Auto-Quality mode, emergency switch down in case bandwidth is suddenly dropping to minimize buffering.        
+      	- Instant switching (immediate quality switch at current video position)
+      	- Smooth switching (quality switch for next loaded fragment)
+      	- Bandwidth conservative switching (quality switch change for next loaded fragment, without flushing the buffer)
+      - In Auto-Quality mode, emergency switch down in case bandwidth is suddenly dropping to minimize buffering.        
   - Accurate Seeking on VoD & Live (not limited to fragment or keyframe boundary)
-  - ability to seek in buffer and back buffer without redownloading segments
+  - Ability to seek in buffer and back buffer without redownloading segments
   - Built-in Analytics
-    - every internal events could be monitored (Network Events,Video Events)
-    - playback session metrics are also exposed
-  - resilience to errors
-    - retry mechanism embedded in the library
-    - recovery actions could be triggered fix fatal media or network errors
+    - Every internal events could be monitored (Network Events,Video Events)
+    - Playback session metrics are also exposed
+  - Resilience to errors
+    - Retry mechanism embedded in the library
+    - Recovery actions could be triggered fix fatal media or network errors
   - [Redundant/Failover Playlists](https://developer.apple.com/library/ios/documentation/NetworkingInternet/Conceptual/StreamingMediaGuide/UsingHTTPLiveStreaming/UsingHTTPLiveStreaming.html#//apple_ref/doc/uid/TP40008332-CH102-SW22)
   - Timed Metadata for HTTP Live Streaming (in ID3 format, carried in MPEG-2 TS)
   - AES-128 decryption (AES-128 mode)
-  - CEA-708 captions (pop-on, channel 1)
+  - CEA-708 captions
 
 ## Not Supported (Yet)
 
-  - CEA-708 captions (roll-up, paint-on, channel 2)
   - MP3 / WebVTT container
   - Alternate Audio Track Rendition (Master Playlist with alternative Audio)
 
@@ -152,7 +151,7 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
 
 ## Video Control
 
-video is controlled through HTML ```<video>``` element.
+Video is controlled through HTML ```<video>``` element.
 
 HTMLVideoElement control and events could be used seamlessly.
 
@@ -173,7 +172,7 @@ Pull requests are welcome. Here is a quick guide on how to start.
  - First, checkout the repository and install required dependencies
 ```sh
 git clone https://github.com/dailymotion/hls.js.git
-# setup dev environnement
+# setup dev environement
 cd hls.js
 npm install
 # build dist/hls.js, watch file change for rebuild and launch demo page
@@ -187,7 +186,7 @@ npm run lint
 
 ## Design
 
-click [here](design.md) for details.
+Click [here](design.md) for details.
 
 [npm-image]: https://img.shields.io/npm/v/hls.js.svg?style=flat
 [npm-url]: https://npmjs.org/package/hls.js

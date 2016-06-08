@@ -41,21 +41,29 @@ class MP4Remuxer {
       this.generateIS(audioTrack,videoTrack,timeOffset);
     }
 
-    let audioData;
     if (this.ISGenerated) {
       // Purposefully remuxing audio before video, so that remuxVideo can use nextAacPts, which is
       // calculated in remuxAudio.
       //logger.log('nb AAC samples:' + audioTrack.samples.length);
       if (audioTrack.samples.length) {
-        audioData = this.remuxAudio(audioTrack,timeOffset,contiguous);
-      }
-      //logger.log('nb AVC samples:' + videoTrack.samples.length);
-      if (videoTrack.samples.length) {
-        let audioTrackLength;
-        if (audioData) {
-          audioTrackLength = audioData.endPTS - audioData.startPTS;
+        let audioData = this.remuxAudio(audioTrack,timeOffset,contiguous);
+        //logger.log('nb AVC samples:' + videoTrack.samples.length);
+        if (videoTrack.samples.length) {
+          let audioTrackLength;
+          if (audioData) {
+            audioTrackLength = audioData.endPTS - audioData.startPTS;
+          }
+          this.remuxVideo(videoTrack,timeOffset,contiguous,audioTrackLength);
         }
-        this.remuxVideo(videoTrack,timeOffset,contiguous,audioTrackLength);
+      } else {
+        let videoData;
+        //logger.log('nb AVC samples:' + videoTrack.samples.length);
+        if (videoTrack.samples.length) {
+          videoData = this.remuxVideo(videoTrack,timeOffset,contiguous);
+        }
+        if (videoData && audioTrack.codec) {
+          this.remuxEmptyAudio(audioTrack, timeOffset, contiguous, videoData);
+        }
       }
     }
     //logger.log('nb ID3 samples:' + audioTrack.samples.length);
