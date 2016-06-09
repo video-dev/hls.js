@@ -49,5 +49,7 @@ export const ErrorDetails = {
   // Identifier for a buffer seek over hole event
   BUFFER_SEEK_OVER_HOLE: 'bufferSeekOverHole',
   // Identifier for an internal exception happening inside hls.js while handling an event
-  INTERNAL_EXCEPTION: 'internalException'
+  INTERNAL_EXCEPTION: 'internalException',
+  // Identifier for empty playlist
+  EMPTY_PLAYLIST: 'emptyPlaylist'
 };

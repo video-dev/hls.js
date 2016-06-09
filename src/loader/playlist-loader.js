@@ -307,7 +307,7 @@ class PlaylistLoader extends EventHandler {
           stats.tparsed = performance.now();
           hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: id, id: id2, stats: stats});
         }
-      } else {
+      } else if (string.indexOf('#EXT-X-STREAM-INF') > 0) {
         levels = this.parseMasterPlaylist(string, url);
         // multi level playlist, parse level info
         if (levels.length) {
@@ -315,6 +315,8 @@ class PlaylistLoader extends EventHandler {
         } else {
           hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'no level found in manifest'});
         }
+      } else {
+        hls.trigger(Event.ERROR, {type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.EMPTY_PLAYLIST, fatal: false, url: url, reason: 'returned playlist is empty'});
       }
     } else {
       hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'no EXTM3U delimiter'});
