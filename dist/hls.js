@@ -10121,9 +10121,9 @@ var enableLogs = exports.enableLogs = function enableLogs(debugConfig) {
 var logger = exports.logger = exportedLogger;
 
 },{}],40:[function(require,module,exports){
-"use strict";
+'use strict';
 
-if (!ArrayBuffer.prototype.slice) {
+if (typeof ArrayBuffer !== 'undefined' && !ArrayBuffer.prototype.slice) {
   ArrayBuffer.prototype.slice = function (start, end) {
     var that = new Uint8Array(this);
     if (end === undefined) {
