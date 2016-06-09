@@ -152,7 +152,7 @@ class StreamController extends EventHandler {
         var now = performance.now();
         var retryDate = this.retryDate;
         // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
-        if(!retryDate || (now >= retryDate) || isSeeking) {
+        if(!retryDate || (now >= retryDate) || (this.media && this.media.seeking)) {
           logger.log(`mediaController: retryDate reached, switch back to IDLE state`);
           this.state = State.IDLE;
         }

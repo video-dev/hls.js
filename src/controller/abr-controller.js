@@ -152,12 +152,12 @@ class AbrController extends EventHandler {
 
   get nextAutoLevel() {
     let hls = this.hls,
+        config = hls.config,
+        levels = hls.levels,
         v = hls.media,
-        playbackRate = ((v && v.playbackRate !== 0) ? Math.abs(v.playbackRate) : 1.0),
-        lastbw = this.lastbw / playbackRate;
-    var adjustedbw, i, maxAutoLevel;
-    if (this._autoLevelCapping === -1 && hls.levels && hls.levels.length) {
-      maxAutoLevel = hls.levels.length - 1;
+        i, maxAutoLevel;
+    if (this._autoLevelCapping === -1 && levels && levels.length) {
+      maxAutoLevel = levels.length - 1;
     } else {
       maxAutoLevel = this._autoLevelCapping;
     }
@@ -167,7 +167,9 @@ class AbrController extends EventHandler {
       return Math.min(this._nextAutoLevel,maxAutoLevel);
     }
 
-    let avgbw = this.bwEstimator.getEstimate(),adjustedbw;
+    let playbackRate = ((v && v.playbackRate !== 0) ? Math.abs(v.playbackRate) : 1.0),
+        avgbw = this.bwEstimator.getEstimate()/playbackRate,
+        adjustedbw;
     // follow algorithm captured from stagefright :
     // https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp
     // Pick the highest bandwidth stream below or equal to estimated bandwidth.
