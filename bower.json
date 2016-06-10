@@ -1,11 +1,12 @@
 {
-  "name": "hls.js",
-  "version": "0.6.2",
+  "name": "metacdn.hls.js",
+  "version": "0.6.333",
   "license": "Apache-2.0",
-  "description": "Media Source Extension - HLS library, by/for Dailymotion",
-  "homepage": "https://github.com/dailymotion/hls.js",
+  "description": "Media Source Extension - HLS library, forked from dailymotion/hls.js",
+  "homepage": "https://github.com/MetaCDN/hls.js",
   "authors": [
-    "Guillaume du Pontavice <guillaume.dupontavice@dailymotion.com>"
+    "Guillaume du Pontavice <guillaume.dupontavice@dailymotion.com>",
+    "Yudong Li <yudong.li@metacdn.com>"
   ],
   "main": "dist/hls.js",
   "private": false,
