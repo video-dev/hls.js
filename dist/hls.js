@@ -646,10 +646,16 @@ var BufferController = function (_EventHandler) {
   function BufferController(hls) {
     _classCallCheck(this, BufferController);
 
+    // the value that we have set mediasource.duration to
+    // (the actual duration may be tweaked slighly by the browser)
+
+    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(BufferController).call(this, hls, _events2.default.MEDIA_ATTACHING, _events2.default.MEDIA_DETACHING, _events2.default.BUFFER_RESET, _events2.default.BUFFER_APPENDING, _events2.default.BUFFER_CODECS, _events2.default.BUFFER_EOS, _events2.default.BUFFER_FLUSHING, _events2.default.LEVEL_UPDATED));
+
+    _this._msDuration = null;
+    // the value that we want to set mediaSource.duration to
+    _this._levelDuration = null;
+
     // Source Buffer listeners
-
-    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(BufferController).call(this, hls, _events2.default.MEDIA_ATTACHING, _events2.default.MEDIA_DETACHING, _events2.default.BUFFER_RESET, _events2.default.BUFFER_APPENDING, _events2.default.BUFFER_CODECS, _events2.default.BUFFER_EOS, _events2.default.BUFFER_FLUSHING));
-
     _this.onsbue = _this.onSBUpdateEnd.bind(_this);
     _this.onsbe = _this.onSBUpdateError.bind(_this);
     return _this;
@@ -851,6 +857,50 @@ var BufferController = function (_EventHandler) {
       // attempt flush immediatly
       this.flushBufferCounter = 0;
       this.doFlush();
+    }
+  }, {
+    key: 'onLevelUpdated',
+    value: function onLevelUpdated(event) {
+      var details = event.details;
+      if (details.fragments.length === 0) {
+        return;
+      }
+      this._levelDuration = details.totalduration + details.fragments[0].start;
+      this.updateMediaElementDuration();
+    }
+
+    // https://github.com/dailymotion/hls.js/issues/355
+
+  }, {
+    key: 'updateMediaElementDuration',
+    value: function updateMediaElementDuration() {
+      if (this._levelDuration === null) {
+        return;
+      }
+      var media = this.media;
+      var mediaSource = this.mediaSource;
+      if (!media || !mediaSource || media.readyState === 0 || mediaSource.readyState !== 'open') {
+        return;
+      }
+      for (var type in mediaSource.sourceBuffers) {
+        if (mediaSource.sourceBuffers[type].updating) {
+          // can't set duration whilst a buffer is updating
+          return;
+        }
+      }
+      if (this._msDuration === null) {
+        // initialise to the value that the media source is reporting
+        this._msDuration = mediaSource.duration;
+      }
+      // this._levelDuration was the last value we set.
+      // not using mediaSource.duration as the browser may tweak this value
+      // only update mediasource duration if its value increase, this is to avoid
+      // flushing already buffered portion when switching between quality level, as they
+      if (this._levelDuration > this._msDuration) {
+        _logger.logger.log('Updating mediasource duration to ' + this._levelDuration);
+        mediaSource.duration = this._levelDuration;
+        this._msDuration = this._levelDuration;
+      }
     }
   }, {
     key: 'doFlush',
@@ -1183,8 +1233,6 @@ var EwmaBandWidthEstimator = function () {
     this.defaultEstimate_ = 5e5; // 500kbps
     this.minWeight_ = 0.001;
     this.minDelayMs_ = 50;
-    this.fast_ = new _ewma2.default(hls.config.abrEwmaFast);
-    this.slow_ = new _ewma2.default(hls.config.abrEwmaSlow);
   }
 
   _createClass(EwmaBandWidthEstimator, [{
@@ -1195,6 +1243,14 @@ var EwmaBandWidthEstimator = function () {
       //console.log('instant bw:'+ Math.round(bandwidth));
       // we weight sample using loading duration....
       var weigth = durationMs / 1000;
+
+      // lazy initialization. this allows to take into account config param changes that could happen after Hls instantiation,
+      // but before first fragment loading. this is useful to A/B tests those params
+      if (!this.fast_) {
+        var config = this.hls.config;
+        this.fast_ = new _ewma2.default(config.abrEwmaFast);
+        this.slow_ = new _ewma2.default(config.abrEwmaSlow);
+      }
       this.fast_.sample(weigth, bandwidth);
       this.slow_.sample(weigth, bandwidth);
     }
