@@ -289,7 +289,9 @@ class BufferController extends EventHandler {
         }
         // this._levelDuration was the last value we set.
         // not using mediaSource.duration as the browser may tweak this value
-        if (this._levelDuration !== this._msDuration) {
+        // only update mediasource duration if its value increase, this is to avoid
+        // flushing already buffered portion when switching between quality level, as they
+        if (this._levelDuration > this._msDuration) {
             logger.log(
                 `Updating mediasource duration to ${this._levelDuration}`
             );
