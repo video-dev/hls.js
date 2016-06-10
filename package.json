@@ -1,5 +1,5 @@
 {
-  "name": "hls.js",
+  "name": "metacdn.hls.js",
   "version": "0.6.2",
   "license": "Apache-2.0",
   "description": "Media Source Extension - HLS library, by/for Dailymotion",
