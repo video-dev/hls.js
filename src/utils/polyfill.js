@@ -1,4 +1,4 @@
-if (!ArrayBuffer.prototype.slice) {
+if (typeof ArrayBuffer !== 'undefined' && !ArrayBuffer.prototype.slice) {
     ArrayBuffer.prototype.slice = function(start, end) {
         var that = new Uint8Array(this);
         if (end === undefined) {
