@@ -351,14 +351,22 @@ class StreamController extends EventHandler {
                     ? config.liveSyncDuration
                     : config.liveSyncDurationCount *
                       levelDetails.targetduration;
-            this.seekAfterBuffered =
+            let liveSyncPosition =
                 start + Math.max(0, levelDetails.totalduration - targetLatency);
             logger.log(
-                `buffer end: ${bufferEnd} is located too far from the end of live sliding playlist, media position will be reseted to: ${this.seekAfterBuffered.toFixed(
+                `buffer end: ${bufferEnd} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(
                     3
                 )}`
             );
-            bufferEnd = this.seekAfterBuffered;
+            bufferEnd = liveSyncPosition;
+            let media = this.media;
+            if (
+                media &&
+                media.readyState &&
+                media.duration > liveSyncPosition
+            ) {
+                media.currentTime = liveSyncPosition;
+            }
         }
 
         // if end of buffer greater than live edge, don't load any fragment
@@ -1335,33 +1343,22 @@ class StreamController extends EventHandler {
         var media = this.media;
         if (media) {
             // compare readyState
-            var readyState = media.readyState;
+            let readyState = media.readyState;
             // if ready state different from HAVE_NOTHING (numeric value 0), we are allowed to seek
             if (readyState) {
-                var targetSeekPosition, currentTime;
-                // if seek after buffered defined, let's seek if within acceptable range
-                var seekAfterBuffered = this.seekAfterBuffered;
-                if (seekAfterBuffered) {
-                    if (media.duration >= seekAfterBuffered) {
-                        targetSeekPosition = seekAfterBuffered;
-                        this.seekAfterBuffered = undefined;
-                    }
-                } else {
-                    currentTime = media.currentTime;
-                    var loadedmetadata = this.loadedmetadata;
+                let targetSeekPosition,
+                    currentTime = media.currentTime,
+                    loadedmetadata = this.loadedmetadata;
 
-                    // adjust currentTime to start position on loaded metadata
-                    if (!loadedmetadata && media.buffered.length) {
-                        this.loadedmetadata = true;
-                        // only adjust currentTime if not equal to 0
-                        if (
-                            !currentTime &&
-                            currentTime !== this.startPosition
-                        ) {
-                            targetSeekPosition = this.startPosition;
-                        }
+                // adjust currentTime to start position on loaded metadata
+                if (!loadedmetadata && media.buffered.length) {
+                    this.loadedmetadata = true;
+                    // only adjust currentTime if not equal to 0
+                    if (!currentTime && currentTime !== this.startPosition) {
+                        targetSeekPosition = this.startPosition;
                     }
                 }
+
                 if (targetSeekPosition) {
                     currentTime = targetSeekPosition;
                     logger.log(`target seek position:${targetSeekPosition}`);
