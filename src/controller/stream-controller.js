@@ -149,13 +149,11 @@ class StreamController extends EventHandler {
           (this.startFragRequested || !config.startFragPrefetch)) {
           break;
         }
-        // determine next candidate fragment to be loaded, based on current position and
-        //  end of buffer position
-        //  ensure 60s of buffer upfront
-        // if we have not yet loaded any fragment, start loading from start position
-        if (this.loadedmetadata) {
+        // determine next candidate fragment to be loaded, based on current position and end of buffer position
+        if (media && media.buffered.length) {
           pos = media.currentTime;
         } else {
+        // if we have not yet loaded any fragment, start loading from start position
           pos = this.nextLoadPosition;
         }
         level = hls.nextLoadLevel;
