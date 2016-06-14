@@ -1868,9 +1868,12 @@ var StreamController = function (_EventHandler) {
 
               if (bufferEnd < Math.max(start, end - maxLatency)) {
                 var targetLatency = config.liveSyncDuration !== undefined ? config.liveSyncDuration : config.liveSyncDurationCount * levelDetails.targetduration;
-                this.seekAfterBuffered = start + Math.max(0, levelDetails.totalduration - targetLatency);
-                _logger.logger.log('buffer end: ' + bufferEnd + ' is located too far from the end of live sliding playlist, media position will be reseted to: ' + this.seekAfterBuffered.toFixed(3));
-                bufferEnd = this.seekAfterBuffered;
+                var liveSyncPosition = start + Math.max(0, levelDetails.totalduration - targetLatency);
+                _logger.logger.log('buffer end: ' + bufferEnd + ' is located too far from the end of live sliding playlist, reset currentTime to : ' + liveSyncPosition.toFixed(3));
+                bufferEnd = liveSyncPosition;
+                if (media && media.readyState && media.duration > liveSyncPosition) {
+                  media.currentTime = liveSyncPosition;
+                }
               }
 
               // if end of buffer greater than live edge, don't load any fragment
@@ -2665,36 +2668,30 @@ var StreamController = function (_EventHandler) {
     key: '_checkBuffer',
     value: function _checkBuffer() {
       var media = this.media;
-      if (media) {
-        // compare readyState
-        var readyState = media.readyState;
-        // if ready state different from HAVE_NOTHING (numeric value 0), we are allowed to seek
-        if (readyState) {
-          var targetSeekPosition, currentTime;
-          // if seek after buffered defined, let's seek if within acceptable range
-          var seekAfterBuffered = this.seekAfterBuffered;
-          if (seekAfterBuffered) {
-            if (media.duration >= seekAfterBuffered) {
-              targetSeekPosition = seekAfterBuffered;
-              this.seekAfterBuffered = undefined;
-            }
-          } else {
-            currentTime = media.currentTime;
-            var loadedmetadata = this.loadedmetadata;
-
-            // adjust currentTime to start position on loaded metadata
-            if (!loadedmetadata && media.buffered.length) {
-              this.loadedmetadata = true;
-              // only adjust currentTime if not equal to 0
-              if (!currentTime && currentTime !== this.startPosition) {
-                targetSeekPosition = this.startPosition;
+      // if ready state different from HAVE_NOTHING (numeric value 0), we are allowed to seek
+      if (media && media.readyState) {
+        var currentTime = media.currentTime;
+        // adjust currentTime to start position on loaded metadata
+        if (!this.loadedmetadata && media.buffered.length) {
+          this.loadedmetadata = true;
+          // only adjust currentTime if startPosition not equal to 0
+          var startPosition = this.startPosition;
+          if (!currentTime && currentTime !== startPosition) {
+            if (startPosition) {
+              _logger.logger.log('target start position:' + startPosition);
+              var bufInfo = _bufferHelper2.default.bufferInfo(media, startPosition, 0);
+              if (bufInfo.len === 0) {
+                var nextStart = bufInfo.nextStart;
+                if (nextStart !== undefined && nextStart - startPosition < this.config.maxSeekHole) {
+                  startPosition = nextStart;
+                  _logger.logger.log('target start position not buffered, seek to next buffered ' + startPosition);
+                }
               }
+              _logger.logger.log('adjust currentTime from ' + currentTime + ' to ' + startPosition);
+              media.currentTime = startPosition;
             }
           }
-          if (targetSeekPosition) {
-            currentTime = targetSeekPosition;
-            _logger.logger.log('target seek position:' + targetSeekPosition);
-          }
+        } else {
           var bufferInfo = _bufferHelper2.default.bufferInfo(media, currentTime, 0),
               expectedPlaying = !(media.paused || // not playing when media is paused
           media.ended || // not playing when media is ended
@@ -2709,8 +2706,7 @@ var StreamController = function (_EventHandler) {
             _logger.logger.log('playback not stuck anymore @' + currentTime);
           }
           // check buffer upfront
-          // if less than jumpThreshold second is buffered, and media is expected to play but playhead is not moving,
-          // and we have a new buffer range available upfront, let's seek to that one
+          // if less than jumpThreshold second is buffered, let's check in more details
           if (expectedPlaying && bufferInfo.len <= jumpThreshold) {
             if (playheadMoving) {
               // playhead moving
@@ -2727,7 +2723,7 @@ var StreamController = function (_EventHandler) {
                 this.seekHoleNudgeDuration += this.config.seekHoleNudgeDuration;
               }
             }
-            // if we are below threshold, try to jump if next buffer range is close
+            // if we are below threshold, try to jump to start of next buffer range if close
             if (bufferInfo.len <= jumpThreshold) {
               // no buffer available @ currentTime, check if next buffer is close (within a config.maxSeekHole second range)
               var nextBufferStart = bufferInfo.nextStart,
@@ -2740,19 +2736,6 @@ var StreamController = function (_EventHandler) {
                 media.currentTime = nextBufferStart + this.seekHoleNudgeDuration;
                 this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_SEEK_OVER_HOLE, fatal: false, hole: hole });
               }
-            }
-          } else {
-            var _currentTime = media.currentTime;
-            if (targetSeekPosition && _currentTime !== targetSeekPosition) {
-              if (bufferInfo.len === 0) {
-                var nextStart = bufferInfo.nextStart;
-                if (nextStart !== undefined && nextStart - targetSeekPosition < this.config.maxSeekHole) {
-                  targetSeekPosition = nextStart;
-                  _logger.logger.log('target seek position not buffered, seek to next buffered ' + targetSeekPosition);
-                }
-              }
-              _logger.logger.log('adjust currentTime from ' + _currentTime + ' to ' + targetSeekPosition);
-              media.currentTime = targetSeekPosition;
             }
           }
         }
@@ -5918,7 +5901,7 @@ var Hls = function () {
   _createClass(Hls, null, [{
     key: 'isSupported',
     value: function isSupported() {
-      return window.MediaSource && window.MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
+      return window.MediaSource && typeof window.MediaSource.isTypeSupported === 'function' && window.MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
     }
   }, {
     key: 'Events',
