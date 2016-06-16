@@ -989,23 +989,24 @@ _checkBuffer() {
     var media = this.media;
     // if ready state different from HAVE_NOTHING (numeric value 0), we are allowed to seek
     if(media && media.readyState) {
-        let currentTime = media.currentTime;
+        let currentTime = media.currentTime,
+             buffered = media.buffered;
       // adjust currentTime to start position on loaded metadata
-      if(!this.loadedmetadata && media.buffered.length) {
+      if(!this.loadedmetadata && buffered.length) {
         this.loadedmetadata = true;
         // only adjust currentTime if startPosition not equal to 0
         let startPosition = this.startPosition;
+        // if currentTime === 0 AND not matching with expected startPosition
         if (!currentTime && currentTime !== startPosition) {
           if (startPosition) {
             logger.log(`target start position:${startPosition}`);
-            let bufInfo = BufferHelper.bufferInfo(media,startPosition,0);
-            if(bufInfo.len === 0) {
-              let nextStart = bufInfo.nextStart;
-              if (nextStart !== undefined &&
-                 (nextStart - startPosition) < this.config.maxSeekHole) {
-                startPosition = nextStart;
-                logger.log(`target start position not buffered, seek to next buffered ${startPosition}`);
-              }
+            // at that stage, there should be only one buffered range, as we reach that code after first fragment has been
+            let bufferStart = buffered.start(0),
+                bufferEnd = buffered.end(0);
+            // if startPosition not buffered, let's seek to buffered.start(0)
+            if(startPosition < bufferStart || startPosition > bufferEnd) {
+              startPosition = bufferStart;
+              logger.log(`target start position not buffered, seek to buffered.start(0) ${bufferStart}`);
             }
             logger.log(`adjust currentTime from ${currentTime} to ${startPosition}`);
             media.currentTime = startPosition;
