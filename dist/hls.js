@@ -1257,7 +1257,7 @@ var EwmaBandWidthEstimator = function () {
   }, {
     key: 'getEstimate',
     value: function getEstimate() {
-      if (this.fast_.getTotalWeight() < this.minWeight_) {
+      if (!this.fast_ || this.fast_.getTotalWeight() < this.minWeight_) {
         return this.defaultEstimate_;
       }
       //console.log('slow estimate:'+ Math.round(this.slow_.getEstimate()));
@@ -1818,13 +1818,11 @@ var StreamController = function (_EventHandler) {
           if (!media && (this.startFragRequested || !config.startFragPrefetch)) {
             break;
           }
-          // determine next candidate fragment to be loaded, based on current position and
-          //  end of buffer position
-          //  ensure 60s of buffer upfront
-          // if we have not yet loaded any fragment, start loading from start position
-          if (this.loadedmetadata) {
+          // determine next candidate fragment to be loaded, based on current position and end of buffer position
+          if (media && media.buffered.length) {
             pos = media.currentTime;
           } else {
+            // if we have not yet loaded any fragment, start loading from start position
             pos = this.nextLoadPosition;
           }
           level = hls.nextLoadLevel;
