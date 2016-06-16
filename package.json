@@ -12,7 +12,7 @@
   "bugs": {
     "url": "https://github.com/dailymotion/hls.js/issues"
   },
-  "main": "./lib/index.js",
+  "main": "./dist/hls.js",
   "private": false,
   "scripts": {
     "clean": "find dist -mindepth 1 -delete",
@@ -34,9 +34,6 @@
     "dev": "npm run build && npm run open -s & parallelshell 'npm run live-reload -s' 'npm run serve -s' 'npm run watch -s'",
     "babel": "babel src --out-dir lib"
   },
-  "dependencies": {
-    "webworkify": "^1.0.2"
-  },
   "devDependencies": {
     "babel-preset-es2015": "^6.3.13",
     "babel-register": "^6.3.13",
@@ -55,6 +52,7 @@
     "opener": "^1.4.0",
     "parallelshell": "^2.0.0",
     "uglify-js": "^2.4.23",
-    "watchify": "^3.7.0"
+    "watchify": "^3.7.0",
+    "webworkify": "^1.0.2"
   }
 }
