@@ -31,7 +31,9 @@ class AbrController extends EventHandler {
         if (!this.timer) {
             this.timer = setInterval(this.onCheck, 100);
         }
-        this.fragCurrent = data.frag;
+        let frag = data.frag;
+        frag.trequest = performance.now();
+        this.fragCurrent = frag;
     }
 
     abandonRulesCheck() {
@@ -64,18 +66,25 @@ class AbrController extends EventHandler {
                 playbackRate = Math.abs(v.playbackRate);
             // monitor fragment load progress after half of expected fragment duration,to stabilize bitrate
             if (requestDelay > 500 * frag.duration / playbackRate) {
-                let loadRate = Math.max(1, frag.loaded * 1000 / requestDelay); // byte/s; at least 1 byte/s to avoid division by zero
-                if (frag.expectedLen < frag.loaded) {
-                    frag.expectedLen = frag.loaded;
-                }
-                let pos = v.currentTime;
-                let fragLoadedDelay =
-                    (frag.expectedLen - frag.loaded) / loadRate;
-                let bufferStarvationDelay =
-                    (BufferHelper.bufferInfo(v, pos, hls.config.maxBufferHole)
-                        .end -
-                        pos) /
-                    playbackRate;
+                let levels = hls.levels,
+                    loadRate = Math.max(1, frag.loaded * 1000 / requestDelay), // byte/s; at least 1 byte/s to avoid division by zero
+                    // compute expected fragment length using frag duration and level bitrate. also ensure that expected len is gte than already loaded size
+                    expectedLen = Math.max(
+                        frag.loaded,
+                        Math.round(
+                            frag.duration * levels[frag.level].bitrate / 8
+                        )
+                    ),
+                    pos = v.currentTime,
+                    fragLoadedDelay = (expectedLen - frag.loaded) / loadRate,
+                    bufferStarvationDelay =
+                        (BufferHelper.bufferInfo(
+                            v,
+                            pos,
+                            hls.config.maxBufferHole
+                        ).end -
+                            pos) /
+                        playbackRate;
                 // consider emergency switch down only if we have less than 2 frag buffered AND
                 // time to finish loading current fragment is bigger than buffer starvation delay
                 // ie if we risk buffer starvation if bw does not increase quickly
@@ -96,7 +105,7 @@ class AbrController extends EventHandler {
                         // 8 = bits per byte (bps/Bps)
                         fragLevelNextLoadedDelay =
                             frag.duration *
-                            hls.levels[nextLoadLevel].bitrate /
+                            levels[nextLoadLevel].bitrate /
                             (8 * 0.8 * loadRate);
                         logger.log(
                             `fragLoadedDelay/bufferStarvationDelay/fragLevelNextLoadedDelay[${nextLoadLevel}] :${fragLoadedDelay.toFixed(
