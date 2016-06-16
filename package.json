@@ -46,7 +46,7 @@
     "babelify": "^7.2.0",
     "browserify": "^13.0.0",
     "browserify-versionify": "^1.0.6",
-    "deep-strict-equal": "^0.1.0",
+    "deep-strict-equal": "^0.2.0",
     "exorcist": "^0.4.0",
     "http-server": "^0.9.0",
     "jshint": "^2.5.11",
