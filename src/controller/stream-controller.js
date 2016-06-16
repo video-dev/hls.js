@@ -405,11 +405,6 @@ class StreamController extends EventHandler {
       hls.trigger(Event.KEY_LOADING, {frag: frag});
     } else {
       logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
-      frag.autoLevel = hls.autoLevelEnabled;
-      if (this.levels.length > 1) {
-        frag.expectedLen = Math.round(frag.duration * this.levels[level].bitrate / 8);
-        frag.trequest = performance.now();
-      }
       // ensure that we are not reloading the same fragments in loop ...
       if (this.fragLoadIdx !== undefined) {
         this.fragLoadIdx++;
@@ -428,6 +423,7 @@ class StreamController extends EventHandler {
         frag.loadCounter = 1;
       }
       frag.loadIdx = this.fragLoadIdx;
+      frag.autoLevel = hls.autoLevelEnabled;
       this.fragCurrent = frag;
       this.startFragRequested = true;
       hls.trigger(Event.FRAG_LOADING, {frag: frag});
