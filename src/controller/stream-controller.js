@@ -796,7 +796,7 @@ class StreamController extends EventHandler {
     // compute start position
     if (this.startFragRequested === false) {
       // if live playlist, set start position to be fragment N-this.config.liveSyncDurationCount (usually 3)
-      if (newDetails.live) {
+      if (newDetails.live &&  !this.config.forceStartToPlayFromFirstFragment) {
         let targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * newDetails.targetduration;
         this.startPosition = Math.max(0, sliding + duration - targetLatency);
       }
