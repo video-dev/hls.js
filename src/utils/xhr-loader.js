@@ -107,7 +107,7 @@ class XhrLoader {
             if (status >= 200 && status < 300) {
                 window.clearTimeout(this.timeoutHandle);
                 stats.tload = Math.max(stats.tfirst, performance.now());
-                this.onSuccess(event, stats);
+                this.onSuccess(event, stats, context);
             } else {
                 // error ...
                 if (stats.retry < this.maxRetry) {
