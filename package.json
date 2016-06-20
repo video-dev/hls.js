@@ -51,7 +51,7 @@
     "http-server": "^0.9.0",
     "jshint": "^2.5.11",
     "live-reload": "^1.1.0",
-    "mocha": "^2.1.0",
+    "mocha": "^2.5.0",
     "mversion": "^1.10.1",
     "opener": "^1.4.0",
     "parallelshell": "^2.0.0",
