@@ -31,12 +31,14 @@ class AbrController extends EventHandler {
   }
 
   onFragLoading(data) {
-    if (!this.timer) {
-      this.timer = setInterval(this.onCheck, 100);
-    }
     let frag = data.frag;
-    frag.trequest = performance.now();
-    this.fragCurrent = frag;
+    if (frag.type === 'main') {
+      if (!this.timer) {
+        this.timer = setInterval(this.onCheck, 100);
+      }
+      frag.trequest = performance.now();
+      this.fragCurrent = frag;
+    }
   }
 
   abandonRulesCheck() {
@@ -107,20 +109,23 @@ class AbrController extends EventHandler {
   }
 
   onFragLoaded(data) {
-    var stats = data.stats;
-    // only update stats on first frag loading
-    // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
-    // and leading to wrong bw estimation
-    if (stats.aborted === undefined && data.frag.loadCounter === 1) {
-      this.bwEstimator.sample(performance.now() - stats.trequest,stats.loaded);
-    }
+    let frag = data.frag;
+    if (frag.type === 'main') {
+      var stats = data.stats;
+      // only update stats on first frag loading
+      // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
+      // and leading to wrong bw estimation
+      if (stats.aborted === undefined && frag.loadCounter === 1) {
+        this.bwEstimator.sample(performance.now() - stats.trequest,stats.loaded);
+      }
 
-    // stop monitoring bw once frag loaded
-    this.clearTimer();
-    // store level id after successful fragment load
-    this.lastLoadedFragLevel = data.frag.level;
-    // reset forced auto level value so that next level will be selected
-    this._nextAutoLevel = -1;
+      // stop monitoring bw once frag loaded
+      this.clearTimer();
+      // store level id after successful fragment load
+      this.lastLoadedFragLevel = frag.level;
+      // reset forced auto level value so that next level will be selected
+      this._nextAutoLevel = -1;
+    }
   }
 
   onError(data) {

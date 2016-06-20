@@ -18,12 +18,13 @@
 
  class TSDemuxer {
 
-  constructor(observer, remuxerClass, config) {
+  constructor(observer, id, remuxerClass, config) {
     this.observer = observer;
+    this.id = id;
     this.remuxerClass = remuxerClass;
     this.config = config;
     this.lastCC = 0;
-    this.remuxer = new this.remuxerClass(observer, config);
+    this.remuxer = new this.remuxerClass(observer, id, config);
   }
 
   static probe(data) {
@@ -114,7 +115,7 @@
                   // if audio PID is undefined OR if we have audio codec info,
                   // we have all codec info !
                   if (this._avcTrack.codec && (aacId === -1 || this._aacTrack.codec)) {
-                    this.remux(data);
+                    this.remux(level,sn,data);
                     return;
                   }
                 }
@@ -134,7 +135,7 @@
                   // if video PID is undefined OR if we have video codec info,
                   // we have all codec infos !
                   if (this._aacTrack.codec && (avcId === -1 || this._avcTrack.codec)) {
-                    this.remux(data);
+                    this.remux(level,sn,data);
                     return;
                   }
                 }
@@ -181,7 +182,7 @@
           }
         }
       } else {
-        this.observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47'});
+        this.observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, id : this.id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47'});
       }
     }
     // parse last PES packet
@@ -194,11 +195,11 @@
     if (id3Data) {
       this._parseID3PES(this._parsePES(id3Data));
     }
-    this.remux(null);
+    this.remux(level,sn,null);
   }
 
-  remux(data) {
-    this.remuxer.remux(this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data);
+  remux(level, sn, data) {
+    this.remuxer.remux(level, sn, this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data);
   }
 
   destroy() {
@@ -712,7 +713,7 @@
         reason = 'no ADTS header found in AAC PES';
         fatal = true;
       }
-      this.observer.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason});
+      this.observer.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, id : this.id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason});
       if (fatal) {
         return;
       }
