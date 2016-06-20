@@ -47,11 +47,13 @@ class LevelHelper {
 
         // if at least one fragment contains PTS info, recompute PTS information for all fragments
         if (PTSFrag) {
-            LevelHelper.updateFragPTS(
+            LevelHelper.updateFragPTSDTS(
                 newDetails,
                 PTSFrag.sn,
                 PTSFrag.startPTS,
-                PTSFrag.endPTS
+                PTSFrag.endPTS,
+                PTSFrag.startDTS,
+                PTSFrag.endDTS
             );
         } else {
             // ensure that delta is within oldfragments range
@@ -71,7 +73,7 @@ class LevelHelper {
         return;
     }
 
-    static updateFragPTS(details, sn, startPTS, endPTS) {
+    static updateFragPTSDTS(details, sn, startPTS, endPTS, startDTS, endDTS) {
         var fragIdx, fragments, frag, i;
         // exit if sn out of range
         if (sn < details.startSN || sn > details.endSN) {
@@ -83,12 +85,16 @@ class LevelHelper {
         if (!isNaN(frag.startPTS)) {
             startPTS = Math.min(startPTS, frag.startPTS);
             endPTS = Math.max(endPTS, frag.endPTS);
+            startDTS = Math.min(startDTS, frag.startDTS);
+            endDTS = Math.max(endDTS, frag.endDTS);
         }
 
         var drift = startPTS - frag.start;
 
         frag.start = frag.startPTS = startPTS;
         frag.endPTS = endPTS;
+        frag.startDTS = startDTS;
+        frag.endDTS = endDTS;
         frag.duration = endPTS - startPTS;
         // adjust fragment PTS/duration from seqnum-1 to frag 0
         for (i = fragIdx; i > 0; i--) {

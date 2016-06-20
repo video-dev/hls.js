@@ -225,10 +225,11 @@ class LevelController extends EventHandler {
             return;
         }
 
-        var details = data.details,
+        let details = data.details,
             hls = this.hls,
             levelId,
-            level;
+            level,
+            levelError = false;
         // try to recover not fatal errors
         switch (details) {
             case ErrorDetails.FRAG_LOAD_ERROR:
@@ -241,6 +242,7 @@ class LevelController extends EventHandler {
             case ErrorDetails.LEVEL_LOAD_ERROR:
             case ErrorDetails.LEVEL_LOAD_TIMEOUT:
                 levelId = data.level;
+                levelError = true;
                 break;
             default:
                 break;
@@ -272,6 +274,10 @@ class LevelController extends EventHandler {
                     logger.warn(
                         `level controller,${details} on live stream, discard`
                     );
+                    if (levelError) {
+                        // reset this._level so that another call to set level() will retrigger a frag load
+                        this._level = undefined;
+                    }
                     // FRAG_LOAD_ERROR and FRAG_LOAD_TIMEOUT are handled by mediaController
                 } else if (
                     details !== ErrorDetails.FRAG_LOAD_ERROR &&

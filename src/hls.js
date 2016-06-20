@@ -31,6 +31,7 @@ class Hls {
     static isSupported() {
         return (
             window.MediaSource &&
+            typeof window.MediaSource.isTypeSupported === 'function' &&
             window.MediaSource.isTypeSupported(
                 'video/mp4; codecs="avc1.42E01E,mp4a.40.2"'
             )
@@ -97,7 +98,11 @@ class Hls {
                 cueHandler: Cues,
                 enableCEA708Captions: true,
                 enableMP2TPassThrough: false,
-                stretchShortVideoTrack: false
+                stretchShortVideoTrack: false,
+                abrEwmaFast: 0,
+                abrEwmaSlow: 0,
+                abrBandWidthFactor: 0.8,
+                abrBandWidthUpFactor: 0.7
             };
         }
         return Hls.defaultConfig;
