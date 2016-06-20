@@ -10,8 +10,9 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import '../utils/polyfill';
 
 class MP4Remuxer {
-    constructor(observer, config) {
+    constructor(observer, id, config) {
         this.observer = observer;
+        this.id = id;
         this.config = config;
         this.ISGenerated = false;
         this.PES2MP4SCALEFACTOR = 4;
@@ -33,7 +34,18 @@ class MP4Remuxer {
         this.ISGenerated = false;
     }
 
-    remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous) {
+    remux(
+        level,
+        sn,
+        audioTrack,
+        videoTrack,
+        id3Track,
+        textTrack,
+        timeOffset,
+        contiguous
+    ) {
+        this.level = level;
+        this.sn = sn;
         // generate Init Segment if needed
         if (!this.ISGenerated) {
             this.generateIS(audioTrack, videoTrack, timeOffset);
@@ -92,7 +104,11 @@ class MP4Remuxer {
             this.remuxText(textTrack, timeOffset);
         }
         //notify end of parsing
-        this.observer.trigger(Event.FRAG_PARSED);
+        this.observer.trigger(Event.FRAG_PARSED, {
+            id: this.id,
+            level: this.level,
+            sn: this.sn
+        });
     }
 
     generateIS(audioTrack, videoTrack, timeOffset) {
@@ -101,7 +117,13 @@ class MP4Remuxer {
             videoSamples = videoTrack.samples,
             pesTimeScale = this.PES_TIMESCALE,
             tracks = {},
-            data = { tracks: tracks, unique: false },
+            data = {
+                id: this.id,
+                level: this.level,
+                sn: this.sn,
+                tracks: tracks,
+                unique: false
+            },
             computePTSDTS = this._initPTS === undefined,
             initPTS,
             initDTS;
@@ -175,6 +197,7 @@ class MP4Remuxer {
         } else {
             observer.trigger(Event.ERROR, {
                 type: ErrorTypes.MEDIA_ERROR,
+                id: this.id,
                 details: ErrorDetails.FRAG_PARSING_ERROR,
                 fatal: false,
                 reason: 'no audio/video samples found'
@@ -423,7 +446,11 @@ class MP4Remuxer {
             track
         );
         track.samples = [];
+
         let data = {
+            id: this.id,
+            level: this.level,
+            sn: this.sn,
             data1: moof,
             data2: mdat,
             startPTS: firstPTS / pesTimeScale,
@@ -637,6 +664,9 @@ class MP4Remuxer {
             );
             track.samples = [];
             let audioData = {
+                id: this.id,
+                level: this.level,
+                sn: this.sn,
                 data1: moof,
                 data2: mdat,
                 startPTS: firstPTS / pesTimeScale,
@@ -707,6 +737,9 @@ class MP4Remuxer {
                 sample.dts = (sample.dts - this._initDTS) / this.PES_TIMESCALE;
             }
             this.observer.trigger(Event.FRAG_PARSING_METADATA, {
+                id: this.id,
+                level: this.level,
+                sn: this.sn,
                 samples: track.samples
             });
         }
@@ -731,6 +764,9 @@ class MP4Remuxer {
                 sample.pts = (sample.pts - this._initPTS) / this.PES_TIMESCALE;
             }
             this.observer.trigger(Event.FRAG_PARSING_USERDATA, {
+                id: this.id,
+                level: this.level,
+                sn: this.sn,
                 samples: track.samples
             });
         }

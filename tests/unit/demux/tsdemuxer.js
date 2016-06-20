@@ -18,7 +18,7 @@ class FakeRemuxer {
 
 describe('TS Demuxer', () => {
 
-  var demuxer = new TSDemuxer(new Hls(), FakeRemuxer);
+  var demuxer = new TSDemuxer(new Hls(), 0, FakeRemuxer);
 
   it('can probe for valid and invalid TS fragments', () => {
     assert.equal(TSDemuxer.probe(validTSFragment), true);

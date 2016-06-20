@@ -17,12 +17,13 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
 class TSDemuxer {
-    constructor(observer, remuxerClass, config) {
+    constructor(observer, id, remuxerClass, config) {
         this.observer = observer;
+        this.id = id;
         this.remuxerClass = remuxerClass;
         this.config = config;
         this.lastCC = 0;
-        this.remuxer = new this.remuxerClass(observer, config);
+        this.remuxer = new this.remuxerClass(observer, id, config);
     }
 
     static probe(data) {
@@ -155,7 +156,7 @@ class TSDemuxer {
                                         this._avcTrack.codec &&
                                         (aacId === -1 || this._aacTrack.codec)
                                     ) {
-                                        this.remux(data);
+                                        this.remux(level, sn, data);
                                         return;
                                     }
                                 }
@@ -180,7 +181,7 @@ class TSDemuxer {
                                         this._aacTrack.codec &&
                                         (avcId === -1 || this._avcTrack.codec)
                                     ) {
-                                        this.remux(data);
+                                        this.remux(level, sn, data);
                                         return;
                                     }
                                 }
@@ -233,6 +234,7 @@ class TSDemuxer {
             } else {
                 this.observer.trigger(Event.ERROR, {
                     type: ErrorTypes.MEDIA_ERROR,
+                    id: this.id,
                     details: ErrorDetails.FRAG_PARSING_ERROR,
                     fatal: false,
                     reason: 'TS packet did not start with 0x47'
@@ -249,11 +251,13 @@ class TSDemuxer {
         if (id3Data) {
             this._parseID3PES(this._parsePES(id3Data));
         }
-        this.remux(null);
+        this.remux(level, sn, null);
     }
 
-    remux(data) {
+    remux(level, sn, data) {
         this.remuxer.remux(
+            level,
+            sn,
             this._aacTrack,
             this._avcTrack,
             this._id3Track,
@@ -858,6 +862,7 @@ class TSDemuxer {
             }
             this.observer.trigger(Event.ERROR, {
                 type: ErrorTypes.MEDIA_ERROR,
+                id: this.id,
                 details: ErrorDetails.FRAG_PARSING_ERROR,
                 fatal: fatal,
                 reason: reason

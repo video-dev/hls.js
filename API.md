@@ -642,13 +642,19 @@ By default, hls.js will automatically start loading quality level playlists, and
 However if `config.autoStartLoad` is set to `false`, the following method needs to be called to manually start playlist and fragments loading:
 
 #### `hls.startLoad()`
-
 Start/restart playlist/fragment loading. this is only effective if MANIFEST_PARSED event has been triggered and video element has been attached to hls object.
 
 #### `hls.stopLoad()`
-
 Stop playlist/fragment loading. could be resumed later on by calling `hls.startLoad()`
 
+
+## Audio Tracks Control API
+
+#### ```hls.audioTracks```
+get : array of audio tracks exposed in manifest
+
+#### ```hls.audioTrack```
+get/set : audio track id (returned by)
 
 ## Runtime Events
 
@@ -673,7 +679,7 @@ Full list of Events is available below:
   - `Hls.Events.MANIFEST_LOADING`  - fired to signal that a manifest loading starts
     -  data: { url : manifestURL }
   - `Hls.Events.MANIFEST_LOADED`  - fired after manifest has been loaded
-    -  data: { levels : [ available quality levels ], url : manifestURL, stats : { trequest, tfirst, tload, mtime } }
+    -  data: { levels : [available quality levels] , audioTracks : [ available audio tracks], url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
   - `Hls.Events.MANIFEST_PARSED`  - fired after manifest has been parsed
     -  data: { levels : [ available quality levels ], firstLevel : index of first quality level appearing in Manifest }
   - `Hls.Events.LEVEL_LOADING`  - fired when a level playlist loading starts
@@ -695,19 +701,17 @@ Full list of Events is available below:
   - `Hls.Events.FRAG_LOAD_PROGRESS`  - fired when a fragment load is in progress
     - data: { frag : fragment object with frag.loaded=stats.loaded, stats : { trequest, tfirst, loaded, total } }
   - `Hls.Events.FRAG_LOADED`  - fired when a fragment loading is completed
-    -  data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length } }
-  - `Hls.Events.FRAG_PARSING_INIT_SEGMENT`  - fired when Init Segment has been extracted from fragment
-    -  data: { moov : moov MP4 box, codecs : codecs found while parsing fragment }
-  - `Hls.Events.FRAG_PARSING_USERDATA`  - fired when parsing sei text is completed
-    -  data: { samples : [ sei samples pes ] }
+    -  data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length}}
+  - `Hls.Events.FRAG_PARSING_INIT_SEGMENT` - fired when Init Segment has been extracted from fragment
+    -  data: { id: demuxer id, moov : moov MP4 box, codecs : codecs found while parsing fragment}
   - `Hls.Events.FRAG_PARSING_METADATA`  - fired when parsing id3 is completed
-    -  data: { samples : [ id3 pes - pts and dts timestamp are relative, values are in seconds ] }
+      -  data: { id: demuxer id, samples : [ id3 pes - pts and dts timestamp are relative, values are in seconds]}
   - `Hls.Events.FRAG_PARSING_DATA`  - fired when moof/mdat have been extracted from fragment
-    -  data: { moof : moof MP4 box, mdat : mdat MP4 box, startPTS : PTS of first sample, endPTS : PTS of last sample, startDTS : DTS of first sample, endDTS : DTS of last sample, type : stream type (audio or video), nb : number of samples }
+    -  data: { id: demuxer id, moof : moof MP4 box, mdat : mdat MP4 box, startPTS : PTS of first sample, endPTS : PTS of last sample, startDTS : DTS of first sample, endDTS : DTS of last sample, type : stream type (audio or video), nb : number of samples}
   - `Hls.Events.FRAG_PARSED`  - fired when fragment parsing is completed
-    -  data: undefined
+    -  data: { id: demuxer id}
   - `Hls.Events.FRAG_BUFFERED`  - fired when fragment remuxed MP4 boxes have all been appended into SourceBuffer
-    -  data: { frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length } }
+    -  data: { id: demuxer id, frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length} }
   - `Hls.Events.FRAG_CHANGED`  - fired when fragment matching with current video position is changing
     -  data: { frag : fragment object }
   - `Hls.Events.FPS_DROP` - triggered when FPS drop in last monitoring period is higher than given threshold

@@ -24,6 +24,7 @@ var DemuxerWorker = function(self) {
             case 'init':
                 self.demuxer = new DemuxerInline(
                     observer,
+                    data.id,
                     data.typeSupported,
                     JSON.parse(data.config)
                 );
@@ -49,6 +50,9 @@ var DemuxerWorker = function(self) {
     observer.on(Event.FRAG_PARSING_INIT_SEGMENT, function(ev, data) {
         self.postMessage({
             event: ev,
+            id: data.id,
+            level: data.level,
+            sn: data.sn,
             tracks: data.tracks,
             unique: data.unique
         });
@@ -57,6 +61,9 @@ var DemuxerWorker = function(self) {
     observer.on(Event.FRAG_PARSING_DATA, function(ev, data) {
         var objData = {
             event: ev,
+            id: data.id,
+            level: data.level,
+            sn: data.sn,
             type: data.type,
             startPTS: data.startPTS,
             endPTS: data.endPTS,
@@ -70,8 +77,8 @@ var DemuxerWorker = function(self) {
         self.postMessage(objData, [objData.data1, objData.data2]);
     });
 
-    observer.on(Event.FRAG_PARSED, function(event) {
-        self.postMessage({ event: event });
+    observer.on(Event.FRAG_PARSED, function(event, data) {
+        self.postMessage({ event: event, data: data });
     });
 
     observer.on(Event.ERROR, function(event, data) {
@@ -79,12 +86,12 @@ var DemuxerWorker = function(self) {
     });
 
     observer.on(Event.FRAG_PARSING_METADATA, function(event, data) {
-        var objData = { event: event, samples: data.samples };
+        var objData = { event: event, id: data.id, samples: data.samples };
         self.postMessage(objData);
     });
 
     observer.on(Event.FRAG_PARSING_USERDATA, function(event, data) {
-        var objData = { event: event, samples: data.samples };
+        var objData = { event: event, id: data.id, samples: data.samples };
         self.postMessage(objData);
     });
 };

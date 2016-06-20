@@ -42,6 +42,7 @@ class StreamController extends EventHandler {
             Event.FRAG_PARSING_DATA,
             Event.FRAG_PARSED,
             Event.ERROR,
+            Event.BUFFER_CREATED,
             Event.BUFFER_APPENDED,
             Event.BUFFER_FLUSHED
         );
@@ -67,7 +68,7 @@ class StreamController extends EventHandler {
             var media = this.media,
                 lastCurrentTime = this.lastCurrentTime;
             this.stopLoad();
-            this.demuxer = new Demuxer(this.hls);
+            this.demuxer = new Demuxer(this.hls, 'main');
             if (!this.timer) {
                 this.timer = setInterval(this.ontick, 100);
             }
@@ -864,7 +865,10 @@ class StreamController extends EventHandler {
             this.lastCurrentTime = this.media.currentTime;
         }
         // avoid reporting fragment loop loading error in case user is seeking several times on same position
-        if (this.fragLoadIdx !== undefined) {
+        if (
+            this.state !== State.FRAG_LOADING &&
+            this.fragLoadIdx !== undefined
+        ) {
             this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
         }
         // tick to speed up processing
@@ -996,6 +1000,7 @@ class StreamController extends EventHandler {
         if (
             this.state === State.FRAG_LOADING &&
             fragCurrent &&
+            data.frag.type === 'main' &&
             data.frag.level === fragCurrent.level &&
             data.frag.sn === fragCurrent.sn
         ) {
@@ -1010,7 +1015,8 @@ class StreamController extends EventHandler {
                 data.stats.tparsed = data.stats.tbuffered = performance.now();
                 this.hls.trigger(Event.FRAG_BUFFERED, {
                     stats: data.stats,
-                    frag: fragCurrent
+                    frag: fragCurrent,
+                    id: 'main'
                 });
             } else {
                 this.state = State.PARSING;
@@ -1067,7 +1073,14 @@ class StreamController extends EventHandler {
     }
 
     onFragParsingInitSegment(data) {
-        if (this.state === State.PARSING) {
+        let fragCurrent = this.fragCurrent;
+        if (
+            fragCurrent &&
+            data.id === 'main' &&
+            data.sn === fragCurrent.sn &&
+            data.level === fragCurrent.level &&
+            this.state === State.PARSING
+        ) {
             var tracks = data.tracks,
                 trackName,
                 track;
@@ -1105,10 +1118,12 @@ class StreamController extends EventHandler {
                     logger.log(`Android: force audio codec to` + audioCodec);
                 }
                 track.levelCodec = audioCodec;
+                track.id = data.id;
             }
             track = tracks.video;
             if (track) {
                 track.levelCodec = this.levels[this.level].videoCodec;
+                track.id = data.id;
             }
 
             // if remuxer specify that a unique track needs to generated,
@@ -1148,7 +1163,8 @@ class StreamController extends EventHandler {
                     this.pendingAppending++;
                     this.hls.trigger(Event.BUFFER_APPENDING, {
                         type: trackName,
-                        data: initSegment
+                        data: initSegment,
+                        parent: 'main'
                     });
                 }
             }
@@ -1158,8 +1174,14 @@ class StreamController extends EventHandler {
     }
 
     onFragParsingData(data) {
-        if (this.state === State.PARSING) {
-            this.tparse2 = Date.now();
+        let fragCurrent = this.fragCurrent;
+        if (
+            fragCurrent &&
+            data.id === 'main' &&
+            data.sn === fragCurrent.sn &&
+            data.level === fragCurrent.level &&
+            this.state === State.PARSING
+        ) {
             var level = this.levels[this.level],
                 frag = this.fragCurrent;
 
@@ -1191,7 +1213,8 @@ class StreamController extends EventHandler {
                     this.pendingAppending++;
                     hls.trigger(Event.BUFFER_APPENDING, {
                         type: data.type,
-                        data: buffer
+                        data: buffer,
+                        parent: 'main'
                     });
                 }
             });
@@ -1206,32 +1229,59 @@ class StreamController extends EventHandler {
 
             //trigger handler right now
             this.tick();
-        } else {
-            logger.warn(
-                `not in PARSING state but ${
-                    this.state
-                }, ignoring FRAG_PARSING_DATA event`
-            );
         }
     }
 
-    onFragParsed() {
-        if (this.state === State.PARSING) {
+    onFragParsed(data) {
+        let fragCurrent = this.fragCurrent;
+        if (
+            fragCurrent &&
+            data.id === 'main' &&
+            data.sn === fragCurrent.sn &&
+            data.level === fragCurrent.level &&
+            this.state === State.PARSING
+        ) {
             this.stats.tparsed = performance.now();
             this.state = State.PARSED;
             this._checkAppendedParsed();
         }
     }
 
-    onBufferAppended() {
-        switch (this.state) {
-            case State.PARSING:
-            case State.PARSED:
-                this.pendingAppending--;
-                this._checkAppendedParsed();
-                break;
-            default:
-                break;
+    onBufferCreated(data) {
+        let tracks = data.tracks,
+            mediaTrack,
+            name,
+            alternate = false;
+        for (var type in tracks) {
+            let track = tracks[type];
+            if (track.id === 'main') {
+                name = type;
+                mediaTrack = track;
+            } else {
+                alternate = true;
+            }
+        }
+        if (alternate && mediaTrack) {
+            logger.log(
+                `alternate track found, use ${name}.buffered to schedule main fragment loading`
+            );
+            this.mediaBuffer = mediaTrack.buffer;
+        } else {
+            this.mediaBuffer = this.media;
+        }
+    }
+
+    onBufferAppended(data) {
+        if (data.parent === 'main') {
+            switch (this.state) {
+                case State.PARSING:
+                case State.PARSED:
+                    this.pendingAppending--;
+                    this._checkAppendedParsed();
+                    break;
+                default:
+                    break;
+            }
         }
     }
 
@@ -1248,12 +1298,12 @@ class StreamController extends EventHandler {
                 );
                 this.hls.trigger(Event.FRAG_BUFFERED, {
                     stats: stats,
-                    frag: frag
+                    frag: frag,
+                    id: 'main'
                 });
+                let media = this.mediaBuffer ? this.mediaBuffer : this.media;
                 logger.log(
-                    `media buffered : ${this.timeRangesToString(
-                        this.media.buffered
-                    )}`
+                    `main buffered : ${this.timeRangesToString(media.buffered)}`
                 );
                 this.state = State.IDLE;
             }
