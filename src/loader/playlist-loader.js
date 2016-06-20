@@ -269,6 +269,7 @@ class PlaylistLoader extends EventHandler {
                         tagList.push(result);
                         frag = {
                             url: url,
+                            type: type,
                             duration: duration,
                             start: totalduration,
                             sn: sn,
