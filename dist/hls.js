@@ -1973,7 +1973,7 @@ var StreamController = function (_EventHandler) {
                       this.state = State.ENDED;
                     }
                   }
-                  return;
+                  break;
                 }
               }
               //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
