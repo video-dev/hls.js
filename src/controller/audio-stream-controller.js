@@ -449,7 +449,7 @@ class AudioStreamController extends EventHandler {
           frag = this.fragCurrent;
 
       logger.log(`parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
-      LevelHelper.updateFragPTS(track.details,frag.sn,data.startPTS,data.endPTS);
+      LevelHelper.updateFragPTSDTS(track.details,frag.sn,data.startPTS,data.endPTS);
 
       [data.data1, data.data2].forEach(buffer => {
         if (buffer) {
