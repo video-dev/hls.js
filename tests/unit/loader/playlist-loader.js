@@ -479,5 +479,4 @@ Rollover38803/20160525T064049-01-69844069.ts
     assert.strictEqual(result.fragments[2].url, 'http://video.example.com/Rollover38803/20160525T064049-01-69844069.ts');
     assert.strictEqual(result.fragments[2].programDateTime.getTime(), 1464366904000);
   });
->>>>>>> master
 });
