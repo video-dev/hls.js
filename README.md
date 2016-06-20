@@ -6,7 +6,7 @@ hls.js is a JavaScript library which implements an [HTTP Live Streaming] client.
 It relies on [HTML5 video][] and [MediaSource Extensions][] for playback.
 
 It works by transmuxing MPEG-2 Transport Stream into ISO BMFF (MP4) fragments.
-this transmuxing could be performed asynchronously using [Web Worker] if available in the browser.
+This transmuxing could be performed asynchronously using [Web Worker] if available in the browser.
 
 hls.js does not need any player, it works directly on top of a standard HTML```<video>```element.
 
