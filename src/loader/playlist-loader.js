@@ -131,6 +131,36 @@ class PlaylistLoader extends EventHandler {
     }
     return medias;
   }
+  /**
+   * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
+   * @returns {Uint8Array}
+   */
+  createInitializationVector (segmentNumber) {
+    var uint8View = new Uint8Array(16);
+
+    for (var i = 12; i < 16; i++) {
+      uint8View[i] = (segmentNumber >> 8 * (15 - i)) & 0xff;
+    }
+
+    return uint8View;
+  }
+
+  /**
+   * Utility method for parseLevelPlaylist to get a fragment's decryption data from the currently parsed encryption key data
+   * @param levelkey - a playlist's encryption info
+   * @param segmentNumber - the fragment's segment number
+   * @returns {*} - an object to be applied as a fragment's decryptdata
+   */
+  fragmentDecryptdataFromLevelkey (levelkey, segmentNumber) {
+    var decryptdata = levelkey;
+
+    if (levelkey && levelkey.method && levelkey.uri && !levelkey.iv) {
+      decryptdata = this.cloneObj(levelkey);
+      decryptdata.iv = this.createInitializationVector(segmentNumber);
+    }
+
+    return decryptdata;
+  }
 
   avc1toavcoti(codec) {
     var result, avcdata = codec.split('.');
@@ -150,6 +180,7 @@ class PlaylistLoader extends EventHandler {
 
   parseLevelPlaylist(string, baseurl, id, type) {
     var currentSN = 0,
+        fragdecryptdata,
         totalduration = 0,
         level = {url: baseurl, fragments: [], live: true, startSN: 0},
         levelkey = {method : null, key : null, iv : null, uri : null},
@@ -159,9 +190,10 @@ class PlaylistLoader extends EventHandler {
         result,
         regexp,
         byteRangeEndOffset,
-        byteRangeStartOffset;
+        byteRangeStartOffset,
+        tagList = [];
 
-    regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*))/g;
+    regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*)[\r\n]+([^#|\r\n]+)?)|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*)[\r\n]+([^#|\r\n]+)?)|(?:#EXT-X-(VERSION):(.*))|(?:#(.*):(.*))|(?:#(.*))/g;
     while ((result = regexp.exec(string)) !== null) {
       result.shift();
       result = result.filter(function(n) { return (n !== undefined); });
@@ -172,11 +204,16 @@ class PlaylistLoader extends EventHandler {
         case 'TARGETDURATION':
           level.targetduration = parseFloat(result[1]);
           break;
+        case 'VERSION':
+          break;
+        case 'EXTM3U':
+          break;
         case 'ENDLIST':
           level.live = false;
           break;
         case 'DIS':
           cc++;
+          tagList.push(result);
           break;
         case 'BYTERANGE':
           var params = result[1].split('@');
@@ -190,39 +227,22 @@ class PlaylistLoader extends EventHandler {
             frag.byteRangeStartOffset = byteRangeStartOffset;
             frag.byteRangeEndOffset = byteRangeEndOffset;
             frag.url = this.resolve(result[2], baseurl);
+            tagList.push(result);
           }
           break;
         case 'INF':
           var duration = parseFloat(result[1]);
           if (!isNaN(duration)) {
-            var fragdecryptdata,
-                sn = currentSN++;
-            if (levelkey.method && levelkey.uri && !levelkey.iv) {
-              fragdecryptdata = this.cloneObj(levelkey);
-              var uint8View = new Uint8Array(16);
-              for (var i = 12; i < 16; i++) {
-                uint8View[i] = (sn >> 8*(15-i)) & 0xff;
-              }
-              fragdecryptdata.iv = uint8View;
-            } else {
-              fragdecryptdata = levelkey;
-            }
+            var sn = currentSN++;
+            fragdecryptdata = this.fragmentDecryptdataFromLevelkey(levelkey, sn);
             var url = result[2] ? this.resolve(result[2], baseurl) : null;
-            frag = {url: url,
-                    type : type,
-                    duration: duration,
-                    start: totalduration,
-                    sn: sn,
-                    level: id,
-                    cc: cc,
-                    byteRangeStartOffset: byteRangeStartOffset,
-                    byteRangeEndOffset: byteRangeEndOffset,
-                    decryptdata : fragdecryptdata,
-                    programDateTime: programDateTime};
+            tagList.push(result);
+            frag = {url: url, duration: duration, start: totalduration, sn: sn, level: id, cc: cc, byteRangeStartOffset: byteRangeStartOffset, byteRangeEndOffset: byteRangeEndOffset, decryptdata : fragdecryptdata, programDateTime: programDateTime, tagList: tagList};
             level.fragments.push(frag);
             totalduration += duration;
             byteRangeStartOffset = null;
             programDateTime = null;
+            tagList = [];
           }
           break;
         case 'KEY':
@@ -243,11 +263,27 @@ class PlaylistLoader extends EventHandler {
               levelkey.iv = decryptiv;
             }
           }
+
+          //issue #425, applying url and decrypt data in instances where EXT-KEY immediately follow EXT-INF
+          if (frag && !frag.url && result.length >= 3) {
+            frag.url = this.resolve(result[2], baseurl);
+
+            //we have not moved onto another segment, we are still parsing one
+            fragdecryptdata = this.fragmentDecryptdataFromLevelkey(levelkey, currentSN - 1);
+            frag.decryptdata = fragdecryptdata;
+            tagList.push(result);
+          }
           break;
         case 'PROGRAM-DATE-TIME':
           programDateTime = new Date(Date.parse(result[1]));
+          tagList.push(result);
+          if (frag && !frag.url && result.length >= 3) {
+            frag.url = this.resolve(result[2], baseurl);
+            frag.programDateTime = programDateTime;
+          }
           break;
         default:
+          tagList.push(result);
           break;
       }
     }
