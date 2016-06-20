@@ -557,7 +557,7 @@ class AudioStreamController extends EventHandler {
                     3
                 )}/${data.endDTS.toFixed(3)}],nb:${data.nb}`
             );
-            LevelHelper.updateFragPTS(
+            LevelHelper.updateFragPTSDTS(
                 track.details,
                 frag.sn,
                 data.startPTS,
