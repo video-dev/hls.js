@@ -347,6 +347,20 @@ lo008ts`;
     assert.strictEqual(result.fragments[3].cc, 1); //continuity counter should increase around discontinuity
   });
 
+  it('parses manifest with one audio track', () => {
+    var manifest = `#EXTM3U
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="600k",LANGUAGE="eng",NAME="Audio",AUTOSELECT=YES,DEFAULT=YES,URI="/videos/ZakEbrahim_2014/audio/600k.m3u8?qr=true&preroll=Blank",BANDWIDTH=614400`;
+
+    var result = new PlaylistLoader({on : function() { }}).parseMasterPlaylistMedia(manifest, 'https://hls.ted.com/', 'AUDIO');
+    assert.strictEqual(result.length,1);
+    assert.strictEqual(result[0]['autoselect'],true);
+    assert.strictEqual(result[0]['default'],true);
+    assert.strictEqual(result[0]['forced'],false);
+    assert.strictEqual(result[0]['groupId'],'600k');
+    assert.strictEqual(result[0]['lang'],'eng');
+    assert.strictEqual(result[0]['name'],'Audio');
+    assert.strictEqual(result[0]['url'],'https://hls.ted.com/videos/ZakEbrahim_2014/audio/600k.m3u8?qr=true&preroll=Blank');
+  });
   //issue #425 - first fragment has null url and no decryptdata if EXT-X-KEY follows EXTINF
   it('parse level with #EXT-X-KEY after #EXTINF', () => {
     var level = `#EXTM3U
@@ -440,4 +454,29 @@ http://dummy.url.com/hls/live/segment/segment_022916_164500865_719935.ts`;
     assert.strictEqual(result.fragments[8].url, 'http://dummy.url.com/hls/live/segment/segment_022916_164500865_719934.ts');
   });
 
+  it('parses playlists with #EXT-X-PROGRAM-DATE-TIME after #EXTINF before fragment URL', () => {
+    var level = `#EXTM3U
+#EXT-X-VERSION:2
+#EXT-X-TARGETDURATION:10
+#EXT-X-MEDIA-SEQUENCE:69844067
+#EXTINF:10, no desc
+#EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:34:44Z
+Rollover38803/20160525T064049-01-69844067.ts
+#EXTINF:10, no desc
+#EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:34:54Z
+Rollover38803/20160525T064049-01-69844068.ts
+#EXTINF:10, no desc
+#EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:35:04Z
+Rollover38803/20160525T064049-01-69844069.ts
+    `;
+    var result = new PlaylistLoader({on : function() { }}).parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8',0);
+    assert.strictEqual(result.fragments.length, 3);
+    assert.strictEqual(result.totalduration, 30);
+    assert.strictEqual(result.fragments[0].url, 'http://video.example.com/Rollover38803/20160525T064049-01-69844067.ts');
+    assert.strictEqual(result.fragments[0].programDateTime.getTime(), 1464366884000);
+    assert.strictEqual(result.fragments[1].url, 'http://video.example.com/Rollover38803/20160525T064049-01-69844068.ts');
+    assert.strictEqual(result.fragments[1].programDateTime.getTime(), 1464366894000);
+    assert.strictEqual(result.fragments[2].url, 'http://video.example.com/Rollover38803/20160525T064049-01-69844069.ts');
+    assert.strictEqual(result.fragments[2].programDateTime.getTime(), 1464366904000);
+  });
 });

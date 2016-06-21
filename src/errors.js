@@ -16,12 +16,16 @@ export const ErrorDetails = {
   MANIFEST_PARSING_ERROR: 'manifestParsingError',
   // Identifier for a manifest with only incompatible codecs error - data: { url : faulty URL, reason : error reason}
   MANIFEST_INCOMPATIBLE_CODECS_ERROR: 'manifestIncompatibleCodecsError',
-  // Identifier for playlist load error - data: { url : faulty URL, response : XHR response}
+  // Identifier for a level load error - data: { url : faulty URL, response : XHR response}
   LEVEL_LOAD_ERROR: 'levelLoadError',
-  // Identifier for playlist load timeout - data: { url : faulty URL, response : XHR response}
+  // Identifier for a level load timeout - data: { url : faulty URL, response : XHR response}
   LEVEL_LOAD_TIMEOUT: 'levelLoadTimeOut',
   // Identifier for a level switch error - data: { level : faulty level Id, event : error description}
   LEVEL_SWITCH_ERROR: 'levelSwitchError',
+  // Identifier for an audio track load error - data: { url : faulty URL, response : XHR response}
+  AUDIO_TRACK_LOAD_ERROR: 'audioTrackLoadError',
+  // Identifier for an audio track load timeout - data: { url : faulty URL, response : XHR response}
+  AUDIO_TRACK_LOAD_TIMEOUT: 'audioTrackLoadTimeOut',
   // Identifier for fragment load error - data: { frag : fragment object, response : XHR response}
   FRAG_LOAD_ERROR: 'fragLoadError',
   // Identifier for fragment loop loading error - data: { frag : fragment object}

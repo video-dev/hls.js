@@ -14,6 +14,7 @@ class BufferController extends EventHandler {
     super(hls,
       Event.MEDIA_ATTACHING,
       Event.MEDIA_DETACHING,
+      Event.MANIFEST_PARSED,
       Event.BUFFER_RESET,
       Event.BUFFER_APPENDING,
       Event.BUFFER_CODECS,
@@ -26,14 +27,26 @@ class BufferController extends EventHandler {
     this._msDuration = null;
     // the value that we want to set mediaSource.duration to
     this._levelDuration = null;
-   
+
     // Source Buffer listeners
     this.onsbue = this.onSBUpdateEnd.bind(this);
     this.onsbe  = this.onSBUpdateError.bind(this);
+    this.pendingTracks = {};
   }
 
   destroy() {
     EventHandler.prototype.destroy.call(this);
+  }
+
+  onManifestParsed(data) {
+    let audioExpected = data.audio,
+        videoExpected = data.video,
+        sourceBufferNb = 0;
+    if (audioExpected || videoExpected) {
+      sourceBufferNb = (audioExpected ? 1 : 0) + (videoExpected ? 1 : 0);
+      logger.log(`${sourceBufferNb} sourceBuffer(s) expected`);
+    }
+    this.sourceBufferNb = sourceBufferNb;
   }
 
   onMediaAttaching(data) {
@@ -81,7 +94,7 @@ class BufferController extends EventHandler {
       }
       this.mediaSource = null;
       this.media = null;
-      this.pendingTracks = null;
+      this.pendingTracks = {};
       this.sourceBuffer = {};
     }
     this.onmso = this.onmse = this.onmsc = null;
@@ -93,11 +106,21 @@ class BufferController extends EventHandler {
     this.hls.trigger(Event.MEDIA_ATTACHED, { media : this.media });
     // once received, don't listen anymore to sourceopen event
     this.mediaSource.removeEventListener('sourceopen', this.onmso);
-    // if any buffer codecs pending, treat it here.
-    var pendingTracks = this.pendingTracks;
-    if (pendingTracks) {
-      this.onBufferCodecs(pendingTracks);
-      this.pendingTracks = null;
+    this.checkPendingTracks();
+  }
+
+  checkPendingTracks() {
+    // if any buffer codecs pending, check if we have enough to create sourceBuffers
+    let pendingTracks = this.pendingTracks,
+        pendingTracksNb = Object.keys(pendingTracks).length;
+    // if any pending tracks and (if nb of pending tracks matching expected nb or if unknoown expected nb)
+    if (pendingTracksNb && (
+        this.sourceBufferNb === pendingTracksNb ||
+        this.sourceBufferNb === 0)) {
+      // ok, let's create them now !
+      this.createSourceBuffers(pendingTracks);
+      this.pendingTracks = {};
+      // append any pending segments now !
       this.doAppending();
     }
   }
@@ -120,12 +143,15 @@ class BufferController extends EventHandler {
     if (this._needsEos) {
       this.onBufferEos();
     }
+    this.appending = false;
+    this.hls.trigger(Event.BUFFER_APPENDED, { parent : this.parent});
+
+    // don't append in flushing mode
+    if (!this._needsFlush) {
+      this.doAppending();
+    }
 
     this.updateMediaElementDuration();
-
-    this.hls.trigger(Event.BUFFER_APPENDED);
-
-    this.doAppending();
   }
 
   onSBUpdateError(event) {
@@ -154,15 +180,21 @@ class BufferController extends EventHandler {
   }
 
   onBufferCodecs(tracks) {
-    let mediaSource = this.mediaSource;
-
-    // delay sourcebuffer creation if media source not opened yet
-    if(!mediaSource || mediaSource.readyState !== 'open') {
-      this.pendingTracks = tracks;
-      return;
+    // if source buffer(s) not created yet, appended buffer tracks in this.pendingTracks
+    // if sourcebuffers already created, do nothing ...
+    if (Object.keys(this.sourceBuffer).length === 0) {
+      for (var trackName in tracks) { this.pendingTracks[trackName] = tracks[trackName]; }
+      let mediaSource = this.mediaSource;
+      if (mediaSource && mediaSource.readyState === 'open') {
+        // try to create sourcebuffers if mediasource opened
+        this.checkPendingTracks();
+      }
     }
+  }
 
-    let sourceBuffer = this.sourceBuffer;
+
+  createSourceBuffers(tracks) {
+    var sourceBuffer = this.sourceBuffer,mediaSource = this.mediaSource;
 
     for (let trackName in tracks) {
       if(!sourceBuffer[trackName]) {
@@ -175,21 +207,25 @@ class BufferController extends EventHandler {
           let sb = sourceBuffer[trackName] = mediaSource.addSourceBuffer(mimeType);
           sb.addEventListener('updateend', this.onsbue);
           sb.addEventListener('error', this.onsbe);
+          track.buffer = sb;
         } catch(err) {
           logger.error(`error while trying to add sourceBuffer:${err.message}`);
           this.hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_ADD_CODEC_ERROR, fatal: false, err: err, mimeType : mimeType});
         }
       }
     }
+    this.hls.trigger(Event.BUFFER_CREATED, { tracks : tracks } );
   }
 
   onBufferAppending(data) {
-    if (!this.segments) {
-      this.segments = [ data ];
-    } else {
-      this.segments.push(data);
+    if (!this._needsFlush) {
+      if (!this.segments) {
+        this.segments = [ data ];
+      } else {
+        this.segments.push(data);
+      }
+      this.doAppending();
     }
-    this.doAppending();
   }
 
   onBufferAppendFail(data) {
@@ -253,7 +289,9 @@ class BufferController extends EventHandler {
     }
     // this._levelDuration was the last value we set.
     // not using mediaSource.duration as the browser may tweak this value
-    if (this._levelDuration !== this._msDuration) {
+    // only update mediasource duration if its value increase, this is to avoid
+    // flushing already buffered portion when switching between quality level, as they
+    if (this._levelDuration > this._msDuration) {
       logger.log(`Updating mediasource duration to ${this._levelDuration}`);
       mediaSource.duration = this._levelDuration;
       this._msDuration = this._levelDuration;
@@ -292,26 +330,26 @@ class BufferController extends EventHandler {
 
   doAppending() {
     var hls = this.hls, sourceBuffer = this.sourceBuffer, segments = this.segments;
-    if (sourceBuffer) {
+    if (Object.keys(sourceBuffer).length) {
       if (this.media.error) {
-        segments = [];
+        this.segments = [];
         logger.error('trying to append although a media error occured, flush segment and abort');
         return;
       }
-      for (var type in sourceBuffer) {
-        if (sourceBuffer[type].updating) {
-          //logger.log('sb update in progress');
-          return;
-        }
+      if (this.appending) {
+        //logger.log(`sb appending in progress`);
+        return;
       }
-      if (segments.length) {
+      if (segments && segments.length) {
         var segment = segments.shift();
         try {
-          //logger.log(`appending ${segment.type} SB, size:${segment.data.length});
           if(sourceBuffer[segment.type]) {
+            //logger.log(`appending ${segment.type} SB, size:${segment.data.length}`);
+            this.parent = segment.parent;
             sourceBuffer[segment.type].appendBuffer(segment.data);
             this.appendError = 0;
             this.appended++;
+            this.appending = true;
           } else {
             // in case we don't have any source buffer matching with this segment type,
             // it means that Mediasource fails to create sourcebuffer
