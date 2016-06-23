@@ -11,11 +11,13 @@ import EWMA from '../utils/ewma';
 
 class EwmaBandWidthEstimator {
 
-  constructor(hls) {
+  constructor(hls,slow,fast) {
     this.hls = hls;
     this.defaultEstimate_ = 5e5; // 500kbps
     this.minWeight_ = 0.001;
     this.minDelayMs_ = 50;
+    this.slow_ = new EWMA(slow);
+    this.fast_ = new EWMA(fast);
   }
 
   sample(durationMs,numBytes) {
@@ -24,14 +26,6 @@ class EwmaBandWidthEstimator {
     //console.log('instant bw:'+ Math.round(bandwidth));
     // we weight sample using loading duration....
         weight = durationMs / 1000;
-
-    // lazy initialization. this allows to take into account config param changes that could happen after Hls instantiation,
-    // but before first fragment loading. this is useful to A/B tests those params
-    if(!this.fast_) {
-      let config = this.hls.config;
-      this.fast_ = new EWMA(config.abrEwmaFast);
-      this.slow_ = new EWMA(config.abrEwmaSlow);
-    }
     this.fast_.sample(weight,bandwidth);
     this.slow_.sample(weight,bandwidth);
   }
