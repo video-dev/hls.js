@@ -520,21 +520,37 @@ this helps playback continue in certain cases that might otherwise get stuck.
 
 parameter should be a boolean
 
-#### `abrEwmaFast`
-
-(default: `0.0`)
-
-Fast bitrate Exponential moving average half-life , used to compute average bitrate 
-Half of the estimate is based on the last abrEwmaFast seconds of sample history.
+#### ```abrEwmaFastLive```
+(default : 5.0)
+Fast bitrate Exponential moving average half-life , used to compute average bitrate for Live streams
+Half of the estimate is based on the last abrEwmaFastLive seconds of sample history.
+Each of the sample is weighted by the fragment loading duration.
 parameter should be a float greater than 0
 
-#### `abrEwmaSlow`
+#### ```abrEwmaSlowLive```
+(default : 9.0)
 
-(default: `0.0`)
+Slow bitrate Exponential moving average half-life , used to compute average bitrate for Live streams
+Half of the estimate is based on the last abrEwmaSlowLive seconds of sample history.
+Each of the sample is weighted by the fragment loading duration.
+parameter should be a float greater than abrEwmaFastLive
 
-Slow bitrate Exponential moving average half-life , used to compute average bitrate 
-Half of the estimate is based on the last abrEwmaFast seconds of sample history.
-parameter should be a float greater than abrEwmaFast
+
+#### ```abrEwmaFastVoD```
+(default : 4.0)
+
+Fast bitrate Exponential moving average half-life , used to compute average bitrate for VoD streams 
+Half of the estimate is based on the last abrEwmaFastVoD seconds of sample history.
+Each of the sample is weighted by the fragment loading duration.
+parameter should be a float greater than 0
+
+#### ```abrEwmaSlowVoD```
+(default : 15.0)
+
+Slow bitrate Exponential moving average half-life , used to compute average bitrate for VoD streams 
+Half of the estimate is based on the last abrEwmaSlowVoD seconds of sample history.
+Each of the sample is weighted by the fragment loading duration.
+parameter should be a float greater than abrEwmaFastVoD
 
 
 #### `abrBandWidthFactor`

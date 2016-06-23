@@ -53,7 +53,7 @@ design idea is pretty simple :
        - "expected time of fragment load completion" is computed using "fragment loading instant bandwidth".
        - this time is compared to the "expected time of buffer starvation".
        - if we have less than 2 fragments buffered and if "expected time of fragment load completion" is bigger than "expected time of buffer starvation" and also bigger than duration needed to load fragment at next quality level (determined by auto quality switch algorithm), current fragment loading is aborted, stream-controller will **trigger an emergency switch down**.
-    - auto quality switch algorithm is pretty naive and simple ATM and similar to the one that could be found in google [StageFright](https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp)   
+    - auto quality switch algorithm is bitrate based : fragment loading bitrate is monitored and smoothed using 2 exponential weighted moving average (a fast one, to adapt quickly on bandwidth drop and a slow one, to avoid ramping up to quickly on bandwidth increase)
   - [src/controller/cap-level-controller.js][]
     - in charge of determining best quality level to actual size (dimensions: width and height) of the player 
   - [src/controller/timeline-controller.js][]
