@@ -481,8 +481,23 @@ class StreamController extends EventHandler {
                 frag.sn === fragPrevious.sn
             ) {
                 if (frag.sn < levelDetails.endSN) {
-                    frag = fragments[frag.sn + 1 - levelDetails.startSN];
-                    logger.log(`SN just loaded, load next one: ${frag.sn}`);
+                    let deltaPTS = fragPrevious.deltaPTS,
+                        curSNIdx = frag.sn - levelDetails.startSN;
+                    // if there is a significant delta between audio and video, larger than max allowed hole,
+                    // it might be because video fragment does not start with a keyframe.
+                    // let's try to load previous fragment again to get last keyframe
+                    // then we will reload again current fragment (that way we should be able to fill the buffer hole ...)
+                    if (deltaPTS && deltaPTS > config.maxBufferHole) {
+                        frag = fragments[curSNIdx - 1];
+                        logger.warn(
+                            `SN just loaded, with large PTS gap between audio and video, maybe frag is not starting with a keyframe ? load previous one to try to overcome this`
+                        );
+                        // decrement previous frag load counter to avoid frag loop loading error when next fragment will get reloaded
+                        fragPrevious.loadCounter--;
+                    } else {
+                        frag = fragments[curSNIdx + 1];
+                        logger.log(`SN just loaded, load next one: ${frag.sn}`);
+                    }
                 } else {
                     // have we reached end of VOD playlist ?
                     if (!levelDetails.live) {
