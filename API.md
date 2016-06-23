@@ -477,35 +477,45 @@ parameter should be a boolean
 #### ```abrEwmaFastLive```
 (default : 5.0)
 
-Fast bitrate Exponential moving average half-life , used to compute average bitrate for Live streams
+Fast bitrate Exponential moving average half-life, used to compute average bitrate for Live streams
 Half of the estimate is based on the last abrEwmaFastLive seconds of sample history.
 Each of the sample is weighted by the fragment loading duration.
+
 parameter should be a float greater than 0
 
 #### ```abrEwmaSlowLive```
 (default : 9.0)
 
-Slow bitrate Exponential moving average half-life , used to compute average bitrate for Live streams
+Slow bitrate Exponential moving average half-life, used to compute average bitrate for Live streams
 Half of the estimate is based on the last abrEwmaSlowLive seconds of sample history.
 Each of the sample is weighted by the fragment loading duration.
-parameter should be a float greater than abrEwmaFastLive
 
+parameter should be a float greater than abrEwmaFastLive
 
 #### ```abrEwmaFastVoD```
 (default : 4.0)
 
-Fast bitrate Exponential moving average half-life , used to compute average bitrate for VoD streams 
+Fast bitrate Exponential moving average half-life, used to compute average bitrate for VoD streams 
 Half of the estimate is based on the last abrEwmaFastVoD seconds of sample history.
 Each of the sample is weighted by the fragment loading duration.
+
 parameter should be a float greater than 0
 
 #### ```abrEwmaSlowVoD```
 (default : 15.0)
 
-Slow bitrate Exponential moving average half-life , used to compute average bitrate for VoD streams 
+Slow bitrate Exponential moving average half-life, used to compute average bitrate for VoD streams 
 Half of the estimate is based on the last abrEwmaSlowVoD seconds of sample history.
 Each of the sample is weighted by the fragment loading duration.
+
 parameter should be a float greater than abrEwmaFastVoD
+
+#### ```abrEwmaDefaultEstimate```
+(default : 500000)
+
+Default bandwidth estimate in bits/second prior to collecting fragment bandwidth samples.
+
+parameter should be a float
 
 
 #### ```abrBandWidthFactor```
