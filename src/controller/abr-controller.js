@@ -51,7 +51,7 @@ class AbrController extends EventHandler {
           ewmaFast = config.abrEwmaFastVoD;
           ewmaSlow = config.abrEwmaSlowVoD;
         }
-        this.bwEstimator = new EwmaBandWidthEstimator(hls,ewmaSlow,ewmaFast);
+        this.bwEstimator = new EwmaBandWidthEstimator(hls,ewmaSlow,ewmaFast,config.abrEwmaDefaultEstimate);
       }
       frag.trequest = performance.now();
       this.fragCurrent = frag;
@@ -191,8 +191,9 @@ class AbrController extends EventHandler {
       return Math.min(this._nextAutoLevel,maxAutoLevel);
     }
 
+<<<<<<< HEAD
     let playbackRate = ((v && v.playbackRate !== 0) ? Math.abs(v.playbackRate) : 1.0),
-        avgbw = this.bwEstimator.getEstimate()/playbackRate,
+        avgbw = this.bwEstimator ? this.bwEstimator.getEstimate()/playbackRate : config.abrEwmaDefaultEstimate/playbackRate,
         adjustedbw;
     // follow algorithm captured from stagefright :
     // https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp

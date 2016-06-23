@@ -24,7 +24,7 @@ design idea is pretty simple :
         - trigger KEY_LOADING event (only if fragment is encrypted)
         - trigger FRAG_LOADING event
         - **trigger fragment demuxing** on FRAG_LOADED
-        - trigger BUFFER_RESET on MANIFEST_PARSED or startLoad()        
+        - trigger BUFFER_RESET on MANIFEST_PARSED or startLoad()
         - trigger BUFFER_CODECS on FRAG_PARSING_INIT_SEGMENT
         - trigger BUFFER_APPENDING on FRAG_PARSING_DATA
         - once FRAG_PARSED is received an all segments have been appended (BUFFER_APPENDED) then buffer controller will recheck whether it needs to buffer more data.
@@ -48,12 +48,12 @@ design idea is pretty simple :
     - a timer is armed to periodically refresh active live playlist.
 
   - [src/controller/abr-controller.js][]
-    - in charge of determining auto quality level and monitoring fragment loading speed
-      - **fragment loading speed is monitored every 100ms, based on inputs received from FRAG_LOAD_PROGRESS event
-       - "expected time of fragment load completion" is computed using "fragment loading instant bandwidth".
-       - this time is compared to the "expected time of buffer starvation".
-       - if we have less than 2 fragments buffered and if "expected time of fragment load completion" is bigger than "expected time of buffer starvation" and also bigger than duration needed to load fragment at next quality level (determined by auto quality switch algorithm), current fragment loading is aborted, stream-controller will **trigger an emergency switch down**.
-    - auto quality switch algorithm is bitrate based : fragment loading bitrate is monitored and smoothed using 2 exponential weighted moving average (a fast one, to adapt quickly on bandwidth drop and a slow one, to avoid ramping up to quickly on bandwidth increase)
+    - in charge of determining auto quality level.
+    - auto quality switch algorithm is bitrate based : fragment loading bitrate is monitored and smoothed using 2 exponential weighted moving average (a fast one, to adapt quickly on bandwidth drop and a slow one, to avoid ramping up too quickly on bandwidth increase)
+    - in charge of **monitoring fragment loading speed** (by monitoring data received from FRAG_LOAD_PROGRESS event)
+     - "expected time of fragment load completion" is computed using "fragment loading instant bandwidth".
+     - this time is compared to the "expected time of buffer starvation".
+     - if we have less than 2 fragments buffered and if "expected time of fragment load completion" is bigger than "expected time of buffer starvation" and also bigger than duration needed to load fragment at next quality level (determined by auto quality switch algorithm), current fragment loading is aborted, stream-controller will **trigger an emergency switch down**.    
   - [src/controller/cap-level-controller.js][]
     - in charge of determining best quality level to actual size (dimensions: width and height) of the player 
   - [src/controller/timeline-controller.js][]
