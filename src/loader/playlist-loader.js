@@ -176,7 +176,7 @@ class PlaylistLoader extends EventHandler {
         byteRangeStartOffset,
         tagList = [];
 
-    regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*)[\r\n]+([^#|\r\n]+)?)|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*))|(?:#EXT-X-(VERSION):(.*))|(?:#(.*):(.*))|(?:#(.*))/g;
+    regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*)[\r\n]+([^#|\r\n]+)?)|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*)[\r\n]+([^#|\r\n]+)?)|(?:#EXT-X-(VERSION):(.*))|(?:#(.*):(.*))|(?:#(.*))/g;
     while ((result = regexp.exec(string)) !== null) {
       result.shift();
       result = result.filter(function(n) { return (n !== undefined); });
@@ -260,6 +260,10 @@ class PlaylistLoader extends EventHandler {
         case 'PROGRAM-DATE-TIME':
           programDateTime = new Date(Date.parse(result[1]));
           tagList.push(result);
+          if (frag && !frag.url && result.length >= 3) {
+            frag.url = this.resolve(result[2], baseurl);
+            frag.programDateTime = programDateTime;
+          }
           break;
         default:
           tagList.push(result);
