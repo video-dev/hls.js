@@ -1102,7 +1102,7 @@ class StreamController extends EventHandler {
         break;
       case ErrorDetails.BUFFER_FULL_ERROR:
         // only reduce max buf len if in appending state
-        if (this.state == State.PARSING || this.state == State.PARSED) {
+        if (this.state === State.PARSING || this.state === State.PARSED) {
           // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
           this.config.maxMaxBufferLength/=2;
           logger.warn(`reduce max buffer length to ${this.config.maxMaxBufferLength}s and switch to IDLE state`);
