@@ -21,6 +21,8 @@ npm install
 npm run dev
 # lint
 npm run lint
+# test
+npm run test
 ```
 
  - Use [EditorConfig](http://editorconfig.org/) or at least stay consistent to the file formats defined in the `.editorconfig` file.
