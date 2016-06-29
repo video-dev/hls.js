@@ -705,8 +705,16 @@ class StreamController extends EventHandler {
         logger.log('immediateLevelSwitch');
         if (!this.immediateSwitch) {
             this.immediateSwitch = true;
-            this.previouslyPaused = this.media.paused;
-            this.media.pause();
+            let media = this.media,
+                previouslyPaused;
+            if (media) {
+                previouslyPaused = media.paused;
+                media.pause();
+            } else {
+                // don't restart playback after instant level switch in case media not attached
+                previouslyPaused = true;
+            }
+            this.previouslyPaused = previouslyPaused;
         }
         var fragCurrent = this.fragCurrent;
         if (fragCurrent && fragCurrent.loader) {
