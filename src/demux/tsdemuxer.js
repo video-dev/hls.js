@@ -50,7 +50,8 @@ class TSDemuxer {
             sequenceNumber: 0,
             samples: [],
             len: 0,
-            nbNalu: 0
+            nbNalu: 0,
+            dropped: 0
         };
         this._aacTrack = {
             container: 'video/mp2t',
@@ -450,6 +451,9 @@ class TSDemuxer {
                     samples.push(avcSample);
                     track.len += length;
                     track.nbNalu += units2.length;
+                } else {
+                    // dropped samples, track it
+                    track.dropped++;
                 }
                 units2 = [];
                 length = 0;

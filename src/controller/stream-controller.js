@@ -484,10 +484,14 @@ class StreamController extends EventHandler {
                     let deltaPTS = fragPrevious.deltaPTS,
                         curSNIdx = frag.sn - levelDetails.startSN;
                     // if there is a significant delta between audio and video, larger than max allowed hole,
-                    // it might be because video fragment does not start with a keyframe.
+                    // and if previous remuxed fragment did not start with a keyframe. (fragPrevious.dropped)
                     // let's try to load previous fragment again to get last keyframe
                     // then we will reload again current fragment (that way we should be able to fill the buffer hole ...)
-                    if (deltaPTS && deltaPTS > config.maxBufferHole) {
+                    if (
+                        deltaPTS &&
+                        deltaPTS > config.maxBufferHole &&
+                        fragPrevious.dropped
+                    ) {
                         frag = fragments[curSNIdx - 1];
                         logger.warn(
                             `SN just loaded, with large PTS gap between audio and video, maybe frag is not starting with a keyframe ? load previous one to try to overcome this`
@@ -1074,7 +1078,7 @@ class StreamController extends EventHandler {
                 logger.log(
                     `Demuxing ${sn} of [${details.startSN} ,${
                         details.endSN
-                    }],level ${level}`
+                    }],level ${level}, cc ${fragCurrent.cc}`
                 );
                 let demuxer = this.demuxer;
                 if (demuxer) {
@@ -1213,7 +1217,9 @@ class StreamController extends EventHandler {
                     3
                 )},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(
                     3
-                )}/${data.endDTS.toFixed(3)}],nb:${data.nb}`
+                )}/${data.endDTS.toFixed(3)}],nb:${
+                    data.nb
+                },dropped:${data.dropped || 0}`
             );
 
             var drift = LevelHelper.updateFragPTSDTS(
@@ -1230,6 +1236,11 @@ class StreamController extends EventHandler {
                 level: this.level,
                 drift: drift
             });
+
+            // has remuxer dropped video frames located before first keyframe ?
+            if (data.type === 'video') {
+                frag.dropped = data.dropped;
+            }
 
             [data.data1, data.data2].forEach(buffer => {
                 if (buffer) {
