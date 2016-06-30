@@ -173,6 +173,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
 ```js
   var config = {
     autoStartLoad: true,
+	startPosition : -1,
     capLevelToPlayerSize: false,
     debug: false,
     defaultAudioCodec: undefined,
@@ -235,8 +236,14 @@ A logger object could also be provided for custom logging: `config.debug = custo
 
 (default: `true`)
 
- - if set to true, start level playlist and first fragments will be loaded automatically, after triggering of `Hls.Events.MANIFEST_PARSED` event
- - if set to false, an explicit API call (`hls.startLoad()`) will be needed to start quality level/fragment loading.
+ - if set to true, start level playlist and first fragments will be loaded automatically, after triggering of ```Hls.Events.MANIFEST_PARSED``` event
+ - if set to false, an explicit API call (```hls.startLoad(startPosition=-1)```) will be needed to start quality level/fragment loading.
+
+#### ```startPosition```
+(default -1)
+
+ - if set to -1, playback will start from initialTime=0 for VoD and according to ```liveSyncDuration/liveSyncDurationCount``` config params for Live
+ - Otherwise, playback will start from predefined value. (unless stated otherwise in ```autoStartLoad=false``` mode : in that case startPosition can be overrided using ```hls.startLoad(startPosition)```).
 
 #### `defaultAudioCodec`
 
@@ -667,12 +674,14 @@ By default, hls.js will automatically start loading quality level playlists, and
 
 However if `config.autoStartLoad` is set to `false`, the following method needs to be called to manually start playlist and fragments loading:
 
-#### `hls.startLoad()`
+#### ```hls.startLoad(startPosition=-1)```
 Start/restart playlist/fragment loading. this is only effective if MANIFEST_PARSED event has been triggered and video element has been attached to hls object.
 
-#### `hls.stopLoad()`
-Stop playlist/fragment loading. could be resumed later on by calling `hls.startLoad()`
+startPosition is the initial position in the playlist.
+If startPosition is not set to -1, it allows to override default startPosition to the one you want (it will bypass hls.config.liveSync* config params for Live for example, so that user can start playback from whatever position)
 
+#### ```hls.stopLoad()```
+stop playlist/fragment loading. could be resumed later on by calling ```hls.startLoad()```
 
 ## Audio Tracks Control API
 

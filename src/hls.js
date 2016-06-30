@@ -54,6 +54,7 @@ class Hls {
         if (!Hls.defaultConfig) {
             Hls.defaultConfig = {
                 autoStartLoad: true,
+                startPosition: -1,
                 debug: false,
                 capLevelOnFPSDrop: false,
                 capLevelToPlayerSize: false,
@@ -221,7 +222,7 @@ class Hls {
         this.trigger(Event.MANIFEST_LOADING, { url: url });
     }
 
-    startLoad(startPosition = 0) {
+    startLoad(startPosition = -1) {
         logger.log('startLoad');
         this.levelController.startLoad();
         this.streamController.startLoad(startPosition);

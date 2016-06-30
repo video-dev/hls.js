@@ -63,7 +63,7 @@ class StreamController extends EventHandler {
         this.state = State.STOPPED;
     }
 
-    startLoad(startPosition = 0) {
+    startLoad(startPosition) {
         if (this.levels) {
             var media = this.media,
                 lastCurrentTime = this.lastCurrentTime;
@@ -822,8 +822,9 @@ class StreamController extends EventHandler {
         media.addEventListener('seeking', this.onvseeking);
         media.addEventListener('seeked', this.onvseeked);
         media.addEventListener('ended', this.onvended);
-        if (this.levels && this.config.autoStartLoad) {
-            this.hls.startLoad();
+        let config = this.config;
+        if (this.levels && config.autoStartLoad) {
+            this.hls.startLoad(config.startPosition);
         }
     }
 
@@ -947,8 +948,9 @@ class StreamController extends EventHandler {
         this.levels = data.levels;
         this.startLevelLoaded = false;
         this.startFragRequested = false;
-        if (this.config.autoStartLoad) {
-            this.hls.startLoad();
+        let config = this.config;
+        if (config.autoStartLoad) {
+            this.hls.startLoad(config.startPosition);
         }
     }
 
@@ -991,19 +993,23 @@ class StreamController extends EventHandler {
             level: newLevelId
         });
 
-        // compute start position
         if (this.startFragRequested === false) {
-            // if live playlist, set start position to be fragment N-this.config.liveSyncDurationCount (usually 3)
-            if (newDetails.live) {
-                let targetLatency =
-                    this.config.liveSyncDuration !== undefined
-                        ? this.config.liveSyncDuration
-                        : this.config.liveSyncDurationCount *
-                          newDetails.targetduration;
-                this.startPosition = Math.max(
-                    0,
-                    sliding + duration - targetLatency
-                );
+            // compute start position if set to -1. use it straight away if value is defined
+            if (this.startPosition === -1) {
+                // if live playlist, set start position to be fragment N-this.config.liveSyncDurationCount (usually 3)
+                if (newDetails.live) {
+                    let targetLatency =
+                        this.config.liveSyncDuration !== undefined
+                            ? this.config.liveSyncDuration
+                            : this.config.liveSyncDurationCount *
+                              newDetails.targetduration;
+                    this.startPosition = Math.max(
+                        0,
+                        sliding + duration - targetLatency
+                    );
+                } else {
+                    this.startPosition = 0;
+                }
             }
             this.nextLoadPosition = this.startPosition;
         }
