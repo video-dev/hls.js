@@ -64,7 +64,8 @@ class PassThroughRemuxer {
       startPTS: timeOffset,
       startDTS: timeOffset,
       type: 'audiovideo',
-      nb: 1
+      nb: 1,
+      dropped : 0
     });
   }
 }

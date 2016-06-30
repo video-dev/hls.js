@@ -315,8 +315,10 @@ class MP4Remuxer {
     }
     // next AVC sample DTS should be equal to last sample DTS + last sample duration (in PES timescale)
     this.nextAvcDts = lastDTS + mp4SampleDuration*pes2mp4ScaleFactor;
+    let dropped = track.dropped;
     track.len = 0;
     track.nbNalu = 0;
+    track.dropped = 0;
     if(outputSamples.length && navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
       let flags = outputSamples[0].flags;
     // chrome workaround, mark first sample as being a Random Access Point to avoid sourcebuffer append issue
@@ -339,7 +341,8 @@ class MP4Remuxer {
       startDTS: firstDTS / pesTimeScale,
       endDTS: this.nextAvcDts / pesTimeScale,
       type: 'video',
-      nb: outputSamples.length
+      nb: outputSamples.length,
+      dropped : dropped
     };
     this.observer.trigger(Event.FRAG_PARSING_DATA, data);
     return data;
