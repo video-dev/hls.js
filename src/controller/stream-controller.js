@@ -74,7 +74,7 @@ class StreamController extends EventHandler {
             }
             this.level = -1;
             this.fragLoadError = 0;
-            if (media && lastCurrentTime) {
+            if (media && lastCurrentTime > 0) {
                 logger.log(`configure startPosition @${lastCurrentTime}`);
                 if (!this.lastPaused) {
                     logger.log('resuming video');
@@ -996,19 +996,28 @@ class StreamController extends EventHandler {
         if (this.startFragRequested === false) {
             // compute start position if set to -1. use it straight away if value is defined
             if (this.startPosition === -1) {
-                // if live playlist, set start position to be fragment N-this.config.liveSyncDurationCount (usually 3)
-                if (newDetails.live) {
-                    let targetLatency =
-                        this.config.liveSyncDuration !== undefined
-                            ? this.config.liveSyncDuration
-                            : this.config.liveSyncDurationCount *
-                              newDetails.targetduration;
-                    this.startPosition = Math.max(
-                        0,
-                        sliding + duration - targetLatency
+                // first, check if start time offset has been set in playlist, if yes, use this value
+                let startTimeOffset = newDetails.startTimeOffset;
+                if (!isNaN(startTimeOffset)) {
+                    logger.log(
+                        `start time offset found in playlist, adjust startPosition to ${startTimeOffset}`
                     );
+                    this.startPosition = startTimeOffset;
                 } else {
-                    this.startPosition = 0;
+                    // if live playlist, set start position to be fragment N-this.config.liveSyncDurationCount (usually 3)
+                    if (newDetails.live) {
+                        let targetLatency =
+                            this.config.liveSyncDuration !== undefined
+                                ? this.config.liveSyncDuration
+                                : this.config.liveSyncDurationCount *
+                                  newDetails.targetduration;
+                        this.startPosition = Math.max(
+                            0,
+                            sliding + duration - targetLatency
+                        );
+                    } else {
+                        this.startPosition = 0;
+                    }
                 }
             }
             this.nextLoadPosition = this.startPosition;
