@@ -300,6 +300,10 @@ class StreamController extends EventHandler {
                   frag = fragments[curSNIdx+1];
                   logger.log(`SN just loaded, load next one: ${frag.sn}`);
                 }
+                // ensure frag is not undefined
+                if(!frag) {
+                  break;
+                }
               } else {
                 // have we reached end of VOD playlist ?
                 if (!levelDetails.live) {
