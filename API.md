@@ -179,7 +179,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
     maxBufferLength: 30,
     maxMaxBufferLength: 600,
     maxBufferSize: 60*1000*1000,
-    maxBufferHole: 0.3,
+    maxBufferHole: 0.5,
     maxSeekHole: 2,
     seekHoleNudgeDuration: 0.01,
     maxFragLookUpTolerance: 0.2,
@@ -263,7 +263,7 @@ This is the guaranteed buffer length hls.js will try to reach, regardless of max
 
 #### `maxBufferHole`
 
-(default: `0.3` seconds)
+(default: `0.5` seconds)
 
 'Maximum' inter-fragment buffer hole tolerance that hls.js can cope with when searching for the next fragment to load.
 When switching between quality level, fragments might not be perfectly aligned.
