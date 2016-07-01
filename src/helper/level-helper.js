@@ -24,12 +24,14 @@ class LevelHelper {
     for(var i = start ; i <= end ; i++) {
       var oldFrag = oldfragments[delta+i],
           newFrag = newfragments[i];
-      ccOffset = oldFrag.cc - newFrag.cc;
-      if (!isNaN(oldFrag.startPTS)) {
-        newFrag.start = newFrag.startPTS = oldFrag.startPTS;
-        newFrag.endPTS = oldFrag.endPTS;
-        newFrag.duration = oldFrag.duration;
-        PTSFrag = newFrag;
+      if (newFrag && oldFrag) {
+        ccOffset = oldFrag.cc - newFrag.cc;
+        if (!isNaN(oldFrag.startPTS)) {
+          newFrag.start = newFrag.startPTS = oldFrag.startPTS;
+          newFrag.endPTS = oldFrag.endPTS;
+          newFrag.duration = oldFrag.duration;
+          PTSFrag = newFrag;
+        }
       }
     }
 
