@@ -307,18 +307,20 @@ class BufferController extends EventHandler {
         if (this._levelDuration === null) {
             return;
         }
-        let media = this.media;
-        let mediaSource = this.mediaSource;
+        let media = this.media,
+            mediaSource = this.mediaSource,
+            sourceBuffer = this.sourceBuffer;
         if (
             !media ||
             !mediaSource ||
+            !sourceBuffer ||
             media.readyState === 0 ||
             mediaSource.readyState !== 'open'
         ) {
             return;
         }
-        for (let type in mediaSource.sourceBuffers) {
-            if (mediaSource.sourceBuffers[type].updating) {
+        for (let type in sourceBuffer) {
+            if (sourceBuffer[type].updating) {
                 // can't set duration whilst a buffer is updating
                 return;
             }
