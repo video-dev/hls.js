@@ -1739,9 +1739,7 @@ var StreamController = function (_EventHandler) {
     }
   }, {
     key: 'startLoad',
-    value: function startLoad() {
-      var startPosition = arguments.length <= 0 || arguments[0] === undefined ? 0 : arguments[0];
-
+    value: function startLoad(startPosition) {
       if (this.levels) {
         var media = this.media,
             lastCurrentTime = this.lastCurrentTime;
@@ -1752,7 +1750,7 @@ var StreamController = function (_EventHandler) {
         }
         this.level = -1;
         this.fragLoadError = 0;
-        if (media && lastCurrentTime) {
+        if (media && lastCurrentTime > 0) {
           _logger.logger.log('configure startPosition @' + lastCurrentTime);
           if (!this.lastPaused) {
             _logger.logger.log('resuming video');
@@ -1972,7 +1970,7 @@ var StreamController = function (_EventHandler) {
             }
             if (frag) {
               start = frag.start;
-              _logger.logger.log('find SN matching with pos:' + bufferEnd + ':' + frag.sn);
+              //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
               if (fragPrevious && frag.level === fragPrevious.level && frag.sn === fragPrevious.sn) {
                 if (frag.sn < levelDetails.endSN) {
                   var deltaPTS = fragPrevious.deltaPTS,
@@ -1989,6 +1987,10 @@ var StreamController = function (_EventHandler) {
                   } else {
                     frag = fragments[curSNIdx + 1];
                     _logger.logger.log('SN just loaded, load next one: ' + frag.sn);
+                  }
+                  // ensure frag is not undefined
+                  if (!frag) {
+                    break;
                   }
                 } else {
                   // have we reached end of VOD playlist ?
@@ -2265,8 +2267,9 @@ var StreamController = function (_EventHandler) {
       media.addEventListener('seeking', this.onvseeking);
       media.addEventListener('seeked', this.onvseeked);
       media.addEventListener('ended', this.onvended);
-      if (this.levels && this.config.autoStartLoad) {
-        this.hls.startLoad();
+      var config = this.config;
+      if (this.levels && config.autoStartLoad) {
+        this.hls.startLoad(config.startPosition);
       }
     }
   }, {
@@ -2381,8 +2384,9 @@ var StreamController = function (_EventHandler) {
       this.levels = data.levels;
       this.startLevelLoaded = false;
       this.startFragRequested = false;
-      if (this.config.autoStartLoad) {
-        this.hls.startLoad();
+      var config = this.config;
+      if (config.autoStartLoad) {
+        this.hls.startLoad(config.startPosition);
       }
     }
   }, {
@@ -2419,12 +2423,23 @@ var StreamController = function (_EventHandler) {
       curLevel.details = newDetails;
       this.hls.trigger(_events2.default.LEVEL_UPDATED, { details: newDetails, level: newLevelId });
 
-      // compute start position
       if (this.startFragRequested === false) {
-        // if live playlist, set start position to be fragment N-this.config.liveSyncDurationCount (usually 3)
-        if (newDetails.live) {
-          var targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * newDetails.targetduration;
-          this.startPosition = Math.max(0, sliding + duration - targetLatency);
+        // compute start position if set to -1. use it straight away if value is defined
+        if (this.startPosition === -1) {
+          // first, check if start time offset has been set in playlist, if yes, use this value
+          var startTimeOffset = newDetails.startTimeOffset;
+          if (!isNaN(startTimeOffset)) {
+            _logger.logger.log('start time offset found in playlist, adjust startPosition to ' + startTimeOffset);
+            this.startPosition = startTimeOffset;
+          } else {
+            // if live playlist, set start position to be fragment N-this.config.liveSyncDurationCount (usually 3)
+            if (newDetails.live) {
+              var targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * newDetails.targetduration;
+              this.startPosition = Math.max(0, sliding + duration - targetLatency);
+            } else {
+              this.startPosition = 0;
+            }
+          }
         }
         this.nextLoadPosition = this.startPosition;
       }
@@ -5983,6 +5998,7 @@ var Hls = function () {
       if (!Hls.defaultConfig) {
         Hls.defaultConfig = {
           autoStartLoad: true,
+          startPosition: -1,
           debug: false,
           capLevelToPlayerSize: false,
           maxBufferLength: 30,
@@ -6143,7 +6159,7 @@ var Hls = function () {
   }, {
     key: 'startLoad',
     value: function startLoad() {
-      var startPosition = arguments.length <= 0 || arguments[0] === undefined ? 0 : arguments[0];
+      var startPosition = arguments.length <= 0 || arguments[0] === undefined ? -1 : arguments[0];
 
       _logger.logger.log('startLoad');
       this.levelController.startLoad();
@@ -6703,7 +6719,7 @@ var PlaylistLoader = function (_EventHandler) {
           byteRangeEndOffset,
           byteRangeStartOffset;
 
-      regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*)[\r\n]+([^#|\r\n]+)?)/g;
+      regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*))|(?:#EXT-X-(START):(.*))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*)[\r\n]+([^#|\r\n]+)?)/g;
       while ((result = regexp.exec(string)) !== null) {
         result.shift();
         result = result.filter(function (n) {
@@ -6776,6 +6792,14 @@ var PlaylistLoader = function (_EventHandler) {
                 // Initialization Vector (IV)
                 levelkey.iv = decryptiv;
               }
+            }
+            break;
+          case 'START':
+            var startParams = result[1];
+            var startAttrs = new _attrList2.default(startParams);
+            var startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
+            if (startTimeOffset) {
+              level.startTimeOffset = startTimeOffset;
             }
             break;
           case 'PROGRAM-DATE-TIME':
