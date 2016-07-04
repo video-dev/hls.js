@@ -46,7 +46,7 @@ class LevelController extends EventHandler {
       if(level.videoCodec) {
         videoCodecFound = true;
       }
-      if(level.audioCodec) {
+      if(level.audioCodec || (level.attrs && level.attrs.AUDIO)) {
         audioCodecFound = true;
       }
       var redundantLevelId = bitrateSet[level.bitrate];
