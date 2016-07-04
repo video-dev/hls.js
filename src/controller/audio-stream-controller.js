@@ -497,7 +497,7 @@ class AudioStreamController extends EventHandler {
 
 
   onBufferCreated(data) {
-    let audioTrack = data.tracks.audio
+    let audioTrack = data.tracks.audio;
     if (audioTrack) {
       this.mediaBuffer = audioTrack.buffer;
       this.loadedmetadata = true;
