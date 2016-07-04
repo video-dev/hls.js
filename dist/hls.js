@@ -727,9 +727,7 @@ var AudioStreamController = function (_EventHandler) {
     }
   }, {
     key: 'startLoad',
-    value: function startLoad() {
-      var startPosition = arguments.length <= 0 || arguments[0] === undefined ? 0 : arguments[0];
-
+    value: function startLoad(startPosition) {
       if (this.tracks) {
         var media = this.media,
             lastCurrentTime = this.lastCurrentTime;
@@ -749,7 +747,7 @@ var AudioStreamController = function (_EventHandler) {
         this.tick();
       } else {
         _logger.logger.warn('cannot start loading as audio tracks not parsed yet');
-        this.nextLoadPosition = startPosition;
+        this.startPosition = startPosition;
         this.state = State.STOPPED;
       }
     }
@@ -792,7 +790,7 @@ var AudioStreamController = function (_EventHandler) {
           trackDetails,
           hls = this.hls,
           config = hls.config;
-      //logger.log('audioStream:' + this.state);
+      _logger.logger.log('audioStream:' + this.state);
       switch (this.state) {
         case State.ERROR:
         //don't do anything in error state to avoid breaking further ...
@@ -966,8 +964,9 @@ var AudioStreamController = function (_EventHandler) {
       this.onvended = this.onMediaEnded.bind(this);
       media.addEventListener('seeking', this.onvseeking);
       media.addEventListener('ended', this.onvended);
-      if (this.tracks && this.config.autoStartLoad) {
-        this.startLoad();
+      var config = this.config;
+      if (this.tracks && config.autoStartLoad) {
+        this.startLoad(config.startPosition);
       }
     }
   }, {
@@ -1035,6 +1034,11 @@ var AudioStreamController = function (_EventHandler) {
     value: function onAudioTrackSwitch(data) {
       this.trackId = data.id;
       this.state = State.IDLE;
+
+      this.fragCurrent = null;
+      this.state = State.PAUSED;
+      // flush audio source buffer
+      this.hls.trigger(_events2.default.BUFFER_FLUSHING, { startOffset: 0, endOffset: Number.POSITIVE_INFINITY, type: 'audio' });
       this.tick();
     }
   }, {
@@ -1050,7 +1054,18 @@ var AudioStreamController = function (_EventHandler) {
       track.details = details;
 
       // compute start position
-      if (this.startFragRequested === false) {
+      if (!this.startFragRequested) {
+        // compute start position if set to -1. use it straight away if value is defined
+        if (this.startPosition === -1) {
+          // first, check if start time offset has been set in playlist, if yes, use this value
+          var startTimeOffset = details.startTimeOffset;
+          if (!isNaN(startTimeOffset)) {
+            _logger.logger.log('start time offset found in playlist, adjust startPosition to ' + startTimeOffset);
+            this.startPosition = startTimeOffset;
+          } else {
+            this.startPosition = 0;
+          }
+        }
         this.nextLoadPosition = this.startPosition;
       }
       // only switch batck to IDLE state if we were waiting for track to start downloading a new fragment
@@ -1154,8 +1169,11 @@ var AudioStreamController = function (_EventHandler) {
   }, {
     key: 'onBufferCreated',
     value: function onBufferCreated(data) {
-      this.mediaBuffer = data.tracks.audio.buffer;
-      this.loadedmetadata = true;
+      var audioTrack = data.tracks.audio;
+      if (audioTrack) {
+        this.mediaBuffer = audioTrack.buffer;
+        this.loadedmetadata = true;
+      }
     }
   }, {
     key: 'onBufferAppended',
@@ -1242,10 +1260,13 @@ var AudioStreamController = function (_EventHandler) {
   }, {
     key: 'onBufferFlushed',
     value: function onBufferFlushed() {
+      // increase fragment load Index to avoid frag loop loading error after buffer flush
+      this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
       // move to IDLE once flush complete. this should trigger new fragment loading
       this.state = State.IDLE;
       // reset reference to frag
       this.fragPrevious = null;
+      this.tick();
     }
   }, {
     key: 'timeRangesToString',
@@ -1694,7 +1715,7 @@ var BufferController = function (_EventHandler) {
   }, {
     key: 'onBufferFlushing',
     value: function onBufferFlushing(data) {
-      this.flushRange.push({ start: data.startOffset, end: data.endOffset });
+      this.flushRange.push({ start: data.startOffset, end: data.endOffset, type: data.type });
       // attempt flush immediatly
       this.flushBufferCounter = 0;
       this.doFlush();
@@ -1751,7 +1772,7 @@ var BufferController = function (_EventHandler) {
       while (this.flushRange.length) {
         var range = this.flushRange[0];
         // flushBuffer will abort any buffer append in progress and flush Audio/Video Buffer
-        if (this.flushBuffer(range.start, range.end)) {
+        if (this.flushBuffer(range.start, range.end, range.type)) {
           // range flushed, remove from flush array
           this.flushRange.shift();
           this.flushBufferCounter = 0;
@@ -1854,12 +1875,17 @@ var BufferController = function (_EventHandler) {
 
   }, {
     key: 'flushBuffer',
-    value: function flushBuffer(startOffset, endOffset) {
+    value: function flushBuffer(startOffset, endOffset, typeIn) {
       var sb, i, bufStart, bufEnd, flushStart, flushEnd;
       //logger.log('flushBuffer,pos/start/end: ' + this.media.currentTime + '/' + startOffset + '/' + endOffset);
       // safeguard to avoid infinite looping : don't try to flush more than the nb of appended segments
       if (this.flushBufferCounter < this.appended && this.sourceBuffer) {
         for (var type in this.sourceBuffer) {
+          // check if sourcebuffer type is defined (typeIn): if yes, let's only flush this one
+          // if no, let's flush all sourcebuffers
+          if (typeIn && type !== typeIn) {
+            continue;
+          }
           sb = this.sourceBuffer[type];
           if (!sb.updating) {
             for (i = 0; i < sb.buffered.length; i++) {
@@ -2328,7 +2354,7 @@ var LevelController = function (_EventHandler) {
         if (level.videoCodec) {
           videoCodecFound = true;
         }
-        if (level.audioCodec) {
+        if (level.audioCodec || level.attrs && level.attrs.AUDIO) {
           audioCodecFound = true;
         }
         var redundantLevelId = bitrateSet[level.bitrate];
@@ -2844,7 +2870,7 @@ var StreamController = function (_EventHandler) {
       // determine next candidate fragment to be loaded, based on current position and end of buffer position
       // ensure up to `config.maxMaxBufferLength` of buffer upfront
 
-      var bufferInfo = _bufferHelper2.default.bufferInfo(this.media, pos, config.maxBufferHole),
+      var bufferInfo = _bufferHelper2.default.bufferInfo(this.mediaBuffer ? this.mediaBuffer : this.media, pos, config.maxBufferHole),
           bufferLen = bufferInfo.len;
       // Stay idle if we are still with buffer margins
       if (bufferLen >= maxBufLen) {
@@ -3210,8 +3236,6 @@ var StreamController = function (_EventHandler) {
         fragCurrent.loader.abort();
       }
       this.fragCurrent = null;
-      // increase fragment load Index to avoid frag loop loading error after buffer flush
-      this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
       this.state = State.PAUSED;
       // flush everything
       this.hls.trigger(_events2.default.BUFFER_FLUSHING, { startOffset: 0, endOffset: Number.POSITIVE_INFINITY });
@@ -3895,6 +3919,8 @@ var StreamController = function (_EventHandler) {
       if (this.immediateSwitch) {
         this.immediateLevelSwitchEnd();
       }
+      // increase fragment load Index to avoid frag loop loading error after buffer flush
+      this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
       // move to IDLE once flush complete. this should trigger new fragment loading
       this.state = State.IDLE;
       // reset reference to frag
@@ -4746,6 +4772,7 @@ var AACDemuxer = function () {
       } else if (level !== this.lastLevel) {
         _logger.logger.log('audio track switch detected');
         this.lastLevel = level;
+        this.remuxer.switchLevel();
         this.insertDiscontinuity();
       } else if (sn === this.lastSN + 1) {
         contiguous = true;
@@ -7356,7 +7383,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.1';
+      return '0.6.2-0';
     }
   }, {
     key: 'Events',
