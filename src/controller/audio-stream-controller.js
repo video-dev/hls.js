@@ -353,6 +353,13 @@ class AudioStreamController extends EventHandler {
   onAudioTrackSwitch(data) {
     this.trackId = data.id;
     this.state = State.IDLE;
+
+    this.fragCurrent = null;
+    // increase fragment load Index to avoid frag loop loading error after buffer flush
+    this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+    this.state = State.PAUSED;
+    // flush audio source buffer
+    this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0, endOffset: Number.POSITIVE_INFINITY, type : 'audio'});
     this.tick();
   }
 

@@ -252,7 +252,7 @@ class BufferController extends EventHandler {
   }
 
   onBufferFlushing(data) {
-    this.flushRange.push({start: data.startOffset, end: data.endOffset});
+    this.flushRange.push({start: data.startOffset, end: data.endOffset, type : data.type});
     // attempt flush immediatly
     this.flushBufferCounter = 0;
     this.doFlush();
@@ -304,7 +304,7 @@ class BufferController extends EventHandler {
     while(this.flushRange.length) {
       var range = this.flushRange[0];
       // flushBuffer will abort any buffer append in progress and flush Audio/Video Buffer
-      if (this.flushBuffer(range.start, range.end)) {
+      if (this.flushBuffer(range.start, range.end, range.type)) {
         // range flushed, remove from flush array
         this.flushRange.shift();
         this.flushBufferCounter = 0;
@@ -401,12 +401,17 @@ class BufferController extends EventHandler {
     return true once range has been flushed.
     as sourceBuffer.remove() is asynchronous, flushBuffer will be retriggered on sourceBuffer update end
   */
-  flushBuffer(startOffset, endOffset) {
+  flushBuffer(startOffset, endOffset, typeIn) {
     var sb, i, bufStart, bufEnd, flushStart, flushEnd;
     //logger.log('flushBuffer,pos/start/end: ' + this.media.currentTime + '/' + startOffset + '/' + endOffset);
     // safeguard to avoid infinite looping : don't try to flush more than the nb of appended segments
     if (this.flushBufferCounter < this.appended && this.sourceBuffer) {
       for (var type in this.sourceBuffer) {
+        // check if sourcebuffer type is defined (typeIn): if yes, let's only flush this one
+        // if no, let's flush all sourcebuffers
+        if (typeIn && type !== typeIn) {
+          continue;
+        }
         sb = this.sourceBuffer[type];
         if (!sb.updating) {
           for (i = 0; i < sb.buffered.length; i++) {
