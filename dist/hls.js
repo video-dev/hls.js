@@ -7383,7 +7383,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.2-0';
+      return '0.6.2-1';
     }
   }, {
     key: 'Events',
