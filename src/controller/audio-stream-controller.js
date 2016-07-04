@@ -61,7 +61,7 @@ class AudioStreamController extends EventHandler {
     this.state = State.STOPPED;
   }
 
-  startLoad(startPosition=0) {
+  startLoad(startPosition) {
     if (this.tracks) {
       var media = this.media, lastCurrentTime = this.lastCurrentTime;
       this.stopLoad();
@@ -80,7 +80,7 @@ class AudioStreamController extends EventHandler {
       this.tick();
     } else {
       logger.warn('cannot start loading as audio tracks not parsed yet');
-      this.nextLoadPosition = startPosition;
+      this.startPosition = startPosition;
       this.state = State.STOPPED;
     }
   }
@@ -287,8 +287,9 @@ class AudioStreamController extends EventHandler {
     this.onvended = this.onMediaEnded.bind(this);
     media.addEventListener('seeking', this.onvseeking);
     media.addEventListener('ended', this.onvended);
-    if(this.tracks && this.config.autoStartLoad) {
-      this.startLoad();
+    let config = this.config;
+    if(this.tracks && config.autoStartLoad) {
+      this.startLoad(config.startPosition);
     }
   }
 
@@ -366,7 +367,18 @@ class AudioStreamController extends EventHandler {
     track.details = details;
 
     // compute start position
-    if (this.startFragRequested === false) {
+    if (!this.startFragRequested) {
+    // compute start position if set to -1. use it straight away if value is defined
+      if (this.startPosition === -1) {
+        // first, check if start time offset has been set in playlist, if yes, use this value
+        let startTimeOffset = details.startTimeOffset;
+        if(!isNaN(startTimeOffset)) {
+          logger.log(`start time offset found in playlist, adjust startPosition to ${startTimeOffset}`);
+          this.startPosition = startTimeOffset;
+        } else {
+          this.startPosition = 0;
+        }
+      }
       this.nextLoadPosition = this.startPosition;
     }
     // only switch batck to IDLE state if we were waiting for track to start downloading a new fragment
@@ -478,8 +490,11 @@ class AudioStreamController extends EventHandler {
 
 
   onBufferCreated(data) {
-    this.mediaBuffer = data.tracks.audio.buffer;
-    this.loadedmetadata = true;
+    let audioTrack = data.tracks.audio
+    if (audioTrack) {
+      this.mediaBuffer = audioTrack.buffer;
+      this.loadedmetadata = true;
+    }
   }
 
   onBufferAppended(data) {
