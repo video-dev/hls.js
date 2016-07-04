@@ -190,8 +190,6 @@ class AbrController extends EventHandler {
     if (this._nextAutoLevel !== -1) {
       return Math.min(this._nextAutoLevel,maxAutoLevel);
     }
-
-<<<<<<< HEAD
     let playbackRate = ((v && v.playbackRate !== 0) ? Math.abs(v.playbackRate) : 1.0),
         avgbw = this.bwEstimator ? this.bwEstimator.getEstimate()/playbackRate : config.abrEwmaDefaultEstimate/playbackRate,
         adjustedbw;
