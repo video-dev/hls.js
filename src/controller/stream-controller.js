@@ -229,7 +229,7 @@ class StreamController extends EventHandler {
         // ensure up to `config.maxMaxBufferLength` of buffer upfront
 
         const bufferInfo = BufferHelper.bufferInfo(
-                this.media,
+                this.mediaBuffer ? this.mediaBuffer : this.media,
                 pos,
                 config.maxBufferHole
             ),
