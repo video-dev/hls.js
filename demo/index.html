@@ -315,6 +315,9 @@ $(document).ready(function() {
           $("#HlsStatus").text(data.audioTracks.length + " audio tracks found");
           updateAudioTrackInfo();
        });
+       hls.on(Hls.Events.AUDIO_TRACK_SWITCH,function(event,data) {
+          updateAudioTrackInfo();
+       });
        hls.on(Hls.Events.LEVEL_LOADED,function(event,data) {
           events.isLive = data.details.live;
           var event = {
