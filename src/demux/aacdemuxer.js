@@ -75,6 +75,7 @@ class AACDemuxer {
         } else if (level !== this.lastLevel) {
             logger.log('audio track switch detected');
             this.lastLevel = level;
+            this.remuxer.switchLevel();
             this.insertDiscontinuity();
         } else if (sn === this.lastSN + 1) {
             contiguous = true;
