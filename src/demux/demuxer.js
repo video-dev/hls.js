@@ -12,6 +12,7 @@ class Demuxer {
       mp4 : MediaSource.isTypeSupported('video/mp4'),
       mp2t : hls.config.enableMP2TPassThrough && MediaSource.isTypeSupported('video/mp2t')
     };
+    var demuxConfig = { forceKeyFrameOnDiscontinuity: hls.config.forceKeyFrameOnDiscontinuity };
     if (hls.config.enableWorker && (typeof(Worker) !== 'undefined')) {
         logger.log('demuxing in webworker');
         try {
@@ -19,13 +20,13 @@ class Demuxer {
           this.w = work(DemuxerWorker);
           this.onwmsg = this.onWorkerMessage.bind(this);
           this.w.addEventListener('message', this.onwmsg);
-          this.w.postMessage({cmd: 'init', typeSupported : typeSupported});
+          this.w.postMessage({cmd: 'init', typeSupported : typeSupported, config: demuxConfig});
         } catch(err) {
           logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
-          this.demuxer = new DemuxerInline(hls,typeSupported);
+          this.demuxer = new DemuxerInline(hls,typeSupported,demuxConfig);
         }
       } else {
-        this.demuxer = new DemuxerInline(hls,typeSupported);
+        this.demuxer = new DemuxerInline(hls,typeSupported,demuxConfig);
       }
       this.demuxInitialized = true;
   }
@@ -110,4 +111,3 @@ class Demuxer {
 }
 
 export default Demuxer;
-

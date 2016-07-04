@@ -202,7 +202,8 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       xhrSetup : XMLHttpRequestSetupCallback,
       abrController : customAbrController,
       timelineController: TimelineController,
-      enableCEA708Captions: true
+      enableCEA708Captions: true,
+      forceKeyFrameOnDiscontinuity: true
     };
 
 
@@ -215,10 +216,10 @@ this configuration will be applied by default to all instances.
 
 #### ```capLevelToPlayerSize```
  (default false)
- 
+
   - if set to true, the adaptive algorithm with limit levels usable in auto-quality by the HTML video element dimensions (width and height)
   - if set to false, levels will not be limited. All available levels could be used in auto-quality mode taking only bandwidth into consideration.
- 
+
 #### ```debug```
 (default false)
 
@@ -243,7 +244,7 @@ a logger object could also be provided for custom logging : ```config.debug=cust
 
  if audio codec is not signaled in variant manifest, or if only a stream manifest is provided, hls.js tries to guess audio codec by parsing audio sampling rate in ADTS header. if sampling rate is less or equal than 22050 Hz, then hls.js assumes it is HE-AAC, otherwise it assumes it is AAC-LC. This could result in bad guess, leading to audio decode error, ending up in media error.
  it is possible to hint default audiocodec to hls.js by configuring this value as below:
-  - ```mp4a.40.2``` (AAC-LC) or 
+  - ```mp4a.40.2``` (AAC-LC) or
   - ```mp4a.40.5``` (HE-AAC) or
   - ```undefined``` (guess based on sampling rate)
 
@@ -292,8 +293,8 @@ frag[1] : [10,20]
 => buffered.end is within frag[0] range, but as we are close to frag[1], frag[1] should be choosen instead
 
 
-if maxFragLookUpTolerance=0.2, 
-this lookup will be adjusted to 
+if maxFragLookUpTolerance=0.2,
+this lookup will be adjusted to
 frag[Ø] : [-0.2,9.8]
 frag[1] : [9.8,19.8]
 => this time, buffered.end is within frag[1] range, and frag[1] will be the next fragment to be loaded, as expected.
@@ -482,6 +483,16 @@ whether or not to enable CEA-708 captions
 
 parameter should be a boolean
 
+#### ```forceKeyFrameOnDiscontinuity```
+(default : true)
+
+whether or not to force having a key frame in the first AVC sample after a discontinuity.
+If set to true, after a discontinuity, the AVC samples without any key frame will be dropped until finding one that contains a key frame.
+If set to false, all AVC samples will be kept, which can help avoid holes in the stream.
+Setting this parameter to false can also generate decoding weirdness when switching level or seeking.
+
+parameter should be a boolean
+
 #### ```abrEwmaFastLive```
 (default : 5.0)
 
@@ -503,7 +514,7 @@ parameter should be a float greater than abrEwmaFastLive
 #### ```abrEwmaFastVoD```
 (default : 4.0)
 
-Fast bitrate Exponential moving average half-life, used to compute average bitrate for VoD streams 
+Fast bitrate Exponential moving average half-life, used to compute average bitrate for VoD streams
 Half of the estimate is based on the last abrEwmaFastVoD seconds of sample history.
 Each of the sample is weighted by the fragment loading duration.
 
@@ -512,7 +523,7 @@ parameter should be a float greater than 0
 #### ```abrEwmaSlowVoD```
 (default : 15.0)
 
-Slow bitrate Exponential moving average half-life, used to compute average bitrate for VoD streams 
+Slow bitrate Exponential moving average half-life, used to compute average bitrate for VoD streams
 Half of the estimate is based on the last abrEwmaSlowVoD seconds of sample history.
 Each of the sample is weighted by the fragment loading duration.
 
@@ -731,7 +742,7 @@ full list of Errors is described below:
     - data: { type : ```MEDIA_ERROR```, details : ```Hls.ErrorDetails.BUFFER_STALLED_ERROR```, fatal : ```false```}
   - ```Hls.ErrorDetails.BUFFER_FULL_ERROR```raised when no data can be appended anymore in media buffer because it is full. this error is recovered automatically by performing a smooth level switching that empty buffers (without disrupting the playback) and reducing the max buffer length.
     - data: { type : ```MEDIA_ERROR```, details : ```Hls.ErrorDetails.BUFFER_FULL_ERROR```, fatal : ```false```}
-  - ```Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE```raised after hls.js seeks over a buffer hole to unstuck the playback, 
+  - ```Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE```raised after hls.js seeks over a buffer hole to unstuck the playback,
     - data: { type : ```MEDIA_ERROR```, details : ```Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE```, fatal : ```false```, hole : hole duration}
 
 ## Objects

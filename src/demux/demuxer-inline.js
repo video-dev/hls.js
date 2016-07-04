@@ -11,9 +11,10 @@ import PassThroughRemuxer from '../remux/passthrough-remuxer';
 
 class DemuxerInline {
 
-  constructor(hls,typeSupported) {
+  constructor(hls,typeSupported,config) {
     this.hls = hls;
     this.typeSupported = typeSupported;
+    this.config = config;
   }
 
   destroy() {
@@ -30,9 +31,9 @@ class DemuxerInline {
       // probe for content type
       if (TSDemuxer.probe(data)) {
         if (this.typeSupported.mp2t === true) {
-          demuxer = new TSDemuxer(hls,PassThroughRemuxer);
+          demuxer = new TSDemuxer(hls,PassThroughRemuxer,this.config);
         } else {
-          demuxer = new TSDemuxer(hls,MP4Remuxer);
+          demuxer = new TSDemuxer(hls,MP4Remuxer,this.config);
         }
       } else if(AACDemuxer.probe(data)) {
         demuxer = new AACDemuxer(hls,MP4Remuxer);

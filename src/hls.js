@@ -46,6 +46,7 @@ class Hls {
           startPosition: -1,
           debug: false,
           capLevelToPlayerSize: false,
+          forceKeyFrameOnDiscontinuity: true,
           maxBufferLength: 30,
           maxBufferSize: 60 * 1000 * 1000,
           maxBufferHole: 0.5,
