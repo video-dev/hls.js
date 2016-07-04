@@ -418,7 +418,6 @@ var AbrController = function (_EventHandler) {
     _this._autoLevelCapping = -1;
     _this._nextAutoLevel = -1;
     _this.hls = hls;
-    _this.bwEstimator = new _ewmaBandwidthEstimator2.default(hls);
     _this.onCheck = _this.abandonRulesCheck.bind(_this);
     return _this;
   }
@@ -436,6 +435,25 @@ var AbrController = function (_EventHandler) {
       if (frag.type === 'main') {
         if (!this.timer) {
           this.timer = setInterval(this.onCheck, 100);
+        }
+        // lazy init of bw Estimator, rationale is that we use different params for Live/VoD
+        // so we need to wait for stream manifest / playlist type to instantiate it.
+        if (!this.bwEstimator) {
+          var hls = this.hls,
+              level = data.frag.level,
+              isLive = hls.levels[level].details.live,
+              config = hls.config,
+              ewmaFast = void 0,
+              ewmaSlow = void 0;
+
+          if (isLive) {
+            ewmaFast = config.abrEwmaFastLive;
+            ewmaSlow = config.abrEwmaSlowLive;
+          } else {
+            ewmaFast = config.abrEwmaFastVoD;
+            ewmaSlow = config.abrEwmaSlowVoD;
+          }
+          this.bwEstimator = new _ewmaBandwidthEstimator2.default(hls, ewmaSlow, ewmaFast, config.abrEwmaDefaultEstimate);
         }
         frag.trequest = performance.now();
         this.fragCurrent = frag;
@@ -588,9 +606,8 @@ var AbrController = function (_EventHandler) {
       if (this._nextAutoLevel !== -1) {
         return Math.min(this._nextAutoLevel, maxAutoLevel);
       }
-
       var playbackRate = v && v.playbackRate !== 0 ? Math.abs(v.playbackRate) : 1.0,
-          avgbw = this.bwEstimator.getEstimate() / playbackRate,
+          avgbw = this.bwEstimator ? this.bwEstimator.getEstimate() / playbackRate : config.abrEwmaDefaultEstimate / playbackRate,
           adjustedbw = void 0;
       // follow algorithm captured from stagefright :
       // https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp
@@ -1701,13 +1718,14 @@ var BufferController = function (_EventHandler) {
       if (this._levelDuration === null) {
         return;
       }
-      var media = this.media;
-      var mediaSource = this.mediaSource;
-      if (!media || !mediaSource || media.readyState === 0 || mediaSource.readyState !== 'open') {
+      var media = this.media,
+          mediaSource = this.mediaSource,
+          sourceBuffer = this.sourceBuffer;
+      if (!media || !mediaSource || !sourceBuffer || media.readyState === 0 || mediaSource.readyState !== 'open') {
         return;
       }
-      for (var type in mediaSource.sourceBuffers) {
-        if (mediaSource.sourceBuffers[type].updating) {
+      for (var type in sourceBuffer) {
+        if (sourceBuffer[type].updating) {
           // can't set duration whilst a buffer is updating
           return;
         }
@@ -1818,9 +1836,10 @@ var BufferController = function (_EventHandler) {
             } else {
               // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
               // let's stop appending any segments, and report BUFFER_FULL_ERROR error
-              segments = [];
+              this.segments = [];
               event.details = _errors.ErrorDetails.BUFFER_FULL_ERROR;
               hls.trigger(_events2.default.ERROR, event);
+              return;
             }
           }
         }
@@ -2073,38 +2092,33 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var EwmaBandWidthEstimator = function () {
-  function EwmaBandWidthEstimator(hls) {
+  function EwmaBandWidthEstimator(hls, slow, fast, defaultEstimate) {
     _classCallCheck(this, EwmaBandWidthEstimator);
 
     this.hls = hls;
-    this.defaultEstimate_ = 5e5; // 500kbps
+    this.defaultEstimate_ = defaultEstimate;
     this.minWeight_ = 0.001;
     this.minDelayMs_ = 50;
+    this.slow_ = new _ewma2.default(slow);
+    this.fast_ = new _ewma2.default(fast);
   }
 
   _createClass(EwmaBandWidthEstimator, [{
     key: 'sample',
     value: function sample(durationMs, numBytes) {
       durationMs = Math.max(durationMs, this.minDelayMs_);
-      var bandwidth = 8000 * numBytes / durationMs;
+      var bandwidth = 8000 * numBytes / durationMs,
+
       //console.log('instant bw:'+ Math.round(bandwidth));
       // we weight sample using loading duration....
-      var weigth = durationMs / 1000;
-
-      // lazy initialization. this allows to take into account config param changes that could happen after Hls instantiation,
-      // but before first fragment loading. this is useful to A/B tests those params
-      if (!this.fast_) {
-        var config = this.hls.config;
-        this.fast_ = new _ewma2.default(config.abrEwmaFast);
-        this.slow_ = new _ewma2.default(config.abrEwmaSlow);
-      }
-      this.fast_.sample(weigth, bandwidth);
-      this.slow_.sample(weigth, bandwidth);
+      weight = durationMs / 1000;
+      this.fast_.sample(weight, bandwidth);
+      this.slow_.sample(weight, bandwidth);
     }
   }, {
     key: 'getEstimate',
     value: function getEstimate() {
-      if (!this.fast_ || this.fast_.getTotalWeight() < this.minWeight_) {
+      if (!this.fast_ || !this.slow_ || this.fast_.getTotalWeight() < this.minWeight_) {
         return this.defaultEstimate_;
       }
       //console.log('slow estimate:'+ Math.round(this.slow_.getEstimate()));
@@ -2673,9 +2687,7 @@ var StreamController = function (_EventHandler) {
     }
   }, {
     key: 'startLoad',
-    value: function startLoad() {
-      var startPosition = arguments.length <= 0 || arguments[0] === undefined ? 0 : arguments[0];
-
+    value: function startLoad(startPosition) {
       if (this.levels) {
         var media = this.media,
             lastCurrentTime = this.lastCurrentTime;
@@ -2686,7 +2698,7 @@ var StreamController = function (_EventHandler) {
         }
         this.level = -1;
         this.fragLoadError = 0;
-        if (media && lastCurrentTime) {
+        if (media && lastCurrentTime > 0) {
           _logger.logger.log('configure startPosition @' + lastCurrentTime);
           if (!this.lastPaused) {
             _logger.logger.log('resuming video');
@@ -3015,8 +3027,21 @@ var StreamController = function (_EventHandler) {
         //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
         if (fragPrevious && frag.level === fragPrevious.level && frag.sn === fragPrevious.sn) {
           if (frag.sn < levelDetails.endSN) {
-            frag = fragments[frag.sn + 1 - levelDetails.startSN];
-            _logger.logger.log('SN just loaded, load next one: ' + frag.sn);
+            var deltaPTS = fragPrevious.deltaPTS,
+                curSNIdx = frag.sn - levelDetails.startSN;
+            // if there is a significant delta between audio and video, larger than max allowed hole,
+            // and if previous remuxed fragment did not start with a keyframe. (fragPrevious.dropped)
+            // let's try to load previous fragment again to get last keyframe
+            // then we will reload again current fragment (that way we should be able to fill the buffer hole ...)
+            if (deltaPTS && deltaPTS > config.maxBufferHole && fragPrevious.dropped) {
+              frag = fragments[curSNIdx - 1];
+              _logger.logger.warn('SN just loaded, with large PTS gap between audio and video, maybe frag is not starting with a keyframe ? load previous one to try to overcome this');
+              // decrement previous frag load counter to avoid frag loop loading error when next fragment will get reloaded
+              fragPrevious.loadCounter--;
+            } else {
+              frag = fragments[curSNIdx + 1];
+              _logger.logger.log('SN just loaded, load next one: ' + frag.sn);
+            }
           } else {
             // have we reached end of VOD playlist ?
             if (!levelDetails.live) {
@@ -3169,8 +3194,16 @@ var StreamController = function (_EventHandler) {
       _logger.logger.log('immediateLevelSwitch');
       if (!this.immediateSwitch) {
         this.immediateSwitch = true;
-        this.previouslyPaused = this.media.paused;
-        this.media.pause();
+        var media = this.media,
+            previouslyPaused = void 0;
+        if (media) {
+          previouslyPaused = media.paused;
+          media.pause();
+        } else {
+          // don't restart playback after instant level switch in case media not attached
+          previouslyPaused = true;
+        }
+        this.previouslyPaused = previouslyPaused;
       }
       var fragCurrent = this.fragCurrent;
       if (fragCurrent && fragCurrent.loader) {
@@ -3268,8 +3301,9 @@ var StreamController = function (_EventHandler) {
       media.addEventListener('seeking', this.onvseeking);
       media.addEventListener('seeked', this.onvseeked);
       media.addEventListener('ended', this.onvended);
-      if (this.levels && this.config.autoStartLoad) {
-        this.hls.startLoad();
+      var config = this.config;
+      if (this.levels && config.autoStartLoad) {
+        this.hls.startLoad(config.startPosition);
       }
     }
   }, {
@@ -3386,8 +3420,9 @@ var StreamController = function (_EventHandler) {
       this.levels = data.levels;
       this.startLevelLoaded = false;
       this.startFragRequested = false;
-      if (this.config.autoStartLoad) {
-        this.hls.startLoad();
+      var config = this.config;
+      if (config.autoStartLoad) {
+        this.hls.startLoad(config.startPosition);
       }
     }
   }, {
@@ -3424,12 +3459,23 @@ var StreamController = function (_EventHandler) {
       curLevel.details = newDetails;
       this.hls.trigger(_events2.default.LEVEL_UPDATED, { details: newDetails, level: newLevelId });
 
-      // compute start position
       if (this.startFragRequested === false) {
-        // if live playlist, set start position to be fragment N-this.config.liveSyncDurationCount (usually 3)
-        if (newDetails.live) {
-          var targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * newDetails.targetduration;
-          this.startPosition = Math.max(0, sliding + duration - targetLatency);
+        // compute start position if set to -1. use it straight away if value is defined
+        if (this.startPosition === -1) {
+          // first, check if start time offset has been set in playlist, if yes, use this value
+          var startTimeOffset = newDetails.startTimeOffset;
+          if (!isNaN(startTimeOffset)) {
+            _logger.logger.log('start time offset found in playlist, adjust startPosition to ' + startTimeOffset);
+            this.startPosition = startTimeOffset;
+          } else {
+            // if live playlist, set start position to be fragment N-this.config.liveSyncDurationCount (usually 3)
+            if (newDetails.live) {
+              var targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * newDetails.targetduration;
+              this.startPosition = Math.max(0, sliding + duration - targetLatency);
+            } else {
+              this.startPosition = 0;
+            }
+          }
         }
         this.nextLoadPosition = this.startPosition;
       }
@@ -3486,7 +3532,7 @@ var StreamController = function (_EventHandler) {
             }
           }
           this.pendingAppending = 0;
-          _logger.logger.log('Demuxing ' + sn + ' of [' + details.startSN + ' ,' + details.endSN + '],level ' + level);
+          _logger.logger.log('Demuxing ' + sn + ' of [' + details.startSN + ' ,' + details.endSN + '],level ' + level + ', cc ' + fragCurrent.cc);
           var demuxer = this.demuxer;
           if (demuxer) {
             demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata);
@@ -3591,11 +3637,16 @@ var StreamController = function (_EventHandler) {
         var level = this.levels[this.level],
             frag = this.fragCurrent;
 
-        _logger.logger.log('parsed ' + data.type + ',PTS:[' + data.startPTS.toFixed(3) + ',' + data.endPTS.toFixed(3) + '],DTS:[' + data.startDTS.toFixed(3) + '/' + data.endDTS.toFixed(3) + '],nb:' + data.nb);
+        _logger.logger.log('parsed ' + data.type + ',PTS:[' + data.startPTS.toFixed(3) + ',' + data.endPTS.toFixed(3) + '],DTS:[' + data.startDTS.toFixed(3) + '/' + data.endDTS.toFixed(3) + '],nb:' + data.nb + ',dropped:' + (data.dropped || 0));
 
         var drift = _levelHelper2.default.updateFragPTSDTS(level.details, frag.sn, data.startPTS, data.endPTS, data.startDTS, data.endDTS),
             hls = this.hls;
         hls.trigger(_events2.default.LEVEL_PTS_UPDATED, { details: level.details, level: this.level, drift: drift });
+
+        // has remuxer dropped video frames located before first keyframe ?
+        if (data.type === 'video') {
+          frag.dropped = data.dropped;
+        }
 
         [data.data1, data.data2].forEach(function (buffer) {
           if (buffer) {
@@ -3723,11 +3774,15 @@ var StreamController = function (_EventHandler) {
           }
           break;
         case _errors.ErrorDetails.BUFFER_FULL_ERROR:
-          // trigger a smooth level switch to empty buffers
-          // also reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
-          this.config.maxMaxBufferLength /= 2;
-          _logger.logger.warn('reduce max buffer length to ' + this.config.maxMaxBufferLength + 's and trigger a nextLevelSwitch to flush old buffer and fix QuotaExceededError');
-          this.nextLevelSwitch();
+          // only reduce max buf len if in appending state
+          if (this.state === State.PARSING || this.state === State.PARSED) {
+            // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
+            this.config.maxMaxBufferLength /= 2;
+            _logger.logger.warn('reduce max buffer length to ' + this.config.maxMaxBufferLength + 's and switch to IDLE state');
+            // increase fragment load Index to avoid frag loop loading error after buffer flush
+            this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+            this.state = State.IDLE;
+          }
           break;
         default:
           break;
@@ -5068,7 +5123,7 @@ var DemuxerWorker = function DemuxerWorker(self) {
   });
 
   observer.on(_events2.default.FRAG_PARSING_DATA, function (ev, data) {
-    var objData = { event: ev, id: data.id, level: data.level, sn: data.sn, type: data.type, startPTS: data.startPTS, endPTS: data.endPTS, startDTS: data.startDTS, endDTS: data.endDTS, data1: data.data1.buffer, data2: data.data2.buffer, nb: data.nb };
+    var objData = { event: ev, id: data.id, level: data.level, sn: data.sn, type: data.type, startPTS: data.startPTS, endPTS: data.endPTS, startDTS: data.startDTS, endDTS: data.endDTS, data1: data.data1.buffer, data2: data.data2.buffer, nb: data.nb, dropped: data.dropped };
     // pass data1/data2 as transferable object (no copy)
     self.postMessage(objData, [objData.data1, objData.data2]);
   });
@@ -5224,7 +5279,8 @@ var Demuxer = function () {
             startDTS: data.startDTS,
             endDTS: data.endDTS,
             type: data.type,
-            nb: data.nb
+            nb: data.nb,
+            dropped: data.dropped
           });
           break;
         case _events2.default.FRAG_PARSING_METADATA:
@@ -5830,7 +5886,7 @@ var TSDemuxer = function () {
     value: function switchLevel() {
       this.pmtParsed = false;
       this._pmtId = -1;
-      this._avcTrack = { container: 'video/mp2t', type: 'video', id: -1, sequenceNumber: 0, samples: [], len: 0, nbNalu: 0 };
+      this._avcTrack = { container: 'video/mp2t', type: 'video', id: -1, sequenceNumber: 0, samples: [], len: 0, nbNalu: 0, dropped: 0 };
       this._aacTrack = { container: 'video/mp2t', type: 'audio', id: -1, sequenceNumber: 0, samples: [], len: 0 };
       this._id3Track = { type: 'id3', id: -1, sequenceNumber: 0, samples: [], len: 0 };
       this._txtTrack = { type: 'text', id: -1, sequenceNumber: 0, samples: [], len: 0 };
@@ -6180,6 +6236,9 @@ var TSDemuxer = function () {
             samples.push(avcSample);
             track.len += length;
             track.nbNalu += units2.length;
+          } else {
+            // dropped samples, track it
+            track.dropped++;
           }
           units2 = [];
           length = 0;
@@ -7082,12 +7141,14 @@ var LevelHelper = function () {
       for (var i = start; i <= end; i++) {
         var oldFrag = oldfragments[delta + i],
             newFrag = newfragments[i];
-        ccOffset = oldFrag.cc - newFrag.cc;
-        if (!isNaN(oldFrag.startPTS)) {
-          newFrag.start = newFrag.startPTS = oldFrag.startPTS;
-          newFrag.endPTS = oldFrag.endPTS;
-          newFrag.duration = oldFrag.duration;
-          PTSFrag = newFrag;
+        if (newFrag && oldFrag) {
+          ccOffset = oldFrag.cc - newFrag.cc;
+          if (!isNaN(oldFrag.startPTS)) {
+            newFrag.start = newFrag.startPTS = oldFrag.startPTS;
+            newFrag.endPTS = oldFrag.endPTS;
+            newFrag.duration = oldFrag.duration;
+            PTSFrag = newFrag;
+          }
         }
       }
 
@@ -7130,6 +7191,13 @@ var LevelHelper = function () {
       fragments = details.fragments;
       frag = fragments[fragIdx];
       if (!isNaN(frag.startPTS)) {
+        // delta PTS between audio and video
+        var deltaPTS = Math.abs(frag.startPTS - startPTS);
+        if (isNaN(frag.deltaPTS)) {
+          frag.deltaPTS = deltaPTS;
+        } else {
+          frag.deltaPTS = Math.max(deltaPTS, frag.deltaPTS);
+        }
         startPTS = Math.min(startPTS, frag.startPTS);
         endPTS = Math.max(endPTS, frag.endPTS);
         startDTS = Math.min(startDTS, frag.startDTS);
@@ -7311,6 +7379,7 @@ var Hls = function () {
       if (!Hls.defaultConfig) {
         Hls.defaultConfig = {
           autoStartLoad: true,
+          startPosition: -1,
           debug: false,
           capLevelOnFPSDrop: false,
           capLevelToPlayerSize: false,
@@ -7356,8 +7425,11 @@ var Hls = function () {
           enableCEA708Captions: true,
           enableMP2TPassThrough: false,
           stretchShortVideoTrack: false,
-          abrEwmaFast: 0,
-          abrEwmaSlow: 0,
+          abrEwmaFastLive: 5,
+          abrEwmaSlowLive: 9,
+          abrEwmaFastVoD: 4,
+          abrEwmaSlowVoD: 15,
+          abrEwmaDefaultEstimate: 5e5, // 500 kbps
           abrBandWidthFactor: 0.8,
           abrBandWidthUpFactor: 0.7
         };
@@ -7477,7 +7549,7 @@ var Hls = function () {
   }, {
     key: 'startLoad',
     value: function startLoad() {
-      var startPosition = arguments.length <= 0 || arguments[0] === undefined ? 0 : arguments[0];
+      var startPosition = arguments.length <= 0 || arguments[0] === undefined ? -1 : arguments[0];
 
       _logger.logger.log('startLoad');
       this.levelController.startLoad();
@@ -8169,7 +8241,7 @@ var PlaylistLoader = function (_EventHandler) {
           byteRangeStartOffset,
           tagList = [];
 
-      regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*)[\r\n]+([^#|\r\n]+)?)|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*)[\r\n]+([^#|\r\n]+)?)|(?:#EXT-X-(VERSION):(.*))|(?:#(.*):(.*))|(?:#(.*))/g;
+      regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*)[\r\n]+([^#|\r\n]+)?)|(?:#EXT-X-(START):(.*))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*)[\r\n]+([^#|\r\n]+)?)|(?:#EXT-X-(VERSION):(.*))|(?:#(.*):(.*))|(?:#(.*))/g;
       while ((result = regexp.exec(string)) !== null) {
         result.shift();
         result = result.filter(function (n) {
@@ -8261,6 +8333,14 @@ var PlaylistLoader = function (_EventHandler) {
               fragdecryptdata = this.fragmentDecryptdataFromLevelkey(levelkey, currentSN - 1);
               frag.decryptdata = fragdecryptdata;
               tagList.push(result);
+            }
+            break;
+          case 'START':
+            var startParams = result[1];
+            var startAttrs = new _attrList2.default(startParams);
+            var startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
+            if (startTimeOffset) {
+              level.startTimeOffset = startTimeOffset;
             }
             break;
           case 'PROGRAM-DATE-TIME':
@@ -9253,8 +9333,10 @@ var MP4Remuxer = function () {
       }
       // next AVC sample DTS should be equal to last sample DTS + last sample duration (in PES timescale)
       this.nextAvcDts = lastDTS + mp4SampleDuration * pes2mp4ScaleFactor;
+      var dropped = track.dropped;
       track.len = 0;
       track.nbNalu = 0;
+      track.dropped = 0;
       if (outputSamples.length && navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
         var flags = outputSamples[0].flags;
         // chrome workaround, mark first sample as being a Random Access Point to avoid sourcebuffer append issue
@@ -9277,7 +9359,8 @@ var MP4Remuxer = function () {
         startDTS: firstDTS / pesTimeScale,
         endDTS: this.nextAvcDts / pesTimeScale,
         type: 'video',
-        nb: outputSamples.length
+        nb: outputSamples.length,
+        dropped: dropped
       };
       this.observer.trigger(_events2.default.FRAG_PARSING_DATA, data);
       return data;
@@ -9674,7 +9757,8 @@ var PassThroughRemuxer = function () {
         startPTS: timeOffset,
         startDTS: timeOffset,
         type: 'audiovideo',
-        nb: 1
+        nb: 1,
+        dropped: 0
       });
     }
   }, {
