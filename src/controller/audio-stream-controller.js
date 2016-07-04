@@ -114,7 +114,7 @@ class AudioStreamController extends EventHandler {
 
   doTick() {
     var pos, track, trackDetails, hls = this.hls, config = hls.config;
-    //logger.log('audioStream:' + this.state);
+    logger.log('audioStream:' + this.state);
     switch(this.state) {
       case State.ERROR:
         //don't do anything in error state to avoid breaking further ...
@@ -587,6 +587,7 @@ class AudioStreamController extends EventHandler {
     this.state = State.IDLE;
     // reset reference to frag
     this.fragPrevious = null;
+    this.tick();
   }
 
   timeRangesToString(r) {
