@@ -114,7 +114,7 @@ class AudioStreamController extends EventHandler {
 
   doTick() {
     var pos, track, trackDetails, hls = this.hls, config = hls.config;
-    logger.log('audioStream:' + this.state);
+    //logger.log('audioStream:' + this.state);
     switch(this.state) {
       case State.ERROR:
         //don't do anything in error state to avoid breaking further ...
@@ -582,7 +582,7 @@ class AudioStreamController extends EventHandler {
 
   onBufferFlushed() {
     // increase fragment load Index to avoid frag loop loading error after buffer flush
-    this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;  
+    this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
     // move to IDLE once flush complete. this should trigger new fragment loading
     this.state = State.IDLE;
     // reset reference to frag
