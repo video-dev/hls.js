@@ -149,54 +149,14 @@ class Demuxer {
 
     onWorkerMessage(ev) {
         let data = ev.data,
-            hls = this.hls,
-            id = data.id,
-            level = data.level,
-            sn = data.sn;
-
+            hls = this.hls;
         //console.log('onWorkerMessage:' + data.event);
         switch (data.event) {
-            case Event.FRAG_PARSING_INIT_SEGMENT:
-                hls.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
-                    id: id,
-                    level: level,
-                    sn: sn,
-                    tracks: data.tracks,
-                    unique: data.unique
-                });
-                break;
+            // special case for FRAG_PARSING_DATA: data1 and data2 are transferable objects
             case Event.FRAG_PARSING_DATA:
-                hls.trigger(Event.FRAG_PARSING_DATA, {
-                    id: id,
-                    level: level,
-                    sn: sn,
-                    data1: new Uint8Array(data.data1),
-                    data2: new Uint8Array(data.data2),
-                    startPTS: data.startPTS,
-                    endPTS: data.endPTS,
-                    startDTS: data.startDTS,
-                    endDTS: data.endDTS,
-                    type: data.type,
-                    nb: data.nb,
-                    dropped: data.dropped
-                });
-                break;
-            case Event.FRAG_PARSING_METADATA:
-                hls.trigger(Event.FRAG_PARSING_METADATA, {
-                    id: id,
-                    level: level,
-                    sn: sn,
-                    samples: data.samples
-                });
-                break;
-            case Event.FRAG_PARSING_USERDATA:
-                hls.trigger(Event.FRAG_PARSING_USERDATA, {
-                    id: id,
-                    level: level,
-                    sn: sn,
-                    samples: data.samples
-                });
-                break;
+                data.data.data1 = new Uint8Array(data.data1);
+                data.data.data2 = new Uint8Array(data.data2);
+            /* falls through */
             default:
                 hls.trigger(data.event, data.data);
                 break;
