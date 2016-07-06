@@ -190,23 +190,21 @@ class StreamController extends EventHandler {
     //       played segment, or on pause/play/seek instead of naively checking every 100ms?
     _doTickIdle() {
         const hls = this.hls,
-            config = hls.config;
+            config = hls.config,
+            media = this.media;
 
         // if video not attached AND
         // start fragment already requested OR start frag prefetch disable
         // exit loop
         // => if media not attached but start frag prefetch is enabled and start frag not requested yet, we will not exit loop
-        if (
-            !this.media &&
-            (this.startFragRequested || !config.startFragPrefetch)
-        ) {
+        if (!media && (this.startFragRequested || !config.startFragPrefetch)) {
             return true;
         }
 
         // if we have not yet loaded any fragment, start loading from start position
         let pos;
         if (this.loadedmetadata) {
-            pos = this.media.currentTime;
+            pos = media.currentTime;
         } else {
             pos = this.nextLoadPosition;
         }
@@ -229,7 +227,7 @@ class StreamController extends EventHandler {
         // ensure up to `config.maxMaxBufferLength` of buffer upfront
 
         const bufferInfo = BufferHelper.bufferInfo(
-                this.mediaBuffer ? this.mediaBuffer : this.media,
+                this.mediaBuffer ? this.mediaBuffer : media,
                 pos,
                 config.maxBufferHole
             ),
