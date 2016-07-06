@@ -2,14 +2,15 @@
  * Stream Controller
 */
 
+import BinarySearch from '../utils/binary-search';
+import BufferHelper from '../helper/buffer-helper';
 import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import EventHandler from '../event-handler';
-import {logger} from '../utils/logger';
-import BinarySearch from '../utils/binary-search';
-import BufferHelper from '../helper/buffer-helper';
 import LevelHelper from '../helper/level-helper';
+import TimeRanges from '../utils/timeRanges';
 import {ErrorTypes, ErrorDetails} from '../errors';
+import {logger} from '../utils/logger';
 
 const State = {
   STOPPED : 'STOPPED',
@@ -1075,7 +1076,7 @@ class StreamController extends EventHandler {
         this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
         this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag, id : 'main'});
         let media = this.mediaBuffer ? this.mediaBuffer : this.media;
-        logger.log(`main buffered : ${this.timeRangesToString(media.buffered)}`);
+        logger.log(`main buffered : ${TimeRanges.toString(media.buffered)}`);
         this.state = State.IDLE;
       }
       this.tick();
@@ -1250,14 +1251,6 @@ _checkBuffer() {
 
   swapAudioCodec() {
     this.audioCodecSwap = !this.audioCodecSwap;
-  }
-
-  timeRangesToString(r) {
-    var log = '', len = r.length;
-    for (var i=0; i<len; i++) {
-      log += '[' + r.start(i) + ',' + r.end(i) + ']';
-    }
-    return log;
   }
 }
 export default StreamController;
