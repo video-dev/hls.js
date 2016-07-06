@@ -462,7 +462,7 @@ class PlaylistLoader extends EventHandler {
                 fatal = false;
                 break;
             case 'audioTrack':
-                details = ErrorDetails.AUDIOTRACK_LOAD_ERROR;
+                details = ErrorDetails.AUDIO_TRACK_LOAD_ERROR;
                 fatal = false;
                 break;
         }
@@ -495,7 +495,7 @@ class PlaylistLoader extends EventHandler {
                 fatal = false;
                 break;
             case 'audioTrack':
-                details = ErrorDetails.AUDIOTRACK_LOAD_TIMEOUT;
+                details = ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT;
                 fatal = false;
                 break;
         }
