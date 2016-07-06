@@ -2,14 +2,15 @@
  * Audio Stream Controller
 */
 
+import BinarySearch from '../utils/binary-search';
+import BufferHelper from '../helper/buffer-helper';
 import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import EventHandler from '../event-handler';
-import { logger } from '../utils/logger';
-import BinarySearch from '../utils/binary-search';
-import BufferHelper from '../helper/buffer-helper';
 import LevelHelper from '../helper/level-helper';
+import TimeRanges from '../utils/timeRanges';
 import { ErrorTypes, ErrorDetails } from '../errors';
+import { logger } from '../utils/logger';
 
 const State = {
     STOPPED: 'STOPPED',
@@ -658,9 +659,7 @@ class AudioStreamController extends EventHandler {
                 });
                 let media = this.mediaBuffer ? this.mediaBuffer : this.media;
                 logger.log(
-                    `audio buffered : ${this.timeRangesToString(
-                        media.buffered
-                    )}`
+                    `audio buffered : ${TimeRanges.toString(media.buffered)}`
                 );
                 this.state = State.IDLE;
             }
@@ -737,15 +736,6 @@ class AudioStreamController extends EventHandler {
         // reset reference to frag
         this.fragPrevious = null;
         this.tick();
-    }
-
-    timeRangesToString(r) {
-        var log = '',
-            len = r.length;
-        for (var i = 0; i < len; i++) {
-            log += '[' + r.start(i) + ',' + r.end(i) + ']';
-        }
-        return log;
     }
 }
 export default AudioStreamController;
