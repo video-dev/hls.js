@@ -18,15 +18,16 @@ class XhrLoader {
   }
 
   abort() {
-    var loader = this.loader,
-        timeoutHandle = this.timeoutHandle;
+    var loader = this.loader;
     if (loader && loader.readyState !== 4) {
       this.stats.aborted = true;
       loader.abort();
     }
-    if (timeoutHandle) {
-      window.clearTimeout(timeoutHandle);
-    }
+
+    window.clearTimeout(this.requestTimeout);
+    this.requestTimeout = null;
+    window.clearTimeout(this.retryTimeout);
+    this.retryTimeout = null;
   }
 
   load(url, context, responseType, onSuccess, onError, onTimeout, timeout, maxRetry, retryDelay, onProgress = null, frag = null) {
@@ -73,7 +74,7 @@ class XhrLoader {
     if (this.xhrSetup) {
       this.xhrSetup(xhr, this.url);
     }
-    this.timeoutHandle = window.setTimeout(this.loadtimeout.bind(this), this.timeout);
+    this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), this.timeout);
     xhr.send();
   }
 
@@ -86,7 +87,7 @@ class XhrLoader {
     if (!stats.aborted) {
         // http status between 200 to 299 are all successful
         if (status >= 200 && status < 300)  {
-          window.clearTimeout(this.timeoutHandle);
+          window.clearTimeout(this.requestTimeout);
           stats.tload = Math.max(stats.tfirst,performance.now());
           this.onSuccess(event, stats, context);
       } else {
@@ -94,12 +95,12 @@ class XhrLoader {
         if (stats.retry < this.maxRetry) {
           logger.warn(`${status} while loading ${this.url}, retrying in ${this.retryDelay}...`);
           this.destroy();
-          window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
+          this.retryTimeout = window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
           // exponential backoff
           this.retryDelay = Math.min(2 * this.retryDelay, 64000);
           stats.retry++;
         } else {
-          window.clearTimeout(this.timeoutHandle);
+          window.clearTimeout(this.requestTimeout);
           logger.error(`${status} while loading ${this.url}` );
           this.onError(event, context);
         }
@@ -107,9 +108,9 @@ class XhrLoader {
     }
   }
 
-  loadtimeout(event) {
+  loadtimeout() {
     logger.warn(`timeout while loading ${this.url}` );
-    this.onTimeout(event, this.stats, this.context);
+    this.onTimeout(null, this.stats, this.context);
   }
 
   loadprogress(event) {
