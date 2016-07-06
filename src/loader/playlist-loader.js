@@ -182,7 +182,7 @@ class PlaylistLoader extends EventHandler {
     var currentSN = 0,
         fragdecryptdata,
         totalduration = 0,
-        level = {type: null, url: baseurl, fragments: [], live: true, startSN: 0},
+        level = {type: null, version: null, url: baseurl, fragments: [], live: true, startSN: 0},
         levelkey = {method : null, key : null, iv : null, uri : null},
         cc = 0,
         programDateTime = null,
