@@ -204,7 +204,13 @@ class PlaylistLoader extends EventHandler {
         var currentSN = 0,
             fragdecryptdata,
             totalduration = 0,
-            level = { url: baseurl, fragments: [], live: true, startSN: 0 },
+            level = {
+                type: null,
+                url: baseurl,
+                fragments: [],
+                live: true,
+                startSN: 0
+            },
             levelkey = { method: null, key: null, iv: null, uri: null },
             cc = 0,
             programDateTime = null,
@@ -215,13 +221,16 @@ class PlaylistLoader extends EventHandler {
             byteRangeStartOffset,
             tagList = [];
 
-        regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*)[\r\n]+([^#|\r\n]+)?)|(?:#EXT-X-(START):(.*))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*)[\r\n]+([^#|\r\n]+)?)|(?:#EXT-X-(VERSION):(.*))|(?:#(.*):(.*))|(?:#(.*))/g;
+        regexp = /(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*)[\r\n]+([^#|\r\n]+)?)|(?:#EXT-X-(START):(.*))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*)[\r\n]+([^#|\r\n]+)?)|(?:#EXT-X-(VERSION):(.*))|(?:#(.*):(.*))|(?:#(.*))/g;
         while ((result = regexp.exec(string)) !== null) {
             result.shift();
             result = result.filter(function(n) {
                 return n !== undefined;
             });
             switch (result[0]) {
+                case 'PLAYLIST-TYPE':
+                    level.type = result[1].toUpperCase();
+                    break;
                 case 'MEDIA-SEQUENCE':
                     currentSN = level.startSN = parseInt(result[1]);
                     break;
@@ -229,6 +238,7 @@ class PlaylistLoader extends EventHandler {
                     level.targetduration = parseFloat(result[1]);
                     break;
                 case 'VERSION':
+                    level.version = parseInt(result[1]);
                     break;
                 case 'EXTM3U':
                     break;
