@@ -206,6 +206,7 @@ class PlaylistLoader extends EventHandler {
             totalduration = 0,
             level = {
                 type: null,
+                version: null,
                 url: baseurl,
                 fragments: [],
                 live: true,
