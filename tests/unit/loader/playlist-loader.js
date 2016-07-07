@@ -165,6 +165,8 @@ http://proxy-21.dailymotion.com/sec(2a991e17f08fcd94f95637a6dd718ddd)/video/107/
     var result = new PlaylistLoader({on : function() { }}).parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core',0);
     assert.strictEqual(result.totalduration, 51.24);
     assert.strictEqual(result.startSN, 0);
+    assert.strictEqual(result.version, 3);
+    assert.strictEqual(result.type, 'VOD');
     assert.strictEqual(result.targetduration, 14);
     assert.strictEqual(result.live, false);
     assert.strictEqual(result.fragments.length, 5);
