@@ -836,6 +836,8 @@ See sample `Level` object below:
 
 A `LevelDetails` object contains level details retrieved after level playlist parsing, they are specified below:
 
+* protocol version
+* playlist type
 * start sequence number
 * end sequence number
 * level total duration
@@ -847,6 +849,8 @@ See sample object below, available after corresponding `LEVEL_LOADED` event has 
 
 ```js
 {
+  version: 3,
+  type: 'VOD', // null if EXT-X-PLAYLIST-TYPE not present
   startSN: 0,
   endSN: 50,
   totalduration: 510,
