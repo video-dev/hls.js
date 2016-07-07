@@ -9,6 +9,8 @@ class MP4 {
       avc1: [], // codingname
       avcC: [],
       btrt: [],
+      edts: [],
+      elst: [],
       dinf: [],
       dref: [],
       esds: [],
@@ -219,14 +221,15 @@ class MP4 {
   }
 /**
  * @param tracks... (optional) {array} the tracks associated with this movie
+ * @param editOffset (optional) {int} the offset that should be applied to the beginning of a track
  */
-  static moov(tracks) {
+  static moov(tracks, editOffset) {
     var
       i = tracks.length,
       boxes = [];
 
     while (i--) {
-      boxes[i] = MP4.trak(tracks[i]);
+      boxes[i] = MP4.trak(tracks[i], editOffset);
     }
 
     return MP4.box.apply(null, [MP4.types.moov, MP4.mvhd(tracks[0].timescale, tracks[0].duration)].concat(boxes).concat(MP4.mvex(tracks)));
@@ -376,6 +379,28 @@ class MP4 {
           );
   }
 
+  static edts(editOffset) {
+    return MP4.box(MP4.types.edts, MP4.elst(editOffset));
+  }
+
+  static elst(editOffset) {
+    if (typeof editOffset === 'undefined' || editOffset === 0) {
+      return new Uint8Array([]);
+    } else {
+      return MP4.box(MP4.types.elst, new Uint8Array([
+        0x00, // version 0
+        0x00, 0x00, 0x00, // flags
+        0x00, 0x00, 0x00, 0x01, // number of edits
+        (editOffset >> 24) & 0xFF,
+        (editOffset >> 16) & 0xFF,
+        (editOffset >> 8) & 0xFF,
+        editOffset & 0xFF, // segment duration
+        0xFF, 0xFF, 0xFF, 0xFF, // media time
+        0x00, 0x01, 0x00, 0x00 // media rate 1.0
+      ]));
+    }
+  }
+
   static esds(track) {
     var configlen = track.config.length;
     return new Uint8Array([
@@ -501,11 +526,12 @@ class MP4 {
   /**
    * Generate a track box.
    * @param track {object} a track definition
+   * @param editOffset {int} the offset to apply to the beginning of the track
    * @return {Uint8Array} the track box
    */
-  static trak(track) {
+  static trak(track, editOffset) {
     track.duration = track.duration || 0xffffffff;
-    return MP4.box(MP4.types.trak, MP4.tkhd(track), MP4.mdia(track));
+    return MP4.box(MP4.types.trak, MP4.tkhd(track), MP4.edts(editOffset), MP4.mdia(track));
   }
 
   static trex(track) {
@@ -574,11 +600,11 @@ class MP4 {
     return MP4.box(MP4.types.trun, array);
   }
 
-  static initSegment(tracks) {
+  static initSegment(tracks, editOffset) {
     if (!MP4.types) {
       MP4.init();
     }
-    var movie = MP4.moov(tracks), result;
+    var movie = MP4.moov(tracks, editOffset), result;
     result = new Uint8Array(MP4.FTYP.byteLength + movie.byteLength);
     result.set(MP4.FTYP);
     result.set(movie, MP4.FTYP.byteLength);
