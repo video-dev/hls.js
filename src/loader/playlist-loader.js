@@ -218,11 +218,13 @@ class PlaylistLoader extends EventHandler {
             frag = null,
             result,
             regexp,
-            byteRangeEndOffset,
-            byteRangeStartOffset,
+            duration = null,
+            title = null,
+            byteRangeEndOffset = null,
+            byteRangeStartOffset = null,
             tagList = [];
 
-        regexp = /(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*)[\r\n]+([^#|\r\n]+)?)|(?:#EXT-X-(START):(.*))|(?:#EXT(INF):([\d\.]+)[^\r\n]*(?:(?:[\r\n]|#(?!EXT).*)+(?!#EXT)(.*))?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*)[\r\n]+([^#|\r\n]+)?)|(?:#EXT-X-(VERSION):(\d+))|(?:#(EXT(?:.*)):(.*))|(?:#(EXT(?:.*)))/g;
+        regexp = /(?:(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*)?)|(?:#EXT-X-(START):(.*))|(?:#EXT(INF):(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE):(\d+(?:@\d+(?:\.\d+)?))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*))|(?:#EXT-X-(VERSION):(\d+))|(?:#(.*):(.*))|(?:#(.*)))(?:.*)[\r\n]?/g;
         while ((result = regexp.exec(string)) !== null) {
             result.shift();
             result = result.filter(function(n) {
@@ -259,29 +261,27 @@ class PlaylistLoader extends EventHandler {
                     }
                     byteRangeEndOffset =
                         parseInt(params[0]) + byteRangeStartOffset;
-                    if (frag && !frag.url) {
-                        frag.byteRangeStartOffset = byteRangeStartOffset;
-                        frag.byteRangeEndOffset = byteRangeEndOffset;
-                        frag.url = this.resolve(result[2], baseurl);
-                        tagList.push(result);
-                    }
                     break;
                 case 'INF':
-                    var duration = parseFloat(result[1]);
+                    duration = parseFloat(result[1]);
+                    title = result[2] ? result[2] : null;
+                    tagList.push(result);
+                    break;
+                case '': // url
                     if (!isNaN(duration)) {
                         var sn = currentSN++;
                         fragdecryptdata = this.fragmentDecryptdataFromLevelkey(
                             levelkey,
                             sn
                         );
-                        var url = result[2]
-                            ? this.resolve(result[2], baseurl)
+                        var url = result[1]
+                            ? this.resolve(result[1], baseurl)
                             : null;
-                        tagList.push(result);
                         frag = {
                             url: url,
                             type: type,
                             duration: duration,
+                            title: title,
                             start: totalduration,
                             sn: sn,
                             level: id,
@@ -294,6 +294,8 @@ class PlaylistLoader extends EventHandler {
                         };
                         level.fragments.push(frag);
                         totalduration += duration;
+                        duration = null;
+                        title = null;
                         byteRangeStartOffset = null;
                         programDateTime = null;
                         tagList = [];
@@ -321,19 +323,6 @@ class PlaylistLoader extends EventHandler {
                             // Initialization Vector (IV)
                             levelkey.iv = decryptiv;
                         }
-                    }
-
-                    //issue #425, applying url and decrypt data in instances where EXT-KEY immediately follow EXT-INF
-                    if (frag && !frag.url && result.length >= 3) {
-                        frag.url = this.resolve(result[2], baseurl);
-
-                        //we have not moved onto another segment, we are still parsing one
-                        fragdecryptdata = this.fragmentDecryptdataFromLevelkey(
-                            levelkey,
-                            currentSN - 1
-                        );
-                        frag.decryptdata = fragdecryptdata;
-                        tagList.push(result);
                     }
                     break;
                 case 'START':
