@@ -1084,6 +1084,11 @@ class StreamController extends EventHandler {
   }
 
   onError(data) {
+    let frag = data.frag;
+    // don't handle frag error not related to main fragment
+    if (frag && frag.type !== 'main') {
+      return;
+    }
     switch(data.details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
@@ -1097,7 +1102,7 @@ class StreamController extends EventHandler {
           if (loadError <= this.config.fragLoadingMaxRetry) {
             this.fragLoadError = loadError;
             // reset load counter to avoid frag loop loading error
-            data.frag.loadCounter = 0;
+            frag.loadCounter = 0;
             // exponential backoff capped to 64s
             var delay = Math.min(Math.pow(2,loadError-1)*this.config.fragLoadingRetryDelay,64000);
             logger.warn(`mediaController: frag loading failed, retry in ${delay} ms`);
