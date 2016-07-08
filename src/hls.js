@@ -97,6 +97,7 @@ class Hls {
           enableCEA708Captions: true,
           enableMP2TPassThrough : false,
           stretchShortVideoTrack: false,
+          forceKeyFrameOnDiscontinuity: true,
           abrEwmaFastLive: 5,
           abrEwmaSlowLive: 9,
           abrEwmaFastVoD: 4,
