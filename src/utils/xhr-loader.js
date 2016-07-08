@@ -118,21 +118,24 @@ class XhrLoader {
             this.onSuccess(event, stats, context);
             // everything else is a failure
         } else {
-            // error ...
+            // retry first
             if (stats.retry < this.maxRetry) {
                 logger.warn(
                     `${status} while loading ${this.url}, retrying in ${
                         this.retryDelay
                     }...`
                 );
+                // aborts and resets internal state
                 this.destroy();
+                // schedule retry
                 this.retryTimeout = window.setTimeout(
                     this.loadInternal.bind(this),
                     this.retryDelay
                 );
-                // exponential backoff
+                // set exponential backoff
                 this.retryDelay = Math.min(2 * this.retryDelay, 64000);
                 stats.retry++;
+                // permanent failure
             } else {
                 logger.error(`${status} while loading ${this.url}`);
                 this.onError(event, context);
