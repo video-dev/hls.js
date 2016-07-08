@@ -17,15 +17,16 @@ class XhrLoader {
     }
 
     abort() {
-        var loader = this.loader,
-            timeoutHandle = this.timeoutHandle;
+        var loader = this.loader;
         if (loader && loader.readyState !== 4) {
             this.stats.aborted = true;
             loader.abort();
         }
-        if (timeoutHandle) {
-            window.clearTimeout(timeoutHandle);
-        }
+
+        window.clearTimeout(this.requestTimeout);
+        this.requestTimeout = null;
+        window.clearTimeout(this.retryTimeout);
+        this.retryTimeout = null;
     }
 
     load(
@@ -89,7 +90,8 @@ class XhrLoader {
         if (this.xhrSetup) {
             this.xhrSetup(xhr, this.url);
         }
-        this.timeoutHandle = window.setTimeout(
+        // setup timeout before we perform request
+        this.requestTimeout = window.setTimeout(
             this.loadtimeout.bind(this),
             this.timeout
         );
@@ -101,41 +103,49 @@ class XhrLoader {
             status = xhr.status,
             stats = this.stats,
             context = this.context;
+
         // don't proceed if xhr has been aborted
-        if (!stats.aborted) {
-            // http status between 200 to 299 are all successful
-            if (status >= 200 && status < 300) {
-                window.clearTimeout(this.timeoutHandle);
-                stats.tload = Math.max(stats.tfirst, performance.now());
-                this.onSuccess(event, stats, context);
-            } else {
-                // error ...
-                if (stats.retry < this.maxRetry) {
-                    logger.warn(
-                        `${status} while loading ${this.url}, retrying in ${
-                            this.retryDelay
-                        }...`
-                    );
-                    this.destroy();
-                    window.setTimeout(
-                        this.loadInternal.bind(this),
+        if (stats.aborted) {
+            return;
+        }
+
+        // in any case clear the current xhrs timeout
+        window.clearTimeout(this.requestTimeout);
+
+        // http status between 200 to 299 are all successful
+        if (status >= 200 && status < 300) {
+            stats.tload = Math.max(stats.tfirst, performance.now());
+            this.onSuccess(event, stats, context);
+            // everything else is a failure
+        } else {
+            // retry first
+            if (stats.retry < this.maxRetry) {
+                logger.warn(
+                    `${status} while loading ${this.url}, retrying in ${
                         this.retryDelay
-                    );
-                    // exponential backoff
-                    this.retryDelay = Math.min(2 * this.retryDelay, 64000);
-                    stats.retry++;
-                } else {
-                    window.clearTimeout(this.timeoutHandle);
-                    logger.error(`${status} while loading ${this.url}`);
-                    this.onError(event, context);
-                }
+                    }...`
+                );
+                // aborts and resets internal state
+                this.destroy();
+                // schedule retry
+                this.retryTimeout = window.setTimeout(
+                    this.loadInternal.bind(this),
+                    this.retryDelay
+                );
+                // set exponential backoff
+                this.retryDelay = Math.min(2 * this.retryDelay, 64000);
+                stats.retry++;
+                // permanent failure
+            } else {
+                logger.error(`${status} while loading ${this.url}`);
+                this.onError(event, context);
             }
         }
     }
 
-    loadtimeout(event) {
+    loadtimeout() {
         logger.warn(`timeout while loading ${this.url}`);
-        this.onTimeout(event, this.stats, this.context);
+        this.onTimeout(null, this.stats, this.context);
     }
 
     loadprogress(event) {
