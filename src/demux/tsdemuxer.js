@@ -435,10 +435,12 @@ class TSDemuxer {
 
         var pushAccesUnit = function() {
             if (units2.length) {
-                // only push AVC sample if keyframe already found in this fragment OR
-                //    keyframe found in last fragment (track.sps) AND
-                //        samples already appended (we already found a keyframe in this fragment) OR fragment is contiguous
+                // only push AVC sample if starting with a keyframe is not mandatory OR
+                //    if keyframe already found in this fragment OR
+                //       keyframe found in last fragment (track.sps) AND
+                //          samples already appended (we already found a keyframe in this fragment) OR fragment is contiguous
                 if (
+                    !this.config.forceKeyFrameOnDiscontinuity ||
                     key === true ||
                     (track.sps && (samples.length || this.contiguous))
                 ) {
