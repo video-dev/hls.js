@@ -510,7 +510,6 @@ class MP4 {
    */
   static trak(track, editOffset) {
     track.duration = track.duration || 0xffffffff;
-    console.log(track.type + ',' + editOffset);
     return MP4.box(MP4.types.trak, MP4.tkhd(track), MP4.mdia(track),MP4.edts(editOffset)); //
   }
 
