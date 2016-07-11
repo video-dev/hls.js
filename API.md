@@ -171,43 +171,50 @@ on Media Error: first call `hls.swapAudioCodec()`, then call `hls.recoverMediaEr
 Configuration parameters could be provided to hls.js upon instantiation of `Hls` object.
 
 ```js
-  var config = {
-    autoStartLoad: true,
-	startPosition : -1,
-    capLevelToPlayerSize: false,
-    debug: false,
-    defaultAudioCodec: undefined,
-    maxBufferLength: 30,
-    maxMaxBufferLength: 600,
-    maxBufferSize: 60*1000*1000,
-    maxBufferHole: 0.5,
-    maxSeekHole: 2,
-    seekHoleNudgeDuration: 0.01,
-    maxFragLookUpTolerance: 0.2,
-    liveSyncDurationCount: 3,
-    liveMaxLatencyDurationCount: 10,
-    enableWorker: true,
-    enableSoftwareAES: true,
-    manifestLoadingTimeOut: 10000,
-    manifestLoadingMaxRetry: 6,
-    manifestLoadingRetryDelay: 500,
-    levelLoadingTimeOut: 10000,
-    levelLoadingMaxRetry: 6,
-    levelLoadingRetryDelay: 500,
-    fragLoadingTimeOut: 20000,
-    fragLoadingMaxRetry: 6,
-    fragLoadingRetryDelay: 500,
-    startFragPrefech: false,
-    appendErrorMaxRetry: 3,
-    loader: customLoader,
-    fLoader: customFragmentLoader,
-    pLoader: customPlaylistLoader,
-    xhrSetup: XMLHttpRequestSetupCallback,
-    abrController: customAbrController,
-    timelineController: TimelineController,
-    enableCEA708Captions: true,
-    stretchShortVideoTrack: false,
-    forceKeyFrameOnDiscontinuity: true,
+   var config = {
+      autoStartLoad: true,
+  	  startPosition : -1,
+      capLevelToPlayerSize: false,
+      debug: false,
+      defaultAudioCodec: undefined,
+      maxBufferLength: 30,
+      maxMaxBufferLength: 600,
+      maxBufferSize: 60*1000*1000,
+      maxBufferHole: 0.5,
+      maxSeekHole: 2,
+      seekHoleNudgeDuration: 0.01,
+      maxFragLookUpTolerance: 0.2,
+      liveSyncDurationCount: 3,
+      liveMaxLatencyDurationCount: 10,
+      enableWorker: true,
+      enableSoftwareAES: true,
+      manifestLoadingTimeOut: 10000,
+      manifestLoadingMaxRetry: 6,
+      manifestLoadingRetryDelay: 500,
+      levelLoadingTimeOut: 10000,
+      levelLoadingMaxRetry: 6,
+      levelLoadingRetryDelay: 500,
+      fragLoadingTimeOut: 20000,
+      fragLoadingMaxRetry: 6,
+      fragLoadingRetryDelay: 500,
+      startFragPrefech: false,
+      appendErrorMaxRetry: 3,
+      loader: customLoader,
+      fLoader: customFragmentLoader,
+      pLoader: customPlaylistLoader,
+      xhrSetup: XMLHttpRequestSetupCallback,
+      abrController: customAbrController,
+      timelineController: TimelineController,
+      enableCEA708Captions: true,
+      stretchShortVideoTrack: false,
+      forceKeyFrameOnDiscontinuity: true,
+      abrEwmaFastLive: 5.0,
+      abrEwmaSlowLive: 9.0,
+      abrEwmaFastVoD: 4.0,
+      abrEwmaSlowVoD: 15.0,
+      abrEwmaDefaultEstimate: 500000,
+      abrBandWidthFactor: 0.8,
+      abrBandWidthUpFactor: 0.7
   };
 
   var hls = new Hls(config);
@@ -523,13 +530,13 @@ parameter should be a boolean
 
 (default: `false`)
 
-if a segment's video track is shorter than its audio track by > `min(maxSeekHole, maxBufferHole)`, extend the final video frame's duration to match the audio track's duration.
-this helps playback continue in certain cases that might otherwise get stuck.
+If a segment's video track is shorter than its audio track by > `min(maxSeekHole, maxBufferHole)`, extend the final video frame's duration to match the audio track's duration.
+This helps playback continue in certain cases that might otherwise get stuck.
 
 parameter should be a boolean
 
-#### ```forceKeyFrameOnDiscontinuity```
-(default : true)
+#### `forceKeyFrameOnDiscontinuity`
+(default: `true`)
 
 Whether or not to force having a key frame in the first AVC sample after a discontinuity.
 If set to true, after a discontinuity, the AVC samples without any key frame will be dropped until finding one that contains a key frame.
@@ -538,62 +545,60 @@ Setting this parameter to false can also generate decoding weirdness when switch
 
 parameter should be a boolean
 
-#### ```abrEwmaFastLive```
-(default : 5.0)
-Fast bitrate Exponential moving average half-life, used to compute average bitrate for Live streams
+#### `abrEwmaFastLive`
+(default: `5.0`)
+
+Fast bitrate Exponential moving average half-life, used to compute average bitrate for Live streams.
 Half of the estimate is based on the last abrEwmaFastLive seconds of sample history.
 Each of the sample is weighted by the fragment loading duration.
 
 parameter should be a float greater than 0
 
-#### ```abrEwmaSlowLive```
-(default : 9.0)
+#### `abrEwmaSlowLive`
+(default: `9.0`)
 
-Slow bitrate Exponential moving average half-life, used to compute average bitrate for Live streams
+Slow bitrate Exponential moving average half-life, used to compute average bitrate for Live streams.
 Half of the estimate is based on the last abrEwmaSlowLive seconds of sample history.
 Each of the sample is weighted by the fragment loading duration.
 
-parameter should be a float greater than abrEwmaFastLive
+parameter should be a float greater than [abrEwmaFastLive](#abrewmafastlive)
 
-#### ```abrEwmaFastVoD```
-(default : 4.0)
+#### `abrEwmaFastVoD`
+(default: `4.0`)
 
-Fast bitrate Exponential moving average half-life, used to compute average bitrate for VoD streams
+Fast bitrate Exponential moving average half-life, used to compute average bitrate for VoD streams.
 Half of the estimate is based on the last abrEwmaFastVoD seconds of sample history.
 Each of the sample is weighted by the fragment loading duration.
 
 parameter should be a float greater than 0
 
-#### ```abrEwmaSlowVoD```
-(default : 15.0)
+#### `abrEwmaSlowVoD`
+(default: `15.0`)
 
-Slow bitrate Exponential moving average half-life, used to compute average bitrate for VoD streams
+Slow bitrate Exponential moving average half-life, used to compute average bitrate for VoD streams.
 Half of the estimate is based on the last abrEwmaSlowVoD seconds of sample history.
 Each of the sample is weighted by the fragment loading duration.
 
-parameter should be a float greater than abrEwmaFastVoD
+parameter should be a float greater than [abrEwmaFastVoD](#abrewmafastvod)
 
-#### ```abrEwmaDefaultEstimate```
-(default : 500000)
+#### `abrEwmaDefaultEstimate`
+(default: `500000`)
 
 Default bandwidth estimate in bits/second prior to collecting fragment bandwidth samples.
 
 parameter should be a float
 
-
 #### `abrBandWidthFactor`
-
 (default: `0.8`)
 
-Scale factor to be applied against measured bandwidth average, to determine whether we can stay on current or lower quality level
-If `abrBandWidthFactor * bandwidth average < level.bitrate` then ABR can switch to that level providing that it is equal or less than current level
+Scale factor to be applied against measured bandwidth average, to determine whether we can stay on current or lower quality level.
+If `abrBandWidthFactor * bandwidth average < level.bitrate` then ABR can switch to that level providing that it is equal or less than current level.
 
 #### `abrBandWidthUpFactor`
-
 (default: `0.7`)
 
-Scale factor to be applied against measured bandwidth average, to determine whether  we can switch up to a higher quality level
-If `abrBandWidthUpFactor * bandwidth average < level.bitrate` then ABR can switch up to that quality level
+Scale factor to be applied against measured bandwidth average, to determine whether we can switch up to a higher quality level.
+If `abrBandWidthUpFactor * bandwidth average < level.bitrate` then ABR can switch up to that quality level.
 
 
 ## Video Binding/Unbinding API
