@@ -156,6 +156,7 @@ http://proxy-21.dailymotion.com/sec(2a991e17f08fcd94f95637a6dd718ddd)/video/107/
 #EXTINF:11.320,
 /sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(2)/video/107/282/158282701_mp4_h264_aac_hq.ts
 #EXTINF:13.480,
+# general comment
 /sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(3)/video/107/282/158282701_mp4_h264_aac_hq.ts
 #EXTINF:11.200,
 /sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(4)/video/107/282/158282701_mp4_h264_aac_hq.ts
@@ -215,11 +216,11 @@ http://proxy-21.dailymotion.com/sec(2a991e17f08fcd94f95637a6dd718ddd)/video/107/
 #EXT-X-ALLOW-CACHE:NO
 #EXT-X-TARGETDURATION:11
 #EXT-X-KEY:METHOD=AES-128,URI="oceans.key"
-#EXTINF:11, no desc
+#EXTINF:11,no desc
 oceans_aes-audio=65000-video=236000-1.ts
-#EXTINF:7, no desc
+#EXTINF:7,no desc
 oceans_aes-audio=65000-video=236000-2.ts
-#EXTINF:7, no desc
+#EXTINF:7,no desc
 oceans_aes-audio=65000-video=236000-3.ts
 #EXT-X-ENDLIST`;
     var result = new PlaylistLoader({on : function() { }}).parseLevelPlaylist(level, 'http://foo.com/adaptive/oceans_aes/oceans_aes.m3u8',0);
@@ -230,6 +231,7 @@ oceans_aes-audio=65000-video=236000-3.ts
     assert.strictEqual(result.fragments.length, 3);
     assert.strictEqual(result.fragments[0].cc, 0);
     assert.strictEqual(result.fragments[0].duration, 11);
+    assert.strictEqual(result.fragments[0].title, "no desc");
     assert.strictEqual(result.fragments[0].level, 0);
     assert.strictEqual(result.fragments[0].url, 'http://foo.com/adaptive/oceans_aes/oceans_aes-audio=65000-video=236000-1.ts');
     assert.strictEqual(result.fragments[0].decryptdata.uri, 'http://foo.com/adaptive/oceans_aes/oceans.key');
