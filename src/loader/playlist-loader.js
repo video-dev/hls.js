@@ -286,12 +286,15 @@ class PlaylistLoader extends EventHandler {
                             sn: sn,
                             level: id,
                             cc: cc,
-                            byteRangeStartOffset: byteRangeStartOffset,
-                            byteRangeEndOffset: byteRangeEndOffset,
                             decryptdata: fragdecryptdata,
                             programDateTime: programDateTime,
                             tagList: tagList
                         };
+                        // only include byte range options if used/needed
+                        if (byteRangeStartOffset !== null) {
+                            frag.byteRangeStartOffset = byteRangeStartOffset;
+                            frag.byteRangeEndOffset = byteRangeEndOffset;
+                        }
                         level.fragments.push(frag);
                         totalduration += duration;
                         duration = null;
