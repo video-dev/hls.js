@@ -102,7 +102,7 @@ class MP4Remuxer {
       }
 
       editOffset = Math.max(videoPTS, audioPTS) - initPTS;
-      console.log ('edit offset: ' + editOffset);
+      logger.log ('edit offset: ' + editOffset);
     }
 
     if (audioTrack.config && audioSamples.length) {
