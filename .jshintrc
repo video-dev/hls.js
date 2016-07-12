@@ -25,6 +25,8 @@
     "console"     : true,
     "MediaSource" : true,
     "performance" : true,
-    "crypto"      : true
+    "crypto"      : true,
+    "fetch"       : true,
+    "Request"     : true
   }
 }
