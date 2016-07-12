@@ -334,7 +334,7 @@ class PlaylistLoader extends EventHandler {
       url = context.url;
     }
     stats.tload = performance.now();
-    stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
+    //stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
     if (string.indexOf('#EXTM3U') === 0) {
       if (string.indexOf('#EXTINF:') > 0) {
         let isLevel = (type !== 'audioTrack'),
