@@ -489,7 +489,8 @@ class StreamController extends EventHandler {
                     if (
                         deltaPTS &&
                         deltaPTS > config.maxBufferHole &&
-                        fragPrevious.dropped
+                        fragPrevious.dropped &&
+                        curSNIdx
                     ) {
                         frag = fragments[curSNIdx - 1];
                         logger.warn(
@@ -734,14 +735,17 @@ class StreamController extends EventHandler {
 
     /*
      on immediate level switch end, after new fragment has been buffered :
-      - nudge video decoder by slightly adjusting video currentTime
+      - nudge video decoder by slightly adjusting video currentTime (if currentTime buffered)
       - resume the playback if needed
   */
     immediateLevelSwitchEnd() {
-        this.immediateSwitch = false;
         let media = this.media;
-        if (media && media.readyState) {
-            media.currentTime -= 0.0001;
+        if (media && media.buffered.length) {
+            this.immediateSwitch = false;
+            if (this.isBuffered(media.currentTime)) {
+                // only nudge if currentTime is buffered
+                media.currentTime -= 0.0001;
+            }
             if (!this.previouslyPaused) {
                 media.play();
             }
@@ -857,37 +861,49 @@ class StreamController extends EventHandler {
     }
 
     onMediaSeeking() {
-        logger.log('media seeking to ' + this.media.currentTime);
+        let media = this.media,
+            currentTime = media ? media.currentTime : undefined;
+        logger.log('media seeking to ' + currentTime);
         if (this.state === State.FRAG_LOADING) {
-            // check if currently loaded fragment is inside buffer.
-            //if outside, cancel fragment loading, otherwise do nothing
-            if (
-                BufferHelper.bufferInfo(
-                    this.media,
-                    this.media.currentTime,
+            let bufferInfo = BufferHelper.bufferInfo(
+                    media,
+                    currentTime,
                     this.config.maxBufferHole
-                ).len === 0
-            ) {
-                logger.log(
-                    'seeking outside of buffer while fragment load in progress, cancel fragment load'
-                );
-                var fragCurrent = this.fragCurrent;
-                if (fragCurrent) {
+                ),
+                fragCurrent = this.fragCurrent;
+            // check if we are seeking to a unbuffered area AND if frag loading is in progress
+            if (bufferInfo.len === 0 && fragCurrent) {
+                let tolerance = this.config.maxFragLookUpTolerance,
+                    fragStartOffset = fragCurrent.start - tolerance,
+                    fragEndOffset =
+                        fragCurrent.start + fragCurrent.duration + tolerance;
+                // check if we seek position will be out of currently loaded frag range : if out cancel frag load, if in, don't do anything
+                if (
+                    currentTime < fragStartOffset ||
+                    currentTime > fragEndOffset
+                ) {
                     if (fragCurrent.loader) {
+                        logger.log(
+                            'seeking outside of buffer while fragment load in progress, cancel fragment load'
+                        );
                         fragCurrent.loader.abort();
                     }
                     this.fragCurrent = null;
+                    this.fragPrevious = null;
+                    // switch to IDLE state to load new fragment
+                    this.state = State.IDLE;
+                } else {
+                    logger.log(
+                        'seeking outside of buffer but within currently loaded fragment range'
+                    );
                 }
-                this.fragPrevious = null;
-                // switch to IDLE state to load new fragment
-                this.state = State.IDLE;
             }
         } else if (this.state === State.ENDED) {
             // switch to IDLE state to check for potential new fragment
             this.state = State.IDLE;
         }
-        if (this.media) {
-            this.lastCurrentTime = this.media.currentTime;
+        if (media) {
+            this.lastCurrentTime = currentTime;
         }
         // avoid reporting fragment loop loading error in case user is seeking several times on same position
         if (
@@ -1011,6 +1027,9 @@ class StreamController extends EventHandler {
                         this.startPosition = Math.max(
                             0,
                             sliding + duration - targetLatency
+                        );
+                        logger.log(
+                            `configure startPosition to ${this.startPosition}`
                         );
                     } else {
                         this.startPosition = 0;
@@ -1451,31 +1470,27 @@ class StreamController extends EventHandler {
             // adjust currentTime to start position on loaded metadata
             if (!this.loadedmetadata && buffered.length) {
                 this.loadedmetadata = true;
-                // only adjust currentTime if startPosition not equal to 0
-                let startPosition = this.startPosition;
-                // if currentTime === 0 AND not matching with expected startPosition
-                if (!currentTime && currentTime !== startPosition) {
-                    if (startPosition) {
-                        logger.log(`target start position:${startPosition}`);
-                        // at that stage, there should be only one buffered range, as we reach that code after first fragment has been
-                        let bufferStart = buffered.start(0),
-                            bufferEnd = buffered.end(0);
-                        // if startPosition not buffered, let's seek to buffered.start(0)
-                        if (
-                            startPosition < bufferStart ||
-                            startPosition > bufferEnd
-                        ) {
-                            startPosition = bufferStart;
-                            logger.log(
-                                `target start position not buffered, seek to buffered.start(0) ${bufferStart}`
-                            );
-                        }
+                // only adjust currentTime if different from startPosition or if startPosition not buffered
+                // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
+                let startPosition = this.startPosition,
+                    startPositionBuffered = this.isBuffered(startPosition);
+                // if currentTime not matching with expected startPosition or startPosition not buffered
+                if (currentTime !== startPosition || !startPositionBuffered) {
+                    logger.log(`target start position:${startPosition}`);
+                    // if startPosition not buffered, let's seek to buffered.start(0)
+                    if (!startPositionBuffered) {
+                        startPosition = buffered.start(0);
                         logger.log(
-                            `adjust currentTime from ${currentTime} to ${startPosition}`
+                            `target start position not buffered, seek to buffered.start(0) ${startPosition}`
                         );
-                        media.currentTime = startPosition;
                     }
+                    logger.log(
+                        `adjust currentTime from ${currentTime} to ${startPosition}`
+                    );
+                    media.currentTime = startPosition;
                 }
+            } else if (this.immediateSwitch) {
+                this.immediateLevelSwitchEnd();
             } else {
                 let bufferInfo = BufferHelper.bufferInfo(media, currentTime, 0),
                     expectedPlaying = !(
@@ -1572,10 +1587,6 @@ class StreamController extends EventHandler {
         }
         this.bufferRange = newRange;
 
-        // handle end of immediate switching if needed
-        if (this.immediateSwitch) {
-            this.immediateLevelSwitchEnd();
-        }
         // increase fragment load Index to avoid frag loop loading error after buffer flush
         this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
         // move to IDLE once flush complete. this should trigger new fragment loading
