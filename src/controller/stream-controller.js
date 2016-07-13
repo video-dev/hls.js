@@ -828,6 +828,10 @@ class StreamController extends EventHandler {
         // first, check if start time offset has been set in playlist, if yes, use this value
         let startTimeOffset = newDetails.startTimeOffset;
         if(!isNaN(startTimeOffset)) {
+          if (startTimeOffset < 0) {
+            logger.log(`negative start time offset ${startTimeOffset}, count from end of last fragment`);
+            startTimeOffset = sliding + duration + startTimeOffset;
+          }
           logger.log(`start time offset found in playlist, adjust startPosition to ${startTimeOffset}`);
           this.startPosition = startTimeOffset;
         } else {
