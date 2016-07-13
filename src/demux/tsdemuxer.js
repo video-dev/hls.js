@@ -18,12 +18,13 @@
 
  class TSDemuxer {
 
-  constructor(observer, remuxerClass, config) {
+  constructor(observer, id, remuxerClass, config) {
     this.observer = observer;
+    this.id = id;
     this.remuxerClass = remuxerClass;
     this.config = config;
     this.lastCC = 0;
-    this.remuxer = new this.remuxerClass(observer, config);
+    this.remuxer = new this.remuxerClass(observer, id, config);
   }
 
   static probe(data) {
@@ -38,7 +39,7 @@
   switchLevel() {
     this.pmtParsed = false;
     this._pmtId = -1;
-    this._avcTrack = {container : 'video/mp2t', type: 'video', id :-1, sequenceNumber: 0, samples : [], len : 0, nbNalu : 0};
+    this._avcTrack = {container : 'video/mp2t', type: 'video', id :-1, sequenceNumber: 0, samples : [], len : 0, nbNalu : 0, dropped : 0};
     this._aacTrack = {container : 'video/mp2t', type: 'audio', id :-1, sequenceNumber: 0, samples : [], len : 0};
     this._id3Track = {type: 'id3', id :-1, sequenceNumber: 0, samples : [], len : 0};
     this._txtTrack = {type: 'text', id: -1, sequenceNumber: 0, samples: [], len: 0};
@@ -114,7 +115,7 @@
                   // if audio PID is undefined OR if we have audio codec info,
                   // we have all codec info !
                   if (this._avcTrack.codec && (aacId === -1 || this._aacTrack.codec)) {
-                    this.remux(data);
+                    this.remux(level,sn,data);
                     return;
                   }
                 }
@@ -134,7 +135,7 @@
                   // if video PID is undefined OR if we have video codec info,
                   // we have all codec infos !
                   if (this._aacTrack.codec && (avcId === -1 || this._avcTrack.codec)) {
-                    this.remux(data);
+                    this.remux(level,sn,data);
                     return;
                   }
                 }
@@ -181,7 +182,7 @@
           }
         }
       } else {
-        this.observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47'});
+        this.observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, id : this.id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47'});
       }
     }
     // parse last PES packet
@@ -194,11 +195,11 @@
     if (id3Data) {
       this._parseID3PES(this._parsePES(id3Data));
     }
-    this.remux(null);
+    this.remux(level,sn,null);
   }
 
-  remux(data) {
-    this.remuxer.remux(this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data);
+  remux(level, sn, data) {
+    this.remuxer.remux(level, sn, this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data);
   }
 
   destroy() {
@@ -351,15 +352,20 @@
 
     var pushAccesUnit = function() {
       if (units2.length) {
-        // only push AVC sample if keyframe already found in this fragment OR
-        //    keyframe found in last fragment (track.sps) AND
-        //        samples already appended (we already found a keyframe in this fragment) OR fragment is contiguous
-        if (key === true ||
+        // only push AVC sample if starting with a keyframe is not mandatory OR
+        //    if keyframe already found in this fragment OR
+        //       keyframe found in last fragment (track.sps) AND
+        //          samples already appended (we already found a keyframe in this fragment) OR fragment is contiguous
+        if (!this.config.forceKeyFrameOnDiscontinuity ||
+            key === true ||
             (track.sps && (samples.length || this.contiguous))) {
           avcSample = {units: { units : units2, length : length}, pts: pes.pts, dts: pes.dts, key: key};
           samples.push(avcSample);
           track.len += length;
           track.nbNalu += units2.length;
+        } else {
+          // dropped samples, track it
+          track.dropped++;
         }
         units2 = [];
         length = 0;
@@ -712,7 +718,7 @@
         reason = 'no ADTS header found in AAC PES';
         fatal = true;
       }
-      this.observer.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason});
+      this.observer.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, id : this.id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason});
       if (fatal) {
         return;
       }

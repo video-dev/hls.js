@@ -6,7 +6,7 @@ hls.js is a JavaScript library which implements an [HTTP Live Streaming] client.
 It relies on [HTML5 video][] and [MediaSource Extensions][] for playback.
 
 It works by transmuxing MPEG-2 Transport Stream into ISO BMFF (MP4) fragments.
-this transmuxing could be performed asynchronously using [Web Worker] if available in the browser.
+This transmuxing could be performed asynchronously using [Web Worker] if available in the browser.
 
 hls.js does not need any player, it works directly on top of a standard HTML```<video>```element.
 
@@ -34,6 +34,7 @@ hls.js is (being) integrated in the following players:
  - [Flowplayer] (https://www.flowplayer.org)  through [flowplayer-hlsjs] (https://github.com/flowplayer/flowplayer-hlsjs)
  - [Videojs] (http://videojs.com) through [Videojs-hlsjs] (https://github.com/benjipott/videojs-hlsjs)
  - [Videojs] (http://videojs.com) through [videojs-hls.js] (https://github.com/streamroot/videojs-hls.js). hls.js is integrated as a SourceHandler -- new feature in Video.js 5.
+ - [Videojs] (http://videojs.com) through [videojs-contrib-hls.js](https://github.com/Peer5/videojs-contrib-hls.js). Production ready plug-in with full fallback compatibility built-in.
 
  It might also be integrated in the following players if you push for it !
 
@@ -130,6 +131,7 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - `#EXT-X-BYTERANGE`
   - `#EXT-X-KEY` (https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4)
   - `#EXT-X-PROGRAM-DATE-TIME` (https://tools.ietf.org/html/draft-pantos-http-live-streaming-18#section-4.3.2.6)
+  - `EXT-X-START:TIME-OFFSET=x` (https://tools.ietf.org/html/draft-pantos-http-live-streaming-18#section-4.3.5.2)
 
 ## Getting Started
 

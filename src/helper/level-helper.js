@@ -24,12 +24,14 @@ class LevelHelper {
     for(var i = start ; i <= end ; i++) {
       var oldFrag = oldfragments[delta+i],
           newFrag = newfragments[i];
-      ccOffset = oldFrag.cc - newFrag.cc;
-      if (!isNaN(oldFrag.startPTS)) {
-        newFrag.start = newFrag.startPTS = oldFrag.startPTS;
-        newFrag.endPTS = oldFrag.endPTS;
-        newFrag.duration = oldFrag.duration;
-        PTSFrag = newFrag;
+      if (newFrag && oldFrag) {
+        ccOffset = oldFrag.cc - newFrag.cc;
+        if (!isNaN(oldFrag.startPTS)) {
+          newFrag.start = newFrag.startPTS = oldFrag.startPTS;
+          newFrag.endPTS = oldFrag.endPTS;
+          newFrag.duration = oldFrag.duration;
+          PTSFrag = newFrag;
+        }
       }
     }
 
@@ -71,6 +73,13 @@ class LevelHelper {
     fragments = details.fragments;
     frag = fragments[fragIdx];
     if(!isNaN(frag.startPTS)) {
+      // delta PTS between audio and video
+      let deltaPTS = Math.abs(frag.startPTS-startPTS);
+      if (isNaN(frag.deltaPTS)) {
+        frag.deltaPTS = deltaPTS;
+      } else {
+        frag.deltaPTS = Math.max(deltaPTS,frag.deltaPTS);
+      }
       startPTS = Math.min(startPTS,frag.startPTS);
       endPTS = Math.max(endPTS, frag.endPTS);
       startDTS = Math.min(startDTS,frag.startDTS);

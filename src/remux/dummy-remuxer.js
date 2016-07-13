@@ -3,9 +3,9 @@
 */
 
 class DummyRemuxer {
-  constructor(observer) {
-    this.PES_TIMESCALE = 90000;
+  constructor(observer, id) {
     this.observer = observer;
+    this.id = id;
   }
 
   get passthrough() {

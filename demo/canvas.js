@@ -515,7 +515,7 @@
       legend += ' ' + event.id2;
     }
     if(event.id !== undefined) {
-      if(event.type === 'fragment') {
+      if(event.type.indexOf('fragment') !== -1) {
       legend += ' @';
       }
       legend += ' ' + event.id;
