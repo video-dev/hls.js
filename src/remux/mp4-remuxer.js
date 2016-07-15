@@ -508,13 +508,9 @@ class MP4Remuxer {
         // In an effort to prevent this from happening, we inject frames here where there are gaps.
         // When possible, we inject a silent frame; when that's not possible, we duplicate the last
         // frame.
-        let firstPtsNorm = this._PTSNormalize(
-                samples0[0].pts - this._initPTS,
-                nextAacPts
-            ),
-            pesFrameDuration = expectedSampleDuration * pes2mp4ScaleFactor;
-        var nextPtsNorm = firstPtsNorm + pesFrameDuration;
-        for (var i = 1; i < samples0.length; ) {
+        const pesFrameDuration = expectedSampleDuration * pes2mp4ScaleFactor;
+        let nextPtsNorm = nextAacPts;
+        for (var i = 0; i < samples0.length; ) {
             // First, let's see how far off this frame is from where we expect it to be
             var sample = samples0[i],
                 ptsNorm = this._PTSNormalize(
@@ -540,7 +536,8 @@ class MP4Remuxer {
                     } of missing audio due to ${Math.round(delta / 90)} ms gap.`
                 );
                 for (var j = 0; j < missing; j++) {
-                    newStamp = samples0[i - 1].pts + pesFrameDuration;
+                    newStamp = sample.pts - (missing - j) * pesFrameDuration;
+                    newStamp = Math.max(newStamp, this._initPTS);
                     fillFrame = AAC.getSilentFrame(track.channelCount);
                     if (!fillFrame) {
                         logger.log(
@@ -558,8 +555,11 @@ class MP4Remuxer {
                 }
 
                 // Adjust sample to next expected pts
-                nextPtsNorm += (missing + 1) * pesFrameDuration;
                 sample.pts = samples0[i - 1].pts + pesFrameDuration;
+                nextPtsNorm = this._PTSNormalize(
+                    sample.pts + pesFrameDuration - this._initPTS,
+                    nextAacPts
+                );
                 i += 1;
             } else {
                 // Otherwise, we're within half a frame duration, so just adjust pts
@@ -573,7 +573,11 @@ class MP4Remuxer {
                     );
                 }
                 nextPtsNorm += pesFrameDuration;
-                sample.pts = samples0[i - 1].pts + pesFrameDuration;
+                if (i === 0) {
+                    sample.pts = this._initPTS + nextAacPts;
+                } else {
+                    sample.pts = samples0[i - 1].pts + pesFrameDuration;
+                }
                 i += 1;
             }
         }
