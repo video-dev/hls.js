@@ -198,7 +198,7 @@ class LevelController extends EventHandler {
          break;
       case ErrorDetails.LEVEL_LOAD_ERROR:
       case ErrorDetails.LEVEL_LOAD_TIMEOUT:
-        levelId = data.level;
+        levelId = data.context.level;
         levelError = true;
         break;
       default:

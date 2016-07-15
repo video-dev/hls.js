@@ -2470,7 +2470,7 @@ var LevelController = function (_EventHandler) {
           break;
         case _errors.ErrorDetails.LEVEL_LOAD_ERROR:
         case _errors.ErrorDetails.LEVEL_LOAD_TIMEOUT:
-          levelId = data.level;
+          levelId = data.context.level;
           levelError = true;
           break;
         default:
@@ -3069,7 +3069,7 @@ var StreamController = function (_EventHandler) {
             // and if previous remuxed fragment did not start with a keyframe. (fragPrevious.dropped)
             // let's try to load previous fragment again to get last keyframe
             // then we will reload again current fragment (that way we should be able to fill the buffer hole ...)
-            if (deltaPTS && deltaPTS > config.maxBufferHole && fragPrevious.dropped) {
+            if (deltaPTS && deltaPTS > config.maxBufferHole && fragPrevious.dropped && curSNIdx) {
               frag = fragments[curSNIdx - 1];
               _logger.logger.warn('SN just loaded, with large PTS gap between audio and video, maybe frag is not starting with a keyframe ? load previous one to try to overcome this');
               // decrement previous frag load counter to avoid frag loop loading error when next fragment will get reloaded
@@ -3253,17 +3253,20 @@ var StreamController = function (_EventHandler) {
 
     /*
        on immediate level switch end, after new fragment has been buffered :
-        - nudge video decoder by slightly adjusting video currentTime
+        - nudge video decoder by slightly adjusting video currentTime (if currentTime buffered)
         - resume the playback if needed
     */
 
   }, {
     key: 'immediateLevelSwitchEnd',
     value: function immediateLevelSwitchEnd() {
-      this.immediateSwitch = false;
       var media = this.media;
-      if (media && media.readyState) {
-        media.currentTime -= 0.0001;
+      if (media && media.buffered.length) {
+        this.immediateSwitch = false;
+        if (this.isBuffered(media.currentTime)) {
+          // only nudge if currentTime is buffered
+          media.currentTime -= 0.0001;
+        }
         if (!this.previouslyPaused) {
           media.play();
         }
@@ -3375,29 +3378,37 @@ var StreamController = function (_EventHandler) {
   }, {
     key: 'onMediaSeeking',
     value: function onMediaSeeking() {
-      _logger.logger.log('media seeking to ' + this.media.currentTime);
+      var media = this.media,
+          currentTime = media ? media.currentTime : undefined;
+      _logger.logger.log('media seeking to ' + currentTime);
       if (this.state === State.FRAG_LOADING) {
-        // check if currently loaded fragment is inside buffer.
-        //if outside, cancel fragment loading, otherwise do nothing
-        if (_bufferHelper2.default.bufferInfo(this.media, this.media.currentTime, this.config.maxBufferHole).len === 0) {
-          _logger.logger.log('seeking outside of buffer while fragment load in progress, cancel fragment load');
-          var fragCurrent = this.fragCurrent;
-          if (fragCurrent) {
+        var bufferInfo = _bufferHelper2.default.bufferInfo(media, currentTime, this.config.maxBufferHole),
+            fragCurrent = this.fragCurrent;
+        // check if we are seeking to a unbuffered area AND if frag loading is in progress
+        if (bufferInfo.len === 0 && fragCurrent) {
+          var tolerance = this.config.maxFragLookUpTolerance,
+              fragStartOffset = fragCurrent.start - tolerance,
+              fragEndOffset = fragCurrent.start + fragCurrent.duration + tolerance;
+          // check if we seek position will be out of currently loaded frag range : if out cancel frag load, if in, don't do anything
+          if (currentTime < fragStartOffset || currentTime > fragEndOffset) {
             if (fragCurrent.loader) {
+              _logger.logger.log('seeking outside of buffer while fragment load in progress, cancel fragment load');
               fragCurrent.loader.abort();
             }
             this.fragCurrent = null;
+            this.fragPrevious = null;
+            // switch to IDLE state to load new fragment
+            this.state = State.IDLE;
+          } else {
+            _logger.logger.log('seeking outside of buffer but within currently loaded fragment range');
           }
-          this.fragPrevious = null;
-          // switch to IDLE state to load new fragment
-          this.state = State.IDLE;
         }
       } else if (this.state === State.ENDED) {
         // switch to IDLE state to check for potential new fragment
         this.state = State.IDLE;
       }
-      if (this.media) {
-        this.lastCurrentTime = this.media.currentTime;
+      if (media) {
+        this.lastCurrentTime = currentTime;
       }
       // avoid reporting fragment loop loading error in case user is seeking several times on same position
       if (this.state !== State.FRAG_LOADING && this.fragLoadIdx !== undefined) {
@@ -3499,6 +3510,10 @@ var StreamController = function (_EventHandler) {
           // first, check if start time offset has been set in playlist, if yes, use this value
           var startTimeOffset = newDetails.startTimeOffset;
           if (!isNaN(startTimeOffset)) {
+            if (startTimeOffset < 0) {
+              _logger.logger.log('negative start time offset ' + startTimeOffset + ', count from end of last fragment');
+              startTimeOffset = sliding + duration + startTimeOffset;
+            }
             _logger.logger.log('start time offset found in playlist, adjust startPosition to ' + startTimeOffset);
             this.startPosition = startTimeOffset;
           } else {
@@ -3506,6 +3521,7 @@ var StreamController = function (_EventHandler) {
             if (newDetails.live) {
               var targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * newDetails.targetduration;
               this.startPosition = Math.max(0, sliding + duration - targetLatency);
+              _logger.logger.log('configure startPosition to ' + this.startPosition);
             } else {
               this.startPosition = 0;
             }
@@ -3838,24 +3854,23 @@ var StreamController = function (_EventHandler) {
         // adjust currentTime to start position on loaded metadata
         if (!this.loadedmetadata && buffered.length) {
           this.loadedmetadata = true;
-          // only adjust currentTime if startPosition not equal to 0
-          var startPosition = this.startPosition;
-          // if currentTime === 0 AND not matching with expected startPosition
-          if (!currentTime && currentTime !== startPosition) {
-            if (startPosition) {
-              _logger.logger.log('target start position:' + startPosition);
-              // at that stage, there should be only one buffered range, as we reach that code after first fragment has been
-              var bufferStart = buffered.start(0),
-                  bufferEnd = buffered.end(0);
-              // if startPosition not buffered, let's seek to buffered.start(0)
-              if (startPosition < bufferStart || startPosition > bufferEnd) {
-                startPosition = bufferStart;
-                _logger.logger.log('target start position not buffered, seek to buffered.start(0) ' + bufferStart);
-              }
-              _logger.logger.log('adjust currentTime from ' + currentTime + ' to ' + startPosition);
-              media.currentTime = startPosition;
+          // only adjust currentTime if different from startPosition or if startPosition not buffered
+          // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
+          var startPosition = this.startPosition,
+              startPositionBuffered = this.isBuffered(startPosition);
+          // if currentTime not matching with expected startPosition or startPosition not buffered
+          if (currentTime !== startPosition || !startPositionBuffered) {
+            _logger.logger.log('target start position:' + startPosition);
+            // if startPosition not buffered, let's seek to buffered.start(0)
+            if (!startPositionBuffered) {
+              startPosition = buffered.start(0);
+              _logger.logger.log('target start position not buffered, seek to buffered.start(0) ' + startPosition);
             }
+            _logger.logger.log('adjust currentTime from ' + currentTime + ' to ' + startPosition);
+            media.currentTime = startPosition;
           }
+        } else if (this.immediateSwitch) {
+          this.immediateLevelSwitchEnd();
         } else {
           var bufferInfo = _bufferHelper2.default.bufferInfo(media, currentTime, 0),
               expectedPlaying = !(media.paused || // not playing when media is paused
@@ -3930,10 +3945,6 @@ var StreamController = function (_EventHandler) {
       }
       this.bufferRange = newRange;
 
-      // handle end of immediate switching if needed
-      if (this.immediateSwitch) {
-        this.immediateLevelSwitchEnd();
-      }
       // increase fragment load Index to avoid frag loop loading error after buffer flush
       this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
       // move to IDLE once flush complete. this should trigger new fragment loading
@@ -7349,7 +7360,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.2-1';
+      return '0.6.2-2';
     }
   }, {
     key: 'Events',
@@ -11677,22 +11688,22 @@ var XhrLoader = function () {
         this.onSuccess(event, stats, context);
         // everything else is a failure
       } else {
-        // retry first
-        if (stats.retry < this.maxRetry) {
-          _logger.logger.warn(status + ' while loading ' + this.url + ', retrying in ' + this.retryDelay + '...');
-          // aborts and resets internal state
-          this.destroy();
-          // schedule retry
-          this.retryTimeout = window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
-          // set exponential backoff
-          this.retryDelay = Math.min(2 * this.retryDelay, 64000);
-          stats.retry++;
-          // permanent failure
-        } else {
-          _logger.logger.error(status + ' while loading ' + this.url);
-          this.onError(event, context);
+          // retry first
+          if (stats.retry < this.maxRetry) {
+            _logger.logger.warn(status + ' while loading ' + this.url + ', retrying in ' + this.retryDelay + '...');
+            // aborts and resets internal state
+            this.destroy();
+            // schedule retry
+            this.retryTimeout = window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
+            // set exponential backoff
+            this.retryDelay = Math.min(2 * this.retryDelay, 64000);
+            stats.retry++;
+            // permanent failure
+          } else {
+              _logger.logger.error(status + ' while loading ' + this.url);
+              this.onError(event, context);
+            }
         }
-      }
     }
   }, {
     key: 'loadtimeout',
