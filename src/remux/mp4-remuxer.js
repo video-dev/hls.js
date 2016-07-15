@@ -361,7 +361,8 @@ class MP4Remuxer {
         firstPTS, firstDTS, lastDTS,
         pts, dts, ptsnorm, dtsnorm,
         samples = [],
-        samples0 = [];
+        samples0 = [],
+        fillFrame, newStamp;
 
     track.samples.sort(function(a, b) {
       return (a.pts-b.pts);
@@ -396,8 +397,8 @@ class MP4Remuxer {
         var missing = Math.round(delta / pesFrameDuration);
         logger.log(`Injecting ${missing} frame${missing > 1 ? 's' : ''} of missing audio due to ${Math.round(delta / 90)} ms gap.`);
         for (var j = 0; j < missing; j++) {
-          var newStamp = samples0[i - 1].pts + pesFrameDuration,
-              fillFrame = AAC.getSilentFrame(track.channelCount);
+          newStamp = samples0[i - 1].pts + pesFrameDuration;
+          fillFrame = AAC.getSilentFrame(track.channelCount);
           if (!fillFrame) {
             logger.log('Unable to get silent frame for given audio codec; duplicating last frame instead.');
             fillFrame = sample.unit.slice(0);
@@ -437,13 +438,22 @@ class MP4Remuxer {
       } else {
         ptsnorm = this._PTSNormalize(pts, nextAacPts);
         dtsnorm = this._PTSNormalize(dts, nextAacPts);
-        let delta = Math.round(1000 * (ptsnorm - nextAacPts) / pesTimeScale);
+        let delta = Math.round(1000 * (ptsnorm - nextAacPts) / pesTimeScale),
+            numMissingFrames = 0;
         // if fragment are contiguous, detect hole/overlapping between fragments
         if (contiguous) {
           // log delta
           if (delta) {
             if (delta > 0) {
+              numMissingFrames = Math.round((ptsnorm - nextAacPts) / pesFrameDuration);
               logger.log(`${delta} ms hole between AAC samples detected,filling it`);
+              if (numMissingFrames > 0) {
+                fillFrame = AAC.getSilentFrame(track.channelCount);
+                if (!fillFrame) {
+                  fillFrame = unit.slice(0);
+                }
+                track.len += numMissingFrames * fillFrame.length;
+              }
               // if we have frame overlap, overlapping for more than half a frame duraion
             } else if (delta < -12) {
               // drop overlapping audio frames... browser will deal with it
@@ -468,6 +478,29 @@ class MP4Remuxer {
         } else {
           // no audio samples
           return;
+        }
+        for (i = 0; i < numMissingFrames; i++) {
+          newStamp = ptsnorm - (numMissingFrames - i) * pesFrameDuration;
+          fillFrame = AAC.getSilentFrame(track.channelCount);
+          if (!fillFrame) {
+            logger.log('Unable to get silent frame for given audio codec; duplicating this frame instead.');
+            fillFrame = unit.slice(0);
+          }
+          mdat.set(fillFrame, offset);
+          offset += fillFrame.byteLength;
+          mp4Sample = {
+            size: fillFrame.byteLength,
+            cts: 0,
+            duration:0,
+            flags: {
+              isLeading: 0,
+              isDependedOn: 0,
+              hasRedundancy: 0,
+              degradPrio: 0,
+              dependsOn: 1,
+            }
+          };
+          samples.push(mp4Sample);
         }
       }
       mdat.set(unit, offset);
