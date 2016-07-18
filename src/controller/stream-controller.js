@@ -795,7 +795,7 @@ class StreamController extends EventHandler {
         var currentLevel = this.levels[this.level],
             details = currentLevel.details,
             duration = details.totalduration,
-            start = fragCurrent.startDTS !== undefined ? fragCurrent.startDTS  : fragCurrent.start,
+            start = fragCurrent.startDTS !== undefined && !isNaN(fragCurrent.startDTS) ? fragCurrent.startDTS  : fragCurrent.start,
             level = fragCurrent.level,
             sn = fragCurrent.sn,
             audioCodec = currentLevel.audioCodec || this.config.defaultAudioCodec;
