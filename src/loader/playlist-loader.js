@@ -66,17 +66,21 @@ class PlaylistLoader extends EventHandler {
             typeof config.pLoader !== 'undefined'
                 ? new config.pLoader(config)
                 : new config.loader(config);
-        loader.load(
-            url,
-            context,
-            '',
-            this.loadsuccess.bind(this),
-            this.loaderror.bind(this),
-            this.loadtimeout.bind(this),
-            timeout,
-            retry,
-            retryDelay
-        );
+        context.url = url;
+        context.responseType = '';
+
+        let loaderConfig, loaderCallbacks;
+        loaderConfig = {
+            timeout: timeout,
+            maxRetry: retry,
+            retryDelay: retryDelay
+        };
+        loaderCallbacks = {
+            onSuccess: this.loadsuccess.bind(this),
+            onError: this.loaderror.bind(this),
+            onTimeout: this.loadtimeout.bind(this)
+        };
+        loader.load(context, loaderConfig, loaderCallbacks);
     }
 
     resolve(url, baseUrl) {
@@ -362,10 +366,9 @@ class PlaylistLoader extends EventHandler {
         return level;
     }
 
-    loadsuccess(event, stats, context) {
-        var target = event.currentTarget,
-            string = target.responseText,
-            url = target.responseURL,
+    loadsuccess(response, stats, context) {
+        var string = response.data,
+            url = response.url,
             type = context.type,
             id = context.id,
             level = context.level,
@@ -455,7 +458,7 @@ class PlaylistLoader extends EventHandler {
         }
     }
 
-    loaderror(event, context) {
+    loaderror(response, context) {
         var details,
             fatal,
             loader = context.loader;
@@ -483,12 +486,12 @@ class PlaylistLoader extends EventHandler {
             fatal: fatal,
             url: loader.url,
             loader: loader,
-            response: event.currentTarget,
+            response: response,
             context: context
         });
     }
 
-    loadtimeout(event, stats, context) {
+    loadtimeout(stats, context) {
         var details,
             fatal,
             loader = context.loader;

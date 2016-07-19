@@ -39,23 +39,36 @@ class FragmentLoader extends EventHandler {
             typeof config.fLoader !== 'undefined'
                 ? new config.fLoader(config)
                 : new config.loader(config);
-        loader.load(
-            frag.url,
-            { frag: frag },
-            'arraybuffer',
-            this.loadsuccess.bind(this),
-            this.loaderror.bind(this),
-            this.loadtimeout.bind(this),
-            config.fragLoadingTimeOut,
-            0,
-            0,
-            this.loadprogress.bind(this),
-            frag
-        );
+
+        let loaderContext, loaderConfig, loaderCallbacks;
+        loaderContext = {
+            url: frag.url,
+            frag: frag,
+            responseType: 'arraybuffer'
+        };
+        let start = frag.byteRangeStartOffset,
+            end = frag.byteRangeEndOffset;
+        if (!isNaN(start) && !isNaN(end)) {
+            loaderContext.headers = {
+                Range: 'bytes=' + start + '-' + (end - 1)
+            };
+        }
+        loaderConfig = {
+            timeout: config.fragLoadingTimeOut,
+            maxRetry: 0,
+            retryDelay: 0
+        };
+        loaderCallbacks = {
+            onSuccess: this.loadsuccess.bind(this),
+            onError: this.loaderror.bind(this),
+            onTimeout: this.loadtimeout.bind(this),
+            onProgress: this.loadprogress.bind(this)
+        };
+        loader.load(loaderContext, loaderConfig, loaderCallbacks);
     }
 
-    loadsuccess(event, stats, context) {
-        let payload = event.currentTarget.response,
+    loadsuccess(response, stats, context) {
+        let payload = response.data,
             frag = context.frag;
         stats.length = payload.byteLength;
         // detach fragment loader on load success
@@ -68,7 +81,7 @@ class FragmentLoader extends EventHandler {
         });
     }
 
-    loaderror(event, context) {
+    loaderror(response, context) {
         let loader = context.loader;
         if (loader) {
             loader.abort();
@@ -79,11 +92,11 @@ class FragmentLoader extends EventHandler {
             details: ErrorDetails.FRAG_LOAD_ERROR,
             fatal: false,
             frag: context.frag,
-            response: event
+            response: response
         });
     }
 
-    loadtimeout(event, stats, context) {
+    loadtimeout(stats, context) {
         let loader = context.loader;
         if (loader) {
             loader.abort();
@@ -97,7 +110,7 @@ class FragmentLoader extends EventHandler {
         });
     }
 
-    loadprogress(event, stats, context) {
+    loadprogress(stats, context) {
         let frag = context.frag;
         frag.loaded = stats.loaded;
         this.hls.trigger(Event.FRAG_LOAD_PROGRESS, {
