@@ -784,19 +784,19 @@ Full list of errors is described below:
 ### Network Errors
 
   - `Hls.ErrorDetails.MANIFEST_LOAD_ERROR` - raised when manifest loading fails because of a network error
-    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.MANIFEST_LOAD_ERROR`, fatal : `true`, url : manifest URL, response : xhr response, loader : URL loader }
+    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.MANIFEST_LOAD_ERROR`, fatal : `true`, url : manifest URL, response : { code: error code, text: error text }, loader : URL loader }
   - `Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT` - raised when manifest loading fails because of a timeout
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT`, fatal : `true`, url : manifest URL, loader : URL loader }
   - `Hls.ErrorDetails.MANIFEST_PARSING_ERROR` - raised when manifest parsing failed to find proper content
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.MANIFEST_PARSING_ERROR`, fatal : `true`, url : manifest URL, reason : parsing error reason }
   - `Hls.ErrorDetails.LEVEL_LOAD_ERROR` - raised when level loading fails because of a network error
-    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.LEVEL_LOAD_ERROR`, fatal : `true`, url : level URL, response : xhr response, loader : URL loader }
+    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.LEVEL_LOAD_ERROR`, fatal : `true`, url : level URL, response : { code: error code, text: error text }, loader : URL loader }
   - `Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT` - raised when level loading fails because of a timeout
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT`, fatal : `true`, url : level URL, loader : URL loader }
   - `Hls.ErrorDetails.LEVEL_SWITCH_ERROR` - raised when level switching fails
     - data: { type : `OTHER_ERROR`, details : `Hls.ErrorDetails.LEVEL_SWITCH_ERROR`, fatal : `false`, level : failed level index, reason : failure reason }
   - `Hls.ErrorDetails.FRAG_LOAD_ERROR` - raised when fragment loading fails because of a network error
-    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.FRAG_LOAD_ERROR`, fatal : `true` or `false`, frag : fragment object, response : xhr response }
+    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.FRAG_LOAD_ERROR`, fatal : `true` or `false`, frag : fragment object, response : { code: error code, text: error text } }
   - `Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR` - raised upon detection of same fragment being requested in loop
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR`, fatal : `true` or `false`, frag : fragment object }
   - `Hls.ErrorDetails.FRAG_LOAD_TIMEOUT` - raised when fragment loading fails because of a timeout

@@ -2,7 +2,7 @@
  * Fetch based logger
  * timeout / abort / onprogress not supported for now
  * timeout / abort : some ideas here : https://github.com/whatwg/fetch/issues/20#issuecomment-196113354
- * but still it is not bullet proof as it fails to avoid data waste.... we could only cancel the
+ * but still it is not bullet proof as it fails to avoid data waste....
 */
 
 class FetchLoader {
@@ -17,38 +17,43 @@ class FetchLoader {
   abort() {
   }
 
-  load(url, context, responseType, onSuccess, onError, onTimeout, timeout, maxRetry, retryDelay, onProgress = null, frag = null) { // jshint ignore:line
 
-    let stats = {trequest: performance.now(), retry: 0}, targetURL = url;
+  load(context, config, callbacks) {
+    let stats = {trequest: performance.now(), retry: 0}, targetURL = context.url;
 
     let initParams = { method: 'GET',
                        mode: 'cors',
                        credentials: 'same-origin'
                      };
 
-    let request = new Request(url,initParams),
+    let request = new Request(context.url,initParams),
         fetchPromise = fetch(request,initParams);
 
     // process fetchPromise
     let responsePromise = fetchPromise.then(function(response) {
-      stats.tfirst = Math.max(stats.trequest,performance.now());
-      targetURL = response.url;
-      if (responseType === 'arraybuffer') {
-        return response.arrayBuffer();
+      if (response.ok) {
+        stats.tfirst = Math.max(stats.trequest,performance.now());
+        targetURL = response.url;
+        if (context.responseType === 'arraybuffer') {
+          return response.arrayBuffer();
+        } else {
+          return response.text();
+        }
       } else {
-        return response.text();
+        callbacks.onError({text : 'fetch, bad network response'}, context);
+        return;
       }
+    }).catch(function(error) {
+      callbacks.onError({text : error.message}, context);
+      return;
     });
     // process response Promise
     responsePromise.then(function(responseData) {
-      stats.tload = Math.max(stats.tfirst,performance.now());
-      let event = { currentTarget : { responseURL : targetURL } };
-      if (responseType === 'arraybuffer') {
-        event.currentTarget.response = responseData;
-      } else {
-        event.currentTarget.responseText = responseData;
+      if (responseData) {
+        stats.tload = Math.max(stats.tfirst,performance.now());
+        let response = { url : targetURL, data : responseData};
+        callbacks.onSuccess(response,stats,context);
       }
-      onSuccess(event, stats,context);
     });
   }
 }

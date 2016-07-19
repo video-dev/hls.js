@@ -17,7 +17,8 @@ import TimelineController from './controller/timeline-controller';
 import FPSController from './controller/fps-controller';
 import AudioTrackController from './controller/audio-track-controller';
 import {logger, enableLogs} from './utils/logger';
-import FetchLoader from './utils/fetch-loader';
+//import FetchLoader from './utils/fetch-loader';
+import XhrLoader from './utils/xhr-loader';
 import EventEmitter from 'events';
 import KeyLoader from './loader/key-loader';
 import Cues from './utils/cues';
@@ -83,7 +84,8 @@ class Hls {
           fpsDroppedMonitoringPeriod: 5000,
           fpsDroppedMonitoringThreshold: 0.2,
           appendErrorMaxRetry: 3,
-          loader: FetchLoader,
+          loader: XhrLoader,
+          //loader: FetchLoader,
           fLoader: undefined,
           pLoader: undefined,
           abrController : AbrController,

@@ -44,7 +44,12 @@ class KeyLoader extends EventHandler {
         frag.loader = this.loaders[type] = new config.loader(config);
         this.decrypturl = uri;
         this.decryptkey = null;
-        frag.loader.load(uri, { frag : frag }, 'arraybuffer', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.fragLoadingTimeOut, config.fragLoadingMaxRetry, config.fragLoadingRetryDelay, this.loadprogress.bind(this), frag);
+
+        let loaderContext, loaderConfig, loaderCallbacks;
+        loaderContext = { url : uri, frag : frag, responseType : 'arraybuffer'};
+        loaderConfig = { timeout : config.fragLoadingTimeOut, maxRetry : config.fragLoadingMaxRetry , retryDelay : config.fragLoadingRetryDelay};
+        loaderCallbacks = { onSuccess : this.loadsuccess.bind(this), onError :this.loaderror.bind(this), onTimeout : this.loadtimeout.bind(this)};
+        frag.loader.load(loaderContext,loaderConfig,loaderCallbacks);
       } else if (this.decryptkey) {
         // we already loaded this key, return it
         decryptdata.key = this.decryptkey;
@@ -52,26 +57,26 @@ class KeyLoader extends EventHandler {
       }
   }
 
-  loadsuccess(event, stats, context) {
+  loadsuccess(response, stats, context) {
     let frag = context.frag;
-    this.decryptkey = frag.decryptdata.key = new Uint8Array(event.currentTarget.response);
+    this.decryptkey = frag.decryptdata.key = new Uint8Array(response.data);
     // detach fragment loader on load success
     frag.loader = undefined;
     this.loaders[context.type] = undefined;
     this.hls.trigger(Event.KEY_LOADED, {frag: frag});
   }
 
-  loaderror(event, context) {
+  loaderror(response, context) {
     let frag = context.frag,
         loader = frag.loader;
     if (loader) {
       loader.abort();
     }
     this.loaders[context.type] = undefined;
-    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_ERROR, fatal: false, frag: frag, response: event});
+    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_ERROR, fatal: false, frag: frag, response: response});
   }
 
-  loadtimeout(event, stats, context) {
+  loadtimeout(stats, context) {
     let frag = context.frag,
         loader = frag.loader;
     if (loader) {
@@ -79,10 +84,6 @@ class KeyLoader extends EventHandler {
     }
     this.loaders[context.type] = undefined;
     this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_TIMEOUT, fatal: false, frag: frag});
-  }
-
-  loadprogress() {
-
   }
 }
 
