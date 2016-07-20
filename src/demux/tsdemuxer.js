@@ -494,6 +494,7 @@ class TSDemuxer {
                     var payloadType = 0;
                     var payloadSize = 0;
                     var endOfCaptions = false;
+                    var b = 0;
 
                     while (
                         !endOfCaptions &&
@@ -501,18 +502,16 @@ class TSDemuxer {
                     ) {
                         payloadType = 0;
                         do {
-                            if (expGolombDecoder.bytesAvailable !== 0) {
-                                payloadType += expGolombDecoder.readUByte();
-                            }
-                        } while (payloadType === 0xff);
+                            b = expGolombDecoder.readUByte();
+                            payloadType += b;
+                        } while (b === 0xff);
 
                         // Parse payload size.
                         payloadSize = 0;
                         do {
-                            if (expGolombDecoder.bytesAvailable !== 0) {
-                                payloadSize += expGolombDecoder.readUByte();
-                            }
-                        } while (payloadSize === 0xff);
+                            b = expGolombDecoder.readUByte();
+                            payloadSize += b;
+                        } while (b === 0xff);
 
                         // TODO: there can be more than one payload in an SEI packet...
                         // TODO: need to read type and size in a while loop to get them all
