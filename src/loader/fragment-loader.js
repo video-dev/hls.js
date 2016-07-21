@@ -49,9 +49,8 @@ class FragmentLoader extends EventHandler {
         let start = frag.byteRangeStartOffset,
             end = frag.byteRangeEndOffset;
         if (!isNaN(start) && !isNaN(end)) {
-            loaderContext.headers = {
-                Range: 'bytes=' + start + '-' + (end - 1)
-            };
+            loaderContext.rangeStart = start;
+            loaderContext.rangeEnd = end;
         }
         loaderConfig = {
             timeout: config.fragLoadingTimeOut,
