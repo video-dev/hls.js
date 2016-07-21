@@ -205,6 +205,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       fLoader: customFragmentLoader,
       pLoader: customPlaylistLoader,
       xhrSetup: XMLHttpRequestSetupCallback,
+      fetchSetup: FetchSetupCallback,
       abrController: customAbrController,
       timelineController: TimelineController,
       enableCEA708Captions: true,
@@ -494,6 +495,26 @@ This allows user to easily modify/setup XHR. See example below.
   var config = {
     xhrSetup: function(xhr, url) {
       xhr.withCredentials = true; // do send cookies
+    }
+  }
+```
+
+#### `fetchSetup`
+
+(default: `undefined`)
+
+`Fetch` customization callback for Fetch based loader.
+
+Parameter should be a function with two arguments (`context` and `Request Init Params`).
+If `fetchSetup` is specified and Fetch loader is used, `fetchSetup` will be triggered to instantiate [Request](https://developer.mozilla.org/fr/docs/Web/API/Request) Object.
+This allows user to easily tweak Fetch loader. See example below.
+
+```js
+  var config = {
+    fetchSetup: function(context, initParams) {
+      // Always send cookies, even for cross-origin calls.
+      initParams.credentials = 'include';
+      return new Request(context.url,initParams);
     }
   }
 ```
