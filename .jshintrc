@@ -27,6 +27,7 @@
     "performance" : true,
     "crypto"      : true,
     "fetch"       : true,
-    "Request"     : true
+    "Request"     : true,
+    "Headers"     : true
   }
 }
