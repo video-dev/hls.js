@@ -24,6 +24,13 @@ class FetchLoader {
             credentials: 'same-origin'
         };
 
+        if (context.rangeEnd) {
+            initParams.headers = new Headers({
+                Range:
+                    'bytes=' + context.rangeStart + '-' + (context.rangeEnd - 1)
+            });
+        }
+
         let request = new Request(context.url, initParams),
             fetchPromise = fetch(request, initParams);
 
