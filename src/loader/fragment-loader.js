@@ -42,7 +42,8 @@ class FragmentLoader extends EventHandler {
     loaderContext = { url : frag.url, frag : frag, responseType : 'arraybuffer'};
     let start = frag.byteRangeStartOffset, end = frag.byteRangeEndOffset;
     if (!isNaN(start) && !isNaN(end)) {
-      loaderContext.headers = { 'Range' : ('bytes=' + start + '-' + (end-1)) };
+      loaderContext.rangeStart = start;
+      loaderContext.rangeEnd = end;
     }
     loaderConfig = { timeout : config.fragLoadingTimeOut, maxRetry : 0 , retryDelay : 0};
     loaderCallbacks = { onSuccess : this.loadsuccess.bind(this), onError :this.loaderror.bind(this), onTimeout : this.loadtimeout.bind(this), onProgress: this.loadprogress.bind(this)};

@@ -53,11 +53,8 @@ class XhrLoader {
 
     xhr.open('GET', context.url, true);
 
-    let headers = context.headers;
-    if (headers) {
-      for(let headerName in headers) {
-        xhr.setRequestHeader(headerName, headers[headerName]);
-      }
+    if (context.rangeEnd) {
+      xhr.setRequestHeader('Range','bytes=' + context.rangeStart + '-' + (context.rangeEnd-1));
     }
     xhr.responseType = context.responseType;
     let stats = this.stats;
