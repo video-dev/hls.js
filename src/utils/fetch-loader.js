@@ -7,7 +7,7 @@
 
 class FetchLoader {
     constructor(config) {
-        this.config = config;
+        this.fetchSetup = config.fetchSetup;
     }
 
     destroy() {}
@@ -16,13 +16,13 @@ class FetchLoader {
 
     load(context, config, callbacks) {
         let stats = { trequest: performance.now(), retry: 0 },
-            targetURL = context.url;
-
-        let initParams = {
-            method: 'GET',
-            mode: 'cors',
-            credentials: 'same-origin'
-        };
+            targetURL = context.url,
+            request,
+            initParams = {
+                method: 'GET',
+                mode: 'cors',
+                credentials: 'same-origin'
+            };
 
         if (context.rangeEnd) {
             initParams.headers = new Headers({
@@ -31,8 +31,13 @@ class FetchLoader {
             });
         }
 
-        let request = new Request(context.url, initParams),
-            fetchPromise = fetch(request, initParams);
+        if (this.fetchSetup) {
+            request = this.fetchSetup(context, initParams);
+        } else {
+            request = new Request(context.url, initParams);
+        }
+
+        let fetchPromise = fetch(request, initParams);
 
         // process fetchPromise
         let responsePromise = fetchPromise
