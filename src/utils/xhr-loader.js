@@ -88,10 +88,13 @@ class XhrLoader {
       stats.tload = Math.max(stats.tfirst,performance.now());
       let response = { url : xhr.responseURL, data : context.responseType === 'arraybuffer' ? xhr.response : xhr.responseText };
       this.callbacks.onSuccess(response, stats, context);
-    // everything else is a failure
     } else {
-      // retry first
-      if (stats.retry < config.maxRetry) {
+      // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
+      if (stats.retry >= config.maxRetry || (status >= 400 && status < 499)) {
+        logger.error(`${status} while loading ${context.url}` );
+        this.callbacks.onError({ code : status, text : xhr.statusText}, context);
+      } else {
+      // retry
         logger.warn(`${status} while loading ${context.url}, retrying in ${this.retryDelay}...`);
         // aborts and resets internal state
         this.destroy();
@@ -100,10 +103,6 @@ class XhrLoader {
         // set exponential backoff
         this.retryDelay = Math.min(2 * this.retryDelay, 64000);
         stats.retry++;
-      // permanent failure
-      } else {
-        logger.error(`${status} while loading ${context.url}` );
-        this.callbacks.onError({ code : status, text : xhr.statusText}, context);
       }
     }
   }
