@@ -37,7 +37,7 @@ class FragmentLoader extends EventHandler {
       loader.abort();
     }
     loader  = this.loaders[type] = frag.loader = typeof(config.fLoader) !== 'undefined' ? new config.fLoader(config) : new config.loader(config);
-    loader.load(frag.url, { frag : frag }, 'arraybuffer', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.fragLoadingTimeOut, 1, 0, config.fragLoadingRetryDelayTimeout, this.loadprogress.bind(this), frag);
+    loader.load(frag.url, { frag : frag }, 'arraybuffer', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.fragLoadingTimeOut, 1, 0, config.fragLoadingMaxRetryTimeout, this.loadprogress.bind(this), frag);
   }
 
   loadsuccess(event, stats, context) {
