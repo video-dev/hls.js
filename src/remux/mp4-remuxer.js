@@ -11,8 +11,9 @@ import {ErrorTypes, ErrorDetails} from '../errors';
 import '../utils/polyfill';
 
 class MP4Remuxer {
-  constructor(observer, config) {
+  constructor(observer, id, config) {
     this.observer = observer;
+    this.id = id;
     this.config = config;
     this.ISGenerated = false;
     this.PES2MP4SCALEFACTOR = 4;
@@ -28,14 +29,16 @@ class MP4Remuxer {
   }
 
   insertDiscontinuity() {
-    this._initPTS = this._initDTS = this.nextAacPts = this.nextAvcDts = undefined;
+    this._initPTS = this._initDTS = undefined;
   }
 
   switchLevel() {
     this.ISGenerated = false;
   }
 
-  remux(audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous) {
+  remux(level,sn,audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous) {
+    this.level = level;
+    this.sn = sn;
     // generate Init Segment if needed
     if (!this.ISGenerated) {
       this.generateIS(audioTrack,videoTrack,timeOffset);
@@ -75,7 +78,7 @@ class MP4Remuxer {
       this.remuxText(textTrack,timeOffset);
     }
     //notify end of parsing
-    this.observer.trigger(Event.FRAG_PARSED);
+    this.observer.trigger(Event.FRAG_PARSED, { id : this.id , level : this.level, sn : this.sn});
   }
 
   generateIS(audioTrack,videoTrack,timeOffset) {
@@ -84,7 +87,7 @@ class MP4Remuxer {
         videoSamples = videoTrack.samples,
         pesTimeScale = this.PES_TIMESCALE,
         tracks = {},
-        data = { tracks : tracks, unique : false },
+        data = { id : this.id, level : this.level, sn : this.sn, tracks : tracks, unique : false },
         computePTSDTS = (this._initPTS === undefined),
         initPTS, initDTS;
 
@@ -146,7 +149,7 @@ class MP4Remuxer {
         this._initDTS = initDTS;
       }
     } else {
-      observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'no audio/video samples found'});
+      observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, id : this.id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'no audio/video samples found'});
     }
   }
 
@@ -312,8 +315,10 @@ class MP4Remuxer {
     }
     // next AVC sample DTS should be equal to last sample DTS + last sample duration (in PES timescale)
     this.nextAvcDts = lastDTS + mp4SampleDuration*pes2mp4ScaleFactor;
+    let dropped = track.dropped;
     track.len = 0;
     track.nbNalu = 0;
+    track.dropped = 0;
     if(outputSamples.length && navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
       let flags = outputSamples[0].flags;
     // chrome workaround, mark first sample as being a Random Access Point to avoid sourcebuffer append issue
@@ -324,7 +329,11 @@ class MP4Remuxer {
     track.samples = outputSamples;
     moof = MP4.moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
     track.samples = [];
+
     let data = {
+      id : this.id,
+      level : this.level,
+      sn : this.sn,
       data1: moof,
       data2: mdat,
       startPTS: firstPTS / pesTimeScale,
@@ -332,7 +341,8 @@ class MP4Remuxer {
       startDTS: firstDTS / pesTimeScale,
       endDTS: this.nextAvcDts / pesTimeScale,
       type: 'video',
-      nb: outputSamples.length
+      nb: outputSamples.length,
+      dropped : dropped
     };
     this.observer.trigger(Event.FRAG_PARSING_DATA, data);
     return data;
@@ -494,6 +504,9 @@ class MP4Remuxer {
       moof = MP4.moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
       track.samples = [];
       let audioData = {
+        id : this.id,
+        level : this.level,
+        sn : this.sn,
         data1: moof,
         data2: mdat,
         startPTS: firstPTS / pesTimeScale,
@@ -557,6 +570,9 @@ class MP4Remuxer {
         sample.dts = ((sample.dts - this._initDTS) / this.PES_TIMESCALE);
       }
       this.observer.trigger(Event.FRAG_PARSING_METADATA, {
+        id : this.id,
+        level : this.level,
+        sn : this.sn,
         samples:track.samples
       });
     }
@@ -580,6 +596,9 @@ class MP4Remuxer {
         sample.pts = ((sample.pts - this._initPTS) / this.PES_TIMESCALE);
       }
       this.observer.trigger(Event.FRAG_PARSING_USERDATA, {
+        id : this.id,
+        level : this.level,
+        sn : this.sn,
         samples:track.samples
       });
     }
