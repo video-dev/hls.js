@@ -85,18 +85,18 @@ class XhrLoader {
           stats.tload = Math.max(stats.tfirst,performance.now());
           this.onSuccess(event, stats);
       } else {
-        // error ...
-        if (stats.retry < this.maxRetry) {
+          // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
+        if (stats.retry >= this.maxRetry || (status >= 400 && status < 499)) {
+          window.clearTimeout(this.timeoutHandle);
+          logger.error(`${status} while loading ${this.url}` );
+          this.onError(event);
+        } else {
           logger.warn(`${status} while loading ${this.url}, retrying in ${this.retryDelay}...`);
           this.destroy();
           window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
           // exponential backoff
           this.retryDelay = Math.min(2 * this.retryDelay, 64000);
           stats.retry++;
-        } else {
-          window.clearTimeout(this.timeoutHandle);
-          logger.error(`${status} while loading ${this.url}` );
-          this.onError(event);
         }
       }
     }
