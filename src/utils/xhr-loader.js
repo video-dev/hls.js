@@ -126,7 +126,10 @@ class XhrLoader {
                     this.retryDelay
                 );
                 // set exponential backoff
-                this.retryDelay = Math.min(2 * this.retryDelay, 64000);
+                this.retryDelay = Math.min(
+                    2 * this.retryDelay,
+                    config.maxRetryDelay
+                );
                 stats.retry++;
             }
         }

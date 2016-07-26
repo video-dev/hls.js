@@ -193,12 +193,15 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       manifestLoadingTimeOut: 10000,
       manifestLoadingMaxRetry: 6,
       manifestLoadingRetryDelay: 500,
+      manifestLoadingMaxRetryTimeout : 64000,
       levelLoadingTimeOut: 10000,
       levelLoadingMaxRetry: 6,
       levelLoadingRetryDelay: 500,
+      levelLoadingMaxRetryTimeout: 64000,
       fragLoadingTimeOut: 20000,
       fragLoadingMaxRetry: 6,
       fragLoadingRetryDelay: 500,
+      fragLoadingMaxRetryTimeout: 64000,
       startFragPrefech: false,
       appendErrorMaxRetry: 3,
       loader: customLoader,
@@ -396,12 +399,18 @@ It is up to the application to catch this event and treat it as needed.
 
 Max number of load retries.
 
+#### `fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout`
+ 
+(default: `64000` ms)
+ 
+Maximum frag/manifest/key retry timeout (in milliseconds) in case I/O errors are met.
+
 #### `fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay`
 
 (default: `1000` ms)
 
 Initial delay between `XMLHttpRequest` error and first load retry (in ms).
-Any I/O error will trigger retries every 500ms,1s,2s,4s,8s, ... capped to 64s (exponential backoff).
+Any I/O error will trigger retries every 500ms,1s,2s,4s,8s, ... capped to `fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout` value (exponential backoff).
 
 Prefetch start fragment although media not attached.
 

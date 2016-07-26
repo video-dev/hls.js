@@ -53,7 +53,8 @@ class KeyLoader extends EventHandler {
             loaderConfig = {
                 timeout: config.fragLoadingTimeOut,
                 maxRetry: config.fragLoadingMaxRetry,
-                retryDelay: config.fragLoadingRetryDelay
+                retryDelay: config.fragLoadingRetryDelay,
+                maxRetryDelay: config.fragLoadingMaxRetryTimeout
             };
             loaderCallbacks = {
                 onSuccess: this.loadsuccess.bind(this),

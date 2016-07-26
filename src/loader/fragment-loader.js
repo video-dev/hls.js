@@ -55,7 +55,8 @@ class FragmentLoader extends EventHandler {
         loaderConfig = {
             timeout: config.fragLoadingTimeOut,
             maxRetry: 0,
-            retryDelay: 0
+            retryDelay: 0,
+            maxRetryDelay: config.fragLoadingMaxRetryTimeout
         };
         loaderCallbacks = {
             onSuccess: this.loadsuccess.bind(this),

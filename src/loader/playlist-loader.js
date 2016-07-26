@@ -47,15 +47,18 @@ class PlaylistLoader extends EventHandler {
         var config = this.hls.config,
             retry,
             timeout,
-            retryDelay;
+            retryDelay,
+            maxRetryDelay;
         if (context.type === 'manifest') {
             retry = config.manifestLoadingMaxRetry;
             timeout = config.manifestLoadingTimeOut;
             retryDelay = config.manifestLoadingRetryDelay;
+            maxRetryDelay = config.manifestLoadingMaxRetryTimeOut;
         } else {
             retry = config.levelLoadingMaxRetry;
             timeout = config.levelLoadingTimeOut;
             retryDelay = config.levelLoadingRetryDelay;
+            maxRetryDelay = config.levelLoadingMaxRetryTimeOut;
         }
         let loader = this.loaders[context.type];
         if (loader) {
@@ -73,7 +76,8 @@ class PlaylistLoader extends EventHandler {
         loaderConfig = {
             timeout: timeout,
             maxRetry: retry,
-            retryDelay: retryDelay
+            retryDelay: retryDelay,
+            maxRetryDelay: maxRetryDelay
         };
         loaderCallbacks = {
             onSuccess: this.loadsuccess.bind(this),
