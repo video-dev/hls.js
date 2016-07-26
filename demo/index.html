@@ -235,7 +235,7 @@ $(document).ready(function() {
 
 
   'use strict';
-  var hls,events, stats,
+  var hls,events, stats,tracks,
       enableStreaming = JSON.parse(getURLParam('enableStreaming',true))
       autoRecoverError = JSON.parse(getURLParam('autoRecoverError',true)),
       enableWorker = JSON.parse(getURLParam('enableWorker',true)),
@@ -560,6 +560,10 @@ $(document).ready(function() {
         $("#HlsStats").text(JSON.stringify(sortObject(stats),null,"\t"));
        });
 
+       hls.on(Hls.Events.BUFFER_CREATED, function(event,data) {
+        tracks = data.tracks;
+       });
+
        hls.on(Hls.Events.FPS_DROP,function(event,data) {
           var evt = {time : performance.now() - events.t0, type : "frame drop", name : data.currentDropped + "/" + data.currentDecoded};
           events.video.push(evt);
@@ -775,6 +779,9 @@ function timeRangesToString(r) {
               + "Played:"
               + timeRangesToString(v.played) + "<br>";
 
+      for(var type in tracks) {
+        log += type + " Buffered:" + timeRangesToString(tracks[type].buffer.buffered) + "<br>";
+      }
 
       var videoPlaybackQuality = v.getVideoPlaybackQuality;
       if(videoPlaybackQuality && typeof(videoPlaybackQuality) === typeof(Function)) {
