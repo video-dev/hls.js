@@ -7,7 +7,7 @@ import EventHandler from '../event-handler';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import URLHelper from '../utils/url';
 import AttrList from '../utils/attr-list';
-//import {logger} from '../utils/logger';
+import {logger} from '../utils/logger';
 
 class PlaylistLoader extends EventHandler {
 
@@ -108,6 +108,37 @@ class PlaylistLoader extends EventHandler {
     return levels;
   }
 
+  /**
+   * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
+   * @returns {Uint8Array}
+   */
+  createInitializationVector (segmentNumber) {
+    var uint8View = new Uint8Array(16);
+
+    for (var i = 12; i < 16; i++) {
+      uint8View[i] = (segmentNumber >> 8 * (15 - i)) & 0xff;
+    }
+
+    return uint8View;
+  }
+
+  /**
+   * Utility method for parseLevelPlaylist to get a fragment's decryption data from the currently parsed encryption key data
+   * @param levelkey - a playlist's encryption info
+   * @param segmentNumber - the fragment's segment number
+   * @returns {*} - an object to be applied as a fragment's decryptdata
+   */
+  fragmentDecryptdataFromLevelkey (levelkey, segmentNumber) {
+    var decryptdata = levelkey;
+
+    if (levelkey && levelkey.method && levelkey.uri && !levelkey.iv) {
+      decryptdata = this.cloneObj(levelkey);
+      decryptdata.iv = this.createInitializationVector(segmentNumber);
+    }
+
+    return decryptdata;
+  }
+
   avc1toavcoti(codec) {
     var result, avcdata = codec.split('.');
     if (avcdata.length > 2) {
@@ -126,6 +157,7 @@ class PlaylistLoader extends EventHandler {
 
   parseLevelPlaylist(string, baseurl, id) {
     var currentSN = 0,
+        fragdecryptdata,
         totalduration = 0,
         level = {version: null, type: null, url: baseurl, fragments: [], live: true, startSN: 0},
         levelkey = {method : null, key : null, iv : null, uri : null},
@@ -134,10 +166,12 @@ class PlaylistLoader extends EventHandler {
         frag = null,
         result,
         regexp,
-        byteRangeEndOffset,
-        byteRangeStartOffset;
+        duration = null,
+        title = null,
+        byteRangeEndOffset = null,
+        byteRangeStartOffset = null;
 
-    regexp = /(?:#EXT-X-(VERSION):(\d+))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*))|(?:#EXT-X-(START):(.*))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*)[\r\n]+([^#|\r\n]+)?)/g;
+    regexp = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF):(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE):(\d+(?:@\d+(?:\.\d+)?))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
     while ((result = regexp.exec(string)) !== null) {
       result.shift();
       result = result.filter(function(n) { return (n !== undefined); });
@@ -154,6 +188,8 @@ class PlaylistLoader extends EventHandler {
         case 'TARGETDURATION':
           level.targetduration = parseFloat(result[1]);
           break;
+        case 'EXTM3U':
+          break;
         case 'ENDLIST':
           level.live = false;
           break;
@@ -168,31 +204,34 @@ class PlaylistLoader extends EventHandler {
             byteRangeStartOffset = parseInt(params[1]);
           }
           byteRangeEndOffset = parseInt(params[0]) + byteRangeStartOffset;
-          if (frag && !frag.url) {
-            frag.byteRangeStartOffset = byteRangeStartOffset;
-            frag.byteRangeEndOffset = byteRangeEndOffset;
-            frag.url = this.resolve(result[2], baseurl);
-          }
           break;
         case 'INF':
-          var duration = parseFloat(result[1]);
+          duration = parseFloat(result[1]);
+          title = result[2] ? result[2] : null;
+          break;
+        case '': // url
           if (!isNaN(duration)) {
-            var fragdecryptdata,
-                sn = currentSN++;
-            if (levelkey.method && levelkey.uri && !levelkey.iv) {
-              fragdecryptdata = this.cloneObj(levelkey);
-              var uint8View = new Uint8Array(16);
-              for (var i = 12; i < 16; i++) {
-                uint8View[i] = (sn >> 8*(15-i)) & 0xff;
-              }
-              fragdecryptdata.iv = uint8View;
-            } else {
-              fragdecryptdata = levelkey;
+            var sn = currentSN++;
+            fragdecryptdata = this.fragmentDecryptdataFromLevelkey(levelkey, sn);
+            var url = result[1] ? this.resolve(result[1], baseurl) : null;
+            frag = {url: url,
+                    duration: duration,
+                    title: title,
+                    start: totalduration,
+                    sn: sn,
+                    level: id,
+                    cc: cc,
+                    decryptdata : fragdecryptdata,
+                    programDateTime: programDateTime};
+            // only include byte range options if used/needed
+            if(byteRangeStartOffset !== null) {
+              frag.byteRangeStartOffset = byteRangeStartOffset;
+              frag.byteRangeEndOffset = byteRangeEndOffset;
             }
-            var url = result[2] ? this.resolve(result[2], baseurl) : null;
-            frag = {url: url, duration: duration, start: totalduration, sn: sn, level: id, cc: cc, byteRangeStartOffset: byteRangeStartOffset, byteRangeEndOffset: byteRangeEndOffset, decryptdata : fragdecryptdata, programDateTime: programDateTime};
             level.fragments.push(frag);
             totalduration += duration;
+            duration = null;
+            title = null;
             byteRangeStartOffset = null;
             programDateTime = null;
           }
@@ -226,12 +265,12 @@ class PlaylistLoader extends EventHandler {
           break;
         case 'PROGRAM-DATE-TIME':
           programDateTime = new Date(Date.parse(result[1]));
-          if (frag && !frag.url && result.length >= 3) {
-            frag.url = this.resolve(result[2], baseurl);
-            frag.programDateTime = programDateTime;
-          }
+          break;
+        case '#':
+          result.shift();
           break;
         default:
+          logger.warn(`line parsed but not handled: ${result}`);
           break;
       }
     }
