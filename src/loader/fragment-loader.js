@@ -44,7 +44,8 @@ class FragmentLoader extends EventHandler {
         loaderContext = {
             url: frag.url,
             frag: frag,
-            responseType: 'arraybuffer'
+            responseType: 'arraybuffer',
+            progressData: false
         };
         let start = frag.byteRangeStartOffset,
             end = frag.byteRangeEndOffset;
@@ -110,7 +111,9 @@ class FragmentLoader extends EventHandler {
         });
     }
 
-    loadprogress(stats, context) {
+    // data will be used for progressive parsing
+    loadprogress(stats, context, data) {
+        // jshint ignore:line
         let frag = context.frag;
         frag.loaded = stats.loaded;
         this.hls.trigger(Event.FRAG_LOAD_PROGRESS, {
