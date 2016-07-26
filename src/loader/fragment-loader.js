@@ -39,7 +39,7 @@ class FragmentLoader extends EventHandler {
     loader  = this.loaders[type] = frag.loader = typeof(config.fLoader) !== 'undefined' ? new config.fLoader(config) : new config.loader(config);
 
     let loaderContext, loaderConfig, loaderCallbacks;
-    loaderContext = { url : frag.url, frag : frag, responseType : 'arraybuffer'};
+    loaderContext = { url : frag.url, frag : frag, responseType : 'arraybuffer', progressData : false};
     let start = frag.byteRangeStartOffset, end = frag.byteRangeEndOffset;
     if (!isNaN(start) && !isNaN(end)) {
       loaderContext.rangeStart = start;
@@ -77,7 +77,8 @@ class FragmentLoader extends EventHandler {
     this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.FRAG_LOAD_TIMEOUT, fatal: false, frag: context.frag});
   }
 
-  loadprogress(stats, context) {
+  // data will be used for progressive parsing
+  loadprogress(stats, context, data) { // jshint ignore:line
     let frag = context.frag;
     frag.loaded = stats.loaded;
     this.hls.trigger(Event.FRAG_LOAD_PROGRESS, {frag: frag, stats: stats});

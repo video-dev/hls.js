@@ -123,7 +123,8 @@ class XhrLoader {
     }
     let onProgress = this.callbacks.onProgress;
     if (onProgress) {
-      onProgress(stats, this.context);
+      // last args is to provide on progress data
+      onProgress(stats, this.context, null);
     }
   }
 }
