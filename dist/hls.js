@@ -901,13 +901,14 @@ var BufferController = function (_EventHandler) {
       if (this._levelDuration === null) {
         return;
       }
-      var media = this.media;
-      var mediaSource = this.mediaSource;
-      if (!media || !mediaSource || media.readyState === 0 || mediaSource.readyState !== 'open') {
+      var media = this.media,
+          mediaSource = this.mediaSource,
+          sourceBuffer = this.sourceBuffer;
+      if (!media || !mediaSource || !sourceBuffer || media.readyState === 0 || mediaSource.readyState !== 'open') {
         return;
       }
-      for (var type in mediaSource.sourceBuffers) {
-        if (mediaSource.sourceBuffers[type].updating) {
+      for (var type in sourceBuffer) {
+        if (sourceBuffer[type].updating) {
           // can't set duration whilst a buffer is updating
           return;
         }
@@ -2479,7 +2480,7 @@ var StreamController = function (_EventHandler) {
           var currentLevel = this.levels[this.level],
               details = currentLevel.details,
               duration = details.totalduration,
-              start = fragCurrent.startDTS !== undefined ? fragCurrent.startDTS : fragCurrent.start,
+              start = fragCurrent.startDTS !== undefined && !isNaN(fragCurrent.startDTS) ? fragCurrent.startDTS : fragCurrent.start,
               level = fragCurrent.level,
               sn = fragCurrent.sn,
               audioCodec = currentLevel.audioCodec || this.config.defaultAudioCodec;
@@ -5782,12 +5783,14 @@ var LevelHelper = function () {
       for (var i = start; i <= end; i++) {
         var oldFrag = oldfragments[delta + i],
             newFrag = newfragments[i];
-        ccOffset = oldFrag.cc - newFrag.cc;
-        if (!isNaN(oldFrag.startPTS)) {
-          newFrag.start = newFrag.startPTS = oldFrag.startPTS;
-          newFrag.endPTS = oldFrag.endPTS;
-          newFrag.duration = oldFrag.duration;
-          PTSFrag = newFrag;
+        if (newFrag && oldFrag) {
+          ccOffset = oldFrag.cc - newFrag.cc;
+          if (!isNaN(oldFrag.startPTS)) {
+            newFrag.start = newFrag.startPTS = oldFrag.startPTS;
+            newFrag.endPTS = oldFrag.endPTS;
+            newFrag.duration = oldFrag.duration;
+            PTSFrag = newFrag;
+          }
         }
       }
 
@@ -6566,6 +6569,8 @@ var _attrList = require('../utils/attr-list');
 
 var _attrList2 = _interopRequireDefault(_attrList);
 
+var _logger = require('../utils/logger');
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -6575,8 +6580,6 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /**
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 * Playlist Loader
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
-
-//import {logger} from '../utils/logger';
 
 var PlaylistLoader = function (_EventHandler) {
   _inherits(PlaylistLoader, _EventHandler);
@@ -6685,6 +6688,43 @@ var PlaylistLoader = function (_EventHandler) {
       }
       return levels;
     }
+
+    /**
+     * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
+     * @returns {Uint8Array}
+     */
+
+  }, {
+    key: 'createInitializationVector',
+    value: function createInitializationVector(segmentNumber) {
+      var uint8View = new Uint8Array(16);
+
+      for (var i = 12; i < 16; i++) {
+        uint8View[i] = segmentNumber >> 8 * (15 - i) & 0xff;
+      }
+
+      return uint8View;
+    }
+
+    /**
+     * Utility method for parseLevelPlaylist to get a fragment's decryption data from the currently parsed encryption key data
+     * @param levelkey - a playlist's encryption info
+     * @param segmentNumber - the fragment's segment number
+     * @returns {*} - an object to be applied as a fragment's decryptdata
+     */
+
+  }, {
+    key: 'fragmentDecryptdataFromLevelkey',
+    value: function fragmentDecryptdataFromLevelkey(levelkey, segmentNumber) {
+      var decryptdata = levelkey;
+
+      if (levelkey && levelkey.method && levelkey.uri && !levelkey.iv) {
+        decryptdata = this.cloneObj(levelkey);
+        decryptdata.iv = this.createInitializationVector(segmentNumber);
+      }
+
+      return decryptdata;
+    }
   }, {
     key: 'avc1toavcoti',
     value: function avc1toavcoti(codec) {
@@ -6708,29 +6748,40 @@ var PlaylistLoader = function (_EventHandler) {
     key: 'parseLevelPlaylist',
     value: function parseLevelPlaylist(string, baseurl, id) {
       var currentSN = 0,
+          fragdecryptdata,
           totalduration = 0,
-          level = { url: baseurl, fragments: [], live: true, startSN: 0 },
+          level = { version: null, type: null, url: baseurl, fragments: [], live: true, startSN: 0 },
           levelkey = { method: null, key: null, iv: null, uri: null },
           cc = 0,
           programDateTime = null,
           frag = null,
           result,
           regexp,
-          byteRangeEndOffset,
-          byteRangeStartOffset;
+          duration = null,
+          title = null,
+          byteRangeEndOffset = null,
+          byteRangeStartOffset = null;
 
-      regexp = /(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.*))|(?:#EXT-X-(START):(.*))|(?:#EXT(INF):([\d\.]+)[^\r\n]*([\r\n]+[^#|\r\n]+)?)|(?:#EXT-X-(BYTERANGE):([\d]+[@[\d]*)]*[\r\n]+([^#|\r\n]+)?|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.*)[\r\n]+([^#|\r\n]+)?)/g;
+      regexp = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF):(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE):(\d+(?:@\d+(?:\.\d+)?))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
       while ((result = regexp.exec(string)) !== null) {
         result.shift();
         result = result.filter(function (n) {
           return n !== undefined;
         });
         switch (result[0]) {
+          case 'VERSION':
+            level.version = parseInt(result[1]);
+            break;
+          case 'PLAYLIST-TYPE':
+            level.type = result[1].toUpperCase();
+            break;
           case 'MEDIA-SEQUENCE':
             currentSN = level.startSN = parseInt(result[1]);
             break;
           case 'TARGETDURATION':
             level.targetduration = parseFloat(result[1]);
+            break;
+          case 'EXTM3U':
             break;
           case 'ENDLIST':
             level.live = false;
@@ -6746,31 +6797,35 @@ var PlaylistLoader = function (_EventHandler) {
               byteRangeStartOffset = parseInt(params[1]);
             }
             byteRangeEndOffset = parseInt(params[0]) + byteRangeStartOffset;
-            if (frag && !frag.url) {
-              frag.byteRangeStartOffset = byteRangeStartOffset;
-              frag.byteRangeEndOffset = byteRangeEndOffset;
-              frag.url = this.resolve(result[2], baseurl);
-            }
             break;
           case 'INF':
-            var duration = parseFloat(result[1]);
+            duration = parseFloat(result[1]);
+            title = result[2] ? result[2] : null;
+            break;
+          case '':
+            // url
             if (!isNaN(duration)) {
-              var fragdecryptdata,
-                  sn = currentSN++;
-              if (levelkey.method && levelkey.uri && !levelkey.iv) {
-                fragdecryptdata = this.cloneObj(levelkey);
-                var uint8View = new Uint8Array(16);
-                for (var i = 12; i < 16; i++) {
-                  uint8View[i] = sn >> 8 * (15 - i) & 0xff;
-                }
-                fragdecryptdata.iv = uint8View;
-              } else {
-                fragdecryptdata = levelkey;
+              var sn = currentSN++;
+              fragdecryptdata = this.fragmentDecryptdataFromLevelkey(levelkey, sn);
+              var url = result[1] ? this.resolve(result[1], baseurl) : null;
+              frag = { url: url,
+                duration: duration,
+                title: title,
+                start: totalduration,
+                sn: sn,
+                level: id,
+                cc: cc,
+                decryptdata: fragdecryptdata,
+                programDateTime: programDateTime };
+              // only include byte range options if used/needed
+              if (byteRangeStartOffset !== null) {
+                frag.byteRangeStartOffset = byteRangeStartOffset;
+                frag.byteRangeEndOffset = byteRangeEndOffset;
               }
-              var url = result[2] ? this.resolve(result[2], baseurl) : null;
-              frag = { url: url, duration: duration, start: totalduration, sn: sn, level: id, cc: cc, byteRangeStartOffset: byteRangeStartOffset, byteRangeEndOffset: byteRangeEndOffset, decryptdata: fragdecryptdata, programDateTime: programDateTime };
               level.fragments.push(frag);
               totalduration += duration;
+              duration = null;
+              title = null;
               byteRangeStartOffset = null;
               programDateTime = null;
             }
@@ -6804,12 +6859,12 @@ var PlaylistLoader = function (_EventHandler) {
             break;
           case 'PROGRAM-DATE-TIME':
             programDateTime = new Date(Date.parse(result[1]));
-            if (frag && !frag.url && result.length >= 3) {
-              frag.url = this.resolve(result[2], baseurl);
-              frag.programDateTime = programDateTime;
-            }
+            break;
+          case '#':
+            result.shift();
             break;
           default:
+            _logger.logger.warn('line parsed but not handled: ' + result);
             break;
         }
       }
@@ -6907,7 +6962,7 @@ var PlaylistLoader = function (_EventHandler) {
 
 exports.default = PlaylistLoader;
 
-},{"../errors":21,"../event-handler":22,"../events":23,"../utils/attr-list":34,"../utils/url":39}],31:[function(require,module,exports){
+},{"../errors":21,"../event-handler":22,"../events":23,"../utils/attr-list":34,"../utils/logger":38,"../utils/url":39}],31:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8946,18 +9001,18 @@ var XhrLoader = function () {
           stats.tload = Math.max(stats.tfirst, performance.now());
           this.onSuccess(event, stats);
         } else {
-          // error ...
-          if (stats.retry < this.maxRetry) {
+          // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
+          if (stats.retry >= this.maxRetry || status >= 400 && status < 499) {
+            window.clearTimeout(this.timeoutHandle);
+            _logger.logger.error(status + ' while loading ' + this.url);
+            this.onError(event);
+          } else {
             _logger.logger.warn(status + ' while loading ' + this.url + ', retrying in ' + this.retryDelay + '...');
             this.destroy();
             window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
             // exponential backoff
             this.retryDelay = Math.min(2 * this.retryDelay, 64000);
             stats.retry++;
-          } else {
-            window.clearTimeout(this.timeoutHandle);
-            _logger.logger.error(status + ' while loading ' + this.url);
-            this.onError(event);
           }
         }
       }
