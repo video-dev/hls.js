@@ -47,7 +47,7 @@ class KeyLoader extends EventHandler {
 
         let loaderContext, loaderConfig, loaderCallbacks;
         loaderContext = { url : uri, frag : frag, responseType : 'arraybuffer'};
-        loaderConfig = { timeout : config.fragLoadingTimeOut, maxRetry : config.fragLoadingMaxRetry , retryDelay : config.fragLoadingRetryDelay};
+        loaderConfig = { timeout : config.fragLoadingTimeOut, maxRetry : config.fragLoadingMaxRetry , retryDelay : config.fragLoadingRetryDelay, maxRetryDelay : config.fragLoadingMaxRetryTimeout};
         loaderCallbacks = { onSuccess : this.loadsuccess.bind(this), onError :this.loaderror.bind(this), onTimeout : this.loadtimeout.bind(this)};
         frag.loader.load(loaderContext,loaderConfig,loaderCallbacks);
       } else if (this.decryptkey) {
