@@ -456,65 +456,80 @@ class BufferController extends EventHandler {
     /*
     flush specified buffered range,
     return true once range has been flushed.
-    as sourceBuffer.remove() is asynchronous, flushBuffer will be retriggered on sourceBuffer update end
+    as sourceBuffer.remove() is asynchronous, @ will be retriggered on sourceBuffer update end
   */
     flushBuffer(startOffset, endOffset, typeIn) {
-        var sb, i, bufStart, bufEnd, flushStart, flushEnd;
-        //logger.log('flushBuffer,pos/start/end: ' + this.media.currentTime + '/' + startOffset + '/' + endOffset);
-        // safeguard to avoid infinite looping : don't try to flush more than the nb of appended segments
-        if (this.flushBufferCounter < this.appended && this.sourceBuffer) {
-            for (var type in this.sourceBuffer) {
-                // check if sourcebuffer type is defined (typeIn): if yes, let's only flush this one
-                // if no, let's flush all sourcebuffers
-                if (typeIn && type !== typeIn) {
-                    continue;
-                }
-                sb = this.sourceBuffer[type];
-                if (!sb.updating) {
-                    for (i = 0; i < sb.buffered.length; i++) {
-                        bufStart = sb.buffered.start(i);
-                        bufEnd = sb.buffered.end(i);
-                        // workaround firefox not able to properly flush multiple buffered range.
-                        if (
-                            navigator.userAgent
-                                .toLowerCase()
-                                .indexOf('firefox') !== -1 &&
-                            endOffset === Number.POSITIVE_INFINITY
-                        ) {
-                            flushStart = startOffset;
-                            flushEnd = endOffset;
-                        } else {
-                            flushStart = Math.max(bufStart, startOffset);
-                            flushEnd = Math.min(bufEnd, endOffset);
-                        }
-                        /* sometimes sourcebuffer.remove() does not flush
-               the exact expected time range.
-               to avoid rounding issues/infinite loop,
-               only flush buffer range of length greater than 500ms.
-            */
-                        if (Math.min(flushEnd, bufEnd) - flushStart > 0.5) {
-                            this.flushBufferCounter++;
-                            logger.log(
-                                `flush ${type} [${flushStart},${flushEnd}], of [${bufStart},${bufEnd}], pos:${
-                                    this.media.currentTime
-                                }`
-                            );
-                            sb.remove(flushStart, flushEnd);
-                            return false;
-                        }
+        var sb,
+            i,
+            bufStart,
+            bufEnd,
+            flushStart,
+            flushEnd,
+            sourceBuffer = this.sourceBuffer;
+        if (Object.keys(sourceBuffer).length) {
+            logger.log(
+                'flushBuffer,pos/start/end: ' +
+                    this.media.currentTime +
+                    '/' +
+                    startOffset +
+                    '/' +
+                    endOffset
+            );
+            // safeguard to avoid infinite looping : don't try to flush more than the nb of appended segments
+            if (this.flushBufferCounter < this.appended) {
+                for (var type in sourceBuffer) {
+                    // check if sourcebuffer type is defined (typeIn): if yes, let's only flush this one
+                    // if no, let's flush all sourcebuffers
+                    if (typeIn && type !== typeIn) {
+                        continue;
                     }
-                } else {
-                    //logger.log('abort ' + type + ' append in progress');
-                    // this will abort any appending in progress
-                    //sb.abort();
-                    logger.warn('cannot flush, sb updating in progress');
-                    return false;
+                    sb = sourceBuffer[type];
+                    if (!sb.updating) {
+                        for (i = 0; i < sb.buffered.length; i++) {
+                            bufStart = sb.buffered.start(i);
+                            bufEnd = sb.buffered.end(i);
+                            // workaround firefox not able to properly flush multiple buffered range.
+                            if (
+                                navigator.userAgent
+                                    .toLowerCase()
+                                    .indexOf('firefox') !== -1 &&
+                                endOffset === Number.POSITIVE_INFINITY
+                            ) {
+                                flushStart = startOffset;
+                                flushEnd = endOffset;
+                            } else {
+                                flushStart = Math.max(bufStart, startOffset);
+                                flushEnd = Math.min(bufEnd, endOffset);
+                            }
+                            /* sometimes sourcebuffer.remove() does not flush
+                 the exact expected time range.
+                 to avoid rounding issues/infinite loop,
+                 only flush buffer range of length greater than 500ms.
+              */
+                            if (Math.min(flushEnd, bufEnd) - flushStart > 0.5) {
+                                this.flushBufferCounter++;
+                                logger.log(
+                                    `flush ${type} [${flushStart},${flushEnd}], of [${bufStart},${bufEnd}], pos:${
+                                        this.media.currentTime
+                                    }`
+                                );
+                                sb.remove(flushStart, flushEnd);
+                                return false;
+                            }
+                        }
+                    } else {
+                        //logger.log('abort ' + type + ' append in progress');
+                        // this will abort any appending in progress
+                        //sb.abort();
+                        logger.warn('cannot flush, sb updating in progress');
+                        return false;
+                    }
                 }
+            } else {
+                logger.warn('abort flushing too many retries');
             }
-        } else {
-            logger.warn('abort flushing too many retries');
+            logger.log('buffer flushed');
         }
-        logger.log('buffer flushed');
         // everything flushed !
         return true;
     }
