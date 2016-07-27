@@ -30,15 +30,23 @@ class AudioTrackController extends EventHandler {
 
     onManifestLoaded(data) {
         let tracks = data.audioTracks || [];
+        let defaultFound = false;
         this.tracks = tracks;
         this.hls.trigger(Event.AUDIO_TRACKS_UPDATED, { audioTracks: tracks });
         // loop through available audio tracks and autoselect default if needed
         tracks.forEach(track => {
             if (track.default) {
                 this.audioTrack = track.id;
+                defaultFound = true;
                 return;
             }
         });
+        if (defaultFound === false && tracks.length) {
+            logger.log(
+                'no default audio track defined, use first audio track as default'
+            );
+            this.audioTrack = 0;
+        }
     }
 
     onAudioTrackLoaded(data) {
@@ -92,12 +100,17 @@ class AudioTrackController extends EventHandler {
             }
             this.trackId = newId;
             logger.log(`switching to audioTrack ${newId}`);
-            this.hls.trigger(Event.AUDIO_TRACK_SWITCH, { id: newId });
-            var audioTrack = this.tracks[newId];
+            let audioTrack = this.tracks[newId],
+                type = audioTrack.type;
+            this.hls.trigger(Event.AUDIO_TRACK_SWITCH, {
+                id: newId,
+                type: audioTrack.type
+            });
             // check if we need to load playlist for this audio Track
             if (
-                audioTrack.details === undefined ||
-                audioTrack.details.live === true
+                type !== 'main' &&
+                (audioTrack.details === undefined ||
+                    audioTrack.details.live === true)
             ) {
                 // track not retrieved yet, or live playlist we need to (re)load it
                 logger.log(`(re)loading playlist for audioTrack ${newId}`);

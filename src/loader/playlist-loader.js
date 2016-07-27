@@ -123,10 +123,9 @@ class PlaylistLoader extends EventHandler {
         return levels;
     }
 
-    parseMasterPlaylistMedia(string, baseurl, type) {
-        let medias = [],
-            result,
-            id = 0;
+    parseMasterPlaylistMedia(medias, string, baseurl, type) {
+        let result,
+            id = medias.length;
 
         // https://regex101.com is your friend
         const re = /#EXT-X-MEDIA:(.*)/g;
@@ -136,6 +135,7 @@ class PlaylistLoader extends EventHandler {
             if (attrs.TYPE === type) {
                 media.groupId = attrs['GROUP-ID'];
                 media.name = attrs.NAME;
+                media.type = type;
                 media.default = attrs.DEFAULT === 'YES';
                 media.autoselect = attrs.AUTOSELECT === 'YES';
                 media.forced = attrs.FORCED === 'YES';
@@ -148,7 +148,7 @@ class PlaylistLoader extends EventHandler {
                 medias.push(media);
             }
         }
-        return medias;
+        return;
     }
     /**
      * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
@@ -417,11 +417,17 @@ class PlaylistLoader extends EventHandler {
                 }
             } else {
                 let levels = this.parseMasterPlaylist(string, url),
-                    audiotracks = this.parseMasterPlaylistMedia(
-                        string,
-                        url,
-                        'AUDIO'
-                    );
+                    audiotracks = [];
+                // if any audio codec signalled, push main audio track in audio track list
+                if (levels[0].audioCodec) {
+                    audiotracks.push({ id: 0, type: 'main', name: 'main' });
+                }
+                this.parseMasterPlaylistMedia(
+                    audiotracks,
+                    string,
+                    url,
+                    'AUDIO'
+                );
                 // multi level playlist, parse level info
                 if (levels.length) {
                     hls.trigger(Event.MANIFEST_LOADED, {
