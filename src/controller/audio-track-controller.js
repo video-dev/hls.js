@@ -91,9 +91,10 @@ class AudioTrackController extends EventHandler {
       this.trackId = newId;
       logger.log(`switching to audioTrack ${newId}`);
       let audioTrack = this.tracks[newId], type = audioTrack.type;
-      this.hls.trigger(Event.AUDIO_TRACK_SWITCH, {id: newId, type : audioTrack.type});
+      this.hls.trigger(Event.AUDIO_TRACK_SWITCH, {id: newId, type : type});
        // check if we need to load playlist for this audio Track
-      if (type !== 'main' && (audioTrack.details === undefined || audioTrack.details.live === true)) {
+       let details = audioTrack.details;
+      if (type !== 'main' && (details === undefined || details.live === true)) {
         // track not retrieved yet, or live playlist we need to (re)load it
         logger.log(`(re)loading playlist for audioTrack ${newId}`);
         this.hls.trigger(Event.AUDIO_TRACK_LOADING, {url: audioTrack.url, id: newId});
