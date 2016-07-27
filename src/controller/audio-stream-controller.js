@@ -80,7 +80,6 @@ class AudioStreamController extends EventHandler {
       this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
       this.tick();
     } else {
-      logger.warn('cannot start loading as audio tracks not parsed yet');
       this.startPosition = startPosition;
       this.state = State.STOPPED;
     }
@@ -357,6 +356,13 @@ class AudioStreamController extends EventHandler {
 
     this.fragCurrent = null;
     this.state = State.PAUSED;
+    // destroy useless demuxer when switching audio to main
+    if (data.type === 'main') {
+      if (this.demuxer) {
+        this.demuxer.destroy();
+        this.demuxer = null;
+      }
+    }
     // flush audio source buffer
     this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0, endOffset: Number.POSITIVE_INFINITY, type : 'audio'});
     this.tick();
