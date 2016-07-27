@@ -750,7 +750,6 @@ var AudioStreamController = function (_EventHandler) {
         this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
         this.tick();
       } else {
-        _logger.logger.warn('cannot start loading as audio tracks not parsed yet');
         this.startPosition = startPosition;
         this.state = State.STOPPED;
       }
@@ -1041,6 +1040,13 @@ var AudioStreamController = function (_EventHandler) {
 
       this.fragCurrent = null;
       this.state = State.PAUSED;
+      // destroy useless demuxer when switching audio to main
+      if (data.type === 'main') {
+        if (this.demuxer) {
+          this.demuxer.destroy();
+          this.demuxer = null;
+        }
+      }
       // flush audio source buffer
       this.hls.trigger(_events2.default.BUFFER_FLUSHING, { startOffset: 0, endOffset: Number.POSITIVE_INFINITY, type: 'audio' });
       this.tick();
@@ -1344,15 +1350,21 @@ var AudioTrackController = function (_EventHandler) {
       var _this2 = this;
 
       var tracks = data.audioTracks || [];
+      var defaultFound = false;
       this.tracks = tracks;
       this.hls.trigger(_events2.default.AUDIO_TRACKS_UPDATED, { audioTracks: tracks });
       // loop through available audio tracks and autoselect default if needed
       tracks.forEach(function (track) {
         if (track.default) {
           _this2.audioTrack = track.id;
+          defaultFound = true;
           return;
         }
       });
+      if (defaultFound === false && tracks.length) {
+        _logger.logger.log('no default audio track defined, use first audio track as default');
+        this.audioTrack = 0;
+      }
     }
   }, {
     key: 'onAudioTrackLoaded',
@@ -1388,10 +1400,12 @@ var AudioTrackController = function (_EventHandler) {
         }
         this.trackId = newId;
         _logger.logger.log('switching to audioTrack ' + newId);
-        this.hls.trigger(_events2.default.AUDIO_TRACK_SWITCH, { id: newId });
-        var audioTrack = this.tracks[newId];
+        var audioTrack = this.tracks[newId],
+            type = audioTrack.type;
+        this.hls.trigger(_events2.default.AUDIO_TRACK_SWITCH, { id: newId, type: type });
         // check if we need to load playlist for this audio Track
-        if (audioTrack.details === undefined || audioTrack.details.live === true) {
+        var details = audioTrack.details;
+        if (type !== 'main' && (details === undefined || details.live === true)) {
           // track not retrieved yet, or live playlist we need to (re)load it
           _logger.logger.log('(re)loading playlist for audioTrack ' + newId);
           this.hls.trigger(_events2.default.AUDIO_TRACK_LOADING, { url: audioTrack.url, id: newId });
@@ -1869,59 +1883,67 @@ var BufferController = function (_EventHandler) {
     /*
       flush specified buffered range,
       return true once range has been flushed.
-      as sourceBuffer.remove() is asynchronous, flushBuffer will be retriggered on sourceBuffer update end
+      as sourceBuffer.remove() is asynchronous, @ will be retriggered on sourceBuffer update end
     */
 
   }, {
     key: 'flushBuffer',
     value: function flushBuffer(startOffset, endOffset, typeIn) {
-      var sb, i, bufStart, bufEnd, flushStart, flushEnd;
-      //logger.log('flushBuffer,pos/start/end: ' + this.media.currentTime + '/' + startOffset + '/' + endOffset);
-      // safeguard to avoid infinite looping : don't try to flush more than the nb of appended segments
-      if (this.flushBufferCounter < this.appended && this.sourceBuffer) {
-        for (var type in this.sourceBuffer) {
-          // check if sourcebuffer type is defined (typeIn): if yes, let's only flush this one
-          // if no, let's flush all sourcebuffers
-          if (typeIn && type !== typeIn) {
-            continue;
-          }
-          sb = this.sourceBuffer[type];
-          if (!sb.updating) {
-            for (i = 0; i < sb.buffered.length; i++) {
-              bufStart = sb.buffered.start(i);
-              bufEnd = sb.buffered.end(i);
-              // workaround firefox not able to properly flush multiple buffered range.
-              if (navigator.userAgent.toLowerCase().indexOf('firefox') !== -1 && endOffset === Number.POSITIVE_INFINITY) {
-                flushStart = startOffset;
-                flushEnd = endOffset;
-              } else {
-                flushStart = Math.max(bufStart, startOffset);
-                flushEnd = Math.min(bufEnd, endOffset);
-              }
-              /* sometimes sourcebuffer.remove() does not flush
-                 the exact expected time range.
-                 to avoid rounding issues/infinite loop,
-                 only flush buffer range of length greater than 500ms.
-              */
-              if (Math.min(flushEnd, bufEnd) - flushStart > 0.5) {
-                this.flushBufferCounter++;
-                _logger.logger.log('flush ' + type + ' [' + flushStart + ',' + flushEnd + '], of [' + bufStart + ',' + bufEnd + '], pos:' + this.media.currentTime);
-                sb.remove(flushStart, flushEnd);
-                return false;
-              }
+      var sb,
+          i,
+          bufStart,
+          bufEnd,
+          flushStart,
+          flushEnd,
+          sourceBuffer = this.sourceBuffer;
+      if (Object.keys(sourceBuffer).length) {
+        _logger.logger.log('flushBuffer,pos/start/end: ' + this.media.currentTime + '/' + startOffset + '/' + endOffset);
+        // safeguard to avoid infinite looping : don't try to flush more than the nb of appended segments
+        if (this.flushBufferCounter < this.appended) {
+          for (var type in sourceBuffer) {
+            // check if sourcebuffer type is defined (typeIn): if yes, let's only flush this one
+            // if no, let's flush all sourcebuffers
+            if (typeIn && type !== typeIn) {
+              continue;
             }
-          } else {
-            //logger.log('abort ' + type + ' append in progress');
-            // this will abort any appending in progress
-            //sb.abort();
-            _logger.logger.warn('cannot flush, sb updating in progress');
-            return false;
+            sb = sourceBuffer[type];
+            if (!sb.updating) {
+              for (i = 0; i < sb.buffered.length; i++) {
+                bufStart = sb.buffered.start(i);
+                bufEnd = sb.buffered.end(i);
+                // workaround firefox not able to properly flush multiple buffered range.
+                if (navigator.userAgent.toLowerCase().indexOf('firefox') !== -1 && endOffset === Number.POSITIVE_INFINITY) {
+                  flushStart = startOffset;
+                  flushEnd = endOffset;
+                } else {
+                  flushStart = Math.max(bufStart, startOffset);
+                  flushEnd = Math.min(bufEnd, endOffset);
+                }
+                /* sometimes sourcebuffer.remove() does not flush
+                   the exact expected time range.
+                   to avoid rounding issues/infinite loop,
+                   only flush buffer range of length greater than 500ms.
+                */
+                if (Math.min(flushEnd, bufEnd) - flushStart > 0.5) {
+                  this.flushBufferCounter++;
+                  _logger.logger.log('flush ' + type + ' [' + flushStart + ',' + flushEnd + '], of [' + bufStart + ',' + bufEnd + '], pos:' + this.media.currentTime);
+                  sb.remove(flushStart, flushEnd);
+                  return false;
+                }
+              }
+            } else {
+              //logger.log('abort ' + type + ' append in progress');
+              // this will abort any appending in progress
+              //sb.abort();
+              _logger.logger.warn('cannot flush, sb updating in progress');
+              return false;
+            }
           }
+        } else {
+          _logger.logger.warn('abort flushing too many retries');
         }
-      } else {
-        _logger.logger.warn('abort flushing too many retries');
+        _logger.logger.log('buffer flushed');
       }
-      _logger.logger.log('buffer flushed');
       // everything flushed !
       return true;
     }
@@ -2694,7 +2716,7 @@ var StreamController = function (_EventHandler) {
   function StreamController(hls) {
     _classCallCheck(this, StreamController);
 
-    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(StreamController).call(this, hls, _events2.default.MEDIA_ATTACHED, _events2.default.MEDIA_DETACHING, _events2.default.MANIFEST_LOADING, _events2.default.MANIFEST_PARSED, _events2.default.LEVEL_LOADED, _events2.default.KEY_LOADED, _events2.default.FRAG_LOADED, _events2.default.FRAG_LOAD_EMERGENCY_ABORTED, _events2.default.FRAG_PARSING_INIT_SEGMENT, _events2.default.FRAG_PARSING_DATA, _events2.default.FRAG_PARSED, _events2.default.ERROR, _events2.default.BUFFER_CREATED, _events2.default.BUFFER_APPENDED, _events2.default.BUFFER_FLUSHED));
+    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(StreamController).call(this, hls, _events2.default.MEDIA_ATTACHED, _events2.default.MEDIA_DETACHING, _events2.default.MANIFEST_LOADING, _events2.default.MANIFEST_PARSED, _events2.default.LEVEL_LOADED, _events2.default.KEY_LOADED, _events2.default.FRAG_LOADED, _events2.default.FRAG_LOAD_EMERGENCY_ABORTED, _events2.default.FRAG_PARSING_INIT_SEGMENT, _events2.default.FRAG_PARSING_DATA, _events2.default.FRAG_PARSED, _events2.default.ERROR, _events2.default.AUDIO_TRACK_SWITCH, _events2.default.BUFFER_CREATED, _events2.default.BUFFER_APPENDED, _events2.default.BUFFER_FLUSHED));
 
     _this.config = hls.config;
     _this.audioCodecSwap = false;
@@ -3578,9 +3600,10 @@ var StreamController = function (_EventHandler) {
           this.pendingAppending = 0;
           _logger.logger.log('Demuxing ' + sn + ' of [' + details.startSN + ' ,' + details.endSN + '],level ' + level + ', cc ' + fragCurrent.cc);
           var demuxer = this.demuxer;
-          if (demuxer) {
-            demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata);
+          if (!demuxer) {
+            demuxer = this.demuxer = new _demuxer2.default(this.hls, 'main');
           }
+          demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata);
         }
       }
       this.fragLoadError = 0;
@@ -3677,7 +3700,8 @@ var StreamController = function (_EventHandler) {
       var _this2 = this;
 
       var fragCurrent = this.fragCurrent;
-      if (fragCurrent && data.id === 'main' && data.sn === fragCurrent.sn && data.level === fragCurrent.level && this.state === State.PARSING) {
+      if (fragCurrent && data.id === 'main' && data.sn === fragCurrent.sn && data.level === fragCurrent.level && (data.type !== 'audio' || this.audioTrackType !== 'AUDIO') && // filter out main audio if audio track is loaded through audio stream controller
+      this.state === State.PARSING) {
         var level = this.levels[this.level],
             frag = this.fragCurrent;
 
@@ -3717,6 +3741,40 @@ var StreamController = function (_EventHandler) {
       }
     }
   }, {
+    key: 'onAudioTrackSwitch',
+    value: function onAudioTrackSwitch(data) {
+      var audioTrackType = data.type;
+      // if we switch on main audio, ensure that main fragment scheduling is synced with media.buffered
+      if (audioTrackType === 'main') {
+        if (this.mediaBuffer !== this.media) {
+          _logger.logger.log('switching on main audio, use media.buffered to schedule main fragment loading');
+          this.mediaBuffer = this.media;
+          var fragCurrent = this.fragCurrent;
+          // we need to refill audio buffer from main: cancel any frag loading to speed up audio switch
+          if (fragCurrent.loader) {
+            _logger.logger.log('switching to main audio track, cancel main fragment load');
+            fragCurrent.loader.abort();
+          }
+          this.fragCurrent = null;
+          this.fragPrevious = null;
+          // destroy demuxer to force init segment generation (following audio switch)
+          if (this.demuxer) {
+            this.demuxer.destroy();
+            this.demuxer = null;
+          }
+          // switch to IDLE state to load new fragment
+          this.state = State.IDLE;
+        }
+      } else {
+        // if we switch on alternate audio, ensure that main fragment scheduling is synced with video sourcebuffer buffered
+        if (this.videoBuffer && this.mediaBuffer !== this.videoBuffer) {
+          _logger.logger.log('switching on alternate audio, use video.buffered to schedule main fragment loading');
+          this.mediaBuffer = this.videoBuffer;
+        }
+      }
+      this.audioTrackType = audioTrackType;
+    }
+  }, {
     key: 'onBufferCreated',
     value: function onBufferCreated(data) {
       var tracks = data.tracks,
@@ -3728,6 +3786,10 @@ var StreamController = function (_EventHandler) {
         if (track.id === 'main') {
           name = type;
           mediaTrack = track;
+          // keep video source buffer reference
+          if (type === 'video') {
+            this.videoBuffer = tracks[type].buffer;
+          }
         } else {
           alternate = true;
         }
@@ -8138,10 +8200,9 @@ var PlaylistLoader = function (_EventHandler) {
     }
   }, {
     key: 'parseMasterPlaylistMedia',
-    value: function parseMasterPlaylistMedia(string, baseurl, type) {
-      var medias = [],
-          result = void 0,
-          id = 0;
+    value: function parseMasterPlaylistMedia(medias, string, baseurl, type) {
+      var result = void 0,
+          id = medias.length;
 
       // https://regex101.com is your friend
       var re = /#EXT-X-MEDIA:(.*)/g;
@@ -8151,6 +8212,7 @@ var PlaylistLoader = function (_EventHandler) {
         if (attrs.TYPE === type) {
           media.groupId = attrs['GROUP-ID'];
           media.name = attrs.NAME;
+          media.type = type;
           media.default = attrs.DEFAULT === 'YES';
           media.autoselect = attrs.AUTOSELECT === 'YES';
           media.forced = attrs.FORCED === 'YES';
@@ -8163,7 +8225,7 @@ var PlaylistLoader = function (_EventHandler) {
           medias.push(media);
         }
       }
-      return medias;
+      return;
     }
     /**
      * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
@@ -8401,7 +8463,12 @@ var PlaylistLoader = function (_EventHandler) {
           }
         } else {
           var levels = this.parseMasterPlaylist(string, url),
-              audiotracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO');
+              audiotracks = [];
+          // if any audio codec signalled, push main audio track in audio track list
+          if (levels[0].audioCodec) {
+            audiotracks.push({ id: 0, type: 'main', name: 'main' });
+          }
+          this.parseMasterPlaylistMedia(audiotracks, string, url, 'AUDIO');
           // multi level playlist, parse level info
           if (levels.length) {
             hls.trigger(_events2.default.MANIFEST_LOADED, { levels: levels, audioTracks: audiotracks, url: url, stats: stats });
