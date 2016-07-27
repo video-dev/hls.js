@@ -5999,7 +5999,15 @@ var TSDemuxer = function () {
       var pmtParsed = this.pmtParsed,
           avcId = this._avcTrack.id,
           aacId = this._aacTrack.id,
-          id3Id = this._id3Track.id;
+          id3Id = this._id3Track.id,
+          pmtId = this._pmtId;
+
+      var parsePAT = this._parsePAT,
+          parsePMT = this._parsePMT,
+          parsePES = this._parsePES,
+          parseAVCPES = this._parseAVCPES.bind(this),
+          parseAACPES = this._parseAACPES.bind(this),
+          parseID3PES = this._parseID3PES.bind(this);
 
       // don't parse last TS packet if incomplete
       len -= len % 188;
@@ -6020,11 +6028,11 @@ var TSDemuxer = function () {
           } else {
             offset = start + 4;
           }
-          if (pmtParsed) {
-            if (pid === avcId) {
+          switch (pid) {
+            case avcId:
               if (stt) {
                 if (avcData) {
-                  this._parseAVCPES(this._parsePES(avcData));
+                  parseAVCPES(parsePES(avcData));
                   if (codecsOnly) {
                     // if we have video codec info AND
                     // if audio PID is undefined OR if we have audio codec info,
@@ -6041,10 +6049,11 @@ var TSDemuxer = function () {
                 avcData.data.push(data.subarray(offset, start + 188));
                 avcData.size += start + 188 - offset;
               }
-            } else if (pid === aacId) {
+              break;
+            case aacId:
               if (stt) {
                 if (aacData) {
-                  this._parseAACPES(this._parsePES(aacData));
+                  parseAACPES(parsePES(aacData));
                   if (codecsOnly) {
                     // here we now that we have audio codec info
                     // if video PID is undefined OR if we have video codec info,
@@ -6061,10 +6070,11 @@ var TSDemuxer = function () {
                 aacData.data.push(data.subarray(offset, start + 188));
                 aacData.size += start + 188 - offset;
               }
-            } else if (pid === id3Id) {
+              break;
+            case id3Id:
               if (stt) {
                 if (id3Data) {
-                  this._parseID3PES(this._parsePES(id3Data));
+                  parseID3PES(parsePES(id3Data));
                 }
                 id3Data = { data: [], size: 0 };
               }
@@ -6072,29 +6082,35 @@ var TSDemuxer = function () {
                 id3Data.data.push(data.subarray(offset, start + 188));
                 id3Data.size += start + 188 - offset;
               }
-            }
-          } else {
-            if (stt) {
-              offset += data[offset] + 1;
-            }
-            if (pid === 0) {
-              this._parsePAT(data, offset);
-            } else if (pid === this._pmtId) {
-              this._parsePMT(data, offset);
-              pmtParsed = this.pmtParsed = true;
-              avcId = this._avcTrack.id;
-              aacId = this._aacTrack.id;
-              id3Id = this._id3Track.id;
-              if (unknownPIDs) {
+              break;
+            case 0:
+              if (stt) {
+                offset += data[offset] + 1;
+              }
+              pmtId = this._pmtId = parsePAT(data, offset);
+              break;
+            case pmtId:
+              if (stt) {
+                offset += data[offset] + 1;
+              }
+              var parsedPIDs = parsePMT(data, offset);
+              avcId = this._avcTrack.id = parsedPIDs.avc;
+              aacId = this._aacTrack.id = parsedPIDs.aac;
+              id3Id = this._id3Track.id = parsedPIDs.id3;
+              if (unknownPIDs && !pmtParsed) {
                 _logger.logger.log('reparse from beginning');
                 unknownPIDs = false;
                 // we set it to -188, the += 188 in the for loop will reset start to 0
                 start = -188;
               }
-            } else {
-              _logger.logger.log('unknown PID found before PAT/PMT');
+              pmtParsed = this.pmtParsed = true;
+              break;
+            case 17:
+            case 0x1fff:
+              break;
+            default:
               unknownPIDs = true;
-            }
+              break;
           }
         } else {
           this.observer.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, id: this.id, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47' });
@@ -6102,13 +6118,13 @@ var TSDemuxer = function () {
       }
       // parse last PES packet
       if (avcData) {
-        this._parseAVCPES(this._parsePES(avcData));
+        parseAVCPES(parsePES(avcData));
       }
       if (aacData) {
-        this._parseAACPES(this._parsePES(aacData));
+        parseAACPES(parsePES(aacData));
       }
       if (id3Data) {
-        this._parseID3PES(this._parsePES(id3Data));
+        parseID3PES(parsePES(id3Data));
       }
       this.remux(level, sn, null);
     }
@@ -6128,13 +6144,17 @@ var TSDemuxer = function () {
     key: '_parsePAT',
     value: function _parsePAT(data, offset) {
       // skip the PSI header and parse the first PMT entry
-      this._pmtId = (data[offset + 10] & 0x1F) << 8 | data[offset + 11];
+      return (data[offset + 10] & 0x1F) << 8 | data[offset + 11];
       //logger.log('PMT PID:'  + this._pmtId);
     }
   }, {
     key: '_parsePMT',
     value: function _parsePMT(data, offset) {
-      var sectionLength, tableEnd, programInfoLength, pid;
+      var sectionLength,
+          tableEnd,
+          programInfoLength,
+          pid,
+          result = { aac: -1, avc: -1, id3: -1 };
       sectionLength = (data[offset + 1] & 0x0f) << 8 | data[offset + 2];
       tableEnd = offset + 3 + sectionLength - 4;
       // to determine where the table is, we have to figure out how
@@ -6148,20 +6168,22 @@ var TSDemuxer = function () {
           // ISO/IEC 13818-7 ADTS AAC (MPEG-2 lower bit-rate audio)
           case 0x0f:
             //logger.log('AAC PID:'  + pid);
-            if (this._aacTrack.id === -1) {
-              this._aacTrack.id = pid;
+            if (result.aac === -1) {
+              result.aac = pid;
             }
             break;
           // Packetized metadata (ID3)
           case 0x15:
             //logger.log('ID3 PID:'  + pid);
-            this._id3Track.id = pid;
+            if (result.id3 === -1) {
+              result.id3 = pid;
+            }
             break;
           // ITU-T Rec. H.264 and ISO/IEC 14496-10 (lower bit-rate video)
           case 0x1b:
             //logger.log('AVC PID:'  + pid);
-            if (this._avcTrack.id === -1) {
-              this._avcTrack.id = pid;
+            if (result.avc === -1) {
+              result.avc = pid;
             }
             break;
           default:
@@ -6172,6 +6194,7 @@ var TSDemuxer = function () {
         // skip past the elementary stream descriptors, if present
         offset += ((data[offset + 3] & 0x0F) << 8 | data[offset + 4]) + 5;
       }
+      return result;
     }
   }, {
     key: '_parsePES',
