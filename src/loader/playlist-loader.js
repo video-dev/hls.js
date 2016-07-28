@@ -35,7 +35,7 @@ class PlaylistLoader extends EventHandler {
   }
 
   onLevelLoading(data) {
-    this.load(data.url, { type : 'level', level : data.level, id : data.id});
+    this.load(data.url, { type : 'level', level : data.level, id : data.id, attrs: data.attrs });
   }
 
   onAudioTrackLoading(data) {

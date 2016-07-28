@@ -139,7 +139,7 @@ class LevelController extends EventHandler {
         // level not retrieved yet, or live playlist we need to (re)load it
         logger.log(`(re)loading playlist for level ${newLevel}`);
         var urlId = level.urlId;
-        this.hls.trigger(Event.LEVEL_LOADING, {url: level.url[urlId], level: newLevel, id: urlId});
+        this.hls.trigger(Event.LEVEL_LOADING, {url: level.url[urlId], level: newLevel, id: urlId, attrs: level.attrs});
       }
     } else {
       // invalid level id given, trigger error

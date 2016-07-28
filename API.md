@@ -433,6 +433,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
      * Calling load() will start retrieving content at given URL (HTTP GET).
      *
      * @param {string} url URL to load.
+     * @param {object} context Object containing extra contextual information
      * @param {string} responseType XHR response type (arraybuffer or default response type for playlist).
      * @param {Function} onSuccess Callback triggered upon successful loading of URL.
      *                             It should return XHR event and load stats object `{ trequest, tfirst, tload }`.
@@ -442,7 +443,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
      * @param {number} maxRetry Max number of load retries.
      * @param {number} retryDelay Delay between an I/O error and following connection retry (ms). This to avoid spamming the server.
      */
-    this.load = function (url, responseType, onSuccess, onError, onTimeOut, timeout, maxRetry, retryDelay) {};
+    this.load = function (url, context, responseType, onSuccess, onError, onTimeOut, timeout, maxRetry, retryDelay) {};
 
     /** Abort any loading in progress. */
     this.abort = function () {};
