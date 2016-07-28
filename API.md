@@ -400,9 +400,9 @@ It is up to the application to catch this event and treat it as needed.
 Max number of load retries.
 
 #### `fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout`
- 
+
 (default: `64000` ms)
- 
+
 Maximum frag/manifest/key retry timeout (in milliseconds) in case I/O errors are met.
 
 #### `fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay`
@@ -470,12 +470,12 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param stats.tfirst {number} - performance.now() of first received byte
       @param stats.tload {number} - performance.now() on load complete
       @param stats.loaded {number} - nb of loaded bytes
-      @param stats.total {number} - total nb of bytes      
+      @param stats.total {number} - total nb of bytes
       @param context {object} - loader context
 
       @callback onProgressCallback
       @param stats {object} - loading stats
-      @param stats.trequest {number} - performance.now() just after load() has been called      
+      @param stats.trequest {number} - performance.now() just after load() has been called
       @param stats.tfirst {number} - performance.now() of first received byte
       @param stats.loaded {number} - nb of loaded bytes
       @param [stats.total] {number} - total nb of bytes
@@ -487,7 +487,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param error.code {number} - error status code
       @param error.text {string} - error description
       @param context {object} - loader context
-      
+
       @callback onTimeoutCallback
       @param stats {object} - loading stats
       @param context {object} - loader context
