@@ -442,19 +442,61 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
 ```js
   var customLoader = function () {
     /**
-     * Calling load() will start retrieving content at given URL (HTTP GET).
+     * Calling load() will start retrieving content located at given URL (HTTP GET).
      *
-     * @param {string} url URL to load.
-     * @param {string} responseType XHR response type (arraybuffer or default response type for playlist).
-     * @param {Function} onSuccess Callback triggered upon successful loading of URL.
-     *                             It should return XHR event and load stats object `{ trequest, tfirst, tload }`.
-     * @param {Function} onError Callback triggered if any I/O error is met while loading fragment.
-     * @param {Function} onTimeOut Callback triggered if loading is still not finished after a certain duration.
-     * @param {number} timeout Timeout after which `onTimeOut` callback will be triggered (if loading is still not finished after that delay).
-     * @param {number} maxRetry Max number of load retries.
-     * @param {number} retryDelay Delay between an I/O error and following connection retry (ms). This to avoid spamming the server.
-     */
-    this.load = function (url, responseType, onSuccess, onError, onTimeOut, timeout, maxRetry, retryDelay) {};
+     * @param {context} loader context.
+     { 
+       url {string} : target URL
+       responseType {string} : loader response type (arraybuffer or default response type for playlist)
+       rangeStart {number/optional} :  if byte range request, start byte offset
+       rangeEnd {number/optional} :   if byte range request, end byte offset
+     }
+     * @param {config} loader config params
+     {
+       maxRetry {number} :  Max number of load retries.
+       timeout {number} :  Timeout after which `onTimeOut` callback will be triggered (if loading is still not finished after that delay).
+       retryDelay {number} :  Delay between an I/O error and following connection retry (ms). This to avoid spamming the server.
+       maxRetryDelay {number} :  max connection retry delay (ms).
+     }
+     * @param {callbacks} 
+     {
+       onSuccess {Function} : Callback triggered upon successful loading of URL.
+        It should be triggered with 3 args
+			response :
+			{
+				url {string}: response URL (which might have been redirected)
+				data : response data (reponse type should be as per context.responseType)
+			}
+			stats : 
+			{ 
+				trequest {number} : performance.now() just after load() has been called
+				tfirst {number} : performance.now() of first received byte
+				tload {number} : performance.now() on load complete
+			}
+			context : loader context
+
+       onProgress {Function} :  Callback triggered while loading is in progress.
+        It should be triggered with 3 args
+			stats :  load stats
+			context : loader context
+			data : onProgress data (should be defined only if context.progressData === true)
+
+       onError {Function} : Callback triggered if any I/O error is met while loading fragment.
+        It should be triggered with 2 args
+          error :
+          {
+            code {number} : error status code
+            text {string} : error description
+          }
+          context : loader context
+          
+       onTimeout {Function} :  Callback triggered if loading is still not finished after a certain duration.
+        It should be triggered with 2 args
+			stats :  load stats
+			context : loader context
+
+   */
+    this.load = function (context, config, callbacks) {};
 
     /** Abort any loading in progress. */
     this.abort = function () {};
