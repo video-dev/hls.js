@@ -655,9 +655,6 @@ class AudioStreamController extends EventHandler {
             if (frag) {
                 this.fragPrevious = frag;
                 stats.tbuffered = performance.now();
-                this.fragLastKbps = Math.round(
-                    8 * stats.length / (stats.tbuffered - stats.tfirst)
-                );
                 this.hls.trigger(Event.FRAG_BUFFERED, {
                     stats: stats,
                     frag: frag,
