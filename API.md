@@ -469,10 +469,16 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param stats.trequest {number} - performance.now() just after load() has been called
       @param stats.tfirst {number} - performance.now() of first received byte
       @param stats.tload {number} - performance.now() on load complete
+      @param stats.loaded {number} - nb of loaded bytes
+      @param stats.total {number} - total nb of bytes      
       @param context {object} - loader context
 
       @callback onProgressCallback
       @param stats {object} - loading stats
+      @param stats.trequest {number} - performance.now() just after load() has been called      
+      @param stats.tfirst {number} - performance.now() of first received byte
+      @param stats.loaded {number} - nb of loaded bytes
+      @param [stats.total] {number} - total nb of bytes
       @param context {object} - loader context
       @param data {string/arraybuffer} - onProgress data (should be defined only if context.progressData === true)
 
