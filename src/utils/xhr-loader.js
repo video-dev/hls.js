@@ -30,7 +30,7 @@ class XhrLoader {
     this.retryTimeout = null;
   }
 
-  load(url, context, responseType, onSuccess, onError, onTimeout, timeout, maxRetry, retryDelay, onProgress = null, frag = null) {
+  load(url, context, responseType, onSuccess, onError, onTimeout, timeout, maxRetry, retryDelay, maxRetryDelay = 64000, onProgress = null, frag = null) {
     this.url = url;
     this.context = context;
     if (context) {
@@ -47,6 +47,7 @@ class XhrLoader {
     this.stats = {trequest: performance.now(), retry: 0};
     this.timeout = timeout;
     this.maxRetry = maxRetry;
+    this.maxRetryDelay = maxRetryDelay;
     this.retryDelay = retryDelay;
     this.loadInternal();
   }
@@ -107,7 +108,7 @@ class XhrLoader {
         // schedule retry
         this.retryTimeout = window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
         // set exponential backoff
-        this.retryDelay = Math.min(2 * this.retryDelay, 64000);
+        this.retryDelay = Math.min(2 * this.retryDelay, this.maxRetryDelay);
         stats.retry++;
       // permanent failure
       } else {

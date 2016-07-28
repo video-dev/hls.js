@@ -46,15 +46,19 @@ class PlaylistLoader extends EventHandler {
     var config = this.hls.config,
         retry,
         timeout,
-        retryDelay;
+        retryDelay,
+        maxRetryDelay;
+
     if(context.type === 'manifest') {
       retry = config.manifestLoadingMaxRetry;
       timeout = config.manifestLoadingTimeOut;
       retryDelay = config.manifestLoadingRetryDelay;
+      maxRetryDelay = config.manifestLoadingMaxRetryTimeout;
     } else {
       retry = config.levelLoadingMaxRetry;
       timeout = config.levelLoadingTimeOut;
       retryDelay = config.levelLoadingRetryDelay;
+      maxRetryDelay = config.levelLoadingMaxRetryTimeout;
     }
     let loader = this.loaders[context.type];
     if (loader) {
@@ -62,7 +66,7 @@ class PlaylistLoader extends EventHandler {
       loader.abort();
     }
     loader  = this.loaders[context.type] = context.loader = typeof(config.pLoader) !== 'undefined' ? new config.pLoader(config) : new config.loader(config);
-    loader.load(url, context, '', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), timeout, retry, retryDelay);
+    loader.load(url, context, '', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), timeout, retry, retryDelay, maxRetryDelay);
   }
 
   resolve(url, baseUrl) {
