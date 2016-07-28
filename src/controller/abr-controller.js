@@ -56,7 +56,6 @@ class AbrController extends EventHandler {
                     config.abrEwmaDefaultEstimate
                 );
             }
-            frag.trequest = performance.now();
             this.fragCurrent = frag;
         }
     }
@@ -87,7 +86,7 @@ class AbrController extends EventHandler {
             frag.autoLevel &&
             frag.level
         ) {
-            let requestDelay = performance.now() - frag.trequest,
+            let requestDelay = performance.now() - frag.loader.stats.trequest,
                 playbackRate = Math.abs(v.playbackRate);
             // monitor fragment load progress after half of expected fragment duration,to stabilize bitrate
             if (requestDelay > 500 * frag.duration / playbackRate) {
