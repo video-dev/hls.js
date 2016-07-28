@@ -59,6 +59,13 @@ class FetchLoader {
     responsePromise.then(function(responseData) {
       if (responseData) {
         stats.tload = Math.max(stats.tfirst,performance.now());
+        let len;
+        if (typeof responseData === 'string') {
+          len = responseData.length;
+        } else {
+          len = responseData.byteLength;
+        }
+        stats.loaded = stats.total = len;
         let response = { url : targetURL, data : responseData};
         callbacks.onSuccess(response,stats,context);
       }

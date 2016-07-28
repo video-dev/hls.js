@@ -52,7 +52,6 @@ class FragmentLoader extends EventHandler {
 
   loadsuccess(response, stats, context) {
     let payload = response.data, frag = context.frag;
-    stats.length = payload.byteLength;
     // detach fragment loader on load success
     frag.loader = undefined;
     this.loaders[frag.type] = undefined;
