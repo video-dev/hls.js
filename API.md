@@ -444,56 +444,47 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
     /**
      * Calling load() will start retrieving content located at given URL (HTTP GET).
      *
-     * @param {context} loader context.
-     { 
-       url {string} : target URL
-       responseType {string} : loader response type (arraybuffer or default response type for playlist)
-       rangeStart {number/optional} :  if byte range request, start byte offset
-       rangeEnd {number/optional} :   if byte range request, end byte offset
-     }
-     * @param {config} loader config params
-     {
-       maxRetry {number} :  Max number of load retries.
-       timeout {number} :  Timeout after which `onTimeOut` callback will be triggered (if loading is still not finished after that delay).
-       retryDelay {number} :  Delay between an I/O error and following connection retry (ms). This to avoid spamming the server.
-       maxRetryDelay {number} :  max connection retry delay (ms).
-     }
-     * @param {callbacks} 
-     {
-       onSuccess {Function} : Callback triggered upon successful loading of URL.
-        It should be triggered with 3 args
-			response :
-			{
-				url {string}: response URL (which might have been redirected)
-				data : response data (reponse type should be as per context.responseType)
-			}
-			stats : 
-			{ 
-				trequest {number} : performance.now() just after load() has been called
-				tfirst {number} : performance.now() of first received byte
-				tload {number} : performance.now() on load complete
-			}
-			context : loader context
+     * @param {object} context - loader context
+     * @param {string} context.url - target URL
+     * @param {string} context.responseType - loader response type (arraybuffer or default response type for playlist)
+     * @param {number} [context.rangeStart] - start byte range offset
+     * @param {number} [context.rangeEnd] - end byte range offset
+     * @param {Boolean} [context.progressData] - true if onProgress should report partial chunk of loaded content
+     * @param {object} config - loader config params
+     * @param {number} config.maxRetry - Max number of load retries
+     * @param {number} config.timeout - Timeout after which `onTimeOut` callback will be triggered (if loading is still not finished after that delay)
+     * @param {number} config.retryDelay - Delay between an I/O error and following connection retry (ms). This to avoid spamming the server
+     * @param {number} config.maxRetryDelay - max connection retry delay (ms)
+     * @param {object} callbacks - loader callbacks
+     * @param {onSuccessCallback} callbacks.onSuccess - Callback triggered upon successful loading of URL.
+     * @param {onProgressCallback} callbacks.onProgress - Callback triggered while loading is in progress.
+     * @param {onErrorCallback} callbacks.onError - Callback triggered if any I/O error is met while loading fragment.
+     * @param {onTimeoutCallback} callbacks.onTimeout - Callback triggered if loading is still not finished after a certain duration.
 
-       onProgress {Function} :  Callback triggered while loading is in progress.
-        It should be triggered with 3 args
-			stats :  load stats
-			context : loader context
-			data : onProgress data (should be defined only if context.progressData === true)
+      @callback onSuccessCallback
+      @param response {object} - response data
+      @param response.url {string} - response URL (which might have been redirected)
+      @param response.data {string/arraybuffer} - response data (reponse type should be as per context.responseType)
+      @param stats {object} - loading stats
+      @param stats.trequest {number} - performance.now() just after load() has been called
+      @param stats.tfirst {number} - performance.now() of first received byte
+      @param stats.tload {number} - performance.now() on load complete
+      @param context {object} - loader context
 
-       onError {Function} : Callback triggered if any I/O error is met while loading fragment.
-        It should be triggered with 2 args
-          error :
-          {
-            code {number} : error status code
-            text {string} : error description
-          }
-          context : loader context
-          
-       onTimeout {Function} :  Callback triggered if loading is still not finished after a certain duration.
-        It should be triggered with 2 args
-			stats :  load stats
-			context : loader context
+      @callback onProgressCallback
+      @param stats {object} - loading stats
+      @param context {object} - loader context
+      @param data {string/arraybuffer} - onProgress data (should be defined only if context.progressData === true)
+
+      @callback onErrorCallback
+      @param error {object} - error data
+      @param error.code {number} - error status code
+      @param error.text {string} - error description
+      @param context {object} - loader context
+      
+      @callback onTimeoutCallback
+      @param stats {object} - loading stats
+      @param context {object} - loader context
 
    */
     this.load = function (context, config, callbacks) {};
