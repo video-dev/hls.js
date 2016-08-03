@@ -64,6 +64,8 @@ class PlaylistLoader extends EventHandler {
     loader  = this.loaders[context.type] = context.loader = typeof(config.pLoader) !== 'undefined' ? new config.pLoader(config) : new config.loader(config);
     if (url) {
       loader.load(url, context, '', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), timeout, retry, retryDelay);
+    } else {
+      this.loaderror(null, context);
     }
   }
 
