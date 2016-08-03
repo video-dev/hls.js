@@ -169,7 +169,9 @@ class AbrController extends EventHandler {
         currentLevel = this.fragCurrent.level,
         avgDuration = ((hls.levels && hls.levels.length && (currentLevel >= 0) && (currentLevel < hls.levels.length)) ? hls.levels[currentLevel].details.averagetargetduration : this.fragCurrent.duration),
         pos = (v ? v.currentTime : 0),
-        lastbw = this.lastbw,
+
+        // 0.8 : consider only 80% of current bw to be conservative
+        lastbw = this.lastbw * 0.8,
 
         // playbackRate is the absolute value of the playback rate; if v.playbackRate is 0, we use 1 to load as
         // if we're playing back at the normal rate.
@@ -180,41 +182,44 @@ class AbrController extends EventHandler {
 
         // targetMinBuffered is the wall-clock time of two segments' worth of media. We aim to maintain this
         // much buffered data (minimum) while choosing the next level.
-        targetMinBuffered = 2 * avgDuration / playbackRate,
+        targetMinBuffered = 2 * avgDuration / playbackRate;
 
-        // availableFetchTime is how much "free time" we have to load the next segment in order to preserve
-        // the minimum amount of buffered data. This can be negative, meaning we're below our target minimum
-        // buffered threshold.
-        availableFetchTime = bufferStarvationDelay - targetMinBuffered;
+    logger.trace(`avgDuration/bufferStarvationDelay/targetMinBuffered: ${avgDuration}/${bufferStarvationDelay}/${targetMinBuffered}`);
 
-    logger.trace(`bufferStarvationDelay/targetMinBuffered/availableFetchTime: ${bufferStarvationDelay}/${targetMinBuffered}/${availableFetchTime}`);
-
-    // If availableFetchTime is positive, we have a relatively easy choice to make -- find the highest level
-    // that can (most likely) be fetched in availableFetchTime seconds.
-    if (availableFetchTime > 0) {
+    // First, look to see if we can load any levels that maintain `targetMinBuffered` seconds of buffered data.
+    if (bufferStarvationDelay > targetMinBuffered) {
       for (let i = maxAutoLevel; i >= 0 ; i--) {
         const bitrate = hls.levels[i].bitrate,
               fetchTime = bitrate * avgDuration / lastbw;
-        logger.trace(`level/bitrate/lastbw/fetchTime/return: ${i}/${bitrate}/${lastbw}/${fetchTime}/${fetchTime < availableFetchTime}`);
-        if (fetchTime < availableFetchTime) {
+        logger.trace(`level/bitrate/lastbw/fetchTime/return: ${i}/${bitrate}/${lastbw}/${fetchTime}/${bufferStarvationDelay + avgDuration - fetchTime >= targetMinBuffered}`);
+        if (bufferStarvationDelay + avgDuration - fetchTime >= targetMinBuffered) {
           return i;
         }
       }
     }
 
-    // If we get here, then availableFetchTime is either negative or so small that we couldn't expect to
-    // fetch any of the levels in time. We don't necessarily have to switch down to zero, but should choose
-    // a level that can be fetched faster than playback so we build our buffer back up to targetMinBuffered.
+    // If we get here, then no level allows us to achieve `targetMinBuffered` seconds of buffered data. So now
+    // we look for a level that simply lets us increase the amount of buffered data, hoping to (eventually)
+    // achieve `targetMinBuffered` seconds.
+    for (let i = maxAutoLevel; i >= 0 ; i--) {
+      const bitrate = hls.levels[i].bitrate,
+            fetchTime = bitrate * avgDuration / lastbw;
+      logger.trace(`level/bitrate/lastbw/fetchTime/return: ${i}/${bitrate}/${lastbw}/${fetchTime}/${fetchTime < avgDuration}`);
+      if (fetchTime < avgDuration) {
+        return i;
+      }
+    }
+
+    // If we get here, we're going to starve the buffer; let's take `maxStarvationDelay` into account and try to
+    // choose a quality level that will buffer for <= `maxStarvationDelay`.
+    const maxStarvationDelay = hls.config.maxStarvationDelay || (avgDuration / 3.0);
+    logger.trace(`maxStarvationDelay=${maxStarvationDelay}`);
     for (let i = maxAutoLevel; i >= 0 ; i--) {
       const bitrate = hls.levels[i].bitrate,
             fetchTime = bitrate * avgDuration / lastbw,
-
-            // timeRecovered is the amount of buffered time that will be "recovered" assuming we're able to
-            // fetch the segment in the expected time.
-            timeRecovered = avgDuration - fetchTime;
-
-      logger.trace(`level/bitrate/lastbw/fetchTime/timeRecovered/return: ${i}/${bitrate}/${lastbw}/${fetchTime}/${timeRecovered}/${availableFetchTime + timeRecovered > 0}`);
-      if (availableFetchTime + timeRecovered > 0) {
+            starvationDelay = fetchTime - bufferStarvationDelay;
+      logger.trace(`level/bitrate/lastbw/fetchTime/starvationDelay/return: ${i}/${bitrate}/${lastbw}/${fetchTime}/${starvationDelay}/${starvationDelay < maxStarvationDelay}`);
+      if (starvationDelay < maxStarvationDelay) {
         return i;
       }
     }

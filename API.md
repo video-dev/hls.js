@@ -203,6 +203,7 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       timelineController: TimelineController,
       enableCEA708Captions: true,
       stretchShortVideoTrack: false,
+      maxStarvationDelay: undefined
     };
 
 
@@ -482,6 +483,11 @@ if a segment's video track is shorter than its audio track by > ```min(maxSeekHo
 this helps playback continue in certain cases that might otherwise get stuck.
 
 parameter should be a boolean
+
+#### ```maxStarvationDelay```
+(default : undefined)
+
+The maximum time (in seconds) the viewer should have to wait for buffer starvation. The shorter this time, the more likely the ABR controller is to choose a lower bitrate variant.
 
 ## Video Binding/Unbinding API
 

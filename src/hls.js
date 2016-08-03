@@ -91,6 +91,7 @@ class Hls {
           enableCEA708Captions: true,
           enableMP2TPassThrough : false,
           stretchShortVideoTrack: false,
+          maxStarvationDelay: undefined,
         };
     }
     return Hls.defaultConfig;
