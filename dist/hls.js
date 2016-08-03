@@ -1471,7 +1471,6 @@ var BufferController = function (_EventHandler) {
 
     // the value that we have set mediasource.duration to
     // (the actual duration may be tweaked slighly by the browser)
-
     var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(BufferController).call(this, hls, _events2.default.MEDIA_ATTACHING, _events2.default.MEDIA_DETACHING, _events2.default.MANIFEST_PARSED, _events2.default.BUFFER_RESET, _events2.default.BUFFER_APPENDING, _events2.default.BUFFER_CODECS, _events2.default.BUFFER_EOS, _events2.default.BUFFER_FLUSHING, _events2.default.LEVEL_UPDATED));
 
     _this._msDuration = null;
@@ -4237,7 +4236,6 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
  * are those of the authors and should not be interpreted as representing
  * official policies, either expressed or implied, of the authors.
  */
-
 var AES = function () {
 
   /**
@@ -4247,7 +4245,6 @@ var AES = function () {
    * @constructor
    * @param key {Array} The key as an array of 4, 6 or 8 words.
    */
-
   function AES(key) {
     _classCallCheck(this, AES);
 
@@ -8099,7 +8096,9 @@ var PlaylistLoader = function (_EventHandler) {
         loader.abort();
       }
       loader = this.loaders[context.type] = context.loader = typeof config.pLoader !== 'undefined' ? new config.pLoader(config) : new config.loader(config);
-      loader.load(url, context, '', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), timeout, retry, retryDelay);
+      if (url) {
+        loader.load(url, context, '', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), timeout, retry, retryDelay);
+      }
     }
   }, {
     key: 'resolve',
@@ -8497,7 +8496,6 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 */
 
 //import Hex from '../utils/hex';
-
 var MP4 = function () {
   function MP4() {
     _classCallCheck(this, MP4);
@@ -9786,7 +9784,6 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 // adapted from https://github.com/kanongil/node-m3u8parse/blob/master/attrlist.js
-
 var AttrList = function () {
   function AttrList(attrs) {
     _classCallCheck(this, AttrList);
@@ -11303,7 +11300,6 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 var EWMA = function () {
 
   //  About half of the estimated value will be from the last |halfLife| samples by weight.
-
   function EWMA(halfLife) {
     _classCallCheck(this, EWMA);
 
@@ -11688,22 +11684,22 @@ var XhrLoader = function () {
         this.onSuccess(event, stats, context);
         // everything else is a failure
       } else {
-          // retry first
-          if (stats.retry < this.maxRetry) {
-            _logger.logger.warn(status + ' while loading ' + this.url + ', retrying in ' + this.retryDelay + '...');
-            // aborts and resets internal state
-            this.destroy();
-            // schedule retry
-            this.retryTimeout = window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
-            // set exponential backoff
-            this.retryDelay = Math.min(2 * this.retryDelay, 64000);
-            stats.retry++;
-            // permanent failure
-          } else {
-              _logger.logger.error(status + ' while loading ' + this.url);
-              this.onError(event, context);
-            }
+        // retry first
+        if (stats.retry < this.maxRetry) {
+          _logger.logger.warn(status + ' while loading ' + this.url + ', retrying in ' + this.retryDelay + '...');
+          // aborts and resets internal state
+          this.destroy();
+          // schedule retry
+          this.retryTimeout = window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
+          // set exponential backoff
+          this.retryDelay = Math.min(2 * this.retryDelay, 64000);
+          stats.retry++;
+          // permanent failure
+        } else {
+          _logger.logger.error(status + ' while loading ' + this.url);
+          this.onError(event, context);
         }
+      }
     }
   }, {
     key: 'loadtimeout',
