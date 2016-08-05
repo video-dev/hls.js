@@ -663,7 +663,7 @@ class MP4Remuxer {
                     mp4Sample = {
                         size: fillFrame.byteLength,
                         cts: 0,
-                        duration: 0,
+                        duration: 1024,
                         flags: {
                             isLeading: 0,
                             isDependedOn: 0,
