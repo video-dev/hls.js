@@ -8,6 +8,7 @@ import {ErrorTypes, ErrorDetails} from '../errors';
 import URLHelper from '../utils/url';
 import AttrList from '../utils/attr-list';
 import {logger} from '../utils/logger';
+import {ResourceTypes} from './resource-types';
 
 class PlaylistLoader extends EventHandler {
 
@@ -71,7 +72,7 @@ class PlaylistLoader extends EventHandler {
     let loaderConfig, loaderCallbacks;
     loaderConfig = { timeout : timeout, maxRetry : retry , retryDelay : retryDelay, maxRetryDelay : maxRetryDelay};
     loaderCallbacks = { onSuccess : this.loadsuccess.bind(this), onError :this.loaderror.bind(this), onTimeout : this.loadtimeout.bind(this)};
-    loader.load(context,loaderConfig,loaderCallbacks);
+    loader.load(context,loaderConfig,loaderCallbacks,ResourceTypes.PLAYLIST);
   }
 
   resolve(url, baseUrl) {

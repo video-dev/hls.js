@@ -30,12 +30,13 @@ class XhrLoader {
     this.retryTimeout = null;
   }
 
-  load(context, config, callbacks) {
+  load(context, config, callbacks, type) {
     this.context = context;
     this.config = config;
     this.callbacks = callbacks;
     this.stats = {trequest: performance.now(), retry: 0};
     this.retryDelay = config.retryDelay;
+    this.type = type;
     this.loadInternal();
   }
 
@@ -61,7 +62,7 @@ class XhrLoader {
     stats.tfirst = 0;
     stats.loaded = 0;
     if (this.xhrSetup) {
-      this.xhrSetup(xhr, context.url);
+      this.xhrSetup(xhr, context.url, this.type);
     }
     // setup timeout before we perform request
     this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), this.config.timeout);

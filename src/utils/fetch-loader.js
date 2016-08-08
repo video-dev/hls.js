@@ -18,7 +18,7 @@ class FetchLoader {
   }
 
 
-  load(context, config, callbacks) {
+  load(context, config, callbacks, type) {
     let stats = {trequest: performance.now(), retry: 0}, targetURL = context.url, request,
         initParams = { method: 'GET',
                        mode: 'cors',
@@ -30,7 +30,7 @@ class FetchLoader {
     }
 
     if (this.fetchSetup) {
-      request = this.fetchSetup(context,initParams);
+      request = this.fetchSetup(context,initParams,type);
     } else {
       request = new Request(context.url,initParams);
     }
