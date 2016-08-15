@@ -350,6 +350,33 @@ lo008ts`;
     assert.strictEqual(result.fragments[9].byteRangeEndOffset,817988);
   });
 
+  it('parse level with #EXT-X-BYTERANGE without offset', () => {
+    var level = `#EXTM3U
+#EXT-X-VERSION:4
+#EXT-X-ALLOW-CACHE:YES
+#EXT-X-TARGETDURATION:1
+#EXT-X-MEDIA-SEQUENCE:7478
+#EXTINF:1000000,
+#EXT-X-BYTERANGE:140060@803136
+lo007ts
+#EXTINF:1000000,
+#EXT-X-BYTERANGE:96256
+lo007ts
+#EXTINF:1000000,
+#EXT-X-BYTERANGE:143068
+lo007ts`;
+
+    var result = new PlaylistLoader({on : function() { }}).parseLevelPlaylist(level, 'http://dummy.com/playlist.m3u8',0);
+    assert.strictEqual(result.fragments.length, 3);
+    assert.strictEqual(result.fragments[0].url, 'http://dummy.com/lo007ts');
+    assert.strictEqual(result.fragments[0].byteRangeStartOffset,803136);
+    assert.strictEqual(result.fragments[0].byteRangeEndOffset,943196);
+    assert.strictEqual(result.fragments[1].byteRangeStartOffset,943196);
+    assert.strictEqual(result.fragments[1].byteRangeEndOffset,1039452);
+    assert.strictEqual(result.fragments[2].byteRangeStartOffset,1039452);
+    assert.strictEqual(result.fragments[2].byteRangeEndOffset,1182520);
+  });
+
   it('parses discontinuity and maintains continuity counter', () => {
     var level = `#EXTM3U
 #EXTM3U
