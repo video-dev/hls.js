@@ -104,8 +104,11 @@ class BufferController extends EventHandler {
   onMediaSourceOpen() {
     logger.log('media source opened');
     this.hls.trigger(Event.MEDIA_ATTACHED, { media : this.media });
-    // once received, don't listen anymore to sourceopen event
-    this.mediaSource.removeEventListener('sourceopen', this.onmso);
+    let mediaSource = this.mediaSource;
+    if (mediaSource) {
+      // once received, don't listen anymore to sourceopen event
+      mediaSource.removeEventListener('sourceopen', this.onmso);
+    }
     this.checkPendingTracks();
   }
 
