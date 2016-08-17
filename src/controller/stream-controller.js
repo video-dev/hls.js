@@ -1444,7 +1444,11 @@ class StreamController extends EventHandler {
                     } else {
                         loadError = 1;
                     }
-                    if (loadError <= this.config.fragLoadingMaxRetry) {
+                    if (
+                        loadError <= this.config.fragLoadingMaxRetry ||
+                        // keep retrying / don't raise fatal network error if current position is buffered
+                        (this.media && this.isBuffered(this.media.currentTime))
+                    ) {
                         this.fragLoadError = loadError;
                         // reset load counter to avoid frag loop loading error
                         frag.loadCounter = 0;
