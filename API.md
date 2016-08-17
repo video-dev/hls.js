@@ -159,7 +159,9 @@ If media error are still raised after calling `hls.recoverMediaError()`,
 calling this method, could be useful to workaround audio codec mismatch.
 the workflow should be:
 
-on Media Error: first call `hls.swapAudioCodec()`, then call `hls.recoverMediaError()`.
+on First Media Error : call `hls.recoverMediaError()`
+
+if another Media Error is raised 'quickly' after this first Media Error : first call `hls.swapAudioCodec()`, then call `hls.recoverMediaError()`.
 
 ### Final step: destroying, switching between streams
 
