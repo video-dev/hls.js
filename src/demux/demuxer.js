@@ -3,6 +3,7 @@ import DemuxerInline from '../demux/demuxer-inline';
 import DemuxerWorker from '../demux/demuxer-worker';
 import {logger} from '../utils/logger';
 import Decrypter from '../crypt/decrypter';
+import {ErrorTypes, ErrorDetails} from '../errors';
 
 class Demuxer {
 
@@ -15,11 +16,12 @@ class Demuxer {
     if (hls.config.enableWorker && (typeof(Worker) !== 'undefined')) {
         logger.log('demuxing in webworker');
         try {
-          var work = require('webworkify');
-          this.w = work(DemuxerWorker);
+          let work = require('webworkify');
+          let w = this.w = work(DemuxerWorker);
           this.onwmsg = this.onWorkerMessage.bind(this);
-          this.w.addEventListener('message', this.onwmsg);
-          this.w.postMessage({cmd: 'init', typeSupported : typeSupported});
+          w.addEventListener('message', this.onwmsg);
+          w.onerror = function(event) { hls.trigger(Event.ERROR, {type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event : 'demuxerWorker', err : { message : event.message + ' (' + event.filename + ':' + event.lineno + ')' }})};
+          w.postMessage({cmd: 'init', typeSupported : typeSupported});
         } catch(err) {
           logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
           this.demuxer = new DemuxerInline(hls,typeSupported);
@@ -31,26 +33,35 @@ class Demuxer {
   }
 
   destroy() {
-    if (this.w) {
-      this.w.removeEventListener('message', this.onwmsg);
-      this.w.terminate();
+    let w = this.w;
+    if (w) {
+      w.removeEventListener('message', this.onwmsg);
+      w.terminate();
       this.w = null;
     } else {
-      this.demuxer.destroy();
-      this.demuxer = null;
+      let demuxer = this.demuxer;
+      if (demuxer) {
+        demuxer.destroy();
+        this.demuxer = null;
+      }
     }
-    if (this.decrypter) {
-      this.decrypter.destroy();
+    let decrypter = this.decrypter;
+    if (decrypter) {
+      decrypter.destroy();
       this.decrypter = null;
     }
   }
 
   pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
-    if (this.w) {
+    let w = this.w;
+    if (w) {
       // post fragment payload as transferable objects (no copy)
-      this.w.postMessage({cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn : sn, duration: duration}, [data]);
+      w.postMessage({cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn : sn, duration: duration}, [data]);
     } else {
-      this.demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
+      let demuxer = this.demuxer;
+      if (demuxer) {
+        demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
+      }
     }
   }
 
