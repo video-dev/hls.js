@@ -402,7 +402,7 @@ class BufferController extends EventHandler {
   /*
     flush specified buffered range,
     return true once range has been flushed.
-    as sourceBuffer.remove() is asynchronous, @ will be retriggered on sourceBuffer update end
+    as sourceBuffer.remove() is asynchronous, flushBuffer will be retriggered on sourceBuffer update end
   */
   flushBuffer(startOffset, endOffset, typeIn) {
     var sb, i, bufStart, bufEnd, flushStart, flushEnd, sourceBuffer = this.sourceBuffer;
