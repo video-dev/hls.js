@@ -47,7 +47,7 @@ class FragmentLoader extends EventHandler {
             this.loaderror.bind(this),
             this.loadtimeout.bind(this),
             config.fragLoadingTimeOut,
-            1,
+            0,
             0,
             this.loadprogress.bind(this),
             frag
