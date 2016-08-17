@@ -335,6 +335,11 @@ class TSDemuxer {
                         result.avc = pid;
                     }
                     break;
+                case 0x24:
+                    logger.warn(
+                        'HEVC stream type found, not supported for now'
+                    );
+                    break;
                 default:
                     logger.log('unkown stream type:' + data[offset]);
                     break;
