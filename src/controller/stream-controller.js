@@ -817,7 +817,7 @@ class StreamController extends EventHandler {
     }
 
     onMediaAttached(data) {
-        var media = (this.media = data.media);
+        var media = (this.media = this.mediaBuffer = data.media);
         this.onvseeking = this.onMediaSeeking.bind(this);
         this.onvseeked = this.onMediaSeeked.bind(this);
         this.onvended = this.onMediaEnded.bind(this);
