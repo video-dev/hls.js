@@ -2680,7 +2680,9 @@ var StreamController = function (_EventHandler) {
             } else {
               loadError = 1;
             }
-            if (loadError <= this.config.fragLoadingMaxRetry) {
+            if (loadError <= this.config.fragLoadingMaxRetry ||
+            // keep retrying / don't raise fatal network error if current position is buffered
+            this.media && this.isBuffered(this.media.currentTime)) {
               this.fragLoadError = loadError;
               // reset load counter to avoid frag loop loading error
               data.frag.loadCounter = 0;
@@ -6397,7 +6399,7 @@ var FragmentLoader = function (_EventHandler) {
       this.frag.loaded = 0;
       var config = this.hls.config;
       frag.loader = this.loader = typeof config.fLoader !== 'undefined' ? new config.fLoader(config) : new config.loader(config);
-      this.loader.load(frag.url, 'arraybuffer', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.fragLoadingTimeOut, 1, 0, this.loadprogress.bind(this), frag);
+      this.loader.load(frag.url, 'arraybuffer', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.fragLoadingTimeOut, 0, 0, this.loadprogress.bind(this), frag);
     }
   }, {
     key: 'loadsuccess',
