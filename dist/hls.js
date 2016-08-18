@@ -3992,6 +3992,8 @@ var _decrypter = require('../crypt/decrypter');
 
 var _decrypter2 = _interopRequireDefault(_decrypter);
 
+var _errors = require('../errors');
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -4009,10 +4011,13 @@ var Demuxer = function () {
       _logger.logger.log('demuxing in webworker');
       try {
         var work = require('webworkify');
-        this.w = work(_demuxerWorker2.default);
+        var w = this.w = work(_demuxerWorker2.default);
         this.onwmsg = this.onWorkerMessage.bind(this);
-        this.w.addEventListener('message', this.onwmsg);
-        this.w.postMessage({ cmd: 'init', typeSupported: typeSupported });
+        w.addEventListener('message', this.onwmsg);
+        w.onerror = function (event) {
+          hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.OTHER_ERROR, details: _errors.ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event: 'demuxerWorker', err: { message: event.message + ' (' + event.filename + ':' + event.lineno + ')' } });
+        };
+        w.postMessage({ cmd: 'init', typeSupported: typeSupported });
       } catch (err) {
         _logger.logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
         this.demuxer = new _demuxerInline2.default(hls, typeSupported);
@@ -4026,27 +4031,36 @@ var Demuxer = function () {
   _createClass(Demuxer, [{
     key: 'destroy',
     value: function destroy() {
-      if (this.w) {
-        this.w.removeEventListener('message', this.onwmsg);
-        this.w.terminate();
+      var w = this.w;
+      if (w) {
+        w.removeEventListener('message', this.onwmsg);
+        w.terminate();
         this.w = null;
       } else {
-        this.demuxer.destroy();
-        this.demuxer = null;
+        var demuxer = this.demuxer;
+        if (demuxer) {
+          demuxer.destroy();
+          this.demuxer = null;
+        }
       }
-      if (this.decrypter) {
-        this.decrypter.destroy();
+      var decrypter = this.decrypter;
+      if (decrypter) {
+        decrypter.destroy();
         this.decrypter = null;
       }
     }
   }, {
     key: 'pushDecrypted',
     value: function pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
-      if (this.w) {
+      var w = this.w;
+      if (w) {
         // post fragment payload as transferable objects (no copy)
-        this.w.postMessage({ cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn: sn, duration: duration }, [data]);
+        w.postMessage({ cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn: sn, duration: duration }, [data]);
       } else {
-        this.demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
+        var demuxer = this.demuxer;
+        if (demuxer) {
+          demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
+        }
       }
     }
   }, {
@@ -4112,7 +4126,7 @@ var Demuxer = function () {
 
 exports.default = Demuxer;
 
-},{"../crypt/decrypter":12,"../demux/demuxer-inline":15,"../demux/demuxer-worker":16,"../events":23,"../utils/logger":38,"webworkify":2}],18:[function(require,module,exports){
+},{"../crypt/decrypter":12,"../demux/demuxer-inline":15,"../demux/demuxer-worker":16,"../errors":21,"../events":23,"../utils/logger":38,"webworkify":2}],18:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6900,13 +6914,11 @@ var PlaylistLoader = function (_EventHandler) {
       stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
       if (string.indexOf('#EXTM3U') === 0) {
         if (string.indexOf('#EXTINF:') > 0) {
-          // 1 level playlist
-          // if first request, fire manifest loaded event, level will be reloaded afterwards
-          // (this is to have a uniform logic for 1 level/multilevel playlists)
-          if (this.id === null) {
-            hls.trigger(_events2.default.MANIFEST_LOADED, { levels: [{ url: url }], url: url, stats: stats });
+          var levelDetails = this.parseLevelPlaylist(string, url, id || 0);
+          if (id === null) {
+            // first request, stream manifest (no master playlist), fire manifest loaded event with level details
+            hls.trigger(_events2.default.MANIFEST_LOADED, { levels: [{ url: url, details: levelDetails }], url: url, stats: stats });
           } else {
-            var levelDetails = this.parseLevelPlaylist(string, url, id);
             stats.tparsed = performance.now();
             hls.trigger(_events2.default.LEVEL_LOADED, { details: levelDetails, level: id, id: id2, stats: stats });
           }
