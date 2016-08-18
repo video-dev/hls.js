@@ -935,6 +935,7 @@ class StreamController extends EventHandler {
         this.hls.trigger(Event.BUFFER_RESET);
         this.bufferRange = [];
         this.stalled = false;
+        this.startPosition = this.lastCurrentTime = 0;
     }
 
     onManifestParsed(data) {
