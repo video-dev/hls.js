@@ -962,7 +962,7 @@ var AudioStreamController = function (_EventHandler) {
   }, {
     key: 'onMediaAttached',
     value: function onMediaAttached(data) {
-      var media = this.media = data.media;
+      var media = this.media = this.mediaBuffer = data.media;
       this.onvseeking = this.onMediaSeeking.bind(this);
       this.onvended = this.onMediaEnded.bind(this);
       media.addEventListener('seeking', this.onvseeking);
@@ -1569,8 +1569,11 @@ var BufferController = function (_EventHandler) {
     value: function onMediaSourceOpen() {
       _logger.logger.log('media source opened');
       this.hls.trigger(_events2.default.MEDIA_ATTACHED, { media: this.media });
-      // once received, don't listen anymore to sourceopen event
-      this.mediaSource.removeEventListener('sourceopen', this.onmso);
+      var mediaSource = this.mediaSource;
+      if (mediaSource) {
+        // once received, don't listen anymore to sourceopen event
+        mediaSource.removeEventListener('sourceopen', this.onmso);
+      }
       this.checkPendingTracks();
     }
   }, {
@@ -1883,7 +1886,7 @@ var BufferController = function (_EventHandler) {
     /*
       flush specified buffered range,
       return true once range has been flushed.
-      as sourceBuffer.remove() is asynchronous, @ will be retriggered on sourceBuffer update end
+      as sourceBuffer.remove() is asynchronous, flushBuffer will be retriggered on sourceBuffer update end
     */
 
   }, {
@@ -3347,7 +3350,7 @@ var StreamController = function (_EventHandler) {
   }, {
     key: 'onMediaAttached',
     value: function onMediaAttached(data) {
-      var media = this.media = data.media;
+      var media = this.media = this.mediaBuffer = data.media;
       this.onvseeking = this.onMediaSeeking.bind(this);
       this.onvseeked = this.onMediaSeeked.bind(this);
       this.onvended = this.onMediaEnded.bind(this);
@@ -3853,7 +3856,9 @@ var StreamController = function (_EventHandler) {
             } else {
               loadError = 1;
             }
-            if (loadError <= this.config.fragLoadingMaxRetry) {
+            if (loadError <= this.config.fragLoadingMaxRetry ||
+            // keep retrying / don't raise fatal network error if current position is buffered
+            this.media && this.isBuffered(this.media.currentTime)) {
               this.fragLoadError = loadError;
               // reset load counter to avoid frag loop loading error
               frag.loadCounter = 0;
@@ -5270,6 +5275,8 @@ var _decrypter = require('../crypt/decrypter');
 
 var _decrypter2 = _interopRequireDefault(_decrypter);
 
+var _errors = require('../errors');
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -5288,10 +5295,13 @@ var Demuxer = function () {
       _logger.logger.log('demuxing in webworker');
       try {
         var work = require('webworkify');
-        this.w = work(_demuxerWorker2.default);
+        var w = this.w = work(_demuxerWorker2.default);
         this.onwmsg = this.onWorkerMessage.bind(this);
-        this.w.addEventListener('message', this.onwmsg);
-        this.w.postMessage({ cmd: 'init', typeSupported: typeSupported, id: id, config: JSON.stringify(hls.config) });
+        w.addEventListener('message', this.onwmsg);
+        w.onerror = function (event) {
+          hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.OTHER_ERROR, details: _errors.ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event: 'demuxerWorker', err: { message: event.message + ' (' + event.filename + ':' + event.lineno + ')' } });
+        };
+        w.postMessage({ cmd: 'init', typeSupported: typeSupported, id: id, config: JSON.stringify(hls.config) });
       } catch (err) {
         _logger.logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
         this.demuxer = new _demuxerInline2.default(hls, id, typeSupported);
@@ -5305,27 +5315,36 @@ var Demuxer = function () {
   _createClass(Demuxer, [{
     key: 'destroy',
     value: function destroy() {
-      if (this.w) {
-        this.w.removeEventListener('message', this.onwmsg);
-        this.w.terminate();
+      var w = this.w;
+      if (w) {
+        w.removeEventListener('message', this.onwmsg);
+        w.terminate();
         this.w = null;
       } else {
-        this.demuxer.destroy();
-        this.demuxer = null;
+        var demuxer = this.demuxer;
+        if (demuxer) {
+          demuxer.destroy();
+          this.demuxer = null;
+        }
       }
-      if (this.decrypter) {
-        this.decrypter.destroy();
+      var decrypter = this.decrypter;
+      if (decrypter) {
+        decrypter.destroy();
         this.decrypter = null;
       }
     }
   }, {
     key: 'pushDecrypted',
     value: function pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
-      if (this.w) {
+      var w = this.w;
+      if (w) {
         // post fragment payload as transferable objects (no copy)
-        this.w.postMessage({ cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn: sn, duration: duration }, [data]);
+        w.postMessage({ cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn: sn, duration: duration }, [data]);
       } else {
-        this.demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
+        var demuxer = this.demuxer;
+        if (demuxer) {
+          demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
+        }
       }
     }
   }, {
@@ -5368,7 +5387,7 @@ var Demuxer = function () {
 
 exports.default = Demuxer;
 
-},{"../crypt/decrypter":15,"../demux/demuxer-inline":18,"../demux/demuxer-worker":19,"../events":26,"../utils/logger":43,"webworkify":2}],21:[function(require,module,exports){
+},{"../crypt/decrypter":15,"../demux/demuxer-inline":18,"../demux/demuxer-worker":19,"../errors":24,"../events":26,"../utils/logger":43,"webworkify":2}],21:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6185,6 +6204,9 @@ var TSDemuxer = function () {
             if (result.avc === -1) {
               result.avc = pid;
             }
+            break;
+          case 0x24:
+            _logger.logger.warn('HEVC stream type found, not supported for now');
             break;
           default:
             _logger.logger.log('unkown stream type:' + data[offset]);
@@ -7436,7 +7458,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.2-3';
+      return '0.6.2-4';
     }
   }, {
     key: 'Events',
@@ -7903,7 +7925,7 @@ var FragmentLoader = function (_EventHandler) {
         loader.abort();
       }
       loader = this.loaders[type] = frag.loader = typeof config.fLoader !== 'undefined' ? new config.fLoader(config) : new config.loader(config);
-      loader.load(frag.url, { frag: frag }, 'arraybuffer', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.fragLoadingTimeOut, 1, 0, this.loadprogress.bind(this), frag);
+      loader.load(frag.url, { frag: frag }, 'arraybuffer', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.fragLoadingTimeOut, 0, 0, this.loadprogress.bind(this), frag);
     }
   }, {
     key: 'loadsuccess',
@@ -8324,7 +8346,7 @@ var PlaylistLoader = function (_EventHandler) {
           byteRangeStartOffset = null,
           tagList = [];
 
-      regexp = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF):(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE):(\d+(?:@\d+(?:\.\d+)?))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
+      regexp = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF):(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE):(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
       while ((result = regexp.exec(string)) !== null) {
         result.shift();
         result = result.filter(function (n) {
@@ -8469,14 +8491,12 @@ var PlaylistLoader = function (_EventHandler) {
       stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
       if (string.indexOf('#EXTM3U') === 0) {
         if (string.indexOf('#EXTINF:') > 0) {
-          // 1 level playlist
-          // if first request, fire manifest loaded event, level will be reloaded afterwards
-          // (this is to have a uniform logic for 1 level/multilevel playlists)
+          var isLevel = type !== 'audioTrack',
+              levelDetails = this.parseLevelPlaylist(string, url, level || id || 0, isLevel ? 'main' : 'audio');
           if (type === 'manifest') {
-            hls.trigger(_events2.default.MANIFEST_LOADED, { levels: [{ url: url }], url: url, stats: stats });
+            // first request, stream manifest (no master playlist), fire manifest loaded event with level details
+            hls.trigger(_events2.default.MANIFEST_LOADED, { levels: [{ url: url, details: levelDetails }], url: url, stats: stats });
           } else {
-            var isLevel = type === 'level',
-                levelDetails = this.parseLevelPlaylist(string, url, level || id, isLevel ? 'main' : 'audio');
             stats.tparsed = performance.now();
             if (isLevel) {
               hls.trigger(_events2.default.LEVEL_LOADED, { details: levelDetails, level: level, id: id, stats: stats });
