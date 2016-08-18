@@ -1646,6 +1646,7 @@ var BufferController = function (_EventHandler) {
       }
       this.sourceBuffer = {};
       this.flushRange = [];
+      this.segments = [];
       this.appended = 0;
     }
   }, {
@@ -1832,7 +1833,7 @@ var BufferController = function (_EventHandler) {
           var segment = segments.shift();
           try {
             if (sourceBuffer[segment.type]) {
-              //logger.log(`appending ${segment.type} SB, size:${segment.data.length}`);
+              _logger.logger.log('appending ' + segment.type + ' SB, size:' + segment.data.length);
               this.parent = segment.parent;
               sourceBuffer[segment.type].appendBuffer(segment.data);
               this.appendError = 0;
@@ -3458,6 +3459,7 @@ var StreamController = function (_EventHandler) {
       this.hls.trigger(_events2.default.BUFFER_RESET);
       this.bufferRange = [];
       this.stalled = false;
+      this.startPosition = this.lastCurrentTime = 0;
     }
   }, {
     key: 'onManifestParsed',
