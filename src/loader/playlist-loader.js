@@ -303,13 +303,11 @@ class PlaylistLoader extends EventHandler {
     stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
     if (string.indexOf('#EXTM3U') === 0) {
       if (string.indexOf('#EXTINF:') > 0) {
-        // 1 level playlist
-        // if first request, fire manifest loaded event, level will be reloaded afterwards
-        // (this is to have a uniform logic for 1 level/multilevel playlists)
-        if (this.id === null) {
-          hls.trigger(Event.MANIFEST_LOADED, {levels: [{url: url}], url: url, stats: stats});
+        let levelDetails = this.parseLevelPlaylist(string, url, id || 0);
+        if (id === null) {
+        // first request, stream manifest (no master playlist), fire manifest loaded event with level details
+          hls.trigger(Event.MANIFEST_LOADED, {levels: [{url: url, details : levelDetails}], url: url, stats: stats});
         } else {
-          var levelDetails = this.parseLevelPlaylist(string, url, id);
           stats.tparsed = performance.now();
           hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: id, id: id2, stats: stats});
         }
