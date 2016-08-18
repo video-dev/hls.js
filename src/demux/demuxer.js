@@ -39,7 +39,12 @@ class Demuxer {
                         }
                     });
                 };
-                w.postMessage({ cmd: 'init', typeSupported: typeSupported });
+                w.postMessage({
+                    cmd: 'init',
+                    typeSupported: typeSupported,
+                    id: id,
+                    config: JSON.stringify(hls.config)
+                });
             } catch (err) {
                 logger.error(
                     'error while initializing DemuxerWorker, fallback on DemuxerInline'
