@@ -188,6 +188,7 @@ class BufferController extends EventHandler {
         }
         this.sourceBuffer = {};
         this.flushRange = [];
+        this.segments = [];
         this.appended = 0;
     }
 
@@ -399,7 +400,11 @@ class BufferController extends EventHandler {
                 var segment = segments.shift();
                 try {
                     if (sourceBuffer[segment.type]) {
-                        //logger.log(`appending ${segment.type} SB, size:${segment.data.length}`);
+                        logger.log(
+                            `appending ${segment.type} SB, size:${
+                                segment.data.length
+                            }`
+                        );
                         this.parent = segment.parent;
                         sourceBuffer[segment.type].appendBuffer(segment.data);
                         this.appendError = 0;
