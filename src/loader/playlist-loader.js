@@ -46,15 +46,18 @@ class PlaylistLoader extends EventHandler {
     var config = this.hls.config,
         retry,
         timeout,
-        retryDelay;
+        retryDelay,
+        maxRetryDelay;
     if(context.type === 'manifest') {
       retry = config.manifestLoadingMaxRetry;
       timeout = config.manifestLoadingTimeOut;
       retryDelay = config.manifestLoadingRetryDelay;
+      maxRetryDelay = config.manifestLoadingMaxRetryTimeOut;
     } else {
       retry = config.levelLoadingMaxRetry;
       timeout = config.levelLoadingTimeOut;
       retryDelay = config.levelLoadingRetryDelay;
+      maxRetryDelay = config.levelLoadingMaxRetryTimeOut;
     }
     let loader = this.loaders[context.type];
     if (loader) {
@@ -62,7 +65,13 @@ class PlaylistLoader extends EventHandler {
       loader.abort();
     }
     loader  = this.loaders[context.type] = context.loader = typeof(config.pLoader) !== 'undefined' ? new config.pLoader(config) : new config.loader(config);
-    loader.load(url, context, '', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), timeout, retry, retryDelay);
+    context.url = url;
+    context.responseType = '';
+
+    let loaderConfig, loaderCallbacks;
+    loaderConfig = { timeout : timeout, maxRetry : retry , retryDelay : retryDelay, maxRetryDelay : maxRetryDelay};
+    loaderCallbacks = { onSuccess : this.loadsuccess.bind(this), onError :this.loaderror.bind(this), onTimeout : this.loadtimeout.bind(this)};
+    loader.load(context,loaderConfig,loaderCallbacks);
   }
 
   resolve(url, baseUrl) {
@@ -317,10 +326,9 @@ class PlaylistLoader extends EventHandler {
     return level;
   }
 
-  loadsuccess(event, stats, context) {
-    var target = event.currentTarget,
-        string = target.responseText,
-        url = target.responseURL,
+  loadsuccess(response, stats, context) {
+    var string = response.data,
+        url = response.url,
         type = context.type,
         id = context.id,
         level = context.level,
@@ -334,7 +342,7 @@ class PlaylistLoader extends EventHandler {
       url = context.url;
     }
     stats.tload = performance.now();
-    stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
+    //stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
     if (string.indexOf('#EXTM3U') === 0) {
       if (string.indexOf('#EXTINF:') > 0) {
         let isLevel = (type !== 'audioTrack'),
@@ -370,7 +378,7 @@ class PlaylistLoader extends EventHandler {
     }
   }
 
-  loaderror(event, context) {
+  loaderror(response, context) {
     var details, fatal,loader = context.loader;
     switch(context.type) {
       case 'manifest':
@@ -390,10 +398,10 @@ class PlaylistLoader extends EventHandler {
       loader.abort();
       this.loaders[context.type] = undefined;
     }
-    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: loader.url, loader: loader, response: event.currentTarget, context : context});
+    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: loader.url, loader: loader, response: response, context : context});
   }
 
-  loadtimeout(event, stats, context) {
+  loadtimeout(stats, context) {
     var details, fatal, loader = context.loader;
     switch(context.type) {
       case 'manifest':

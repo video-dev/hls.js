@@ -471,12 +471,12 @@ $(document).ready(function() {
         switch(data.details) {
           case Hls.ErrorDetails.MANIFEST_LOAD_ERROR:
             try {
-              $("#HlsStatus").html("cannot Load <a href=\"" + data.url + "\">" + url + "</a><br>HTTP response code:" + data.response.status + "<br>" + data.response.statusText);
-                if(data.response.status === 0) {
+              $("#HlsStatus").html("cannot Load <a href=\"" + data.context.url + "\">" + url + "</a><br>HTTP response code:" + data.response.code + " <br>" + data.response.text);
+                if(data.response.code === 0) {
                   $("#HlsStatus").append("this might be a CORS issue, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin</a> Chrome Extension");
                 }
             } catch(err) {
-              $("#HlsStatus").html("cannot Load <a href=\"" + data.url + "\">" + url + "</a><br>Reason:Load " + data.event.type);
+              $("#HlsStatus").html("cannot Load <a href=\"" + data.context.url + "\">" + url + "</a><br>Reason:Load " + data.response.text);
             }
             break;
           case Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT:

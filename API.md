@@ -193,18 +193,22 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       manifestLoadingTimeOut: 10000,
       manifestLoadingMaxRetry: 6,
       manifestLoadingRetryDelay: 500,
+      manifestLoadingMaxRetryTimeout : 64000,
       levelLoadingTimeOut: 10000,
       levelLoadingMaxRetry: 6,
       levelLoadingRetryDelay: 500,
+      levelLoadingMaxRetryTimeout: 64000,
       fragLoadingTimeOut: 20000,
       fragLoadingMaxRetry: 6,
       fragLoadingRetryDelay: 500,
+      fragLoadingMaxRetryTimeout: 64000,
       startFragPrefech: false,
       appendErrorMaxRetry: 3,
       loader: customLoader,
       fLoader: customFragmentLoader,
       pLoader: customPlaylistLoader,
       xhrSetup: XMLHttpRequestSetupCallback,
+      fetchSetup: FetchSetupCallback,
       abrController: customAbrController,
       timelineController: TimelineController,
       enableCEA708Captions: true,
@@ -395,12 +399,18 @@ It is up to the application to catch this event and treat it as needed.
 
 Max number of load retries.
 
+#### `fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout`
+
+(default: `64000` ms)
+
+Maximum frag/manifest/key retry timeout (in milliseconds) in case I/O errors are met.
+
 #### `fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay`
 
 (default: `1000` ms)
 
 Initial delay between `XMLHttpRequest` error and first load retry (in ms).
-Any I/O error will trigger retries every 500ms,1s,2s,4s,8s, ... capped to 64s (exponential backoff).
+Any I/O error will trigger retries every 500ms,1s,2s,4s,8s, ... capped to `fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout` value (exponential backoff).
 
 Prefetch start fragment although media not attached.
 
@@ -432,19 +442,60 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
 ```js
   var customLoader = function () {
     /**
-     * Calling load() will start retrieving content at given URL (HTTP GET).
+     * Calling load() will start retrieving content located at given URL (HTTP GET).
      *
-     * @param {string} url URL to load.
-     * @param {string} responseType XHR response type (arraybuffer or default response type for playlist).
-     * @param {Function} onSuccess Callback triggered upon successful loading of URL.
-     *                             It should return XHR event and load stats object `{ trequest, tfirst, tload }`.
-     * @param {Function} onError Callback triggered if any I/O error is met while loading fragment.
-     * @param {Function} onTimeOut Callback triggered if loading is still not finished after a certain duration.
-     * @param {number} timeout Timeout after which `onTimeOut` callback will be triggered (if loading is still not finished after that delay).
-     * @param {number} maxRetry Max number of load retries.
-     * @param {number} retryDelay Delay between an I/O error and following connection retry (ms). This to avoid spamming the server.
-     */
-    this.load = function (url, responseType, onSuccess, onError, onTimeOut, timeout, maxRetry, retryDelay) {};
+     * @param {object} context - loader context
+     * @param {string} context.url - target URL
+     * @param {string} context.responseType - loader response type (arraybuffer or default response type for playlist)
+     * @param {number} [context.rangeStart] - start byte range offset
+     * @param {number} [context.rangeEnd] - end byte range offset
+     * @param {Boolean} [context.progressData] - true if onProgress should report partial chunk of loaded content
+     * @param {object} config - loader config params
+     * @param {number} config.maxRetry - Max number of load retries
+     * @param {number} config.timeout - Timeout after which `onTimeOut` callback will be triggered (if loading is still not finished after that delay)
+     * @param {number} config.retryDelay - Delay between an I/O error and following connection retry (ms). This to avoid spamming the server
+     * @param {number} config.maxRetryDelay - max connection retry delay (ms)
+     * @param {object} callbacks - loader callbacks
+     * @param {onSuccessCallback} callbacks.onSuccess - Callback triggered upon successful loading of URL.
+     * @param {onProgressCallback} callbacks.onProgress - Callback triggered while loading is in progress.
+     * @param {onErrorCallback} callbacks.onError - Callback triggered if any I/O error is met while loading fragment.
+     * @param {onTimeoutCallback} callbacks.onTimeout - Callback triggered if loading is still not finished after a certain duration.
+
+      @callback onSuccessCallback
+      @param response {object} - response data
+      @param response.url {string} - response URL (which might have been redirected)
+      @param response.data {string/arraybuffer} - response data (reponse type should be as per context.responseType)
+      @param stats {object} - loading stats
+      @param stats.trequest {number} - performance.now() just after load() has been called
+      @param stats.tfirst {number} - performance.now() of first received byte
+      @param stats.tload {number} - performance.now() on load complete
+      @param stats.loaded {number} - nb of loaded bytes
+      @param [stats.bw] {number} - download bandwidth in bit/s
+      @param stats.total {number} - total nb of bytes
+      @param context {object} - loader context
+
+      @callback onProgressCallback
+      @param stats {object} - loading stats
+      @param stats.trequest {number} - performance.now() just after load() has been called
+      @param stats.tfirst {number} - performance.now() of first received byte
+      @param stats.loaded {number} - nb of loaded bytes
+      @param [stats.total] {number} - total nb of bytes
+      @param [stats.bw] {number} - current download bandwidth in bit/s (monitored by ABR controller to control emergency switch down)
+      @param context {object} - loader context
+      @param data {string/arraybuffer} - onProgress data (should be defined only if context.progressData === true)
+
+      @callback onErrorCallback
+      @param error {object} - error data
+      @param error.code {number} - error status code
+      @param error.text {string} - error description
+      @param context {object} - loader context
+
+      @callback onTimeoutCallback
+      @param stats {object} - loading stats
+      @param context {object} - loader context
+
+   */
+    this.load = function (context, config, callbacks) {};
 
     /** Abort any loading in progress. */
     this.abort = function () {};
@@ -494,6 +545,26 @@ This allows user to easily modify/setup XHR. See example below.
   var config = {
     xhrSetup: function(xhr, url) {
       xhr.withCredentials = true; // do send cookies
+    }
+  }
+```
+
+#### `fetchSetup`
+
+(default: `undefined`)
+
+`Fetch` customization callback for Fetch based loader.
+
+Parameter should be a function with two arguments (`context` and `Request Init Params`).
+If `fetchSetup` is specified and Fetch loader is used, `fetchSetup` will be triggered to instantiate [Request](https://developer.mozilla.org/fr/docs/Web/API/Request) Object.
+This allows user to easily tweak Fetch loader. See example below.
+
+```js
+  var config = {
+    fetchSetup: function(context, initParams) {
+      // Always send cookies, even for cross-origin calls.
+      initParams.credentials = 'include';
+      return new Request(context.url,initParams);
     }
   }
 ```
@@ -784,19 +855,19 @@ Full list of errors is described below:
 ### Network Errors
 
   - `Hls.ErrorDetails.MANIFEST_LOAD_ERROR` - raised when manifest loading fails because of a network error
-    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.MANIFEST_LOAD_ERROR`, fatal : `true`, url : manifest URL, response : xhr response, loader : URL loader }
+    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.MANIFEST_LOAD_ERROR`, fatal : `true`, url : manifest URL, response : { code: error code, text: error text }, loader : URL loader }
   - `Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT` - raised when manifest loading fails because of a timeout
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT`, fatal : `true`, url : manifest URL, loader : URL loader }
   - `Hls.ErrorDetails.MANIFEST_PARSING_ERROR` - raised when manifest parsing failed to find proper content
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.MANIFEST_PARSING_ERROR`, fatal : `true`, url : manifest URL, reason : parsing error reason }
   - `Hls.ErrorDetails.LEVEL_LOAD_ERROR` - raised when level loading fails because of a network error
-    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.LEVEL_LOAD_ERROR`, fatal : `true`, url : level URL, response : xhr response, loader : URL loader }
+    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.LEVEL_LOAD_ERROR`, fatal : `true`, url : level URL, response : { code: error code, text: error text }, loader : URL loader }
   - `Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT` - raised when level loading fails because of a timeout
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT`, fatal : `true`, url : level URL, loader : URL loader }
   - `Hls.ErrorDetails.LEVEL_SWITCH_ERROR` - raised when level switching fails
     - data: { type : `OTHER_ERROR`, details : `Hls.ErrorDetails.LEVEL_SWITCH_ERROR`, fatal : `false`, level : failed level index, reason : failure reason }
   - `Hls.ErrorDetails.FRAG_LOAD_ERROR` - raised when fragment loading fails because of a network error
-    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.FRAG_LOAD_ERROR`, fatal : `true` or `false`, frag : fragment object, response : xhr response }
+    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.FRAG_LOAD_ERROR`, fatal : `true` or `false`, frag : fragment object, response : { code: error code, text: error text } }
   - `Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR` - raised upon detection of same fragment being requested in loop
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR`, fatal : `true` or `false`, frag : fragment object }
   - `Hls.ErrorDetails.FRAG_LOAD_TIMEOUT` - raised when fragment loading fails because of a timeout
