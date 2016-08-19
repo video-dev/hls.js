@@ -342,6 +342,10 @@ class Hls {
   set audioTrack(audioTrackId) {
     this.audioTrackController.audioTrack = audioTrackId;
   }
+
+  get liveSyncPosition() {
+      return this.streamController.liveSyncPosition;
+  }
 }
 
 export default Hls;
