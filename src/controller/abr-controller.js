@@ -80,7 +80,7 @@ class AbrController extends EventHandler {
       // monitor fragment load progress after half of expected fragment duration,to stabilize bitrate
       if (requestDelay > (500 * frag.duration / playbackRate)) {
         let levels = hls.levels,
-            loadRate = Math.max(1,stats.loaded * 1000 / requestDelay), // byte/s; at least 1 byte/s to avoid division by zero
+            loadRate = Math.max(1, stats.bw ? stats.bw / 8 : stats.loaded * 1000 / requestDelay), // byte/s; at least 1 byte/s to avoid division by zero
             // compute expected fragment length using frag duration and level bitrate. also ensure that expected len is gte than already loaded size
             expectedLen = stats.total ? stats.total : Math.max(stats.loaded, Math.round(frag.duration * levels[frag.level].bitrate / 8)),
             pos = v.currentTime,

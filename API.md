@@ -470,6 +470,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param stats.tfirst {number} - performance.now() of first received byte
       @param stats.tload {number} - performance.now() on load complete
       @param stats.loaded {number} - nb of loaded bytes
+      @param [stats.bw] {number} - download bandwidth in bit/s
       @param stats.total {number} - total nb of bytes
       @param context {object} - loader context
 
@@ -479,6 +480,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param stats.tfirst {number} - performance.now() of first received byte
       @param stats.loaded {number} - nb of loaded bytes
       @param [stats.total] {number} - total nb of bytes
+      @param [stats.bw] {number} - current download bandwidth in bit/s (monitored by ABR controller to control emergency switch down)
       @param context {object} - loader context
       @param data {string/arraybuffer} - onProgress data (should be defined only if context.progressData === true)
 
