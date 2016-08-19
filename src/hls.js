@@ -17,6 +17,7 @@ import TimelineController from './controller/timeline-controller';
 import FPSController from './controller/fps-controller';
 import AudioTrackController from './controller/audio-track-controller';
 import { logger, enableLogs } from './utils/logger';
+//import FetchLoader from './utils/fetch-loader';
 import XhrLoader from './utils/xhr-loader';
 import EventEmitter from 'events';
 import KeyLoader from './loader/key-loader';
@@ -75,18 +76,22 @@ class Hls {
                 manifestLoadingTimeOut: 10000,
                 manifestLoadingMaxRetry: 1,
                 manifestLoadingRetryDelay: 1000,
+                manifestLoadingMaxRetryTimeout: 64000,
                 levelLoadingTimeOut: 10000,
                 levelLoadingMaxRetry: 4,
                 levelLoadingRetryDelay: 1000,
+                levelLoadingMaxRetryTimeout: 64000,
                 fragLoadingTimeOut: 20000,
                 fragLoadingMaxRetry: 6,
                 fragLoadingRetryDelay: 1000,
+                fragLoadingMaxRetryTimeout: 64000,
                 fragLoadingLoopThreshold: 3,
                 startFragPrefetch: false,
                 fpsDroppedMonitoringPeriod: 5000,
                 fpsDroppedMonitoringThreshold: 0.2,
                 appendErrorMaxRetry: 3,
                 loader: XhrLoader,
+                //loader: FetchLoader,
                 fLoader: undefined,
                 pLoader: undefined,
                 abrController: AbrController,

@@ -1411,8 +1411,9 @@ class StreamController extends EventHandler {
             if (frag) {
                 this.fragPrevious = frag;
                 stats.tbuffered = performance.now();
+                // we should get rid of this.fragLastKbps
                 this.fragLastKbps = Math.round(
-                    8 * stats.length / (stats.tbuffered - stats.tfirst)
+                    8 * stats.total / (stats.tbuffered - stats.tfirst)
                 );
                 this.hls.trigger(Event.FRAG_BUFFERED, {
                     stats: stats,
