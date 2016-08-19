@@ -1833,7 +1833,7 @@ var BufferController = function (_EventHandler) {
           var segment = segments.shift();
           try {
             if (sourceBuffer[segment.type]) {
-              _logger.logger.log('appending ' + segment.type + ' SB, size:' + segment.data.length);
+              //logger.log(`appending ${segment.type} SB, size:${segment.data.length}`);
               this.parent = segment.parent;
               sourceBuffer[segment.type].appendBuffer(segment.data);
               this.appendError = 0;
@@ -2454,9 +2454,10 @@ var LevelController = function (_EventHandler) {
         this._level = newLevel;
         _logger.logger.log('switching to level ' + newLevel);
         this.hls.trigger(_events2.default.LEVEL_SWITCH, { level: newLevel });
-        var level = levels[newLevel];
-        // check if we need to load playlist for this level
-        if (level.details === undefined || level.details.live === true) {
+        var level = levels[newLevel],
+            levelDetails = level.details;
+        // check if we need to load playlist for this level. don't reload live playlist more than once per second
+        if (!levelDetails || levelDetails.live === true && performance.now() - levelDetails.tload > 1000) {
           // level not retrieved yet, or live playlist we need to (re)load it
           _logger.logger.log('(re)loading playlist for level ' + newLevel);
           var urlId = level.urlId;
@@ -8495,16 +8496,16 @@ var PlaylistLoader = function (_EventHandler) {
         if (string.indexOf('#EXTINF:') > 0) {
           var isLevel = type !== 'audioTrack',
               levelDetails = this.parseLevelPlaylist(string, url, level || id || 0, isLevel ? 'main' : 'audio');
+          levelDetails.tload = stats.tload;
           if (type === 'manifest') {
             // first request, stream manifest (no master playlist), fire manifest loaded event with level details
             hls.trigger(_events2.default.MANIFEST_LOADED, { levels: [{ url: url, details: levelDetails }], url: url, stats: stats });
+          }
+          stats.tparsed = performance.now();
+          if (isLevel) {
+            hls.trigger(_events2.default.LEVEL_LOADED, { details: levelDetails, level: level || 0, id: id || 0, stats: stats });
           } else {
-            stats.tparsed = performance.now();
-            if (isLevel) {
-              hls.trigger(_events2.default.LEVEL_LOADED, { details: levelDetails, level: level, id: id, stats: stats });
-            } else {
-              hls.trigger(_events2.default.AUDIO_TRACK_LOADED, { details: levelDetails, id: id, stats: stats });
-            }
+            hls.trigger(_events2.default.AUDIO_TRACK_LOADED, { details: levelDetails, id: id, stats: stats });
           }
         } else {
           var levels = this.parseMasterPlaylist(string, url),
