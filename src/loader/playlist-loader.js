@@ -389,6 +389,7 @@ class PlaylistLoader extends EventHandler {
                         level || id || 0,
                         isLevel ? 'main' : 'audio'
                     );
+                levelDetails.tload = stats.tload;
                 if (type === 'manifest') {
                     // first request, stream manifest (no master playlist), fire manifest loaded event with level details
                     hls.trigger(Event.MANIFEST_LOADED, {
@@ -396,22 +397,21 @@ class PlaylistLoader extends EventHandler {
                         url: url,
                         stats: stats
                     });
+                }
+                stats.tparsed = performance.now();
+                if (isLevel) {
+                    hls.trigger(Event.LEVEL_LOADED, {
+                        details: levelDetails,
+                        level: level || 0,
+                        id: id || 0,
+                        stats: stats
+                    });
                 } else {
-                    stats.tparsed = performance.now();
-                    if (isLevel) {
-                        hls.trigger(Event.LEVEL_LOADED, {
-                            details: levelDetails,
-                            level: level,
-                            id: id,
-                            stats: stats
-                        });
-                    } else {
-                        hls.trigger(Event.AUDIO_TRACK_LOADED, {
-                            details: levelDetails,
-                            id: id,
-                            stats: stats
-                        });
-                    }
+                    hls.trigger(Event.AUDIO_TRACK_LOADED, {
+                        details: levelDetails,
+                        id: id,
+                        stats: stats
+                    });
                 }
             } else {
                 let levels = this.parseMasterPlaylist(string, url),
