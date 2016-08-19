@@ -304,13 +304,13 @@ class PlaylistLoader extends EventHandler {
     if (string.indexOf('#EXTM3U') === 0) {
       if (string.indexOf('#EXTINF:') > 0) {
         let levelDetails = this.parseLevelPlaylist(string, url, id || 0);
+        levelDetails.tload = stats.tload;
         if (id === null) {
         // first request, stream manifest (no master playlist), fire manifest loaded event with level details
           hls.trigger(Event.MANIFEST_LOADED, {levels: [{url: url, details : levelDetails}], url: url, stats: stats});
-        } else {
-          stats.tparsed = performance.now();
-          hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: id, id: id2, stats: stats});
         }
+        stats.tparsed = performance.now();
+        hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: id || 0, id: id2, stats: stats});
       } else {
         levels = this.parseMasterPlaylist(string, url);
         // multi level playlist, parse level info
