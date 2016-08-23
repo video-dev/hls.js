@@ -537,7 +537,7 @@ Note: This will overwrite the default `loader`, as well as your own loader funct
 
 `XMLHttpRequest` customization callback for default XHR based loader.
 
-Parameter should be a function with one single argument (of type `XMLHttpRequest`).
+Parameter should be a function with two arguments `(xhr: XMLHttpRequest, url: string)`.
 If `xhrSetup` is specified, default loader will invoke it before calling `xhr.send()`.
 This allows user to easily modify/setup XHR. See example below.
 
