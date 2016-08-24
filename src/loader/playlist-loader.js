@@ -436,6 +436,11 @@ class PlaylistLoader extends EventHandler {
                         url,
                         'AUDIO'
                     );
+                    let subtitles = this.parseMasterPlaylistMedia(
+                        string,
+                        url,
+                        'SUBTITLES'
+                    );
                     if (audiotracks.length) {
                         // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
                         let embeddedAudioFound = false;
@@ -458,10 +463,11 @@ class PlaylistLoader extends EventHandler {
                         }
                     }
                     hls.trigger(Event.MANIFEST_LOADED, {
-                        levels: levels,
-                        audioTracks: audiotracks,
-                        url: url,
-                        stats: stats
+                        levels,
+                        audioTracks,
+                        subtitles,
+                        url,
+                        stats
                     });
                 } else {
                     hls.trigger(Event.ERROR, {
