@@ -16,6 +16,7 @@ import LevelController from './controller/level-controller';
 import TimelineController from './controller/timeline-controller';
 import FPSController from './controller/fps-controller';
 import AudioTrackController from './controller/audio-track-controller';
+import SubtitleTrackController from './controller/subtitle-track-controller';
 import { logger, enableLogs } from './utils/logger';
 //import FetchLoader from './utils/fetch-loader';
 import XhrLoader from './utils/xhr-loader';
@@ -189,6 +190,7 @@ class Hls {
         this.audioStreamController = new config.audioStreamController(this);
         this.timelineController = new config.timelineController(this);
         this.audioTrackController = new AudioTrackController(this);
+        this.subtitleTrackController = new SubtitleTrackController(this);
         this.keyLoader = new KeyLoader(this);
     }
 
@@ -207,6 +209,7 @@ class Hls {
         this.audioStreamController.destroy();
         this.timelineController.destroy();
         this.audioTrackController.destroy();
+        this.subitleTrackController.destroy();
         this.keyLoader.destroy();
         this.url = null;
         this.observer.removeAllListeners();
@@ -375,6 +378,21 @@ class Hls {
 
     get liveSyncPosition() {
         return this.streamController.liveSyncPosition;
+    }
+
+    /** get alternate subtitle tracks list from playlist **/
+    get subtitleTracks() {
+        return this.subtitleTrackController.subtitleTracks;
+    }
+
+    /** get index of the selected subtitle track (index in subtitle track lists) **/
+    get subtitleTrack() {
+        return this.subtitleTrackController.subtitleTrack;
+    }
+
+    /** select an subtitle track, based on its index in subtitle track lists**/
+    set subtitleTrack(subtitleTrackId) {
+        this.subtitleTrackController.subtitleTrack = subtitleTrackId;
     }
 }
 
