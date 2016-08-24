@@ -47,6 +47,14 @@ module.exports = {
   AUDIO_TRACK_LOADING: 'hlsAudioTrackLoading',
   // fired when an audio track loading  finishes - data: { details : levelDetails object, id : audio track id, stats : { trequest, tfirst, tload, mtime} }
   AUDIO_TRACK_LOADED: 'hlsAudioTrackLoaded',
+  // fired to notify that subtitle track lists has been updated data: { subtitleTracks : subtitleTracks}
+  SUBTITLE_TRACKS_UPDATED: 'hlsSubtitleTracksUpdated',
+  // fired when an subtitle track switch occurs - data: {  id : subtitle track id}
+  SUBTITLE_TRACK_SWITCH: 'hlsSubtitleTrackSwitch',
+  // fired when an subtitle track loading starts - data: { url : subtitle track URL  id : subtitle track id}
+  SUBTITLE_TRACK_LOADING: 'hlsSubtitleTrackLoading',
+  // fired when an subtitle track loading  finishes - data: { details : levelDetails object, id : subtitle track id, stats : { trequest, tfirst, tload, mtime} }
+  SUBTITLE_TRACK_LOADED: 'hlsSubtitleTrackLoaded',
   // fired when a fragment loading starts - data: { frag : fragment object}
   FRAG_LOADING: 'hlsFragLoading',
   // fired when a fragment loading is progressing - data: { frag : fragment object, { trequest, tfirst, loaded}}
