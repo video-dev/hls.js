@@ -81,17 +81,14 @@ class SubtitleTrackController extends EventHandler {
 
     /** select a subtitle track, based on its index in subtitle track lists**/
     set subtitleTrack(subtitleTrackId) {
-        if (
-            this.trackId !== subtitleTrackId ||
-            this.tracks[subtitleTrackId].details === undefined
-        ) {
+        if (this.trackId !== subtitleTrackId) {
+            // || this.tracks[subtitleTrackId].details === undefined) {
             this.setSubtitleTrackInternal(subtitleTrackId);
         }
     }
 
     setSubtitleTrackInternal(newId) {
         // check if level idx is valid
-        debugger;
         if (newId >= 0 && newId < this.tracks.length) {
             // stopping live reloading timer if any
             if (this.timer) {

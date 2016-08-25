@@ -15,7 +15,8 @@ class PlaylistLoader extends EventHandler {
             hls,
             Event.MANIFEST_LOADING,
             Event.LEVEL_LOADING,
-            Event.AUDIO_TRACK_LOADING
+            Event.AUDIO_TRACK_LOADING,
+            Event.SUBTITLE_TRACK_LOADING
         );
         this.loaders = {};
     }
@@ -41,6 +42,10 @@ class PlaylistLoader extends EventHandler {
 
     onAudioTrackLoading(data) {
         this.load(data.url, { type: 'audioTrack', id: data.id });
+    }
+
+    onSubtitleTrackLoading(data) {
+        this.load(data.url, { type: 'subtitleTrack', id: data.id });
     }
 
     load(url, context) {
@@ -396,7 +401,7 @@ class PlaylistLoader extends EventHandler {
         //stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
         if (string.indexOf('#EXTM3U') === 0) {
             if (string.indexOf('#EXTINF:') > 0) {
-                let isLevel = type !== 'audioTrack',
+                let isLevel = type !== 'audioTrack' && type !== 'subtitleTrack',
                     levelDetails = this.parseLevelPlaylist(
                         string,
                         url,
@@ -421,11 +426,18 @@ class PlaylistLoader extends EventHandler {
                         stats: stats
                     });
                 } else {
-                    hls.trigger(Event.AUDIO_TRACK_LOADED, {
-                        details: levelDetails,
-                        id: id,
-                        stats: stats
-                    });
+                    if (type === 'audioTrack')
+                        hls.trigger(Event.AUDIO_TRACK_LOADED, {
+                            details: levelDetails,
+                            id: id,
+                            stats: stats
+                        });
+                    else if (type === 'subtitleTrack')
+                        hls.trigger(Event.SUBTITLE_TRACK_LOADED, {
+                            details: levelDetails,
+                            id: id,
+                            stats: stats
+                        });
                 }
             } else {
                 let levels = this.parseMasterPlaylist(string, url);
