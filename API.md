@@ -709,6 +709,11 @@ get : array of audio tracks exposed in manifest
 #### ```hls.audioTrack```
 get/set : audio track id (returned by)
 
+## Live stream API
+
+#### ```hls.liveSyncPosition```
+get : actual live stream duration in seconds
+
 ## Runtime Events
 
 Hls.js fires a bunch of events, that could be registered as below:
