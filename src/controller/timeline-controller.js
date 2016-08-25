@@ -13,6 +13,7 @@ class TimelineController extends EventHandler {
                 Event.MEDIA_DETACHING,
                 Event.FRAG_PARSING_USERDATA,
                 Event.MANIFEST_LOADING,
+                Event.MANIFEST_LOADED,
                 Event.FRAG_LOADED,
                 Event.LEVEL_SWITCH);
 
@@ -20,6 +21,8 @@ class TimelineController extends EventHandler {
     this.config = hls.config;
     this.enabled = true;
     this.Cues = hls.config.cueHandler;
+    this.textTracks = [];
+    this.tracks = [];
 
     if (this.config.enableCEA708Captions)
     {
@@ -88,6 +91,21 @@ class TimelineController extends EventHandler {
   onManifestLoading()
   {
     this.lastPts = Number.NEGATIVE_INFINITY;
+  }
+
+  onManifestLoaded(data) {
+    // TODO: actually remove the tracks from the media object.
+    this.textTracks = [];
+
+
+    // TODO: maybe enable WebVTT if "forced"?
+    if(this.config.enableWebVTT) {
+      this.tracks = data.subtitles || [];
+
+      this.tracks.forEach(track => {
+        this.textTracks.push(this.createTextTrack('captions', track.name, track.lang));
+      });
+    }
   }
 
   onLevelSwitch()
