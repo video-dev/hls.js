@@ -80,7 +80,6 @@ class AudioStreamController extends EventHandler {
       this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
       this.tick();
     } else {
-      logger.warn('cannot start loading as audio tracks not parsed yet');
       this.startPosition = startPosition;
       this.state = State.STOPPED;
     }
@@ -283,7 +282,7 @@ class AudioStreamController extends EventHandler {
   }
 
   onMediaAttached(data) {
-    var media = this.media = data.media;
+    var media = this.media = this.mediaBuffer = data.media;
     this.onvseeking = this.onMediaSeeking.bind(this);
     this.onvended = this.onMediaEnded.bind(this);
     media.addEventListener('seeking', this.onvseeking);
@@ -357,6 +356,13 @@ class AudioStreamController extends EventHandler {
 
     this.fragCurrent = null;
     this.state = State.PAUSED;
+    // destroy useless demuxer when switching audio to main
+    if (data.type === 'main') {
+      if (this.demuxer) {
+        this.demuxer.destroy();
+        this.demuxer = null;
+      }
+    }
     // flush audio source buffer
     this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0, endOffset: Number.POSITIVE_INFINITY, type : 'audio'});
     this.tick();
@@ -524,7 +530,6 @@ class AudioStreamController extends EventHandler {
       if (frag) {
         this.fragPrevious = frag;
         stats.tbuffered = performance.now();
-        this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
         this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag, id : 'audio'});
         let media = this.mediaBuffer ? this.mediaBuffer : this.media;
         logger.log(`audio buffered : ${TimeRanges.toString(media.buffered)}`);

@@ -528,8 +528,8 @@ class MP4Remuxer {
         pes2mp4ScaleFactor = pesTimeScale/mp4timeScale,
 
         // sync with video's timestamp
-        startDTS = videoData.startDTS * pesTimeScale,
-        endDTS = videoData.endDTS * pesTimeScale,
+        startDTS = videoData.startDTS * pesTimeScale + this._initDTS,
+        endDTS = videoData.endDTS * pesTimeScale + this._initDTS,
 
         // one sample's duration value
         sampleDuration = 1024,

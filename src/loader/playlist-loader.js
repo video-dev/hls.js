@@ -46,15 +46,18 @@ class PlaylistLoader extends EventHandler {
     var config = this.hls.config,
         retry,
         timeout,
-        retryDelay;
+        retryDelay,
+        maxRetryDelay;
     if(context.type === 'manifest') {
       retry = config.manifestLoadingMaxRetry;
       timeout = config.manifestLoadingTimeOut;
       retryDelay = config.manifestLoadingRetryDelay;
+      maxRetryDelay = config.manifestLoadingMaxRetryTimeOut;
     } else {
       retry = config.levelLoadingMaxRetry;
       timeout = config.levelLoadingTimeOut;
       retryDelay = config.levelLoadingRetryDelay;
+      maxRetryDelay = config.levelLoadingMaxRetryTimeOut;
     }
     let loader = this.loaders[context.type];
     if (loader) {
@@ -62,7 +65,13 @@ class PlaylistLoader extends EventHandler {
       loader.abort();
     }
     loader  = this.loaders[context.type] = context.loader = typeof(config.pLoader) !== 'undefined' ? new config.pLoader(config) : new config.loader(config);
-    loader.load(url, context, '', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), timeout, retry, retryDelay);
+    context.url = url;
+    context.responseType = '';
+
+    let loaderConfig, loaderCallbacks;
+    loaderConfig = { timeout : timeout, maxRetry : retry , retryDelay : retryDelay, maxRetryDelay : maxRetryDelay};
+    loaderCallbacks = { onSuccess : this.loadsuccess.bind(this), onError :this.loaderror.bind(this), onTimeout : this.loadtimeout.bind(this)};
+    loader.load(context,loaderConfig,loaderCallbacks);
   }
 
   resolve(url, baseUrl) {
@@ -106,8 +115,8 @@ class PlaylistLoader extends EventHandler {
     return levels;
   }
 
-  parseMasterPlaylistMedia(string, baseurl, type) {
-    let medias = [], result, id = 0;
+  parseMasterPlaylistMedia(medias,string, baseurl, type) {
+    let result, id = medias.length;
 
     // https://regex101.com is your friend
     const re = /#EXT-X-MEDIA:(.*)/g;
@@ -117,6 +126,7 @@ class PlaylistLoader extends EventHandler {
       if(attrs.TYPE === type) {
         media.groupId = attrs['GROUP-ID'];
         media.name = attrs.NAME;
+        media.type = type;
         media.default = (attrs.DEFAULT === 'YES');
         media.autoselect = (attrs.AUTOSELECT === 'YES');
         media.forced = (attrs.FORCED === 'YES');
@@ -129,7 +139,7 @@ class PlaylistLoader extends EventHandler {
         medias.push(media);
       }
     }
-    return medias;
+    return;
   }
   /**
    * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
@@ -195,7 +205,7 @@ class PlaylistLoader extends EventHandler {
         byteRangeStartOffset = null,
         tagList = [];
 
-    regexp = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF):(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE):(\d+(?:@\d+(?:\.\d+)?))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
+    regexp = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF):(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE):(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
     while ((result = regexp.exec(string)) !== null) {
       result.shift();
       result = result.filter(function(n) { return (n !== undefined); });
@@ -316,10 +326,9 @@ class PlaylistLoader extends EventHandler {
     return level;
   }
 
-  loadsuccess(event, stats, context) {
-    var target = event.currentTarget,
-        string = target.responseText,
-        url = target.responseURL,
+  loadsuccess(response, stats, context) {
+    var string = response.data,
+        url = response.url,
         type = context.type,
         id = context.id,
         level = context.level,
@@ -333,27 +342,30 @@ class PlaylistLoader extends EventHandler {
       url = context.url;
     }
     stats.tload = performance.now();
-    stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
+    //stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
     if (string.indexOf('#EXTM3U') === 0) {
       if (string.indexOf('#EXTINF:') > 0) {
-        // 1 level playlist
-        // if first request, fire manifest loaded event, level will be reloaded afterwards
-        // (this is to have a uniform logic for 1 level/multilevel playlists)
+        let isLevel = (type !== 'audioTrack'),
+            levelDetails = this.parseLevelPlaylist(string, url, level || id || 0, isLevel ? 'main' : 'audio');
+            levelDetails.tload = stats.tload;
         if (type === 'manifest') {
-          hls.trigger(Event.MANIFEST_LOADED, {levels: [{url: url}], url: url, stats: stats});
+        // first request, stream manifest (no master playlist), fire manifest loaded event with level details
+          hls.trigger(Event.MANIFEST_LOADED, {levels: [{url: url, details : levelDetails}], url: url, stats: stats});
+        }
+        stats.tparsed = performance.now();
+        if (isLevel) {
+          hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: level || 0, id: id || 0, stats: stats});
         } else {
-          let isLevel = (type === 'level'),
-              levelDetails = this.parseLevelPlaylist(string, url, level || id, isLevel ? 'main' : 'audio');
-          stats.tparsed = performance.now();
-          if (isLevel) {
-            hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: level, id: id, stats: stats});
-          } else {
-            hls.trigger(Event.AUDIO_TRACK_LOADED, {details: levelDetails, id: id, stats: stats});
-          }
+          hls.trigger(Event.AUDIO_TRACK_LOADED, {details: levelDetails, id: id, stats: stats});
         }
       } else {
         let levels = this.parseMasterPlaylist(string, url),
-            audiotracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO');
+             audiotracks = [];
+             // if any audio codec signalled, push main audio track in audio track list
+            if (levels[0].audioCodec) {
+              audiotracks.push({id: 0, type : 'main', name : 'main'});
+            }
+            this.parseMasterPlaylistMedia(audiotracks,string, url, 'AUDIO');
         // multi level playlist, parse level info
         if (levels.length) {
           hls.trigger(Event.MANIFEST_LOADED, {levels: levels, audioTracks : audiotracks, url: url, stats: stats});
@@ -366,7 +378,7 @@ class PlaylistLoader extends EventHandler {
     }
   }
 
-  loaderror(event, context) {
+  loaderror(response, context) {
     var details, fatal,loader = context.loader;
     switch(context.type) {
       case 'manifest':
@@ -386,10 +398,10 @@ class PlaylistLoader extends EventHandler {
       loader.abort();
       this.loaders[context.type] = undefined;
     }
-    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: loader.url, loader: loader, response: event.currentTarget, context : context});
+    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: loader.url, loader: loader, response: response, context : context});
   }
 
-  loadtimeout(event, stats, context) {
+  loadtimeout(stats, context) {
     var details, fatal, loader = context.loader;
     switch(context.type) {
       case 'manifest':

@@ -43,6 +43,7 @@ class StreamController extends EventHandler {
       Event.FRAG_PARSING_DATA,
       Event.FRAG_PARSED,
       Event.ERROR,
+      Event.AUDIO_TRACK_SWITCH,
       Event.BUFFER_CREATED,
       Event.BUFFER_APPENDED,
       Event.BUFFER_FLUSHED);
@@ -658,7 +659,7 @@ class StreamController extends EventHandler {
   }
 
   onMediaAttached(data) {
-    var media = this.media = data.media;
+    var media = this.media = this.mediaBuffer = data.media;
     this.onvseeking = this.onMediaSeeking.bind(this);
     this.onvseeked = this.onMediaSeeked.bind(this);
     this.onvended = this.onMediaEnded.bind(this);
@@ -761,6 +762,7 @@ class StreamController extends EventHandler {
     this.hls.trigger(Event.BUFFER_RESET);
     this.bufferRange = [];
     this.stalled = false;
+    this.startPosition = this.lastCurrentTime = 0;
   }
 
   onManifestParsed(data) {
@@ -904,9 +906,10 @@ class StreamController extends EventHandler {
         this.pendingAppending = 0;
         logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],level ${level}, cc ${fragCurrent.cc}`);
         let demuxer = this.demuxer;
-        if (demuxer) {
-          demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata);
+        if (!demuxer) {
+          demuxer = this.demuxer = new Demuxer(this.hls,'main');
         }
+        demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata);
       }
     }
     this.fragLoadError = 0;
@@ -1005,6 +1008,7 @@ class StreamController extends EventHandler {
         data.id === 'main' &&
         data.sn === fragCurrent.sn &&
         data.level === fragCurrent.level &&
+        (data.type !== 'audio' || this.audioTrackType !== 'AUDIO') && // filter out main audio if audio track is loaded through audio stream controller
         this.state === State.PARSING) {
       var level = this.levels[this.level],
           frag = this.fragCurrent;
@@ -1048,6 +1052,40 @@ class StreamController extends EventHandler {
     }
   }
 
+  onAudioTrackSwitch(data) {
+    var audioTrackType = data.type;
+    // if we switch on main audio, ensure that main fragment scheduling is synced with media.buffered
+    if (audioTrackType === 'main') {
+      if (this.mediaBuffer !== this.media) {
+        logger.log(`switching on main audio, use media.buffered to schedule main fragment loading`);
+        this.mediaBuffer = this.media;
+        let fragCurrent = this.fragCurrent;
+        // we need to refill audio buffer from main: cancel any frag loading to speed up audio switch
+        if (fragCurrent.loader) {
+          logger.log('switching to main audio track, cancel main fragment load');
+          fragCurrent.loader.abort();
+        }
+        this.fragCurrent = null;
+        this.fragPrevious = null;
+        // destroy demuxer to force init segment generation (following audio switch)
+        if (this.demuxer) {
+          this.demuxer.destroy();
+          this.demuxer = null;
+        }
+        // switch to IDLE state to load new fragment
+        this.state = State.IDLE;
+      }
+    } else {
+    // if we switch on alternate audio, ensure that main fragment scheduling is synced with video sourcebuffer buffered
+      if (this.videoBuffer && this.mediaBuffer !== this.videoBuffer) {
+        logger.log(`switching on alternate audio, use video.buffered to schedule main fragment loading`);
+        this.mediaBuffer = this.videoBuffer;
+      }
+    }
+    this.audioTrackType = audioTrackType;
+  }
+
+
   onBufferCreated(data) {
     let tracks = data.tracks, mediaTrack, name, alternate = false;
     for(var type in tracks) {
@@ -1055,6 +1093,10 @@ class StreamController extends EventHandler {
       if (track.id === 'main') {
         name = type;
         mediaTrack = track;
+        // keep video source buffer reference
+        if (type === 'video') {
+          this.videoBuffer = tracks[type].buffer;
+        }
       } else {
         alternate = true;
       }
@@ -1088,7 +1130,8 @@ class StreamController extends EventHandler {
       if (frag) {
         this.fragPrevious = frag;
         stats.tbuffered = performance.now();
-        this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
+        // we should get rid of this.fragLastKbps
+        this.fragLastKbps = Math.round(8 * stats.total / (stats.tbuffered - stats.tfirst));
         this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag, id : 'main'});
         let media = this.mediaBuffer ? this.mediaBuffer : this.media;
         logger.log(`main buffered : ${TimeRanges.toString(media.buffered)}`);
@@ -1114,7 +1157,9 @@ class StreamController extends EventHandler {
           } else {
             loadError=1;
           }
-          if (loadError <= this.config.fragLoadingMaxRetry) {
+          if (loadError <= this.config.fragLoadingMaxRetry ||
+            // keep retrying / don't raise fatal network error if current position is buffered
+            (this.media && this.isBuffered(this.media.currentTime))) {
             this.fragLoadError = loadError;
             // reset load counter to avoid frag loop loading error
             frag.loadCounter = 0;
