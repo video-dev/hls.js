@@ -712,7 +712,7 @@ get/set : audio track id (returned by)
 ## Live stream API
 
 #### ```hls.liveSyncPosition```
-get : actual live stream duration in seconds
+get : position of live sync point (ie edge of live position minus safety delay defined by ```hls.config.liveSyncDuration```)
 
 ## Runtime Events
 
