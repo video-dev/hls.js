@@ -184,6 +184,15 @@ class StreamController extends EventHandler {
             this.state = State.WAITING_LEVEL;
             break;
           }
+
+          // DO NOT try to load a new fragment if we just got done loading the final fragment.
+          if (!levelDetails.live && !isSeeking && fragPrevious && fragPrevious.sn === levelDetails.endSN) {
+            // Finalize the media stream
+            this.hls.trigger(Event.BUFFER_EOS);
+            this.state = State.ENDED;
+            break;
+          }
+
           // find fragment index, contiguous with end of buffer position
           let fragments = levelDetails.fragments,
               fragLen = fragments.length,
