@@ -406,7 +406,9 @@ class PlaylistLoader extends EventHandler {
                         string,
                         url,
                         level || id || 0,
-                        isLevel ? 'main' : 'audio'
+                        type === 'audioTrack'
+                            ? 'audio'
+                            : type === 'subtitleTrack' ? 'subtitle' : 'main'
                     );
                 levelDetails.tload = stats.tload;
                 if (type === 'manifest') {

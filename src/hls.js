@@ -11,6 +11,7 @@ import AbrController from './controller/abr-controller';
 import BufferController from './controller/buffer-controller';
 import CapLevelController from './controller/cap-level-controller';
 import AudioStreamController from './controller/audio-stream-controller';
+import SubtitleStreamController from './controller/subtitle-stream-controller';
 import StreamController from './controller/stream-controller';
 import LevelController from './controller/level-controller';
 import TimelineController from './controller/timeline-controller';
@@ -104,6 +105,7 @@ class Hls {
                 fpsController: FPSController,
                 streamController: StreamController,
                 audioStreamController: AudioStreamController,
+                subtitleStreamController: SubtitleStreamController,
                 timelineController: TimelineController,
                 cueHandler: Cues,
                 enableCEA708Captions: false,
@@ -189,6 +191,9 @@ class Hls {
         this.fpsController = new config.fpsController(this);
         this.streamController = new config.streamController(this);
         this.audioStreamController = new config.audioStreamController(this);
+        this.subtitleStreamController = new config.subtitleStreamController(
+            this
+        );
         this.timelineController = new config.timelineController(this);
         this.audioTrackController = new AudioTrackController(this);
         this.subtitleTrackController = new SubtitleTrackController(this);
@@ -208,6 +213,7 @@ class Hls {
         this.fpsController.destroy();
         this.streamController.destroy();
         this.audioStreamController.destroy();
+        this.subtitleStreamController.destroy();
         this.timelineController.destroy();
         this.audioTrackController.destroy();
         this.subitleTrackController.destroy();
