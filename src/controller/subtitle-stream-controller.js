@@ -22,6 +22,7 @@ class SubtitleStreamController extends EventHandler {
   }
 
 
+
   onSubtitleTracksUpdated(data) {
     logger.log('subtitle tracks updated');
     this.tracks = data.subtitleTracks;
