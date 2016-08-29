@@ -515,7 +515,7 @@
       legend += ' ' + event.id2;
     }
     if(event.id !== undefined) {
-      if(event.type === 'fragment') {
+      if(event.type.indexOf('fragment') !== -1) {
       legend += ' @';
       }
       legend += ' ' + event.id;
@@ -535,7 +535,7 @@
     ctx.fillStyle = "black";
     ctx.font = "15px Arial";
     legend = event.type;
-    if (event.name) legend+= ':' + event.name;
+    if (event.name !== undefined) legend+= ':' + event.name;
     ctx.fillText(legend,5,yoffset+15);
 
 

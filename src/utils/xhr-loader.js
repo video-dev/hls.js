@@ -18,19 +18,24 @@ class XhrLoader {
   }
 
   abort() {
-    var loader = this.loader,
-        timeoutHandle = this.timeoutHandle;
+    var loader = this.loader;
     if (loader && loader.readyState !== 4) {
       this.stats.aborted = true;
       loader.abort();
     }
-    if (timeoutHandle) {
-      window.clearTimeout(timeoutHandle);
-    }
+
+    window.clearTimeout(this.requestTimeout);
+    this.requestTimeout = null;
+    window.clearTimeout(this.retryTimeout);
+    this.retryTimeout = null;
   }
 
-  load(url, responseType, onSuccess, onError, onTimeout, timeout, maxRetry, retryDelay, onProgress = null, frag = null) {
+  load(url, context, responseType, onSuccess, onError, onTimeout, timeout, maxRetry, retryDelay, onProgress = null, frag = null) {
     this.url = url;
+    this.context = context;
+    if (context) {
+      context.url = url;
+    }
     if (frag && !isNaN(frag.byteRangeStartOffset) && !isNaN(frag.byteRangeEndOffset)) {
         this.byteRange = frag.byteRangeStartOffset + '-' + (frag.byteRangeEndOffset-1);
     }
@@ -63,60 +68,72 @@ class XhrLoader {
       xhr.setRequestHeader('Range', 'bytes=' + this.byteRange);
     }
     xhr.responseType = this.responseType;
-    this.stats.tfirst = null;
-    this.stats.loaded = 0;
+    let stats = this.stats;
+    stats.tfirst = 0;
+    stats.loaded = 0;
     if (this.xhrSetup) {
       this.xhrSetup(xhr, this.url);
     }
-    this.timeoutHandle = window.setTimeout(this.loadtimeout.bind(this), this.timeout);
+    // setup timeout before we perform request
+    this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), this.timeout);
     xhr.send();
   }
 
   loadend(event) {
     var xhr = event.currentTarget,
         status = xhr.status,
-        stats = this.stats;
+        stats = this.stats,
+        context = this.context;
+
     // don't proceed if xhr has been aborted
-    if (!stats.aborted) {
-        // http status between 200 to 299 are all successful
-        if (status >= 200 && status < 300)  {
-          window.clearTimeout(this.timeoutHandle);
-          stats.tload = performance.now();
-          this.onSuccess(event, stats);
+    if (stats.aborted) {
+      return;
+    }
+
+    // in any case clear the current xhrs timeout
+    window.clearTimeout(this.requestTimeout);
+
+    // http status between 200 to 299 are all successful
+    if (status >= 200 && status < 300)  {
+      stats.tload = Math.max(stats.tfirst,performance.now());
+      this.onSuccess(event, stats, context);
+    // everything else is a failure
+    } else {
+      // retry first
+      if (stats.retry < this.maxRetry) {
+        logger.warn(`${status} while loading ${this.url}, retrying in ${this.retryDelay}...`);
+        // aborts and resets internal state
+        this.destroy();
+        // schedule retry
+        this.retryTimeout = window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
+        // set exponential backoff
+        this.retryDelay = Math.min(2 * this.retryDelay, 64000);
+        stats.retry++;
+      // permanent failure
       } else {
-        // error ...
-        if (stats.retry < this.maxRetry) {
-          logger.warn(`${status} while loading ${this.url}, retrying in ${this.retryDelay}...`);
-          this.destroy();
-          window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
-          // exponential backoff
-          this.retryDelay = Math.min(2 * this.retryDelay, 64000);
-          stats.retry++;
-        } else {
-          window.clearTimeout(this.timeoutHandle);
-          logger.error(`${status} while loading ${this.url}` );
-          this.onError(event);
-        }
+        logger.error(`${status} while loading ${this.url}` );
+        this.onError(event, context);
       }
     }
+
   }
 
-  loadtimeout(event) {
+  loadtimeout() {
     logger.warn(`timeout while loading ${this.url}` );
-    this.onTimeout(event, this.stats);
+    this.onTimeout(null, this.stats, this.context);
   }
 
   loadprogress(event) {
     var stats = this.stats;
-    if (stats.tfirst === null) {
-      stats.tfirst = performance.now();
+    if (stats.tfirst === 0) {
+      stats.tfirst = Math.max(performance.now(), stats.trequest);
     }
     stats.loaded = event.loaded;
     if (event.lengthComputable) {
       stats.total = event.total;
     }
     if (this.onProgress) {
-      this.onProgress(stats);
+      this.onProgress(event, stats, this.context);
     }
   }
 }
