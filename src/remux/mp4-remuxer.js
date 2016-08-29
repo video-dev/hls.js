@@ -184,6 +184,7 @@ class MP4Remuxer {
                     initDTS,
                     videoSamples[0].dts - pesTimeScale * timeOffset
                 );
+                this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS });
             }
         }
 
