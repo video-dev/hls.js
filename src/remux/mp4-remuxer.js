@@ -28,6 +28,7 @@ class MP4Remuxer {
 
     insertDiscontinuity() {
         this._initPTS = this._initDTS = undefined;
+        this.nextAacPts = this.nextAvcDts = 0;
     }
 
     switchLevel() {
