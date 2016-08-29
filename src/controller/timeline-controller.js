@@ -5,6 +5,8 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import Cea608Parser from '../utils/cea-608-parser';
+import WebVTTParser from '../utils/webvtt-parser';
+import Cues from '../utils/cues';
 
 class TimelineController extends EventHandler {
 
@@ -132,6 +134,11 @@ class TimelineController extends EventHandler {
       this.clearCurrentCues(this.textTrack2);
       }
       this.lastPts = pts;
+    }
+    else if (data.frag.type === 'subtitle') {
+      if(data.payload.byteLength) {
+         let parsedCues = WebVTTParser.parse(data.payload);
+      }
     }
   }
 
