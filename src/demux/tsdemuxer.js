@@ -66,22 +66,18 @@
     this.videoCodec = videoCodec;
     this.timeOffset = timeOffset;
     this._duration = duration;
-    this.contiguous = null;
+    this.contiguous = false;
     if (cc !== this.lastCC) {
       logger.log('discontinuity detected');
       this.insertDiscontinuity();
       this.lastCC = cc;
-      this.contiguous = false;
     }
     if (level !== this.lastLevel) {
       logger.log('level switch detected');
       this.switchLevel();
       this.lastLevel = level;
-      this.contiguous = false;
-    } else if ((sn === (this.lastSN+1)) && (this.contiguous === null)) {
+    } else if (sn === (this.lastSN+1)) {
       this.contiguous = true;
-    } else {
-      this.contiguous = false;
     }
     this.lastSN = sn;
 
