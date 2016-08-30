@@ -360,17 +360,18 @@ class PlaylistLoader extends EventHandler {
         }
       } else {
         let levels = this.parseMasterPlaylist(string, url),
-             audiotracks = [];
-             // if any audio codec signalled, push main audio track in audio track list
-            if (levels[0].audioCodec) {
-              audiotracks.push({id: 0, type : 'main', name : 'main'});
-            }
-            this.parseMasterPlaylistMedia(audiotracks,string, url, 'AUDIO');
-        // multi level playlist, parse level info
-        if (levels.length) {
-          hls.trigger(Event.MANIFEST_LOADED, {levels: levels, audioTracks : audiotracks, url: url, stats: stats});
-        } else {
+            audiotracks = [];
+
+        if (!levels.length) {
           hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'no level found in manifest'});
+        } else {
+          // if any audio codec signalled, push main audio track in audio track list
+          if (levels[0].audioCodec) {
+            audiotracks.push({id: 0, type: 'main', name: 'main'});
+          }
+          this.parseMasterPlaylistMedia(audiotracks,string, url, 'AUDIO');
+          // multi level playlist, parse level info
+          hls.trigger(Event.MANIFEST_LOADED, {levels: levels, audioTracks: audiotracks, url: url, stats: stats});
         }
       }
     } else {
