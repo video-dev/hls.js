@@ -341,7 +341,7 @@ class StreamController extends EventHandler {
         foundFrag,
         maxFragLookUpTolerance = config.maxFragLookUpTolerance;
 
-    if (bufferEnd < end - 0.1) {
+    if (bufferEnd < end) {
       if (bufferEnd > end - maxFragLookUpTolerance) {
         maxFragLookUpTolerance = 0;
       }
