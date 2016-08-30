@@ -423,18 +423,18 @@ class PlaylistLoader extends EventHandler {
             } else {
                 let levels = this.parseMasterPlaylist(string, url),
                     audiotracks = [];
-                // if any audio codec signalled, push main audio track in audio track list
-                if (levels[0].audioCodec) {
-                    audiotracks.push({ id: 0, type: 'main', name: 'main' });
-                }
-                this.parseMasterPlaylistMedia(
-                    audiotracks,
-                    string,
-                    url,
-                    'AUDIO'
-                );
                 // multi level playlist, parse level info
                 if (levels.length) {
+                    // if any audio codec signalled, push main audio track in audio track list
+                    if (levels[0].audioCodec) {
+                        audiotracks.push({ id: 0, type: 'main', name: 'main' });
+                    }
+                    this.parseMasterPlaylistMedia(
+                        audiotracks,
+                        string,
+                        url,
+                        'AUDIO'
+                    );
                     hls.trigger(Event.MANIFEST_LOADED, {
                         levels: levels,
                         audioTracks: audiotracks,
