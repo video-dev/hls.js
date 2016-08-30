@@ -288,8 +288,7 @@ class StreamController extends EventHandler {
     let maxLatency = config.liveMaxLatencyDuration !== undefined ? config.liveMaxLatencyDuration : config.liveMaxLatencyDurationCount*levelDetails.targetduration;
 
     if (bufferEnd < Math.max(start, end - maxLatency)) {
-        let targetLatency = config.liveSyncDuration !== undefined ? config.liveSyncDuration : config.liveSyncDurationCount * levelDetails.targetduration;
-        let liveSyncPosition = start + Math.max(0, levelDetails.totalduration - targetLatency);
+        let liveSyncPosition = this.liveSyncPosition = this.computeLivePosition(start, levelDetails);
         logger.log(`buffer end: ${bufferEnd} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(3)}`);
         bufferEnd = liveSyncPosition;
         let media = this.media;
@@ -808,6 +807,7 @@ class StreamController extends EventHandler {
         // we already have details for that level, merge them
         LevelHelper.mergeDetails(curDetails,newDetails);
         sliding = newDetails.fragments[0].start;
+        this.liveSyncPosition = this.computeLivePosition(sliding, curDetails);
         if (newDetails.PTSKnown) {
           logger.log(`live playlist sliding:${sliding.toFixed(3)}`);
         } else {
@@ -839,8 +839,7 @@ class StreamController extends EventHandler {
         } else {
           // if live playlist, set start position to be fragment N-this.config.liveSyncDurationCount (usually 3)
           if (newDetails.live) {
-            let targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * newDetails.targetduration;
-            this.startPosition = Math.max(0, sliding + duration - targetLatency);
+            this.startPosition = this.computeLivePosition(sliding, newDetails);
             logger.log(`configure startPosition to ${this.startPosition}`);
           } else {
             this.startPosition = 0;
@@ -1311,6 +1310,19 @@ _checkBuffer() {
 
   swapAudioCodec() {
     this.audioCodecSwap = !this.audioCodecSwap;
+  }
+
+  computeLivePosition(sliding, levelDetails) {
+    let targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * levelDetails.targetduration;
+    return sliding + Math.max(0, levelDetails.totalduration - targetLatency);
+  }
+
+  get liveSyncPosition() {
+    return this._liveSyncPosition;
+  }
+
+  set liveSyncPosition(value) {
+    this._liveSyncPosition = value;
   }
 }
 export default StreamController;
