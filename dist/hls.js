@@ -455,7 +455,6 @@ var AbrController = function (_EventHandler) {
           }
           this.bwEstimator = new _ewmaBandwidthEstimator2.default(hls, ewmaSlow, ewmaFast, config.abrEwmaDefaultEstimate);
         }
-        frag.trequest = performance.now();
         this.fragCurrent = frag;
       }
     }
@@ -469,28 +468,30 @@ var AbrController = function (_EventHandler) {
       */
       var hls = this.hls,
           v = hls.media,
-          frag = this.fragCurrent;
+          frag = this.fragCurrent,
+          loader = frag.loader;
 
       // if loader has been destroyed or loading has been aborted, stop timer and return
-      if (!frag.loader || frag.loader.stats && frag.loader.stats.aborted) {
+      if (!loader || loader.stats && loader.stats.aborted) {
         _logger.logger.warn('frag loader destroy or aborted, disarm abandonRulesCheck');
         this.clearTimer();
         return;
       }
+      var stats = loader.stats;
       /* only monitor frag retrieval time if
       (video not paused OR first fragment being loaded(ready state === HAVE_NOTHING = 0)) AND autoswitching enabled AND not lowest level (=> means that we have several levels) */
       if (v && (!v.paused && v.playbackRate !== 0 || !v.readyState) && frag.autoLevel && frag.level) {
-        var requestDelay = performance.now() - frag.trequest,
+        var requestDelay = performance.now() - stats.trequest,
             playbackRate = Math.abs(v.playbackRate);
         // monitor fragment load progress after half of expected fragment duration,to stabilize bitrate
         if (requestDelay > 500 * frag.duration / playbackRate) {
           var levels = hls.levels,
-              loadRate = Math.max(1, frag.loaded * 1000 / requestDelay),
+              loadRate = Math.max(1, stats.bw ? stats.bw / 8 : stats.loaded * 1000 / requestDelay),
               // byte/s; at least 1 byte/s to avoid division by zero
           // compute expected fragment length using frag duration and level bitrate. also ensure that expected len is gte than already loaded size
-          expectedLen = Math.max(frag.loaded, Math.round(frag.duration * levels[frag.level].bitrate / 8)),
+          expectedLen = stats.total ? stats.total : Math.max(stats.loaded, Math.round(frag.duration * levels[frag.level].bitrate / 8)),
               pos = v.currentTime,
-              fragLoadedDelay = (expectedLen - frag.loaded) / loadRate,
+              fragLoadedDelay = (expectedLen - stats.loaded) / loadRate,
               bufferStarvationDelay = (_bufferHelper2.default.bufferInfo(v, pos, hls.config.maxBufferHole).end - pos) / playbackRate;
           // consider emergency switch down only if we have less than 2 frag buffered AND
           // time to finish loading current fragment is bigger than buffer starvation delay
@@ -519,7 +520,7 @@ var AbrController = function (_EventHandler) {
               // force next load level in auto mode
               hls.nextLoadLevel = nextLoadLevel;
               // update bw estimate for this fragment before cancelling load (this will help reducing the bw)
-              this.bwEstimator.sample(requestDelay, frag.loaded);
+              this.bwEstimator.sample(requestDelay, stats.loaded);
               // abort fragment loading ...
               _logger.logger.warn('loading too slow, abort fragment loading and switch to level ' + nextLoadLevel);
               //abort fragment loading
@@ -1210,7 +1211,6 @@ var AudioStreamController = function (_EventHandler) {
         if (frag) {
           this.fragPrevious = frag;
           stats.tbuffered = performance.now();
-          this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
           this.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: stats, frag: frag, id: 'audio' });
           var media = this.mediaBuffer ? this.mediaBuffer : this.media;
           _logger.logger.log('audio buffered : ' + _timeRanges2.default.toString(media.buffered));
@@ -1549,13 +1549,13 @@ var BufferController = function (_EventHandler) {
         ms.removeEventListener('sourceended', this.onmse);
         ms.removeEventListener('sourceclose', this.onmsc);
 
-        try {
-          // unlink MediaSource from video tag
-          this.media.src = '';
+        // Detach properly the MediaSource from the HTMLMediaElement as
+        // suggested in https://github.com/w3c/media-source/issues/53.
+        if (this.media) {
           this.media.removeAttribute('src');
-        } catch (err) {
-          _logger.logger.warn('onMediaDetaching:' + err.message + ' while unlinking video.src');
+          this.media.load();
         }
+
         this.mediaSource = null;
         this.media = null;
         this.pendingTracks = {};
@@ -2924,6 +2924,18 @@ var StreamController = function (_EventHandler) {
         return true;
       }
 
+      // we just got done loading the final fragment, check if we need to finalize media stream
+      var fragPrevious = this.fragPrevious;
+      if (!levelDetails.live && fragPrevious && fragPrevious.sn === levelDetails.endSN) {
+        // if we are not seeking or if we are seeking but everything til the end is buffered, let's signal eos
+        if (!media.seeking || bufferInfo.end === media.duration) {
+          // Finalize the media stream
+          this.hls.trigger(_events2.default.BUFFER_EOS);
+          this.state = State.ENDED;
+          return true;
+        }
+      }
+
       // if we have the levelDetails for the selected variant, lets continue enrichen our stream (load keys/fragments or trigger EOS, etc..)
       return this._fetchPayloadOrEos({ pos: pos, bufferInfo: bufferInfo, levelDetails: levelDetails });
     }
@@ -2986,8 +2998,7 @@ var StreamController = function (_EventHandler) {
       var maxLatency = config.liveMaxLatencyDuration !== undefined ? config.liveMaxLatencyDuration : config.liveMaxLatencyDurationCount * levelDetails.targetduration;
 
       if (bufferEnd < Math.max(start, end - maxLatency)) {
-        var targetLatency = config.liveSyncDuration !== undefined ? config.liveSyncDuration : config.liveSyncDurationCount * levelDetails.targetduration;
-        var liveSyncPosition = start + Math.max(0, levelDetails.totalduration - targetLatency);
+        var liveSyncPosition = this.liveSyncPosition = this.computeLivePosition(start, levelDetails);
         _logger.logger.log('buffer end: ' + bufferEnd + ' is located too far from the end of live sliding playlist, reset currentTime to : ' + liveSyncPosition.toFixed(3));
         bufferEnd = liveSyncPosition;
         var media = this.media;
@@ -3100,17 +3111,6 @@ var StreamController = function (_EventHandler) {
               _logger.logger.log('SN just loaded, load next one: ' + frag.sn);
             }
           } else {
-            // have we reached end of VOD playlist ?
-            if (!levelDetails.live) {
-              // Finalize the media stream
-              this.hls.trigger(_events2.default.BUFFER_EOS);
-              // We might be loading the last fragment but actually the media
-              // is currently processing a seek command and waiting for new data to resume at another point.
-              // Going to ended state while media is seeking can spawn an infinite buffering broken state.
-              if (!this.media.seeking) {
-                this.state = State.ENDED;
-              }
-            }
             frag = null;
           }
         }
@@ -3510,6 +3510,7 @@ var StreamController = function (_EventHandler) {
           // we already have details for that level, merge them
           _levelHelper2.default.mergeDetails(curDetails, newDetails);
           sliding = newDetails.fragments[0].start;
+          this.liveSyncPosition = this.computeLivePosition(sliding, curDetails);
           if (newDetails.PTSKnown) {
             _logger.logger.log('live playlist sliding:' + sliding.toFixed(3));
           } else {
@@ -3541,8 +3542,7 @@ var StreamController = function (_EventHandler) {
           } else {
             // if live playlist, set start position to be fragment N-this.config.liveSyncDurationCount (usually 3)
             if (newDetails.live) {
-              var targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * newDetails.targetduration;
-              this.startPosition = Math.max(0, sliding + duration - targetLatency);
+              this.startPosition = this.computeLivePosition(sliding, newDetails);
               _logger.logger.log('configure startPosition to ' + this.startPosition);
             } else {
               this.startPosition = 0;
@@ -3832,7 +3832,8 @@ var StreamController = function (_EventHandler) {
         if (frag) {
           this.fragPrevious = frag;
           stats.tbuffered = performance.now();
-          this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
+          // we should get rid of this.fragLastKbps
+          this.fragLastKbps = Math.round(8 * stats.total / (stats.tbuffered - stats.tfirst));
           this.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: stats, frag: frag, id: 'main' });
           var media = this.mediaBuffer ? this.mediaBuffer : this.media;
           _logger.logger.log('main buffered : ' + _timeRanges2.default.toString(media.buffered));
@@ -4022,6 +4023,12 @@ var StreamController = function (_EventHandler) {
       this.audioCodecSwap = !this.audioCodecSwap;
     }
   }, {
+    key: 'computeLivePosition',
+    value: function computeLivePosition(sliding, levelDetails) {
+      var targetLatency = this.config.liveSyncDuration !== undefined ? this.config.liveSyncDuration : this.config.liveSyncDurationCount * levelDetails.targetduration;
+      return sliding + Math.max(0, levelDetails.totalduration - targetLatency);
+    }
+  }, {
     key: 'state',
     set: function set(nextState) {
       if (this.state !== nextState) {
@@ -4064,6 +4071,14 @@ var StreamController = function (_EventHandler) {
       } else {
         return -1;
       }
+    }
+  }, {
+    key: 'liveSyncPosition',
+    get: function get() {
+      return this._liveSyncPosition;
+    },
+    set: function set(value) {
+      this._liveSyncPosition = value;
     }
   }]);
 
@@ -6811,25 +6826,25 @@ var ErrorTypes = exports.ErrorTypes = {
 };
 
 var ErrorDetails = exports.ErrorDetails = {
-  // Identifier for a manifest load error - data: { url : faulty URL, response : XHR response}
+  // Identifier for a manifest load error - data: { url : faulty URL, response : { code: error code, text: error text }}
   MANIFEST_LOAD_ERROR: 'manifestLoadError',
-  // Identifier for a manifest load timeout - data: { url : faulty URL, response : XHR response}
+  // Identifier for a manifest load timeout - data: { url : faulty URL, response : { code: error code, text: error text }}
   MANIFEST_LOAD_TIMEOUT: 'manifestLoadTimeOut',
   // Identifier for a manifest parsing error - data: { url : faulty URL, reason : error reason}
   MANIFEST_PARSING_ERROR: 'manifestParsingError',
   // Identifier for a manifest with only incompatible codecs error - data: { url : faulty URL, reason : error reason}
   MANIFEST_INCOMPATIBLE_CODECS_ERROR: 'manifestIncompatibleCodecsError',
-  // Identifier for a level load error - data: { url : faulty URL, response : XHR response}
+  // Identifier for a level load error - data: { url : faulty URL, response : { code: error code, text: error text }}
   LEVEL_LOAD_ERROR: 'levelLoadError',
-  // Identifier for a level load timeout - data: { url : faulty URL, response : XHR response}
+  // Identifier for a level load timeout - data: { url : faulty URL, response : { code: error code, text: error text }}
   LEVEL_LOAD_TIMEOUT: 'levelLoadTimeOut',
   // Identifier for a level switch error - data: { level : faulty level Id, event : error description}
   LEVEL_SWITCH_ERROR: 'levelSwitchError',
-  // Identifier for an audio track load error - data: { url : faulty URL, response : XHR response}
+  // Identifier for an audio track load error - data: { url : faulty URL, response : { code: error code, text: error text }}
   AUDIO_TRACK_LOAD_ERROR: 'audioTrackLoadError',
-  // Identifier for an audio track load timeout - data: { url : faulty URL, response : XHR response}
+  // Identifier for an audio track load timeout - data: { url : faulty URL, response : { code: error code, text: error text }}
   AUDIO_TRACK_LOAD_TIMEOUT: 'audioTrackLoadTimeOut',
-  // Identifier for fragment load error - data: { frag : fragment object, response : XHR response}
+  // Identifier for fragment load error - data: { frag : fragment object, response : { code: error code, text: error text }}
   FRAG_LOAD_ERROR: 'fragLoadError',
   // Identifier for fragment loop loading error - data: { frag : fragment object}
   FRAG_LOOP_LOADING_ERROR: 'fragLoopLoadingError',
@@ -6839,7 +6854,7 @@ var ErrorDetails = exports.ErrorDetails = {
   FRAG_DECRYPT_ERROR: 'fragDecryptError',
   // Identifier for a fragment parsing error event - data: parsing error description
   FRAG_PARSING_ERROR: 'fragParsingError',
-  // Identifier for decrypt key load error - data: { frag : fragment object, response : XHR response}
+  // Identifier for decrypt key load error - data: { frag : fragment object, response : { code: error code, text: error text }}
   KEY_LOAD_ERROR: 'keyLoadError',
   // Identifier for decrypt key load timeout error - data: { frag : fragment object}
   KEY_LOAD_TIMEOUT: 'keyLoadTimeOut',
@@ -7378,6 +7393,8 @@ Object.defineProperty(exports, "__esModule", {
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+//import FetchLoader from './utils/fetch-loader';
+
 
 var _events = require('./events');
 
@@ -7505,18 +7522,22 @@ var Hls = function () {
           manifestLoadingTimeOut: 10000,
           manifestLoadingMaxRetry: 1,
           manifestLoadingRetryDelay: 1000,
+          manifestLoadingMaxRetryTimeout: 64000,
           levelLoadingTimeOut: 10000,
           levelLoadingMaxRetry: 4,
           levelLoadingRetryDelay: 1000,
+          levelLoadingMaxRetryTimeout: 64000,
           fragLoadingTimeOut: 20000,
           fragLoadingMaxRetry: 6,
           fragLoadingRetryDelay: 1000,
+          fragLoadingMaxRetryTimeout: 64000,
           fragLoadingLoopThreshold: 3,
           startFragPrefetch: false,
           fpsDroppedMonitoringPeriod: 5000,
           fpsDroppedMonitoringThreshold: 0.2,
           appendErrorMaxRetry: 3,
           loader: _xhrLoader2.default,
+          //loader: FetchLoader,
           fLoader: undefined,
           pLoader: undefined,
           abrController: _abrController2.default,
@@ -7844,6 +7865,11 @@ var Hls = function () {
     set: function set(audioTrackId) {
       this.audioTrackController.audioTrack = audioTrackId;
     }
+  }, {
+    key: 'liveSyncPosition',
+    get: function get() {
+      return this.streamController.liveSyncPosition;
+    }
   }]);
 
   return Hls;
@@ -7928,14 +7954,26 @@ var FragmentLoader = function (_EventHandler) {
         loader.abort();
       }
       loader = this.loaders[type] = frag.loader = typeof config.fLoader !== 'undefined' ? new config.fLoader(config) : new config.loader(config);
-      loader.load(frag.url, { frag: frag }, 'arraybuffer', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.fragLoadingTimeOut, 0, 0, this.loadprogress.bind(this), frag);
+
+      var loaderContext = void 0,
+          loaderConfig = void 0,
+          loaderCallbacks = void 0;
+      loaderContext = { url: frag.url, frag: frag, responseType: 'arraybuffer', progressData: false };
+      var start = frag.byteRangeStartOffset,
+          end = frag.byteRangeEndOffset;
+      if (!isNaN(start) && !isNaN(end)) {
+        loaderContext.rangeStart = start;
+        loaderContext.rangeEnd = end;
+      }
+      loaderConfig = { timeout: config.fragLoadingTimeOut, maxRetry: 0, retryDelay: 0, maxRetryDelay: config.fragLoadingMaxRetryTimeout };
+      loaderCallbacks = { onSuccess: this.loadsuccess.bind(this), onError: this.loaderror.bind(this), onTimeout: this.loadtimeout.bind(this), onProgress: this.loadprogress.bind(this) };
+      loader.load(loaderContext, loaderConfig, loaderCallbacks);
     }
   }, {
     key: 'loadsuccess',
-    value: function loadsuccess(event, stats, context) {
-      var payload = event.currentTarget.response,
+    value: function loadsuccess(response, stats, context) {
+      var payload = response.data,
           frag = context.frag;
-      stats.length = payload.byteLength;
       // detach fragment loader on load success
       frag.loader = undefined;
       this.loaders[frag.type] = undefined;
@@ -7943,17 +7981,17 @@ var FragmentLoader = function (_EventHandler) {
     }
   }, {
     key: 'loaderror',
-    value: function loaderror(event, context) {
+    value: function loaderror(response, context) {
       var loader = context.loader;
       if (loader) {
         loader.abort();
       }
       this.loaders[context.type] = undefined;
-      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.FRAG_LOAD_ERROR, fatal: false, frag: context.frag, response: event });
+      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.FRAG_LOAD_ERROR, fatal: false, frag: context.frag, response: response });
     }
   }, {
     key: 'loadtimeout',
-    value: function loadtimeout(event, stats, context) {
+    value: function loadtimeout(stats, context) {
       var loader = context.loader;
       if (loader) {
         loader.abort();
@@ -7961,9 +7999,13 @@ var FragmentLoader = function (_EventHandler) {
       this.loaders[context.type] = undefined;
       this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.FRAG_LOAD_TIMEOUT, fatal: false, frag: context.frag });
     }
+
+    // data will be used for progressive parsing
+
   }, {
     key: 'loadprogress',
-    value: function loadprogress(event, stats, context) {
+    value: function loadprogress(stats, context, data) {
+      // jshint ignore:line
       var frag = context.frag;
       frag.loaded = stats.loaded;
       this.hls.trigger(_events2.default.FRAG_LOAD_PROGRESS, { frag: frag, stats: stats });
@@ -8051,7 +8093,14 @@ var KeyLoader = function (_EventHandler) {
         frag.loader = this.loaders[type] = new config.loader(config);
         this.decrypturl = uri;
         this.decryptkey = null;
-        frag.loader.load(uri, { frag: frag }, 'arraybuffer', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.fragLoadingTimeOut, config.fragLoadingMaxRetry, config.fragLoadingRetryDelay, this.loadprogress.bind(this), frag);
+
+        var loaderContext = void 0,
+            loaderConfig = void 0,
+            loaderCallbacks = void 0;
+        loaderContext = { url: uri, frag: frag, responseType: 'arraybuffer' };
+        loaderConfig = { timeout: config.fragLoadingTimeOut, maxRetry: config.fragLoadingMaxRetry, retryDelay: config.fragLoadingRetryDelay, maxRetryDelay: config.fragLoadingMaxRetryTimeout };
+        loaderCallbacks = { onSuccess: this.loadsuccess.bind(this), onError: this.loaderror.bind(this), onTimeout: this.loadtimeout.bind(this) };
+        frag.loader.load(loaderContext, loaderConfig, loaderCallbacks);
       } else if (this.decryptkey) {
         // we already loaded this key, return it
         decryptdata.key = this.decryptkey;
@@ -8060,9 +8109,9 @@ var KeyLoader = function (_EventHandler) {
     }
   }, {
     key: 'loadsuccess',
-    value: function loadsuccess(event, stats, context) {
+    value: function loadsuccess(response, stats, context) {
       var frag = context.frag;
-      this.decryptkey = frag.decryptdata.key = new Uint8Array(event.currentTarget.response);
+      this.decryptkey = frag.decryptdata.key = new Uint8Array(response.data);
       // detach fragment loader on load success
       frag.loader = undefined;
       this.loaders[context.type] = undefined;
@@ -8070,18 +8119,18 @@ var KeyLoader = function (_EventHandler) {
     }
   }, {
     key: 'loaderror',
-    value: function loaderror(event, context) {
+    value: function loaderror(response, context) {
       var frag = context.frag,
           loader = frag.loader;
       if (loader) {
         loader.abort();
       }
       this.loaders[context.type] = undefined;
-      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.KEY_LOAD_ERROR, fatal: false, frag: frag, response: event });
+      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.KEY_LOAD_ERROR, fatal: false, frag: frag, response: response });
     }
   }, {
     key: 'loadtimeout',
-    value: function loadtimeout(event, stats, context) {
+    value: function loadtimeout(stats, context) {
       var frag = context.frag,
           loader = frag.loader;
       if (loader) {
@@ -8090,9 +8139,6 @@ var KeyLoader = function (_EventHandler) {
       this.loaders[context.type] = undefined;
       this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.KEY_LOAD_TIMEOUT, fatal: false, frag: frag });
     }
-  }, {
-    key: 'loadprogress',
-    value: function loadprogress() {}
   }]);
 
   return KeyLoader;
@@ -8184,15 +8230,18 @@ var PlaylistLoader = function (_EventHandler) {
       var config = this.hls.config,
           retry,
           timeout,
-          retryDelay;
+          retryDelay,
+          maxRetryDelay;
       if (context.type === 'manifest') {
         retry = config.manifestLoadingMaxRetry;
         timeout = config.manifestLoadingTimeOut;
         retryDelay = config.manifestLoadingRetryDelay;
+        maxRetryDelay = config.manifestLoadingMaxRetryTimeOut;
       } else {
         retry = config.levelLoadingMaxRetry;
         timeout = config.levelLoadingTimeOut;
         retryDelay = config.levelLoadingRetryDelay;
+        maxRetryDelay = config.levelLoadingMaxRetryTimeOut;
       }
       var loader = this.loaders[context.type];
       if (loader) {
@@ -8200,7 +8249,14 @@ var PlaylistLoader = function (_EventHandler) {
         loader.abort();
       }
       loader = this.loaders[context.type] = context.loader = typeof config.pLoader !== 'undefined' ? new config.pLoader(config) : new config.loader(config);
-      loader.load(url, context, '', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), timeout, retry, retryDelay);
+      context.url = url;
+      context.responseType = '';
+
+      var loaderConfig = void 0,
+          loaderCallbacks = void 0;
+      loaderConfig = { timeout: timeout, maxRetry: retry, retryDelay: retryDelay, maxRetryDelay: maxRetryDelay };
+      loaderCallbacks = { onSuccess: this.loadsuccess.bind(this), onError: this.loaderror.bind(this), onTimeout: this.loadtimeout.bind(this) };
+      loader.load(context, loaderConfig, loaderCallbacks);
     }
   }, {
     key: 'resolve',
@@ -8248,9 +8304,9 @@ var PlaylistLoader = function (_EventHandler) {
     }
   }, {
     key: 'parseMasterPlaylistMedia',
-    value: function parseMasterPlaylistMedia(medias, string, baseurl, type) {
+    value: function parseMasterPlaylistMedia(string, baseurl, type) {
       var result = void 0,
-          id = medias.length;
+          medias = [];
 
       // https://regex101.com is your friend
       var re = /#EXT-X-MEDIA:(.*)/g;
@@ -8264,16 +8320,17 @@ var PlaylistLoader = function (_EventHandler) {
           media.default = attrs.DEFAULT === 'YES';
           media.autoselect = attrs.AUTOSELECT === 'YES';
           media.forced = attrs.FORCED === 'YES';
-          media.url = attrs.URI ? this.resolve(attrs.URI, baseurl) : '';
+          if (attrs.URI) {
+            media.url = this.resolve(attrs.URI, baseurl);
+          }
           media.lang = attrs.LANGUAGE;
           if (!media.name) {
             media.name = media.lang;
           }
-          media.id = id++;
           medias.push(media);
         }
       }
-      return;
+      return medias;
     }
     /**
      * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
@@ -8474,10 +8531,9 @@ var PlaylistLoader = function (_EventHandler) {
     }
   }, {
     key: 'loadsuccess',
-    value: function loadsuccess(event, stats, context) {
-      var target = event.currentTarget,
-          string = target.responseText,
-          url = target.responseURL,
+    value: function loadsuccess(response, stats, context) {
+      var string = response.data,
+          url = response.url,
           type = context.type,
           id = context.id,
           level = context.level,
@@ -8491,7 +8547,7 @@ var PlaylistLoader = function (_EventHandler) {
         url = context.url;
       }
       stats.tload = performance.now();
-      stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
+      //stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
       if (string.indexOf('#EXTM3U') === 0) {
         if (string.indexOf('#EXTINF:') > 0) {
           var isLevel = type !== 'audioTrack',
@@ -8508,15 +8564,25 @@ var PlaylistLoader = function (_EventHandler) {
             hls.trigger(_events2.default.AUDIO_TRACK_LOADED, { details: levelDetails, id: id, stats: stats });
           }
         } else {
-          var levels = this.parseMasterPlaylist(string, url),
-              audiotracks = [];
-          // if any audio codec signalled, push main audio track in audio track list
-          if (levels[0].audioCodec) {
-            audiotracks.push({ id: 0, type: 'main', name: 'main' });
-          }
-          this.parseMasterPlaylistMedia(audiotracks, string, url, 'AUDIO');
+          var levels = this.parseMasterPlaylist(string, url);
           // multi level playlist, parse level info
           if (levels.length) {
+            var audiotracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO');
+            if (audiotracks.length) {
+              // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
+              var embeddedAudioFound = false;
+              audiotracks.forEach(function (audioTrack) {
+                if (!audioTrack.url) {
+                  embeddedAudioFound = true;
+                }
+              });
+              // if no embedded audio track defined, but audio codec signaled in quality level, we need to signal this main audio track
+              // this could happen with playlists with alt audio rendition in which quality levels (main) contains both audio+video. but with mixed audio track not signaled
+              if (embeddedAudioFound === false && levels[0].audioCodec) {
+                _logger.logger.log('audio codec signaled in quality level, but no embedded audio track signaled, create one');
+                audiotracks.unshift({ type: 'main', name: 'main' });
+              }
+            }
             hls.trigger(_events2.default.MANIFEST_LOADED, { levels: levels, audioTracks: audiotracks, url: url, stats: stats });
           } else {
             hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'no level found in manifest' });
@@ -8528,7 +8594,7 @@ var PlaylistLoader = function (_EventHandler) {
     }
   }, {
     key: 'loaderror',
-    value: function loaderror(event, context) {
+    value: function loaderror(response, context) {
       var details,
           fatal,
           loader = context.loader;
@@ -8550,11 +8616,11 @@ var PlaylistLoader = function (_EventHandler) {
         loader.abort();
         this.loaders[context.type] = undefined;
       }
-      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: loader.url, loader: loader, response: event.currentTarget, context: context });
+      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: loader.url, loader: loader, response: response, context: context });
     }
   }, {
     key: 'loadtimeout',
-    value: function loadtimeout(event, stats, context) {
+    value: function loadtimeout(stats, context) {
       var details,
           fatal,
           loader = context.loader;
@@ -9147,6 +9213,7 @@ var MP4Remuxer = function () {
     key: 'insertDiscontinuity',
     value: function insertDiscontinuity() {
       this._initPTS = this._initDTS = undefined;
+      this.nextAacPts = this.nextAvcDts = 0;
     }
   }, {
     key: 'switchLevel',
@@ -9496,7 +9563,9 @@ var MP4Remuxer = function () {
           ptsnorm,
           dtsnorm,
           samples = [],
-          samples0 = [];
+          samples0 = [],
+          fillFrame,
+          newStamp;
 
       track.samples.sort(function (a, b) {
         return a.pts - b.pts;
@@ -9510,10 +9579,9 @@ var MP4Remuxer = function () {
       // In an effort to prevent this from happening, we inject frames here where there are gaps.
       // When possible, we inject a silent frame; when that's not possible, we duplicate the last
       // frame.
-      var firstPtsNorm = this._PTSNormalize(samples0[0].pts - this._initPTS, nextAacPts),
-          pesFrameDuration = expectedSampleDuration * pes2mp4ScaleFactor;
-      var nextPtsNorm = firstPtsNorm + pesFrameDuration;
-      for (var i = 1; i < samples0.length;) {
+      var pesFrameDuration = expectedSampleDuration * pes2mp4ScaleFactor;
+      var nextPtsNorm = nextAacPts;
+      for (var i = 0; i < samples0.length;) {
         // First, let's see how far off this frame is from where we expect it to be
         var sample = samples0[i],
             ptsNorm = this._PTSNormalize(sample.pts - this._initPTS, nextAacPts),
@@ -9531,8 +9599,9 @@ var MP4Remuxer = function () {
             var missing = Math.round(delta / pesFrameDuration);
             _logger.logger.log('Injecting ' + missing + ' frame' + (missing > 1 ? 's' : '') + ' of missing audio due to ' + Math.round(delta / 90) + ' ms gap.');
             for (var j = 0; j < missing; j++) {
-              var newStamp = samples0[i - 1].pts + pesFrameDuration,
-                  fillFrame = _aac2.default.getSilentFrame(track.channelCount);
+              newStamp = sample.pts - (missing - j) * pesFrameDuration;
+              newStamp = Math.max(newStamp, this._initPTS);
+              fillFrame = _aac2.default.getSilentFrame(track.channelCount);
               if (!fillFrame) {
                 _logger.logger.log('Unable to get silent frame for given audio codec; duplicating last frame instead.');
                 fillFrame = sample.unit.slice(0);
@@ -9543,8 +9612,8 @@ var MP4Remuxer = function () {
             }
 
             // Adjust sample to next expected pts
-            nextPtsNorm += (missing + 1) * pesFrameDuration;
             sample.pts = samples0[i - 1].pts + pesFrameDuration;
+            nextPtsNorm = this._PTSNormalize(sample.pts + pesFrameDuration - this._initPTS, nextAacPts);
             i += 1;
           }
           // Otherwise, we're within half a frame duration, so just adjust pts
@@ -9553,7 +9622,11 @@ var MP4Remuxer = function () {
                 _logger.logger.log('Invalid frame delta ' + (ptsNorm - nextPtsNorm + pesFrameDuration) + ' at PTS ' + Math.round(ptsNorm / 90) + ' (should be ' + pesFrameDuration + ').');
               }
               nextPtsNorm += pesFrameDuration;
-              sample.pts = samples0[i - 1].pts + pesFrameDuration;
+              if (i === 0) {
+                sample.pts = this._initPTS + nextAacPts;
+              } else {
+                sample.pts = samples0[i - 1].pts + pesFrameDuration;
+              }
               i += 1;
             }
       }
@@ -9572,13 +9645,22 @@ var MP4Remuxer = function () {
         } else {
           ptsnorm = this._PTSNormalize(pts, nextAacPts);
           dtsnorm = this._PTSNormalize(dts, nextAacPts);
-          var _delta = Math.round(1000 * (ptsnorm - nextAacPts) / pesTimeScale);
+          var _delta = Math.round(1000 * (ptsnorm - nextAacPts) / pesTimeScale),
+              numMissingFrames = 0;
           // if fragment are contiguous, detect hole/overlapping between fragments
           if (contiguous) {
             // log delta
             if (_delta) {
               if (_delta > 0) {
+                numMissingFrames = Math.round((ptsnorm - nextAacPts) / pesFrameDuration);
                 _logger.logger.log(_delta + ' ms hole between AAC samples detected,filling it');
+                if (numMissingFrames > 0) {
+                  fillFrame = _aac2.default.getSilentFrame(track.channelCount);
+                  if (!fillFrame) {
+                    fillFrame = unit.slice(0);
+                  }
+                  track.len += numMissingFrames * fillFrame.length;
+                }
                 // if we have frame overlap, overlapping for more than half a frame duraion
               } else if (_delta < -12) {
                   // drop overlapping audio frames... browser will deal with it
@@ -9603,6 +9685,29 @@ var MP4Remuxer = function () {
           } else {
             // no audio samples
             return;
+          }
+          for (i = 0; i < numMissingFrames; i++) {
+            newStamp = ptsnorm - (numMissingFrames - i) * pesFrameDuration;
+            fillFrame = _aac2.default.getSilentFrame(track.channelCount);
+            if (!fillFrame) {
+              _logger.logger.log('Unable to get silent frame for given audio codec; duplicating this frame instead.');
+              fillFrame = unit.slice(0);
+            }
+            mdat.set(fillFrame, offset);
+            offset += fillFrame.byteLength;
+            mp4Sample = {
+              size: fillFrame.byteLength,
+              cts: 0,
+              duration: 1024,
+              flags: {
+                isLeading: 0,
+                isDependedOn: 0,
+                hasRedundancy: 0,
+                degradPrio: 0,
+                dependsOn: 1
+              }
+            };
+            samples.push(mp4Sample);
           }
         }
         mdat.set(unit, offset);
@@ -11722,33 +11827,19 @@ var XhrLoader = function () {
     }
   }, {
     key: 'load',
-    value: function load(url, context, responseType, onSuccess, onError, onTimeout, timeout, maxRetry, retryDelay) {
-      var onProgress = arguments.length <= 9 || arguments[9] === undefined ? null : arguments[9];
-      var frag = arguments.length <= 10 || arguments[10] === undefined ? null : arguments[10];
-
-      this.url = url;
+    value: function load(context, config, callbacks) {
       this.context = context;
-      if (context) {
-        context.url = url;
-      }
-      if (frag && !isNaN(frag.byteRangeStartOffset) && !isNaN(frag.byteRangeEndOffset)) {
-        this.byteRange = frag.byteRangeStartOffset + '-' + (frag.byteRangeEndOffset - 1);
-      }
-      this.responseType = responseType;
-      this.onSuccess = onSuccess;
-      this.onProgress = onProgress;
-      this.onTimeout = onTimeout;
-      this.onError = onError;
+      this.config = config;
+      this.callbacks = callbacks;
       this.stats = { trequest: performance.now(), retry: 0 };
-      this.timeout = timeout;
-      this.maxRetry = maxRetry;
-      this.retryDelay = retryDelay;
+      this.retryDelay = config.retryDelay;
       this.loadInternal();
     }
   }, {
     key: 'loadInternal',
     value: function loadInternal() {
-      var xhr;
+      var xhr,
+          context = this.context;
 
       if (typeof XDomainRequest !== 'undefined') {
         xhr = this.loader = new XDomainRequest();
@@ -11759,19 +11850,20 @@ var XhrLoader = function () {
       xhr.onloadend = this.loadend.bind(this);
       xhr.onprogress = this.loadprogress.bind(this);
 
-      xhr.open('GET', this.url, true);
-      if (this.byteRange) {
-        xhr.setRequestHeader('Range', 'bytes=' + this.byteRange);
+      xhr.open('GET', context.url, true);
+
+      if (context.rangeEnd) {
+        xhr.setRequestHeader('Range', 'bytes=' + context.rangeStart + '-' + (context.rangeEnd - 1));
       }
-      xhr.responseType = this.responseType;
+      xhr.responseType = context.responseType;
       var stats = this.stats;
       stats.tfirst = 0;
       stats.loaded = 0;
       if (this.xhrSetup) {
-        this.xhrSetup(xhr, this.url);
+        this.xhrSetup(xhr, context.url);
       }
       // setup timeout before we perform request
-      this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), this.timeout);
+      this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), this.config.timeout);
       xhr.send();
     }
   }, {
@@ -11780,7 +11872,8 @@ var XhrLoader = function () {
       var xhr = event.currentTarget,
           status = xhr.status,
           stats = this.stats,
-          context = this.context;
+          context = this.context,
+          config = this.config;
 
       // don't proceed if xhr has been aborted
       if (stats.aborted) {
@@ -11793,31 +11886,41 @@ var XhrLoader = function () {
       // http status between 200 to 299 are all successful
       if (status >= 200 && status < 300) {
         stats.tload = Math.max(stats.tfirst, performance.now());
-        this.onSuccess(event, stats, context);
-        // everything else is a failure
-      } else {
-          // retry first
-          if (stats.retry < this.maxRetry) {
-            _logger.logger.warn(status + ' while loading ' + this.url + ', retrying in ' + this.retryDelay + '...');
-            // aborts and resets internal state
-            this.destroy();
-            // schedule retry
-            this.retryTimeout = window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
-            // set exponential backoff
-            this.retryDelay = Math.min(2 * this.retryDelay, 64000);
-            stats.retry++;
-            // permanent failure
-          } else {
-              _logger.logger.error(status + ' while loading ' + this.url);
-              this.onError(event, context);
-            }
+        var data = void 0,
+            len = void 0;
+        if (context.responseType === 'arraybuffer') {
+          data = xhr.response;
+          len = data.byteLength;
+        } else {
+          data = xhr.responseText;
+          len = data.length;
         }
+        stats.loaded = stats.total = len;
+        var response = { url: xhr.responseURL, data: data };
+        this.callbacks.onSuccess(response, stats, context);
+      } else {
+        // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
+        if (stats.retry >= config.maxRetry || status >= 400 && status < 499) {
+          _logger.logger.error(status + ' while loading ' + context.url);
+          this.callbacks.onError({ code: status, text: xhr.statusText }, context);
+        } else {
+          // retry
+          _logger.logger.warn(status + ' while loading ' + context.url + ', retrying in ' + this.retryDelay + '...');
+          // aborts and resets internal state
+          this.destroy();
+          // schedule retry
+          this.retryTimeout = window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
+          // set exponential backoff
+          this.retryDelay = Math.min(2 * this.retryDelay, config.maxRetryDelay);
+          stats.retry++;
+        }
+      }
     }
   }, {
     key: 'loadtimeout',
     value: function loadtimeout() {
-      _logger.logger.warn('timeout while loading ' + this.url);
-      this.onTimeout(null, this.stats, this.context);
+      _logger.logger.warn('timeout while loading ' + this.context.url);
+      this.callbacks.onTimeout(this.stats, this.context);
     }
   }, {
     key: 'loadprogress',
@@ -11830,8 +11933,10 @@ var XhrLoader = function () {
       if (event.lengthComputable) {
         stats.total = event.total;
       }
-      if (this.onProgress) {
-        this.onProgress(event, stats, this.context);
+      var onProgress = this.callbacks.onProgress;
+      if (onProgress) {
+        // last args is to provide on progress data
+        onProgress(stats, this.context, null);
       }
     }
   }]);
