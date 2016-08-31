@@ -1047,6 +1047,11 @@ var AudioStreamController = function (_EventHandler) {
           this.demuxer.destroy();
           this.demuxer = null;
         }
+      } else {
+        // switching to audio track, start timer if not already started
+        if (!this.timer) {
+          this.timer = setInterval(this.ontick, 100);
+        }
       }
       // flush audio source buffer
       this.hls.trigger(_events2.default.BUFFER_FLUSHING, { startOffset: 0, endOffset: Number.POSITIVE_INFINITY, type: 'audio' });
@@ -1132,11 +1137,11 @@ var AudioStreamController = function (_EventHandler) {
           track.levelCodec = 'mp4a.40.2';
           track.id = data.id;
           this.hls.trigger(_events2.default.BUFFER_CODECS, tracks);
-          _logger.logger.log('track:audio,container:' + track.container + ',codecs[level/parsed]=[' + track.levelCodec + '/' + track.codec + ']');
+          _logger.logger.log('audio track:audio,container:' + track.container + ',codecs[level/parsed]=[' + track.levelCodec + '/' + track.codec + ']');
           var initSegment = track.initSegment;
           if (initSegment) {
             this.pendingAppending++;
-            this.hls.trigger(_events2.default.BUFFER_APPENDING, { type: 'audio', data: initSegment, parent: 'audio' });
+            this.hls.trigger(_events2.default.BUFFER_APPENDING, { type: 'audio', data: initSegment, parent: 'audio', content: 'initSegment' });
           }
           //trigger handler right now
           this.tick();
@@ -1159,7 +1164,7 @@ var AudioStreamController = function (_EventHandler) {
         [data.data1, data.data2].forEach(function (buffer) {
           if (buffer) {
             _this3.pendingAppending++;
-            _this3.hls.trigger(_events2.default.BUFFER_APPENDING, { type: data.type, data: buffer, parent: 'audio' });
+            _this3.hls.trigger(_events2.default.BUFFER_APPENDING, { type: data.type, data: buffer, parent: 'audio', content: 'data' });
           }
         });
         this.nextLoadPosition = data.endPTS;
@@ -1833,7 +1838,7 @@ var BufferController = function (_EventHandler) {
           var segment = segments.shift();
           try {
             if (sourceBuffer[segment.type]) {
-              //logger.log(`appending ${segment.type} SB, size:${segment.data.length}`);
+              //logger.log(`appending ${segment.content} ${segment.type} SB, size:${segment.data.length}, ${segment.parent}`);
               this.parent = segment.parent;
               sourceBuffer[segment.type].appendBuffer(segment.data);
               this.appendError = 0;
@@ -2927,8 +2932,10 @@ var StreamController = function (_EventHandler) {
       // we just got done loading the final fragment, check if we need to finalize media stream
       var fragPrevious = this.fragPrevious;
       if (!levelDetails.live && fragPrevious && fragPrevious.sn === levelDetails.endSN) {
-        // if we are not seeking or if we are seeking but everything til the end is buffered, let's signal eos
-        if (!media.seeking || bufferInfo.end === media.duration) {
+        // if we are not seeking or if we are seeking but everything (almost) til the end is buffered, let's signal eos
+        // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference when switching
+        // between different renditions. using half frag duration should help cope with these cases.
+        if (!media.seeking || media.duration - bufferInfo.end < fragPrevious.duration / 2) {
           // Finalize the media stream
           this.hls.trigger(_events2.default.BUFFER_EOS);
           this.state = State.ENDED;
@@ -3623,6 +3630,10 @@ var StreamController = function (_EventHandler) {
             trackName,
             track;
 
+        // if audio track is expected to come from audio stream controller, discard any coming from main
+        if (tracks.audio && this.audioTrackType === 'AUDIO') {
+          delete tracks.audio;
+        }
         // include levelCodec in audio and video tracks
         track = tracks.audio;
         if (track) {
@@ -3689,11 +3700,11 @@ var StreamController = function (_EventHandler) {
         // loop through tracks that are going to be provided to bufferController
         for (trackName in tracks) {
           track = tracks[trackName];
-          _logger.logger.log('track:' + trackName + ',container:' + track.container + ',codecs[level/parsed]=[' + track.levelCodec + '/' + track.codec + ']');
+          _logger.logger.log('main track:' + trackName + ',container:' + track.container + ',codecs[level/parsed]=[' + track.levelCodec + '/' + track.codec + ']');
           var initSegment = track.initSegment;
           if (initSegment) {
             this.pendingAppending++;
-            this.hls.trigger(_events2.default.BUFFER_APPENDING, { type: trackName, data: initSegment, parent: 'main' });
+            this.hls.trigger(_events2.default.BUFFER_APPENDING, { type: trackName, data: initSegment, parent: 'main', content: 'initSegment' });
           }
         }
         //trigger handler right now
@@ -3725,7 +3736,7 @@ var StreamController = function (_EventHandler) {
         [data.data1, data.data2].forEach(function (buffer) {
           if (buffer) {
             _this2.pendingAppending++;
-            hls.trigger(_events2.default.BUFFER_APPENDING, { type: data.type, data: buffer, parent: 'main' });
+            hls.trigger(_events2.default.BUFFER_APPENDING, { type: data.type, data: buffer, parent: 'main', content: 'data' });
           }
         });
 
