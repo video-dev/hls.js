@@ -926,6 +926,10 @@ class StreamController extends EventHandler {
         this.state === State.PARSING) {
       var tracks = data.tracks, trackName, track;
 
+      // if audio track is expected to come from audio stream controller, discard any coming from main
+      if (tracks.audio && this.audioTrackType === 'AUDIO') {
+        delete tracks.audio;
+      }
       // include levelCodec in audio and video tracks
       track = tracks.audio;
       if(track) {
@@ -992,11 +996,11 @@ class StreamController extends EventHandler {
       // loop through tracks that are going to be provided to bufferController
       for (trackName in tracks) {
         track = tracks[trackName];
-        logger.log(`track:${trackName},container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
+        logger.log(`main track:${trackName},container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
         var initSegment = track.initSegment;
         if (initSegment) {
           this.pendingAppending++;
-          this.hls.trigger(Event.BUFFER_APPENDING, {type: trackName, data: initSegment, parent : 'main'});
+          this.hls.trigger(Event.BUFFER_APPENDING, {type: trackName, data: initSegment, parent : 'main', content : 'initSegment'});
         }
       }
       //trigger handler right now
@@ -1029,7 +1033,7 @@ class StreamController extends EventHandler {
       [data.data1, data.data2].forEach(buffer => {
         if (buffer) {
           this.pendingAppending++;
-          hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer, parent : 'main'});
+          hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer, parent : 'main',content : 'data'});
         }
       });
 
