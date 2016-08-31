@@ -431,6 +431,11 @@ class AudioStreamController extends EventHandler {
                 this.demuxer.destroy();
                 this.demuxer = null;
             }
+        } else {
+            // switching to audio track, start timer if not already started
+            if (!this.timer) {
+                this.timer = setInterval(this.ontick, 100);
+            }
         }
         // flush audio source buffer
         this.hls.trigger(Event.BUFFER_FLUSHING, {
@@ -549,7 +554,7 @@ class AudioStreamController extends EventHandler {
                 track.id = data.id;
                 this.hls.trigger(Event.BUFFER_CODECS, tracks);
                 logger.log(
-                    `track:audio,container:${
+                    `audio track:audio,container:${
                         track.container
                     },codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`
                 );
@@ -559,7 +564,8 @@ class AudioStreamController extends EventHandler {
                     this.hls.trigger(Event.BUFFER_APPENDING, {
                         type: 'audio',
                         data: initSegment,
-                        parent: 'audio'
+                        parent: 'audio',
+                        content: 'initSegment'
                     });
                 }
                 //trigger handler right now
@@ -600,7 +606,8 @@ class AudioStreamController extends EventHandler {
                     this.hls.trigger(Event.BUFFER_APPENDING, {
                         type: data.type,
                         data: buffer,
-                        parent: 'audio'
+                        parent: 'audio',
+                        content: 'data'
                     });
                 }
             });
