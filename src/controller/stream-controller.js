@@ -184,6 +184,18 @@ class StreamController extends EventHandler {
             this.state = State.WAITING_LEVEL;
             break;
           }
+
+          // we just got done loading the final fragment, check if we need to finalize media stream
+          if (!levelDetails.live && fragPrevious && fragPrevious.sn === levelDetails.endSN) {
+            // if we are not seeking or if we are seeking but everything til the end is buffered, let's signal eos
+            if (!isSeeking || bufferEnd === media.duration) {
+              // Finalize the media stream
+              this.hls.trigger(Event.BUFFER_EOS);
+              this.state = State.ENDED;
+              break;
+            }
+          }
+
           // find fragment index, contiguous with end of buffer position
           let fragments = levelDetails.fragments,
               fragLen = fragments.length,
@@ -304,19 +316,6 @@ class StreamController extends EventHandler {
                 if(!frag) {
                   break;
                 }
-              } else {
-                // have we reached end of VOD playlist ?
-                if (!levelDetails.live) {
-                  // Finalize the media stream
-                  this.hls.trigger(Event.BUFFER_EOS);
-                  // We might be loading the last fragment but actually the media
-                  // is currently processing a seek command and waiting for new data to resume at another point.
-                  // Going to ended state while media is seeking can spawn an infinite buffering broken state.
-                  if (!isSeeking) {
-                    this.state = State.ENDED;
-                  }
-                }
-                break;
               }
             }
             //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
