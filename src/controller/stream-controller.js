@@ -1158,6 +1158,10 @@ class StreamController extends EventHandler {
                 trackName,
                 track;
 
+            // if audio track is expected to come from audio stream controller, discard any coming from main
+            if (tracks.audio && this.audioTrackType === 'AUDIO') {
+                delete tracks.audio;
+            }
             // include levelCodec in audio and video tracks
             track = tracks.audio;
             if (track) {
@@ -1227,7 +1231,7 @@ class StreamController extends EventHandler {
             for (trackName in tracks) {
                 track = tracks[trackName];
                 logger.log(
-                    `track:${trackName},container:${
+                    `main track:${trackName},container:${
                         track.container
                     },codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`
                 );
@@ -1237,7 +1241,8 @@ class StreamController extends EventHandler {
                     this.hls.trigger(Event.BUFFER_APPENDING, {
                         type: trackName,
                         data: initSegment,
-                        parent: 'main'
+                        parent: 'main',
+                        content: 'initSegment'
                     });
                 }
             }
@@ -1295,7 +1300,8 @@ class StreamController extends EventHandler {
                     hls.trigger(Event.BUFFER_APPENDING, {
                         type: data.type,
                         data: buffer,
-                        parent: 'main'
+                        parent: 'main',
+                        content: 'data'
                     });
                 }
             });
