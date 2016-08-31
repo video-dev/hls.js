@@ -362,6 +362,11 @@ class AudioStreamController extends EventHandler {
         this.demuxer.destroy();
         this.demuxer = null;
       }
+    } else {
+      // switching to audio track, start timer if not already started
+      if (!this.timer) {
+        this.timer = setInterval(this.ontick, 100);
+      }
     }
     // flush audio source buffer
     this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0, endOffset: Number.POSITIVE_INFINITY, type : 'audio'});
@@ -450,11 +455,11 @@ class AudioStreamController extends EventHandler {
         track.levelCodec = 'mp4a.40.2';
         track.id = data.id;
         this.hls.trigger(Event.BUFFER_CODECS,tracks);
-        logger.log(`track:audio,container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
+        logger.log(`audio track:audio,container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
         let initSegment = track.initSegment;
         if (initSegment) {
           this.pendingAppending++;
-          this.hls.trigger(Event.BUFFER_APPENDING, {type: 'audio', data: initSegment, parent : 'audio'});
+          this.hls.trigger(Event.BUFFER_APPENDING, {type: 'audio', data: initSegment, parent : 'audio',content : 'initSegment'});
         }
         //trigger handler right now
         this.tick();
@@ -478,7 +483,7 @@ class AudioStreamController extends EventHandler {
       [data.data1, data.data2].forEach(buffer => {
         if (buffer) {
           this.pendingAppending++;
-          this.hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer, parent : 'audio'});
+          this.hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer, parent : 'audio',content : 'data'});
         }
       });
       this.nextLoadPosition = data.endPTS;
