@@ -728,13 +728,13 @@ var BufferController = function (_EventHandler) {
         ms.removeEventListener('sourceended', this.onmse);
         ms.removeEventListener('sourceclose', this.onmsc);
 
-        try {
-          // unlink MediaSource from video tag
-          this.media.src = '';
+        // Detach properly the MediaSource from the HTMLMediaElement as
+        // suggested in https://github.com/w3c/media-source/issues/53.
+        if (this.media) {
           this.media.removeAttribute('src');
-        } catch (err) {
-          _logger.logger.warn('onMediaDetaching:' + err.message + ' while unlinking video.src');
+          this.media.load();
         }
+
         this.mediaSource = null;
         this.media = null;
         this.pendingTracks = null;
@@ -1456,9 +1456,10 @@ var LevelController = function (_EventHandler) {
         this._level = newLevel;
         _logger.logger.log('switching to level ' + newLevel);
         this.hls.trigger(_events2.default.LEVEL_SWITCH, { level: newLevel });
-        var level = levels[newLevel];
-        // check if we need to load playlist for this level
-        if (level.details === undefined || level.details.live === true) {
+        var level = levels[newLevel],
+            levelDetails = level.details;
+        // check if we need to load playlist for this level. don't reload live playlist more than once per second
+        if (!levelDetails || levelDetails.live === true && performance.now() - levelDetails.tload > 1000) {
           // level not retrieved yet, or live playlist we need to (re)load it
           _logger.logger.log('(re)loading playlist for level ' + newLevel);
           var urlId = level.urlId;
@@ -1872,6 +1873,18 @@ var StreamController = function (_EventHandler) {
               this.state = State.WAITING_LEVEL;
               break;
             }
+
+            // we just got done loading the final fragment, check if we need to finalize media stream
+            if (!levelDetails.live && fragPrevious && fragPrevious.sn === levelDetails.endSN) {
+              // if we are not seeking or if we are seeking but everything til the end is buffered, let's signal eos
+              if (!isSeeking || bufferEnd === media.duration) {
+                // Finalize the media stream
+                this.hls.trigger(_events2.default.BUFFER_EOS);
+                this.state = State.ENDED;
+                break;
+              }
+            }
+
             // find fragment index, contiguous with end of buffer position
             var fragments = levelDetails.fragments,
                 fragLen = fragments.length,
@@ -1993,19 +2006,6 @@ var StreamController = function (_EventHandler) {
                   if (!frag) {
                     break;
                   }
-                } else {
-                  // have we reached end of VOD playlist ?
-                  if (!levelDetails.live) {
-                    // Finalize the media stream
-                    this.hls.trigger(_events2.default.BUFFER_EOS);
-                    // We might be loading the last fragment but actually the media
-                    // is currently processing a seek command and waiting for new data to resume at another point.
-                    // Going to ended state while media is seeking can spawn an infinite buffering broken state.
-                    if (!isSeeking) {
-                      this.state = State.ENDED;
-                    }
-                  }
-                  break;
                 }
               }
               //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
@@ -6915,13 +6915,13 @@ var PlaylistLoader = function (_EventHandler) {
       if (string.indexOf('#EXTM3U') === 0) {
         if (string.indexOf('#EXTINF:') > 0) {
           var levelDetails = this.parseLevelPlaylist(string, url, id || 0);
+          levelDetails.tload = stats.tload;
           if (id === null) {
             // first request, stream manifest (no master playlist), fire manifest loaded event with level details
             hls.trigger(_events2.default.MANIFEST_LOADED, { levels: [{ url: url, details: levelDetails }], url: url, stats: stats });
-          } else {
-            stats.tparsed = performance.now();
-            hls.trigger(_events2.default.LEVEL_LOADED, { details: levelDetails, level: id, id: id2, stats: stats });
           }
+          stats.tparsed = performance.now();
+          hls.trigger(_events2.default.LEVEL_LOADED, { details: levelDetails, level: id || 0, id: id2, stats: stats });
         } else {
           levels = this.parseMasterPlaylist(string, url);
           // multi level playlist, parse level info
