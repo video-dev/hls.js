@@ -318,6 +318,9 @@ class StreamController extends EventHandler {
                 if(!frag) {
                   break;
                 }
+              } else {
+                // last fragment already loaded, just break
+                break;
               }
             }
             //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
