@@ -75,7 +75,6 @@ header {
       <label class="innerControls"><input id="enableStreaming" type=checkbox checked/> Enable Streaming</label>
       <label class="innerControls"><input id="autoRecoverError" type=checkbox checked/> Auto-Recover Media Error</label>
       <label class="innerControls"><input id="enableWorker" type=checkbox checked/> Enable Worker</label>
-      <label class="innerControls">Version <select id="version"></select></label>
       <label class="innerControls">Level Capping <input id="levelCapping" type=number/></label>
       <label class="innerControls">default Audio Codec <input id="defaultAudioCodec"/></label>
       <div id="StreamPermalink" class="innerControls"></div>
@@ -202,6 +201,7 @@ header {
   <script src="../../streams.js"></script>
   <!-- live-reload script -->
   <script src="//localhost:8001"></script>
+  <script src="../dist/hls.js"></script>
   <script src="canvas.js"></script>
   <script src="metrics.js"></script>
   <script src="jsonpack.js"></script>
@@ -223,12 +223,14 @@ $(document).ready(function() {
    $('#enableWorker').click(function()  { enableWorker = this.checked; updatePermalink();});
    $('#levelCapping').change(function()  { levelCapping = this.value; updatePermalink();});
    $('#defaultAudioCodec').change(function()  { defaultAudioCodec = this.value; updatePermalink();});
-   $('#version').change(function() { version = this.value; updatePermalink(); });
    $('#enableStreaming').prop( "checked", enableStreaming );
    $('#autoRecoverError').prop( "checked", autoRecoverError );
    $('#enableWorker').prop( "checked", enableWorker );
    $('#levelCapping').val(levelCapping);
    $('#defaultAudioCodec').val(defaultAudioCodec || "undefined");
+
+   $('h1').append(' <a target=_blank href=https://github.com/dailymotion/hls.js/releases/tag/v' + Hls.version + '>v' + Hls.version + '</a>');
+
 });
 
 
@@ -239,54 +241,11 @@ $(document).ready(function() {
       enableWorker = JSON.parse(getURLParam('enableWorker',true)),
       levelCapping = JSON.parse(getURLParam('levelCapping',-1)),
       defaultAudioCodec = getURLParam('defaultAudioCodec',undefined);
-      version = getURLParam('version', null);
   var video = $('#video')[0];
   video.volume = 0.05;
+  $("#currentVersion").html("Hls version:" + Hls.version);
 
-  loadLibrary(function() {
-    // Override the version with Hls.version when available.
-    // It allows to display the proper title with old versions.
-    version = Hls.version || version;
-
-    $("#currentVersion").html('Hls version:' + version);
-    $('h1').append(' <a target=_blank href=https://github.com/dailymotion/hls.js/releases/tag/v' + version + '>v' + version + '</a>');
-
-    fetchAssets(function(assets) {
-      // Always put the active version at the top of the list.
-      var options = '<option value="' + version + '" selected>' + version + '</option>';
-      var asset = null;
-
-      for (var i = 0, max = assets.length; i < max; i++) {
-        asset = assets[i]
-
-        // Discard the active version.
-        if (version != asset.version) {
-          options += '<option value="' + asset.version + '">' + asset.version + '</option>';
-        }
-      }
-
-      $('#version').html(options);
-    });
-
-    loadStream(decodeURIComponent(getURLParam('src','http://www.streambox.fr/playlists/x36xhzz/x36xhzz.m3u8')));
-  });
-
-  function loadLibrary(onLibraryLoaded) {
-    var cdnURL = 'https://cdnjs.cloudflare.com/ajax/libs/hls.js/' + version + '/hls.js';
-    var localURL = '../dist/hls.js';
-
-    // Try to load the local dist file first in order to boost the page loading.
-    $.getScript(version ? cdnURL : localURL)
-      .done(function() { onLibraryLoaded() })
-      // Fallback on the local dist file if the first attempt fails.
-      .fail(function() { $.getScript(localURL, onLibraryLoaded); });
-  };
-
-  function fetchAssets(onAssetsFetched) {
-    $.get('https://api.cdnjs.com/libraries/hls.js')
-      .done(function(json) { onAssetsFetched(json['assets'] || []); })
-      .fail(function() { onAssetsFetched([]); });
-  }
+  loadStream(decodeURIComponent(getURLParam('src','http://www.streambox.fr/playlists/x36xhzz/x36xhzz.m3u8')));
 
   function loadStream(url) {
     hideCanvas();
@@ -1074,8 +1033,7 @@ function updateAudioTrackInfo() {
                     '&autoRecoverError=' + autoRecoverError +
                     '&enableWorker=' + enableWorker +
                     '&levelCapping=' + levelCapping +
-                    '&defaultAudioCodec=' + defaultAudioCodec +
-                    '&version=' + version;
+                    '&defaultAudioCodec=' + defaultAudioCodec;
       var description = 'permalink: ' + "<a href=\"" + hlsLink + "\">" + hlsLink + "</a>";
       $("#StreamPermalink").html(description);
   }
