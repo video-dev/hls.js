@@ -406,8 +406,7 @@ lo007ts`;
   it('parses manifest with one audio track', () => {
     var manifest = `#EXTM3U
 #EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="600k",LANGUAGE="eng",NAME="Audio",AUTOSELECT=YES,DEFAULT=YES,URI="/videos/ZakEbrahim_2014/audio/600k.m3u8?qr=true&preroll=Blank",BANDWIDTH=614400`;
-    var result = [];
-    new PlaylistLoader({on : function() { }}).parseMasterPlaylistMedia(result,manifest, 'https://hls.ted.com/', 'AUDIO');
+    var result = new PlaylistLoader({on : function() { }}).parseMasterPlaylistMedia(manifest, 'https://hls.ted.com/', 'AUDIO');
     assert.strictEqual(result.length,1);
     assert.strictEqual(result[0]['autoselect'],true);
     assert.strictEqual(result[0]['default'],true);
