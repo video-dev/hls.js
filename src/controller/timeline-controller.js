@@ -5,7 +5,6 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import Cea608Parser from '../utils/cea-608-parser';
-import Cues from '../utils/cues';
 
 class TimelineController extends EventHandler {
     constructor(hls) {
@@ -22,6 +21,7 @@ class TimelineController extends EventHandler {
         this.hls = hls;
         this.config = hls.config;
         this.enabled = true;
+        this.Cues = hls.config.cueHandler;
 
         if (this.config.enableCEA708Captions) {
             var self = this;
@@ -37,7 +37,12 @@ class TimelineController extends EventHandler {
                         //            self.textTrack1.mode = 'showing';
                     }
 
-                    Cues.newCue(self.textTrack1, startTime, endTime, screen);
+                    self.Cues.newCue(
+                        self.textTrack1,
+                        startTime,
+                        endTime,
+                        screen
+                    );
                 }
             };
 
@@ -51,7 +56,12 @@ class TimelineController extends EventHandler {
                         );
                     }
 
-                    Cues.newCue(self.textTrack2, startTime, endTime, screen);
+                    self.Cues.newCue(
+                        self.textTrack2,
+                        startTime,
+                        endTime,
+                        screen
+                    );
                 }
             };
 
