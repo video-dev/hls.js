@@ -157,6 +157,20 @@ class AudioStreamController extends EventHandler {
             this.state = State.WAITING_TRACK;
             break;
           }
+
+        // we just got done loading the final fragment, check if we need to finalize media stream
+        if (!trackDetails.live && fragPrevious && fragPrevious.sn === trackDetails.endSN) {
+            // if we are not seeking or if we are seeking but everything (almost) til the end is buffered, let's signal eos
+            // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference when switching
+            // between different renditions. using half frag duration should help cope with these cases.
+            if (!this.media.seeking || (this.media.duration-bufferEnd) < fragPrevious.duration/2) {
+            // Finalize the media stream
+            this.hls.trigger(Event.BUFFER_EOS,{ type : 'audio'});
+            this.state = State.ENDED;
+            break;
+          }
+        }
+
           // find fragment index, contiguous with end of buffer position
           let fragments = trackDetails.fragments,
               fragLen = fragments.length,
@@ -209,10 +223,6 @@ class AudioStreamController extends EventHandler {
                   frag = fragments[frag.sn + 1 - trackDetails.startSN];
                   logger.log(`SN just loaded, load next one: ${frag.sn}`);
                 } else {
-                  // have we reached end of VOD playlist ?
-                  if (!trackDetails.live) {
-                    this.state = State.ENDED;
-                  }
                   frag = null;
                 }
               }
