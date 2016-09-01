@@ -787,8 +787,6 @@ var AudioStreamController = function (_EventHandler) {
   }, {
     key: 'doTick',
     value: function doTick() {
-      var _this2 = this;
-
       var pos,
           track,
           trackDetails,
@@ -836,6 +834,20 @@ var AudioStreamController = function (_EventHandler) {
               this.state = State.WAITING_TRACK;
               break;
             }
+
+            // we just got done loading the final fragment, check if we need to finalize media stream
+            if (!trackDetails.live && fragPrevious && fragPrevious.sn === trackDetails.endSN) {
+              // if we are not seeking or if we are seeking but everything (almost) til the end is buffered, let's signal eos
+              // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference when switching
+              // between different renditions. using half frag duration should help cope with these cases.
+              if (!this.media.seeking || this.media.duration - bufferEnd < fragPrevious.duration / 2) {
+                // Finalize the media stream
+                this.hls.trigger(_events2.default.BUFFER_EOS, { type: 'audio' });
+                this.state = State.ENDED;
+                break;
+              }
+            }
+
             // find fragment index, contiguous with end of buffer position
             var fragments = trackDetails.fragments,
                 fragLen = fragments.length,
@@ -888,10 +900,6 @@ var AudioStreamController = function (_EventHandler) {
                       frag = fragments[frag.sn + 1 - trackDetails.startSN];
                       _logger.logger.log('SN just loaded, load next one: ' + frag.sn);
                     } else {
-                      // have we reached end of VOD playlist ?
-                      if (!trackDetails.live) {
-                        _this2.state = State.ENDED;
-                      }
                       frag = null;
                     }
                   }
@@ -1151,7 +1159,7 @@ var AudioStreamController = function (_EventHandler) {
   }, {
     key: 'onFragParsingData',
     value: function onFragParsingData(data) {
-      var _this3 = this;
+      var _this2 = this;
 
       var fragCurrent = this.fragCurrent;
       if (fragCurrent && data.id === 'audio' && data.sn === fragCurrent.sn && data.level === fragCurrent.level && this.state === State.PARSING) {
@@ -1163,8 +1171,8 @@ var AudioStreamController = function (_EventHandler) {
 
         [data.data1, data.data2].forEach(function (buffer) {
           if (buffer) {
-            _this3.pendingAppending++;
-            _this3.hls.trigger(_events2.default.BUFFER_APPENDING, { type: data.type, data: buffer, parent: 'audio', content: 'data' });
+            _this2.pendingAppending++;
+            _this2.hls.trigger(_events2.default.BUFFER_APPENDING, { type: data.type, data: buffer, parent: 'audio', content: 'data' });
           }
         });
         this.nextLoadPosition = data.endPTS;
@@ -1615,7 +1623,7 @@ var BufferController = function (_EventHandler) {
       }
 
       if (this._needsEos) {
-        this.onBufferEos();
+        this.checkEos();
       }
       this.appending = false;
       this.hls.trigger(_events2.default.BUFFER_APPENDED, { parent: this.parent });
@@ -1717,22 +1725,49 @@ var BufferController = function (_EventHandler) {
       // it will be followed by a mediaElement error ...)
       this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_APPENDING_ERROR, fatal: false, frag: this.fragCurrent });
     }
+
+    // on BUFFER_EOS mark matching sourcebuffer(s) as ended and trigger checkEos()
+
   }, {
     key: 'onBufferEos',
-    value: function onBufferEos() {
+    value: function onBufferEos(data) {
+      var sb = this.sourceBuffer;
+      var dataType = data.type;
+      for (var type in sb) {
+        if (!dataType || type === dataType) {
+          if (!sb[type].ended) {
+            sb[type].ended = true;
+            _logger.logger.log(type + ' sourceBuffer now EOS');
+          }
+        }
+      }
+      this.checkEos();
+    }
+
+    // if all source buffers are marked as ended, signal endOfStream() to MediaSource.
+
+  }, {
+    key: 'checkEos',
+    value: function checkEos() {
       var sb = this.sourceBuffer,
           mediaSource = this.mediaSource;
       if (!mediaSource || mediaSource.readyState !== 'open') {
+        this._needsEos = false;
         return;
       }
-      if (!(sb.audio && sb.audio.updating || sb.video && sb.video.updating)) {
-        _logger.logger.log('all media data available, signal endOfStream() to MediaSource and stop loading fragment');
-        //Notify the media element that it now has all of the media data
-        mediaSource.endOfStream();
-        this._needsEos = false;
-      } else {
-        this._needsEos = true;
+      for (var type in sb) {
+        if (!sb[type].ended) {
+          return;
+        }
+        if (sb[type].updating) {
+          this._needsEos = true;
+          return;
+        }
       }
+      _logger.logger.log('all media data available, signal endOfStream() to MediaSource and stop loading fragment');
+      //Notify the media element that it now has all of the media data
+      mediaSource.endOfStream();
+      this._needsEos = false;
     }
   }, {
     key: 'onBufferFlushing',
@@ -1837,10 +1872,13 @@ var BufferController = function (_EventHandler) {
         if (segments && segments.length) {
           var segment = segments.shift();
           try {
-            if (sourceBuffer[segment.type]) {
+            var type = segment.type;
+            if (sourceBuffer[type]) {
+              // reset sourceBuffer ended flag before appending segment
+              sourceBuffer[type].ended = false;
               //logger.log(`appending ${segment.content} ${segment.type} SB, size:${segment.data.length}, ${segment.parent}`);
               this.parent = segment.parent;
-              sourceBuffer[segment.type].appendBuffer(segment.data);
+              sourceBuffer[type].appendBuffer(segment.data);
               this.appendError = 0;
               this.appended++;
               this.appending = true;
@@ -2937,7 +2975,11 @@ var StreamController = function (_EventHandler) {
         // between different renditions. using half frag duration should help cope with these cases.
         if (!media.seeking || media.duration - bufferInfo.end < fragPrevious.duration / 2) {
           // Finalize the media stream
-          this.hls.trigger(_events2.default.BUFFER_EOS);
+          var data = {};
+          if (this.audioTrackType === 'AUDIO') {
+            data.type = 'video';
+          }
+          this.hls.trigger(_events2.default.BUFFER_EOS, data);
           this.state = State.ENDED;
           return true;
         }
