@@ -7,6 +7,7 @@ import EventHandler from '../event-handler';
 import Cea608Parser from '../utils/cea-608-parser';
 import WebVTTParser from '../utils/webvtt-parser';
 import Cues from '../utils/cues';
+import {logger} from '../utils/logger';
 
 class TimelineController extends EventHandler {
 
@@ -26,6 +27,8 @@ class TimelineController extends EventHandler {
     this.Cues = hls.config.cueHandler;
     this.textTracks = [];
     this.tracks = [];
+    this.unparsedVttFrags = [];
+    this.initPTS = undefined;
 
     if (this.config.enableCEA708Captions)
     {
@@ -61,8 +64,19 @@ class TimelineController extends EventHandler {
     }
   }
 
+  // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
   onInitPtsFound(data) {
-    console.log('***********************************', data)
+    if(typeof this.initPTS === 'undefined')
+      this.initPTS = data.initPTS;
+
+    // Due to asynchrony, initial PTS may arrive later than the first VTT fragments are loaded.
+    // Parse any unparsed fragments upon receiving the initial PTS.
+    if(this.unparsedVttFrags.length) {
+      this.unparsedVttFrags.forEach(frag => {
+        this.onFragLoaded(frag);
+      });
+      this.unparsedVttFrags = [];
+    }
   }
 
   clearCurrentCues(track)
@@ -104,6 +118,8 @@ class TimelineController extends EventHandler {
     // TODO: actually remove the tracks from the media object.
     this.textTracks = [];
 
+    this.unparsedVttFrags = [];
+    this.initPTS = undefined;
 
     // TODO: maybe enable WebVTT if "forced"?
     if(this.config.enableWebVTT) {
@@ -140,9 +156,30 @@ class TimelineController extends EventHandler {
       }
       this.lastPts = pts;
     }
+    // If fragment is subtitle type, parse as WebVTT.
     else if (data.frag.type === 'subtitle') {
       if(data.payload.byteLength) {
-         let parsedCues = WebVTTParser.parse(data.payload);
+        // We need an initial synchronisation PTS. Store fragments as long as none has arrived.
+        if(typeof this.initPTS === 'undefined') {
+          this.unparsedVttFrags.push(data);
+          logger.log(`timelineController: Tried to parse WebVTT frag without PTS. Saving frag for later...`);
+          return;
+        }
+        let textTracks = this.textTracks,
+            hls = this.hls;
+
+        // Parse the WebVTT file contents.
+        WebVTTParser.parse(data.payload, this.initPTS, function(cues) {
+          // Add cues and trigger event with success true.
+          cues.forEach(cue => {
+            textTracks[0].addCue(cue);
+          });
+          hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: true, frag: data.frag});
+        },
+        function(e) {
+          // Something went wrong while parsing. Trigger event with success false.
+          hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: false, frag: data.frag});
+        });
       }
     }
   }

@@ -55,6 +55,10 @@ module.exports = {
   SUBTITLE_TRACK_LOADING: 'hlsSubtitleTrackLoading',
   // fired when an subtitle track loading  finishes - data: { details : levelDetails object, id : subtitle track id, stats : { trequest, tfirst, tload, mtime} }
   SUBTITLE_TRACK_LOADED: 'hlsSubtitleTrackLoaded',
+  // fired when a subtitle fragment has been processed - data: { success : boolean, frag : the processed frag}
+  SUBTITLE_FRAG_PROCESSED: 'hlsSubtitleFragProcessed',
+  // fired when the first timestamp is found. Used for synchronising WebVTT subtitles.
+  INIT_PTS_FOUND: 'hlsInitPtsFound',
   // fired when a fragment loading starts - data: { frag : fragment object}
   FRAG_LOADING: 'hlsFragLoading',
   // fired when a fragment loading is progressing - data: { frag : fragment object, { trequest, tfirst, loaded}}
@@ -90,7 +94,5 @@ module.exports = {
   // fired when a decrypt key loading is completed - data: { frag : fragment object, payload : key payload, stats : { trequest, tfirst, tload, length}}
   KEY_LOADED: 'hlsKeyLoaded',
   // fired upon stream controller state transitions - data: {previousState, nextState}
-  STREAM_STATE_TRANSITION: 'hlsStreamStateTransition',
-  // Fired when the first timestamp is found. Used for synchronising WebVTT subtitles.
-  INIT_PTS_FOUND: 'hlsInitPtsFound'
+  STREAM_STATE_TRANSITION: 'hlsStreamStateTransition'
 };
