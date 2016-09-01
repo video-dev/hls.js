@@ -22,12 +22,13 @@ class SubtitleTrackController extends EventHandler {
         EventHandler.prototype.destroy.call(this);
     }
 
+    // Reset subtitle tracks on manifest loading
     onManifestLoading() {
-        // reset subtitle tracks on manifest loading
         this.tracks = [];
         this.trackId = 0;
     }
 
+    // Fired whenever a new manifest is loaded.
     onManifestLoaded(data) {
         let tracks = data.subtitles || [];
         let defaultFound = false;
@@ -48,6 +49,21 @@ class SubtitleTrackController extends EventHandler {
         });
     }
 
+    onTick() {
+        let trackId = this.trackId,
+            subtitleTrack = this.tracks[trackId],
+            details = subtitleTrack.details;
+        // check if we need to load playlist for this subtitle Track
+        if (details === undefined || details.live === true) {
+            // track not retrieved yet, or live playlist we need to (re)load it
+            logger.log(`(re)loading playlist for subtitle track ${trackId}`);
+            this.hls.trigger(Event.SUBTITLE_TRACK_LOADING, {
+                url: subtitleTrack.url,
+                id: trackId
+            });
+        }
+    }
+
     onSubtitleTrackLoaded(data) {
         if (data.id < this.tracks.length) {
             logger.log(`subtitle track ${data.id} loaded`);
@@ -57,8 +73,11 @@ class SubtitleTrackController extends EventHandler {
                 // if live playlist we will have to reload it periodically
                 // set reload period to playlist target duration
                 this.timer = setInterval(
-                    this.ontick,
-                    1000 * data.details.targetduration
+                    () => {
+                        this.onTick();
+                    },
+                    1000 * data.details.targetduration,
+                    this
                 );
             }
             if (!data.details.live && this.timer) {
