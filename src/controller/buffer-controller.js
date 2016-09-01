@@ -148,7 +148,7 @@ class BufferController extends EventHandler {
         }
 
         if (this._needsEos) {
-            this.onBufferEos();
+            this.checkEos();
         }
         this.appending = false;
         this.hls.trigger(Event.BUFFER_APPENDED, { parent: this.parent });
@@ -264,27 +264,44 @@ class BufferController extends EventHandler {
         });
     }
 
-    onBufferEos() {
+    // on BUFFER_EOS mark matching sourcebuffer(s) as ended and trigger checkEos()
+    onBufferEos(data) {
+        var sb = this.sourceBuffer;
+        let dataType = data.type;
+        for (let type in sb) {
+            if (!dataType || type === dataType) {
+                if (!sb[type].ended) {
+                    sb[type].ended = true;
+                    logger.log(`${type} sourceBuffer now EOS`);
+                }
+            }
+        }
+        this.checkEos();
+    }
+
+    // if all source buffers are marked as ended, signal endOfStream() to MediaSource.
+    checkEos() {
         var sb = this.sourceBuffer,
             mediaSource = this.mediaSource;
         if (!mediaSource || mediaSource.readyState !== 'open') {
+            this._needsEos = false;
             return;
         }
-        if (
-            !(
-                (sb.audio && sb.audio.updating) ||
-                (sb.video && sb.video.updating)
-            )
-        ) {
-            logger.log(
-                'all media data available, signal endOfStream() to MediaSource and stop loading fragment'
-            );
-            //Notify the media element that it now has all of the media data
-            mediaSource.endOfStream();
-            this._needsEos = false;
-        } else {
-            this._needsEos = true;
+        for (let type in sb) {
+            if (!sb[type].ended) {
+                return;
+            }
+            if (sb[type].updating) {
+                this._needsEos = true;
+                return;
+            }
         }
+        logger.log(
+            'all media data available, signal endOfStream() to MediaSource and stop loading fragment'
+        );
+        //Notify the media element that it now has all of the media data
+        mediaSource.endOfStream();
+        this._needsEos = false;
     }
 
     onBufferFlushing(data) {
@@ -397,10 +414,13 @@ class BufferController extends EventHandler {
             if (segments && segments.length) {
                 var segment = segments.shift();
                 try {
-                    if (sourceBuffer[segment.type]) {
+                    let type = segment.type;
+                    if (sourceBuffer[type]) {
+                        // reset sourceBuffer ended flag before appending segment
+                        sourceBuffer[type].ended = false;
                         //logger.log(`appending ${segment.content} ${segment.type} SB, size:${segment.data.length}, ${segment.parent}`);
                         this.parent = segment.parent;
-                        sourceBuffer[segment.type].appendBuffer(segment.data);
+                        sourceBuffer[type].appendBuffer(segment.data);
                         this.appendError = 0;
                         this.appended++;
                         this.appending = true;

@@ -279,7 +279,11 @@ class StreamController extends EventHandler {
                 media.duration - bufferInfo.end < fragPrevious.duration / 2
             ) {
                 // Finalize the media stream
-                this.hls.trigger(Event.BUFFER_EOS);
+                let data = {};
+                if (this.audioTrackType === 'AUDIO') {
+                    data.type = 'video';
+                }
+                this.hls.trigger(Event.BUFFER_EOS, data);
                 this.state = State.ENDED;
                 return true;
             }
