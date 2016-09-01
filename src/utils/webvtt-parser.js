@@ -33,6 +33,8 @@ const WebVTTParser = {
             // Adjust cue timing; clamp cues to start no earlier than - and drop cues that don't end after - 0 on timeline.
             cue.startTime = Math.max(0, cue.startTime + offsetMillis/1000);
             cue.endTime += offsetMillis/1000;
+            // Fix encoding of special characters. TODO: Test with all sorts of weird characters.
+            cue.text = decodeURIComponent(escape(cue.text));
             if(cue.endTime > 0) cues.push(cue);
         };
 
@@ -70,7 +72,11 @@ const WebVTTParser = {
                     });
                     try {
                         // Calculate subtitle offset in milliseconds.
+                        // If sync PTS is less than zero, we have a 33-bit wraparound, which is fixed by adding 2^33 = 8589934592.
+                        syncPTS = syncPTS < 0 ? syncPTS + 8589934592 : syncPTS;
+                        // Adjust MPEGTS by sync PTS.
                         mpegTs -= syncPTS;
+                        // Calculate cue timing in milliseconds and adjust by MPEGTS converted to milliseconds from 90kHz.
                         offsetMillis = cueString2millis(cueTime) + Math.floor(mpegTs/90);
                         if(offsetMillis === -1) parsingError = new Error(`Malformed X-TIMESTAMP-MAP: ${line}`);
                     }
