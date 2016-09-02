@@ -1338,11 +1338,7 @@ var AudioTrackController = function (_EventHandler) {
   function AudioTrackController(hls) {
     _classCallCheck(this, AudioTrackController);
 
-    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(AudioTrackController).call(this, hls, _events2.default.MANIFEST_LOADING, _events2.default.MANIFEST_LOADED, _events2.default.AUDIO_TRACK_LOADED));
-
-    _this.tracks = [];
-    _this.trackId = 0;
-    return _this;
+    return _possibleConstructorReturn(this, Object.getPrototypeOf(AudioTrackController).call(this, hls, _events2.default.MANIFEST_LOADING, _events2.default.MANIFEST_LOADED, _events2.default.AUDIO_TRACK_LOADED));
   }
 
   _createClass(AudioTrackController, [{
@@ -1355,7 +1351,7 @@ var AudioTrackController = function (_EventHandler) {
     value: function onManifestLoading() {
       // reset audio tracks on manifest loading
       this.tracks = [];
-      this.trackId = 0;
+      this.trackId = -1;
     }
   }, {
     key: 'onManifestLoaded',
@@ -1367,12 +1363,14 @@ var AudioTrackController = function (_EventHandler) {
       this.tracks = tracks;
       this.hls.trigger(_events2.default.AUDIO_TRACKS_UPDATED, { audioTracks: tracks });
       // loop through available audio tracks and autoselect default if needed
+      var id = 0;
       tracks.forEach(function (track) {
         if (track.default) {
-          _this2.audioTrack = track.id;
+          _this2.audioTrack = id;
           defaultFound = true;
           return;
         }
+        id++;
       });
       if (defaultFound === false && tracks.length) {
         _logger.logger.log('no default audio track defined, use first audio track as default');
@@ -4161,10 +4159,6 @@ var _cea608Parser = require('../utils/cea-608-parser');
 
 var _cea608Parser2 = _interopRequireDefault(_cea608Parser);
 
-var _cues = require('../utils/cues');
-
-var _cues2 = _interopRequireDefault(_cues);
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -4186,6 +4180,7 @@ var TimelineController = function (_EventHandler) {
     _this.hls = hls;
     _this.config = hls.config;
     _this.enabled = true;
+    _this.Cues = hls.config.cueHandler;
 
     if (_this.config.enableCEA708Captions) {
       var self = _this;
@@ -4197,7 +4192,7 @@ var TimelineController = function (_EventHandler) {
             //            self.textTrack1.mode = 'showing';
           }
 
-          _cues2.default.newCue(self.textTrack1, startTime, endTime, screen);
+          self.Cues.newCue(self.textTrack1, startTime, endTime, screen);
         }
       };
 
@@ -4207,7 +4202,7 @@ var TimelineController = function (_EventHandler) {
             self.textTrack2 = self.createTextTrack('captions', 'Unknown CC2', 'es');
           }
 
-          _cues2.default.newCue(self.textTrack2, startTime, endTime, screen);
+          self.Cues.newCue(self.textTrack2, startTime, endTime, screen);
         }
       };
 
@@ -4321,7 +4316,7 @@ var TimelineController = function (_EventHandler) {
 
 exports.default = TimelineController;
 
-},{"../event-handler":25,"../events":26,"../utils/cea-608-parser":40,"../utils/cues":41}],13:[function(require,module,exports){
+},{"../event-handler":25,"../events":26,"../utils/cea-608-parser":40}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7531,7 +7526,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.2-4';
+      return '0.6.2-5';
     }
   }, {
     key: 'Events',
@@ -8631,7 +8626,7 @@ var PlaylistLoader = function (_EventHandler) {
               });
               // if no embedded audio track defined, but audio codec signaled in quality level, we need to signal this main audio track
               // this could happen with playlists with alt audio rendition in which quality levels (main) contains both audio+video. but with mixed audio track not signaled
-              if (embeddedAudioFound === false && levels[0].audioCodec) {
+              if (embeddedAudioFound === false && levels[0].audioCodec && !levels[0].attrs.AUDIO) {
                 _logger.logger.log('audio codec signaled in quality level, but no embedded audio track signaled, create one');
                 audiotracks.unshift({ type: 'main', name: 'main' });
               }
@@ -9266,7 +9261,6 @@ var MP4Remuxer = function () {
     key: 'insertDiscontinuity',
     value: function insertDiscontinuity() {
       this._initPTS = this._initDTS = undefined;
-      this.nextAacPts = this.nextAvcDts = 0;
     }
   }, {
     key: 'switchLevel',
