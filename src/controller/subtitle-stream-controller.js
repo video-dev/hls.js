@@ -17,12 +17,20 @@ class SubtitleStreamController extends EventHandler {
         );
         this.config = hls.config;
         this.vttFragSNsProcessed = {};
-        this.vttFragQueues = {};
+        this.vttFragQueues = undefined;
         (this.currentlyProcessing = null), (this.currentTrackId = -1);
     }
 
     destroy() {
         EventHandler.prototype.destroy.call(this);
+    }
+
+    clearVttFragQueues() {
+        this.vttFragQueues = {};
+        this.tracks.forEach(track => {
+            this.vttFragSNsProcessed[track.id] = [];
+            this.vttFragQueues[track.id] = [];
+        });
     }
 
     nextFrag() {
@@ -31,21 +39,16 @@ class SubtitleStreamController extends EventHandler {
             this.currentTrackId > -1 &&
             this.vttFragQueues[this.currentTrackId].length
         ) {
-            this.currentlyProcessing = {
-                sn: this.vttFragQueues[this.currentTrackId][0].sn,
-                id: this.currentTrackId
-            };
-            hls.trigger(Event.FRAG_LOADING, {
-                frag: this.vttFragQueues[this.currentTrackId].shift()
-            });
+            let frag = (this.currentlyProcessing = this.vttFragQueues[
+                this.currentTrackId
+            ].shift());
+            hls.trigger(Event.FRAG_LOADING, { frag });
         }
     }
 
     onSubtitleFragProcessed(data) {
         if (data.success) {
-            this.vttFragSNsProcessed[this.currentlyProcessing.id].push(
-                this.currentlyProcessing.sn
-            );
+            this.vttFragSNsProcessed[data.frag.trackId].push(data.frag.sn);
         }
         this.currentlyProcessing = null;
         this.nextFrag();
@@ -55,14 +58,13 @@ class SubtitleStreamController extends EventHandler {
         logger.log('subtitle tracks updated');
         this.tracks = data.subtitleTracks;
         this.vttFragSNsProcessed = {};
-        this.vttFragQueues = {};
-        this.tracks.forEach(track => {
-            this.vttFragSNsProcessed[track.id] = [];
-            this.vttFragQueues[track.id] = [];
-        });
+        this.clearVttFragQueues();
     }
 
-    onSubtitleTrackSwitch(data) {}
+    onSubtitleTrackSwitch(data) {
+        this.currentTrackId = data.id;
+        this.clearVttFragQueues();
+    }
 
     onSubtitleTrackLoaded(data) {
         let processedFragSNs = this.vttFragSNsProcessed[data.id],
@@ -89,6 +91,7 @@ class SubtitleStreamController extends EventHandler {
                     alreadyInQueue(frag)
                 )
             ) {
+                frag.trackId = data.id;
                 fragQueue.push(frag);
             }
         });
