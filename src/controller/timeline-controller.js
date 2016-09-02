@@ -126,7 +126,9 @@ class TimelineController extends EventHandler {
       this.tracks = data.subtitles || [];
 
       this.tracks.forEach(track => {
-        this.textTracks.push(this.createTextTrack('captions', track.name, track.lang));
+        let textTrack = this.createTextTrack('captions', track.name, track.lang);
+        textTrack.mode = track.default ? "showing" : "hidden";
+        this.textTracks.push(textTrack);
       });
     }
   }
@@ -172,7 +174,7 @@ class TimelineController extends EventHandler {
         WebVTTParser.parse(data.payload, this.initPTS, function(cues) {
           // Add cues and trigger event with success true.
           cues.forEach(cue => {
-            textTracks[0].addCue(cue);
+            textTracks[data.frag.trackId].addCue(cue);
           });
           hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: true, frag: data.frag});
         },
