@@ -29,7 +29,6 @@ class SubtitleStreamController extends EventHandler {
     clearVttFragQueues() {
         this.vttFragQueues = {};
         this.tracks.forEach(track => {
-            this.vttFragSNsProcessed[track.id] = [];
             this.vttFragQueues[track.id] = [];
         });
     }
@@ -70,8 +69,11 @@ class SubtitleStreamController extends EventHandler {
     onSubtitleTracksUpdated(data) {
         logger.log('subtitle tracks updated');
         this.tracks = data.subtitleTracks;
-        this.vttFragSNsProcessed = {};
         this.clearVttFragQueues();
+        this.vttFragSNsProcessed = {};
+        this.tracks.forEach(track => {
+            this.vttFragSNsProcessed[track.id] = [];
+        });
     }
 
     onSubtitleTrackSwitch(data) {
