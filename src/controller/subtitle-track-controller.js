@@ -25,6 +25,7 @@ class SubtitleTrackController extends EventHandler {
         EventHandler.prototype.destroy.call(this);
     }
 
+    // Listen for subtitle track change, then extract the current track ID.
     onMediaAttached(data) {
         this.media = data.media;
 
@@ -34,6 +35,7 @@ class SubtitleTrackController extends EventHandler {
             for (let id = 0; id < tracks.length; id++) {
                 if (tracks[id].mode === 'showing') trackId = id;
             }
+            // Setting current subtitleTrack will envoke code.
             this.subtitleTrack = trackId;
         });
     }
@@ -70,6 +72,7 @@ class SubtitleTrackController extends EventHandler {
         });
     }
 
+    // Trigger subtitle track playlist reload.
     onTick() {
         let trackId = this.trackId,
             subtitleTrack = this.tracks[trackId],
