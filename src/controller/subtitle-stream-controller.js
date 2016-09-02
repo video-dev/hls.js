@@ -10,6 +10,7 @@ class SubtitleStreamController extends EventHandler {
     constructor(hls) {
         super(
             hls,
+            Event.ERROR,
             Event.SUBTITLE_TRACKS_UPDATED,
             Event.SUBTITLE_TRACK_SWITCH,
             Event.SUBTITLE_TRACK_LOADED,
@@ -52,6 +53,18 @@ class SubtitleStreamController extends EventHandler {
         }
         this.currentlyProcessing = null;
         this.nextFrag();
+    }
+
+    onError(data) {
+        let frag = data.frag;
+        // don't handle frag error not related to subtitle fragment
+        if (frag && frag.type !== 'subtitle') {
+            return;
+        }
+        if (this.currentlyProcessing) {
+            this.currentlyProcessing = null;
+            this.nextFrag();
+        }
     }
 
     onSubtitleTracksUpdated(data) {

@@ -10,22 +10,43 @@ class SubtitleTrackController extends EventHandler {
     constructor(hls) {
         super(
             hls,
+            Event.MEDIA_ATTACHED,
+            Event.MEDIA_DETACHING,
             Event.MANIFEST_LOADING,
             Event.MANIFEST_LOADED,
             Event.SUBTITLE_TRACK_LOADED
         );
         this.tracks = [];
-        this.trackId = 0;
+        this.trackId = -1;
+        this.media = undefined;
     }
 
     destroy() {
         EventHandler.prototype.destroy.call(this);
     }
 
+    onMediaAttached(data) {
+        this.media = data.media;
+
+        this.media.textTracks.addEventListener('change', event => {
+            let trackId = -1;
+            let tracks = this.media.textTracks;
+            for (let id = 0; id < tracks.length; id++) {
+                if (tracks[id].mode === 'showing') trackId = id;
+            }
+            this.subtitleTrack = trackId;
+        });
+    }
+
+    onMediaDetaching() {
+        // TODO: Remove event listeners.
+        this.media = undefined;
+    }
+
     // Reset subtitle tracks on manifest loading
     onManifestLoading() {
         this.tracks = [];
-        this.trackId = 0;
+        this.trackId = -1;
     }
 
     // Fired whenever a new manifest is loaded.
