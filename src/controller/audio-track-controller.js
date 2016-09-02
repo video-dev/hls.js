@@ -14,8 +14,6 @@ class AudioTrackController extends EventHandler {
             Event.MANIFEST_LOADED,
             Event.AUDIO_TRACK_LOADED
         );
-        this.tracks = [];
-        this.trackId = 0;
     }
 
     destroy() {
@@ -25,7 +23,7 @@ class AudioTrackController extends EventHandler {
     onManifestLoading() {
         // reset audio tracks on manifest loading
         this.tracks = [];
-        this.trackId = 0;
+        this.trackId = -1;
     }
 
     onManifestLoaded(data) {
@@ -34,12 +32,14 @@ class AudioTrackController extends EventHandler {
         this.tracks = tracks;
         this.hls.trigger(Event.AUDIO_TRACKS_UPDATED, { audioTracks: tracks });
         // loop through available audio tracks and autoselect default if needed
+        let id = 0;
         tracks.forEach(track => {
             if (track.default) {
-                this.audioTrack = track.id;
+                this.audioTrack = id;
                 defaultFound = true;
                 return;
             }
+            id++;
         });
         if (defaultFound === false && tracks.length) {
             logger.log(
