@@ -26,6 +26,7 @@ class SubtitleStreamController extends EventHandler {
     EventHandler.prototype.destroy.call(this);
   }
 
+  // Remove all queued items and create a new, empty queue for each track.
   clearVttFragQueues() {
     this.vttFragQueues = {};
     this.tracks.forEach(track => {
@@ -33,6 +34,7 @@ class SubtitleStreamController extends EventHandler {
     });
   }
 
+  // If no frag is being processed and queue isn't empty, initiate processing of next frag in line.
   nextFrag() {
     if(this.currentlyProcessing === null && this.currentTrackId > -1 && this.vttFragQueues[this.currentTrackId].length) {
       let frag = this.currentlyProcessing = this.vttFragQueues[this.currentTrackId].shift();
@@ -40,6 +42,7 @@ class SubtitleStreamController extends EventHandler {
     }
   }
 
+  // When fragment has finished processing, add sn to list of completed if successful.
   onSubtitleFragProcessed(data) {
     if(data.success) {
       this.vttFragSNsProcessed[data.frag.trackId].push(data.frag.sn);
@@ -48,6 +51,7 @@ class SubtitleStreamController extends EventHandler {
     this.nextFrag();
   }
 
+  // If something goes wrong, procede to next frag, if we were processing one.
   onError(data) {
     let frag = data.frag;
     // don't handle frag error not related to subtitle fragment
@@ -60,6 +64,7 @@ class SubtitleStreamController extends EventHandler {
     }
   }
 
+  // Got all new subtitle tracks.
   onSubtitleTracksUpdated(data) {
     logger.log('subtitle tracks updated');
     this.tracks = data.subtitleTracks;
@@ -75,6 +80,7 @@ class SubtitleStreamController extends EventHandler {
     this.clearVttFragQueues();
   }
 
+  // Got a new set of subtitle fragments.
   onSubtitleTrackLoaded(data) {
     let processedFragSNs = this.vttFragSNsProcessed[data.id],
         fragQueue = this.vttFragQueues[data.id],
@@ -88,8 +94,10 @@ class SubtitleStreamController extends EventHandler {
       return fragQueue.some(fragInQueue => {return fragInQueue.sn === frag.sn});
     }
 
+    // Add all fragments that haven't been, aren't currently being and aren't waiting to be processed, to queue.
     data.details.fragments.forEach(frag => {
       if(!(alreadyProcessed(frag) || frag.sn === currentFragSN || alreadyInQueue(frag))) {
+        // Frags don't know their subtitle track ID, so let's just add that...
         frag.trackId = data.id;
         fragQueue.push(frag);
       }
