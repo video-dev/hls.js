@@ -276,7 +276,7 @@ class StreamController extends EventHandler {
             // between different renditions. using half frag duration should help cope with these cases.
             if (
                 !media.seeking ||
-                media.duration - bufferInfo.end < fragPrevious.duration / 2
+                media.duration - bufferInfo.end <= fragPrevious.duration / 2
             ) {
                 // Finalize the media stream
                 let data = {};
