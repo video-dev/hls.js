@@ -190,7 +190,7 @@ class StreamController extends EventHandler {
             // if we are not seeking or if we are seeking but everything (almost) til the end is buffered, let's signal eos
             // we don't compare exactly media.duration === bufferEnd as there could be some subtle media duration difference when switching
             // between different renditions. using half frag duration should help cope with these cases.
-            if (!isSeeking || (media.duration-bufferEnd) < fragPrevious.duration/2) {
+            if (!isSeeking || (media.duration-bufferEnd) <= fragPrevious.duration/2) {
               // Finalize the media stream
               this.hls.trigger(Event.BUFFER_EOS);
               this.state = State.ENDED;
