@@ -381,12 +381,12 @@ class MP4Remuxer {
     for (var i = 0; i < samples0.length; ) {
       // First, let's see how far off this frame is from where we expect it to be
       var sample = samples0[i],
-          ptsNorm = this._PTSNormalize(sample.pts - this._initPTS, nextAacPts),
+          ptsNorm = this._PTSNormalize(sample.pts - this._initDTS, nextAacPts),
           delta = ptsNorm - nextPtsNorm;
 
       // If we're overlapping by more than half a duration, drop this sample
       if (delta < (-0.5 * pesFrameDuration)) {
-        logger.log(`Dropping frame due to ${Math.abs(delta / 90)} ms overlap.`);
+        logger.log(`Dropping frame due to ${Math.round(Math.abs(delta / 90))} ms overlap.`);
         samples0.splice(i, 1);
         track.len -= sample.unit.length;
         // Don't touch nextPtsNorm or i
@@ -397,7 +397,7 @@ class MP4Remuxer {
         logger.log(`Injecting ${missing} frame${missing > 1 ? 's' : ''} of missing audio due to ${Math.round(delta / 90)} ms gap.`);
         for (var j = 0; j < missing; j++) {
           newStamp = sample.pts - (missing - j) * pesFrameDuration;
-          newStamp = Math.max(newStamp, this._initPTS);
+          newStamp = Math.max(newStamp, this._initDTS);
           fillFrame = AAC.getSilentFrame(track.channelCount);
           if (!fillFrame) {
             logger.log('Unable to get silent frame for given audio codec; duplicating last frame instead.');
@@ -410,17 +410,17 @@ class MP4Remuxer {
 
         // Adjust sample to next expected pts
         sample.pts = samples0[i - 1].pts + pesFrameDuration;
-        nextPtsNorm = this._PTSNormalize(sample.pts + pesFrameDuration - this._initPTS, nextAacPts);
+        nextPtsNorm = this._PTSNormalize(sample.pts + pesFrameDuration - this._initDTS, nextAacPts);
         i += 1;
       }
       // Otherwise, we're within half a frame duration, so just adjust pts
       else {
         if (Math.abs(delta) > (0.1 * pesFrameDuration)) {
-          logger.log(`Invalid frame delta ${ptsNorm - nextPtsNorm + pesFrameDuration} at PTS ${Math.round(ptsNorm / 90)} (should be ${pesFrameDuration}).`);
+          logger.log(`Invalid frame delta ${Math.round(ptsNorm - nextPtsNorm + pesFrameDuration)} at PTS ${Math.round(ptsNorm / 90)} (should be ${Math.round(pesFrameDuration)}).`);
         }
         nextPtsNorm += pesFrameDuration;
         if (i === 0) {
-          sample.pts = this._initPTS + nextAacPts;
+          sample.pts = this._initDTS + nextAacPts;
         } else {
           sample.pts = samples0[i - 1].pts + pesFrameDuration;
         }
@@ -438,7 +438,7 @@ class MP4Remuxer {
       if (lastDTS !== undefined) {
         ptsnorm = this._PTSNormalize(pts, lastDTS);
         dtsnorm = this._PTSNormalize(dts, lastDTS);
-        mp4Sample.duration = (dtsnorm - lastDTS) / pes2mp4ScaleFactor;
+        mp4Sample.duration = Math.round((dtsnorm - lastDTS) / pes2mp4ScaleFactor);
       } else {
         ptsnorm = this._PTSNormalize(pts, nextAacPts);
         dtsnorm = this._PTSNormalize(dts, nextAacPts);
