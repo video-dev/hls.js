@@ -192,7 +192,7 @@ class Hls {
     this.subtitleStreamController.destroy();
     this.timelineController.destroy();
     this.audioTrackController.destroy();
-    this.subitleTrackController.destroy();
+    this.subtitleTrackController.destroy();
     this.keyLoader.destroy();
     this.url = null;
     this.observer.removeAllListeners();
