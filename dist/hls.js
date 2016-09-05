@@ -6447,8 +6447,7 @@ var TSDemuxer = function () {
             if (debug) {
               debugString += 'SEI ';
             }
-            unit.data = _this.discardEPB(unit.data);
-            expGolombDecoder = new _expGolomb2.default(unit.data);
+            expGolombDecoder = new _expGolomb2.default(_this.discardEPB(unit.data));
 
             // skip frameType
             expGolombDecoder.readUByte();
@@ -9435,8 +9434,8 @@ var MP4Remuxer = function () {
 
       // compute first DTS and last DTS, normalize them against reference value
       var sample = inputSamples[0];
-      firstDTS = Math.max(this._PTSNormalize(sample.dts, nextAvcDts) - this._initDTS, 0);
-      firstPTS = Math.max(this._PTSNormalize(sample.pts, nextAvcDts) - this._initDTS, 0);
+      firstDTS = Math.max(this._PTSNormalize(sample.dts - this._initDTS, nextAvcDts), 0);
+      firstPTS = Math.max(this._PTSNormalize(sample.pts - this._initDTS, nextAvcDts), 0);
 
       // check timestamp continuity accross consecutive fragments (this is to remove inter-fragment gap/hole)
       var delta = Math.round((firstDTS - nextAvcDts) / 90);
@@ -9461,8 +9460,8 @@ var MP4Remuxer = function () {
 
       // compute lastPTS/lastDTS
       sample = inputSamples[inputSamples.length - 1];
-      lastDTS = Math.max(this._PTSNormalize(sample.dts, nextAvcDts) - this._initDTS, 0);
-      lastPTS = Math.max(this._PTSNormalize(sample.pts, nextAvcDts) - this._initDTS, 0);
+      lastDTS = Math.max(this._PTSNormalize(sample.dts - this._initDTS, nextAvcDts), 0);
+      lastPTS = Math.max(this._PTSNormalize(sample.pts - this._initDTS, nextAvcDts), 0);
       lastPTS = Math.max(lastPTS, lastDTS);
 
       var vendor = navigator.vendor,
@@ -9484,13 +9483,13 @@ var MP4Remuxer = function () {
           _sample.dts = firstDTS + i * pes2mp4ScaleFactor * mp4SampleDuration;
         } else {
           // ensure sample monotonic DTS
-          _sample.dts = Math.max(this._PTSNormalize(_sample.dts, nextAvcDts) - this._initDTS, firstDTS);
+          _sample.dts = Math.max(this._PTSNormalize(_sample.dts - this._initDTS, nextAvcDts), firstDTS);
           // ensure dts is a multiple of scale factor to avoid rounding issues
           _sample.dts = Math.round(_sample.dts / pes2mp4ScaleFactor) * pes2mp4ScaleFactor;
         }
         // we normalize PTS against nextAvcDts, we also substract initDTS (some streams don't start @ PTS O)
         // and we ensure that computed value is greater or equal than sample DTS
-        _sample.pts = Math.max(this._PTSNormalize(_sample.pts, nextAvcDts) - this._initDTS, _sample.dts);
+        _sample.pts = Math.max(this._PTSNormalize(_sample.pts - this._initDTS, nextAvcDts), _sample.dts);
         // ensure pts is a multiple of scale factor to avoid rounding issues
         _sample.pts = Math.round(_sample.pts / pes2mp4ScaleFactor) * pes2mp4ScaleFactor;
       }
