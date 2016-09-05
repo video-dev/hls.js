@@ -365,8 +365,8 @@ $(document).ready(function() {
             parsing : data.stats.tparsed - data.stats.tload,
             buffer : data.stats.tbuffered - data.stats.tparsed,
             duration : data.stats.tbuffered - data.stats.tfirst,
-            bw : Math.round(8*data.stats.length/(data.stats.tbuffered - data.stats.tfirst)),
-            size : data.stats.length
+            bw : Math.round(8*data.stats.total/(data.stats.tbuffered - data.stats.tfirst)),
+            size : data.stats.total
           };
           events.load.push(event);
           events.bitrate.push({time : performance.now() - events.t0, bitrate : event.bw , duration : data.frag.duration, level : event.id});
