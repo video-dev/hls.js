@@ -279,6 +279,16 @@
 
   _parsePES(stream) {
     var i = 0, frag, pesFlags, pesPrefix, pesLen, pesHdrLen, pesData, pesPts, pesDts, payloadStartOffset, data = stream.data;
+    // we might need up to 19 bytes to read PES header
+    // if first chunk of data is less than 19 bytes, let's merge it with following ones until we get 19 bytes
+    // usually only one merge is needed (and this is rare ...)
+    while(data[0].length < 19 && data.length > 1) {
+      let newData = new Uint8Array(data[0].length + data[1].length);
+      newData.set(data[0]);
+      newData.set(data[1], data[0].length);
+      data[0] = newData;
+      data.splice(1,1);
+    }
     //retrieve PTS/DTS from first fragment
     frag = data[0];
     pesPrefix = (frag[0] << 16) + (frag[1] << 8) + frag[2];
