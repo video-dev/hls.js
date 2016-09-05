@@ -197,7 +197,12 @@ class TimelineController extends EventHandler {
                         });
                     }
                 );
-            }
+            } else
+                // In case there is no payload, finish unsuccessfully.
+                hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {
+                    success: false,
+                    frag: data.frag
+                });
         }
     }
 
