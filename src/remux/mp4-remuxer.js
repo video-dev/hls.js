@@ -234,11 +234,11 @@ class MP4Remuxer {
         // compute first DTS and last DTS, normalize them against reference value
         let sample = inputSamples[0];
         firstDTS = Math.max(
-            this._PTSNormalize(sample.dts, nextAvcDts) - this._initDTS,
+            this._PTSNormalize(sample.dts - this._initDTS, nextAvcDts),
             0
         );
         firstPTS = Math.max(
-            this._PTSNormalize(sample.pts, nextAvcDts) - this._initDTS,
+            this._PTSNormalize(sample.pts - this._initDTS, nextAvcDts),
             0
         );
 
@@ -272,11 +272,11 @@ class MP4Remuxer {
         // compute lastPTS/lastDTS
         sample = inputSamples[inputSamples.length - 1];
         lastDTS = Math.max(
-            this._PTSNormalize(sample.dts, nextAvcDts) - this._initDTS,
+            this._PTSNormalize(sample.dts - this._initDTS, nextAvcDts),
             0
         );
         lastPTS = Math.max(
-            this._PTSNormalize(sample.pts, nextAvcDts) - this._initDTS,
+            this._PTSNormalize(sample.pts - this._initDTS, nextAvcDts),
             0
         );
         lastPTS = Math.max(lastPTS, lastDTS);
@@ -309,7 +309,7 @@ class MP4Remuxer {
             } else {
                 // ensure sample monotonic DTS
                 sample.dts = Math.max(
-                    this._PTSNormalize(sample.dts, nextAvcDts) - this._initDTS,
+                    this._PTSNormalize(sample.dts - this._initDTS, nextAvcDts),
                     firstDTS
                 );
                 // ensure dts is a multiple of scale factor to avoid rounding issues
@@ -320,7 +320,7 @@ class MP4Remuxer {
             // we normalize PTS against nextAvcDts, we also substract initDTS (some streams don't start @ PTS O)
             // and we ensure that computed value is greater or equal than sample DTS
             sample.pts = Math.max(
-                this._PTSNormalize(sample.pts, nextAvcDts) - this._initDTS,
+                this._PTSNormalize(sample.pts - this._initDTS, nextAvcDts),
                 sample.dts
             );
             // ensure pts is a multiple of scale factor to avoid rounding issues
