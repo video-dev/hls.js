@@ -427,8 +427,7 @@
           if(debug) {
             debugString += 'SEI ';
           }
-          unit.data = this.discardEPB(unit.data);
-          expGolombDecoder = new ExpGolomb(unit.data);
+          expGolombDecoder = new ExpGolomb(this.discardEPB(unit.data));
 
           // skip frameType
           expGolombDecoder.readUByte();
