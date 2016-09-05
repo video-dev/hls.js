@@ -61,8 +61,14 @@ class PlaylistLoader extends EventHandler {
     }
     let loader = this.loaders[context.type];
     if (loader) {
-      logger.warn(`abort previous loader for type:${context.type}`);
-      loader.abort();
+      let loaderContext = loader.context;
+      if (loaderContext && loaderContext.url === url) {
+        logger.warn(`playlist request ongoing`);
+        return;
+      } else {
+        logger.warn(`abort previous loader for type:${context.type}`);
+        loader.abort();
+      }
     }
     loader  = this.loaders[context.type] = context.loader = typeof(config.pLoader) !== 'undefined' ? new config.pLoader(config) : new config.loader(config);
     context.url = url;
