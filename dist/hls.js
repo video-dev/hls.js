@@ -603,7 +603,7 @@ var AbrController = function (_EventHandler) {
         var bitrate = levels[i].bitrate,
             fetchDuration = bitrate * avgDuration / adjustedbw;
 
-        _logger.logger.log('level/adjustedbw/bitrate/avgDuration/maxFetchDuration/fetchDuration: ' + i + '/' + Math.round(adjustedbw) + '/' + bitrate + '/' + avgDuration + '/' + maxFetchDuration + '/' + fetchDuration);
+        _logger.logger.trace('level/adjustedbw/bitrate/avgDuration/maxFetchDuration/fetchDuration: ' + i + '/' + Math.round(adjustedbw) + '/' + bitrate + '/' + avgDuration + '/' + maxFetchDuration + '/' + fetchDuration);
         // if adjusted bw is greater than level bitrate AND
         if (adjustedbw > bitrate && (
         // fragment fetchDuration unknown or fragment fetchDuration less than max allowed fetch duration, then this level matches
