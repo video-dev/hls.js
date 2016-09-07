@@ -351,6 +351,7 @@ class StreamController extends EventHandler {
               this.fragCurrent = frag;
               this.startFragRequested = true;
               frag.autoLevel = hls.autoLevelEnabled;
+              frag.bitrateTest = this.fragBitrateTest;
               hls.trigger(Event.FRAG_LOADING, {frag: frag});
               this.state = State.FRAG_LOADING;
             }
@@ -778,24 +779,29 @@ class StreamController extends EventHandler {
   }
 
   onFragLoaded(data) {
-    var fragCurrent = this.fragCurrent;
+    var fragCurrent = this.fragCurrent,
+        fragLoaded = data.frag;
     if (this.state === State.FRAG_LOADING &&
         fragCurrent &&
-        data.frag.level === fragCurrent.level &&
-        data.frag.sn === fragCurrent.sn) {
-
+        fragLoaded.level === fragCurrent.level &&
+        fragLoaded.sn === fragCurrent.sn) {
+      let stats = data.stats;
       logger.log(`Loaded  ${fragCurrent.sn} of level ${fragCurrent.level}`);
-      if (this.fragBitrateTest === true) {
+      // reset frag bitrate test in any case after frag loaded event
+      this.fragBitrateTest = false;
+      // if this frag was loaded to perform a bitrate test AND if hls.nextLoadLevel is greater than 0
+      // then this means that we should be able to load a fragment at a higher quality level
+      if (fragLoaded.bitrateTest === true && this.hls.nextLoadLevel) {
         // switch back to IDLE state ... we just loaded a fragment to determine adequate start bitrate and initialize autoswitch algo
         this.state = State.IDLE;
-        this.fragBitrateTest = false;
         this.startFragRequested = false;
-        data.stats.tparsed = data.stats.tbuffered = performance.now();
+        stats.tparsed = stats.tbuffered = performance.now();
         this.hls.trigger(Event.FRAG_BUFFERED, {stats: data.stats, frag: fragCurrent});
+        this.tick();
       } else {
         this.state = State.PARSING;
         // transmux the MPEG-TS data to ISO-BMFF segments
-        this.stats = data.stats;
+        this.stats = stats;
         var currentLevel = this.levels[this.level],
             details = currentLevel.details,
             duration = details.totalduration,
