@@ -112,8 +112,9 @@ class Hls {
           abrEwmaFastVoD: 4,
           abrEwmaSlowVoD: 15,
           abrEwmaDefaultEstimate: 5e5, // 500 kbps
-          abrBandWidthFactor: 0.8,
-          abrBandWidthUpFactor: 0.7
+          abrBandWidthFactor : 0.8,
+          abrBandWidthUpFactor : 0.7,
+          maxStarvationDelay : 4
         };
     }
     return Hls.defaultConfig;
