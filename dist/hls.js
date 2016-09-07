@@ -534,12 +534,20 @@ var AbrController = function (_EventHandler) {
   }, {
     key: 'onFragLoaded',
     value: function onFragLoaded(data) {
-      var stats = data.stats;
+      var stats = data.stats,
+          frag = data.frag;
       // only update stats on first frag loading
       // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
       // and leading to wrong bw estimation
-      if (stats.aborted === undefined && data.frag.loadCounter === 1) {
-        this.bwEstimator.sample(performance.now() - stats.trequest, stats.loaded);
+      if (stats.aborted === undefined && frag.loadCounter === 1) {
+        var fragLoadingDurationMs = stats.tload - stats.trequest;
+        this.bwEstimator.sample(fragLoadingDurationMs, stats.loaded);
+        // if fragment has been loaded to perform a bitrate test, (hls.startLevel = -1), store bitrate test delay duration
+        if (frag.bitrateTest) {
+          this.bitrateTestDelay = fragLoadingDurationMs / 1000;
+        } else {
+          this.bitrateTestDelay = 0;
+        }
       }
 
       // stop monitoring bw once frag loaded
@@ -574,6 +582,39 @@ var AbrController = function (_EventHandler) {
     /** Return the capping/max level value that could be used by automatic level selection algorithm **/
 
   }, {
+    key: 'findBestLevel',
+    value: function findBestLevel(currentLevel, currentFragDuration, currentBw, maxAutoLevel, maxFetchDuration, bwFactor, bwUpFactor, levels) {
+      for (var i = maxAutoLevel; i >= 0; i--) {
+        var levelInfo = levels[i],
+            levelDetails = levelInfo.details,
+            avgDuration = levelDetails ? levelDetails.totalduration / levelDetails.fragments.length : currentFragDuration,
+            adjustedbw = void 0;
+        // follow algorithm captured from stagefright :
+        // https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp
+        // Pick the highest bandwidth stream below or equal to estimated bandwidth.
+        // consider only 80% of the available bandwidth, but if we are switching up,
+        // be even more conservative (70%) to avoid overestimating and immediately
+        // switching back.
+        if (i <= currentLevel) {
+          adjustedbw = bwFactor * currentBw;
+        } else {
+          adjustedbw = bwUpFactor * currentBw;
+        }
+        var bitrate = levels[i].bitrate,
+            fetchDuration = bitrate * avgDuration / adjustedbw;
+
+        _logger.logger.log('level/adjustedbw/bitrate/avgDuration/maxFetchDuration/fetchDuration: ' + i + '/' + Math.round(adjustedbw) + '/' + bitrate + '/' + avgDuration + '/' + maxFetchDuration + '/' + fetchDuration);
+        // if adjusted bw is greater than level bitrate AND
+        if (adjustedbw > bitrate && (
+        // fragment fetchDuration unknown or fragment fetchDuration less than max allowed fetch duration, then this level matches
+        !fetchDuration || fetchDuration < maxFetchDuration)) {
+          // as we are looping from highest to lowest, this will return the best achievable quality level
+          return i;
+        }
+      }
+      return 0;
+    }
+  }, {
     key: 'autoLevelCapping',
     get: function get() {
       return this._autoLevelCapping;
@@ -588,7 +629,6 @@ var AbrController = function (_EventHandler) {
     key: 'nextAutoLevel',
     get: function get() {
       var hls = this.hls,
-          i,
           maxAutoLevel,
           levels = hls.levels,
           config = hls.config;
@@ -603,25 +643,40 @@ var AbrController = function (_EventHandler) {
         return Math.min(this._nextAutoLevel, maxAutoLevel);
       }
 
-      var avgbw = this.bwEstimator ? this.bwEstimator.getEstimate() : config.abrEwmaDefaultEstimate,
-          adjustedbw = void 0;
-      // follow algorithm captured from stagefright :
-      // https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp
-      // Pick the highest bandwidth stream below or equal to estimated bandwidth.
-      for (i = 0; i <= maxAutoLevel; i++) {
-        // consider only 80% of the available bandwidth, but if we are switching up,
-        // be even more conservative (70%) to avoid overestimating and immediately
-        // switching back.
-        if (i <= this.lastLoadedFragLevel) {
-          adjustedbw = config.abrBandWidthFactor * avgbw;
-        } else {
-          adjustedbw = config.abrBandWidthUpFactor * avgbw;
+      var v = hls.media,
+          currentLevel = this.lastLoadedFragLevel,
+          currentFragDuration = this.fragCurrent ? this.fragCurrent.duration : 0,
+          pos = v ? v.currentTime : 0,
+
+      // playbackRate is the absolute value of the playback rate; if v.playbackRate is 0, we use 1 to load as
+      // if we're playing back at the normal rate.
+      playbackRate = v && v.playbackRate !== 0 ? Math.abs(v.playbackRate) : 1.0,
+          avgbw = this.bwEstimator ? this.bwEstimator.getEstimate() : config.abrEwmaDefaultEstimate,
+
+      // bufferStarvationDelay is the wall-clock time left until the playback buffer is exhausted.
+      bufferStarvationDelay = (_bufferHelper2.default.bufferInfo(v, pos, config.maxBufferHole).end - pos) / playbackRate;
+
+      // First, look to see if we can find a level matching with our avg bandwidth AND that could also guarantee no rebuffering at all
+      var bestLevel = this.findBestLevel(currentLevel, currentFragDuration, avgbw, maxAutoLevel, bufferStarvationDelay, config.abrBandWidthFactor, config.abrBandWidthUpFactor, levels);
+      if (bestLevel) {
+        return bestLevel;
+      } else {
+        _logger.logger.trace('rebuffering expected to happen, lets try to find a quality level minimizing the rebuffering');
+        // not possible to get rid of rebuffering ... let's try to find level that will guarantee less than maxStarvationDelay of rebuffering
+        // if no matching level found, logic will return 0
+        var maxStarvationDelay = config.maxStarvationDelay;
+        if (bufferStarvationDelay === 0) {
+          // in case buffer is empty, let's check if previous fragment was loaded to perform a bitrate test
+          var bitrateTestDelay = this.bitrateTestDelay;
+          if (bitrateTestDelay) {
+            // if it is the case, then we need to decrease this bitrate test duration from our maxStarvationDelay.
+            // rationale is that we need to account for this bitrate test duration
+            maxStarvationDelay -= bitrateTestDelay;
+            _logger.logger.trace('bitrate test took ' + Math.round(1000 * bitrateTestDelay) + 'ms, set first fragment max fetchDuration to ' + Math.round(1000 * maxStarvationDelay) + ' ms');
+          }
         }
-        if (adjustedbw < levels[i].bitrate) {
-          return Math.max(0, i - 1);
-        }
+        return this.findBestLevel(currentLevel, currentFragDuration, avgbw, maxAutoLevel, bufferStarvationDelay + maxStarvationDelay, config.abrBandWidthFactor, config.abrBandWidthUpFactor, levels);
       }
-      return i - 1;
     },
     set: function set(nextLevel) {
       this._nextAutoLevel = nextLevel;
@@ -1879,7 +1934,7 @@ var StreamController = function (_EventHandler) {
               // if we are not seeking or if we are seeking but everything (almost) til the end is buffered, let's signal eos
               // we don't compare exactly media.duration === bufferEnd as there could be some subtle media duration difference when switching
               // between different renditions. using half frag duration should help cope with these cases.
-              if (!isSeeking || media.duration - bufferEnd < fragPrevious.duration / 2) {
+              if (!isSeeking || media.duration - bufferEnd <= fragPrevious.duration / 2) {
                 // Finalize the media stream
                 this.hls.trigger(_events2.default.BUFFER_EOS);
                 this.state = State.ENDED;
@@ -2041,6 +2096,7 @@ var StreamController = function (_EventHandler) {
                 this.fragCurrent = frag;
                 this.startFragRequested = true;
                 frag.autoLevel = hls.autoLevelEnabled;
+                frag.bitrateTest = this.fragBitrateTest;
                 hls.trigger(_events2.default.FRAG_LOADING, { frag: frag });
                 this.state = State.FRAG_LOADING;
               }
@@ -2467,21 +2523,26 @@ var StreamController = function (_EventHandler) {
   }, {
     key: 'onFragLoaded',
     value: function onFragLoaded(data) {
-      var fragCurrent = this.fragCurrent;
-      if (this.state === State.FRAG_LOADING && fragCurrent && data.frag.level === fragCurrent.level && data.frag.sn === fragCurrent.sn) {
-
+      var fragCurrent = this.fragCurrent,
+          fragLoaded = data.frag;
+      if (this.state === State.FRAG_LOADING && fragCurrent && fragLoaded.level === fragCurrent.level && fragLoaded.sn === fragCurrent.sn) {
+        var stats = data.stats;
         _logger.logger.log('Loaded  ' + fragCurrent.sn + ' of level ' + fragCurrent.level);
-        if (this.fragBitrateTest === true) {
+        // reset frag bitrate test in any case after frag loaded event
+        this.fragBitrateTest = false;
+        // if this frag was loaded to perform a bitrate test AND if hls.nextLoadLevel is greater than 0
+        // then this means that we should be able to load a fragment at a higher quality level
+        if (fragLoaded.bitrateTest === true && this.hls.nextLoadLevel) {
           // switch back to IDLE state ... we just loaded a fragment to determine adequate start bitrate and initialize autoswitch algo
           this.state = State.IDLE;
-          this.fragBitrateTest = false;
           this.startFragRequested = false;
-          data.stats.tparsed = data.stats.tbuffered = performance.now();
+          stats.tparsed = stats.tbuffered = performance.now();
           this.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: data.stats, frag: fragCurrent });
+          this.tick();
         } else {
           this.state = State.PARSING;
           // transmux the MPEG-TS data to ISO-BMFF segments
-          this.stats = data.stats;
+          this.stats = stats;
           var currentLevel = this.levels[this.level],
               details = currentLevel.details,
               duration = details.totalduration,
@@ -6069,7 +6130,8 @@ var Hls = function () {
           abrEwmaSlowVoD: 15,
           abrEwmaDefaultEstimate: 5e5, // 500 kbps
           abrBandWidthFactor: 0.8,
-          abrBandWidthUpFactor: 0.7
+          abrBandWidthUpFactor: 0.7,
+          maxStarvationDelay: 2
         };
       }
       return Hls.defaultConfig;
