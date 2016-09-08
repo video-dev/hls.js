@@ -180,7 +180,7 @@ class AbrController extends EventHandler {
         levels = hls.levels,
         v = hls.media,
         i, maxAutoLevel;
-    if (this._autoLevelCapping === -1 && levels && levels.length) {
+    if (levels && levels.length && (this._autoLevelCapping === -1 || this._autoLevelCapping > levels.length - 1)) {
       maxAutoLevel = levels.length - 1;
     } else {
       maxAutoLevel = this._autoLevelCapping;
