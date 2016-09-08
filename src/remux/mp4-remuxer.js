@@ -89,11 +89,22 @@ class MP4Remuxer {
         tracks = {},
         data = { id : this.id, level : this.level, sn : this.sn, tracks : tracks, unique : false },
         computePTSDTS = (this._initPTS === undefined),
-        initPTS, initDTS;
+        initPTS = Infinity, initDTS = Infinity, editOffset = 0, videoPTS = 0, audioPTS = 0;
 
     if (computePTSDTS) {
-      initPTS = initDTS = Infinity;
+      if (audioTrack.config && audioSamples.length) {
+        initPTS = initDTS = audioPTS = audioSamples[0].pts - pesTimeScale * timeOffset;
+      }
+      if (videoTrack.sps && videoTrack.pps && videoSamples.length) {
+        videoPTS = videoSamples[0].pts - pesTimeScale * timeOffset;
+        initPTS = Math.min(initPTS,videoPTS);
+        initDTS = Math.min(initDTS,videoSamples[0].dts - pesTimeScale * timeOffset);
+      }
+
+      editOffset = Math.max(videoPTS, audioPTS) - initPTS;
+      logger.log ('edit offset: ' + editOffset);
     }
+
     if (audioTrack.config && audioSamples.length) {
       audioTrack.timescale = audioTrack.audiosamplerate;
       // MP4 duration (track duration in seconds multiplied by timescale) is coded on 32 bits
@@ -113,15 +124,11 @@ class MP4Remuxer {
       tracks.audio = {
         container : 'audio/mp4',
         codec :  audioTrack.codec,
-        initSegment : MP4.initSegment([audioTrack]),
+        initSegment : MP4.initSegment([audioTrack], editOffset),
         metadata : {
           channelCount : audioTrack.channelCount
         }
       };
-      if (computePTSDTS) {
-        // remember first PTS of this demuxing context. for audio, PTS + DTS ...
-        initPTS = initDTS = audioSamples[0].pts - pesTimeScale * timeOffset;
-      }
     }
 
     if (videoTrack.sps && videoTrack.pps && videoSamples.length) {
@@ -129,16 +136,12 @@ class MP4Remuxer {
       tracks.video = {
         container : 'video/mp4',
         codec :  videoTrack.codec,
-        initSegment : MP4.initSegment([videoTrack]),
+        initSegment : MP4.initSegment([videoTrack], editOffset),
         metadata : {
           width : videoTrack.width,
           height : videoTrack.height
         }
       };
-      if (computePTSDTS) {
-        initPTS = Math.min(initPTS,videoSamples[0].pts - pesTimeScale * timeOffset);
-        initDTS = Math.min(initDTS,videoSamples[0].dts - pesTimeScale * timeOffset);
-      }
     }
 
     if(Object.keys(tracks).length) {
