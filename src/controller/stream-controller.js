@@ -248,7 +248,7 @@ class StreamController extends EventHandler {
         if (!media.seeking || (media.duration-bufferInfo.end) <= fragPrevious.duration/2) {
         // Finalize the media stream
         let data = {};
-        if (this.audioTrackType === 'AUDIO') {
+        if (this.altAudio) {
           data.type = 'video';
         }
         this.hls.trigger(Event.BUFFER_EOS,data);
@@ -931,7 +931,7 @@ class StreamController extends EventHandler {
       var tracks = data.tracks, trackName, track;
 
       // if audio track is expected to come from audio stream controller, discard any coming from main
-      if (tracks.audio && this.audioTrackType === 'AUDIO') {
+      if (tracks.audio && this.altAudio) {
         delete tracks.audio;
       }
       // include levelCodec in audio and video tracks
@@ -1063,9 +1063,10 @@ class StreamController extends EventHandler {
   }
 
   onAudioTrackSwitch(data) {
-    var audioTrackType = data.type;
+    // if any URL found on new audio track, it is an alternate audio track
+    var altAudio = !!data.url;
     // if we switch on main audio, ensure that main fragment scheduling is synced with media.buffered
-    if (audioTrackType === 'main') {
+    if (!altAudio) {
       if (this.mediaBuffer !== this.media) {
         logger.log(`switching on main audio, use media.buffered to schedule main fragment loading`);
         this.mediaBuffer = this.media;
@@ -1092,7 +1093,7 @@ class StreamController extends EventHandler {
         this.mediaBuffer = this.videoBuffer;
       }
     }
-    this.audioTrackType = audioTrackType;
+    this.altAudio = altAudio;
   }
 
 

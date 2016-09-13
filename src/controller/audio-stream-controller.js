@@ -361,13 +361,15 @@ class AudioStreamController extends EventHandler {
   }
 
   onAudioTrackSwitch(data) {
+    // if any URL found on new audio track, it is an alternate audio track
+    var altAudio = !!data.url;
     this.trackId = data.id;
     this.state = State.IDLE;
 
     this.fragCurrent = null;
     this.state = State.PAUSED;
     // destroy useless demuxer when switching audio to main
-    if (data.type === 'main') {
+    if (!altAudio) {
       if (this.demuxer) {
         this.demuxer.destroy();
         this.demuxer = null;
