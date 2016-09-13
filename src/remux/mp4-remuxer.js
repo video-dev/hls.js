@@ -158,7 +158,7 @@ class MP4Remuxer {
                 }
             };
             if (computePTSDTS) {
-                // remember first PTS of this demuxing context. for audio, PTS + DTS ...
+                // remember first PTS of this demuxing context. for audio, PTS = DTS
                 initPTS = initDTS =
                     audioSamples[0].pts - pesTimeScale * timeOffset;
             }
