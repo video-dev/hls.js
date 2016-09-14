@@ -80,11 +80,10 @@ class StreamController extends EventHandler {
           logger.log('resuming video');
           media.play();
         }
-        this.state = State.IDLE;
       } else {
         this.lastCurrentTime = this.startPosition ? this.startPosition : startPosition;
-        this.state = State.STARTING;
       }
+      this.state = this.startFragRequested ? State.IDLE : State.STARTING;
       this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
       this.tick();
     } else {
