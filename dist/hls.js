@@ -739,6 +739,9 @@ var BufferController = function (_EventHandler) {
         this.media = null;
         this.pendingTracks = null;
         this.sourceBuffer = null;
+        this.flushRange = [];
+        this.segments = [];
+        this.appended = 0;
       }
       this.onmso = this.onmse = this.onmsc = null;
       this.hls.trigger(_events2.default.MEDIA_DETACHED);
@@ -810,6 +813,7 @@ var BufferController = function (_EventHandler) {
         this.sourceBuffer = null;
       }
       this.flushRange = [];
+      this.segments = [];
       this.appended = 0;
     }
   }, {
@@ -981,7 +985,7 @@ var BufferController = function (_EventHandler) {
         if (segments.length) {
           var segment = segments.shift();
           try {
-            //logger.log(`appending ${segment.type} SB, size:${segment.data.length});
+            //logger.log(`appending ${segment.type} SB, size:${segment.data.length}`);
             sourceBuffer[segment.type].appendBuffer(segment.data);
             this.appendError = 0;
             this.appended++;
@@ -1758,11 +1762,10 @@ var StreamController = function (_EventHandler) {
             _logger.logger.log('resuming video');
             media.play();
           }
-          this.state = State.IDLE;
         } else {
           this.lastCurrentTime = this.startPosition ? this.startPosition : startPosition;
-          this.state = State.STARTING;
         }
+        this.state = this.startFragRequested ? State.IDLE : State.STARTING;
         this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
         this.tick();
       } else {
@@ -1879,7 +1882,7 @@ var StreamController = function (_EventHandler) {
               // if we are not seeking or if we are seeking but everything (almost) til the end is buffered, let's signal eos
               // we don't compare exactly media.duration === bufferEnd as there could be some subtle media duration difference when switching
               // between different renditions. using half frag duration should help cope with these cases.
-              if (!isSeeking || media.duration - bufferEnd < fragPrevious.duration / 2) {
+              if (!isSeeking || media.duration - bufferEnd <= fragPrevious.duration / 2) {
                 // Finalize the media stream
                 this.hls.trigger(_events2.default.BUFFER_EOS);
                 this.state = State.ENDED;
@@ -2409,7 +2412,7 @@ var StreamController = function (_EventHandler) {
 
       if (newDetails.live) {
         var curDetails = curLevel.details;
-        if (curDetails) {
+        if (curDetails && newDetails.fragments.length > 0) {
           // we already have details for that level, merge them
           _levelHelper2.default.mergeDetails(curDetails, newDetails);
           sliding = newDetails.fragments[0].start;
