@@ -82,6 +82,9 @@ class BufferController extends EventHandler {
       this.media = null;
       this.pendingTracks = null;
       this.sourceBuffer = null;
+      this.flushRange = [];
+      this.segments = [];
+      this.appended = 0;
     }
     this.onmso = this.onmse = this.onmsc = null;
     this.hls.trigger(Event.MEDIA_DETACHED);
@@ -149,6 +152,7 @@ class BufferController extends EventHandler {
       this.sourceBuffer = null;
     }
     this.flushRange = [];
+    this.segments = [];
     this.appended = 0;
   }
 
@@ -306,7 +310,7 @@ class BufferController extends EventHandler {
       if (segments.length) {
         var segment = segments.shift();
         try {
-          //logger.log(`appending ${segment.type} SB, size:${segment.data.length});
+          //logger.log(`appending ${segment.type} SB, size:${segment.data.length}`);
           sourceBuffer[segment.type].appendBuffer(segment.data);
           this.appendError = 0;
           this.appended++;
