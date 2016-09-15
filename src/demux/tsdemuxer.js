@@ -47,12 +47,19 @@
     this.aacOverFlow = null;
     this.aacLastPTS = null;
     this.avcNaluState = 0;
+    this.avcDebugString = '';
+    this.avcSample = this.newAVCSample();
     this.remuxer.switchLevel();
   }
 
   insertDiscontinuity() {
     this.switchLevel();
     this.remuxer.insertDiscontinuity();
+  }
+
+
+  newAVCSample() {
+    return { key : false, units : { units : [], length : 0}};
   }
 
   // feed incoming data to the front of the parsing pipeline
@@ -354,55 +361,48 @@
     }
   }
 
+  pushAccesUnit(avcSample,avcTrack) {
+    if (avcSample.units.length) {
+      // only push AVC sample if starting with a keyframe is not mandatory OR
+      //    if keyframe already found in this fragment OR
+      //       keyframe found in last fragment (track.sps) AND
+      //          samples already appended (we already found a keyframe in this fragment) OR fragment is contiguous
+      if (!this.config.forceKeyFrameOnDiscontinuity ||
+          avcSample.key === true ||
+          (avcTrack.sps && (avcTrack.samples.length || this.contiguous))) {
+        avcTrack.samples.push(avcSample);
+        avcTrack.len += avcSample.units.length;
+        avcTrack.nbNalu += avcSample.units.units.length;
+      } else {
+        // dropped samples, track it
+        avcTrack.dropped++;
+      }
+    }
+  }
+
   _parseAVCPES(pes) {
+    //logger.log('parse new PES');
     var track = this._avcTrack,
-        samples = track.samples,
         units = this._parseAVCNALu(pes.data),
-        units2 = [],
-        debug = false,
-        key = false,
-        length = 0,
+        debug = true,
         expGolombDecoder,
-        avcSample,
+        avcSample = this.avcSample,
         push,
         i;
     // no NALu found
-    if (units.length === 0 && samples.length > 0) {
+    if (units.length === 0 && avcSample.units.length > 0) {
       // append pes.data to previous NAL unit
-      var lastavcSample = samples[samples.length - 1];
-      var lastUnit = lastavcSample.units.units[lastavcSample.units.units.length - 1];
+      var lastUnit = avcSample.units.units[avcSample.units.units.length - 1];
       var tmp = new Uint8Array(lastUnit.data.byteLength + pes.data.byteLength);
       tmp.set(lastUnit.data, 0);
       tmp.set(pes.data, lastUnit.data.byteLength);
       lastUnit.data = tmp;
-      lastavcSample.units.length += pes.data.byteLength;
+      avcSample.units.length += pes.data.byteLength;
       track.len += pes.data.byteLength;
     }
     //free pes.data to save up some memory
     pes.data = null;
-    var debugString = '';
-
-    var pushAccesUnit = function() {
-      if (units2.length) {
-        // only push AVC sample if starting with a keyframe is not mandatory OR
-        //    if keyframe already found in this fragment OR
-        //       keyframe found in last fragment (track.sps) AND
-        //          samples already appended (we already found a keyframe in this fragment) OR fragment is contiguous
-        if (!this.config.forceKeyFrameOnDiscontinuity ||
-            key === true ||
-            (track.sps && (samples.length || this.contiguous))) {
-          avcSample = {units: { units : units2, length : length}, pts: pes.pts, dts: pes.dts, key: key};
-          samples.push(avcSample);
-          track.len += length;
-          track.nbNalu += units2.length;
-        } else {
-          // dropped samples, track it
-          track.dropped++;
-        }
-        units2 = [];
-        length = 0;
-      }
-    }.bind(this);
+    var debugString = this.avcDebugString;
 
     units.forEach(unit => {
       switch(unit.type) {
@@ -419,7 +419,7 @@
           if(debug) {
             debugString += 'IDR ';
           }
-          key = true;
+          avcSample.key = true;
           break;
         //SEI
         case 6:
@@ -535,10 +535,17 @@
           break;
         case 9:
           push = false;
+          this.pushAccesUnit(avcSample,track);
+          if(debugString.length) {
+            logger.log(avcSample.pts + '/' + avcSample.dts + ':' + debugString);
+            this.avcDebugString = debugString = '';
+          }
+          avcSample = this.avcSample = this.newAVCSample();
+          avcSample.pts = pes.pts;
+          avcSample.dts = pes.dts;
           if(debug) {
             debugString += 'AUD ';
           }
-          pushAccesUnit();
           break;
         default:
           push = false;
@@ -546,14 +553,11 @@
           break;
       }
       if(push) {
-        units2.push(unit);
-        length+=unit.data.byteLength;
+        avcSample.units.units.push(unit);
+        avcSample.units.length+=unit.data.byteLength;
       }
     });
-    if(debug || debugString.length) {
-      logger.log(debugString);
-    }
-    pushAccesUnit();
+    this.avcDebugString = debugString;
   }
 
   _insertSampleInOrder(arr, data) {
@@ -578,7 +582,7 @@
   }
 
   _parseAVCNALu(array) {
-    var i = 0, len = array.byteLength, value, overflow, state = this.avcNaluState;
+    var i = 0, len = array.byteLength, value, overflow, state = this.avcNaluState, track = this._avcTrack;
     var units = [], unit, unitType, lastUnitStart, lastUnitType;
     //logger.log('PES:' + Hex.hexDump(array));
     while (i < len) {
@@ -617,17 +621,15 @@
               if(lastState &&  (i <= 4 - lastState)) {
                 // start delimiter overlapping between PES packets
                 // strip start delimiter bytes from the end of last NAL unit
-                let track = this._avcTrack,
-                    samples = track.samples;
-                if (samples.length) {
-                  let lastavcSample = samples[samples.length - 1],
-                      lastUnits = lastavcSample.units.units,
-                      lastUnit = lastUnits[lastUnits.length - 1];
+                let avcSample = this.avcSample;
+                if (avcSample) {
+                  let units = avcSample.units.units;
+                  let lastUnit = units[units.length - 1];
                   // check if lastUnit had a state different from zero
                   if (lastUnit.state) {
                     // strip last bytes
                     lastUnit.data = lastUnit.data.subarray(0,lastUnit.data.byteLength - lastState);
-                    lastavcSample.units.length -= lastState;
+                    avcSample.units.length -= lastState;
                     track.len -= lastState;
                   }
                 }
@@ -635,18 +637,16 @@
               // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
               overflow  = i - state - 1;
               if (overflow > 0) {
-                let track = this._avcTrack,
-                    samples = track.samples;
                 //logger.log('first NALU found with overflow:' + overflow);
-                if (samples.length) {
-                  let lastavcSample = samples[samples.length - 1],
-                      lastUnits = lastavcSample.units.units,
-                      lastUnit = lastUnits[lastUnits.length - 1],
+                let avcSample = this.avcSample;
+                if (avcSample) {
+                  let units = avcSample.units.units,
+                      lastUnit = units[units.length - 1],
                       tmp = new Uint8Array(lastUnit.data.byteLength + overflow);
                   tmp.set(lastUnit.data, 0);
                   tmp.set(array.subarray(0, overflow), lastUnit.data.byteLength);
                   lastUnit.data = tmp;
-                  lastavcSample.units.length += overflow;
+                  avcSample.units.length += overflow;
                   track.len += overflow;
                 }
               }
