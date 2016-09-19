@@ -6407,7 +6407,7 @@ var TSDemuxer = function () {
       //logger.log('parse new PES');
       var track = this._avcTrack,
           units = this._parseAVCNALu(pes.data),
-          debug = true,
+          debug = false,
           expGolombDecoder,
           avcSample = this.avcSample,
           push,
@@ -6640,6 +6640,10 @@ var TSDemuxer = function () {
                 units.push(unit);
               } else {
                 var avcSample = this.avcSample;
+                // try to fallback to previous sample if current one is empty
+                if (!avcSample || avcSample.units.length === 0) {
+                  avcSample = track.samples[track.samples.length - 1];
+                }
                 if (avcSample) {
                   var _units2 = avcSample.units.units,
                       lastUnit = _units2[_units2.length - 1];
@@ -6651,7 +6655,7 @@ var TSDemuxer = function () {
                     // start delimiter overlapping between PES packets
                     // strip start delimiter bytes from the end of last NAL unit
                     // check if lastUnit had a state different from zero
-                    if (lastUnit.state) {
+                    if (lastUnit && lastUnit.state) {
                       // strip last bytes
                       lastUnit.data = lastUnit.data.subarray(0, lastUnit.data.byteLength - lastState);
                       avcSample.units.length -= lastState;
@@ -6660,7 +6664,7 @@ var TSDemuxer = function () {
                   }
                   // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
                   overflow = i - state - 1;
-                  if (overflow > 0) {
+                  if (lastUnit && overflow > 0) {
                     //logger.log('first NALU found with overflow:' + overflow);
                     var tmp = new Uint8Array(lastUnit.data.byteLength + overflow);
                     tmp.set(lastUnit.data, 0);
