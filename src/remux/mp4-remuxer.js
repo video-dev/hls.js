@@ -165,6 +165,19 @@ class MP4Remuxer {
         inputSamples = track.samples,
         outputSamples = [];
 
+  // for (let i = 0; i < track.samples.length; i++) {
+  //   let avcSample = track.samples[i];
+  //   let units = avcSample.units.units;
+  //   let unitsString = '';
+  //   for (let j = 0; j < units.length ; j++) {
+  //     unitsString += units[j].type + ',';
+  //     if (units[j].data.length < 500) {
+  //       unitsString += Hex.hexDump(units[j].data);
+  //     }
+  //   }
+  //   logger.log(avcSample.pts + '/' + avcSample.dts + ',' + unitsString + avcSample.units.length);
+  // }
+
   // PTS is coded on 33bits, and can loop from -2^32 to 2^32
   // PTSNormalize will make PTS/DTS value monotonic, we use last known DTS value as reference value
    let nextAvcDts;
@@ -416,7 +429,7 @@ class MP4Remuxer {
       // Otherwise, we're within half a frame duration, so just adjust pts
       else {
         if (Math.abs(delta) > (0.1 * pesFrameDuration)) {
-          logger.log(`Invalid frame delta ${Math.round(ptsNorm - nextPtsNorm + pesFrameDuration)} at PTS ${Math.round(ptsNorm / 90)} (should be ${Math.round(pesFrameDuration)}).`);
+          //logger.log(`Invalid frame delta ${Math.round(ptsNorm - nextPtsNorm + pesFrameDuration)} at PTS ${Math.round(ptsNorm / 90)} (should be ${Math.round(pesFrameDuration)}).`);
         }
         nextPtsNorm += pesFrameDuration;
         if (i === 0) {
