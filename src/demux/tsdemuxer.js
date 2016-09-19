@@ -51,6 +51,7 @@ class TSDemuxer {
             samples: [],
             len: 0,
             nbNalu: 0,
+            naluState: 0,
             dropped: 0
         };
         this._aacTrack = {
@@ -78,19 +79,13 @@ class TSDemuxer {
         // flush any partial content
         this.aacOverFlow = null;
         this.aacLastPTS = null;
-        this.avcNaluState = 0;
-        this.avcDebugString = '';
-        this.avcSample = this.newAVCSample();
+        this.avcSample = null;
         this.remuxer.switchLevel();
     }
 
     insertDiscontinuity() {
         this.switchLevel();
         this.remuxer.insertDiscontinuity();
-    }
-
-    newAVCSample() {
-        return { key: false, units: { units: [], length: 0 } };
     }
 
     // feed incoming data to the front of the parsing pipeline
@@ -162,7 +157,7 @@ class TSDemuxer {
                     case avcId:
                         if (stt) {
                             if (avcData) {
-                                parseAVCPES(parsePES(avcData));
+                                parseAVCPES(parsePES(avcData), false);
                                 if (codecsOnly) {
                                     // if we have video codec info AND
                                     // if audio PID is undefined OR if we have audio codec info,
@@ -266,7 +261,7 @@ class TSDemuxer {
         }
         // parse last PES packet
         if (avcData) {
-            parseAVCPES(parsePES(avcData));
+            parseAVCPES(parsePES(avcData), true);
         }
         if (aacData) {
             parseAACPES(parsePES(aacData));
@@ -465,9 +460,20 @@ class TSDemuxer {
                 avcTrack.dropped++;
             }
         }
+        if (avcSample.debug.length) {
+            logger.log(
+                avcSample.pts +
+                    '/' +
+                    avcSample.dts +
+                    ':' +
+                    avcSample.debug +
+                    ',' +
+                    avcSample.units.length
+            );
+        }
     }
 
-    _parseAVCPES(pes) {
+    _parseAVCPES(pes, last) {
         //logger.log('parse new PES');
         var track = this._avcTrack,
             units = this._parseAVCNALu(pes.data),
@@ -477,7 +483,7 @@ class TSDemuxer {
             push,
             i;
         // no NALu found
-        if (units.length === 0 && avcSample.units.length > 0) {
+        if (units.length === 0 && avcSample && avcSample.units.length > 0) {
             // append pes.data to previous NAL unit
             var lastUnit =
                 avcSample.units.units[avcSample.units.units.length - 1];
@@ -492,30 +498,29 @@ class TSDemuxer {
         }
         //free pes.data to save up some memory
         pes.data = null;
-        var debugString = this.avcDebugString;
 
         units.forEach(unit => {
             switch (unit.type) {
                 //NDR
                 case 1:
                     push = true;
-                    if (debug) {
-                        debugString += 'NDR ';
+                    if (debug && avcSample) {
+                        avcSample.debug += 'NDR ';
                     }
                     break;
                 //IDR
                 case 5:
                     push = true;
-                    if (debug) {
-                        debugString += 'IDR ';
+                    if (debug && avcSample) {
+                        avcSample.debug += 'IDR ';
                     }
                     avcSample.key = true;
                     break;
                 //SEI
                 case 6:
                     push = true;
-                    if (debug) {
-                        debugString += 'SEI ';
+                    if (debug && avcSample) {
+                        avcSample.debug += 'SEI ';
                     }
                     expGolombDecoder = new ExpGolomb(
                         this.discardEPB(unit.data)
@@ -613,8 +618,8 @@ class TSDemuxer {
                 //SPS
                 case 7:
                     push = true;
-                    if (debug) {
-                        debugString += 'SPS ';
+                    if (debug && avcSample) {
+                        avcSample.debug += 'SPS ';
                     }
                     if (!track.sps) {
                         expGolombDecoder = new ExpGolomb(unit.data);
@@ -638,8 +643,8 @@ class TSDemuxer {
                 //PPS
                 case 8:
                     push = true;
-                    if (debug) {
-                        debugString += 'PPS ';
+                    if (debug && avcSample) {
+                        avcSample.debug += 'PPS ';
                     }
                     if (!track.pps) {
                         track.pps = [unit.data];
@@ -647,35 +652,35 @@ class TSDemuxer {
                     break;
                 case 9:
                     push = false;
-                    this.pushAccesUnit(avcSample, track);
-                    if (debugString.length) {
-                        logger.log(
-                            avcSample.pts +
-                                '/' +
-                                avcSample.dts +
-                                ':' +
-                                debugString
-                        );
-                        this.avcDebugString = debugString = '';
+                    if (avcSample) {
+                        this.pushAccesUnit(avcSample, track);
                     }
-                    avcSample = this.avcSample = this.newAVCSample();
-                    avcSample.pts = pes.pts;
-                    avcSample.dts = pes.dts;
-                    if (debug) {
-                        debugString += 'AUD ';
-                    }
+                    avcSample = this.avcSample = {
+                        key: false,
+                        pts: pes.pts,
+                        dts: pes.dts,
+                        units: { units: [], length: 0 },
+                        debug: debug ? 'AUD ' : ''
+                    };
                     break;
                 default:
                     push = false;
-                    debugString += 'unknown NAL ' + unit.type + ' ';
+                    if (avcSample) {
+                        avcSample.debug += 'unknown NAL ' + unit.type + ' ';
+                    }
                     break;
             }
-            if (push) {
-                avcSample.units.units.push(unit);
-                avcSample.units.length += unit.data.byteLength;
+            if (avcSample && push) {
+                let units = avcSample.units;
+                units.units.push(unit);
+                units.length += unit.data.byteLength;
             }
         });
-        this.avcDebugString = debugString;
+        // if last PES packet, push samples
+        if (last && avcSample) {
+            this.pushAccesUnit(avcSample, track);
+            this.avcSample = null;
+        }
     }
 
     _insertSampleInOrder(arr, data) {
@@ -701,12 +706,13 @@ class TSDemuxer {
             len = array.byteLength,
             value,
             overflow,
-            state = this.avcNaluState,
-            track = this._avcTrack;
+            track = this._avcTrack,
+            state = track.naluState,
+            lastState = state;
         var units = [],
             unit,
             unitType,
-            lastUnitStart,
+            lastUnitStart = -1,
             lastUnitType;
         //logger.log('PES:' + Hex.hexDump(array));
         while (i < len) {
@@ -729,10 +735,8 @@ class TSDemuxer {
                 case 3:
                     if (value === 0) {
                         state = 3;
-                    } else if (value === 1 && i < len) {
-                        unitType = array[i] & 0x1f;
-                        //logger.log('find NALU @ offset:' + i + ',type:' + unitType);
-                        if (lastUnitStart) {
+                    } else if (value === 1) {
+                        if (lastUnitStart >= 0) {
                             unit = {
                                 data: array.subarray(
                                     lastUnitStart,
@@ -743,18 +747,17 @@ class TSDemuxer {
                             //logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
                             units.push(unit);
                         } else {
-                            // lastUnitStart is undefined => this is the first start code found in this PES packet
-                            // first check if start code delimiter is overlapping between 2 PES packets,
-                            // ie it started in last packet (lastState not zero)
-                            // and ended at the beginning of this PES packet (i <= 4 - lastState)
-                            let lastState = this.avcNaluState;
-                            if (lastState && i <= 4 - lastState) {
-                                // start delimiter overlapping between PES packets
-                                // strip start delimiter bytes from the end of last NAL unit
-                                let avcSample = this.avcSample;
-                                if (avcSample) {
-                                    let units = avcSample.units.units;
-                                    let lastUnit = units[units.length - 1];
+                            let avcSample = this.avcSample;
+                            if (avcSample) {
+                                let units = avcSample.units.units,
+                                    lastUnit = units[units.length - 1];
+                                // lastUnitStart is undefined => this is the first start code found in this PES packet
+                                // first check if start code delimiter is overlapping between 2 PES packets,
+                                // ie it started in last packet (lastState not zero)
+                                // and ended at the beginning of this PES packet (i <= 4 - lastState)
+                                if (lastState && i <= 4 - lastState) {
+                                    // start delimiter overlapping between PES packets
+                                    // strip start delimiter bytes from the end of last NAL unit
                                     // check if lastUnit had a state different from zero
                                     if (lastUnit.state) {
                                         // strip last bytes
@@ -766,18 +769,13 @@ class TSDemuxer {
                                         track.len -= lastState;
                                     }
                                 }
-                            }
-                            // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
-                            overflow = i - state - 1;
-                            if (overflow > 0) {
-                                //logger.log('first NALU found with overflow:' + overflow);
-                                let avcSample = this.avcSample;
-                                if (avcSample) {
-                                    let units = avcSample.units.units,
-                                        lastUnit = units[units.length - 1],
-                                        tmp = new Uint8Array(
-                                            lastUnit.data.byteLength + overflow
-                                        );
+                                // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
+                                overflow = i - state - 1;
+                                if (overflow > 0) {
+                                    //logger.log('first NALU found with overflow:' + overflow);
+                                    let tmp = new Uint8Array(
+                                        lastUnit.data.byteLength + overflow
+                                    );
                                     tmp.set(lastUnit.data, 0);
                                     tmp.set(
                                         array.subarray(0, overflow),
@@ -789,18 +787,33 @@ class TSDemuxer {
                                 }
                             }
                         }
-                        lastUnitStart = i;
-                        lastUnitType = unitType;
-                        state = 0;
+                        // check if we can read unit type
+                        if (i < len) {
+                            unitType = array[i] & 0x1f;
+                            //logger.log('find NALU @ offset:' + i + ',type:' + unitType);
+                            lastUnitStart = i;
+                            lastUnitType = unitType;
+                            state = 0;
+                        } else {
+                            // not enough byte to read unit type. let's read it on next PES parsing
+                            state = 4;
+                        }
                     } else {
                         state = 0;
                     }
+                    break;
+                case 4:
+                    // special use case where we found 3 or 4-byte start codes exactly at the end of previous NAL unit
+                    lastUnitStart = 0;
+                    // NALu type is value read from offset 0
+                    lastUnitType = value;
+                    state = 0;
                     break;
                 default:
                     break;
             }
         }
-        if (lastUnitStart) {
+        if (lastUnitStart >= 0) {
             unit = {
                 data: array.subarray(lastUnitStart, len),
                 type: lastUnitType,
@@ -808,8 +821,8 @@ class TSDemuxer {
             };
             units.push(unit);
             //logger.log('pushing NALU, type/size/state:' + unit.type + '/' + unit.data.byteLength + '/' + state);
-            this.avcNaluState = state;
         }
+        track.naluState = state;
         return units;
     }
 
