@@ -115,11 +115,12 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - Timed Metadata for HTTP Live Streaming (in ID3 format, carried in MPEG-2 TS)
   - AES-128 decryption (AES-128 mode)
   - CEA-708 captions
+  - Alternate Audio Track Rendition (Master Playlist with alternative Audio) for VoD playlists  
 
 ## Not Supported (Yet)
 
   - MP3 / WebVTT container
-  - Alternate Audio Track Rendition (Master Playlist with alternative Audio)
+  - Alternate Audio Track Rendition for live playlists
 
 ### Supported M3U8 tags
 
