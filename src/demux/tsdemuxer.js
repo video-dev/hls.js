@@ -748,6 +748,11 @@ class TSDemuxer {
                             units.push(unit);
                         } else {
                             let avcSample = this.avcSample;
+                            // try to fallback to previous sample if current one is empty
+                            if (!avcSample || avcSample.units.length === 0) {
+                                avcSample =
+                                    track.samples[track.samples.length - 1];
+                            }
                             if (avcSample) {
                                 let units = avcSample.units.units,
                                     lastUnit = units[units.length - 1];
@@ -759,7 +764,7 @@ class TSDemuxer {
                                     // start delimiter overlapping between PES packets
                                     // strip start delimiter bytes from the end of last NAL unit
                                     // check if lastUnit had a state different from zero
-                                    if (lastUnit.state) {
+                                    if (lastUnit && lastUnit.state) {
                                         // strip last bytes
                                         lastUnit.data = lastUnit.data.subarray(
                                             0,
@@ -771,7 +776,7 @@ class TSDemuxer {
                                 }
                                 // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
                                 overflow = i - state - 1;
-                                if (overflow > 0) {
+                                if (lastUnit && overflow > 0) {
                                     //logger.log('first NALU found with overflow:' + overflow);
                                     let tmp = new Uint8Array(
                                         lastUnit.data.byteLength + overflow
