@@ -1574,6 +1574,9 @@ var BufferController = function (_EventHandler) {
         this.media = null;
         this.pendingTracks = {};
         this.sourceBuffer = {};
+        this.flushRange = [];
+        this.segments = [];
+        this.appended = 0;
       }
       this.onmso = this.onmse = this.onmsc = null;
       this.hls.trigger(_events2.default.MEDIA_DETACHED);
@@ -2804,11 +2807,10 @@ var StreamController = function (_EventHandler) {
             _logger.logger.log('resuming video');
             media.play();
           }
-          this.state = State.IDLE;
         } else {
           this.lastCurrentTime = this.startPosition ? this.startPosition : startPosition;
-          this.state = State.STARTING;
         }
+        this.state = this.startFragRequested ? State.IDLE : State.STARTING;
         this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
         this.tick();
       } else {
@@ -6032,14 +6034,14 @@ var TSDemuxer = function () {
     value: function switchLevel() {
       this.pmtParsed = false;
       this._pmtId = -1;
-      this._avcTrack = { container: 'video/mp2t', type: 'video', id: -1, sequenceNumber: 0, samples: [], len: 0, nbNalu: 0, dropped: 0 };
+      this._avcTrack = { container: 'video/mp2t', type: 'video', id: -1, sequenceNumber: 0, samples: [], len: 0, nbNalu: 0, naluState: 0, dropped: 0 };
       this._aacTrack = { container: 'video/mp2t', type: 'audio', id: -1, sequenceNumber: 0, samples: [], len: 0 };
       this._id3Track = { type: 'id3', id: -1, sequenceNumber: 0, samples: [], len: 0 };
       this._txtTrack = { type: 'text', id: -1, sequenceNumber: 0, samples: [], len: 0 };
       // flush any partial content
       this.aacOverFlow = null;
       this.aacLastPTS = null;
-      this.avcNaluState = 0;
+      this.avcSample = null;
       this.remuxer.switchLevel();
     }
   }, {
@@ -6121,7 +6123,7 @@ var TSDemuxer = function () {
             case avcId:
               if (stt) {
                 if (avcData) {
-                  parseAVCPES(parsePES(avcData));
+                  parseAVCPES(parsePES(avcData), false);
                   if (codecsOnly) {
                     // if we have video codec info AND
                     // if audio PID is undefined OR if we have audio codec info,
@@ -6207,7 +6209,7 @@ var TSDemuxer = function () {
       }
       // parse last PES packet
       if (avcData) {
-        parseAVCPES(parsePES(avcData));
+        parseAVCPES(parsePES(avcData), true);
       }
       if (aacData) {
         parseAACPES(parsePES(aacData));
@@ -6377,79 +6379,75 @@ var TSDemuxer = function () {
       }
     }
   }, {
+    key: 'pushAccesUnit',
+    value: function pushAccesUnit(avcSample, avcTrack) {
+      if (avcSample.units.length) {
+        // only push AVC sample if starting with a keyframe is not mandatory OR
+        //    if keyframe already found in this fragment OR
+        //       keyframe found in last fragment (track.sps) AND
+        //          samples already appended (we already found a keyframe in this fragment) OR fragment is contiguous
+        if (!this.config.forceKeyFrameOnDiscontinuity || avcSample.key === true || avcTrack.sps && (avcTrack.samples.length || this.contiguous)) {
+          avcTrack.samples.push(avcSample);
+          avcTrack.len += avcSample.units.length;
+          avcTrack.nbNalu += avcSample.units.units.length;
+        } else {
+          // dropped samples, track it
+          avcTrack.dropped++;
+        }
+      }
+      if (avcSample.debug.length) {
+        _logger.logger.log(avcSample.pts + '/' + avcSample.dts + ':' + avcSample.debug + ',' + avcSample.units.length);
+      }
+    }
+  }, {
     key: '_parseAVCPES',
-    value: function _parseAVCPES(pes) {
+    value: function _parseAVCPES(pes, last) {
       var _this = this;
 
+      //logger.log('parse new PES');
       var track = this._avcTrack,
-          samples = track.samples,
           units = this._parseAVCNALu(pes.data),
-          units2 = [],
-          debug = false,
-          key = false,
-          length = 0,
+          debug = true,
           expGolombDecoder,
-          avcSample,
+          avcSample = this.avcSample,
           push,
           i;
       // no NALu found
-      if (units.length === 0 && samples.length > 0) {
+      if (units.length === 0 && avcSample && avcSample.units.length > 0) {
         // append pes.data to previous NAL unit
-        var lastavcSample = samples[samples.length - 1];
-        var lastUnit = lastavcSample.units.units[lastavcSample.units.units.length - 1];
+        var lastUnit = avcSample.units.units[avcSample.units.units.length - 1];
         var tmp = new Uint8Array(lastUnit.data.byteLength + pes.data.byteLength);
         tmp.set(lastUnit.data, 0);
         tmp.set(pes.data, lastUnit.data.byteLength);
         lastUnit.data = tmp;
-        lastavcSample.units.length += pes.data.byteLength;
+        avcSample.units.length += pes.data.byteLength;
         track.len += pes.data.byteLength;
       }
       //free pes.data to save up some memory
       pes.data = null;
-      var debugString = '';
-
-      var pushAccesUnit = function () {
-        if (units2.length) {
-          // only push AVC sample if starting with a keyframe is not mandatory OR
-          //    if keyframe already found in this fragment OR
-          //       keyframe found in last fragment (track.sps) AND
-          //          samples already appended (we already found a keyframe in this fragment) OR fragment is contiguous
-          if (!this.config.forceKeyFrameOnDiscontinuity || key === true || track.sps && (samples.length || this.contiguous)) {
-            avcSample = { units: { units: units2, length: length }, pts: pes.pts, dts: pes.dts, key: key };
-            samples.push(avcSample);
-            track.len += length;
-            track.nbNalu += units2.length;
-          } else {
-            // dropped samples, track it
-            track.dropped++;
-          }
-          units2 = [];
-          length = 0;
-        }
-      }.bind(this);
 
       units.forEach(function (unit) {
         switch (unit.type) {
           //NDR
           case 1:
             push = true;
-            if (debug) {
-              debugString += 'NDR ';
+            if (debug && avcSample) {
+              avcSample.debug += 'NDR ';
             }
             break;
           //IDR
           case 5:
             push = true;
-            if (debug) {
-              debugString += 'IDR ';
+            if (debug && avcSample) {
+              avcSample.debug += 'IDR ';
             }
-            key = true;
+            avcSample.key = true;
             break;
           //SEI
           case 6:
             push = true;
-            if (debug) {
-              debugString += 'SEI ';
+            if (debug && avcSample) {
+              avcSample.debug += 'SEI ';
             }
             expGolombDecoder = new _expGolomb2.default(_this.discardEPB(unit.data));
 
@@ -6522,8 +6520,8 @@ var TSDemuxer = function () {
           //SPS
           case 7:
             push = true;
-            if (debug) {
-              debugString += 'SPS ';
+            if (debug && avcSample) {
+              avcSample.debug += 'SPS ';
             }
             if (!track.sps) {
               expGolombDecoder = new _expGolomb2.default(unit.data);
@@ -6547,8 +6545,8 @@ var TSDemuxer = function () {
           //PPS
           case 8:
             push = true;
-            if (debug) {
-              debugString += 'PPS ';
+            if (debug && avcSample) {
+              avcSample.debug += 'PPS ';
             }
             if (!track.pps) {
               track.pps = [unit.data];
@@ -6556,25 +6554,29 @@ var TSDemuxer = function () {
             break;
           case 9:
             push = false;
-            if (debug) {
-              debugString += 'AUD ';
+            if (avcSample) {
+              _this.pushAccesUnit(avcSample, track);
             }
-            pushAccesUnit();
+            avcSample = _this.avcSample = { key: false, pts: pes.pts, dts: pes.dts, units: { units: [], length: 0 }, debug: debug ? 'AUD ' : '' };
             break;
           default:
             push = false;
-            debugString += 'unknown NAL ' + unit.type + ' ';
+            if (avcSample) {
+              avcSample.debug += 'unknown NAL ' + unit.type + ' ';
+            }
             break;
         }
-        if (push) {
-          units2.push(unit);
-          length += unit.data.byteLength;
+        if (avcSample && push) {
+          var _units = avcSample.units;
+          _units.units.push(unit);
+          _units.length += unit.data.byteLength;
         }
       });
-      if (debug || debugString.length) {
-        _logger.logger.log(debugString);
+      // if last PES packet, push samples
+      if (last && avcSample) {
+        this.pushAccesUnit(avcSample, track);
+        this.avcSample = null;
       }
-      pushAccesUnit();
     }
   }, {
     key: '_insertSampleInOrder',
@@ -6602,11 +6604,13 @@ var TSDemuxer = function () {
           len = array.byteLength,
           value,
           overflow,
-          state = this.avcNaluState;
+          track = this._avcTrack,
+          state = track.naluState,
+          lastState = state;
       var units = [],
           unit,
           unitType,
-          lastUnitStart,
+          lastUnitStart = -1,
           lastUnitType;
       //logger.log('PES:' + Hex.hexDump(array));
       while (i < len) {
@@ -6629,73 +6633,76 @@ var TSDemuxer = function () {
           case 3:
             if (value === 0) {
               state = 3;
-            } else if (value === 1 && i < len) {
-              unitType = array[i] & 0x1f;
-              //logger.log('find NALU @ offset:' + i + ',type:' + unitType);
-              if (lastUnitStart) {
+            } else if (value === 1) {
+              if (lastUnitStart >= 0) {
                 unit = { data: array.subarray(lastUnitStart, i - state - 1), type: lastUnitType };
                 //logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
                 units.push(unit);
               } else {
-                // lastUnitStart is undefined => this is the first start code found in this PES packet
-                // first check if start code delimiter is overlapping between 2 PES packets,
-                // ie it started in last packet (lastState not zero)
-                // and ended at the beginning of this PES packet (i <= 4 - lastState)
-                var lastState = this.avcNaluState;
-                if (lastState && i <= 4 - lastState) {
-                  // start delimiter overlapping between PES packets
-                  // strip start delimiter bytes from the end of last NAL unit
-                  var track = this._avcTrack,
-                      samples = track.samples;
-                  if (samples.length) {
-                    var lastavcSample = samples[samples.length - 1],
-                        lastUnits = lastavcSample.units.units,
-                        lastUnit = lastUnits[lastUnits.length - 1];
+                var avcSample = this.avcSample;
+                if (avcSample) {
+                  var _units2 = avcSample.units.units,
+                      lastUnit = _units2[_units2.length - 1];
+                  // lastUnitStart is undefined => this is the first start code found in this PES packet
+                  // first check if start code delimiter is overlapping between 2 PES packets,
+                  // ie it started in last packet (lastState not zero)
+                  // and ended at the beginning of this PES packet (i <= 4 - lastState)
+                  if (lastState && i <= 4 - lastState) {
+                    // start delimiter overlapping between PES packets
+                    // strip start delimiter bytes from the end of last NAL unit
                     // check if lastUnit had a state different from zero
                     if (lastUnit.state) {
                       // strip last bytes
                       lastUnit.data = lastUnit.data.subarray(0, lastUnit.data.byteLength - lastState);
-                      lastavcSample.units.length -= lastState;
+                      avcSample.units.length -= lastState;
                       track.len -= lastState;
                     }
                   }
-                }
-                // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
-                overflow = i - state - 1;
-                if (overflow > 0) {
-                  var _track = this._avcTrack,
-                      _samples = _track.samples;
-                  //logger.log('first NALU found with overflow:' + overflow);
-                  if (_samples.length) {
-                    var _lastavcSample = _samples[_samples.length - 1],
-                        _lastUnits = _lastavcSample.units.units,
-                        _lastUnit = _lastUnits[_lastUnits.length - 1],
-                        tmp = new Uint8Array(_lastUnit.data.byteLength + overflow);
-                    tmp.set(_lastUnit.data, 0);
-                    tmp.set(array.subarray(0, overflow), _lastUnit.data.byteLength);
-                    _lastUnit.data = tmp;
-                    _lastavcSample.units.length += overflow;
-                    _track.len += overflow;
+                  // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
+                  overflow = i - state - 1;
+                  if (overflow > 0) {
+                    //logger.log('first NALU found with overflow:' + overflow);
+                    var tmp = new Uint8Array(lastUnit.data.byteLength + overflow);
+                    tmp.set(lastUnit.data, 0);
+                    tmp.set(array.subarray(0, overflow), lastUnit.data.byteLength);
+                    lastUnit.data = tmp;
+                    avcSample.units.length += overflow;
+                    track.len += overflow;
                   }
                 }
               }
-              lastUnitStart = i;
-              lastUnitType = unitType;
-              state = 0;
+              // check if we can read unit type
+              if (i < len) {
+                unitType = array[i] & 0x1f;
+                //logger.log('find NALU @ offset:' + i + ',type:' + unitType);
+                lastUnitStart = i;
+                lastUnitType = unitType;
+                state = 0;
+              } else {
+                // not enough byte to read unit type. let's read it on next PES parsing
+                state = 4;
+              }
             } else {
               state = 0;
             }
+            break;
+          case 4:
+            // special use case where we found 3 or 4-byte start codes exactly at the end of previous NAL unit
+            lastUnitStart = 0;
+            // NALu type is value read from offset 0
+            lastUnitType = value;
+            state = 0;
             break;
           default:
             break;
         }
       }
-      if (lastUnitStart) {
+      if (lastUnitStart >= 0) {
         unit = { data: array.subarray(lastUnitStart, len), type: lastUnitType, state: state };
         units.push(unit);
         //logger.log('pushing NALU, type/size/state:' + unit.type + '/' + unit.data.byteLength + '/' + state);
-        this.avcNaluState = state;
       }
+      track.naluState = state;
       return units;
     }
 
@@ -9425,6 +9432,19 @@ var MP4Remuxer = function () {
           inputSamples = track.samples,
           outputSamples = [];
 
+      // for (let i = 0; i < track.samples.length; i++) {
+      //   let avcSample = track.samples[i];
+      //   let units = avcSample.units.units;
+      //   let unitsString = '';
+      //   for (let j = 0; j < units.length ; j++) {
+      //     unitsString += units[j].type + ',';
+      //     if (units[j].data.length < 500) {
+      //       unitsString += Hex.hexDump(units[j].data);
+      //     }
+      //   }
+      //   logger.log(avcSample.pts + '/' + avcSample.dts + ',' + unitsString + avcSample.units.length);
+      // }
+
       // PTS is coded on 33bits, and can loop from -2^32 to 2^32
       // PTSNormalize will make PTS/DTS value monotonic, we use last known DTS value as reference value
       var nextAvcDts = void 0;
@@ -9685,7 +9705,7 @@ var MP4Remuxer = function () {
           // Otherwise, we're within half a frame duration, so just adjust pts
           else {
               if (Math.abs(delta) > 0.1 * pesFrameDuration) {
-                _logger.logger.log('Invalid frame delta ' + Math.round(ptsNorm - nextPtsNorm + pesFrameDuration) + ' at PTS ' + Math.round(ptsNorm / 90) + ' (should be ' + Math.round(pesFrameDuration) + ').');
+                //logger.log(`Invalid frame delta ${Math.round(ptsNorm - nextPtsNorm + pesFrameDuration)} at PTS ${Math.round(ptsNorm / 90)} (should be ${Math.round(pesFrameDuration)}).`);
               }
               nextPtsNorm += pesFrameDuration;
               if (i === 0) {
