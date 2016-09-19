@@ -477,7 +477,7 @@ class TSDemuxer {
         //logger.log('parse new PES');
         var track = this._avcTrack,
             units = this._parseAVCNALu(pes.data),
-            debug = true,
+            debug = false,
             expGolombDecoder,
             avcSample = this.avcSample,
             push,
