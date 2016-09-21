@@ -445,7 +445,7 @@ class PlaylistLoader extends EventHandler {
                 let levels = this.parseMasterPlaylist(string, url);
                 // multi level playlist, parse level info
                 if (levels.length) {
-                    let audiotracks = this.parseMasterPlaylistMedia(
+                    let audioTracks = this.parseMasterPlaylistMedia(
                         string,
                         url,
                         'AUDIO'
@@ -455,10 +455,10 @@ class PlaylistLoader extends EventHandler {
                         url,
                         'SUBTITLES'
                     );
-                    if (audiotracks.length) {
+                    if (audioTracks.length) {
                         // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
                         let embeddedAudioFound = false;
-                        audiotracks.forEach(audioTrack => {
+                        audioTracks.forEach(audioTrack => {
                             if (!audioTrack.url) {
                                 embeddedAudioFound = true;
                             }
@@ -473,7 +473,7 @@ class PlaylistLoader extends EventHandler {
                             logger.log(
                                 'audio codec signaled in quality level, but no embedded audio track signaled, create one'
                             );
-                            audiotracks.unshift({ type: 'main', name: 'main' });
+                            audioTracks.unshift({ type: 'main', name: 'main' });
                         }
                     }
                     hls.trigger(Event.MANIFEST_LOADED, {
