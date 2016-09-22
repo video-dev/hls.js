@@ -179,22 +179,33 @@ class AbrController extends EventHandler {
   }
 
   get nextAutoLevel() {
+    let nextAutoLevel = this._nextAutoLevel, bwEstimator = this.bwEstimator;
+    // in case next auto level has been forced, and bw not available or not reliable
+    if (nextAutoLevel !== -1 && (!bwEstimator || !bwEstimator.canEstimate())) {
+      // cap next auto level by max auto level
+      return Math.min(nextAutoLevel,this.maxAutoLevel);
+    }
     // compute next level using ABR logic
-    let nextABRAutoLevel = this.nextABRAutoLevel, nextAutoLevel = this._nextAutoLevel;
-    // in case next auto level has been forced, use it to cap ABR computed quality level
+    let nextABRAutoLevel = this.nextABRAutoLevel;
     if (nextAutoLevel !== -1) {
+      // nextAutoLevel is defined, use it to cap ABR computed quality level
       nextABRAutoLevel = Math.min(nextAutoLevel,nextABRAutoLevel);
     }
     return nextABRAutoLevel;
   }
 
-  get nextABRAutoLevel() {
-    var hls = this.hls, maxAutoLevel, levels = hls.levels, config = hls.config;
-    if (this._autoLevelCapping === -1 && levels && levels.length) {
+  get maxAutoLevel() {
+    var levels = this.hls.levels,autoLevelCapping = this._autoLevelCapping, maxAutoLevel;
+    if (autoLevelCapping=== -1 && levels && levels.length) {
       maxAutoLevel = levels.length - 1;
     } else {
-      maxAutoLevel = this._autoLevelCapping;
+      maxAutoLevel = autoLevelCapping;
     }
+    return maxAutoLevel;
+  }
+
+  get nextABRAutoLevel() {
+    var hls = this.hls, maxAutoLevel = this.maxAutoLevel, levels = hls.levels, config = hls.config;
     const v = hls.media,
           currentLevel = this.lastLoadedFragLevel,
           currentFragDuration = this.fragCurrent ? this.fragCurrent.duration : 0,
