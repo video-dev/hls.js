@@ -801,24 +801,25 @@ class TSDemuxer {
                             state = 0;
                         } else {
                             // not enough byte to read unit type. let's read it on next PES parsing
-                            state = 4;
+                            state = -state - 1;
                         }
                     } else {
                         state = 0;
                     }
                     break;
-                case 4:
-                    // special use case where we found 3 or 4-byte start codes exactly at the end of previous NAL unit
+                case -3:
+                case -4:
+                    // special use case where we found 3 or 4-byte start codes exactly at the end of previous PES packet
                     lastUnitStart = 0;
                     // NALu type is value read from offset 0
-                    lastUnitType = value;
+                    lastUnitType = value & 0x1f;
                     state = 0;
                     break;
                 default:
                     break;
             }
         }
-        if (lastUnitStart >= 0) {
+        if (lastUnitStart >= 0 && state >= 0) {
             unit = {
                 data: array.subarray(lastUnitStart, len),
                 type: lastUnitType,
