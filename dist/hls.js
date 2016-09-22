@@ -628,6 +628,21 @@ var AbrController = function (_EventHandler) {
   }, {
     key: 'nextAutoLevel',
     get: function get() {
+      // compute next level using ABR logic
+      var nextABRAutoLevel = this.nextABRAutoLevel,
+          nextAutoLevel = this._nextAutoLevel;
+      // in case next auto level has been forced, use it to cap ABR computed quality level
+      if (nextAutoLevel !== -1) {
+        nextABRAutoLevel = Math.min(nextAutoLevel, nextABRAutoLevel);
+      }
+      return nextABRAutoLevel;
+    },
+    set: function set(nextLevel) {
+      this._nextAutoLevel = nextLevel;
+    }
+  }, {
+    key: 'nextABRAutoLevel',
+    get: function get() {
       var hls = this.hls,
           maxAutoLevel,
           levels = hls.levels,
@@ -637,12 +652,6 @@ var AbrController = function (_EventHandler) {
       } else {
         maxAutoLevel = this._autoLevelCapping;
       }
-
-      // in case next auto level has been forced, return it straight-away (but capped)
-      if (this._nextAutoLevel !== -1) {
-        return Math.min(this._nextAutoLevel, maxAutoLevel);
-      }
-
       var v = hls.media,
           currentLevel = this.lastLoadedFragLevel,
           currentFragDuration = this.fragCurrent ? this.fragCurrent.duration : 0,
@@ -677,9 +686,6 @@ var AbrController = function (_EventHandler) {
         }
         return this.findBestLevel(currentLevel, currentFragDuration, avgbw, maxAutoLevel, bufferStarvationDelay + maxStarvationDelay, config.abrBandWidthFactor, config.abrBandWidthUpFactor, levels);
       }
-    },
-    set: function set(nextLevel) {
-      this._nextAutoLevel = nextLevel;
     }
   }]);
 
