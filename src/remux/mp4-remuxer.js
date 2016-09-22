@@ -233,6 +233,23 @@ class MP4Remuxer {
         //   logger.log(avcSample.pts + '/' + avcSample.dts + ',' + unitsString + avcSample.units.length);
         // }
 
+        // handle broken streams with PTS < DTS, tolerance up 200ms (18000 in 90kHz timescale)
+        let PTSDTSshift = inputSamples.reduce(
+            (prev, curr) =>
+                Math.max(Math.min(prev, curr.pts - curr.dts), -18000),
+            0
+        );
+        if (PTSDTSshift < 0) {
+            logger.warn(
+                `PTS < DTS detected in video samples, shifting DTS by ${Math.round(
+                    PTSDTSshift / 90
+                )} ms to overcome this issue`
+            );
+            for (let i = 0; i < inputSamples.length; i++) {
+                inputSamples[i].dts += PTSDTSshift;
+            }
+        }
+
         // PTS is coded on 33bits, and can loop from -2^32 to 2^32
         // PTSNormalize will make PTS/DTS value monotonic, we use last known DTS value as reference value
         let nextAvcDts;
