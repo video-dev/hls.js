@@ -219,7 +219,7 @@ class AbrController extends EventHandler {
 
     // First, look to see if we can find a level matching with our avg bandwidth AND that could also guarantee no rebuffering at all
     let bestLevel = this.findBestLevel(currentLevel,currentFragDuration,avgbw,maxAutoLevel,bufferStarvationDelay,config.abrBandWidthFactor,config.abrBandWidthUpFactor,levels);
-    if (bestLevel) {
+    if (bestLevel >= 0) {
       return bestLevel;
     } else {
       logger.trace('rebuffering expected to happen, lets try to find a quality level minimizing the rebuffering');
@@ -236,7 +236,8 @@ class AbrController extends EventHandler {
           logger.trace(`bitrate test took ${Math.round(1000*bitrateTestDelay)}ms, set first fragment max fetchDuration to ${Math.round(1000*maxStarvationDelay)} ms`);
         }
       }
-      return this.findBestLevel(currentLevel,currentFragDuration,avgbw,maxAutoLevel,bufferStarvationDelay+maxStarvationDelay,config.abrBandWidthFactor,config.abrBandWidthUpFactor,levels);
+      bestLevel = this.findBestLevel(currentLevel,currentFragDuration,avgbw,maxAutoLevel,bufferStarvationDelay+maxStarvationDelay,config.abrBandWidthFactor,config.abrBandWidthUpFactor,levels);
+      return Math.max(bestLevel,0);
     }
   }
 
@@ -269,7 +270,8 @@ class AbrController extends EventHandler {
         return i;
       }
     }
-    return 0;
+    // not enough time budget even with quality level 0 ... rebuffering might happen
+    return -1;
   }
 
   set nextAutoLevel(nextLevel) {
