@@ -612,7 +612,8 @@ var AbrController = function (_EventHandler) {
           return i;
         }
       }
-      return 0;
+      // not enough time budget even with quality level 0 ... rebuffering might happen
+      return -1;
     }
   }, {
     key: 'autoLevelCapping',
@@ -681,7 +682,7 @@ var AbrController = function (_EventHandler) {
 
       // First, look to see if we can find a level matching with our avg bandwidth AND that could also guarantee no rebuffering at all
       var bestLevel = this.findBestLevel(currentLevel, currentFragDuration, avgbw, maxAutoLevel, bufferStarvationDelay, config.abrBandWidthFactor, config.abrBandWidthUpFactor, levels);
-      if (bestLevel) {
+      if (bestLevel >= 0) {
         return bestLevel;
       } else {
         _logger.logger.trace('rebuffering expected to happen, lets try to find a quality level minimizing the rebuffering');
@@ -698,7 +699,8 @@ var AbrController = function (_EventHandler) {
             _logger.logger.trace('bitrate test took ' + Math.round(1000 * bitrateTestDelay) + 'ms, set first fragment max fetchDuration to ' + Math.round(1000 * maxStarvationDelay) + ' ms');
           }
         }
-        return this.findBestLevel(currentLevel, currentFragDuration, avgbw, maxAutoLevel, bufferStarvationDelay + maxStarvationDelay, config.abrBandWidthFactor, config.abrBandWidthUpFactor, levels);
+        bestLevel = this.findBestLevel(currentLevel, currentFragDuration, avgbw, maxAutoLevel, bufferStarvationDelay + maxStarvationDelay, config.abrBandWidthFactor, config.abrBandWidthUpFactor, levels);
+        return Math.max(bestLevel, 0);
       }
     }
   }]);
