@@ -28,13 +28,13 @@ function formatMsg(type, msg) {
 }
 
 function consolePrintFn(type) {
-    const func = window.console[type];
+    const func = self.console[type];
     if (func) {
         return function(...args) {
             if (args[0]) {
                 args[0] = formatMsg(type, args[0]);
             }
-            func.apply(window.console, args);
+            func.apply(self.console, args);
         };
     }
     return noop;
