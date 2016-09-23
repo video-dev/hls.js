@@ -5254,11 +5254,18 @@ var _events = _dereq_(26);
 
 var _events2 = _interopRequireDefault(_events);
 
+var _logger = _dereq_(43);
+
 var _events3 = _dereq_(1);
 
 var _events4 = _interopRequireDefault(_events3);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+/* demuxer web worker.
+ *  - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
+ *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
+ */
 
 var DemuxerWorker = function DemuxerWorker(self) {
   // observer setup
@@ -5283,7 +5290,13 @@ var DemuxerWorker = function DemuxerWorker(self) {
     //console.log('demuxer cmd:' + data.cmd);
     switch (data.cmd) {
       case 'init':
-        self.demuxer = new _demuxerInline2.default(observer, data.id, data.typeSupported, JSON.parse(data.config));
+        var config = JSON.parse(data.config);
+        self.demuxer = new _demuxerInline2.default(observer, data.id, data.typeSupported, config);
+        try {
+          (0, _logger.enableLogs)(config.debug);
+        } catch (err) {
+          console.warn('demuxerWorker: unable to enable logs');
+        }
         break;
       case 'demux':
         self.demuxer.push(new Uint8Array(data.data), data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration);
@@ -5313,14 +5326,11 @@ var DemuxerWorker = function DemuxerWorker(self) {
     delete data.data2;
     self.postMessage({ event: ev, data: data, data1: data1, data2: data2 }, [data1, data2]);
   });
-}; /* demuxer web worker.
-    *  - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
-    *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
-    */
+};
 
 exports.default = DemuxerWorker;
 
-},{"1":1,"18":18,"26":26}],20:[function(_dereq_,module,exports){
+},{"1":1,"18":18,"26":26,"43":43}],20:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6034,7 +6044,7 @@ var TSDemuxer = function () {
     value: function switchLevel() {
       this.pmtParsed = false;
       this._pmtId = -1;
-      this._avcTrack = { container: 'video/mp2t', type: 'video', id: -1, sequenceNumber: 0, samples: [], len: 0, nbNalu: 0, naluState: 0, dropped: 0 };
+      this._avcTrack = { container: 'video/mp2t', type: 'video', id: -1, sequenceNumber: 0, samples: [], len: 0, dropped: 0 };
       this._aacTrack = { container: 'video/mp2t', type: 'audio', id: -1, sequenceNumber: 0, samples: [], len: 0 };
       this._id3Track = { type: 'id3', id: -1, sequenceNumber: 0, samples: [], len: 0 };
       this._txtTrack = { type: 'text', id: -1, sequenceNumber: 0, samples: [], len: 0 };
@@ -6222,6 +6232,25 @@ var TSDemuxer = function () {
   }, {
     key: 'remux',
     value: function remux(level, sn, data) {
+      var avcTrack = this._avcTrack,
+          samples = avcTrack.samples;
+
+      // compute total/avc sample length and nb of NAL units
+      var trackData = samples.reduce(function (prevSampleData, curSample) {
+        var sampleData = curSample.units.units.reduce(function (prevUnitData, curUnit) {
+          return {
+            len: prevUnitData.len + curUnit.data.length,
+            nbNalu: prevUnitData.nbNalu + 1
+          };
+        }, { len: 0, nbNalu: 0 });
+        curSample.length = sampleData.len;
+        return {
+          len: prevSampleData.len + sampleData.len,
+          nbNalu: prevSampleData.nbNalu + sampleData.nbNalu
+        };
+      }, { len: 0, nbNalu: 0 });
+      avcTrack.len = trackData.len;
+      avcTrack.nbNalu = trackData.nbNalu;
       this.remuxer.remux(level, sn, this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data);
     }
   }, {
@@ -6381,15 +6410,13 @@ var TSDemuxer = function () {
   }, {
     key: 'pushAccesUnit',
     value: function pushAccesUnit(avcSample, avcTrack) {
-      if (avcSample.units.length) {
+      if (avcSample.units.units.length) {
         // only push AVC sample if starting with a keyframe is not mandatory OR
         //    if keyframe already found in this fragment OR
         //       keyframe found in last fragment (track.sps) AND
         //          samples already appended (we already found a keyframe in this fragment) OR fragment is contiguous
         if (!this.config.forceKeyFrameOnDiscontinuity || avcSample.key === true || avcTrack.sps && (avcTrack.samples.length || this.contiguous)) {
           avcTrack.samples.push(avcSample);
-          avcTrack.len += avcSample.units.length;
-          avcTrack.nbNalu += avcSample.units.units.length;
         } else {
           // dropped samples, track it
           avcTrack.dropped++;
@@ -6412,17 +6439,6 @@ var TSDemuxer = function () {
           avcSample = this.avcSample,
           push,
           i;
-      // no NALu found
-      if (units.length === 0 && avcSample && avcSample.units.length > 0) {
-        // append pes.data to previous NAL unit
-        var lastUnit = avcSample.units.units[avcSample.units.units.length - 1];
-        var tmp = new Uint8Array(lastUnit.data.byteLength + pes.data.byteLength);
-        tmp.set(lastUnit.data, 0);
-        tmp.set(pes.data, lastUnit.data.byteLength);
-        lastUnit.data = tmp;
-        avcSample.units.length += pes.data.byteLength;
-        track.len += pes.data.byteLength;
-      }
       //free pes.data to save up some memory
       pes.data = null;
 
@@ -6569,7 +6585,6 @@ var TSDemuxer = function () {
         if (avcSample && push) {
           var _units = avcSample.units;
           _units.units.push(unit);
-          _units.length += unit.data.byteLength;
         }
       });
       // if last PES packet, push samples
@@ -6598,6 +6613,23 @@ var TSDemuxer = function () {
       }
     }
   }, {
+    key: '_getLastNalUnit',
+    value: function _getLastNalUnit() {
+      var avcSample = this.avcSample,
+          lastUnit = void 0;
+      // try to fallback to previous sample if current one is empty
+      if (!avcSample || avcSample.units.units.length === 0) {
+        var track = this._avcTrack,
+            samples = track.samples;
+        avcSample = samples[samples.length - 1];
+      }
+      if (avcSample) {
+        var units = avcSample.units.units;
+        lastUnit = units[units.length - 1];
+      }
+      return lastUnit;
+    }
+  }, {
     key: '_parseAVCNALu',
     value: function _parseAVCNALu(array) {
       var i = 0,
@@ -6605,7 +6637,7 @@ var TSDemuxer = function () {
           value,
           overflow,
           track = this._avcTrack,
-          state = track.naluState,
+          state = track.naluState || 0,
           lastState = state;
       var units = [],
           unit,
@@ -6639,39 +6671,29 @@ var TSDemuxer = function () {
                 //logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
                 units.push(unit);
               } else {
-                var avcSample = this.avcSample;
-                // try to fallback to previous sample if current one is empty
-                if (!avcSample || avcSample.units.length === 0) {
-                  avcSample = track.samples[track.samples.length - 1];
-                }
-                if (avcSample) {
-                  var _units2 = avcSample.units.units,
-                      lastUnit = _units2[_units2.length - 1];
-                  // lastUnitStart is undefined => this is the first start code found in this PES packet
-                  // first check if start code delimiter is overlapping between 2 PES packets,
-                  // ie it started in last packet (lastState not zero)
-                  // and ended at the beginning of this PES packet (i <= 4 - lastState)
+                // lastUnitStart is undefined => this is the first start code found in this PES packet
+                // first check if start code delimiter is overlapping between 2 PES packets,
+                // ie it started in last packet (lastState not zero)
+                // and ended at the beginning of this PES packet (i <= 4 - lastState)
+                var lastUnit = this._getLastNalUnit();
+                if (lastUnit) {
                   if (lastState && i <= 4 - lastState) {
                     // start delimiter overlapping between PES packets
                     // strip start delimiter bytes from the end of last NAL unit
                     // check if lastUnit had a state different from zero
-                    if (lastUnit && lastUnit.state) {
+                    if (lastUnit.state) {
                       // strip last bytes
                       lastUnit.data = lastUnit.data.subarray(0, lastUnit.data.byteLength - lastState);
-                      avcSample.units.length -= lastState;
-                      track.len -= lastState;
                     }
                   }
                   // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
                   overflow = i - state - 1;
-                  if (lastUnit && overflow > 0) {
+                  if (overflow > 0) {
                     //logger.log('first NALU found with overflow:' + overflow);
                     var tmp = new Uint8Array(lastUnit.data.byteLength + overflow);
                     tmp.set(lastUnit.data, 0);
                     tmp.set(array.subarray(0, overflow), lastUnit.data.byteLength);
                     lastUnit.data = tmp;
-                    avcSample.units.length += overflow;
-                    track.len += overflow;
                   }
                 }
               }
@@ -6684,14 +6706,13 @@ var TSDemuxer = function () {
                 state = 0;
               } else {
                 // not enough byte to read unit type. let's read it on next PES parsing
-                state = -state - 1;
+                state = -1;
               }
             } else {
               state = 0;
             }
             break;
-          case -3:
-          case -4:
+          case -1:
             // special use case where we found 3 or 4-byte start codes exactly at the end of previous PES packet
             lastUnitStart = 0;
             // NALu type is value read from offset 0
@@ -6706,6 +6727,17 @@ var TSDemuxer = function () {
         unit = { data: array.subarray(lastUnitStart, len), type: lastUnitType, state: state };
         units.push(unit);
         //logger.log('pushing NALU, type/size/state:' + unit.type + '/' + unit.data.byteLength + '/' + state);
+      }
+      // no NALu found
+      if (units.length === 0) {
+        // append pes.data to previous NAL unit
+        var _lastUnit = this._getLastNalUnit();
+        if (_lastUnit) {
+          var _tmp = new Uint8Array(_lastUnit.data.byteLength + array.byteLength);
+          _tmp.set(_lastUnit.data, 0);
+          _tmp.set(array, _lastUnit.data.byteLength);
+          _lastUnit.data = _tmp;
+        }
       }
       track.naluState = state;
       return units;
@@ -7551,7 +7583,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.2-6';
+      return '0.6.2-7';
     }
   }, {
     key: 'Events',
@@ -11679,6 +11711,8 @@ var fakeLogger = {
 
 var exportedLogger = fakeLogger;
 
+/*globals self: false */
+
 //let lastCallTime;
 // function formatMsgWithTimeInfo(type, msg) {
 //   const now = Date.now();
@@ -11694,7 +11728,7 @@ function formatMsg(type, msg) {
 }
 
 function consolePrintFn(type) {
-  var func = window.console[type];
+  var func = self.console[type];
   if (func) {
     return function () {
       for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
@@ -11704,7 +11738,7 @@ function consolePrintFn(type) {
       if (args[0]) {
         args[0] = formatMsg(type, args[0]);
       }
-      func.apply(window.console, args);
+      func.apply(self.console, args);
     };
   }
   return noop;
