@@ -13,6 +13,8 @@ const fakeLogger = {
 
 let exportedLogger = fakeLogger;
 
+/*globals self: false */
+
 //let lastCallTime;
 // function formatMsgWithTimeInfo(type, msg) {
 //   const now = Date.now();
