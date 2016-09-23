@@ -50,8 +50,6 @@ class TSDemuxer {
             sequenceNumber: 0,
             samples: [],
             len: 0,
-            nbNalu: 0,
-            naluState: 0,
             dropped: 0
         };
         this._aacTrack = {
@@ -273,6 +271,31 @@ class TSDemuxer {
     }
 
     remux(level, sn, data) {
+        let avcTrack = this._avcTrack,
+            samples = avcTrack.samples;
+
+        // compute total/avc sample length and nb of NAL units
+        let trackData = samples.reduce(
+            function(prevSampleData, curSample) {
+                let sampleData = curSample.units.units.reduce(
+                    function(prevUnitData, curUnit) {
+                        return {
+                            len: prevUnitData.len + curUnit.data.length,
+                            nbNalu: prevUnitData.nbNalu + 1
+                        };
+                    },
+                    { len: 0, nbNalu: 0 }
+                );
+                curSample.length = sampleData.len;
+                return {
+                    len: prevSampleData.len + sampleData.len,
+                    nbNalu: prevSampleData.nbNalu + sampleData.nbNalu
+                };
+            },
+            { len: 0, nbNalu: 0 }
+        );
+        avcTrack.len = trackData.len;
+        avcTrack.nbNalu = trackData.nbNalu;
         this.remuxer.remux(
             level,
             sn,
@@ -442,7 +465,7 @@ class TSDemuxer {
     }
 
     pushAccesUnit(avcSample, avcTrack) {
-        if (avcSample.units.length) {
+        if (avcSample.units.units.length) {
             // only push AVC sample if starting with a keyframe is not mandatory OR
             //    if keyframe already found in this fragment OR
             //       keyframe found in last fragment (track.sps) AND
@@ -453,8 +476,6 @@ class TSDemuxer {
                 (avcTrack.sps && (avcTrack.samples.length || this.contiguous))
             ) {
                 avcTrack.samples.push(avcSample);
-                avcTrack.len += avcSample.units.length;
-                avcTrack.nbNalu += avcSample.units.units.length;
             } else {
                 // dropped samples, track it
                 avcTrack.dropped++;
@@ -482,20 +503,6 @@ class TSDemuxer {
             avcSample = this.avcSample,
             push,
             i;
-        // no NALu found
-        if (units.length === 0 && avcSample && avcSample.units.length > 0) {
-            // append pes.data to previous NAL unit
-            var lastUnit =
-                avcSample.units.units[avcSample.units.units.length - 1];
-            var tmp = new Uint8Array(
-                lastUnit.data.byteLength + pes.data.byteLength
-            );
-            tmp.set(lastUnit.data, 0);
-            tmp.set(pes.data, lastUnit.data.byteLength);
-            lastUnit.data = tmp;
-            avcSample.units.length += pes.data.byteLength;
-            track.len += pes.data.byteLength;
-        }
         //free pes.data to save up some memory
         pes.data = null;
 
@@ -673,7 +680,6 @@ class TSDemuxer {
             if (avcSample && push) {
                 let units = avcSample.units;
                 units.units.push(unit);
-                units.length += unit.data.byteLength;
             }
         });
         // if last PES packet, push samples
@@ -701,13 +707,29 @@ class TSDemuxer {
         }
     }
 
+    _getLastNalUnit() {
+        let avcSample = this.avcSample,
+            lastUnit;
+        // try to fallback to previous sample if current one is empty
+        if (!avcSample || avcSample.units.units.length === 0) {
+            let track = this._avcTrack,
+                samples = track.samples;
+            avcSample = samples[samples.length - 1];
+        }
+        if (avcSample) {
+            let units = avcSample.units.units;
+            lastUnit = units[units.length - 1];
+        }
+        return lastUnit;
+    }
+
     _parseAVCNALu(array) {
         var i = 0,
             len = array.byteLength,
             value,
             overflow,
             track = this._avcTrack,
-            state = track.naluState,
+            state = track.naluState || 0,
             lastState = state;
         var units = [],
             unit,
@@ -747,36 +769,27 @@ class TSDemuxer {
                             //logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
                             units.push(unit);
                         } else {
-                            let avcSample = this.avcSample;
-                            // try to fallback to previous sample if current one is empty
-                            if (!avcSample || avcSample.units.length === 0) {
-                                avcSample =
-                                    track.samples[track.samples.length - 1];
-                            }
-                            if (avcSample) {
-                                let units = avcSample.units.units,
-                                    lastUnit = units[units.length - 1];
-                                // lastUnitStart is undefined => this is the first start code found in this PES packet
-                                // first check if start code delimiter is overlapping between 2 PES packets,
-                                // ie it started in last packet (lastState not zero)
-                                // and ended at the beginning of this PES packet (i <= 4 - lastState)
+                            // lastUnitStart is undefined => this is the first start code found in this PES packet
+                            // first check if start code delimiter is overlapping between 2 PES packets,
+                            // ie it started in last packet (lastState not zero)
+                            // and ended at the beginning of this PES packet (i <= 4 - lastState)
+                            let lastUnit = this._getLastNalUnit();
+                            if (lastUnit) {
                                 if (lastState && i <= 4 - lastState) {
                                     // start delimiter overlapping between PES packets
                                     // strip start delimiter bytes from the end of last NAL unit
                                     // check if lastUnit had a state different from zero
-                                    if (lastUnit && lastUnit.state) {
+                                    if (lastUnit.state) {
                                         // strip last bytes
                                         lastUnit.data = lastUnit.data.subarray(
                                             0,
                                             lastUnit.data.byteLength - lastState
                                         );
-                                        avcSample.units.length -= lastState;
-                                        track.len -= lastState;
                                     }
                                 }
                                 // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
                                 overflow = i - state - 1;
-                                if (lastUnit && overflow > 0) {
+                                if (overflow > 0) {
                                     //logger.log('first NALU found with overflow:' + overflow);
                                     let tmp = new Uint8Array(
                                         lastUnit.data.byteLength + overflow
@@ -787,8 +800,6 @@ class TSDemuxer {
                                         lastUnit.data.byteLength
                                     );
                                     lastUnit.data = tmp;
-                                    avcSample.units.length += overflow;
-                                    track.len += overflow;
                                 }
                             }
                         }
@@ -826,6 +837,19 @@ class TSDemuxer {
             };
             units.push(unit);
             //logger.log('pushing NALU, type/size/state:' + unit.type + '/' + unit.data.byteLength + '/' + state);
+        }
+        // no NALu found
+        if (units.length === 0) {
+            // append pes.data to previous NAL unit
+            let lastUnit = this._getLastNalUnit();
+            if (lastUnit) {
+                let tmp = new Uint8Array(
+                    lastUnit.data.byteLength + array.byteLength
+                );
+                tmp.set(lastUnit.data, 0);
+                tmp.set(array, lastUnit.data.byteLength);
+                lastUnit.data = tmp;
+            }
         }
         track.naluState = state;
         return units;
