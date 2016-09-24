@@ -61,9 +61,9 @@ class Hls {
           maxBufferSize: 60 * 1000 * 1000,
           maxBufferHole: 0.5,
           maxSeekHole: 2,
-          seekHoleNudgeDuration : 0.01,
+          seekHoleNudgeDuration: 0.01,
           stalledInBufferedNudgeThreshold: 10,
-          maxFragLookUpTolerance : 0.2,
+          maxFragLookUpTolerance: 0.2,
           liveSyncDurationCount:3,
           liveMaxLatencyDurationCount: Infinity,
           liveSyncDuration: undefined,
@@ -84,7 +84,7 @@ class Hls {
           fragLoadingRetryDelay: 1000,
           fragLoadingMaxRetryTimeout: 64000,
           fragLoadingLoopThreshold: 3,
-          startFragPrefetch : false,
+          startFragPrefetch: false,
           fpsDroppedMonitoringPeriod: 5000,
           fpsDroppedMonitoringThreshold: 0.2,
           appendErrorMaxRetry: 3,
@@ -94,16 +94,16 @@ class Hls {
           pLoader: undefined,
           xhrSetup: undefined,
           fetchSetup: undefined,
-          abrController : AbrController,
-          bufferController : BufferController,
-          capLevelController : CapLevelController,
+          abrController: AbrController,
+          bufferController: BufferController,
+          capLevelController: CapLevelController,
           fpsController: FPSController,
           streamController: StreamController,
-          audioStreamController : AudioStreamController,
+          audioStreamController: AudioStreamController,
           timelineController: TimelineController,
           cueHandler: Cues,
           enableCEA708Captions: true,
-          enableMP2TPassThrough : false,
+          enableMP2TPassThrough: false,
           stretchShortVideoTrack: false,
           forceKeyFrameOnDiscontinuity: true,
           abrEwmaFastLive: 5,
@@ -111,8 +111,8 @@ class Hls {
           abrEwmaFastVoD: 4,
           abrEwmaSlowVoD: 15,
           abrEwmaDefaultEstimate: 5e5, // 500 kbps
-          abrBandWidthFactor : 0.8,
-          abrBandWidthUpFactor : 0.7
+          abrBandWidthFactor: 0.8,
+          abrBandWidthUpFactor: 0.7
         };
     }
     return Hls.defaultConfig;
