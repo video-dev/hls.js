@@ -56,6 +56,7 @@ class Hls {
             Hls.defaultConfig = {
                 autoStartLoad: true,
                 startPosition: -1,
+                defaultAudioCodec: undefined,
                 debug: false,
                 capLevelOnFPSDrop: false,
                 capLevelToPlayerSize: false,
@@ -94,6 +95,8 @@ class Hls {
                 //loader: FetchLoader,
                 fLoader: undefined,
                 pLoader: undefined,
+                xhrSetup: undefined,
+                fetchSetup: undefined,
                 abrController: AbrController,
                 bufferController: BufferController,
                 capLevelController: CapLevelController,
