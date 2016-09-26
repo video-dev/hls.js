@@ -30,12 +30,14 @@ class XhrLoader {
     this.retryTimeout = null;
   }
 
-  load(context, config, callbacks) {
+  load(context, config, callbacks, loadingBackOff, onWarn) {
     this.context = context;
     this.config = config;
     this.callbacks = callbacks;
     this.stats = {trequest: performance.now(), retry: 0};
     this.retryDelay = config.retryDelay;
+    this.loadingBackOff = loadingBackOff;
+    this.onWarn = onWarn;
     this.loadInternal();
   }
 
@@ -110,7 +112,12 @@ class XhrLoader {
         // schedule retry
         this.retryTimeout = window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
         // set exponential backoff
-        this.retryDelay = Math.min(2 * this.retryDelay, config.maxRetryDelay);
+        if (this.loadingBackOff) {
+          this.retryDelay = Math.min(2 * this.retryDelay, config.maxRetryDelay);
+        }
+        if (this.onWarn) {
+          this.onWarn(event);
+        }
         stats.retry++;
       }
     }

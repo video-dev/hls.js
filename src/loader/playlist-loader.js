@@ -77,7 +77,7 @@ class PlaylistLoader extends EventHandler {
     let loaderConfig, loaderCallbacks;
     loaderConfig = { timeout : timeout, maxRetry : retry , retryDelay : retryDelay, maxRetryDelay : maxRetryDelay};
     loaderCallbacks = { onSuccess : this.loadsuccess.bind(this), onError :this.loaderror.bind(this), onTimeout : this.loadtimeout.bind(this)};
-    loader.load(context,loaderConfig,loaderCallbacks);
+    loader.load(context,loaderConfig,loaderCallbacks,config.loadingBackOff, this.loadwarn.bind(this));
   }
 
   resolve(url, baseUrl) {
@@ -365,7 +365,7 @@ class PlaylistLoader extends EventHandler {
         } else {
           hls.trigger(Event.AUDIO_TRACK_LOADED, {details: levelDetails, id: id, stats: stats});
         }
-      } else {
+      } else if (string.indexOf('#EXT-X-STREAM-INF') > 0) {
         let levels = this.parseMasterPlaylist(string, url);
         // multi level playlist, parse level info
         if (levels.length) {
@@ -386,13 +386,17 @@ class PlaylistLoader extends EventHandler {
             }
           }
           hls.trigger(Event.MANIFEST_LOADED, {levels: levels, audioTracks : audiotracks, url: url, stats: stats});
-        } else {
-          hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'no level found in manifest'});
         }
+      } else {
+        hls.trigger(Event.ERROR, {type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.EMPTY_PLAYLIST, fatal: false, url: url, reason: 'returned playlist is empty'});
       }
     } else {
       hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'no EXTM3U delimiter'});
     }
+  }
+
+  loadwarn(response, context) {
+    this.hls.trigger(Event.WARN, { type: ErrorTypes.NETWORK_ERROR, url: context.loader.url, loader: context.loader, response: response, context : context });
   }
 
   loaderror(response, context) {

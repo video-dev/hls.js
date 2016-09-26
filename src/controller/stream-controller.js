@@ -1173,9 +1173,11 @@ class StreamController extends EventHandler {
             this.fragLoadError = loadError;
             // reset load counter to avoid frag loop loading error
             frag.loadCounter = 0;
-            // exponential backoff capped to 64s
-            var delay = Math.min(Math.pow(2,loadError-1)*this.config.fragLoadingRetryDelay,64000);
-            logger.warn(`mediaController: frag loading failed, retry in ${delay} ms`);
+            var delay = 0;
+            if (this.config.loadingBackOff) {
+              delay = Math.min(Math.pow(2,loadError-1)*this.config.fragLoadingRetryDelay,64000);
+              logger.warn(`mediaController: frag loading failed, retry in ${delay} ms`);
+            }
             this.retryDate = performance.now() + delay;
             // retry loading state
             this.state = State.FRAG_LOADING_WAITING_RETRY;

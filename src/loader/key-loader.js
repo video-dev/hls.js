@@ -41,7 +41,14 @@ class KeyLoader extends EventHandler {
           logger.warn(`abort previous fragment loader for type:${type}`);
           loader.abort();
         }
-        frag.loader = this.loaders[type] = new config.loader(config);
+
+        let kConfig = Object.create(config);
+        if (config.keyRequestWithCredential === true) {
+          kConfig.xhrSetup = function(xhr) {
+            xhr.withCredentials = true;
+          };
+        }
+        frag.loader = this.loaders[type] = new kConfig.loader(kConfig);
         this.decrypturl = uri;
         this.decryptkey = null;
 
@@ -49,7 +56,7 @@ class KeyLoader extends EventHandler {
         loaderContext = { url : uri, frag : frag, responseType : 'arraybuffer'};
         loaderConfig = { timeout : config.fragLoadingTimeOut, maxRetry : config.fragLoadingMaxRetry , retryDelay : config.fragLoadingRetryDelay, maxRetryDelay : config.fragLoadingMaxRetryTimeout};
         loaderCallbacks = { onSuccess : this.loadsuccess.bind(this), onError :this.loaderror.bind(this), onTimeout : this.loadtimeout.bind(this)};
-        frag.loader.load(loaderContext,loaderConfig,loaderCallbacks);
+        frag.loader.load(loaderContext,loaderConfig,loaderCallbacks,config.loadingBackOff,null);
       } else if (this.decryptkey) {
         // we already loaded this key, return it
         decryptdata.key = this.decryptkey;

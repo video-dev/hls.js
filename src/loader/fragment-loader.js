@@ -47,7 +47,7 @@ class FragmentLoader extends EventHandler {
     }
     loaderConfig = { timeout : config.fragLoadingTimeOut, maxRetry : 0 , retryDelay : 0, maxRetryDelay : config.fragLoadingMaxRetryTimeout};
     loaderCallbacks = { onSuccess : this.loadsuccess.bind(this), onError :this.loaderror.bind(this), onTimeout : this.loadtimeout.bind(this), onProgress: this.loadprogress.bind(this)};
-    loader.load(loaderContext,loaderConfig,loaderCallbacks);
+    loader.load(loaderContext,loaderConfig,loaderCallbacks,config.loadingBackOff,null);
   }
 
   loadsuccess(response, stats, context) {
@@ -65,7 +65,7 @@ class FragmentLoader extends EventHandler {
     }
     this.loaders[context.type] = undefined;
     this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.FRAG_LOAD_ERROR, fatal: false, frag: context.frag, response: response});
-  } 
+  }
 
   loadtimeout(stats, context) {
     let loader = context.loader;
