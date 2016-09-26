@@ -296,7 +296,7 @@ class StreamController extends EventHandler {
   }
 
   _ensureFragmentAtLivePoint({levelDetails, bufferEnd, start, end, fragPrevious, fragments, fragLen}) {
-    const config = this.hls.config;
+    const config = this.hls.config, media = this.media;
 
     let frag;
 
@@ -308,7 +308,6 @@ class StreamController extends EventHandler {
         let liveSyncPosition = this.liveSyncPosition = this.computeLivePosition(start, levelDetails);
         logger.log(`buffer end: ${bufferEnd} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(3)}`);
         bufferEnd = liveSyncPosition;
-        let media = this.media;
         if (media && media.readyState && media.duration > liveSyncPosition) {
           media.currentTime = liveSyncPosition;
         }
@@ -323,7 +322,8 @@ class StreamController extends EventHandler {
     // level 1 loaded [182580162,182580168] <============= here we should have bufferEnd > end. in that case break to avoid reloading 182580168
     // level 1 loaded [182580164,182580171]
     //
-    if (levelDetails.PTSKnown && bufferEnd > end) {
+    // don't return null in case media not loaded yet (readystate === 0)
+    if (levelDetails.PTSKnown && bufferEnd > end && media && media.readyState) {
       return null;
     }
 
