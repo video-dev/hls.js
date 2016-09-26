@@ -17,6 +17,7 @@ import TimelineController from './controller/timeline-controller';
 import FPSController from './controller/fps-controller';
 import AudioTrackController from './controller/audio-track-controller';
 import {logger, enableLogs} from './utils/logger';
+//import FetchLoader from './utils/fetch-loader';
 import XhrLoader from './utils/xhr-loader';
 import EventEmitter from 'events';
 import KeyLoader from './loader/key-loader';
@@ -51,6 +52,7 @@ class Hls {
     if(!Hls.defaultConfig) {
        Hls.defaultConfig = {
           autoStartLoad: true,
+          startPosition: -1,
           debug: false,
           capLevelOnFPSDrop: false,
           capLevelToPlayerSize: false,
@@ -71,18 +73,22 @@ class Hls {
           manifestLoadingTimeOut: 10000,
           manifestLoadingMaxRetry: 1,
           manifestLoadingRetryDelay: 1000,
+          manifestLoadingMaxRetryTimeout: 64000,
           levelLoadingTimeOut: 10000,
           levelLoadingMaxRetry: 4,
           levelLoadingRetryDelay: 1000,
+          levelLoadingMaxRetryTimeout: 64000,
           fragLoadingTimeOut: 20000,
           fragLoadingMaxRetry: 6,
           fragLoadingRetryDelay: 1000,
+          fragLoadingMaxRetryTimeout: 64000,
           fragLoadingLoopThreshold: 3,
           startFragPrefetch : false,
           fpsDroppedMonitoringPeriod: 5000,
           fpsDroppedMonitoringThreshold: 0.2,
           appendErrorMaxRetry: 3,
           loader: XhrLoader,
+          //loader: FetchLoader,
           fLoader: undefined,
           pLoader: undefined,
           abrController : AbrController,
@@ -96,8 +102,12 @@ class Hls {
           enableCEA708Captions: true,
           enableMP2TPassThrough : false,
           stretchShortVideoTrack: false,
-          abrEwmaFast: 0,
-          abrEwmaSlow: 0,
+          forceKeyFrameOnDiscontinuity: true,
+          abrEwmaFastLive: 5,
+          abrEwmaSlowLive: 9,
+          abrEwmaFastVoD: 4,
+          abrEwmaSlowVoD: 15,
+          abrEwmaDefaultEstimate: 5e5, // 500 kbps
           abrBandWidthFactor : 0.8,
           abrBandWidthUpFactor : 0.7
         };
@@ -196,7 +206,7 @@ class Hls {
     this.trigger(Event.MANIFEST_LOADING, {url: url});
   }
 
-  startLoad(startPosition=0) {
+  startLoad(startPosition=-1) {
     logger.log('startLoad');
     this.levelController.startLoad();
     this.streamController.startLoad(startPosition);
@@ -336,6 +346,10 @@ class Hls {
   /** select an audio track, based on its index in audio track lists**/
   set audioTrack(audioTrackId) {
     this.audioTrackController.audioTrack = audioTrackId;
+  }
+
+  get liveSyncPosition() {
+      return this.streamController.liveSyncPosition;
   }
 }
 

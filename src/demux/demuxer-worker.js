@@ -5,6 +5,7 @@
 
  import DemuxerInline from '../demux/demuxer-inline';
  import Event from '../events';
+ import {enableLogs} from '../utils/logger';
  import EventEmitter from 'events';
 
 var DemuxerWorker = function (self) {
@@ -22,7 +23,13 @@ var DemuxerWorker = function (self) {
     //console.log('demuxer cmd:' + data.cmd);
     switch (data.cmd) {
       case 'init':
-        self.demuxer = new DemuxerInline(observer, data.id, data.typeSupported, JSON.parse(data.config));
+        let config = JSON.parse(data.config);
+        self.demuxer = new DemuxerInline(observer, data.id, data.typeSupported, config);
+        try {
+          enableLogs(config.debug);
+        } catch(err) {
+          console.warn('demuxerWorker: unable to enable logs');
+        }
         break;
       case 'demux':
         self.demuxer.push(new Uint8Array(data.data), data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration);
@@ -32,35 +39,25 @@ var DemuxerWorker = function (self) {
     }
   });
 
-  // listen to events triggered by Demuxer
-  observer.on(Event.FRAG_PARSING_INIT_SEGMENT, function(ev, data) {
-    self.postMessage({event: ev, id : data.id, level : data.level, sn : data.sn, tracks : data.tracks, unique : data.unique });
-  });
+  var forwardMessage = function(ev,data) {
+    self.postMessage({event: ev, data:data });
+  };
 
+  // forward events to main thread
+  observer.on(Event.FRAG_PARSING_INIT_SEGMENT, forwardMessage);
+  observer.on(Event.FRAG_PARSED, forwardMessage);
+  observer.on(Event.ERROR, forwardMessage);
+  observer.on(Event.FRAG_PARSING_METADATA, forwardMessage);
+  observer.on(Event.FRAG_PARSING_USERDATA, forwardMessage);
+
+  // special case for FRAG_PARSING_DATA: pass data1/data2 as transferable object (no copy)
   observer.on(Event.FRAG_PARSING_DATA, function(ev, data) {
-    var objData = {event: ev, id : data.id, level : data.level, sn : data.sn, type: data.type, startPTS: data.startPTS, endPTS: data.endPTS, startDTS: data.startDTS, endDTS: data.endDTS, data1: data.data1.buffer, data2: data.data2.buffer, nb: data.nb};
-    // pass data1/data2 as transferable object (no copy)
-    self.postMessage(objData, [objData.data1, objData.data2]);
+    let data1 = data.data1.buffer, data2 = data.data2.buffer;
+    // remove data1 and data2 reference from data to avoid copying them ...
+    delete data.data1;
+    delete data.data2;
+    self.postMessage({event: ev, data:data , data1 : data1, data2 : data2},[data1, data2]);
   });
-
-  observer.on(Event.FRAG_PARSED, function(event, data) {
-    self.postMessage({event: event, data : data});
-  });
-
-  observer.on(Event.ERROR, function(event, data) {
-    self.postMessage({event: event, data: data });
-  });
-
-  observer.on(Event.FRAG_PARSING_METADATA, function(event, data) {
-    var objData = {event: event, id : data.id, samples: data.samples};
-    self.postMessage(objData);
-  });
-
-  observer.on(Event.FRAG_PARSING_USERDATA, function(event, data) {
-    var objData = {event: event, id : data.id, samples: data.samples};
-    self.postMessage(objData);
-  });
-
 };
 
 export default DemuxerWorker;

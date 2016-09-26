@@ -1,6 +1,6 @@
 {
   "name": "metacdn.hls.js",
-  "version": "0.6.3",
+  "version": "0.6.2-71",
   "license": "Apache-2.0",
   "description": "Media Source Extension - HLS library, forked from dailymotion/hls.js",
   "homepage": "https://github.com/MetaCDN/hls.js",
@@ -12,17 +12,18 @@
   "bugs": {
     "url": "https://github.com/MetaCDN/hls.js/issues"
   },
-  "main": "./lib/index.js",
+  "main": "./dist/hls.js",
   "private": false,
   "scripts": {
     "clean": "rimraf dist/*",
-    "prebuild": "npm run clean & npm run test",
-    "build": "npm run babel && browserify -t browserify-versionify -t [babelify] -s Hls src/index.js --debug | exorcist dist/hls.js.map -b . > dist/hls.js",
+    "prebuild": "npm run clean && npm run test",
+    "build": "npm run babel && browserify -t browserify-versionify -t [babelify] -p browserify-derequire -p bundle-collapser/plugin -s Hls src/index.js --debug | exorcist dist/hls.js.map -b . > dist/hls.js",
     "postbuild": "npm run minify",
-    "prerelease": "npm run prebuild && npm run build && npm run postbuild && git add dist/* && git commit -m 'update dist'",
-    "patch": "npm run prerelease && mversion p",
-    "minor": "npm run prerelease && mversion mi",
-    "major": "npm run prerelease && mversion ma",
+    "preparerelease": "npm run prebuild && npm run build && npm run postbuild && git add dist/* && git commit -m 'update dist'",
+    "prerelease": "mversion prerelease && npm run preparerelease",
+    "patch": "mversion p && npm run preparerelease",
+    "minor": "mversion mi && npm run preparerelease",
+    "major": "mversion ma && npm run preparerelease",
     "minify": "uglifyjs dist/hls.js -c sequences=true,dead_code=true,conditionals=true,booleans=true,unused=true,if_return=true,join_vars=true,drop_console=true -m sort --screw-ie8 > dist/hls.min.js",
     "watch": "watchify --debug -s Hls src/index.js -t [babelify] -o dist/hls.js",
     "pretest": "npm run lint",
@@ -32,10 +33,7 @@
     "open": "opener http://localhost:8000/demo/",
     "live-reload": "live-reload --port 8001 dist/",
     "dev": "npm run build && npm run open -s & parallelshell 'npm run live-reload -s' 'npm run serve -s' 'npm run watch -s'",
-    "babel": "babel src --out-dir lib"
-  },
-  "dependencies": {
-    "webworkify": "^1.0.2"
+    "babel": "rimraf lib/* && babel src --out-dir lib"
   },
   "devDependencies": {
     "arraybuffer-equal": "^1.0.4",
@@ -45,18 +43,21 @@
     "babel-register": "^6.3.13",
     "babelify": "^7.2.0",
     "browserify": "^13.0.0",
+    "browserify-derequire": "^0.9.4",
     "browserify-versionify": "^1.0.6",
+    "bundle-collapser": "^1.2.1",
     "deep-strict-equal": "^0.2.0",
     "exorcist": "^0.4.0",
     "http-server": "^0.9.0",
     "jshint": "^2.5.11",
     "live-reload": "^1.1.0",
-    "mocha": "^2.5.1",
+    "mocha": "^3.0.2",
     "mversion": "^1.10.1",
     "opener": "^1.4.0",
     "parallelshell": "^2.0.0",
     "rimraf": "^2.5.1",
     "uglify-js": "^2.4.23",
-    "watchify": "^3.7.0"
+    "watchify": "^3.7.0",
+    "webworkify": "^1.0.2"
   }
 }

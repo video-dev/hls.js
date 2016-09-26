@@ -2,14 +2,15 @@
  * Audio Stream Controller
 */
 
+import BinarySearch from '../utils/binary-search';
+import BufferHelper from '../helper/buffer-helper';
 import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import EventHandler from '../event-handler';
-import {logger} from '../utils/logger';
-import BinarySearch from '../utils/binary-search';
-import BufferHelper from '../helper/buffer-helper';
 import LevelHelper from '../helper/level-helper';
+import TimeRanges from '../utils/timeRanges';
 import {ErrorTypes, ErrorDetails} from '../errors';
+import {logger} from '../utils/logger';
 
 const State = {
   STOPPED : 'STOPPED',
@@ -61,7 +62,7 @@ class AudioStreamController extends EventHandler {
     this.state = State.STOPPED;
   }
 
-  startLoad(startPosition=0) {
+  startLoad(startPosition) {
     if (this.tracks) {
       var media = this.media, lastCurrentTime = this.lastCurrentTime;
       this.stopLoad();
@@ -79,8 +80,7 @@ class AudioStreamController extends EventHandler {
       this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
       this.tick();
     } else {
-      logger.warn('cannot start loading as audio tracks not parsed yet');
-      this.nextLoadPosition = startPosition;
+      this.startPosition = startPosition;
       this.state = State.STOPPED;
     }
   }
@@ -157,6 +157,20 @@ class AudioStreamController extends EventHandler {
             this.state = State.WAITING_TRACK;
             break;
           }
+
+        // we just got done loading the final fragment, check if we need to finalize media stream
+        if (!trackDetails.live && fragPrevious && fragPrevious.sn === trackDetails.endSN) {
+            // if we are not seeking or if we are seeking but everything (almost) til the end is buffered, let's signal eos
+            // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference when switching
+            // between different renditions. using half frag duration should help cope with these cases.
+            if (!this.media.seeking || (this.media.duration-bufferEnd) < fragPrevious.duration/2) {
+            // Finalize the media stream
+            this.hls.trigger(Event.BUFFER_EOS,{ type : 'audio'});
+            this.state = State.ENDED;
+            break;
+          }
+        }
+
           // find fragment index, contiguous with end of buffer position
           let fragments = trackDetails.fragments,
               fragLen = fragments.length,
@@ -209,10 +223,6 @@ class AudioStreamController extends EventHandler {
                   frag = fragments[frag.sn + 1 - trackDetails.startSN];
                   logger.log(`SN just loaded, load next one: ${frag.sn}`);
                 } else {
-                  // have we reached end of VOD playlist ?
-                  if (!trackDetails.live) {
-                    this.state = State.ENDED;
-                  }
                   frag = null;
                 }
               }
@@ -282,13 +292,14 @@ class AudioStreamController extends EventHandler {
   }
 
   onMediaAttached(data) {
-    var media = this.media = data.media;
+    var media = this.media = this.mediaBuffer = data.media;
     this.onvseeking = this.onMediaSeeking.bind(this);
     this.onvended = this.onMediaEnded.bind(this);
     media.addEventListener('seeking', this.onvseeking);
     media.addEventListener('ended', this.onvended);
-    if(this.tracks && this.config.autoStartLoad) {
-      this.startLoad();
+    let config = this.config;
+    if(this.tracks && config.autoStartLoad) {
+      this.startLoad(config.startPosition);
     }
   }
 
@@ -350,8 +361,27 @@ class AudioStreamController extends EventHandler {
   }
 
   onAudioTrackSwitch(data) {
+    // if any URL found on new audio track, it is an alternate audio track
+    var altAudio = !!data.url;
     this.trackId = data.id;
     this.state = State.IDLE;
+
+    this.fragCurrent = null;
+    this.state = State.PAUSED;
+    // destroy useless demuxer when switching audio to main
+    if (!altAudio) {
+      if (this.demuxer) {
+        this.demuxer.destroy();
+        this.demuxer = null;
+      }
+    } else {
+      // switching to audio track, start timer if not already started
+      if (!this.timer) {
+        this.timer = setInterval(this.ontick, 100);
+      }
+    }
+    // flush audio source buffer
+    this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0, endOffset: Number.POSITIVE_INFINITY, type : 'audio'});
     this.tick();
   }
 
@@ -366,7 +396,18 @@ class AudioStreamController extends EventHandler {
     track.details = details;
 
     // compute start position
-    if (this.startFragRequested === false) {
+    if (!this.startFragRequested) {
+    // compute start position if set to -1. use it straight away if value is defined
+      if (this.startPosition === -1) {
+        // first, check if start time offset has been set in playlist, if yes, use this value
+        let startTimeOffset = details.startTimeOffset;
+        if(!isNaN(startTimeOffset)) {
+          logger.log(`start time offset found in playlist, adjust startPosition to ${startTimeOffset}`);
+          this.startPosition = startTimeOffset;
+        } else {
+          this.startPosition = 0;
+        }
+      }
       this.nextLoadPosition = this.startPosition;
     }
     // only switch batck to IDLE state if we were waiting for track to start downloading a new fragment
@@ -426,11 +467,11 @@ class AudioStreamController extends EventHandler {
         track.levelCodec = 'mp4a.40.2';
         track.id = data.id;
         this.hls.trigger(Event.BUFFER_CODECS,tracks);
-        logger.log(`track:audio,container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
+        logger.log(`audio track:audio,container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
         let initSegment = track.initSegment;
         if (initSegment) {
           this.pendingAppending++;
-          this.hls.trigger(Event.BUFFER_APPENDING, {type: 'audio', data: initSegment, parent : 'audio'});
+          this.hls.trigger(Event.BUFFER_APPENDING, {type: 'audio', data: initSegment, parent : 'audio',content : 'initSegment'});
         }
         //trigger handler right now
         this.tick();
@@ -454,7 +495,7 @@ class AudioStreamController extends EventHandler {
       [data.data1, data.data2].forEach(buffer => {
         if (buffer) {
           this.pendingAppending++;
-          this.hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer, parent : 'audio'});
+          this.hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer, parent : 'audio',content : 'data'});
         }
       });
       this.nextLoadPosition = data.endPTS;
@@ -478,8 +519,11 @@ class AudioStreamController extends EventHandler {
 
 
   onBufferCreated(data) {
-    this.mediaBuffer = data.tracks.audio.buffer;
-    this.loadedmetadata = true;
+    let audioTrack = data.tracks.audio;
+    if (audioTrack) {
+      this.mediaBuffer = audioTrack.buffer;
+      this.loadedmetadata = true;
+    }
   }
 
   onBufferAppended(data) {
@@ -503,10 +547,9 @@ class AudioStreamController extends EventHandler {
       if (frag) {
         this.fragPrevious = frag;
         stats.tbuffered = performance.now();
-        this.fragLastKbps = Math.round(8 * stats.length / (stats.tbuffered - stats.tfirst));
         this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag, id : 'audio'});
         let media = this.mediaBuffer ? this.mediaBuffer : this.media;
-        logger.log(`audio buffered : ${this.timeRangesToString(media.buffered)}`);
+        logger.log(`audio buffered : ${TimeRanges.toString(media.buffered)}`);
         this.state = State.IDLE;
       }
       this.tick();
@@ -514,6 +557,11 @@ class AudioStreamController extends EventHandler {
   }
 
   onError(data) {
+    let frag = data.frag;
+    // don't handle frag error not related to audio fragment
+    if (frag && frag.type !== 'audio') {
+      return;
+    }
     switch(data.details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
@@ -527,7 +575,7 @@ class AudioStreamController extends EventHandler {
           if (loadError <= this.config.fragLoadingMaxRetry) {
             this.fragLoadError = loadError;
             // reset load counter to avoid frag loop loading error
-            data.frag.loadCounter = 0;
+            frag.loadCounter = 0;
             // exponential backoff capped to 64s
             var delay = Math.min(Math.pow(2,loadError-1)*this.config.fragLoadingRetryDelay,64000);
             logger.warn(`audioStreamController: frag loading failed, retry in ${delay} ms`);
@@ -561,18 +609,13 @@ class AudioStreamController extends EventHandler {
   }
 
   onBufferFlushed() {
+    // increase fragment load Index to avoid frag loop loading error after buffer flush
+    this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
     // move to IDLE once flush complete. this should trigger new fragment loading
     this.state = State.IDLE;
     // reset reference to frag
     this.fragPrevious = null;
-  }
-
-  timeRangesToString(r) {
-    var log = '', len = r.length;
-    for (var i=0; i<len; i++) {
-      log += '[' + r.start(i) + ',' + r.end(i) + ']';
-    }
-    return log;
+    this.tick();
   }
 }
 export default AudioStreamController;

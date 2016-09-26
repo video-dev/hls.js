@@ -46,7 +46,7 @@ class LevelController extends EventHandler {
       if(level.videoCodec) {
         videoCodecFound = true;
       }
-      if(level.audioCodec) {
+      if(level.audioCodec || (level.attrs && level.attrs.AUDIO)) {
         audioCodecFound = true;
       }
       var redundantLevelId = bitrateSet[level.bitrate];
@@ -133,9 +133,10 @@ class LevelController extends EventHandler {
       this._level = newLevel;
       logger.log(`switching to level ${newLevel}`);
       this.hls.trigger(Event.LEVEL_SWITCH, {level: newLevel});
-      var level = levels[newLevel];
-       // check if we need to load playlist for this level
-      if (level.details === undefined || level.details.live === true) {
+      var level = levels[newLevel], levelDetails = level.details;
+       // check if we need to load playlist for this level. don't reload live playlist more than once per second
+      if (!levelDetails ||
+          (levelDetails.live === true && (performance.now() - levelDetails.tload > 1000) )) {
         // level not retrieved yet, or live playlist we need to (re)load it
         logger.log(`(re)loading playlist for level ${newLevel}`);
         var urlId = level.urlId;
@@ -198,7 +199,7 @@ class LevelController extends EventHandler {
          break;
       case ErrorDetails.LEVEL_LOAD_ERROR:
       case ErrorDetails.LEVEL_LOAD_TIMEOUT:
-        levelId = data.level;
+        levelId = data.context.level;
         levelError = true;
         break;
       default:

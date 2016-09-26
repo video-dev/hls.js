@@ -1,0 +1,57 @@
+<html>
+<head>
+    <title>HLS.js Error Example</title>
+</head>
+<body>
+    <script src="../../../dist/hls.js"></script>
+
+    <video id="video" controls="controls" style="width:640px; height:360px; background:#000;"></video>
+    <script>
+        if (Hls.isSupported()) {
+            var video = document.getElementById('video');
+            var hls = new Hls({
+                debug : true,
+                maxBufferLength: 15,
+                maxBufferHole: 1,
+                maxSeekHole: 2,
+                capLevelToPlayerSize: true,
+                startFragPrefetch: false,
+                autoStartLoad: false,
+                manifestLoadingTimeOut: 10000,
+                manifestLoadingMaxRetry: 4,
+                manifestLoadingRetryDelay: 500,
+                enableCEA708Captions: true
+            });
+
+            hls.on(Hls.Events.ERROR, function(event, data) {
+                console.warn('ERROR', data);
+            });
+
+            function loadSource(url, time) {
+                function onAttached() {
+                    hls.off(Hls.Events.MEDIA_ATTACHED, onAttached);
+                    hls.on(Hls.Events.MANIFEST_PARSED, onParsed);
+                    hls.loadSource(url);
+                }
+
+                function onParsed(event, data) {
+                    hls.off(Hls.Events.MANIFEST_PARSED, onParsed);
+                    hls.startLoad(time);
+                    if (time !== undefined) {
+                        video.currentTime = time;
+                    }
+                    video.play();
+                }
+
+                hls.detachMedia();
+                hls.on(Hls.Events.MEDIA_ATTACHED, onAttached);
+                hls.attachMedia(video);
+            }
+        }
+    </script>
+    <br />
+    <a href="#" onclick="loadSource('http://www.streambox.fr/playlists/x36xhzz/x36xhzz.m3u8', 10)">Start stream one</a><br />
+    <a href="#" onclick="loadSource('http://www.streambox.fr/playlists/test_001/stream.m3u8', 10)">Start stream two</a><br />
+    <a href="#" onclick="loadSource('http://media.blacktrash.org/stsp.m3u8', 10)">Start stream three</a><br />
+</body>
+</html>

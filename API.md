@@ -106,7 +106,7 @@ See sample code below to listen to errors:
     var errorType = data.type;
     var errorDetails = data.details;
     var errorFatal = data.fatal;
-    
+
     switch(data.details) {
       case hls.ErrorDetails.FRAG_LOAD_ERROR:
         // ....
@@ -159,7 +159,9 @@ If media error are still raised after calling `hls.recoverMediaError()`,
 calling this method, could be useful to workaround audio codec mismatch.
 the workflow should be:
 
-on Media Error: first call `hls.swapAudioCodec()`, then call `hls.recoverMediaError()`.
+on First Media Error : call `hls.recoverMediaError()`
+
+if another Media Error is raised 'quickly' after this first Media Error : first call `hls.swapAudioCodec()`, then call `hls.recoverMediaError()`.
 
 ### Final step: destroying, switching between streams
 
@@ -171,41 +173,54 @@ on Media Error: first call `hls.swapAudioCodec()`, then call `hls.recoverMediaEr
 Configuration parameters could be provided to hls.js upon instantiation of `Hls` object.
 
 ```js
-  var config = {
-    autoStartLoad: true,
-    capLevelToPlayerSize: false,
-    debug: false,
-    defaultAudioCodec: undefined,
-    maxBufferLength: 30,
-    maxMaxBufferLength: 600,
-    maxBufferSize: 60*1000*1000,
-    maxBufferHole: 0.3,
-    maxSeekHole: 2,
-    seekHoleNudgeDuration: 0.01,
-    maxFragLookUpTolerance: 0.2,
-    liveSyncDurationCount: 3,
-    liveMaxLatencyDurationCount: 10,
-    enableWorker: true,
-    enableSoftwareAES: true,
-    manifestLoadingTimeOut: 10000,
-    manifestLoadingMaxRetry: 6,
-    manifestLoadingRetryDelay: 500,
-    levelLoadingTimeOut: 10000,
-    levelLoadingMaxRetry: 6,
-    levelLoadingRetryDelay: 500,
-    fragLoadingTimeOut: 20000,
-    fragLoadingMaxRetry: 6,
-    fragLoadingRetryDelay: 500,
-    startFragPrefech: false,
-    appendErrorMaxRetry: 3,
-    loader: customLoader,
-    fLoader: customFragmentLoader,
-    pLoader: customPlaylistLoader,
-    xhrSetup: XMLHttpRequestSetupCallback,
-    abrController: customAbrController,
-    timelineController: TimelineController,
-    enableCEA708Captions: true,
-    stretchShortVideoTrack: false,
+   var config = {
+      autoStartLoad: true,
+  	  startPosition : -1,
+      capLevelToPlayerSize: false,
+      debug: false,
+      defaultAudioCodec: undefined,
+      maxBufferLength: 30,
+      maxMaxBufferLength: 600,
+      maxBufferSize: 60*1000*1000,
+      maxBufferHole: 0.5,
+      maxSeekHole: 2,
+      seekHoleNudgeDuration: 0.01,
+      maxFragLookUpTolerance: 0.2,
+      liveSyncDurationCount: 3,
+      liveMaxLatencyDurationCount: 10,
+      enableWorker: true,
+      enableSoftwareAES: true,
+      manifestLoadingTimeOut: 10000,
+      manifestLoadingMaxRetry: 6,
+      manifestLoadingRetryDelay: 500,
+      manifestLoadingMaxRetryTimeout : 64000,
+      levelLoadingTimeOut: 10000,
+      levelLoadingMaxRetry: 6,
+      levelLoadingRetryDelay: 500,
+      levelLoadingMaxRetryTimeout: 64000,
+      fragLoadingTimeOut: 20000,
+      fragLoadingMaxRetry: 6,
+      fragLoadingRetryDelay: 500,
+      fragLoadingMaxRetryTimeout: 64000,
+      startFragPrefech: false,
+      appendErrorMaxRetry: 3,
+      loader: customLoader,
+      fLoader: customFragmentLoader,
+      pLoader: customPlaylistLoader,
+      xhrSetup: XMLHttpRequestSetupCallback,
+      fetchSetup: FetchSetupCallback,
+      abrController: customAbrController,
+      timelineController: TimelineController,
+      enableCEA708Captions: true,
+      stretchShortVideoTrack: false,
+      forceKeyFrameOnDiscontinuity: true,
+      abrEwmaFastLive: 5.0,
+      abrEwmaSlowLive: 9.0,
+      abrEwmaFastVoD: 4.0,
+      abrEwmaSlowVoD: 15.0,
+      abrEwmaDefaultEstimate: 500000,
+      abrBandWidthFactor: 0.8,
+      abrBandWidthUpFactor: 0.7
   };
 
   var hls = new Hls(config);
@@ -219,10 +234,10 @@ This configuration will be applied by default to all instances.
 #### `capLevelToPlayerSize`
 
 (default: `false`)
- 
+
   - if set to true, the adaptive algorithm with limit levels usable in auto-quality by the HTML video element dimensions (width and height)
   - if set to false, levels will not be limited. All available levels could be used in auto-quality mode taking only bandwidth into consideration.
- 
+
 #### `debug`
 
 (default: `false`)
@@ -235,8 +250,14 @@ A logger object could also be provided for custom logging: `config.debug = custo
 
 (default: `true`)
 
- - if set to true, start level playlist and first fragments will be loaded automatically, after triggering of `Hls.Events.MANIFEST_PARSED` event
- - if set to false, an explicit API call (`hls.startLoad()`) will be needed to start quality level/fragment loading.
+ - if set to true, start level playlist and first fragments will be loaded automatically, after triggering of ```Hls.Events.MANIFEST_PARSED``` event
+ - if set to false, an explicit API call (```hls.startLoad(startPosition=-1)```) will be needed to start quality level/fragment loading.
+
+#### ```startPosition```
+(default -1)
+
+ - if set to -1, playback will start from initialTime=0 for VoD and according to ```liveSyncDuration/liveSyncDurationCount``` config params for Live
+ - Otherwise, playback will start from predefined value. (unless stated otherwise in ```autoStartLoad=false``` mode : in that case startPosition can be overrided using ```hls.startLoad(startPosition)```).
 
 #### `defaultAudioCodec`
 
@@ -244,7 +265,7 @@ A logger object could also be provided for custom logging: `config.debug = custo
 
  If audio codec is not signaled in variant manifest, or if only a stream manifest is provided, hls.js tries to guess audio codec by parsing audio sampling rate in ADTS header. If sampling rate is less or equal than 22050 Hz, then hls.js assumes it is HE-AAC, otherwise it assumes it is AAC-LC. This could result in bad guess, leading to audio decode error, ending up in media error.
  It is possible to hint default audiocodec to hls.js by configuring this value as below:
-  - `mp4a.40.2` (AAC-LC) or 
+  - `mp4a.40.2` (AAC-LC) or
   - `mp4a.40.5` (HE-AAC) or
   - `undefined` (guess based on sampling rate)
 
@@ -263,7 +284,7 @@ This is the guaranteed buffer length hls.js will try to reach, regardless of max
 
 #### `maxBufferHole`
 
-(default: `0.3` seconds)
+(default: `0.5` seconds)
 
 'Maximum' inter-fragment buffer hole tolerance that hls.js can cope with when searching for the next fragment to load.
 When switching between quality level, fragments might not be perfectly aligned.
@@ -299,7 +320,7 @@ frag[1] : [10,20]
 `buffered.end` is within `frag[0]` range, but as we are close to `frag[1]`, `frag[1]` should be choosen instead
 
 If `maxFragLookUpTolerance = 0.2`,
-this lookup will be adjusted to 
+this lookup will be adjusted to
 ```
 frag[0] : [-0.2,9.8]
 frag[1] : [9.8,19.8]
@@ -378,12 +399,18 @@ It is up to the application to catch this event and treat it as needed.
 
 Max number of load retries.
 
+#### `fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout`
+
+(default: `64000` ms)
+
+Maximum frag/manifest/key retry timeout (in milliseconds) in case I/O errors are met.
+
 #### `fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay`
 
 (default: `1000` ms)
 
 Initial delay between `XMLHttpRequest` error and first load retry (in ms).
-Any I/O error will trigger retries every 500ms,1s,2s,4s,8s, ... capped to 64s (exponential backoff).
+Any I/O error will trigger retries every 500ms,1s,2s,4s,8s, ... capped to `fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout` value (exponential backoff).
 
 Prefetch start fragment although media not attached.
 
@@ -415,23 +442,64 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
 ```js
   var customLoader = function () {
     /**
-     * Calling load() will start retrieving content at given URL (HTTP GET).
+     * Calling load() will start retrieving content located at given URL (HTTP GET).
      *
-     * @param {string} url URL to load.
-     * @param {string} responseType XHR response type (arraybuffer or default response type for playlist).
-     * @param {Function} onSuccess Callback triggered upon successful loading of URL.
-     *                             It should return XHR event and load stats object `{ trequest, tfirst, tload }`.
-     * @param {Function} onError Callback triggered if any I/O error is met while loading fragment.
-     * @param {Function} onTimeOut Callback triggered if loading is still not finished after a certain duration.
-     * @param {number} timeout Timeout after which `onTimeOut` callback will be triggered (if loading is still not finished after that delay).
-     * @param {number} maxRetry Max number of load retries.
-     * @param {number} retryDelay Delay between an I/O error and following connection retry (ms). This to avoid spamming the server.
-     */
-    this.load = function (url, responseType, onSuccess, onError, onTimeOut, timeout, maxRetry, retryDelay) {};
+     * @param {object} context - loader context
+     * @param {string} context.url - target URL
+     * @param {string} context.responseType - loader response type (arraybuffer or default response type for playlist)
+     * @param {number} [context.rangeStart] - start byte range offset
+     * @param {number} [context.rangeEnd] - end byte range offset
+     * @param {Boolean} [context.progressData] - true if onProgress should report partial chunk of loaded content
+     * @param {object} config - loader config params
+     * @param {number} config.maxRetry - Max number of load retries
+     * @param {number} config.timeout - Timeout after which `onTimeOut` callback will be triggered (if loading is still not finished after that delay)
+     * @param {number} config.retryDelay - Delay between an I/O error and following connection retry (ms). This to avoid spamming the server
+     * @param {number} config.maxRetryDelay - max connection retry delay (ms)
+     * @param {object} callbacks - loader callbacks
+     * @param {onSuccessCallback} callbacks.onSuccess - Callback triggered upon successful loading of URL.
+     * @param {onProgressCallback} callbacks.onProgress - Callback triggered while loading is in progress.
+     * @param {onErrorCallback} callbacks.onError - Callback triggered if any I/O error is met while loading fragment.
+     * @param {onTimeoutCallback} callbacks.onTimeout - Callback triggered if loading is still not finished after a certain duration.
+
+      @callback onSuccessCallback
+      @param response {object} - response data
+      @param response.url {string} - response URL (which might have been redirected)
+      @param response.data {string/arraybuffer} - response data (reponse type should be as per context.responseType)
+      @param stats {object} - loading stats
+      @param stats.trequest {number} - performance.now() just after load() has been called
+      @param stats.tfirst {number} - performance.now() of first received byte
+      @param stats.tload {number} - performance.now() on load complete
+      @param stats.loaded {number} - nb of loaded bytes
+      @param [stats.bw] {number} - download bandwidth in bit/s
+      @param stats.total {number} - total nb of bytes
+      @param context {object} - loader context
+
+      @callback onProgressCallback
+      @param stats {object} - loading stats
+      @param stats.trequest {number} - performance.now() just after load() has been called
+      @param stats.tfirst {number} - performance.now() of first received byte
+      @param stats.loaded {number} - nb of loaded bytes
+      @param [stats.total] {number} - total nb of bytes
+      @param [stats.bw] {number} - current download bandwidth in bit/s (monitored by ABR controller to control emergency switch down)
+      @param context {object} - loader context
+      @param data {string/arraybuffer} - onProgress data (should be defined only if context.progressData === true)
+
+      @callback onErrorCallback
+      @param error {object} - error data
+      @param error.code {number} - error status code
+      @param error.text {string} - error description
+      @param context {object} - loader context
+
+      @callback onTimeoutCallback
+      @param stats {object} - loading stats
+      @param context {object} - loader context
+
+   */
+    this.load = function (context, config, callbacks) {};
 
     /** Abort any loading in progress. */
     this.abort = function () {};
-    
+
     /** Destroy loading context. */
     this.destroy = function () {};
   }
@@ -469,7 +537,7 @@ Note: This will overwrite the default `loader`, as well as your own loader funct
 
 `XMLHttpRequest` customization callback for default XHR based loader.
 
-Parameter should be a function with one single argument (of type `XMLHttpRequest`).
+Parameter should be a function with two arguments `(xhr: XMLHttpRequest, url: string)`.
 If `xhrSetup` is specified, default loader will invoke it before calling `xhr.send()`.
 This allows user to easily modify/setup XHR. See example below.
 
@@ -477,6 +545,26 @@ This allows user to easily modify/setup XHR. See example below.
   var config = {
     xhrSetup: function(xhr, url) {
       xhr.withCredentials = true; // do send cookies
+    }
+  }
+```
+
+#### `fetchSetup`
+
+(default: `undefined`)
+
+`Fetch` customization callback for Fetch based loader.
+
+Parameter should be a function with two arguments (`context` and `Request Init Params`).
+If `fetchSetup` is specified and Fetch loader is used, `fetchSetup` will be triggered to instantiate [Request](https://developer.mozilla.org/fr/docs/Web/API/Request) Object.
+This allows user to easily tweak Fetch loader. See example below.
+
+```js
+  var config = {
+    fetchSetup: function(context, initParams) {
+      // Always send cookies, even for cross-origin calls.
+      initParams.credentials = 'include';
+      return new Request(context.url,initParams);
     }
   }
 ```
@@ -515,41 +603,75 @@ parameter should be a boolean
 
 (default: `false`)
 
-if a segment's video track is shorter than its audio track by > `min(maxSeekHole, maxBufferHole)`, extend the final video frame's duration to match the audio track's duration.
-this helps playback continue in certain cases that might otherwise get stuck.
+If a segment's video track is shorter than its audio track by > `min(maxSeekHole, maxBufferHole)`, extend the final video frame's duration to match the audio track's duration.
+This helps playback continue in certain cases that might otherwise get stuck.
 
 parameter should be a boolean
 
-#### `abrEwmaFast`
+#### `forceKeyFrameOnDiscontinuity`
+(default: `true`)
 
-(default: `0.0`)
+Whether or not to force having a key frame in the first AVC sample after a discontinuity.
+If set to true, after a discontinuity, the AVC samples without any key frame will be dropped until finding one that contains a key frame.
+If set to false, all AVC samples will be kept, which can help avoid holes in the stream.
+Setting this parameter to false can also generate decoding weirdness when switching level or seeking.
 
-Fast bitrate Exponential moving average half-life , used to compute average bitrate 
-Half of the estimate is based on the last abrEwmaFast seconds of sample history.
+parameter should be a boolean
+
+#### `abrEwmaFastLive`
+(default: `5.0`)
+
+Fast bitrate Exponential moving average half-life, used to compute average bitrate for Live streams.
+Half of the estimate is based on the last abrEwmaFastLive seconds of sample history.
+Each of the sample is weighted by the fragment loading duration.
+
 parameter should be a float greater than 0
 
-#### `abrEwmaSlow`
+#### `abrEwmaSlowLive`
+(default: `9.0`)
 
-(default: `0.0`)
+Slow bitrate Exponential moving average half-life, used to compute average bitrate for Live streams.
+Half of the estimate is based on the last abrEwmaSlowLive seconds of sample history.
+Each of the sample is weighted by the fragment loading duration.
 
-Slow bitrate Exponential moving average half-life , used to compute average bitrate 
-Half of the estimate is based on the last abrEwmaFast seconds of sample history.
-parameter should be a float greater than abrEwmaFast
+parameter should be a float greater than [abrEwmaFastLive](#abrewmafastlive)
 
+#### `abrEwmaFastVoD`
+(default: `4.0`)
+
+Fast bitrate Exponential moving average half-life, used to compute average bitrate for VoD streams.
+Half of the estimate is based on the last abrEwmaFastVoD seconds of sample history.
+Each of the sample is weighted by the fragment loading duration.
+
+parameter should be a float greater than 0
+
+#### `abrEwmaSlowVoD`
+(default: `15.0`)
+
+Slow bitrate Exponential moving average half-life, used to compute average bitrate for VoD streams.
+Half of the estimate is based on the last abrEwmaSlowVoD seconds of sample history.
+Each of the sample is weighted by the fragment loading duration.
+
+parameter should be a float greater than [abrEwmaFastVoD](#abrewmafastvod)
+
+#### `abrEwmaDefaultEstimate`
+(default: `500000`)
+
+Default bandwidth estimate in bits/second prior to collecting fragment bandwidth samples.
+
+parameter should be a float
 
 #### `abrBandWidthFactor`
-
 (default: `0.8`)
 
-Scale factor to be applied against measured bandwidth average, to determine whether we can stay on current or lower quality level
-If `abrBandWidthFactor * bandwidth average < level.bitrate` then ABR can switch to that level providing that it is equal or less than current level
+Scale factor to be applied against measured bandwidth average, to determine whether we can stay on current or lower quality level.
+If `abrBandWidthFactor * bandwidth average < level.bitrate` then ABR can switch to that level providing that it is equal or less than current level.
 
 #### `abrBandWidthUpFactor`
-
 (default: `0.7`)
 
-Scale factor to be applied against measured bandwidth average, to determine whether  we can switch up to a higher quality level
-If `abrBandWidthUpFactor * bandwidth average < level.bitrate` then ABR can switch up to that quality level
+Scale factor to be applied against measured bandwidth average, to determine whether we can switch up to a higher quality level.
+If `abrBandWidthUpFactor * bandwidth average < level.bitrate` then ABR can switch up to that quality level.
 
 
 ## Video Binding/Unbinding API
@@ -641,12 +763,14 @@ By default, hls.js will automatically start loading quality level playlists, and
 
 However if `config.autoStartLoad` is set to `false`, the following method needs to be called to manually start playlist and fragments loading:
 
-#### `hls.startLoad()`
+#### ```hls.startLoad(startPosition=-1)```
 Start/restart playlist/fragment loading. this is only effective if MANIFEST_PARSED event has been triggered and video element has been attached to hls object.
 
-#### `hls.stopLoad()`
-Stop playlist/fragment loading. could be resumed later on by calling `hls.startLoad()`
+startPosition is the initial position in the playlist.
+If startPosition is not set to -1, it allows to override default startPosition to the one you want (it will bypass hls.config.liveSync* config params for Live for example, so that user can start playback from whatever position)
 
+#### ```hls.stopLoad()```
+stop playlist/fragment loading. could be resumed later on by calling ```hls.startLoad()```
 
 ## Audio Tracks Control API
 
@@ -655,6 +779,11 @@ get : array of audio tracks exposed in manifest
 
 #### ```hls.audioTrack```
 get/set : audio track id (returned by)
+
+## Live stream API
+
+#### ```hls.liveSyncPosition```
+get : position of live sync point (ie edge of live position minus safety delay defined by ```hls.config.liveSyncDuration```)
 
 ## Runtime Events
 
@@ -731,19 +860,19 @@ Full list of errors is described below:
 ### Network Errors
 
   - `Hls.ErrorDetails.MANIFEST_LOAD_ERROR` - raised when manifest loading fails because of a network error
-    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.MANIFEST_LOAD_ERROR`, fatal : `true`, url : manifest URL, response : xhr response, loader : URL loader }
+    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.MANIFEST_LOAD_ERROR`, fatal : `true`, url : manifest URL, response : { code: error code, text: error text }, loader : URL loader }
   - `Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT` - raised when manifest loading fails because of a timeout
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT`, fatal : `true`, url : manifest URL, loader : URL loader }
   - `Hls.ErrorDetails.MANIFEST_PARSING_ERROR` - raised when manifest parsing failed to find proper content
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.MANIFEST_PARSING_ERROR`, fatal : `true`, url : manifest URL, reason : parsing error reason }
   - `Hls.ErrorDetails.LEVEL_LOAD_ERROR` - raised when level loading fails because of a network error
-    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.LEVEL_LOAD_ERROR`, fatal : `true`, url : level URL, response : xhr response, loader : URL loader }
+    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.LEVEL_LOAD_ERROR`, fatal : `true`, url : level URL, response : { code: error code, text: error text }, loader : URL loader }
   - `Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT` - raised when level loading fails because of a timeout
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT`, fatal : `true`, url : level URL, loader : URL loader }
   - `Hls.ErrorDetails.LEVEL_SWITCH_ERROR` - raised when level switching fails
     - data: { type : `OTHER_ERROR`, details : `Hls.ErrorDetails.LEVEL_SWITCH_ERROR`, fatal : `false`, level : failed level index, reason : failure reason }
   - `Hls.ErrorDetails.FRAG_LOAD_ERROR` - raised when fragment loading fails because of a network error
-    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.FRAG_LOAD_ERROR`, fatal : `true` or `false`, frag : fragment object, response : xhr response }
+    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.FRAG_LOAD_ERROR`, fatal : `true` or `false`, frag : fragment object, response : { code: error code, text: error text } }
   - `Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR` - raised upon detection of same fragment being requested in loop
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR`, fatal : `true` or `false`, frag : fragment object }
   - `Hls.ErrorDetails.FRAG_LOAD_TIMEOUT` - raised when fragment loading fails because of a timeout
@@ -765,7 +894,7 @@ Full list of errors is described below:
     - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_STALLED_ERROR`, fatal : `false` }
   - `Hls.ErrorDetails.BUFFER_FULL_ERROR` - raised when no data can be appended anymore in media buffer because it is full. this error is recovered automatically by performing a smooth level switching that empty buffers (without disrupting the playback) and reducing the max buffer length.
     - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_FULL_ERROR`, fatal : `false` }
-  - `Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE` - raised after hls.js seeks over a buffer hole to unstuck the playback, 
+  - `Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE` - raised after hls.js seeks over a buffer hole to unstuck the playback,
     - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE`, fatal : `false`, hole : hole duration }
 
 
@@ -801,6 +930,8 @@ See sample `Level` object below:
 
 A `LevelDetails` object contains level details retrieved after level playlist parsing, they are specified below:
 
+* protocol version
+* playlist type
 * start sequence number
 * end sequence number
 * level total duration
@@ -812,6 +943,8 @@ See sample object below, available after corresponding `LEVEL_LOADED` event has 
 
 ```js
 {
+  version: 3,
+  type: 'VOD', // null if EXT-X-PLAYLIST-TYPE not present
   startSN: 0,
   endSN: 50,
   totalduration: 510,
