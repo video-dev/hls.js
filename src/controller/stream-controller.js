@@ -358,7 +358,8 @@ class StreamController extends EventHandler {
         fragments,
         fragLen
     }) {
-        const config = this.hls.config;
+        const config = this.hls.config,
+            media = this.media;
 
         let frag;
 
@@ -381,7 +382,6 @@ class StreamController extends EventHandler {
                 )}`
             );
             bufferEnd = liveSyncPosition;
-            let media = this.media;
             if (
                 media &&
                 media.readyState &&
@@ -400,7 +400,13 @@ class StreamController extends EventHandler {
         // level 1 loaded [182580162,182580168] <============= here we should have bufferEnd > end. in that case break to avoid reloading 182580168
         // level 1 loaded [182580164,182580171]
         //
-        if (levelDetails.PTSKnown && bufferEnd > end) {
+        // don't return null in case media not loaded yet (readystate === 0)
+        if (
+            levelDetails.PTSKnown &&
+            bufferEnd > end &&
+            media &&
+            media.readyState
+        ) {
             return null;
         }
 
