@@ -795,7 +795,7 @@ class StreamController extends EventHandler {
         this.state = State.IDLE;
         this.startFragRequested = false;
         stats.tparsed = stats.tbuffered = performance.now();
-        this.hls.trigger(Event.FRAG_BUFFERED, {stats: data.stats, frag: fragCurrent});
+        this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: fragCurrent});
         this.tick();
       } else {
         this.state = State.PARSING;
