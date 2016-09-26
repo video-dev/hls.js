@@ -69,7 +69,8 @@ class XhrLoader {
     if (this.xhrSetup) {
       this.xhrSetup(xhr, this.url);
     }
-    this.timeoutHandle = window.setTimeout(this.loadtimeout.bind(this), this.timeout);
+    // first timeout to track HEADERS_RECEIVED, set to half total timeout.
+    this.timeoutHandle = window.setTimeout(this.loadtimeout.bind(this), this.timeout/2);
     xhr.send();
   }
 
@@ -83,6 +84,10 @@ class XhrLoader {
       if (readystate >=2) {
         if (stats.tfirst === 0) {
           stats.tfirst = Math.max(performance.now(), stats.trequest);
+          // clear first timeout after headers have been received
+          window.clearTimeout(this.timeoutHandle);
+          // reset timeout to total timeout duration minus the time it took to receive headers
+          this.timeoutHandle = window.setTimeout(this.loadtimeout.bind(this), this.timeout - (stats.tfirst-stats.trequest));
         }
         if (readystate === 4) {
           let status = xhr.status;
@@ -100,7 +105,7 @@ class XhrLoader {
             } else {
               logger.warn(`${status} while loading ${this.url}, retrying in ${this.retryDelay}...`);
               this.destroy();
-              window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
+              this.timeoutHandle = window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
               // exponential backoff
               this.retryDelay = Math.min(2 * this.retryDelay, 64000);
               stats.retry++;
