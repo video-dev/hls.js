@@ -509,6 +509,8 @@ class BufferController extends EventHandler {
                         continue;
                     }
                     sb = sourceBuffer[type];
+                    // we are going to flush buffer, mark source buffer as 'not ended'
+                    sb.ended = false;
                     if (!sb.updating) {
                         for (i = 0; i < sb.buffered.length; i++) {
                             bufStart = sb.buffered.start(i);
