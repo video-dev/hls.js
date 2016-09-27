@@ -3041,7 +3041,8 @@ var StreamController = function (_EventHandler) {
       var fragments = _ref2.fragments;
       var fragLen = _ref2.fragLen;
 
-      var config = this.hls.config;
+      var config = this.hls.config,
+          media = this.media;
 
       var frag = void 0;
 
@@ -3053,7 +3054,6 @@ var StreamController = function (_EventHandler) {
         var liveSyncPosition = this.liveSyncPosition = this.computeLivePosition(start, levelDetails);
         _logger.logger.log('buffer end: ' + bufferEnd + ' is located too far from the end of live sliding playlist, reset currentTime to : ' + liveSyncPosition.toFixed(3));
         bufferEnd = liveSyncPosition;
-        var media = this.media;
         if (media && media.readyState && media.duration > liveSyncPosition) {
           media.currentTime = liveSyncPosition;
         }
@@ -3068,7 +3068,8 @@ var StreamController = function (_EventHandler) {
       // level 1 loaded [182580162,182580168] <============= here we should have bufferEnd > end. in that case break to avoid reloading 182580168
       // level 1 loaded [182580164,182580171]
       //
-      if (levelDetails.PTSKnown && bufferEnd > end) {
+      // don't return null in case media not loaded yet (readystate === 0)
+      if (levelDetails.PTSKnown && bufferEnd > end && media && media.readyState) {
         return null;
       }
 
@@ -6222,7 +6223,13 @@ var TSDemuxer = function () {
         parseAVCPES(parsePES(avcData), true);
       }
       if (aacData) {
-        parseAACPES(parsePES(aacData));
+        var lastPES = parsePES(aacData);
+        // only parse last audio PES if PES length undefined or if PES reassembly completed
+        if (lastPES.len === 0 || lastPES.len === lastPES.data.length) {
+          parseAACPES(lastPES);
+        } else {
+          _logger.logger.warn('last AAC PES packet truncated, dont parse it');
+        }
       }
       if (id3Data) {
         parseID3PES(parsePES(id3Data));
@@ -6379,6 +6386,7 @@ var TSDemuxer = function () {
           }
         }
         pesHdrLen = frag[8];
+        // 9 bytes : 6 bytes for PES header + 3 bytes for PES extension
         payloadStartOffset = pesHdrLen + 9;
 
         stream.size -= payloadStartOffset;
@@ -6401,6 +6409,10 @@ var TSDemuxer = function () {
           }
           pesData.set(frag, i);
           i += len;
+        }
+        if (pesLen) {
+          // payload size : remove PES header + PES extension
+          pesLen -= pesHdrLen + 3;
         }
         return { data: pesData, pts: pesPts, dts: pesDts, len: pesLen };
       } else {
@@ -6831,6 +6843,7 @@ var TSDemuxer = function () {
           reason = 'no ADTS header found in AAC PES';
           fatal = true;
         }
+        _logger.logger.warn('parsing error:' + reason);
         this.observer.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, id: this.id, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason });
         if (fatal) {
           return;
@@ -7607,6 +7620,7 @@ var Hls = function () {
         Hls.defaultConfig = {
           autoStartLoad: true,
           startPosition: -1,
+          defaultAudioCodec: undefined,
           debug: false,
           capLevelOnFPSDrop: false,
           capLevelToPlayerSize: false,
@@ -7645,6 +7659,8 @@ var Hls = function () {
           //loader: FetchLoader,
           fLoader: undefined,
           pLoader: undefined,
+          xhrSetup: undefined,
+          fetchSetup: undefined,
           abrController: _abrController2.default,
           bufferController: _bufferController2.default,
           capLevelController: _capLevelController2.default,
