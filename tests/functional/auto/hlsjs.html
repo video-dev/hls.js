@@ -1,0 +1,22 @@
+<html>
+   <head>
+<script src="/dist/hls.js"></script>
+   </head>
+   <body>
+<video id="video" autoplay></video>
+<script>
+  if(Hls.isSupported()) {
+    var video = document.getElementById('video');
+    var hls = new Hls();
+    hls.loadSource('http://www.streambox.fr/playlists/test_001/stream.m3u8');
+    hls.attachMedia(video);
+    video.onloadeddata = function() {
+      var e = document.createElement('div');
+      e.id = 'loadeddata';
+      document.body.appendChild(e);
+    };
+ }
+</script>
+   </body>
+ </html>
+
