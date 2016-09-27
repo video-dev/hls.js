@@ -206,7 +206,13 @@
       parseAVCPES(parsePES(avcData),true);
     }
     if (aacData) {
-      parseAACPES(parsePES(aacData));
+      let lastPES = parsePES(aacData);
+      // only parse last audio PES if PES length undefined or if PES reassembly completed
+      if (lastPES.len === 0 || lastPES.len === lastPES.data.length) {
+        parseAACPES(lastPES);
+      } else {
+        logger.warn('last AAC PES packet truncated, dont parse it');
+      }
     }
     if (id3Data) {
       parseID3PES(parsePES(id3Data));
@@ -342,6 +348,7 @@
         }
       }
       pesHdrLen = frag[8];
+      // 9 bytes : 6 bytes for PES header + 3 bytes for PES extension
       payloadStartOffset = pesHdrLen + 9;
 
       stream.size -= payloadStartOffset;
@@ -364,6 +371,10 @@
         }
         pesData.set(frag, i);
         i+=len;
+      }
+      if (pesLen) {
+        // payload size : remove PES header + PES extension
+        pesLen -= pesHdrLen+3;
       }
       return {data: pesData, pts: pesPts, dts: pesDts, len: pesLen};
     } else {
@@ -772,6 +783,7 @@
         reason = 'no ADTS header found in AAC PES';
         fatal = true;
       }
+      logger.warn(`parsing error:${reason}`);
       this.observer.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, id : this.id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason});
       if (fatal) {
         return;
