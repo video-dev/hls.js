@@ -7,18 +7,30 @@
 <script>
   if(Hls.isSupported()) {
     var video = document.getElementById('video');
-    var hls = new Hls();
-    hls.loadSource('http://www.streambox.fr/playlists/test_001/stream.m3u8');
-    hls.attachMedia(video);
-    hls.on(Hls.Events.MANIFEST_PARSED,function() {
-      video.play();
-    });
+    try {
+      var hls; = new Hls();
+      hls.loadSource('http://www.streambox.fr/playlists/test_001/stream.m3u8');
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED,function() {
+        video.play();
+      });
+    } catch(err) {
+      sendMsg('exception');
+    }
     video.onloadeddata = function() {
-      var e = document.createElement('div');
-      e.id = 'loadeddata';
-      document.body.appendChild(e);
-    };
+      sendMsg('loadeddata');
+    }.bind(this);
+ } else {
+    sendMsg('notSupported');
  }
+
+function sendMsg(msg) {
+  var e = document.createElement('div');
+  e.id = 'video_event';
+  e.setAttribute('msg',msg);
+  document.body.appendChild(e);
+}
+
 </script>
    </body>
  </html>
