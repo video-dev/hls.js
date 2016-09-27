@@ -30,6 +30,6 @@ describe("testing hls.js playback in the browser", function() {
     var video = this.browser.findElement(webdriver.By.id('video'));
     this.browser.wait(function () {
         return this.browser.isElementPresent(webdriver.By.id("loadeddata"));
-    }.bind(this), 80000).then(function() { done()});
+    }.bind(this), 10000).then(function() { done()});
   });
 });
