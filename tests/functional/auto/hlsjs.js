@@ -16,7 +16,9 @@ describe("testing hls.js playback in the browser", function() {
     } else {
       this.browser = new webdriver.Builder()
       .withCapabilities({
-        browserName: "chrome"
+        browserName : 'chrome',
+        platform : 'Windows 10',
+        version : '53.0'
       }).build();
     }
     return this.browser.get("http://localhost:8000/tests/functional/auto/hlsjs.html");
