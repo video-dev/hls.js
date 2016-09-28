@@ -20,8 +20,8 @@
       video.onloadeddata = function() {
         sendMsg('loadeddata');
       }.bind(this);
-      video.onerror = function() {
-        sendMsg('video_error');
+      video.onerror = function(event) {
+        sendMsg('video_error_' + video.error.code);
       }.bind(this);
     } catch(err) {
       sendMsg('exception');
