@@ -29,7 +29,7 @@ describe("testing hls.js playback in the browser", function() {
   it("should receive loadeddata event", function(done) {
     this.browser.wait(function () {
       return this.browser.isElementPresent(webdriver.By.id('video_event'));
-    }.bind(this), 10000)
+    }.bind(this), 20000)
     .then(function() {
         this.browser.findElement(webdriver.By.id('video_event')).then(function(element) {
         element.getAttribute('msg').then(function(attribute) {
