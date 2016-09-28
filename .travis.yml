@@ -2,9 +2,11 @@ language: node_js
 node_js:
  - "5.4.1"
 
+before_install:
+  - export DISPLAY=:99.0
+  - sh -e /etc/init.d/xvfb start
+
 before_script:
-  - "export DISPLAY=:99.0"
-  - "sh -e /etc/init.d/xvfb start"
   - python -m SimpleHTTPServer &
   - sleep 2
 
