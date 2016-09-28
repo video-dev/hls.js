@@ -12,9 +12,13 @@
       hls.loadSource('http://www.streambox.fr/playlists/test_001/stream.m3u8');
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED,function() {
-        sendMsg('test_002');
         video.play();
       });
+
+      hls.on(Hls.Events.FRAG_LOADED,function() {
+        sendMsg('test_003');
+      });
+
       hls.on(Hls.Events.ERROR,function(event,data) {
         sendMsg(data.details);
       }.bind(this));
