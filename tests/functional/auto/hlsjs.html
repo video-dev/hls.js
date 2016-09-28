@@ -16,7 +16,7 @@
       });
 
       hls.on(Hls.Events.FRAG_BUFFERED,function() {
-        sendMsg('video_readyState:' + video.readyState);
+        setTimeout(function() { sendMsg('video_readyState:' + video.readyState); }, 3000);
       });
 
       hls.on(Hls.Events.ERROR,function(event,data) {
