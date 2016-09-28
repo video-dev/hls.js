@@ -15,8 +15,8 @@
         video.play();
       });
 
-      hls.on(Hls.Events.FRAG_BUFFERED,function() {
-        sendMsg('test_003');
+      hls.on(Hls.Events.FRAG_CHANGED,function() {
+        sendMsg('video_readyState:' + video.readyState);
       });
 
       hls.on(Hls.Events.ERROR,function(event,data) {
