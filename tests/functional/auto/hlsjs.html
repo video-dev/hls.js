@@ -11,8 +11,8 @@
       var hls = new Hls();
       hls.loadSource('http://www.streambox.fr/playlists/test_001/stream.m3u8');
       hls.attachMedia(video);
-      sendMsg('test_001');
       hls.on(Hls.Events.MANIFEST_PARSED,function() {
+        sendMsg('test_002');
         video.play();
       });
       hls.on(Hls.Events.ERROR,function(event,data) {
