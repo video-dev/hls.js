@@ -28,6 +28,7 @@
     "watch": "watchify --debug -s Hls src/index.js -t [babelify] -o dist/hls.js",
     "pretest": "npm run lint",
     "test": "mocha --compilers js:babel-register --recursive tests/unit",
+    "testfunc": "mocha --compilers js:babel-register --recursive tests/functional/auto --timeout 30000",
     "lint": "jshint src/",
     "serve": "http-server -p 8000 .",
     "open": "opener http://localhost:8000/demo/",
@@ -46,6 +47,7 @@
     "browserify-derequire": "^0.9.4",
     "browserify-versionify": "^1.0.6",
     "bundle-collapser": "^1.2.1",
+    "chromedriver":"^2.24.1",
     "deep-strict-equal": "^0.2.0",
     "exorcist": "^0.4.0",
     "http-server": "^0.9.0",
@@ -57,6 +59,7 @@
     "parallelshell": "^2.0.0",
     "rimraf": "^2.5.1",
     "uglify-js": "^2.4.23",
+    "selenium-webdriver": "^2.52.0",
     "watchify": "^3.7.0",
     "webworkify": "^1.0.2"
   }

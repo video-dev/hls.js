@@ -1,0 +1,43 @@
+<html>
+   <head>
+<script src="/dist/hls.js"></script>
+   </head>
+   <body>
+<video id="video"></video>
+<script>
+  if(Hls.isSupported()) {
+    var video = document.getElementById('video');
+    try {
+      var hls = new Hls({debug:true});
+      hls.loadSource('http://www.streambox.fr/playlists/test_001/stream.m3u8');
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED,function() {
+        video.play();
+      });
+      hls.on(Hls.Events.ERROR,function(event,data) {
+        sendMsg(data.details);
+      }.bind(this));
+      video.onloadeddata = function() {
+        sendMsg('loadeddata');
+      }.bind(this);
+      video.onerror = function(event) {
+        sendMsg('video_error_' + video.error.code);
+      }.bind(this);
+    } catch(err) {
+      sendMsg('exception');
+    }
+ } else {
+    sendMsg('notSupported');
+ }
+
+function sendMsg(msg) {
+  var e = document.createElement('div');
+  e.id = 'video_event';
+  e.setAttribute('msg',msg);
+  document.body.appendChild(e);
+}
+
+</script>
+   </body>
+ </html>
+
