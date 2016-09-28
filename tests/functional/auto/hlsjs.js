@@ -11,14 +11,14 @@ describe("testing hls.js playback in the browser", function() {
         build: process.env.TRAVIS_BUILD_NUMBER,
         username: process.env.SAUCE_USERNAME,
         accessKey: process.env.SAUCE_ACCESS_KEY,
-        browserName: "chrome"
+        browserName : 'chrome',
+        platform : 'Windows 10',
+        version : '53.0'
       }).build();
     } else {
       this.browser = new webdriver.Builder()
       .withCapabilities({
-        browserName : 'firefox',
-        platform : 'Windows 10',
-        version : '48.0'
+        browserName : 'chrome'
       }).build();
     }
     return this.browser.get("http://localhost:8000/tests/functional/auto/hlsjs.html");
