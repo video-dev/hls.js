@@ -207,10 +207,10 @@ class StreamController extends EventHandler {
     let maxBufLen;
     if ((this.levels[level]).hasOwnProperty('bitrate')) {
       maxBufLen = Math.max(8 * config.maxBufferSize / this.levels[level].bitrate, config.maxBufferLength);
-      maxBufLen = Math.min(maxBufLen, config.maxMaxBufferLength);
     } else {
       maxBufLen = config.maxBufferLength;
     }
+    maxBufLen = Math.min(maxBufLen, config.maxMaxBufferLength);
 
     // determine next candidate fragment to be loaded, based on current position and end of buffer position
     // ensure up to `config.maxMaxBufferLength` of buffer upfront
@@ -1169,6 +1169,9 @@ class StreamController extends EventHandler {
     if (frag && frag.type !== 'main') {
       return;
     }
+    let media = this.media,
+        // 0.4 : tolerance needed as some browsers stalls playback before reaching buffered end
+        mediaBuffered = media && this.isBuffered(media.currentTime) && this.isBuffered(media.currentTime+0.4);
     switch(data.details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
@@ -1179,9 +1182,8 @@ class StreamController extends EventHandler {
           } else {
             loadError=1;
           }
-          if (loadError <= this.config.fragLoadingMaxRetry ||
-            // keep retrying / don't raise fatal network error if current position is buffered
-            (this.media && this.isBuffered(this.media.currentTime))) {
+          // keep retrying / don't raise fatal network error if current position is buffered
+          if (loadError <= this.config.fragLoadingMaxRetry || mediaBuffered) {
             this.fragLoadError = loadError;
             // reset load counter to avoid frag loop loading error
             frag.loadCounter = 0;
@@ -1201,6 +1203,26 @@ class StreamController extends EventHandler {
         }
         break;
       case ErrorDetails.FRAG_LOOP_LOADING_ERROR:
+        if(!data.fatal) {
+          let frag = data.frag;
+          // if buffer is not empty
+          if (mediaBuffered) {
+            // try to reduce max buffer length : rationale is that we could get
+            // frag loop loading error because of buffer eviction
+            this._reduceMaxMaxBufferLength(frag.duration);
+            this.state = State.IDLE;
+          } else {
+            // buffer empty. report as fatal if in manual mode or if lowest level.
+            // level controller takes care of emergency switch down logic
+            if (!frag.autoLevel || frag.level === 0) {
+              // redispatch same error but with fatal set to true
+              data.fatal = true;
+              this.hls.trigger(Event.ERROR, data);
+              this.state = State.ERROR;
+            }
+          }
+        }
+        break;
       case ErrorDetails.LEVEL_LOAD_ERROR:
       case ErrorDetails.LEVEL_LOAD_TIMEOUT:
       case ErrorDetails.KEY_LOAD_ERROR:
@@ -1215,16 +1237,23 @@ class StreamController extends EventHandler {
       case ErrorDetails.BUFFER_FULL_ERROR:
         // only reduce max buf len if in appending state
         if (this.state === State.PARSING || this.state === State.PARSED) {
-          // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
-          this.config.maxMaxBufferLength/=2;
-          logger.warn(`reduce max buffer length to ${this.config.maxMaxBufferLength}s and switch to IDLE state`);
-          // increase fragment load Index to avoid frag loop loading error after buffer flush
-          this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+          this._reduceMaxMaxBufferLength();
           this.state = State.IDLE;
         }
         break;
       default:
         break;
+    }
+  }
+
+  _reduceMaxMaxBufferLength(minLength) {
+    let config = this.config;
+    if (config.maxMaxBufferLength >= minLength) {
+      // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
+      config.maxMaxBufferLength/=2;
+      logger.warn(`reduce max buffer length to ${config.maxMaxBufferLength}s and switch to IDLE state`);
+      // increase fragment load Index to avoid frag loop loading error after buffer flush
+      this.fragLoadIdx += 2 * config.fragLoadingLoopThreshold;
     }
   }
 
