@@ -25,7 +25,7 @@ class DemuxerInline {
     }
   }
 
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
+  push(data, audioCodec, videoCodec, timeOffset, frag, level, sn, duration) {
     var demuxer = this.demuxer;
     if (!demuxer) {
       let hls = this.hls,
@@ -40,12 +40,12 @@ class DemuxerInline {
       } else if(AACDemuxer.probe(data)) {
         demuxer = new AACDemuxer(hls, id, MP4Remuxer, this.config);
       } else {
-        hls.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, id : id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found'});
+        hls.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, id : id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found', frag: frag});
         return;
       }
       this.demuxer = demuxer;
     }
-    demuxer.push(data,audioCodec,videoCodec,timeOffset,cc,level,sn,duration);
+    demuxer.push(data,audioCodec,videoCodec,timeOffset,frag,level,sn,duration);
   }
 }
 

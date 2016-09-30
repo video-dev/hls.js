@@ -56,7 +56,7 @@
   }
 
   // feed incoming data to the front of the parsing pipeline
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
+  push(data, audioCodec, videoCodec, timeOffset, frag, level, sn, duration) {
     var avcData, aacData, id3Data,
         start, len = data.length, stt, pid, atf, offset,
         codecsOnly = this.remuxer.passthrough,
@@ -67,10 +67,10 @@
     this.timeOffset = timeOffset;
     this._duration = duration;
     this.contiguous = false;
-    if (cc !== this.lastCC) {
+    if (frag.cc !== this.lastCC) {
       logger.log('discontinuity detected');
       this.insertDiscontinuity();
-      this.lastCC = cc;
+      this.lastCC = frag.cc;
     }
     if (level !== this.lastLevel) {
       logger.log('level switch detected');
@@ -138,7 +138,7 @@
           case aacId:
             if (stt) {
               if (aacData) {
-                parseAACPES(parsePES(aacData));
+                parseAACPES(parsePES(aacData), frag);
                 if (codecsOnly) {
                   // here we now that we have audio codec info
                   // if video PID is undefined OR if we have video codec info,
@@ -198,7 +198,7 @@
             break;
         }
       } else {
-        this.observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, id : this.id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47'});
+        this.observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, id : this.id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47', frag: frag});
       }
     }
     // parse last PES packet
@@ -206,7 +206,7 @@
       parseAVCPES(parsePES(avcData),true);
     }
     if (aacData) {
-      parseAACPES(parsePES(aacData));
+      parseAACPES(parsePES(aacData), frag);
     }
     if (id3Data) {
       parseID3PES(parsePES(id3Data));
@@ -739,7 +739,7 @@
     return newData;
   }
 
-  _parseAACPES(pes) {
+  _parseAACPES(pes, frag) {
     var track = this._aacTrack,
         data = pes.data,
         pts = pes.pts,
@@ -772,13 +772,13 @@
         reason = 'no ADTS header found in AAC PES';
         fatal = true;
       }
-      this.observer.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, id : this.id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason});
+      this.observer.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, id : this.id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason, frag: frag});
       if (fatal) {
         return;
       }
     }
     if (!track.audiosamplerate) {
-      config = ADTS.getAudioConfig(this.observer,data, offset, audioCodec);
+      config = ADTS.getAudioConfig(this.observer,data, offset, audioCodec, frag);
       track.config = config.config;
       track.audiosamplerate = config.samplerate;
       track.channelCount = config.channelCount;

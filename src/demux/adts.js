@@ -6,7 +6,7 @@ import {ErrorTypes, ErrorDetails} from '../errors';
 
  class ADTS {
 
-  static getAudioConfig(observer, data, offset, audioCodec) {
+  static getAudioConfig(observer, data, offset, audioCodec, frag) {
     var adtsObjectType, // :int
         adtsSampleingIndex, // :int
         adtsExtensionSampleingIndex, // :int
@@ -25,7 +25,7 @@ import {ErrorTypes, ErrorDetails} from '../errors';
     adtsObjectType = ((data[offset + 2] & 0xC0) >>> 6) + 1;
     adtsSampleingIndex = ((data[offset + 2] & 0x3C) >>> 2);
     if(adtsSampleingIndex > adtsSampleingRates.length-1) {
-      observer.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: `invalid ADTS sampling index:${adtsSampleingIndex}`});
+      observer.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: `invalid ADTS sampling index:${adtsSampleingIndex}`, frag: frag});
       return;
     }
     adtsChanelConfig = ((data[offset + 2] & 0x01) << 2);

@@ -27,18 +27,21 @@ describe('TS Demuxer', () => {
   //  demuxer.push(data,audioCodec,videoCodec,timeOffset,cc,level,sn,duration);
 
   it('detects a discontinuity', () => {
-    var cc;
+    var frag = {
+      cc: 0
+    };
 
     // Initial feeds of data should not attempt to insert a discontinuity
-    cc = 0;
-    demuxer.push([], 'a', 'v', 0, cc, 0, 0, 0)
+    demuxer.push([], 'a', 'v', 0, frag, 0, 0, 0);
     assert.equal(demuxer.remuxer.insertDiscontinuity__count, 0);
-    demuxer.push([], 'a', 'v', 0, cc, 0, 0, 0)
+    demuxer.push([], 'a', 'v', 0, frag, 0, 0, 0);
     assert.equal(demuxer.remuxer.insertDiscontinuity__count, 0);
 
     // Noticing a change to the continuity counter should trigger a remuxer discontinuity insertion
-    cc = 1;
-    demuxer.push([], 'a', 'v', 0, cc, 0, 0, 0)
+    frag = {
+      cc: 1
+    };
+    demuxer.push([], 'a', 'v', 0, frag, 0, 0, 0);
     assert.equal(demuxer.remuxer.insertDiscontinuity__count, 1);
   });
 

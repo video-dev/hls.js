@@ -53,20 +53,21 @@ class Demuxer {
     }
   }
 
-  pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
+  pushDecrypted(data, audioCodec, videoCodec, timeOffset, frag, level, sn, duration) {
     let w = this.w;
     if (w) {
       // post fragment payload as transferable objects (no copy)
-      w.postMessage({cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn : sn, duration: duration}, [data]);
+      w.postMessage({cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: frag.cc, level: level, sn : sn, duration: duration}, [data]);
     } else {
       let demuxer = this.demuxer;
       if (demuxer) {
-        demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
+        demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset, frag, level, sn, duration);
       }
     }
   }
 
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata) {
+  push(data, audioCodec, videoCodec, timeOffset, frag, level, sn, duration) {
+    var decryptdata = frag.decryptdata;
     if ((data.byteLength > 0) && (decryptdata != null) && (decryptdata.key != null) && (decryptdata.method === 'AES-128')) {
       if (this.decrypter == null) {
         this.decrypter = new Decrypter(this.hls);
@@ -74,10 +75,10 @@ class Demuxer {
 
       var localthis = this;
       this.decrypter.decrypt(data, decryptdata.key, decryptdata.iv, function(decryptedData){
-        localthis.pushDecrypted(decryptedData, audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
+        localthis.pushDecrypted(decryptedData, audioCodec, videoCodec, timeOffset, frag, level, sn, duration);
       });
     } else {
-      this.pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
+      this.pushDecrypted(data, audioCodec, videoCodec, timeOffset, frag, level, sn, duration);
     }
   }
 

@@ -37,16 +37,16 @@ import ID3 from '../demux/id3';
 
 
   // feed incoming data to the front of the parsing pipeline
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
+  push(data, audioCodec, videoCodec, timeOffset, frag, level, sn, duration) {
     var track,
         id3 = new ID3(data),
         pts = 90*id3.timeStamp,
         config, frameLength, frameDuration, frameIndex, offset, headerLength, stamp, len, aacSample;
 
     let contiguous = false;
-    if (cc !== this.lastCC) {
+    if (frag.cc !== this.lastCC) {
       logger.log(`${this.id} discontinuity detected`);
-      this.lastCC = cc;
+      this.lastCC = frag.cc;
       this.insertDiscontinuity();
       this.remuxer.switchLevel();
       this.remuxer.insertDiscontinuity();
@@ -70,7 +70,7 @@ import ID3 from '../demux/id3';
     }
 
     if (!track.audiosamplerate) {
-      config = ADTS.getAudioConfig(this.observer,data, offset, audioCodec);
+      config = ADTS.getAudioConfig(this.observer,data, offset, audioCodec, frag);
       track.config = config.config;
       track.audiosamplerate = config.samplerate;
       track.channelCount = config.channelCount;
