@@ -262,12 +262,17 @@ class StreamController extends EventHandler {
 
   _fetchPayloadOrEos({pos, bufferInfo, levelDetails}) {
     const fragPrevious = this.fragPrevious,
-          level = this.level;
+          level = this.level,
+          fragments = levelDetails.fragments,
+          fragLen = fragments.length;
+
+    // empty playlist
+    if (fragLen === 0) {
+      return false;
+    }
 
     // find fragment index, contiguous with end of buffer position
-    let fragments = levelDetails.fragments,
-        fragLen = fragments.length,
-        start = fragments[0].start,
+    let start = fragments[0].start,
         end = fragments[fragLen-1].start + fragments[fragLen-1].duration,
         bufferEnd = bufferInfo.end,
         frag;
