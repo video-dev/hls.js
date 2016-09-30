@@ -1977,8 +1977,13 @@ var StreamController = function (_EventHandler) {
 
             // find fragment index, contiguous with end of buffer position
             var fragments = levelDetails.fragments,
-                fragLen = fragments.length,
-                start = fragments[0].start,
+                fragLen = fragments.length;
+
+            if (fragLen === 0) {
+              break;
+            }
+
+            var start = fragments[0].start,
                 end = fragments[fragLen - 1].start + fragments[fragLen - 1].duration,
                 frag = void 0;
 
