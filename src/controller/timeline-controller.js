@@ -31,8 +31,22 @@ class TimelineController extends EventHandler {
         {
           if (!self.textTrack1)
           {
-            self.textTrack1 = self.createTextTrack('captions', 'Unknown CC1', 'en');
-//            self.textTrack1.mode = 'showing';
+            //Enable reuse of existing text track.
+            var existingTrack1 = self.getExistingTrack('1');
+            if(!existingTrack1)
+            {
+              self.textTrack1 = self.createTextTrack('captions', 'English', 'en');
+              self.textTrack1.textTrack1 = true;
+            }
+            else
+            {
+              self.textTrack1 = existingTrack1;
+              self.clearCurrentCues(self.textTrack1);
+
+              let e = new window.Event('addtrack');
+              e.track = self.textTrack1;
+              self.media.dispatchEvent(e);
+            }
           }
 
           self.Cues.newCue(self.textTrack1, startTime, endTime, screen);
@@ -45,7 +59,22 @@ class TimelineController extends EventHandler {
         {
           if (!self.textTrack2)
           {
-            self.textTrack2 = self.createTextTrack('captions', 'Unknown CC2', 'es');
+            //Enable reuse of existing text track.
+            var existingTrack2 = self.getExistingTrack('2');
+            if(!existingTrack2)
+            {
+              self.textTrack2 = self.createTextTrack('captions', 'Spanish', 'es');
+              self.textTrack2.textTrack2 = true;
+            }
+            else
+            {
+              self.textTrack2 = existingTrack2;
+              self.clearCurrentCues(self.textTrack2);
+
+              let e = new window.Event('addtrack');
+              e.track = self.textTrack2;
+              self.media.dispatchEvent(e);
+            }
           }
 
           self.Cues.newCue(self.textTrack2, startTime, endTime, screen);        }
@@ -64,6 +93,23 @@ class TimelineController extends EventHandler {
         track.removeCue(track.cues[0]);
       }
     }
+  }
+
+  getExistingTrack(channelNumber)
+  {
+    if(this.media)
+    {
+      for(let i=0; i<this.media.textTracks.length; i++)
+      {
+        let textTrack = this.media.textTracks[i];
+        let propName = 'textTrack' + channelNumber;
+        if(Reflect.has(textTrack,propName))
+        {
+          return textTrack;
+        }
+      }
+    }
+    return null;
   }
 
   createTextTrack(kind, label, lang)
