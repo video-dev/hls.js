@@ -115,10 +115,12 @@ class AbrController extends EventHandler {
             this.bwEstimator.sample(requestDelay,frag.loaded);
             // abort fragment loading ...
             logger.warn(`loading too slow, abort fragment loading and switch to level ${nextLoadLevel}`);
+            let loader = frag.loader,
+                stats = loader.stats;
             //abort fragment loading
-            frag.loader.abort();
+            loader.abort();
             this.clearTimer();
-            hls.trigger(Event.FRAG_LOAD_EMERGENCY_ABORTED, {frag: frag});
+            hls.trigger(Event.FRAG_LOAD_EMERGENCY_ABORTED, {frag: frag, stats: stats });
           }
         }
       }
