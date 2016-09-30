@@ -199,8 +199,13 @@ class StreamController extends EventHandler {
 
           // find fragment index, contiguous with end of buffer position
           let fragments = levelDetails.fragments,
-              fragLen = fragments.length,
-              start = fragments[0].start,
+              fragLen = fragments.length;
+
+          if (fragLen === 0) {
+            break;
+          }
+
+          let start = fragments[0].start,
               end = fragments[fragLen-1].start + fragments[fragLen-1].duration,
               frag;
 
