@@ -267,7 +267,7 @@ class StreamController extends EventHandler {
           fragLen = fragments.length;
 
     // empty playlist
-    if (fragLen == 0) {
+    if (fragLen === 0) {
       return false;
     }
 
