@@ -1958,6 +1958,8 @@ var BufferController = function (_EventHandler) {
               continue;
             }
             sb = sourceBuffer[type];
+            // we are going to flush buffer, mark source buffer as 'not ended'
+            sb.ended = false;
             if (!sb.updating) {
               for (i = 0; i < sb.buffered.length; i++) {
                 bufStart = sb.buffered.start(i);
@@ -3041,7 +3043,8 @@ var StreamController = function (_EventHandler) {
       var fragments = _ref2.fragments;
       var fragLen = _ref2.fragLen;
 
-      var config = this.hls.config;
+      var config = this.hls.config,
+          media = this.media;
 
       var frag = void 0;
 
@@ -3053,7 +3056,6 @@ var StreamController = function (_EventHandler) {
         var liveSyncPosition = this.liveSyncPosition = this.computeLivePosition(start, levelDetails);
         _logger.logger.log('buffer end: ' + bufferEnd + ' is located too far from the end of live sliding playlist, reset currentTime to : ' + liveSyncPosition.toFixed(3));
         bufferEnd = liveSyncPosition;
-        var media = this.media;
         if (media && media.readyState && media.duration > liveSyncPosition) {
           media.currentTime = liveSyncPosition;
         }
@@ -3068,7 +3070,8 @@ var StreamController = function (_EventHandler) {
       // level 1 loaded [182580162,182580168] <============= here we should have bufferEnd > end. in that case break to avoid reloading 182580168
       // level 1 loaded [182580164,182580171]
       //
-      if (levelDetails.PTSKnown && bufferEnd > end) {
+      // don't return null in case media not loaded yet (readystate === 0)
+      if (levelDetails.PTSKnown && bufferEnd > end && media && media.readyState) {
         return null;
       }
 
@@ -5554,7 +5557,7 @@ var ExpGolomb = function () {
         this.loadWord();
       }
       bits = size - bits;
-      if (bits > 0) {
+      if (bits > 0 && this.bitsAvailable) {
         return valu << bits | this.readBits(bits);
       } else {
         return valu;
@@ -6066,21 +6069,18 @@ var TSDemuxer = function () {
   }, {
     key: 'push',
     value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
-      var avcData,
-          aacData,
-          id3Data,
-          start,
+      var start,
           len = data.length,
           stt,
           pid,
           atf,
           offset,
+          pes,
           codecsOnly = this.remuxer.passthrough,
           unknownPIDs = false;
 
       this.audioCodec = audioCodec;
       this.videoCodec = videoCodec;
-      this.timeOffset = timeOffset;
       this._duration = duration;
       this.contiguous = false;
       if (cc !== this.lastCC) {
@@ -6098,12 +6098,17 @@ var TSDemuxer = function () {
       this.lastSN = sn;
 
       var pmtParsed = this.pmtParsed,
-          avcId = this._avcTrack.id,
-          aacId = this._aacTrack.id,
-          id3Id = this._id3Track.id,
-          pmtId = this._pmtId;
-
-      var parsePAT = this._parsePAT,
+          avcTrack = this._avcTrack,
+          aacTrack = this._aacTrack,
+          id3Track = this._id3Track,
+          avcId = avcTrack.id,
+          aacId = aacTrack.id,
+          id3Id = id3Track.id,
+          pmtId = this._pmtId,
+          avcData = avcTrack.pesData,
+          aacData = aacTrack.pesData,
+          id3Data = id3Track.pesData,
+          parsePAT = this._parsePAT,
           parsePMT = this._parsePMT,
           parsePES = this._parsePES,
           parseAVCPES = this._parseAVCPES.bind(this),
@@ -6132,14 +6137,14 @@ var TSDemuxer = function () {
           switch (pid) {
             case avcId:
               if (stt) {
-                if (avcData) {
-                  parseAVCPES(parsePES(avcData), false);
+                if (avcData && (pes = parsePES(avcData))) {
+                  parseAVCPES(pes, false);
                   if (codecsOnly) {
                     // if we have video codec info AND
                     // if audio PID is undefined OR if we have audio codec info,
                     // we have all codec info !
-                    if (this._avcTrack.codec && (aacId === -1 || this._aacTrack.codec)) {
-                      this.remux(level, sn, data);
+                    if (avcTrack.codec && (aacId === -1 || aacTrack.codec)) {
+                      this.remux(level, sn, data, timeOffset);
                       return;
                     }
                   }
@@ -6153,14 +6158,14 @@ var TSDemuxer = function () {
               break;
             case aacId:
               if (stt) {
-                if (aacData) {
-                  parseAACPES(parsePES(aacData));
+                if (aacData && (pes = parsePES(aacData))) {
+                  parseAACPES(pes);
                   if (codecsOnly) {
                     // here we now that we have audio codec info
                     // if video PID is undefined OR if we have video codec info,
                     // we have all codec infos !
-                    if (this._aacTrack.codec && (avcId === -1 || this._avcTrack.codec)) {
-                      this.remux(level, sn, data);
+                    if (aacTrack.codec && (avcId === -1 || avcTrack.codec)) {
+                      this.remux(level, sn, data, timeOffset);
                       return;
                     }
                   }
@@ -6174,8 +6179,8 @@ var TSDemuxer = function () {
               break;
             case id3Id:
               if (stt) {
-                if (id3Data) {
-                  parseID3PES(parsePES(id3Data));
+                if (id3Data && (pes = parsePES(id3Data))) {
+                  parseID3PES(pes);
                 }
                 id3Data = { data: [], size: 0 };
               }
@@ -6195,9 +6200,9 @@ var TSDemuxer = function () {
                 offset += data[offset] + 1;
               }
               var parsedPIDs = parsePMT(data, offset);
-              avcId = this._avcTrack.id = parsedPIDs.avc;
-              aacId = this._aacTrack.id = parsedPIDs.aac;
-              id3Id = this._id3Track.id = parsedPIDs.id3;
+              avcId = avcTrack.id = parsedPIDs.avc;
+              aacId = aacTrack.id = parsedPIDs.aac;
+              id3Id = id3Track.id = parsedPIDs.id3;
               if (unknownPIDs && !pmtParsed) {
                 _logger.logger.log('reparse from beginning');
                 unknownPIDs = false;
@@ -6217,21 +6222,38 @@ var TSDemuxer = function () {
           this.observer.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, id: this.id, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47' });
         }
       }
-      // parse last PES packet
-      if (avcData) {
-        parseAVCPES(parsePES(avcData), true);
+      // try to parse last PES packets
+      if (avcData && (pes = parsePES(avcData))) {
+        parseAVCPES(pes, true);
+        avcTrack.pesData = null;
+      } else {
+        // either avcData null or PES truncated, keep it for next frag parsing
+        avcTrack.pesData = avcData;
       }
-      if (aacData) {
-        parseAACPES(parsePES(aacData));
+
+      if (aacData && (pes = parsePES(aacData))) {
+        parseAACPES(pes);
+        aacTrack.pesData = null;
+      } else {
+        if (aacData && aacData.size) {
+          _logger.logger.log('last AAC PES packet truncated,might overlap between fragments');
+        }
+        // either aacData null or PES truncated, keep it for next frag parsing
+        aacTrack.pesData = aacData;
       }
-      if (id3Data) {
-        parseID3PES(parsePES(id3Data));
+
+      if (id3Data && (pes = parsePES(id3Data))) {
+        parseID3PES(pes);
+        id3Track.pesData = null;
+      } else {
+        // either id3Data null or PES truncated, keep it for next frag parsing
+        id3Track.pesData = id3Data;
       }
-      this.remux(level, sn, null);
+      this.remux(level, sn, null, timeOffset);
     }
   }, {
     key: 'remux',
-    value: function remux(level, sn, data) {
+    value: function remux(level, sn, data, timeOffset) {
       var avcTrack = this._avcTrack,
           samples = avcTrack.samples;
 
@@ -6251,7 +6273,7 @@ var TSDemuxer = function () {
       }, { len: 0, nbNalu: 0 });
       avcTrack.len = trackData.len;
       avcTrack.nbNalu = trackData.nbNalu;
-      this.remuxer.remux(level, sn, this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, this.timeOffset, this.contiguous, data);
+      this.remuxer.remux(level, sn, this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, timeOffset, this.contiguous, data);
     }
   }, {
     key: 'destroy',
@@ -6333,6 +6355,11 @@ var TSDemuxer = function () {
           pesDts,
           payloadStartOffset,
           data = stream.data;
+      // safety check
+      if (!stream || stream.size === 0) {
+        return null;
+      }
+
       // we might need up to 19 bytes to read PES header
       // if first chunk of data is less than 19 bytes, let's merge it with following ones until we get 19 bytes
       // usually only one merge is needed (and this is rare ...)
@@ -6348,6 +6375,11 @@ var TSDemuxer = function () {
       pesPrefix = (frag[0] << 16) + (frag[1] << 8) + frag[2];
       if (pesPrefix === 1) {
         pesLen = (frag[4] << 8) + frag[5];
+        // if PES len is not zero and not matching with total len, stop parsing. PES might be truncated
+        // minus 6 : PES header size
+        if (pesLen && pesLen !== stream.size - 6) {
+          return null;
+        }
         pesFlags = frag[7];
         if (pesFlags & 0xC0) {
           /* PES header described here : http://dvd.sourceforge.net/dvdinfo/pes-hdr.html
@@ -6379,6 +6411,7 @@ var TSDemuxer = function () {
           }
         }
         pesHdrLen = frag[8];
+        // 9 bytes : 6 bytes for PES header + 3 bytes for PES extension
         payloadStartOffset = pesHdrLen + 9;
 
         stream.size -= payloadStartOffset;
@@ -6401,6 +6434,10 @@ var TSDemuxer = function () {
           }
           pesData.set(frag, i);
           i += len;
+        }
+        if (pesLen) {
+          // payload size : remove PES header + PES extension
+          pesLen -= pesHdrLen + 3;
         }
         return { data: pesData, pts: pesPts, dts: pesDts, len: pesLen };
       } else {
@@ -6795,8 +6832,6 @@ var TSDemuxer = function () {
           data = pes.data,
           pts = pes.pts,
           startOffset = 0,
-          duration = this._duration,
-          audioCodec = this.audioCodec,
           aacOverFlow = this.aacOverFlow,
           aacLastPTS = this.aacLastPTS,
           config,
@@ -6831,18 +6866,19 @@ var TSDemuxer = function () {
           reason = 'no ADTS header found in AAC PES';
           fatal = true;
         }
+        _logger.logger.warn('parsing error:' + reason);
         this.observer.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, id: this.id, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason });
         if (fatal) {
           return;
         }
       }
       if (!track.audiosamplerate) {
-        config = _adts2.default.getAudioConfig(this.observer, data, offset, audioCodec);
+        config = _adts2.default.getAudioConfig(this.observer, data, offset, this.audioCodec);
         track.config = config.config;
         track.audiosamplerate = config.samplerate;
         track.channelCount = config.channelCount;
         track.codec = config.codec;
-        track.duration = duration;
+        track.duration = this._duration;
         _logger.logger.log('parsed codec:' + track.codec + ',rate:' + config.samplerate + ',nb channel:' + config.channelCount);
       }
       frameIndex = 0;
@@ -7607,6 +7643,7 @@ var Hls = function () {
         Hls.defaultConfig = {
           autoStartLoad: true,
           startPosition: -1,
+          defaultAudioCodec: undefined,
           debug: false,
           capLevelOnFPSDrop: false,
           capLevelToPlayerSize: false,
@@ -7645,6 +7682,8 @@ var Hls = function () {
           //loader: FetchLoader,
           fLoader: undefined,
           pLoader: undefined,
+          xhrSetup: undefined,
+          fetchSetup: undefined,
           abrController: _abrController2.default,
           bufferController: _bufferController2.default,
           capLevelController: _capLevelController2.default,
