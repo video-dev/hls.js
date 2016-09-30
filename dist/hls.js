@@ -522,10 +522,12 @@ var AbrController = function (_EventHandler) {
               this.bwEstimator.sample(requestDelay, frag.loaded);
               // abort fragment loading ...
               _logger.logger.warn('loading too slow, abort fragment loading and switch to level ' + nextLoadLevel);
+              var loader = frag.loader,
+                  stats = loader.stats;
               //abort fragment loading
-              frag.loader.abort();
+              loader.abort();
               this.clearTimer();
-              hls.trigger(_events2.default.FRAG_LOAD_EMERGENCY_ABORTED, { frag: frag });
+              hls.trigger(_events2.default.FRAG_LOAD_EMERGENCY_ABORTED, { frag: frag, stats: stats });
             }
           }
         }
@@ -1590,7 +1592,6 @@ var LevelController = function (_EventHandler) {
       /* try to switch to a redundant stream if any available.
        * if no redundant stream available, emergency switch down (if in auto mode and current level not 0)
        * otherwise, we cannot recover this network error ...
-       * don't raise FRAG_LOAD_ERROR and FRAG_LOAD_TIMEOUT as fatal, as it is handled by mediaController
        */
       if (levelId !== undefined) {
         level = this._levels[levelId];
@@ -1602,16 +1603,16 @@ var LevelController = function (_EventHandler) {
           // we could try to recover if in auto mode and current level not lowest level (0)
           var recoverable = this._manualLevel === -1 && levelId;
           if (recoverable) {
-            _logger.logger.warn('level controller,' + details + ': emergency switch-down for next fragment');
-            hls.abrController.nextAutoLevel = 0;
+            _logger.logger.warn('level controller,' + details + ': switch-down for next fragment');
+            hls.nextLoadLevel = levelId - 1;
           } else if (level && level.details && level.details.live) {
             _logger.logger.warn('level controller,' + details + ' on live stream, discard');
             if (levelError) {
               // reset this._level so that another call to set level() will retrigger a frag load
               this._level = undefined;
             }
-            // FRAG_LOAD_ERROR and FRAG_LOAD_TIMEOUT are handled by mediaController
-          } else if (details !== _errors.ErrorDetails.FRAG_LOAD_ERROR && details !== _errors.ErrorDetails.FRAG_LOAD_TIMEOUT) {
+            // fragment errors are all handled  by streamController
+          } else if (details !== _errors.ErrorDetails.FRAG_LOAD_ERROR && details !== _errors.ErrorDetails.FRAG_LOAD_TIMEOUT && details !== _errors.ErrorDetails.FRAG_LOOP_LOADING_ERROR) {
               _logger.logger.error('cannot recover ' + details + ' error');
               this._level = undefined;
               // stopping live reloading timer if any
@@ -1943,10 +1944,10 @@ var StreamController = function (_EventHandler) {
           // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
           if (this.levels[level].hasOwnProperty('bitrate')) {
             maxBufLen = Math.max(8 * config.maxBufferSize / this.levels[level].bitrate, config.maxBufferLength);
-            maxBufLen = Math.min(maxBufLen, config.maxMaxBufferLength);
           } else {
             maxBufLen = config.maxBufferLength;
           }
+          maxBufLen = Math.min(maxBufLen, config.maxMaxBufferLength);
           // if buffer length is less than maxBufLen try to load a new fragment
           if (bufferLen < maxBufLen) {
             // set next load level : this will trigger a playlist load if needed
@@ -2569,7 +2570,7 @@ var StreamController = function (_EventHandler) {
           this.state = State.IDLE;
           this.startFragRequested = false;
           stats.tparsed = stats.tbuffered = performance.now();
-          this.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: data.stats, frag: fragCurrent });
+          this.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: stats, frag: fragCurrent });
           this.tick();
         } else {
           this.state = State.PARSING;
@@ -2768,6 +2769,10 @@ var StreamController = function (_EventHandler) {
   }, {
     key: 'onError',
     value: function onError(data) {
+      var media = this.media,
+
+      // 0.4 : tolerance needed as some browsers stalls playback before reaching buffered end
+      mediaBuffered = media && this.isBuffered(media.currentTime) && this.isBuffered(media.currentTime + 0.4);
       switch (data.details) {
         case _errors.ErrorDetails.FRAG_LOAD_ERROR:
         case _errors.ErrorDetails.FRAG_LOAD_TIMEOUT:
@@ -2778,9 +2783,8 @@ var StreamController = function (_EventHandler) {
             } else {
               loadError = 1;
             }
-            if (loadError <= this.config.fragLoadingMaxRetry ||
             // keep retrying / don't raise fatal network error if current position is buffered
-            this.media && this.isBuffered(this.media.currentTime)) {
+            if (loadError <= this.config.fragLoadingMaxRetry || mediaBuffered) {
               this.fragLoadError = loadError;
               // reset load counter to avoid frag loop loading error
               data.frag.loadCounter = 0;
@@ -2800,6 +2804,26 @@ var StreamController = function (_EventHandler) {
           }
           break;
         case _errors.ErrorDetails.FRAG_LOOP_LOADING_ERROR:
+          if (!data.fatal) {
+            var frag = data.frag;
+            // if buffer is not empty
+            if (mediaBuffered) {
+              // try to reduce max buffer length : rationale is that we could get
+              // frag loop loading error because of buffer eviction
+              this._reduceMaxMaxBufferLength(frag.duration);
+              this.state = State.IDLE;
+            } else {
+              // buffer empty. report as fatal if in manual mode or if lowest level.
+              // level controller takes care of emergency switch down logic
+              if (!frag.autoLevel || frag.level === 0) {
+                // redispatch same error but with fatal set to true
+                data.fatal = true;
+                this.hls.trigger(_events2.default.ERROR, data);
+                this.state = State.ERROR;
+              }
+            }
+          }
+          break;
         case _errors.ErrorDetails.LEVEL_LOAD_ERROR:
         case _errors.ErrorDetails.LEVEL_LOAD_TIMEOUT:
         case _errors.ErrorDetails.KEY_LOAD_ERROR:
@@ -2814,16 +2838,23 @@ var StreamController = function (_EventHandler) {
         case _errors.ErrorDetails.BUFFER_FULL_ERROR:
           // only reduce max buf len if in appending state
           if (this.state === State.PARSING || this.state === State.PARSED) {
-            // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
-            this.config.maxMaxBufferLength /= 2;
-            _logger.logger.warn('reduce max buffer length to ' + this.config.maxMaxBufferLength + 's and switch to IDLE state');
-            // increase fragment load Index to avoid frag loop loading error after buffer flush
-            this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+            this._reduceMaxMaxBufferLength();
             this.state = State.IDLE;
           }
           break;
         default:
           break;
+      }
+    }
+  }, {
+    key: '_reduceMaxMaxBufferLength',
+    value: function _reduceMaxMaxBufferLength(minLength) {
+      if (this.config.maxMaxBufferLength >= minLength) {
+        // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
+        this.config.maxMaxBufferLength /= 2;
+        _logger.logger.warn('reduce max buffer length to ' + this.config.maxMaxBufferLength + 's and switch to IDLE state');
+        // increase fragment load Index to avoid frag loop loading error after buffer flush
+        this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
       }
     }
   }, {
@@ -9083,7 +9114,7 @@ var XhrLoader = function () {
         xhr = this.loader = new XMLHttpRequest();
       }
 
-      xhr.onloadend = this.loadend.bind(this);
+      xhr.onreadystatechange = this.readystatechange.bind(this);
       xhr.onprogress = this.loadprogress.bind(this);
 
       xhr.open('GET', this.url, true);
@@ -9097,35 +9128,49 @@ var XhrLoader = function () {
       if (this.xhrSetup) {
         this.xhrSetup(xhr, this.url);
       }
-      this.timeoutHandle = window.setTimeout(this.loadtimeout.bind(this), this.timeout);
+      // first timeout to track HEADERS_RECEIVED, set to half total timeout.
+      this.timeoutHandle = window.setTimeout(this.loadtimeout.bind(this), this.timeout / 2);
       xhr.send();
     }
   }, {
-    key: 'loadend',
-    value: function loadend(event) {
+    key: 'readystatechange',
+    value: function readystatechange(event) {
       var xhr = event.currentTarget,
-          status = xhr.status,
+          readystate = xhr.readyState,
           stats = this.stats;
       // don't proceed if xhr has been aborted
       if (!stats.aborted) {
-        // http status between 200 to 299 are all successful
-        if (status >= 200 && status < 300) {
-          window.clearTimeout(this.timeoutHandle);
-          stats.tload = Math.max(stats.tfirst, performance.now());
-          this.onSuccess(event, stats);
-        } else {
-          // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
-          if (stats.retry >= this.maxRetry || status >= 400 && status < 499) {
+        // HEADERS_RECEIVED
+        if (readystate >= 2) {
+          if (stats.tfirst === 0) {
+            stats.tfirst = Math.max(performance.now(), stats.trequest);
+            // clear first timeout after headers have been received
             window.clearTimeout(this.timeoutHandle);
-            _logger.logger.error(status + ' while loading ' + this.url);
-            this.onError(event);
-          } else {
-            _logger.logger.warn(status + ' while loading ' + this.url + ', retrying in ' + this.retryDelay + '...');
-            this.destroy();
-            window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
-            // exponential backoff
-            this.retryDelay = Math.min(2 * this.retryDelay, 64000);
-            stats.retry++;
+            // reset timeout to total timeout duration minus the time it took to receive headers
+            this.timeoutHandle = window.setTimeout(this.loadtimeout.bind(this), this.timeout - (stats.tfirst - stats.trequest));
+          }
+          if (readystate === 4) {
+            var status = xhr.status;
+            // http status between 200 to 299 are all successful
+            if (status >= 200 && status < 300) {
+              window.clearTimeout(this.timeoutHandle);
+              stats.tload = Math.max(stats.tfirst, performance.now());
+              this.onSuccess(event, stats);
+            } else {
+              // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
+              if (stats.retry >= this.maxRetry || status >= 400 && status < 499) {
+                window.clearTimeout(this.timeoutHandle);
+                _logger.logger.error(status + ' while loading ' + this.url);
+                this.onError(event);
+              } else {
+                _logger.logger.warn(status + ' while loading ' + this.url + ', retrying in ' + this.retryDelay + '...');
+                this.destroy();
+                this.timeoutHandle = window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
+                // exponential backoff
+                this.retryDelay = Math.min(2 * this.retryDelay, 64000);
+                stats.retry++;
+              }
+            }
           }
         }
       }
@@ -9140,9 +9185,6 @@ var XhrLoader = function () {
     key: 'loadprogress',
     value: function loadprogress(event) {
       var stats = this.stats;
-      if (stats.tfirst === 0) {
-        stats.tfirst = Math.max(performance.now(), stats.trequest);
-      }
       stats.loaded = event.loaded;
       if (this.onProgress) {
         this.onProgress(event, stats);
