@@ -6,22 +6,27 @@
 <video id="video"></video>
 <script>
 
-function testLoadedData(callback) {
+var video,hls;
+
+
+function setup(callback) {
   if(Hls.isSupported()) {
-    var video = document.getElementById('video');
+    if(hls) {
+     hls.destroy();
+    }
+    video = document.getElementById('video');
     try {
-      var hls = new Hls({debug:true});
+      hls = new Hls();
       hls.loadSource('http://www.streambox.fr/playlists/test_001/stream.m3u8');
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED,function() {
         video.play();
       });
       hls.on(Hls.Events.ERROR,function(event,data) {
-        callback(data.details);
+        if (data.fatal) {
+          callback(data.details);
+        }
       }.bind(this));
-      video.onloadeddata = function() {
-        callback('loadeddata');
-      }.bind(this);
       video.onerror = function(event) {
         callback('video_error_' + video.error.code);
       }.bind(this);
@@ -32,6 +37,28 @@ function testLoadedData(callback) {
     callback('notSupported');
   }
 }
+
+function testLoadedData(callback) {
+  setup(callback);
+  video.onloadeddata = function() {
+    callback('loadeddata');
+  }.bind(this);
+}
+
+function testEnded(callback) {
+  setup(callback);
+  video.onloadeddata = function() {
+    video.currentTime = video.duration - 5;
+  }.bind(this);
+
+  video.onended = function() {
+    callback('ended');
+  }.bind(this);
+
+}
+
+
+
 </script>
    </body>
  </html>

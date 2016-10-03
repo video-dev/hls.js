@@ -28,7 +28,7 @@ describe("testing hls.js playback in the browser", function() {
     return this.browser.quit();
   });
 
-  it("should receive loadeddata event", function(done) {
+  it("should receive video loadeddata event", function(done) {
 
     this.browser.manage().timeouts().setScriptTimeout(20000);
     this.browser.executeAsyncScript(function() {
@@ -39,4 +39,17 @@ describe("testing hls.js playback in the browser", function() {
       done();
     });
   });
+
+  it("should seek and receive video ended event", function(done) {
+
+    this.browser.manage().timeouts().setScriptTimeout(20000);
+    this.browser.executeAsyncScript(function() {
+      var callback = arguments[arguments.length - 1];
+      testEnded(callback);
+    }).then(function(result) {
+      assert.strictEqual(result,'ended');
+      done();
+    });
+  });
+
 });
