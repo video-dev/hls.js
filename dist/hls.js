@@ -2667,8 +2667,15 @@ var LevelController = function (_EventHandler) {
   }, {
     key: 'startLevel',
     get: function get() {
+      // hls.startLevel takes precedence over config.startLevel
+      // if none of these values are defined, fallback on this._firstLevel (first quality level appearing in variant manifest)
       if (this._startLevel === undefined) {
-        return this._firstLevel;
+        var configStartLevel = this.hls.config.startLevel;
+        if (configStartLevel !== undefined) {
+          return configStartLevel;
+        } else {
+          return this._firstLevel;
+        }
       } else {
         return this._startLevel;
       }
@@ -7670,6 +7677,7 @@ var Hls = function () {
           manifestLoadingMaxRetry: 1,
           manifestLoadingRetryDelay: 1000,
           manifestLoadingMaxRetryTimeout: 64000,
+          startLevel: undefined,
           levelLoadingTimeOut: 10000,
           levelLoadingMaxRetry: 4,
           levelLoadingRetryDelay: 1000,
@@ -9767,7 +9775,7 @@ var MP4Remuxer = function () {
 
         // If we're overlapping by more than half a duration, drop this sample
         if (delta < -0.5 * pesFrameDuration) {
-          _logger.logger.log('Dropping frame due to ' + Math.round(Math.abs(delta / 90)) + ' ms overlap.');
+          _logger.logger.warn('Dropping 1 audio frame @ ' + Math.round(nextPtsNorm / 90) / 1000 + 's due to ' + Math.round(Math.abs(delta / 90)) + ' ms overlap.');
           samples0.splice(i, 1);
           track.len -= sample.unit.length;
           // Don't touch nextPtsNorm or i
@@ -9775,9 +9783,9 @@ var MP4Remuxer = function () {
         // Otherwise, if we're more than half a frame away from where we should be, insert missing frames
         else if (delta > 0.5 * pesFrameDuration) {
             var missing = Math.round(delta / pesFrameDuration);
-            _logger.logger.log('Injecting ' + missing + ' frame' + (missing > 1 ? 's' : '') + ' of missing audio due to ' + Math.round(delta / 90) + ' ms gap.');
+            _logger.logger.warn('Injecting ' + missing + ' audio frame @ ' + Math.round(nextPtsNorm / 90) / 1000 + 's due to ' + Math.round(delta / 90) + ' ms gap.');
             for (var j = 0; j < missing; j++) {
-              newStamp = sample.pts - (missing - j) * pesFrameDuration;
+              newStamp = nextPtsNorm + this._initDTS;
               newStamp = Math.max(newStamp, this._initDTS);
               fillFrame = _aac2.default.getSilentFrame(track.channelCount);
               if (!fillFrame) {
@@ -9786,12 +9794,13 @@ var MP4Remuxer = function () {
               }
               samples0.splice(i, 0, { unit: fillFrame, pts: newStamp, dts: newStamp });
               track.len += fillFrame.length;
+              nextPtsNorm += pesFrameDuration;
               i += 1;
             }
 
             // Adjust sample to next expected pts
-            sample.pts = samples0[i - 1].pts + pesFrameDuration;
-            nextPtsNorm = this._PTSNormalize(sample.pts + pesFrameDuration - this._initDTS, nextAacPts);
+            sample.pts = nextPtsNorm + this._initDTS;
+            nextPtsNorm += pesFrameDuration;
             i += 1;
           }
           // Otherwise, we're within half a frame duration, so just adjust pts
