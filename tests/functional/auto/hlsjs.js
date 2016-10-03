@@ -4,6 +4,8 @@ var webdriver = require("selenium-webdriver");
 var chromedriver = require("chromedriver");
 var HttpServer = require("http-server");
 
+var STREAM_URL = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
+
 HttpServer.createServer({
   showDir: false,
   autoIndex: false,
@@ -38,23 +40,30 @@ describe("testing hls.js playback in the browser", function() {
     return this.browser.quit();
   });
 
-  it("should receive video loadeddata event", function(done) {
-    this.browser.executeAsyncScript(function() {
+  it("should receive video loadeddata event", function() {
+    return this.browser.executeAsyncScript(function(STREAM_URL) {
       var callback = arguments[arguments.length - 1];
-      testLoadedData(callback);
-    }).then(function(result) {
-      assert.strictEqual(result,'loadeddata');
-      done();
+      startStream(STREAM_URL, callback);
+      video.onloadeddata = function() {
+        callback('loadeddata');
+      };
+    }, STREAM_URL).then(function(result) {
+      assert.strictEqual(result, 'loadeddata');
     });
   });
 
-  it("should seek and receive video ended event", function(done) {
-    this.browser.executeAsyncScript(function() {
+  it("should seek and receive video ended event", function() {
+    return this.browser.executeAsyncScript(function(STREAM_URL) {
       var callback = arguments[arguments.length - 1];
-      testEnded(callback);
-    }).then(function(result) {
-      assert.strictEqual(result,'ended');
-      done();
+      startStream(STREAM_URL, callback);
+      video.onloadeddata = function() {
+        video.currentTime = video.duration - 5;
+      };
+      video.onended = function() {
+        callback('ended');
+      };
+    }, STREAM_URL).then(function(result) {
+      assert.strictEqual(result, 'ended');
     });
   });
 
