@@ -18,17 +18,17 @@
               hls = new Hls();
               hls.loadSource(streamUrl);
               hls.attachMedia(video);
-              hls.on(Hls.Events.MANIFEST_PARSED,function() {
+              hls.on(Hls.Events.MANIFEST_PARSED, function() {
                 video.play();
               });
-              hls.on(Hls.Events.ERROR,function(event,data) {
+              hls.on(Hls.Events.ERROR, function(event, data) {
                 if (data.fatal) {
                   callback(data.details);
                 }
-              }.bind(this));
+              });
               video.onerror = function(event) {
                 callback('video_error_' + video.error.code);
-              }.bind(this);
+              };
             } catch(err) {
               callback('exception');
             }

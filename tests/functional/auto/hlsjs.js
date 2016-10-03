@@ -58,7 +58,7 @@ describe("testing hls.js playback in the browser", function() {
       startStream(STREAM_URL, callback);
       video.onloadeddata = function() {
         video.currentTime = video.duration - 5;
-      }.bind(this);
+      };
       video.onended = function() {
         callback('ended');
       };
