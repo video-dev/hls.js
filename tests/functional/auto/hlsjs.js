@@ -21,6 +21,7 @@ describe("testing hls.js playback in the browser", function() {
         browserName : 'chrome'
       }).build();
     }
+    this.browser.manage().timeouts().setScriptTimeout(20000);
     return this.browser.get("http://localhost:8000/tests/functional/auto/hlsjs.html");
   });
 
@@ -29,8 +30,6 @@ describe("testing hls.js playback in the browser", function() {
   });
 
   it("should receive video loadeddata event", function(done) {
-
-    this.browser.manage().timeouts().setScriptTimeout(20000);
     this.browser.executeAsyncScript(function() {
       var callback = arguments[arguments.length - 1];
       testLoadedData(callback);
@@ -41,8 +40,6 @@ describe("testing hls.js playback in the browser", function() {
   });
 
   it("should seek and receive video ended event", function(done) {
-
-    this.browser.manage().timeouts().setScriptTimeout(20000);
     this.browser.executeAsyncScript(function() {
       var callback = arguments[arguments.length - 1];
       testEnded(callback);
