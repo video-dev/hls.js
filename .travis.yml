@@ -2,7 +2,7 @@ language: node_js
 node_js:
  - "5.4.1"
 
-script: npm install && npm run build && npm run serve & npm run testfunc
+script: npm install && npm run build && npm run testfunc
 
 addons:
   sauce_connect: true
