@@ -171,9 +171,11 @@ class LevelController extends EventHandler {
   }
 
   get startLevel() {
-    let configStartLevel = this.hls.config.startLevel;
+    // hls.startLevel takes precedence over config.startLevel
+    // if none of these values are defined, fallback on this._firstLevel (first quality level appearing in variant manifest)
     if (this._startLevel === undefined) {
-      if (this.hls.config.startLevel !== undefined) {
+      let configStartLevel = this.hls.config.startLevel;
+      if (configStartLevel !== undefined) {
         return configStartLevel;
       } else {
         return this._firstLevel;
