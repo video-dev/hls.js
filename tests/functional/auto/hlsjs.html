@@ -5,6 +5,8 @@
    <body>
 <video id="video"></video>
 <script>
+
+function testLoadedData(callback) {
   if(Hls.isSupported()) {
     var video = document.getElementById('video');
     try {
@@ -15,28 +17,21 @@
         video.play();
       });
       hls.on(Hls.Events.ERROR,function(event,data) {
-        sendMsg(data.details);
+        callback(data.details);
       }.bind(this));
       video.onloadeddata = function() {
-        sendMsg('loadeddata');
+        callback('loadeddata');
       }.bind(this);
       video.onerror = function(event) {
-        sendMsg('video_error_' + video.error.code);
+        callback('video_error_' + video.error.code);
       }.bind(this);
     } catch(err) {
-      sendMsg('exception');
+      callback('exception');
     }
- } else {
-    sendMsg('notSupported');
- }
-
-function sendMsg(msg) {
-  var e = document.createElement('div');
-  e.id = 'video_event';
-  e.setAttribute('msg',msg);
-  document.body.appendChild(e);
+  } else {
+    callback('notSupported');
+  }
 }
-
 </script>
    </body>
  </html>

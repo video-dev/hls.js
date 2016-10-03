@@ -29,16 +29,14 @@ describe("testing hls.js playback in the browser", function() {
   });
 
   it("should receive loadeddata event", function(done) {
-    this.browser.wait(function () {
-      return this.browser.isElementPresent(webdriver.By.id('video_event'));
-    }.bind(this), 20000)
-    .then(function() {
-        this.browser.findElement(webdriver.By.id('video_event')).then(function(element) {
-        element.getAttribute('msg').then(function(attribute) {
-          assert.strictEqual(attribute,'loadeddata');
-          done();
-        });
-      });
-    }.bind(this));
+
+    this.browser.manage().timeouts().setScriptTimeout(20000);
+    this.browser.executeAsyncScript(function() {
+      var callback = arguments[arguments.length - 1];
+      testLoadedData(callback);
+    }).then(function(result) {
+      assert.strictEqual(result,'loadeddata');
+      done();
+    });
   });
 });
