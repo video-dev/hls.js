@@ -1,5 +1,14 @@
 var assert = require("assert");
 var webdriver = require("selenium-webdriver");
+// requiring this automatically adds the chromedriver binary to the PATH
+var chromedriver = require("chromedriver");
+var HttpServer = require("http-server");
+
+HttpServer.createServer({
+  showDir: false,
+  autoIndex: false,
+  root: './',
+}).listen(8000, '0.0.0.0');
 
 describe("testing hls.js playback in the browser", function() {
   beforeEach(function() {
