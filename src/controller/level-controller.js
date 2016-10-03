@@ -172,7 +172,7 @@ class LevelController extends EventHandler {
 
   get startLevel() {
     if (this._startLevel === undefined) {
-      return this._firstLevel;
+      return this.hls.config.startLevel;
     } else {
       return this._startLevel;
     }
