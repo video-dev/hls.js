@@ -194,6 +194,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       manifestLoadingMaxRetry: 6,
       manifestLoadingRetryDelay: 500,
       manifestLoadingMaxRetryTimeout : 64000,
+      startLevel: undefined,
       levelLoadingTimeOut: 10000,
       levelLoadingMaxRetry: 6,
       levelLoadingRetryDelay: 500,
@@ -383,6 +384,12 @@ Enable WebWorker (if available on browser) for TS demuxing/MP4 remuxing, to impr
 (default: `true`)
 
 Enable to use JavaScript version AES decryption for fallback of WebCrypto API.
+
+#### `startLevel`
+
+(default: `undefined`)
+
+When set, use this level as the default hls.startLevel.
 
 #### `fragLoadingTimeOut` / `manifestLoadingTimeOut` / `levelLoadingTimeOut`
 
