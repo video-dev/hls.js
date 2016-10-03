@@ -1,7 +1,7 @@
 var assert = require("assert");
 var webdriver = require("selenium-webdriver");
 // requiring this automatically adds the chromedriver binary to the PATH
-var chromedriver = require("chromedriver");
+// TODO put back var chromedriver = require("chromedriver");
 
 describe("testing hls.js playback in the browser", function() {
   beforeEach(function() {
