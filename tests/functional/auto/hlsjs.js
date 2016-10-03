@@ -8,7 +8,7 @@ HttpServer.createServer({
   showDir: false,
   autoIndex: false,
   root: './',
-}).listen(8000, '0.0.0.0');
+}).listen(8000, '127.0.0.1');
 
 describe("testing hls.js playback in the browser", function() {
   beforeEach(function() {
