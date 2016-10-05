@@ -5237,8 +5237,8 @@ var ADTS = function () {
       // byte 3
       adtsChanelConfig |= (data[offset + 3] & 0xC0) >>> 6;
       _logger.logger.log('manifest codec:' + audioCodec + ',ADTS data:type:' + adtsObjectType + ',sampleingIndex:' + adtsSampleingIndex + '[' + adtsSampleingRates[adtsSampleingIndex] + 'Hz],channelConfig:' + adtsChanelConfig);
-      // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
-      if (userAgent.indexOf('firefox') !== -1) {
+      // firefox/Opera/Vivaldi: freq less than 24kHz = AAC SBR (HE-AAC)
+      if (/firefox|OPR|vivaldi/i.test(userAgent)) {
         if (adtsSampleingIndex >= 6) {
           adtsObjectType = 5;
           config = new Array(4);
@@ -6787,12 +6787,17 @@ var TSDemuxer = function () {
               track.pps = [unit.data];
             }
             break;
+          // AUD
           case 9:
             push = false;
             if (avcSample) {
               _this.pushAccesUnit(avcSample, track);
             }
             avcSample = _this.avcSample = { key: false, pts: pes.pts, dts: pes.dts, units: { units: [], length: 0 }, debug: debug ? 'AUD ' : '' };
+            break;
+          // Filler Data
+          case 12:
+            push = false;
             break;
           default:
             push = false;
@@ -9929,6 +9934,15 @@ var MP4Remuxer = function () {
       });
       samples0 = track.samples;
 
+      // for audio samples, also consider consecutive fragments as being contiguous (even if a level switch occurs),
+      // for sake of clarity:
+      // consecutive fragments are frags with less than 100ms gaps between new time offset and next expected PTS
+      // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
+      // this helps ensuring audio continuity
+      // and this also avoids audio glitches/cut when switching quality, or reporting wrong duration on first audio frame
+
+      contiguous |= samples0.length && this.nextAacPts && Math.abs(timeOffset - this.nextAacPts / pesTimeScale) < 0.1;
+
       var nextAacPts = contiguous ? this.nextAacPts : timeOffset * pesTimeScale;
 
       // If the audio track is missing samples, the frames seem to get "left-shifted" within the
@@ -9944,15 +9958,15 @@ var MP4Remuxer = function () {
             ptsNorm = this._PTSNormalize(sample.pts - this._initDTS, nextAacPts),
             delta = ptsNorm - nextPtsNorm;
 
-        // If we're overlapping by more than half a duration, drop this sample
-        if (delta < -0.5 * pesFrameDuration) {
+        // If we're overlapping by more than a duration, drop this sample
+        if (delta <= -pesFrameDuration) {
           _logger.logger.warn('Dropping 1 audio frame @ ' + Math.round(nextPtsNorm / 90) / 1000 + 's due to ' + Math.round(Math.abs(delta / 90)) + ' ms overlap.');
           samples0.splice(i, 1);
           track.len -= sample.unit.length;
           // Don't touch nextPtsNorm or i
         }
-        // Otherwise, if we're more than half a frame away from where we should be, insert missing frames
-        else if (delta > 0.5 * pesFrameDuration) {
+        // Otherwise, if we're more than a frame away from where we should be, insert missing frames
+        else if (delta >= pesFrameDuration) {
             var missing = Math.round(delta / pesFrameDuration);
             _logger.logger.warn('Injecting ' + missing + ' audio frame @ ' + Math.round(nextPtsNorm / 90) / 1000 + 's due to ' + Math.round(delta / 90) + ' ms gap.');
             for (var j = 0; j < missing; j++) {
@@ -9970,7 +9984,7 @@ var MP4Remuxer = function () {
             }
 
             // Adjust sample to next expected pts
-            sample.pts = nextPtsNorm + this._initDTS;
+            sample.pts = sample.dts = nextPtsNorm + this._initDTS;
             nextPtsNorm += pesFrameDuration;
             i += 1;
           }
@@ -9981,9 +9995,9 @@ var MP4Remuxer = function () {
               }
               nextPtsNorm += pesFrameDuration;
               if (i === 0) {
-                sample.pts = this._initDTS + nextAacPts;
+                sample.pts = sample.dts = this._initDTS + nextAacPts;
               } else {
-                sample.pts = samples0[i - 1].pts + pesFrameDuration;
+                sample.pts = sample.dts = samples0[i - 1].pts + pesFrameDuration;
               }
               i += 1;
             }
