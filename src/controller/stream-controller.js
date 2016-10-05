@@ -1465,7 +1465,7 @@ class StreamController extends EventHandler {
     }
 
     onError(data) {
-        let frag = data.frag;
+        let frag = data.frag || this.fragCurrent;
         // don't handle frag error not related to main fragment
         if (frag && frag.type !== 'main') {
             return;
@@ -1522,7 +1522,6 @@ class StreamController extends EventHandler {
                 break;
             case ErrorDetails.FRAG_LOOP_LOADING_ERROR:
                 if (!data.fatal) {
-                    let frag = data.frag;
                     // if buffer is not empty
                     if (mediaBuffered) {
                         // try to reduce max buffer length : rationale is that we could get
@@ -1557,13 +1556,30 @@ class StreamController extends EventHandler {
                 }
                 break;
             case ErrorDetails.BUFFER_FULL_ERROR:
-                // only reduce max buf len if in appending state
+                // if in appending state
                 if (
                     this.state === State.PARSING ||
                     this.state === State.PARSED
                 ) {
-                    this._reduceMaxMaxBufferLength();
-                    this.state = State.IDLE;
+                    // reduce max buf len if current position is buffered
+                    if (mediaBuffered) {
+                        this._reduceMaxMaxBufferLength(frag.duration);
+                        this.state = State.IDLE;
+                    } else {
+                        // current position is not buffered, but browser is still complaining about buffer full error
+                        // this happens on IE/Edge, refer to https://github.com/dailymotion/hls.js/pull/708
+                        // in that case flush the whole buffer to recover
+                        logger.warn(
+                            'buffer full error also media.currentTime is not buffered, flush everything'
+                        );
+                        this.fragCurrent = null;
+                        this.state = State.PAUSED;
+                        // flush everything
+                        this.hls.trigger(Event.BUFFER_FLUSHING, {
+                            startOffset: 0,
+                            endOffset: Number.POSITIVE_INFINITY
+                        });
+                    }
                 }
                 break;
             default:
