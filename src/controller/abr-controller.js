@@ -146,7 +146,7 @@ class AbrController extends EventHandler {
     // stop monitoring bw once frag loaded
     this.clearTimer();
     // store level id after successful fragment load
-    this.lastLoadedFragLevel = data.frag.level;
+    this.lastLoadedFragLevel = frag.level;
     // reset forced auto level value so that next level will be selected
     this._nextAutoLevel = -1;
   }
