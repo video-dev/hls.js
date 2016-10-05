@@ -990,7 +990,8 @@ class StreamController extends EventHandler {
   onError(data) {
     let media = this.media,
         // 0.4 : tolerance needed as some browsers stalls playback before reaching buffered end
-        mediaBuffered = media && this.isBuffered(media.currentTime) && this.isBuffered(media.currentTime+0.4);
+        mediaBuffered = media && this.isBuffered(media.currentTime) && this.isBuffered(media.currentTime+0.4),
+        frag = data.frag || this.fragCurrent;
     switch(data.details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
@@ -1005,7 +1006,7 @@ class StreamController extends EventHandler {
           if (loadError <= this.config.fragLoadingMaxRetry || mediaBuffered) {
             this.fragLoadError = loadError;
             // reset load counter to avoid frag loop loading error
-            data.frag.loadCounter = 0;
+            frag.loadCounter = 0;
             // exponential backoff capped to 64s
             var delay = Math.min(Math.pow(2,loadError-1)*this.config.fragLoadingRetryDelay,64000);
             logger.warn(`mediaController: frag loading failed, retry in ${delay} ms`);
@@ -1023,7 +1024,6 @@ class StreamController extends EventHandler {
         break;
       case ErrorDetails.FRAG_LOOP_LOADING_ERROR:
         if(!data.fatal) {
-          let frag = data.frag;
           // if buffer is not empty
           if (mediaBuffered) {
             // try to reduce max buffer length : rationale is that we could get
@@ -1056,7 +1056,7 @@ class StreamController extends EventHandler {
       case ErrorDetails.BUFFER_FULL_ERROR:
         // only reduce max buf len if in appending state
         if (this.state === State.PARSING || this.state === State.PARSED) {
-          this._reduceMaxMaxBufferLength();
+          this._reduceMaxMaxBufferLength(frag.duration);
           this.state = State.IDLE;
         }
         break;
