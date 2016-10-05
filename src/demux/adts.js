@@ -32,8 +32,8 @@ import {ErrorTypes, ErrorDetails} from '../errors';
     // byte 3
     adtsChanelConfig |= ((data[offset + 3] & 0xC0) >>> 6);
     logger.log(`manifest codec:${audioCodec},ADTS data:type:${adtsObjectType},sampleingIndex:${adtsSampleingIndex}[${adtsSampleingRates[adtsSampleingIndex]}Hz],channelConfig:${adtsChanelConfig}`);
-    // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
-    if (userAgent.indexOf('firefox') !== -1) {
+    // firefox/Opera/Vivaldi: freq less than 24kHz = AAC SBR (HE-AAC)
+    if (/firefox|OPR|vivaldi/i.test(userAgent)) {
       if (adtsSampleingIndex >= 6) {
         adtsObjectType = 5;
         config = new Array(4);
