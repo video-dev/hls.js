@@ -78,6 +78,7 @@ class Hls {
                 manifestLoadingMaxRetry: 1,
                 manifestLoadingRetryDelay: 1000,
                 manifestLoadingMaxRetryTimeout: 64000,
+                startLevel: undefined,
                 levelLoadingTimeOut: 10000,
                 levelLoadingMaxRetry: 4,
                 levelLoadingRetryDelay: 1000,
@@ -115,7 +116,8 @@ class Hls {
                 abrEwmaSlowVoD: 15,
                 abrEwmaDefaultEstimate: 5e5, // 500 kbps
                 abrBandWidthFactor: 0.8,
-                abrBandWidthUpFactor: 0.7
+                abrBandWidthUpFactor: 0.7,
+                maxStarvationDelay: 4
             };
         }
         return Hls.defaultConfig;
