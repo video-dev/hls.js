@@ -1,0 +1,41 @@
+<html>
+   <head>
+      <script src="/dist/hls.js"></script>
+    </head>
+    <body>
+      <video id="video"></video>
+      <script>
+        var video, hls;
+
+        function startStream(streamUrl, callback) {
+          if (Hls.isSupported()) {
+            if (hls) {
+             callback('hlsjsAlreadyInitialised');
+             return;
+            }
+            video = document.getElementById('video');
+            try {
+              hls = new Hls();
+              hls.loadSource(streamUrl);
+              hls.attachMedia(video);
+              hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                video.play();
+              });
+              hls.on(Hls.Events.ERROR, function(event, data) {
+                if (data.fatal) {
+                  callback(data.details);
+                }
+              });
+              video.onerror = function(event) {
+                callback('video_error_' + video.error.code);
+              };
+            } catch(err) {
+              callback('exception');
+            }
+          } else {
+            callback('notSupported');
+          }
+        }
+      </script>
+    </body>
+ </html>

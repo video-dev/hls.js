@@ -194,6 +194,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       manifestLoadingMaxRetry: 6,
       manifestLoadingRetryDelay: 500,
       manifestLoadingMaxRetryTimeout : 64000,
+      startLevel: undefined,
       levelLoadingTimeOut: 10000,
       levelLoadingMaxRetry: 6,
       levelLoadingRetryDelay: 500,
@@ -298,8 +299,14 @@ In case playback is stalled, and a buffered range is available upfront, less tha
 hls.js will jump over this buffer hole to reach the beginning of this following buffered range.
 `maxSeekHole` allows to configure this jumpable threshold.
 
-#### `seekHoleNudgeDuration`
+#### ```maxStarvationDelay```
+(default 4s)
 
+ABR algorithm will always try to choose a quality level that should avoid rebuffering.
+In case no quality level with this criteria can be found (lets say for example that buffer length is 1s, but fetching a fragment at lowest quality is predicted to take around 2s ... ie we can forecast around 1s of rebuffering ...) then ABR algorithm will try to find a level that should guarantee less than ```maxStarvationDelay``` of buffering.
+this max delay is also used in  automatic start level selection : in that mode ABR controller will ensure that video loading time (ie the time to fetch the first fragment at lowest quality level + the time to fetch the fragment at the appropriate quality level is less than ```maxStarvationDelay``` )
+
+#### ```seekHoleNudgeDuration```
 (default 0.01s)
 
 In case playback is still stalling although a seek over buffer hole just occured, hls.js will seek to next buffer start + (number of consecutive stalls * `seekHoleNudgeDuration`) to try to restore playback.
@@ -383,6 +390,12 @@ Enable WebWorker (if available on browser) for TS demuxing/MP4 remuxing, to impr
 (default: `true`)
 
 Enable to use JavaScript version AES decryption for fallback of WebCrypto API.
+
+#### `startLevel`
+
+(default: `undefined`)
+
+When set, use this level as the default hls.startLevel. Keep in mind that the startLevel set with the API takes precedence over config.startLevel configuration parameter.
 
 #### `fragLoadingTimeOut` / `manifestLoadingTimeOut` / `levelLoadingTimeOut`
 

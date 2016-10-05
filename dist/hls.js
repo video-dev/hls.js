@@ -2667,8 +2667,15 @@ var LevelController = function (_EventHandler) {
   }, {
     key: 'startLevel',
     get: function get() {
+      // hls.startLevel takes precedence over config.startLevel
+      // if none of these values are defined, fallback on this._firstLevel (first quality level appearing in variant manifest)
       if (this._startLevel === undefined) {
-        return this._firstLevel;
+        var configStartLevel = this.hls.config.startLevel;
+        if (configStartLevel !== undefined) {
+          return configStartLevel;
+        } else {
+          return this._firstLevel;
+        }
       } else {
         return this._startLevel;
       }
@@ -3001,12 +3008,17 @@ var StreamController = function (_EventHandler) {
       var levelDetails = _ref.levelDetails;
 
       var fragPrevious = this.fragPrevious,
-          level = this.level;
+          level = this.level,
+          fragments = levelDetails.fragments,
+          fragLen = fragments.length;
+
+      // empty playlist
+      if (fragLen === 0) {
+        return false;
+      }
 
       // find fragment index, contiguous with end of buffer position
-      var fragments = levelDetails.fragments,
-          fragLen = fragments.length,
-          start = fragments[0].start,
+      var start = fragments[0].start,
           end = fragments[fragLen - 1].start + fragments[fragLen - 1].duration,
           bufferEnd = bufferInfo.end,
           frag = void 0;
@@ -7619,7 +7631,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.2-7';
+      return '0.6.3';
     }
   }, {
     key: 'Events',
@@ -7665,6 +7677,7 @@ var Hls = function () {
           manifestLoadingMaxRetry: 1,
           manifestLoadingRetryDelay: 1000,
           manifestLoadingMaxRetryTimeout: 64000,
+          startLevel: undefined,
           levelLoadingTimeOut: 10000,
           levelLoadingMaxRetry: 4,
           levelLoadingRetryDelay: 1000,
@@ -9762,7 +9775,7 @@ var MP4Remuxer = function () {
 
         // If we're overlapping by more than half a duration, drop this sample
         if (delta < -0.5 * pesFrameDuration) {
-          _logger.logger.log('Dropping frame due to ' + Math.round(Math.abs(delta / 90)) + ' ms overlap.');
+          _logger.logger.warn('Dropping 1 audio frame @ ' + Math.round(nextPtsNorm / 90) / 1000 + 's due to ' + Math.round(Math.abs(delta / 90)) + ' ms overlap.');
           samples0.splice(i, 1);
           track.len -= sample.unit.length;
           // Don't touch nextPtsNorm or i
@@ -9770,9 +9783,9 @@ var MP4Remuxer = function () {
         // Otherwise, if we're more than half a frame away from where we should be, insert missing frames
         else if (delta > 0.5 * pesFrameDuration) {
             var missing = Math.round(delta / pesFrameDuration);
-            _logger.logger.log('Injecting ' + missing + ' frame' + (missing > 1 ? 's' : '') + ' of missing audio due to ' + Math.round(delta / 90) + ' ms gap.');
+            _logger.logger.warn('Injecting ' + missing + ' audio frame @ ' + Math.round(nextPtsNorm / 90) / 1000 + 's due to ' + Math.round(delta / 90) + ' ms gap.');
             for (var j = 0; j < missing; j++) {
-              newStamp = sample.pts - (missing - j) * pesFrameDuration;
+              newStamp = nextPtsNorm + this._initDTS;
               newStamp = Math.max(newStamp, this._initDTS);
               fillFrame = _aac2.default.getSilentFrame(track.channelCount);
               if (!fillFrame) {
@@ -9781,12 +9794,13 @@ var MP4Remuxer = function () {
               }
               samples0.splice(i, 0, { unit: fillFrame, pts: newStamp, dts: newStamp });
               track.len += fillFrame.length;
+              nextPtsNorm += pesFrameDuration;
               i += 1;
             }
 
             // Adjust sample to next expected pts
-            sample.pts = samples0[i - 1].pts + pesFrameDuration;
-            nextPtsNorm = this._PTSNormalize(sample.pts + pesFrameDuration - this._initDTS, nextAacPts);
+            sample.pts = nextPtsNorm + this._initDTS;
+            nextPtsNorm += pesFrameDuration;
             i += 1;
           }
           // Otherwise, we're within half a frame duration, so just adjust pts

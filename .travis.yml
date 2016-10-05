@@ -1,8 +1,8 @@
 language: node_js
 node_js:
- - "5.4.1"
-
-script: npm install && npm run build
-
+- 5.4.1
+script: npm install && npm run build && npm run testfunc
 addons:
   sauce_connect: true
+  jwt:
+    secure: TxJT041jqRf4raCwtNJRb0rz2gGvEaADZjWO41UQND2+YIZ//S9qB2C4YyrL1BBsn8/ebdHr0cd18PwCzoBSEmoCdoAWXmqBaaLvM1DOeQkKJbU3+pFmWtv1qGqRXJLEAysNvzhG0sLdvBc0M7a/CWxqRfx1O3lGhLnTlAW33LlQndjJ8vh3SGQm8HxFR1503ujPd7V1jGwduVwaQp4zbAKTnQ4MLugmJf6UKiTc+YILMrVWOwipOIyYHh2GqbChd/v1PXff26XCNJXcaRZKJ8JosWyBpq5t4zlPO0qDfHpqbEuYK44xm4vzbZS94P/KF8BYzdtxQYLrxoS1UlnUYU7RmzqgL3y3AM7nzX/cXvJcoNXfUK2BpsB754XNyQfRmXOdRiHoC8+wwPqGkH/KCrmS4UIOqv4THfmDbrtewfcDTgKOzHxGcT1IsUq9BTxMNtxSwpHTHUXTXrzpS/UBDvrlc+9qPTqf+e6QL1aG+JT5sOg5REm2hMy0j18/Kr+HLXkehxEgJ6JrybyHUkkJrfcuWgVDu7Lv3cxlrtSMXi7TIwSB75NMoM8AE71GEVjXwpOw/0giwnmGsJNNi01ztod0UFe2V2rS+yPI1WNZIJ7Fw66U0oOKJ1rb4Iksl86n5Y2snHsxK8q5jhKaAaiWgGK5kVTAgF89t/GXYyNH6cI=
