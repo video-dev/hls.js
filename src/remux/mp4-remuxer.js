@@ -529,6 +529,18 @@ class MP4Remuxer {
         });
         samples0 = track.samples;
 
+        // for audio samples, also consider consecutive fragments as being contiguous (even if a level switch occurs),
+        // for sake of clarity:
+        // consecutive fragments are frags with less than 100ms gaps between new time offset and next expected PTS
+        // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
+        // this helps ensuring audio continuity
+        // and this also avoids audio glitches/cut when switching quality, or reporting wrong duration on first audio frame
+
+        contiguous |=
+            samples0.length &&
+            this.nextAacPts &&
+            Math.abs(timeOffset - this.nextAacPts / pesTimeScale) < 0.1;
+
         let nextAacPts = contiguous
             ? this.nextAacPts
             : timeOffset * pesTimeScale;
@@ -549,8 +561,8 @@ class MP4Remuxer {
                 ),
                 delta = ptsNorm - nextPtsNorm;
 
-            // If we're overlapping by more than half a duration, drop this sample
-            if (delta < -0.5 * pesFrameDuration) {
+            // If we're overlapping by more than a duration, drop this sample
+            if (delta <= -pesFrameDuration) {
                 logger.warn(
                     `Dropping 1 audio frame @ ${Math.round(nextPtsNorm / 90) /
                         1000}s due to ${Math.round(
@@ -560,8 +572,8 @@ class MP4Remuxer {
                 samples0.splice(i, 1);
                 track.len -= sample.unit.length;
                 // Don't touch nextPtsNorm or i
-            } else if (delta > 0.5 * pesFrameDuration) {
-                // Otherwise, if we're more than half a frame away from where we should be, insert missing frames
+            } else if (delta >= pesFrameDuration) {
+                // Otherwise, if we're more than a frame away from where we should be, insert missing frames
                 var missing = Math.round(delta / pesFrameDuration);
                 logger.warn(
                     `Injecting ${missing} audio frame @ ${Math.round(
@@ -589,7 +601,7 @@ class MP4Remuxer {
                 }
 
                 // Adjust sample to next expected pts
-                sample.pts = nextPtsNorm + this._initDTS;
+                sample.pts = sample.dts = nextPtsNorm + this._initDTS;
                 nextPtsNorm += pesFrameDuration;
                 i += 1;
             } else {
@@ -599,9 +611,10 @@ class MP4Remuxer {
                 }
                 nextPtsNorm += pesFrameDuration;
                 if (i === 0) {
-                    sample.pts = this._initDTS + nextAacPts;
+                    sample.pts = sample.dts = this._initDTS + nextAacPts;
                 } else {
-                    sample.pts = samples0[i - 1].pts + pesFrameDuration;
+                    sample.pts = sample.dts =
+                        samples0[i - 1].pts + pesFrameDuration;
                 }
                 i += 1;
             }
