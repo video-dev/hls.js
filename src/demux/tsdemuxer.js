@@ -693,6 +693,7 @@ class TSDemuxer {
                         track.pps = [unit.data];
                     }
                     break;
+                // AUD
                 case 9:
                     push = false;
                     if (avcSample) {
@@ -705,6 +706,10 @@ class TSDemuxer {
                         units: { units: [], length: 0 },
                         debug: debug ? 'AUD ' : ''
                     };
+                    break;
+                // Filler Data
+                case 12:
+                    push = false;
                     break;
                 default:
                     push = false;
