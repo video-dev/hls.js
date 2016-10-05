@@ -47,8 +47,8 @@ class ADTS {
                 adtsSampleingRates[adtsSampleingIndex]
             }Hz],channelConfig:${adtsChanelConfig}`
         );
-        // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
-        if (userAgent.indexOf('firefox') !== -1) {
+        // firefox/Opera/Vivaldi: freq less than 24kHz = AAC SBR (HE-AAC)
+        if (/firefox|OPR|vivaldi/i.test(userAgent)) {
             if (adtsSampleingIndex >= 6) {
                 adtsObjectType = 5;
                 config = new Array(4);
