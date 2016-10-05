@@ -98,13 +98,13 @@ class TimelineController extends EventHandler {
   getExistingTrack(channelNumber)
   {
     let media = this.media;
-    if(media)
+    if (media)
     {
-      for(let i=0; i<media.textTracks.length; i++)
+      for (let i = 0; i < media.textTracks.length; i++)
       {
         let textTrack = media.textTracks[i];
         let propName = 'textTrack' + channelNumber;
-        if(textTrack[propName] === true)
+        if (textTrack[propName] === true)
         {
           return textTrack;
         }
