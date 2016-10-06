@@ -473,25 +473,50 @@ class AudioStreamController extends EventHandler {
     }
 
     onAudioTrackLoaded(data) {
-        var details = data.details,
+        var newDetails = data.details,
             trackId = data.id,
             track = this.tracks[trackId],
-            duration = details.totalduration;
+            duration = newDetails.totalduration,
+            sliding = 0;
 
         logger.log(
-            `track ${trackId} loaded [${details.startSN},${
-                details.endSN
+            `track ${trackId} loaded [${newDetails.startSN},${
+                newDetails.endSN
             }],duration:${duration}`
         );
-        details.PTSKnown = false;
-        track.details = details;
+
+        if (newDetails.live) {
+            var curDetails = track.details;
+            if (curDetails && newDetails.fragments.length > 0) {
+                // we already have details for that level, merge them
+                LevelHelper.mergeDetails(curDetails, newDetails);
+                sliding = newDetails.fragments[0].start;
+                // TODO
+                //this.liveSyncPosition = this.computeLivePosition(sliding, curDetails);
+                if (newDetails.PTSKnown) {
+                    logger.log(
+                        `live audio playlist sliding:${sliding.toFixed(3)}`
+                    );
+                } else {
+                    logger.log(
+                        'live audio playlist - outdated PTS, unknown sliding'
+                    );
+                }
+            } else {
+                newDetails.PTSKnown = false;
+                logger.log('live audio playlist - first load, unknown sliding');
+            }
+        } else {
+            newDetails.PTSKnown = false;
+        }
+        track.details = newDetails;
 
         // compute start position
         if (!this.startFragRequested) {
             // compute start position if set to -1. use it straight away if value is defined
             if (this.startPosition === -1) {
                 // first, check if start time offset has been set in playlist, if yes, use this value
-                let startTimeOffset = details.startTimeOffset;
+                let startTimeOffset = newDetails.startTimeOffset;
                 if (!isNaN(startTimeOffset)) {
                     logger.log(
                         `start time offset found in playlist, adjust startPosition to ${startTimeOffset}`
