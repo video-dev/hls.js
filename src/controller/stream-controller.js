@@ -691,7 +691,7 @@ class StreamController extends EventHandler {
         var rangeCurrent,
             currentTime,
             video = this.media;
-        if (video && video.seeking === false) {
+        if (video && video.readyState && video.seeking === false) {
             currentTime = video.currentTime;
             /* if video element is in seeked state, currentTime can only increase.
         (assuming that playback rate is positive ...)
@@ -1036,7 +1036,7 @@ class StreamController extends EventHandler {
 
         if (this.startFragRequested === false) {
             // compute start position if set to -1. use it straight away if value is defined
-            if (this.startPosition === -1) {
+            if (this.startPosition === -1 || this.lastCurrentTime === -1) {
                 // first, check if start time offset has been set in playlist, if yes, use this value
                 let startTimeOffset = newDetails.startTimeOffset;
                 if (!isNaN(startTimeOffset)) {
@@ -1709,6 +1709,11 @@ class StreamController extends EventHandler {
 
     onFragLoadEmergencyAborted() {
         this.state = State.IDLE;
+        // if loadedmetadata is not set, it means that we are emergency switch down on first frag
+        // in that case, reset startFragRequested flag
+        if (!this.loadedmetadata) {
+            this.startFragRequested = false;
+        }
         this.tick();
     }
 
