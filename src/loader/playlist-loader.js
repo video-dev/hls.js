@@ -305,7 +305,8 @@ class PlaylistLoader extends EventHandler {
           let startParams = result[1];
           let startAttrs = new AttrList(startParams);
           let startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
-          if (startTimeOffset) {
+          //TIME-OFFSET can be 0
+          if ( !isNaN(startTimeOffset) ) {
             level.startTimeOffset = startTimeOffset;
           }
           break;
