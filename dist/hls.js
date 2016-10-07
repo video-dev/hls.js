@@ -3357,7 +3357,7 @@ var StreamController = function (_EventHandler) {
       var rangeCurrent,
           currentTime,
           video = this.media;
-      if (video && video.seeking === false) {
+      if (video && video.readyState && video.seeking === false) {
         currentTime = video.currentTime;
         /* if video element is in seeked state, currentTime can only increase.
           (assuming that playback rate is positive ...)
@@ -3679,7 +3679,7 @@ var StreamController = function (_EventHandler) {
 
       if (this.startFragRequested === false) {
         // compute start position if set to -1. use it straight away if value is defined
-        if (this.startPosition === -1) {
+        if (this.startPosition === -1 || this.lastCurrentTime === -1) {
           // first, check if start time offset has been set in playlist, if yes, use this value
           var startTimeOffset = newDetails.startTimeOffset;
           if (!isNaN(startTimeOffset)) {
@@ -4194,6 +4194,11 @@ var StreamController = function (_EventHandler) {
     key: 'onFragLoadEmergencyAborted',
     value: function onFragLoadEmergencyAborted() {
       this.state = State.IDLE;
+      // if loadedmetadata is not set, it means that we are emergency switch down on first frag
+      // in that case, reset startFragRequested flag
+      if (!this.loadedmetadata) {
+        this.startFragRequested = false;
+      }
       this.tick();
     }
   }, {
@@ -5237,8 +5242,8 @@ var ADTS = function () {
       // byte 3
       adtsChanelConfig |= (data[offset + 3] & 0xC0) >>> 6;
       _logger.logger.log('manifest codec:' + audioCodec + ',ADTS data:type:' + adtsObjectType + ',sampleingIndex:' + adtsSampleingIndex + '[' + adtsSampleingRates[adtsSampleingIndex] + 'Hz],channelConfig:' + adtsChanelConfig);
-      // firefox/Opera/Vivaldi: freq less than 24kHz = AAC SBR (HE-AAC)
-      if (/firefox|OPR|vivaldi/i.test(userAgent)) {
+      // firefox/Opera: freq less than 24kHz = AAC SBR (HE-AAC)
+      if (/firefox|OPR/i.test(userAgent)) {
         if (adtsSampleingIndex >= 6) {
           adtsObjectType = 5;
           config = new Array(4);
@@ -5257,7 +5262,7 @@ var ADTS = function () {
           config = new Array(2);
           adtsExtensionSampleingIndex = adtsSampleingIndex;
         } else {
-          /*  for other browsers (chrome ...)
+          /*  for other browsers (Chrome/Vivaldi ...)
               always force audio type to be HE-AAC SBR, as some browsers do not support audio codec switch properly (like Chrome ...)
           */
           adtsObjectType = 5;
@@ -7806,7 +7811,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.3';
+      return '0.6.4';
     }
   }, {
     key: 'Events',
@@ -8841,7 +8846,8 @@ var PlaylistLoader = function (_EventHandler) {
             var startParams = result[1];
             var startAttrs = new _attrList2.default(startParams);
             var startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
-            if (startTimeOffset) {
+            //TIME-OFFSET can be 0
+            if (!isNaN(startTimeOffset)) {
               level.startTimeOffset = startTimeOffset;
             }
             break;
@@ -8890,7 +8896,7 @@ var PlaylistLoader = function (_EventHandler) {
       if (string.indexOf('#EXTM3U') === 0) {
         if (string.indexOf('#EXTINF:') > 0) {
           var isLevel = type !== 'audioTrack',
-              levelDetails = this.parseLevelPlaylist(string, url, level || id || 0, isLevel ? 'main' : 'audio');
+              levelDetails = this.parseLevelPlaylist(string, url, isLevel ? level : id || 0, isLevel ? 'main' : 'audio');
           levelDetails.tload = stats.tload;
           if (type === 'manifest') {
             // first request, stream manifest (no master playlist), fire manifest loaded event with level details
