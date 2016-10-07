@@ -6678,7 +6678,11 @@ var TSDemuxer = function () {
           //IDR
           case 5:
             push = true;
-            if (debug && avcSample) {
+            // handle PES not starting with AUD
+            if (!avcSample) {
+              avcSample = _this.avcSample = _this._createAVCSample(true, pes.pts, pes.dts, '');
+            }
+            if (debug) {
               avcSample.debug += 'IDR ';
             }
             avcSample.key = true;
@@ -6798,7 +6802,7 @@ var TSDemuxer = function () {
             if (avcSample) {
               _this.pushAccesUnit(avcSample, track);
             }
-            avcSample = _this.avcSample = { key: false, pts: pes.pts, dts: pes.dts, units: { units: [], length: 0 }, debug: debug ? 'AUD ' : '' };
+            avcSample = _this.avcSample = _this._createAVCSample(false, pes.pts, pes.dts, debug ? 'AUD ' : '');
             break;
           // Filler Data
           case 12:
@@ -6821,6 +6825,11 @@ var TSDemuxer = function () {
         this.pushAccesUnit(avcSample, track);
         this.avcSample = null;
       }
+    }
+  }, {
+    key: '_createAVCSample',
+    value: function _createAVCSample(key, pts, dts, debug) {
+      return { key: key, pts: pts, dts: dts, units: { units: [], length: 0 }, debug: debug };
     }
   }, {
     key: '_insertSampleInOrder',
