@@ -450,7 +450,11 @@
         //IDR
         case 5:
           push = true;
-          if(debug && avcSample) {
+          // handle PES not starting with AUD
+          if (!avcSample) {
+            avcSample = this.avcSample = this._createAVCSample(true,pes.pts,pes.dts,'');
+          }
+          if(debug) {
             avcSample.debug += 'IDR ';
           }
           avcSample.key = true;
@@ -573,7 +577,7 @@
           if (avcSample) {
             this.pushAccesUnit(avcSample,track);
           }
-          avcSample = this.avcSample = { key : false, pts : pes.pts, dts : pes.dts, units : { units : [], length : 0}, debug : debug ? 'AUD ': ''};
+          avcSample = this.avcSample = this._createAVCSample(false,pes.pts,pes.dts,debug ? 'AUD ': '');
           break;
         // Filler Data
         case 12:
@@ -596,6 +600,10 @@
       this.pushAccesUnit(avcSample,track);
       this.avcSample = null;
     }
+  }
+
+  _createAVCSample(key,pts,dts,debug) {
+    return { key : key, pts : pts, dts : dts, units : { units : [], length : 0}, debug : debug};
   }
 
   _insertSampleInOrder(arr, data) {
