@@ -83,7 +83,10 @@ As of today, it is supported on:
  * Chrome for Desktop 34+
  * Firefox for Android 41+
  * Firefox for Desktop 42+
- * IE11+ for Windows 8.1
+ * IE11+ for Windows 8.1+
+ * Edge for Windows 10+
+ * Opera for Desktop
+ * Vivaldi for Desktop
  * Safari for Mac 8+ (beta)
 
 ## CORS

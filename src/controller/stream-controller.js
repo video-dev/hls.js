@@ -538,7 +538,7 @@ class StreamController extends EventHandler {
 
   _checkFragmentChanged() {
     var rangeCurrent, currentTime, video = this.media;
-    if (video && video.seeking === false) {
+    if (video && video.readyState && video.seeking === false) {
       currentTime = video.currentTime;
       /* if video element is in seeked state, currentTime can only increase.
         (assuming that playback rate is positive ...)
@@ -838,7 +838,7 @@ class StreamController extends EventHandler {
 
     if (this.startFragRequested === false) {
     // compute start position if set to -1. use it straight away if value is defined
-      if (this.startPosition === -1) {
+      if (this.startPosition === -1 || this.lastCurrentTime === -1) {
         // first, check if start time offset has been set in playlist, if yes, use this value
         let startTimeOffset = newDetails.startTimeOffset;
         if(!isNaN(startTimeOffset)) {
@@ -1164,7 +1164,7 @@ class StreamController extends EventHandler {
   }
 
   onError(data) {
-    let frag = data.frag;
+    let frag = data.frag || this.fragCurrent;
     // don't handle frag error not related to main fragment
     if (frag && frag.type !== 'main') {
       return;
@@ -1182,14 +1182,16 @@ class StreamController extends EventHandler {
           } else {
             loadError=1;
           }
+          let config = this.config;
           // keep retrying / don't raise fatal network error if current position is buffered
-          if (loadError <= this.config.fragLoadingMaxRetry || mediaBuffered) {
+          if (loadError <= config.fragLoadingMaxRetry || mediaBuffered) {
             this.fragLoadError = loadError;
             // reset load counter to avoid frag loop loading error
             frag.loadCounter = 0;
             var delay = 0;
             if (this.config.loadingBackOff) {
-              delay = Math.min(Math.pow(2,loadError-1)*this.config.fragLoadingRetryDelay,64000);
+              // exponential backoff capped to config.fragLoadingMaxRetryTimeout
+              delay = Math.min(Math.pow(2,loadError-1)*config.fragLoadingRetryDelay,config.fragLoadingMaxRetryTimeout);
               logger.warn(`mediaController: frag loading failed, retry in ${delay} ms`);
             }
             this.retryDate = performance.now() + delay;
@@ -1206,7 +1208,6 @@ class StreamController extends EventHandler {
         break;
       case ErrorDetails.FRAG_LOOP_LOADING_ERROR:
         if(!data.fatal) {
-          let frag = data.frag;
           // if buffer is not empty
           if (mediaBuffered) {
             // try to reduce max buffer length : rationale is that we could get
@@ -1237,10 +1238,22 @@ class StreamController extends EventHandler {
         }
         break;
       case ErrorDetails.BUFFER_FULL_ERROR:
-        // only reduce max buf len if in appending state
+        // if in appending state
         if (this.state === State.PARSING || this.state === State.PARSED) {
-          this._reduceMaxMaxBufferLength();
-          this.state = State.IDLE;
+          // reduce max buf len if current position is buffered
+          if (mediaBuffered) {
+            this._reduceMaxMaxBufferLength(frag.duration);
+            this.state = State.IDLE;
+          } else {
+            // current position is not buffered, but browser is still complaining about buffer full error
+            // this happens on IE/Edge, refer to https://github.com/dailymotion/hls.js/pull/708
+            // in that case flush the whole buffer to recover
+            logger.warn('buffer full error also media.currentTime is not buffered, flush everything');
+            this.fragCurrent = null;
+            this.state = State.PAUSED;
+            // flush everything
+            this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0, endOffset: Number.POSITIVE_INFINITY});
+          }
         }
         break;
       default:
@@ -1337,6 +1350,11 @@ _checkBuffer() {
 
   onFragLoadEmergencyAborted() {
     this.state = State.IDLE;
+    // if loadedmetadata is not set, it means that we are emergency switch down on first frag
+    // in that case, reset startFragRequested flag
+    if(!this.loadedmetadata) {
+      this.startFragRequested = false;
+    }
     this.tick();
   }
 
