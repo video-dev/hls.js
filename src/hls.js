@@ -53,6 +53,7 @@ class Hls {
        Hls.defaultConfig = {
           autoStartLoad: true,
           startPosition: -1,
+          defaultAudioCodec: undefined,
           debug: false,
           capLevelOnFPSDrop: false,
           capLevelToPlayerSize: false,
@@ -60,9 +61,9 @@ class Hls {
           maxBufferSize: 60 * 1000 * 1000,
           maxBufferHole: 0.5,
           maxSeekHole: 2,
-          seekHoleNudgeDuration : 0.01,
+          seekHoleNudgeDuration: 0.01,
           stalledInBufferedNudgeThreshold: 10,
-          maxFragLookUpTolerance : 0.2,
+          maxFragLookUpTolerance: 0.2,
           liveSyncDurationCount:3,
           liveMaxLatencyDurationCount: Infinity,
           liveSyncDuration: undefined,
@@ -74,6 +75,7 @@ class Hls {
           manifestLoadingMaxRetry: 1,
           manifestLoadingRetryDelay: 1000,
           manifestLoadingMaxRetryTimeout: 64000,
+          startLevel: undefined,
           levelLoadingTimeOut: 10000,
           levelLoadingMaxRetry: 4,
           levelLoadingRetryDelay: 1000,
@@ -93,16 +95,18 @@ class Hls {
           //loader: FetchLoader,
           fLoader: undefined,
           pLoader: undefined,
-          abrController : AbrController,
-          bufferController : BufferController,
-          capLevelController : CapLevelController,
+          xhrSetup: undefined,
+          fetchSetup: undefined,
+          abrController: AbrController,
+          bufferController: BufferController,
+          capLevelController: CapLevelController,
           fpsController: FPSController,
           streamController: StreamController,
-          audioStreamController : AudioStreamController,
+          audioStreamController: AudioStreamController,
           timelineController: TimelineController,
           cueHandler: Cues,
           enableCEA708Captions: true,
-          enableMP2TPassThrough : false,
+          enableMP2TPassThrough: false,
           stretchShortVideoTrack: false,
           forceKeyFrameOnDiscontinuity: true,
           abrEwmaFastLive: 5,
@@ -111,7 +115,8 @@ class Hls {
           abrEwmaSlowVoD: 15,
           abrEwmaDefaultEstimate: 5e5, // 500 kbps
           abrBandWidthFactor : 0.8,
-          abrBandWidthUpFactor : 0.7
+          abrBandWidthUpFactor : 0.7,
+          maxStarvationDelay : 4
         };
     }
     return Hls.defaultConfig;

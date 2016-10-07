@@ -171,8 +171,15 @@ class LevelController extends EventHandler {
   }
 
   get startLevel() {
+    // hls.startLevel takes precedence over config.startLevel
+    // if none of these values are defined, fallback on this._firstLevel (first quality level appearing in variant manifest)
     if (this._startLevel === undefined) {
-      return this._firstLevel;
+      let configStartLevel = this.hls.config.startLevel;
+      if (configStartLevel !== undefined) {
+        return configStartLevel;
+      } else {
+        return this._firstLevel;
+      }
     } else {
       return this._startLevel;
     }
@@ -208,7 +215,6 @@ class LevelController extends EventHandler {
     /* try to switch to a redundant stream if any available.
      * if no redundant stream available, emergency switch down (if in auto mode and current level not 0)
      * otherwise, we cannot recover this network error ...
-     * don't raise FRAG_LOAD_ERROR and FRAG_LOAD_TIMEOUT as fatal, as it is handled by mediaController
      */
     if (levelId !== undefined) {
       level = this._levels[levelId];
@@ -228,8 +234,10 @@ class LevelController extends EventHandler {
             // reset this._level so that another call to set level() will retrigger a frag load
             this._level = undefined;
           }
-        // FRAG_LOAD_ERROR and FRAG_LOAD_TIMEOUT are handled by mediaController
-        } else if (details !== ErrorDetails.FRAG_LOAD_ERROR && details !== ErrorDetails.FRAG_LOAD_TIMEOUT) {
+        // fragment errors are all handled  by streamController
+        } else if (details !== ErrorDetails.FRAG_LOAD_ERROR &&
+                   details !== ErrorDetails.FRAG_LOAD_TIMEOUT &&
+                   details !== ErrorDetails.FRAG_LOOP_LOADING_ERROR) {
           logger.error(`cannot recover ${details} error`);
           this._level = undefined;
           // stopping live reloading timer if any
