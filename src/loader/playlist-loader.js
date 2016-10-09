@@ -401,7 +401,7 @@ class PlaylistLoader extends EventHandler {
                     levelDetails = this.parseLevelPlaylist(
                         string,
                         url,
-                        isLevel ? level : id || 0,
+                        (isLevel ? level : id) || 0,
                         isLevel ? 'main' : 'audio'
                     );
                 levelDetails.tload = stats.tload;
