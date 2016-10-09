@@ -7820,7 +7820,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.4';
+      return '0.6.5';
     }
   }, {
     key: 'Events',
@@ -8905,7 +8905,7 @@ var PlaylistLoader = function (_EventHandler) {
       if (string.indexOf('#EXTM3U') === 0) {
         if (string.indexOf('#EXTINF:') > 0) {
           var isLevel = type !== 'audioTrack',
-              levelDetails = this.parseLevelPlaylist(string, url, isLevel ? level : id || 0, isLevel ? 'main' : 'audio');
+              levelDetails = this.parseLevelPlaylist(string, url, (isLevel ? level : id) || 0, isLevel ? 'main' : 'audio');
           levelDetails.tload = stats.tload;
           if (type === 'manifest') {
             // first request, stream manifest (no master playlist), fire manifest loaded event with level details
