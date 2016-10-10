@@ -32,7 +32,7 @@ var DemuxerWorker = function (self) {
         }
         break;
       case 'demux':
-        self.demuxer.push(new Uint8Array(data.data), data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration);
+        self.demuxer.push(new Uint8Array(data.data), data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration,data.accurateTimeOffset);
         break;
       default:
         break;
