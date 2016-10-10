@@ -38,7 +38,7 @@ describe("testing hls.js playback in the browser", function() {
         browserName : 'chrome'
       }).build();
     }
-    this.browser.manage().timeouts().setScriptTimeout(20000);
+    this.browser.manage().timeouts().setScriptTimeout(40000);
     return this.browser.get("http://localhost:8000/tests/functional/auto/hlsjs.html");
   });
 
