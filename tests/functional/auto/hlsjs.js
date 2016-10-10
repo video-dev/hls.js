@@ -4,7 +4,13 @@ var webdriver = require("selenium-webdriver");
 var chromedriver = require("chromedriver");
 var HttpServer = require("http-server");
 
-var STREAM_URL = 'http://www.streambox.fr/playlists/test_001/stream.m3u8';
+var STREAMS = [
+  { url : 'http://www.streambox.fr/playlists/test_001/stream.m3u8', description : 'ARTE China,ABR' },
+  { url : 'http://www.streambox.fr/playlists/x36xhzz/x36xhzz.m3u8', description : 'big buck bunny,ABR'},
+  { url : 'http://www.streambox.fr/playlists/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8', description : 'big buck bunny,480p'},
+  { url : 'http://www.streambox.fr/playlists/cisq0gim60007xzvi505emlxx.m3u8', description : 'https://github.com/dailymotion/hls.js/issues/666'}
+ ];
+
 
 HttpServer.createServer({
   showDir: false,
@@ -40,31 +46,36 @@ describe("testing hls.js playback in the browser", function() {
     return this.browser.quit();
   });
 
-  it("should receive video loadeddata event", function() {
-    return this.browser.executeAsyncScript(function(STREAM_URL) {
-      var callback = arguments[arguments.length - 1];
-      startStream(STREAM_URL, callback);
-      video.onloadeddata = function() {
-        callback('loadeddata');
-      };
-    }, STREAM_URL).then(function(result) {
-      assert.strictEqual(result, 'loadeddata');
+
+
+  STREAMS.forEach(function(stream) {
+    it("should receive video loadeddata event for " + stream.description, function() {
+      var url = stream.url;
+      return this.browser.executeAsyncScript(function(url) {
+        var callback = arguments[arguments.length - 1];
+        startStream(url, callback);
+        video.onloadeddata = function() {
+          callback('loadeddata');
+        };
+      }, url).then(function(result) {
+        assert.strictEqual(result, 'loadeddata');
+      });
+    });
+
+    it("should seek near the end and receive video ended event for " + stream.description, function() {
+      var url = stream.url;
+      return this.browser.executeAsyncScript(function(url) {
+        var callback = arguments[arguments.length - 1];
+        startStream(url, callback);
+        video.onloadeddata = function() {
+          video.currentTime = video.duration - 5;
+        };
+        video.onended = function() {
+          callback('ended');
+        };
+      }, url).then(function(result) {
+        assert.strictEqual(result, 'ended');
+      });
     });
   });
-
-  it("should seek and receive video ended event", function() {
-    return this.browser.executeAsyncScript(function(STREAM_URL) {
-      var callback = arguments[arguments.length - 1];
-      startStream(STREAM_URL, callback);
-      video.onloadeddata = function() {
-        video.currentTime = video.duration - 5;
-      };
-      video.onended = function() {
-        callback('ended');
-      };
-    }, STREAM_URL).then(function(result) {
-      assert.strictEqual(result, 'ended');
-    });
-  });
-
 });
