@@ -5,10 +5,11 @@ var chromedriver = require("chromedriver");
 var HttpServer = require("http-server");
 
 var STREAMS = [
-  { url : 'http://www.streambox.fr/playlists/test_001/stream.m3u8', description : 'ARTE China,ABR' },
-  { url : 'http://www.streambox.fr/playlists/x36xhzz/x36xhzz.m3u8', description : 'big buck bunny,ABR'},
-  { url : 'http://www.streambox.fr/playlists/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8', description : 'big buck bunny,480p'},
-  { url : 'http://www.streambox.fr/playlists/cisq0gim60007xzvi505emlxx.m3u8', description : 'https://github.com/dailymotion/hls.js/issues/666'}
+  { url : 'http://www.streambox.fr/playlists/test_001/stream.m3u8', description : 'ARTE China,ABR', live : false , abr : true},
+  { url : 'http://www.streambox.fr/playlists/x36xhzz/x36xhzz.m3u8', description : 'big buck bunny,ABR', live : false, abr : false},
+  { url : 'http://www.streambox.fr/playlists/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8', description : 'big buck bunny,480p', live : false, abr : false},
+  { url : 'http://www.streambox.fr/playlists/cisq0gim60007xzvi505emlxx.m3u8', description : 'https://github.com/dailymotion/hls.js/issues/666', live : false, abr : false},
+  { url : 'http://nasatv-lh.akamaihd.net/i/NASA_101@319270/index_1000_av-p.m3u8?sd=10&rebase=on', description : 'NASA live stream', live : true, abr : true}
  ];
 
 
@@ -62,20 +63,54 @@ describe("testing hls.js playback in the browser", function() {
       });
     });
 
-    it("should seek near the end and receive video ended event for " + stream.description, function() {
-      var url = stream.url;
-      return this.browser.executeAsyncScript(function(url) {
-        var callback = arguments[arguments.length - 1];
-        startStream(url, callback);
-        video.onloadeddata = function() {
-          video.currentTime = video.duration - 5;
-        };
-        video.onended = function() {
-          callback('ended');
-        };
-      }, url).then(function(result) {
-        assert.strictEqual(result, 'ended');
+    if (stream.abr) {
+      it("should 'smooth switch' to highest level and still play(readyState === 4) after 12s for " + stream.description, function() {
+        var url = stream.url;
+        return this.browser.executeAsyncScript(function(url) {
+          var callback = arguments[arguments.length - 1];
+          startStream(url, callback);
+          video.onloadeddata = function() {
+            switchToHighestLevel('next');
+          };
+          window.setTimeout(function() { callback(video.readyState);},12000);
+        }, url).then(function(result) {
+          assert.strictEqual(result, 4);
+        });
       });
-    });
+    }
+
+    if (stream.live) {
+      it("should seek near the end and receive video seeked event for " + stream.description, function() {
+        var url = stream.url;
+        return this.browser.executeAsyncScript(function(url) {
+          var callback = arguments[arguments.length - 1];
+          startStream(url, callback);
+          video.onloadeddata = function() {
+            window.setTimeout(function() { video.currentTime = video.duration - 5;},5000);
+          };
+          video.onseeked = function() {
+            callback('seeked');
+          };
+        }, url).then(function(result) {
+          assert.strictEqual(result, 'seeked');
+        });
+      });
+    } else {
+      it("should seek near the end and receive video ended event for " + stream.description, function() {
+        var url = stream.url;
+        return this.browser.executeAsyncScript(function(url) {
+          var callback = arguments[arguments.length - 1];
+          startStream(url, callback);
+          video.onloadeddata = function() {
+            video.currentTime = video.duration - 5;
+          };
+          video.onended = function() {
+            callback('ended');
+          };
+        }, url).then(function(result) {
+          assert.strictEqual(result, 'ended');
+        });
+      });
+    }
   });
 });
