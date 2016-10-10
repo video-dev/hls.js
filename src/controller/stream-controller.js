@@ -1150,6 +1150,8 @@ class StreamController extends EventHandler {
                 if (!demuxer) {
                     demuxer = this.demuxer = new Demuxer(this.hls, 'main');
                 }
+                // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
+                let accurateTimeOffset = details.PTSKnown || !details.live;
                 demuxer.push(
                     data.payload,
                     audioCodec,
@@ -1159,7 +1161,8 @@ class StreamController extends EventHandler {
                     level,
                     sn,
                     duration,
-                    fragCurrent.decryptdata
+                    fragCurrent.decryptdata,
+                    accurateTimeOffset
                 );
             }
         }

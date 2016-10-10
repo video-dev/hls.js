@@ -87,7 +87,17 @@ class TSDemuxer {
     }
 
     // feed incoming data to the front of the parsing pipeline
-    push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
+    push(
+        data,
+        audioCodec,
+        videoCodec,
+        timeOffset,
+        cc,
+        level,
+        sn,
+        duration,
+        accurateTimeOffset
+    ) {
         var start,
             len = data.length,
             stt,
@@ -102,6 +112,7 @@ class TSDemuxer {
         this.videoCodec = videoCodec;
         this._duration = duration;
         this.contiguous = false;
+        this.accurateTimeOffset = accurateTimeOffset;
         if (cc !== this.lastCC) {
             logger.log('discontinuity detected');
             this.insertDiscontinuity();
@@ -326,6 +337,7 @@ class TSDemuxer {
             this._txtTrack,
             timeOffset,
             this.contiguous,
+            this.accurateTimeOffset,
             data
         );
     }

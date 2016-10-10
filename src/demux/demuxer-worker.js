@@ -45,7 +45,8 @@ var DemuxerWorker = function(self) {
                     data.cc,
                     data.level,
                     data.sn,
-                    data.duration
+                    data.duration,
+                    data.accurateTimeOffset
                 );
                 break;
             default:

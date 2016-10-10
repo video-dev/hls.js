@@ -24,7 +24,17 @@ class DemuxerInline {
         }
     }
 
-    push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
+    push(
+        data,
+        audioCodec,
+        videoCodec,
+        timeOffset,
+        cc,
+        level,
+        sn,
+        duration,
+        accurateTimeOffset
+    ) {
         var demuxer = this.demuxer;
         if (!demuxer) {
             let hls = this.hls,
@@ -63,7 +73,8 @@ class DemuxerInline {
             cc,
             level,
             sn,
-            duration
+            duration,
+            accurateTimeOffset
         );
     }
 }

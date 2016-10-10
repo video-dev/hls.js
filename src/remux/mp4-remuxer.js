@@ -42,7 +42,8 @@ class MP4Remuxer {
         id3Track,
         textTrack,
         timeOffset,
-        contiguous
+        contiguous,
+        accurateTimeOffset
     ) {
         this.level = level;
         this.sn = sn;
@@ -59,7 +60,8 @@ class MP4Remuxer {
                 let audioData = this.remuxAudio(
                     audioTrack,
                     timeOffset,
-                    contiguous
+                    contiguous,
+                    accurateTimeOffset
                 );
                 //logger.log('nb AVC samples:' + videoTrack.samples.length);
                 if (videoTrack.samples.length) {
@@ -253,6 +255,7 @@ class MP4Remuxer {
         // PTS is coded on 33bits, and can loop from -2^32 to 2^32
         // PTSNormalize will make PTS/DTS value monotonic, we use last known DTS value as reference value
         let nextAvcDts;
+        // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
         if (contiguous) {
             // if parsed fragment is contiguous with last one, let's use last DTS value as reference
             nextAvcDts = this.nextAvcDts;
@@ -293,7 +296,9 @@ class MP4Remuxer {
                 firstPTS = Math.max(firstPTS - delta, nextAvcDts);
                 inputSamples[0].pts = firstPTS + this._initDTS;
                 logger.log(
-                    `Video/PTS/DTS adjusted: ${firstPTS}/${firstDTS},delta:${delta}`
+                    `Video/PTS/DTS adjusted: ${Math.round(
+                        firstPTS / 90
+                    )}/${Math.round(firstDTS / 90)},delta:${delta} ms`
                 );
             }
         }
@@ -499,7 +504,7 @@ class MP4Remuxer {
         return data;
     }
 
-    remuxAudio(track, timeOffset, contiguous) {
+    remuxAudio(track, timeOffset, contiguous, accurateTimeOffset) {
         let pesTimeScale = this.PES_TIMESCALE,
             mp4timeScale = track.timescale,
             pes2mp4ScaleFactor = pesTimeScale / mp4timeScale,
@@ -552,71 +557,76 @@ class MP4Remuxer {
         // frame.
         const pesFrameDuration = expectedSampleDuration * pes2mp4ScaleFactor;
         let nextPtsNorm = nextAacPts;
-        for (var i = 0; i < samples0.length; ) {
-            // First, let's see how far off this frame is from where we expect it to be
-            var sample = samples0[i],
-                ptsNorm = this._PTSNormalize(
-                    sample.pts - this._initDTS,
-                    nextAacPts
-                ),
-                delta = ptsNorm - nextPtsNorm;
 
-            // If we're overlapping by more than a duration, drop this sample
-            if (delta <= -pesFrameDuration) {
-                logger.warn(
-                    `Dropping 1 audio frame @ ${Math.round(nextPtsNorm / 90) /
-                        1000}s due to ${Math.round(
-                        Math.abs(delta / 90)
-                    )} ms overlap.`
-                );
-                samples0.splice(i, 1);
-                track.len -= sample.unit.length;
-                // Don't touch nextPtsNorm or i
-            } else if (delta >= pesFrameDuration) {
-                // Otherwise, if we're more than a frame away from where we should be, insert missing frames
-                var missing = Math.round(delta / pesFrameDuration);
-                logger.warn(
-                    `Injecting ${missing} audio frame @ ${Math.round(
-                        nextPtsNorm / 90
-                    ) / 1000}s due to ${Math.round(delta / 90)} ms gap.`
-                );
-                for (var j = 0; j < missing; j++) {
-                    newStamp = nextPtsNorm + this._initDTS;
-                    newStamp = Math.max(newStamp, this._initDTS);
-                    fillFrame = AAC.getSilentFrame(track.channelCount);
-                    if (!fillFrame) {
-                        logger.log(
-                            'Unable to get silent frame for given audio codec; duplicating last frame instead.'
-                        );
-                        fillFrame = sample.unit.slice(0);
+        // only inject/drop audio frames in case time offset is accurate
+        if (accurateTimeOffset) {
+            for (var i = 0; i < samples0.length; ) {
+                // First, let's see how far off this frame is from where we expect it to be
+                var sample = samples0[i],
+                    ptsNorm = this._PTSNormalize(
+                        sample.pts - this._initDTS,
+                        nextAacPts
+                    ),
+                    delta = ptsNorm - nextPtsNorm;
+
+                // If we're overlapping by more than a duration, drop this sample
+                if (delta <= -pesFrameDuration) {
+                    logger.warn(
+                        `Dropping 1 audio frame @ ${Math.round(
+                            nextPtsNorm / 90
+                        ) / 1000}s due to ${Math.round(
+                            Math.abs(delta / 90)
+                        )} ms overlap.`
+                    );
+                    samples0.splice(i, 1);
+                    track.len -= sample.unit.length;
+                    // Don't touch nextPtsNorm or i
+                } else if (delta >= pesFrameDuration) {
+                    // Otherwise, if we're more than a frame away from where we should be, insert missing frames
+                    var missing = Math.round(delta / pesFrameDuration);
+                    logger.warn(
+                        `Injecting ${missing} audio frame @ ${Math.round(
+                            nextPtsNorm / 90
+                        ) / 1000}s due to ${Math.round(delta / 90)} ms gap.`
+                    );
+                    for (var j = 0; j < missing; j++) {
+                        newStamp = nextPtsNorm + this._initDTS;
+                        newStamp = Math.max(newStamp, this._initDTS);
+                        fillFrame = AAC.getSilentFrame(track.channelCount);
+                        if (!fillFrame) {
+                            logger.log(
+                                'Unable to get silent frame for given audio codec; duplicating last frame instead.'
+                            );
+                            fillFrame = sample.unit.slice(0);
+                        }
+                        samples0.splice(i, 0, {
+                            unit: fillFrame,
+                            pts: newStamp,
+                            dts: newStamp
+                        });
+                        track.len += fillFrame.length;
+                        nextPtsNorm += pesFrameDuration;
+                        i += 1;
                     }
-                    samples0.splice(i, 0, {
-                        unit: fillFrame,
-                        pts: newStamp,
-                        dts: newStamp
-                    });
-                    track.len += fillFrame.length;
+
+                    // Adjust sample to next expected pts
+                    sample.pts = sample.dts = nextPtsNorm + this._initDTS;
                     nextPtsNorm += pesFrameDuration;
                     i += 1;
-                }
-
-                // Adjust sample to next expected pts
-                sample.pts = sample.dts = nextPtsNorm + this._initDTS;
-                nextPtsNorm += pesFrameDuration;
-                i += 1;
-            } else {
-                // Otherwise, we're within half a frame duration, so just adjust pts
-                if (Math.abs(delta) > 0.1 * pesFrameDuration) {
-                    //logger.log(`Invalid frame delta ${Math.round(ptsNorm - nextPtsNorm + pesFrameDuration)} at PTS ${Math.round(ptsNorm / 90)} (should be ${Math.round(pesFrameDuration)}).`);
-                }
-                nextPtsNorm += pesFrameDuration;
-                if (i === 0) {
-                    sample.pts = sample.dts = this._initDTS + nextAacPts;
                 } else {
-                    sample.pts = sample.dts =
-                        samples0[i - 1].pts + pesFrameDuration;
+                    // Otherwise, we're within half a frame duration, so just adjust pts
+                    if (Math.abs(delta) > 0.1 * pesFrameDuration) {
+                        //logger.log(`Invalid frame delta ${Math.round(ptsNorm - nextPtsNorm + pesFrameDuration)} at PTS ${Math.round(ptsNorm / 90)} (should be ${Math.round(pesFrameDuration)}).`);
+                    }
+                    nextPtsNorm += pesFrameDuration;
+                    if (i === 0) {
+                        sample.pts = sample.dts = this._initDTS + nextAacPts;
+                    } else {
+                        sample.pts = sample.dts =
+                            samples0[i - 1].pts + pesFrameDuration;
+                    }
+                    i += 1;
                 }
-                i += 1;
             }
         }
 
@@ -641,6 +651,7 @@ class MP4Remuxer {
                     ),
                     numMissingFrames = 0;
                 // if fragment are contiguous, detect hole/overlapping between fragments
+                // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
                 if (contiguous) {
                     // log delta
                     if (delta) {

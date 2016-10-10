@@ -51,7 +51,17 @@ class AACDemuxer {
     }
 
     // feed incoming data to the front of the parsing pipeline
-    push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
+    push(
+        data,
+        audioCodec,
+        videoCodec,
+        timeOffset,
+        cc,
+        level,
+        sn,
+        duration,
+        accurateTimeOffset
+    ) {
         var track,
             id3 = new ID3(data),
             pts = 90 * id3.timeStamp,
@@ -162,7 +172,8 @@ class AACDemuxer {
             { samples: [{ pts: pts, dts: pts, unit: id3.payload }] },
             { samples: [] },
             timeOffset,
-            contiguous
+            contiguous,
+            accurateTimeOffset
         );
     }
 
