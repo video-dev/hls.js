@@ -305,7 +305,8 @@ class PlaylistLoader extends EventHandler {
           let startParams = result[1];
           let startAttrs = new AttrList(startParams);
           let startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
-          if (startTimeOffset) {
+          //TIME-OFFSET can be 0
+          if ( !isNaN(startTimeOffset) ) {
             level.startTimeOffset = startTimeOffset;
           }
           break;
@@ -353,7 +354,7 @@ class PlaylistLoader extends EventHandler {
     if (string.indexOf('#EXTM3U') === 0) {
       if (string.indexOf('#EXTINF:') > 0) {
         let isLevel = (type !== 'audioTrack'),
-            levelDetails = this.parseLevelPlaylist(string, url, level || id || 0, isLevel ? 'main' : 'audio');
+            levelDetails = this.parseLevelPlaylist(string, url, (isLevel ? level : id) || 0, isLevel ? 'main' : 'audio');
             levelDetails.tload = stats.tload;
         if (type === 'manifest') {
         // first request, stream manifest (no master playlist), fire manifest loaded event with level details

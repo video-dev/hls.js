@@ -926,7 +926,9 @@ class StreamController extends EventHandler {
         if (!demuxer) {
           demuxer = this.demuxer = new Demuxer(this.hls,'main');
         }
-        demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata);
+        // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
+        let accurateTimeOffset = details.PTSKnown || !details.live;
+        demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata, accurateTimeOffset);
       }
     }
     this.fragLoadError = 0;
