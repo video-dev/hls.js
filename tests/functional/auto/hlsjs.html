@@ -33,6 +33,38 @@
             callback('notSupported');
           }
         }
+
+        function switchToLowestLevel(mode) {
+          switch(mode) {
+            case 'current':
+              hls.currentLevel = 0;
+              break;
+            case 'next':
+              hls.nextLevel = 0;
+              break;
+            case 'load':
+            default:
+              hls.loadLevel = 0;
+              break;
+          }
+        }
+
+        function switchToHighestLevel() {
+          var highestLevel = hls.levels.length-1;
+          switch(mode) {
+            case 'current':
+              hls.currentLevel = highestLevel;
+              break;
+            case 'next':
+              hls.nextLevel = highestLevel;
+              break;
+            case 'load':
+            default:
+              hls.loadLevel = highestLevel;
+              break;
+          }
+        }
+
        </script>
     </head>
     <body>
