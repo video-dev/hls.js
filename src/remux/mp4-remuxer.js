@@ -413,7 +413,7 @@ class MP4Remuxer {
 
     // only inject/drop audio frames in case time offset is accurate
     if (accurateTimeOffset) {
-      for (var i = 0; i < samples0.length; ) {
+      for (let i = 0; i < samples0.length; ) {
         // First, let's see how far off this frame is from where we expect it to be
         var sample = samples0[i],
             ptsNorm = this._PTSNormalize(sample.pts - this._initDTS, nextAacPts),
@@ -522,7 +522,7 @@ class MP4Remuxer {
           // no audio samples
           return;
         }
-        for (i = 0; i < numMissingFrames; i++) {
+        for (let i = 0; i < numMissingFrames; i++) {
           newStamp = ptsnorm - (numMissingFrames - i) * pesFrameDuration;
           fillFrame = AAC.getSilentFrame(track.channelCount);
           if (!fillFrame) {
