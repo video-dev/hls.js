@@ -4,12 +4,12 @@ var webdriver = require("selenium-webdriver");
 var chromedriver = require("chromedriver");
 var HttpServer = require("http-server");
 
-var onTravis = !!process.env.TRAVIS
+var onTravis = !!process.env.TRAVIS;
 var STREAM = onTravis ? JSON.parse(process.env.TEST_STREAM) : { url : 'http://www.streambox.fr/playlists/test_001/stream.m3u8', description : 'ARTE China,ABR', live : false , abr : true};
 if (!STREAM) {
   throw new Error("No stream.");
 }
-var BROWSER_CONFIG = onTravis ? JSON.parse(process.env.TEST_BROWSER_CONFIG) : { name : 'chrome' } 
+var BROWSER_CONFIG = onTravis ? {name : 'chrome', version : '53.0', platform : 'Windows 10'} : { name : 'chrome' };
 
 var browserDescription = BROWSER_CONFIG.name;
 if (BROWSER_CONFIG.version) {
