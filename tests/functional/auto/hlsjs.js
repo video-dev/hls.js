@@ -9,6 +9,15 @@ var STREAM = onTravis ? JSON.parse(process.env.TEST_STREAM) : { url : 'http://ww
 if (!STREAM) {
   throw new Error("No stream.");
 }
+var BROWSER_CONFIG = onTravis ? JSON.parse(process.env.TEST_BROWSER_CONFIG) : { name : 'chrome' } 
+
+var browserDescription = BROWSER_CONFIG.name;
+if (BROWSER_CONFIG.version) {
+  browserDescription += " ("+BROWSER_CONFIG.version+")";
+}
+if (BROWSER_CONFIG.platform) {
+  browserDescription += ", "+BROWSER_CONFIG.platform;
+}
 
 HttpServer.createServer({
   showDir: false,
@@ -16,26 +25,24 @@ HttpServer.createServer({
   root: './',
 }).listen(8000, '127.0.0.1');
 
-describe("testing hls.js playback in the browser with \""+STREAM.description+"\"", function() {
+describe("testing hls.js playback in the browser with \""+STREAM.description+"\" on \""+browserDescription+"\"", function() {
   beforeEach(function() {
+    var capabilities = {
+      browserName : BROWSER_CONFIG.name,
+      platform : BROWSER_CONFIG.platform,
+      version: BROWSER_CONFIG.version
+    };
     if (onTravis) {
-      this.browser = new webdriver.Builder()
-      .usingServer('http://'+ process.env.SAUCE_USERNAME+':'+process.env.SAUCE_ACCESS_KEY+'@ondemand.saucelabs.com:80/wd/hub')
-      .withCapabilities({
-        'tunnel-identifier': process.env.TRAVIS_JOB_NUMBER,
-        build: process.env.TRAVIS_BUILD_NUMBER,
-        username: process.env.SAUCE_USERNAME,
-        accessKey: process.env.SAUCE_ACCESS_KEY,
-        browserName : 'chrome',
-        platform : 'Windows 10',
-        version : '53.0'
-      }).build();
-    } else {
-      this.browser = new webdriver.Builder()
-      .withCapabilities({
-        browserName : 'chrome'
-      }).build();
+      capabilities['tunnel-identifier'] = process.env.TRAVIS_JOB_NUMBER;
+      capabilities.build = process.env.TRAVIS_BUILD_NUMBER;
+      capabilities.username = process.env.SAUCE_USERNAME;
+      capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
+      this.browser = new webdriver.Builder().usingServer('http://'+ process.env.SAUCE_USERNAME+':'+process.env.SAUCE_ACCESS_KEY+'@ondemand.saucelabs.com:80/wd/hub');
     }
+    else {
+      this.browser = new webdriver.Builder();
+    }
+    this.browser = this.browser.withCapabilities(capabilities).build();
     this.browser.manage().timeouts().setScriptTimeout(40000);
     return this.browser.get("http://localhost:8000/tests/functional/auto/hlsjs.html");
   });
