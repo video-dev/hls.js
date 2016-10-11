@@ -3,12 +3,12 @@ node_js:
 - 5.4.1
 script: npm install && npm run build && npm run testfunc
 env:
-- "TEST_BROWSER_CONFIG={name: 'chrome', version: '53.0', platform: 'Windows 10'}"
-- "TEST_STREAM={url: 'http://www.streambox.fr/playlists/test_001/stream.m3u8', description: 'ARTE China,ABR', live: false , abr: true}"
-- "TEST_STREAM={url: 'http://www.streambox.fr/playlists/x36xhzz/x36xhzz.m3u8', description: 'big buck bunny,ABR', live: false, abr: false}"
-- "TEST_STREAM={url: 'http://www.streambox.fr/playlists/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8', description: 'big buck bunny,480p', live: false, abr: false}"
-- "TEST_STREAM={url: 'http://www.streambox.fr/playlists/cisq0gim60007xzvi505emlxx.m3u8', description: 'https://github.com/dailymotion/hls.js/issues/666', live: false, abr: false}"
-- "TEST_STREAM={url: 'http://nasatv-lh.akamaihd.net/i/NASA_101@319270/index_1000_av-p.m3u8?sd=10&rebase=on', description: 'NASA live stream', live: true, abr: true}"
+- "TEST_BROWSER_CONFIG={'name': 'chrome', 'version': '53.0', 'platform': 'Windows 10'}"
+- "TEST_STREAM={'url': 'http://www.streambox.fr/playlists/test_001/stream.m3u8', 'description': 'ARTE China,ABR', 'live': false , 'abr': true}"
+- "TEST_STREAM={'url': 'http://www.streambox.fr/playlists/x36xhzz/x36xhzz.m3u8', 'description': 'big buck bunny,ABR', 'live': false, 'abr': false}"
+- "TEST_STREAM={'url': 'http://www.streambox.fr/playlists/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8', 'description': 'big buck bunny,480p', 'live': false, 'abr': false}"
+- "TEST_STREAM={'url': 'http://www.streambox.fr/playlists/cisq0gim60007xzvi505emlxx.m3u8', 'description': 'https://github.com/dailymotion/hls.js/issues/666', 'live': false, 'abr': false}"
+- "TEST_STREAM={'url': 'http://nasatv-lh.akamaihd.net/i/NASA_101@319270/index_1000_av-p.m3u8?sd=10&rebase=on', 'description': 'NASA live stream', 'live': true, 'abr': true}"
 addons:
   sauce_connect: true
   jwt:
