@@ -1,22 +1,27 @@
-var assert = require("assert");
-var webdriver = require("selenium-webdriver");
+var assert = require('assert');
+var webdriver = require('selenium-webdriver');
 // requiring this automatically adds the chromedriver binary to the PATH
-var chromedriver = require("chromedriver");
-var HttpServer = require("http-server");
+var chromedriver = require('chromedriver');
+var HttpServer = require('http-server');
+var streams = require('../streams.json');
 
 var onTravis = !!process.env.TRAVIS;
-var STREAM = onTravis ? JSON.parse(process.env.TEST_STREAM) : { url : 'http://www.streambox.fr/playlists/test_001/stream.m3u8', description : 'ARTE China,ABR', live : false , abr : true};
-if (!STREAM) {
-  throw new Error("No stream.");
+var stream_ID = onTravis ? process.env.TEST_stream_ID : 'arte';
+if (!stream_ID) {
+  throw new Error('No stream ID.');
+}
+var stream = streams[stream_ID];
+if (!stream) {
+  throw new Error('Could not find stream "'+stream_ID+'"');
 }
 var BROWSER_CONFIG = onTravis ? {name : 'chrome', version : '53.0', platform : 'Windows 10'} : { name : 'chrome' };
 
 var browserDescription = BROWSER_CONFIG.name;
 if (BROWSER_CONFIG.version) {
-  browserDescription += " ("+BROWSER_CONFIG.version+")";
+  browserDescription += ' ('+BROWSER_CONFIG.version+')';
 }
 if (BROWSER_CONFIG.platform) {
-  browserDescription += ", "+BROWSER_CONFIG.platform;
+  browserDescription += ', '+BROWSER_CONFIG.platform;
 }
 
 HttpServer.createServer({
@@ -25,7 +30,7 @@ HttpServer.createServer({
   root: './',
 }).listen(8000, '127.0.0.1');
 
-describe("testing hls.js playback in the browser with \""+STREAM.description+"\" on \""+browserDescription+"\"", function() {
+describe('testing hls.js playback in the browser with "'+stream.description+'" on "'+browserDescription+'"', function() {
   beforeEach(function() {
     var capabilities = {
       browserName : BROWSER_CONFIG.name,
@@ -44,15 +49,15 @@ describe("testing hls.js playback in the browser with \""+STREAM.description+"\"
     }
     this.browser = this.browser.withCapabilities(capabilities).build();
     this.browser.manage().timeouts().setScriptTimeout(40000);
-    return this.browser.get("http://localhost:8000/tests/functional/auto/hlsjs.html");
+    return this.browser.get('http://localhost:8000/tests/functional/auto/hlsjs.html');
   });
 
   afterEach(function() {
     return this.browser.quit();
   });
 
-  it("should receive video loadeddata event", function() {
-    var url = STREAM.url;
+  it('should receive video loadeddata event', function() {
+    var url = stream.url;
     return this.browser.executeAsyncScript(function(url) {
       var callback = arguments[arguments.length - 1];
       startStream(url, callback);
@@ -64,25 +69,25 @@ describe("testing hls.js playback in the browser with \""+STREAM.description+"\"
     });
   });
 
-  if (STREAM.abr) {
-    it("should 'smooth switch' to highest level and still play(readyState === 4) after 12s", function() {
-      var url = STREAM.url;
+  if (stream.abr) {
+    it('should "smooth switch" to highest level and still play(readyState === 4) after 12s', function() {
+      var url = stream.url;
       return this.browser.executeAsyncScript(function(url) {
         var callback = arguments[arguments.length - 1];
         startStream(url, callback);
         video.onloadeddata = function() {
           switchToHighestLevel('next');
         };
-        window.setTimeout(function() { callback(video.readyState);},12000);
+        window.setTimeout(function() { callback(video.readyState);}, 12000);
       }, url).then(function(result) {
         assert.strictEqual(result, 4);
       });
     });
   }
 
-  if (STREAM.live) {
-    it("should seek near the end and receive video seeked event", function() {
-      var url = STREAM.url;
+  if (stream.live) {
+    it('should seek near the end and receive video seeked event', function() {
+      var url = stream.url;
       return this.browser.executeAsyncScript(function(url) {
         var callback = arguments[arguments.length - 1];
         startStream(url, callback);
@@ -97,8 +102,8 @@ describe("testing hls.js playback in the browser with \""+STREAM.description+"\"
       });
     });
   } else {
-    it("should seek near the end and receive video ended event", function() {
-      var url = STREAM.url;
+    it('should seek near the end and receive video ended event', function() {
+      var url = stream.url;
       return this.browser.executeAsyncScript(function(url) {
         var callback = arguments[arguments.length - 1];
         startStream(url, callback);
