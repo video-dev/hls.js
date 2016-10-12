@@ -6,11 +6,11 @@ var HttpServer = require('http-server');
 var streams = require('../streams.json');
 
 var onTravis = !!process.env.TRAVIS;
-var stream_ID = onTravis ? process.env.TEST_stream_ID : 'arte';
-if (!stream_ID) {
+var STREAM_ID = onTravis ? process.env.TEST_STREAM_ID : 'arte';
+if (!STREAM_ID) {
   throw new Error('No stream ID.');
 }
-var stream = streams[stream_ID];
+var stream = streams[STREAM_ID];
 if (!stream) {
   throw new Error('Could not find stream "'+stream_ID+'"');
 }
