@@ -3,11 +3,14 @@ node_js:
 - 5.4.1
 script: npm install && npm run build && npm run testfunc
 env:
-- SAUCE_USERNAME=mangui TEST_STREAM_ID=arte
-- SAUCE_USERNAME=mangui TEST_STREAM_ID=bigBuckBunnyABR
-- SAUCE_USERNAME=mangui TEST_STREAM_ID=bigBuckBunny480p
-- SAUCE_USERNAME=mangui TEST_STREAM_ID=issue666
-- SAUCE_USERNAME=mangui TEST_STREAM_ID=nasa
+  global:
+    - SAUCE_USERNAME=mangui
+  matrix:
+    - TEST_STREAM_ID=arte
+    - TEST_STREAM_ID=bigBuckBunnyABR
+    - TEST_STREAM_ID=bigBuckBunny480p
+    - TEST_STREAM_ID=issue666
+    - TEST_STREAM_ID=nasa
 addons:
   sauce_connect: true
   jwt:
