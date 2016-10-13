@@ -61,6 +61,7 @@ class PlaylistLoader extends EventHandler {
       retry = config.levelLoadingMaxRetry;
       timeout = config.levelLoadingTimeOut;
       retryDelay = config.levelLoadingRetryDelay;
+      logger.log(`(re)loading playlist for level ${id1}`);
     }
     this.loader = typeof(config.pLoader) !== 'undefined' ? new config.pLoader(config) : new config.loader(config);
     this.loading = true;
