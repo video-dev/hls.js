@@ -109,8 +109,8 @@ class Hls {
           forceKeyFrameOnDiscontinuity: true,
           abrEwmaFastLive: 5,
           abrEwmaSlowLive: 9,
-          abrEwmaFastVoD: 4,
-          abrEwmaSlowVoD: 15,
+          abrEwmaFastVoD: 3,
+          abrEwmaSlowVoD: 6,
           abrEwmaDefaultEstimate: 5e5, // 500 kbps
           abrBandWidthFactor : 0.8,
           abrBandWidthUpFactor : 0.7,
