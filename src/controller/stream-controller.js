@@ -333,7 +333,7 @@ class StreamController extends EventHandler {
               this.state = State.KEY_LOADING;
               hls.trigger(Event.KEY_LOADING, {frag: frag});
             } else {
-              logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
+              logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferEnd.toFixed(3)}`);
               // ensure that we are not reloading the same fragments in loop ...
               if (this.fragLoadIdx !== undefined) {
                 this.fragLoadIdx++;
@@ -1096,9 +1096,9 @@ _checkBuffer() {
             // if startPosition not buffered, let's seek to buffered.start(0)
             if(startPosition < bufferStart || startPosition > bufferEnd) {
               startPosition = bufferStart;
-              logger.log(`target start position not buffered, seek to buffered.start(0) ${bufferStart}`);
+              logger.log(`target start position not buffered, seek to buffered.start(0) ${bufferStart.toFixed(3)}`);
             }
-            logger.log(`adjust currentTime from ${currentTime} to ${startPosition}`);
+            logger.log(`adjust currentTime from ${currentTime.toFixed(3)} to ${startPosition.toFixed(3)}`);
             media.currentTime = startPosition;
           }
         }
@@ -1141,7 +1141,7 @@ _checkBuffer() {
                (delta > 0)) {
               // next buffer is close ! adjust currentTime to nextBufferStart
               // this will ensure effective video decoding
-              logger.log(`adjust currentTime from ${media.currentTime} to next buffered @ ${nextBufferStart} + nudge ${this.seekHoleNudgeDuration}`);
+              logger.log(`adjust currentTime from ${media.currentTime.toFixed(3)} to next buffered @ ${nextBufferStart.toFixed(3)} + nudge ${this.seekHoleNudgeDuration}`);
               let hole = nextBufferStart + this.seekHoleNudgeDuration - media.currentTime;
               media.currentTime = nextBufferStart + this.seekHoleNudgeDuration;
               this.hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_SEEK_OVER_HOLE, fatal: false, hole : hole});
@@ -1188,7 +1188,7 @@ _checkBuffer() {
   timeRangesToString(r) {
     var log = '', len = r.length;
     for (var i=0; i<len; i++) {
-      log += '[' + r.start(i) + ',' + r.end(i) + ']';
+      log += '[' + r.start(i).toFixed(3) + ',' + r.end(i).toFixed(3) + ']';
     }
     return log;
   }
