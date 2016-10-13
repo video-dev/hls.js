@@ -1096,9 +1096,13 @@ class StreamController extends EventHandler {
             fragLoaded.level === fragCurrent.level &&
             fragLoaded.sn === fragCurrent.sn
         ) {
-            let stats = data.stats;
+            let stats = data.stats,
+                currentLevel = this.levels[fragCurrent.level],
+                details = currentLevel.details;
             logger.log(
-                `Loaded  ${fragCurrent.sn} of level ${fragCurrent.level}`
+                `Loaded  ${fragCurrent.sn} of [${details.startSN} ,${
+                    details.endSN
+                }],level ${fragCurrent.level}`
             );
             // reset frag bitrate test in any case after frag loaded event
             this.fragBitrateTest = false;
@@ -1119,9 +1123,7 @@ class StreamController extends EventHandler {
                 this.state = State.PARSING;
                 // transmux the MPEG-TS data to ISO-BMFF segments
                 this.stats = stats;
-                var currentLevel = this.levels[this.level],
-                    details = currentLevel.details,
-                    duration = details.totalduration,
+                let duration = details.totalduration,
                     start =
                         fragCurrent.startDTS !== undefined
                             ? fragCurrent.startDTS
@@ -1146,7 +1148,7 @@ class StreamController extends EventHandler {
                 }
                 this.pendingAppending = 0;
                 logger.log(
-                    `Demuxing ${sn} of [${details.startSN} ,${
+                    `Parsing ${sn} of [${details.startSN} ,${
                         details.endSN
                     }],level ${level}, cc ${fragCurrent.cc}`
                 );
@@ -1293,7 +1295,7 @@ class StreamController extends EventHandler {
                 frag = this.fragCurrent;
 
             logger.log(
-                `parsed ${data.type},PTS:[${data.startPTS.toFixed(
+                `Parsed ${data.type},PTS:[${data.startPTS.toFixed(
                     3
                 )},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(
                     3

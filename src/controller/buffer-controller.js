@@ -218,7 +218,7 @@ class BufferController extends EventHandler {
                 // use levelCodec as first priority
                 let codec = track.levelCodec || track.codec;
                 let mimeType = `${track.container};codecs=${codec}`;
-                logger.log(`creating sourceBuffer with mimeType:${mimeType}`);
+                logger.log(`creating sourceBuffer(${mimeType})`);
                 try {
                     let sb = (sourceBuffer[
                         trackName

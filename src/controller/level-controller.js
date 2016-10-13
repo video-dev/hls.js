@@ -159,8 +159,10 @@ class LevelController extends EventHandler {
                 clearTimeout(this.timer);
                 this.timer = null;
             }
-            this._level = newLevel;
-            logger.log(`switching to level ${newLevel}`);
+            if (this._level !== newLevel) {
+                logger.log(`switching to level ${newLevel}`);
+                this._level = newLevel;
+            }
             this.hls.trigger(Event.LEVEL_SWITCH, { level: newLevel });
             var level = levels[newLevel],
                 levelDetails = level.details;
@@ -171,7 +173,6 @@ class LevelController extends EventHandler {
                     performance.now() - levelDetails.tload > 1000)
             ) {
                 // level not retrieved yet, or live playlist we need to (re)load it
-                logger.log(`(re)loading playlist for level ${newLevel}`);
                 var urlId = level.urlId;
                 this.hls.trigger(Event.LEVEL_LOADING, {
                     url: level.url[urlId],

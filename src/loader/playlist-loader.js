@@ -44,7 +44,18 @@ class PlaylistLoader extends EventHandler {
     }
 
     load(url, context) {
-        var config = this.hls.config,
+        let loader = this.loaders[context.type];
+        if (loader) {
+            let loaderContext = loader.context;
+            if (loaderContext && loaderContext.url === url) {
+                logger.trace(`playlist request ongoing`);
+                return;
+            } else {
+                logger.warn(`abort previous loader for type:${context.type}`);
+                loader.abort();
+            }
+        }
+        let config = this.hls.config,
             retry,
             timeout,
             retryDelay,
@@ -59,17 +70,7 @@ class PlaylistLoader extends EventHandler {
             timeout = config.levelLoadingTimeOut;
             retryDelay = config.levelLoadingRetryDelay;
             maxRetryDelay = config.levelLoadingMaxRetryTimeOut;
-        }
-        let loader = this.loaders[context.type];
-        if (loader) {
-            let loaderContext = loader.context;
-            if (loaderContext && loaderContext.url === url) {
-                logger.warn(`playlist request ongoing`);
-                return;
-            } else {
-                logger.warn(`abort previous loader for type:${context.type}`);
-                loader.abort();
-            }
+            logger.log(`loading playlist for level ${context.level}`);
         }
         loader = this.loaders[context.type] = context.loader =
             typeof config.pLoader !== 'undefined'

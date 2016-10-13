@@ -166,7 +166,6 @@ class AbrController extends EventHandler {
                         hls.nextLoadLevel = nextLoadLevel;
                         // update bw estimate for this fragment before cancelling load (this will help reducing the bw)
                         this.bwEstimator.sample(requestDelay, stats.loaded);
-                        let stats = loader.stats;
                         //abort fragment loading
                         loader.abort();
                         // stop abandon rules timer
