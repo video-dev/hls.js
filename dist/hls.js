@@ -412,7 +412,7 @@ var AbrController = function (_EventHandler) {
   function AbrController(hls) {
     _classCallCheck(this, AbrController);
 
-    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(AbrController).call(this, hls, _events2.default.FRAG_LOADING, _events2.default.FRAG_LOADED, _events2.default.ERROR));
+    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(AbrController).call(this, hls, _events2.default.FRAG_LOADING, _events2.default.FRAG_LOADED, _events2.default.FRAG_BUFFERED, _events2.default.ERROR));
 
     _this.lastLoadedFragLevel = 0;
     _this._autoLevelCapping = -1;
@@ -473,7 +473,7 @@ var AbrController = function (_EventHandler) {
 
       // if loader has been destroyed or loading has been aborted, stop timer and return
       if (!frag.loader || frag.loader.stats && frag.loader.stats.aborted) {
-        _logger.logger.warn('frag loader destroy or aborted, disarm abandonRulesCheck');
+        _logger.logger.warn('frag loader destroy or aborted, disarm abandonRules');
         this.clearTimer();
         return;
       }
@@ -505,7 +505,6 @@ var AbrController = function (_EventHandler) {
               // 0.8 : consider only 80% of current bw to be conservative
               // 8 = bits per byte (bps/Bps)
               fragLevelNextLoadedDelay = frag.duration * levels[nextLoadLevel].bitrate / (8 * 0.8 * loadRate);
-              _logger.logger.log('fragLoadedDelay/bufferStarvationDelay/fragLevelNextLoadedDelay[' + nextLoadLevel + '] :' + fragLoadedDelay.toFixed(1) + '/' + bufferStarvationDelay.toFixed(1) + '/' + fragLevelNextLoadedDelay.toFixed(1));
               if (fragLevelNextLoadedDelay < bufferStarvationDelay) {
                 // we found a lower level that be rebuffering free with current estimated bw !
                 break;
@@ -516,16 +515,17 @@ var AbrController = function (_EventHandler) {
             if (fragLevelNextLoadedDelay < fragLoadedDelay) {
               // ensure nextLoadLevel is not negative
               nextLoadLevel = Math.max(0, nextLoadLevel);
+              _logger.logger.warn('loading too slow, abort fragment loading and switch to level ' + nextLoadLevel + ':fragLoadedDelay[' + nextLoadLevel + ']<fragLoadedDelay[' + (frag.level - 1) + '];bufferStarvationDelay:' + fragLevelNextLoadedDelay.toFixed(1) + '<' + fragLoadedDelay.toFixed(1) + ':' + bufferStarvationDelay.toFixed(1));
               // force next load level in auto mode
               hls.nextLoadLevel = nextLoadLevel;
               // update bw estimate for this fragment before cancelling load (this will help reducing the bw)
               this.bwEstimator.sample(requestDelay, frag.loaded);
               // abort fragment loading ...
-              _logger.logger.warn('loading too slow, abort fragment loading and switch to level ' + nextLoadLevel);
               var loader = frag.loader,
                   stats = loader.stats;
               //abort fragment loading
               loader.abort();
+              // stop abandon rules timer
               this.clearTimer();
               hls.trigger(_events2.default.FRAG_LOAD_EMERGENCY_ABORTED, { frag: frag, stats: stats });
             }
@@ -536,28 +536,32 @@ var AbrController = function (_EventHandler) {
   }, {
     key: 'onFragLoaded',
     value: function onFragLoaded(data) {
+      // stop monitoring bw once frag loaded
+      this.clearTimer();
+      // store level id after successful fragment load
+      this.lastLoadedFragLevel = data.frag.level;
+      // reset forced auto level value so that next level will be selected
+      this._nextAutoLevel = -1;
+    }
+  }, {
+    key: 'onFragBuffered',
+    value: function onFragBuffered(data) {
       var stats = data.stats,
           frag = data.frag;
-      // only update stats on first frag loading
+      // only update stats on first frag buffering
       // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
       // and leading to wrong bw estimation
-      if (stats.aborted === undefined && frag.loadCounter === 1) {
-        var fragLoadingDurationMs = stats.tload - stats.trequest;
-        this.bwEstimator.sample(fragLoadingDurationMs, stats.loaded);
+      if (stats.aborted !== true && frag.loadCounter === 1) {
+        var fragLoadingProcessingMs = stats.tbuffered - stats.trequest;
+        _logger.logger.log('latency/loading/parsing/append/kbps:' + Math.round(stats.tfirst - stats.trequest) + '/' + Math.round(stats.tload - stats.tfirst) + '/' + Math.round(stats.tparsed - stats.tload) + '/' + Math.round(stats.tbuffered - stats.tparsed) + '/' + Math.round(8 * stats.loaded / (stats.tbuffered - stats.trequest)));
+        this.bwEstimator.sample(fragLoadingProcessingMs, stats.loaded);
         // if fragment has been loaded to perform a bitrate test, (hls.startLevel = -1), store bitrate test delay duration
         if (frag.bitrateTest) {
-          this.bitrateTestDelay = fragLoadingDurationMs / 1000;
+          this.bitrateTestDelay = fragLoadingProcessingMs / 1000;
         } else {
           this.bitrateTestDelay = 0;
         }
       }
-
-      // stop monitoring bw once frag loaded
-      this.clearTimer();
-      // store level id after successful fragment load
-      this.lastLoadedFragLevel = frag.level;
-      // reset forced auto level value so that next level will be selected
-      this._nextAutoLevel = -1;
     }
   }, {
     key: 'onError',
@@ -913,7 +917,7 @@ var BufferController = function (_EventHandler) {
           // use levelCodec as first priority
           var codec = track.levelCodec || track.codec;
           var mimeType = track.container + ';codecs=' + codec;
-          _logger.logger.log('creating sourceBuffer with mimeType:' + mimeType);
+          _logger.logger.log('creating sourceBuffer(' + mimeType + ')');
           var sb = sourceBuffer[trackName] = mediaSource.addSourceBuffer(mimeType);
           sb.addEventListener('updateend', this.onsbue);
           sb.addEventListener('error', this.onsbe);
@@ -1543,15 +1547,16 @@ var LevelController = function (_EventHandler) {
           clearTimeout(this.timer);
           this.timer = null;
         }
-        this._level = newLevel;
-        _logger.logger.log('switching to level ' + newLevel);
+        if (this._level !== newLevel) {
+          _logger.logger.log('switching to level ' + newLevel);
+          this._level = newLevel;
+        }
         this.hls.trigger(_events2.default.LEVEL_SWITCH, { level: newLevel });
         var level = levels[newLevel],
             levelDetails = level.details;
         // check if we need to load playlist for this level. don't reload live playlist more than once per second
         if (!levelDetails || levelDetails.live === true && performance.now() - levelDetails.tload > 1000) {
           // level not retrieved yet, or live playlist we need to (re)load it
-          _logger.logger.log('(re)loading playlist for level ' + newLevel);
           var urlId = level.urlId;
           this.hls.trigger(_events2.default.LEVEL_LOADING, { url: level.url[urlId], level: newLevel, id: urlId });
         }
@@ -2112,7 +2117,7 @@ var StreamController = function (_EventHandler) {
                 this.state = State.KEY_LOADING;
                 hls.trigger(_events2.default.KEY_LOADING, { frag: frag });
               } else {
-                _logger.logger.log('Loading ' + frag.sn + ' of [' + levelDetails.startSN + ' ,' + levelDetails.endSN + '],level ' + level + ', currentTime:' + pos + ',bufferEnd:' + bufferEnd.toFixed(3));
+                _logger.logger.log('Loading ' + frag.sn + ' of [' + levelDetails.startSN + ' ,' + levelDetails.endSN + '],level ' + level + ', currentTime:' + pos.toFixed(3) + ',bufferEnd:' + bufferEnd.toFixed(3));
                 // ensure that we are not reloading the same fragments in loop ...
                 if (this.fragLoadIdx !== undefined) {
                   this.fragLoadIdx++;
@@ -2564,8 +2569,10 @@ var StreamController = function (_EventHandler) {
       var fragCurrent = this.fragCurrent,
           fragLoaded = data.frag;
       if (this.state === State.FRAG_LOADING && fragCurrent && fragLoaded.level === fragCurrent.level && fragLoaded.sn === fragCurrent.sn) {
-        var stats = data.stats;
-        _logger.logger.log('Loaded  ' + fragCurrent.sn + ' of level ' + fragCurrent.level);
+        var stats = data.stats,
+            currentLevel = this.levels[fragCurrent.level],
+            details = currentLevel.details;
+        _logger.logger.log('Loaded  ' + fragCurrent.sn + ' of [' + details.startSN + ' ,' + details.endSN + '],level ' + fragCurrent.level);
         // reset frag bitrate test in any case after frag loaded event
         this.fragBitrateTest = false;
         // if this frag was loaded to perform a bitrate test AND if hls.nextLoadLevel is greater than 0
@@ -2581,9 +2588,7 @@ var StreamController = function (_EventHandler) {
           this.state = State.PARSING;
           // transmux the MPEG-TS data to ISO-BMFF segments
           this.stats = stats;
-          var currentLevel = this.levels[this.level],
-              details = currentLevel.details,
-              duration = details.totalduration,
+          var duration = details.totalduration,
               start = fragCurrent.startDTS !== undefined && !isNaN(fragCurrent.startDTS) ? fragCurrent.startDTS : fragCurrent.start,
               level = fragCurrent.level,
               sn = fragCurrent.sn,
@@ -2602,7 +2607,7 @@ var StreamController = function (_EventHandler) {
             }
           }
           this.pendingAppending = 0;
-          _logger.logger.log('Demuxing ' + sn + ' of [' + details.startSN + ' ,' + details.endSN + '],level ' + level + ', cc ' + fragCurrent.cc);
+          _logger.logger.log('Parsing ' + sn + ' of [' + details.startSN + ' ,' + details.endSN + '],level ' + level + ', cc ' + fragCurrent.cc);
           var demuxer = this.demuxer;
           if (demuxer) {
             demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata);
@@ -2704,7 +2709,7 @@ var StreamController = function (_EventHandler) {
         var level = this.levels[this.level],
             frag = this.fragCurrent;
 
-        _logger.logger.log('parsed ' + data.type + ',PTS:[' + data.startPTS.toFixed(3) + ',' + data.endPTS.toFixed(3) + '],DTS:[' + data.startDTS.toFixed(3) + '/' + data.endDTS.toFixed(3) + '],nb:' + data.nb + ',dropped:' + (data.dropped || 0));
+        _logger.logger.log('Parsed ' + data.type + ',PTS:[' + data.startPTS.toFixed(3) + ',' + data.endPTS.toFixed(3) + '],DTS:[' + data.startDTS.toFixed(3) + '/' + data.endDTS.toFixed(3) + '],nb:' + data.nb + ',dropped:' + (data.dropped || 0));
 
         var drift = _levelHelper2.default.updateFragPTSDTS(level.details, frag.sn, data.startPTS, data.endPTS, data.startDTS, data.endDTS),
             hls = this.hls;
@@ -2885,9 +2890,9 @@ var StreamController = function (_EventHandler) {
               // if startPosition not buffered, let's seek to buffered.start(0)
               if (startPosition < bufferStart || startPosition > bufferEnd) {
                 startPosition = bufferStart;
-                _logger.logger.log('target start position not buffered, seek to buffered.start(0) ' + bufferStart);
+                _logger.logger.log('target start position not buffered, seek to buffered.start(0) ' + bufferStart.toFixed(3));
               }
-              _logger.logger.log('adjust currentTime from ' + currentTime + ' to ' + startPosition);
+              _logger.logger.log('adjust currentTime from ' + currentTime.toFixed(3) + ' to ' + startPosition.toFixed(3));
               media.currentTime = startPosition;
             }
           }
@@ -2931,7 +2936,7 @@ var StreamController = function (_EventHandler) {
               if (nextBufferStart && delta < this.config.maxSeekHole && delta > 0) {
                 // next buffer is close ! adjust currentTime to nextBufferStart
                 // this will ensure effective video decoding
-                _logger.logger.log('adjust currentTime from ' + media.currentTime + ' to next buffered @ ' + nextBufferStart + ' + nudge ' + this.seekHoleNudgeDuration);
+                _logger.logger.log('adjust currentTime from ' + media.currentTime.toFixed(3) + ' to next buffered @ ' + nextBufferStart.toFixed(3) + ' + nudge ' + this.seekHoleNudgeDuration);
                 var hole = nextBufferStart + this.seekHoleNudgeDuration - media.currentTime;
                 media.currentTime = nextBufferStart + this.seekHoleNudgeDuration;
                 this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_SEEK_OVER_HOLE, fatal: false, hole: hole });
@@ -2985,7 +2990,7 @@ var StreamController = function (_EventHandler) {
       var log = '',
           len = r.length;
       for (var i = 0; i < len; i++) {
-        log += '[' + r.start(i) + ',' + r.end(i) + ']';
+        log += '[' + r.start(i).toFixed(3) + ',' + r.end(i).toFixed(3) + ']';
       }
       return log;
     }
@@ -6194,8 +6199,8 @@ var Hls = function () {
           enableMP2TPassThrough: false,
           abrEwmaFastLive: 5,
           abrEwmaSlowLive: 9,
-          abrEwmaFastVoD: 4,
-          abrEwmaSlowVoD: 15,
+          abrEwmaFastVoD: 3,
+          abrEwmaSlowVoD: 6,
           abrEwmaDefaultEstimate: 5e5, // 500 kbps
           abrBandWidthFactor: 0.8,
           abrBandWidthUpFactor: 0.7,
@@ -6534,8 +6539,9 @@ var FragmentLoader = function (_EventHandler) {
   _createClass(FragmentLoader, [{
     key: 'destroy',
     value: function destroy() {
-      if (this.loader) {
-        this.loader.destroy();
+      var loader = this.loader;
+      if (loader) {
+        loader.abort();
         this.loader = null;
       }
       _eventHandler2.default.prototype.destroy.call(this);
@@ -6543,43 +6549,46 @@ var FragmentLoader = function (_EventHandler) {
   }, {
     key: 'onFragLoading',
     value: function onFragLoading(data) {
-      var frag = data.frag;
-      this.frag = frag;
-      this.frag.loaded = 0;
-      var config = this.hls.config;
+      var frag = this.frag = data.frag,
+          config = this.hls.config;
+      frag.loaded = 0;
       frag.loader = this.loader = typeof config.fLoader !== 'undefined' ? new config.fLoader(config) : new config.loader(config);
-      this.loader.load(frag.url, 'arraybuffer', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.fragLoadingTimeOut, 0, 0, this.loadprogress.bind(this), frag);
+      frag.loader.load(frag.url, 'arraybuffer', this.loadsuccess.bind(this), this.loaderror.bind(this), this.loadtimeout.bind(this), config.fragLoadingTimeOut, 0, 0, this.loadprogress.bind(this), frag);
     }
   }, {
     key: 'loadsuccess',
     value: function loadsuccess(event, stats) {
-      var payload = event.currentTarget.response;
+      var payload = event.currentTarget.response,
+          frag = this.frag;
       stats.length = payload.byteLength;
       // detach fragment loader on load success
-      this.frag.loader = undefined;
-      this.hls.trigger(_events2.default.FRAG_LOADED, { payload: payload, frag: this.frag, stats: stats });
+      this.loader = frag.loader = undefined;
+      this.hls.trigger(_events2.default.FRAG_LOADED, { payload: payload, frag: frag, stats: stats });
     }
   }, {
     key: 'loaderror',
     value: function loaderror(event) {
-      if (this.loader) {
-        this.loader.abort();
+      var loader = this.loader;
+      if (loader) {
+        loader.abort();
       }
       this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.FRAG_LOAD_ERROR, fatal: false, frag: this.frag, response: event });
     }
   }, {
     key: 'loadtimeout',
     value: function loadtimeout() {
-      if (this.loader) {
-        this.loader.abort();
+      var loader = this.loader;
+      if (loader) {
+        loader.abort();
       }
       this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.FRAG_LOAD_TIMEOUT, fatal: false, frag: this.frag });
     }
   }, {
     key: 'loadprogress',
     value: function loadprogress(event, stats) {
-      this.frag.loaded = stats.loaded;
-      this.hls.trigger(_events2.default.FRAG_LOAD_PROGRESS, { frag: this.frag, stats: stats });
+      var frag = this.frag;
+      frag.loaded = stats.loaded;
+      this.hls.trigger(_events2.default.FRAG_LOAD_PROGRESS, { frag: frag, stats: stats });
     }
   }]);
 
@@ -6790,6 +6799,7 @@ var PlaylistLoader = function (_EventHandler) {
         retry = config.levelLoadingMaxRetry;
         timeout = config.levelLoadingTimeOut;
         retryDelay = config.levelLoadingRetryDelay;
+        _logger.logger.log('(re)loading playlist for level ' + id1);
       }
       this.loader = typeof config.pLoader !== 'undefined' ? new config.pLoader(config) : new config.loader(config);
       this.loading = true;
