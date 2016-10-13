@@ -32,7 +32,7 @@ class AbrController extends EventHandler {
 
   onFragLoading(data) {
     let frag = data.frag;
-    if (frag.type === 'main') { 
+    if (frag.type === 'main') {
       if (!this.timer) {
         this.timer = setInterval(this.onCheck, 100);
       }
@@ -114,7 +114,6 @@ class AbrController extends EventHandler {
             hls.nextLoadLevel = nextLoadLevel;
             // update bw estimate for this fragment before cancelling load (this will help reducing the bw)
             this.bwEstimator.sample(requestDelay,stats.loaded);
-            let stats = loader.stats;
             //abort fragment loading
             loader.abort();
             // stop abandon rules timer
