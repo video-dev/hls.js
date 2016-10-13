@@ -208,6 +208,15 @@ class AbrController extends EventHandler {
             frag.type === 'main'
         ) {
             let fragLoadingProcessingMs = stats.tbuffered - stats.trequest;
+            logger.log(
+                `latency/loading/parsing/append/kbps:${Math.round(
+                    stats.tfirst - stats.trequest
+                )}/${Math.round(stats.tload - stats.tfirst)}/${Math.round(
+                    stats.tparsed - stats.tload
+                )}/${Math.round(stats.tbuffered - stats.tparsed)}/${Math.round(
+                    8 * stats.loaded / (stats.tbuffered - stats.trequest)
+                )}`
+            );
             this.bwEstimator.sample(fragLoadingProcessingMs, stats.loaded);
             // if fragment has been loaded to perform a bitrate test, (hls.startLevel = -1), store bitrate test delay duration
             if (frag.bitrateTest) {
