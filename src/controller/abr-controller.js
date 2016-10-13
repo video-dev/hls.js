@@ -13,7 +13,13 @@ import EwmaBandWidthEstimator from './ewma-bandwidth-estimator';
 
 class AbrController extends EventHandler {
     constructor(hls) {
-        super(hls, Event.FRAG_LOADING, Event.FRAG_LOADED, Event.ERROR);
+        super(
+            hls,
+            Event.FRAG_LOADING,
+            Event.FRAG_LOADED,
+            Event.FRAG_BUFFERED,
+            Event.ERROR
+        );
         this.lastLoadedFragLevel = 0;
         this._autoLevelCapping = -1;
         this._nextAutoLevel = -1;
@@ -181,27 +187,34 @@ class AbrController extends EventHandler {
     onFragLoaded(data) {
         let frag = data.frag;
         if (frag.type === 'main') {
-            let stats = data.stats;
-            // only update stats on first frag loading
-            // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
-            // and leading to wrong bw estimation
-            if (stats.aborted === undefined && frag.loadCounter === 1) {
-                let fragLoadingDurationMs = stats.tload - stats.trequest;
-                this.bwEstimator.sample(fragLoadingDurationMs, stats.loaded);
-                // if fragment has been loaded to perform a bitrate test, (hls.startLevel = -1), store bitrate test delay duration
-                if (frag.bitrateTest) {
-                    this.bitrateTestDelay = fragLoadingDurationMs / 1000;
-                } else {
-                    this.bitrateTestDelay = 0;
-                }
-            }
-
             // stop monitoring bw once frag loaded
             this.clearTimer();
             // store level id after successful fragment load
             this.lastLoadedFragLevel = frag.level;
             // reset forced auto level value so that next level will be selected
             this._nextAutoLevel = -1;
+        }
+    }
+
+    onFragBuffered(data) {
+        var stats = data.stats,
+            frag = data.frag;
+        // only update stats on first frag buffering
+        // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
+        // and leading to wrong bw estimation
+        if (
+            stats.aborted !== true &&
+            frag.loadCounter === 1 &&
+            frag.type === 'main'
+        ) {
+            let fragLoadingProcessingMs = stats.tbuffered - stats.trequest;
+            this.bwEstimator.sample(fragLoadingProcessingMs, stats.loaded);
+            // if fragment has been loaded to perform a bitrate test, (hls.startLevel = -1), store bitrate test delay duration
+            if (frag.bitrateTest) {
+                this.bitrateTestDelay = fragLoadingProcessingMs / 1000;
+            } else {
+                this.bitrateTestDelay = 0;
+            }
         }
     }
 
