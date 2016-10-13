@@ -270,11 +270,11 @@ class StreamController extends EventHandler {
             fragPrevious &&
             fragPrevious.sn === levelDetails.endSN
         ) {
-            // if we are not seeking or if we are seeking but everything (almost) til the end is buffered, let's signal eos
+            // if (we are not seeking AND current position is buffered) OR (if we are seeking but everything (almost) til the end is buffered), let's signal eos
             // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference when switching
             // between different renditions. using half frag duration should help cope with these cases.
             if (
-                !media.seeking ||
+                (!media.seeking && bufferInfo.len) ||
                 media.duration - bufferInfo.end <= fragPrevious.duration / 2
             ) {
                 // Finalize the media stream
