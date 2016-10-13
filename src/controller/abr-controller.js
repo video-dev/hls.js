@@ -79,9 +79,7 @@ class AbrController extends EventHandler {
 
         // if loader has been destroyed or loading has been aborted, stop timer and return
         if (!loader || (loader.stats && loader.stats.aborted)) {
-            logger.warn(
-                `frag loader destroy or aborted, disarm abandonRulesCheck`
-            );
+            logger.warn('frag loader destroy or aborted, disarm abandonRules');
             this.clearTimer();
             return;
         }
@@ -146,13 +144,6 @@ class AbrController extends EventHandler {
                             frag.duration *
                             levels[nextLoadLevel].bitrate /
                             (8 * 0.8 * loadRate);
-                        logger.log(
-                            `fragLoadedDelay/bufferStarvationDelay/fragLevelNextLoadedDelay[${nextLoadLevel}] :${fragLoadedDelay.toFixed(
-                                1
-                            )}/${bufferStarvationDelay.toFixed(
-                                1
-                            )}/${fragLevelNextLoadedDelay.toFixed(1)}`
-                        );
                         if (fragLevelNextLoadedDelay < bufferStarvationDelay) {
                             // we found a lower level that be rebuffering free with current estimated bw !
                             break;
@@ -163,16 +154,22 @@ class AbrController extends EventHandler {
                     if (fragLevelNextLoadedDelay < fragLoadedDelay) {
                         // ensure nextLoadLevel is not negative
                         nextLoadLevel = Math.max(0, nextLoadLevel);
+                        logger.warn(
+                            `loading too slow, abort fragment loading and switch to level ${nextLoadLevel}:fragLoadedDelay[${nextLoadLevel}]<fragLoadedDelay[${frag.level -
+                                1}];bufferStarvationDelay:${fragLevelNextLoadedDelay.toFixed(
+                                1
+                            )}<${fragLoadedDelay.toFixed(
+                                1
+                            )}:${bufferStarvationDelay.toFixed(1)}`
+                        );
                         // force next load level in auto mode
                         hls.nextLoadLevel = nextLoadLevel;
                         // update bw estimate for this fragment before cancelling load (this will help reducing the bw)
                         this.bwEstimator.sample(requestDelay, stats.loaded);
-                        // abort fragment loading ...
-                        logger.warn(
-                            `loading too slow, abort fragment loading and switch to level ${nextLoadLevel}`
-                        );
+                        let stats = loader.stats;
                         //abort fragment loading
-                        frag.loader.abort();
+                        loader.abort();
+                        // stop abandon rules timer
                         this.clearTimer();
                         hls.trigger(Event.FRAG_LOAD_EMERGENCY_ABORTED, {
                             frag: frag,
