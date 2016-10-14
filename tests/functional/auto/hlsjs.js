@@ -14,14 +14,25 @@ var stream = streams[STREAM_ID];
 if (!stream) {
   throw new Error('Could not find stream "'+stream_ID+'"');
 }
-var BROWSER_CONFIG = onTravis ? {name : 'chrome', version : 'latest', platform : 'Windows 10'} : { name : 'chrome' };
-
-var browserDescription = BROWSER_CONFIG.name;
-if (BROWSER_CONFIG.version) {
-  browserDescription += ' ('+BROWSER_CONFIG.version+')';
+var browserConfig = {version : 'latest'};
+if (onTravis) {
+  var TEST_BROWSER_NAME = process.env.TEST_BROWSER_NAME;
+  if (!TEST_BROWSER_NAME) {
+    throw new Error('No test browser name.')
+  }
+  var TEST_BROWSER_PLATFORM = process.env.TEST_BROWSER_PLATFORM;
+  if (!TEST_BROWSER_PLATFORM) {
+    throw new Error('No test browser platform.')
+  }
+  browserConfig.name = TEST_BROWSER_NAME;
+  browserConfig.platform = TEST_BROWSER_PLATFORM;
 }
-if (BROWSER_CONFIG.platform) {
-  browserDescription += ', '+BROWSER_CONFIG.platform;
+var browserDescription = browserConfig.name;
+if (browserConfig.version) {
+  browserDescription += ' ('+browserConfig.version+')';
+}
+if (browserConfig.platform) {
+  browserDescription += ', '+browserConfig.platform;
 }
 
 HttpServer.createServer({
@@ -33,9 +44,9 @@ HttpServer.createServer({
 describe('testing hls.js playback in the browser with "'+stream.description+'" on "'+browserDescription+'"', function() {
   beforeEach(function() {
     var capabilities = {
-      browserName : BROWSER_CONFIG.name,
-      platform : BROWSER_CONFIG.platform,
-      version: BROWSER_CONFIG.version
+      browserName : browserConfig.name,
+      platform : browserConfig.platform,
+      version: browserConfig.version
     };
     if (onTravis) {
       capabilities['tunnel-identifier'] = process.env.TRAVIS_JOB_NUMBER;
