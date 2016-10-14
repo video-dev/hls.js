@@ -1,17 +1,28 @@
-var assert = require("assert");
-var webdriver = require("selenium-webdriver");
+var assert = require('assert');
+var webdriver = require('selenium-webdriver');
 // requiring this automatically adds the chromedriver binary to the PATH
-var chromedriver = require("chromedriver");
-var HttpServer = require("http-server");
+var chromedriver = require('chromedriver');
+var HttpServer = require('http-server');
+var streams = require('../streams.json');
 
-var STREAMS = [
-  { url : 'http://www.streambox.fr/playlists/test_001/stream.m3u8', description : 'ARTE China,ABR', live : false , abr : true},
-  { url : 'http://www.streambox.fr/playlists/x36xhzz/x36xhzz.m3u8', description : 'big buck bunny,ABR', live : false, abr : false},
-  { url : 'http://www.streambox.fr/playlists/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8', description : 'big buck bunny,480p', live : false, abr : false},
-  { url : 'http://www.streambox.fr/playlists/cisq0gim60007xzvi505emlxx.m3u8', description : 'https://github.com/dailymotion/hls.js/issues/666', live : false, abr : false},
-  { url : 'http://nasatv-lh.akamaihd.net/i/NASA_101@319270/index_1000_av-p.m3u8?sd=10&rebase=on', description : 'NASA live stream', live : true, abr : true}
- ];
+var onTravis = !!process.env.TRAVIS;
+var STREAM_ID = onTravis ? process.env.TEST_STREAM_ID : 'arte';
+if (!STREAM_ID) {
+  throw new Error('No stream ID.');
+}
+var stream = streams[STREAM_ID];
+if (!stream) {
+  throw new Error('Could not find stream "'+stream_ID+'"');
+}
+var BROWSER_CONFIG = onTravis ? {name : 'chrome', version : 'latest', platform : 'Windows 10'} : { name : 'chrome' };
 
+var browserDescription = BROWSER_CONFIG.name;
+if (BROWSER_CONFIG.version) {
+  browserDescription += ' ('+BROWSER_CONFIG.version+')';
+}
+if (BROWSER_CONFIG.platform) {
+  browserDescription += ', '+BROWSER_CONFIG.platform;
+}
 
 HttpServer.createServer({
   showDir: false,
@@ -19,98 +30,95 @@ HttpServer.createServer({
   root: './',
 }).listen(8000, '127.0.0.1');
 
-describe("testing hls.js playback in the browser", function() {
+describe('testing hls.js playback in the browser with "'+stream.description+'" on "'+browserDescription+'"', function() {
   beforeEach(function() {
-    if (process.env.SAUCE_USERNAME != undefined) {
-      this.browser = new webdriver.Builder()
-      .usingServer('http://'+ process.env.SAUCE_USERNAME+':'+process.env.SAUCE_ACCESS_KEY+'@ondemand.saucelabs.com:80/wd/hub')
-      .withCapabilities({
-        'tunnel-identifier': process.env.TRAVIS_JOB_NUMBER,
-        build: process.env.TRAVIS_BUILD_NUMBER,
-        username: process.env.SAUCE_USERNAME,
-        accessKey: process.env.SAUCE_ACCESS_KEY,
-        browserName : 'chrome',
-        platform : 'Windows 10',
-        version : '53.0'
-      }).build();
-    } else {
-      this.browser = new webdriver.Builder()
-      .withCapabilities({
-        browserName : 'chrome'
-      }).build();
+    var capabilities = {
+      browserName : BROWSER_CONFIG.name,
+      platform : BROWSER_CONFIG.platform,
+      version: BROWSER_CONFIG.version
+    };
+    if (onTravis) {
+      capabilities['tunnel-identifier'] = process.env.TRAVIS_JOB_NUMBER;
+      capabilities.build = process.env.TRAVIS_BUILD_NUMBER;
+      capabilities.username = process.env.SAUCE_USERNAME;
+      capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
+      this.browser = new webdriver.Builder().usingServer('http://'+ process.env.SAUCE_USERNAME+':'+process.env.SAUCE_ACCESS_KEY+'@ondemand.saucelabs.com:80/wd/hub');
     }
+    else {
+      this.browser = new webdriver.Builder();
+    }
+    this.browser = this.browser.withCapabilities(capabilities).build();
     this.browser.manage().timeouts().setScriptTimeout(40000);
-    return this.browser.get("http://localhost:8000/tests/functional/auto/hlsjs.html");
+    return this.browser.getSession().then(function(session) {
+      console.log("Web driver session id: "+session.getId());
+      return this.browser.get('http://localhost:8000/tests/functional/auto/hlsjs.html');
+    }.bind(this));
   });
 
   afterEach(function() {
     return this.browser.quit();
   });
 
+  it('should receive video loadeddata event', function() {
+    var url = stream.url;
+    return this.browser.executeAsyncScript(function(url) {
+      var callback = arguments[arguments.length - 1];
+      startStream(url, callback);
+      video.onloadeddata = function() {
+        callback('loadeddata');
+      };
+    }, url).then(function(result) {
+      assert.strictEqual(result, 'loadeddata');
+    });
+  });
 
-
-  STREAMS.forEach(function(stream) {
-    it("should receive video loadeddata event for " + stream.description, function() {
+  if (stream.abr) {
+    it('should "smooth switch" to highest level and still play(readyState === 4) after 12s', function() {
       var url = stream.url;
       return this.browser.executeAsyncScript(function(url) {
         var callback = arguments[arguments.length - 1];
         startStream(url, callback);
         video.onloadeddata = function() {
-          callback('loadeddata');
+          switchToHighestLevel('next');
         };
+        window.setTimeout(function() { callback(video.readyState);}, 12000);
       }, url).then(function(result) {
-        assert.strictEqual(result, 'loadeddata');
+        assert.strictEqual(result, 4);
       });
     });
+  }
 
-    if (stream.abr) {
-      it("should 'smooth switch' to highest level and still play(readyState === 4) after 12s for " + stream.description, function() {
-        var url = stream.url;
-        return this.browser.executeAsyncScript(function(url) {
-          var callback = arguments[arguments.length - 1];
-          startStream(url, callback);
-          video.onloadeddata = function() {
-            switchToHighestLevel('next');
-          };
-          window.setTimeout(function() { callback(video.readyState);},12000);
-        }, url).then(function(result) {
-          assert.strictEqual(result, 4);
-        });
+  if (stream.live) {
+    it('should seek near the end and receive video seeked event', function() {
+      var url = stream.url;
+      return this.browser.executeAsyncScript(function(url) {
+        var callback = arguments[arguments.length - 1];
+        startStream(url, callback);
+        video.onloadeddata = function() {
+          window.setTimeout(function() { video.currentTime = video.duration - 5;}, 5000);
+        };
+        video.onseeked = function() {
+          callback('seeked');
+        };
+      }, url).then(function(result) {
+        assert.strictEqual(result, 'seeked');
       });
-    }
-
-    if (stream.live) {
-      it("should seek near the end and receive video seeked event for " + stream.description, function() {
-        var url = stream.url;
-        return this.browser.executeAsyncScript(function(url) {
-          var callback = arguments[arguments.length - 1];
-          startStream(url, callback);
-          video.onloadeddata = function() {
-            window.setTimeout(function() { video.currentTime = video.duration - 5;},5000);
-          };
-          video.onseeked = function() {
-            callback('seeked');
-          };
-        }, url).then(function(result) {
-          assert.strictEqual(result, 'seeked');
-        });
+    });
+  } else {
+    it('should seek near the end and receive video ended event', function() {
+      var url = stream.url;
+      return this.browser.executeAsyncScript(function(url) {
+        var callback = arguments[arguments.length - 1];
+        startStream(url, callback);
+        video.onloadeddata = function() {
+          video.currentTime = video.duration - 5;
+        };
+        video.onended = function() {
+          callback('ended');
+        };
+      }, url).then(function(result) {
+        assert.strictEqual(result, 'ended');
       });
-    } else {
-      it("should seek near the end and receive video ended event for " + stream.description, function() {
-        var url = stream.url;
-        return this.browser.executeAsyncScript(function(url) {
-          var callback = arguments[arguments.length - 1];
-          startStream(url, callback);
-          video.onloadeddata = function() {
-            video.currentTime = video.duration - 5;
-          };
-          video.onended = function() {
-            callback('ended');
-          };
-        }, url).then(function(result) {
-          assert.strictEqual(result, 'ended');
-        });
-      });
-    }
-  });
+    });
+  }
 });
