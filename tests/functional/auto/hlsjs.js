@@ -14,7 +14,7 @@ var stream = streams[STREAM_ID];
 if (!stream) {
   throw new Error('Could not find stream "'+stream_ID+'"');
 }
-var BROWSER_CONFIG = onTravis ? {name : 'chrome', version : '53.0', platform : 'Windows 10'} : { name : 'chrome' };
+var BROWSER_CONFIG = onTravis ? {name : 'chrome', version : 'latest', platform : 'Windows 10'} : { name : 'chrome' };
 
 var browserDescription = BROWSER_CONFIG.name;
 if (BROWSER_CONFIG.version) {
