@@ -1,6 +1,7 @@
 language: node_js
 node_js:
 - 5.4.1
+before_script: chmod +x ./scripts/*.sh
 script: ./scripts/travis.sh
 env:
   global:
