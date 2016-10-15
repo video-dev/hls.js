@@ -47,7 +47,7 @@ describe('testing hls.js playback in the browser with "'+stream.description+'" o
       browserName : browserConfig.name,
       platform : browserConfig.platform,
       version : browserConfig.version,
-      commandTimeout : 5
+      commandTimeout : 25
     };
     if (onTravis) {
       capabilities['tunnel-identifier'] = process.env.TRAVIS_JOB_NUMBER;
