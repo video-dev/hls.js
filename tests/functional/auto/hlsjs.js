@@ -75,7 +75,10 @@ describe('testing hls.js playback in the browser with "'+stream.description+'" o
   });
 
   afterEach(function() {
-    return this.browser.quit();
+    console.log("Quitting browser...");
+    return this.browser.quit().then(function() {
+      console.log("Browser quit.");
+    });
   });
 
   it('should receive video loadeddata event', function() {
