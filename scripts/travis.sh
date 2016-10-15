@@ -1,6 +1,7 @@
 #!/bin/bash
 # https://docs.travis-ci.com/user/customizing-the-build/#Implementing-Complex-Build-Steps
 set -ev
+
 npm install
 if [ "${TRAVIS_MODE}" = "buildLib" ]; then
 	npm run buildlib
@@ -15,7 +16,7 @@ elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
 	until [ $n -ge ${maxRetries} ]
 	do
 		if [ $n -gt 0 ]; then
-			echo "Retrying... Attempt: ${n+1}"
+			echo "Retrying... Attempt: $((n+1))"
 		fi
 		npm run testfunc && break
 		n=$[$n+1]
