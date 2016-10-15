@@ -64,10 +64,14 @@ describe('testing hls.js playback in the browser with "'+stream.description+'" o
     }
     this.browser = this.browser.withCapabilities(capabilities).build();
     this.browser.manage().timeouts().setScriptTimeout(40000);
+    console.log("Retrieving web driver session...");
     return this.browser.getSession().then(function(session) {
       console.log("Web driver session id: "+session.getId());
+      console.log("Loading test page...");
       return this.browser.get('http://localhost:8000/tests/functional/auto/hlsjs.html');
-    }.bind(this));
+    }.bind(this)).then(function() {
+      console.log("Test page loaded.");
+    });
   });
 
   afterEach(function() {
