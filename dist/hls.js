@@ -1145,7 +1145,7 @@ var BufferController = function (_EventHandler) {
               */
               if (Math.min(flushEnd, bufEnd) - flushStart > 0.5) {
                 this.flushBufferCounter++;
-                _logger.logger.log('flush ' + type + ' [' + flushStart + ',' + flushEnd + '], of [' + bufStart + ',' + bufEnd + '], pos:' + this.media.currentTime);
+                _logger.logger.log('flush ' + type + ' [' + flushStart.toFixed(3) + ',' + flushEnd.toFixed(3) + '], of [' + bufStart.toFixed(3) + ',' + bufEnd.toFixed(3) + '], pos:' + this.media.currentTime.toFixed(3));
                 sb.remove(flushStart, flushEnd);
                 return false;
               }
@@ -1412,6 +1412,10 @@ var _logger = require('../utils/logger');
 
 var _errors = require('../errors');
 
+var _bufferHelper = require('../helper/buffer-helper');
+
+var _bufferHelper2 = _interopRequireDefault(_bufferHelper);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -1616,18 +1620,29 @@ var LevelController = function (_EventHandler) {
               // reset this._level so that another call to set level() will retrigger a frag load
               this._level = undefined;
             }
-            // fragment errors are all handled  by streamController
-          } else if (details !== _errors.ErrorDetails.FRAG_LOAD_ERROR && details !== _errors.ErrorDetails.FRAG_LOAD_TIMEOUT && details !== _errors.ErrorDetails.FRAG_LOOP_LOADING_ERROR) {
-              _logger.logger.error('cannot recover ' + details + ' error');
-              this._level = undefined;
-              // stopping live reloading timer if any
-              if (this.timer) {
-                clearTimeout(this.timer);
-                this.timer = null;
+            // other errors are handled by stream controller
+          } else if (details === _errors.ErrorDetails.LEVEL_LOAD_ERROR || details === _errors.ErrorDetails.LEVEL_LOAD_TIMEOUT) {
+              var _hls = this.hls,
+                  media = _hls.media,
+
+              // 0.4 : tolerance needed as some browsers stalls playback before reaching buffered end
+              mediaBuffered = media && _bufferHelper2.default.isBuffered(media, media.currentTime) && _bufferHelper2.default.isBuffered(media, media.currentTime + 0.4);
+              if (mediaBuffered) {
+                var retryDelay = _hls.config.levelLoadingRetryDelay;
+                _logger.logger.warn('level controller,' + details + ', but media buffered, retry in ' + retryDelay + 'ms');
+                this.timer = setTimeout(this.ontick, retryDelay);
+              } else {
+                _logger.logger.error('cannot recover ' + details + ' error');
+                this._level = undefined;
+                // stopping live reloading timer if any
+                if (this.timer) {
+                  clearTimeout(this.timer);
+                  this.timer = null;
+                }
+                // redispatch same error but with fatal set to true
+                data.fatal = true;
+                _hls.trigger(_events2.default.ERROR, data);
               }
-              // redispatch same error but with fatal set to true
-              data.fatal = true;
-              hls.trigger(_events2.default.ERROR, data);
             }
         }
       }
@@ -1745,7 +1760,7 @@ var LevelController = function (_EventHandler) {
 
 exports.default = LevelController;
 
-},{"../errors":21,"../event-handler":22,"../events":23,"../utils/logger":38}],8:[function(require,module,exports){
+},{"../errors":21,"../event-handler":22,"../events":23,"../helper/buffer-helper":24,"../utils/logger":38}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2158,7 +2173,7 @@ var StreamController = function (_EventHandler) {
           var retryDate = this.retryDate;
           // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
           if (!retryDate || now >= retryDate || isSeeking) {
-            _logger.logger.log('mediaController: retryDate reached, switch back to IDLE state');
+            _logger.logger.log('streamController: retryDate reached, switch back to IDLE state');
             this.state = State.IDLE;
           }
           break;
@@ -2202,20 +2217,6 @@ var StreamController = function (_EventHandler) {
       return null;
     }
   }, {
-    key: 'isBuffered',
-    value: function isBuffered(position) {
-      var media = this.media;
-      if (media) {
-        var buffered = media.buffered;
-        for (var i = 0; i < buffered.length; i++) {
-          if (position >= buffered.start(i) && position <= buffered.end(i)) {
-            return true;
-          }
-        }
-      }
-      return false;
-    }
-  }, {
     key: '_checkFragmentChanged',
     value: function _checkFragmentChanged() {
       var rangeCurrent,
@@ -2232,9 +2233,9 @@ var StreamController = function (_EventHandler) {
         if (currentTime > video.playbackRate * this.lastCurrentTime) {
           this.lastCurrentTime = currentTime;
         }
-        if (this.isBuffered(currentTime)) {
+        if (_bufferHelper2.default.isBuffered(video, currentTime)) {
           rangeCurrent = this.getBufferRange(currentTime);
-        } else if (this.isBuffered(currentTime + 0.1)) {
+        } else if (_bufferHelper2.default.isBuffered(video, currentTime + 0.1)) {
           /* ensure that FRAG_CHANGED event is triggered at startup,
             when first video frame is displayed and playback is paused.
             add a tolerance of 100ms, in case current position is not buffered,
@@ -2782,7 +2783,7 @@ var StreamController = function (_EventHandler) {
       var media = this.media,
 
       // 0.4 : tolerance needed as some browsers stalls playback before reaching buffered end
-      mediaBuffered = media && this.isBuffered(media.currentTime) && this.isBuffered(media.currentTime + 0.4),
+      mediaBuffered = media && _bufferHelper2.default.isBuffered(media, media.currentTime) && _bufferHelper2.default.isBuffered(media, media.currentTime + 0.4),
           frag = data.frag || this.fragCurrent;
       switch (data.details) {
         case _errors.ErrorDetails.FRAG_LOAD_ERROR:
@@ -2801,12 +2802,12 @@ var StreamController = function (_EventHandler) {
               frag.loadCounter = 0;
               // exponential backoff capped to 64s
               var delay = Math.min(Math.pow(2, loadError - 1) * this.config.fragLoadingRetryDelay, 64000);
-              _logger.logger.warn('mediaController: frag loading failed, retry in ' + delay + ' ms');
+              _logger.logger.warn('streamController: frag loading failed, retry in ' + delay + ' ms');
               this.retryDate = performance.now() + delay;
               // retry loading state
               this.state = State.FRAG_LOADING_WAITING_RETRY;
             } else {
-              _logger.logger.error('mediaController: ' + data.details + ' reaches max retry, redispatch as fatal ...');
+              _logger.logger.error('streamController: ' + data.details + ' reaches max retry, redispatch as fatal ...');
               // redispatch same error but with fatal set to true
               data.fatal = true;
               this.hls.trigger(_events2.default.ERROR, data);
@@ -2820,7 +2821,7 @@ var StreamController = function (_EventHandler) {
             if (mediaBuffered) {
               // try to reduce max buffer length : rationale is that we could get
               // frag loop loading error because of buffer eviction
-              this._reduceMaxMaxBufferLength(frag.duration);
+              this._reduceMaxBufferLength(frag.duration);
               this.state = State.IDLE;
             } else {
               // buffer empty. report as fatal if in manual mode or if lowest level.
@@ -2842,13 +2843,13 @@ var StreamController = function (_EventHandler) {
           if (this.state !== State.ERROR) {
             // if fatal error, stop processing, otherwise move to IDLE to retry loading
             this.state = data.fatal ? State.ERROR : State.IDLE;
-            _logger.logger.warn('mediaController: ' + data.details + ' while loading frag,switch to ' + this.state + ' state ...');
+            _logger.logger.warn('streamController: ' + data.details + ' while loading frag,switch to ' + this.state + ' state ...');
           }
           break;
         case _errors.ErrorDetails.BUFFER_FULL_ERROR:
           // only reduce max buf len if in appending state
           if (this.state === State.PARSING || this.state === State.PARSED) {
-            this._reduceMaxMaxBufferLength(frag.duration);
+            this._reduceMaxBufferLength(frag.duration);
             this.state = State.IDLE;
           }
           break;
@@ -2857,8 +2858,8 @@ var StreamController = function (_EventHandler) {
       }
     }
   }, {
-    key: '_reduceMaxMaxBufferLength',
-    value: function _reduceMaxMaxBufferLength(minLength) {
+    key: '_reduceMaxBufferLength',
+    value: function _reduceMaxBufferLength(minLength) {
       if (this.config.maxMaxBufferLength >= minLength) {
         // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
         this.config.maxMaxBufferLength /= 2;
@@ -2908,7 +2909,7 @@ var StreamController = function (_EventHandler) {
 
           if (this.stalled && playheadMoving) {
             this.stalled = false;
-            _logger.logger.log('playback not stuck anymore @' + currentTime);
+            _logger.logger.log('playback not stuck anymore @' + currentTime.toFixed(3));
           }
           // check buffer upfront
           // if less than jumpThreshold second is buffered, let's check in more details
@@ -2921,7 +2922,7 @@ var StreamController = function (_EventHandler) {
               // playhead not moving AND media expected to play
               if (!this.stalled) {
                 this.seekHoleNudgeDuration = 0;
-                _logger.logger.log('playback seems stuck @' + currentTime);
+                _logger.logger.log('playback seems stuck @' + currentTime.toFixed(3));
                 this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_STALLED_ERROR, fatal: false });
                 this.stalled = true;
               } else {
@@ -2964,7 +2965,7 @@ var StreamController = function (_EventHandler) {
           i;
       for (i = 0; i < this.bufferRange.length; i++) {
         range = this.bufferRange[i];
-        if (this.isBuffered((range.start + range.end) / 2)) {
+        if (_bufferHelper2.default.isBuffered(this.media, (range.start + range.end) / 2)) {
           newRange.push(range);
         }
       }
@@ -5816,6 +5817,19 @@ var BufferHelper = function () {
   }
 
   _createClass(BufferHelper, null, [{
+    key: "isBuffered",
+    value: function isBuffered(media, position) {
+      if (media) {
+        var buffered = media.buffered;
+        for (var i = 0; i < buffered.length; i++) {
+          if (position >= buffered.start(i) && position <= buffered.end(i)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+  }, {
     key: "bufferInfo",
     value: function bufferInfo(media, pos, maxHoleDuration) {
       if (media) {
