@@ -384,7 +384,7 @@ class BufferController extends EventHandler {
             */
             if (Math.min(flushEnd,bufEnd) - flushStart > 0.5 ) {
               this.flushBufferCounter++;
-              logger.log(`flush ${type} [${flushStart},${flushEnd}], of [${bufStart},${bufEnd}], pos:${this.media.currentTime}`);
+              logger.log(`flush ${type} [${flushStart.toFixed(3)},${flushEnd.toFixed(3)}], of [${bufStart.toFixed(3)},${bufEnd.toFixed(3)}], pos:${this.media.currentTime.toFixed(3)}`);
               sb.remove(flushStart, flushEnd);
               return false;
             }

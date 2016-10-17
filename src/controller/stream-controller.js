@@ -374,7 +374,7 @@ class StreamController extends EventHandler {
         var retryDate = this.retryDate;
         // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
         if(!retryDate || (now >= retryDate) || isSeeking) {
-          logger.log(`mediaController: retryDate reached, switch back to IDLE state`);
+          logger.log(`streamController: retryDate reached, switch back to IDLE state`);
           this.state = State.IDLE;
         }
         break;
@@ -1009,12 +1009,12 @@ class StreamController extends EventHandler {
             frag.loadCounter = 0;
             // exponential backoff capped to 64s
             var delay = Math.min(Math.pow(2,loadError-1)*this.config.fragLoadingRetryDelay,64000);
-            logger.warn(`mediaController: frag loading failed, retry in ${delay} ms`);
+            logger.warn(`streamController: frag loading failed, retry in ${delay} ms`);
             this.retryDate = performance.now() + delay;
             // retry loading state
             this.state = State.FRAG_LOADING_WAITING_RETRY;
           } else {
-            logger.error(`mediaController: ${data.details} reaches max retry, redispatch as fatal ...`);
+            logger.error(`streamController: ${data.details} reaches max retry, redispatch as fatal ...`);
             // redispatch same error but with fatal set to true
             data.fatal = true;
             this.hls.trigger(Event.ERROR, data);
@@ -1028,7 +1028,7 @@ class StreamController extends EventHandler {
           if (mediaBuffered) {
             // try to reduce max buffer length : rationale is that we could get
             // frag loop loading error because of buffer eviction
-            this._reduceMaxMaxBufferLength(frag.duration);
+            this._reduceMaxBufferLength(frag.duration);
             this.state = State.IDLE;
           } else {
             // buffer empty. report as fatal if in manual mode or if lowest level.
@@ -1050,13 +1050,13 @@ class StreamController extends EventHandler {
         if(this.state !== State.ERROR) {
             // if fatal error, stop processing, otherwise move to IDLE to retry loading
             this.state = data.fatal ? State.ERROR : State.IDLE;
-            logger.warn(`mediaController: ${data.details} while loading frag,switch to ${this.state} state ...`);
+            logger.warn(`streamController: ${data.details} while loading frag,switch to ${this.state} state ...`);
         }
         break;
       case ErrorDetails.BUFFER_FULL_ERROR:
         // only reduce max buf len if in appending state
         if (this.state === State.PARSING || this.state === State.PARSED) {
-          this._reduceMaxMaxBufferLength(frag.duration);
+          this._reduceMaxBufferLength(frag.duration);
           this.state = State.IDLE;
         }
         break;
@@ -1065,7 +1065,7 @@ class StreamController extends EventHandler {
     }
   }
 
-  _reduceMaxMaxBufferLength(minLength) {
+  _reduceMaxBufferLength(minLength) {
     if (this.config.maxMaxBufferLength >= minLength) {
       // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
       this.config.maxMaxBufferLength/=2;
@@ -1112,7 +1112,7 @@ _checkBuffer() {
 
         if (this.stalled && playheadMoving) {
           this.stalled = false;
-          logger.log(`playback not stuck anymore @${currentTime}`);
+          logger.log(`playback not stuck anymore @${currentTime.toFixed(3)}`);
         }
         // check buffer upfront
         // if less than jumpThreshold second is buffered, let's check in more details
@@ -1125,7 +1125,7 @@ _checkBuffer() {
             // playhead not moving AND media expected to play
             if(!this.stalled) {
               this.seekHoleNudgeDuration = 0;
-              logger.log(`playback seems stuck @${currentTime}`);
+              logger.log(`playback seems stuck @${currentTime.toFixed(3)}`);
               this.hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_STALLED_ERROR, fatal: false});
               this.stalled = true;
             } else {
