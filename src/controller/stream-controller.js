@@ -446,19 +446,6 @@ class StreamController extends EventHandler {
     }
   }
 
-  isBuffered(position) {
-    let media = this.media;
-    if (media) {
-      let buffered = media.buffered;
-      for (let i = 0; i < buffered.length; i++) {
-        if (position >= buffered.start(i) && position <= buffered.end(i)) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
-
   _checkFragmentChanged() {
     var rangeCurrent, currentTime, video = this.media;
     if (video && video.seeking === false) {
@@ -472,9 +459,9 @@ class StreamController extends EventHandler {
       if(currentTime > video.playbackRate*this.lastCurrentTime) {
         this.lastCurrentTime = currentTime;
       }
-      if (this.isBuffered(currentTime)) {
+      if (BufferHelper.isBuffered(video,currentTime)) {
         rangeCurrent = this.getBufferRange(currentTime);
-      } else if (this.isBuffered(currentTime + 0.1)) {
+      } else if (BufferHelper.isBuffered(video,currentTime + 0.1)) {
         /* ensure that FRAG_CHANGED event is triggered at startup,
           when first video frame is displayed and playback is paused.
           add a tolerance of 100ms, in case current position is not buffered,
@@ -990,7 +977,7 @@ class StreamController extends EventHandler {
   onError(data) {
     let media = this.media,
         // 0.4 : tolerance needed as some browsers stalls playback before reaching buffered end
-        mediaBuffered = media && this.isBuffered(media.currentTime) && this.isBuffered(media.currentTime+0.4),
+        mediaBuffered = media && BufferHelper.isBuffered(media,media.currentTime) && BufferHelper.isBuffered(media,media.currentTime+0.4),
         frag = data.frag || this.fragCurrent;
     switch(data.details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
@@ -1165,7 +1152,7 @@ _checkBuffer() {
     var newRange = [],range,i;
     for (i = 0; i < this.bufferRange.length; i++) {
       range = this.bufferRange[i];
-      if (this.isBuffered((range.start + range.end) / 2)) {
+      if (BufferHelper.isBuffered(this.media,(range.start + range.end) / 2)) {
         newRange.push(range);
       }
     }
