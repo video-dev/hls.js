@@ -6,6 +6,7 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import {logger} from '../utils/logger';
 import {ErrorTypes, ErrorDetails} from '../errors';
+import BufferHelper from '../helper/buffer-helper';
 
 class LevelController extends EventHandler {
 
@@ -228,20 +229,29 @@ class LevelController extends EventHandler {
             // reset this._level so that another call to set level() will retrigger a frag load
             this._level = undefined;
           }
-        // fragment errors are all handled  by streamController
-        } else if (details !== ErrorDetails.FRAG_LOAD_ERROR &&
-                   details !== ErrorDetails.FRAG_LOAD_TIMEOUT &&
-                   details !== ErrorDetails.FRAG_LOOP_LOADING_ERROR) {
-          logger.error(`cannot recover ${details} error`);
-          this._level = undefined;
-          // stopping live reloading timer if any
-          if (this.timer) {
-            clearTimeout(this.timer);
-            this.timer = null;
+          // other errors are handled by stream controller
+        } else if (details === ErrorDetails.LEVEL_LOAD_ERROR ||
+                   details === ErrorDetails.LEVEL_LOAD_TIMEOUT) {
+          let hls = this.hls,
+              media = hls.media,
+            // 0.4 : tolerance needed as some browsers stalls playback before reaching buffered end
+              mediaBuffered = media && BufferHelper.isBuffered(media,media.currentTime) && BufferHelper.isBuffered(media,media.currentTime+0.4);
+          if (mediaBuffered) {
+            let retryDelay = hls.config.levelLoadingRetryDelay;
+            logger.warn(`level controller,${details}, but media buffered, retry in ${retryDelay}ms`);
+            this.timer = setTimeout(this.ontick,retryDelay);
+          } else {
+            logger.error(`cannot recover ${details} error`);
+            this._level = undefined;
+            // stopping live reloading timer if any
+            if (this.timer) {
+              clearTimeout(this.timer);
+              this.timer = null;
+            }
+            // redispatch same error but with fatal set to true
+            data.fatal = true;
+            hls.trigger(Event.ERROR, data);
           }
-          // redispatch same error but with fatal set to true
-          data.fatal = true;
-          hls.trigger(Event.ERROR, data);
         }
       }
     }
