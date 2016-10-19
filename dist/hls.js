@@ -542,6 +542,12 @@ var AbrController = function (_EventHandler) {
       this.lastLoadedFragLevel = data.frag.level;
       // reset forced auto level value so that next level will be selected
       this._nextAutoLevel = -1;
+      // if fragment has been loaded to perform a bitrate test,
+      if (data.frag.bitrateTest) {
+        var stats = data.stats;
+        stats.tparsed = stats.tbuffered = stats.tload;
+        this.onFragBuffered(data);
+      }
     }
   }, {
     key: 'onFragBuffered',
@@ -551,7 +557,8 @@ var AbrController = function (_EventHandler) {
       // only update stats on first frag buffering
       // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
       // and leading to wrong bw estimation
-      if (stats.aborted !== true && frag.loadCounter === 1) {
+      // on bitrate test, also only update stats once (if tload = tbuffered == on FRAG_LOADED)
+      if (stats.aborted !== true && frag.loadCounter === 1 && (!frag.bitrateTest || stats.tload === stats.tbuffered)) {
         var fragLoadingProcessingMs = stats.tbuffered - stats.trequest;
         _logger.logger.log('latency/loading/parsing/append/kbps:' + Math.round(stats.tfirst - stats.trequest) + '/' + Math.round(stats.tload - stats.tfirst) + '/' + Math.round(stats.tparsed - stats.tload) + '/' + Math.round(stats.tbuffered - stats.tparsed) + '/' + Math.round(8 * stats.loaded / (stats.tbuffered - stats.trequest)));
         this.bwEstimator.sample(fragLoadingProcessingMs, stats.loaded);
@@ -694,7 +701,9 @@ var AbrController = function (_EventHandler) {
         _logger.logger.trace('rebuffering expected to happen, lets try to find a quality level minimizing the rebuffering');
         // not possible to get rid of rebuffering ... let's try to find level that will guarantee less than maxStarvationDelay of rebuffering
         // if no matching level found, logic will return 0
-        var maxStarvationDelay = config.maxStarvationDelay;
+        var maxStarvationDelay = config.maxStarvationDelay,
+            bwFactor = config.abrBandWidthFactor,
+            bwUpFactor = config.abrBandWidthUpFactor;
         if (bufferStarvationDelay === 0) {
           // in case buffer is empty, let's check if previous fragment was loaded to perform a bitrate test
           var bitrateTestDelay = this.bitrateTestDelay;
@@ -703,9 +712,11 @@ var AbrController = function (_EventHandler) {
             // rationale is that we need to account for this bitrate test duration
             maxStarvationDelay -= bitrateTestDelay;
             _logger.logger.trace('bitrate test took ' + Math.round(1000 * bitrateTestDelay) + 'ms, set first fragment max fetchDuration to ' + Math.round(1000 * maxStarvationDelay) + ' ms');
+            // don't use conservative factor on bitrate test
+            bwFactor = bwUpFactor = 1;
           }
         }
-        bestLevel = this.findBestLevel(currentLevel, currentFragDuration, avgbw, maxAutoLevel, bufferStarvationDelay + maxStarvationDelay, config.abrBandWidthFactor, config.abrBandWidthUpFactor, levels);
+        bestLevel = this.findBestLevel(currentLevel, currentFragDuration, avgbw, maxAutoLevel, bufferStarvationDelay + maxStarvationDelay, bwFactor, bwUpFactor, levels);
         return Math.max(bestLevel, 0);
       }
     }
@@ -1809,7 +1820,6 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 var State = {
   STOPPED: 'STOPPED',
-  STARTING: 'STARTING',
   IDLE: 'IDLE',
   PAUSED: 'PAUSED',
   KEY_LOADING: 'KEY_LOADING',
@@ -1853,7 +1863,8 @@ var StreamController = function (_EventHandler) {
     value: function startLoad(startPosition) {
       if (this.levels) {
         var media = this.media,
-            lastCurrentTime = this.lastCurrentTime;
+            lastCurrentTime = this.lastCurrentTime,
+            hls = this.hls;
         this.stopLoad();
         this.demuxer = new _demuxer2.default(this.hls);
         if (!this.timer) {
@@ -1870,7 +1881,20 @@ var StreamController = function (_EventHandler) {
         } else {
           this.lastCurrentTime = this.startPosition ? this.startPosition : startPosition;
         }
-        this.state = this.startFragRequested ? State.IDLE : State.STARTING;
+        if (!this.startFragRequested) {
+          // determine load level
+          var startLevel = hls.startLevel;
+          if (startLevel === -1) {
+            // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
+            startLevel = 0;
+            this.fragBitrateTest = true;
+          }
+          // set new level to playlist loader : this will trigger start level load
+          // hls.nextLoadLevel remains until it is set to a new value or until a new frag is successfully loaded
+          this.level = hls.nextLoadLevel = startLevel;
+          this.loadedmetadata = false;
+        }
+        this.state = State.IDLE;
         this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
         this.tick();
       } else {
@@ -1923,20 +1947,6 @@ var StreamController = function (_EventHandler) {
         //don't do anything in error state to avoid breaking further ...
         case State.PAUSED:
           //don't do anything in paused state either ...
-          break;
-        case State.STARTING:
-          // determine load level
-          var startLevel = hls.startLevel;
-          if (startLevel === -1) {
-            // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
-            startLevel = 0;
-            this.fragBitrateTest = true;
-          }
-          // set new level to playlist loader : this will trigger start level load
-          // hls.nextLoadLevel remains until it is set to a new value or until a new frag is successfully loaded
-          this.level = hls.nextLoadLevel = startLevel;
-          this.state = State.WAITING_LEVEL;
-          this.loadedmetadata = false;
           break;
         case State.IDLE:
           // if video not attached AND
@@ -6218,7 +6228,7 @@ var Hls = function () {
           abrEwmaDefaultEstimate: 5e5, // 500 kbps
           abrBandWidthFactor: 0.8,
           abrBandWidthUpFactor: 0.7,
-          maxStarvationDelay: 2
+          maxStarvationDelay: 4
         };
       }
       return Hls.defaultConfig;
