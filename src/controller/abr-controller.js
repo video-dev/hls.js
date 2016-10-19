@@ -134,6 +134,12 @@ class AbrController extends EventHandler {
       this.lastLoadedFragLevel = frag.level;
       // reset forced auto level value so that next level will be selected
       this._nextAutoLevel = -1;
+      // if fragment has been loaded to perform a bitrate test,
+      if (data.frag.bitrateTest) {
+        let stats = data.stats;
+        stats.tparsed = stats.tbuffered = stats.tload;
+        this.onFragBuffered(data);
+      }
     }
   }
 
@@ -142,7 +148,8 @@ class AbrController extends EventHandler {
     // only update stats on first frag buffering
     // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
     // and leading to wrong bw estimation
-    if (stats.aborted !== true && frag.loadCounter === 1 && frag.type === 'main') {
+    // on bitrate test, also only update stats once (if tload = tbuffered == on FRAG_LOADED)
+    if (stats.aborted !== true && frag.loadCounter === 1 && frag.type === 'main' && ((!frag.bitrateTest || stats.tload === stats.tbuffered))) {
       let fragLoadingProcessingMs = stats.tbuffered - stats.trequest;
       logger.log(`latency/loading/parsing/append/kbps:${Math.round(stats.tfirst-stats.trequest)}/${Math.round(stats.tload-stats.tfirst)}/${Math.round(stats.tparsed-stats.tload)}/${Math.round(stats.tbuffered-stats.tparsed)}/${Math.round(8*stats.loaded/(stats.tbuffered-stats.trequest))}`);
       this.bwEstimator.sample(fragLoadingProcessingMs,stats.loaded);
