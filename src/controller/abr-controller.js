@@ -238,7 +238,9 @@ class AbrController extends EventHandler {
       logger.trace('rebuffering expected to happen, lets try to find a quality level minimizing the rebuffering');
       // not possible to get rid of rebuffering ... let's try to find level that will guarantee less than maxStarvationDelay of rebuffering
       // if no matching level found, logic will return 0
-      let maxStarvationDelay = config.maxStarvationDelay;
+      let maxStarvationDelay = config.maxStarvationDelay,
+          bwFactor = config.abrBandWidthFactor,
+          bwUpFactor = config.abrBandWidthUpFactor;
       if (bufferStarvationDelay === 0) {
         // in case buffer is empty, let's check if previous fragment was loaded to perform a bitrate test
         let bitrateTestDelay = this.bitrateTestDelay;
@@ -247,9 +249,11 @@ class AbrController extends EventHandler {
           // rationale is that we need to account for this bitrate test duration
           maxStarvationDelay -= bitrateTestDelay;
           logger.trace(`bitrate test took ${Math.round(1000*bitrateTestDelay)}ms, set first fragment max fetchDuration to ${Math.round(1000*maxStarvationDelay)} ms`);
+          // don't use conservative factor on bitrate test
+          bwFactor = bwUpFactor = 1;
         }
       }
-      bestLevel = this.findBestLevel(currentLevel,currentFragDuration,avgbw,maxAutoLevel,bufferStarvationDelay+maxStarvationDelay,config.abrBandWidthFactor,config.abrBandWidthUpFactor,levels);
+      bestLevel = this.findBestLevel(currentLevel,currentFragDuration,avgbw,maxAutoLevel,bufferStarvationDelay+maxStarvationDelay,bwFactor,bwUpFactor,levels);
       return Math.max(bestLevel,0);
     }
   }
