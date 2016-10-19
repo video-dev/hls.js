@@ -13,7 +13,6 @@ import {ErrorTypes, ErrorDetails} from '../errors';
 
 const State = {
   STOPPED : 'STOPPED',
-  STARTING : 'STARTING',
   IDLE : 'IDLE',
   PAUSED : 'PAUSED',
   KEY_LOADING : 'KEY_LOADING',
@@ -63,7 +62,7 @@ class StreamController extends EventHandler {
 
   startLoad(startPosition) {
     if (this.levels) {
-      var media = this.media, lastCurrentTime = this.lastCurrentTime;
+      let media = this.media, lastCurrentTime = this.lastCurrentTime, hls = this.hls;
       this.stopLoad();
       this.demuxer = new Demuxer(this.hls);
       if (!this.timer) {
@@ -80,7 +79,20 @@ class StreamController extends EventHandler {
       } else {
         this.lastCurrentTime = this.startPosition ? this.startPosition : startPosition;
       }
-      this.state = this.startFragRequested ? State.IDLE : State.STARTING;
+      if (!this.startFragRequested) {
+        // determine load level
+        let startLevel = hls.startLevel;
+        if (startLevel === -1) {
+          // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
+          startLevel = 0;
+          this.fragBitrateTest = true;
+        }
+        // set new level to playlist loader : this will trigger start level load
+        // hls.nextLoadLevel remains until it is set to a new value or until a new frag is successfully loaded
+        this.level = hls.nextLoadLevel = startLevel;
+        this.loadedmetadata = false;
+      }
+      this.state = State.IDLE;
       this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
       this.tick();
     } else {
@@ -124,20 +136,6 @@ class StreamController extends EventHandler {
         //don't do anything in error state to avoid breaking further ...
       case State.PAUSED:
         //don't do anything in paused state either ...
-        break;
-      case State.STARTING:
-        // determine load level
-        let startLevel = hls.startLevel;
-        if (startLevel === -1) {
-          // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
-          startLevel = 0;
-          this.fragBitrateTest = true;
-        }
-        // set new level to playlist loader : this will trigger start level load
-        // hls.nextLoadLevel remains until it is set to a new value or until a new frag is successfully loaded
-        this.level = hls.nextLoadLevel = startLevel;
-        this.state = State.WAITING_LEVEL;
-        this.loadedmetadata = false;
         break;
       case State.IDLE:
         // if video not attached AND
