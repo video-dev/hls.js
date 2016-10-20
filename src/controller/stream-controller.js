@@ -621,10 +621,12 @@ class StreamController extends EventHandler {
   }
 
   onMediaSeeking() {
+    let media = this.media,
+        config = this.config;
     if (this.state === State.FRAG_LOADING) {
       // check if currently loaded fragment is inside buffer.
       //if outside, cancel fragment loading, otherwise do nothing
-      if (BufferHelper.bufferInfo(this.media,this.media.currentTime,this.config.maxBufferHole).len === 0) {
+      if (BufferHelper.bufferInfo(media,media.currentTime,config.maxBufferHole).len === 0) {
         logger.log('seeking outside of buffer while fragment load in progress, cancel fragment load');
         var fragCurrent = this.fragCurrent;
         if (fragCurrent) {
@@ -641,12 +643,12 @@ class StreamController extends EventHandler {
         // switch to IDLE state to check for potential new fragment
         this.state = State.IDLE;
     }
-    if (this.media) {
-      this.lastCurrentTime = this.media.currentTime;
+    if (media) {
+      this.lastCurrentTime = media.currentTime;
     }
     // avoid reporting fragment loop loading error in case user is seeking several times on same position
     if (this.fragLoadIdx !== undefined) {
-      this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+      this.fragLoadIdx += 2 * config.fragLoadingLoopThreshold;
     }
     // tick to speed up processing
     this.tick();
@@ -1051,12 +1053,13 @@ class StreamController extends EventHandler {
   }
 
   _reduceMaxBufferLength(minLength) {
-    if (this.config.maxMaxBufferLength >= minLength) {
+    let config = this.config;
+    if (config.maxMaxBufferLength >= minLength) {
       // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
-      this.config.maxMaxBufferLength/=2;
-      logger.warn(`reduce max buffer length to ${this.config.maxMaxBufferLength}s and switch to IDLE state`);
+      config.maxMaxBufferLength/=2;
+      logger.warn(`reduce max buffer length to ${config.maxMaxBufferLength}s and switch to IDLE state`);
       // increase fragment load Index to avoid frag loop loading error after buffer flush
-      this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+      this.fragLoadIdx += 2 * config.fragLoadingLoopThreshold;
     }
   }
 
@@ -1093,7 +1096,8 @@ _checkBuffer() {
                                 media.ended  || // not playing when media is ended
                                 media.buffered.length === 0), // not playing if nothing buffered
             jumpThreshold = 0.4, // tolerance needed as some browsers stalls playback before reaching buffered range end
-            playheadMoving = currentTime > media.playbackRate*this.lastCurrentTime;
+            playheadMoving = currentTime > media.playbackRate*this.lastCurrentTime,
+            config = this.config;
 
         if (this.stalled && playheadMoving) {
           this.stalled = false;
@@ -1114,7 +1118,7 @@ _checkBuffer() {
               this.hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_STALLED_ERROR, fatal: false});
               this.stalled = true;
             } else {
-              this.seekHoleNudgeDuration += this.config.seekHoleNudgeDuration;
+              this.seekHoleNudgeDuration += config.seekHoleNudgeDuration;
             }
           }
           // if we are below threshold, try to jump to start of next buffer range if close
@@ -1122,7 +1126,7 @@ _checkBuffer() {
             // no buffer available @ currentTime, check if next buffer is close (within a config.maxSeekHole second range)
             var nextBufferStart = bufferInfo.nextStart, delta = nextBufferStart-currentTime;
             if(nextBufferStart &&
-               (delta < this.config.maxSeekHole) &&
+               (delta < config.maxSeekHole) &&
                (delta > 0)) {
               // next buffer is close ! adjust currentTime to nextBufferStart
               // this will ensure effective video decoding
