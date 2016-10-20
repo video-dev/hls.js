@@ -245,9 +245,11 @@ class AbrController extends EventHandler {
         // in case buffer is empty, let's check if previous fragment was loaded to perform a bitrate test
         let bitrateTestDelay = this.bitrateTestDelay;
         if (bitrateTestDelay) {
-          // if it is the case, then we need to decrease this bitrate test duration from our maxStarvationDelay.
-          // rationale is that we need to account for this bitrate test duration
-          maxStarvationDelay -= bitrateTestDelay;
+          // if it is the case, then we need to adjust our max starvation delay using maxLoadingDelay config value
+          // max video loading delay used in  automatic start level selection :
+          // in that mode ABR controller will ensure that video loading time (ie the time to fetch the first fragment at lowest quality level +
+          // the time to fetch the fragment at the appropriate quality level is less than ```maxLoadingDelay``` )
+          maxStarvationDelay = config.maxLoadingDelay - bitrateTestDelay;
           logger.trace(`bitrate test took ${Math.round(1000*bitrateTestDelay)}ms, set first fragment max fetchDuration to ${Math.round(1000*maxStarvationDelay)} ms`);
           // don't use conservative factor on bitrate test
           bwFactor = bwUpFactor = 1;
