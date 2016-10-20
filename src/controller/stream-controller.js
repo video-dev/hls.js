@@ -67,7 +67,6 @@ class StreamController extends EventHandler {
     if (this.levels) {
       let media = this.media, lastCurrentTime = this.lastCurrentTime, hls = this.hls;
       this.stopLoad();
-      this.demuxer = new Demuxer(this.hls,'main');
       if (!this.timer) {
         this.timer = setInterval(this.ontick, 100);
       }
