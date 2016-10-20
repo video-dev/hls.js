@@ -94,7 +94,7 @@ class StreamController extends EventHandler {
                 if (startLevel === -1) {
                     // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
                     startLevel = 0;
-                    this.fragBitrateTest = true;
+                    this.bitrateTest = true;
                 }
                 // set new level to playlist loader : this will trigger start level load
                 // hls.nextLoadLevel remains until it is set to a new value or until a new frag is successfully loaded
@@ -599,7 +599,7 @@ class StreamController extends EventHandler {
             this.fragCurrent = frag;
             this.startFragRequested = true;
             frag.autoLevel = hls.autoLevelEnabled;
-            frag.bitrateTest = this.fragBitrateTest;
+            frag.bitrateTest = this.bitrateTest;
             hls.trigger(Event.FRAG_LOADING, { frag: frag });
             this.state = State.FRAG_LOADING;
             return true;
@@ -1091,7 +1091,7 @@ class StreamController extends EventHandler {
                 }],level ${fragCurrent.level}`
             );
             // reset frag bitrate test in any case after frag loaded event
-            this.fragBitrateTest = false;
+            this.bitrateTest = false;
             // if this frag was loaded to perform a bitrate test AND if hls.nextLoadLevel is greater than 0
             // then this means that we should be able to load a fragment at a higher quality level
             if (fragLoaded.bitrateTest === true && this.hls.nextLoadLevel) {
