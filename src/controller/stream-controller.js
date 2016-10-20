@@ -77,7 +77,9 @@ class StreamController extends EventHandler {
             this.level = -1;
             this.fragLoadError = 0;
             if (media && lastCurrentTime > 0) {
-                logger.log(`configure startPosition @${lastCurrentTime}`);
+                logger.log(
+                    `configure startPosition @${lastCurrentTime.toFixed(3)}`
+                );
                 if (!this.lastPaused) {
                     logger.log('resuming video');
                     media.play();
@@ -382,7 +384,9 @@ class StreamController extends EventHandler {
                 levelDetails
             ));
             logger.log(
-                `buffer end: ${bufferEnd} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(
+                `buffer end: ${bufferEnd.toFixed(
+                    3
+                )} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(
                     3
                 )}`
             );
@@ -560,9 +564,9 @@ class StreamController extends EventHandler {
             logger.log(
                 `Loading ${frag.sn} of [${levelDetails.startSN} ,${
                     levelDetails.endSN
-                }],level ${level}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(
+                }],level ${level}, currentTime:${pos.toFixed(
                     3
-                )}`
+                )},bufferEnd:${bufferEnd.toFixed(3)}`
             );
             // ensure that we are not reloading the same fragments in loop ...
             if (this.fragLoadIdx !== undefined) {
@@ -886,7 +890,7 @@ class StreamController extends EventHandler {
     onMediaSeeking() {
         let media = this.media,
             currentTime = media ? media.currentTime : undefined;
-        logger.log('media seeking to ' + currentTime);
+        logger.log(`media seeking to ${currentTime.toFixed(3)}`);
         if (this.state === State.FRAG_LOADING) {
             let bufferInfo = BufferHelper.bufferInfo(
                     media,
@@ -940,7 +944,7 @@ class StreamController extends EventHandler {
     }
 
     onMediaSeeked() {
-        logger.log('media seeked to ' + this.media.currentTime);
+        logger.log(`media seeked to ${this.media.currentTime.toFixed(3)}`);
         // tick to speed up FRAGMENT_PLAYING triggering
         this.tick();
     }
