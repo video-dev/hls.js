@@ -875,7 +875,8 @@ class StreamController extends EventHandler {
 
     onMediaSeeking() {
         let media = this.media,
-            currentTime = media ? media.currentTime : undefined;
+            currentTime = media ? media.currentTime : undefined,
+            config = this.config;
         logger.log(`media seeking to ${currentTime.toFixed(3)}`);
         if (this.state === State.FRAG_LOADING) {
             let bufferInfo = BufferHelper.bufferInfo(
@@ -886,7 +887,7 @@ class StreamController extends EventHandler {
                 fragCurrent = this.fragCurrent;
             // check if we are seeking to a unbuffered area AND if frag loading is in progress
             if (bufferInfo.len === 0 && fragCurrent) {
-                let tolerance = this.config.maxFragLookUpTolerance,
+                let tolerance = config.maxFragLookUpTolerance,
                     fragStartOffset = fragCurrent.start - tolerance,
                     fragEndOffset =
                         fragCurrent.start + fragCurrent.duration + tolerance;
@@ -923,7 +924,7 @@ class StreamController extends EventHandler {
             this.state !== State.FRAG_LOADING &&
             this.fragLoadIdx !== undefined
         ) {
-            this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+            this.fragLoadIdx += 2 * config.fragLoadingLoopThreshold;
         }
         // tick to speed up processing
         this.tick();
@@ -1521,7 +1522,7 @@ class StreamController extends EventHandler {
                     if (mediaBuffered) {
                         // try to reduce max buffer length : rationale is that we could get
                         // frag loop loading error because of buffer eviction
-                        this._reduceMaxMaxBufferLength(frag.duration);
+                        this._reduceMaxBufferLength(frag.duration);
                         this.state = State.IDLE;
                     } else {
                         // buffer empty. report as fatal if in manual mode or if lowest level.
@@ -1558,7 +1559,7 @@ class StreamController extends EventHandler {
                 ) {
                     // reduce max buf len if current position is buffered
                     if (mediaBuffered) {
-                        this._reduceMaxMaxBufferLength(frag.duration);
+                        this._reduceMaxBufferLength(frag.duration);
                         this.state = State.IDLE;
                     } else {
                         // current position is not buffered, but browser is still complaining about buffer full error
@@ -1582,7 +1583,7 @@ class StreamController extends EventHandler {
         }
     }
 
-    _reduceMaxMaxBufferLength(minLength) {
+    _reduceMaxBufferLength(minLength) {
         let config = this.config;
         if (config.maxMaxBufferLength >= minLength) {
             // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
@@ -1639,7 +1640,8 @@ class StreamController extends EventHandler {
                     ), // not playing if nothing buffered
                     jumpThreshold = 0.4, // tolerance needed as some browsers stalls playback before reaching buffered range end
                     playheadMoving =
-                        currentTime > media.playbackRate * this.lastCurrentTime;
+                        currentTime > media.playbackRate * this.lastCurrentTime,
+                    config = this.config;
 
                 if (this.stalled && playheadMoving) {
                     this.stalled = false;
@@ -1664,7 +1666,8 @@ class StreamController extends EventHandler {
                             });
                             this.stalled = true;
                         } else {
-                            this.seekHoleNudgeDuration += this.config.seekHoleNudgeDuration;
+                            this.seekHoleNudgeDuration +=
+                                config.seekHoleNudgeDuration;
                         }
                     }
                     // if we are below threshold, try to jump to start of next buffer range if close
@@ -1674,7 +1677,7 @@ class StreamController extends EventHandler {
                             delta = nextBufferStart - currentTime;
                         if (
                             nextBufferStart &&
-                            delta < this.config.maxSeekHole &&
+                            delta < config.maxSeekHole &&
                             delta > 0
                         ) {
                             // next buffer is close ! adjust currentTime to nextBufferStart
