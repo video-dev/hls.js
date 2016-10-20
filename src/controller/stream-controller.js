@@ -64,7 +64,6 @@ class StreamController extends EventHandler {
     if (this.levels) {
       let media = this.media, lastCurrentTime = this.lastCurrentTime, hls = this.hls;
       this.stopLoad();
-      this.demuxer = new Demuxer(this.hls);
       if (!this.timer) {
         this.timer = setInterval(this.ontick, 100);
       }
@@ -814,9 +813,10 @@ class StreamController extends EventHandler {
         this.pendingAppending = 0;
         logger.log(`Parsing ${sn} of [${details.startSN} ,${details.endSN}],level ${level}, cc ${fragCurrent.cc}`);
         let demuxer = this.demuxer;
-        if (demuxer) {
-          demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata);
+        if (!demuxer) {
+          demuxer = this.demuxer = new Demuxer(this.hls);
         }
+        demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata);
       }
     }
     this.fragLoadError = 0;
