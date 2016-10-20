@@ -70,7 +70,6 @@ class StreamController extends EventHandler {
                 lastCurrentTime = this.lastCurrentTime,
                 hls = this.hls;
             this.stopLoad();
-            this.demuxer = new Demuxer(this.hls, 'main');
             if (!this.timer) {
                 this.timer = setInterval(this.ontick, 100);
             }
