@@ -131,7 +131,7 @@ class LevelHelper {
             if (toIdx > fromIdx) {
                 fragFrom.duration = fragToPTS - fragFrom.start;
                 if (fragFrom.duration < 0) {
-                    logger.error(
+                    logger.warn(
                         `negative duration computed for frag ${
                             fragFrom.sn
                         },level ${
@@ -142,7 +142,7 @@ class LevelHelper {
             } else {
                 fragTo.duration = fragFrom.start - fragToPTS;
                 if (fragTo.duration < 0) {
-                    logger.error(
+                    logger.warn(
                         `negative duration computed for frag ${
                             fragTo.sn
                         },level ${
