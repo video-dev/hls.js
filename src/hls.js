@@ -114,7 +114,8 @@ class Hls {
           abrEwmaDefaultEstimate: 5e5, // 500 kbps
           abrBandWidthFactor : 0.8,
           abrBandWidthUpFactor : 0.7,
-          maxStarvationDelay : 4
+          maxStarvationDelay : 4,
+          maxLoadingDelay : 4,
         };
     }
     return Hls.defaultConfig;
