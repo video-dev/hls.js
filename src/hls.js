@@ -113,7 +113,7 @@ class Hls {
                 abrEwmaFastLive: 5,
                 abrEwmaSlowLive: 9,
                 abrEwmaFastVoD: 3,
-                abrEwmaSlowVoD: 6,
+                abrEwmaSlowVoD: 9,
                 abrEwmaDefaultEstimate: 5e5, // 500 kbps
                 abrBandWidthFactor: 0.8,
                 abrBandWidthUpFactor: 0.7,
