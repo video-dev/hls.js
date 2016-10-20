@@ -708,9 +708,11 @@ var AbrController = function (_EventHandler) {
           // in case buffer is empty, let's check if previous fragment was loaded to perform a bitrate test
           var bitrateTestDelay = this.bitrateTestDelay;
           if (bitrateTestDelay) {
-            // if it is the case, then we need to decrease this bitrate test duration from our maxStarvationDelay.
-            // rationale is that we need to account for this bitrate test duration
-            maxStarvationDelay -= bitrateTestDelay;
+            // if it is the case, then we need to adjust our max starvation delay using maxLoadingDelay config value
+            // max video loading delay used in  automatic start level selection :
+            // in that mode ABR controller will ensure that video loading time (ie the time to fetch the first fragment at lowest quality level +
+            // the time to fetch the fragment at the appropriate quality level is less than ```maxLoadingDelay``` )
+            maxStarvationDelay = config.maxLoadingDelay - bitrateTestDelay;
             _logger.logger.trace('bitrate test took ' + Math.round(1000 * bitrateTestDelay) + 'ms, set first fragment max fetchDuration to ' + Math.round(1000 * maxStarvationDelay) + ' ms');
             // don't use conservative factor on bitrate test
             bwFactor = bwUpFactor = 1;
@@ -1866,7 +1868,6 @@ var StreamController = function (_EventHandler) {
             lastCurrentTime = this.lastCurrentTime,
             hls = this.hls;
         this.stopLoad();
-        this.demuxer = new _demuxer2.default(this.hls);
         if (!this.timer) {
           this.timer = setInterval(this.ontick, 100);
         }
@@ -1887,7 +1888,7 @@ var StreamController = function (_EventHandler) {
           if (startLevel === -1) {
             // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
             startLevel = 0;
-            this.fragBitrateTest = true;
+            this.bitrateTest = true;
           }
           // set new level to playlist loader : this will trigger start level load
           // hls.nextLoadLevel remains until it is set to a new value or until a new frag is successfully loaded
@@ -2164,7 +2165,7 @@ var StreamController = function (_EventHandler) {
                 this.fragCurrent = frag;
                 this.startFragRequested = true;
                 frag.autoLevel = hls.autoLevelEnabled;
-                frag.bitrateTest = this.fragBitrateTest;
+                frag.bitrateTest = this.bitrateTest;
                 hls.trigger(_events2.default.FRAG_LOADING, { frag: frag });
                 this.state = State.FRAG_LOADING;
               }
@@ -2423,10 +2424,12 @@ var StreamController = function (_EventHandler) {
   }, {
     key: 'onMediaSeeking',
     value: function onMediaSeeking() {
+      var media = this.media,
+          config = this.config;
       if (this.state === State.FRAG_LOADING) {
         // check if currently loaded fragment is inside buffer.
         //if outside, cancel fragment loading, otherwise do nothing
-        if (_bufferHelper2.default.bufferInfo(this.media, this.media.currentTime, this.config.maxBufferHole).len === 0) {
+        if (_bufferHelper2.default.bufferInfo(media, media.currentTime, config.maxBufferHole).len === 0) {
           _logger.logger.log('seeking outside of buffer while fragment load in progress, cancel fragment load');
           var fragCurrent = this.fragCurrent;
           if (fragCurrent) {
@@ -2443,12 +2446,12 @@ var StreamController = function (_EventHandler) {
         // switch to IDLE state to check for potential new fragment
         this.state = State.IDLE;
       }
-      if (this.media) {
-        this.lastCurrentTime = this.media.currentTime;
+      if (media) {
+        this.lastCurrentTime = media.currentTime;
       }
       // avoid reporting fragment loop loading error in case user is seeking several times on same position
       if (this.fragLoadIdx !== undefined) {
-        this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+        this.fragLoadIdx += 2 * config.fragLoadingLoopThreshold;
       }
       // tick to speed up processing
       this.tick();
@@ -2585,7 +2588,7 @@ var StreamController = function (_EventHandler) {
             details = currentLevel.details;
         _logger.logger.log('Loaded  ' + fragCurrent.sn + ' of [' + details.startSN + ' ,' + details.endSN + '],level ' + fragCurrent.level);
         // reset frag bitrate test in any case after frag loaded event
-        this.fragBitrateTest = false;
+        this.bitrateTest = false;
         // if this frag was loaded to perform a bitrate test AND if hls.nextLoadLevel is greater than 0
         // then this means that we should be able to load a fragment at a higher quality level
         if (fragLoaded.bitrateTest === true && this.hls.nextLoadLevel) {
@@ -2620,9 +2623,10 @@ var StreamController = function (_EventHandler) {
           this.pendingAppending = 0;
           _logger.logger.log('Parsing ' + sn + ' of [' + details.startSN + ' ,' + details.endSN + '],level ' + level + ', cc ' + fragCurrent.cc);
           var demuxer = this.demuxer;
-          if (demuxer) {
-            demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata);
+          if (!demuxer) {
+            demuxer = this.demuxer = new _demuxer2.default(this.hls);
           }
+          demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata);
         }
       }
       this.fragLoadError = 0;
@@ -2870,12 +2874,13 @@ var StreamController = function (_EventHandler) {
   }, {
     key: '_reduceMaxBufferLength',
     value: function _reduceMaxBufferLength(minLength) {
-      if (this.config.maxMaxBufferLength >= minLength) {
+      var config = this.config;
+      if (config.maxMaxBufferLength >= minLength) {
         // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
-        this.config.maxMaxBufferLength /= 2;
-        _logger.logger.warn('reduce max buffer length to ' + this.config.maxMaxBufferLength + 's and switch to IDLE state');
+        config.maxMaxBufferLength /= 2;
+        _logger.logger.warn('reduce max buffer length to ' + config.maxMaxBufferLength + 's and switch to IDLE state');
         // increase fragment load Index to avoid frag loop loading error after buffer flush
-        this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+        this.fragLoadIdx += 2 * config.fragLoadingLoopThreshold;
       }
     }
   }, {
@@ -2915,7 +2920,8 @@ var StreamController = function (_EventHandler) {
               // not playing if nothing buffered
           jumpThreshold = 0.4,
               // tolerance needed as some browsers stalls playback before reaching buffered range end
-          playheadMoving = currentTime > media.playbackRate * this.lastCurrentTime;
+          playheadMoving = currentTime > media.playbackRate * this.lastCurrentTime,
+              config = this.config;
 
           if (this.stalled && playheadMoving) {
             this.stalled = false;
@@ -2936,7 +2942,7 @@ var StreamController = function (_EventHandler) {
                 this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_STALLED_ERROR, fatal: false });
                 this.stalled = true;
               } else {
-                this.seekHoleNudgeDuration += this.config.seekHoleNudgeDuration;
+                this.seekHoleNudgeDuration += config.seekHoleNudgeDuration;
               }
             }
             // if we are below threshold, try to jump to start of next buffer range if close
@@ -2944,7 +2950,7 @@ var StreamController = function (_EventHandler) {
               // no buffer available @ currentTime, check if next buffer is close (within a config.maxSeekHole second range)
               var nextBufferStart = bufferInfo.nextStart,
                   delta = nextBufferStart - currentTime;
-              if (nextBufferStart && delta < this.config.maxSeekHole && delta > 0) {
+              if (nextBufferStart && delta < config.maxSeekHole && delta > 0) {
                 // next buffer is close ! adjust currentTime to nextBufferStart
                 // this will ensure effective video decoding
                 _logger.logger.log('adjust currentTime from ' + media.currentTime.toFixed(3) + ' to next buffered @ ' + nextBufferStart.toFixed(3) + ' + nudge ' + this.seekHoleNudgeDuration);
@@ -6224,11 +6230,12 @@ var Hls = function () {
           abrEwmaFastLive: 5,
           abrEwmaSlowLive: 9,
           abrEwmaFastVoD: 3,
-          abrEwmaSlowVoD: 6,
+          abrEwmaSlowVoD: 9,
           abrEwmaDefaultEstimate: 5e5, // 500 kbps
           abrBandWidthFactor: 0.8,
           abrBandWidthUpFactor: 0.7,
-          maxStarvationDelay: 4
+          maxStarvationDelay: 4,
+          maxLoadingDelay: 4
         };
       }
       return Hls.defaultConfig;
