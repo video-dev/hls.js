@@ -27,6 +27,9 @@ if (onTravis) {
   browserConfig.name = TEST_BROWSER_NAME;
   browserConfig.platform = TEST_BROWSER_PLATFORM;
 }
+else {
+  browserConfig.name = "chrome";
+}
 var browserDescription = browserConfig.name;
 if (browserConfig.version) {
   browserDescription += ' ('+browserConfig.version+')';
