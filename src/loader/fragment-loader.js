@@ -15,8 +15,9 @@ class FragmentLoader extends EventHandler {
   }
 
   destroy() {
-    for (let loaderName in this.loaders) {
-      let loader = this.loaders[loaderName];
+    let loaders = this.loaders;
+    for (let loaderName in loaders) {
+      let loader = loaders[loaderName];
       if (loader) {
         loader.destroy();
       }
@@ -65,7 +66,7 @@ class FragmentLoader extends EventHandler {
     }
     this.loaders[context.type] = undefined;
     this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.FRAG_LOAD_ERROR, fatal: false, frag: context.frag, response: response});
-  } 
+  }
 
   loadtimeout(stats, context) {
     let loader = context.loader;
