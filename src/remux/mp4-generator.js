@@ -22,6 +22,7 @@ class MP4 {
       moof: [],
       moov: [],
       mp4a: [],
+      '.mp3': [],
       mvex: [],
       mvhd: [],
       sdtp: [],
@@ -378,6 +379,13 @@ class MP4 {
 
   static esds(track) {
     var configlen = track.config.length;
+    var mpeg4Audio = 0x40;
+    if (track.codec === 'mp4a.69') {
+      mpeg4Audio = 0x69;
+    }
+    else if (track.codec === 'mp4a.6B') {
+      mpeg4Audio = 0x6B;
+    }
     return new Uint8Array([
       0x00, // version 0
       0x00, 0x00, 0x00, // flags
@@ -389,7 +397,7 @@ class MP4 {
 
       0x04, // descriptor_type
       0x0f+configlen, // length
-      0x40, //codec : mpeg4_audio
+      mpeg4Audio, //codec : mpeg4_audio
       0x15, // stream_type
       0x00, 0x00, 0x00, // buffer_size
       0x00, 0x00, 0x00, 0x00, // maxBitrate
@@ -416,8 +424,29 @@ class MP4 {
       MP4.box(MP4.types.esds, MP4.esds(track)));
   }
 
+  static mp3(track) {
+    var audiosamplerate = track.audiosamplerate;
+      return MP4.box(MP4.types['.mp3'], new Uint8Array([
+      0x00, 0x00, 0x00, // reserved
+      0x00, 0x00, 0x00, // reserved
+      0x00, 0x01, // data_reference_index
+      0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, // reserved
+      0x00, track.channelCount, // channelcount
+      0x00, 0x10, // sampleSize:16bits
+      0x00, 0x00, 0x00, 0x00, // reserved2
+      (audiosamplerate >> 8) & 0xFF,
+      audiosamplerate & 0xff, //
+      0x00, 0x00]));
+  }
+
   static stsd(track) {
     if (track.type === 'audio') {
+      if (!track.isAAC) {
+        if (track.codec === 'mp3') {
+          return MP4.box(MP4.types.stsd, MP4.STSD, MP4.mp3(track));
+        }
+      }
       return MP4.box(MP4.types.stsd, MP4.STSD, MP4.mp4a(track));
     } else {
       return MP4.box(MP4.types.stsd, MP4.STSD, MP4.avc1(track));

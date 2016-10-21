@@ -11,10 +11,11 @@ import {ErrorTypes, ErrorDetails} from '../errors';
 import '../utils/polyfill';
 
 class MP4Remuxer {
-  constructor(observer, id, config) {
+  constructor(observer, id, config, typeSupported) {
     this.observer = observer;
     this.id = id;
     this.config = config;
+    this.typeSupported = typeSupported;
     this.ISGenerated = false;
     this.PES2MP4SCALEFACTOR = 4;
     this.PES_TIMESCALE = 90000;
@@ -107,11 +108,30 @@ class MP4Remuxer {
             }
             return greatestCommonDivisor(b, a % b);
         };
-        audioTrack.timescale = audioTrack.audiosamplerate / greatestCommonDivisor(audioTrack.audiosamplerate,1024);
+        audioTrack.timescale = audioTrack.audiosamplerate / greatestCommonDivisor(audioTrack.audiosamplerate,(audioTrack.isAAC ? 1024 : 1152));
       }
       logger.log ('audio mp4 timescale :'+ audioTrack.timescale);
+      var container = 'audio/mp4';
+      if (!audioTrack.isAAC) {
+        if (this.typeSupported.mpeg === true) { // Chrome
+          container = 'audio/mpeg';
+          audioTrack.codec = '';
+        }
+        else if (this.typeSupported.mp4a4034 === true) { // IE
+          audioTrack.codec = 'mp4a.40.34';
+        }
+        else if (this.typeSupported.mp4a69 === true) { // IE
+          audioTrack.codec = 'mp4a.69';
+        }
+        else if (this.typeSupported.mp4a6B === true) { // IE
+          audioTrack.codec = 'mp4a.6B';
+        }
+        else if (this.typeSupported.mp3 === true) { // Firefox
+          audioTrack.codec = 'mp3';
+        }
+      }
       tracks.audio = {
-        container : 'audio/mp4',
+        container : container,
         codec :  audioTrack.codec,
         initSegment : MP4.initSegment([audioTrack]),
         metadata : {
@@ -375,7 +395,7 @@ class MP4Remuxer {
     let pesTimeScale = this.PES_TIMESCALE,
         mp4timeScale = track.timescale,
         pes2mp4ScaleFactor = pesTimeScale/mp4timeScale,
-        expectedSampleDuration = track.timescale * 1024 / track.audiosamplerate;
+        expectedSampleDuration = track.timescale * (track.isAAC ? 1024 : 1152) / track.audiosamplerate;
     var view,
         offset = 8,
         aacSample, mp4Sample,
@@ -433,7 +453,13 @@ class MP4Remuxer {
           for (var j = 0; j < missing; j++) {
             newStamp = nextPtsNorm + this._initDTS;
             newStamp = Math.max(newStamp, this._initDTS);
-            fillFrame = AAC.getSilentFrame(track.channelCount);
+            if (track.isAAC) {
+              fillFrame = AAC.getSilentFrame(track.channelCount);
+            }
+            else {
+              // For mpeg audio get last frame
+              fillFrame = sample.unit.slice(0);
+            }
             if (!fillFrame) {
               logger.log('Unable to get silent frame for given audio codec; duplicating last frame instead.');
               fillFrame = sample.unit.slice(0);
@@ -534,7 +560,7 @@ class MP4Remuxer {
           mp4Sample = {
             size: fillFrame.byteLength,
             cts: 0,
-            duration: 1024,
+            duration: (track.isAAC ? 1024 : 1152),
             flags: {
               isLeading: 0,
               isDependedOn: 0,
