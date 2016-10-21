@@ -13,7 +13,14 @@ class Demuxer {
             mp4: MediaSource.isTypeSupported('video/mp4'),
             mp2t:
                 hls.config.enableMP2TPassThrough &&
-                MediaSource.isTypeSupported('video/mp2t')
+                MediaSource.isTypeSupported('video/mp2t'),
+            mpeg: MediaSource.isTypeSupported('audio/mpeg'),
+            mp3: MediaSource.isTypeSupported('audio/mp4; codecs="mp3"'),
+            mp4a4034: MediaSource.isTypeSupported(
+                'audio/mp4; codecs="mp4a.40.34"'
+            ),
+            mp4a69: MediaSource.isTypeSupported('audio/mp4; codecs="mp4a.69"'),
+            mp4a6B: MediaSource.isTypeSupported('audio/mp4; codecs="mp4a.6B"')
         };
         if (hls.config.enableWorker && typeof Worker !== 'undefined') {
             logger.log('demuxing in webworker');
