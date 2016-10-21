@@ -48,7 +48,7 @@ class XhrLoader {
        xhr = this.loader = new XMLHttpRequest();
     }
 
-    xhr.onloadend = this.loadend.bind(this);
+    xhr.onreadystatechange = this.readystatechange.bind(this);
     xhr.onprogress = this.loadprogress.bind(this);
 
     xhr.open('GET', context.url, true);
@@ -68,9 +68,9 @@ class XhrLoader {
     xhr.send();
   }
 
-  loadend(event) {
+  readystatechange(event) {
     var xhr = event.currentTarget,
-        status = xhr.status,
+        readyState = xhr.readyState,
         stats = this.stats,
         context = this.context,
         config = this.config;
@@ -83,35 +83,46 @@ class XhrLoader {
     // in any case clear the current xhrs timeout
     window.clearTimeout(this.requestTimeout);
 
-    // http status between 200 to 299 are all successful
-    if (status >= 200 && status < 300)  {
-      stats.tload = Math.max(stats.tfirst,performance.now());
-      let data,len;
-      if (context.responseType === 'arraybuffer') {
-        data = xhr.response;
-        len = data.byteLength;
-      } else {
-        data = xhr.responseText;
-        len = data.length;
+    // HEADERS_RECEIVED
+    if (readyState >=2) {
+      if (stats.tfirst === 0) {
+        stats.tfirst = Math.max(performance.now(), stats.trequest);
+        // reset timeout to total timeout duration minus the time it took to receive headers
+        this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), config.timeout - (stats.tfirst-stats.trequest));
       }
-      stats.loaded = stats.total = len;
-      let response = { url : xhr.responseURL, data : data };
-      this.callbacks.onSuccess(response, stats, context);
-    } else {
-      // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
-      if (stats.retry >= config.maxRetry || (status >= 400 && status < 499)) {
-        logger.error(`${status} while loading ${context.url}` );
-        this.callbacks.onError({ code : status, text : xhr.statusText}, context);
-      } else {
-      // retry
-        logger.warn(`${status} while loading ${context.url}, retrying in ${this.retryDelay}...`);
-        // aborts and resets internal state
-        this.destroy();
-        // schedule retry
-        this.retryTimeout = window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
-        // set exponential backoff
-        this.retryDelay = Math.min(2 * this.retryDelay, config.maxRetryDelay);
-        stats.retry++;
+      if (readyState === 4) {
+        let status = xhr.status;
+        // http status between 200 to 299 are all successful
+        if (status >= 200 && status < 300)  {
+          stats.tload = Math.max(stats.tfirst,performance.now());
+          let data,len;
+          if (context.responseType === 'arraybuffer') {
+            data = xhr.response;
+            len = data.byteLength;
+          } else {
+            data = xhr.responseText;
+            len = data.length;
+          }
+          stats.loaded = stats.total = len;
+          let response = { url : xhr.responseURL, data : data };
+          this.callbacks.onSuccess(response, stats, context);
+        } else {
+            // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
+          if (stats.retry >= config.maxRetry || (status >= 400 && status < 499)) {
+            logger.error(`${status} while loading ${context.url}` );
+            this.callbacks.onError({ code : status, text : xhr.statusText}, context);
+          } else {
+            // retry
+            logger.warn(`${status} while loading ${context.url}, retrying in ${this.retryDelay}...`);
+            // aborts and resets internal state
+            this.destroy();
+            // schedule retry
+            this.retryTimeout = window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
+            // set exponential backoff
+            this.retryDelay = Math.min(2 * this.retryDelay, config.maxRetryDelay);
+            stats.retry++;
+          }
+        }
       }
     }
   }
@@ -123,9 +134,6 @@ class XhrLoader {
 
   loadprogress(event) {
     var stats = this.stats;
-    if (stats.tfirst === 0) {
-      stats.tfirst = Math.max(performance.now(), stats.trequest);
-    }
     stats.loaded = event.loaded;
     if (event.lengthComputable) {
       stats.total = event.total;

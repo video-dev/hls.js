@@ -1,0 +1,73 @@
+<html>
+   <head>
+      <script src="/dist/hls.js"></script>
+       <script>
+        var video, hls;
+
+        function startStream(streamUrl, callback) {
+          if (Hls.isSupported()) {
+            if (hls) {
+             callback('hlsjsAlreadyInitialised');
+             return;
+            }
+            video = document.getElementById('video');
+            try {
+              hls = new Hls();
+              hls.loadSource(streamUrl);
+              hls.attachMedia(video);
+              hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                video.play();
+              });
+              hls.on(Hls.Events.ERROR, function(event, data) {
+                if (data.fatal) {
+                  callback(data.details);
+                }
+              });
+              video.onerror = function(event) {
+                callback('video_error_' + video.error.code);
+              };
+            } catch(err) {
+              callback('exception');
+            }
+          } else {
+            callback('notSupported');
+          }
+        }
+
+        function switchToLowestLevel(mode) {
+          switch(mode) {
+            case 'current':
+              hls.currentLevel = 0;
+              break;
+            case 'next':
+              hls.nextLevel = 0;
+              break;
+            case 'load':
+            default:
+              hls.loadLevel = 0;
+              break;
+          }
+        }
+
+        function switchToHighestLevel() {
+          var highestLevel = hls.levels.length-1;
+          switch(mode) {
+            case 'current':
+              hls.currentLevel = highestLevel;
+              break;
+            case 'next':
+              hls.nextLevel = highestLevel;
+              break;
+            case 'load':
+            default:
+              hls.loadLevel = highestLevel;
+              break;
+          }
+        }
+
+       </script>
+    </head>
+    <body>
+      <video id="video"></video>
+    </body>
+ </html>

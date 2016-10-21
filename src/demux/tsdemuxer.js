@@ -56,7 +56,7 @@
   }
 
   // feed incoming data to the front of the parsing pipeline
-  push(data, audioCodec, videoCodec, timeOffset, frag, level, sn, duration) {
+  push(data, audioCodec, videoCodec, timeOffset, frag, level, sn, duration,accurateTimeOffset) {
     var start, len = data.length, stt, pid, atf, offset,pes,
         codecsOnly = this.remuxer.passthrough,
         unknownPIDs = false;
@@ -65,6 +65,7 @@
     this.videoCodec = videoCodec;
     this._duration = duration;
     this.contiguous = false;
+    this.accurateTimeOffset = accurateTimeOffset;
     if (frag.cc !== this.lastCC) {
       logger.log('discontinuity detected');
       this.insertDiscontinuity();
@@ -252,7 +253,7 @@
     };},{len : 0, nbNalu : 0});
      avcTrack.len = trackData.len;
      avcTrack.nbNalu = trackData.nbNalu;
-    this.remuxer.remux(level, sn, this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, timeOffset, this.contiguous, data);
+    this.remuxer.remux(level, sn, this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, timeOffset, this.contiguous, this.accurateTimeOffset, data);
   }
 
   destroy() {
@@ -450,7 +451,11 @@
         //IDR
         case 5:
           push = true;
-          if(debug && avcSample) {
+          // handle PES not starting with AUD
+          if (!avcSample) {
+            avcSample = this.avcSample = this._createAVCSample(true,pes.pts,pes.dts,'');
+          }
+          if(debug) {
             avcSample.debug += 'IDR ';
           }
           avcSample.key = true;
@@ -567,12 +572,17 @@
             track.pps = [unit.data];
           }
           break;
+        // AUD
         case 9:
           push = false;
           if (avcSample) {
             this.pushAccesUnit(avcSample,track);
           }
-          avcSample = this.avcSample = { key : false, pts : pes.pts, dts : pes.dts, units : { units : [], length : 0}, debug : debug ? 'AUD ': ''};
+          avcSample = this.avcSample = this._createAVCSample(false,pes.pts,pes.dts,debug ? 'AUD ': '');
+          break;
+        // Filler Data
+        case 12:
+          push = false;
           break;
         default:
           push = false;
@@ -591,6 +601,10 @@
       this.pushAccesUnit(avcSample,track);
       this.avcSample = null;
     }
+  }
+
+  _createAVCSample(key,pts,dts,debug) {
+    return { key : key, pts : pts, dts : dts, units : { units : [], length : 0}, debug : debug};
   }
 
   _insertSampleInOrder(arr, data) {

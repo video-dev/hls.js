@@ -526,7 +526,7 @@ var AbrController = function (_EventHandler) {
               //abort fragment loading
               frag.loader.abort();
               this.clearTimer();
-              hls.trigger(_events2.default.FRAG_LOAD_EMERGENCY_ABORTED, { frag: frag });
+              hls.trigger(_events2.default.FRAG_LOAD_EMERGENCY_ABORTED, { frag: frag, stats: stats });
             }
           }
         }
@@ -542,7 +542,14 @@ var AbrController = function (_EventHandler) {
         // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
         // and leading to wrong bw estimation
         if (stats.aborted === undefined && frag.loadCounter === 1) {
-          this.bwEstimator.sample(performance.now() - stats.trequest, stats.loaded);
+          var fragLoadingDurationMs = stats.tload - stats.trequest;
+          this.bwEstimator.sample(fragLoadingDurationMs, stats.loaded);
+          // if fragment has been loaded to perform a bitrate test, (hls.startLevel = -1), store bitrate test delay duration
+          if (frag.bitrateTest) {
+            this.bitrateTestDelay = fragLoadingDurationMs / 1000;
+          } else {
+            this.bitrateTestDelay = 0;
+          }
         }
 
         // stop monitoring bw once frag loaded
@@ -578,6 +585,40 @@ var AbrController = function (_EventHandler) {
     /** Return the capping/max level value that could be used by automatic level selection algorithm **/
 
   }, {
+    key: 'findBestLevel',
+    value: function findBestLevel(currentLevel, currentFragDuration, currentBw, maxAutoLevel, maxFetchDuration, bwFactor, bwUpFactor, levels) {
+      for (var i = maxAutoLevel; i >= 0; i--) {
+        var levelInfo = levels[i],
+            levelDetails = levelInfo.details,
+            avgDuration = levelDetails ? levelDetails.totalduration / levelDetails.fragments.length : currentFragDuration,
+            adjustedbw = void 0;
+        // follow algorithm captured from stagefright :
+        // https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp
+        // Pick the highest bandwidth stream below or equal to estimated bandwidth.
+        // consider only 80% of the available bandwidth, but if we are switching up,
+        // be even more conservative (70%) to avoid overestimating and immediately
+        // switching back.
+        if (i <= currentLevel) {
+          adjustedbw = bwFactor * currentBw;
+        } else {
+          adjustedbw = bwUpFactor * currentBw;
+        }
+        var bitrate = levels[i].bitrate,
+            fetchDuration = bitrate * avgDuration / adjustedbw;
+
+        _logger.logger.trace('level/adjustedbw/bitrate/avgDuration/maxFetchDuration/fetchDuration: ' + i + '/' + Math.round(adjustedbw) + '/' + bitrate + '/' + avgDuration + '/' + maxFetchDuration + '/' + fetchDuration);
+        // if adjusted bw is greater than level bitrate AND
+        if (adjustedbw > bitrate && (
+        // fragment fetchDuration unknown or fragment fetchDuration less than max allowed fetch duration, then this level matches
+        !fetchDuration || fetchDuration < maxFetchDuration)) {
+          // as we are looping from highest to lowest, this will return the best achievable quality level
+          return i;
+        }
+      }
+      // not enough time budget even with quality level 0 ... rebuffering might happen
+      return -1;
+    }
+  }, {
     key: 'autoLevelCapping',
     get: function get() {
       return this._autoLevelCapping;
@@ -591,45 +632,79 @@ var AbrController = function (_EventHandler) {
   }, {
     key: 'nextAutoLevel',
     get: function get() {
-      var hls = this.hls,
-          config = hls.config,
-          levels = hls.levels,
-          v = hls.media,
-          i = void 0,
-          maxAutoLevel = void 0;
-      if (levels && levels.length && (this._autoLevelCapping === -1 || this._autoLevelCapping > levels.length - 1)) {
-        maxAutoLevel = levels.length - 1;
-      } else {
-        maxAutoLevel = this._autoLevelCapping;
+      var nextAutoLevel = this._nextAutoLevel,
+          bwEstimator = this.bwEstimator;
+      // in case next auto level has been forced, and bw not available or not reliable
+      if (nextAutoLevel !== -1 && (!bwEstimator || !bwEstimator.canEstimate())) {
+        // cap next auto level by max auto level
+        return Math.min(nextAutoLevel, this.maxAutoLevel);
       }
-
-      // in case next auto level has been forced, return it straight-away (but capped)
-      if (this._nextAutoLevel !== -1) {
-        return Math.min(this._nextAutoLevel, maxAutoLevel);
+      // compute next level using ABR logic
+      var nextABRAutoLevel = this.nextABRAutoLevel;
+      if (nextAutoLevel !== -1) {
+        // nextAutoLevel is defined, use it to cap ABR computed quality level
+        nextABRAutoLevel = Math.min(nextAutoLevel, nextABRAutoLevel);
       }
-      var playbackRate = v && v.playbackRate !== 0 ? Math.abs(v.playbackRate) : 1.0,
-          avgbw = this.bwEstimator ? this.bwEstimator.getEstimate() / playbackRate : config.abrEwmaDefaultEstimate / playbackRate,
-          adjustedbw = void 0;
-      // follow algorithm captured from stagefright :
-      // https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp
-      // Pick the highest bandwidth stream below or equal to estimated bandwidth.
-      for (i = 0; i <= maxAutoLevel; i++) {
-        // consider only 80% of the available bandwidth, but if we are switching up,
-        // be even more conservative (70%) to avoid overestimating and immediately
-        // switching back.
-        if (i <= this.lastLoadedFragLevel) {
-          adjustedbw = config.abrBandWidthFactor * avgbw;
-        } else {
-          adjustedbw = config.abrBandWidthUpFactor * avgbw;
-        }
-        if (adjustedbw < levels[i].bitrate) {
-          return Math.max(0, i - 1);
-        }
-      }
-      return i - 1;
+      return nextABRAutoLevel;
     },
     set: function set(nextLevel) {
       this._nextAutoLevel = nextLevel;
+    }
+  }, {
+    key: 'maxAutoLevel',
+    get: function get() {
+      var levels = this.hls.levels,
+          autoLevelCapping = this._autoLevelCapping,
+          maxAutoLevel;
+      if (autoLevelCapping === -1 && levels && levels.length) {
+        maxAutoLevel = levels.length - 1;
+      } else {
+        maxAutoLevel = autoLevelCapping;
+      }
+      return maxAutoLevel;
+    }
+  }, {
+    key: 'nextABRAutoLevel',
+    get: function get() {
+      var hls = this.hls,
+          maxAutoLevel = this.maxAutoLevel,
+          levels = hls.levels,
+          config = hls.config;
+      var v = hls.media,
+          currentLevel = this.lastLoadedFragLevel,
+          currentFragDuration = this.fragCurrent ? this.fragCurrent.duration : 0,
+          pos = v ? v.currentTime : 0,
+
+      // playbackRate is the absolute value of the playback rate; if v.playbackRate is 0, we use 1 to load as
+      // if we're playing back at the normal rate.
+      playbackRate = v && v.playbackRate !== 0 ? Math.abs(v.playbackRate) : 1.0,
+          avgbw = this.bwEstimator ? this.bwEstimator.getEstimate() : config.abrEwmaDefaultEstimate,
+
+      // bufferStarvationDelay is the wall-clock time left until the playback buffer is exhausted.
+      bufferStarvationDelay = (_bufferHelper2.default.bufferInfo(v, pos, config.maxBufferHole).end - pos) / playbackRate;
+
+      // First, look to see if we can find a level matching with our avg bandwidth AND that could also guarantee no rebuffering at all
+      var bestLevel = this.findBestLevel(currentLevel, currentFragDuration, avgbw, maxAutoLevel, bufferStarvationDelay, config.abrBandWidthFactor, config.abrBandWidthUpFactor, levels);
+      if (bestLevel >= 0) {
+        return bestLevel;
+      } else {
+        _logger.logger.trace('rebuffering expected to happen, lets try to find a quality level minimizing the rebuffering');
+        // not possible to get rid of rebuffering ... let's try to find level that will guarantee less than maxStarvationDelay of rebuffering
+        // if no matching level found, logic will return 0
+        var maxStarvationDelay = config.maxStarvationDelay;
+        if (bufferStarvationDelay === 0) {
+          // in case buffer is empty, let's check if previous fragment was loaded to perform a bitrate test
+          var bitrateTestDelay = this.bitrateTestDelay;
+          if (bitrateTestDelay) {
+            // if it is the case, then we need to decrease this bitrate test duration from our maxStarvationDelay.
+            // rationale is that we need to account for this bitrate test duration
+            maxStarvationDelay -= bitrateTestDelay;
+            _logger.logger.trace('bitrate test took ' + Math.round(1000 * bitrateTestDelay) + 'ms, set first fragment max fetchDuration to ' + Math.round(1000 * maxStarvationDelay) + ' ms');
+          }
+        }
+        bestLevel = this.findBestLevel(currentLevel, currentFragDuration, avgbw, maxAutoLevel, bufferStarvationDelay + maxStarvationDelay, config.abrBandWidthFactor, config.abrBandWidthUpFactor, levels);
+        return Math.max(bestLevel, 0);
+      }
     }
   }]);
 
@@ -1129,7 +1204,9 @@ var AudioStreamController = function (_EventHandler) {
           this.demuxer = new _demuxer2.default(this.hls, 'audio');
         }
         _logger.logger.log('Demuxing ' + sn + ' of [' + details.startSN + ' ,' + details.endSN + '],track ' + trackId);
-        this.demuxer.push(data.payload, audioCodec, null, start, fragCurrent.cc, trackId, sn, duration, fragCurrent.decryptdata);
+        // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
+        var accurateTimeOffset = details.PTSKnown || !details.live;
+        this.demuxer.push(data.payload, audioCodec, null, start, fragCurrent.cc, trackId, sn, duration, fragCurrent.decryptdata, accurateTimeOffset);
       }
       this.fragLoadError = 0;
     }
@@ -1252,12 +1329,13 @@ var AudioStreamController = function (_EventHandler) {
             } else {
               loadError = 1;
             }
-            if (loadError <= this.config.fragLoadingMaxRetry) {
+            var config = this.config;
+            if (loadError <= config.fragLoadingMaxRetry) {
               this.fragLoadError = loadError;
               // reset load counter to avoid frag loop loading error
               frag.loadCounter = 0;
-              // exponential backoff capped to 64s
-              var delay = Math.min(Math.pow(2, loadError - 1) * this.config.fragLoadingRetryDelay, 64000);
+              // exponential backoff capped to config.fragLoadingMaxRetryTimeout
+              var delay = Math.min(Math.pow(2, loadError - 1) * config.fragLoadingRetryDelay, config.fragLoadingMaxRetryTimeout);
               _logger.logger.warn('audioStreamController: frag loading failed, retry in ' + delay + ' ms');
               this.retryDate = performance.now() + delay;
               // retry loading state
@@ -2216,16 +2294,23 @@ var EwmaBandWidthEstimator = function () {
       this.slow_.sample(weight, bandwidth);
     }
   }, {
+    key: 'canEstimate',
+    value: function canEstimate() {
+      var fast = this.fast_;
+      return fast && fast.getTotalWeight() >= this.minWeight_;
+    }
+  }, {
     key: 'getEstimate',
     value: function getEstimate() {
-      if (!this.fast_ || !this.slow_ || this.fast_.getTotalWeight() < this.minWeight_) {
+      if (this.canEstimate()) {
+        //console.log('slow estimate:'+ Math.round(this.slow_.getEstimate()));
+        //console.log('fast estimate:'+ Math.round(this.fast_.getEstimate()));
+        // Take the minimum of these two estimates.  This should have the effect of
+        // adapting down quickly, but up more slowly.
+        return Math.min(this.fast_.getEstimate(), this.slow_.getEstimate());
+      } else {
         return this.defaultEstimate_;
       }
-      //console.log('slow estimate:'+ Math.round(this.slow_.getEstimate()));
-      //console.log('fast estimate:'+ Math.round(this.fast_.getEstimate()));
-      // Take the minimum of these two estimates.  This should have the effect of
-      // adapting down quickly, but up more slowly.
-      return Math.min(this.fast_.getEstimate(), this.slow_.getEstimate());
     }
   }, {
     key: 'destroy',
@@ -2549,7 +2634,6 @@ var LevelController = function (_EventHandler) {
       /* try to switch to a redundant stream if any available.
        * if no redundant stream available, emergency switch down (if in auto mode and current level not 0)
        * otherwise, we cannot recover this network error ...
-       * don't raise FRAG_LOAD_ERROR and FRAG_LOAD_TIMEOUT as fatal, as it is handled by mediaController
        */
       if (levelId !== undefined) {
         level = this._levels[levelId];
@@ -2569,8 +2653,8 @@ var LevelController = function (_EventHandler) {
               // reset this._level so that another call to set level() will retrigger a frag load
               this._level = undefined;
             }
-            // FRAG_LOAD_ERROR and FRAG_LOAD_TIMEOUT are handled by mediaController
-          } else if (details !== _errors.ErrorDetails.FRAG_LOAD_ERROR && details !== _errors.ErrorDetails.FRAG_LOAD_TIMEOUT) {
+            // fragment errors are all handled  by streamController
+          } else if (details !== _errors.ErrorDetails.FRAG_LOAD_ERROR && details !== _errors.ErrorDetails.FRAG_LOAD_TIMEOUT && details !== _errors.ErrorDetails.FRAG_LOOP_LOADING_ERROR) {
               _logger.logger.error('cannot recover ' + details + ' error');
               this._level = undefined;
               // stopping live reloading timer if any
@@ -2667,8 +2751,15 @@ var LevelController = function (_EventHandler) {
   }, {
     key: 'startLevel',
     get: function get() {
+      // hls.startLevel takes precedence over config.startLevel
+      // if none of these values are defined, fallback on this._firstLevel (first quality level appearing in variant manifest)
       if (this._startLevel === undefined) {
-        return this._firstLevel;
+        var configStartLevel = this.hls.config.startLevel;
+        if (configStartLevel !== undefined) {
+          return configStartLevel;
+        } else {
+          return this._firstLevel;
+        }
       } else {
         return this._startLevel;
       }
@@ -2941,10 +3032,10 @@ var StreamController = function (_EventHandler) {
       var maxBufLen = void 0;
       if (this.levels[level].hasOwnProperty('bitrate')) {
         maxBufLen = Math.max(8 * config.maxBufferSize / this.levels[level].bitrate, config.maxBufferLength);
-        maxBufLen = Math.min(maxBufLen, config.maxMaxBufferLength);
       } else {
         maxBufLen = config.maxBufferLength;
       }
+      maxBufLen = Math.min(maxBufLen, config.maxMaxBufferLength);
 
       // determine next candidate fragment to be loaded, based on current position and end of buffer position
       // ensure up to `config.maxMaxBufferLength` of buffer upfront
@@ -2975,10 +3066,10 @@ var StreamController = function (_EventHandler) {
       // we just got done loading the final fragment, check if we need to finalize media stream
       var fragPrevious = this.fragPrevious;
       if (!levelDetails.live && fragPrevious && fragPrevious.sn === levelDetails.endSN) {
-        // if we are not seeking or if we are seeking but everything (almost) til the end is buffered, let's signal eos
+        // if (we are not seeking AND current position is buffered) OR (if we are seeking but everything (almost) til the end is buffered), let's signal eos
         // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference when switching
         // between different renditions. using half frag duration should help cope with these cases.
-        if (!media.seeking || media.duration - bufferInfo.end <= fragPrevious.duration / 2) {
+        if (!media.seeking && bufferInfo.len || media.duration - bufferInfo.end <= fragPrevious.duration / 2) {
           // Finalize the media stream
           var data = {};
           if (this.altAudio) {
@@ -3001,12 +3092,17 @@ var StreamController = function (_EventHandler) {
       var levelDetails = _ref.levelDetails;
 
       var fragPrevious = this.fragPrevious,
-          level = this.level;
+          level = this.level,
+          fragments = levelDetails.fragments,
+          fragLen = fragments.length;
+
+      // empty playlist
+      if (fragLen === 0) {
+        return false;
+      }
 
       // find fragment index, contiguous with end of buffer position
-      var fragments = levelDetails.fragments,
-          fragLen = fragments.length,
-          start = fragments[0].start,
+      var start = fragments[0].start,
           end = fragments[fragLen - 1].start + fragments[fragLen - 1].duration,
           bufferEnd = bufferInfo.end,
           frag = void 0;
@@ -3209,9 +3305,10 @@ var StreamController = function (_EventHandler) {
           frag.loadCounter = 1;
         }
         frag.loadIdx = this.fragLoadIdx;
-        frag.autoLevel = hls.autoLevelEnabled;
         this.fragCurrent = frag;
         this.startFragRequested = true;
+        frag.autoLevel = hls.autoLevelEnabled;
+        frag.bitrateTest = this.fragBitrateTest;
         hls.trigger(_events2.default.FRAG_LOADING, { frag: frag });
         this.state = State.FRAG_LOADING;
         return true;
@@ -3262,7 +3359,7 @@ var StreamController = function (_EventHandler) {
       var rangeCurrent,
           currentTime,
           video = this.media;
-      if (video && video.seeking === false) {
+      if (video && video.readyState && video.seeking === false) {
         currentTime = video.currentTime;
         /* if video element is in seeked state, currentTime can only increase.
           (assuming that playback rate is positive ...)
@@ -3584,7 +3681,7 @@ var StreamController = function (_EventHandler) {
 
       if (this.startFragRequested === false) {
         // compute start position if set to -1. use it straight away if value is defined
-        if (this.startPosition === -1) {
+        if (this.startPosition === -1 || this.lastCurrentTime === -1) {
           // first, check if start time offset has been set in playlist, if yes, use this value
           var startTimeOffset = newDetails.startTimeOffset;
           if (!isNaN(startTimeOffset)) {
@@ -3624,20 +3721,26 @@ var StreamController = function (_EventHandler) {
   }, {
     key: 'onFragLoaded',
     value: function onFragLoaded(data) {
-      var fragCurrent = this.fragCurrent;
-      if (this.state === State.FRAG_LOADING && fragCurrent && data.frag.type === 'main' && data.frag.level === fragCurrent.level && data.frag.sn === fragCurrent.sn) {
+      var fragCurrent = this.fragCurrent,
+          fragLoaded = data.frag;
+      if (this.state === State.FRAG_LOADING && fragCurrent && fragLoaded.type === 'main' && fragLoaded.level === fragCurrent.level && fragLoaded.sn === fragCurrent.sn) {
+        var stats = data.stats;
         _logger.logger.log('Loaded  ' + fragCurrent.sn + ' of level ' + fragCurrent.level);
-        if (this.fragBitrateTest === true) {
+        // reset frag bitrate test in any case after frag loaded event
+        this.fragBitrateTest = false;
+        // if this frag was loaded to perform a bitrate test AND if hls.nextLoadLevel is greater than 0
+        // then this means that we should be able to load a fragment at a higher quality level
+        if (fragLoaded.bitrateTest === true && this.hls.nextLoadLevel) {
           // switch back to IDLE state ... we just loaded a fragment to determine adequate start bitrate and initialize autoswitch algo
           this.state = State.IDLE;
-          this.fragBitrateTest = false;
           this.startFragRequested = false;
-          data.stats.tparsed = data.stats.tbuffered = performance.now();
-          this.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: data.stats, frag: fragCurrent, id: 'main' });
+          stats.tparsed = stats.tbuffered = performance.now();
+          this.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: stats, frag: fragCurrent, id: 'main' });
+          this.tick();
         } else {
           this.state = State.PARSING;
           // transmux the MPEG-TS data to ISO-BMFF segments
-          this.stats = data.stats;
+          this.stats = stats;
           var currentLevel = this.levels[this.level],
               details = currentLevel.details,
               duration = details.totalduration,
@@ -3664,7 +3767,9 @@ var StreamController = function (_EventHandler) {
           if (!demuxer) {
             demuxer = this.demuxer = new _demuxer2.default(this.hls, 'main');
           }
-          demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata);
+          // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
+          var accurateTimeOffset = details.PTSKnown || !details.live;
+          demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata, accurateTimeOffset);
         }
       }
       this.fragLoadError = 0;
@@ -3905,11 +4010,15 @@ var StreamController = function (_EventHandler) {
   }, {
     key: 'onError',
     value: function onError(data) {
-      var frag = data.frag;
+      var frag = data.frag || this.fragCurrent;
       // don't handle frag error not related to main fragment
       if (frag && frag.type !== 'main') {
         return;
       }
+      var media = this.media,
+
+      // 0.4 : tolerance needed as some browsers stalls playback before reaching buffered end
+      mediaBuffered = media && this.isBuffered(media.currentTime) && this.isBuffered(media.currentTime + 0.4);
       switch (data.details) {
         case _errors.ErrorDetails.FRAG_LOAD_ERROR:
         case _errors.ErrorDetails.FRAG_LOAD_TIMEOUT:
@@ -3920,14 +4029,14 @@ var StreamController = function (_EventHandler) {
             } else {
               loadError = 1;
             }
-            if (loadError <= this.config.fragLoadingMaxRetry ||
+            var config = this.config;
             // keep retrying / don't raise fatal network error if current position is buffered
-            this.media && this.isBuffered(this.media.currentTime)) {
+            if (loadError <= config.fragLoadingMaxRetry || mediaBuffered) {
               this.fragLoadError = loadError;
               // reset load counter to avoid frag loop loading error
               frag.loadCounter = 0;
-              // exponential backoff capped to 64s
-              var delay = Math.min(Math.pow(2, loadError - 1) * this.config.fragLoadingRetryDelay, 64000);
+              // exponential backoff capped to config.fragLoadingMaxRetryTimeout
+              var delay = Math.min(Math.pow(2, loadError - 1) * config.fragLoadingRetryDelay, config.fragLoadingMaxRetryTimeout);
               _logger.logger.warn('mediaController: frag loading failed, retry in ' + delay + ' ms');
               this.retryDate = performance.now() + delay;
               // retry loading state
@@ -3942,6 +4051,25 @@ var StreamController = function (_EventHandler) {
           }
           break;
         case _errors.ErrorDetails.FRAG_LOOP_LOADING_ERROR:
+          if (!data.fatal) {
+            // if buffer is not empty
+            if (mediaBuffered) {
+              // try to reduce max buffer length : rationale is that we could get
+              // frag loop loading error because of buffer eviction
+              this._reduceMaxMaxBufferLength(frag.duration);
+              this.state = State.IDLE;
+            } else {
+              // buffer empty. report as fatal if in manual mode or if lowest level.
+              // level controller takes care of emergency switch down logic
+              if (!frag.autoLevel || frag.level === 0) {
+                // redispatch same error but with fatal set to true
+                data.fatal = true;
+                this.hls.trigger(_events2.default.ERROR, data);
+                this.state = State.ERROR;
+              }
+            }
+          }
+          break;
         case _errors.ErrorDetails.LEVEL_LOAD_ERROR:
         case _errors.ErrorDetails.LEVEL_LOAD_TIMEOUT:
         case _errors.ErrorDetails.KEY_LOAD_ERROR:
@@ -3954,18 +4082,38 @@ var StreamController = function (_EventHandler) {
           }
           break;
         case _errors.ErrorDetails.BUFFER_FULL_ERROR:
-          // only reduce max buf len if in appending state
+          // if in appending state
           if (this.state === State.PARSING || this.state === State.PARSED) {
-            // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
-            this.config.maxMaxBufferLength /= 2;
-            _logger.logger.warn('reduce max buffer length to ' + this.config.maxMaxBufferLength + 's and switch to IDLE state');
-            // increase fragment load Index to avoid frag loop loading error after buffer flush
-            this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
-            this.state = State.IDLE;
+            // reduce max buf len if current position is buffered
+            if (mediaBuffered) {
+              this._reduceMaxMaxBufferLength(frag.duration);
+              this.state = State.IDLE;
+            } else {
+              // current position is not buffered, but browser is still complaining about buffer full error
+              // this happens on IE/Edge, refer to https://github.com/dailymotion/hls.js/pull/708
+              // in that case flush the whole buffer to recover
+              _logger.logger.warn('buffer full error also media.currentTime is not buffered, flush everything');
+              this.fragCurrent = null;
+              this.state = State.PAUSED;
+              // flush everything
+              this.hls.trigger(_events2.default.BUFFER_FLUSHING, { startOffset: 0, endOffset: Number.POSITIVE_INFINITY });
+            }
           }
           break;
         default:
           break;
+      }
+    }
+  }, {
+    key: '_reduceMaxMaxBufferLength',
+    value: function _reduceMaxMaxBufferLength(minLength) {
+      var config = this.config;
+      if (config.maxMaxBufferLength >= minLength) {
+        // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
+        config.maxMaxBufferLength /= 2;
+        _logger.logger.warn('reduce max buffer length to ' + config.maxMaxBufferLength + 's and switch to IDLE state');
+        // increase fragment load Index to avoid frag loop loading error after buffer flush
+        this.fragLoadIdx += 2 * config.fragLoadingLoopThreshold;
       }
     }
   }, {
@@ -4050,6 +4198,11 @@ var StreamController = function (_EventHandler) {
     key: 'onFragLoadEmergencyAborted',
     value: function onFragLoadEmergencyAborted() {
       this.state = State.IDLE;
+      // if loadedmetadata is not set, it means that we are emergency switch down on first frag
+      // in that case, reset startFragRequested flag
+      if (!this.loadedmetadata) {
+        this.startFragRequested = false;
+      }
       this.tick();
     }
   }, {
@@ -4197,8 +4350,19 @@ var TimelineController = function (_EventHandler) {
       var channel1 = {
         'newCue': function newCue(startTime, endTime, screen) {
           if (!self.textTrack1) {
-            self.textTrack1 = self.createTextTrack('captions', 'Unknown CC1', 'en');
-            //            self.textTrack1.mode = 'showing';
+            //Enable reuse of existing text track.
+            var existingTrack1 = self.getExistingTrack('1');
+            if (!existingTrack1) {
+              self.textTrack1 = self.createTextTrack('captions', 'English', 'en');
+              self.textTrack1.textTrack1 = true;
+            } else {
+              self.textTrack1 = existingTrack1;
+              self.clearCurrentCues(self.textTrack1);
+
+              var e = new window.Event('addtrack');
+              e.track = self.textTrack1;
+              self.media.dispatchEvent(e);
+            }
           }
 
           self.Cues.newCue(self.textTrack1, startTime, endTime, screen);
@@ -4208,7 +4372,19 @@ var TimelineController = function (_EventHandler) {
       var channel2 = {
         'newCue': function newCue(startTime, endTime, screen) {
           if (!self.textTrack2) {
-            self.textTrack2 = self.createTextTrack('captions', 'Unknown CC2', 'es');
+            //Enable reuse of existing text track.
+            var existingTrack2 = self.getExistingTrack('2');
+            if (!existingTrack2) {
+              self.textTrack2 = self.createTextTrack('captions', 'Spanish', 'es');
+              self.textTrack2.textTrack2 = true;
+            } else {
+              self.textTrack2 = existingTrack2;
+              self.clearCurrentCues(self.textTrack2);
+
+              var e = new window.Event('addtrack');
+              e.track = self.textTrack2;
+              self.media.dispatchEvent(e);
+            }
           }
 
           self.Cues.newCue(self.textTrack2, startTime, endTime, screen);
@@ -4228,6 +4404,21 @@ var TimelineController = function (_EventHandler) {
           track.removeCue(track.cues[0]);
         }
       }
+    }
+  }, {
+    key: 'getExistingTrack',
+    value: function getExistingTrack(channelNumber) {
+      var media = this.media;
+      if (media) {
+        for (var i = 0; i < media.textTracks.length; i++) {
+          var textTrack = media.textTracks[i];
+          var propName = 'textTrack' + channelNumber;
+          if (textTrack[propName] === true) {
+            return textTrack;
+          }
+        }
+      }
+      return null;
     }
   }, {
     key: 'createTextTrack',
@@ -4900,7 +5091,7 @@ var AACDemuxer = function () {
 
 
     // feed incoming data to the front of the parsing pipeline
-    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
+    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset) {
       var track,
           id3 = new _id2.default(data),
           pts = 90 * id3.timeStamp,
@@ -4977,7 +5168,7 @@ var AACDemuxer = function () {
           break;
         }
       }
-      this.remuxer.remux(level, sn, this._aacTrack, { samples: [] }, { samples: [{ pts: pts, dts: pts, unit: id3.payload }] }, { samples: [] }, timeOffset, contiguous);
+      this.remuxer.remux(level, sn, this._aacTrack, { samples: [] }, { samples: [{ pts: pts, dts: pts, unit: id3.payload }] }, { samples: [] }, timeOffset, contiguous, accurateTimeOffset);
     }
   }, {
     key: 'destroy',
@@ -5055,8 +5246,8 @@ var ADTS = function () {
       // byte 3
       adtsChanelConfig |= (data[offset + 3] & 0xC0) >>> 6;
       _logger.logger.log('manifest codec:' + audioCodec + ',ADTS data:type:' + adtsObjectType + ',sampleingIndex:' + adtsSampleingIndex + '[' + adtsSampleingRates[adtsSampleingIndex] + 'Hz],channelConfig:' + adtsChanelConfig);
-      // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
-      if (userAgent.indexOf('firefox') !== -1) {
+      // firefox/Opera: freq less than 24kHz = AAC SBR (HE-AAC)
+      if (/firefox|OPR/i.test(userAgent)) {
         if (adtsSampleingIndex >= 6) {
           adtsObjectType = 5;
           config = new Array(4);
@@ -5075,7 +5266,7 @@ var ADTS = function () {
           config = new Array(2);
           adtsExtensionSampleingIndex = adtsSampleingIndex;
         } else {
-          /*  for other browsers (chrome ...)
+          /*  for other browsers (Chrome/Vivaldi ...)
               always force audio type to be HE-AAC SBR, as some browsers do not support audio codec switch properly (like Chrome ...)
           */
           adtsObjectType = 5;
@@ -5213,7 +5404,7 @@ var DemuxerInline = function () {
     }
   }, {
     key: 'push',
-    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
+    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset) {
       var demuxer = this.demuxer;
       if (!demuxer) {
         var hls = this.hls,
@@ -5233,7 +5424,7 @@ var DemuxerInline = function () {
         }
         this.demuxer = demuxer;
       }
-      demuxer.push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
+      demuxer.push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset);
     }
   }]);
 
@@ -5302,7 +5493,7 @@ var DemuxerWorker = function DemuxerWorker(self) {
         }
         break;
       case 'demux':
-        self.demuxer.push(new Uint8Array(data.data), data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration);
+        self.demuxer.push(new Uint8Array(data.data), data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration, data.accurateTimeOffset);
         break;
       default:
         break;
@@ -5420,21 +5611,21 @@ var Demuxer = function () {
     }
   }, {
     key: 'pushDecrypted',
-    value: function pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
+    value: function pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset) {
       var w = this.w;
       if (w) {
         // post fragment payload as transferable objects (no copy)
-        w.postMessage({ cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn: sn, duration: duration }, [data]);
+        w.postMessage({ cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn: sn, duration: duration, accurateTimeOffset: accurateTimeOffset }, [data]);
       } else {
         var demuxer = this.demuxer;
         if (demuxer) {
-          demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
+          demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset);
         }
       }
     }
   }, {
     key: 'push',
-    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata) {
+    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset) {
       if (data.byteLength > 0 && decryptdata != null && decryptdata.key != null && decryptdata.method === 'AES-128') {
         if (this.decrypter == null) {
           this.decrypter = new _decrypter2.default(this.hls);
@@ -5442,10 +5633,10 @@ var Demuxer = function () {
 
         var localthis = this;
         this.decrypter.decrypt(data, decryptdata.key, decryptdata.iv, function (decryptedData) {
-          localthis.pushDecrypted(decryptedData, audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
+          localthis.pushDecrypted(decryptedData, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset);
         });
       } else {
-        this.pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration);
+        this.pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset);
       }
     }
   }, {
@@ -6068,7 +6259,7 @@ var TSDemuxer = function () {
 
   }, {
     key: 'push',
-    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
+    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset) {
       var start,
           len = data.length,
           stt,
@@ -6083,6 +6274,7 @@ var TSDemuxer = function () {
       this.videoCodec = videoCodec;
       this._duration = duration;
       this.contiguous = false;
+      this.accurateTimeOffset = accurateTimeOffset;
       if (cc !== this.lastCC) {
         _logger.logger.log('discontinuity detected');
         this.insertDiscontinuity();
@@ -6273,7 +6465,7 @@ var TSDemuxer = function () {
       }, { len: 0, nbNalu: 0 });
       avcTrack.len = trackData.len;
       avcTrack.nbNalu = trackData.nbNalu;
-      this.remuxer.remux(level, sn, this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, timeOffset, this.contiguous, data);
+      this.remuxer.remux(level, sn, this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, timeOffset, this.contiguous, this.accurateTimeOffset, data);
     }
   }, {
     key: 'destroy',
@@ -6491,7 +6683,11 @@ var TSDemuxer = function () {
           //IDR
           case 5:
             push = true;
-            if (debug && avcSample) {
+            // handle PES not starting with AUD
+            if (!avcSample) {
+              avcSample = _this.avcSample = _this._createAVCSample(true, pes.pts, pes.dts, '');
+            }
+            if (debug) {
               avcSample.debug += 'IDR ';
             }
             avcSample.key = true;
@@ -6605,12 +6801,17 @@ var TSDemuxer = function () {
               track.pps = [unit.data];
             }
             break;
+          // AUD
           case 9:
             push = false;
             if (avcSample) {
               _this.pushAccesUnit(avcSample, track);
             }
-            avcSample = _this.avcSample = { key: false, pts: pes.pts, dts: pes.dts, units: { units: [], length: 0 }, debug: debug ? 'AUD ' : '' };
+            avcSample = _this.avcSample = _this._createAVCSample(false, pes.pts, pes.dts, debug ? 'AUD ' : '');
+            break;
+          // Filler Data
+          case 12:
+            push = false;
             break;
           default:
             push = false;
@@ -6629,6 +6830,11 @@ var TSDemuxer = function () {
         this.pushAccesUnit(avcSample, track);
         this.avcSample = null;
       }
+    }
+  }, {
+    key: '_createAVCSample',
+    value: function _createAVCSample(key, pts, dts, debug) {
+      return { key: key, pts: pts, dts: dts, units: { units: [], length: 0 }, debug: debug };
     }
   }, {
     key: '_insertSampleInOrder',
@@ -7619,7 +7825,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.2-7';
+      return '0.6.6';
     }
   }, {
     key: 'Events',
@@ -7665,6 +7871,7 @@ var Hls = function () {
           manifestLoadingMaxRetry: 1,
           manifestLoadingRetryDelay: 1000,
           manifestLoadingMaxRetryTimeout: 64000,
+          startLevel: undefined,
           levelLoadingTimeOut: 10000,
           levelLoadingMaxRetry: 4,
           levelLoadingRetryDelay: 1000,
@@ -7702,7 +7909,8 @@ var Hls = function () {
           abrEwmaSlowVoD: 15,
           abrEwmaDefaultEstimate: 5e5, // 500 kbps
           abrBandWidthFactor: 0.8,
-          abrBandWidthUpFactor: 0.7
+          abrBandWidthUpFactor: 0.7,
+          maxStarvationDelay: 4
         };
       }
       return Hls.defaultConfig;
@@ -8652,7 +8860,8 @@ var PlaylistLoader = function (_EventHandler) {
             var startParams = result[1];
             var startAttrs = new _attrList2.default(startParams);
             var startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
-            if (startTimeOffset) {
+            //TIME-OFFSET can be 0
+            if (!isNaN(startTimeOffset)) {
               level.startTimeOffset = startTimeOffset;
             }
             break;
@@ -8701,7 +8910,7 @@ var PlaylistLoader = function (_EventHandler) {
       if (string.indexOf('#EXTM3U') === 0) {
         if (string.indexOf('#EXTINF:') > 0) {
           var isLevel = type !== 'audioTrack',
-              levelDetails = this.parseLevelPlaylist(string, url, level || id || 0, isLevel ? 'main' : 'audio');
+              levelDetails = this.parseLevelPlaylist(string, url, (isLevel ? level : id) || 0, isLevel ? 'main' : 'audio');
           levelDetails.tload = stats.tload;
           if (type === 'manifest') {
             // first request, stream manifest (no master playlist), fire manifest loaded event with level details
@@ -9371,7 +9580,7 @@ var MP4Remuxer = function () {
     }
   }, {
     key: 'remux',
-    value: function remux(level, sn, audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous) {
+    value: function remux(level, sn, audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
       this.level = level;
       this.sn = sn;
       // generate Init Segment if needed
@@ -9384,7 +9593,7 @@ var MP4Remuxer = function () {
         // calculated in remuxAudio.
         //logger.log('nb AAC samples:' + audioTrack.samples.length);
         if (audioTrack.samples.length) {
-          var audioData = this.remuxAudio(audioTrack, timeOffset, contiguous);
+          var audioData = this.remuxAudio(audioTrack, timeOffset, contiguous, accurateTimeOffset);
           //logger.log('nb AVC samples:' + videoTrack.samples.length);
           if (videoTrack.samples.length) {
             var audioTrackLength = void 0;
@@ -9535,6 +9744,7 @@ var MP4Remuxer = function () {
       // PTS is coded on 33bits, and can loop from -2^32 to 2^32
       // PTSNormalize will make PTS/DTS value monotonic, we use last known DTS value as reference value
       var nextAvcDts = void 0;
+      // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
       if (contiguous) {
         // if parsed fragment is contiguous with last one, let's use last DTS value as reference
         nextAvcDts = this.nextAvcDts;
@@ -9564,7 +9774,7 @@ var MP4Remuxer = function () {
           // offset PTS as well, ensure that PTS is smaller or equal than new DTS
           firstPTS = Math.max(firstPTS - delta, nextAvcDts);
           inputSamples[0].pts = firstPTS + this._initDTS;
-          _logger.logger.log('Video/PTS/DTS adjusted: ' + firstPTS + '/' + firstDTS + ',delta:' + delta);
+          _logger.logger.log('Video/PTS/DTS adjusted: ' + Math.round(firstPTS / 90) + '/' + Math.round(firstDTS / 90) + ',delta:' + delta + ' ms');
         }
       }
       nextDTS = firstDTS;
@@ -9716,7 +9926,7 @@ var MP4Remuxer = function () {
     }
   }, {
     key: 'remuxAudio',
-    value: function remuxAudio(track, timeOffset, contiguous) {
+    value: function remuxAudio(track, timeOffset, contiguous, accurateTimeOffset) {
       var pesTimeScale = this.PES_TIMESCALE,
           mp4timeScale = track.timescale,
           pes2mp4ScaleFactor = pesTimeScale / mp4timeScale,
@@ -9745,6 +9955,15 @@ var MP4Remuxer = function () {
       });
       samples0 = track.samples;
 
+      // for audio samples, also consider consecutive fragments as being contiguous (even if a level switch occurs),
+      // for sake of clarity:
+      // consecutive fragments are frags with less than 100ms gaps between new time offset and next expected PTS
+      // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
+      // this helps ensuring audio continuity
+      // and this also avoids audio glitches/cut when switching quality, or reporting wrong duration on first audio frame
+
+      contiguous |= samples0.length && this.nextAacPts && Math.abs(timeOffset - this.nextAacPts / pesTimeScale) < 0.1;
+
       var nextAacPts = contiguous ? this.nextAacPts : timeOffset * pesTimeScale;
 
       // If the audio track is missing samples, the frames seem to get "left-shifted" within the
@@ -9754,54 +9973,59 @@ var MP4Remuxer = function () {
       // frame.
       var pesFrameDuration = expectedSampleDuration * pes2mp4ScaleFactor;
       var nextPtsNorm = nextAacPts;
-      for (var i = 0; i < samples0.length;) {
-        // First, let's see how far off this frame is from where we expect it to be
-        var sample = samples0[i],
-            ptsNorm = this._PTSNormalize(sample.pts - this._initDTS, nextAacPts),
-            delta = ptsNorm - nextPtsNorm;
 
-        // If we're overlapping by more than half a duration, drop this sample
-        if (delta < -0.5 * pesFrameDuration) {
-          _logger.logger.log('Dropping frame due to ' + Math.round(Math.abs(delta / 90)) + ' ms overlap.');
-          samples0.splice(i, 1);
-          track.len -= sample.unit.length;
-          // Don't touch nextPtsNorm or i
-        }
-        // Otherwise, if we're more than half a frame away from where we should be, insert missing frames
-        else if (delta > 0.5 * pesFrameDuration) {
-            var missing = Math.round(delta / pesFrameDuration);
-            _logger.logger.log('Injecting ' + missing + ' frame' + (missing > 1 ? 's' : '') + ' of missing audio due to ' + Math.round(delta / 90) + ' ms gap.');
-            for (var j = 0; j < missing; j++) {
-              newStamp = sample.pts - (missing - j) * pesFrameDuration;
-              newStamp = Math.max(newStamp, this._initDTS);
-              fillFrame = _aac2.default.getSilentFrame(track.channelCount);
-              if (!fillFrame) {
-                _logger.logger.log('Unable to get silent frame for given audio codec; duplicating last frame instead.');
-                fillFrame = sample.unit.slice(0);
-              }
-              samples0.splice(i, 0, { unit: fillFrame, pts: newStamp, dts: newStamp });
-              track.len += fillFrame.length;
-              i += 1;
-            }
+      // only inject/drop audio frames in case time offset is accurate
+      if (accurateTimeOffset) {
+        for (var i = 0; i < samples0.length;) {
+          // First, let's see how far off this frame is from where we expect it to be
+          var sample = samples0[i],
+              ptsNorm = this._PTSNormalize(sample.pts - this._initDTS, nextAacPts),
+              delta = ptsNorm - nextPtsNorm;
 
-            // Adjust sample to next expected pts
-            sample.pts = samples0[i - 1].pts + pesFrameDuration;
-            nextPtsNorm = this._PTSNormalize(sample.pts + pesFrameDuration - this._initDTS, nextAacPts);
-            i += 1;
+          // If we're overlapping by more than a duration, drop this sample
+          if (delta <= -pesFrameDuration) {
+            _logger.logger.warn('Dropping 1 audio frame @ ' + Math.round(nextPtsNorm / 90) / 1000 + 's due to ' + Math.round(Math.abs(delta / 90)) + ' ms overlap.');
+            samples0.splice(i, 1);
+            track.len -= sample.unit.length;
+            // Don't touch nextPtsNorm or i
           }
-          // Otherwise, we're within half a frame duration, so just adjust pts
-          else {
-              if (Math.abs(delta) > 0.1 * pesFrameDuration) {
-                //logger.log(`Invalid frame delta ${Math.round(ptsNorm - nextPtsNorm + pesFrameDuration)} at PTS ${Math.round(ptsNorm / 90)} (should be ${Math.round(pesFrameDuration)}).`);
+          // Otherwise, if we're more than a frame away from where we should be, insert missing frames
+          else if (delta >= pesFrameDuration) {
+              var missing = Math.round(delta / pesFrameDuration);
+              _logger.logger.warn('Injecting ' + missing + ' audio frame @ ' + Math.round(nextPtsNorm / 90) / 1000 + 's due to ' + Math.round(delta / 90) + ' ms gap.');
+              for (var j = 0; j < missing; j++) {
+                newStamp = nextPtsNorm + this._initDTS;
+                newStamp = Math.max(newStamp, this._initDTS);
+                fillFrame = _aac2.default.getSilentFrame(track.channelCount);
+                if (!fillFrame) {
+                  _logger.logger.log('Unable to get silent frame for given audio codec; duplicating last frame instead.');
+                  fillFrame = sample.unit.slice(0);
+                }
+                samples0.splice(i, 0, { unit: fillFrame, pts: newStamp, dts: newStamp });
+                track.len += fillFrame.length;
+                nextPtsNorm += pesFrameDuration;
+                i += 1;
               }
+
+              // Adjust sample to next expected pts
+              sample.pts = sample.dts = nextPtsNorm + this._initDTS;
               nextPtsNorm += pesFrameDuration;
-              if (i === 0) {
-                sample.pts = this._initDTS + nextAacPts;
-              } else {
-                sample.pts = samples0[i - 1].pts + pesFrameDuration;
-              }
               i += 1;
             }
+            // Otherwise, we're within half a frame duration, so just adjust pts
+            else {
+                if (Math.abs(delta) > 0.1 * pesFrameDuration) {
+                  //logger.log(`Invalid frame delta ${Math.round(ptsNorm - nextPtsNorm + pesFrameDuration)} at PTS ${Math.round(ptsNorm / 90)} (should be ${Math.round(pesFrameDuration)}).`);
+                }
+                nextPtsNorm += pesFrameDuration;
+                if (i === 0) {
+                  sample.pts = sample.dts = this._initDTS + nextAacPts;
+                } else {
+                  sample.pts = sample.dts = samples0[i - 1].pts + pesFrameDuration;
+                }
+                i += 1;
+              }
+        }
       }
 
       while (samples0.length) {
@@ -9821,6 +10045,7 @@ var MP4Remuxer = function () {
           var _delta = Math.round(1000 * (ptsnorm - nextAacPts) / pesTimeScale),
               numMissingFrames = 0;
           // if fragment are contiguous, detect hole/overlapping between fragments
+          // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
           if (contiguous) {
             // log delta
             if (_delta) {
@@ -9859,8 +10084,8 @@ var MP4Remuxer = function () {
             // no audio samples
             return;
           }
-          for (i = 0; i < numMissingFrames; i++) {
-            newStamp = ptsnorm - (numMissingFrames - i) * pesFrameDuration;
+          for (var _i3 = 0; _i3 < numMissingFrames; _i3++) {
+            newStamp = ptsnorm - (numMissingFrames - _i3) * pesFrameDuration;
             fillFrame = _aac2.default.getSilentFrame(track.channelCount);
             if (!fillFrame) {
               _logger.logger.log('Unable to get silent frame for given audio codec; duplicating this frame instead.');
@@ -12022,7 +12247,7 @@ var XhrLoader = function () {
         xhr = this.loader = new XMLHttpRequest();
       }
 
-      xhr.onloadend = this.loadend.bind(this);
+      xhr.onreadystatechange = this.readystatechange.bind(this);
       xhr.onprogress = this.loadprogress.bind(this);
 
       xhr.open('GET', context.url, true);
@@ -12042,10 +12267,10 @@ var XhrLoader = function () {
       xhr.send();
     }
   }, {
-    key: 'loadend',
-    value: function loadend(event) {
+    key: 'readystatechange',
+    value: function readystatechange(event) {
       var xhr = event.currentTarget,
-          status = xhr.status,
+          readyState = xhr.readyState,
           stats = this.stats,
           context = this.context,
           config = this.config;
@@ -12058,36 +12283,47 @@ var XhrLoader = function () {
       // in any case clear the current xhrs timeout
       window.clearTimeout(this.requestTimeout);
 
-      // http status between 200 to 299 are all successful
-      if (status >= 200 && status < 300) {
-        stats.tload = Math.max(stats.tfirst, performance.now());
-        var data = void 0,
-            len = void 0;
-        if (context.responseType === 'arraybuffer') {
-          data = xhr.response;
-          len = data.byteLength;
-        } else {
-          data = xhr.responseText;
-          len = data.length;
+      // HEADERS_RECEIVED
+      if (readyState >= 2) {
+        if (stats.tfirst === 0) {
+          stats.tfirst = Math.max(performance.now(), stats.trequest);
+          // reset timeout to total timeout duration minus the time it took to receive headers
+          this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), config.timeout - (stats.tfirst - stats.trequest));
         }
-        stats.loaded = stats.total = len;
-        var response = { url: xhr.responseURL, data: data };
-        this.callbacks.onSuccess(response, stats, context);
-      } else {
-        // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
-        if (stats.retry >= config.maxRetry || status >= 400 && status < 499) {
-          _logger.logger.error(status + ' while loading ' + context.url);
-          this.callbacks.onError({ code: status, text: xhr.statusText }, context);
-        } else {
-          // retry
-          _logger.logger.warn(status + ' while loading ' + context.url + ', retrying in ' + this.retryDelay + '...');
-          // aborts and resets internal state
-          this.destroy();
-          // schedule retry
-          this.retryTimeout = window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
-          // set exponential backoff
-          this.retryDelay = Math.min(2 * this.retryDelay, config.maxRetryDelay);
-          stats.retry++;
+        if (readyState === 4) {
+          var status = xhr.status;
+          // http status between 200 to 299 are all successful
+          if (status >= 200 && status < 300) {
+            stats.tload = Math.max(stats.tfirst, performance.now());
+            var data = void 0,
+                len = void 0;
+            if (context.responseType === 'arraybuffer') {
+              data = xhr.response;
+              len = data.byteLength;
+            } else {
+              data = xhr.responseText;
+              len = data.length;
+            }
+            stats.loaded = stats.total = len;
+            var response = { url: xhr.responseURL, data: data };
+            this.callbacks.onSuccess(response, stats, context);
+          } else {
+            // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
+            if (stats.retry >= config.maxRetry || status >= 400 && status < 499) {
+              _logger.logger.error(status + ' while loading ' + context.url);
+              this.callbacks.onError({ code: status, text: xhr.statusText }, context);
+            } else {
+              // retry
+              _logger.logger.warn(status + ' while loading ' + context.url + ', retrying in ' + this.retryDelay + '...');
+              // aborts and resets internal state
+              this.destroy();
+              // schedule retry
+              this.retryTimeout = window.setTimeout(this.loadInternal.bind(this), this.retryDelay);
+              // set exponential backoff
+              this.retryDelay = Math.min(2 * this.retryDelay, config.maxRetryDelay);
+              stats.retry++;
+            }
+          }
         }
       }
     }
@@ -12101,9 +12337,6 @@ var XhrLoader = function () {
     key: 'loadprogress',
     value: function loadprogress(event) {
       var stats = this.stats;
-      if (stats.tfirst === 0) {
-        stats.tfirst = Math.max(performance.now(), stats.trequest);
-      }
       stats.loaded = event.loaded;
       if (event.lengthComputable) {
         stats.total = event.total;
