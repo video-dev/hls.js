@@ -355,7 +355,7 @@ class BufferController extends EventHandler {
         appended += sourceBuffer[type].buffered.length;
       }
       this.appended = appended;
-      this.hls.trigger(Event.BUFFER_FLUSHED);
+      this.hls.trigger(Event.BUFFER_FLUSHED,{type:range.type});
     }
   }
 
