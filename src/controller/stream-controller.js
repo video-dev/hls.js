@@ -1015,7 +1015,6 @@ class StreamController extends EventHandler {
 
   onFragParsingData(data) {
     let fragCurrent = this.fragCurrent;
-	console.log('**',this.audioTrackType,data.type);
     if (fragCurrent &&
         data.id === 'main' &&
         data.sn === fragCurrent.sn &&
