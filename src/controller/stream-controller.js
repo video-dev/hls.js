@@ -1015,11 +1015,12 @@ class StreamController extends EventHandler {
 
   onFragParsingData(data) {
     let fragCurrent = this.fragCurrent;
+	console.log('**',this.audioTrackType,data.type);
     if (fragCurrent &&
         data.id === 'main' &&
         data.sn === fragCurrent.sn &&
         data.level === fragCurrent.level &&
-        (data.type !== 'audio' || this.audioTrackType !== 'AUDIO') && // filter out main audio if audio track is loaded through audio stream controller
+        !(data.type == 'audio' && this.altAudio == 'AUDIO') && // filter out main audio if audio track is loaded through audio stream controller
         this.state === State.PARSING) {
       var level = this.levels[this.level],
           frag = this.fragCurrent;
