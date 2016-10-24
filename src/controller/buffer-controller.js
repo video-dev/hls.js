@@ -330,6 +330,7 @@ class BufferController extends EventHandler {
   }
 
   doFlush() {
+    var flushType=this.flushRange[0].type;
     // loop through all buffer ranges to flush
     while(this.flushRange.length) {
       var range = this.flushRange[0];
@@ -351,11 +352,16 @@ class BufferController extends EventHandler {
       // let's recompute this.appended, which is used to avoid flush looping
       var appended = 0;
       var sourceBuffer = this.sourceBuffer;
-      for (var type in sourceBuffer) {
-        appended += sourceBuffer[type].buffered.length;
+      //In case of flush only audio, since video was not flushed
+      if(flushType==='audio') {
+        appended += sourceBuffer[flushType].buffered.length;
+      } else {
+        for (var type in sourceBuffer) {
+          appended += sourceBuffer[type].buffered.length;
+        }
       }
       this.appended = appended;
-      this.hls.trigger(Event.BUFFER_FLUSHED);
+      this.hls.trigger(Event.BUFFER_FLUSHED,{type:flushType});
     }
   }
 

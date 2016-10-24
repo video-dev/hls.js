@@ -1346,16 +1346,23 @@ _checkBuffer() {
     this.tick();
   }
 
-  onBufferFlushed() {
+  onBufferFlushed(bufferFlush) {
     /* after successful buffer flushing, rebuild buffer Range array
       loop through existing buffer range and check if
       corresponding range is still buffered. only push to new array already buffered range
     */
+    var typeOfFlush=bufferFlush.type;
     var newRange = [],range,i;
+
     for (i = 0; i < this.bufferRange.length; i++) {
       range = this.bufferRange[i];
-      if (BufferHelper.isBuffered(this.media,(range.start + range.end) / 2)) {
-        newRange.push(range);
+      if(typeOfFlush==='audio'&&range.type==='video') {
+          newRange.push(range);//Audio Flush, Video is the same so keeping the current range on video
+      }else {
+        //Not a audio flush, so keeping logic
+        if (BufferHelper.isBuffered(this.media,(range.start + range.end) / 2)) {
+          newRange.push(range);
+        }
       }
     }
     this.bufferRange = newRange;
