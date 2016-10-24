@@ -14,13 +14,13 @@ import {ErrorTypes, ErrorDetails} from '../errors';
 const State = {
   STOPPED : 'STOPPED',
   IDLE : 'IDLE',
-  PAUSED : 'PAUSED',
   KEY_LOADING : 'KEY_LOADING',
   FRAG_LOADING : 'FRAG_LOADING',
   FRAG_LOADING_WAITING_RETRY : 'FRAG_LOADING_WAITING_RETRY',
   WAITING_LEVEL : 'WAITING_LEVEL',
   PARSING : 'PARSING',
   PARSED : 'PARSED',
+  BUFFER_FLUSHING : 'BUFFER_FLUSHING',
   ENDED : 'ENDED',
   ERROR : 'ERROR'
 };
@@ -133,8 +133,10 @@ class StreamController extends EventHandler {
     switch(this.state) {
       case State.ERROR:
         //don't do anything in error state to avoid breaking further ...
-      case State.PAUSED:
-        //don't do anything in paused state either ...
+        break;
+      case State.BUFFER_FLUSHING:
+      // in buffer flushing state, reset fragLoadError counter
+        this.fragLoadError = 0;
         break;
       case State.IDLE:
         // if video not attached AND
@@ -503,7 +505,7 @@ class StreamController extends EventHandler {
     this.fragCurrent = null;
     // increase fragment load Index to avoid frag loop loading error after buffer flush
     this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
-    this.state = State.PAUSED;
+    this.state = State.BUFFER_FLUSHING;
     // flush everything
     this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0, endOffset: Number.POSITIVE_INFINITY});
   }
@@ -540,7 +542,7 @@ class StreamController extends EventHandler {
       if (currentRange && currentRange.start > 1) {
       // flush buffer preceding current fragment (flush until current fragment start offset)
       // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
-        this.state = State.PAUSED;
+        this.state = State.BUFFER_FLUSHING;
         this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0, endOffset: currentRange.start - 1});
       }
       if (!media.paused) {
@@ -568,7 +570,7 @@ class StreamController extends EventHandler {
           }
           this.fragCurrent = null;
           // flush position is the start position of this new buffer
-          this.state = State.PAUSED;
+          this.state = State.BUFFER_FLUSHING;
           this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: nextRange.start, endOffset: Number.POSITIVE_INFINITY});
         }
       }
