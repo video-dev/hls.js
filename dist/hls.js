@@ -1823,13 +1823,13 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 var State = {
   STOPPED: 'STOPPED',
   IDLE: 'IDLE',
-  PAUSED: 'PAUSED',
   KEY_LOADING: 'KEY_LOADING',
   FRAG_LOADING: 'FRAG_LOADING',
   FRAG_LOADING_WAITING_RETRY: 'FRAG_LOADING_WAITING_RETRY',
   WAITING_LEVEL: 'WAITING_LEVEL',
   PARSING: 'PARSING',
   PARSED: 'PARSED',
+  BUFFER_FLUSHING: 'BUFFER_FLUSHING',
   ENDED: 'ENDED',
   ERROR: 'ERROR'
 };
@@ -1945,9 +1945,11 @@ var StreamController = function (_EventHandler) {
       //logger.log(this.state);
       switch (this.state) {
         case State.ERROR:
-        //don't do anything in error state to avoid breaking further ...
-        case State.PAUSED:
-          //don't do anything in paused state either ...
+          //don't do anything in error state to avoid breaking further ...
+          break;
+        case State.BUFFER_FLUSHING:
+          // in buffer flushing state, reset fragLoadError counter
+          this.fragLoadError = 0;
           break;
         case State.IDLE:
           // if video not attached AND
@@ -2295,7 +2297,7 @@ var StreamController = function (_EventHandler) {
       this.fragCurrent = null;
       // increase fragment load Index to avoid frag loop loading error after buffer flush
       this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
-      this.state = State.PAUSED;
+      this.state = State.BUFFER_FLUSHING;
       // flush everything
       this.hls.trigger(_events2.default.BUFFER_FLUSHING, { startOffset: 0, endOffset: Number.POSITIVE_INFINITY });
     }
@@ -2338,7 +2340,7 @@ var StreamController = function (_EventHandler) {
         if (currentRange && currentRange.start > 1) {
           // flush buffer preceding current fragment (flush until current fragment start offset)
           // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
-          this.state = State.PAUSED;
+          this.state = State.BUFFER_FLUSHING;
           this.hls.trigger(_events2.default.BUFFER_FLUSHING, { startOffset: 0, endOffset: currentRange.start - 1 });
         }
         if (!media.paused) {
@@ -2368,7 +2370,7 @@ var StreamController = function (_EventHandler) {
             }
             this.fragCurrent = null;
             // flush position is the start position of this new buffer
-            this.state = State.PAUSED;
+            this.state = State.BUFFER_FLUSHING;
             this.hls.trigger(_events2.default.BUFFER_FLUSHING, { startOffset: nextRange.start, endOffset: Number.POSITIVE_INFINITY });
           }
         }
@@ -2802,6 +2804,8 @@ var StreamController = function (_EventHandler) {
       switch (data.details) {
         case _errors.ErrorDetails.FRAG_LOAD_ERROR:
         case _errors.ErrorDetails.FRAG_LOAD_TIMEOUT:
+        case _errors.ErrorDetails.KEY_LOAD_ERROR:
+        case _errors.ErrorDetails.KEY_LOAD_TIMEOUT:
           if (!data.fatal) {
             var loadError = this.fragLoadError;
             if (loadError) {
@@ -2809,8 +2813,8 @@ var StreamController = function (_EventHandler) {
             } else {
               loadError = 1;
             }
-            // keep retrying / don't raise fatal network error if current position is buffered
-            if (loadError <= this.config.fragLoadingMaxRetry || mediaBuffered) {
+            // keep retrying / don't raise fatal network error if current position is buffered or if in automode with current level not 0
+            if (loadError <= this.config.fragLoadingMaxRetry || mediaBuffered || frag.autoLevel && frag.level) {
               this.fragLoadError = loadError;
               // reset load counter to avoid frag loop loading error
               frag.loadCounter = 0;
@@ -2851,13 +2855,17 @@ var StreamController = function (_EventHandler) {
           break;
         case _errors.ErrorDetails.LEVEL_LOAD_ERROR:
         case _errors.ErrorDetails.LEVEL_LOAD_TIMEOUT:
-        case _errors.ErrorDetails.KEY_LOAD_ERROR:
-        case _errors.ErrorDetails.KEY_LOAD_TIMEOUT:
-          //  when in ERROR state, don't switch back to IDLE state in case a non-fatal error is received
           if (this.state !== State.ERROR) {
-            // if fatal error, stop processing, otherwise move to IDLE to retry loading
-            this.state = data.fatal ? State.ERROR : State.IDLE;
-            _logger.logger.warn('streamController: ' + data.details + ' while loading frag,switch to ' + this.state + ' state ...');
+            if (data.fatal) {
+              // if fatal error, stop processing
+              this.state = State.ERROR;
+              _logger.logger.warn('streamController: ' + data.details + ',switch to ' + this.state + ' state ...');
+            } else {
+              // in cas of non fatal error while waiting level load to be completed, switch back to IDLE
+              if (this.state === State.WAITING_LEVEL) {
+                this.state = State.IDLE;
+              }
+            }
           }
           break;
         case _errors.ErrorDetails.BUFFER_FULL_ERROR:
