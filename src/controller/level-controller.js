@@ -117,7 +117,8 @@ class LevelController extends EventHandler {
                 firstLevel: this._firstLevel,
                 stats: data.stats,
                 audio: audioCodecFound,
-                video: videoCodecFound
+                video: videoCodecFound,
+                altAudio: data.audioTracks.length > 0
             });
         } else {
             hls.trigger(Event.ERROR, {
