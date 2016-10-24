@@ -42,7 +42,11 @@ class BufferController extends EventHandler {
     let audioExpected = data.audio,
         videoExpected = data.video,
         sourceBufferNb = 0;
-    if (audioExpected || videoExpected) {
+    // in case of alt audio 2 BUFFER_CODECS events will be triggered, one per stream controller
+    // sourcebuffers will be created all at once when the expected nb of tracks will be reached
+    // in case alt audio is not used, only one BUFFER_CODEC event will be fired from main stream controller
+    // it will contain the expected nb of source buffers, no need to compute it
+    if (data.altAudio && (audioExpected || videoExpected)) {
       sourceBufferNb = (audioExpected ? 1 : 0) + (videoExpected ? 1 : 0);
       logger.log(`${sourceBufferNb} sourceBuffer(s) expected`);
     }
