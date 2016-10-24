@@ -119,9 +119,9 @@ class BufferController extends EventHandler {
     // if any buffer codecs pending, check if we have enough to create sourceBuffers
     let pendingTracks = this.pendingTracks,
         pendingTracksNb = Object.keys(pendingTracks).length;
-    // if any pending tracks and (if nb of pending tracks matching expected nb or if unknoown expected nb)
+    // if any pending tracks and (if nb of pending tracks gt or equal than expected nb or if unknown expected nb)
     if (pendingTracksNb && (
-        this.sourceBufferNb === pendingTracksNb ||
+        this.sourceBufferNb <= pendingTracksNb ||
         this.sourceBufferNb === 0)) {
       // ok, let's create them now !
       this.createSourceBuffers(pendingTracks);
