@@ -5,7 +5,7 @@ import AESDecryptor from './aes-decryptor';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 
-class AES {
+class Decrypter {
     constructor(hls) {
         this.hls = hls;
         try {
@@ -68,4 +68,4 @@ class AES {
     destroy() {}
 }
 
-export default AES;
+export default Decrypter;

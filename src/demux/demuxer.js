@@ -2,7 +2,7 @@ import Event from '../events';
 import DemuxerInline from '../demux/demuxer-inline';
 import DemuxerWorker from '../demux/demuxer-worker';
 import { logger } from '../utils/logger';
-import AES from '../crypt/aes';
+import Decrypter from '../crypt/decrypter';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
 class Demuxer {
@@ -70,10 +70,10 @@ class Demuxer {
                 this.demuxer = null;
             }
         }
-        let aes = this.aes;
-        if (aes) {
-            aes.destroy();
-            this.aes = null;
+        let decrypter = this.decrypter;
+        if (decrypter) {
+            decrypter.destroy();
+            this.decrypter = null;
         }
     }
 
@@ -142,12 +142,12 @@ class Demuxer {
             decryptdata.key != null &&
             decryptdata.method === 'AES-128'
         ) {
-            if (this.aes == null) {
-                this.aes = new AES(this.hls);
+            if (this.decrypter == null) {
+                this.decrypter = new Decrypter(this.hls);
             }
 
             var localthis = this;
-            this.aes.decrypt(
+            this.decrypter.decrypt(
                 data,
                 decryptdata.key.buffer,
                 decryptdata.iv.buffer,

@@ -294,7 +294,7 @@ class AESDecryptor {
             offset += 16;
         }
 
-        return this.unpad_(output);
+        return this.unpad_(output).buffer;
     }
 
     unpad_(data) {
