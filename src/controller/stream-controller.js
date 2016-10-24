@@ -640,8 +640,9 @@ class StreamController extends EventHandler {
     }
 
     get currentLevel() {
-        if (this.media) {
-            var range = this.getBufferRange(this.media.currentTime);
+        let media = this.media;
+        if (media) {
+            var range = this.getBufferRange(media.currentTime);
             if (range) {
                 return range.frag.level;
             }
@@ -650,10 +651,11 @@ class StreamController extends EventHandler {
     }
 
     get nextBufferRange() {
-        if (this.media) {
+        let media = this.media;
+        if (media) {
             // first get end range of current fragment
             return this.followingBufferRange(
-                this.getBufferRange(this.media.currentTime)
+                this.getBufferRange(media.currentTime)
             );
         } else {
             return null;
@@ -1722,18 +1724,16 @@ class StreamController extends EventHandler {
         /* after successful buffer flushing, rebuild buffer Range array
       loop through existing buffer range and check if
       corresponding range is still buffered. only push to new array already buffered range
+      use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
     */
-        var newRange = [],
+        let media = this.mediaBuffer ? this.mediaBuffer : this.media,
+            bufferRange = this.bufferRange,
+            newRange = [],
             range,
             i;
-        for (i = 0; i < this.bufferRange.length; i++) {
-            range = this.bufferRange[i];
-            if (
-                BufferHelper.isBuffered(
-                    this.media,
-                    (range.start + range.end) / 2
-                )
-            ) {
+        for (i = 0; i < bufferRange.length; i++) {
+            range = bufferRange[i];
+            if (BufferHelper.isBuffered(media, (range.start + range.end) / 2)) {
                 newRange.push(range);
             }
         }
