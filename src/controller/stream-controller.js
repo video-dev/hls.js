@@ -1167,6 +1167,8 @@ class StreamController extends EventHandler {
     switch(data.details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
+      case ErrorDetails.KEY_LOAD_ERROR:
+      case ErrorDetails.KEY_LOAD_TIMEOUT:
         if(!data.fatal) {
           var loadError = this.fragLoadError;
           if(loadError) {
@@ -1175,8 +1177,8 @@ class StreamController extends EventHandler {
             loadError=1;
           }
           let config = this.config;
-          // keep retrying / don't raise fatal network error if current position is buffered
-          if (loadError <= config.fragLoadingMaxRetry || mediaBuffered) {
+          // keep retrying / don't raise fatal network error if current position is buffered or if in automode with current level not 0
+          if (loadError <= config.fragLoadingMaxRetry || mediaBuffered || (frag.autoLevel && frag.level)) {
             this.fragLoadError = loadError;
             // reset load counter to avoid frag loop loading error
             frag.loadCounter = 0;
@@ -1217,13 +1219,17 @@ class StreamController extends EventHandler {
         break;
       case ErrorDetails.LEVEL_LOAD_ERROR:
       case ErrorDetails.LEVEL_LOAD_TIMEOUT:
-      case ErrorDetails.KEY_LOAD_ERROR:
-      case ErrorDetails.KEY_LOAD_TIMEOUT:
-        //  when in ERROR state, don't switch back to IDLE state in case a non-fatal error is received
         if(this.state !== State.ERROR) {
-            // if fatal error, stop processing, otherwise move to IDLE to retry loading
-            this.state = data.fatal ? State.ERROR : State.IDLE;
-            logger.warn(`mediaController: ${data.details} while loading frag,switch to ${this.state} state ...`);
+          if (data.fatal) {
+           // if fatal error, stop processing
+            this.state = State.ERROR;
+            logger.warn(`streamController: ${data.details},switch to ${this.state} state ...`);
+          } else {
+            // in cas of non fatal error while waiting level load to be completed, switch back to IDLE
+            if (this.state === State.WAITING_LEVEL) {
+              this.state = State.IDLE;
+            }
+          }
         }
         break;
       case ErrorDetails.BUFFER_FULL_ERROR:
