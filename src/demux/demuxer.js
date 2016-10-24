@@ -149,8 +149,8 @@ class Demuxer {
             var localthis = this;
             this.decrypter.decrypt(
                 data,
-                decryptdata.key,
-                decryptdata.iv,
+                decryptdata.key.buffer,
+                decryptdata.iv.buffer,
                 function(decryptedData) {
                     localthis.pushDecrypted(
                         decryptedData,
