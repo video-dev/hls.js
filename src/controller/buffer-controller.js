@@ -331,8 +331,10 @@ class BufferController extends EventHandler {
 
   doFlush() {
     // loop through all buffer ranges to flush
+    var typeFlush='';
     while(this.flushRange.length) {
       var range = this.flushRange[0];
+      typeFlush=range.type;
       // flushBuffer will abort any buffer append in progress and flush Audio/Video Buffer
       if (this.flushBuffer(range.start, range.end, range.type)) {
         // range flushed, remove from flush array
@@ -355,7 +357,7 @@ class BufferController extends EventHandler {
         appended += sourceBuffer[type].buffered.length;
       }
       this.appended = appended;
-      this.hls.trigger(Event.BUFFER_FLUSHED,{type:range.type});
+      this.hls.trigger(Event.BUFFER_FLUSHED,{type:typeFlush});
     }
   }
 

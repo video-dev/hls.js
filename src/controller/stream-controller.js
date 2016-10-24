@@ -1356,7 +1356,7 @@ _checkBuffer() {
 
     for (i = 0; i < this.bufferRange.length; i++) {
       range = this.bufferRange[i];
-      if(typeOfFlush=="audio"&&range.type=="video") {
+      if(typeOfFlush==='audio'&&range.type==='video') {
           newRange.push(range);//Audio Flush, Video is the same so keeping the current range on video
       }else {
         //Not a audio flush, so keeping logic
