@@ -16,20 +16,15 @@ class Demuxer {
     };
     if (hls.config.enableWorker && (typeof(Worker) !== 'undefined')) {
         logger.log('demuxing in webworker');
-        let w;
         try {
           let work = require('webworkify');
-          w = this.w = work(DemuxerWorker);
+          let w = this.w = work(DemuxerWorker);
           this.onwmsg = this.onWorkerMessage.bind(this);
           w.addEventListener('message', this.onwmsg);
           w.onerror = function(event) { hls.trigger(Event.ERROR, {type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event : 'demuxerWorker', err : { message : event.message + ' (' + event.filename + ':' + event.lineno + ')' }});};
           w.postMessage({cmd: 'init', typeSupported : typeSupported, id : id, config: JSON.stringify(hls.config)});
         } catch(err) {
           logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
-          if (w) {
-            // revoke the Object URL that was used to create demuxer worker, so as not to leak it
-            URL.revokeObjectURL(w.objectURL);
-          }
           this.demuxer = new DemuxerInline(hls,id,typeSupported);
         }
       } else {
@@ -71,15 +66,16 @@ class Demuxer {
     }
   }
 
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata,accurateTimeOffset) {
+  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset) {
     if ((data.byteLength > 0) && (decryptdata != null) && (decryptdata.key != null) && (decryptdata.method === 'AES-128')) {
       if (this.decrypter == null) {
         this.decrypter = new Decrypter(this.hls);
       }
-
       var localthis = this;
-      this.decrypter.decrypt(data, decryptdata.key, decryptdata.iv, function(decryptedData){
-        localthis.pushDecrypted(decryptedData, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset);
+      var startTime = performance.now();
+      this.decrypter.decrypt(data, decryptdata.key.buffer, decryptdata.iv.buffer, function (decryptedData) {
+        localthis.hls.trigger(Event.FRAG_DECRYPTED, { level : level, sn : sn, stats: { tstart: startTime, tdecrypt: performance.now() } });
+        localthis.pushDecrypted(decryptedData, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset);
       });
     } else {
       this.pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset);
@@ -91,10 +87,6 @@ class Demuxer {
         hls = this.hls;
     //console.log('onWorkerMessage:' + data.event);
     switch(data.event) {
-      case 'init':
-        // revoke the Object URL that was used to create demuxer worker, so as not to leak it
-        URL.revokeObjectURL(this.w.objectURL);
-        break;
       // special case for FRAG_PARSING_DATA: data1 and data2 are transferable objects
       case Event.FRAG_PARSING_DATA:
         data.data.data1 = new Uint8Array(data.data1);
