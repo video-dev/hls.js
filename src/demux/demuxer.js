@@ -73,7 +73,7 @@ class Demuxer {
       }
 
       var localthis = this;
-      this.decrypter.decrypt(data, decryptdata.key, decryptdata.iv, function(decryptedData){
+      this.decrypter.decrypt(data, decryptdata.key.buffer, decryptdata.iv.buffer, function(decryptedData){
         localthis.pushDecrypted(decryptedData, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset);
       });
     } else {
