@@ -353,9 +353,9 @@ class BufferController extends EventHandler {
       var appended = 0;
       var sourceBuffer = this.sourceBuffer;
       //In case of flush only audio, since video was not flushed
-      if(flushType==='audio')
+      if(flushType==='audio') {
         appended += sourceBuffer[flushType].buffered.length;
-      else {
+      } else {
         for (var type in sourceBuffer) {
           appended += sourceBuffer[type].buffered.length;
         }
