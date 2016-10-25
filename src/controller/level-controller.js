@@ -295,13 +295,13 @@ class LevelController extends EventHandler {
                 ) {
                     let hls = this.hls,
                         media = hls.media,
-                        // 0.4 : tolerance needed as some browsers stalls playback before reaching buffered end
+                        // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
                         mediaBuffered =
                             media &&
                             BufferHelper.isBuffered(media, media.currentTime) &&
                             BufferHelper.isBuffered(
                                 media,
-                                media.currentTime + 0.4
+                                media.currentTime + 0.5
                             );
                     if (mediaBuffered) {
                         let retryDelay = hls.config.levelLoadingRetryDelay;
