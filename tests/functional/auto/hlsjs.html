@@ -31,6 +31,7 @@
         border-color: #aaaaaa;
         border-style: none;
         border-bottom-style: solid;
+        white-space: pre-wrap;
       }
     </style>
     <script src="/dist/hls.js"></script>
@@ -45,7 +46,7 @@
           }
           video = document.getElementById('video');
           try {
-            hls = new Hls();
+            hls = new Hls({debug: true});
             hls.loadSource(streamUrl);
             hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, function() {
