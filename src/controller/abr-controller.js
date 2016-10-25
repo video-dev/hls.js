@@ -288,6 +288,14 @@ class AbrController extends EventHandler {
         return nextABRAutoLevel;
     }
 
+    get minAutoLevel() {
+        for (let i = 0; i < hls.levels.length; i++) {
+            if (this.hls.levels[i].bitrate > this.hls.config.minAutoBitrate)
+                return i;
+        }
+        return 0;
+    }
+
     get maxAutoLevel() {
         var levels = this.hls.levels,
             autoLevelCapping = this._autoLevelCapping,
@@ -304,7 +312,8 @@ class AbrController extends EventHandler {
         var hls = this.hls,
             maxAutoLevel = this.maxAutoLevel,
             levels = hls.levels,
-            config = hls.config;
+            config = hls.config,
+            minAutoLevel = this.minAutoLevel;
         const v = hls.media,
             currentLevel = this.lastLoadedFragLevel,
             currentFragDuration = this.fragCurrent
@@ -333,7 +342,8 @@ class AbrController extends EventHandler {
             bufferStarvationDelay,
             config.abrBandWidthFactor,
             config.abrBandWidthUpFactor,
-            levels
+            levels,
+            minAutoLevel
         );
         if (bestLevel >= 0) {
             return bestLevel;
@@ -375,7 +385,8 @@ class AbrController extends EventHandler {
                 bufferStarvationDelay + maxStarvationDelay,
                 bwFactor,
                 bwUpFactor,
-                levels
+                levels,
+                config.minAutoLevel
             );
             return Math.max(bestLevel, 0);
         }
@@ -389,9 +400,10 @@ class AbrController extends EventHandler {
         maxFetchDuration,
         bwFactor,
         bwUpFactor,
-        levels
+        levels,
+        minAutoLevel
     ) {
-        for (let i = maxAutoLevel; i >= 0; i--) {
+        for (let i = maxAutoLevel; i >= minAutoLevel; i--) {
             let levelInfo = levels[i],
                 levelDetails = levelInfo.details,
                 avgDuration = levelDetails
@@ -424,6 +436,7 @@ class AbrController extends EventHandler {
                 (!fetchDuration || fetchDuration < maxFetchDuration)
             ) {
                 // as we are looping from highest to lowest, this will return the best achievable quality level
+
                 return i;
             }
         }
