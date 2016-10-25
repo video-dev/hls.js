@@ -50,7 +50,7 @@ describe('testing hls.js playback in the browser with "'+stream.description+'" o
       browserName : browserConfig.name,
       platform : browserConfig.platform,
       version : browserConfig.version,
-      commandTimeout : 25,
+      commandTimeout : 35,
       customData : {
         stream : stream
       }
