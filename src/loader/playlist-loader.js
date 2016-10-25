@@ -356,7 +356,6 @@ class PlaylistLoader extends EventHandler {
       if (string.indexOf('#EXTINF:') > 0) {
         let isLevel = (type !== 'audioTrack'),
             levelDetails = this.parseLevelPlaylist(string, url, (isLevel ? level : id) || 0, isLevel ? 'main' : 'audio');
-            levelDetails.tload = stats.tload;
         if (type === 'manifest') {
         // first request, stream manifest (no master playlist), fire manifest loaded event with level details
           hls.trigger(Event.MANIFEST_LOADED, {levels: [{url: url, details : levelDetails}], url: url, stats: stats});
