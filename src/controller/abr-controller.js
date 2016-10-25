@@ -212,6 +212,14 @@ class AbrController extends EventHandler {
     return nextABRAutoLevel;
   }
 
+  get minAutoLevel() {
+    for (let i = 0 ; i < hls.levels.length ; i++){
+      if(this.hls.levels[i].bitrate > this.hls.config.minAutoBitrate)
+        return i;
+    }
+    return 0;
+  }
+
   get maxAutoLevel() {
     var levels = this.hls.levels,autoLevelCapping = this._autoLevelCapping, maxAutoLevel;
     if (autoLevelCapping=== -1 && levels && levels.length) {
@@ -223,7 +231,7 @@ class AbrController extends EventHandler {
   }
 
   get nextABRAutoLevel() {
-    var hls = this.hls, maxAutoLevel = this.maxAutoLevel, levels = hls.levels, config = hls.config;
+    var hls = this.hls, maxAutoLevel = this.maxAutoLevel, levels = hls.levels, config = hls.config, minAutoLevel = this.minAutoLevel;
     const v = hls.media,
           currentLevel = this.lastLoadedFragLevel,
           currentFragDuration = this.fragCurrent ? this.fragCurrent.duration : 0,
@@ -236,7 +244,7 @@ class AbrController extends EventHandler {
           bufferStarvationDelay = (BufferHelper.bufferInfo(v, pos, config.maxBufferHole).end - pos) / playbackRate;
 
     // First, look to see if we can find a level matching with our avg bandwidth AND that could also guarantee no rebuffering at all
-    let bestLevel = this.findBestLevel(currentLevel,currentFragDuration,avgbw,maxAutoLevel,bufferStarvationDelay,config.abrBandWidthFactor,config.abrBandWidthUpFactor,levels);
+    let bestLevel = this.findBestLevel(currentLevel,currentFragDuration,avgbw,maxAutoLevel,bufferStarvationDelay,config.abrBandWidthFactor,config.abrBandWidthUpFactor,levels,minAutoLevel);
     if (bestLevel >= 0) {
       return bestLevel;
     } else {
@@ -260,13 +268,13 @@ class AbrController extends EventHandler {
           bwFactor = bwUpFactor = 1;
         }
       }
-      bestLevel = this.findBestLevel(currentLevel,currentFragDuration,avgbw,maxAutoLevel,bufferStarvationDelay+maxStarvationDelay,bwFactor,bwUpFactor,levels);
+      bestLevel = this.findBestLevel(currentLevel,currentFragDuration,avgbw,maxAutoLevel,bufferStarvationDelay+maxStarvationDelay,bwFactor,bwUpFactor,levels,config.minAutoLevel);
       return Math.max(bestLevel,0);
     }
   }
 
-  findBestLevel(currentLevel,currentFragDuration,currentBw,maxAutoLevel,maxFetchDuration,bwFactor,bwUpFactor,levels) {
-    for (let i = maxAutoLevel; i >= 0; i--) {
+  findBestLevel(currentLevel,currentFragDuration,currentBw,maxAutoLevel,maxFetchDuration,bwFactor,bwUpFactor,levels,minAutoLevel) {
+    for (let i = maxAutoLevel; i >= minAutoLevel; i--) {
       let levelInfo = levels[i],
           levelDetails = levelInfo.details,
           avgDuration = levelDetails ? levelDetails.totalduration/levelDetails.fragments.length : currentFragDuration,
@@ -291,6 +299,7 @@ class AbrController extends EventHandler {
       // fragment fetchDuration unknown or fragment fetchDuration less than max allowed fetch duration, then this level matches
         (!fetchDuration || fetchDuration < maxFetchDuration) ) {
         // as we are looping from highest to lowest, this will return the best achievable quality level
+
         return i;
       }
     }
