@@ -16,6 +16,10 @@ if (!stream) {
 }
 var browserConfig = {version : 'latest'};
 if (onTravis) {
+  var TEST_BROWSER_VERSION = process.env.TEST_BROWSER_VERSION;
+  if (TEST_BROWSER_VERSION) {
+    browserConfig.version = TEST_BROWSER_VERSION;
+  }
   var TEST_BROWSER_NAME = process.env.TEST_BROWSER_NAME;
   if (!TEST_BROWSER_NAME) {
     throw new Error('No test browser name.')
@@ -50,7 +54,7 @@ describe('testing hls.js playback in the browser with "'+stream.description+'" o
       browserName : browserConfig.name,
       platform : browserConfig.platform,
       version : browserConfig.version,
-      commandTimeout : 25,
+      commandTimeout : 35,
       customData : {
         stream : stream
       }
