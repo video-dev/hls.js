@@ -114,6 +114,9 @@
           var methods = ["log", "debug", "info", "warn", "error"];
           methods.forEach(function(methodName) {
             var original = console[methodName];
+            if (!original) {
+              return;
+            }
             console[methodName] = function() {
               append(methodName, Array.prototype.slice.call(arguments).map(JSON.stringify).join(" "));
               return original.apply(this, arguments);
