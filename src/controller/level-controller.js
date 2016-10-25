@@ -168,12 +168,8 @@ class LevelController extends EventHandler {
             this.hls.trigger(Event.LEVEL_SWITCH, { level: newLevel });
             var level = levels[newLevel],
                 levelDetails = level.details;
-            // check if we need to load playlist for this level. don't reload live playlist more than once per second
-            if (
-                !levelDetails ||
-                (levelDetails.live === true &&
-                    performance.now() - levelDetails.tload > 1000)
-            ) {
+            // check if we need to load playlist for this level
+            if (!levelDetails || levelDetails.live === true) {
                 // level not retrieved yet, or live playlist we need to (re)load it
                 var urlId = level.urlId;
                 this.hls.trigger(Event.LEVEL_LOADING, {

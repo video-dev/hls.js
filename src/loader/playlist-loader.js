@@ -405,7 +405,6 @@ class PlaylistLoader extends EventHandler {
                         (isLevel ? level : id) || 0,
                         isLevel ? 'main' : 'audio'
                     );
-                levelDetails.tload = stats.tload;
                 if (type === 'manifest') {
                     // first request, stream manifest (no master playlist), fire manifest loaded event with level details
                     hls.trigger(Event.MANIFEST_LOADED, {
