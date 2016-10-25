@@ -1162,8 +1162,8 @@ class StreamController extends EventHandler {
       return;
     }
     let media = this.media,
-        // 0.4 : tolerance needed as some browsers stalls playback before reaching buffered end
-        mediaBuffered = media && BufferHelper.isBuffered(media,media.currentTime) && BufferHelper.isBuffered(media,media.currentTime+0.4);
+        // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
+        mediaBuffered = media && BufferHelper.isBuffered(media,media.currentTime) && BufferHelper.isBuffered(media,media.currentTime+0.5);
     switch(data.details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
@@ -1292,7 +1292,7 @@ _checkBuffer() {
             expectedPlaying = !(media.paused || // not playing when media is paused
                                 media.ended  || // not playing when media is ended
                                 media.buffered.length === 0), // not playing if nothing buffered
-            jumpThreshold = 0.4, // tolerance needed as some browsers stalls playback before reaching buffered range end
+            jumpThreshold = 0.5, // tolerance needed as some browsers stalls playback before reaching buffered range end
             playheadMoving = currentTime > media.playbackRate*this.lastCurrentTime,
             config = this.config;
 
