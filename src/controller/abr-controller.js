@@ -277,6 +277,14 @@ class AbrController extends EventHandler {
             // nextAutoLevel is defined, use it to cap ABR computed quality level
             nextABRAutoLevel = Math.min(nextAutoLevel, nextABRAutoLevel);
         }
+        if (this.hls.config.minAutoBitrate !== undefined) {
+            while (
+                this.hls.levels[nextABRAutoLevel].bitrate <
+                this.hls.config.minAutoBitrate
+            ) {
+                nextABRAutoLevel++;
+            }
+        }
         return nextABRAutoLevel;
     }
 
