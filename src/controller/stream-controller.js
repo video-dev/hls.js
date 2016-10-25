@@ -1113,10 +1113,9 @@ class StreamController extends EventHandler {
                 // transmux the MPEG-TS data to ISO-BMFF segments
                 this.stats = stats;
                 let duration = details.totalduration,
-                    start =
-                        fragCurrent.startDTS !== undefined
-                            ? fragCurrent.startDTS
-                            : fragCurrent.start,
+                    start = !isNaN(fragCurrent.startDTS)
+                        ? fragCurrent.startDTS
+                        : fragCurrent.start,
                     level = fragCurrent.level,
                     sn = fragCurrent.sn,
                     audioCodec =
