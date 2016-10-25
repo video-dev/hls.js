@@ -265,7 +265,6 @@ class AbrController extends EventHandler {
             bwEstimator = this.bwEstimator,
             hls = this.hls,
             levels = hls.levels,
-            config = hls.config,
             minAutoBitrate = hls.minAutoBitrate;
         // in case next auto level has been forced, and bw not available or not reliable
         if (
@@ -281,7 +280,7 @@ class AbrController extends EventHandler {
             // nextAutoLevel is defined, use it to cap ABR computed quality level
             nextABRAutoLevel = Math.min(nextAutoLevel, nextABRAutoLevel);
         }
-        if (this.hls.config.minAutoBitrate !== undefined) {
+        if (minAutoBitrate !== undefined) {
             while (levels[nextABRAutoLevel].bitrate < minAutoBitrate) {
                 nextABRAutoLevel++;
             }
@@ -293,7 +292,7 @@ class AbrController extends EventHandler {
         let hls = this.hls,
             levels = hls.levels,
             minAutoBitrate = hls.config.minAutoBitrate;
-        for (let i = 0; i < this.hls.levels.length; i++) {
+        for (let i = 0; i < levels.length; i++) {
             if (levels[i].bitrate > minAutoBitrate) {
                 return i;
             }
