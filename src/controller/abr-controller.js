@@ -265,7 +265,7 @@ class AbrController extends EventHandler {
             bwEstimator = this.bwEstimator,
             hls = this.hls,
             levels = hls.levels,
-            minAutoBitrate = hls.minAutoBitrate;
+            minAutoBitrate = hls.config.minAutoBitrate;
         // in case next auto level has been forced, and bw not available or not reliable
         if (
             nextAutoLevel !== -1 &&
@@ -342,12 +342,12 @@ class AbrController extends EventHandler {
             currentLevel,
             currentFragDuration,
             avgbw,
+            minAutoLevel,
             maxAutoLevel,
             bufferStarvationDelay,
             config.abrBandWidthFactor,
             config.abrBandWidthUpFactor,
-            levels,
-            minAutoLevel
+            levels
         );
         if (bestLevel >= 0) {
             return bestLevel;
@@ -385,12 +385,12 @@ class AbrController extends EventHandler {
                 currentLevel,
                 currentFragDuration,
                 avgbw,
+                minAutoLevel,
                 maxAutoLevel,
                 bufferStarvationDelay + maxStarvationDelay,
                 bwFactor,
                 bwUpFactor,
-                levels,
-                config.minAutoLevel
+                levels
             );
             return Math.max(bestLevel, 0);
         }
@@ -400,12 +400,12 @@ class AbrController extends EventHandler {
         currentLevel,
         currentFragDuration,
         currentBw,
+        minAutoLevel,
         maxAutoLevel,
         maxFetchDuration,
         bwFactor,
         bwUpFactor,
-        levels,
-        minAutoLevel
+        levels
     ) {
         for (let i = maxAutoLevel; i >= minAutoLevel; i--) {
             let levelInfo = levels[i],
