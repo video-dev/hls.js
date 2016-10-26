@@ -193,7 +193,7 @@ class AbrController extends EventHandler {
 
   get nextAutoLevel() {
     let nextAutoLevel = this._nextAutoLevel, bwEstimator = this.bwEstimator, hls = this.hls,
-      levels = hls.levels, minAutoBitrate = hls.minAutoBitrate;
+      levels = hls.levels, minAutoBitrate = hls.config.minAutoBitrate;
     // in case next auto level has been forced, and bw not available or not reliable
     if (nextAutoLevel !== -1 && (!bwEstimator || !bwEstimator.canEstimate())) {
       // cap next auto level by max auto level
@@ -247,7 +247,7 @@ class AbrController extends EventHandler {
           bufferStarvationDelay = (BufferHelper.bufferInfo(v, pos, config.maxBufferHole).end - pos) / playbackRate;
 
     // First, look to see if we can find a level matching with our avg bandwidth AND that could also guarantee no rebuffering at all
-    let bestLevel = this.findBestLevel(currentLevel,currentFragDuration,avgbw,maxAutoLevel,bufferStarvationDelay,config.abrBandWidthFactor,config.abrBandWidthUpFactor,levels,minAutoLevel);
+    let bestLevel = this.findBestLevel(currentLevel,currentFragDuration,avgbw,minAutoLevel,maxAutoLevel,bufferStarvationDelay,config.abrBandWidthFactor,config.abrBandWidthUpFactor,levels);
     if (bestLevel >= 0) {
       return bestLevel;
     } else {
@@ -271,12 +271,12 @@ class AbrController extends EventHandler {
           bwFactor = bwUpFactor = 1;
         }
       }
-      bestLevel = this.findBestLevel(currentLevel,currentFragDuration,avgbw,maxAutoLevel,bufferStarvationDelay+maxStarvationDelay,bwFactor,bwUpFactor,levels,config.minAutoLevel);
+      bestLevel = this.findBestLevel(currentLevel,currentFragDuration,avgbw,minAutoLevel,maxAutoLevel,bufferStarvationDelay+maxStarvationDelay,bwFactor,bwUpFactor,levels);
       return Math.max(bestLevel,0);
     }
   }
 
-  findBestLevel(currentLevel,currentFragDuration,currentBw,maxAutoLevel,maxFetchDuration,bwFactor,bwUpFactor,levels,minAutoLevel) {
+  findBestLevel(currentLevel,currentFragDuration,currentBw,minAutoLevel,maxAutoLevel,maxFetchDuration,bwFactor,bwUpFactor,levels) {
     for (let i = maxAutoLevel; i >= minAutoLevel; i--) {
       let levelInfo = levels[i],
           levelDetails = levelInfo.details,
