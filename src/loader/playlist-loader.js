@@ -409,6 +409,7 @@ class PlaylistLoader extends EventHandler {
                     // first request, stream manifest (no master playlist), fire manifest loaded event with level details
                     hls.trigger(Event.MANIFEST_LOADED, {
                         levels: [{ url: url, details: levelDetails }],
+                        audioTracks: [],
                         url: url,
                         stats: stats
                     });
