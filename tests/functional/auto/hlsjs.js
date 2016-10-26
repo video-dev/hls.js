@@ -140,7 +140,7 @@ describe('testing hls.js playback in the browser with "'+stream.description+'" o
         var callback = arguments[arguments.length - 1];
         startStream(url, callback);
         video.onloadeddata = function() {
-          video.currentTime = video.duration - 5;
+          window.setTimeout(function() { video.currentTime = video.duration - 5;}, 2000);
         };
         video.onended = function() {
           callback('ended');
