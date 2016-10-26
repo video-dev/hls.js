@@ -1,6 +1,8 @@
 [![Build Status](https://travis-ci.org/dailymotion/hls.js.svg?branch=master)](https://travis-ci.org/dailymotion/hls.js)
-[![Coverage Status](https://coveralls.io/repos/github/dailymotion/hls.js/badge.svg?branch=master)](https://coveralls.io/github/dailymotion/hls.js?branch=master)
 [![npm][npm-image]][npm-url]
+
+Join the discussion: [![Slack Status](https://hlsjs.herokuapp.com/badge.svg)](https://hlsjs.herokuapp.com/)
+
 # hls.js
 hls.js is a JavaScript library which implements an [HTTP Live Streaming] client.
 It relies on [HTML5 video][] and [MediaSource Extensions][] for playback.
@@ -81,7 +83,10 @@ As of today, it is supported on:
  * Chrome for Desktop 34+
  * Firefox for Android 41+
  * Firefox for Desktop 42+
- * IE11+ for Windows 8.1
+ * IE11+ for Windows 8.1+
+ * Edge for Windows 10+
+ * Opera for Desktop
+ * Vivaldi for Desktop
  * Safari for Mac 8+ (beta)
 
 ## CORS
@@ -113,11 +118,12 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - Timed Metadata for HTTP Live Streaming (in ID3 format, carried in MPEG-2 TS)
   - AES-128 decryption (AES-128 mode)
   - CEA-708 captions
+  - Alternate Audio Track Rendition (Master Playlist with alternative Audio) for VoD playlists  
 
 ## Not Supported (Yet)
 
   - MP3 / WebVTT container
-  - Alternate Audio Track Rendition (Master Playlist with alternative Audio)
+  - Alternate Audio Track Rendition for live playlists
 
 ### Supported M3U8 tags
 

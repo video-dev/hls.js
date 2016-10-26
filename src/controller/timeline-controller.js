@@ -5,7 +5,6 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import Cea608Parser from '../utils/cea-608-parser';
-import Cues from '../utils/cues';
 
 class TimelineController extends EventHandler {
 
@@ -20,6 +19,7 @@ class TimelineController extends EventHandler {
     this.hls = hls;
     this.config = hls.config;
     this.enabled = true;
+    this.Cues = hls.config.cueHandler;
 
     if (this.config.enableCEA708Captions)
     {
@@ -31,11 +31,25 @@ class TimelineController extends EventHandler {
         {
           if (!self.textTrack1)
           {
-            self.textTrack1 = self.createTextTrack('captions', 'Unknown CC1', 'en');
-//            self.textTrack1.mode = 'showing';
+            //Enable reuse of existing text track.
+            var existingTrack1 = self.getExistingTrack('1');
+            if(!existingTrack1)
+            {
+              self.textTrack1 = self.createTextTrack('captions', 'English', 'en');
+              self.textTrack1.textTrack1 = true;
+            }
+            else
+            {
+              self.textTrack1 = existingTrack1;
+              self.clearCurrentCues(self.textTrack1);
+
+              let e = new window.Event('addtrack');
+              e.track = self.textTrack1;
+              self.media.dispatchEvent(e);
+            }
           }
 
-          Cues.newCue(self.textTrack1, startTime, endTime, screen);
+          self.Cues.newCue(self.textTrack1, startTime, endTime, screen);
         }
       };
 
@@ -45,10 +59,25 @@ class TimelineController extends EventHandler {
         {
           if (!self.textTrack2)
           {
-            self.textTrack2 = self.createTextTrack('captions', 'Unknown CC2', 'es');
+            //Enable reuse of existing text track.
+            var existingTrack2 = self.getExistingTrack('2');
+            if(!existingTrack2)
+            {
+              self.textTrack2 = self.createTextTrack('captions', 'Spanish', 'es');
+              self.textTrack2.textTrack2 = true;
+            }
+            else
+            {
+              self.textTrack2 = existingTrack2;
+              self.clearCurrentCues(self.textTrack2);
+
+              let e = new window.Event('addtrack');
+              e.track = self.textTrack2;
+              self.media.dispatchEvent(e);
+            }
           }
 
-          Cues.newCue(self.textTrack2, startTime, endTime, screen);        }
+          self.Cues.newCue(self.textTrack2, startTime, endTime, screen);        }
       };
 
       this.cea608Parser = new Cea608Parser(0, channel1, channel2);
@@ -64,6 +93,24 @@ class TimelineController extends EventHandler {
         track.removeCue(track.cues[0]);
       }
     }
+  }
+
+  getExistingTrack(channelNumber)
+  {
+    let media = this.media;
+    if (media)
+    {
+      for (let i = 0; i < media.textTracks.length; i++)
+      {
+        let textTrack = media.textTracks[i];
+        let propName = 'textTrack' + channelNumber;
+        if (textTrack[propName] === true)
+        {
+          return textTrack;
+        }
+      }
+    }
+    return null;
   }
 
   createTextTrack(kind, label, lang)

@@ -32,8 +32,8 @@ import {ErrorTypes, ErrorDetails} from '../errors';
     // byte 3
     adtsChanelConfig |= ((data[offset + 3] & 0xC0) >>> 6);
     logger.log(`manifest codec:${audioCodec},ADTS data:type:${adtsObjectType},sampleingIndex:${adtsSampleingIndex}[${adtsSampleingRates[adtsSampleingIndex]}Hz],channelConfig:${adtsChanelConfig}`);
-    // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
-    if (userAgent.indexOf('firefox') !== -1) {
+    // firefox/Opera: freq less than 24kHz = AAC SBR (HE-AAC)
+    if (/firefox|OPR/i.test(userAgent)) {
       if (adtsSampleingIndex >= 6) {
         adtsObjectType = 5;
         config = new Array(4);
@@ -52,7 +52,7 @@ import {ErrorTypes, ErrorDetails} from '../errors';
       config = new Array(2);
       adtsExtensionSampleingIndex = adtsSampleingIndex;
     } else {
-      /*  for other browsers (chrome ...)
+      /*  for other browsers (Chrome/Vivaldi ...)
           always force audio type to be HE-AAC SBR, as some browsers do not support audio codec switch properly (like Chrome ...)
       */
       adtsObjectType = 5;

@@ -235,7 +235,7 @@ $(document).ready(function() {
 
 
   'use strict';
-  var hls,events, stats,
+  var hls,events, stats,tracks,
       enableStreaming = JSON.parse(getURLParam('enableStreaming',true))
       autoRecoverError = JSON.parse(getURLParam('autoRecoverError',true)),
       enableWorker = JSON.parse(getURLParam('enableWorker',true)),
@@ -365,8 +365,8 @@ $(document).ready(function() {
             parsing : data.stats.tparsed - data.stats.tload,
             buffer : data.stats.tbuffered - data.stats.tparsed,
             duration : data.stats.tbuffered - data.stats.tfirst,
-            bw : Math.round(8*data.stats.length/(data.stats.tbuffered - data.stats.tfirst)),
-            size : data.stats.length
+            bw : Math.round(8*data.stats.total/(data.stats.tbuffered - data.stats.tfirst)),
+            size : data.stats.total
           };
           events.load.push(event);
           events.bitrate.push({time : performance.now() - events.t0, bitrate : event.bw , duration : data.frag.duration, level : event.id});
@@ -471,12 +471,12 @@ $(document).ready(function() {
         switch(data.details) {
           case Hls.ErrorDetails.MANIFEST_LOAD_ERROR:
             try {
-              $("#HlsStatus").html("cannot Load <a href=\"" + data.url + "\">" + url + "</a><br>HTTP response code:" + data.response.status + "<br>" + data.response.statusText);
-                if(data.response.status === 0) {
+              $("#HlsStatus").html("cannot Load <a href=\"" + data.context.url + "\">" + url + "</a><br>HTTP response code:" + data.response.code + " <br>" + data.response.text);
+                if(data.response.code === 0) {
                   $("#HlsStatus").append("this might be a CORS issue, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin</a> Chrome Extension");
                 }
             } catch(err) {
-              $("#HlsStatus").html("cannot Load <a href=\"" + data.url + "\">" + url + "</a><br>Reason:Load " + data.event.type);
+              $("#HlsStatus").html("cannot Load <a href=\"" + data.context.url + "\">" + url + "</a><br>Reason:Load " + data.response.text);
             }
             break;
           case Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT:
@@ -558,6 +558,10 @@ $(document).ready(function() {
           }
         }
         $("#HlsStats").text(JSON.stringify(sortObject(stats),null,"\t"));
+       });
+
+       hls.on(Hls.Events.BUFFER_CREATED, function(event,data) {
+        tracks = data.tracks;
        });
 
        hls.on(Hls.Events.FPS_DROP,function(event,data) {
@@ -775,6 +779,9 @@ function timeRangesToString(r) {
               + "Played:"
               + timeRangesToString(v.played) + "<br>";
 
+      for(var type in tracks) {
+        log += type + " Buffered:" + timeRangesToString(tracks[type].buffer.buffered) + "<br>";
+      }
 
       var videoPlaybackQuality = v.getVideoPlaybackQuality;
       if(videoPlaybackQuality && typeof(videoPlaybackQuality) === typeof(Function)) {

@@ -17,6 +17,7 @@ import TimelineController from './controller/timeline-controller';
 import FPSController from './controller/fps-controller';
 import AudioTrackController from './controller/audio-track-controller';
 import {logger, enableLogs} from './utils/logger';
+//import FetchLoader from './utils/fetch-loader';
 import XhrLoader from './utils/xhr-loader';
 import EventEmitter from 'events';
 import KeyLoader from './loader/key-loader';
@@ -52,6 +53,7 @@ class Hls {
        Hls.defaultConfig = {
           autoStartLoad: true,
           startPosition: -1,
+          defaultAudioCodec: undefined,
           debug: false,
           capLevelOnFPSDrop: false,
           capLevelToPlayerSize: false,
@@ -59,9 +61,9 @@ class Hls {
           maxBufferSize: 60 * 1000 * 1000,
           maxBufferHole: 0.5,
           maxSeekHole: 2,
-          seekHoleNudgeDuration : 0.01,
+          seekHoleNudgeDuration: 0.01,
           stalledInBufferedNudgeThreshold: 10,
-          maxFragLookUpTolerance : 0.2,
+          maxFragLookUpTolerance: 0.2,
           liveSyncDurationCount:3,
           liveMaxLatencyDurationCount: Infinity,
           liveSyncDuration: undefined,
@@ -72,39 +74,48 @@ class Hls {
           manifestLoadingTimeOut: 10000,
           manifestLoadingMaxRetry: 1,
           manifestLoadingRetryDelay: 1000,
+          manifestLoadingMaxRetryTimeout: 64000,
+          startLevel: undefined,
           levelLoadingTimeOut: 10000,
           levelLoadingMaxRetry: 4,
           levelLoadingRetryDelay: 1000,
+          levelLoadingMaxRetryTimeout: 64000,
           fragLoadingTimeOut: 20000,
           fragLoadingMaxRetry: 6,
           fragLoadingRetryDelay: 1000,
+          fragLoadingMaxRetryTimeout: 64000,
           fragLoadingLoopThreshold: 3,
-          startFragPrefetch : false,
+          startFragPrefetch: false,
           fpsDroppedMonitoringPeriod: 5000,
           fpsDroppedMonitoringThreshold: 0.2,
           appendErrorMaxRetry: 3,
           loader: XhrLoader,
+          //loader: FetchLoader,
           fLoader: undefined,
           pLoader: undefined,
-          abrController : AbrController,
-          bufferController : BufferController,
-          capLevelController : CapLevelController,
+          xhrSetup: undefined,
+          fetchSetup: undefined,
+          abrController: AbrController,
+          bufferController: BufferController,
+          capLevelController: CapLevelController,
           fpsController: FPSController,
           streamController: StreamController,
-          audioStreamController : AudioStreamController,
+          audioStreamController: AudioStreamController,
           timelineController: TimelineController,
           cueHandler: Cues,
           enableCEA708Captions: true,
-          enableMP2TPassThrough : false,
+          enableMP2TPassThrough: false,
           stretchShortVideoTrack: false,
           forceKeyFrameOnDiscontinuity: true,
           abrEwmaFastLive: 5,
           abrEwmaSlowLive: 9,
-          abrEwmaFastVoD: 4,
-          abrEwmaSlowVoD: 15,
+          abrEwmaFastVoD: 3,
+          abrEwmaSlowVoD: 9,
           abrEwmaDefaultEstimate: 5e5, // 500 kbps
           abrBandWidthFactor : 0.8,
-          abrBandWidthUpFactor : 0.7
+          abrBandWidthUpFactor : 0.7,
+          maxStarvationDelay : 4,
+          maxLoadingDelay : 4,
         };
     }
     return Hls.defaultConfig;
@@ -341,6 +352,10 @@ class Hls {
   /** select an audio track, based on its index in audio track lists**/
   set audioTrack(audioTrackId) {
     this.audioTrackController.audioTrack = audioTrackId;
+  }
+
+  get liveSyncPosition() {
+      return this.streamController.liveSyncPosition;
   }
 }
 

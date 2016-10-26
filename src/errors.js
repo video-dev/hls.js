@@ -8,25 +8,25 @@ export const ErrorTypes = {
 };
 
 export const ErrorDetails = {
-  // Identifier for a manifest load error - data: { url : faulty URL, response : XHR response}
+  // Identifier for a manifest load error - data: { url : faulty URL, response : { code: error code, text: error text }}
   MANIFEST_LOAD_ERROR: 'manifestLoadError',
-  // Identifier for a manifest load timeout - data: { url : faulty URL, response : XHR response}
+  // Identifier for a manifest load timeout - data: { url : faulty URL, response : { code: error code, text: error text }}
   MANIFEST_LOAD_TIMEOUT: 'manifestLoadTimeOut',
   // Identifier for a manifest parsing error - data: { url : faulty URL, reason : error reason}
   MANIFEST_PARSING_ERROR: 'manifestParsingError',
   // Identifier for a manifest with only incompatible codecs error - data: { url : faulty URL, reason : error reason}
   MANIFEST_INCOMPATIBLE_CODECS_ERROR: 'manifestIncompatibleCodecsError',
-  // Identifier for a level load error - data: { url : faulty URL, response : XHR response}
+  // Identifier for a level load error - data: { url : faulty URL, response : { code: error code, text: error text }}
   LEVEL_LOAD_ERROR: 'levelLoadError',
-  // Identifier for a level load timeout - data: { url : faulty URL, response : XHR response}
+  // Identifier for a level load timeout - data: { url : faulty URL, response : { code: error code, text: error text }}
   LEVEL_LOAD_TIMEOUT: 'levelLoadTimeOut',
   // Identifier for a level switch error - data: { level : faulty level Id, event : error description}
   LEVEL_SWITCH_ERROR: 'levelSwitchError',
-  // Identifier for an audio track load error - data: { url : faulty URL, response : XHR response}
+  // Identifier for an audio track load error - data: { url : faulty URL, response : { code: error code, text: error text }}
   AUDIO_TRACK_LOAD_ERROR: 'audioTrackLoadError',
-  // Identifier for an audio track load timeout - data: { url : faulty URL, response : XHR response}
+  // Identifier for an audio track load timeout - data: { url : faulty URL, response : { code: error code, text: error text }}
   AUDIO_TRACK_LOAD_TIMEOUT: 'audioTrackLoadTimeOut',
-  // Identifier for fragment load error - data: { frag : fragment object, response : XHR response}
+  // Identifier for fragment load error - data: { frag : fragment object, response : { code: error code, text: error text }}
   FRAG_LOAD_ERROR: 'fragLoadError',
   // Identifier for fragment loop loading error - data: { frag : fragment object}
   FRAG_LOOP_LOADING_ERROR: 'fragLoopLoadingError',
@@ -36,7 +36,7 @@ export const ErrorDetails = {
   FRAG_DECRYPT_ERROR: 'fragDecryptError',
   // Identifier for a fragment parsing error event - data: parsing error description
   FRAG_PARSING_ERROR: 'fragParsingError',
-  // Identifier for decrypt key load error - data: { frag : fragment object, response : XHR response}
+  // Identifier for decrypt key load error - data: { frag : fragment object, response : { code: error code, text: error text }}
   KEY_LOAD_ERROR: 'keyLoadError',
   // Identifier for decrypt key load timeout error - data: { frag : fragment object}
   KEY_LOAD_TIMEOUT: 'keyLoadTimeOut',
