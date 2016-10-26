@@ -1,14 +1,14 @@
 class AESDecryptor {
     constructor(keyBuffer) {
         // convert keyBuffer to Uint32Array
-        var key = this.uint8ArrayToUint32Array_(keyBuffer);
-        var keySize = (this.keySize = key.length);
+        let key = this.uint8ArrayToUint32Array_(keyBuffer);
+        let keySize = (this.keySize = key.length);
 
         if (keySize !== 4 && keySize !== 6 && keySize !== 8) {
             throw new Error('Invalid aes key size=' + keySize);
         }
 
-        var nRounds = keySize + 6;
+        let nRounds = keySize + 6;
         this.ksRows = (nRounds + 1) * 4;
         this.keyWords = key;
         this.subMix = [];
@@ -18,25 +18,25 @@ class AESDecryptor {
     }
 
     uint8ArrayToUint32Array_(arrayBuffer) {
-        var view = new DataView(arrayBuffer);
-        var newArray = new Uint32Array(4);
-        for (var i = 0; i < newArray.length; i++) {
+        let view = new DataView(arrayBuffer);
+        let newArray = new Uint32Array(4);
+        for (let i = 0; i < newArray.length; i++) {
             newArray[i] = view.getUint32(i * 4);
         }
         return newArray;
     }
 
     initTable() {
-        var sBox = (this.sBox = new Uint32Array(256));
-        var invSBox = (this.invSBox = new Uint32Array(256));
-        var subMix0 = (this.subMix[0] = new Uint32Array(256));
-        var subMix1 = (this.subMix[1] = new Uint32Array(256));
-        var subMix2 = (this.subMix[2] = new Uint32Array(256));
-        var subMix3 = (this.subMix[3] = new Uint32Array(256));
-        var invSubMix0 = (this.invSubMix[0] = new Uint32Array(256));
-        var invSubMix1 = (this.invSubMix[1] = new Uint32Array(256));
-        var invSubMix2 = (this.invSubMix[2] = new Uint32Array(256));
-        var invSubMix3 = (this.invSubMix[3] = new Uint32Array(256));
+        let sBox = (this.sBox = new Uint32Array(256));
+        let invSBox = (this.invSBox = new Uint32Array(256));
+        let subMix0 = (this.subMix[0] = new Uint32Array(256));
+        let subMix1 = (this.subMix[1] = new Uint32Array(256));
+        let subMix2 = (this.subMix[2] = new Uint32Array(256));
+        let subMix3 = (this.subMix[3] = new Uint32Array(256));
+        let invSubMix0 = (this.invSubMix[0] = new Uint32Array(256));
+        let invSubMix1 = (this.invSubMix[1] = new Uint32Array(256));
+        let invSubMix2 = (this.invSubMix[2] = new Uint32Array(256));
+        let invSubMix3 = (this.invSubMix[3] = new Uint32Array(256));
         this.rcon = [
             0x0,
             0x1,
@@ -51,10 +51,10 @@ class AESDecryptor {
             0x36
         ];
 
-        var d = new Uint32Array(256);
-        var x = 0;
-        var xi = 0;
-        var i = 0;
+        let d = new Uint32Array(256);
+        let x = 0;
+        let xi = 0;
+        let i = 0;
         for (i = 0; i < 256; i++) {
             if (i < 128) {
                 d[i] = i << 1;
@@ -64,18 +64,18 @@ class AESDecryptor {
         }
 
         for (i = 0; i < 256; i++) {
-            var sx = xi ^ (xi << 1) ^ (xi << 2) ^ (xi << 3) ^ (xi << 4);
+            let sx = xi ^ (xi << 1) ^ (xi << 2) ^ (xi << 3) ^ (xi << 4);
             sx = (sx >>> 8) ^ (sx & 0xff) ^ 0x63;
             sBox[x] = sx;
             invSBox[sx] = x;
 
             // Compute multiplication
-            var x2 = d[x];
-            var x4 = d[x2];
-            var x8 = d[x4];
+            let x2 = d[x];
+            let x4 = d[x2];
+            let x8 = d[x4];
 
             // Compute sub/invSub bytes, mix columns tables
-            var t = (d[sx] * 0x101) ^ (sx * 0x1010100);
+            let t = (d[sx] * 0x101) ^ (sx * 0x1010100);
             subMix0[x] = (t << 24) | (t >>> 8);
             subMix1[x] = (t << 16) | (t >>> 16);
             subMix2[x] = (t << 8) | (t >>> 24);
@@ -103,25 +103,27 @@ class AESDecryptor {
     }
 
     expandKey() {
-        var keySchedule = (this.keySchedule = new Uint32Array(this.ksRows).fill(
+        let keySchedule = (this.keySchedule = new Uint32Array(this.ksRows).fill(
             0
         ));
-        var rcon = this.rcon;
-        var invKeySchedule = (this.invKeySchedule = new Uint32Array(
+        let rcon = this.rcon;
+        let invKeySchedule = (this.invKeySchedule = new Uint32Array(
             this.ksRows
         ).fill(0));
-        var keySize = this.keySize;
-        var keyWords = this.keyWords;
-        var ksRows = this.ksRows;
-        var sbox = this.sBox;
-        var invSubMix0 = this.invSubMix[0];
-        var invSubMix1 = this.invSubMix[1];
-        var invSubMix2 = this.invSubMix[2];
-        var invSubMix3 = this.invSubMix[3];
-        var prev;
-        var t;
+        let keySize = this.keySize;
+        let keyWords = this.keyWords;
+        let ksRows = this.ksRows;
+        let sbox = this.sBox;
+        let invSubMix0 = this.invSubMix[0];
+        let invSubMix1 = this.invSubMix[1];
+        let invSubMix2 = this.invSubMix[2];
+        let invSubMix3 = this.invSubMix[3];
+        let prev;
+        let t;
+        let ksRow;
+        let invKsRow;
 
-        for (var ksRow = 0; ksRow < ksRows; ksRow++) {
+        for (ksRow = 0; ksRow < ksRows; ksRow++) {
             if (ksRow < keySize) {
                 prev = keySchedule[ksRow] = keyWords[ksRow];
                 continue;
@@ -154,7 +156,7 @@ class AESDecryptor {
                 (keySchedule[ksRow - keySize] ^ t) >>> 0;
         }
 
-        for (var invKsRow = 0; invKsRow < ksRows; invKsRow++) {
+        for (invKsRow = 0; invKsRow < ksRows; invKsRow++) {
             ksRow = ksRows - invKsRow;
             if (invKsRow & 3) {
                 t = keySchedule[ksRow];
@@ -177,46 +179,47 @@ class AESDecryptor {
     }
 
     decrypt(inputData, offset, aesIV) {
-        var invKeySched = this.invKeySchedule;
-        var invKey0 = invKeySched[0];
-        var invKey1 = invKeySched[1];
-        var invKey2 = invKeySched[2];
-        var invKey3 = invKeySched[3];
-        var nRounds = this.keySize + 6;
-        var invSubMix0 = this.invSubMix[0];
-        var invSubMix1 = this.invSubMix[1];
-        var invSubMix2 = this.invSubMix[2];
-        var invSubMix3 = this.invSubMix[3];
-        var invSBOX = this.invSBox;
-        var output = new Uint8Array(inputData.byteLength);
+        let invKeySched = this.invKeySchedule;
+        let invKey0 = invKeySched[0];
+        let invKey1 = invKeySched[1];
+        let invKey2 = invKeySched[2];
+        let invKey3 = invKeySched[3];
+        let nRounds = this.keySize + 6;
+        let invSubMix0 = this.invSubMix[0];
+        let invSubMix1 = this.invSubMix[1];
+        let invSubMix2 = this.invSubMix[2];
+        let invSubMix3 = this.invSubMix[3];
+        let invSBOX = this.invSBox;
+        let output = new Uint8Array(inputData.byteLength);
 
         // parse iv to Uint32Array
-        var iv = this.uint8ArrayToUint32Array_(aesIV);
+        let iv = this.uint8ArrayToUint32Array_(aesIV);
 
-        var mixing0 = iv[0];
-        var mixing1 = iv[1];
-        var mixing2 = iv[2];
-        var mixing3 = iv[3];
+        let mixing0 = iv[0];
+        let mixing1 = iv[1];
+        let mixing2 = iv[2];
+        let mixing3 = iv[3];
 
-        var input = new DataView(inputData);
+        let input = new DataView(inputData);
+
+        let s = new Uint32Array(4);
+        let t = new Uint32Array(4);
+        let r = new Uint32Array(4);
+        let resultUint8 = new Uint8Array(r.buffer);
 
         while (offset < inputData.byteLength) {
-            var w0 = input.getUint32(offset);
-            var w1 = input.getUint32(offset + 4);
-            var w2 = input.getUint32(offset + 8);
-            var w3 = input.getUint32(offset + 12);
-
-            var s = new Uint32Array(4);
-            var t = new Uint32Array(4);
-            var r = new Uint32Array(4);
+            let w0 = input.getUint32(offset);
+            let w1 = input.getUint32(offset + 4);
+            let w2 = input.getUint32(offset + 8);
+            let w3 = input.getUint32(offset + 12);
 
             s[0] = w0 ^ invKey0;
             s[1] = w3 ^ invKey1;
             s[2] = w2 ^ invKey2;
             s[3] = w1 ^ invKey3;
 
-            var ksRow = 4;
-            var i;
+            let ksRow = 4;
+            let i;
             for (i = 1; i < nRounds; i++) {
                 t[0] =
                     invSubMix0[s[0] >>> 24] ^
@@ -280,9 +283,8 @@ class AESDecryptor {
             r[0] = t[1] ^ mixing3;
 
             // convert result to uint8Array and write to output
-            var rView = new DataView(r.buffer);
             for (i = 0; i < 16; i++) {
-                output[i + offset] = rView.getUint8(15 - i);
+                output[i + offset] = resultUint8[15 - i];
             }
 
             // reset iv to last 4 unsigned int
@@ -300,12 +302,12 @@ class AESDecryptor {
     unpad_(data) {
         // Remove the padding at the end of output.
         // The padding occurs because each decryption happens in 16 bytes, but the encrypted data is not modulus of 16
-        var len = data.length;
-        var bytesOfPadding = data[len - 1];
+        let len = data.length;
+        let bytesOfPadding = data[len - 1];
 
         // Uncomment to log info about padding
-        //for (var i = bytesOfPadding; i > 0; --i) {
-        //    var v = data[--len];
+        //for (let i = bytesOfPadding; i > 0; --i) {
+        //    let v = data[--len];
         //
         //    if (bytesOfPadding !== v) {
         //        console.warn('Invalid padding error: Expected ' + bytesOfPadding, ', but received ' + v);

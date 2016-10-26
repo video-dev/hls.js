@@ -24,7 +24,7 @@ class Decrypter {
         if (this.disableWebCrypto && this.hls.config.enableSoftwareAES) {
             logger.log('decrypting by JavaScript Implementation');
 
-            var decryptor = new AESDecryptor(key);
+            let decryptor = new AESDecryptor(key);
             callback(decryptor.decrypt(data, 0, iv));
         } else {
             logger.log('decrypting by WebCrypto API');
@@ -38,7 +38,7 @@ class Decrypter {
                 .expandKey()
                 .then(aesKey => {
                     // decrypt using web crypto
-                    var crypto = new AESCrypto(iv);
+                    let crypto = new AESCrypto(iv);
                     crypto.decrypt(data, aesKey).then(result => {
                         callback(result);
                     });
