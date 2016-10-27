@@ -305,8 +305,7 @@ var cache = arguments[5];
 
 var stringify = JSON.stringify;
 
-module.exports = function (fn) {
-    var keys = [];
+module.exports = function (fn, options) {
     var wkey;
     var cacheKeys = Object.keys(cache);
 
@@ -317,7 +316,7 @@ module.exports = function (fn) {
         // be an object with the default export as a property of it. To ensure
         // the existing api and babel esmodule exports are both supported we
         // check for both
-        if (exp === fn || exp.default === fn) {
+        if (exp === fn || exp && exp.default === fn) {
             wkey = key;
             break;
         }
@@ -348,8 +347,22 @@ module.exports = function (fn) {
         scache
     ];
 
+    var workerSources = {};
+    resolveSources(skey);
+
+    function resolveSources(key) {
+        workerSources[key] = true;
+
+        for (var depPath in sources[key][1]) {
+            var depKey = sources[key][1][depPath];
+            if (!workerSources[depKey]) {
+                resolveSources(depKey);
+            }
+        }
+    }
+
     var src = '(' + bundleFn + ')({'
-        + Object.keys(sources).map(function (key) {
+        + Object.keys(workerSources).map(function (key) {
             return stringify(key) + ':['
                 + sources[key][0]
                 + ',' + stringify(sources[key][1]) + ']'
@@ -360,9 +373,12 @@ module.exports = function (fn) {
 
     var URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
 
-    return new Worker(URL.createObjectURL(
-        new Blob([src], { type: 'text/javascript' })
-    ));
+    var blob = new Blob([src], { type: 'text/javascript' });
+    if (options && options.bare) { return blob; }
+    var workerUrl = URL.createObjectURL(blob);
+    var worker = new Worker(workerUrl);
+    worker.objectURL = workerUrl;
+    return worker;
 };
 
 },{}],3:[function(require,module,exports){
@@ -4085,6 +4101,7 @@ var DemuxerWorker = function DemuxerWorker(self) {
     switch (data.cmd) {
       case 'init':
         self.demuxer = new _demuxerInline2.default(observer, data.typeSupported);
+        self.postMessage({ event: 'init' });
         break;
       case 'demux':
         self.demuxer.push(new Uint8Array(data.data), data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration);
@@ -4173,9 +4190,10 @@ var Demuxer = function () {
     };
     if (hls.config.enableWorker && typeof Worker !== 'undefined') {
       _logger.logger.log('demuxing in webworker');
+      var w = void 0;
       try {
         var work = require('webworkify');
-        var w = this.w = work(_demuxerWorker2.default);
+        w = this.w = work(_demuxerWorker2.default);
         this.onwmsg = this.onWorkerMessage.bind(this);
         w.addEventListener('message', this.onwmsg);
         w.onerror = function (event) {
@@ -4184,6 +4202,10 @@ var Demuxer = function () {
         w.postMessage({ cmd: 'init', typeSupported: typeSupported });
       } catch (err) {
         _logger.logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
+        if (w) {
+          // revoke the Object URL that was used to create demuxer worker, so as not to leak it
+          URL.revokeObjectURL(w.objectURL);
+        }
         this.demuxer = new _demuxerInline2.default(hls, typeSupported);
       }
     } else {
@@ -4254,6 +4276,10 @@ var Demuxer = function () {
           obj.tracks = data.tracks;
           obj.unique = data.unique;
           this.hls.trigger(_events2.default.FRAG_PARSING_INIT_SEGMENT, obj);
+          break;
+        case 'init':
+          // revoke the Object URL that was used to create demuxer worker, so as not to leak it
+          URL.revokeObjectURL(this.w.objectURL);
           break;
         case _events2.default.FRAG_PARSING_DATA:
           this.hls.trigger(_events2.default.FRAG_PARSING_DATA, {
