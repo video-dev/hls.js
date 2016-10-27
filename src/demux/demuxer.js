@@ -147,7 +147,6 @@ class Demuxer {
             }
 
             var localthis = this;
-            //localthis.hls.trigger(Event.FRAG_DECRYPT_STARTED, { level : level, sn : sn});
             var startTime = performance.now();
             this.decrypter.decrypt(
                 data,
