@@ -35,6 +35,8 @@ var DemuxerWorker = function(self) {
                 } catch (err) {
                     console.warn('demuxerWorker: unable to enable logs');
                 }
+                // signal end of worker init
+                forwardMessage('init', null);
                 break;
             case 'demux':
                 self.demuxer.push(

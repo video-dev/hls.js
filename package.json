@@ -59,6 +59,6 @@
     "uglify-js": "^2.4.23",
     "selenium-webdriver": "^2.52.0",
     "watchify": "^3.7.0",
-    "webworkify": "^1.0.2"
+    "webworkify": "^1.4.0"
   }
 }
