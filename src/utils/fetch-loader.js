@@ -15,15 +15,17 @@ class FetchLoader {
   }
 
   abort() {
+    this._requestAbort = true;
   }
 
 
   load(context, config, callbacks) {
-    let stats = {trequest: performance.now(), retry: 0}, targetURL = context.url, request,
+    let stats = this.stats = {trequest: performance.now(), retry: 0, loaded : 0}, targetURL = context.url, request,
         initParams = { method: 'GET',
                        mode: 'cors',
                        credentials: 'same-origin'
                      };
+    this.context = context;
 
     if (context.rangeEnd) {
       initParams.headers = new Headers({ 'Range' :  'bytes=' + context.rangeStart + '-' + (context.rangeEnd-1)});
@@ -56,20 +58,22 @@ class FetchLoader {
       return;
     });
     // process response Promise
-    responsePromise.then(function(responseData) {
-      if (responseData) {
-        stats.tload = Math.max(stats.tfirst,performance.now());
-        let len;
-        if (typeof responseData === 'string') {
-          len = responseData.length;
-        } else {
-          len = responseData.byteLength;
+    if (!this._requestAbort) {
+      responsePromise.then(function(responseData) {
+        if (responseData && !this._requestAbort) {
+          stats.tload = Math.max(stats.tfirst,performance.now());
+          let len;
+          if (typeof responseData === 'string') {
+            len = responseData.length;
+          } else {
+            len = responseData.byteLength;
+          }
+          stats.loaded = stats.total = len;
+          let response = { url : targetURL, data : responseData};
+          callbacks.onSuccess(response,stats,context);
         }
-        stats.loaded = stats.total = len;
-        let response = { url : targetURL, data : responseData};
-        callbacks.onSuccess(response,stats,context);
-      }
-    });
+      }.bind(this));
+    }
   }
 }
 export default FetchLoader;
