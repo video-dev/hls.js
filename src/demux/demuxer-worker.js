@@ -30,6 +30,8 @@ var DemuxerWorker = function (self) {
         } catch(err) {
           console.warn('demuxerWorker: unable to enable logs');
         }
+        // signal end of worker init
+        forwardMessage('init',null);
         break;
       case 'demux':
         self.demuxer.push(new Uint8Array(data.data), data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration,data.accurateTimeOffset);
