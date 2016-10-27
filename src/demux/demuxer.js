@@ -15,15 +15,20 @@ class Demuxer {
     };
     if (hls.config.enableWorker && (typeof(Worker) !== 'undefined')) {
         logger.log('demuxing in webworker');
+        let w;
         try {
           let work = require('webworkify');
-          let w = this.w = work(DemuxerWorker);
+          w = this.w = work(DemuxerWorker);
           this.onwmsg = this.onWorkerMessage.bind(this);
           w.addEventListener('message', this.onwmsg);
           w.onerror = function(event) { hls.trigger(Event.ERROR, {type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event : 'demuxerWorker', err : { message : event.message + ' (' + event.filename + ':' + event.lineno + ')' }});};
           w.postMessage({cmd: 'init', typeSupported : typeSupported});
         } catch(err) {
           logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
+          if (w) {
+            // revoke the Object URL that was used to create demuxer worker, so as not to leak it
+            URL.revokeObjectURL(w.objectURL);
+          }
           this.demuxer = new DemuxerInline(hls,typeSupported);
         }
       } else {
@@ -89,6 +94,10 @@ class Demuxer {
         obj.tracks = data.tracks;
         obj.unique = data.unique;
         this.hls.trigger(Event.FRAG_PARSING_INIT_SEGMENT, obj);
+        break;
+      case 'init':
+        // revoke the Object URL that was used to create demuxer worker, so as not to leak it
+        URL.revokeObjectURL(this.w.objectURL);
         break;
       case Event.FRAG_PARSING_DATA:
         this.hls.trigger(Event.FRAG_PARSING_DATA,{

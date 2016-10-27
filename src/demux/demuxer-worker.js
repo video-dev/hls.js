@@ -23,6 +23,7 @@ var DemuxerWorker = function (self) {
     switch (data.cmd) {
       case 'init':
         self.demuxer = new DemuxerInline(observer, data.typeSupported);
+        self.postMessage({event :'init'});
         break;
       case 'demux':
         self.demuxer.push(new Uint8Array(data.data), data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration);
