@@ -18,6 +18,11 @@ var DemuxerWorker = function(self) {
     observer.off = function off(event, ...data) {
         observer.removeListener(event, ...data);
     };
+
+    var forwardMessage = function(ev, data) {
+        self.postMessage({ event: ev, data: data });
+    };
+
     self.addEventListener('message', function(ev) {
         var data = ev.data;
         //console.log('demuxer cmd:' + data.cmd);
@@ -55,10 +60,6 @@ var DemuxerWorker = function(self) {
                 break;
         }
     });
-
-    var forwardMessage = function(ev, data) {
-        self.postMessage({ event: ev, data: data });
-    };
 
     // forward events to main thread
     observer.on(Event.FRAG_PARSING_INIT_SEGMENT, forwardMessage);
