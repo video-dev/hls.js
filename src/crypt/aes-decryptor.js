@@ -17,6 +17,7 @@ class AESDecryptor {
     this.expandKey();
   }
 
+  // Using view.getUint32() also swaps the byte order.
   uint8ArrayToUint32Array_(arrayBuffer) {
     let view = new DataView(arrayBuffer);
     let newArray = new Uint32Array(4);
@@ -145,7 +146,11 @@ class AESDecryptor {
     }
   }
 
-  decrypt(inputData, offset, aesIV) {
+  networkToHostOrderSwap(word) {
+    return (word << 24) | ((word & 0xff00) << 8) | ((word & 0xff0000) >> 8) | (word >>> 24);
+  }
+
+  decrypt(inputArrayBuffer, offset, aesIV) {
     let invKeySched = this.invKeySchedule;
     let invKey0 = invKeySched[0];
     let invKey1 = invKeySched[1];
@@ -157,73 +162,75 @@ class AESDecryptor {
     let invSubMix2 = this.invSubMix[2];
     let invSubMix3 = this.invSubMix[3];
     let invSBOX = this.invSBox;
-    let output = new Uint8Array(inputData.byteLength);
 
     // parse iv to Uint32Array
-    let iv = this.uint8ArrayToUint32Array_(aesIV);
+    let initVector = this.uint8ArrayToUint32Array_(aesIV);
+    let initVector0 = initVector[0];
+    let initVector1 = initVector[1];
+    let initVector2 = initVector[2];
+    let initVector3 = initVector[3];
 
-    let mixing0 = iv[0];
-    let mixing1 = iv[1];
-    let mixing2 = iv[2];
-    let mixing3 = iv[3];
+    let inputInt32 = new Int32Array(inputArrayBuffer);
+    let outputInt32 = new Int32Array(inputInt32.length);
 
-    let input = new DataView(inputData);
+    let s = new Int32Array(4);
+    let t = new Int32Array(4);
+    let inputWords = new Int32Array(4);
 
-    let s = new Uint32Array(4);
-    let t = new Uint32Array(4);
-    let r = new Uint32Array(4);
-    let resultUint8 = new Uint8Array(r.buffer);
+    let ksRow;
+    let i;
 
-    while (offset < inputData.byteLength) {
-      let w0 = input.getUint32(offset);
-      let w1 = input.getUint32(offset + 4);
-      let w2 = input.getUint32(offset + 8);
-      let w3 = input.getUint32(offset + 12);
+    while (offset < inputInt32.length) {
+      inputWords[0] = this.networkToHostOrderSwap(inputInt32[offset]);
+      inputWords[1] = this.networkToHostOrderSwap(inputInt32[offset + 1]);
+      inputWords[2] = this.networkToHostOrderSwap(inputInt32[offset + 2]);
+      inputWords[3] = this.networkToHostOrderSwap(inputInt32[offset + 3]);
 
-      s[0] = w0 ^ invKey0;
-      s[1] = w3 ^ invKey1;
-      s[2] = w2 ^ invKey2;
-      s[3] = w1 ^ invKey3;
+      s[0] = inputWords[0] ^ invKey0;
+      s[1] = inputWords[3] ^ invKey1;
+      s[2] = inputWords[2] ^ invKey2;
+      s[3] = inputWords[1] ^ invKey3;
 
-      let ksRow = 4;
-      let i;
+      ksRow = 4;
+
+      // Iterate through the rounds of decryption
       for (i = 1; i < nRounds; i++) {
-        t[0] = invSubMix0[s[0] >>> 24] ^ invSubMix1[(s[1] >>> 16) & 0xff] ^ invSubMix2[(s[2] >>> 8) & 0xff] ^ invSubMix3[s[3] & 0xff] ^ invKeySched[ksRow++];
-        t[1] = invSubMix0[s[1] >>> 24] ^ invSubMix1[(s[2] >>> 16) & 0xff] ^ invSubMix2[(s[3] >>> 8) & 0xff] ^ invSubMix3[s[0] & 0xff] ^ invKeySched[ksRow++];
-        t[2] = invSubMix0[s[2] >>> 24] ^ invSubMix1[(s[3] >>> 16) & 0xff] ^ invSubMix2[(s[0] >>> 8) & 0xff] ^ invSubMix3[s[1] & 0xff] ^ invKeySched[ksRow++];
-        t[3] = invSubMix0[s[3] >>> 24] ^ invSubMix1[(s[0] >>> 16) & 0xff] ^ invSubMix2[(s[1] >>> 8) & 0xff] ^ invSubMix3[s[2] & 0xff] ^ invKeySched[ksRow++];
+        t[0] = invSubMix0[s[0] >>> 24] ^ invSubMix1[(s[1] >> 16) & 0xff] ^ invSubMix2[(s[2] >> 8) & 0xff] ^ invSubMix3[s[3] & 0xff] ^ invKeySched[ksRow];
+        t[1] = invSubMix0[s[1] >>> 24] ^ invSubMix1[(s[2] >> 16) & 0xff] ^ invSubMix2[(s[3] >> 8) & 0xff] ^ invSubMix3[s[0] & 0xff] ^ invKeySched[ksRow + 1];
+        t[2] = invSubMix0[s[2] >>> 24] ^ invSubMix1[(s[3] >> 16) & 0xff] ^ invSubMix2[(s[0] >> 8) & 0xff] ^ invSubMix3[s[1] & 0xff] ^ invKeySched[ksRow + 2];
+        t[3] = invSubMix0[s[3] >>> 24] ^ invSubMix1[(s[0] >> 16) & 0xff] ^ invSubMix2[(s[1] >> 8) & 0xff] ^ invSubMix3[s[2] & 0xff] ^ invKeySched[ksRow + 3];
         // Update state
         s[0] = t[0];
         s[1] = t[1];
         s[2] = t[2];
         s[3] = t[3];
+
+        ksRow += 4;
       }
+
       // Shift rows, sub bytes, add round key
-      t[0] = ((invSBOX[s[0] >>> 24] << 24) | (invSBOX[(s[1] >>> 16) & 0xff] << 16) | (invSBOX[(s[2] >>> 8) & 0xff] << 8) | invSBOX[s[3] & 0xff]) ^ invKeySched[ksRow++];
-      t[1] = ((invSBOX[s[1] >>> 24] << 24) | (invSBOX[(s[2] >>> 16) & 0xff] << 16) | (invSBOX[(s[3] >>> 8) & 0xff] << 8) | invSBOX[s[0] & 0xff]) ^ invKeySched[ksRow++];
-      t[2] = ((invSBOX[s[2] >>> 24] << 24) | (invSBOX[(s[3] >>> 16) & 0xff] << 16) | (invSBOX[(s[0] >>> 8) & 0xff] << 8) | invSBOX[s[1] & 0xff]) ^ invKeySched[ksRow++];
-      t[3] = ((invSBOX[s[3] >>> 24] << 24) | (invSBOX[(s[0] >>> 16) & 0xff] << 16) | (invSBOX[(s[1] >>> 8) & 0xff] << 8) | invSBOX[s[2] & 0xff]) ^ invKeySched[ksRow];
+      t[0] = ((invSBOX[s[0] >>> 24] << 24) ^ (invSBOX[(s[1] >> 16) & 0xff] << 16) ^ (invSBOX[(s[2] >> 8) & 0xff] << 8) ^ invSBOX[s[3] & 0xff]) ^ invKeySched[ksRow];
+      t[1] = ((invSBOX[s[1] >>> 24] << 24) ^ (invSBOX[(s[2] >> 16) & 0xff] << 16) ^ (invSBOX[(s[3] >> 8) & 0xff] << 8) ^ invSBOX[s[0] & 0xff]) ^ invKeySched[ksRow + 1];
+      t[2] = ((invSBOX[s[2] >>> 24] << 24) ^ (invSBOX[(s[3] >> 16) & 0xff] << 16) ^ (invSBOX[(s[0] >> 8) & 0xff] << 8) ^ invSBOX[s[1] & 0xff]) ^ invKeySched[ksRow + 2];
+      t[3] = ((invSBOX[s[3] >>> 24] << 24) ^ (invSBOX[(s[0] >> 16) & 0xff] << 16) ^ (invSBOX[(s[1] >> 8) & 0xff] << 8) ^ invSBOX[s[2] & 0xff]) ^ invKeySched[ksRow + 3];
+      ksRow += 3;
 
-      r[3] = t[0] ^ mixing0;
-      r[2] = t[3] ^ mixing1;
-      r[1] = t[2] ^ mixing2;
-      r[0] = t[1] ^ mixing3;
+      // Write
+      outputInt32[offset] = this.networkToHostOrderSwap(t[0] ^ initVector0);
+      outputInt32[offset + 1] = this.networkToHostOrderSwap(t[3] ^ initVector1);
+      outputInt32[offset + 2] = this.networkToHostOrderSwap(t[2] ^ initVector2);
+      outputInt32[offset + 3] = this.networkToHostOrderSwap(t[1] ^ initVector3);
 
-      // convert result to uint8Array and write to output
-      for (i = 0; i < 16; i++) {
-        output[i + offset] = resultUint8[15 - i];
-      }
+      // reset initVector to last 4 unsigned int
+      initVector0 = inputWords[0];
+      initVector1 = inputWords[1];
+      initVector2 = inputWords[2];
+      initVector3 = inputWords[3];
 
-      // reset iv to last 4 unsigned int
-      mixing0 = w0;
-      mixing1 = w1;
-      mixing2 = w2;
-      mixing3 = w3;
-
-      offset += 16;
+      offset += 4;
     }
 
-    return this.unpad_(output).buffer;
+    return this.unpad_(outputInt32).buffer;
   }
 
   unpad_(data) {
