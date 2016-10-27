@@ -262,7 +262,10 @@ class AbrController extends EventHandler {
 
     get nextAutoLevel() {
         let nextAutoLevel = this._nextAutoLevel,
-            bwEstimator = this.bwEstimator;
+            bwEstimator = this.bwEstimator,
+            hls = this.hls,
+            levels = hls.levels,
+            minAutoBitrate = hls.config.minAutoBitrate;
         // in case next auto level has been forced, and bw not available or not reliable
         if (
             nextAutoLevel !== -1 &&
@@ -277,7 +280,24 @@ class AbrController extends EventHandler {
             // nextAutoLevel is defined, use it to cap ABR computed quality level
             nextABRAutoLevel = Math.min(nextAutoLevel, nextABRAutoLevel);
         }
+        if (minAutoBitrate !== undefined) {
+            while (levels[nextABRAutoLevel].bitrate < minAutoBitrate) {
+                nextABRAutoLevel++;
+            }
+        }
         return nextABRAutoLevel;
+    }
+
+    get minAutoLevel() {
+        let hls = this.hls,
+            levels = hls.levels,
+            minAutoBitrate = hls.config.minAutoBitrate;
+        for (let i = 0; i < levels.length; i++) {
+            if (levels[i].bitrate > minAutoBitrate) {
+                return i;
+            }
+        }
+        return 0;
     }
 
     get maxAutoLevel() {
@@ -296,7 +316,8 @@ class AbrController extends EventHandler {
         var hls = this.hls,
             maxAutoLevel = this.maxAutoLevel,
             levels = hls.levels,
-            config = hls.config;
+            config = hls.config,
+            minAutoLevel = this.minAutoLevel;
         const v = hls.media,
             currentLevel = this.lastLoadedFragLevel,
             currentFragDuration = this.fragCurrent
@@ -321,6 +342,7 @@ class AbrController extends EventHandler {
             currentLevel,
             currentFragDuration,
             avgbw,
+            minAutoLevel,
             maxAutoLevel,
             bufferStarvationDelay,
             config.abrBandWidthFactor,
@@ -363,6 +385,7 @@ class AbrController extends EventHandler {
                 currentLevel,
                 currentFragDuration,
                 avgbw,
+                minAutoLevel,
                 maxAutoLevel,
                 bufferStarvationDelay + maxStarvationDelay,
                 bwFactor,
@@ -377,13 +400,14 @@ class AbrController extends EventHandler {
         currentLevel,
         currentFragDuration,
         currentBw,
+        minAutoLevel,
         maxAutoLevel,
         maxFetchDuration,
         bwFactor,
         bwUpFactor,
         levels
     ) {
-        for (let i = maxAutoLevel; i >= 0; i--) {
+        for (let i = maxAutoLevel; i >= minAutoLevel; i--) {
             let levelInfo = levels[i],
                 levelDetails = levelInfo.details,
                 avgDuration = levelDetails
@@ -416,6 +440,7 @@ class AbrController extends EventHandler {
                 (!fetchDuration || fetchDuration < maxFetchDuration)
             ) {
                 // as we are looping from highest to lowest, this will return the best achievable quality level
+
                 return i;
             }
         }
