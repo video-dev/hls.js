@@ -305,8 +305,7 @@ var cache = arguments[5];
 
 var stringify = JSON.stringify;
 
-module.exports = function (fn) {
-    var keys = [];
+module.exports = function (fn, options) {
     var wkey;
     var cacheKeys = Object.keys(cache);
 
@@ -317,7 +316,7 @@ module.exports = function (fn) {
         // be an object with the default export as a property of it. To ensure
         // the existing api and babel esmodule exports are both supported we
         // check for both
-        if (exp === fn || exp.default === fn) {
+        if (exp === fn || exp && exp.default === fn) {
             wkey = key;
             break;
         }
@@ -348,8 +347,22 @@ module.exports = function (fn) {
         scache
     ];
 
+    var workerSources = {};
+    resolveSources(skey);
+
+    function resolveSources(key) {
+        workerSources[key] = true;
+
+        for (var depPath in sources[key][1]) {
+            var depKey = sources[key][1][depPath];
+            if (!workerSources[depKey]) {
+                resolveSources(depKey);
+            }
+        }
+    }
+
     var src = '(' + bundleFn + ')({'
-        + Object.keys(sources).map(function (key) {
+        + Object.keys(workerSources).map(function (key) {
             return stringify(key) + ':['
                 + sources[key][0]
                 + ',' + stringify(sources[key][1]) + ']'
@@ -360,9 +373,12 @@ module.exports = function (fn) {
 
     var URL = window.URL || window.webkitURL || window.mozURL || window.msURL;
 
-    return new Worker(URL.createObjectURL(
-        new Blob([src], { type: 'text/javascript' })
-    ));
+    var blob = new Blob([src], { type: 'text/javascript' });
+    if (options && options.bare) { return blob; }
+    var workerUrl = URL.createObjectURL(blob);
+    var worker = new Worker(workerUrl);
+    worker.objectURL = workerUrl;
+    return worker;
 };
 
 },{}],3:[function(_dereq_,module,exports){
@@ -597,8 +613,8 @@ var AbrController = function (_EventHandler) {
 
   }, {
     key: 'findBestLevel',
-    value: function findBestLevel(currentLevel, currentFragDuration, currentBw, maxAutoLevel, maxFetchDuration, bwFactor, bwUpFactor, levels) {
-      for (var i = maxAutoLevel; i >= 0; i--) {
+    value: function findBestLevel(currentLevel, currentFragDuration, currentBw, minAutoLevel, maxAutoLevel, maxFetchDuration, bwFactor, bwUpFactor, levels) {
+      for (var i = maxAutoLevel; i >= minAutoLevel; i--) {
         var levelInfo = levels[i],
             levelDetails = levelInfo.details,
             avgDuration = levelDetails ? levelDetails.totalduration / levelDetails.fragments.length : currentFragDuration,
@@ -623,6 +639,7 @@ var AbrController = function (_EventHandler) {
         // fragment fetchDuration unknown or fragment fetchDuration less than max allowed fetch duration, then this level matches
         !fetchDuration || fetchDuration < maxFetchDuration)) {
           // as we are looping from highest to lowest, this will return the best achievable quality level
+
           return i;
         }
       }
@@ -644,7 +661,10 @@ var AbrController = function (_EventHandler) {
     key: 'nextAutoLevel',
     get: function get() {
       var nextAutoLevel = this._nextAutoLevel,
-          bwEstimator = this.bwEstimator;
+          bwEstimator = this.bwEstimator,
+          hls = this.hls,
+          levels = hls.levels,
+          minAutoBitrate = hls.config.minAutoBitrate;
       // in case next auto level has been forced, and bw not available or not reliable
       if (nextAutoLevel !== -1 && (!bwEstimator || !bwEstimator.canEstimate())) {
         // cap next auto level by max auto level
@@ -656,10 +676,28 @@ var AbrController = function (_EventHandler) {
         // nextAutoLevel is defined, use it to cap ABR computed quality level
         nextABRAutoLevel = Math.min(nextAutoLevel, nextABRAutoLevel);
       }
+      if (minAutoBitrate !== undefined) {
+        while (levels[nextABRAutoLevel].bitrate < minAutoBitrate) {
+          nextABRAutoLevel++;
+        }
+      }
       return nextABRAutoLevel;
     },
     set: function set(nextLevel) {
       this._nextAutoLevel = nextLevel;
+    }
+  }, {
+    key: 'minAutoLevel',
+    get: function get() {
+      var hls = this.hls,
+          levels = hls.levels,
+          minAutoBitrate = hls.config.minAutoBitrate;
+      for (var i = 0; i < levels.length; i++) {
+        if (levels[i].bitrate > minAutoBitrate) {
+          return i;
+        }
+      }
+      return 0;
     }
   }, {
     key: 'maxAutoLevel',
@@ -680,7 +718,8 @@ var AbrController = function (_EventHandler) {
       var hls = this.hls,
           maxAutoLevel = this.maxAutoLevel,
           levels = hls.levels,
-          config = hls.config;
+          config = hls.config,
+          minAutoLevel = this.minAutoLevel;
       var v = hls.media,
           currentLevel = this.lastLoadedFragLevel,
           currentFragDuration = this.fragCurrent ? this.fragCurrent.duration : 0,
@@ -695,7 +734,7 @@ var AbrController = function (_EventHandler) {
       bufferStarvationDelay = (_bufferHelper2.default.bufferInfo(v, pos, config.maxBufferHole).end - pos) / playbackRate;
 
       // First, look to see if we can find a level matching with our avg bandwidth AND that could also guarantee no rebuffering at all
-      var bestLevel = this.findBestLevel(currentLevel, currentFragDuration, avgbw, maxAutoLevel, bufferStarvationDelay, config.abrBandWidthFactor, config.abrBandWidthUpFactor, levels);
+      var bestLevel = this.findBestLevel(currentLevel, currentFragDuration, avgbw, minAutoLevel, maxAutoLevel, bufferStarvationDelay, config.abrBandWidthFactor, config.abrBandWidthUpFactor, levels);
       if (bestLevel >= 0) {
         return bestLevel;
       } else {
@@ -719,7 +758,7 @@ var AbrController = function (_EventHandler) {
             bwFactor = bwUpFactor = 1;
           }
         }
-        bestLevel = this.findBestLevel(currentLevel, currentFragDuration, avgbw, maxAutoLevel, bufferStarvationDelay + maxStarvationDelay, bwFactor, bwUpFactor, levels);
+        bestLevel = this.findBestLevel(currentLevel, currentFragDuration, avgbw, minAutoLevel, maxAutoLevel, bufferStarvationDelay + maxStarvationDelay, bwFactor, bwUpFactor, levels);
         return Math.max(bestLevel, 0);
       }
     }
@@ -2684,8 +2723,8 @@ var LevelController = function (_EventHandler) {
               var _hls = this.hls,
                   media = _hls.media,
 
-              // 0.4 : tolerance needed as some browsers stalls playback before reaching buffered end
-              mediaBuffered = media && _bufferHelper2.default.isBuffered(media, media.currentTime) && _bufferHelper2.default.isBuffered(media, media.currentTime + 0.4);
+              // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
+              mediaBuffered = media && _bufferHelper2.default.isBuffered(media, media.currentTime) && _bufferHelper2.default.isBuffered(media, media.currentTime + 0.5);
               if (mediaBuffered) {
                 var retryDelay = _hls.config.levelLoadingRetryDelay;
                 _logger.logger.warn('level controller,' + details + ', but media buffered, retry in ' + retryDelay + 'ms');
@@ -4043,8 +4082,8 @@ var StreamController = function (_EventHandler) {
       }
       var media = this.media,
 
-      // 0.4 : tolerance needed as some browsers stalls playback before reaching buffered end
-      mediaBuffered = media && _bufferHelper2.default.isBuffered(media, media.currentTime) && _bufferHelper2.default.isBuffered(media, media.currentTime + 0.4);
+      // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
+      mediaBuffered = media && _bufferHelper2.default.isBuffered(media, media.currentTime) && _bufferHelper2.default.isBuffered(media, media.currentTime + 0.5);
       switch (data.details) {
         case _errors.ErrorDetails.FRAG_LOAD_ERROR:
         case _errors.ErrorDetails.FRAG_LOAD_TIMEOUT:
@@ -4176,7 +4215,7 @@ var StreamController = function (_EventHandler) {
           media.ended || // not playing when media is ended
           media.buffered.length === 0),
               // not playing if nothing buffered
-          jumpThreshold = 0.4,
+          jumpThreshold = 0.5,
               // tolerance needed as some browsers stalls playback before reaching buffered range end
           playheadMoving = currentTime > media.playbackRate * this.lastCurrentTime,
               config = this.config;
@@ -5523,6 +5562,8 @@ var DemuxerWorker = function DemuxerWorker(self) {
         } catch (err) {
           console.warn('demuxerWorker: unable to enable logs');
         }
+        // signal end of worker init
+        forwardMessage('init', null);
         break;
       case 'demux':
         self.demuxer.push(new Uint8Array(data.data), data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration, data.accurateTimeOffset);
@@ -5601,9 +5642,10 @@ var Demuxer = function () {
     };
     if (hls.config.enableWorker && typeof Worker !== 'undefined') {
       _logger.logger.log('demuxing in webworker');
+      var w = void 0;
       try {
         var work = _dereq_(2);
-        var w = this.w = work(_demuxerWorker2.default);
+        w = this.w = work(_demuxerWorker2.default);
         this.onwmsg = this.onWorkerMessage.bind(this);
         w.addEventListener('message', this.onwmsg);
         w.onerror = function (event) {
@@ -5612,6 +5654,10 @@ var Demuxer = function () {
         w.postMessage({ cmd: 'init', typeSupported: typeSupported, id: id, config: JSON.stringify(hls.config) });
       } catch (err) {
         _logger.logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
+        if (w) {
+          // revoke the Object URL that was used to create demuxer worker, so as not to leak it
+          URL.revokeObjectURL(w.objectURL);
+        }
         this.demuxer = new _demuxerInline2.default(hls, id, typeSupported);
       }
     } else {
@@ -5678,6 +5724,10 @@ var Demuxer = function () {
           hls = this.hls;
       //console.log('onWorkerMessage:' + data.event);
       switch (data.event) {
+        case 'init':
+          // revoke the Object URL that was used to create demuxer worker, so as not to leak it
+          URL.revokeObjectURL(this.w.objectURL);
+          break;
         // special case for FRAG_PARSING_DATA: data1 and data2 are transferable objects
         case _events2.default.FRAG_PARSING_DATA:
           data.data.data1 = new Uint8Array(data.data1);
@@ -7956,7 +8006,8 @@ var Hls = function () {
           abrBandWidthFactor: 0.8,
           abrBandWidthUpFactor: 0.7,
           maxStarvationDelay: 4,
-          maxLoadingDelay: 4
+          maxLoadingDelay: 4,
+          minAutoBitrate: 0
         };
       }
       return Hls.defaultConfig;
@@ -8961,7 +9012,7 @@ var PlaylistLoader = function (_EventHandler) {
               levelDetails = this.parseLevelPlaylist(string, url, (isLevel ? level : id) || 0, isLevel ? 'main' : 'audio');
           if (type === 'manifest') {
             // first request, stream manifest (no master playlist), fire manifest loaded event with level details
-            hls.trigger(_events2.default.MANIFEST_LOADED, { levels: [{ url: url, details: levelDetails }], url: url, stats: stats });
+            hls.trigger(_events2.default.MANIFEST_LOADED, { levels: [{ url: url, details: levelDetails }], audioTracks: [], url: url, stats: stats });
           }
           stats.tparsed = performance.now();
           if (isLevel) {
