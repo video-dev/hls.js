@@ -5550,6 +5550,11 @@ var DemuxerWorker = function DemuxerWorker(self) {
 
     observer.removeListener.apply(observer, [event].concat(data));
   };
+
+  var forwardMessage = function forwardMessage(ev, data) {
+    self.postMessage({ event: ev, data: data });
+  };
+
   self.addEventListener('message', function (ev) {
     var data = ev.data;
     //console.log('demuxer cmd:' + data.cmd);
@@ -5572,10 +5577,6 @@ var DemuxerWorker = function DemuxerWorker(self) {
         break;
     }
   });
-
-  var forwardMessage = function forwardMessage(ev, data) {
-    self.postMessage({ event: ev, data: data });
-  };
 
   // forward events to main thread
   observer.on(_events2.default.FRAG_PARSING_INIT_SEGMENT, forwardMessage);
@@ -7920,7 +7921,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.6';
+      return '0.6.7';
     }
   }, {
     key: 'Events',
