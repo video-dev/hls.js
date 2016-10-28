@@ -105,7 +105,7 @@ class PlaylistLoader extends EventHandler {
 
       var codecs = attrs.CODECS;
       if(codecs) {
-        codecs = codecs.split(',');
+        codecs = codecs.split(/[ ,]+/);
         for (let i = 0; i < codecs.length; i++) {
           const codec = codecs[i];
           if (codec.indexOf('avc1') !== -1) {
