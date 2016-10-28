@@ -40,7 +40,7 @@ class FragmentLoader extends EventHandler {
     loader  = this.loaders[type] = frag.loader = typeof(config.fLoader) !== 'undefined' ? new config.fLoader(config) : new config.loader(config);
 
     let loaderContext, loaderConfig, loaderCallbacks;
-    loaderContext = { url : frag.url, frag : frag, responseType : 'arraybuffer', progressData : false};
+    loaderContext = { url : frag.url, frag : frag, responseType : 'arraybuffer', progressData : true};
     let start = frag.byteRangeStartOffset, end = frag.byteRangeEndOffset;
     if (!isNaN(start) && !isNaN(end)) {
       loaderContext.rangeStart = start;
