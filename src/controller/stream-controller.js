@@ -203,8 +203,12 @@ class StreamController extends EventHandler {
         // if video not attached AND
         // start fragment already requested OR start frag prefetch disable
         // exit loop
-        // => if media not attached but start frag prefetch is enabled and start frag not requested yet, we will not exit loop
-        if (!media && (this.startFragRequested || !config.startFragPrefetch)) {
+        // => if start level loaded and media not attached but start frag prefetch is enabled and start frag not requested yet, we will not exit loop
+        if (
+            this.levelLastLoaded !== undefined &&
+            !media &&
+            (this.startFragRequested || !config.startFragPrefetch)
+        ) {
             return true;
         }
 
@@ -216,13 +220,15 @@ class StreamController extends EventHandler {
             pos = this.nextLoadPosition;
         }
         // determine next load level
-        let level = hls.nextLoadLevel;
+        let level = hls.nextLoadLevel,
+            levelInfo = this.levels[level],
+            levelBitrate = levelInfo.bitrate,
+            maxBufLen;
 
         // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
-        let maxBufLen;
-        if (this.levels[level].hasOwnProperty('bitrate')) {
+        if (levelBitrate) {
             maxBufLen = Math.max(
-                8 * config.maxBufferSize / this.levels[level].bitrate,
+                8 * config.maxBufferSize / levelBitrate,
                 config.maxBufferLength
             );
         } else {
@@ -254,10 +260,9 @@ class StreamController extends EventHandler {
         );
 
         // set next load level : this will trigger a playlist load if needed
-        hls.nextLoadLevel = level;
-        this.level = level;
+        this.level = hls.nextLoadLevel = level;
 
-        const levelDetails = this.levels[level].details;
+        const levelDetails = levelInfo.details;
         // if level info not retrieved yet, switch state and wait for level retrieval
         // if live playlist, ensure that new playlist has been refreshed to avoid loading/try to load
         // a useless and outdated fragment (that might even introduce load error if it is already out of the live playlist)
