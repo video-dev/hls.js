@@ -139,11 +139,11 @@ class StreamController extends EventHandler {
         this.fragLoadError = 0;
         break;
       case State.IDLE:
-        // if video not attached AND
+        // if start level loaded AND video not attached AND
         // start fragment already requested OR start frag prefetch disable
         // exit loop
-        // => if media not attached but start frag prefetch is enabled and start frag not requested yet, we will not exit loop
-        if (!media &&
+        // => if start level loaded and media not attached but start frag prefetch is enabled and start frag not requested yet, we will not exit loop
+        if (this.levelLastLoaded !== undefined && !media &&
           (this.startFragRequested || !config.startFragPrefetch)) {
           break;
         }
@@ -157,14 +157,16 @@ class StreamController extends EventHandler {
           pos = this.nextLoadPosition;
         }
         level = hls.nextLoadLevel;
-        var bufferInfo = BufferHelper.bufferInfo(media,pos,config.maxBufferHole),
+        let bufferInfo = BufferHelper.bufferInfo(media,pos,config.maxBufferHole),
             bufferLen = bufferInfo.len,
             bufferEnd = bufferInfo.end,
             fragPrevious = this.fragPrevious,
+            levelInfo = this.levels[level],
+            levelBitrate = levelInfo.bitrate,
             maxBufLen;
         // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
-        if ((this.levels[level]).hasOwnProperty('bitrate')) {
-          maxBufLen = Math.max(8 * config.maxBufferSize / this.levels[level].bitrate, config.maxBufferLength);
+        if (levelBitrate) {
+          maxBufLen = Math.max(8 * config.maxBufferSize / levelBitrate, config.maxBufferLength);
         } else {
           maxBufLen = config.maxBufferLength;
         }
@@ -172,9 +174,8 @@ class StreamController extends EventHandler {
         // if buffer length is less than maxBufLen try to load a new fragment
         if (bufferLen < maxBufLen) {
           // set next load level : this will trigger a playlist load if needed
-          hls.nextLoadLevel = level;
-          this.level = level;
-          levelDetails = this.levels[level].details;
+          this.level = hls.nextLoadLevel = level;
+          levelDetails = levelInfo.details;
           // if level info not retrieved yet, switch state and wait for level retrieval
           // if live playlist, ensure that new playlist has been refreshed to avoid loading/try to load
           // a useless and outdated fragment (that might even introduce load error if it is already out of the live playlist)
