@@ -30,6 +30,7 @@ class Hls {
     }
 
     static isSupported() {
+        window.MediaSource = window.MediaSource || window.WebKitMediaSource;
         return (
             window.MediaSource &&
             typeof window.MediaSource.isTypeSupported === 'function' &&
