@@ -211,6 +211,12 @@ class StreamController extends EventHandler {
 
             // in case of live playlist we need to ensure that requested position is not located before playlist start
           if (levelDetails.live) {
+
+            if(fragLen < config.initialLiveManifestSize){
+              logger.warn(`Can not start playback of a level, reason: not enough fragments ${fragLen} < ${config.initialLiveManifestSize}`);
+              break;
+            }
+
             // check if requested position is within seekable boundaries :
             //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${media.seeking}`);
             let maxLatency = config.liveMaxLatencyDuration !== undefined ? config.liveMaxLatencyDuration : config.liveMaxLatencyDurationCount*levelDetails.targetduration;
