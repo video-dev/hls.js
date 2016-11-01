@@ -283,6 +283,12 @@ class StreamController extends EventHandler {
 
       // in case of live playlist we need to ensure that requested position is not located before playlist start
     if (levelDetails.live) {
+      let initialLiveManifestSize = this.config.initialLiveManifestSize;
+      if(fragLen < initialLiveManifestSize){
+        logger.warn(`Can not start playback of a level, reason: not enough fragments ${fragLen} < ${initialLiveManifestSize}`);
+        return false;
+      }
+
       frag = this._ensureFragmentAtLivePoint({levelDetails, bufferEnd, start, end, fragPrevious, fragments, fragLen});
       // if it explicitely returns null don't load any fragment and exit function now
       if (frag === null) {
