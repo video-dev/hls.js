@@ -61,6 +61,7 @@ class Hls {
                 debug: false,
                 capLevelOnFPSDrop: false,
                 capLevelToPlayerSize: false,
+                initialLiveManifestSize: 1,
                 maxBufferLength: 30,
                 maxBufferSize: 60 * 1000 * 1000,
                 maxBufferHole: 0.5,
