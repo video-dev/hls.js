@@ -15,25 +15,23 @@ class AESDecryptor {
             0x36
         ];
 
-        this.invSubMix = [];
-        this.invSubMix[0] = new Uint32Array(256);
-        this.invSubMix[1] = new Uint32Array(256);
-        this.invSubMix[2] = new Uint32Array(256);
-        this.invSubMix[3] = new Uint32Array(256);
-
         this.subMix = [];
         this.subMix[0] = new Uint32Array(256);
         this.subMix[1] = new Uint32Array(256);
         this.subMix[2] = new Uint32Array(256);
         this.subMix[3] = new Uint32Array(256);
 
+        this.invSubMix = [];
+        this.invSubMix[0] = new Uint32Array(256);
+        this.invSubMix[1] = new Uint32Array(256);
+        this.invSubMix[2] = new Uint32Array(256);
+        this.invSubMix[3] = new Uint32Array(256);
+
         this.sBox = new Uint32Array(256);
         this.invSBox = new Uint32Array(256);
-        this.d = new Uint32Array(256);
 
         // Changes during runtime
         this.key = new Uint32Array(0);
-        this.outputInt32 = new Int32Array(0);
 
         this.initTable();
     }
@@ -60,7 +58,7 @@ class AESDecryptor {
         let invSubMix2 = this.invSubMix[2];
         let invSubMix3 = this.invSubMix[3];
 
-        let d = this.d;
+        let d = new Uint32Array(256);
         let x = 0;
         let xi = 0;
         let i = 0;
@@ -355,7 +353,6 @@ class AESDecryptor {
         this.keySchedule = undefined;
         this.invKeySchedule = undefined;
 
-        this.d = undefined;
         this.rcon = undefined;
     }
 }
