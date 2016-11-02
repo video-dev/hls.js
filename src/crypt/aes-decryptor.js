@@ -1,43 +1,6 @@
 class AESDecryptor {
-    constructor(keyBuffer) {
-        // convert keyBuffer to Uint32Array
-        let key = this.uint8ArrayToUint32Array_(keyBuffer);
-        let keySize = (this.keySize = key.length);
-
-        if (keySize !== 4 && keySize !== 6 && keySize !== 8) {
-            throw new Error('Invalid aes key size=' + keySize);
-        }
-
-        let nRounds = keySize + 6;
-        this.ksRows = (nRounds + 1) * 4;
-        this.keyWords = key;
-        this.subMix = [];
-        this.invSubMix = [];
-        this.initTable();
-        this.expandKey();
-    }
-
-    // Using view.getUint32() also swaps the byte order.
-    uint8ArrayToUint32Array_(arrayBuffer) {
-        let view = new DataView(arrayBuffer);
-        let newArray = new Uint32Array(4);
-        for (let i = 0; i < newArray.length; i++) {
-            newArray[i] = view.getUint32(i * 4);
-        }
-        return newArray;
-    }
-
-    initTable() {
-        let sBox = (this.sBox = new Uint32Array(256));
-        let invSBox = (this.invSBox = new Uint32Array(256));
-        let subMix0 = (this.subMix[0] = new Uint32Array(256));
-        let subMix1 = (this.subMix[1] = new Uint32Array(256));
-        let subMix2 = (this.subMix[2] = new Uint32Array(256));
-        let subMix3 = (this.subMix[3] = new Uint32Array(256));
-        let invSubMix0 = (this.invSubMix[0] = new Uint32Array(256));
-        let invSubMix1 = (this.invSubMix[1] = new Uint32Array(256));
-        let invSubMix2 = (this.invSubMix[2] = new Uint32Array(256));
-        let invSubMix3 = (this.invSubMix[3] = new Uint32Array(256));
+    constructor() {
+        // Static after running initTable
         this.rcon = [
             0x0,
             0x1,
@@ -52,7 +15,52 @@ class AESDecryptor {
             0x36
         ];
 
-        let d = new Uint32Array(256);
+        this.invSubMix = [];
+        this.invSubMix[0] = new Uint32Array(256);
+        this.invSubMix[1] = new Uint32Array(256);
+        this.invSubMix[2] = new Uint32Array(256);
+        this.invSubMix[3] = new Uint32Array(256);
+
+        this.subMix = [];
+        this.subMix[0] = new Uint32Array(256);
+        this.subMix[1] = new Uint32Array(256);
+        this.subMix[2] = new Uint32Array(256);
+        this.subMix[3] = new Uint32Array(256);
+
+        this.sBox = new Uint32Array(256);
+        this.invSBox = new Uint32Array(256);
+        this.d = new Uint32Array(256);
+
+        // Changes during runtime
+        this.key = new Uint32Array(0);
+        this.outputInt32 = new Int32Array(0);
+
+        this.initTable();
+    }
+
+    // Using view.getUint32() also swaps the byte order.
+    uint8ArrayToUint32Array_(arrayBuffer) {
+        let view = new DataView(arrayBuffer);
+        let newArray = new Uint32Array(4);
+        for (let i = 0; i < newArray.length; i++) {
+            newArray[i] = view.getUint32(i * 4);
+        }
+        return newArray;
+    }
+
+    initTable() {
+        let sBox = this.sBox;
+        let invSBox = this.invSBox;
+        let subMix0 = this.subMix[0];
+        let subMix1 = this.subMix[1];
+        let subMix2 = this.subMix[2];
+        let subMix3 = this.subMix[3];
+        let invSubMix0 = this.invSubMix[0];
+        let invSubMix1 = this.invSubMix[1];
+        let invSubMix2 = this.invSubMix[2];
+        let invSubMix3 = this.invSubMix[3];
+
+        let d = this.d;
         let x = 0;
         let xi = 0;
         let i = 0;
@@ -103,30 +111,52 @@ class AESDecryptor {
         }
     }
 
-    expandKey() {
+    expandKey(keyBuffer) {
+        // convert keyBuffer to Uint32Array
+        let key = this.uint8ArrayToUint32Array_(keyBuffer);
+        let sameKey = true;
+        let offset = 0;
+
+        while (offset < key.length && sameKey) {
+            sameKey = key[offset] === this.key[offset];
+            offset++;
+        }
+
+        if (sameKey) {
+            return;
+        }
+
+        this.key = key;
+        let keySize = (this.keySize = key.length);
+
+        if (keySize !== 4 && keySize !== 6 && keySize !== 8) {
+            throw new Error('Invalid aes key size=' + keySize);
+        }
+
+        let ksRows = (this.ksRows = (keySize + 6 + 1) * 4);
+        let ksRow;
+        let invKsRow;
+
         let keySchedule = (this.keySchedule = new Uint32Array(this.ksRows).fill(
             0
         ));
-        let rcon = this.rcon;
         let invKeySchedule = (this.invKeySchedule = new Uint32Array(
             this.ksRows
         ).fill(0));
-        let keySize = this.keySize;
-        let keyWords = this.keyWords;
-        let ksRows = this.ksRows;
         let sbox = this.sBox;
+        let rcon = this.rcon;
+
         let invSubMix0 = this.invSubMix[0];
         let invSubMix1 = this.invSubMix[1];
         let invSubMix2 = this.invSubMix[2];
         let invSubMix3 = this.invSubMix[3];
+
         let prev;
         let t;
-        let ksRow;
-        let invKsRow;
 
         for (ksRow = 0; ksRow < ksRows; ksRow++) {
             if (ksRow < keySize) {
-                prev = keySchedule[ksRow] = keyWords[ksRow];
+                prev = keySchedule[ksRow] = key[ksRow];
                 continue;
             }
             t = prev;
@@ -179,6 +209,7 @@ class AESDecryptor {
         }
     }
 
+    // Adding this as a method greatly improves performance.
     networkToHostOrderSwap(word) {
         return (
             (word << 24) |
@@ -189,19 +220,15 @@ class AESDecryptor {
     }
 
     decrypt(inputArrayBuffer, offset, aesIV) {
-        let invKeySched = this.invKeySchedule;
-        let invKey0 = invKeySched[0];
-        let invKey1 = invKeySched[1];
-        let invKey2 = invKeySched[2];
-        let invKey3 = invKeySched[3];
         let nRounds = this.keySize + 6;
+        let invKeySchedule = this.invKeySchedule;
+        let invSBOX = this.invSBox;
+
         let invSubMix0 = this.invSubMix[0];
         let invSubMix1 = this.invSubMix[1];
         let invSubMix2 = this.invSubMix[2];
         let invSubMix3 = this.invSubMix[3];
-        let invSBOX = this.invSBox;
 
-        // parse iv to Uint32Array
         let initVector = this.uint8ArrayToUint32Array_(aesIV);
         let initVector0 = initVector[0];
         let initVector1 = initVector[1];
@@ -211,130 +238,125 @@ class AESDecryptor {
         let inputInt32 = new Int32Array(inputArrayBuffer);
         let outputInt32 = new Int32Array(inputInt32.length);
 
-        let s = new Int32Array(4);
-        let t = new Int32Array(4);
-        let inputWords = new Int32Array(4);
+        let t0, t1, t2, t3;
+        let s0, s1, s2, s3;
+        let inputWords0, inputWords1, inputWords2, inputWords3;
 
-        let ksRow;
-        let i;
+        var ksRow, i;
 
         while (offset < inputInt32.length) {
-            inputWords[0] = this.networkToHostOrderSwap(inputInt32[offset]);
-            inputWords[1] = this.networkToHostOrderSwap(inputInt32[offset + 1]);
-            inputWords[2] = this.networkToHostOrderSwap(inputInt32[offset + 2]);
-            inputWords[3] = this.networkToHostOrderSwap(inputInt32[offset + 3]);
+            inputWords0 = this.networkToHostOrderSwap(inputInt32[offset]);
+            inputWords1 = this.networkToHostOrderSwap(inputInt32[offset + 1]);
+            inputWords2 = this.networkToHostOrderSwap(inputInt32[offset + 2]);
+            inputWords3 = this.networkToHostOrderSwap(inputInt32[offset + 3]);
 
-            s[0] = inputWords[0] ^ invKey0;
-            s[1] = inputWords[3] ^ invKey1;
-            s[2] = inputWords[2] ^ invKey2;
-            s[3] = inputWords[1] ^ invKey3;
+            s0 = inputWords0 ^ invKeySchedule[0];
+            s1 = inputWords3 ^ invKeySchedule[1];
+            s2 = inputWords2 ^ invKeySchedule[2];
+            s3 = inputWords1 ^ invKeySchedule[3];
 
             ksRow = 4;
 
             // Iterate through the rounds of decryption
             for (i = 1; i < nRounds; i++) {
-                t[0] =
-                    invSubMix0[s[0] >>> 24] ^
-                    invSubMix1[(s[1] >> 16) & 0xff] ^
-                    invSubMix2[(s[2] >> 8) & 0xff] ^
-                    invSubMix3[s[3] & 0xff] ^
-                    invKeySched[ksRow];
-                t[1] =
-                    invSubMix0[s[1] >>> 24] ^
-                    invSubMix1[(s[2] >> 16) & 0xff] ^
-                    invSubMix2[(s[3] >> 8) & 0xff] ^
-                    invSubMix3[s[0] & 0xff] ^
-                    invKeySched[ksRow + 1];
-                t[2] =
-                    invSubMix0[s[2] >>> 24] ^
-                    invSubMix1[(s[3] >> 16) & 0xff] ^
-                    invSubMix2[(s[0] >> 8) & 0xff] ^
-                    invSubMix3[s[1] & 0xff] ^
-                    invKeySched[ksRow + 2];
-                t[3] =
-                    invSubMix0[s[3] >>> 24] ^
-                    invSubMix1[(s[0] >> 16) & 0xff] ^
-                    invSubMix2[(s[1] >> 8) & 0xff] ^
-                    invSubMix3[s[2] & 0xff] ^
-                    invKeySched[ksRow + 3];
+                t0 =
+                    invSubMix0[s0 >>> 24] ^
+                    invSubMix1[(s1 >> 16) & 0xff] ^
+                    invSubMix2[(s2 >> 8) & 0xff] ^
+                    invSubMix3[s3 & 0xff] ^
+                    invKeySchedule[ksRow];
+                t1 =
+                    invSubMix0[s1 >>> 24] ^
+                    invSubMix1[(s2 >> 16) & 0xff] ^
+                    invSubMix2[(s3 >> 8) & 0xff] ^
+                    invSubMix3[s0 & 0xff] ^
+                    invKeySchedule[ksRow + 1];
+                t2 =
+                    invSubMix0[s2 >>> 24] ^
+                    invSubMix1[(s3 >> 16) & 0xff] ^
+                    invSubMix2[(s0 >> 8) & 0xff] ^
+                    invSubMix3[s1 & 0xff] ^
+                    invKeySchedule[ksRow + 2];
+                t3 =
+                    invSubMix0[s3 >>> 24] ^
+                    invSubMix1[(s0 >> 16) & 0xff] ^
+                    invSubMix2[(s1 >> 8) & 0xff] ^
+                    invSubMix3[s2 & 0xff] ^
+                    invKeySchedule[ksRow + 3];
                 // Update state
-                s[0] = t[0];
-                s[1] = t[1];
-                s[2] = t[2];
-                s[3] = t[3];
+                s0 = t0;
+                s1 = t1;
+                s2 = t2;
+                s3 = t3;
 
-                ksRow += 4;
+                ksRow = ksRow + 4;
             }
 
             // Shift rows, sub bytes, add round key
-            t[0] =
-                (invSBOX[s[0] >>> 24] << 24) ^
-                (invSBOX[(s[1] >> 16) & 0xff] << 16) ^
-                (invSBOX[(s[2] >> 8) & 0xff] << 8) ^
-                invSBOX[s[3] & 0xff] ^
-                invKeySched[ksRow];
-            t[1] =
-                (invSBOX[s[1] >>> 24] << 24) ^
-                (invSBOX[(s[2] >> 16) & 0xff] << 16) ^
-                (invSBOX[(s[3] >> 8) & 0xff] << 8) ^
-                invSBOX[s[0] & 0xff] ^
-                invKeySched[ksRow + 1];
-            t[2] =
-                (invSBOX[s[2] >>> 24] << 24) ^
-                (invSBOX[(s[3] >> 16) & 0xff] << 16) ^
-                (invSBOX[(s[0] >> 8) & 0xff] << 8) ^
-                invSBOX[s[1] & 0xff] ^
-                invKeySched[ksRow + 2];
-            t[3] =
-                (invSBOX[s[3] >>> 24] << 24) ^
-                (invSBOX[(s[0] >> 16) & 0xff] << 16) ^
-                (invSBOX[(s[1] >> 8) & 0xff] << 8) ^
-                invSBOX[s[2] & 0xff] ^
-                invKeySched[ksRow + 3];
-            ksRow += 3;
+            t0 =
+                (invSBOX[s0 >>> 24] << 24) ^
+                (invSBOX[(s1 >> 16) & 0xff] << 16) ^
+                (invSBOX[(s2 >> 8) & 0xff] << 8) ^
+                invSBOX[s3 & 0xff] ^
+                invKeySchedule[ksRow];
+            t1 =
+                (invSBOX[s1 >>> 24] << 24) ^
+                (invSBOX[(s2 >> 16) & 0xff] << 16) ^
+                (invSBOX[(s3 >> 8) & 0xff] << 8) ^
+                invSBOX[s0 & 0xff] ^
+                invKeySchedule[ksRow + 1];
+            t2 =
+                (invSBOX[s2 >>> 24] << 24) ^
+                (invSBOX[(s3 >> 16) & 0xff] << 16) ^
+                (invSBOX[(s0 >> 8) & 0xff] << 8) ^
+                invSBOX[s1 & 0xff] ^
+                invKeySchedule[ksRow + 2];
+            t3 =
+                (invSBOX[s3 >>> 24] << 24) ^
+                (invSBOX[(s0 >> 16) & 0xff] << 16) ^
+                (invSBOX[(s1 >> 8) & 0xff] << 8) ^
+                invSBOX[s2 & 0xff] ^
+                invKeySchedule[ksRow + 3];
+            ksRow = ksRow + 3;
 
             // Write
-            outputInt32[offset] = this.networkToHostOrderSwap(
-                t[0] ^ initVector0
-            );
+            outputInt32[offset] = this.networkToHostOrderSwap(t0 ^ initVector0);
             outputInt32[offset + 1] = this.networkToHostOrderSwap(
-                t[3] ^ initVector1
+                t3 ^ initVector1
             );
             outputInt32[offset + 2] = this.networkToHostOrderSwap(
-                t[2] ^ initVector2
+                t2 ^ initVector2
             );
             outputInt32[offset + 3] = this.networkToHostOrderSwap(
-                t[1] ^ initVector3
+                t1 ^ initVector3
             );
 
             // reset initVector to last 4 unsigned int
-            initVector0 = inputWords[0];
-            initVector1 = inputWords[1];
-            initVector2 = inputWords[2];
-            initVector3 = inputWords[3];
+            initVector0 = inputWords0;
+            initVector1 = inputWords1;
+            initVector2 = inputWords2;
+            initVector3 = inputWords3;
 
-            offset += 4;
+            offset = offset + 4;
         }
 
-        return this.unpad_(outputInt32).buffer;
+        return outputInt32.buffer;
     }
 
-    unpad_(data) {
-        // Remove the padding at the end of output.
-        // The padding occurs because each decryption happens in 16 bytes, but the encrypted data is not modulus of 16
-        let len = data.length;
-        let bytesOfPadding = data[len - 1];
+    destroy() {
+        this.key = undefined;
+        this.keySize = undefined;
+        this.ksRows = undefined;
 
-        // Uncomment to log info about padding
-        //for (let i = bytesOfPadding; i > 0; --i) {
-        //    let v = data[--len];
-        //
-        //    if (bytesOfPadding !== v) {
-        //        console.warn('Invalid padding error: Expected ' + bytesOfPadding, ', but received ' + v);
-        //    }
-        //}
+        this.sBox = undefined;
+        this.invSBox = undefined;
+        this.subMix = undefined;
+        this.invSubMix = undefined;
+        this.keySchedule = undefined;
+        this.invKeySchedule = undefined;
 
-        return data.subarray(0, data.length - bytesOfPadding);
+        this.d = undefined;
+        this.rcon = undefined;
     }
 }
 

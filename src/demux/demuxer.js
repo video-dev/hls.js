@@ -145,7 +145,6 @@ class Demuxer {
             if (this.decrypter == null) {
                 this.decrypter = new Decrypter(this.hls);
             }
-
             var localthis = this;
             var startTime = performance.now();
             this.decrypter.decrypt(
