@@ -8,7 +8,6 @@ import {logger} from '../utils/logger';
 class Decrypter {
   constructor(hls) {
     this.hls = hls;
-    this.decryptor = new AESDecryptor();
     try {
       const browserCrypto = window ? window.crypto : crypto;
       this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
@@ -24,6 +23,9 @@ class Decrypter {
   decrypt(data, key, iv, callback) {
     if (this.disableWebCrypto && this.hls.config.enableSoftwareAES) {
       logger.log('decrypting by JavaScript Implementation');
+      if (!this.decryptor) {
+        this.decryptor = new AESDecryptor();
+      }
       this.decryptor.expandKey(key);
       callback(this.decryptor.decrypt(data, 0, iv));
     }
@@ -64,6 +66,7 @@ class Decrypter {
 
   destroy() {
     this.decryptor.destroy();
+    this.decryptor = undefined;
   }
 }
 
