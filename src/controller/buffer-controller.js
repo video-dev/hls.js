@@ -303,13 +303,11 @@ class BufferController extends EventHandler {
 
   // https://github.com/dailymotion/hls.js/issues/355
   updateMediaElementDuration() {
-    if (this._levelDuration === null) {
-      return;
-    }
     let media = this.media,
         mediaSource = this.mediaSource,
-        sourceBuffer = this.sourceBuffer;
-    if (!media || !mediaSource || !sourceBuffer || media.readyState === 0 || mediaSource.readyState !== 'open') {
+        sourceBuffer = this.sourceBuffer,
+        levelDuration = this._levelDuration;
+    if (levelDuration === null || !media || !mediaSource || !sourceBuffer || media.readyState === 0 || mediaSource.readyState !== 'open') {
       return;
     }
     for (let type in sourceBuffer) {
@@ -322,14 +320,13 @@ class BufferController extends EventHandler {
       // initialise to the value that the media source is reporting
       this._msDuration = mediaSource.duration;
     }
-    // this._levelDuration was the last value we set.
+    // levelDuration was the last value we set.
     // not using mediaSource.duration as the browser may tweak this value
     // only update mediasource duration if its value increase, this is to avoid
-    // flushing already buffered portion when switching between quality level, as they
-    if (this._levelDuration > this._msDuration) {
-      logger.log(`Updating mediasource duration to ${this._levelDuration}`);
-      mediaSource.duration = this._levelDuration;
-      this._msDuration = this._levelDuration;
+    // flushing already buffered portion when switching between quality level
+    if (levelDuration > this._msDuration && levelDuration > media.duration) {
+      logger.log(`Updating mediasource duration to ${levelDuration.toFixed(3)}`);
+      this._msDuration = mediaSource.duration = levelDuration;
     }
   }
 
