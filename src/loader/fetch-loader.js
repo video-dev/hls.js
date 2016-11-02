@@ -7,6 +7,17 @@
 
 class FetchLoader {
 
+
+  static isSupported() {
+    try {
+        // fetch + stream is broken on Microsoft Edge. Disable for now.
+        // see https://developer.microsoft.com/en-us/microsoft-edge/platform/issues/8196907/
+        return (window.fetch && window.ReadableStream && navigator.userAgent.toLowerCase().indexOf('edge') === -1);
+      } catch (e) {
+        return false;
+      }
+    }
+
   constructor(config) {
     this.fetchSetup = config.fetchSetup;
   }
