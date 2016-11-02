@@ -10,18 +10,11 @@ import FetchLoader from './fetch-loader';
 
 class HTTPLoader {
 
-  constructor(config) {
-    if (!HTTPLoader._loaderClass) {
-      HTTPLoader._selectLoader();
-    }
-    return new HTTPLoader._loaderClass(config);
-  }
-
-  static _selectLoader() {
-    if (FetchLoader.isSupported()) {
-        HTTPLoader._loaderClass = FetchLoader;
+  constructor(config,progressData = false) {
+    if (progressData && FetchLoader.isSupported()) {
+      return new FetchLoader(config);
     } else {
-        HTTPLoader._loaderClass = XhrLoader;
+      return new XhrLoader(config);
     }
   }
 }
