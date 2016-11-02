@@ -174,6 +174,7 @@ configuration parameters could be provided to hls.js upon instantiation of Hls O
       capLevelToPlayerSize: false,
       debug : false,
       defaultAudioCodec : undefined,
+      initialLiveManifestSize: 1,
       maxBufferLength : 30,
       maxMaxBufferLength : 600,
       maxBufferSize : 60*1000*1000,
@@ -253,6 +254,11 @@ a logger object could also be provided for custom logging : ```config.debug=cust
   - ```mp4a.40.2``` (AAC-LC) or 
   - ```mp4a.40.5``` (HE-AAC) or
   - ```undefined``` (guess based on sampling rate)
+
+#### ```initialLiveManifestSize```
+(default 1)
+
+number of segments needed to start a playback of Live stream.
 
 #### ```maxBufferLength```
 (default 30s)
