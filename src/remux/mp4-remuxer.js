@@ -372,10 +372,11 @@ class MP4Remuxer {
   }
 
   remuxAudio(track, timeOffset, contiguous,accurateTimeOffset) {
-    let pesTimeScale = this.PES_TIMESCALE,
-        mp4timeScale = track.timescale,
-        pes2mp4ScaleFactor = pesTimeScale/mp4timeScale,
-        expectedSampleDuration = track.timescale * 1024 / track.audiosamplerate;
+    const pesTimeScale = this.PES_TIMESCALE,
+          mp4timeScale = track.timescale,
+          pes2mp4ScaleFactor = pesTimeScale/mp4timeScale,
+          expectedSampleDuration = track.timescale * 1024 / track.audiosamplerate,
+          pesFrameDuration = expectedSampleDuration * pes2mp4ScaleFactor;
     var view,
         offset = 8,
         aacSample, mp4Sample,
@@ -385,7 +386,8 @@ class MP4Remuxer {
         pts, dts, ptsnorm, dtsnorm,
         samples = [],
         samples0 = [],
-        fillFrame, newStamp;
+        fillFrame, newStamp,
+        nextAacPts;
 
     track.samples.sort(function(a, b) {
       return (a.pts-b.pts);
@@ -394,26 +396,32 @@ class MP4Remuxer {
 
     // for audio samples, also consider consecutive fragments as being contiguous (even if a level switch occurs),
     // for sake of clarity:
-    // consecutive fragments are frags with less than 100ms gaps between new time offset and next expected PTS
+    // consecutive fragments are frags with
+    //  - less than 100ms gaps between new time offset and next expected PTS OR
+    //  - less than 20 audio frames distance
     // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
     // this helps ensuring audio continuity
     // and this also avoids audio glitches/cut when switching quality, or reporting wrong duration on first audio frame
 
-    contiguous |= (samples0.length && this.nextAacPts && Math.abs(timeOffset-this.nextAacPts/pesTimeScale) < 0.1);
+    nextAacPts = this.nextAacPts;
+    contiguous |= (samples0.length && nextAacPts &&
+                   (Math.abs(timeOffset-nextAacPts/pesTimeScale) < 0.1 ||
+                    Math.abs((samples0[0].pts-nextAacPts)) < 20*pesFrameDuration)
+                    );
 
-    let nextAacPts = (contiguous ? this.nextAacPts : timeOffset*pesTimeScale);
-
+    if (!contiguous) {
+      // if fragments are not contiguous, let's use timeOffset to compute next AAC PTS
+      nextAacPts = timeOffset*pesTimeScale;
+    }
     // If the audio track is missing samples, the frames seem to get "left-shifted" within the
     // resulting mp4 segment, causing sync issues and leaving gaps at the end of the audio segment.
     // In an effort to prevent this from happening, we inject frames here where there are gaps.
     // When possible, we inject a silent frame; when that's not possible, we duplicate the last
     // frame.
-    const pesFrameDuration = expectedSampleDuration * pes2mp4ScaleFactor;
-    let nextPtsNorm = nextAacPts;
 
     // only inject/drop audio frames in case time offset is accurate
     if (accurateTimeOffset) {
-      for (let i = 0; i < samples0.length; ) {
+      for (let i = 0, nextPtsNorm = nextAacPts; i < samples0.length; ) {
         // First, let's see how far off this frame is from where we expect it to be
         var sample = samples0[i],
             ptsNorm = this._PTSNormalize(sample.pts - this._initDTS, nextAacPts),
