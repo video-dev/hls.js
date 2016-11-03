@@ -6473,9 +6473,23 @@ var TSDemuxer = function () {
                 offset += data[offset] + 1;
               }
               var parsedPIDs = parsePMT(data, offset);
-              avcId = avcTrack.id = parsedPIDs.avc;
-              aacId = aacTrack.id = parsedPIDs.aac;
-              id3Id = id3Track.id = parsedPIDs.id3;
+
+              // only update track id if track PID found while parsing PMT
+              // this is to avoid resetting the PID to -1 in case
+              // track PID transiently disappears from the stream
+              // this could happen in case of transient missing audio samples for example
+              avcId = parsedPIDs.avc;
+              if (avcId > 0) {
+                avcTrack.id = avcId;
+              }
+              aacId = parsedPIDs.aac;
+              if (aacId > 0) {
+                aacTrack.id = aacId;
+              }
+              id3Id = parsedPIDs.id3;
+              if (id3Id > 0) {
+                id3Track.id = id3Id;
+              }
               if (unknownPIDs && !pmtParsed) {
                 _logger.logger.log('reparse from beginning');
                 unknownPIDs = false;
@@ -10263,12 +10277,12 @@ var MP4Remuxer = function () {
       var pesTimeScale = this.PES_TIMESCALE,
           mp4timeScale = track.timescale ? track.timescale : track.audiosamplerate,
           pes2mp4ScaleFactor = pesTimeScale / mp4timeScale,
+          nextAacPts = this.nextAacPts,
 
 
       // sync with video's timestamp
-      startDTS = videoData.startDTS * pesTimeScale + this._initDTS,
+      startDTS = (nextAacPts !== undefined ? nextAacPts : videoData.startDTS * pesTimeScale) + this._initDTS,
           endDTS = videoData.endDTS * pesTimeScale + this._initDTS,
-
 
       // one sample's duration value
       sampleDuration = 1024,
@@ -10282,6 +10296,7 @@ var MP4Remuxer = function () {
       // silent frame
       silentFrame = _aac2.default.getSilentFrame(track.channelCount);
 
+      _logger.logger.warn('remux empty Audio');
       // Can't remux if we can't generate a silent frame...
       if (!silentFrame) {
         _logger.logger.trace('Unable to remuxEmptyAudio since we were unable to get a silent frame for given audio codec!');
