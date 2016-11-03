@@ -794,8 +794,12 @@ class MP4Remuxer {
                 ? track.timescale
                 : track.audiosamplerate,
             pes2mp4ScaleFactor = pesTimeScale / mp4timeScale,
+            nextAacPts = this.nextAacPts,
             // sync with video's timestamp
-            startDTS = videoData.startDTS * pesTimeScale + this._initDTS,
+            startDTS =
+                (nextAacPts !== undefined
+                    ? nextAacPts
+                    : videoData.startDTS * pesTimeScale) + this._initDTS,
             endDTS = videoData.endDTS * pesTimeScale + this._initDTS,
             // one sample's duration value
             sampleDuration = 1024,
@@ -805,6 +809,7 @@ class MP4Remuxer {
             // silent frame
             silentFrame = AAC.getSilentFrame(track.channelCount);
 
+        logger.warn('remux empty Audio');
         // Can't remux if we can't generate a silent frame...
         if (!silentFrame) {
             logger.trace(
