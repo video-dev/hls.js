@@ -48,6 +48,8 @@
     this.aacOverFlow = null;
     this.aacLastPTS = null;
     this.avcSample = null;
+    this.data = [];
+    this.len = 0;
     this.remuxer.switchLevel();
   }
 
@@ -57,13 +59,13 @@
   }
 
   // feed incoming data to the front of the parsing pipeline
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
+  append(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
     var start, len = data.length, stt, pid, atf, offset,pes,
         codecsOnly = this.remuxer.passthrough,
         unknownPIDs = false;
-
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
+    this.timeOffset = timeOffset;
     this._duration = duration;
     this.contiguous = false;
     this.accurateTimeOffset = accurateTimeOffset;
@@ -80,8 +82,17 @@
       this.contiguous = true;
     }
     this.lastSN = sn;
+    this.data.push({start : 0, data : data});
+    this.len += data.length;
+  }
 
-    var pmtParsed = this.pmtParsed,
+
+  notifycomplete() {
+    var len = this.len, stt, pid, atf, offset,pes,
+        codecsOnly = this.remuxer.passthrough,
+        timeOffset = this.timeOffset,
+        unknownPIDs = false,
+        pmtParsed = this.pmtParsed,
         avcTrack = this._avcTrack,
         audioTrack = this._audioTrack,
         id3Track = this._id3Track,
@@ -92,6 +103,8 @@
         avcData = avcTrack.pesData,
         audioData = audioTrack.pesData,
         id3Data = id3Track.pesData,
+        level = this.lastLevel,
+        sn = this.lastSN,
         parsePAT = this._parsePAT,
         parsePMT = this._parsePMT,
         parsePES = this._parsePES,
@@ -102,8 +115,43 @@
 
     // don't parse last TS packet if incomplete
     len -= len % 188;
+    //console.table(this.data);
+
     // loop through TS packets
-    for (start = 0; start < len; start += 188) {
+    for (let i = 0, data = this.data.shift().data, start = 0 ; i < len; i += 188, start += 188) {
+      if( (start + 188) > data.length) {
+        //console.log(`${start}/${start+188}/${data.length}`);
+        if (start < data.length) {
+          let remainingLen = data.length - start,
+              neededLen = 188 - remainingLen,
+              nextChunk = this.data[0],
+              appendedLen = Math.min(nextChunk.data.length,neededLen),
+              newData = new Uint8Array(remainingLen + appendedLen);
+          newData.set(data.subarray(start));
+          if(nextChunk) {
+            newData.set(nextChunk.data.subarray(0, appendedLen), remainingLen);
+            if (newData.length === 188) {
+              nextChunk.start = appendedLen;
+            } else {
+              this.data.shift();
+            }
+            data = newData;
+            start = 0;
+          }
+        } else {
+          data = this.data.shift();
+          if (data) {
+            start = data.start;
+            data = data.data;
+          }
+        }
+      }
+
+      if (start + 188 > data.length) {
+        i-=188;
+        start-=188;
+        continue;
+      }
       if (data[start] === 0x47) {
         stt = !!(data[start + 1] & 0x40);
         // pid is a 13-bit field starting at the last bit of TS[1]
@@ -223,7 +271,7 @@
             break;
         }
       } else {
-        this.observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, id : this.id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47'});
+        this.observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, id : this.id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: `TS packet did not start with 0x47 @ offset ${i}`});
       }
     }
     // try to parse last PES packets
@@ -244,7 +292,7 @@
       audioTrack.pesData = null;
     } else {
       if (audioData && audioData.size) {
-        logger.log('last AAC PES packet truncated,might overlap between fragments');
+        logger.warn('last AAC PES packet truncated,might overlap between fragments');
       }
      // either audioData null or PES truncated, keep it for next frag parsing
       audioTrack.pesData = audioData;
@@ -258,6 +306,7 @@
       id3Track.pesData = id3Data;
     }
     this.remux(level,sn,cc,null,timeOffset,defaultInitPTS);
+    this.len = 0;
   }
 
   remux(level, sn, cc, data, timeOffset,defaultInitPTS) {

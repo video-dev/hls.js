@@ -37,7 +37,7 @@ import ID3 from '../demux/id3';
 
 
   // feed incoming data to the front of the parsing pipeline
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset, defaultInitPTS) {
+  append(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset, defaultInitPTS) {
     var track,
         id3 = new ID3(data),
         pts = 90*id3.timeStamp,

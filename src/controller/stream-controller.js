@@ -36,6 +36,7 @@ class StreamController extends EventHandler {
       Event.MANIFEST_PARSED,
       Event.LEVEL_LOADED,
       Event.KEY_LOADED,
+      Event.FRAG_LOAD_PROGRESS,
       Event.FRAG_LOADED,
       Event.FRAG_LOAD_EMERGENCY_ABORTED,
       Event.FRAG_PARSING_INIT_SEGMENT,
@@ -459,6 +460,7 @@ class StreamController extends EventHandler {
       this.fragCurrent = frag;
       this.startFragRequested = true;
       this.nextLoadPosition = frag.start + frag.duration;
+      this.pendingAppending = 0;
       frag.autoLevel = hls.autoLevelEnabled;
       frag.bitrateTest = this.bitrateTest;
       hls.trigger(Event.FRAG_LOADING, {frag: frag});
@@ -475,7 +477,7 @@ class StreamController extends EventHandler {
     if (this.state !== nextState) {
       const previousState = this.state;
       this._state = nextState;
-      logger.log(`engine state transition from ${previousState} to ${nextState}`);
+      logger.trace(`engine state transition from ${previousState} to ${nextState}`);
       this.hls.trigger(Event.STREAM_STATE_TRANSITION, {previousState, nextState});
     }
   }
@@ -889,10 +891,19 @@ class StreamController extends EventHandler {
     }
   }
 
+  onFragLoadProgress(data) {
+    this.processFragChunk(data,false);
+  }
+
   onFragLoaded(data) {
+    this.processFragChunk(data,true);
+  }
+
+  processFragChunk(data,notifycomplete) {
     var fragCurrent = this.fragCurrent,
-        fragLoaded = data.frag;
-    if (this.state === State.FRAG_LOADING &&
+        fragLoaded = data.frag,
+        state = this.state;
+    if ((state === State.FRAG_LOADING || state === State.PARSING) &&
         fragCurrent &&
         fragLoaded.type === 'main' &&
         fragLoaded.level === fragCurrent.level &&
@@ -900,7 +911,10 @@ class StreamController extends EventHandler {
       let stats = data.stats,
           currentLevel = this.levels[fragCurrent.level],
           details = currentLevel.details;
-      logger.log(`Loaded  ${fragCurrent.sn} of [${details.startSN} ,${details.endSN}],level ${fragCurrent.level}`);
+      if (notifycomplete) {
+        logger.log(`Loaded  ${fragCurrent.sn} of [${details.startSN} ,${details.endSN}],level ${fragCurrent.level}`);
+        this.fragLoadError = 0;
+      }
       // reset frag bitrate test in any case after frag loaded event
       this.bitrateTest = false;
       // if this frag was loaded to perform a bitrate test AND if hls.nextLoadLevel is greater than 0
@@ -913,7 +927,6 @@ class StreamController extends EventHandler {
         this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: fragCurrent, id : 'main'});
         this.tick();
       } else {
-        this.state = State.PARSING;
         // transmux the MPEG-TS data to ISO-BMFF segments
         this.stats = stats;
         let duration = details.totalduration,
@@ -934,18 +947,25 @@ class StreamController extends EventHandler {
             }
           }
         }
-        this.pendingBuffering = -1;
-        logger.log(`Parsing ${sn} of [${details.startSN} ,${details.endSN}],level ${level}, cc ${fragCurrent.cc}`);
+        if (this.state !== State.PARSING) {
+          this.state = State.PARSING;
+          this.pendingBuffering = -1;
+          logger.log(`Parsing ${sn} of [${details.startSN} ,${details.endSN}],level ${level}, cc ${fragCurrent.cc}`);
+        }
         let demuxer = this.demuxer;
         if (!demuxer) {
           demuxer = this.demuxer = new Demuxer(this.hls,'main');
         }
-        // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
-        let accurateTimeOffset = details.PTSKnown || !details.live;
-        demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata, accurateTimeOffset,null);
+        if (data.payload) {
+          // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
+          let accurateTimeOffset = details.PTSKnown || !details.live;
+          demuxer.append(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata, accurateTimeOffset,null);
+        }
+        if (notifycomplete) {
+          demuxer.notifycomplete();
+        }
       }
     }
-    this.fragLoadError = 0;
   }
 
   onFragParsingInitSegment(data) {

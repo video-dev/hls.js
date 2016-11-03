@@ -60,7 +60,7 @@ class Demuxer {
     }
   }
 
-  pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
+  appendDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
     let w = this.w;
     if (w) {
       // post fragment payload as transferable objects (no copy)
@@ -68,12 +68,12 @@ class Demuxer {
     } else {
       let demuxer = this.demuxer;
       if (demuxer) {
-        demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS);
+        demuxer.append(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS);
       }
     }
   }
 
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata,accurateTimeOffset,defaultInitPTS) {
+  append(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata,accurateTimeOffset,defaultInitPTS) {
     if ((data.byteLength > 0) && (decryptdata != null) && (decryptdata.key != null) && (decryptdata.method === 'AES-128')) {
       if (this.decrypter == null) {
         this.decrypter = new Decrypter(this.hls);
@@ -82,10 +82,22 @@ class Demuxer {
       var startTime = performance.now();
       this.decrypter.decrypt(data, decryptdata.key.buffer, decryptdata.iv.buffer, function (decryptedData) {
         localthis.hls.trigger(Event.FRAG_DECRYPTED, { level : level, sn : sn, stats: { tstart: startTime, tdecrypt: performance.now() } });
-        localthis.pushDecrypted(decryptedData, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset,defaultInitPTS);
+        localthis.appendDecrypted(decryptedData, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset,defaultInitPTS);
       });
     } else {
-      this.pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS);
+      this.appendDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS);
+    }
+  }
+
+  notifycomplete() {
+    let w = this.w;
+    if (w) {
+      w.postMessage({cmd: 'complete'});
+    } else {
+      let demuxer = this.demuxer;
+      if (demuxer) {
+        demuxer.notifycomplete();
+      }
     }
   }
 
