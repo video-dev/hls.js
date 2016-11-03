@@ -506,7 +506,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param [stats.total] {number} - total nb of bytes
       @param [stats.bw] {number} - current download bandwidth in bit/s (monitored by ABR controller to control emergency switch down)
       @param context {object} - loader context
-      @param data {string/arraybuffer} - onProgress data (should be defined only if context.progressData === true)
+      @param [data] {string/arraybuffer} - onProgress data (should be defined only if context.progressData === true)
 
       @callback onErrorCallback
       @param error {object} - error data
