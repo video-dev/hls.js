@@ -183,9 +183,23 @@
               offset += data[offset] + 1;
             }
             let parsedPIDs = parsePMT(data, offset);
-            avcId = avcTrack.id = parsedPIDs.avc;
-            aacId = aacTrack.id = parsedPIDs.aac;
-            id3Id = id3Track.id = parsedPIDs.id3;
+
+            // only update track id if track PID found while parsing PMT
+            // this is to avoid resetting the PID to -1 in case
+            // track PID transiently disappears from the stream
+            // this could happen in case of transient missing audio samples for example
+            avcId = parsedPIDs.avc;
+            if (avcId > 0) {
+              avcTrack.id = avcId;
+            }
+            aacId = parsedPIDs.aac;
+            if (aacId > 0) {
+              aacTrack.id = aacId;
+            }
+            id3Id = parsedPIDs.id3;
+            if (id3Id > 0) {
+              id3Track.id = id3Id;
+            }
             if (unknownPIDs && !pmtParsed) {
               logger.log('reparse from beginning');
               unknownPIDs = false;
