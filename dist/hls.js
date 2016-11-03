@@ -3106,9 +3106,9 @@ var StreamController = function (_EventHandler) {
   }, {
     key: '_fetchPayloadOrEos',
     value: function _fetchPayloadOrEos(_ref) {
-      var pos = _ref.pos,
-          bufferInfo = _ref.bufferInfo,
-          levelDetails = _ref.levelDetails;
+      var pos = _ref.pos;
+      var bufferInfo = _ref.bufferInfo;
+      var levelDetails = _ref.levelDetails;
 
       var fragPrevious = this.fragPrevious,
           level = this.level,
@@ -3150,13 +3150,13 @@ var StreamController = function (_EventHandler) {
   }, {
     key: '_ensureFragmentAtLivePoint',
     value: function _ensureFragmentAtLivePoint(_ref2) {
-      var levelDetails = _ref2.levelDetails,
-          bufferEnd = _ref2.bufferEnd,
-          start = _ref2.start,
-          end = _ref2.end,
-          fragPrevious = _ref2.fragPrevious,
-          fragments = _ref2.fragments,
-          fragLen = _ref2.fragLen;
+      var levelDetails = _ref2.levelDetails;
+      var bufferEnd = _ref2.bufferEnd;
+      var start = _ref2.start;
+      var end = _ref2.end;
+      var fragPrevious = _ref2.fragPrevious;
+      var fragments = _ref2.fragments;
+      var fragLen = _ref2.fragLen;
 
       var config = this.hls.config,
           media = this.media;
@@ -3215,13 +3215,13 @@ var StreamController = function (_EventHandler) {
   }, {
     key: '_findFragment',
     value: function _findFragment(_ref3) {
-      var start = _ref3.start,
-          fragPrevious = _ref3.fragPrevious,
-          fragLen = _ref3.fragLen,
-          fragments = _ref3.fragments,
-          bufferEnd = _ref3.bufferEnd,
-          end = _ref3.end,
-          levelDetails = _ref3.levelDetails;
+      var start = _ref3.start;
+      var fragPrevious = _ref3.fragPrevious;
+      var fragLen = _ref3.fragLen;
+      var fragments = _ref3.fragments;
+      var bufferEnd = _ref3.bufferEnd;
+      var end = _ref3.end;
+      var levelDetails = _ref3.levelDetails;
 
       var config = this.hls.config;
 
@@ -3290,11 +3290,11 @@ var StreamController = function (_EventHandler) {
   }, {
     key: '_loadFragmentOrKey',
     value: function _loadFragmentOrKey(_ref4) {
-      var frag = _ref4.frag,
-          level = _ref4.level,
-          levelDetails = _ref4.levelDetails,
-          pos = _ref4.pos,
-          bufferEnd = _ref4.bufferEnd;
+      var frag = _ref4.frag;
+      var level = _ref4.level;
+      var levelDetails = _ref4.levelDetails;
+      var pos = _ref4.pos;
+      var bufferEnd = _ref4.bufferEnd;
 
       var hls = this.hls,
           config = hls.config;
@@ -5054,6 +5054,9 @@ var AACDemuxer = function () {
     value: function insertDiscontinuity() {
       this._aacTrack = { container: 'audio/adts', type: 'audio', id: -1, sequenceNumber: 0, samples: [], len: 0 };
     }
+
+    // Source for probe info - https://wiki.multimedia.cx/index.php?title=ADTS
+
   }, {
     key: 'push',
 
@@ -5062,7 +5065,7 @@ var AACDemuxer = function () {
     value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset) {
       var track,
           id3 = new _id2.default(data),
-          pts = 90 * id3.timeStamp,
+          pts = 90 * id3.timeStamp || timeOffset * 90000,
           config,
           frameLength,
           frameDuration,
@@ -5092,9 +5095,9 @@ var AACDemuxer = function () {
       this.lastSN = sn;
       this.lastLevel = level;
 
-      // look for ADTS header (0xFFFx)
-      for (offset = id3.length, len = data.length; offset < len - 1; offset++) {
-        if (data[offset] === 0xff && (data[offset + 1] & 0xf0) === 0xf0) {
+      // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
+      for (offset = id3.length || 0, len = data.length; offset < len - 1; offset++) {
+        if (data[offset] === 0xff && (data[offset + 1] & 0xf6) === 0xf0) {
           break;
         }
       }
@@ -5144,17 +5147,14 @@ var AACDemuxer = function () {
   }], [{
     key: 'probe',
     value: function probe(data) {
-      // check if data contains ID3 timestamp and ADTS sync worc
       var id3 = new _id2.default(data),
           offset,
           len;
-      if (id3.hasTimeStamp) {
-        // look for ADTS header (0xFFFx)
-        for (offset = id3.length, len = data.length; offset < len - 1; offset++) {
-          if (data[offset] === 0xff && (data[offset + 1] & 0xf0) === 0xf0) {
-            //logger.log('ADTS sync word found !');
-            return true;
-          }
+      for (offset = id3.length || 0, len = data.length; offset < len - 1; offset++) {
+        // ADTS Header is | 1111 1111 | 1111 X00X | where X can be either 0 or 1
+        if (data[offset] === 0xff && (data[offset + 1] & 0xf6) === 0xf0) {
+          //logger.log('ADTS sync word found !');
+          return true;
         }
       }
       return false;
