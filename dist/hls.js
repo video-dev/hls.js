@@ -4971,8 +4971,10 @@ var Decrypter = function () {
   }, {
     key: 'destroy',
     value: function destroy() {
-      this.decryptor.destroy();
-      this.decryptor = undefined;
+      if (this.decryptor) {
+        this.decryptor.destroy();
+        this.decryptor = undefined;
+      }
     }
   }]);
 
