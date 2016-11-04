@@ -101,6 +101,8 @@ class FetchLoader {
               stats = this.stats,
               context = this.context;
           if (done) {
+            stats.total = stats.loaded;
+            stats.tload = Math.max(stats.tfirst,performance.now());
             callbacks.onSuccess({url :this.targetURL},stats,context);
           } else {
             stats.loaded += value.length;
