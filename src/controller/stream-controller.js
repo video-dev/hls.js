@@ -1310,7 +1310,10 @@ class StreamController extends EventHandler {
             hls.trigger(Event.LEVEL_PTS_UPDATED, {
                 details: level.details,
                 level: this.level,
-                drift: drift
+                drift: drift,
+                type: data.type,
+                start: data.startPTS,
+                end: data.endPTS
             });
 
             // has remuxer dropped video frames located before first keyframe ?
