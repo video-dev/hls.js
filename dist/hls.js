@@ -4544,7 +4544,7 @@ var TimelineController = function (_EventHandler) {
     value: function onFragParsingUserdata(data) {
       // push all of the CEA-708 messages into the interpreter
       // immediately. It will create the proper timestamps based on our PTS value
-      if (this.enabled) {
+      if (this.enabled && this.config.enableCEA708Captions) {
         for (var i = 0; i < data.samples.length; i++) {
           var ccdatas = this.extractCea608Data(data.samples[i].bytes);
           this.cea608Parser.addData(data.samples[i].pts, ccdatas);
@@ -7934,7 +7934,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.7';
+      return '0.6.8';
     }
   }, {
     key: 'Events',
