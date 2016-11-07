@@ -41,6 +41,9 @@ var DemuxerWorker = function (self) {
       case 'demux':
         self.demuxer.append(new Uint8Array(data.data), data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration,data.accurateTimeOffset,data.defaultInitPTS);
         break;
+      case 'complete':
+        self.demuxer.notifycomplete();
+        break;
       default:
         break;
     }
