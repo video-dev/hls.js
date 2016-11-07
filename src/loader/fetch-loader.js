@@ -106,7 +106,7 @@ class FetchLoader {
             callbacks.onSuccess({url :this.targetURL},stats,context);
           } else {
             stats.loaded += value.length;
-            callbacks.onProgress(stats, this.context, value);
+            callbacks.onProgress(stats, this.context, value.buffer);
             return this._pump(reader);
           }
         }
