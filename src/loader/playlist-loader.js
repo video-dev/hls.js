@@ -511,7 +511,7 @@ class PlaylistLoader extends EventHandler {
             type: ErrorTypes.NETWORK_ERROR,
             details: details,
             fatal: fatal,
-            url: loader.context.url,
+            url: context.url,
             loader: loader,
             response: response,
             context: context
@@ -544,7 +544,7 @@ class PlaylistLoader extends EventHandler {
             type: ErrorTypes.NETWORK_ERROR,
             details: details,
             fatal: fatal,
-            url: loader.context.url,
+            url: context.url,
             loader: loader,
             context: context
         });
