@@ -84,7 +84,6 @@
     this.len += dataIn.length;
     var len = this.len, stt, pid, atf, offset,pes,
         codecsOnly = this.remuxer.passthrough,
-        timeOffset = this.timeOffset,
         unknownPIDs = false,
         pmtParsed = this.pmtParsed,
         avcTrack = this._avcTrack,
@@ -97,8 +96,6 @@
         avcData = avcTrack.pesData,
         audioData = audioTrack.pesData,
         id3Data = id3Track.pesData,
-        level = this.lastLevel,
-        sn = this.lastSN,
         parsePAT = this._parsePAT,
         parsePMT = this._parsePMT,
         parsePES = this._parsePES,
@@ -258,7 +255,7 @@
               logger.log('reparse from beginning');
               unknownPIDs = false;
               // we set it to the start of the first packet of this data chunk
-              let start = (start % 188) - 188;
+              start = (start % 188) - 188;
               i = -188;
             }
             pmtParsed = this.pmtParsed = true;
@@ -294,10 +291,6 @@
     let avcTrack = this._avcTrack,
         aacTrack = this._aacTrack,
         id3Track = this._id3Track,
-        avcId = avcTrack.id,
-        aacId = aacTrack.id,
-        id3Id = id3Track.id,
-        pmtId = this._pmtId,
         avcData = avcTrack.pesData,
         aacData = aacTrack.pesData,
         id3Data = id3Track.pesData,
