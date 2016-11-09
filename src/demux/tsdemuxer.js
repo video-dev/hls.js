@@ -60,9 +60,6 @@
 
   // feed incoming data to the front of the parsing pipeline
   append(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
-    var start, len = data.length, stt, pid, atf, offset,pes,
-        codecsOnly = this.remuxer.passthrough,
-        unknownPIDs = false;
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
     this.timeOffset = timeOffset;
@@ -81,13 +78,10 @@
     } else if (sn === (this.lastSN+1)) {
       this.contiguous = true;
     }
+    //console.log(`trailer/arrayLen/in:${this.len}/${this.data.length}/${dataIn.length}`);
     this.lastSN = sn;
-    this.data.push({start : 0, data : data});
-    this.len += data.length;
-  }
-
-
-  notifycomplete() {
+    this.data.push({start : 0, data : dataIn});
+    this.len += dataIn.length;
     var len = this.len, stt, pid, atf, offset,pes,
         codecsOnly = this.remuxer.passthrough,
         timeOffset = this.timeOffset,
@@ -113,12 +107,17 @@
         parseMPEGPES = this._parseMPEGPES.bind(this),
         parseID3PES  = this._parseID3PES.bind(this);
 
-    // don't parse last TS packet if incomplete
-    len -= len % 188;
-    //console.table(this.data);
+    if (len < 188) {
+      return;
+    }
+
+    let dataObject = this.data.shift(),
+        data = dataObject.data,
+        start = dataObject.start,
+        i = 0;
 
     // loop through TS packets
-    for (let i = 0, data = this.data.shift().data, start = 0 ; i < len; i += 188, start += 188) {
+    for (i = 0 ; i + 188 <= len; i += 188, start += 188) {
       if( (start + 188) > data.length) {
         //console.log(`${start}/${start+188}/${data.length}`);
         if (start < data.length) {
@@ -258,8 +257,9 @@
             if (unknownPIDs && !pmtParsed) {
               logger.log('reparse from beginning');
               unknownPIDs = false;
-              // we set it to -188, the += 188 in the for loop will reset start to 0
-              start = -188;
+              // we set it to the start of the first packet of this data chunk
+              let start = (start % 188) - 188;
+              i = -188;
             }
             pmtParsed = this.pmtParsed = true;
             break;
@@ -274,6 +274,38 @@
         this.observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, id : this.id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: `TS packet did not start with 0x47 @ offset ${i}`});
       }
     }
+
+    // check if there any remaining bytes left
+    let remainingLen = this.len = len - i;
+    //console.log('parsed/trailer:' + i + '/' + remainingLen);
+    if (remainingLen) {
+      if (this.data.length === 0) {
+        this.data.push({start :data.length - remainingLen , data : data});
+      }
+    }
+    // update tracks with chunk of partial reassembled PES
+    avcTrack.pesData = avcData;
+    aacTrack.pesData = aacData;
+    id3Track.pesData = id3Data;
+  }
+
+
+  notifycomplete() {
+    let avcTrack = this._avcTrack,
+        aacTrack = this._aacTrack,
+        id3Track = this._id3Track,
+        avcId = avcTrack.id,
+        aacId = aacTrack.id,
+        id3Id = id3Track.id,
+        pmtId = this._pmtId,
+        avcData = avcTrack.pesData,
+        aacData = aacTrack.pesData,
+        id3Data = id3Track.pesData,
+        parsePES = this._parsePES,
+        parseAVCPES = this._parseAVCPES.bind(this),
+        parseAACPES = this._parseAACPES.bind(this),
+        parseID3PES  = this._parseID3PES.bind(this),
+        pes;
     // try to parse last PES packets
     if (avcData && (pes = parsePES(avcData))) {
       parseAVCPES(pes,true);
@@ -305,7 +337,8 @@
       // either id3Data null or PES truncated, keep it for next frag parsing
       id3Track.pesData = id3Data;
     }
-    this.remux(level,sn,cc,null,timeOffset,defaultInitPTS);
+    this.remux(this.lastLevel,this.lastSN,null,this.timeOffset,defaultInitPTS);
+    this.data = [];
     this.len = 0;
   }
 
