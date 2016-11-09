@@ -111,7 +111,7 @@ class Hls {
                 enableMP2TPassThrough: false,
                 stretchShortVideoTrack: false,
                 forceKeyFrameOnDiscontinuity: true,
-                abrEwmaFastLive: 5,
+                abrEwmaFastLive: 3,
                 abrEwmaSlowLive: 9,
                 abrEwmaFastVoD: 3,
                 abrEwmaSlowVoD: 9,
