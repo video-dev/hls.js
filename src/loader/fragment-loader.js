@@ -33,7 +33,6 @@ class FragmentLoader extends EventHandler {
         config = this.hls.config,
         progressData = !frag.bitrateTest;
 
-    frag.loaded = 0;
     if (loader) {
       logger.warn(`abort previous fragment loader for type:${type}`);
       loader.abort();
@@ -81,7 +80,6 @@ class FragmentLoader extends EventHandler {
   // data will be used for progressive parsing
   loadprogress(stats, context, data) {
     let frag = context.frag;
-    frag.loaded = stats.loaded;
     this.hls.trigger(Event.FRAG_LOAD_PROGRESS, {frag: frag, stats: stats, payload : data});
   }
 }
