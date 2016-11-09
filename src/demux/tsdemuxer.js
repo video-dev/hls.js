@@ -454,9 +454,9 @@ class TSDemuxer {
         pesPrefix = (frag[0] << 16) + (frag[1] << 8) + frag[2];
         if (pesPrefix === 1) {
             pesLen = (frag[4] << 8) + frag[5];
-            // if PES len is not zero and not matching with total len, stop parsing. PES might be truncated
+            // if PES parsed length is not zero and greater than total received length, stop parsing. PES might be truncated
             // minus 6 : PES header size
-            if (pesLen && pesLen !== stream.size - 6) {
+            if (pesLen && pesLen > stream.size - 6) {
                 return null;
             }
             pesFlags = frag[7];
