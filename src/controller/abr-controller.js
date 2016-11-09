@@ -413,6 +413,7 @@ class AbrController extends EventHandler {
                 avgDuration = levelDetails
                     ? levelDetails.totalduration / levelDetails.fragments.length
                     : currentFragDuration,
+                live = levelDetails ? levelDetails.live : false,
                 adjustedbw;
             // follow algorithm captured from stagefright :
             // https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp
@@ -436,8 +437,9 @@ class AbrController extends EventHandler {
             // if adjusted bw is greater than level bitrate AND
             if (
                 adjustedbw > bitrate &&
-                // fragment fetchDuration unknown or fragment fetchDuration less than max allowed fetch duration, then this level matches
-                (!fetchDuration || fetchDuration < maxFetchDuration)
+                // fragment fetchDuration unknown OR live stream OR fragment fetchDuration less than max allowed fetch duration, then this level matches
+                // we don't account for max Fetch Duration for live streams, this is to avoid switching down when near the edge of live sliding window ...
+                (!fetchDuration || live || fetchDuration < maxFetchDuration)
             ) {
                 // as we are looping from highest to lowest, this will return the best achievable quality level
 
