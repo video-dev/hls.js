@@ -31,7 +31,7 @@ class FetchLoader {
 
 
   load(context, config, callbacks) {
-    let stats = this.stats = {trequest: performance.now(), retry: 0, loaded : 0}, request,
+    let stats = this.stats = {trequest: performance.now(), retry: 0, loaded : 0, chunks : 0}, request,
         initParams = { method: 'GET',
                        mode: 'cors',
                        credentials: 'same-origin'
@@ -86,6 +86,7 @@ class FetchLoader {
             len = responseData.byteLength;
           }
           stats.loaded = stats.total = len;
+          stats.chunks++;
           let response = { url : this.targetURL, data : responseData};
           callbacks.onSuccess(response,stats,context);
         }
@@ -106,6 +107,7 @@ class FetchLoader {
             callbacks.onSuccess({url :this.targetURL},stats,context);
           } else {
             stats.loaded += value.length;
+            stats.chunks++;
             callbacks.onProgress(stats, this.context, value.buffer);
             return this._pump(reader);
           }
