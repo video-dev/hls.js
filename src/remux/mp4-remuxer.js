@@ -406,7 +406,7 @@ class MP4Remuxer {
     nextAacPts = this.nextAacPts;
     contiguous |= (samples0.length && nextAacPts &&
                    (Math.abs(timeOffset-nextAacPts/pesTimeScale) < 0.1 ||
-                    Math.abs((samples0[0].pts-nextAacPts)) < 20*pesFrameDuration)
+                    Math.abs((samples0[0].pts-nextAacPts-this._initDTS)) < 20*pesFrameDuration)
                     );
 
     if (!contiguous) {
