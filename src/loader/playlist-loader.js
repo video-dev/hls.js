@@ -415,28 +415,18 @@ class PlaylistLoader extends EventHandler {
                     });
                 }
                 stats.tparsed = performance.now();
-                if (levelDetails.targetduration && levelDetails.totalduration) {
-                    if (isLevel) {
-                        hls.trigger(Event.LEVEL_LOADED, {
-                            details: levelDetails,
-                            level: level || 0,
-                            id: id || 0,
-                            stats: stats
-                        });
-                    } else {
-                        hls.trigger(Event.AUDIO_TRACK_LOADED, {
-                            details: levelDetails,
-                            id: id,
-                            stats: stats
-                        });
-                    }
+                if (isLevel) {
+                    hls.trigger(Event.LEVEL_LOADED, {
+                        details: levelDetails,
+                        level: level || 0,
+                        id: id || 0,
+                        stats: stats
+                    });
                 } else {
-                    hls.trigger(Event.ERROR, {
-                        type: ErrorTypes.NETWORK_ERROR,
-                        details: ErrorDetails.MANIFEST_PARSING_ERROR,
-                        fatal: true,
-                        url: url,
-                        reason: 'no duration found in level'
+                    hls.trigger(Event.AUDIO_TRACK_LOADED, {
+                        details: levelDetails,
+                        id: id,
+                        stats: stats
                     });
                 }
             } else {
