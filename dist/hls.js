@@ -617,6 +617,7 @@ var AbrController = function (_EventHandler) {
         var levelInfo = levels[i],
             levelDetails = levelInfo.details,
             avgDuration = levelDetails ? levelDetails.totalduration / levelDetails.fragments.length : currentFragDuration,
+            live = levelDetails ? levelDetails.live : false,
             adjustedbw = void 0;
         // follow algorithm captured from stagefright :
         // https://android.googlesource.com/platform/frameworks/av/+/master/media/libstagefright/httplive/LiveSession.cpp
@@ -635,8 +636,9 @@ var AbrController = function (_EventHandler) {
         _logger.logger.trace('level/adjustedbw/bitrate/avgDuration/maxFetchDuration/fetchDuration: ' + i + '/' + Math.round(adjustedbw) + '/' + bitrate + '/' + avgDuration + '/' + maxFetchDuration + '/' + fetchDuration);
         // if adjusted bw is greater than level bitrate AND
         if (adjustedbw > bitrate && (
-        // fragment fetchDuration unknown or fragment fetchDuration less than max allowed fetch duration, then this level matches
-        !fetchDuration || fetchDuration < maxFetchDuration)) {
+        // fragment fetchDuration unknown OR live stream OR fragment fetchDuration less than max allowed fetch duration, then this level matches
+        // we don't account for max Fetch Duration for live streams, this is to avoid switching down when near the edge of live sliding window ...
+        !fetchDuration || live || fetchDuration < maxFetchDuration)) {
           // as we are looping from highest to lowest, this will return the best achievable quality level
           return i;
         }
@@ -2039,6 +2041,12 @@ var StreamController = function (_EventHandler) {
 
             // in case of live playlist we need to ensure that requested position is not located before playlist start
             if (levelDetails.live) {
+
+              if (fragLen < config.initialLiveManifestSize) {
+                _logger.logger.warn('Can not start playback of a level, reason: not enough fragments ' + fragLen + ' < ' + config.initialLiveManifestSize);
+                break;
+              }
+
               // check if requested position is within seekable boundaries :
               //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${media.seeking}`);
               var maxLatency = config.liveMaxLatencyDuration !== undefined ? config.liveMaxLatencyDuration : config.liveMaxLatencyDurationCount * levelDetails.targetduration;
@@ -6224,6 +6232,7 @@ var Hls = function () {
           startPosition: -1,
           debug: false,
           capLevelToPlayerSize: false,
+          initialLiveManifestSize: 1,
           maxBufferLength: 30,
           maxBufferSize: 60 * 1000 * 1000,
           maxBufferHole: 0.5,
@@ -6262,12 +6271,12 @@ var Hls = function () {
           timelineController: _timelineController2.default,
           enableCEA708Captions: true,
           enableMP2TPassThrough: false,
-          abrEwmaFastLive: 5,
+          abrEwmaFastLive: 3,
           abrEwmaSlowLive: 9,
           abrEwmaFastVoD: 3,
           abrEwmaSlowVoD: 9,
           abrEwmaDefaultEstimate: 5e5, // 500 kbps
-          abrBandWidthFactor: 0.8,
+          abrBandWidthFactor: 0.95,
           abrBandWidthUpFactor: 0.7,
           maxStarvationDelay: 4,
           maxLoadingDelay: 4
