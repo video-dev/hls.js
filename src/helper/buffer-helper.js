@@ -101,8 +101,8 @@ class BufferHelper {
         }
         return {
             len: bufferLen,
-            start: bufferStart,
-            end: bufferEnd,
+            start: bufferStart || 0,
+            end: bufferEnd || 0,
             nextStart: bufferStartNext
         };
     }
