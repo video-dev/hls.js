@@ -7953,7 +7953,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.8';
+      return '0.6.9';
     }
   }, {
     key: 'Events',
@@ -11242,12 +11242,32 @@ var CaptionScreen = function () {
         }
     }, {
         key: 'setPAC',
-        value: function setPAC(pacData) {
+        value: function setPAC(pacData, lastOutputScreen) {
             logger.log('INFO', 'pacData = ' + JSON.stringify(pacData));
             var newRow = pacData.row - 1;
             if (this.nrRollUpRows && newRow < this.nrRollUpRows - 1) {
                 newRow = this.nrRollUpRows - 1;
             }
+
+            if (this.currRow !== newRow) {
+                //clear all rows first
+                for (var i = 0; i < NR_ROWS; i++) {
+                    this.rows[i].clear();
+                }
+
+                //Copy this.nrRollUpRows rows from lastOutputScreen and place it in the newRow location
+                //topRowIndex - the start of rows to copy (inclusive index)
+                var topRowIndex = this.currRow + 1 - this.nrRollUpRows;
+                //We only copy if the last position was already shown.
+                //We use the cueStartTime to check this.
+                var prevLineTime = lastOutputScreen.rows[topRowIndex].cueStartTime;
+                if (prevLineTime && prevLineTime < logger.time) {
+                    for (i = 0; i < this.nrRollUpRows; i++) {
+                        this.rows[newRow - this.nrRollUpRows + i + 1].copy(lastOutputScreen.rows[topRowIndex + i]);
+                    }
+                }
+            }
+
             this.currRow = newRow;
             var row = this.rows[this.currRow];
             if (pacData.indent !== null) {
@@ -11380,7 +11400,7 @@ var Cea608Channel = function () {
     }, {
         key: 'setPAC',
         value: function setPAC(pacData) {
-            this.writeScreen.setPAC(pacData);
+            this.writeScreen.setPAC(pacData, this.lastOutputScreen);
         }
     }, {
         key: 'setBkgData',
@@ -11400,6 +11420,7 @@ var Cea608Channel = function () {
             } else {
                 this.writeScreen = this.displayedMemory;
                 this.writeScreen.reset();
+                this.lastOutputScreen.reset();
             }
             if (this.mode !== 'MODE_ROLL-UP') {
                 this.displayedMemory.nrRollUpRows = null;
@@ -12000,6 +12021,8 @@ var Cues = {
             indenting = false;
           }
         }
+        //To be used for cleaning-up orphaned roll-up captions
+        row.cueStartTime = startTime;
         cue = new VTTCue(startTime, endTime, text.trim());
 
         if (indent >= 16) {
