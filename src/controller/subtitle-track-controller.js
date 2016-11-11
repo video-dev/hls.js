@@ -28,15 +28,17 @@ class SubtitleTrackController extends EventHandler {
   onMediaAttached(data) {
     this.media = data.media;
 
-    this.media.textTracks.addEventListener('change', (event => {
+    this.media.textTracks.addEventListener('change', () => {
       let trackId = -1;
       let tracks = this.media.textTracks;
       for(let id = 0; id< tracks.length; id++) {
-        if(tracks[id].mode === "showing") trackId = id;
+        if(tracks[id].mode === 'showing') {
+          trackId = id;
+        }
       }
-      // Setting current subtitleTrack will envoke code.
+      // Setting current subtitleTrack will invoke code.
       this.subtitleTrack = trackId;
-    }));
+    });
   }
 
   onMediaDetaching() {
@@ -64,7 +66,6 @@ class SubtitleTrackController extends EventHandler {
       if(track.default) {
         this.subtitleTrack = track.id;
         defaultFound = true;
-        return;
       }
     });
   }

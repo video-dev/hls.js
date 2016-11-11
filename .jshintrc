@@ -28,6 +28,8 @@
     "crypto"      : true,
     "fetch"       : true,
     "Request"     : true,
-    "Headers"     : true
+    "Headers"     : true,
+    "WebVTT"      : true,
+    "escape"      : true
   }
 }
