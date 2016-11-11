@@ -47,6 +47,18 @@ module.exports = {
   AUDIO_TRACK_LOADING: 'hlsAudioTrackLoading',
   // fired when an audio track loading  finishes - data: { details : levelDetails object, id : audio track id, stats : { trequest, tfirst, tload, mtime} }
   AUDIO_TRACK_LOADED: 'hlsAudioTrackLoaded',
+  // fired to notify that subtitle track lists has been updated data: { subtitleTracks : subtitleTracks}
+  SUBTITLE_TRACKS_UPDATED: 'hlsSubtitleTracksUpdated',
+  // fired when an subtitle track switch occurs - data: {  id : subtitle track id}
+  SUBTITLE_TRACK_SWITCH: 'hlsSubtitleTrackSwitch',
+  // fired when an subtitle track loading starts - data: { url : subtitle track URL  id : subtitle track id}
+  SUBTITLE_TRACK_LOADING: 'hlsSubtitleTrackLoading',
+  // fired when an subtitle track loading  finishes - data: { details : levelDetails object, id : subtitle track id, stats : { trequest, tfirst, tload, mtime} }
+  SUBTITLE_TRACK_LOADED: 'hlsSubtitleTrackLoaded',
+  // fired when a subtitle fragment has been processed - data: { success : boolean, frag : the processed frag}
+  SUBTITLE_FRAG_PROCESSED: 'hlsSubtitleFragProcessed',
+  // fired when the first timestamp is found. Used for synchronising WebVTT subtitles.
+  INIT_PTS_FOUND: 'hlsInitPtsFound',
   // fired when a fragment loading starts - data: { frag : fragment object}
   FRAG_LOADING: 'hlsFragLoading',
   // fired when a fragment loading is progressing - data: { frag : fragment object, { trequest, tfirst, loaded}}
@@ -55,6 +67,10 @@ module.exports = {
   FRAG_LOAD_EMERGENCY_ABORTED: 'hlsFragLoadEmergencyAborted',
   // fired when a fragment loading is completed - data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length}}
   FRAG_LOADED: 'hlsFragLoaded',
+  // fired when a fragment has started decrypting - data: { level : levelId, sn : sequence number }
+  FRAG_DECRYPT_STARTED: 'hlsFragDecryptStarted',
+  // fired when a fragment has finished decrypting - data: { level : levelId, sn : sequence number }
+  FRAG_DECRYPTED: 'hlsFragDecrypted',
   // fired when Init Segment has been extracted from fragment - data: { id : demuxer id, level : levelId, sn : sequence number, moov : moov MP4 box, codecs : codecs found while parsing fragment}
   FRAG_PARSING_INIT_SEGMENT: 'hlsFragParsingInitSegment',
   // fired when parsing sei text is completed - data: { id : demuxer id, , level : levelId, sn : sequence number, samples : [ sei samples pes ] }

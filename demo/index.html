@@ -48,6 +48,7 @@ header {
   <title>hls.js demo</title>
 <link rel="icon" type="image/png" href="http://static1.dmcdn.net/images/favicon-32x32.png" sizes="32x32" />
 <link rel="icon" type="image/png" href="http://static1.dmcdn.net/images/favicon-16x16.png" sizes="16x16" />
+<script type="text/javascript" src="vtt.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
@@ -460,6 +461,17 @@ $(document).ready(function() {
           stats.manualLevelLast = level;
         }
         this.levelLastAuto = autoLevel;
+       });
+
+       hls.on(Hls.Events.FRAG_DECRYPTED,function(event,data) {
+         if (!stats.fragDecrypted) {
+           stats.fragDecrypted = 0;
+           this.totalDecryptTime = 0;
+           stats.fragAvgDecryptTime = 0;
+         }
+         stats.fragDecrypted++;
+         this.totalDecryptTime += data.stats.tdecrypt - data.stats.tstart;
+         stats.fragAvgDecryptTime = this.totalDecryptTime / stats.fragDecrypted;
        });
 
        hls.on(Hls.Events.FRAG_LOAD_EMERGENCY_ABORTED,function(event,data) {
