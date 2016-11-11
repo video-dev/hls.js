@@ -5,6 +5,19 @@
 
 class BufferHelper {
 
+
+  static isBuffered(media,position) {
+    if (media) {
+      let buffered = media.buffered;
+      for (let i = 0; i < buffered.length; i++) {
+        if (position >= buffered.start(i) && position <= buffered.end(i)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   static bufferInfo(media, pos,maxHoleDuration) {
     if (media) {
       var vbuffered = media.buffered, buffered = [],i;

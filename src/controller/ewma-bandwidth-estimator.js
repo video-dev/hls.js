@@ -30,16 +30,22 @@ class EwmaBandWidthEstimator {
     this.slow_.sample(weight,bandwidth);
   }
 
+  canEstimate() {
+    let fast = this.fast_;
+    return (fast && fast.getTotalWeight() >= this.minWeight_);
+  }
+
 
   getEstimate() {
-    if (!this.fast_ || !this.slow_ || this.fast_.getTotalWeight() < this.minWeight_) {
+    if (this.canEstimate()) {
+      //console.log('slow estimate:'+ Math.round(this.slow_.getEstimate()));
+      //console.log('fast estimate:'+ Math.round(this.fast_.getEstimate()));
+      // Take the minimum of these two estimates.  This should have the effect of
+      // adapting down quickly, but up more slowly.
+      return Math.min(this.fast_.getEstimate(),this.slow_.getEstimate());
+    } else {
       return this.defaultEstimate_;
     }
-    //console.log('slow estimate:'+ Math.round(this.slow_.getEstimate()));
-    //console.log('fast estimate:'+ Math.round(this.fast_.getEstimate()));
-    // Take the minimum of these two estimates.  This should have the effect of
-    // adapting down quickly, but up more slowly.
-    return Math.min(this.fast_.getEstimate(),this.slow_.getEstimate());
   }
 
   destroy() {

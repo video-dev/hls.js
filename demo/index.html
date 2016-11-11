@@ -58,7 +58,12 @@ header {
 <body>
   <div class="header-container">
     <header class="wrapper clearfix">
-      <h1 class="title"><a target=_blank href="https://github.com/dailymotion/hls.js">hls.js</a> demo page</h1>
+      <h1>
+        <a target="_blank" href="https://github.com/dailymotion/hls.js">
+          <img src="https://cloud.githubusercontent.com/assets/616833/19739063/e10be95a-9bb9-11e6-8100-2896f8500138.png"/>
+        </a>
+      </h1>
+      <h2 class="title">demo page</h2>
     </header>
   </div>
 
@@ -230,7 +235,7 @@ $(document).ready(function() {
    $('#levelCapping').val(levelCapping);
    $('#defaultAudioCodec').val(defaultAudioCodec || "undefined");
 
-   $('h1').append(' <a target=_blank href=https://github.com/dailymotion/hls.js/releases/tag/v' + Hls.version + '>v' + Hls.version + '</a>');
+   $('h2').append(' <a target=_blank href=https://github.com/dailymotion/hls.js/releases/tag/v' + Hls.version + '>v' + Hls.version + '</a>');
 
 });
 
@@ -456,6 +461,17 @@ $(document).ready(function() {
           stats.manualLevelLast = level;
         }
         this.levelLastAuto = autoLevel;
+       });
+
+       hls.on(Hls.Events.FRAG_DECRYPTED,function(event,data) {
+         if (!stats.fragDecrypted) {
+           stats.fragDecrypted = 0;
+           this.totalDecryptTime = 0;
+           stats.fragAvgDecryptTime = 0;
+         }
+         stats.fragDecrypted++;
+         this.totalDecryptTime += data.stats.tdecrypt - data.stats.tstart;
+         stats.fragAvgDecryptTime = this.totalDecryptTime / stats.fragDecrypted;
        });
 
        hls.on(Hls.Events.FRAG_LOAD_EMERGENCY_ABORTED,function(event,data) {

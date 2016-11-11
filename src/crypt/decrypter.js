@@ -1,79 +1,62 @@
-/*
- * AES128 decryption.
- */
+import AESCrypto from './aes-crypto';
+import FastAESKey from './fast-aes-key';
+import AESDecryptor from './aes-decryptor';
 
-import AES128Decrypter from './aes128-decrypter';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
 
 class Decrypter {
-
   constructor(hls) {
     this.hls = hls;
     try {
       const browserCrypto = window ? window.crypto : crypto;
       this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
-      this.disableWebCrypto = !this.subtle;
-    } catch (e) {
-      this.disableWebCrypto = true;
-    }
+    } catch (e) {}
+
+    this.disableWebCrypto = !this.supportsWebCrypto();
   }
 
-  destroy() {
+  supportsWebCrypto() {
+    return this.subtle && window.location.protocol === 'https:';
   }
 
   decrypt(data, key, iv, callback) {
     if (this.disableWebCrypto && this.hls.config.enableSoftwareAES) {
-      this.decryptBySoftware(data, key, iv, callback);
-    } else {
-      this.decryptByWebCrypto(data, key, iv, callback);
+      logger.log('decrypting by JavaScript Implementation');
+      if (!this.decryptor) {
+        this.decryptor = new AESDecryptor();
+      }
+      this.decryptor.expandKey(key);
+      callback(this.decryptor.decrypt(data, 0, iv));
     }
-  }
+    else {
+      logger.log('decrypting by WebCrypto API');
 
-  decryptByWebCrypto(data, key, iv, callback) {
-    logger.log('decrypting by WebCrypto API');
+      if (this.key !== key) {
+        this.key = key;
+        this.fastAesKey = new FastAESKey(key);
+      }
 
-    this.subtle.importKey('raw', key, { name : 'AES-CBC', length : 128 }, false, ['decrypt']).
-      then((importedKey) => {
-        this.subtle.decrypt({ name : 'AES-CBC', iv : iv.buffer }, importedKey, data).
-          then(callback).
-          catch ((err) => {
-            this.onWebCryptoError(err, data, key, iv, callback);
-          });
-      }).
-    catch ((err) => {
-      this.onWebCryptoError(err, data, key, iv, callback);
-    });
-  }
-
-  decryptBySoftware(data, key8, iv8, callback) {
-    logger.log('decrypting by JavaScript Implementation');
-
-    var view = new DataView(key8.buffer);
-    var key = new Uint32Array([
-        view.getUint32(0),
-        view.getUint32(4),
-        view.getUint32(8),
-        view.getUint32(12)
-    ]);
-
-    view = new DataView(iv8.buffer);
-    var iv = new Uint32Array([
-        view.getUint32(0),
-        view.getUint32(4),
-        view.getUint32(8),
-        view.getUint32(12)
-    ]);
-
-    var decrypter = new AES128Decrypter(key, iv);
-    callback(decrypter.decrypt(data).buffer);
+      this.fastAesKey.expandKey().
+        then((aesKey) => {
+          // decrypt using web crypto
+          let crypto = new AESCrypto(iv);
+          crypto.decrypt(data, aesKey).
+            then((result) => {
+              callback(result);
+            });
+        }).
+        catch ((err) => {
+          this.onWebCryptoError(err, data, key, iv, callback);
+        });
+    }
   }
 
   onWebCryptoError(err, data, key, iv, callback) {
     if (this.hls.config.enableSoftwareAES) {
       logger.log('disabling to use WebCrypto API');
       this.disableWebCrypto = true;
-      this.decryptBySoftware(data, key, iv, callback);
+      this.decrypt(data, key, iv, callback);
     }
     else {
       logger.error(`decrypting error : ${err.message}`);
@@ -81,6 +64,12 @@ class Decrypter {
     }
   }
 
+  destroy() {
+    if (this.decryptor) {
+      this.decryptor.destroy();
+      this.decryptor = undefined;
+    }
+  }
 }
 
 export default Decrypter;

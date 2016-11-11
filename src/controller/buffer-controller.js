@@ -42,7 +42,11 @@ class BufferController extends EventHandler {
     let audioExpected = data.audio,
         videoExpected = data.video,
         sourceBufferNb = 0;
-    if (audioExpected || videoExpected) {
+    // in case of alt audio 2 BUFFER_CODECS events will be triggered, one per stream controller
+    // sourcebuffers will be created all at once when the expected nb of tracks will be reached
+    // in case alt audio is not used, only one BUFFER_CODEC event will be fired from main stream controller
+    // it will contain the expected nb of source buffers, no need to compute it
+    if (data.altAudio && (audioExpected || videoExpected)) {
       sourceBufferNb = (audioExpected ? 1 : 0) + (videoExpected ? 1 : 0);
       logger.log(`${sourceBufferNb} sourceBuffer(s) expected`);
     }
@@ -119,9 +123,9 @@ class BufferController extends EventHandler {
     // if any buffer codecs pending, check if we have enough to create sourceBuffers
     let pendingTracks = this.pendingTracks,
         pendingTracksNb = Object.keys(pendingTracks).length;
-    // if any pending tracks and (if nb of pending tracks matching expected nb or if unknoown expected nb)
+    // if any pending tracks and (if nb of pending tracks gt or equal than expected nb or if unknown expected nb)
     if (pendingTracksNb && (
-        this.sourceBufferNb === pendingTracksNb ||
+        this.sourceBufferNb <= pendingTracksNb ||
         this.sourceBufferNb === 0)) {
       // ok, let's create them now !
       this.createSourceBuffers(pendingTracks);
@@ -209,7 +213,7 @@ class BufferController extends EventHandler {
         // use levelCodec as first priority
         let codec = track.levelCodec || track.codec;
         let mimeType = `${track.container};codecs=${codec}`;
-        logger.log(`creating sourceBuffer with mimeType:${mimeType}`);
+        logger.log(`creating sourceBuffer(${mimeType})`);
         try {
           let sb = sourceBuffer[trackName] = mediaSource.addSourceBuffer(mimeType);
           sb.addEventListener('updateend', this.onsbue);
@@ -299,13 +303,11 @@ class BufferController extends EventHandler {
 
   // https://github.com/dailymotion/hls.js/issues/355
   updateMediaElementDuration() {
-    if (this._levelDuration === null) {
-      return;
-    }
     let media = this.media,
         mediaSource = this.mediaSource,
-        sourceBuffer = this.sourceBuffer;
-    if (!media || !mediaSource || !sourceBuffer || media.readyState === 0 || mediaSource.readyState !== 'open') {
+        sourceBuffer = this.sourceBuffer,
+        levelDuration = this._levelDuration;
+    if (levelDuration === null || !media || !mediaSource || !sourceBuffer || media.readyState === 0 || mediaSource.readyState !== 'open') {
       return;
     }
     for (let type in sourceBuffer) {
@@ -318,14 +320,13 @@ class BufferController extends EventHandler {
       // initialise to the value that the media source is reporting
       this._msDuration = mediaSource.duration;
     }
-    // this._levelDuration was the last value we set.
+    // levelDuration was the last value we set.
     // not using mediaSource.duration as the browser may tweak this value
     // only update mediasource duration if its value increase, this is to avoid
-    // flushing already buffered portion when switching between quality level, as they
-    if (this._levelDuration > this._msDuration) {
-      logger.log(`Updating mediasource duration to ${this._levelDuration}`);
-      mediaSource.duration = this._levelDuration;
-      this._msDuration = this._levelDuration;
+    // flushing already buffered portion when switching between quality level
+    if (levelDuration > this._msDuration && levelDuration > media.duration) {
+      logger.log(`Updating mediasource duration to ${levelDuration.toFixed(3)}`);
+      this._msDuration = mediaSource.duration = levelDuration;
     }
   }
 
@@ -447,6 +448,8 @@ class BufferController extends EventHandler {
             continue;
           }
           sb = sourceBuffer[type];
+          // we are going to flush buffer, mark source buffer as 'not ended'
+          sb.ended = false;
           if (!sb.updating) {
             for (i = 0; i < sb.buffered.length; i++) {
               bufStart = sb.buffered.start(i);
