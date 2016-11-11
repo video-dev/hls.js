@@ -433,18 +433,19 @@ class PlaylistLoader extends EventHandler {
                         stats: stats
                     });
                 } else {
-                    if (type === 'audioTrack')
+                    if (type === 'audioTrack') {
                         hls.trigger(Event.AUDIO_TRACK_LOADED, {
                             details: levelDetails,
                             id: id,
                             stats: stats
                         });
-                    else if (type === 'subtitleTrack')
+                    } else if (type === 'subtitleTrack') {
                         hls.trigger(Event.SUBTITLE_TRACK_LOADED, {
                             details: levelDetails,
                             id: id,
                             stats: stats
                         });
+                    }
                 }
             } else {
                 let levels = this.parseMasterPlaylist(string, url);

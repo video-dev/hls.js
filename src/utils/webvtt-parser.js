@@ -7,7 +7,9 @@ const cueString2millis = function(timeString) {
                 ? parseInt(timeString.substr(0, timeString.indexOf(':')))
                 : 0;
 
-    if (isNaN(ts) || isNaN(secs) || isNaN(mins) || isNaN(hours)) return -1;
+    if (isNaN(ts) || isNaN(secs) || isNaN(mins) || isNaN(hours)) {
+        return -1;
+    }
 
     ts += 1000 * secs;
     ts += 60 * 1000 * mins;
@@ -19,19 +21,19 @@ const cueString2millis = function(timeString) {
 const WebVTTParser = {
     parse: function(vttByteArray, syncPTS, callBack, errorCallBack) {
         // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
-        let re = /\r\n|\n\r|\n|\r/g,
-            vttLines = String.fromCharCode
-                .apply(null, new Uint8Array(vttByteArray))
-                .trim()
-                .replace(re, '\n')
-                .split('\n'),
-            cueTime = '00:00.000',
-            mpegTs = 0,
-            offsetMillis = 0,
-            cues = [],
-            parsingError = undefined,
-            inHeader = true,
-            VTTCue = window.VTTCue || window.TextTrackCue;
+        let re = /\r\n|\n\r|\n|\r/g;
+        let vttLines = String.fromCharCode
+            .apply(null, new Uint8Array(vttByteArray))
+            .trim()
+            .replace(re, '\n')
+            .split('\n');
+        let cueTime = '00:00.000';
+        let mpegTs = 0;
+        let offsetMillis = 0;
+        let cues = [];
+        let parsingError;
+        let inHeader = true;
+        let VTTCue = window.VTTCue || window.TextTrackCue;
 
         // Create parser object using VTTCue with TextTrackCue fallback on certain browsers.
         let parser = new WebVTT.Parser(
@@ -45,15 +47,13 @@ const WebVTTParser = {
             cue.endTime += offsetMillis / 1000;
             // Fix encoding of special characters. TODO: Test with all sorts of weird characters.
             cue.text = decodeURIComponent(escape(cue.text));
-            if (cue.endTime > 0) cues.push(cue);
+            if (cue.endTime > 0) {
+                cues.push(cue);
+            }
         };
 
         parser.onparsingerror = function(e) {
             parsingError = e;
-        };
-
-        parser.onregion = function(region) {
-            // Region currently not handled.
         };
 
         parser.onflush = function() {
@@ -62,10 +62,6 @@ const WebVTTParser = {
                 return;
             }
             callBack(cues);
-        };
-
-        let parseLine = function(line) {
-            return parser.parse(line + '\n');
         };
 
         // Go through contents line by line.
@@ -80,10 +76,11 @@ const WebVTTParser = {
                         .substr(16)
                         .split(',')
                         .forEach(timestamp => {
-                            if (timestamp.startsWith('LOCAL:'))
+                            if (timestamp.startsWith('LOCAL:')) {
                                 cueTime = timestamp.substr(6);
-                            else if (timestamp.startsWith('MPEGTS:'))
+                            } else if (timestamp.startsWith('MPEGTS:')) {
                                 mpegTs = parseInt(timestamp.substr(7));
+                            }
                         });
                     try {
                         // Calculate subtitle offset in milliseconds.
@@ -94,10 +91,11 @@ const WebVTTParser = {
                         // Calculate cue timing in milliseconds and adjust by MPEGTS converted to milliseconds from 90kHz.
                         offsetMillis =
                             cueString2millis(cueTime) + Math.floor(mpegTs / 90);
-                        if (offsetMillis === -1)
+                        if (offsetMillis === -1) {
                             parsingError = new Error(
                                 `Malformed X-TIMESTAMP-MAP: ${line}`
                             );
+                        }
                     } catch (e) {
                         parsingError = new Error(
                             `Malformed X-TIMESTAMP-MAP: ${line}`
@@ -105,7 +103,9 @@ const WebVTTParser = {
                     }
                     // Return without parsing X-TIMESTAMP-MAP line.
                     return;
-                } else if (line === '') inHeader = false;
+                } else if (line === '') {
+                    inHeader = false;
+                }
             }
             // Parse line by default.
             parser.parse(line + '\n');

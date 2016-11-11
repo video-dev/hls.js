@@ -6,7 +6,6 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import Cea608Parser from '../utils/cea-608-parser';
 import WebVTTParser from '../utils/webvtt-parser';
-import Cues from '../utils/cues';
 import { logger } from '../utils/logger';
 
 class TimelineController extends EventHandler {
@@ -87,7 +86,6 @@ class TimelineController extends EventHandler {
                             self.media.dispatchEvent(e);
                         }
                     }
-
                     self.Cues.newCue(
                         self.textTrack2,
                         startTime,
@@ -103,7 +101,9 @@ class TimelineController extends EventHandler {
 
     // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
     onInitPtsFound(data) {
-        if (typeof this.initPTS === 'undefined') this.initPTS = data.initPTS;
+        if (typeof this.initPTS === 'undefined') {
+            this.initPTS = data.initPTS;
+        }
 
         // Due to asynchrony, initial PTS may arrive later than the first VTT fragments are loaded.
         // Parse any unparsed fragments upon receiving the initial PTS.
@@ -181,11 +181,7 @@ class TimelineController extends EventHandler {
     }
 
     onLevelSwitch() {
-        if (this.hls.currentLevel.closedCaptions === 'NONE') {
-            this.enabled = false;
-        } else {
-            this.enabled = true;
-        }
+        this.enabled = this.hls.currentLevel.closedCaptions !== 'NONE';
     }
 
     onFragLoaded(data) {
@@ -228,18 +224,20 @@ class TimelineController extends EventHandler {
                     },
                     function(e) {
                         // Something went wrong while parsing. Trigger event with success false.
+                        logger.log(`Failed to parse VTT cue: ${e}`);
                         hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {
                             success: false,
                             frag: data.frag
                         });
                     }
                 );
-            } else
+            } else {
                 // In case there is no payload, finish unsuccessfully.
-                hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {
+                this.hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {
                     success: false,
                     frag: data.frag
                 });
+            }
         }
     }
 
@@ -264,7 +262,7 @@ class TimelineController extends EventHandler {
             tmpByte = byteArray[position++];
             ccbyte1 = 0x7f & byteArray[position++];
             ccbyte2 = 0x7f & byteArray[position++];
-            ccValid = (4 & tmpByte) === 0 ? false : true;
+            ccValid = (4 & tmpByte) !== 0;
             ccType = 3 & tmpByte;
 
             if (ccbyte1 === 0 && ccbyte2 === 0) {
