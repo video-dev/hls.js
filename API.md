@@ -179,6 +179,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       capLevelToPlayerSize: false,
       debug: false,
       defaultAudioCodec: undefined,
+      initialLiveManifestSize: 1,
       maxBufferLength: 30,
       maxMaxBufferLength: 600,
       maxBufferSize: 60*1000*1000,
@@ -194,6 +195,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       manifestLoadingMaxRetry: 6,
       manifestLoadingRetryDelay: 500,
       manifestLoadingMaxRetryTimeout : 64000,
+      startLevel: undefined,
       levelLoadingTimeOut: 10000,
       levelLoadingMaxRetry: 6,
       levelLoadingRetryDelay: 500,
@@ -220,7 +222,8 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       abrEwmaSlowVoD: 15.0,
       abrEwmaDefaultEstimate: 500000,
       abrBandWidthFactor: 0.8,
-      abrBandWidthUpFactor: 0.7
+      abrBandWidthUpFactor: 0.7,
+      minAutoBitrate: 0
   };
 
   var hls = new Hls(config);
@@ -269,6 +272,11 @@ A logger object could also be provided for custom logging: `config.debug = custo
   - `mp4a.40.5` (HE-AAC) or
   - `undefined` (guess based on sampling rate)
 
+#### ```initialLiveManifestSize```
+(default 1)
+
+number of segments needed to start a playback of Live stream.
+
 #### `maxBufferLength`
 
 (default: `30` seconds)
@@ -298,8 +306,18 @@ In case playback is stalled, and a buffered range is available upfront, less tha
 hls.js will jump over this buffer hole to reach the beginning of this following buffered range.
 `maxSeekHole` allows to configure this jumpable threshold.
 
-#### `seekHoleNudgeDuration`
+#### ```maxStarvationDelay```
+(default 4s)
 
+ABR algorithm will always try to choose a quality level that should avoid rebuffering.
+In case no quality level with this criteria can be found (lets say for example that buffer length is 1s, but fetching a fragment at lowest quality is predicted to take around 2s ... ie we can forecast around 1s of rebuffering ...) then ABR algorithm will try to find a level that should guarantee less than ```maxStarvationDelay``` of buffering.
+
+#### ```maxLoadingDelay```
+(default 4s)
+
+max video loading delay used in  automatic start level selection : in that mode ABR controller will ensure that video loading time (ie the time to fetch the first fragment at lowest quality level + the time to fetch the fragment at the appropriate quality level is less than ```maxLoadingDelay``` )
+
+#### ```seekHoleNudgeDuration```
 (default 0.01s)
 
 In case playback is still stalling although a seek over buffer hole just occured, hls.js will seek to next buffer start + (number of consecutive stalls * `seekHoleNudgeDuration`) to try to restore playback.
@@ -383,6 +401,12 @@ Enable WebWorker (if available on browser) for TS demuxing/MP4 remuxing, to impr
 (default: `true`)
 
 Enable to use JavaScript version AES decryption for fallback of WebCrypto API.
+
+#### `startLevel`
+
+(default: `undefined`)
+
+When set, use this level as the default hls.startLevel. Keep in mind that the startLevel set with the API takes precedence over config.startLevel configuration parameter.
 
 #### `fragLoadingTimeOut` / `manifestLoadingTimeOut` / `levelLoadingTimeOut`
 
@@ -672,6 +696,12 @@ If `abrBandWidthFactor * bandwidth average < level.bitrate` then ABR can switch 
 
 Scale factor to be applied against measured bandwidth average, to determine whether we can switch up to a higher quality level.
 If `abrBandWidthUpFactor * bandwidth average < level.bitrate` then ABR can switch up to that quality level.
+
+#### `minAutoBitrate`
+(default: `0`)
+
+Return the capping/min bandwidth value that could be used by automatic level selection algorithm.
+Useful when browser or tab of the browser is not in the focus and bandwidth drops 
 
 
 ## Video Binding/Unbinding API

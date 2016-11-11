@@ -1,0 +1,140 @@
+<html>
+  <head>
+    <style>
+      body {
+        background-color: #cccccc;
+      }
+
+      #log {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        margin: 0;
+        color: #ff0000;
+        overflow: hidden;
+        font-size: 20px;
+        z-index: 999;
+      }
+
+      #log .inner {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        margin: 0;
+        padding: 0;
+        background-color: rgba(255, 255, 255, 0.75);
+      }
+
+      #log .inner .line {
+        margin: 0;
+        padding: 3px 15px;
+        border-width: 1px;
+        border-color: #aaaaaa;
+        border-style: none;
+        border-bottom-style: solid;
+        white-space: pre-wrap;
+      }
+    </style>
+    <script src="/dist/hls.js"></script>
+    <script>
+      var video, hls;
+
+      function startStream(streamUrl, callback) {
+        if (Hls.isSupported()) {
+          if (hls) {
+           callback('hlsjsAlreadyInitialised');
+           return;
+          }
+          video = document.getElementById('video');
+          try {
+            hls = new Hls({debug: true});
+            hls.loadSource(streamUrl);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, function() {
+              video.play();
+            });
+            hls.on(Hls.Events.ERROR, function(event, data) {
+              if (data.fatal) {
+                callback(data.details);
+              }
+            });
+            video.onerror = function(event) {
+              callback('video_error_' + video.error.code);
+            };
+          } catch(err) {
+            callback('exception');
+          }
+        } else {
+          callback('notSupported');
+        }
+      }
+
+      function switchToLowestLevel(mode) {
+        switch(mode) {
+          case 'current':
+            hls.currentLevel = 0;
+            break;
+          case 'next':
+            hls.nextLevel = 0;
+            break;
+          case 'load':
+          default:
+            hls.loadLevel = 0;
+            break;
+        }
+      }
+
+      function switchToHighestLevel() {
+        var highestLevel = hls.levels.length-1;
+        switch(mode) {
+          case 'current':
+            hls.currentLevel = highestLevel;
+            break;
+          case 'next':
+            hls.nextLevel = highestLevel;
+            break;
+          case 'load':
+          default:
+            hls.loadLevel = highestLevel;
+            break;
+        }
+      }
+     </script>
+    </head>
+    <body>
+      <video id="video"></video>
+      <div id="log">
+        <div class="inner"></div>
+      </div>
+      <script>
+        (function() {
+          var methods = ["log", "debug", "info", "warn", "error"];
+          methods.forEach(function(methodName) {
+            var original = console[methodName];
+            if (!original) {
+              return;
+            }
+            console[methodName] = function() {
+              append(methodName, Array.prototype.slice.call(arguments).map(JSON.stringify).join(" "));
+              return original.apply(this, arguments);
+            };
+          });
+
+          var log = document.getElementById('log');
+          var inner = log.getElementsByClassName('inner')[0];
+
+          function append(methodName, msg) {
+            var a = (new Date()).toISOString().replace("T", " ").replace("Z", "")+': '+msg;
+            var text = document.createTextNode(a);
+            var line = document.createElement('pre');
+            line.className = "line line-"+methodName;
+            line.appendChild(text);
+            inner.appendChild(line);
+          }
+        })();
+      </script>
+    </body>
+ </html>

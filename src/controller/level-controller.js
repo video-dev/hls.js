@@ -6,6 +6,7 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import {logger} from '../utils/logger';
 import {ErrorTypes, ErrorDetails} from '../errors';
+import BufferHelper from '../helper/buffer-helper';
 
 class LevelController extends EventHandler {
 
@@ -97,7 +98,7 @@ class LevelController extends EventHandler {
           break;
         }
       }
-      hls.trigger(Event.MANIFEST_PARSED, {levels: this._levels, firstLevel: this._firstLevel, stats: data.stats, audio : audioCodecFound, video : videoCodecFound});
+      hls.trigger(Event.MANIFEST_PARSED, {levels: this._levels, firstLevel: this._firstLevel, stats: data.stats, audio : audioCodecFound, video : videoCodecFound, altAudio : data.audioTracks.length > 0});
     } else {
       hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR, fatal: true, url: hls.url, reason: 'no level with compatible codecs found in manifest'});
     }
@@ -130,15 +131,15 @@ class LevelController extends EventHandler {
        clearTimeout(this.timer);
        this.timer = null;
       }
-      this._level = newLevel;
-      logger.log(`switching to level ${newLevel}`);
+      if (this._level !== newLevel) {
+        logger.log(`switching to level ${newLevel}`);
+        this._level = newLevel;
+      }
       this.hls.trigger(Event.LEVEL_SWITCH, {level: newLevel});
       var level = levels[newLevel], levelDetails = level.details;
-       // check if we need to load playlist for this level. don't reload live playlist more than once per second
-      if (!levelDetails ||
-          (levelDetails.live === true && (performance.now() - levelDetails.tload > 1000) )) {
+       // check if we need to load playlist for this level
+      if (!levelDetails || levelDetails.live === true) {
         // level not retrieved yet, or live playlist we need to (re)load it
-        logger.log(`(re)loading playlist for level ${newLevel}`);
         var urlId = level.urlId;
         this.hls.trigger(Event.LEVEL_LOADING, {url: level.url[urlId], level: newLevel, id: urlId});
       }
@@ -171,8 +172,15 @@ class LevelController extends EventHandler {
   }
 
   get startLevel() {
+    // hls.startLevel takes precedence over config.startLevel
+    // if none of these values are defined, fallback on this._firstLevel (first quality level appearing in variant manifest)
     if (this._startLevel === undefined) {
-      return this._firstLevel;
+      let configStartLevel = this.hls.config.startLevel;
+      if (configStartLevel !== undefined) {
+        return configStartLevel;
+      } else {
+        return this._firstLevel;
+      }
     } else {
       return this._startLevel;
     }
@@ -208,7 +216,6 @@ class LevelController extends EventHandler {
     /* try to switch to a redundant stream if any available.
      * if no redundant stream available, emergency switch down (if in auto mode and current level not 0)
      * otherwise, we cannot recover this network error ...
-     * don't raise FRAG_LOAD_ERROR and FRAG_LOAD_TIMEOUT as fatal, as it is handled by mediaController
      */
     if (levelId !== undefined) {
       level = this._levels[levelId];
@@ -228,18 +235,29 @@ class LevelController extends EventHandler {
             // reset this._level so that another call to set level() will retrigger a frag load
             this._level = undefined;
           }
-        // FRAG_LOAD_ERROR and FRAG_LOAD_TIMEOUT are handled by mediaController
-        } else if (details !== ErrorDetails.FRAG_LOAD_ERROR && details !== ErrorDetails.FRAG_LOAD_TIMEOUT) {
-          logger.error(`cannot recover ${details} error`);
-          this._level = undefined;
-          // stopping live reloading timer if any
-          if (this.timer) {
-            clearTimeout(this.timer);
-            this.timer = null;
+          // other errors are handled by stream controller
+        } else if (details === ErrorDetails.LEVEL_LOAD_ERROR ||
+                   details === ErrorDetails.LEVEL_LOAD_TIMEOUT) {
+          let hls = this.hls,
+              media = hls.media,
+            // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
+              mediaBuffered = media && BufferHelper.isBuffered(media,media.currentTime) && BufferHelper.isBuffered(media,media.currentTime+0.5);
+          if (mediaBuffered) {
+            let retryDelay = hls.config.levelLoadingRetryDelay;
+            logger.warn(`level controller,${details}, but media buffered, retry in ${retryDelay}ms`);
+            this.timer = setTimeout(this.ontick,retryDelay);
+          } else {
+            logger.error(`cannot recover ${details} error`);
+            this._level = undefined;
+            // stopping live reloading timer if any
+            if (this.timer) {
+              clearTimeout(this.timer);
+              this.timer = null;
+            }
+            // redispatch same error but with fatal set to true
+            data.fatal = true;
+            hls.trigger(Event.ERROR, data);
           }
-          // redispatch same error but with fatal set to true
-          data.fatal = true;
-          hls.trigger(Event.ERROR, data);
         }
       }
     }

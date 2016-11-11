@@ -3,7 +3,7 @@
 
 Join the discussion: [![Slack Status](https://hlsjs.herokuapp.com/badge.svg)](https://hlsjs.herokuapp.com/)
 
-# hls.js
+# ![hls.js](https://cloud.githubusercontent.com/assets/616833/19739063/e10be95a-9bb9-11e6-8100-2896f8500138.png)
 hls.js is a JavaScript library which implements an [HTTP Live Streaming] client.
 It relies on [HTML5 video][] and [MediaSource Extensions][] for playback.
 
@@ -83,7 +83,10 @@ As of today, it is supported on:
  * Chrome for Desktop 34+
  * Firefox for Android 41+
  * Firefox for Desktop 42+
- * IE11+ for Windows 8.1
+ * IE11+ for Windows 8.1+
+ * Edge for Windows 10+
+ * Opera for Desktop
+ * Vivaldi for Desktop
  * Safari for Mac 8+ (beta)
 
 ## CORS
