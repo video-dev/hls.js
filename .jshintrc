@@ -29,7 +29,6 @@
     "fetch"       : true,
     "Request"     : true,
     "Headers"     : true,
-    "WebVTT"      : true,
     "escape"      : true
   }
 }
