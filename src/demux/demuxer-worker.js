@@ -18,6 +18,11 @@ var DemuxerWorker = function(self) {
     observer.off = function off(event, ...data) {
         observer.removeListener(event, ...data);
     };
+
+    var forwardMessage = function(ev, data) {
+        self.postMessage({ event: ev, data: data });
+    };
+
     self.addEventListener('message', function(ev) {
         var data = ev.data;
         //console.log('demuxer cmd:' + data.cmd);
@@ -35,6 +40,8 @@ var DemuxerWorker = function(self) {
                 } catch (err) {
                     console.warn('demuxerWorker: unable to enable logs');
                 }
+                // signal end of worker init
+                forwardMessage('init', null);
                 break;
             case 'demux':
                 self.demuxer.push(
@@ -45,17 +52,14 @@ var DemuxerWorker = function(self) {
                     data.cc,
                     data.level,
                     data.sn,
-                    data.duration
+                    data.duration,
+                    data.accurateTimeOffset
                 );
                 break;
             default:
                 break;
         }
     });
-
-    var forwardMessage = function(ev, data) {
-        self.postMessage({ event: ev, data: data });
-    };
 
     // forward events to main thread
     observer.on(Event.FRAG_PARSING_INIT_SEGMENT, forwardMessage);

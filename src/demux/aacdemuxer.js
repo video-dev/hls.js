@@ -26,35 +26,40 @@ class AACDemuxer {
         };
     }
 
+    // Source for probe info - https://wiki.multimedia.cx/index.php?title=ADTS
     static probe(data) {
-        // check if data contains ID3 timestamp and ADTS sync worc
         var id3 = new ID3(data),
             offset,
             len;
-        if (id3.hasTimeStamp) {
-            // look for ADTS header (0xFFFx)
-            for (
-                offset = id3.length, len = data.length;
-                offset < len - 1;
-                offset++
-            ) {
-                if (
-                    data[offset] === 0xff &&
-                    (data[offset + 1] & 0xf0) === 0xf0
-                ) {
-                    //logger.log('ADTS sync word found !');
-                    return true;
-                }
+        for (
+            offset = id3.length || 0, len = data.length;
+            offset < len - 1;
+            offset++
+        ) {
+            // ADTS Header is | 1111 1111 | 1111 X00X | where X can be either 0 or 1
+            if (data[offset] === 0xff && (data[offset + 1] & 0xf6) === 0xf0) {
+                //logger.log('ADTS sync word found !');
+                return true;
             }
         }
         return false;
     }
 
     // feed incoming data to the front of the parsing pipeline
-    push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
+    push(
+        data,
+        audioCodec,
+        videoCodec,
+        timeOffset,
+        cc,
+        level,
+        sn,
+        duration,
+        accurateTimeOffset
+    ) {
         var track,
             id3 = new ID3(data),
-            pts = 90 * id3.timeStamp,
+            pts = 90 * id3.timeStamp || timeOffset * 90000,
             config,
             frameLength,
             frameDuration,
@@ -84,13 +89,13 @@ class AACDemuxer {
         this.lastSN = sn;
         this.lastLevel = level;
 
-        // look for ADTS header (0xFFFx)
+        // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
         for (
-            offset = id3.length, len = data.length;
+            offset = id3.length || 0, len = data.length;
             offset < len - 1;
             offset++
         ) {
-            if (data[offset] === 0xff && (data[offset + 1] & 0xf0) === 0xf0) {
+            if (data[offset] === 0xff && (data[offset + 1] & 0xf6) === 0xf0) {
                 break;
             }
         }
@@ -154,15 +159,19 @@ class AACDemuxer {
                 break;
             }
         }
+        var id3Track = id3.payload
+            ? { samples: [{ pts: pts, dts: pts, unit: id3.payload }] }
+            : { samples: [] };
         this.remuxer.remux(
             level,
             sn,
             this._aacTrack,
             { samples: [] },
-            { samples: [{ pts: pts, dts: pts, unit: id3.payload }] },
+            id3Track,
             { samples: [] },
             timeOffset,
-            contiguous
+            contiguous,
+            accurateTimeOffset
         );
     }
 

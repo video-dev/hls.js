@@ -32,6 +32,7 @@ class Hls {
     }
 
     static isSupported() {
+        window.MediaSource = window.MediaSource || window.WebKitMediaSource;
         return (
             window.MediaSource &&
             typeof window.MediaSource.isTypeSupported === 'function' &&
@@ -62,6 +63,7 @@ class Hls {
                 debug: false,
                 capLevelOnFPSDrop: false,
                 capLevelToPlayerSize: false,
+                initialLiveManifestSize: 1,
                 maxBufferLength: 30,
                 maxBufferSize: 60 * 1000 * 1000,
                 maxBufferHole: 0.5,
@@ -80,6 +82,7 @@ class Hls {
                 manifestLoadingMaxRetry: 1,
                 manifestLoadingRetryDelay: 1000,
                 manifestLoadingMaxRetryTimeout: 64000,
+                startLevel: undefined,
                 levelLoadingTimeOut: 10000,
                 levelLoadingMaxRetry: 4,
                 levelLoadingRetryDelay: 1000,
@@ -113,13 +116,16 @@ class Hls {
                 enableMP2TPassThrough: false,
                 stretchShortVideoTrack: false,
                 forceKeyFrameOnDiscontinuity: true,
-                abrEwmaFastLive: 5,
+                abrEwmaFastLive: 3,
                 abrEwmaSlowLive: 9,
-                abrEwmaFastVoD: 4,
-                abrEwmaSlowVoD: 15,
+                abrEwmaFastVoD: 3,
+                abrEwmaSlowVoD: 9,
                 abrEwmaDefaultEstimate: 5e5, // 500 kbps
-                abrBandWidthFactor: 0.8,
-                abrBandWidthUpFactor: 0.7
+                abrBandWidthFactor: 0.95,
+                abrBandWidthUpFactor: 0.7,
+                maxStarvationDelay: 4,
+                maxLoadingDelay: 4,
+                minAutoBitrate: 0
             };
         }
         return Hls.defaultConfig;

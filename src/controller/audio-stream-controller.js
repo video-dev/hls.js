@@ -542,6 +542,8 @@ class AudioStreamController extends EventHandler {
                     details.endSN
                 }],track ${trackId}`
             );
+            // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
+            let accurateTimeOffset = details.PTSKnown || !details.live;
             this.demuxer.push(
                 data.payload,
                 audioCodec,
@@ -551,7 +553,8 @@ class AudioStreamController extends EventHandler {
                 trackId,
                 sn,
                 duration,
-                fragCurrent.decryptdata
+                fragCurrent.decryptdata,
+                accurateTimeOffset
             );
         }
         this.fragLoadError = 0;
@@ -715,15 +718,16 @@ class AudioStreamController extends EventHandler {
                     } else {
                         loadError = 1;
                     }
-                    if (loadError <= this.config.fragLoadingMaxRetry) {
+                    let config = this.config;
+                    if (loadError <= config.fragLoadingMaxRetry) {
                         this.fragLoadError = loadError;
                         // reset load counter to avoid frag loop loading error
                         frag.loadCounter = 0;
-                        // exponential backoff capped to 64s
+                        // exponential backoff capped to config.fragLoadingMaxRetryTimeout
                         var delay = Math.min(
                             Math.pow(2, loadError - 1) *
-                                this.config.fragLoadingRetryDelay,
-                            64000
+                                config.fragLoadingRetryDelay,
+                            config.fragLoadingMaxRetryTimeout
                         );
                         logger.warn(
                             `audioStreamController: frag loading failed, retry in ${delay} ms`

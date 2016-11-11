@@ -87,24 +87,32 @@ class TSDemuxer {
     }
 
     // feed incoming data to the front of the parsing pipeline
-    push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration) {
-        var avcData,
-            aacData,
-            id3Data,
-            start,
+    push(
+        data,
+        audioCodec,
+        videoCodec,
+        timeOffset,
+        cc,
+        level,
+        sn,
+        duration,
+        accurateTimeOffset
+    ) {
+        var start,
             len = data.length,
             stt,
             pid,
             atf,
             offset,
+            pes,
             codecsOnly = this.remuxer.passthrough,
             unknownPIDs = false;
 
         this.audioCodec = audioCodec;
         this.videoCodec = videoCodec;
-        this.timeOffset = timeOffset;
         this._duration = duration;
         this.contiguous = false;
+        this.accurateTimeOffset = accurateTimeOffset;
         if (cc !== this.lastCC) {
             logger.log('discontinuity detected');
             this.insertDiscontinuity();
@@ -120,12 +128,17 @@ class TSDemuxer {
         this.lastSN = sn;
 
         var pmtParsed = this.pmtParsed,
-            avcId = this._avcTrack.id,
-            aacId = this._aacTrack.id,
-            id3Id = this._id3Track.id,
-            pmtId = this._pmtId;
-
-        var parsePAT = this._parsePAT,
+            avcTrack = this._avcTrack,
+            aacTrack = this._aacTrack,
+            id3Track = this._id3Track,
+            avcId = avcTrack.id,
+            aacId = aacTrack.id,
+            id3Id = id3Track.id,
+            pmtId = this._pmtId,
+            avcData = avcTrack.pesData,
+            aacData = aacTrack.pesData,
+            id3Data = id3Track.pesData,
+            parsePAT = this._parsePAT,
             parsePMT = this._parsePMT,
             parsePES = this._parsePES,
             parseAVCPES = this._parseAVCPES.bind(this),
@@ -154,17 +167,17 @@ class TSDemuxer {
                 switch (pid) {
                     case avcId:
                         if (stt) {
-                            if (avcData) {
-                                parseAVCPES(parsePES(avcData), false);
+                            if (avcData && (pes = parsePES(avcData))) {
+                                parseAVCPES(pes, false);
                                 if (codecsOnly) {
                                     // if we have video codec info AND
                                     // if audio PID is undefined OR if we have audio codec info,
                                     // we have all codec info !
                                     if (
-                                        this._avcTrack.codec &&
-                                        (aacId === -1 || this._aacTrack.codec)
+                                        avcTrack.codec &&
+                                        (aacId === -1 || aacTrack.codec)
                                     ) {
-                                        this.remux(level, sn, data);
+                                        this.remux(level, sn, data, timeOffset);
                                         return;
                                     }
                                 }
@@ -180,17 +193,17 @@ class TSDemuxer {
                         break;
                     case aacId:
                         if (stt) {
-                            if (aacData) {
-                                parseAACPES(parsePES(aacData));
+                            if (aacData && (pes = parsePES(aacData))) {
+                                parseAACPES(pes);
                                 if (codecsOnly) {
                                     // here we now that we have audio codec info
                                     // if video PID is undefined OR if we have video codec info,
                                     // we have all codec infos !
                                     if (
-                                        this._aacTrack.codec &&
-                                        (avcId === -1 || this._avcTrack.codec)
+                                        aacTrack.codec &&
+                                        (avcId === -1 || avcTrack.codec)
                                     ) {
-                                        this.remux(level, sn, data);
+                                        this.remux(level, sn, data, timeOffset);
                                         return;
                                     }
                                 }
@@ -206,8 +219,8 @@ class TSDemuxer {
                         break;
                     case id3Id:
                         if (stt) {
-                            if (id3Data) {
-                                parseID3PES(parsePES(id3Data));
+                            if (id3Data && (pes = parsePES(id3Data))) {
+                                parseID3PES(pes);
                             }
                             id3Data = { data: [], size: 0 };
                         }
@@ -229,9 +242,23 @@ class TSDemuxer {
                             offset += data[offset] + 1;
                         }
                         let parsedPIDs = parsePMT(data, offset);
-                        avcId = this._avcTrack.id = parsedPIDs.avc;
-                        aacId = this._aacTrack.id = parsedPIDs.aac;
-                        id3Id = this._id3Track.id = parsedPIDs.id3;
+
+                        // only update track id if track PID found while parsing PMT
+                        // this is to avoid resetting the PID to -1 in case
+                        // track PID transiently disappears from the stream
+                        // this could happen in case of transient missing audio samples for example
+                        avcId = parsedPIDs.avc;
+                        if (avcId > 0) {
+                            avcTrack.id = avcId;
+                        }
+                        aacId = parsedPIDs.aac;
+                        if (aacId > 0) {
+                            aacTrack.id = aacId;
+                        }
+                        id3Id = parsedPIDs.id3;
+                        if (id3Id > 0) {
+                            id3Track.id = id3Id;
+                        }
                         if (unknownPIDs && !pmtParsed) {
                             logger.log('reparse from beginning');
                             unknownPIDs = false;
@@ -257,20 +284,39 @@ class TSDemuxer {
                 });
             }
         }
-        // parse last PES packet
-        if (avcData) {
-            parseAVCPES(parsePES(avcData), true);
+        // try to parse last PES packets
+        if (avcData && (pes = parsePES(avcData))) {
+            parseAVCPES(pes, true);
+            avcTrack.pesData = null;
+        } else {
+            // either avcData null or PES truncated, keep it for next frag parsing
+            avcTrack.pesData = avcData;
         }
-        if (aacData) {
-            parseAACPES(parsePES(aacData));
+
+        if (aacData && (pes = parsePES(aacData))) {
+            parseAACPES(pes);
+            aacTrack.pesData = null;
+        } else {
+            if (aacData && aacData.size) {
+                logger.log(
+                    'last AAC PES packet truncated,might overlap between fragments'
+                );
+            }
+            // either aacData null or PES truncated, keep it for next frag parsing
+            aacTrack.pesData = aacData;
         }
-        if (id3Data) {
-            parseID3PES(parsePES(id3Data));
+
+        if (id3Data && (pes = parsePES(id3Data))) {
+            parseID3PES(pes);
+            id3Track.pesData = null;
+        } else {
+            // either id3Data null or PES truncated, keep it for next frag parsing
+            id3Track.pesData = id3Data;
         }
-        this.remux(level, sn, null);
+        this.remux(level, sn, null, timeOffset);
     }
 
-    remux(level, sn, data) {
+    remux(level, sn, data, timeOffset) {
         let avcTrack = this._avcTrack,
             samples = avcTrack.samples;
 
@@ -303,8 +349,9 @@ class TSDemuxer {
             this._avcTrack,
             this._id3Track,
             this._txtTrack,
-            this.timeOffset,
+            timeOffset,
             this.contiguous,
+            this.accurateTimeOffset,
             data
         );
     }
@@ -387,6 +434,11 @@ class TSDemuxer {
             pesDts,
             payloadStartOffset,
             data = stream.data;
+        // safety check
+        if (!stream || stream.size === 0) {
+            return null;
+        }
+
         // we might need up to 19 bytes to read PES header
         // if first chunk of data is less than 19 bytes, let's merge it with following ones until we get 19 bytes
         // usually only one merge is needed (and this is rare ...)
@@ -402,6 +454,11 @@ class TSDemuxer {
         pesPrefix = (frag[0] << 16) + (frag[1] << 8) + frag[2];
         if (pesPrefix === 1) {
             pesLen = (frag[4] << 8) + frag[5];
+            // if PES parsed length is not zero and greater than total received length, stop parsing. PES might be truncated
+            // minus 6 : PES header size
+            if (pesLen && pesLen > stream.size - 6) {
+                return null;
+            }
             pesFlags = frag[7];
             if (pesFlags & 0xc0) {
                 /* PES header described here : http://dvd.sourceforge.net/dvdinfo/pes-hdr.html
@@ -435,6 +492,7 @@ class TSDemuxer {
                 }
             }
             pesHdrLen = frag[8];
+            // 9 bytes : 6 bytes for PES header + 3 bytes for PES extension
             payloadStartOffset = pesHdrLen + 9;
 
             stream.size -= payloadStartOffset;
@@ -457,6 +515,10 @@ class TSDemuxer {
                 }
                 pesData.set(frag, i);
                 i += len;
+            }
+            if (pesLen) {
+                // payload size : remove PES header + PES extension
+                pesLen -= pesHdrLen + 3;
             }
             return { data: pesData, pts: pesPts, dts: pesDts, len: pesLen };
         } else {
@@ -518,7 +580,16 @@ class TSDemuxer {
                 //IDR
                 case 5:
                     push = true;
-                    if (debug && avcSample) {
+                    // handle PES not starting with AUD
+                    if (!avcSample) {
+                        avcSample = this.avcSample = this._createAVCSample(
+                            true,
+                            pes.pts,
+                            pes.dts,
+                            ''
+                        );
+                    }
+                    if (debug) {
                         avcSample.debug += 'IDR ';
                     }
                     avcSample.key = true;
@@ -657,18 +728,22 @@ class TSDemuxer {
                         track.pps = [unit.data];
                     }
                     break;
+                // AUD
                 case 9:
                     push = false;
                     if (avcSample) {
                         this.pushAccesUnit(avcSample, track);
                     }
-                    avcSample = this.avcSample = {
-                        key: false,
-                        pts: pes.pts,
-                        dts: pes.dts,
-                        units: { units: [], length: 0 },
-                        debug: debug ? 'AUD ' : ''
-                    };
+                    avcSample = this.avcSample = this._createAVCSample(
+                        false,
+                        pes.pts,
+                        pes.dts,
+                        debug ? 'AUD ' : ''
+                    );
+                    break;
+                // Filler Data
+                case 12:
+                    push = false;
                     break;
                 default:
                     push = false;
@@ -687,6 +762,16 @@ class TSDemuxer {
             this.pushAccesUnit(avcSample, track);
             this.avcSample = null;
         }
+    }
+
+    _createAVCSample(key, pts, dts, debug) {
+        return {
+            key: key,
+            pts: pts,
+            dts: dts,
+            units: { units: [], length: 0 },
+            debug: debug
+        };
     }
 
     _insertSampleInOrder(arr, data) {
@@ -903,8 +988,6 @@ class TSDemuxer {
             data = pes.data,
             pts = pes.pts,
             startOffset = 0,
-            duration = this._duration,
-            audioCodec = this.audioCodec,
             aacOverFlow = this.aacOverFlow,
             aacLastPTS = this.aacLastPTS,
             config,
@@ -943,6 +1026,7 @@ class TSDemuxer {
                 reason = 'no ADTS header found in AAC PES';
                 fatal = true;
             }
+            logger.warn(`parsing error:${reason}`);
             this.observer.trigger(Event.ERROR, {
                 type: ErrorTypes.MEDIA_ERROR,
                 id: this.id,
@@ -959,13 +1043,13 @@ class TSDemuxer {
                 this.observer,
                 data,
                 offset,
-                audioCodec
+                this.audioCodec
             );
             track.config = config.config;
             track.audiosamplerate = config.samplerate;
             track.channelCount = config.channelCount;
             track.codec = config.codec;
-            track.duration = duration;
+            track.duration = this._duration;
             logger.log(
                 `parsed codec:${track.codec},rate:${
                     config.samplerate

@@ -49,7 +49,18 @@ class PlaylistLoader extends EventHandler {
     }
 
     load(url, context) {
-        var config = this.hls.config,
+        let loader = this.loaders[context.type];
+        if (loader) {
+            let loaderContext = loader.context;
+            if (loaderContext && loaderContext.url === url) {
+                logger.trace(`playlist request ongoing`);
+                return;
+            } else {
+                logger.warn(`abort previous loader for type:${context.type}`);
+                loader.abort();
+            }
+        }
+        let config = this.hls.config,
             retry,
             timeout,
             retryDelay,
@@ -64,17 +75,7 @@ class PlaylistLoader extends EventHandler {
             timeout = config.levelLoadingTimeOut;
             retryDelay = config.levelLoadingRetryDelay;
             maxRetryDelay = config.levelLoadingMaxRetryTimeOut;
-        }
-        let loader = this.loaders[context.type];
-        if (loader) {
-            let loaderContext = loader.context;
-            if (loaderContext && loaderContext.url === url) {
-                logger.warn(`playlist request ongoing`);
-                return;
-            } else {
-                logger.warn(`abort previous loader for type:${context.type}`);
-                loader.abort();
-            }
+            logger.log(`loading playlist for level ${context.level}`);
         }
         loader = this.loaders[context.type] = context.loader =
             typeof config.pLoader !== 'undefined'
@@ -126,7 +127,7 @@ class PlaylistLoader extends EventHandler {
 
             var codecs = attrs.CODECS;
             if (codecs) {
-                codecs = codecs.split(',');
+                codecs = codecs.split(/[ ,]+/);
                 for (let i = 0; i < codecs.length; i++) {
                     const codec = codecs[i];
                     if (codec.indexOf('avc1') !== -1) {
@@ -246,7 +247,7 @@ class PlaylistLoader extends EventHandler {
             byteRangeStartOffset = null,
             tagList = [];
 
-        regexp = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF):(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE):(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
+        regexp = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE):\s*(\d+))|(?:#EXT-X-(TARGETDURATION):\s*(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF):\s*(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE):\s*(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
         while ((result = regexp.exec(string)) !== null) {
             result.shift();
             result = result.filter(function(n) {
@@ -356,7 +357,8 @@ class PlaylistLoader extends EventHandler {
                     let startTimeOffset = startAttrs.decimalFloatingPoint(
                         'TIME-OFFSET'
                     );
-                    if (startTimeOffset) {
+                    //TIME-OFFSET can be 0
+                    if (!isNaN(startTimeOffset)) {
                         level.startTimeOffset = startTimeOffset;
                     }
                     break;
@@ -417,6 +419,7 @@ class PlaylistLoader extends EventHandler {
                     // first request, stream manifest (no master playlist), fire manifest loaded event with level details
                     hls.trigger(Event.MANIFEST_LOADED, {
                         levels: [{ url: url, details: levelDetails }],
+                        audioTracks: [],
                         url: url,
                         stats: stats
                     });
@@ -532,7 +535,7 @@ class PlaylistLoader extends EventHandler {
             type: ErrorTypes.NETWORK_ERROR,
             details: details,
             fatal: fatal,
-            url: loader.url,
+            url: context.url,
             loader: loader,
             response: response,
             context: context
@@ -565,7 +568,7 @@ class PlaylistLoader extends EventHandler {
             type: ErrorTypes.NETWORK_ERROR,
             details: details,
             fatal: fatal,
-            url: loader.url,
+            url: context.url,
             loader: loader,
             context: context
         });
