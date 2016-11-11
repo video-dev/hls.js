@@ -18,7 +18,7 @@ class SubtitleStreamController extends EventHandler {
     this.config = hls.config;
     this.vttFragSNsProcessed = {};
     this.vttFragQueues = undefined;
-    this.currentlyProcessing = null,
+    this.currentlyProcessing = null;
     this.currentTrackId = -1;
   }
 
@@ -38,7 +38,7 @@ class SubtitleStreamController extends EventHandler {
   nextFrag() {
     if(this.currentlyProcessing === null && this.currentTrackId > -1 && this.vttFragQueues[this.currentTrackId].length) {
       let frag = this.currentlyProcessing = this.vttFragQueues[this.currentTrackId].shift();
-      hls.trigger(Event.FRAG_LOADING, {frag});
+      this.hls.trigger(Event.FRAG_LOADING, {frag});
     }
   }
 
@@ -60,7 +60,7 @@ class SubtitleStreamController extends EventHandler {
     }
     if(this.currentlyProcessing) {
       this.currentlyProcessing = null;
-      this.nextFrag()
+      this.nextFrag();
     }
   }
 
@@ -82,17 +82,17 @@ class SubtitleStreamController extends EventHandler {
 
   // Got a new set of subtitle fragments.
   onSubtitleTrackLoaded(data) {
-    let processedFragSNs = this.vttFragSNsProcessed[data.id],
+    const processedFragSNs = this.vttFragSNsProcessed[data.id],
         fragQueue = this.vttFragQueues[data.id],
         currentFragSN = !!this.currentlyProcessing ? this.currentlyProcessing.sn : -1;
 
-    let alreadyProcessed = function(frag) {
+    const alreadyProcessed = function(frag) {
       return processedFragSNs.indexOf(frag.sn) > -1;
-    }
+    };
 
-    let alreadyInQueue = function(frag) {
-      return fragQueue.some(fragInQueue => {return fragInQueue.sn === frag.sn});
-    }
+    const alreadyInQueue = function(frag) {
+      return fragQueue.some(fragInQueue => {return fragInQueue.sn === frag.sn;});
+    };
 
     // Add all fragments that haven't been, aren't currently being and aren't waiting to be processed, to queue.
     data.details.fragments.forEach(frag => {

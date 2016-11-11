@@ -371,10 +371,12 @@ class PlaylistLoader extends EventHandler {
         if (isLevel) {
           hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: level || 0, id: id || 0, stats: stats});
         } else {
-          if(type === 'audioTrack')
+          if(type === 'audioTrack') {
             hls.trigger(Event.AUDIO_TRACK_LOADED, {details: levelDetails, id: id, stats: stats});
-          else if(type === 'subtitleTrack')
+          }
+          else if(type === 'subtitleTrack') {
             hls.trigger(Event.SUBTITLE_TRACK_LOADED, {details: levelDetails, id: id, stats: stats});
+          }
         }
       } else {
         let levels = this.parseMasterPlaylist(string, url);
