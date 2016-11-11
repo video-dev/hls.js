@@ -253,7 +253,12 @@ class TSDemuxer {
                         if (stt) {
                             offset += data[offset] + 1;
                         }
-                        let parsedPIDs = parsePMT(data, offset);
+                        let parsedPIDs = parsePMT(
+                            data,
+                            offset,
+                            this.typeSupported.mpeg === true ||
+                                this.typeSupported.mp3 === true
+                        );
                         avcId = avcTrack.id = parsedPIDs.avc;
                         aacId = aacTrack.id = parsedPIDs.aac;
                         id3Id = id3Track.id = parsedPIDs.id3;
@@ -371,7 +376,7 @@ class TSDemuxer {
         //logger.log('PMT PID:'  + this._pmtId);
     }
 
-    _parsePMT(data, offset) {
+    _parsePMT(data, offset, mpegSupported) {
         var sectionLength,
             tableEnd,
             programInfoLength,
@@ -413,8 +418,12 @@ class TSDemuxer {
                 // or ISO/IEC 13818-3 (MPEG-2 halved sample rate audio)
                 case 0x03:
                 case 0x04:
-                    logger.log('MPEG PID:' + pid);
-                    if (result.aac === -1) {
+                    //logger.log('MPEG PID:'  + pid);
+                    if (!mpegSupported) {
+                        logger.log(
+                            'MPEG audio found, not supported in this browser for now'
+                        );
+                    } else if (result.aac === -1) {
                         result.aac = pid;
                         result.isAAC = false;
                     }
@@ -1197,38 +1206,7 @@ class TSDemuxer {
 
         var track = this._aacTrack;
 
-        // Build audio config for mp4a.40.34
-        if (this.typeSupported.mp4a4034 === true) {
-            var audioConfigSampleingRates = {
-                96000: 0,
-                88200: 1,
-                64000: 2,
-                48000: 3,
-                44100: 4,
-                32000: 5,
-                24000: 6,
-                22050: 7,
-                16000: 8,
-                12000: 9,
-                11025: 10,
-                8000: 11,
-                7350: 12
-            };
-            var audioSamplingIndex = audioConfigSampleingRates[sampleRate];
-
-            track.config = new Array(4);
-            // For mp4a.40.34 we need 11 bits. More information: https://wiki.multimedia.cx/index.php?title=MPEG-4_Audio
-            track.config[0] = 31 << 3;
-            track.config[1] |= 0x01 << 6;
-            track.config[1] |= (audioSamplingIndex & 0x0f) << 1;
-            // channelConfiguration
-            track.config[1] |= (channelCount & 0x0f) >> 3;
-            track.config[2] |= (channelCount & 0x0f) << 5;
-            track.config[3] = 0;
-        } else {
-            track.config = [];
-        }
-
+        track.config = [];
         track.channelCount = channelCount;
         track.audiosamplerate = sampleRate;
         track.duration = this._duration;

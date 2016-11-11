@@ -161,15 +161,6 @@ class MP4Remuxer {
                     // Chrome
                     container = 'audio/mpeg';
                     audioTrack.codec = '';
-                } else if (this.typeSupported.mp4a4034 === true) {
-                    // IE
-                    audioTrack.codec = 'mp4a.40.34';
-                } else if (this.typeSupported.mp4a69 === true) {
-                    // IE
-                    audioTrack.codec = 'mp4a.69';
-                } else if (this.typeSupported.mp4a6B === true) {
-                    // IE
-                    audioTrack.codec = 'mp4a.6B';
                 } else if (this.typeSupported.mp3 === true) {
                     // Firefox
                     audioTrack.codec = 'mp3';

@@ -672,12 +672,6 @@ class MP4 {
 
     static esds(track) {
         var configlen = track.config.length;
-        var mpeg4Audio = 0x40;
-        if (track.codec === 'mp4a.69') {
-            mpeg4Audio = 0x69;
-        } else if (track.codec === 'mp4a.6B') {
-            mpeg4Audio = 0x6b;
-        }
         return new Uint8Array(
             [
                 0x00, // version 0
@@ -693,7 +687,7 @@ class MP4 {
 
                 0x04, // descriptor_type
                 0x0f + configlen, // length
-                mpeg4Audio, //codec : mpeg4_audio
+                0x40, //codec : mpeg4_audio
                 0x15, // stream_type
                 0x00,
                 0x00,
@@ -792,10 +786,8 @@ class MP4 {
 
     static stsd(track) {
         if (track.type === 'audio') {
-            if (!track.isAAC) {
-                if (track.codec === 'mp3') {
-                    return MP4.box(MP4.types.stsd, MP4.STSD, MP4.mp3(track));
-                }
+            if (!track.isAAC && track.codec === 'mp3') {
+                return MP4.box(MP4.types.stsd, MP4.STSD, MP4.mp3(track));
             }
             return MP4.box(MP4.types.stsd, MP4.STSD, MP4.mp4a(track));
         } else {
