@@ -259,10 +259,24 @@ class TSDemuxer {
                             this.typeSupported.mpeg === true ||
                                 this.typeSupported.mp3 === true
                         );
-                        avcId = avcTrack.id = parsedPIDs.avc;
-                        aacId = aacTrack.id = parsedPIDs.aac;
-                        id3Id = id3Track.id = parsedPIDs.id3;
-                        aacTrack.isAAC = parsedPIDs.isAAC;
+
+                        // only update track id if track PID found while parsing PMT
+                        // this is to avoid resetting the PID to -1 in case
+                        // track PID transiently disappears from the stream
+                        // this could happen in case of transient missing audio samples for example
+                        avcId = parsedPIDs.avc;
+                        if (avcId > 0) {
+                            avcTrack.id = avcId;
+                        }
+                        aacId = parsedPIDs.aac;
+                        if (aacId > 0) {
+                            aacTrack.id = aacId;
+                            aacTrack.isAAC = parsedPIDs.isAAC;
+                        }
+                        id3Id = parsedPIDs.id3;
+                        if (id3Id > 0) {
+                            id3Track.id = id3Id;
+                        }
                         if (unknownPIDs && !pmtParsed) {
                             logger.log('reparse from beginning');
                             unknownPIDs = false;
@@ -476,9 +490,9 @@ class TSDemuxer {
         pesPrefix = (frag[0] << 16) + (frag[1] << 8) + frag[2];
         if (pesPrefix === 1) {
             pesLen = (frag[4] << 8) + frag[5];
-            // if PES len is not zero and not matching with total len, stop parsing. PES might be truncated
+            // if PES parsed length is not zero and greater than total received length, stop parsing. PES might be truncated
             // minus 6 : PES header size
-            if (pesLen && pesLen !== stream.size - 6) {
+            if (pesLen && pesLen > stream.size - 6) {
                 return null;
             }
             pesFlags = frag[7];
