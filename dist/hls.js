@@ -7575,13 +7575,17 @@ var BufferHelper = function () {
     key: "bufferInfo",
     value: function bufferInfo(media, pos, maxHoleDuration) {
       if (media) {
-        var vbuffered = media.buffered,
-            buffered = [],
-            i;
-        for (i = 0; i < vbuffered.length; i++) {
-          buffered.push({ start: vbuffered.start(i), end: vbuffered.end(i) });
+        try {
+          var vbuffered = media.buffered,
+              buffered = [],
+              i;
+          for (i = 0; i < vbuffered.length; i++) {
+            buffered.push({ start: vbuffered.start(i), end: vbuffered.end(i) });
+          }
+          return this.bufferedInfo(buffered, pos, maxHoleDuration);
+        } catch (e) {
+          return { len: 0, start: 0, end: 0, nextStart: undefined };
         }
-        return this.bufferedInfo(buffered, pos, maxHoleDuration);
       } else {
         return { len: 0, start: 0, end: 0, nextStart: undefined };
       }
@@ -7645,7 +7649,7 @@ var BufferHelper = function () {
           break;
         }
       }
-      return { len: bufferLen, start: bufferStart, end: bufferEnd, nextStart: bufferStartNext };
+      return { len: bufferLen, start: bufferStart || 0, end: bufferEnd || 0, nextStart: bufferStartNext };
     }
   }]);
 
@@ -8856,7 +8860,7 @@ var PlaylistLoader = function (_EventHandler) {
           byteRangeStartOffset = null,
           tagList = [];
 
-      regexp = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE):\s*(\d+))|(?:#EXT-X-(TARGETDURATION):\s*(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF):\s*(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE):\s*(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
+      regexp = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF): *(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
       while ((result = regexp.exec(string)) !== null) {
         result.shift();
         result = result.filter(function (n) {
@@ -9008,10 +9012,14 @@ var PlaylistLoader = function (_EventHandler) {
             hls.trigger(_events2.default.MANIFEST_LOADED, { levels: [{ url: url, details: levelDetails }], audioTracks: [], url: url, stats: stats });
           }
           stats.tparsed = performance.now();
-          if (isLevel) {
-            hls.trigger(_events2.default.LEVEL_LOADED, { details: levelDetails, level: level || 0, id: id || 0, stats: stats });
+          if (levelDetails.targetduration) {
+            if (isLevel) {
+              hls.trigger(_events2.default.LEVEL_LOADED, { details: levelDetails, level: level || 0, id: id || 0, stats: stats });
+            } else {
+              hls.trigger(_events2.default.AUDIO_TRACK_LOADED, { details: levelDetails, id: id, stats: stats });
+            }
           } else {
-            hls.trigger(_events2.default.AUDIO_TRACK_LOADED, { details: levelDetails, id: id, stats: stats });
+            hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: _errors.ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'invalid targetduration' });
           }
         } else {
           var levels = this.parseMasterPlaylist(string, url);
