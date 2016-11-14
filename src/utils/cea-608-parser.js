@@ -518,7 +518,8 @@ class CaptionScreen {
           var topRowIndex = this.currRow + 1 - (this.nrRollUpRows);
           //We only copy if the last position was already shown.
           //We use the cueStartTime to check this.
-          var prevLineTime = lastOutputScreen.rows[topRowIndex].cueStartTime;
+          var topRow = lastOutputScreen.rows[topRowIndex];
+          var prevLineTime = topRow ? topRow.cueStartTime : 0;
           if(prevLineTime && prevLineTime < logger.time) {
             for (i = 0; i < this.nrRollUpRows; i++) {
               this.rows[newRow-this.nrRollUpRows+i+1].copy(lastOutputScreen.rows[topRowIndex+i]);

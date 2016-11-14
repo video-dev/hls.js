@@ -108,7 +108,7 @@ class Hls {
           subtitleStreamController: SubtitleStreamController,
           timelineController: TimelineController,
           cueHandler: Cues,
-          enableCEA708Captions: false,
+          enableCEA708Captions: true,
           enableWebVTT: true,
           enableMP2TPassThrough: false,
           stretchShortVideoTrack: false,
