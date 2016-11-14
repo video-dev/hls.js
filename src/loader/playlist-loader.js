@@ -247,7 +247,7 @@ class PlaylistLoader extends EventHandler {
             byteRangeStartOffset = null,
             tagList = [];
 
-        regexp = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE):\s*(\d+))|(?:#EXT-X-(TARGETDURATION):\s*(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF):\s*(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE):\s*(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
+        regexp = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF): *(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
         while ((result = regexp.exec(string)) !== null) {
             result.shift();
             result = result.filter(function(n) {
@@ -425,27 +425,37 @@ class PlaylistLoader extends EventHandler {
                     });
                 }
                 stats.tparsed = performance.now();
-                if (isLevel) {
-                    hls.trigger(Event.LEVEL_LOADED, {
-                        details: levelDetails,
-                        level: level || 0,
-                        id: id || 0,
-                        stats: stats
-                    });
-                } else {
-                    if (type === 'audioTrack') {
-                        hls.trigger(Event.AUDIO_TRACK_LOADED, {
+                if (levelDetails.targetduration) {
+                    if (isLevel) {
+                        hls.trigger(Event.LEVEL_LOADED, {
                             details: levelDetails,
-                            id: id,
+                            level: level || 0,
+                            id: id || 0,
                             stats: stats
                         });
-                    } else if (type === 'subtitleTrack') {
-                        hls.trigger(Event.SUBTITLE_TRACK_LOADED, {
-                            details: levelDetails,
-                            id: id,
-                            stats: stats
-                        });
+                    } else {
+                        if (type === 'audioTrack') {
+                            hls.trigger(Event.AUDIO_TRACK_LOADED, {
+                                details: levelDetails,
+                                id: id,
+                                stats: stats
+                            });
+                        } else if (type === 'subtitleTrack') {
+                            hls.trigger(Event.SUBTITLE_TRACK_LOADED, {
+                                details: levelDetails,
+                                id: id,
+                                stats: stats
+                            });
+                        }
                     }
+                } else {
+                    hls.trigger(Event.ERROR, {
+                        type: ErrorTypes.NETWORK_ERROR,
+                        details: ErrorDetails.MANIFEST_PARSING_ERROR,
+                        fatal: true,
+                        url: url,
+                        reason: 'invalid targetduration'
+                    });
                 }
             } else {
                 let levels = this.parseMasterPlaylist(string, url);
