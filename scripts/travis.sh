@@ -17,7 +17,7 @@ elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
 	do
 		if [ $n -gt 0 ]; then
 			echo "Retrying... Attempt: $((n+1))"
-			delay = $((n*60))
+			delay=$((n*60))
 			echo "Waiting ${delay} seconds..."
 			sleep $delay
 		fi
