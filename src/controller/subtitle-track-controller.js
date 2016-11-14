@@ -27,8 +27,16 @@ class SubtitleTrackController extends EventHandler {
   // Listen for subtitle track change, then extract the current track ID.
   onMediaAttached(data) {
     this.media = data.media;
+    if (!this.media) {
+      return;
+    }
 
     this.media.textTracks.addEventListener('change', () => {
+      // Media is undefined when switching streams via loadSource()
+      if (!this.media) {
+        return;
+      }
+
       let trackId = -1;
       let tracks = this.media.textTracks;
       for(let id = 0; id< tracks.length; id++) {
