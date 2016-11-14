@@ -29,8 +29,6 @@ var Cues = {
             indenting = false;
           }
         }
-        //To be used for cleaning-up orphaned roll-up captions
-        row.cueStartTime = startTime;
         cue = new VTTCue(startTime, endTime, text.trim());
 
         if (indent >= 16)

@@ -500,33 +500,12 @@ class CaptionScreen {
         row.setCursor(absPos);
     }
 
-    setPAC(pacData, lastOutputScreen) {
+    setPAC(pacData) {
         logger.log('INFO', 'pacData = ' + JSON.stringify(pacData));
         var newRow = pacData.row - 1;
         if (this.nrRollUpRows  && newRow < this.nrRollUpRows - 1) {
                 newRow = this.nrRollUpRows-1;
         }
-
-        if (this.currRow !== newRow) {
-          //clear all rows first
-          for (var i = 0; i < NR_ROWS; i++) {
-            this.rows[i].clear();
-          }
-
-          //Copy this.nrRollUpRows rows from lastOutputScreen and place it in the newRow location
-          //topRowIndex - the start of rows to copy (inclusive index)
-          var topRowIndex = this.currRow + 1 - (this.nrRollUpRows);
-          //We only copy if the last position was already shown.
-          //We use the cueStartTime to check this.
-          var topRow = lastOutputScreen.rows[topRowIndex];
-          var prevLineTime = topRow ? topRow.cueStartTime : 0;
-          if(prevLineTime && prevLineTime < logger.time) {
-            for (i = 0; i < this.nrRollUpRows; i++) {
-              this.rows[newRow-this.nrRollUpRows+i+1].copy(lastOutputScreen.rows[topRowIndex+i]);
-            }
-          }
-        }
-
         this.currRow = newRow;
         var row = this.rows[this.currRow];
         if (pacData.indent !== null) {
@@ -642,7 +621,7 @@ class Cea608Channel
     }
 
     setPAC(pacData) {
-        this.writeScreen.setPAC(pacData, this.lastOutputScreen);
+        this.writeScreen.setPAC(pacData);
     }
 
     setBkgData(bkgData) {
@@ -660,7 +639,6 @@ class Cea608Channel
         } else {
             this.writeScreen = this.displayedMemory;
             this.writeScreen.reset();
-            this.lastOutputScreen.reset();
         }
         if (this.mode !== 'MODE_ROLL-UP') {
             this.displayedMemory.nrRollUpRows = null;
