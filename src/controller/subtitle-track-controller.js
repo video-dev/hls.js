@@ -83,9 +83,13 @@ class SubtitleTrackController extends EventHandler {
 
     // Trigger subtitle track playlist reload.
     onTick() {
-        let trackId = this.trackId,
-            subtitleTrack = this.tracks[trackId],
-            details = subtitleTrack.details;
+        const trackId = this.trackId;
+        const subtitleTrack = this.tracks[trackId];
+        if (!subtitleTrack) {
+            return;
+        }
+
+        const details = subtitleTrack.details;
         // check if we need to load playlist for this subtitle Track
         if (details === undefined || details.live === true) {
             // track not retrieved yet, or live playlist we need to (re)load it
