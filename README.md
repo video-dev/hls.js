@@ -28,6 +28,15 @@ Public demo : [http://dailymotion.github.io/hls.js/demo](http://dailymotion.gith
 Private demo accessible from Dailymotion network: [http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html](http://gdupontavice.dev.dailymotion.com/hls.js/demo/index.html)
 
 
+## they use hls.js in production !
+
+
+|[<img src="http://i.cdn.turner.com/adultswim/big/img/global/adultswim.jpg" width="100">](http://www.adultswim.com/videos/streams)|[<img src="http://press.dailymotion.com/fr/wp-content/uploads/sites/4/2010/06/LOGO-PRESS-BLOG.png" width="100">](http://www.dailymotion.com)|[<img src="https://flowplayer.org/media/img/logo-blue.png" width="100">](http://www.flowplayer.org)|[<img src="https://cloud.githubusercontent.com/assets/244265/12556435/dfaceb48-c353-11e5-971b-2c4429725469.png" width="100">](http://www.globo.com)|
+|---|---|---|---|
+|[<img src="https://cloud.githubusercontent.com/assets/13573755/20111430/80a6bebc-a5e8-11e6-8dc1-619b1e936f6d.png" width="100">](https://www.gl-systemhaus.de/)|[<img src="https://cloud.githubusercontent.com/assets/244265/12556385/999aa884-c353-11e5-9102-79df54384498.png" width="100">](https://www.nytimes.com/)|[<img src="https://www.radiantmediaplayer.com/images/radiantmediaplayer-new-logo-640.jpg" width="100">](https://www.radiantmediaplayer.com/)|[<img src="https://cloud.githubusercontent.com/assets/12702747/19316434/0a3601de-9067-11e6-85e2-936b1cb099a0.png" width="100">](https://www.snapstream.com/)|
+|[<img src="https://www.streamamg.com/wp-content/themes/barebones/_assets/images/streamamg-logo.png" width="100">](https://www.streamamg.com/)|[<img src="https://streamsharkio.sa.metacdn.com/wp-content/uploads/2015/10/streamshark-dark.svg" width="100">](https://streamshark.io/)|[<img src="https://camo.githubusercontent.com/9580f10e9bfa8aa7fba52c5cb447bee0757e33da/68747470733a2f2f7777772e7461626c6f74762e636f6d2f7374617469632f696d616765732f7461626c6f5f6c6f676f2e706e67" width="100">](http://my.tablotv.com/)|[<img src="https://www.seeklogo.net/wp-content/uploads/2014/12/twitter-logo-vector-download.jpg" width="100">](https://twitter.com/)|
+
+
 ## Player Integration
 
 hls.js is (being) integrated in the following players:
