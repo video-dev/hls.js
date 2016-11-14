@@ -134,6 +134,7 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - `#EXT-X-MEDIA-SEQUENCE`
   - `#EXT-X-TARGETDURATION`
   - `#EXT-X-DISCONTINUITY`
+  - `#EXT-X-DISCONTINUITY-SEQUENCE`  
   - `#EXT-X-BYTERANGE`
   - `#EXT-X-KEY` (https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4)
   - `#EXT-X-PROGRAM-DATE-TIME` (https://tools.ietf.org/html/draft-pantos-http-live-streaming-18#section-4.3.2.6)
