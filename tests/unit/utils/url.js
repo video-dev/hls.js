@@ -1,5 +1,5 @@
 var assert = require("assert");
-var URL = require("../../../src/utils/url");
+var URL = require("url-toolkit");
 
 describe('utils', function() {
   describe('url helper', function() {

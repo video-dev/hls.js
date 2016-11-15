@@ -2,10 +2,10 @@
  * Playlist Loader
  */
 
+import URLToolkit from 'url-toolkit';
 import Event from '../events';
 import EventHandler from '../event-handler';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import URLHelper from '../utils/url';
 import AttrList from '../utils/attr-list';
 import { logger } from '../utils/logger';
 
@@ -95,7 +95,7 @@ class PlaylistLoader extends EventHandler {
     }
 
     resolve(url, baseUrl) {
-        return URLHelper.buildAbsoluteURL(baseUrl, url);
+        return URLToolkit.buildAbsoluteURL(baseUrl, url);
     }
 
     parseMasterPlaylist(string, baseurl) {
