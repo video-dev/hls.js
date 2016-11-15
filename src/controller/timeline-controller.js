@@ -5,6 +5,8 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import Cea608Parser from '../utils/cea-608-parser';
+import WebVTTParser from '../utils/webvtt-parser';
+import {logger} from '../utils/logger';
 
 class TimelineController extends EventHandler {
 
@@ -13,13 +15,19 @@ class TimelineController extends EventHandler {
                 Event.MEDIA_DETACHING,
                 Event.FRAG_PARSING_USERDATA,
                 Event.MANIFEST_LOADING,
+                Event.MANIFEST_LOADED,
                 Event.FRAG_LOADED,
-                Event.LEVEL_SWITCH);
+                Event.LEVEL_SWITCH,
+                Event.INIT_PTS_FOUND);
 
     this.hls = hls;
     this.config = hls.config;
     this.enabled = true;
     this.Cues = hls.config.cueHandler;
+    this.textTracks = [];
+    this.tracks = [];
+    this.unparsedVttFrags = [];
+    this.initPTS = undefined;
 
     if (this.config.enableCEA708Captions)
     {
@@ -85,16 +93,31 @@ class TimelineController extends EventHandler {
               sendAddTrackEvent(self.textTrack2, self.media);
             }
           }
-
-          self.Cues.newCue(self.textTrack2, startTime, endTime, screen);        }
+          self.Cues.newCue(self.textTrack2, startTime, endTime, screen);
+        }
       };
 
       this.cea608Parser = new Cea608Parser(0, channel1, channel2);
     }
   }
 
-  clearCurrentCues(track)
-  {
+  // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
+  onInitPtsFound(data) {
+    if(typeof this.initPTS === 'undefined') {
+      this.initPTS = data.initPTS;
+    }
+
+    // Due to asynchrony, initial PTS may arrive later than the first VTT fragments are loaded.
+    // Parse any unparsed fragments upon receiving the initial PTS.
+    if(this.unparsedVttFrags.length) {
+      this.unparsedVttFrags.forEach(frag => {
+        this.onFragLoaded(frag);
+      });
+      this.unparsedVttFrags = [];
+    }
+  }
+
+  clearCurrentCues(track) {
     if (track && track.cues)
     {
       while (track.cues.length > 0)
@@ -104,8 +127,7 @@ class TimelineController extends EventHandler {
     }
   }
 
-  getExistingTrack(channelNumber)
-  {
+  getExistingTrack(channelNumber) {
     let media = this.media;
     if (media)
     {
@@ -122,8 +144,7 @@ class TimelineController extends EventHandler {
     return null;
   }
 
-  createTextTrack(kind, label, lang)
-  {
+  createTextTrack(kind, label, lang) {
     if (this.media)
     {
       return this.media.addTextTrack(kind, label, lang);
@@ -148,30 +169,70 @@ class TimelineController extends EventHandler {
     this.lastPts = Number.NEGATIVE_INFINITY;
   }
 
-  onLevelSwitch()
-  {
-    if (this.hls.currentLevel.closedCaptions === 'NONE')
-    {
-      this.enabled = false;
-    }
-    else
-    {
-      this.enabled = true;
+  onManifestLoaded(data) {
+    // TODO: actually remove the tracks from the media object.
+    this.textTracks = [];
+
+    this.unparsedVttFrags = [];
+    this.initPTS = undefined;
+
+    // TODO: maybe enable WebVTT if "forced"?
+    if(this.config.enableWebVTT) {
+      this.tracks = data.subtitles || [];
+
+      this.tracks.forEach(track => {
+        let textTrack = this.createTextTrack('captions', track.name, track.lang);
+        textTrack.mode = track.default ? 'showing' : 'hidden';
+        this.textTracks.push(textTrack);
+      });
     }
   }
 
-  onFragLoaded(data)
-  {
+  onLevelSwitch() {
+    this.enabled = this.hls.currentLevel.closedCaptions !== 'NONE';
+  }
+
+  onFragLoaded(data) {
     if (data.frag.type === 'main') {
       var pts = data.frag.start; //Number.POSITIVE_INFINITY;
       // if this is a frag for a previously loaded timerange, remove all captions
       // TODO: consider just removing captions for the timerange
-      if (pts <= this.lastPts)
-      {
-      this.clearCurrentCues(this.textTrack1);
-      this.clearCurrentCues(this.textTrack2);
+      if (pts <= this.lastPts) {
+        this.clearCurrentCues(this.textTrack1);
+        this.clearCurrentCues(this.textTrack2);
       }
       this.lastPts = pts;
+    }
+    // If fragment is subtitle type, parse as WebVTT.
+    else if (data.frag.type === 'subtitle') {
+      if (data.payload.byteLength) {
+        // We need an initial synchronisation PTS. Store fragments as long as none has arrived.
+        if (typeof this.initPTS === 'undefined') {
+          this.unparsedVttFrags.push(data);
+          logger.log(`timelineController: Tried to parse WebVTT frag without PTS. Saving frag for later...`);
+          return;
+        }
+        let textTracks = this.textTracks,
+          hls = this.hls;
+
+        // Parse the WebVTT file contents.
+        WebVTTParser.parse(data.payload, this.initPTS, function (cues) {
+            // Add cues and trigger event with success true.
+            cues.forEach(cue => {
+              textTracks[data.frag.trackId].addCue(cue);
+            });
+            hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: true, frag: data.frag});
+          },
+          function (e) {
+            // Something went wrong while parsing. Trigger event with success false.
+            logger.log(`Failed to parse VTT cue: ${e}`);
+            hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: false, frag: data.frag});
+          });
+      }
+      else {
+        // In case there is no payload, finish unsuccessfully.
+        this.hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: false, frag: data.frag});
+      }
     }
   }
 
@@ -188,8 +249,7 @@ class TimelineController extends EventHandler {
     }
   }
 
-  extractCea608Data(byteArray)
-  {
+  extractCea608Data(byteArray) {
     var count = byteArray[0] & 31;
     var position = 2;
     var tmpByte, ccbyte1, ccbyte2, ccValid, ccType;
@@ -199,7 +259,7 @@ class TimelineController extends EventHandler {
       tmpByte = byteArray[position++];
       ccbyte1 = 0x7F & byteArray[position++];
       ccbyte2 = 0x7F & byteArray[position++];
-      ccValid = (4 & tmpByte) === 0 ? false : true;
+      ccValid = (4 & tmpByte) !== 0;
       ccType = 3 & tmpByte;
 
       if (ccbyte1 === 0 && ccbyte2 === 0) {
