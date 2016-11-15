@@ -594,7 +594,8 @@ class CaptionScreen {
             newRow = this.nrRollUpRows - 1;
         }
 
-        if (this.currRow !== newRow) {
+        //Make sure this only affects Roll-up Captions by checking this.nrRollUpRows
+        if (this.nrRollUpRows && this.currRow !== newRow) {
             //clear all rows first
             for (var i = 0; i < NR_ROWS; i++) {
                 this.rows[i].clear();
@@ -604,7 +605,7 @@ class CaptionScreen {
             //topRowIndex - the start of rows to copy (inclusive index)
             var topRowIndex = this.currRow + 1 - this.nrRollUpRows;
             //We only copy if the last position was already shown.
-            //We use the cueStartTime to check this.
+            //We use the cueStartTime value to check this.
             var prevLineTime = lastOutputScreen.rows[topRowIndex].cueStartTime;
             if (prevLineTime && prevLineTime < logger.time) {
                 for (i = 0; i < this.nrRollUpRows; i++) {
