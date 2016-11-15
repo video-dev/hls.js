@@ -56,8 +56,9 @@
     "opener": "^1.4.0",
     "parallelshell": "^2.0.0",
     "rimraf": "^2.5.1",
-    "uglify-js": "^2.7.4",
     "selenium-webdriver": "^2.52.0",
+    "uglify-js": "^2.7.4",
+    "vtt.js": "^0.12.1",
     "watchify": "^3.7.0",
     "webworkify": "^1.4.0"
   }

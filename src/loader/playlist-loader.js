@@ -15,7 +15,8 @@ class PlaylistLoader extends EventHandler {
     super(hls,
       Event.MANIFEST_LOADING,
       Event.LEVEL_LOADING,
-      Event.AUDIO_TRACK_LOADING);
+      Event.AUDIO_TRACK_LOADING,
+      Event.SUBTITLE_TRACK_LOADING);
     this.loaders = {};
   }
 
@@ -40,6 +41,10 @@ class PlaylistLoader extends EventHandler {
 
   onAudioTrackLoading(data) {
     this.load(data.url, { type : 'audioTrack', id : data.id});
+  }
+
+  onSubtitleTrackLoading(data) {
+    this.load(data.url, { type : 'subtitleTrack', id : data.id});
   }
 
   load(url, context) {
@@ -123,7 +128,7 @@ class PlaylistLoader extends EventHandler {
   }
 
   parseMasterPlaylistMedia(string, baseurl, type) {
-    let result, medias = [];
+    let result, medias = [], id = 0;
 
     // https://regex101.com is your friend
     const re = /#EXT-X-MEDIA:(.*)/g;
@@ -144,6 +149,7 @@ class PlaylistLoader extends EventHandler {
         if(!media.name) {
             media.name = media.lang;
         }
+        media.id = id++;
         medias.push(media);
       }
     }
@@ -354,8 +360,9 @@ class PlaylistLoader extends EventHandler {
     //stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
     if (string.indexOf('#EXTM3U') === 0) {
       if (string.indexOf('#EXTINF:') > 0) {
-        let isLevel = (type !== 'audioTrack'),
-            levelDetails = this.parseLevelPlaylist(string, url, (isLevel ? level : id) || 0, isLevel ? 'main' : 'audio');
+        let isLevel = (type !== 'audioTrack' && type !== 'subtitleTrack'),
+            levelDetails = this.parseLevelPlaylist(string, url, level || id || 0, (type === 'audioTrack' ? 'audio' : (type === 'subtitleTrack' ? 'subtitle' : 'main') ));
+            levelDetails.tload = stats.tload;
         if (type === 'manifest') {
         // first request, stream manifest (no master playlist), fire manifest loaded event with level details
           hls.trigger(Event.MANIFEST_LOADED, {levels: [{url: url, details : levelDetails}], audioTracks : [], url: url, stats: stats});
@@ -365,7 +372,12 @@ class PlaylistLoader extends EventHandler {
           if (isLevel) {
             hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: level || 0, id: id || 0, stats: stats});
           } else {
-            hls.trigger(Event.AUDIO_TRACK_LOADED, {details: levelDetails, id: id, stats: stats});
+            if (type === 'audioTrack') {
+              hls.trigger(Event.AUDIO_TRACK_LOADED, {details: levelDetails, id: id, stats: stats});
+            }
+            else if (type === 'subtitleTrack') {
+              hls.trigger(Event.SUBTITLE_TRACK_LOADED, {details: levelDetails, id: id, stats: stats});
+            }
           }
         } else {
           hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'invalid targetduration'});
@@ -374,11 +386,12 @@ class PlaylistLoader extends EventHandler {
         let levels = this.parseMasterPlaylist(string, url);
         // multi level playlist, parse level info
         if (levels.length) {
-          let audiotracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO');
-          if (audiotracks.length) {
+          let audioTracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO');
+          let subtitles = this.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
+          if (audioTracks.length) {
             // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
             let embeddedAudioFound = false;
-            audiotracks.forEach(audioTrack => {
+            audioTracks.forEach(audioTrack => {
               if(!audioTrack.url) {
                 embeddedAudioFound = true;
               }
@@ -387,10 +400,10 @@ class PlaylistLoader extends EventHandler {
             // this could happen with playlists with alt audio rendition in which quality levels (main) contains both audio+video. but with mixed audio track not signaled
             if (embeddedAudioFound === false && levels[0].audioCodec && !levels[0].attrs.AUDIO) {
               logger.log('audio codec signaled in quality level, but no embedded audio track signaled, create one');
-              audiotracks.unshift({ type : 'main', name : 'main'});
+              audioTracks.unshift({ type : 'main', name : 'main'});
             }
           }
-          hls.trigger(Event.MANIFEST_LOADED, {levels: levels, audioTracks : audiotracks, url: url, stats: stats});
+          hls.trigger(Event.MANIFEST_LOADED, {levels, audioTracks, subtitles, url, stats});
         } else {
           hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'no level found in manifest'});
         }
