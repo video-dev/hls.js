@@ -5,6 +5,8 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import Cea608Parser from '../utils/cea-608-parser';
+import WebVTTParser from '../utils/webvtt-parser';
+import { logger } from '../utils/logger';
 
 class TimelineController extends EventHandler {
     constructor(hls) {
@@ -14,14 +16,20 @@ class TimelineController extends EventHandler {
             Event.MEDIA_DETACHING,
             Event.FRAG_PARSING_USERDATA,
             Event.MANIFEST_LOADING,
+            Event.MANIFEST_LOADED,
             Event.FRAG_LOADED,
-            Event.LEVEL_SWITCH
+            Event.LEVEL_SWITCH,
+            Event.INIT_PTS_FOUND
         );
 
         this.hls = hls;
         this.config = hls.config;
         this.enabled = true;
         this.Cues = hls.config.cueHandler;
+        this.textTracks = [];
+        this.tracks = [];
+        this.unparsedVttFrags = [];
+        this.initPTS = undefined;
 
         if (this.config.enableCEA708Captions) {
             var self = this;
@@ -86,7 +94,6 @@ class TimelineController extends EventHandler {
                             sendAddTrackEvent(self.textTrack2, self.media);
                         }
                     }
-
                     self.Cues.newCue(
                         self.textTrack2,
                         startTime,
@@ -97,6 +104,22 @@ class TimelineController extends EventHandler {
             };
 
             this.cea608Parser = new Cea608Parser(0, channel1, channel2);
+        }
+    }
+
+    // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
+    onInitPtsFound(data) {
+        if (typeof this.initPTS === 'undefined') {
+            this.initPTS = data.initPTS;
+        }
+
+        // Due to asynchrony, initial PTS may arrive later than the first VTT fragments are loaded.
+        // Parse any unparsed fragments upon receiving the initial PTS.
+        if (this.unparsedVttFrags.length) {
+            this.unparsedVttFrags.forEach(frag => {
+                this.onFragLoaded(frag);
+            });
+            this.unparsedVttFrags = [];
         }
     }
 
@@ -145,12 +168,31 @@ class TimelineController extends EventHandler {
         this.lastPts = Number.NEGATIVE_INFINITY;
     }
 
-    onLevelSwitch() {
-        if (this.hls.currentLevel.closedCaptions === 'NONE') {
-            this.enabled = false;
-        } else {
-            this.enabled = true;
+    onManifestLoaded(data) {
+        // TODO: actually remove the tracks from the media object.
+        this.textTracks = [];
+
+        this.unparsedVttFrags = [];
+        this.initPTS = undefined;
+
+        // TODO: maybe enable WebVTT if "forced"?
+        if (this.config.enableWebVTT) {
+            this.tracks = data.subtitles || [];
+
+            this.tracks.forEach(track => {
+                let textTrack = this.createTextTrack(
+                    'captions',
+                    track.name,
+                    track.lang
+                );
+                textTrack.mode = track.default ? 'showing' : 'hidden';
+                this.textTracks.push(textTrack);
+            });
         }
+    }
+
+    onLevelSwitch() {
+        this.enabled = this.hls.currentLevel.closedCaptions !== 'NONE';
     }
 
     onFragLoaded(data) {
@@ -163,6 +205,50 @@ class TimelineController extends EventHandler {
                 this.clearCurrentCues(this.textTrack2);
             }
             this.lastPts = pts;
+        } else if (data.frag.type === 'subtitle') {
+            // If fragment is subtitle type, parse as WebVTT.
+            if (data.payload.byteLength) {
+                // We need an initial synchronisation PTS. Store fragments as long as none has arrived.
+                if (typeof this.initPTS === 'undefined') {
+                    this.unparsedVttFrags.push(data);
+                    logger.log(
+                        `timelineController: Tried to parse WebVTT frag without PTS. Saving frag for later...`
+                    );
+                    return;
+                }
+                let textTracks = this.textTracks,
+                    hls = this.hls;
+
+                // Parse the WebVTT file contents.
+                WebVTTParser.parse(
+                    data.payload,
+                    this.initPTS,
+                    function(cues) {
+                        // Add cues and trigger event with success true.
+                        cues.forEach(cue => {
+                            textTracks[data.frag.trackId].addCue(cue);
+                        });
+                        hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {
+                            success: true,
+                            frag: data.frag
+                        });
+                    },
+                    function(e) {
+                        // Something went wrong while parsing. Trigger event with success false.
+                        logger.log(`Failed to parse VTT cue: ${e}`);
+                        hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {
+                            success: false,
+                            frag: data.frag
+                        });
+                    }
+                );
+            } else {
+                // In case there is no payload, finish unsuccessfully.
+                this.hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {
+                    success: false,
+                    frag: data.frag
+                });
+            }
         }
     }
 
@@ -187,7 +273,7 @@ class TimelineController extends EventHandler {
             tmpByte = byteArray[position++];
             ccbyte1 = 0x7f & byteArray[position++];
             ccbyte2 = 0x7f & byteArray[position++];
-            ccValid = (4 & tmpByte) === 0 ? false : true;
+            ccValid = (4 & tmpByte) !== 0;
             ccType = 3 & tmpByte;
 
             if (ccbyte1 === 0 && ccbyte2 === 0) {

@@ -587,7 +587,7 @@ class CaptionScreen {
         row.setCursor(absPos);
     }
 
-    setPAC(pacData, lastOutputScreen) {
+    setPAC(pacData) {
         logger.log('INFO', 'pacData = ' + JSON.stringify(pacData));
         var newRow = pacData.row - 1;
         if (this.nrRollUpRows && newRow < this.nrRollUpRows - 1) {
@@ -734,7 +734,7 @@ class Cea608Channel {
     }
 
     setPAC(pacData) {
-        this.writeScreen.setPAC(pacData, this.lastOutputScreen);
+        this.writeScreen.setPAC(pacData);
     }
 
     setBkgData(bkgData) {
@@ -752,7 +752,6 @@ class Cea608Channel {
         } else {
             this.writeScreen = this.displayedMemory;
             this.writeScreen.reset();
-            this.lastOutputScreen.reset();
         }
         if (this.mode !== 'MODE_ROLL-UP') {
             this.displayedMemory.nrRollUpRows = null;

@@ -58,6 +58,7 @@
     "uglify-js": "^2.7.5",
     "url-toolkit": "^1.0.4",
     "selenium-webdriver": "^2.52.0",
+    "vtt.js": "^0.12.1",
     "watchify": "^3.7.0",
     "webworkify": "^1.4.0"
   }
