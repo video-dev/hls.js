@@ -180,7 +180,6 @@ class TimelineController extends EventHandler {
                     );
                 } else {
                     this.clearCurrentCues(textTrack);
-                    textTrack.inuse = true;
                     textTrack.name = track.name;
                     textTrack.lang = track.lang;
                 }
