@@ -7639,6 +7639,9 @@ var AACDemuxer = function () {
     this.remuxerClass = remuxerClass;
     this.config = config;
     this.remuxer = new this.remuxerClass(observer, id, config);
+    // id === 'main' when the demuxer is used to play an audio only stream and requires AAC files placed back-to-back in the order they are received.
+    // id === 'audio' when the demuxer is used for multitrack audio and requires the use of timestamps to sync audio with video.
+    this.useTimeStamp = id === 'audio';
     this.insertDiscontinuity();
   }
 
@@ -7658,7 +7661,7 @@ var AACDemuxer = function () {
     value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset) {
       var track,
           id3 = new _id2.default(data),
-          pts = 90 * id3.timeStamp || timeOffset * 90000,
+          pts,
           config,
           frameLength,
           frameDuration,
@@ -7668,6 +7671,9 @@ var AACDemuxer = function () {
           stamp,
           len,
           aacSample;
+
+      // Use ID3 Timestamp if needed, as in v4 audio tracks.  Otherwise, concat AAC audio in the order it comes in.
+      pts = this.useTimeStamp ? 90 * id3.timeStamp : timeOffset * 90000;
 
       var contiguous = false;
       if (cc !== this.lastCC) {
