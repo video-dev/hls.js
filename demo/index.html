@@ -483,6 +483,17 @@ $(document).ready(function() {
         }
        });
 
+       hls.on(Hls.Events.FRAG_DECRYPTED,function(event,data) {
+         if (!stats.fragDecrypted) {
+           stats.fragDecrypted = 0;
+           this.totalDecryptTime = 0;
+           stats.fragAvgDecryptTime = 0;
+         }
+         stats.fragDecrypted++;
+         this.totalDecryptTime += data.stats.tdecrypt - data.stats.tstart;
+         stats.fragAvgDecryptTime = this.totalDecryptTime / stats.fragDecrypted;
+       });
+
        hls.on(Hls.Events.ERROR, function(event,data) {
         switch(data.details) {
           case Hls.ErrorDetails.MANIFEST_LOAD_ERROR:
