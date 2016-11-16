@@ -177,7 +177,6 @@ class TimelineController extends EventHandler {
           textTrack = this.createTextTrack('subtitles', track.name, track.lang);
         } else {
           this.clearCurrentCues(textTrack);
-          textTrack.inuse = true;
           textTrack.name = track.name;
           textTrack.lang = track.lang;
         }
