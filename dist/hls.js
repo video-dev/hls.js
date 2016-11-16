@@ -394,21 +394,21 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _eventHandler = _dereq_(25);
+var _eventHandler = _dereq_(26);
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _bufferHelper = _dereq_(28);
+var _bufferHelper = _dereq_(29);
 
 var _bufferHelper2 = _interopRequireDefault(_bufferHelper);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
 var _ewmaBandwidthEstimator = _dereq_(8);
 
@@ -775,7 +775,7 @@ var AbrController = function (_EventHandler) {
 
 exports.default = AbrController;
 
-},{"24":24,"25":25,"26":26,"28":28,"43":43,"8":8}],4:[function(_dereq_,module,exports){
+},{"25":25,"26":26,"27":27,"29":29,"44":44,"8":8}],4:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -784,37 +784,37 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _binarySearch = _dereq_(39);
+var _binarySearch = _dereq_(40);
 
 var _binarySearch2 = _interopRequireDefault(_binarySearch);
 
-var _bufferHelper = _dereq_(28);
+var _bufferHelper = _dereq_(29);
 
 var _bufferHelper2 = _interopRequireDefault(_bufferHelper);
 
-var _demuxer = _dereq_(20);
+var _demuxer = _dereq_(21);
 
 var _demuxer2 = _interopRequireDefault(_demuxer);
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _eventHandler = _dereq_(25);
+var _eventHandler = _dereq_(26);
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _levelHelper = _dereq_(29);
+var _levelHelper = _dereq_(30);
 
 var _levelHelper2 = _interopRequireDefault(_levelHelper);
 
-var _timeRanges = _dereq_(45);
+var _timeRanges = _dereq_(46);
 
 var _timeRanges2 = _interopRequireDefault(_timeRanges);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -1445,7 +1445,7 @@ var AudioStreamController = function (_EventHandler) {
 
 exports.default = AudioStreamController;
 
-},{"20":20,"24":24,"25":25,"26":26,"28":28,"29":29,"39":39,"43":43,"45":45}],5:[function(_dereq_,module,exports){
+},{"21":21,"25":25,"26":26,"27":27,"29":29,"30":30,"40":40,"44":44,"46":46}],5:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1454,15 +1454,15 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _eventHandler = _dereq_(25);
+var _eventHandler = _dereq_(26);
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -1594,7 +1594,7 @@ var AudioTrackController = function (_EventHandler) {
 
 exports.default = AudioTrackController;
 
-},{"25":25,"26":26,"43":43}],6:[function(_dereq_,module,exports){
+},{"26":26,"27":27,"44":44}],6:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1603,17 +1603,17 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _eventHandler = _dereq_(25);
+var _eventHandler = _dereq_(26);
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -2147,7 +2147,7 @@ var BufferController = function (_EventHandler) {
 
 exports.default = BufferController;
 
-},{"24":24,"25":25,"26":26,"43":43}],7:[function(_dereq_,module,exports){
+},{"25":25,"26":26,"27":27,"44":44}],7:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2156,11 +2156,11 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _eventHandler = _dereq_(25);
+var _eventHandler = _dereq_(26);
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
@@ -2308,7 +2308,7 @@ var CapLevelController = function (_EventHandler) {
 
 exports.default = CapLevelController;
 
-},{"25":25,"26":26}],8:[function(_dereq_,module,exports){
+},{"26":26,"27":27}],8:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2323,7 +2323,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       * different half-lives.
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       */
 
-var _ewma = _dereq_(42);
+var _ewma = _dereq_(43);
 
 var _ewma2 = _interopRequireDefault(_ewma);
 
@@ -2384,7 +2384,7 @@ var EwmaBandWidthEstimator = function () {
 
 exports.default = EwmaBandWidthEstimator;
 
-},{"42":42}],9:[function(_dereq_,module,exports){
+},{"43":43}],9:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2393,15 +2393,15 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _eventHandler = _dereq_(25);
+var _eventHandler = _dereq_(26);
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -2491,7 +2491,7 @@ var FPSController = function (_EventHandler) {
 
 exports.default = FPSController;
 
-},{"25":25,"26":26,"43":43}],10:[function(_dereq_,module,exports){
+},{"26":26,"27":27,"44":44}],10:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2500,19 +2500,19 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _eventHandler = _dereq_(25);
+var _eventHandler = _dereq_(26);
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
-var _bufferHelper = _dereq_(28);
+var _bufferHelper = _dereq_(29);
 
 var _bufferHelper2 = _interopRequireDefault(_bufferHelper);
 
@@ -2867,7 +2867,7 @@ var LevelController = function (_EventHandler) {
 
 exports.default = LevelController;
 
-},{"24":24,"25":25,"26":26,"28":28,"43":43}],11:[function(_dereq_,module,exports){
+},{"25":25,"26":26,"27":27,"29":29,"44":44}],11:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2876,37 +2876,37 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _binarySearch = _dereq_(39);
+var _binarySearch = _dereq_(40);
 
 var _binarySearch2 = _interopRequireDefault(_binarySearch);
 
-var _bufferHelper = _dereq_(28);
+var _bufferHelper = _dereq_(29);
 
 var _bufferHelper2 = _interopRequireDefault(_bufferHelper);
 
-var _demuxer = _dereq_(20);
+var _demuxer = _dereq_(21);
 
 var _demuxer2 = _interopRequireDefault(_demuxer);
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _eventHandler = _dereq_(25);
+var _eventHandler = _dereq_(26);
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _levelHelper = _dereq_(29);
+var _levelHelper = _dereq_(30);
 
 var _levelHelper2 = _interopRequireDefault(_levelHelper);
 
-var _timeRanges = _dereq_(45);
+var _timeRanges = _dereq_(46);
 
 var _timeRanges2 = _interopRequireDefault(_timeRanges);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -4390,7 +4390,7 @@ var StreamController = function (_EventHandler) {
 
 exports.default = StreamController;
 
-},{"20":20,"24":24,"25":25,"26":26,"28":28,"29":29,"39":39,"43":43,"45":45}],12:[function(_dereq_,module,exports){
+},{"21":21,"25":25,"26":26,"27":27,"29":29,"30":30,"40":40,"44":44,"46":46}],12:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4399,15 +4399,15 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _eventHandler = _dereq_(25);
+var _eventHandler = _dereq_(26);
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _cea608Parser = _dereq_(40);
+var _cea608Parser = _dereq_(41);
 
 var _cea608Parser2 = _interopRequireDefault(_cea608Parser);
 
@@ -4606,7 +4606,7 @@ var TimelineController = function (_EventHandler) {
 
 exports.default = TimelineController;
 
-},{"25":25,"26":26,"40":40}],13:[function(_dereq_,module,exports){
+},{"26":26,"27":27,"41":41}],13:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4617,236 +4617,24 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-/*
- *
- * This file contains an adaptation of the AES decryption algorithm
- * from the Standford Javascript Cryptography Library. That work is
- * covered by the following copyright and permissions notice:
- *
- * Copyright 2009-2010 Emily Stark, Mike Hamburg, Dan Boneh.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *
- * 2. Redistributions in binary form must reproduce the above
- *    copyright notice, this list of conditions and the following
- *    disclaimer in the documentation and/or other materials provided
- *    with the distribution.
- *
- * THIS SOFTWARE IS PROVIDED BY THE AUTHORS ``AS IS'' AND ANY EXPRESS OR
- * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
- * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
- * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
- * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- * The views and conclusions contained in the software and documentation
- * are those of the authors and should not be interpreted as representing
- * official policies, either expressed or implied, of the authors.
- */
-var AES = function () {
+var AESCrypto = function () {
+  function AESCrypto(iv) {
+    _classCallCheck(this, AESCrypto);
 
-  /**
-   * Schedule out an AES key for both encryption and decryption. This
-   * is a low-level class. Use a cipher mode to do bulk encryption.
-   *
-   * @constructor
-   * @param key {Array} The key as an array of 4, 6 or 8 words.
-   */
-  function AES(key) {
-    _classCallCheck(this, AES);
-
-    /**
-     * The expanded S-box and inverse S-box tables. These will be computed
-     * on the client so that we don't have to send them down the wire.
-     *
-     * There are two tables, _tables[0] is for encryption and
-     * _tables[1] is for decryption.
-     *
-     * The first 4 sub-tables are the expanded S-box with MixColumns. The
-     * last (_tables[01][4]) is the S-box itself.
-     *
-     * @private
-     */
-    this._tables = [[[], [], [], [], []], [[], [], [], [], []]];
-
-    this._precompute();
-
-    var i,
-        j,
-        tmp,
-        encKey,
-        decKey,
-        sbox = this._tables[0][4],
-        decTable = this._tables[1],
-        keyLen = key.length,
-        rcon = 1;
-
-    if (keyLen !== 4 && keyLen !== 6 && keyLen !== 8) {
-      throw new Error('Invalid aes key size=' + keyLen);
-    }
-
-    encKey = key.slice(0);
-    decKey = [];
-    this._key = [encKey, decKey];
-
-    // schedule encryption keys
-    for (i = keyLen; i < 4 * keyLen + 28; i++) {
-      tmp = encKey[i - 1];
-
-      // apply sbox
-      if (i % keyLen === 0 || keyLen === 8 && i % keyLen === 4) {
-        tmp = sbox[tmp >>> 24] << 24 ^ sbox[tmp >> 16 & 255] << 16 ^ sbox[tmp >> 8 & 255] << 8 ^ sbox[tmp & 255];
-
-        // shift rows and add rcon
-        if (i % keyLen === 0) {
-          tmp = tmp << 8 ^ tmp >>> 24 ^ rcon << 24;
-          rcon = rcon << 1 ^ (rcon >> 7) * 283;
-        }
-      }
-
-      encKey[i] = encKey[i - keyLen] ^ tmp;
-    }
-
-    // schedule decryption keys
-    for (j = 0; i; j++, i--) {
-      tmp = encKey[j & 3 ? i : i - 4];
-      if (i <= 4 || j < 4) {
-        decKey[j] = tmp;
-      } else {
-        decKey[j] = decTable[0][sbox[tmp >>> 24]] ^ decTable[1][sbox[tmp >> 16 & 255]] ^ decTable[2][sbox[tmp >> 8 & 255]] ^ decTable[3][sbox[tmp & 255]];
-      }
-    }
+    this.aesIV = iv;
   }
 
-  /**
-   * Expand the S-box tables.
-   *
-   * @private
-   */
-
-
-  _createClass(AES, [{
-    key: '_precompute',
-    value: function _precompute() {
-      var encTable = this._tables[0],
-          decTable = this._tables[1],
-          sbox = encTable[4],
-          sboxInv = decTable[4],
-          i,
-          x,
-          xInv,
-          d = [],
-          th = [],
-          x2,
-          x4,
-          x8,
-          s,
-          tEnc,
-          tDec;
-
-      // Compute double and third tables
-      for (i = 0; i < 256; i++) {
-        th[(d[i] = i << 1 ^ (i >> 7) * 283) ^ i] = i;
-      }
-
-      for (x = xInv = 0; !sbox[x]; x ^= x2 || 1, xInv = th[xInv] || 1) {
-        // Compute sbox
-        s = xInv ^ xInv << 1 ^ xInv << 2 ^ xInv << 3 ^ xInv << 4;
-        s = s >> 8 ^ s & 255 ^ 99;
-        sbox[x] = s;
-        sboxInv[s] = x;
-
-        // Compute MixColumns
-        x8 = d[x4 = d[x2 = d[x]]];
-        tDec = x8 * 0x1010101 ^ x4 * 0x10001 ^ x2 * 0x101 ^ x * 0x1010100;
-        tEnc = d[s] * 0x101 ^ s * 0x1010100;
-
-        for (i = 0; i < 4; i++) {
-          encTable[i][x] = tEnc = tEnc << 24 ^ tEnc >>> 8;
-          decTable[i][s] = tDec = tDec << 24 ^ tDec >>> 8;
-        }
-      }
-
-      // Compactify. Considerable speedup on Firefox.
-      for (i = 0; i < 5; i++) {
-        encTable[i] = encTable[i].slice(0);
-        decTable[i] = decTable[i].slice(0);
-      }
-    }
-
-    /**
-     * Decrypt 16 bytes, specified as four 32-bit words.
-     * @param encrypted0 {number} the first word to decrypt
-     * @param encrypted1 {number} the second word to decrypt
-     * @param encrypted2 {number} the third word to decrypt
-     * @param encrypted3 {number} the fourth word to decrypt
-     * @param out {Int32Array} the array to write the decrypted words
-     * into
-     * @param offset {number} the offset into the output array to start
-     * writing results
-     * @return {Array} The plaintext.
-     */
-
-  }, {
+  _createClass(AESCrypto, [{
     key: 'decrypt',
-    value: function decrypt(encrypted0, encrypted1, encrypted2, encrypted3, out, offset) {
-      var key = this._key[1],
-
-      // state variables a,b,c,d are loaded with pre-whitened data
-      a = encrypted0 ^ key[0],
-          b = encrypted3 ^ key[1],
-          c = encrypted2 ^ key[2],
-          d = encrypted1 ^ key[3],
-          a2,
-          b2,
-          c2,
-          nInnerRounds = key.length / 4 - 2,
-          // key.length === 2 ?
-      i,
-          kIndex = 4,
-          table = this._tables[1],
-
-
-      // load up the tables
-      table0 = table[0],
-          table1 = table[1],
-          table2 = table[2],
-          table3 = table[3],
-          sbox = table[4];
-
-      // Inner rounds. Cribbed from OpenSSL.
-      for (i = 0; i < nInnerRounds; i++) {
-        a2 = table0[a >>> 24] ^ table1[b >> 16 & 255] ^ table2[c >> 8 & 255] ^ table3[d & 255] ^ key[kIndex];
-        b2 = table0[b >>> 24] ^ table1[c >> 16 & 255] ^ table2[d >> 8 & 255] ^ table3[a & 255] ^ key[kIndex + 1];
-        c2 = table0[c >>> 24] ^ table1[d >> 16 & 255] ^ table2[a >> 8 & 255] ^ table3[b & 255] ^ key[kIndex + 2];
-        d = table0[d >>> 24] ^ table1[a >> 16 & 255] ^ table2[b >> 8 & 255] ^ table3[c & 255] ^ key[kIndex + 3];
-        kIndex += 4;
-        a = a2;b = b2;c = c2;
-      }
-
-      // Last round.
-      for (i = 0; i < 4; i++) {
-        out[(3 & -i) + offset] = sbox[a >>> 24] << 24 ^ sbox[b >> 16 & 255] << 16 ^ sbox[c >> 8 & 255] << 8 ^ sbox[d & 255] ^ key[kIndex++];
-        a2 = a;a = b;b = c;c = d;d = a2;
-      }
+    value: function decrypt(data, key) {
+      return window.crypto.subtle.decrypt({ name: 'AES-CBC', iv: this.aesIV }, key, data);
     }
   }]);
 
-  return AES;
+  return AESCrypto;
 }();
 
-exports.default = AES;
+exports.default = AESCrypto;
 
 },{}],14:[function(_dereq_,module,exports){
 'use strict';
@@ -4855,203 +4643,336 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * This file contains an adaptation of the AES decryption algorithm
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * from the Standford Javascript Cryptography Library. That work is
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * covered by the following copyright and permissions notice:
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Copyright 2009-2010 Emily Stark, Mike Hamburg, Dan Boneh.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * All rights reserved.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Redistribution and use in source and binary forms, with or without
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * modification, are permitted provided that the following conditions are
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * met:
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * 1. Redistributions of source code must retain the above copyright
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *    notice, this list of conditions and the following disclaimer.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * 2. Redistributions in binary form must reproduce the above
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *    copyright notice, this list of conditions and the following
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *    disclaimer in the documentation and/or other materials provided
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *    with the distribution.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * THIS SOFTWARE IS PROVIDED BY THE AUTHORS ``AS IS'' AND ANY EXPRESS OR
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> OR CONTRIBUTORS BE
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * The views and conclusions contained in the software and documentation
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * are those of the authors and should not be interpreted as representing
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * official policies, either expressed or implied, of the authors.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
-
-var _aes = _dereq_(13);
-
-var _aes2 = _interopRequireDefault(_aes);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var AES128Decrypter = function () {
-  function AES128Decrypter(key, initVector) {
-    _classCallCheck(this, AES128Decrypter);
+var AESDecryptor = function () {
+  function AESDecryptor() {
+    _classCallCheck(this, AESDecryptor);
 
-    this.key = key;
-    this.iv = initVector;
+    // Static after running initTable
+    this.rcon = [0x0, 0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36];
+
+    this.subMix = [];
+    this.subMix[0] = new Uint32Array(256);
+    this.subMix[1] = new Uint32Array(256);
+    this.subMix[2] = new Uint32Array(256);
+    this.subMix[3] = new Uint32Array(256);
+
+    this.invSubMix = [];
+    this.invSubMix[0] = new Uint32Array(256);
+    this.invSubMix[1] = new Uint32Array(256);
+    this.invSubMix[2] = new Uint32Array(256);
+    this.invSubMix[3] = new Uint32Array(256);
+
+    this.sBox = new Uint32Array(256);
+    this.invSBox = new Uint32Array(256);
+
+    // Changes during runtime
+    this.key = new Uint32Array(0);
+
+    this.initTable();
   }
 
-  /**
-   * Convert network-order (big-endian) bytes into their little-endian
-   * representation.
-   */
+  // Using view.getUint32() also swaps the byte order.
 
 
-  _createClass(AES128Decrypter, [{
-    key: 'ntoh',
-    value: function ntoh(word) {
-      return word << 24 | (word & 0xff00) << 8 | (word & 0xff0000) >> 8 | word >>> 24;
+  _createClass(AESDecryptor, [{
+    key: 'uint8ArrayToUint32Array_',
+    value: function uint8ArrayToUint32Array_(arrayBuffer) {
+      var view = new DataView(arrayBuffer);
+      var newArray = new Uint32Array(4);
+      for (var i = 0; i < newArray.length; i++) {
+        newArray[i] = view.getUint32(i * 4);
+      }
+      return newArray;
     }
-
-    /**
-     * Decrypt bytes using AES-128 with CBC and PKCS#7 padding.
-     * @param encrypted {Uint8Array} the encrypted bytes
-     * @param key {Uint32Array} the bytes of the decryption key
-     * @param initVector {Uint32Array} the initialization vector (IV) to
-     * use for the first round of CBC.
-     * @return {Uint8Array} the decrypted bytes
-     *
-     * @see http://en.wikipedia.org/wiki/Advanced_Encryption_Standard
-     * @see http://en.wikipedia.org/wiki/Block_cipher_mode_of_operation#Cipher_Block_Chaining_.28CBC.29
-     * @see https://tools.ietf.org/html/rfc2315
-     */
-
   }, {
-    key: 'doDecrypt',
-    value: function doDecrypt(encrypted, key, initVector) {
-      var
-      // word-level access to the encrypted bytes
-      encrypted32 = new Int32Array(encrypted.buffer, encrypted.byteOffset, encrypted.byteLength >> 2),
-          decipher = new _aes2.default(Array.prototype.slice.call(key)),
+    key: 'initTable',
+    value: function initTable() {
+      var sBox = this.sBox;
+      var invSBox = this.invSBox;
+      var subMix0 = this.subMix[0];
+      var subMix1 = this.subMix[1];
+      var subMix2 = this.subMix[2];
+      var subMix3 = this.subMix[3];
+      var invSubMix0 = this.invSubMix[0];
+      var invSubMix1 = this.invSubMix[1];
+      var invSubMix2 = this.invSubMix[2];
+      var invSubMix3 = this.invSubMix[3];
 
-
-      // byte and word-level access for the decrypted output
-      decrypted = new Uint8Array(encrypted.byteLength),
-          decrypted32 = new Int32Array(decrypted.buffer),
-
-
-      // temporary variables for working with the IV, encrypted, and
-      // decrypted data
-      init0,
-          init1,
-          init2,
-          init3,
-          encrypted0,
-          encrypted1,
-          encrypted2,
-          encrypted3,
-
-
-      // iteration variable
-      wordIx;
-
-      // pull out the words of the IV to ensure we don't modify the
-      // passed-in reference and easier access
-      init0 = ~~initVector[0];
-      init1 = ~~initVector[1];
-      init2 = ~~initVector[2];
-      init3 = ~~initVector[3];
-
-      // decrypt four word sequences, applying cipher-block chaining (CBC)
-      // to each decrypted block
-      for (wordIx = 0; wordIx < encrypted32.length; wordIx += 4) {
-        // convert big-endian (network order) words into little-endian
-        // (javascript order)
-        encrypted0 = ~~this.ntoh(encrypted32[wordIx]);
-        encrypted1 = ~~this.ntoh(encrypted32[wordIx + 1]);
-        encrypted2 = ~~this.ntoh(encrypted32[wordIx + 2]);
-        encrypted3 = ~~this.ntoh(encrypted32[wordIx + 3]);
-
-        // decrypt the block
-        decipher.decrypt(encrypted0, encrypted1, encrypted2, encrypted3, decrypted32, wordIx);
-
-        // XOR with the IV, and restore network byte-order to obtain the
-        // plaintext
-        decrypted32[wordIx] = this.ntoh(decrypted32[wordIx] ^ init0);
-        decrypted32[wordIx + 1] = this.ntoh(decrypted32[wordIx + 1] ^ init1);
-        decrypted32[wordIx + 2] = this.ntoh(decrypted32[wordIx + 2] ^ init2);
-        decrypted32[wordIx + 3] = this.ntoh(decrypted32[wordIx + 3] ^ init3);
-
-        // setup the IV for the next round
-        init0 = encrypted0;
-        init1 = encrypted1;
-        init2 = encrypted2;
-        init3 = encrypted3;
+      var d = new Uint32Array(256);
+      var x = 0;
+      var xi = 0;
+      var i = 0;
+      for (i = 0; i < 256; i++) {
+        if (i < 128) {
+          d[i] = i << 1;
+        } else {
+          d[i] = i << 1 ^ 0x11b;
+        }
       }
 
-      return decrypted;
+      for (i = 0; i < 256; i++) {
+        var sx = xi ^ xi << 1 ^ xi << 2 ^ xi << 3 ^ xi << 4;
+        sx = sx >>> 8 ^ sx & 0xff ^ 0x63;
+        sBox[x] = sx;
+        invSBox[sx] = x;
+
+        // Compute multiplication
+        var x2 = d[x];
+        var x4 = d[x2];
+        var x8 = d[x4];
+
+        // Compute sub/invSub bytes, mix columns tables
+        var t = d[sx] * 0x101 ^ sx * 0x1010100;
+        subMix0[x] = t << 24 | t >>> 8;
+        subMix1[x] = t << 16 | t >>> 16;
+        subMix2[x] = t << 8 | t >>> 24;
+        subMix3[x] = t;
+
+        // Compute inv sub bytes, inv mix columns tables
+        t = x8 * 0x1010101 ^ x4 * 0x10001 ^ x2 * 0x101 ^ x * 0x1010100;
+        invSubMix0[sx] = t << 24 | t >>> 8;
+        invSubMix1[sx] = t << 16 | t >>> 16;
+        invSubMix2[sx] = t << 8 | t >>> 24;
+        invSubMix3[sx] = t;
+
+        // Compute next counter
+        if (!x) {
+          x = xi = 1;
+        } else {
+          x = x2 ^ d[d[d[x8 ^ x2]]];
+          xi ^= d[d[xi]];
+        }
+      }
     }
   }, {
-    key: 'localDecrypt',
-    value: function localDecrypt(encrypted, key, initVector, decrypted) {
-      var bytes = this.doDecrypt(encrypted, key, initVector);
-      decrypted.set(bytes, encrypted.byteOffset);
+    key: 'expandKey',
+    value: function expandKey(keyBuffer) {
+      // convert keyBuffer to Uint32Array
+      var key = this.uint8ArrayToUint32Array_(keyBuffer);
+      var sameKey = true;
+      var offset = 0;
+
+      while (offset < key.length && sameKey) {
+        sameKey = key[offset] === this.key[offset];
+        offset++;
+      }
+
+      if (sameKey) {
+        return;
+      }
+
+      this.key = key;
+      var keySize = this.keySize = key.length;
+
+      if (keySize !== 4 && keySize !== 6 && keySize !== 8) {
+        throw new Error('Invalid aes key size=' + keySize);
+      }
+
+      var ksRows = this.ksRows = (keySize + 6 + 1) * 4;
+      var ksRow = void 0;
+      var invKsRow = void 0;
+
+      var keySchedule = this.keySchedule = new Uint32Array(this.ksRows).fill(0);
+      var invKeySchedule = this.invKeySchedule = new Uint32Array(this.ksRows).fill(0);
+      var sbox = this.sBox;
+      var rcon = this.rcon;
+
+      var invSubMix0 = this.invSubMix[0];
+      var invSubMix1 = this.invSubMix[1];
+      var invSubMix2 = this.invSubMix[2];
+      var invSubMix3 = this.invSubMix[3];
+
+      var prev = void 0;
+      var t = void 0;
+
+      for (ksRow = 0; ksRow < ksRows; ksRow++) {
+        if (ksRow < keySize) {
+          prev = keySchedule[ksRow] = key[ksRow];
+          continue;
+        }
+        t = prev;
+
+        if (ksRow % keySize === 0) {
+          // Rot word
+          t = t << 8 | t >>> 24;
+
+          // Sub word
+          t = sbox[t >>> 24] << 24 | sbox[t >>> 16 & 0xff] << 16 | sbox[t >>> 8 & 0xff] << 8 | sbox[t & 0xff];
+
+          // Mix Rcon
+          t ^= rcon[ksRow / keySize | 0] << 24;
+        } else if (keySize > 6 && ksRow % keySize === 4) {
+          // Sub word
+          t = sbox[t >>> 24] << 24 | sbox[t >>> 16 & 0xff] << 16 | sbox[t >>> 8 & 0xff] << 8 | sbox[t & 0xff];
+        }
+
+        keySchedule[ksRow] = prev = (keySchedule[ksRow - keySize] ^ t) >>> 0;
+      }
+
+      for (invKsRow = 0; invKsRow < ksRows; invKsRow++) {
+        ksRow = ksRows - invKsRow;
+        if (invKsRow & 3) {
+          t = keySchedule[ksRow];
+        } else {
+          t = keySchedule[ksRow - 4];
+        }
+
+        if (invKsRow < 4 || ksRow <= 4) {
+          invKeySchedule[invKsRow] = t;
+        } else {
+          invKeySchedule[invKsRow] = invSubMix0[sbox[t >>> 24]] ^ invSubMix1[sbox[t >>> 16 & 0xff]] ^ invSubMix2[sbox[t >>> 8 & 0xff]] ^ invSubMix3[sbox[t & 0xff]];
+        }
+
+        invKeySchedule[invKsRow] = invKeySchedule[invKsRow] >>> 0;
+      }
+    }
+
+    // Adding this as a method greatly improves performance.
+
+  }, {
+    key: 'networkToHostOrderSwap',
+    value: function networkToHostOrderSwap(word) {
+      return word << 24 | (word & 0xff00) << 8 | (word & 0xff0000) >> 8 | word >>> 24;
     }
   }, {
     key: 'decrypt',
-    value: function decrypt(encrypted) {
-      var step = 4 * 8000,
+    value: function decrypt(inputArrayBuffer, offset, aesIV) {
+      var nRounds = this.keySize + 6;
+      var invKeySchedule = this.invKeySchedule;
+      var invSBOX = this.invSBox;
 
-      //encrypted32 = new Int32Array(encrypted.buffer),
-      encrypted32 = new Int32Array(encrypted),
-          decrypted = new Uint8Array(encrypted.byteLength),
-          i = 0;
+      var invSubMix0 = this.invSubMix[0];
+      var invSubMix1 = this.invSubMix[1];
+      var invSubMix2 = this.invSubMix[2];
+      var invSubMix3 = this.invSubMix[3];
 
-      // split up the encryption job and do the individual chunks asynchronously
-      var key = this.key;
-      var initVector = this.iv;
-      this.localDecrypt(encrypted32.subarray(i, i + step), key, initVector, decrypted);
+      var initVector = this.uint8ArrayToUint32Array_(aesIV);
+      var initVector0 = initVector[0];
+      var initVector1 = initVector[1];
+      var initVector2 = initVector[2];
+      var initVector3 = initVector[3];
 
-      for (i = step; i < encrypted32.length; i += step) {
-        initVector = new Uint32Array([this.ntoh(encrypted32[i - 4]), this.ntoh(encrypted32[i - 3]), this.ntoh(encrypted32[i - 2]), this.ntoh(encrypted32[i - 1])]);
-        this.localDecrypt(encrypted32.subarray(i, i + step), key, initVector, decrypted);
+      var inputInt32 = new Int32Array(inputArrayBuffer);
+      var outputInt32 = new Int32Array(inputInt32.length);
+
+      var t0 = void 0,
+          t1 = void 0,
+          t2 = void 0,
+          t3 = void 0;
+      var s0 = void 0,
+          s1 = void 0,
+          s2 = void 0,
+          s3 = void 0;
+      var inputWords0 = void 0,
+          inputWords1 = void 0,
+          inputWords2 = void 0,
+          inputWords3 = void 0;
+
+      var ksRow, i;
+
+      while (offset < inputInt32.length) {
+        inputWords0 = this.networkToHostOrderSwap(inputInt32[offset]);
+        inputWords1 = this.networkToHostOrderSwap(inputInt32[offset + 1]);
+        inputWords2 = this.networkToHostOrderSwap(inputInt32[offset + 2]);
+        inputWords3 = this.networkToHostOrderSwap(inputInt32[offset + 3]);
+
+        s0 = inputWords0 ^ invKeySchedule[0];
+        s1 = inputWords3 ^ invKeySchedule[1];
+        s2 = inputWords2 ^ invKeySchedule[2];
+        s3 = inputWords1 ^ invKeySchedule[3];
+
+        ksRow = 4;
+
+        // Iterate through the rounds of decryption
+        for (i = 1; i < nRounds; i++) {
+          t0 = invSubMix0[s0 >>> 24] ^ invSubMix1[s1 >> 16 & 0xff] ^ invSubMix2[s2 >> 8 & 0xff] ^ invSubMix3[s3 & 0xff] ^ invKeySchedule[ksRow];
+          t1 = invSubMix0[s1 >>> 24] ^ invSubMix1[s2 >> 16 & 0xff] ^ invSubMix2[s3 >> 8 & 0xff] ^ invSubMix3[s0 & 0xff] ^ invKeySchedule[ksRow + 1];
+          t2 = invSubMix0[s2 >>> 24] ^ invSubMix1[s3 >> 16 & 0xff] ^ invSubMix2[s0 >> 8 & 0xff] ^ invSubMix3[s1 & 0xff] ^ invKeySchedule[ksRow + 2];
+          t3 = invSubMix0[s3 >>> 24] ^ invSubMix1[s0 >> 16 & 0xff] ^ invSubMix2[s1 >> 8 & 0xff] ^ invSubMix3[s2 & 0xff] ^ invKeySchedule[ksRow + 3];
+          // Update state
+          s0 = t0;
+          s1 = t1;
+          s2 = t2;
+          s3 = t3;
+
+          ksRow = ksRow + 4;
+        }
+
+        // Shift rows, sub bytes, add round key
+        t0 = invSBOX[s0 >>> 24] << 24 ^ invSBOX[s1 >> 16 & 0xff] << 16 ^ invSBOX[s2 >> 8 & 0xff] << 8 ^ invSBOX[s3 & 0xff] ^ invKeySchedule[ksRow];
+        t1 = invSBOX[s1 >>> 24] << 24 ^ invSBOX[s2 >> 16 & 0xff] << 16 ^ invSBOX[s3 >> 8 & 0xff] << 8 ^ invSBOX[s0 & 0xff] ^ invKeySchedule[ksRow + 1];
+        t2 = invSBOX[s2 >>> 24] << 24 ^ invSBOX[s3 >> 16 & 0xff] << 16 ^ invSBOX[s0 >> 8 & 0xff] << 8 ^ invSBOX[s1 & 0xff] ^ invKeySchedule[ksRow + 2];
+        t3 = invSBOX[s3 >>> 24] << 24 ^ invSBOX[s0 >> 16 & 0xff] << 16 ^ invSBOX[s1 >> 8 & 0xff] << 8 ^ invSBOX[s2 & 0xff] ^ invKeySchedule[ksRow + 3];
+        ksRow = ksRow + 3;
+
+        // Write
+        outputInt32[offset] = this.networkToHostOrderSwap(t0 ^ initVector0);
+        outputInt32[offset + 1] = this.networkToHostOrderSwap(t3 ^ initVector1);
+        outputInt32[offset + 2] = this.networkToHostOrderSwap(t2 ^ initVector2);
+        outputInt32[offset + 3] = this.networkToHostOrderSwap(t1 ^ initVector3);
+
+        // reset initVector to last 4 unsigned int
+        initVector0 = inputWords0;
+        initVector1 = inputWords1;
+        initVector2 = inputWords2;
+        initVector3 = inputWords3;
+
+        offset = offset + 4;
       }
 
-      return decrypted;
+      return outputInt32.buffer;
+    }
+  }, {
+    key: 'destroy',
+    value: function destroy() {
+      this.key = undefined;
+      this.keySize = undefined;
+      this.ksRows = undefined;
+
+      this.sBox = undefined;
+      this.invSBox = undefined;
+      this.subMix = undefined;
+      this.invSubMix = undefined;
+      this.keySchedule = undefined;
+      this.invKeySchedule = undefined;
+
+      this.rcon = undefined;
     }
   }]);
 
-  return AES128Decrypter;
+  return AESDecryptor;
 }();
 
-exports.default = AES128Decrypter;
+exports.default = AESDecryptor;
 
-},{"13":13}],15:[function(_dereq_,module,exports){
+},{}],15:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * AES128 decryption.
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _aes128Decrypter = _dereq_(14);
+var _aesCrypto = _dereq_(13);
 
-var _aes128Decrypter2 = _interopRequireDefault(_aes128Decrypter);
+var _aesCrypto2 = _interopRequireDefault(_aesCrypto);
 
-var _errors = _dereq_(24);
+var _fastAesKey = _dereq_(16);
 
-var _logger = _dereq_(43);
+var _fastAesKey2 = _interopRequireDefault(_fastAesKey);
+
+var _aesDecryptor = _dereq_(14);
+
+var _aesDecryptor2 = _interopRequireDefault(_aesDecryptor);
+
+var _errors = _dereq_(25);
+
+var _logger = _dereq_(44);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -5065,52 +4986,46 @@ var Decrypter = function () {
     try {
       var browserCrypto = window ? window.crypto : crypto;
       this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
-      this.disableWebCrypto = !this.subtle;
-    } catch (e) {
-      this.disableWebCrypto = true;
-    }
+    } catch (e) {}
+
+    this.disableWebCrypto = !this.supportsWebCrypto();
   }
 
   _createClass(Decrypter, [{
-    key: 'destroy',
-    value: function destroy() {}
+    key: 'supportsWebCrypto',
+    value: function supportsWebCrypto() {
+      return this.subtle && window.location.protocol === 'https:';
+    }
   }, {
     key: 'decrypt',
     value: function decrypt(data, key, iv, callback) {
-      if (this.disableWebCrypto && this.hls.config.enableSoftwareAES) {
-        this.decryptBySoftware(data, key, iv, callback);
-      } else {
-        this.decryptByWebCrypto(data, key, iv, callback);
-      }
-    }
-  }, {
-    key: 'decryptByWebCrypto',
-    value: function decryptByWebCrypto(data, key, iv, callback) {
       var _this = this;
 
-      _logger.logger.log('decrypting by WebCrypto API');
+      if (this.disableWebCrypto && this.hls.config.enableSoftwareAES) {
+        _logger.logger.log('decrypting by JavaScript Implementation');
+        if (!this.decryptor) {
+          this.decryptor = new _aesDecryptor2.default();
+        }
+        this.decryptor.expandKey(key);
+        callback(this.decryptor.decrypt(data, 0, iv));
+      } else {
+        _logger.logger.log('decrypting by WebCrypto API');
 
-      this.subtle.importKey('raw', key, { name: 'AES-CBC', length: 128 }, false, ['decrypt']).then(function (importedKey) {
-        _this.subtle.decrypt({ name: 'AES-CBC', iv: iv.buffer }, importedKey, data).then(callback).catch(function (err) {
+        if (this.key !== key) {
+          this.key = key;
+          this.fastAesKey = new _fastAesKey2.default(key);
+        }
+
+        this.fastAesKey.expandKey().then(function (aesKey) {
+          // decrypt using web crypto
+          var crypto = new _aesCrypto2.default(iv);
+          crypto.decrypt(data, aesKey).then(function (result) {
+            callback(result);
+          });
+        }).catch(function (err) {
           _this.onWebCryptoError(err, data, key, iv, callback);
         });
-      }).catch(function (err) {
-        _this.onWebCryptoError(err, data, key, iv, callback);
-      });
-    }
-  }, {
-    key: 'decryptBySoftware',
-    value: function decryptBySoftware(data, key8, iv8, callback) {
-      _logger.logger.log('decrypting by JavaScript Implementation');
-
-      var view = new DataView(key8.buffer);
-      var key = new Uint32Array([view.getUint32(0), view.getUint32(4), view.getUint32(8), view.getUint32(12)]);
-
-      view = new DataView(iv8.buffer);
-      var iv = new Uint32Array([view.getUint32(0), view.getUint32(4), view.getUint32(8), view.getUint32(12)]);
-
-      var decrypter = new _aes128Decrypter2.default(key, iv);
-      callback(decrypter.decrypt(data).buffer);
+      }
     }
   }, {
     key: 'onWebCryptoError',
@@ -5118,10 +5033,18 @@ var Decrypter = function () {
       if (this.hls.config.enableSoftwareAES) {
         _logger.logger.log('disabling to use WebCrypto API');
         this.disableWebCrypto = true;
-        this.decryptBySoftware(data, key, iv, callback);
+        this.decrypt(data, key, iv, callback);
       } else {
         _logger.logger.error('decrypting error : ' + err.message);
         this.hls.trigger(Event.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_DECRYPT_ERROR, fatal: true, reason: err.message });
+      }
+    }
+  }, {
+    key: 'destroy',
+    value: function destroy() {
+      if (this.decryptor) {
+        this.decryptor.destroy();
+        this.decryptor = undefined;
       }
     }
   }]);
@@ -5131,7 +5054,37 @@ var Decrypter = function () {
 
 exports.default = Decrypter;
 
-},{"14":14,"24":24,"43":43}],16:[function(_dereq_,module,exports){
+},{"13":13,"14":14,"16":16,"25":25,"44":44}],16:[function(_dereq_,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var FastAESKey = function () {
+  function FastAESKey(key) {
+    _classCallCheck(this, FastAESKey);
+
+    this.key = key;
+  }
+
+  _createClass(FastAESKey, [{
+    key: 'expandKey',
+    value: function expandKey() {
+      return window.crypto.subtle.importKey('raw', this.key, { name: 'AES-CBC' }, false, ['encrypt', 'decrypt']);
+    }
+  }]);
+
+  return FastAESKey;
+}();
+
+exports.default = FastAESKey;
+
+},{}],17:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5143,13 +5096,13 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       */
 
 
-var _adts = _dereq_(17);
+var _adts = _dereq_(18);
 
 var _adts2 = _interopRequireDefault(_adts);
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
-var _id = _dereq_(22);
+var _id = _dereq_(23);
 
 var _id2 = _interopRequireDefault(_id);
 
@@ -5174,6 +5127,9 @@ var AACDemuxer = function () {
     value: function insertDiscontinuity() {
       this._aacTrack = { container: 'audio/adts', type: 'audio', id: -1, sequenceNumber: 0, samples: [], len: 0 };
     }
+
+    // Source for probe info - https://wiki.multimedia.cx/index.php?title=ADTS
+
   }, {
     key: 'push',
 
@@ -5182,7 +5138,7 @@ var AACDemuxer = function () {
     value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset) {
       var track,
           id3 = new _id2.default(data),
-          pts = 90 * id3.timeStamp,
+          pts = 90 * id3.timeStamp || timeOffset * 90000,
           config,
           frameLength,
           frameDuration,
@@ -5212,9 +5168,9 @@ var AACDemuxer = function () {
       this.lastSN = sn;
       this.lastLevel = level;
 
-      // look for ADTS header (0xFFFx)
-      for (offset = id3.length, len = data.length; offset < len - 1; offset++) {
-        if (data[offset] === 0xff && (data[offset + 1] & 0xf0) === 0xf0) {
+      // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
+      for (offset = id3.length || 0, len = data.length; offset < len - 1; offset++) {
+        if (data[offset] === 0xff && (data[offset + 1] & 0xf6) === 0xf0) {
           break;
         }
       }
@@ -5256,7 +5212,8 @@ var AACDemuxer = function () {
           break;
         }
       }
-      this.remuxer.remux(level, sn, this._aacTrack, { samples: [] }, { samples: [{ pts: pts, dts: pts, unit: id3.payload }] }, { samples: [] }, timeOffset, contiguous, accurateTimeOffset);
+      var id3Track = id3.payload ? { samples: [{ pts: pts, dts: pts, unit: id3.payload }] } : { samples: [] };
+      this.remuxer.remux(level, sn, this._aacTrack, { samples: [] }, id3Track, { samples: [] }, timeOffset, contiguous, accurateTimeOffset);
     }
   }, {
     key: 'destroy',
@@ -5264,17 +5221,14 @@ var AACDemuxer = function () {
   }], [{
     key: 'probe',
     value: function probe(data) {
-      // check if data contains ID3 timestamp and ADTS sync worc
       var id3 = new _id2.default(data),
           offset,
           len;
-      if (id3.hasTimeStamp) {
-        // look for ADTS header (0xFFFx)
-        for (offset = id3.length, len = data.length; offset < len - 1; offset++) {
-          if (data[offset] === 0xff && (data[offset + 1] & 0xf0) === 0xf0) {
-            //logger.log('ADTS sync word found !');
-            return true;
-          }
+      for (offset = id3.length || 0, len = data.length; offset < len - 1; offset++) {
+        // ADTS Header is | 1111 1111 | 1111 X00X | where X can be either 0 or 1
+        if (data[offset] === 0xff && (data[offset + 1] & 0xf6) === 0xf0) {
+          //logger.log('ADTS sync word found !');
+          return true;
         }
       }
       return false;
@@ -5286,7 +5240,7 @@ var AACDemuxer = function () {
 
 exports.default = AACDemuxer;
 
-},{"17":17,"22":22,"43":43}],17:[function(_dereq_,module,exports){
+},{"18":18,"23":23,"44":44}],18:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5298,9 +5252,9 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       */
 
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -5433,7 +5387,7 @@ var ADTS = function () {
 
 exports.default = ADTS;
 
-},{"24":24,"43":43}],18:[function(_dereq_,module,exports){
+},{"25":25,"44":44}],19:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5444,25 +5398,25 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       *   probe fragments and instantiate appropriate demuxer depending on content type (TSDemuxer, AACDemuxer, ...)
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       */
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
-var _aacdemuxer = _dereq_(16);
+var _aacdemuxer = _dereq_(17);
 
 var _aacdemuxer2 = _interopRequireDefault(_aacdemuxer);
 
-var _tsdemuxer = _dereq_(23);
+var _tsdemuxer = _dereq_(24);
 
 var _tsdemuxer2 = _interopRequireDefault(_tsdemuxer);
 
-var _mp4Remuxer = _dereq_(36);
+var _mp4Remuxer = _dereq_(37);
 
 var _mp4Remuxer2 = _interopRequireDefault(_mp4Remuxer);
 
-var _passthroughRemuxer = _dereq_(37);
+var _passthroughRemuxer = _dereq_(38);
 
 var _passthroughRemuxer2 = _interopRequireDefault(_passthroughRemuxer);
 
@@ -5521,22 +5475,22 @@ var DemuxerInline = function () {
 
 exports.default = DemuxerInline;
 
-},{"16":16,"23":23,"24":24,"26":26,"36":36,"37":37}],19:[function(_dereq_,module,exports){
+},{"17":17,"24":24,"25":25,"27":27,"37":37,"38":38}],20:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _demuxerInline = _dereq_(18);
+var _demuxerInline = _dereq_(19);
 
 var _demuxerInline2 = _interopRequireDefault(_demuxerInline);
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
 var _events3 = _dereq_(1);
 
@@ -5615,7 +5569,7 @@ var DemuxerWorker = function DemuxerWorker(self) {
 
 exports.default = DemuxerWorker;
 
-},{"1":1,"18":18,"26":26,"43":43}],20:[function(_dereq_,module,exports){
+},{"1":1,"19":19,"27":27,"44":44}],21:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5624,25 +5578,25 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _demuxerInline = _dereq_(18);
+var _demuxerInline = _dereq_(19);
 
 var _demuxerInline2 = _interopRequireDefault(_demuxerInline);
 
-var _demuxerWorker = _dereq_(19);
+var _demuxerWorker = _dereq_(20);
 
 var _demuxerWorker2 = _interopRequireDefault(_demuxerWorker);
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
 var _decrypter = _dereq_(15);
 
 var _decrypter2 = _interopRequireDefault(_decrypter);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -5726,9 +5680,10 @@ var Demuxer = function () {
         if (this.decrypter == null) {
           this.decrypter = new _decrypter2.default(this.hls);
         }
-
         var localthis = this;
-        this.decrypter.decrypt(data, decryptdata.key, decryptdata.iv, function (decryptedData) {
+        var startTime = performance.now();
+        this.decrypter.decrypt(data, decryptdata.key.buffer, decryptdata.iv.buffer, function (decryptedData) {
+          localthis.hls.trigger(_events2.default.FRAG_DECRYPTED, { level: level, sn: sn, stats: { tstart: startTime, tdecrypt: performance.now() } });
           localthis.pushDecrypted(decryptedData, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset);
         });
       } else {
@@ -5763,7 +5718,7 @@ var Demuxer = function () {
 
 exports.default = Demuxer;
 
-},{"15":15,"18":18,"19":19,"2":2,"24":24,"26":26,"43":43}],21:[function(_dereq_,module,exports){
+},{"15":15,"19":19,"2":2,"20":20,"25":25,"27":27,"44":44}],22:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5774,7 +5729,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       * Parser for exponential Golomb codes, a variable-bitwidth number encoding scheme used by h264.
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -6127,7 +6082,7 @@ var ExpGolomb = function () {
 
 exports.default = ExpGolomb;
 
-},{"43":43}],22:[function(_dereq_,module,exports){
+},{"44":44}],23:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6139,7 +6094,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       */
 
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -6280,7 +6235,7 @@ var ID3 = function () {
 
 exports.default = ID3;
 
-},{"43":43}],23:[function(_dereq_,module,exports){
+},{"44":44}],24:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6301,21 +6256,21 @@ var _createClass = function () { function defineProperties(target, props) { for 
 // import Hex from '../utils/hex';
 
 
-var _adts = _dereq_(17);
+var _adts = _dereq_(18);
 
 var _adts2 = _interopRequireDefault(_adts);
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _expGolomb = _dereq_(21);
+var _expGolomb = _dereq_(22);
 
 var _expGolomb2 = _interopRequireDefault(_expGolomb);
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -7271,7 +7226,7 @@ var TSDemuxer = function () {
 
 exports.default = TSDemuxer;
 
-},{"17":17,"21":21,"24":24,"26":26,"43":43}],24:[function(_dereq_,module,exports){
+},{"18":18,"22":22,"25":25,"27":27,"44":44}],25:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7335,7 +7290,7 @@ var ErrorDetails = exports.ErrorDetails = {
   INTERNAL_EXCEPTION: 'internalException'
 };
 
-},{}],25:[function(_dereq_,module,exports){
+},{}],26:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7350,11 +7305,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
@@ -7444,7 +7399,7 @@ var EventHandler = function () {
 
 exports.default = EventHandler;
 
-},{"24":24,"26":26,"43":43}],26:[function(_dereq_,module,exports){
+},{"25":25,"27":27,"44":44}],27:[function(_dereq_,module,exports){
 'use strict';
 
 module.exports = {
@@ -7504,6 +7459,10 @@ module.exports = {
   FRAG_LOAD_EMERGENCY_ABORTED: 'hlsFragLoadEmergencyAborted',
   // fired when a fragment loading is completed - data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length}}
   FRAG_LOADED: 'hlsFragLoaded',
+  // fired when a fragment has started decrypting - data: { level : levelId, sn : sequence number }
+  FRAG_DECRYPT_STARTED: 'hlsFragDecryptStarted',
+  // fired when a fragment has finished decrypting - data: { level : levelId, sn : sequence number }
+  FRAG_DECRYPTED: 'hlsFragDecrypted',
   // fired when Init Segment has been extracted from fragment - data: { id : demuxer id, level : levelId, sn : sequence number, moov : moov MP4 box, codecs : codecs found while parsing fragment}
   FRAG_PARSING_INIT_SEGMENT: 'hlsFragParsingInitSegment',
   // fired when parsing sei text is completed - data: { id : demuxer id, , level : levelId, sn : sequence number, samples : [ sei samples pes ] }
@@ -7534,7 +7493,7 @@ module.exports = {
   STREAM_STATE_TRANSITION: 'hlsStreamStateTransition'
 };
 
-},{}],27:[function(_dereq_,module,exports){
+},{}],28:[function(_dereq_,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -7579,7 +7538,7 @@ var AAC = function () {
 
 exports.default = AAC;
 
-},{}],28:[function(_dereq_,module,exports){
+},{}],29:[function(_dereq_,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -7695,7 +7654,7 @@ var BufferHelper = function () {
 
 exports.default = BufferHelper;
 
-},{}],29:[function(_dereq_,module,exports){
+},{}],30:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7706,7 +7665,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       * Level Helper class, providing methods dealing with playlist sliding and drift
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -7856,7 +7815,7 @@ var LevelHelper = function () {
 
 exports.default = LevelHelper;
 
-},{"43":43}],30:[function(_dereq_,module,exports){
+},{"44":44}],31:[function(_dereq_,module,exports){
 /**
  * HLS interface
  */
@@ -7870,17 +7829,17 @@ var _createClass = function () { function defineProperties(target, props) { for 
 //import FetchLoader from './utils/fetch-loader';
 
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
-var _playlistLoader = _dereq_(34);
+var _playlistLoader = _dereq_(35);
 
 var _playlistLoader2 = _interopRequireDefault(_playlistLoader);
 
-var _fragmentLoader = _dereq_(32);
+var _fragmentLoader = _dereq_(33);
 
 var _fragmentLoader2 = _interopRequireDefault(_fragmentLoader);
 
@@ -7920,9 +7879,9 @@ var _audioTrackController = _dereq_(5);
 
 var _audioTrackController2 = _interopRequireDefault(_audioTrackController);
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
-var _xhrLoader = _dereq_(47);
+var _xhrLoader = _dereq_(48);
 
 var _xhrLoader2 = _interopRequireDefault(_xhrLoader);
 
@@ -7930,11 +7889,11 @@ var _events3 = _dereq_(1);
 
 var _events4 = _interopRequireDefault(_events3);
 
-var _keyLoader = _dereq_(33);
+var _keyLoader = _dereq_(34);
 
 var _keyLoader2 = _interopRequireDefault(_keyLoader);
 
-var _cues = _dereq_(41);
+var _cues = _dereq_(42);
 
 var _cues2 = _interopRequireDefault(_cues);
 
@@ -8360,15 +8319,15 @@ var Hls = function () {
 
 exports.default = Hls;
 
-},{"1":1,"10":10,"11":11,"12":12,"24":24,"26":26,"3":3,"32":32,"33":33,"34":34,"4":4,"41":41,"43":43,"47":47,"5":5,"6":6,"7":7,"9":9}],31:[function(_dereq_,module,exports){
+},{"1":1,"10":10,"11":11,"12":12,"25":25,"27":27,"3":3,"33":33,"34":34,"35":35,"4":4,"42":42,"44":44,"48":48,"5":5,"6":6,"7":7,"9":9}],32:[function(_dereq_,module,exports){
 'use strict';
 
 // This is mostly for support of the es6 module export
 // syntax with the babel compiler, it looks like it doesnt support
 // function exports like we are used to in node/commonjs
-module.exports = _dereq_(30).default;
+module.exports = _dereq_(31).default;
 
-},{"30":30}],32:[function(_dereq_,module,exports){
+},{"31":31}],33:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8377,17 +8336,17 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _eventHandler = _dereq_(25);
+var _eventHandler = _dereq_(26);
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -8501,7 +8460,7 @@ var FragmentLoader = function (_EventHandler) {
 
 exports.default = FragmentLoader;
 
-},{"24":24,"25":25,"26":26,"43":43}],33:[function(_dereq_,module,exports){
+},{"25":25,"26":26,"27":27,"44":44}],34:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8510,17 +8469,17 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _eventHandler = _dereq_(25);
+var _eventHandler = _dereq_(26);
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -8630,7 +8589,7 @@ var KeyLoader = function (_EventHandler) {
 
 exports.default = KeyLoader;
 
-},{"24":24,"25":25,"26":26,"43":43}],34:[function(_dereq_,module,exports){
+},{"25":25,"26":26,"27":27,"44":44}],35:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8639,25 +8598,25 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _eventHandler = _dereq_(25);
+var _eventHandler = _dereq_(26);
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
-var _url = _dereq_(46);
+var _url = _dereq_(47);
 
 var _url2 = _interopRequireDefault(_url);
 
-var _attrList = _dereq_(38);
+var _attrList = _dereq_(39);
 
 var _attrList2 = _interopRequireDefault(_attrList);
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -8897,7 +8856,7 @@ var PlaylistLoader = function (_EventHandler) {
           byteRangeStartOffset = null,
           tagList = [];
 
-      regexp = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF):(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE):(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
+      regexp = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE):\s*(\d+))|(?:#EXT-X-(TARGETDURATION):\s*(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF):\s*(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE):\s*(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
       while ((result = regexp.exec(string)) !== null) {
         result.shift();
         result = result.filter(function (n) {
@@ -9107,7 +9066,7 @@ var PlaylistLoader = function (_EventHandler) {
         loader.abort();
         this.loaders[context.type] = undefined;
       }
-      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: loader.url, loader: loader, response: response, context: context });
+      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: context.url, loader: loader, response: response, context: context });
     }
   }, {
     key: 'loadtimeout',
@@ -9133,7 +9092,7 @@ var PlaylistLoader = function (_EventHandler) {
         loader.abort();
         this.loaders[context.type] = undefined;
       }
-      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: loader.url, loader: loader, context: context });
+      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: context.url, loader: loader, context: context });
     }
   }]);
 
@@ -9142,7 +9101,7 @@ var PlaylistLoader = function (_EventHandler) {
 
 exports.default = PlaylistLoader;
 
-},{"24":24,"25":25,"26":26,"38":38,"43":43,"46":46}],35:[function(_dereq_,module,exports){
+},{"25":25,"26":26,"27":27,"39":39,"44":44,"47":47}],36:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9646,7 +9605,7 @@ var MP4 = function () {
 
 exports.default = MP4;
 
-},{}],36:[function(_dereq_,module,exports){
+},{}],37:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9657,23 +9616,23 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       * fMP4 remuxer
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
 
-var _aac = _dereq_(27);
+var _aac = _dereq_(28);
 
 var _aac2 = _interopRequireDefault(_aac);
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
-var _mp4Generator = _dereq_(35);
+var _mp4Generator = _dereq_(36);
 
 var _mp4Generator2 = _interopRequireDefault(_mp4Generator);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
-_dereq_(44);
+_dereq_(45);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -10420,7 +10379,7 @@ var MP4Remuxer = function () {
 
 exports.default = MP4Remuxer;
 
-},{"24":24,"26":26,"27":27,"35":35,"43":43,"44":44}],37:[function(_dereq_,module,exports){
+},{"25":25,"27":27,"28":28,"36":36,"44":44,"45":45}],38:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -10432,7 +10391,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
 
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
@@ -10518,7 +10477,7 @@ var PassThroughRemuxer = function () {
 
 exports.default = PassThroughRemuxer;
 
-},{"26":26}],38:[function(_dereq_,module,exports){
+},{"27":27}],39:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -10624,7 +10583,7 @@ var AttrList = function () {
 
 exports.default = AttrList;
 
-},{}],39:[function(_dereq_,module,exports){
+},{}],40:[function(_dereq_,module,exports){
 "use strict";
 
 var BinarySearch = {
@@ -10669,7 +10628,7 @@ var BinarySearch = {
 
 module.exports = BinarySearch;
 
-},{}],40:[function(_dereq_,module,exports){
+},{}],41:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -11993,7 +11952,7 @@ var Cea608Parser = function () {
 
 exports.default = Cea608Parser;
 
-},{}],41:[function(_dereq_,module,exports){
+},{}],42:[function(_dereq_,module,exports){
 'use strict';
 
 var Cues = {
@@ -12050,7 +12009,7 @@ var Cues = {
 
 module.exports = Cues;
 
-},{}],42:[function(_dereq_,module,exports){
+},{}],43:[function(_dereq_,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -12108,7 +12067,7 @@ var EWMA = function () {
 
 exports.default = EWMA;
 
-},{}],43:[function(_dereq_,module,exports){
+},{}],44:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -12193,7 +12152,7 @@ var enableLogs = exports.enableLogs = function enableLogs(debugConfig) {
 
 var logger = exports.logger = exportedLogger;
 
-},{}],44:[function(_dereq_,module,exports){
+},{}],45:[function(_dereq_,module,exports){
 'use strict';
 
 if (typeof ArrayBuffer !== 'undefined' && !ArrayBuffer.prototype.slice) {
@@ -12211,7 +12170,7 @@ if (typeof ArrayBuffer !== 'undefined' && !ArrayBuffer.prototype.slice) {
   };
 }
 
-},{}],45:[function(_dereq_,module,exports){
+},{}],46:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -12248,7 +12207,7 @@ var TimeRanges = function () {
 
 exports.default = TimeRanges;
 
-},{}],46:[function(_dereq_,module,exports){
+},{}],47:[function(_dereq_,module,exports){
 'use strict';
 
 var URLHelper = {
@@ -12336,7 +12295,7 @@ var URLHelper = {
 
 module.exports = URLHelper;
 
-},{}],47:[function(_dereq_,module,exports){
+},{}],48:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -12347,7 +12306,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       * XHR based logger
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
 
-var _logger = _dereq_(43);
+var _logger = _dereq_(44);
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -12509,6 +12468,6 @@ var XhrLoader = function () {
 
 exports.default = XhrLoader;
 
-},{"43":43}]},{},[31])(31)
+},{"44":44}]},{},[32])(32)
 });
 //# sourceMappingURL=hls.js.map
