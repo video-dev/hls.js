@@ -180,8 +180,8 @@ class TimelineController extends EventHandler {
             this.tracks = data.subtitles || [];
 
             this.tracks.forEach(track => {
-                let textTrack = this.createTextTrack(
-                    'captions',
+                const textTrack = this.createTextTrack(
+                    'subtitles',
                     track.name,
                     track.lang
                 );
