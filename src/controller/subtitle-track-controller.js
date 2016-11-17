@@ -85,7 +85,7 @@ class SubtitleTrackController extends EventHandler {
     if (!subtitleTrack) {
       return;
     }
-    
+
     const details = subtitleTrack.details;
     // check if we need to load playlist for this subtitle Track
     if (details === undefined || details.live === true) {

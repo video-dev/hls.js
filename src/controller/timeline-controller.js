@@ -180,8 +180,8 @@ class TimelineController extends EventHandler {
     if(this.config.enableWebVTT) {
       this.tracks = data.subtitles || [];
 
-      this.tracks.forEach(track => {
-        let textTrack = this.createTextTrack('captions', track.name, track.lang);
+      this.tracks.forEach((track) => {
+        const textTrack = this.createTextTrack('subtitles', track.name, track.lang);
         textTrack.mode = track.default ? 'showing' : 'hidden';
         this.textTracks.push(textTrack);
       });
