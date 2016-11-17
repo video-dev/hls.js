@@ -60,5 +60,8 @@
     "selenium-webdriver": "^2.52.0",
     "watchify": "^3.7.0",
     "webworkify": "^1.4.0"
+  },
+  "dependencies": {
+    "url-toolkit": "^1.0.4"
   }
 }
