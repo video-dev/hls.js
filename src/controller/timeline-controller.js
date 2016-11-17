@@ -167,22 +167,13 @@ class TimelineController extends EventHandler {
         // TODO: maybe enable WebVTT if "forced"?
         if (this.config.enableWebVTT) {
             this.tracks = data.subtitles || [];
-            const currentTracks = this.media.textTracks;
 
-            // Reuse existing tracks before creating more
-            this.tracks.forEach((track, index) => {
-                let textTrack = currentTracks[index];
-                if (!textTrack) {
-                    textTrack = this.createTextTrack(
-                        'subtitles',
-                        track.name,
-                        track.lang
-                    );
-                } else {
-                    this.clearCurrentCues(textTrack);
-                    textTrack.name = track.name;
-                    textTrack.lang = track.lang;
-                }
+            this.tracks.forEach(track => {
+                const textTrack = this.createTextTrack(
+                    'subtitles',
+                    track.name,
+                    track.lang
+                );
                 textTrack.mode = track.default ? 'showing' : 'hidden';
                 this.textTracks.push(textTrack);
             });
