@@ -171,7 +171,8 @@ class TimelineController extends EventHandler {
       this.tracks.forEach((track, index) => {
         let textTrack;
         const inUseTrack = inUseTracks[index];
-        if (inUseTrack && inUseTrack.label === track.name) {
+        // Reuse tracks with the same label, but do not reuse 608/708 tracks
+        if (inUseTrack && inUseTrack.label === track.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2)) {
           textTrack = inUseTrack;
         } else {
           textTrack = this.createTextTrack('subtitles', track.name, track.lang);
