@@ -169,22 +169,27 @@ class TimelineController extends EventHandler {
     }
 
     onManifestLoaded(data) {
-        // TODO: actually remove the tracks from the media object.
         this.textTracks = [];
 
         this.unparsedVttFrags = [];
         this.initPTS = undefined;
 
-        // TODO: maybe enable WebVTT if "forced"?
         if (this.config.enableWebVTT) {
             this.tracks = data.subtitles || [];
+            const inUseTracks = this.video.textTracks;
 
-            this.tracks.forEach(track => {
-                const textTrack = this.createTextTrack(
-                    'subtitles',
-                    track.name,
-                    track.lang
-                );
+            this.tracks.forEach((track, index) => {
+                let textTrack;
+                const inUseTrack = inUseTracks[index];
+                if (inUseTrack && inUseTrack.label === track.name) {
+                    textTrack = inUseTrack;
+                } else {
+                    textTrack = this.createTextTrack(
+                        'subtitles',
+                        track.name,
+                        track.lang
+                    );
+                }
                 textTrack.mode = track.default ? 'showing' : 'hidden';
                 this.textTracks.push(textTrack);
             });
