@@ -63,12 +63,12 @@ class PlaylistLoader extends EventHandler {
       retry = config.manifestLoadingMaxRetry;
       timeout = config.manifestLoadingTimeOut;
       retryDelay = config.manifestLoadingRetryDelay;
-      maxRetryDelay = config.manifestLoadingMaxRetryTimeOut;
+      maxRetryDelay = config.manifestLoadingMaxRetryTimeout;
     } else {
       retry = config.levelLoadingMaxRetry;
       timeout = config.levelLoadingTimeOut;
       retryDelay = config.levelLoadingRetryDelay;
-      maxRetryDelay = config.levelLoadingMaxRetryTimeOut;
+      maxRetryDelay = config.levelLoadingMaxRetryTimeout;
       logger.log(`loading playlist for level ${context.level}`);
     }
     loader  = this.loaders[context.type] = context.loader = typeof(config.pLoader) !== 'undefined' ? new config.pLoader(config) : new config.loader(config);
