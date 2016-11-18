@@ -143,6 +143,14 @@ class TimelineController extends EventHandler {
         }
     }
 
+    reuseVttTextTrack(inUseTrack, manifestTrack) {
+        return (
+            inUseTrack &&
+            inUseTrack.label === manifestTrack.name &&
+            !(inUseTrack.textTrack1 || inUseTrack.textTrack2)
+        );
+    }
+
     destroy() {
         EventHandler.prototype.destroy.call(this);
     }
@@ -165,17 +173,13 @@ class TimelineController extends EventHandler {
 
         if (this.config.enableWebVTT) {
             this.tracks = data.subtitles || [];
-            const inUseTracks = this.video.textTracks;
+            const inUseTracks = this.media ? this.media.textTracks : [];
 
             this.tracks.forEach((track, index) => {
                 let textTrack;
                 const inUseTrack = inUseTracks[index];
                 // Reuse tracks with the same label, but do not reuse 608/708 tracks
-                if (
-                    inUseTrack &&
-                    inUseTrack.label === track.name &&
-                    !(inUseTrack.textTrack1 || inUseTrack.textTrack2)
-                ) {
+                if (this.reuseVttTextTrack(inUseTrack, track)) {
                     textTrack = inUseTrack;
                 } else {
                     textTrack = this.createTextTrack(
