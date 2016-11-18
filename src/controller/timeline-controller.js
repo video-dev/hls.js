@@ -171,13 +171,8 @@ class TimelineController extends EventHandler {
       this.tracks.forEach((track, index) => {
         let textTrack;
         const inUseTrack = inUseTracks[index];
-        if (inUseTrack) {
-          if (inUseTrack.label === track.name) {
-            textTrack = inUseTrack;
-          } else {
-            inUseTrack.mode = 'disabled';
-            inUseTrack.default = false;
-          }
+        if (inUseTrack && inUseTrack.label === track.name) {
+          textTrack = inUseTrack;
         } else {
           textTrack = this.createTextTrack('subtitles', track.name, track.lang);
         }
