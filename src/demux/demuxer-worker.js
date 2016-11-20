@@ -53,7 +53,8 @@ var DemuxerWorker = function(self) {
                     data.level,
                     data.sn,
                     data.duration,
-                    data.accurateTimeOffset
+                    data.accurateTimeOffset,
+                    data.defaultInitPTS
                 );
                 break;
             default:
@@ -67,6 +68,7 @@ var DemuxerWorker = function(self) {
     observer.on(Event.ERROR, forwardMessage);
     observer.on(Event.FRAG_PARSING_METADATA, forwardMessage);
     observer.on(Event.FRAG_PARSING_USERDATA, forwardMessage);
+    observer.on(Event.INIT_PTS_FOUND, forwardMessage);
 
     // special case for FRAG_PARSING_DATA: pass data1/data2 as transferable object (no copy)
     observer.on(Event.FRAG_PARSING_DATA, function(ev, data) {

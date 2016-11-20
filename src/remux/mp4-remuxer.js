@@ -43,13 +43,18 @@ class MP4Remuxer {
         textTrack,
         timeOffset,
         contiguous,
-        accurateTimeOffset
+        accurateTimeOffset,
+        defaultInitPTS
     ) {
         this.level = level;
         this.sn = sn;
         // generate Init Segment if needed
         if (!this.ISGenerated) {
             this.generateIS(audioTrack, videoTrack, timeOffset);
+        }
+
+        if (defaultInitPTS !== null) {
+            this._initPTS = this._initDTS = defaultInitPTS;
         }
 
         if (this.ISGenerated) {
@@ -204,6 +209,7 @@ class MP4Remuxer {
                     initDTS,
                     videoSamples[0].dts - pesTimeScale * timeOffset
                 );
+                this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS });
             }
         }
 

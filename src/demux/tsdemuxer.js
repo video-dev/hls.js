@@ -103,7 +103,8 @@ class TSDemuxer {
         level,
         sn,
         duration,
-        accurateTimeOffset
+        accurateTimeOffset,
+        defaultInitPTS
     ) {
         var start,
             len = data.length,
@@ -335,10 +336,10 @@ class TSDemuxer {
             // either id3Data null or PES truncated, keep it for next frag parsing
             id3Track.pesData = id3Data;
         }
-        this.remux(level, sn, null, timeOffset);
+        this.remux(level, sn, null, timeOffset, defaultInitPTS);
     }
 
-    remux(level, sn, data, timeOffset) {
+    remux(level, sn, data, timeOffset, defaultInitPTS) {
         let avcTrack = this._avcTrack,
             samples = avcTrack.samples,
             nbNalu = 0,
@@ -362,13 +363,14 @@ class TSDemuxer {
         this.remuxer.remux(
             level,
             sn,
-            this._audioTrack,
+            this._aacTrack,
             this._avcTrack,
             this._id3Track,
             this._txtTrack,
             timeOffset,
             this.contiguous,
             this.accurateTimeOffset,
+            defaultInitPTS,
             data
         );
     }

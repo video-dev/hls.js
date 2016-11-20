@@ -33,7 +33,8 @@ class DemuxerInline {
         level,
         sn,
         duration,
-        accurateTimeOffset
+        accurateTimeOffset,
+        defaultInitPTS
     ) {
         var demuxer = this.demuxer;
         if (!demuxer) {
@@ -89,7 +90,8 @@ class DemuxerInline {
             level,
             sn,
             duration,
-            accurateTimeOffset
+            accurateTimeOffset,
+            defaultInitPTS
         );
     }
 }

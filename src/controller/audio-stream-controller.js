@@ -44,13 +44,15 @@ class AudioStreamController extends EventHandler {
             Event.ERROR,
             Event.BUFFER_CREATED,
             Event.BUFFER_APPENDED,
-            Event.BUFFER_FLUSHED
+            Event.BUFFER_FLUSHED,
+            Event.INIT_PTS_FOUND
         );
 
         this.config = hls.config;
         this.audioCodecSwap = false;
         this.ticks = 0;
         this.ontick = this.tick.bind(this);
+        this.initPTS = undefined;
     }
 
     destroy() {
@@ -61,6 +63,12 @@ class AudioStreamController extends EventHandler {
         }
         EventHandler.prototype.destroy.call(this);
         this.state = State.STOPPED;
+    }
+
+    onInitPtsFound(data) {
+        if (typeof this.initPTS === 'undefined') {
+            this.initPTS = data.initPTS;
+        }
     }
 
     startLoad(startPosition) {
@@ -583,7 +591,8 @@ class AudioStreamController extends EventHandler {
                 sn,
                 duration,
                 fragCurrent.decryptdata,
-                accurateTimeOffset
+                accurateTimeOffset,
+                this.initPTS
             );
         }
         this.fragLoadError = 0;
