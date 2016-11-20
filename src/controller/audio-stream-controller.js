@@ -44,12 +44,14 @@ class AudioStreamController extends EventHandler {
       Event.ERROR,
       Event.BUFFER_CREATED,
       Event.BUFFER_APPENDED,
-      Event.BUFFER_FLUSHED);
+      Event.BUFFER_FLUSHED,
+      Event.INIT_PTS_FOUND);
 
     this.config = hls.config;
     this.audioCodecSwap = false;
     this.ticks = 0;
     this.ontick = this.tick.bind(this);
+    this.initPTS=undefined;
   }
 
   destroy() {
@@ -60,6 +62,12 @@ class AudioStreamController extends EventHandler {
     }
     EventHandler.prototype.destroy.call(this);
     this.state = State.STOPPED;
+  }
+
+  onInitPtsFound(data) {
+    if(typeof this.initPTS === 'undefined') {
+      this.initPTS = data.initPTS;
+    }
   }
 
   startLoad(startPosition) {
@@ -471,7 +479,7 @@ class AudioStreamController extends EventHandler {
         logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
         // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
         let accurateTimeOffset = details.PTSKnown || !details.live;
-        this.demuxer.push(data.payload, audioCodec, null, start, fragCurrent.cc, trackId, sn, duration, fragCurrent.decryptdata,accurateTimeOffset);
+        this.demuxer.push(data.payload, audioCodec, null, start, fragCurrent.cc, trackId, sn, duration, fragCurrent.decryptdata,accurateTimeOffset,this.initPTS);
     }
     this.fragLoadError = 0;
   }

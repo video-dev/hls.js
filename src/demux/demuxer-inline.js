@@ -25,7 +25,7 @@ class DemuxerInline {
     }
   }
 
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset) {
+  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
     var demuxer = this.demuxer;
     if (!demuxer) {
       let hls = this.hls,
@@ -47,7 +47,7 @@ class DemuxerInline {
       }
       this.demuxer = demuxer;
     }
-    demuxer.push(data,audioCodec,videoCodec,timeOffset,cc,level,sn,duration,accurateTimeOffset);
+    demuxer.push(data,audioCodec,videoCodec,timeOffset,cc,level,sn,duration,accurateTimeOffset,defaultInitPTS);
   }
 }
 
