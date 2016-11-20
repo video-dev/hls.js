@@ -44,7 +44,7 @@ class MP4Remuxer {
       this.generateIS(audioTrack,videoTrack,timeOffset);
     }
 
-    if((defaultInitPTS!=="undefined" && defaultInitPTS!==null)){
+    if((defaultInitPTS!=='undefined' && defaultInitPTS!==null)){
       this._initPTS=this._initDTS= defaultInitPTS;
     }
 
