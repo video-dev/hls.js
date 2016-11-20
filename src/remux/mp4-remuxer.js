@@ -45,7 +45,6 @@ class MP4Remuxer {
     }
 
     if((defaultInitPTS!==null)){
-      debugger;
       this._initPTS=this._initDTS= defaultInitPTS;
     }
 
