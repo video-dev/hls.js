@@ -44,12 +44,14 @@ class AudioStreamController extends EventHandler {
       Event.ERROR,
       Event.BUFFER_CREATED,
       Event.BUFFER_APPENDED,
-      Event.BUFFER_FLUSHED);
+      Event.BUFFER_FLUSHED,
+      Event.INIT_PTS_FOUND);
 
     this.config = hls.config;
     this.audioCodecSwap = false;
     this.ticks = 0;
     this.ontick = this.tick.bind(this);
+    this.initPTS=null;
   }
 
   destroy() {
@@ -60,6 +62,12 @@ class AudioStreamController extends EventHandler {
     }
     EventHandler.prototype.destroy.call(this);
     this.state = State.STOPPED;
+  }
+
+  onInitPtsFound(data) {
+    if(this.initPTS === null) {
+      this.initPTS = data.initPTS;
+    }
   }
 
   startLoad(startPosition) {
@@ -386,21 +394,42 @@ class AudioStreamController extends EventHandler {
   }
 
   onAudioTrackLoaded(data) {
-    var details = data.details,
+    var newDetails = data.details,
         trackId = data.id,
         track = this.tracks[trackId],
-        duration = details.totalduration;
+        duration = newDetails.totalduration,
+        sliding = 0;
 
-    logger.log(`track ${trackId} loaded [${details.startSN},${details.endSN}],duration:${duration}`);
-    details.PTSKnown = false;
-    track.details = details;
+    logger.log(`track ${trackId} loaded [${newDetails.startSN},${newDetails.endSN}],duration:${duration}`);
 
+    if (newDetails.live) {
+      var curDetails = track.details;
+      if (curDetails && newDetails.fragments.length > 0) {
+        // we already have details for that level, merge them
+        LevelHelper.mergeDetails(curDetails,newDetails);
+        sliding = newDetails.fragments[0].start;
+        // TODO
+        //this.liveSyncPosition = this.computeLivePosition(sliding, curDetails);
+        if (newDetails.PTSKnown) {
+          logger.log(`live audio playlist sliding:${sliding.toFixed(3)}`);
+        } else {
+          logger.log('live audio playlist - outdated PTS, unknown sliding');
+        }
+      } else {
+        newDetails.PTSKnown = false;
+        logger.log('live audio playlist - first load, unknown sliding');
+      }
+    } else {
+      newDetails.PTSKnown = false;
+    }
+    track.details = newDetails;
+    
     // compute start position
     if (!this.startFragRequested) {
     // compute start position if set to -1. use it straight away if value is defined
       if (this.startPosition === -1) {
         // first, check if start time offset has been set in playlist, if yes, use this value
-        let startTimeOffset = details.startTimeOffset;
+        let startTimeOffset = newDetails.startTimeOffset;
         if(!isNaN(startTimeOffset)) {
           logger.log(`start time offset found in playlist, adjust startPosition to ${startTimeOffset}`);
           this.startPosition = startTimeOffset;
@@ -449,7 +478,7 @@ class AudioStreamController extends EventHandler {
         logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
         // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
         let accurateTimeOffset = details.PTSKnown || !details.live;
-        this.demuxer.push(data.payload, audioCodec, null, start, fragCurrent.cc, trackId, sn, duration, fragCurrent.decryptdata,accurateTimeOffset);
+        this.demuxer.push(data.payload, audioCodec, null, start, fragCurrent.cc, trackId, sn, duration, fragCurrent.decryptdata,accurateTimeOffset,this.initPTS);
     }
     this.fragLoadError = 0;
   }

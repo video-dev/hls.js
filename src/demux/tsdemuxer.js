@@ -56,7 +56,7 @@
   }
 
   // feed incoming data to the front of the parsing pipeline
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset) {
+  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
     var start, len = data.length, stt, pid, atf, offset,pes,
         codecsOnly = this.remuxer.passthrough,
         unknownPIDs = false;
@@ -246,10 +246,10 @@
       // either id3Data null or PES truncated, keep it for next frag parsing
       id3Track.pesData = id3Data;
     }
-    this.remux(level,sn,null,timeOffset);
+    this.remux(level,sn,null,timeOffset,defaultInitPTS);
   }
 
-  remux(level, sn, data, timeOffset) {
+  remux(level, sn, data, timeOffset,defaultInitPTS) {
     let avcTrack = this._avcTrack, samples = avcTrack.samples;
 
     // compute total/avc sample length and nb of NAL units
@@ -267,7 +267,7 @@
     };},{len : 0, nbNalu : 0});
      avcTrack.len = trackData.len;
      avcTrack.nbNalu = trackData.nbNalu;
-    this.remuxer.remux(level, sn, this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, timeOffset, this.contiguous, this.accurateTimeOffset, data);
+    this.remuxer.remux(level, sn, this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, timeOffset, this.contiguous, this.accurateTimeOffset, defaultInitPTS,data);
   }
 
   destroy() {
