@@ -928,55 +928,20 @@
   _parseMPEGPES(pes) {
     var data = pes.data;
     var pts = pes.pts;
-    var length;
-
-    if (typeof this.mpegBuffer === 'undefined') {
-      this.mpegBuffer = null;
-      this.mpegBufferSize = 0;
-    }
-
-    if (this.mpegBufferSize > 0) {
-        var needBuffer = data.length + this.mpegBufferSize;
-        if (!this.mpegBuffer || this.mpegBuffer.length < needBuffer) {
-            var newBuffer = new Uint8Array(needBuffer);
-            if (this.mpegBufferSize > 0) {
-                newBuffer.set(this.mpegBuffer.subarray(0, this.mpegBufferSize));
-            }
-            this.mpegBuffer = newBuffer;
-        }
-        this.mpegBuffer.set(data, this.mpegBufferSize);
-        this.mpegBufferSize = needBuffer;
-        data = this.mpegBuffer;
-        length = needBuffer;
-    }
-    else {
-        length = data.length;
-    }
-
+    var length = data.length;
     var frameIndex = 0;
     var offset = 0;
     var parsed;
+
     while (offset < length &&
         (parsed = this._parseMpeg(data, offset, length, frameIndex++, pts)) > 0) {
         offset += parsed;
     }
-    var tail = length - offset;
-    if (tail > 0) {
-        if (!this.mpegBuffer || this.mpegBuffer.length < tail) {
-            this.mpegBuffer = new Uint8Array(data.subarray(offset, length));
-        }
-        else {
-            this.mpegBuffer.set(data.subarray(offset, length));
-        }
-    }
-    this.mpegBufferSize = tail;
   }
 
   _onMpegFrame(data, bitRate, sampleRate, channelCount, frameIndex, pts) {
     var frameDuration = (1152 / sampleRate) * 1000;
-
     var stamp = pts + frameIndex * frameDuration;
-
     var track = this._audioTrack;
 
     track.config = [];
