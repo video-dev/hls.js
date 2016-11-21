@@ -152,13 +152,21 @@ class Demuxer {
             if (this.decrypter == null) {
                 this.decrypter = new Decrypter(this.hls);
             }
-
             var localthis = this;
+            var startTime = performance.now();
             this.decrypter.decrypt(
                 data,
-                decryptdata.key,
-                decryptdata.iv,
+                decryptdata.key.buffer,
+                decryptdata.iv.buffer,
                 function(decryptedData) {
+                    localthis.hls.trigger(Event.FRAG_DECRYPTED, {
+                        level: level,
+                        sn: sn,
+                        stats: {
+                            tstart: startTime,
+                            tdecrypt: performance.now()
+                        }
+                    });
                     localthis.pushDecrypted(
                         decryptedData,
                         audioCodec,
