@@ -87,6 +87,8 @@ class MP4Remuxer {
         audioSamples = audioTrack.samples,
         videoSamples = videoTrack.samples,
         pesTimeScale = this.PES_TIMESCALE,
+        typeSupported = this.typeSupported,
+        container = 'audio/mp4',
         tracks = {},
         data = { id : this.id, level : this.level, sn : this.sn, tracks : tracks, unique : false },
         computePTSDTS = (this._initPTS === undefined),
@@ -111,13 +113,11 @@ class MP4Remuxer {
         audioTrack.timescale = audioTrack.audiosamplerate / greatestCommonDivisor(audioTrack.audiosamplerate,(audioTrack.isAAC ? 1024 : 1152));
       }
       logger.log ('audio mp4 timescale :'+ audioTrack.timescale);
-      var container = 'audio/mp4';
       if (!audioTrack.isAAC) {
-        if (this.typeSupported.mpeg === true) { // Chrome
+        if (typeSupported.mpeg === true) { // Chrome
           container = 'audio/mpeg';
           audioTrack.codec = '';
-        }
-        else if (this.typeSupported.mp3 === true) { // Firefox
+        } else if (typeSupported.mp3 === true) { // Firefox
           audioTrack.codec = 'mp3';
         }
       }
