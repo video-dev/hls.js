@@ -2,10 +2,10 @@
  * Playlist Loader
 */
 
+import URLToolkit from 'url-toolkit';
 import Event from '../events';
 import EventHandler from '../event-handler';
 import {ErrorTypes, ErrorDetails} from '../errors';
-import URLHelper from '../utils/url';
 import AttrList from '../utils/attr-list';
 import {logger} from '../utils/logger';
 
@@ -63,12 +63,12 @@ class PlaylistLoader extends EventHandler {
       retry = config.manifestLoadingMaxRetry;
       timeout = config.manifestLoadingTimeOut;
       retryDelay = config.manifestLoadingRetryDelay;
-      maxRetryDelay = config.manifestLoadingMaxRetryTimeOut;
+      maxRetryDelay = config.manifestLoadingMaxRetryTimeout;
     } else {
       retry = config.levelLoadingMaxRetry;
       timeout = config.levelLoadingTimeOut;
       retryDelay = config.levelLoadingRetryDelay;
-      maxRetryDelay = config.levelLoadingMaxRetryTimeOut;
+      maxRetryDelay = config.levelLoadingMaxRetryTimeout;
       logger.log(`loading playlist for level ${context.level}`);
     }
     loader  = this.loaders[context.type] = context.loader = typeof(config.pLoader) !== 'undefined' ? new config.pLoader(config) : new config.loader(config);
@@ -82,7 +82,7 @@ class PlaylistLoader extends EventHandler {
   }
 
   resolve(url, baseUrl) {
-    return URLHelper.buildAbsoluteURL(baseUrl, url);
+    return URLToolkit.buildAbsoluteURL(baseUrl, url);
   }
 
   parseMasterPlaylist(string, baseurl) {
@@ -213,7 +213,7 @@ class PlaylistLoader extends EventHandler {
         byteRangeStartOffset = null,
         tagList = [];
 
-    regexp = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE):(\d+))|(?:#EXT-X-(TARGETDURATION):(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF):(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE):(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
+    regexp = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF): *(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
     while ((result = regexp.exec(string)) !== null) {
       result.shift();
       result = result.filter(function(n) { return (n !== undefined); });
@@ -238,6 +238,9 @@ class PlaylistLoader extends EventHandler {
         case 'DIS':
           cc++;
           tagList.push(result);
+          break;
+        case 'DISCONTINUITY-SEQ':
+          cc = parseInt(result[1]);
           break;
         case 'BYTERANGE':
           var params = result[1].split('@');
@@ -361,10 +364,14 @@ class PlaylistLoader extends EventHandler {
           hls.trigger(Event.MANIFEST_LOADED, {levels: [{url: url, details : levelDetails}], audioTracks : [], url: url, stats: stats});
         }
         stats.tparsed = performance.now();
-        if (isLevel) {
-          hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: level || 0, id: id || 0, stats: stats});
+        if (levelDetails.targetduration) {
+          if (isLevel) {
+            hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: level || 0, id: id || 0, stats: stats});
+          } else {
+            hls.trigger(Event.AUDIO_TRACK_LOADED, {details: levelDetails, id: id, stats: stats});
+          }
         } else {
-          hls.trigger(Event.AUDIO_TRACK_LOADED, {details: levelDetails, id: id, stats: stats});
+          hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'invalid targetduration'});
         }
       } else {
         let levels = this.parseMasterPlaylist(string, url);

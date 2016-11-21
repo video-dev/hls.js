@@ -55,6 +55,8 @@ module.exports = {
   FRAG_LOAD_EMERGENCY_ABORTED: 'hlsFragLoadEmergencyAborted',
   // fired when a fragment loading is completed - data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length}}
   FRAG_LOADED: 'hlsFragLoaded',
+  // fired when a fragment has finished decrypting - data: { level : levelId, sn : sequence number }
+  FRAG_DECRYPTED: 'hlsFragDecrypted',
   // fired when Init Segment has been extracted from fragment - data: { id : demuxer id, level : levelId, sn : sequence number, moov : moov MP4 box, codecs : codecs found while parsing fragment}
   FRAG_PARSING_INIT_SEGMENT: 'hlsFragParsingInitSegment',
   // fired when parsing sei text is completed - data: { id : demuxer id, , level : levelId, sn : sequence number, samples : [ sei samples pes ] }
