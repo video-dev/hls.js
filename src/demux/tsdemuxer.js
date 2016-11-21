@@ -58,7 +58,7 @@ class TSDemuxer {
             len: 0,
             dropped: 0
         };
-        this._aacTrack = {
+        this._audioTrack = {
             container: 'video/mp2t',
             type: 'audio',
             id: -1,
@@ -136,14 +136,14 @@ class TSDemuxer {
 
         var pmtParsed = this.pmtParsed,
             avcTrack = this._avcTrack,
-            aacTrack = this._aacTrack,
+            audioTrack = this._audioTrack,
             id3Track = this._id3Track,
             avcId = avcTrack.id,
-            aacId = aacTrack.id,
+            audioId = audioTrack.id,
             id3Id = id3Track.id,
             pmtId = this._pmtId,
             avcData = avcTrack.pesData,
-            aacData = aacTrack.pesData,
+            audioData = audioTrack.pesData,
             id3Data = id3Track.pesData,
             parsePAT = this._parsePAT,
             parsePMT = this._parsePMT,
@@ -183,7 +183,7 @@ class TSDemuxer {
                                     // we have all codec info !
                                     if (
                                         avcTrack.codec &&
-                                        (aacId === -1 || aacTrack.codec)
+                                        (audioId === -1 || audioTrack.codec)
                                     ) {
                                         this.remux(level, sn, data, timeOffset);
                                         return;
@@ -199,10 +199,10 @@ class TSDemuxer {
                             avcData.size += start + 188 - offset;
                         }
                         break;
-                    case aacId:
+                    case audioId:
                         if (stt) {
-                            if (aacData && (pes = parsePES(aacData))) {
-                                if (aacTrack.isAAC) {
+                            if (audioData && (pes = parsePES(audioData))) {
+                                if (audioTrack.isAAC) {
                                     parseAACPES(pes);
                                 } else {
                                     parseMPEGPES(pes);
@@ -212,7 +212,7 @@ class TSDemuxer {
                                     // if video PID is undefined OR if we have video codec info,
                                     // we have all codec infos !
                                     if (
-                                        aacTrack.codec &&
+                                        audioTrack.codec &&
                                         (avcId === -1 || avcTrack.codec)
                                     ) {
                                         this.remux(level, sn, data, timeOffset);
@@ -220,13 +220,13 @@ class TSDemuxer {
                                     }
                                 }
                             }
-                            aacData = { data: [], size: 0 };
+                            audioData = { data: [], size: 0 };
                         }
-                        if (aacData) {
-                            aacData.data.push(
+                        if (audioData) {
+                            audioData.data.push(
                                 data.subarray(offset, start + 188)
                             );
-                            aacData.size += start + 188 - offset;
+                            audioData.size += start + 188 - offset;
                         }
                         break;
                     case id3Id:
@@ -268,10 +268,10 @@ class TSDemuxer {
                         if (avcId > 0) {
                             avcTrack.id = avcId;
                         }
-                        aacId = parsedPIDs.aac;
-                        if (aacId > 0) {
-                            aacTrack.id = aacId;
-                            aacTrack.isAAC = parsedPIDs.isAAC;
+                        audioId = parsedPIDs.audio;
+                        if (audioId > 0) {
+                            audioTrack.id = audioId;
+                            audioTrack.isAAC = parsedPIDs.isAAC;
                         }
                         id3Id = parsedPIDs.id3;
                         if (id3Id > 0) {
@@ -311,21 +311,21 @@ class TSDemuxer {
             avcTrack.pesData = avcData;
         }
 
-        if (aacData && (pes = parsePES(aacData))) {
-            if (aacTrack.isAAC) {
+        if (audioData && (pes = parsePES(audioData))) {
+            if (audioTrack.isAAC) {
                 parseAACPES(pes);
             } else {
                 parseMPEGPES(pes);
             }
-            aacTrack.pesData = null;
+            audioTrack.pesData = null;
         } else {
-            if (aacData && aacData.size) {
+            if (audioData && audioData.size) {
                 logger.log(
                     'last AAC PES packet truncated,might overlap between fragments'
                 );
             }
-            // either aacData null or PES truncated, keep it for next frag parsing
-            aacTrack.pesData = aacData;
+            // either audioData null or PES truncated, keep it for next frag parsing
+            audioTrack.pesData = audioData;
         }
 
         if (id3Data && (pes = parsePES(id3Data))) {
@@ -367,7 +367,7 @@ class TSDemuxer {
         this.remuxer.remux(
             level,
             sn,
-            this._aacTrack,
+            this._audioTrack,
             this._avcTrack,
             this._id3Track,
             this._txtTrack,
@@ -395,7 +395,7 @@ class TSDemuxer {
             tableEnd,
             programInfoLength,
             pid,
-            result = { aac: -1, avc: -1, id3: -1, isAAC: true };
+            result = { audio: -1, avc: -1, id3: -1, isAAC: true };
         sectionLength = ((data[offset + 1] & 0x0f) << 8) | data[offset + 2];
         tableEnd = offset + 3 + sectionLength - 4;
         // to determine where the table is, we have to figure out how
@@ -410,8 +410,8 @@ class TSDemuxer {
                 // ISO/IEC 13818-7 ADTS AAC (MPEG-2 lower bit-rate audio)
                 case 0x0f:
                     //logger.log('AAC PID:'  + pid);
-                    if (result.aac === -1) {
-                        result.aac = pid;
+                    if (result.audio === -1) {
+                        result.audio = pid;
                     }
                     break;
                 // Packetized metadata (ID3)
@@ -437,8 +437,8 @@ class TSDemuxer {
                         logger.log(
                             'MPEG audio found, not supported in this browser for now'
                         );
-                    } else if (result.aac === -1) {
-                        result.aac = pid;
+                    } else if (result.audio === -1) {
+                        result.audio = pid;
                         result.isAAC = false;
                     }
                     break;
@@ -1020,7 +1020,7 @@ class TSDemuxer {
     }
 
     _parseAACPES(pes) {
-        var track = this._aacTrack,
+        var track = this._audioTrack,
             data = pes.data,
             pts = pes.pts,
             startOffset = 0,
@@ -1218,7 +1218,7 @@ class TSDemuxer {
 
         var stamp = pts + frameIndex * frameDuration;
 
-        var track = this._aacTrack;
+        var track = this._audioTrack;
 
         track.config = [];
         track.channelCount = channelCount;
