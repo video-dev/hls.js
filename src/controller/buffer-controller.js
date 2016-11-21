@@ -44,6 +44,13 @@ class BufferController extends EventHandler {
     let type = data.type;
     let audioTrack = this.tracks.audio;
 
+    // Adjusting `SourceBuffer.timestampOffset` (desired point in the timeline where the next frames should be appended)
+    // in Chrome browser when we detect MPEG audio container and time delta between level PTS and `SourceBuffer.timestampOffset`
+    // is greater than 100ms (this is enough to handle seek for VOD or level change for LIVE videos). At the time of change we issue
+    // `SourceBuffer.abort()` and adjusting `SourceBuffer.timestampOffset` if `SourceBuffer.updating` is false or awaiting `updateend`
+    // event if SB is in updating state.
+    // More info here: https://github.com/dailymotion/hls.js/issues/332#issuecomment-257986486
+
     if (type === 'audio' && audioTrack && audioTrack.container === 'audio/mpeg') { // Chrome audio mp3 track
       let audioBuffer = this.sourceBuffer.audio;
       let delta = Math.abs(audioBuffer.timestampOffset - data.start);
@@ -54,8 +61,7 @@ class BufferController extends EventHandler {
 
         try {
           audioBuffer.abort();
-        }
-        catch (err) {
+        } catch (err) {
           updating = true;
           logger.warn('can not abort audio buffer: ' + err);
         }
@@ -63,8 +69,7 @@ class BufferController extends EventHandler {
         if (!updating) {
           logger.warn('change mpeg audio timestamp offset from ' + audioBuffer.timestampOffset + ' to ' + data.start);
           audioBuffer.timestampOffset = data.start;
-        }
-        else {
+        } else {
           this.audioTimestampOffset = data.start;
         }
       }
