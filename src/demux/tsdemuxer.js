@@ -146,8 +146,7 @@
               if (audioData && (pes = parsePES(audioData))) {
                 if (audioTrack.isAAC) {
                   parseAACPES(pes);
-                }
-                else {
+                } else {
                   parseMPEGPES(pes);
                 }
                 if (codecsOnly) {
@@ -239,8 +238,7 @@
     if (audioData && (pes = parsePES(audioData))) {
       if (audioTrack.isAAC) {
         parseAACPES(pes);
-      }
-      else {
+      } else {
         parseMPEGPES(pes);
       }
       audioTrack.pesData = null;
@@ -335,8 +333,7 @@
           //logger.log('MPEG PID:'  + pid);
           if (!mpegSupported) {
             logger.log('MPEG audio found, not supported in this browser for now');
-          }
-          else if (result.audio === -1) {
+          } else if (result.audio === -1) {
             result.audio = pid;
             result.isAAC = false;
           }
