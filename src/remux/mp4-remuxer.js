@@ -119,6 +119,8 @@ class MP4Remuxer {
             audioSamples = audioTrack.samples,
             videoSamples = videoTrack.samples,
             pesTimeScale = this.PES_TIMESCALE,
+            typeSupported = this.typeSupported,
+            container = 'audio/mp4',
             tracks = {},
             data = {
                 id: this.id,
@@ -155,13 +157,12 @@ class MP4Remuxer {
                     );
             }
             logger.log('audio mp4 timescale :' + audioTrack.timescale);
-            var container = 'audio/mp4';
             if (!audioTrack.isAAC) {
-                if (this.typeSupported.mpeg === true) {
+                if (typeSupported.mpeg === true) {
                     // Chrome
                     container = 'audio/mpeg';
                     audioTrack.codec = '';
-                } else if (this.typeSupported.mp3 === true) {
+                } else if (typeSupported.mp3 === true) {
                     // Firefox
                     audioTrack.codec = 'mp3';
                 }
