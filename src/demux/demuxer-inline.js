@@ -46,10 +46,17 @@ class DemuxerInline {
                         hls,
                         id,
                         PassThroughRemuxer,
-                        this.config
+                        this.config,
+                        this.typeSupported
                     );
                 } else {
-                    demuxer = new TSDemuxer(hls, id, MP4Remuxer, this.config);
+                    demuxer = new TSDemuxer(
+                        hls,
+                        id,
+                        MP4Remuxer,
+                        this.config,
+                        this.typeSupported
+                    );
                 }
             } else if (AACDemuxer.probe(data)) {
                 demuxer = new AACDemuxer(hls, id, MP4Remuxer, this.config);

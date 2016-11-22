@@ -10,10 +10,11 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import '../utils/polyfill';
 
 class MP4Remuxer {
-    constructor(observer, id, config) {
+    constructor(observer, id, config, typeSupported) {
         this.observer = observer;
         this.id = id;
         this.config = config;
+        this.typeSupported = typeSupported;
         this.ISGenerated = false;
         this.PES2MP4SCALEFACTOR = 4;
         this.PES_TIMESCALE = 90000;
@@ -118,6 +119,8 @@ class MP4Remuxer {
             audioSamples = audioTrack.samples,
             videoSamples = videoTrack.samples,
             pesTimeScale = this.PES_TIMESCALE,
+            typeSupported = this.typeSupported,
+            container = 'audio/mp4',
             tracks = {},
             data = {
                 id: this.id,
@@ -148,11 +151,24 @@ class MP4Remuxer {
                 };
                 audioTrack.timescale =
                     audioTrack.audiosamplerate /
-                    greatestCommonDivisor(audioTrack.audiosamplerate, 1024);
+                    greatestCommonDivisor(
+                        audioTrack.audiosamplerate,
+                        audioTrack.isAAC ? 1024 : 1152
+                    );
             }
             logger.log('audio mp4 timescale :' + audioTrack.timescale);
+            if (!audioTrack.isAAC) {
+                if (typeSupported.mpeg === true) {
+                    // Chrome
+                    container = 'audio/mpeg';
+                    audioTrack.codec = '';
+                } else if (typeSupported.mp3 === true) {
+                    // Firefox
+                    audioTrack.codec = 'mp3';
+                }
+            }
             tracks.audio = {
-                container: 'audio/mp4',
+                container: container,
                 codec: audioTrack.codec,
                 initSegment: MP4.initSegment([audioTrack]),
                 metadata: {
@@ -509,7 +525,9 @@ class MP4Remuxer {
             mp4timeScale = track.timescale,
             pes2mp4ScaleFactor = pesTimeScale / mp4timeScale,
             expectedSampleDuration =
-                track.timescale * 1024 / track.audiosamplerate,
+                track.timescale *
+                (track.isAAC ? 1024 : 1152) /
+                track.audiosamplerate,
             pesFrameDuration = expectedSampleDuration * pes2mp4ScaleFactor;
         var view,
             offset = 8,
@@ -564,7 +582,7 @@ class MP4Remuxer {
         // frame.
 
         // only inject/drop audio frames in case time offset is accurate
-        if (accurateTimeOffset) {
+        if (accurateTimeOffset && track.isAAC) {
             for (let i = 0, nextPtsNorm = nextAacPts; i < samples0.length; ) {
                 // First, let's see how far off this frame is from where we expect it to be
                 var sample = samples0[i],
@@ -719,7 +737,7 @@ class MP4Remuxer {
                     mp4Sample = {
                         size: fillFrame.byteLength,
                         cts: 0,
-                        duration: 1024,
+                        duration: track.isAAC ? 1024 : 1152,
                         flags: {
                             isLeading: 0,
                             isDependedOn: 0,
