@@ -62,6 +62,7 @@
       2,
       "single"
     ],
+    "allowTemplateLiterals": true,
     "semi": [
       0,
       "never"
