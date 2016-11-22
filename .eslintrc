@@ -11,6 +11,7 @@
     "builtin": true
   },
   "globals": {
+    "ArrayBuffer": true,
     "DataView": true,
     "Uint8Array": true
   },
@@ -34,7 +35,7 @@
     "guard-for-in": 2,
     "import/no-amd": 0,
     "new-cap": 2,
-    "no-bitwise": 1,
+    "no-bitwise": 0,
     "no-caller": 2,
     "no-cond-assign": [
       2,
@@ -44,7 +45,7 @@
     "no-empty": 2,
     "no-eval": 2,
     "no-extend-native": 2,
-    "no-extra-parens": 1,
+    "no-extra-parens": 0,
     "no-irregular-whitespace": 2,
     "no-iterator": 2,
     "no-loop-func": 2,
@@ -60,9 +61,11 @@
     "no-with": 2,
     "quotes": [
       2,
-      "single"
+      "single",
+      {
+        "allowTemplateLiterals": true
+      }
     ],
-    "allowTemplateLiterals": 2,
     "semi": [
       0,
       "never"
