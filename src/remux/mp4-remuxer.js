@@ -39,29 +39,24 @@ class MP4Remuxer {
 
   remux(level, sn, audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset, cc) {
     var switchedLevels = this.level !== level,
-        createdDiscontinuityMap = false,
-        sampleSources = [videoTrack, audioTrack],
-        referenceTrackIndex = sampleSources.findIndex((track) => (track.samples && track.samples.length) ? track.samples[0] : false ),
-        referencePTS = sampleSources[referenceTrackIndex].samples[0].pts;
+        referencePTS = [videoTrack, audioTrack].reduce((value, track) => (value >= 0) ? value : (track.samples && track.samples.length) ? track.samples[0].pts : -1, -1);
 
     this.level = level;
     this.sn = sn;
 
     if (!this.discontinuityMap[cc]) {
       this.discontinuityMap[cc] = {
-        discontinuitySequenceId: cc,
         pts: referencePTS,
-        timelineOffset: timeOffset
+        timeOffset: timeOffset
       };
       logger.log(`First instance of discontinuity sequence ${cc}, created a discontinuity map. ${this.discontinuityMap[cc]}`);
-      createdDiscontinuityMap = true;
     }
 
-    if (switchedLevels || createdDiscontinuityMap) {
+    if (switchedLevels) {
       var map = this.discontinuityMap[cc];
 
       // Set the correct offset for where the segment will be written for the upcoming set of fragments based on the PTS
-      timeOffset = ((referencePTS - map.pts) / 90000) + map.timelineOffset;
+      timeOffset = ((referencePTS - map.pts) / 90000) + map.timeOffset;
 
       logger.log(`Mapping PTS of ${referencePTS} for discontinuity sequence ${cc} to start being written at ${timeOffset.toFixed(3)}.`);
     }
