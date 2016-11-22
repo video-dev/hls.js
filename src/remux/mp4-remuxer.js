@@ -49,12 +49,13 @@ class MP4Remuxer {
     ) {
         var switchedLevels = this.level !== level,
             createdDiscontinuityMap = false,
-            sampleSources = [videoTrack, audioTrack, id3Track, textTrack],
-            referenceTrackIndex = sampleSources.findIndex(function(track) {
-                return track.samples && track.samples.length
-                    ? track.samples[0]
-                    : false;
-            }),
+            sampleSources = [videoTrack, audioTrack],
+            referenceTrackIndex = sampleSources.findIndex(
+                track =>
+                    track.samples && track.samples.length
+                        ? track.samples[0]
+                        : false
+            ),
             referencePTS = sampleSources[referenceTrackIndex].samples[0].pts;
 
         this.level = level;
@@ -79,6 +80,12 @@ class MP4Remuxer {
 
             // Set the correct offset for where the segment will be written for the upcoming set of fragments based on the PTS
             timeOffset = (referencePTS - map.pts) / 90000 + map.timelineOffset;
+
+            logger.log(
+                `Mapping PTS of ${referencePTS} for discontinuity sequence ${cc} to start being written at ${timeOffset.toFixed(
+                    3
+                )}.`
+            );
         }
 
         // generate Init Segment if needed
