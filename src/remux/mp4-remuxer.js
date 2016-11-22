@@ -14,6 +14,7 @@ class MP4Remuxer {
         this.observer = observer;
         this.id = id;
         this.config = config;
+        this.discontinuityMap = {};
         this.ISGenerated = false;
         this.PES2MP4SCALEFACTOR = 4;
         this.PES_TIMESCALE = 90000;
@@ -43,10 +44,43 @@ class MP4Remuxer {
         textTrack,
         timeOffset,
         contiguous,
-        accurateTimeOffset
+        accurateTimeOffset,
+        cc
     ) {
+        var switchedLevels = this.level !== level,
+            createdDiscontinuityMap = false,
+            sampleSources = [videoTrack, audioTrack, id3Track, textTrack],
+            referenceTrackIndex = sampleSources.findIndex(function(track) {
+                return track.samples && track.samples.length
+                    ? track.samples[0]
+                    : false;
+            }),
+            referencePTS = sampleSources[referenceTrackIndex].samples[0].pts;
+
         this.level = level;
         this.sn = sn;
+
+        if (!this.discontinuityMap[cc]) {
+            this.discontinuityMap[cc] = {
+                discontinuitySequenceId: cc,
+                pts: referencePTS,
+                timelineOffset: timeOffset
+            };
+            logger.log(
+                `First instance of discontinuity sequence ${cc}, created a discontinuity map. ${
+                    this.discontinuityMap[cc]
+                }`
+            );
+            createdDiscontinuityMap = true;
+        }
+
+        if (switchedLevels || createdDiscontinuityMap) {
+            var map = this.discontinuityMap[cc];
+
+            // Set the correct offset for where the segment will be written for the upcoming set of fragments based on the PTS
+            timeOffset = (referencePTS - map.pts) / 90000 + map.timelineOffset;
+        }
+
         // generate Init Segment if needed
         if (!this.ISGenerated) {
             this.generateIS(audioTrack, videoTrack, timeOffset);

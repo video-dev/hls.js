@@ -352,6 +352,7 @@ class TSDemuxer {
             timeOffset,
             this.contiguous,
             this.accurateTimeOffset,
+            this.lastCC,
             data
         );
     }
