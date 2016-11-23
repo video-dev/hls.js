@@ -135,12 +135,10 @@ class AESDecryptor {
         let ksRow;
         let invKsRow;
 
-        let keySchedule = (this.keySchedule = new Uint32Array(this.ksRows).fill(
-            0
-        ));
+        let keySchedule = (this.keySchedule = new Uint32Array(this.ksRows));
         let invKeySchedule = (this.invKeySchedule = new Uint32Array(
             this.ksRows
-        ).fill(0));
+        ));
         let sbox = this.sBox;
         let rcon = this.rcon;
 
