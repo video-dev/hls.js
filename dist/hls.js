@@ -8881,6 +8881,11 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 * Playlist Loader
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                */
 
+// https://regex101.com is your friend
+var MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
+var MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
+var LEVEL_PLAYLIST_REGEX = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF): *(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
+
 var PlaylistLoader = function (_EventHandler) {
   _inherits(PlaylistLoader, _EventHandler);
 
@@ -8971,10 +8976,7 @@ var PlaylistLoader = function (_EventHandler) {
     value: function parseMasterPlaylist(string, baseurl) {
       var levels = [],
           result = void 0;
-
-      // https://regex101.com is your friend
-      var re = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
-      while ((result = re.exec(string)) != null) {
+      while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
         var level = {};
 
         var attrs = level.attrs = new _attrList2.default(result[1]);
@@ -9010,10 +9012,7 @@ var PlaylistLoader = function (_EventHandler) {
     value: function parseMasterPlaylistMedia(string, baseurl, type) {
       var result = void 0,
           medias = [];
-
-      // https://regex101.com is your friend
-      var re = /#EXT-X-MEDIA:(.*)/g;
-      while ((result = re.exec(string)) != null) {
+      while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) != null) {
         var media = {};
         var attrs = new _attrList2.default(result[1]);
         if (attrs.TYPE === type) {
@@ -9102,15 +9101,13 @@ var PlaylistLoader = function (_EventHandler) {
           programDateTime = null,
           frag = null,
           result,
-          regexp,
           duration = null,
           title = null,
           byteRangeEndOffset = null,
           byteRangeStartOffset = null,
           tagList = [];
 
-      regexp = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF): *(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
-      while ((result = regexp.exec(string)) !== null) {
+      while ((result = LEVEL_PLAYLIST_REGEX.exec(string)) !== null) {
         result.shift();
         result = result.filter(function (n) {
           return n !== undefined;
@@ -10107,6 +10104,11 @@ var MP4Remuxer = function () {
       //   logger.log(avcSample.pts + '/' + avcSample.dts + ',' + unitsString + avcSample.units.length);
       // }
 
+      // sort video samples by DTS order
+      inputSamples.sort(function (a, b) {
+        return a.dts - b.dts;
+      });
+
       // handle broken streams with PTS < DTS, tolerance up 200ms (18000 in 90kHz timescale)
       var PTSDTSshift = inputSamples.reduce(function (prev, curr) {
         return Math.max(Math.min(prev, curr.pts - curr.dts), -18000);
@@ -10779,7 +10781,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+var DECIMAL_RESOLUTION_REGEX = /^(\d+)x(\d+)$/;
+var ATTR_LIST_REGEX = /\s*(.+?)\s*=((?:\".*?\")|.*?)(?:,|$)/g;
+
 // adapted from https://github.com/kanongil/node-m3u8parse/blob/master/attrlist.js
+
 var AttrList = function () {
   function AttrList(attrs) {
     _classCallCheck(this, AttrList);
@@ -10841,7 +10847,7 @@ var AttrList = function () {
   }, {
     key: 'decimalResolution',
     value: function decimalResolution(attrName) {
-      var res = /^(\d+)x(\d+)$/.exec(this[attrName]);
+      var res = DECIMAL_RESOLUTION_REGEX.exec(this[attrName]);
       if (res === null) {
         return undefined;
       }
@@ -10853,10 +10859,9 @@ var AttrList = function () {
   }], [{
     key: 'parseAttrList',
     value: function parseAttrList(input) {
-      var re = /\s*(.+?)\s*=((?:\".*?\")|.*?)(?:,|$)/g;
       var match,
           attrs = {};
-      while ((match = re.exec(input)) !== null) {
+      while ((match = ATTR_LIST_REGEX.exec(input)) !== null) {
         var value = match[2],
             quote = '"';
 
