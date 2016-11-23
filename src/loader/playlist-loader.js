@@ -232,7 +232,6 @@ class PlaylistLoader extends EventHandler {
             programDateTime = null,
             frag = null,
             result,
-            regexp,
             duration = null,
             title = null,
             byteRangeEndOffset = null,
