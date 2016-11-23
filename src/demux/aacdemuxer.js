@@ -177,7 +177,8 @@ class AACDemuxer {
             { samples: [] },
             timeOffset,
             contiguous,
-            accurateTimeOffset
+            accurateTimeOffset,
+            this.lastCC
         );
     }
 
