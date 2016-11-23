@@ -6983,6 +6983,11 @@ var TimelineController = function (_EventHandler) {
       }
     }
   }, {
+    key: 'reuseVttTextTrack',
+    value: function reuseVttTextTrack(inUseTrack, manifestTrack) {
+      return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
+    }
+  }, {
     key: 'destroy',
     value: function destroy() {
       _eventHandler2.default.prototype.destroy.call(this);
@@ -7005,21 +7010,29 @@ var TimelineController = function (_EventHandler) {
     value: function onManifestLoaded(data) {
       var _this3 = this;
 
-      // TODO: actually remove the tracks from the media object.
       this.textTracks = [];
 
       this.unparsedVttFrags = [];
       this.initPTS = undefined;
 
-      // TODO: maybe enable WebVTT if "forced"?
       if (this.config.enableWebVTT) {
-        this.tracks = data.subtitles || [];
+        (function () {
+          _this3.tracks = data.subtitles || [];
+          var inUseTracks = _this3.media ? _this3.media.textTracks : [];
 
-        this.tracks.forEach(function (track) {
-          var textTrack = _this3.createTextTrack('subtitles', track.name, track.lang);
-          textTrack.mode = track.default ? 'showing' : 'hidden';
-          _this3.textTracks.push(textTrack);
-        });
+          _this3.tracks.forEach(function (track, index) {
+            var textTrack = void 0;
+            var inUseTrack = inUseTracks[index];
+            // Reuse tracks with the same label, but do not reuse 608/708 tracks
+            if (_this3.reuseVttTextTrack(inUseTrack, track)) {
+              textTrack = inUseTrack;
+            } else {
+              textTrack = _this3.createTextTrack('subtitles', track.name, track.lang);
+            }
+            textTrack.mode = track.default ? 'showing' : 'hidden';
+            _this3.textTracks.push(textTrack);
+          });
+        })();
       }
     }
   }, {
@@ -7045,7 +7058,7 @@ var TimelineController = function (_EventHandler) {
       // If fragment is subtitle type, parse as WebVTT.
       else if (data.frag.type === 'subtitle') {
           if (data.payload.byteLength) {
-            var _ret = function () {
+            var _ret2 = function () {
               // We need an initial synchronisation PTS. Store fragments as long as none has arrived.
               if (typeof _this4.initPTS === 'undefined') {
                 _this4.unparsedVttFrags.push(data);
@@ -7071,7 +7084,7 @@ var TimelineController = function (_EventHandler) {
               });
             }();
 
-            if ((typeof _ret === 'undefined' ? 'undefined' : _typeof(_ret)) === "object") return _ret.v;
+            if ((typeof _ret2 === 'undefined' ? 'undefined' : _typeof(_ret2)) === "object") return _ret2.v;
           } else {
             // In case there is no payload, finish unsuccessfully.
             this.hls.trigger(_events2.default.SUBTITLE_FRAG_PROCESSED, { success: false, frag: data.frag });
@@ -7739,7 +7752,7 @@ var AACDemuxer = function () {
         }
       }
       var id3Track = id3.payload ? { samples: [{ pts: pts, dts: pts, unit: id3.payload }] } : { samples: [] };
-      this.remuxer.remux(level, sn, this._aacTrack, { samples: [] }, id3Track, { samples: [] }, timeOffset, contiguous, accurateTimeOffset);
+      this.remuxer.remux(level, sn, this._aacTrack, { samples: [] }, id3Track, { samples: [] }, timeOffset, contiguous, accurateTimeOffset, this.lastCC);
     }
   }, {
     key: 'destroy',
@@ -9061,7 +9074,7 @@ var TSDemuxer = function () {
       }, { len: 0, nbNalu: 0 });
       avcTrack.len = trackData.len;
       avcTrack.nbNalu = trackData.nbNalu;
-      this.remuxer.remux(level, sn, this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, timeOffset, this.contiguous, this.accurateTimeOffset, data);
+      this.remuxer.remux(level, sn, this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, timeOffset, this.contiguous, this.accurateTimeOffset, this.lastCC, data);
     }
   }, {
     key: 'destroy',
@@ -11444,7 +11457,7 @@ var PlaylistLoader = function (_EventHandler) {
           byteRangeStartOffset = null,
           tagList = [];
 
-      regexp = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF): *(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
+      regexp = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF): *(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
       while ((result = regexp.exec(string)) !== null) {
         result.shift();
         result = result.filter(function (n) {
@@ -11471,6 +11484,9 @@ var PlaylistLoader = function (_EventHandler) {
           case 'DIS':
             cc++;
             tagList.push(result);
+            break;
+          case 'DISCONTINUITY-SEQ':
+            cc = parseInt(result[1]);
             break;
           case 'BYTERANGE':
             var params = result[1].split('@');
@@ -12243,6 +12259,7 @@ var MP4Remuxer = function () {
     this.observer = observer;
     this.id = id;
     this.config = config;
+    this.discontinuityMap = {};
     this.ISGenerated = false;
     this.PES2MP4SCALEFACTOR = 4;
     this.PES_TIMESCALE = 90000;
@@ -12264,9 +12281,32 @@ var MP4Remuxer = function () {
     }
   }, {
     key: 'remux',
-    value: function remux(level, sn, audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
+    value: function remux(level, sn, audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset, cc) {
+
+      var referencePTS = [videoTrack, audioTrack].reduce(function (value, track) {
+        return value >= 0 ? value : track.samples && track.samples.length ? track.samples[0].pts : -1;
+      }, -1);
+      if (referencePTS > -1) {
+        var map = this.discontinuityMap[cc];
+        if (!map) {
+          map = this.discontinuityMap[cc] = {
+            pts: referencePTS,
+            timeOffset: timeOffset
+          };
+          _logger.logger.log('First instance of discontinuity sequence ' + cc + ', created a discontinuity map. pts ' + referencePTS + ' timeOffset ' + timeOffset);
+        }
+        if (this.level !== level && referencePTS !== map.pts) {
+          // Set the correct offset for where the segment will be written for the upcoming set of fragments based on the PTS
+          var previousTimeOffset = timeOffset;
+          timeOffset = (referencePTS - map.pts) / 90000 + map.timeOffset;
+
+          _logger.logger.log('Mapping PTS of ' + referencePTS + ' with offset ' + previousTimeOffset.toFixed(3) + ' to start at ' + timeOffset.toFixed(3) + ' for discontinuity sequence ' + cc + '.');
+        }
+      }
+
       this.level = level;
       this.sn = sn;
+
       // generate Init Segment if needed
       if (!this.ISGenerated) {
         this.generateIS(audioTrack, videoTrack, timeOffset);
