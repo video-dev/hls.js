@@ -1054,7 +1054,9 @@ class StreamController extends EventHandler {
           hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer, parent : 'main',content : 'data'});
         }
       });
-
+      if (this.startPosition === this.nextLoadPosition) {
+        this.startPosition = data.startPTS;
+      }
       this.nextLoadPosition = data.endPTS;
       this.bufferRange.push({type: data.type, start: data.startPTS, end: data.endPTS, frag: frag});
 
