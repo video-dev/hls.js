@@ -106,6 +106,7 @@ class PlaylistLoader extends EventHandler {
     parseMasterPlaylist(string, baseurl) {
         let levels = [],
             result;
+        MASTER_PLAYLIST_REGEX.lastIndex = 0;
         while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
             const level = {};
 
@@ -143,6 +144,7 @@ class PlaylistLoader extends EventHandler {
     parseMasterPlaylistMedia(string, baseurl, type) {
         let result,
             medias = [];
+        MASTER_PLAYLIST_MEDIA_REGEX.lastIndex = 0;
         while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) != null) {
             const media = {};
             var attrs = new AttrList(result[1]);
@@ -238,6 +240,7 @@ class PlaylistLoader extends EventHandler {
             byteRangeStartOffset = null,
             tagList = [];
 
+        LEVEL_PLAYLIST_REGEX.lastIndex = 0;
         while ((result = LEVEL_PLAYLIST_REGEX.exec(string)) !== null) {
             result.shift();
             result = result.filter(function(n) {

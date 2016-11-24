@@ -67,6 +67,7 @@ class AttrList {
     static parseAttrList(input) {
         var match,
             attrs = {};
+        ATTR_LIST_REGEX.lastIndex = 0;
         while ((match = ATTR_LIST_REGEX.exec(input)) !== null) {
             var value = match[2],
                 quote = '"';
