@@ -445,7 +445,7 @@
   }
 
   pushAccesUnit(avcSample,avcTrack) {
-    if (avcSample.units.units.length) {
+    if (avcSample.units.units.length && avcSample.frame) {
       // only push AVC sample if starting with a keyframe is not mandatory OR
       //    if keyframe already found in this fragment OR
       //       keyframe found in last fragment (track.sps) AND
@@ -484,6 +484,7 @@
            if(debug && avcSample) {
             avcSample.debug += 'NDR ';
            }
+           avcSample.frame = true;
            break;
         //IDR
         case 5:
@@ -496,6 +497,7 @@
             avcSample.debug += 'IDR ';
           }
           avcSample.key = true;
+          avcSample.frame = true;
           break;
         //SEI
         case 6:
