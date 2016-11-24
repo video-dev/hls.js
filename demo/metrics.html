@@ -53,10 +53,10 @@ $(document).ready(function() {
   $('#metricsData').change(function()  { events = jsonpack.unpack(atob($('#metricsData').val())); updateMetrics(); });
 });
 
-var data = location.search.split('data=')[1],events;
+var data = location.search.split('data=')[1] || location.hash.split('data=')[1],events;
 if (data) {
   events = jsonpack.unpack(atob(decodeURIComponent(data)));
-  updateMetrics();  
+  updateMetrics();
 }
 
 function updateMetrics() {
