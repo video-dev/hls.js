@@ -284,7 +284,7 @@ class LevelController extends EventHandler {
                     logger.warn(
                         `level controller,${details}: emergency switch-down for next fragment`
                     );
-                    hls.abrController.nextAutoLevel = minAutoLevel;
+                    abrController.nextAutoLevel = minAutoLevel;
                 } else if (level && level.details && level.details.live) {
                     logger.warn(
                         `level controller,${details} on live stream, discard`
@@ -298,8 +298,7 @@ class LevelController extends EventHandler {
                     details === ErrorDetails.LEVEL_LOAD_ERROR ||
                     details === ErrorDetails.LEVEL_LOAD_TIMEOUT
                 ) {
-                    let hls = this.hls,
-                        media = hls.media,
+                    let media = hls.media,
                         // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
                         mediaBuffered =
                             media &&
