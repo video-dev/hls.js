@@ -228,10 +228,10 @@ class LevelController extends EventHandler {
     }
 
     set startLevel(newLevel) {
-        let hls = this.hls,
-            abrController = hls.abrController,
-            minAutoLevel = abrController.minAutoLevel;
-        this._startLevel = Math.max(newLevel, minAutoLevel);
+        this._startLevel = Math.max(
+            newLevel,
+            this.hls.abrController.minAutoLevel
+        );
     }
 
     onError(data) {
