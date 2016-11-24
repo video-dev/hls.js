@@ -187,7 +187,7 @@ class LevelController extends EventHandler {
   }
 
   set startLevel(newLevel) {
-    this._startLevel = newLevel;
+    this._startLevel = Math.max(newLevel, this.hls.abrController.minAutoLevel);
   }
 
   onError(data) {
@@ -195,7 +195,7 @@ class LevelController extends EventHandler {
       return;
     }
 
-    let details = data.details, hls = this.hls, levelId, level, levelError = false;
+    let details = data.details, hls = this.hls, levelId, level, levelError = false, abrController = hls.abrController, minAutoLevel = abrController.minAutoLevel;
     // try to recover not fatal errors
     switch(details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
@@ -228,7 +228,7 @@ class LevelController extends EventHandler {
         let recoverable = ((this._manualLevel === -1) && levelId);
         if (recoverable) {
           logger.warn(`level controller,${details}: emergency switch-down for next fragment`);
-          hls.abrController.nextAutoLevel = 0;
+          abrController.nextAutoLevel = minAutoLevel;
         } else if(level && level.details && level.details.live) {
           logger.warn(`level controller,${details} on live stream, discard`);
           if (levelError) {
@@ -238,8 +238,7 @@ class LevelController extends EventHandler {
           // other errors are handled by stream controller
         } else if (details === ErrorDetails.LEVEL_LOAD_ERROR ||
                    details === ErrorDetails.LEVEL_LOAD_TIMEOUT) {
-          let hls = this.hls,
-              media = hls.media,
+          let media = hls.media,
             // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
               mediaBuffered = media && BufferHelper.isBuffered(media,media.currentTime) && BufferHelper.isBuffered(media,media.currentTime+0.5);
           if (mediaBuffered) {
