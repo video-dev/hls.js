@@ -94,7 +94,7 @@ class AbrController extends EventHandler {
           let fragLevelNextLoadedDelay, nextLoadLevel;
           // lets iterate through lower level and try to find the biggest one that could avoid rebuffering
           // we start from current level - 1 and we step down , until we find a matching level
-          for (nextLoadLevel = frag.level - 1 ; nextLoadLevel >=0 ; nextLoadLevel--) {
+          for (nextLoadLevel = frag.level - 1 ; nextLoadLevel > this.minAutoLevel ; nextLoadLevel--) {
             // compute time to load next fragment at lower level
             // 0.8 : consider only 80% of current bw to be conservative
             // 8 = bits per byte (bps/Bps)
@@ -108,7 +108,7 @@ class AbrController extends EventHandler {
           // of finishing loading current one ...
           if (fragLevelNextLoadedDelay < fragLoadedDelay) {
             // ensure nextLoadLevel is not negative
-            nextLoadLevel = Math.max(0,nextLoadLevel);
+            nextLoadLevel = Math.max(this.minAutoLevel,nextLoadLevel);
             logger.warn(`loading too slow, abort fragment loading and switch to level ${nextLoadLevel}:fragLoadedDelay[${nextLoadLevel}]<fragLoadedDelay[${frag.level-1}];bufferStarvationDelay:${fragLevelNextLoadedDelay.toFixed(1)}<${fragLoadedDelay.toFixed(1)}:${bufferStarvationDelay.toFixed(1)}`);
             // force next load level in auto mode
             hls.nextLoadLevel = nextLoadLevel;

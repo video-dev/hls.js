@@ -187,7 +187,8 @@ class LevelController extends EventHandler {
   }
 
   set startLevel(newLevel) {
-    this._startLevel = newLevel;
+    let hls = this.hls, abrController = hls.abrController, minAutoLevel = abrController.minAutoLevel;
+    this._startLevel = Math.max(newLevel, minAutoLevel);
   }
 
   onError(data) {
@@ -195,7 +196,7 @@ class LevelController extends EventHandler {
       return;
     }
 
-    let details = data.details, hls = this.hls, levelId, level, levelError = false;
+    let details = data.details, hls = this.hls, levelId, level, levelError = false, abrController = hls.abrController, minAutoLevel = abrController.minAutoLevel;
     // try to recover not fatal errors
     switch(details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
@@ -228,7 +229,7 @@ class LevelController extends EventHandler {
         let recoverable = ((this._manualLevel === -1) && levelId);
         if (recoverable) {
           logger.warn(`level controller,${details}: emergency switch-down for next fragment`);
-          hls.abrController.nextAutoLevel = 0;
+          hls.abrController.nextAutoLevel = minAutoLevel;
         } else if(level && level.details && level.details.live) {
           logger.warn(`level controller,${details} on live stream, discard`);
           if (levelError) {
