@@ -316,7 +316,8 @@ class Hls {
     /** Return first level (index of first level referenced in manifest)
      **/
     get firstLevel() {
-        return this.levelController.firstLevel;
+        let minAutoLevel = this.abrController.minAutoLevel;
+        return Math.max(this.levelController.firstLevel, minAutoLevel);
     }
 
     /** set first level (index of first level referenced in manifest)
@@ -340,7 +341,8 @@ class Hls {
   **/
     set startLevel(newLevel) {
         logger.log(`set startLevel:${newLevel}`);
-        this.levelController.startLevel = newLevel;
+        let minAutoLevel = this.abrController.minAutoLevel;
+        this.levelController.startLevel = Math.max(newLevel, minAutoLevel);
     }
 
     /** Return the capping/max level value that could be used by automatic level selection algorithm **/

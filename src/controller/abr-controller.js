@@ -134,7 +134,7 @@ class AbrController extends EventHandler {
                     // we start from current level - 1 and we step down , until we find a matching level
                     for (
                         nextLoadLevel = frag.level - 1;
-                        nextLoadLevel >= 0;
+                        nextLoadLevel > this.minAutoLevel;
                         nextLoadLevel--
                     ) {
                         // compute time to load next fragment at lower level
@@ -153,7 +153,10 @@ class AbrController extends EventHandler {
                     // of finishing loading current one ...
                     if (fragLevelNextLoadedDelay < fragLoadedDelay) {
                         // ensure nextLoadLevel is not negative
-                        nextLoadLevel = Math.max(0, nextLoadLevel);
+                        nextLoadLevel = Math.max(
+                            this.minAutoLevel,
+                            nextLoadLevel
+                        );
                         logger.warn(
                             `loading too slow, abort fragment loading and switch to level ${nextLoadLevel}:fragLoadedDelay[${nextLoadLevel}]<fragLoadedDelay[${frag.level -
                                 1}];bufferStarvationDelay:${fragLevelNextLoadedDelay.toFixed(
