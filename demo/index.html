@@ -370,7 +370,7 @@ $(document).ready(function() {
             parsing : data.stats.tparsed - data.stats.tload,
             buffer : data.stats.tbuffered - data.stats.tparsed,
             duration : data.stats.tbuffered - data.stats.tfirst,
-            bw : Math.round(8*data.stats.total/(data.stats.tbuffered - data.stats.tfirst)),
+            bw : Math.round(8*data.stats.total/(data.stats.tbuffered - data.stats.trequest)),
             size : data.stats.total
           };
           events.load.push(event);
@@ -877,7 +877,7 @@ function timeRangesToString(r) {
   function goToMetricsPermaLink() {
     var url = document.URL;
     var b64 = getMetrics();
-    url = url.substr(0,url.lastIndexOf("/")+1) + 'metrics.html?data=' + b64;
+    url = url.substr(0,url.lastIndexOf("/")+1) + 'metrics.html#data=' + b64;
     console.log(url);
     window.open(url,'_blank');
   }
