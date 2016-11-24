@@ -294,8 +294,7 @@ class Hls {
   /** Return first level (index of first level referenced in manifest)
   **/
   get firstLevel() {
-    let minAutoLevel = this.abrController.minAutoLevel;
-    return Math.max(this.levelController.firstLevel,minAutoLevel);
+    return Math.max(this.levelController.firstLevel, this.abrController.minAutoLevel);
   }
 
   /** set first level (index of first level referenced in manifest)
