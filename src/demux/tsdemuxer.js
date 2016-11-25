@@ -340,30 +340,25 @@ class TSDemuxer {
 
     remux(level, sn, data, timeOffset) {
         let avcTrack = this._avcTrack,
-            samples = avcTrack.samples;
+            samples = avcTrack.samples,
+            nbNalu = 0,
+            naluLen = 0;
 
         // compute total/avc sample length and nb of NAL units
-        let trackData = samples.reduce(
-            function(prevSampleData, curSample) {
-                let sampleData = curSample.units.units.reduce(
-                    function(prevUnitData, curUnit) {
-                        return {
-                            len: prevUnitData.len + curUnit.data.length,
-                            nbNalu: prevUnitData.nbNalu + 1
-                        };
-                    },
-                    { len: 0, nbNalu: 0 }
-                );
-                curSample.length = sampleData.len;
-                return {
-                    len: prevSampleData.len + sampleData.len,
-                    nbNalu: prevSampleData.nbNalu + sampleData.nbNalu
-                };
-            },
-            { len: 0, nbNalu: 0 }
-        );
-        avcTrack.len = trackData.len;
-        avcTrack.nbNalu = trackData.nbNalu;
+        for (let i = 0; i < samples.length; i++) {
+            let sample = samples[i],
+                units = sample.units.units,
+                nbUnits = units.length,
+                sampleLen = 0;
+            for (let j = 0; j < nbUnits; j++) {
+                sampleLen += units[j].data.length;
+            }
+            naluLen += sampleLen;
+            nbNalu += nbUnits;
+            sample.length = sampleLen;
+        }
+        avcTrack.len = naluLen;
+        avcTrack.nbNalu = nbNalu;
         this.remuxer.remux(
             level,
             sn,
