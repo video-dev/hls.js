@@ -588,7 +588,8 @@ var AbrController = function (_EventHandler) {
       var hls = this.hls,
           v = hls.media,
           frag = this.fragCurrent,
-          loader = frag.loader;
+          loader = frag.loader,
+          minAutoLevel = this.minAutoLevel;
 
       // if loader has been destroyed or loading has been aborted, stop timer and return
       if (!loader || loader.stats && loader.stats.aborted) {
@@ -620,7 +621,7 @@ var AbrController = function (_EventHandler) {
                 nextLoadLevel = void 0;
             // lets iterate through lower level and try to find the biggest one that could avoid rebuffering
             // we start from current level - 1 and we step down , until we find a matching level
-            for (nextLoadLevel = frag.level - 1; nextLoadLevel >= 0; nextLoadLevel--) {
+            for (nextLoadLevel = frag.level - 1; nextLoadLevel > minAutoLevel; nextLoadLevel--) {
               // compute time to load next fragment at lower level
               // 0.8 : consider only 80% of current bw to be conservative
               // 8 = bits per byte (bps/Bps)
@@ -633,8 +634,6 @@ var AbrController = function (_EventHandler) {
             // only emergency switch down if it takes less time to load new fragment at lowest level instead
             // of finishing loading current one ...
             if (fragLevelNextLoadedDelay < fragLoadedDelay) {
-              // ensure nextLoadLevel is not negative
-              nextLoadLevel = Math.max(0, nextLoadLevel);
               _logger.logger.warn('loading too slow, abort fragment loading and switch to level ' + nextLoadLevel + ':fragLoadedDelay[' + nextLoadLevel + ']<fragLoadedDelay[' + (frag.level - 1) + '];bufferStarvationDelay:' + fragLevelNextLoadedDelay.toFixed(1) + '<' + fragLoadedDelay.toFixed(1) + ':' + bufferStarvationDelay.toFixed(1));
               // force next load level in auto mode
               hls.nextLoadLevel = nextLoadLevel;
@@ -2827,7 +2826,9 @@ var LevelController = function (_EventHandler) {
           hls = this.hls,
           levelId = void 0,
           level = void 0,
-          levelError = false;
+          levelError = false,
+          abrController = hls.abrController,
+          minAutoLevel = abrController.minAutoLevel;
       // try to recover not fatal errors
       switch (details) {
         case _errors.ErrorDetails.FRAG_LOAD_ERROR:
@@ -2860,7 +2861,7 @@ var LevelController = function (_EventHandler) {
           var recoverable = this._manualLevel === -1 && levelId;
           if (recoverable) {
             _logger.logger.warn('level controller,' + details + ': emergency switch-down for next fragment');
-            hls.abrController.nextAutoLevel = 0;
+            abrController.nextAutoLevel = minAutoLevel;
           } else if (level && level.details && level.details.live) {
             _logger.logger.warn('level controller,' + details + ' on live stream, discard');
             if (levelError) {
@@ -2869,13 +2870,12 @@ var LevelController = function (_EventHandler) {
             }
             // other errors are handled by stream controller
           } else if (details === _errors.ErrorDetails.LEVEL_LOAD_ERROR || details === _errors.ErrorDetails.LEVEL_LOAD_TIMEOUT) {
-            var _hls = this.hls,
-                media = _hls.media,
+            var media = hls.media,
 
             // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
             mediaBuffered = media && _bufferHelper2.default.isBuffered(media, media.currentTime) && _bufferHelper2.default.isBuffered(media, media.currentTime + 0.5);
             if (mediaBuffered) {
-              var retryDelay = _hls.config.levelLoadingRetryDelay;
+              var retryDelay = hls.config.levelLoadingRetryDelay;
               _logger.logger.warn('level controller,' + details + ', but media buffered, retry in ' + retryDelay + 'ms');
               this.timer = setTimeout(this.ontick, retryDelay);
             } else {
@@ -2888,7 +2888,7 @@ var LevelController = function (_EventHandler) {
               }
               // redispatch same error but with fatal set to true
               data.fatal = true;
-              _hls.trigger(_events2.default.ERROR, data);
+              hls.trigger(_events2.default.ERROR, data);
             }
           }
         }
@@ -2990,7 +2990,7 @@ var LevelController = function (_EventHandler) {
       }
     },
     set: function set(newLevel) {
-      this._startLevel = newLevel;
+      this._startLevel = Math.max(newLevel, this.hls.abrController.minAutoLevel);
     }
   }, {
     key: 'nextLoadLevel',
@@ -6676,24 +6676,25 @@ var TSDemuxer = function () {
     key: 'remux',
     value: function remux(level, sn, data, timeOffset) {
       var avcTrack = this._avcTrack,
-          samples = avcTrack.samples;
+          samples = avcTrack.samples,
+          nbNalu = 0,
+          naluLen = 0;
 
       // compute total/avc sample length and nb of NAL units
-      var trackData = samples.reduce(function (prevSampleData, curSample) {
-        var sampleData = curSample.units.units.reduce(function (prevUnitData, curUnit) {
-          return {
-            len: prevUnitData.len + curUnit.data.length,
-            nbNalu: prevUnitData.nbNalu + 1
-          };
-        }, { len: 0, nbNalu: 0 });
-        curSample.length = sampleData.len;
-        return {
-          len: prevSampleData.len + sampleData.len,
-          nbNalu: prevSampleData.nbNalu + sampleData.nbNalu
-        };
-      }, { len: 0, nbNalu: 0 });
-      avcTrack.len = trackData.len;
-      avcTrack.nbNalu = trackData.nbNalu;
+      for (var i = 0; i < samples.length; i++) {
+        var sample = samples[i],
+            units = sample.units.units,
+            nbUnits = units.length,
+            sampleLen = 0;
+        for (var j = 0; j < nbUnits; j++) {
+          sampleLen += units[j].data.length;
+        }
+        naluLen += sampleLen;
+        nbNalu += nbUnits;
+        sample.length = sampleLen;
+      }
+      avcTrack.len = naluLen;
+      avcTrack.nbNalu = nbNalu;
       this.remuxer.remux(level, sn, this._audioTrack, this._avcTrack, this._id3Track, this._txtTrack, timeOffset, this.contiguous, this.accurateTimeOffset, data);
     }
   }, {
@@ -8167,7 +8168,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.10';
+      return '0.6.11';
     }
   }, {
     key: 'Events',
@@ -8478,7 +8479,7 @@ var Hls = function () {
   }, {
     key: 'firstLevel',
     get: function get() {
-      return this.levelController.firstLevel;
+      return Math.max(this.levelController.firstLevel, this.abrController.minAutoLevel);
     }
 
     /** set first level (index of first level referenced in manifest)
@@ -8507,7 +8508,8 @@ var Hls = function () {
     ,
     set: function set(newLevel) {
       _logger.logger.log('set startLevel:' + newLevel);
-      this.levelController.startLevel = newLevel;
+      var minAutoLevel = this.abrController.minAutoLevel;
+      this.levelController.startLevel = Math.max(newLevel, minAutoLevel);
     }
 
     /** Return the capping/max level value that could be used by automatic level selection algorithm **/
@@ -8978,6 +8980,7 @@ var PlaylistLoader = function (_EventHandler) {
     value: function parseMasterPlaylist(string, baseurl) {
       var levels = [],
           result = void 0;
+      MASTER_PLAYLIST_REGEX.lastIndex = 0;
       while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
         var level = {};
 
@@ -9014,6 +9017,7 @@ var PlaylistLoader = function (_EventHandler) {
     value: function parseMasterPlaylistMedia(string, baseurl, type) {
       var result = void 0,
           medias = [];
+      MASTER_PLAYLIST_MEDIA_REGEX.lastIndex = 0;
       while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) != null) {
         var media = {};
         var attrs = new _attrList2.default(result[1]);
@@ -9109,6 +9113,7 @@ var PlaylistLoader = function (_EventHandler) {
           byteRangeStartOffset = null,
           tagList = [];
 
+      LEVEL_PLAYLIST_REGEX.lastIndex = 0;
       while ((result = LEVEL_PLAYLIST_REGEX.exec(string)) !== null) {
         result.shift();
         result = result.filter(function (n) {
@@ -10863,6 +10868,7 @@ var AttrList = function () {
     value: function parseAttrList(input) {
       var match,
           attrs = {};
+      ATTR_LIST_REGEX.lastIndex = 0;
       while ((match = ATTR_LIST_REGEX.exec(input)) !== null) {
         var value = match[2],
             quote = '"';
