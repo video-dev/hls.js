@@ -107,8 +107,6 @@ class AbrController extends EventHandler {
           // only emergency switch down if it takes less time to load new fragment at lowest level instead
           // of finishing loading current one ...
           if (fragLevelNextLoadedDelay < fragLoadedDelay) {
-            // ensure nextLoadLevel is not negative
-            nextLoadLevel = Math.max(minAutoLevel,nextLoadLevel);
             logger.warn(`loading too slow, abort fragment loading and switch to level ${nextLoadLevel}:fragLoadedDelay[${nextLoadLevel}]<fragLoadedDelay[${frag.level-1}];bufferStarvationDelay:${fragLevelNextLoadedDelay.toFixed(1)}<${fragLoadedDelay.toFixed(1)}:${bufferStarvationDelay.toFixed(1)}`);
             // force next load level in auto mode
             hls.nextLoadLevel = nextLoadLevel;
