@@ -187,7 +187,11 @@ class LevelController extends EventHandler {
   }
 
   set startLevel(newLevel) {
-    this._startLevel = Math.max(newLevel, this.hls.abrController.minAutoLevel);
+    // if not in autostart level, ensure startLevel is greater than minAutoLevel
+    if (newLevel !== -1) {
+      newLevel = Math.max(newLevel, this.hls.abrController.minAutoLevel);
+    }
+    this._startLevel = newLevel;
   }
 
   onError(data) {

@@ -318,8 +318,7 @@ class Hls {
   **/
   set startLevel(newLevel) {
     logger.log(`set startLevel:${newLevel}`);
-    let minAutoLevel = this.abrController.minAutoLevel;
-    this.levelController.startLevel = Math.max(newLevel,minAutoLevel);
+    this.levelController.startLevel = newLevel;
   }
 
   /** Return the capping/max level value that could be used by automatic level selection algorithm **/
