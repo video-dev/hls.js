@@ -125,6 +125,9 @@ function parseOptions(input, callback, keyValueDelim, groupDelim) {
     }
 }
 
+var defaults = new VTTCue(0, 0, 0);
+var center = defaults.align === 'middle' ? 'middle' : 'center';
+
 function parseCue(input, cue, regionList) {
     // Remember the original input if we need to throw an error.
     var oInput = input;
@@ -170,7 +173,7 @@ function parseCue(input, cue, regionList) {
                         if (vals.length === 2) {
                             settings.alt('lineAlign', vals[1], [
                                 'start',
-                                'middle',
+                                center,
                                 'end'
                             ]);
                         }
@@ -180,8 +183,10 @@ function parseCue(input, cue, regionList) {
                         settings.percent(k, vals[0]);
                         if (vals.length === 2) {
                             settings.alt('positionAlign', vals[1], [
+                                'start',
+                                center,
+                                'end',
                                 'line-left',
-                                'middle',
                                 'line-right',
                                 'auto'
                             ]);
@@ -193,7 +198,7 @@ function parseCue(input, cue, regionList) {
                     case 'align':
                         settings.alt(k, v, [
                             'start',
-                            'middle',
+                            center,
                             'end',
                             'left',
                             'right'
@@ -208,12 +213,23 @@ function parseCue(input, cue, regionList) {
         // Apply default values for any missing fields.
         cue.region = settings.get('region', null);
         cue.vertical = settings.get('vertical', '');
-        cue.line = settings.get('line', 'auto');
+        var line = settings.get('line', 'auto');
+        if (line === 'auto' && defaults.line === -1) {
+            line = -1;
+        }
+        cue.line = line;
         cue.lineAlign = settings.get('lineAlign', 'start');
         cue.snapToLines = settings.get('snapToLines', true);
         cue.size = settings.get('size', 100);
-        cue.align = settings.get('align', 'middle');
-        cue.position = settings.get('position', 'auto');
+        cue.align = settings.get('align', center);
+        var position = settings.get('position', 'auto');
+        if (position === 'auto' && defaults.position === 50) {
+            position =
+                cue.align === 'start' || cue.align === 'left'
+                    ? 0
+                    : cue.align === 'end' || cue.align === 'right' ? 100 : 50;
+        }
+        cue.position = position;
         cue.positionAlign = settings.get('positionAlign', 'auto');
     }
 
