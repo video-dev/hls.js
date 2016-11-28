@@ -795,8 +795,9 @@ var AbrController = function (_EventHandler) {
     get: function get() {
       var hls = this.hls,
           levels = hls.levels,
-          minAutoBitrate = hls.config.minAutoBitrate;
-      for (var i = 0; i < levels.length; i++) {
+          minAutoBitrate = hls.config.minAutoBitrate,
+          len = levels ? levels.length : 0;
+      for (var i = 0; i < len; i++) {
         if (levels[i].bitrate > minAutoBitrate) {
           return i;
         }
@@ -2990,7 +2991,11 @@ var LevelController = function (_EventHandler) {
       }
     },
     set: function set(newLevel) {
-      this._startLevel = Math.max(newLevel, this.hls.abrController.minAutoLevel);
+      // if not in autostart level, ensure startLevel is greater than minAutoLevel
+      if (newLevel !== -1) {
+        newLevel = Math.max(newLevel, this.hls.abrController.minAutoLevel);
+      }
+      this._startLevel = newLevel;
     }
   }, {
     key: 'nextLoadLevel',
@@ -5681,7 +5686,7 @@ var DemuxerWorker = function DemuxerWorker(self) {
         var config = JSON.parse(data.config);
         self.demuxer = new _demuxerInline2.default(observer, data.id, data.typeSupported, config);
         try {
-          (0, _logger.enableLogs)(config.debug);
+          (0, _logger.enableLogs)(config.debug === true);
         } catch (err) {
           console.warn('demuxerWorker: unable to enable logs');
         }
@@ -8508,8 +8513,7 @@ var Hls = function () {
     ,
     set: function set(newLevel) {
       _logger.logger.log('set startLevel:' + newLevel);
-      var minAutoLevel = this.abrController.minAutoLevel;
-      this.levelController.startLevel = Math.max(newLevel, minAutoLevel);
+      this.levelController.startLevel = newLevel;
     }
 
     /** Return the capping/max level value that could be used by automatic level selection algorithm **/
