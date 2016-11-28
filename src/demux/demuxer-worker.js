@@ -31,7 +31,7 @@ var DemuxerWorker = function (self) {
         let config = JSON.parse(data.config);
         self.demuxer = new DemuxerInline(observer, data.id, data.typeSupported, config);
         try {
-          enableLogs(config.debug);
+          enableLogs(config.debug === true);
         } catch(err) {
           console.warn('demuxerWorker: unable to enable logs');
         }
