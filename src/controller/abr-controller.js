@@ -212,8 +212,8 @@ class AbrController extends EventHandler {
   }
 
   get minAutoLevel() {
-    let hls = this.hls, levels = hls.levels, minAutoBitrate = hls.config.minAutoBitrate;
-    for (let i = 0; i < levels.length; i++) {
+    let hls = this.hls, levels = hls.levels, minAutoBitrate = hls.config.minAutoBitrate, len = levels ? levels.length : 0;
+    for (let i = 0; i < len; i++) {
       if (levels[i].bitrate > minAutoBitrate) {
         return i;
       }
