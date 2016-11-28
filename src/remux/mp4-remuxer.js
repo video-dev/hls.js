@@ -493,7 +493,7 @@ class MP4Remuxer {
     while (samples0.length) {
       aacSample = samples0.shift();
       unit = aacSample.unit;
-      pts = aacSample.pts - this._initDTS;
+      pts = aacSample.pts - this._initPTS;
       dts = aacSample.dts - this._initDTS;
       //logger.log(`Audio/PTS:${Math.round(pts/90)}`);
       // if not first sample
