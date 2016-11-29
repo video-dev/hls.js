@@ -178,8 +178,7 @@ class TimelineController extends EventHandler {
 
     onManifestLoaded(data) {
         this.textTracks = [];
-
-        this.unparsedVttFrags = [];
+        this.unparsedVttFrags = this.unparsedVttFrags || [];
         this.initPTS = undefined;
 
         if (this.config.enableWebVTT) {
