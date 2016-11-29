@@ -64,14 +64,14 @@ class AudioStreamController extends EventHandler {
 
   startLoad(startPosition) {
     if (this.tracks) {
-      var media = this.media, lastCurrentTime = this.lastCurrentTime;
+      var lastCurrentTime = this.lastCurrentTime;
       this.stopLoad();
       if (!this.timer) {
         this.timer = setInterval(this.ontick, 100);
       }
       this.fragLoadError = 0;
-      if (media && lastCurrentTime) {
-        logger.log(`configure startPosition @${lastCurrentTime}`);
+      if (lastCurrentTime > 0) {
+        logger.log(`override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(3)}`);
         this.state = State.IDLE;
       } else {
         this.lastCurrentTime = this.startPosition ? this.startPosition : startPosition;

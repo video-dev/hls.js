@@ -65,19 +65,15 @@ class StreamController extends EventHandler {
 
   startLoad(startPosition) {
     if (this.levels) {
-      let media = this.media, lastCurrentTime = this.lastCurrentTime, hls = this.hls;
+      let lastCurrentTime = this.lastCurrentTime, hls = this.hls;
       this.stopLoad();
       if (!this.timer) {
         this.timer = setInterval(this.ontick, 100);
       }
       this.level = -1;
       this.fragLoadError = 0;
-      if (media && lastCurrentTime > 0) {
-        logger.log(`configure startPosition @${lastCurrentTime.toFixed(3)}`);
-        if (!this.lastPaused) {
-          logger.log('resuming video');
-          media.play();
-        }
+      if (lastCurrentTime > 0) {
+        logger.log(`override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(3)}`);
       } else {
         this.lastCurrentTime = this.startPosition ? this.startPosition : startPosition;
       }

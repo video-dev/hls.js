@@ -216,7 +216,7 @@ class Hls {
   }
 
   startLoad(startPosition=-1) {
-    logger.log('startLoad');
+    logger.log(`startLoad(${startPosition})`);
     this.levelController.startLoad();
     this.streamController.startLoad(startPosition);
     this.audioStreamController.startLoad(startPosition);
