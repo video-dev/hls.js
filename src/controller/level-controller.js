@@ -39,21 +39,36 @@ class LevelController extends EventHandler {
         var levels0 = [],
             levels = [],
             bitrateStart,
-            i,
             bitrateSet = {},
             videoCodecFound = false,
             audioCodecFound = false,
-            hls = this.hls;
+            hls = this.hls,
+            brokenmp4inmp3 = /chrome|firefox/.test(
+                navigator.userAgent.toLowerCase()
+            ),
+            checkSupported = function(type, codec) {
+                return MediaSource.isTypeSupported(
+                    `${type}/mp4;codecs=${codec}`
+                );
+            };
 
         // regroup redundant level together
         data.levels.forEach(level => {
             if (level.videoCodec) {
                 videoCodecFound = true;
             }
+            // erase audio codec info if browser does not support mp4a.40.34. demuxer will autodetect codec and fallback to mpeg/audio
+            if (
+                brokenmp4inmp3 &&
+                level.audioCodec &&
+                level.audioCodec.indexOf('mp4a.40.34') !== -1
+            ) {
+                level.audioCodec = undefined;
+            }
             if (level.audioCodec || (level.attrs && level.attrs.AUDIO)) {
                 audioCodecFound = true;
             }
-            var redundantLevelId = bitrateSet[level.bitrate];
+            let redundantLevelId = bitrateSet[level.bitrate];
             if (redundantLevelId === undefined) {
                 bitrateSet[level.bitrate] = levels0.length;
                 level.url = [level.url];
@@ -74,21 +89,13 @@ class LevelController extends EventHandler {
         } else {
             levels = levels0;
         }
-
         // only keep level with supported audio/video codecs
         levels = levels.filter(function(level) {
-            var checkSupportedAudio = function(codec) {
-                return MediaSource.isTypeSupported(`audio/mp4;codecs=${codec}`);
-            };
-            var checkSupportedVideo = function(codec) {
-                return MediaSource.isTypeSupported(`video/mp4;codecs=${codec}`);
-            };
-            var audioCodec = level.audioCodec,
+            let audioCodec = level.audioCodec,
                 videoCodec = level.videoCodec;
-
             return (
-                (!audioCodec || checkSupportedAudio(audioCodec)) &&
-                (!videoCodec || checkSupportedVideo(videoCodec))
+                (!audioCodec || checkSupported('audio', audioCodec)) &&
+                (!videoCodec || checkSupported('video', videoCodec))
             );
         });
 
@@ -101,7 +108,7 @@ class LevelController extends EventHandler {
             });
             this._levels = levels;
             // find index of first level in sorted levels
-            for (i = 0; i < levels.length; i++) {
+            for (let i = 0; i < levels.length; i++) {
                 if (levels[i].bitrate === bitrateStart) {
                     this._firstLevel = i;
                     logger.log(
@@ -113,7 +120,7 @@ class LevelController extends EventHandler {
                 }
             }
             hls.trigger(Event.MANIFEST_PARSED, {
-                levels: this._levels,
+                levels: levels,
                 firstLevel: this._firstLevel,
                 stats: data.stats,
                 audio: audioCodecFound,
