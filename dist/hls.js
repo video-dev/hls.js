@@ -2715,16 +2715,23 @@ var LevelController = function (_EventHandler) {
       var levels0 = [],
           levels = [],
           bitrateStart,
-          i,
           bitrateSet = {},
           videoCodecFound = false,
           audioCodecFound = false,
-          hls = this.hls;
+          hls = this.hls,
+          brokenmp4inmp3 = /chrome|firefox/.test(navigator.userAgent.toLowerCase()),
+          checkSupported = function checkSupported(type, codec) {
+        return MediaSource.isTypeSupported(type + '/mp4;codecs=' + codec);
+      };
 
       // regroup redundant level together
       data.levels.forEach(function (level) {
         if (level.videoCodec) {
           videoCodecFound = true;
+        }
+        // erase audio codec info if browser does not support mp4a.40.34. demuxer will autodetect codec and fallback to mpeg/audio
+        if (brokenmp4inmp3 && level.audioCodec && level.audioCodec.indexOf('mp4a.40.34') !== -1) {
+          level.audioCodec = undefined;
         }
         if (level.audioCodec || level.attrs && level.attrs.AUDIO) {
           audioCodecFound = true;
@@ -2750,19 +2757,11 @@ var LevelController = function (_EventHandler) {
       } else {
         levels = levels0;
       }
-
       // only keep level with supported audio/video codecs
       levels = levels.filter(function (level) {
-        var checkSupportedAudio = function checkSupportedAudio(codec) {
-          return MediaSource.isTypeSupported('audio/mp4;codecs=' + codec);
-        };
-        var checkSupportedVideo = function checkSupportedVideo(codec) {
-          return MediaSource.isTypeSupported('video/mp4;codecs=' + codec);
-        };
         var audioCodec = level.audioCodec,
             videoCodec = level.videoCodec;
-
-        return (!audioCodec || checkSupportedAudio(audioCodec)) && (!videoCodec || checkSupportedVideo(videoCodec));
+        return (!audioCodec || checkSupported('audio', audioCodec)) && (!videoCodec || checkSupported('video', videoCodec));
       });
 
       if (levels.length) {
@@ -2774,14 +2773,14 @@ var LevelController = function (_EventHandler) {
         });
         this._levels = levels;
         // find index of first level in sorted levels
-        for (i = 0; i < levels.length; i++) {
+        for (var i = 0; i < levels.length; i++) {
           if (levels[i].bitrate === bitrateStart) {
             this._firstLevel = i;
             _logger.logger.log('manifest loaded,' + levels.length + ' level(s) found, first bitrate:' + bitrateStart);
             break;
           }
         }
-        hls.trigger(_events2.default.MANIFEST_PARSED, { levels: this._levels, firstLevel: this._firstLevel, stats: data.stats, audio: audioCodecFound, video: videoCodecFound, altAudio: data.audioTracks.length > 0 });
+        hls.trigger(_events2.default.MANIFEST_PARSED, { levels: levels, firstLevel: this._firstLevel, stats: data.stats, audio: audioCodecFound, video: videoCodecFound, altAudio: data.audioTracks.length > 0 });
       } else {
         hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR, fatal: true, url: hls.url, reason: 'no level with compatible codecs found in manifest' });
       }
@@ -5264,21 +5263,21 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var AACDemuxer = function () {
-  function AACDemuxer(observer, id, remuxerClass, config) {
+  function AACDemuxer(observer, id, remuxerClass, config, typeSupported) {
     _classCallCheck(this, AACDemuxer);
 
     this.observer = observer;
     this.id = id;
     this.remuxerClass = remuxerClass;
     this.config = config;
-    this.remuxer = new this.remuxerClass(observer, id, config);
+    this.remuxer = new this.remuxerClass(observer, id, config, typeSupported);
     this.insertDiscontinuity();
   }
 
   _createClass(AACDemuxer, [{
     key: 'insertDiscontinuity',
     value: function insertDiscontinuity() {
-      this._aacTrack = { container: 'audio/adts', type: 'audio', id: -1, sequenceNumber: 0, samples: [], len: 0 };
+      this._aacTrack = { container: 'audio/adts', type: 'audio', id: -1, sequenceNumber: 0, isAAC: true, samples: [], len: 0 };
     }
   }, {
     key: 'push',
@@ -5602,16 +5601,18 @@ var DemuxerInline = function () {
       var demuxer = this.demuxer;
       if (!demuxer) {
         var hls = this.hls,
-            id = this.id;
+            id = this.id,
+            config = this.config,
+            typeSupported = this.typeSupported;
         // probe for content type
         if (_tsdemuxer2.default.probe(data)) {
           if (this.typeSupported.mp2t === true) {
-            demuxer = new _tsdemuxer2.default(hls, id, _passthroughRemuxer2.default, this.config, this.typeSupported);
+            demuxer = new _tsdemuxer2.default(hls, id, _passthroughRemuxer2.default, config, typeSupported);
           } else {
-            demuxer = new _tsdemuxer2.default(hls, id, _mp4Remuxer2.default, this.config, this.typeSupported);
+            demuxer = new _tsdemuxer2.default(hls, id, _mp4Remuxer2.default, config, typeSupported);
           }
         } else if (_aacdemuxer2.default.probe(data)) {
-          demuxer = new _aacdemuxer2.default(hls, id, _mp4Remuxer2.default, this.config);
+          demuxer = new _aacdemuxer2.default(hls, id, _mp4Remuxer2.default, config, typeSupported);
         } else {
           hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, id: id, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found' });
           return;
