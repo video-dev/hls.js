@@ -14,7 +14,6 @@ class MP4Remuxer {
         this.observer = observer;
         this.id = id;
         this.config = config;
-        this.discontinuityMap = {};
         this.ISGenerated = false;
         this.PES2MP4SCALEFACTOR = 4;
         this.PES_TIMESCALE = 90000;
@@ -44,47 +43,10 @@ class MP4Remuxer {
         textTrack,
         timeOffset,
         contiguous,
-        accurateTimeOffset,
-        cc
+        accurateTimeOffset
     ) {
-        let referencePTS = [videoTrack, audioTrack].reduce(
-            (value, track) =>
-                value >= 0
-                    ? value
-                    : track.samples && track.samples.length
-                      ? track.samples[0].pts
-                      : -1,
-            -1
-        );
-        if (referencePTS > -1) {
-            var map = this.discontinuityMap[cc];
-            if (!map) {
-                map = this.discontinuityMap[cc] = {
-                    pts: referencePTS,
-                    timeOffset: timeOffset
-                };
-                logger.log(
-                    `First instance of discontinuity sequence ${cc}, created a discontinuity map. pts ${referencePTS} timeOffset ${timeOffset}`
-                );
-            }
-            if (this.level !== level && referencePTS !== map.pts) {
-                // Set the correct offset for where the segment will be written for the upcoming set of fragments based on the PTS
-                let previousTimeOffset = timeOffset;
-                timeOffset = (referencePTS - map.pts) / 90000 + map.timeOffset;
-
-                logger.log(
-                    `Mapping PTS of ${referencePTS} with offset ${previousTimeOffset.toFixed(
-                        3
-                    )} to start at ${timeOffset.toFixed(
-                        3
-                    )} for discontinuity sequence ${cc}.`
-                );
-            }
-        }
-
         this.level = level;
         this.sn = sn;
-
         // generate Init Segment if needed
         if (!this.ISGenerated) {
             this.generateIS(audioTrack, videoTrack, timeOffset);
