@@ -6,12 +6,17 @@ import { logger } from '../utils/logger';
 import ID3 from '../demux/id3';
 
 class AACDemuxer {
-    constructor(observer, id, remuxerClass, config) {
+    constructor(observer, id, remuxerClass, config, typeSupported) {
         this.observer = observer;
         this.id = id;
         this.remuxerClass = remuxerClass;
         this.config = config;
-        this.remuxer = new this.remuxerClass(observer, id, config);
+        this.remuxer = new this.remuxerClass(
+            observer,
+            id,
+            config,
+            typeSupported
+        );
         this.insertDiscontinuity();
     }
 
@@ -21,6 +26,7 @@ class AACDemuxer {
             type: 'audio',
             id: -1,
             sequenceNumber: 0,
+            isAAC: true,
             samples: [],
             len: 0
         };

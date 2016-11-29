@@ -38,7 +38,9 @@ class DemuxerInline {
         var demuxer = this.demuxer;
         if (!demuxer) {
             let hls = this.hls,
-                id = this.id;
+                id = this.id,
+                config = this.config,
+                typeSupported = this.typeSupported;
             // probe for content type
             if (TSDemuxer.probe(data)) {
                 if (this.typeSupported.mp2t === true) {
@@ -46,20 +48,26 @@ class DemuxerInline {
                         hls,
                         id,
                         PassThroughRemuxer,
-                        this.config,
-                        this.typeSupported
+                        config,
+                        typeSupported
                     );
                 } else {
                     demuxer = new TSDemuxer(
                         hls,
                         id,
                         MP4Remuxer,
-                        this.config,
-                        this.typeSupported
+                        config,
+                        typeSupported
                     );
                 }
             } else if (AACDemuxer.probe(data)) {
-                demuxer = new AACDemuxer(hls, id, MP4Remuxer, this.config);
+                demuxer = new AACDemuxer(
+                    hls,
+                    id,
+                    MP4Remuxer,
+                    config,
+                    typeSupported
+                );
             } else {
                 hls.trigger(Event.ERROR, {
                     type: ErrorTypes.MEDIA_ERROR,
