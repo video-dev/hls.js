@@ -267,7 +267,7 @@
     };},{len : 0, nbNalu : 0});
      avcTrack.len = trackData.len;
      avcTrack.nbNalu = trackData.nbNalu;
-    this.remuxer.remux(level, sn, this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, timeOffset, this.contiguous, this.accurateTimeOffset, this.lastCC, data);
+    this.remuxer.remux(level, sn, this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, timeOffset, this.contiguous, this.accurateTimeOffset, data);
   }
 
   destroy() {
