@@ -7,17 +7,17 @@ import ID3 from '../demux/id3';
 
  class AACDemuxer {
 
-  constructor(observer, id, remuxerClass, config) {
+  constructor(observer, id, remuxerClass, config, typeSupported) {
     this.observer = observer;
     this.id = id;
     this.remuxerClass = remuxerClass;
     this.config = config;
-    this.remuxer = new this.remuxerClass(observer,id, config);
+    this.remuxer = new this.remuxerClass(observer,id, config, typeSupported);
     this.insertDiscontinuity();
   }
 
   insertDiscontinuity() {
-    this._aacTrack = {container : 'audio/adts', type: 'audio', id :-1, sequenceNumber: 0, samples : [], len : 0};
+    this._aacTrack = {container : 'audio/adts', type: 'audio', id :-1, sequenceNumber: 0, isAAC : true , samples : [], len : 0};
   }
 
   static probe(data) {
