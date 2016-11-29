@@ -71,9 +71,9 @@ class AudioStreamController extends EventHandler {
                 this.timer = setInterval(this.ontick, 100);
             }
             this.fragLoadError = 0;
-            if (lastCurrentTime > 0) {
+            if (lastCurrentTime > 0 && startPosition === -1) {
                 logger.log(
-                    `override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(
+                    `audio:override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(
                         3
                     )}`
                 );
@@ -337,6 +337,7 @@ class AudioStreamController extends EventHandler {
                             frag.loadIdx = this.fragLoadIdx;
                             this.fragCurrent = frag;
                             this.startFragRequested = true;
+                            this.nextLoadPosition = frag.start + frag.duration;
                             hls.trigger(Event.FRAG_LOADING, { frag: frag });
                             this.state = State.FRAG_LOADING;
                         }
@@ -639,7 +640,6 @@ class AudioStreamController extends EventHandler {
                     });
                 }
             });
-            this.nextLoadPosition = data.endPTS;
             //trigger handler right now
             this.tick();
         }
