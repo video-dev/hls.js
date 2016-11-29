@@ -970,15 +970,14 @@ var AudioStreamController = function (_EventHandler) {
     key: 'startLoad',
     value: function startLoad(startPosition) {
       if (this.tracks) {
-        var media = this.media,
-            lastCurrentTime = this.lastCurrentTime;
+        var lastCurrentTime = this.lastCurrentTime;
         this.stopLoad();
         if (!this.timer) {
           this.timer = setInterval(this.ontick, 100);
         }
         this.fragLoadError = 0;
-        if (media && lastCurrentTime) {
-          _logger.logger.log('configure startPosition @' + lastCurrentTime);
+        if (lastCurrentTime > 0) {
+          _logger.logger.log('override startPosition with lastCurrentTime @' + lastCurrentTime.toFixed(3));
           this.state = State.IDLE;
         } else {
           this.lastCurrentTime = this.startPosition ? this.startPosition : startPosition;
@@ -3113,8 +3112,7 @@ var StreamController = function (_EventHandler) {
     key: 'startLoad',
     value: function startLoad(startPosition) {
       if (this.levels) {
-        var media = this.media,
-            lastCurrentTime = this.lastCurrentTime,
+        var lastCurrentTime = this.lastCurrentTime,
             hls = this.hls;
         this.stopLoad();
         if (!this.timer) {
@@ -3122,12 +3120,8 @@ var StreamController = function (_EventHandler) {
         }
         this.level = -1;
         this.fragLoadError = 0;
-        if (media && lastCurrentTime > 0) {
-          _logger.logger.log('configure startPosition @' + lastCurrentTime.toFixed(3));
-          if (!this.lastPaused) {
-            _logger.logger.log('resuming video');
-            media.play();
-          }
+        if (lastCurrentTime > 0) {
+          _logger.logger.log('override startPosition with lastCurrentTime @' + lastCurrentTime.toFixed(3));
         } else {
           this.lastCurrentTime = this.startPosition ? this.startPosition : startPosition;
         }
@@ -8382,7 +8376,7 @@ var Hls = function () {
     value: function startLoad() {
       var startPosition = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : -1;
 
-      _logger.logger.log('startLoad');
+      _logger.logger.log('startLoad(' + startPosition + ')');
       this.levelController.startLoad();
       this.streamController.startLoad(startPosition);
       this.audioStreamController.startLoad(startPosition);
