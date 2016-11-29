@@ -127,6 +127,8 @@ function parseOptions(input, callback, keyValueDelim, groupDelim) {
 }
 
 var defaults = new VTTCue(0, 0, 0);
+// 'middle' was changed to 'center' in the spec: https://github.com/w3c/webvtt/pull/244
+// Chrome and Safari don't yet support this change, but FF does
 var center = defaults.align === 'middle' ? 'middle' : 'center';
 
 function parseCue(input, cue, regionList) {
@@ -216,6 +218,7 @@ function parseCue(input, cue, regionList) {
         cue.vertical = settings.get('vertical', '');
         var line = settings.get('line', 'auto');
         if (line === 'auto' && defaults.line === -1) {
+            // set numeric line number for Safari
             line = -1;
         }
         cue.line = line;
@@ -225,13 +228,13 @@ function parseCue(input, cue, regionList) {
         cue.align = settings.get('align', center);
         var position = settings.get('position', 'auto');
         if (position === 'auto' && defaults.position === 50) {
+            // set numeric position for Safari
             position =
                 cue.align === 'start' || cue.align === 'left'
                     ? 0
                     : cue.align === 'end' || cue.align === 'right' ? 100 : 50;
         }
         cue.position = position;
-        cue.positionAlign = settings.get('positionAlign', 'auto');
     }
 
     function skipWhitespace() {
