@@ -884,7 +884,7 @@ class StreamController extends EventHandler {
             media.removeEventListener('ended', this.onvended);
             this.onvseeking = this.onvseeked = this.onvended = null;
         }
-        this.media = null;
+        this.media = this.mediaBuffer = null;
         this.loadedmetadata = false;
         this.stopLoad();
     }
