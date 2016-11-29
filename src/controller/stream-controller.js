@@ -72,7 +72,7 @@ class StreamController extends EventHandler {
       }
       this.level = -1;
       this.fragLoadError = 0;
-      if (lastCurrentTime > 0) {
+      if (lastCurrentTime > 0 && startPosition === -1) {
         logger.log(`override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(3)}`);
       } else {
         this.lastCurrentTime = this.startPosition ? this.startPosition : startPosition;
@@ -458,6 +458,7 @@ class StreamController extends EventHandler {
       frag.loadIdx = this.fragLoadIdx;
       this.fragCurrent = frag;
       this.startFragRequested = true;
+      this.nextLoadPosition = frag.start + frag.duration;
       frag.autoLevel = hls.autoLevelEnabled;
       frag.bitrateTest = this.bitrateTest;
       hls.trigger(Event.FRAG_LOADING, {frag: frag});
@@ -746,6 +747,10 @@ class StreamController extends EventHandler {
     // avoid reporting fragment loop loading error in case user is seeking several times on same position
     if (this.state !== State.FRAG_LOADING && this.fragLoadIdx !== undefined) {
       this.fragLoadIdx += 2 * config.fragLoadingLoopThreshold;
+    }
+    // in case seeking occurs although no media buffered, adjust startPosition and nextLoadPosition to seek target
+    if(!this.loadedmetadata) {
+      this.nextLoadPosition = this.startPosition = currentTime;
     }
     // tick to speed up processing
     this.tick();
@@ -1051,7 +1056,6 @@ class StreamController extends EventHandler {
         }
       });
 
-      this.nextLoadPosition = data.endPTS;
       this.bufferRange.push({type: data.type, start: data.startPTS, end: data.endPTS, frag: frag});
 
       //trigger handler right now
@@ -1281,7 +1285,7 @@ _checkBuffer() {
         let currentTime = media.currentTime,
              buffered = media.buffered;
       // adjust currentTime to start position on loaded metadata
-      if(!this.loadedmetadata && buffered.length) {
+      if(!this.loadedmetadata && buffered.length && !media.seeking) {
         this.loadedmetadata = true;
         // only adjust currentTime if different from startPosition or if startPosition not buffered
         // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
