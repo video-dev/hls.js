@@ -116,7 +116,7 @@ header {
       <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime-=10">currentTime-=10</button>
       <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime=$('#seek_pos').val()">seek to </button>
        <input type="text" id='seek_pos' size="8" onkeydown="if(window.event.keyCode=='13'){$('#video')[0].currentTime=$('#seek_pos').val();}"><br><br>
-      <button type="button" class="btn btn-xs btn-warning" onclick="hls.attachMedia($('#video')[0])">attach Video</button>
+      <button type="button" class="btn btn-xs btn-warning" onclick="hls.attachMedia($('#video')[0]);hls.startLoad();">attach Video</button>
       <button type="button" class="btn btn-xs btn-warning" onclick="hls.detachMedia()">detach Video</button><br>
       <button type="button" class="btn btn-xs btn-warning" onclick="hls.startLoad()">start Load</button>
       <button type="button" class="btn btn-xs btn-warning" onclick="hls.stopLoad()">stop Load</button>
@@ -795,16 +795,18 @@ function timeRangesToString(r) {
               + "Played:"
               + timeRangesToString(v.played) + "<br>";
 
-      for(var type in tracks) {
-        log += type + " Buffered:" + timeRangesToString(tracks[type].buffer.buffered) + "<br>";
-      }
+      if (hls.media) {
+        for(var type in tracks) {
+          log += type + " Buffered:" + timeRangesToString(tracks[type].buffer.buffered) + "<br>";
+        }
 
-      var videoPlaybackQuality = v.getVideoPlaybackQuality;
-      if(videoPlaybackQuality && typeof(videoPlaybackQuality) === typeof(Function)) {
-        log+="Dropped Frames:"+ v.getVideoPlaybackQuality().droppedVideoFrames + "<br>";
-        log+="Corrupted Frames:"+ v.getVideoPlaybackQuality().corruptedVideoFrames + "<br>";
-      } else if(v.webkitDroppedFrameCount) {
-        log+="Dropped Frames:"+ v.webkitDroppedFrameCount + "<br>";
+        var videoPlaybackQuality = v.getVideoPlaybackQuality;
+        if(videoPlaybackQuality && typeof(videoPlaybackQuality) === typeof(Function)) {
+          log+="Dropped Frames:"+ v.getVideoPlaybackQuality().droppedVideoFrames + "<br>";
+          log+="Corrupted Frames:"+ v.getVideoPlaybackQuality().corruptedVideoFrames + "<br>";
+        } else if(v.webkitDroppedFrameCount) {
+          log+="Dropped Frames:"+ v.webkitDroppedFrameCount + "<br>";
+        }
       }
       $("#buffered_log").html(log);
       $("#HlsStats").text(JSON.stringify(sortObject(stats),null,"\t"));
