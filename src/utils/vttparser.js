@@ -2,7 +2,8 @@
  * Source: https://github.com/mozilla/vtt.js/blob/master/dist/vtt.js#L1716
  */
 
-const VTTCue = window.VTTCue || window.TextTrackCue;
+import VTTCue from './vttcue';
+
 const StringDecoder = function StringDecoder() {
     return {
         decode: function (data) {
@@ -17,11 +18,11 @@ const StringDecoder = function StringDecoder() {
     };
 };
 
-export default function VTTParser(window, decoder) {
+function VTTParser() {
     this.window = window;
     this.state = 'INITIAL';
     this.buffer = '';
-    this.decoder = decoder || new StringDecoder();
+    this.decoder = new StringDecoder();
     this.regionList = [];
 }
 
@@ -418,3 +419,5 @@ VTTParser.prototype = {
         return this;
     }
 };
+
+export default VTTParser;

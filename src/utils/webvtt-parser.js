@@ -31,7 +31,7 @@ const WebVTTParser = {
       // let VTTCue = VTTCue || window.TextTrackCue;
 
         // Create parser object using VTTCue with TextTrackCue fallback on certain browsers.
-        let parser = new VTTParser(window);
+        let parser = new VTTParser();
 
         parser.oncue = function(cue) {
             // Adjust cue timing; clamp cues to start no earlier than - and drop cues that don't end after - 0 on timeline.
