@@ -12,7 +12,7 @@
   "bugs": {
     "url": "https://github.com/dailymotion/hls.js/issues"
   },
-  "main": "./lib/index.js",
+  "main": "./lib/hls.js",
   "private": false,
   "scripts": {
     "clean": "find dist -mindepth 1 -delete",
