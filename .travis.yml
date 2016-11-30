@@ -46,6 +46,12 @@ env:
     - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=firefox             TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=oceans_aes
 #    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=safari              TEST_BROWSER_PLATFORM="OS X 10.11"  TEST_STREAM_ID=oceans_aes TEST_BROWSER_VERSION="9.0"
 #    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME="internet explorer" TEST_BROWSER_PLATFORM="Windows 8.1" TEST_STREAM_ID=oceans_aes
+    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=chrome              TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=aac
+#    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=MicrosoftEdge       TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=aac
+#    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=firefox             TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=aac
+#    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=safari              TEST_BROWSER_PLATFORM="OS X 10.11"  TEST_STREAM_ID=oceans_aes TEST_BROWSER_VERSION="9.0"
+    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=chrome              TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=mp3
+    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=firefox             TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=mp3
 
 
 addons:
