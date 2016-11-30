@@ -74,17 +74,6 @@ class StreamController extends EventHandler {
             }
             this.level = -1;
             this.fragLoadError = 0;
-            if (lastCurrentTime > 0 && startPosition === -1) {
-                logger.log(
-                    `override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(
-                        3
-                    )}`
-                );
-            } else {
-                this.lastCurrentTime = this.startPosition
-                    ? this.startPosition
-                    : startPosition;
-            }
             if (!this.startFragRequested) {
                 // determine load level
                 let startLevel = hls.startLevel;
@@ -98,8 +87,17 @@ class StreamController extends EventHandler {
                 this.level = hls.nextLoadLevel = startLevel;
                 this.loadedmetadata = false;
             }
+            // if startPosition undefined but lastCurrentTime set, set startPosition to last currentTime
+            if (lastCurrentTime > 0 && startPosition === -1) {
+                logger.log(
+                    `override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(
+                        3
+                    )}`
+                );
+                startPosition = lastCurrentTime;
+            }
             this.state = State.IDLE;
-            this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
+            this.nextLoadPosition = this.startPosition = this.lastCurrentTime = startPosition;
             this.tick();
         } else {
             logger.warn('cannot start loading as manifest not parsed yet');
