@@ -3120,11 +3120,6 @@ var StreamController = function (_EventHandler) {
         }
         this.level = -1;
         this.fragLoadError = 0;
-        if (lastCurrentTime > 0 && startPosition === -1) {
-          _logger.logger.log('override startPosition with lastCurrentTime @' + lastCurrentTime.toFixed(3));
-        } else {
-          this.lastCurrentTime = this.startPosition ? this.startPosition : startPosition;
-        }
         if (!this.startFragRequested) {
           // determine load level
           var startLevel = hls.startLevel;
@@ -3138,8 +3133,13 @@ var StreamController = function (_EventHandler) {
           this.level = hls.nextLoadLevel = startLevel;
           this.loadedmetadata = false;
         }
+        // if startPosition undefined but lastCurrentTime set, set startPosition to last currentTime
+        if (lastCurrentTime > 0 && startPosition === -1) {
+          _logger.logger.log('override startPosition with lastCurrentTime @' + lastCurrentTime.toFixed(3));
+          startPosition = lastCurrentTime;
+        }
         this.state = State.IDLE;
-        this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
+        this.nextLoadPosition = this.startPosition = this.lastCurrentTime = startPosition;
         this.tick();
       } else {
         _logger.logger.warn('cannot start loading as manifest not parsed yet');
