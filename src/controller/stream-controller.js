@@ -1074,6 +1074,7 @@ class StreamController extends EventHandler {
                         this.startPosition = 0;
                     }
                 }
+                this.lastCurrentTime = this.startPosition;
             }
             this.nextLoadPosition = this.startPosition;
         }
