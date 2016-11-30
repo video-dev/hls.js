@@ -210,7 +210,10 @@ class AbrController extends EventHandler {
             frag.type === 'main' &&
             (!frag.bitrateTest || stats.tload === stats.tbuffered)
         ) {
-            let fragLoadingProcessingMs = stats.tbuffered - stats.trequest;
+            // use tparsed-trequest instead of tbuffered-trequest to compute fragLoadingProcessing; rationale is that  buffer appending only happens once media is attached
+            // in case we use config.startFragPrefetch while media is not attached yet, fragment might be parsed while media not attached yet, but it will only be buffered on media attached
+            // as a consequence it could happen really late in the process. meaning that appending duration might appears huge ... leading to underestimated throughput estimation
+            let fragLoadingProcessingMs = stats.tparsed - stats.trequest;
             logger.log(
                 `latency/loading/parsing/append/kbps:${Math.round(
                     stats.tfirst - stats.trequest
