@@ -2052,17 +2052,22 @@ var BufferController = function (_EventHandler) {
         return;
       }
       for (var type in sb) {
-        if (!sb[type].ended) {
+        var sbobj = sb[type];
+        if (!sbobj.ended) {
           return;
         }
-        if (sb[type].updating) {
+        if (sbobj.updating) {
           this._needsEos = true;
           return;
         }
       }
       _logger.logger.log('all media data available, signal endOfStream() to MediaSource and stop loading fragment');
       //Notify the media element that it now has all of the media data
-      mediaSource.endOfStream();
+      try {
+        mediaSource.endOfStream();
+      } catch (e) {
+        _logger.logger.warn('exception while calling mediaSource.endOfStream()');
+      }
       this._needsEos = false;
     }
   }, {
@@ -2250,28 +2255,32 @@ var BufferController = function (_EventHandler) {
             // we are going to flush buffer, mark source buffer as 'not ended'
             sb.ended = false;
             if (!sb.updating) {
-              for (i = 0; i < sb.buffered.length; i++) {
-                bufStart = sb.buffered.start(i);
-                bufEnd = sb.buffered.end(i);
-                // workaround firefox not able to properly flush multiple buffered range.
-                if (navigator.userAgent.toLowerCase().indexOf('firefox') !== -1 && endOffset === Number.POSITIVE_INFINITY) {
-                  flushStart = startOffset;
-                  flushEnd = endOffset;
-                } else {
-                  flushStart = Math.max(bufStart, startOffset);
-                  flushEnd = Math.min(bufEnd, endOffset);
+              try {
+                for (i = 0; i < sb.buffered.length; i++) {
+                  bufStart = sb.buffered.start(i);
+                  bufEnd = sb.buffered.end(i);
+                  // workaround firefox not able to properly flush multiple buffered range.
+                  if (navigator.userAgent.toLowerCase().indexOf('firefox') !== -1 && endOffset === Number.POSITIVE_INFINITY) {
+                    flushStart = startOffset;
+                    flushEnd = endOffset;
+                  } else {
+                    flushStart = Math.max(bufStart, startOffset);
+                    flushEnd = Math.min(bufEnd, endOffset);
+                  }
+                  /* sometimes sourcebuffer.remove() does not flush
+                     the exact expected time range.
+                     to avoid rounding issues/infinite loop,
+                     only flush buffer range of length greater than 500ms.
+                  */
+                  if (Math.min(flushEnd, bufEnd) - flushStart > 0.5) {
+                    this.flushBufferCounter++;
+                    _logger.logger.log('flush ' + type + ' [' + flushStart + ',' + flushEnd + '], of [' + bufStart + ',' + bufEnd + '], pos:' + this.media.currentTime);
+                    sb.remove(flushStart, flushEnd);
+                    return false;
+                  }
                 }
-                /* sometimes sourcebuffer.remove() does not flush
-                   the exact expected time range.
-                   to avoid rounding issues/infinite loop,
-                   only flush buffer range of length greater than 500ms.
-                */
-                if (Math.min(flushEnd, bufEnd) - flushStart > 0.5) {
-                  this.flushBufferCounter++;
-                  _logger.logger.log('flush ' + type + ' [' + flushStart + ',' + flushEnd + '], of [' + bufStart + ',' + bufEnd + '], pos:' + this.media.currentTime);
-                  sb.remove(flushStart, flushEnd);
-                  return false;
-                }
+              } catch (e) {
+                _logger.logger.warn('exception while accessing sourcebuffer, it might have been removed from MediaSource');
               }
             } else {
               //logger.log('abort ' + type + ' append in progress');
