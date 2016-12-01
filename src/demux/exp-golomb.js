@@ -185,6 +185,7 @@ class ExpGolomb {
       readUEG = this.readUEG.bind(this),
       readBoolean = this.readBoolean.bind(this),
       skipBits = this.skipBits.bind(this),
+      skipEG = this.skipEG.bind(this),
       skipUEG = this.skipUEG.bind(this),
       skipScalingList = this.skipScalingList.bind(this);
 
