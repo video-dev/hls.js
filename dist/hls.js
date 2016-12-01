@@ -10615,7 +10615,7 @@ var MP4Remuxer = function () {
       var samples = [];
       for (var i = 0; i < nbSamples; i++) {
         var stamp = startDTS + i * frameDuration;
-        samples.push({ unit: silentFrame.subarray(), pts: stamp, dts: stamp });
+        samples.push({ unit: silentFrame, pts: stamp, dts: stamp });
         track.len += silentFrame.length;
       }
       track.samples = samples;
