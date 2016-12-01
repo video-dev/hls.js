@@ -317,17 +317,22 @@ class BufferController extends EventHandler {
       return;
     }
     for(let type in sb) {
-      if (!sb[type].ended) {
+      let sbobj = sb[type];
+      if (!sbobj.ended) {
         return;
       }
-      if(sb[type].updating) {
+      if(sbobj.updating) {
         this._needsEos = true;
         return;
       }
     }
     logger.log('all media data available, signal endOfStream() to MediaSource and stop loading fragment');
     //Notify the media element that it now has all of the media data
-    mediaSource.endOfStream();
+    try {
+      mediaSource.endOfStream();
+    } catch(e) {
+      logger.warn('exception while calling mediaSource.endOfStream()');
+    }
     this._needsEos = false;
  }
 
