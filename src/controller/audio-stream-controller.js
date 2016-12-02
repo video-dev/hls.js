@@ -73,7 +73,7 @@ class AudioStreamController extends EventHandler {
     //Always update the new INIT PTS
     //Can change due level switch
     this.initPTS = data.initPTS;
-    logger(`InitPTS , ${this.initPTS}, found from video track`);
+    logger.log(`InitPTS , ${this.initPTS}, found from video track`);
 
     //If we are waiting we need to demux/remux the waiting frag
     //With the new initPTS
