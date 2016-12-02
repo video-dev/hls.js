@@ -58,7 +58,7 @@
     "rimraf": "^2.5.1",
     "uglify-js": "^2.7.5",
     "url-toolkit": "^1.0.4",
-    "selenium-webdriver": "^2.52.0",
+    "selenium-webdriver": "^3.0.0",
     "watchify": "^3.7.0",
     "webworkify": "^1.4.0"
   }
