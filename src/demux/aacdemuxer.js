@@ -66,7 +66,8 @@ class AACDemuxer {
         level,
         sn,
         duration,
-        accurateTimeOffset
+        accurateTimeOffset,
+        defaultInitPTS
     ) {
         var track,
             id3 = new ID3(data),
@@ -179,7 +180,8 @@ class AACDemuxer {
             { samples: [] },
             timeOffset,
             contiguous,
-            accurateTimeOffset
+            accurateTimeOffset,
+            defaultInitPTS
         );
     }
 
