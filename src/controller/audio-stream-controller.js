@@ -70,21 +70,24 @@ class AudioStreamController extends EventHandler {
 
     //Signal that video PTS was found
     onInitPtsFound(data) {
-        //Always update the new INIT PTS
-        //Can change due level switch
-        this.initPTS = data.initPTS;
-        logger.log(`InitPTS , ${this.initPTS}, found from video track`);
+        var demuxerId = data.id;
+        if (demuxerId === 'main') {
+            //Always update the new INIT PTS
+            //Can change due level switch
+            this.initPTS = data.initPTS;
+            logger.log(`InitPTS , ${this.initPTS}, found from video track`);
 
-        //If we are waiting we need to demux/remux the waiting frag
-        //With the new initPTS
-        if (this.state === State.WAITING_INIT_PTS) {
-            logger.log(`Waiting audio frag sending to demuxer`);
-            this.state = State.FRAG_LOADING;
-            //We have audio frag waiting or video pts
-            //Let process it
-            this.onFragLoaded(this.waitingFragment);
-            //Lets clean the waiting frag
-            this.waitingFragment = null;
+            //If we are waiting we need to demux/remux the waiting frag
+            //With the new initPTS
+            if (this.state === State.WAITING_INIT_PTS) {
+                logger.log(`Waiting audio frag sending to demuxer`);
+                this.state = State.FRAG_LOADING;
+                //We have audio frag waiting or video pts
+                //Let process it
+                this.onFragLoaded(this.waitingFragment);
+                //Lets clean the waiting frag
+                this.waitingFragment = null;
+            }
         }
     }
 
@@ -681,7 +684,7 @@ class AudioStreamController extends EventHandler {
                 );
             } else {
                 logger.log(
-                    `No video PTS for audio frag ${sn} of [${
+                    `unknown video PTS for audio frag ${sn} of [${
                         details.startSN
                     } ,${
                         details.endSN
