@@ -52,7 +52,7 @@ class AudioStreamController extends EventHandler {
     this.audioCodecSwap = false;
     this.ticks = 0;
     this.ontick = this.tick.bind(this);
-    this.initPTS=null;
+    this.initPTS=[];
     this.waitingFragment=null;
     this.prevTrackId=-1;
   }
@@ -69,12 +69,12 @@ class AudioStreamController extends EventHandler {
 
   //Signal that video PTS was found
   onInitPtsFound(data) {
-    var demuxerId=data.id;
+    var demuxerId=data.id, cc = data.cc, initPTS = data.initPTS;
     if(demuxerId === 'main') {
       //Always update the new INIT PTS
       //Can change due level switch
-      this.initPTS = data.initPTS;
-      logger.log(`InitPTS , ${this.initPTS}, found from video track`);
+      this.initPTS[cc] = initPTS;
+      logger.log(`InitPTS for cc:${cc} found from video track:${initPTS}`);
 
       //If we are waiting we need to demux/remux the waiting frag
       //With the new initPTS
@@ -170,12 +170,13 @@ class AudioStreamController extends EventHandler {
         } else {
           pos = this.nextLoadPosition;
         }
-        let media = this.mediaBuffer ? this.mediaBuffer : this.media;
-        var bufferInfo = BufferHelper.bufferInfo(media,pos,config.maxBufferHole),
+        let media = this.mediaBuffer ? this.mediaBuffer : this.media,
+            bufferInfo = BufferHelper.bufferInfo(media,pos,config.maxBufferHole),
             bufferLen = bufferInfo.len,
             bufferEnd = bufferInfo.end,
             fragPrevious = this.fragPrevious,
-            maxBufLen = config.maxMaxBufferLength;
+            maxBufLen = config.maxMaxBufferLength,
+            audioSwitch = (this.prevTrackId!== -1 && this.prevTrackId !== this.trackId);
 
         // if buffer length is less than maxBufLen try to load a new fragment
         if (bufferLen < maxBufLen && this.trackId < this.tracks.length) {
@@ -213,19 +214,11 @@ class AudioStreamController extends EventHandler {
             let foundFrag;
             let maxFragLookUpTolerance = config.maxFragLookUpTolerance;
 
-            var currentTime=this.media.currentTime;
 
-            // When switching audio track the bufferEnd should only be considered
-            // until the start of the current frag
-            //We change without buffer_flush for not hanging/delaying live streams
-            //First we need to download+remux to issue proper flush event
-            if(this.prevTrackId!==this.trackId){
-              for(let i=0;i<fragments.length;i++){
-                if(currentTime>fragments[i].start) {
-                  bufferEnd = fragments[i].start;
-                  break;
-                }
-              }
+            // When switching audio track, ensure bufferEnd is not greater than currentTime, so that we reload audio as close as possible to currentTime
+            if(audioSwitch){
+              logger.log(`switching track, bufferEnd/pos/start:${bufferEnd}/${pos}/${start}`);
+              bufferEnd = Math.min(bufferEnd,pos);
             }
 
             if (bufferEnd < end) {
@@ -236,7 +229,7 @@ class AudioStreamController extends EventHandler {
                 // offset should be within fragment boundary - config.maxFragLookUpTolerance
                 // this is to cope with situations like
                 // bufferEnd = 9.991
-                // frag[Ø] : [0,10]
+                // frag[Ø] : [0,1
                 // frag[1] : [10,20]
                 // bufferEnd is within frag[0] range ... although what we are expecting is to return frag[1] here
                     //              frag start               frag start+duration
@@ -273,12 +266,8 @@ class AudioStreamController extends EventHandler {
             }
           }
           if(frag) {
-            //Only flush when we have a startPTS
-            //Calculating when we have a new track frag available to play
-            //Can be immediatly or in the future since on alt live playlist
-            //on currentTime the frag could not be available anymore
-            //Safe Flush if until we have a proper frag to switch
-            if(this.prevTrackId!==this.trackId && frag.startPTS!==undefined){
+            //Only flush audio from old audio tracks when PTS is known on new audio track
+            if(audioSwitch && trackDetails.PTSKnown){
               //Adding at least 1s for safety
               let flushTime=Math.max(frag.start, this.media.currentTime)+1;
               //Cleaning the past
@@ -492,7 +481,7 @@ class AudioStreamController extends EventHandler {
       newDetails.PTSKnown = false;
     }
     track.details = newDetails;
-    
+
     // compute start position
     if (!this.startFragRequested) {
     // compute start position if set to -1. use it straight away if value is defined
@@ -539,6 +528,7 @@ class AudioStreamController extends EventHandler {
             start = fragCurrent.start,
             trackId = fragCurrent.level,
             sn = fragCurrent.sn,
+            cc = fragCurrent.cc,
             audioCodec = this.config.defaultAudioCodec || track.audioCodec;
         this.pendingAppending = 0;
         if(!this.demuxer) {
@@ -546,13 +536,14 @@ class AudioStreamController extends EventHandler {
         }
         //Check if we have video initPTS
         // If not we need to wait for it
-        if (this.initPTS !== null ){
+        let initPTS = this.initPTS[cc];
+        if (initPTS !== undefined){
           logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
           // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
-          let accurateTimeOffset = details.PTSKnown || !details.live;
-          this.demuxer.push(data.payload, audioCodec, null, start, fragCurrent.cc, trackId, sn, duration, fragCurrent.decryptdata, accurateTimeOffset, this.initPTS);
+          let accurateTimeOffset = false; //details.PTSKnown || !details.live;
+          this.demuxer.push(data.payload, audioCodec, null, start, cc, trackId, sn, duration, fragCurrent.decryptdata, accurateTimeOffset, initPTS);
         } else {
-          logger.log(`unknown video PTS for audio frag ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId} , waiting for video pts`);
+          logger.log(`unknown video PTS for continuity counter ${cc}, waiting for video PTS before demuxing audio frag ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
           this.waitingFragment=data;
           this.state=State.WAITING_INIT_PTS;
         }
