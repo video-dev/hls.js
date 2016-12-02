@@ -47,7 +47,7 @@ module.exports = {
   AUDIO_TRACK_LOADING: 'hlsAudioTrackLoading',
   // fired when an audio track loading  finishes - data: { details : levelDetails object, id : audio track id, stats : { trequest, tfirst, tload, mtime} }
   AUDIO_TRACK_LOADED: 'hlsAudioTrackLoaded',
-  // fired when the first timestamp is found.
+  // fired when the first timestamp is found. - data: { id : demuxer id, initPTS: initPTS }
   INIT_PTS_FOUND: 'hlsInitPtsFound',
   // fired when a fragment loading starts - data: { frag : fragment object}
   FRAG_LOADING: 'hlsFragLoading',
