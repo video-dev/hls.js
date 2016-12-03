@@ -245,6 +245,18 @@ class AudioStreamController extends EventHandler {
                             fragments[fragLen - 1].duration,
                         frag;
 
+                    // When switching audio track, reload audio as close as possible to currentTime
+                    if (audioSwitch) {
+                        logger.trace(
+                            `switching track, find audio frag matching with currentTime:${pos}`
+                        );
+                        bufferEnd = pos;
+                        // don't reload old fragments in case PTS known on this audio track
+                        if (trackDetails.PTSKnown && pos < start) {
+                            return;
+                        }
+                    }
+
                     // if bufferEnd before start of playlist, load first fragment
                     if (bufferEnd < start) {
                         frag = fragments[0];
@@ -252,15 +264,6 @@ class AudioStreamController extends EventHandler {
                         let foundFrag;
                         let maxFragLookUpTolerance =
                             config.maxFragLookUpTolerance;
-
-                        // When switching audio track, ensure bufferEnd is not greater than currentTime, so that we reload audio as close as possible to currentTime
-                        if (audioSwitch) {
-                            logger.log(
-                                `switching track, bufferEnd/pos/start:${bufferEnd}/${pos}/${start}`
-                            );
-                            bufferEnd = Math.min(bufferEnd, pos);
-                        }
-
                         if (bufferEnd < end) {
                             if (bufferEnd > end - maxFragLookUpTolerance) {
                                 maxFragLookUpTolerance = 0;
@@ -271,7 +274,7 @@ class AudioStreamController extends EventHandler {
                                     // offset should be within fragment boundary - config.maxFragLookUpTolerance
                                     // this is to cope with situations like
                                     // bufferEnd = 9.991
-                                    // frag[Ø] : [0,1
+                                    // frag[Ø] : [0,10]
                                     // frag[1] : [10,20]
                                     // bufferEnd is within frag[0] range ... although what we are expecting is to return frag[1] here
                                     //              frag start               frag start+duration
@@ -328,32 +331,6 @@ class AudioStreamController extends EventHandler {
                         }
                     }
                     if (frag) {
-                        //Only flush audio from old audio tracks when PTS is known on new audio track
-                        if (audioSwitch && trackDetails.PTSKnown) {
-                            //Adding at least 1s for safety
-                            let flushTime =
-                                Math.max(frag.start, this.media.currentTime) +
-                                1;
-                            //Cleaning the past
-                            this.hls.trigger(Event.BUFFER_FLUSHING, {
-                                startOffset: 0,
-                                endOffset: this.media.currentTime,
-                                type: 'audio'
-                            });
-                            //Cleaning the future when we can as safe
-                            logger.log(
-                                `Audio track switch, flushing audio buffer at ${flushTime}, track ${
-                                    this.trackId
-                                }, currentTime:${pos}`
-                            );
-                            this.hls.trigger(Event.BUFFER_FLUSHING, {
-                                startOffset: flushTime,
-                                endOffset: Number.POSITIVE_INFINITY,
-                                type: 'audio'
-                            });
-                            //Lets announce that the initial audio track switch flush occur
-                            this.prevTrackId = this.trackId;
-                        }
                         //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
                         if (
                             frag.decryptdata.uri != null &&
@@ -550,8 +527,8 @@ class AudioStreamController extends EventHandler {
                 });
                 this.prevTrackId = this.trackId;
             } else {
-                //No Flush lets go idle to get proper pts to know where to flush
-                //No lag is expecting on audio switch on alt live streams
+                //No Flush lets go idle to load new audio fragment
+                // old audio will be flushed before appending new audio fragment
                 this.state = State.IDLE;
             }
         }
@@ -738,8 +715,10 @@ class AudioStreamController extends EventHandler {
             data.level === fragCurrent.level &&
             this.state === State.PARSING
         ) {
-            var track = this.tracks[this.trackId],
-                frag = this.fragCurrent;
+            let trackId = this.trackId,
+                track = this.tracks[trackId],
+                frag = this.fragCurrent,
+                hls = this.hls;
 
             logger.log(
                 `parsed ${data.type},PTS:[${data.startPTS.toFixed(
@@ -755,10 +734,30 @@ class AudioStreamController extends EventHandler {
                 data.endPTS
             );
 
+            let audioSwitch =
+                    this.prevTrackId !== -1 && this.prevTrackId !== trackId,
+                media = this.media;
+            //Only flush audio from old audio tracks when PTS is known on new audio track
+            if (audioSwitch && media) {
+                let currentTime = media.currentTime;
+                if (
+                    currentTime >= data.startPTS &&
+                    currentTime <= data.endPTS
+                ) {
+                    hls.trigger(Event.BUFFER_FLUSHING, {
+                        startOffset: 0,
+                        endOffset: Number.POSITIVE_INFINITY,
+                        type: 'audio'
+                    });
+                    //Lets announce that the initial audio track switch flush occur
+                    this.prevTrackId = trackId;
+                }
+            }
+
             [data.data1, data.data2].forEach(buffer => {
                 if (buffer) {
                     this.pendingAppending++;
-                    this.hls.trigger(Event.BUFFER_APPENDING, {
+                    hls.trigger(Event.BUFFER_APPENDING, {
                         type: data.type,
                         data: buffer,
                         parent: 'audio',
