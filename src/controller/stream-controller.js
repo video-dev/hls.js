@@ -529,48 +529,48 @@ class StreamController extends EventHandler {
             start = foundFrag.start;
             const curSNIdx = frag.sn - levelDetails.startSN;
             //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
-            if (fragPrevious) {
-                if (
-                    frag.level === fragPrevious.level &&
-                    frag.sn === fragPrevious.sn
-                ) {
-                    if (frag.sn < levelDetails.endSN) {
-                        let deltaPTS = fragPrevious.deltaPTS;
-                        // if there is a significant delta between audio and video, larger than max allowed hole,
-                        // and if previous remuxed fragment did not start with a keyframe. (fragPrevious.dropped)
-                        // let's try to load previous fragment again to get last keyframe
-                        // then we will reload again current fragment (that way we should be able to fill the buffer hole ...)
-                        if (
-                            deltaPTS &&
-                            deltaPTS > config.maxBufferHole &&
-                            fragPrevious.dropped &&
-                            curSNIdx
-                        ) {
-                            frag = fragments[curSNIdx - 1];
-                            logger.warn(
-                                `SN just loaded, with large PTS gap between audio and video, maybe frag is not starting with a keyframe ? load previous one to try to overcome this`
-                            );
-                            // decrement previous frag load counter to avoid frag loop loading error when next fragment will get reloaded
-                            fragPrevious.loadCounter--;
-                        } else {
-                            frag = fragments[curSNIdx + 1];
-                            logger.log(
-                                `SN just loaded, load next one: ${frag.sn}`
-                            );
-                        }
+            if (
+                fragPrevious &&
+                frag.level === fragPrevious.level &&
+                frag.sn === fragPrevious.sn
+            ) {
+                if (frag.sn < levelDetails.endSN) {
+                    let deltaPTS = fragPrevious.deltaPTS;
+                    // if there is a significant delta between audio and video, larger than max allowed hole,
+                    // and if previous remuxed fragment did not start with a keyframe. (fragPrevious.dropped)
+                    // let's try to load previous fragment again to get last keyframe
+                    // then we will reload again current fragment (that way we should be able to fill the buffer hole ...)
+                    if (
+                        deltaPTS &&
+                        deltaPTS > config.maxBufferHole &&
+                        fragPrevious.dropped &&
+                        curSNIdx
+                    ) {
+                        frag = fragments[curSNIdx - 1];
+                        logger.warn(
+                            `SN just loaded, with large PTS gap between audio and video, maybe frag is not starting with a keyframe ? load previous one to try to overcome this`
+                        );
+                        // decrement previous frag load counter to avoid frag loop loading error when next fragment will get reloaded
+                        fragPrevious.loadCounter--;
                     } else {
-                        frag = null;
+                        frag = fragments[curSNIdx + 1];
+                        logger.log(`SN just loaded, load next one: ${frag.sn}`);
                     }
-                } else if (frag.dropped) {
-                    // If a fragment has dropped frames and it's in a different level/sequence, load the previous fragment to try and find the keyframe
-                    // Reset the dropped count now since it won't be reset until we parse the fragment again, which prevents infinite backtracking on the same segment
-                    logger.warn(
-                        'Loaded fragment with dropped frames, backtracking 1 segment'
-                    );
-                    frag.dropped = 0;
-                    frag = fragments[curSNIdx - 1];
-                    fragPrevious.loadCounter--;
+                } else {
+                    frag = null;
                 }
+            } else if (frag.dropped) {
+                // If a fragment has dropped frames and it's in a different level/sequence, load the previous fragment to try and find the keyframe
+                // Reset the dropped count now since it won't be reset until we parse the fragment again, which prevents infinite backtracking on the same segment
+                logger.warn(
+                    'Loaded fragment with dropped frames, backtracking 1 segment to find keyframe'
+                );
+                frag.dropped = 0;
+                const prev = fragments[curSNIdx - 1];
+                if (prev) {
+                    prev.loadCounter = Math.max(0, (prev.loadCounter -= 1));
+                }
+                frag = prev;
             }
         }
         return frag;
