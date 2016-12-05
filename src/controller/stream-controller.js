@@ -527,37 +527,51 @@ class StreamController extends EventHandler {
         if (foundFrag) {
             frag = foundFrag;
             start = foundFrag.start;
+            const curSNIdx = frag.sn - levelDetails.startSN;
             //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
-            if (
-                fragPrevious &&
-                frag.level === fragPrevious.level &&
-                frag.sn === fragPrevious.sn
-            ) {
-                if (frag.sn < levelDetails.endSN) {
-                    let deltaPTS = fragPrevious.deltaPTS,
-                        curSNIdx = frag.sn - levelDetails.startSN;
-                    // if there is a significant delta between audio and video, larger than max allowed hole,
-                    // and if previous remuxed fragment did not start with a keyframe. (fragPrevious.dropped)
-                    // let's try to load previous fragment again to get last keyframe
-                    // then we will reload again current fragment (that way we should be able to fill the buffer hole ...)
-                    if (
-                        deltaPTS &&
-                        deltaPTS > config.maxBufferHole &&
-                        fragPrevious.dropped &&
-                        curSNIdx
-                    ) {
-                        frag = fragments[curSNIdx - 1];
-                        logger.warn(
-                            `SN just loaded, with large PTS gap between audio and video, maybe frag is not starting with a keyframe ? load previous one to try to overcome this`
-                        );
-                        // decrement previous frag load counter to avoid frag loop loading error when next fragment will get reloaded
-                        fragPrevious.loadCounter--;
+            if (fragPrevious) {
+                // If a fragment has dropped frames, load the previous fragment to try and find the keyframe
+                if (frag.dropped) {
+                    logger.warn(
+                        'Loaded fragment with dropped frames, backtracking 1 segment'
+                    );
+                    // Reset the dropped count now since it won't be reset until we parse the fragment again
+                    // Prevents infinite backtracking on the same segment
+                    frag.dropped = 0;
+                    frag = fragments[curSNIdx - 1];
+                    fragPrevious.loadCounter--;
+                } else if (
+                    fragPrevious &&
+                    frag.level === fragPrevious.level &&
+                    frag.sn === fragPrevious.sn
+                ) {
+                    if (frag.sn < levelDetails.endSN) {
+                        let deltaPTS = fragPrevious.deltaPTS;
+                        // if there is a significant delta between audio and video, larger than max allowed hole,
+                        // and if previous remuxed fragment did not start with a keyframe. (fragPrevious.dropped)
+                        // let's try to load previous fragment again to get last keyframe
+                        // then we will reload again current fragment (that way we should be able to fill the buffer hole ...)
+                        if (
+                            deltaPTS &&
+                            deltaPTS > config.maxBufferHole &&
+                            fragPrevious.dropped &&
+                            curSNIdx
+                        ) {
+                            frag = fragments[curSNIdx - 1];
+                            logger.warn(
+                                `SN just loaded, with large PTS gap between audio and video, maybe frag is not starting with a keyframe ? load previous one to try to overcome this`
+                            );
+                            // decrement previous frag load counter to avoid frag loop loading error when next fragment will get reloaded
+                            fragPrevious.loadCounter--;
+                        } else {
+                            frag = fragments[curSNIdx + 1];
+                            logger.log(
+                                `SN just loaded, load next one: ${frag.sn}`
+                            );
+                        }
                     } else {
-                        frag = fragments[curSNIdx + 1];
-                        logger.log(`SN just loaded, load next one: ${frag.sn}`);
+                        frag = null;
                     }
-                } else {
-                    frag = null;
                 }
             }
         }
@@ -1309,6 +1323,18 @@ class StreamController extends EventHandler {
                 },dropped:${data.dropped || 0}`
             );
 
+            if (data.type === 'video') {
+                frag.dropped = data.dropped;
+                if (frag.dropped) {
+                    logger.warn(
+                        'Parsed video fragment with dropped frames, returning to idle'
+                    );
+                    this.state = State.IDLE;
+                    this.tick();
+                    return;
+                }
+            }
+
             var drift = LevelHelper.updateFragPTSDTS(
                     level.details,
                     frag.sn,
@@ -1325,10 +1351,6 @@ class StreamController extends EventHandler {
             });
 
             // has remuxer dropped video frames located before first keyframe ?
-            if (data.type === 'video') {
-                frag.dropped = data.dropped;
-            }
-
             [data.data1, data.data2].forEach(buffer => {
                 if (buffer) {
                     this.pendingAppending++;
