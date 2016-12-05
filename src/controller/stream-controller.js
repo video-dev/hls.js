@@ -408,15 +408,7 @@ class StreamController extends EventHandler {
       const curSNIdx = frag.sn - levelDetails.startSN;
       //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
       if (fragPrevious) {
-        // If a fragment has dropped frames, load the previous fragment to try and find the keyframe
-        if (frag.dropped) {
-          logger.warn('Loaded fragment with dropped frames, backtracking 1 segment');
-          // Reset the dropped count now since it won't be reset until we parse the fragment again
-          // Prevents infinite backtracking on the same segment
-          frag.dropped = 0;
-          frag = fragments[curSNIdx - 1];
-          fragPrevious.loadCounter--;
-        } else if (fragPrevious && frag.level === fragPrevious.level && frag.sn === fragPrevious.sn) {
+         if (frag.level === fragPrevious.level && frag.sn === fragPrevious.sn) {
             if (frag.sn < levelDetails.endSN) {
               let deltaPTS = fragPrevious.deltaPTS;
               // if there is a significant delta between audio and video, larger than max allowed hole,
@@ -435,7 +427,14 @@ class StreamController extends EventHandler {
             } else {
               frag = null;
             }
-          }
+          } else if (frag.dropped) {
+           // If a fragment has dropped frames and it's in a different level/sequence, load the previous fragment to try and find the keyframe
+           // Reset the dropped count now since it won't be reset until we parse the fragment again, which prevents infinite backtracking on the same segment
+           logger.warn('Loaded fragment with dropped frames, backtracking 1 segment');
+           frag.dropped = 0;
+           frag = fragments[curSNIdx - 1];
+           fragPrevious.loadCounter--;
+         }
         }
       }
     return frag;
@@ -1052,6 +1051,8 @@ class StreamController extends EventHandler {
       if(data.type === 'video') {
         frag.dropped = data.dropped;
         if (frag.dropped) {
+          // Return back to the IDLE stater without updating the nextLoadPosition or appending to buffer
+          // Causes findFragments to backtrack a segment and find the keyframe
           logger.warn('Parsed video fragment with dropped frames, returning to idle');
           this.state = State.IDLE;
           this.tick();
