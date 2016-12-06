@@ -526,14 +526,10 @@ class StreamController extends EventHandler {
         }
         if (foundFrag) {
             frag = foundFrag;
-            start = foundFrag.start;
             const curSNIdx = frag.sn - levelDetails.startSN;
+            const sameLevel = fragPrevious && frag.level === fragPrevious.level;
             //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
-            if (
-                fragPrevious &&
-                frag.level === fragPrevious.level &&
-                frag.sn === fragPrevious.sn
-            ) {
+            if (sameLevel && frag.sn === fragPrevious.sn) {
                 if (frag.sn < levelDetails.endSN) {
                     let deltaPTS = fragPrevious.deltaPTS;
                     // if there is a significant delta between audio and video, larger than max allowed hole,
@@ -559,11 +555,11 @@ class StreamController extends EventHandler {
                 } else {
                     frag = null;
                 }
-            } else if (frag.dropped) {
+            } else if (frag.dropped && !sameLevel) {
                 // If a fragment has dropped frames and it's in a different level/sequence, load the previous fragment to try and find the keyframe
                 // Reset the dropped count now since it won't be reset until we parse the fragment again, which prevents infinite backtracking on the same segment
                 logger.warn(
-                    'Loaded fragment with dropped frames, backtracking 1 segment to find keyframe'
+                    'Loaded fragment with dropped frames, backtracking 1 segment to find a keyframe'
                 );
                 frag.dropped = 0;
                 const prev = fragments[curSNIdx - 1];
@@ -888,6 +884,7 @@ class StreamController extends EventHandler {
                 if (level.details) {
                     level.details.fragments.forEach(fragment => {
                         fragment.loadCounter = undefined;
+                        fragment.backtracked = undefined;
                     });
                 }
             });
@@ -1321,17 +1318,28 @@ class StreamController extends EventHandler {
                 },dropped:${data.dropped || 0}`
             );
 
+            // Detect gaps in a fragment  and try to fix it by finding a keyframe in the previous fragment (see _findFragments)
             if (data.type === 'video') {
                 frag.dropped = data.dropped;
                 if (frag.dropped) {
-                    // Return back to the IDLE stater without updating the nextLoadPosition or appending to buffer
-                    // Causes findFragments to backtrack a segment and find the keyframe
-                    logger.warn(
-                        'Parsed video fragment with dropped frames, returning to idle'
-                    );
-                    this.state = State.IDLE;
-                    this.tick();
-                    return;
+                    if (!frag.backtracked) {
+                        // Return back to the IDLE stater without updating the nextLoadPosition or appending to buffer
+                        // Causes findFragments to backtrack a segment and find the keyframe
+                        logger.warn(
+                            'Parsed video fragment with dropped frames, returning to idle without appending'
+                        );
+                        frag.backtracked = true;
+                        this.state = State.IDLE;
+                        this.tick();
+                        return;
+                    } else {
+                        logger.warn(
+                            'Already backtracked on this fragment, appending with the gap'
+                        );
+                    }
+                } else {
+                    // Only reset the backtracked flag if we've loaded the frag without any dropped frames
+                    frag.backtracked = false;
                 }
             }
 
