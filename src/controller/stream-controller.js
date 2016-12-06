@@ -1330,9 +1330,6 @@ class StreamController extends EventHandler {
                         // Return back to the IDLE stater without updating the nextLoadPosition or appending to buffer
                         // Causes findFragments to backtrack a segment and find the keyframe
                         // Audio fragments arriving before video sets the nextLoadPosition, causing _findFragments to skip the backtracked fragment
-                        logger.warn(
-                            'Parsed video fragment with dropped frames, returning to idle without appending'
-                        );
                         frag.backtracked = true;
                         this.nextLoadPosition = frag.startPTS;
                         this.state = State.IDLE;
