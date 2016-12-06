@@ -87,7 +87,7 @@ class CapLevelController extends EventHandler {
   get mediaWidth() {
     let width;
     if (this.media) {
-      width = this.media.width || this.media.clientWidth || this.media.offsetWidth;
+      width =  this.media.clientWidth || this.media.offsetWidth;
       width *= this.contentScaleFactor;
     }
     return width;
@@ -96,7 +96,7 @@ class CapLevelController extends EventHandler {
   get mediaHeight() {
     let height;
     if (this.media) {
-      height = this.media.height || this.media.clientHeight || this.media.offsetHeight;
+      height = this.media.clientHeight || this.media.offsetHeight;
       height *= this.contentScaleFactor; 
     }
     return height;
