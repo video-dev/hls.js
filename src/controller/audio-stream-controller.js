@@ -35,7 +35,7 @@ class AudioStreamController extends EventHandler {
       Event.MEDIA_ATTACHED,
       Event.MEDIA_DETACHING,
       Event.AUDIO_TRACKS_UPDATED,
-      Event.AUDIO_TRACK_SWITCH,
+      Event.AUDIO_TRACK_SWITCHING,
       Event.AUDIO_TRACK_LOADED,
       Event.KEY_LOADED,
       Event.FRAG_LOADED,
@@ -209,11 +209,17 @@ class AudioStreamController extends EventHandler {
 
           // When switching audio track, reload audio as close as possible to currentTime
           if(audioSwitch){
-            logger.trace(`switching track, find audio frag matching with currentTime:${pos}`);
+            logger.log(`switching track, find audio frag matching with currentTime/start:${pos}/${start}`);
             bufferEnd = pos;
-            // don't reload old fragments in case PTS known on this audio track
+            // if currentTime (pos) is less than alt audio playlist start time, it means that alt audio is ahead of currentTime
             if (trackDetails.PTSKnown && pos < start) {
-              return;
+              // if everything is buffered from pos to start, let's seek to start
+              if (bufferInfo.end > start) {
+                logger.log('alt audio track ahead of main track, seek to start of alt audio track');
+                this.media.currentTime = start;
+              } else {
+                return;
+              }
             }
           }
 
@@ -401,10 +407,10 @@ class AudioStreamController extends EventHandler {
     this.tracks = data.audioTracks;
   }
 
-  onAudioTrackSwitch(data) {
+  onAudioTrackSwitching(data) {
     // if any URL found on new audio track, it is an alternate audio track
     var altAudio = !!data.url;
-    this.trackId = data.id;
+    let trackId = this.trackId = data.id;
     this.state = State.IDLE;
 
     this.fragCurrent = null;
@@ -423,18 +429,13 @@ class AudioStreamController extends EventHandler {
       }
     }
 
-    //We switch tracks
-    //If Main audio we can flush imediatly
-    // If not we need to have the proper PTS to know where to flush
-    //Lets give time to properly download the frag and get PTS
-    if(this.prevTrackId!==this.trackId){
-      //If Original we have audio track lets flush immediately
-      if(!altAudio){
-        this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0 , endOffset: Number.POSITIVE_INFINITY, type : 'audio'});
-        this.prevTrackId=this.trackId;
-      }else{
-        //No Flush lets go idle to load new audio fragment
-        // old audio will be flushed before appending new audio fragment
+    //should we switch tracks ?
+    if(this.prevTrackId !== trackId){
+        //main audio track are handled by stream-controller
+      if(!altAudio) {
+        this.prevTrackId = trackId;
+      } else {
+        //switch to alt-audio, lets go idle to load new audio fragment
         this.state=State.IDLE;
       }
     }
@@ -559,8 +560,14 @@ class AudioStreamController extends EventHandler {
         logger.log(`audio track:audio,container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
         let initSegment = track.initSegment;
         if (initSegment) {
-          this.pendingAppending++;
-          this.hls.trigger(Event.BUFFER_APPENDING, {type: 'audio', data: initSegment, parent : 'audio',content : 'initSegment'});
+          let audioSwitch = (this.prevTrackId!== -1 && this.prevTrackId !== this.trackId);
+          let appendObj = {type: 'audio', data: initSegment, parent : 'audio',content : 'initSegment'};
+          if (audioSwitch) {
+            this.pendingData = [appendObj];
+          } else {
+            this.pendingAppending++;
+            this.hls.trigger(Event.BUFFER_APPENDING, appendObj);
+          }
         }
         //trigger handler right now
         this.tick();
@@ -588,16 +595,22 @@ class AudioStreamController extends EventHandler {
       if(audioSwitch && media){
         let currentTime = media.currentTime;
         if (currentTime >= data.startPTS && currentTime <= data.endPTS) {
-          hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0 , endOffset: Number.POSITIVE_INFINITY, type : 'audio'});
-          //Lets announce that the initial audio track switch flush occur
-          this.prevTrackId=trackId;
+            hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0 , endOffset: Number.POSITIVE_INFINITY, type : 'audio'});
+            //Lets announce that the initial audio track switch flush occur
+            this.prevTrackId=trackId;
+            hls.trigger(Event.AUDIO_TRACK_SWITCHED, {id : trackId});
         }
       }
 
       [data.data1, data.data2].forEach(buffer => {
         if (buffer) {
-          this.pendingAppending++;
-          hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer, parent : 'audio',content : 'data'});
+          let appendObj = {type: data.type, data: buffer, parent : 'audio',content : 'data'};
+          if (audioSwitch) {
+            this.pendingData.push(appendObj);
+          } else {
+            this.pendingAppending++;
+            hls.trigger(Event.BUFFER_APPENDING, appendObj);
+          }
         }
       });
       //trigger handler right now
@@ -711,13 +724,23 @@ class AudioStreamController extends EventHandler {
   }
 
   onBufferFlushed() {
-    // increase fragment load Index to avoid frag loop loading error after buffer flush
-    this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
-    // move to IDLE once flush complete. this should trigger new fragment loading
-    this.state = State.IDLE;
-    // reset reference to frag
-    this.fragPrevious = null;
-    this.tick();
+    let pendingData = this.pendingData;
+    if (pendingData) {
+      logger.log('appending pending audio data on Buffer Flushed');
+      pendingData.forEach(appendObj => {
+        this.pendingAppending++;
+        hls.trigger(Event.BUFFER_APPENDING, appendObj);
+      });
+      this.pendingData = null;
+    } else {
+      // increase fragment load Index to avoid frag loop loading error after buffer flush
+      this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+      // move to IDLE once flush complete. this should trigger new fragment loading
+      this.state = State.IDLE;
+      // reset reference to frag
+      this.fragPrevious = null;
+      this.tick();
+    }
   }
 }
 export default AudioStreamController;
