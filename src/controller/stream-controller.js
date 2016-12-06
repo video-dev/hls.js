@@ -42,7 +42,8 @@ class StreamController extends EventHandler {
       Event.FRAG_PARSING_DATA,
       Event.FRAG_PARSED,
       Event.ERROR,
-      Event.AUDIO_TRACK_SWITCH,
+      Event.AUDIO_TRACK_SWITCHING,
+      Event.AUDIO_TRACK_SWITCHED,
       Event.BUFFER_CREATED,
       Event.BUFFER_APPENDED,
       Event.BUFFER_FLUSHED);
@@ -1081,10 +1082,13 @@ class StreamController extends EventHandler {
     }
   }
 
-  onAudioTrackSwitch(data) {
+  onAudioTrackSwitching(data) {
     // if any URL found on new audio track, it is an alternate audio track
-    var altAudio = !!data.url;
+    var altAudio = !!data.url,
+        trackId = data.id;
     // if we switch on main audio, ensure that main fragment scheduling is synced with media.buffered
+    // don't do anything if we switch to alt audio: audio stream controller is handling it.
+    // we will just have to change buffer scheduling on audioTrackSwitched
     if (!altAudio) {
       if (this.mediaBuffer !== this.media) {
         logger.log(`switching on main audio, use media.buffered to schedule main fragment loading`);
@@ -1105,15 +1109,29 @@ class StreamController extends EventHandler {
         // switch to IDLE state to load new fragment
         this.state = State.IDLE;
       }
-    } else {
-    // if we switch on alternate audio, ensure that main fragment scheduling is synced with video sourcebuffer buffered
-      if (this.videoBuffer && this.mediaBuffer !== this.videoBuffer) {
+      let hls = this.hls;
+      // switching to main audio, flush all audio and trigger track switched
+      hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0 , endOffset: Number.POSITIVE_INFINITY, type : 'audio'});
+      hls.trigger(Event.AUDIO_TRACK_SWITCHED, {id : trackId});
+      this.altAudio = false;
+    }
+  }
+
+  onAudioTrackSwitched(data) {
+    var trackId = data.id,
+    altAudio = !!this.hls.audioTracks[trackId].url;
+    if (altAudio) {
+      let videoBuffer = this.videoBuffer;
+      // if we switched on alternate audio, ensure that main fragment scheduling is synced with video sourcebuffer buffered
+      if (videoBuffer && this.mediaBuffer !== videoBuffer) {
         logger.log(`switching on alternate audio, use video.buffered to schedule main fragment loading`);
-        this.mediaBuffer = this.videoBuffer;
+        this.mediaBuffer = videoBuffer;
       }
     }
     this.altAudio = altAudio;
+    this.tick();
   }
+
 
 
   onBufferCreated(data) {
