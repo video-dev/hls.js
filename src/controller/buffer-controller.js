@@ -500,16 +500,19 @@ class BufferController extends EventHandler {
             if (segments && segments.length) {
                 var segment = segments.shift();
                 try {
-                    let type = segment.type;
-                    if (sourceBuffer[type]) {
-                        // reset sourceBuffer ended flag before appending segment
-                        sourceBuffer[type].ended = false;
-                        //logger.log(`appending ${segment.content} ${segment.type} SB, size:${segment.data.length}, ${segment.parent}`);
-                        this.parent = segment.parent;
-                        sourceBuffer[type].appendBuffer(segment.data);
-                        this.appendError = 0;
-                        this.appended++;
-                        this.appending = true;
+                    let type = segment.type,
+                        sb = sourceBuffer[type];
+                    if (sb) {
+                        if (!sb.updating) {
+                            // reset sourceBuffer ended flag before appending segment
+                            sb.ended = false;
+                            //logger.log(`appending ${segment.content} ${segment.type} SB, size:${segment.data.length}, ${segment.parent}`);
+                            this.parent = segment.parent;
+                            sb.appendBuffer(segment.data);
+                            this.appendError = 0;
+                            this.appended++;
+                            this.appending = true;
+                        }
                     } else {
                         // in case we don't have any source buffer matching with this segment type,
                         // it means that Mediasource fails to create sourcebuffer
