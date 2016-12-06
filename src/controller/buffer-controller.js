@@ -130,6 +130,7 @@ class BufferController extends EventHandler {
       // Detach properly the MediaSource from the HTMLMediaElement as
       // suggested in https://github.com/w3c/media-source/issues/53.
       if (this.media) {
+        URL.revokeObjectURL(this.media.src);
         this.media.removeAttribute('src');
         this.media.load();
       }
