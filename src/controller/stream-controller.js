@@ -1327,7 +1327,7 @@ class StreamController extends EventHandler {
                 frag.dropped = data.dropped;
                 if (frag.dropped) {
                     if (!frag.backtracked) {
-                        // Return back to the IDLE stater without updating the nextLoadPosition or appending to buffer
+                        // Return back to the IDLE state without appending to buffer
                         // Causes findFragments to backtrack a segment and find the keyframe
                         // Audio fragments arriving before video sets the nextLoadPosition, causing _findFragments to skip the backtracked fragment
                         frag.backtracked = true;
