@@ -41,8 +41,12 @@ module.exports = {
     LEVEL_SWITCH: 'hlsLevelSwitch',
     // fired to notify that audio track lists has been updated data: { audioTracks : audioTracks}
     AUDIO_TRACKS_UPDATED: 'hlsAudioTracksUpdated',
-    // fired when an audio track switch occurs - data: {  id : audio track id}
+    // fired when an audio track switch occurs - data: {  id : audio track id} // deprecated
     AUDIO_TRACK_SWITCH: 'hlsAudioTrackSwitch',
+    // fired when an audio track switching is requested - data: {  id : audio track id}
+    AUDIO_TRACK_SWITCHING: 'hlsAudioTrackSwitching',
+    // fired when an audio track switch actually occurs - data: {  id : audio track id}
+    AUDIO_TRACK_SWITCHED: 'hlsAudioTrackSwitched',
     // fired when an audio track loading starts - data: { url : audio track URL  id : audio track id}
     AUDIO_TRACK_LOADING: 'hlsAudioTrackLoading',
     // fired when an audio track loading  finishes - data: { details : levelDetails object, id : audio track id, stats : { trequest, tfirst, tload, mtime} }
