@@ -128,7 +128,10 @@ class TimelineController extends EventHandler {
         this.media = data.media;
     }
 
-    onMediaDetaching() {}
+    onMediaDetaching() {
+        this.clearCurrentCues(this.textTrack1);
+        this.clearCurrentCues(this.textTrack2);
+    }
 
     onManifestLoading() {
         this.lastPts = Number.NEGATIVE_INFINITY;
