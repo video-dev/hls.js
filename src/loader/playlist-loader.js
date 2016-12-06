@@ -195,7 +195,10 @@ class PlaylistLoader extends EventHandler {
             timeout = config.levelLoadingTimeOut;
             retryDelay = config.levelLoadingRetryDelay;
             maxRetryDelay = config.levelLoadingMaxRetryTimeout;
-            logger.log(`loading playlist for level ${context.level}`);
+            logger.log(
+                `loading playlist for ${context.type} ${context.level ||
+                    context.id}`
+            );
         }
         loader = this.loaders[context.type] = context.loader =
             typeof config.pLoader !== 'undefined'
