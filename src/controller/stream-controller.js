@@ -431,11 +431,15 @@ class StreamController extends EventHandler {
          // Reset the dropped count now since it won't be reset until we parse the fragment again, which prevents infinite backtracking on the same segment
          logger.warn('Loaded fragment with dropped frames, backtracking 1 segment to find a keyframe');
          frag.dropped = 0;
-         const prev = fragments[curSNIdx - 1];
-         if (prev) {
-           prev.loadCounter = Math.max(0, prev.loadCounter -= 1);
+         if (curSNIdx) {
+           const prev = fragments[curSNIdx - 1];
+           if (prev.loadCounter) {
+             prev.loadCounter--;
+           }
+           frag = prev;
+         } else {
+           frag = null;
          }
-         frag = prev;
       }
     }
     return frag;
@@ -1057,8 +1061,10 @@ class StreamController extends EventHandler {
           if (!frag.backtracked) {
             // Return back to the IDLE stater without updating the nextLoadPosition or appending to buffer
             // Causes findFragments to backtrack a segment and find the keyframe
+            // Audio fragments arriving before video sets the nextLoadPosition, causing _findFragments to skip the backtracked fragment
             logger.warn('Parsed video fragment with dropped frames, returning to idle without appending');
             frag.backtracked = true;
+            this.nextLoadPosition = frag.startPTS;
             this.state = State.IDLE;
             this.tick();
             return;
