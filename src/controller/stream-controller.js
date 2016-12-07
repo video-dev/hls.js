@@ -1157,7 +1157,7 @@ class StreamController extends EventHandler {
                         }
                     }
                 }
-                this.pendingAppending = 0;
+                this.pendingBuffering = -1;
                 logger.log(
                     `Parsing ${sn} of [${details.startSN} ,${
                         details.endSN
@@ -1283,7 +1283,6 @@ class StreamController extends EventHandler {
                 );
                 var initSegment = track.initSegment;
                 if (initSegment) {
-                    this.pendingAppending++;
                     this.hls.trigger(Event.BUFFER_APPENDING, {
                         type: trackName,
                         data: initSegment,
@@ -1345,7 +1344,6 @@ class StreamController extends EventHandler {
 
             [data.data1, data.data2].forEach(buffer => {
                 if (buffer) {
-                    this.pendingAppending++;
                     hls.trigger(Event.BUFFER_APPENDING, {
                         type: data.type,
                         data: buffer,
@@ -1472,21 +1470,17 @@ class StreamController extends EventHandler {
 
     onBufferAppended(data) {
         if (data.parent === 'main') {
-            switch (this.state) {
-                case State.PARSING:
-                case State.PARSED:
-                    this.pendingAppending--;
-                    this._checkAppendedParsed();
-                    break;
-                default:
-                    break;
+            const state = this.state;
+            if (state === State.PARSING || state === State.PARSED) {
+                this.pendingBuffering = data.pending;
+                this._checkAppendedParsed();
             }
         }
     }
 
     _checkAppendedParsed() {
         //trigger handler right now
-        if (this.state === State.PARSED && this.pendingAppending === 0) {
+        if (this.state === State.PARSED && this.pendingBuffering === 0) {
             var frag = this.fragCurrent,
                 stats = this.stats;
             if (frag) {
