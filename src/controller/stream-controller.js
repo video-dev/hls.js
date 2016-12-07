@@ -66,8 +66,7 @@ class StreamController extends EventHandler {
 
     startLoad(startPosition) {
         if (this.levels) {
-            let media = this.media,
-                lastCurrentTime = this.lastCurrentTime,
+            let lastCurrentTime = this.lastCurrentTime,
                 hls = this.hls;
             this.stopLoad();
             if (!this.timer) {
@@ -75,19 +74,6 @@ class StreamController extends EventHandler {
             }
             this.level = -1;
             this.fragLoadError = 0;
-            if (media && lastCurrentTime > 0) {
-                logger.log(
-                    `configure startPosition @${lastCurrentTime.toFixed(3)}`
-                );
-                if (!this.lastPaused) {
-                    logger.log('resuming video');
-                    media.play();
-                }
-            } else {
-                this.lastCurrentTime = this.startPosition
-                    ? this.startPosition
-                    : startPosition;
-            }
             if (!this.startFragRequested) {
                 // determine load level
                 let startLevel = hls.startLevel;
@@ -101,8 +87,17 @@ class StreamController extends EventHandler {
                 this.level = hls.nextLoadLevel = startLevel;
                 this.loadedmetadata = false;
             }
+            // if startPosition undefined but lastCurrentTime set, set startPosition to last currentTime
+            if (lastCurrentTime > 0 && startPosition === -1) {
+                logger.log(
+                    `override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(
+                        3
+                    )}`
+                );
+                startPosition = lastCurrentTime;
+            }
             this.state = State.IDLE;
-            this.nextLoadPosition = this.startPosition = this.lastCurrentTime;
+            this.nextLoadPosition = this.startPosition = this.lastCurrentTime = startPosition;
             this.tick();
         } else {
             logger.warn('cannot start loading as manifest not parsed yet');
@@ -625,6 +620,7 @@ class StreamController extends EventHandler {
             frag.loadIdx = this.fragLoadIdx;
             this.fragCurrent = frag;
             this.startFragRequested = true;
+            this.nextLoadPosition = frag.start + frag.duration;
             frag.autoLevel = hls.autoLevelEnabled;
             frag.bitrateTest = this.bitrateTest;
             hls.trigger(Event.FRAG_LOADING, { frag: frag });
@@ -900,7 +896,7 @@ class StreamController extends EventHandler {
             media.removeEventListener('ended', this.onvended);
             this.onvseeking = this.onvseeked = this.onvended = null;
         }
-        this.media = null;
+        this.media = this.mediaBuffer = null;
         this.loadedmetadata = false;
         this.stopLoad();
     }
@@ -957,6 +953,10 @@ class StreamController extends EventHandler {
             this.fragLoadIdx !== undefined
         ) {
             this.fragLoadIdx += 2 * config.fragLoadingLoopThreshold;
+        }
+        // in case seeking occurs although no media buffered, adjust startPosition and nextLoadPosition to seek target
+        if (!this.loadedmetadata) {
+            this.nextLoadPosition = this.startPosition = currentTime;
         }
         // tick to speed up processing
         this.tick();
@@ -1087,6 +1087,7 @@ class StreamController extends EventHandler {
                         this.startPosition = 0;
                     }
                 }
+                this.lastCurrentTime = this.startPosition;
             }
             this.nextLoadPosition = this.startPosition;
         }
@@ -1238,7 +1239,11 @@ class StreamController extends EventHandler {
                     }
                 }
                 // HE-AAC is broken on Android, always signal audio codec as AAC even if variant manifest states otherwise
-                if (ua.indexOf('android') !== -1) {
+                if (
+                    ua.indexOf('android') !== -1 &&
+                    track.container !== 'audio/mpeg'
+                ) {
+                    // Exclude mpeg audio
                     audioCodec = 'mp4a.40.2';
                     logger.log(`Android: force audio codec to` + audioCodec);
                 }
@@ -1358,7 +1363,10 @@ class StreamController extends EventHandler {
             hls.trigger(Event.LEVEL_PTS_UPDATED, {
                 details: level.details,
                 level: this.level,
-                drift: drift
+                drift: drift,
+                type: data.type,
+                start: data.startPTS,
+                end: data.endPTS
             });
 
             // has remuxer dropped video frames located before first keyframe ?
@@ -1374,7 +1382,6 @@ class StreamController extends EventHandler {
                 }
             });
 
-            this.nextLoadPosition = data.endPTS;
             this.bufferRange.push({
                 type: data.type,
                 start: data.startPTS,
@@ -1663,7 +1670,7 @@ class StreamController extends EventHandler {
             let currentTime = media.currentTime,
                 buffered = media.buffered;
             // adjust currentTime to start position on loaded metadata
-            if (!this.loadedmetadata && buffered.length) {
+            if (!this.loadedmetadata && buffered.length && !media.seeking) {
                 this.loadedmetadata = true;
                 // only adjust currentTime if different from startPosition or if startPosition not buffered
                 // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered

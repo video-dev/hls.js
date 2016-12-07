@@ -6,12 +6,17 @@ import { logger } from '../utils/logger';
 import ID3 from '../demux/id3';
 
 class AACDemuxer {
-    constructor(observer, id, remuxerClass, config) {
+    constructor(observer, id, remuxerClass, config, typeSupported) {
         this.observer = observer;
         this.id = id;
         this.remuxerClass = remuxerClass;
         this.config = config;
-        this.remuxer = new this.remuxerClass(observer, id, config);
+        this.remuxer = new this.remuxerClass(
+            observer,
+            id,
+            config,
+            typeSupported
+        );
         // id === 'main' when the demuxer is used to play an audio only stream and requires AAC files placed back-to-back in the order they are received.
         // id === 'audio' when the demuxer is used for multitrack audio and requires the use of timestamps to sync audio with video.
         this.useTimeStamp = id === 'audio';
@@ -24,6 +29,7 @@ class AACDemuxer {
             type: 'audio',
             id: -1,
             sequenceNumber: 0,
+            isAAC: true,
             samples: [],
             len: 0
         };

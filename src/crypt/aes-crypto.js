@@ -1,4 +1,4 @@
-class AESCrypto {
+export default class AESCrypto {
     constructor(iv) {
         this.aesIV = iv;
     }
@@ -11,5 +11,3 @@ class AESCrypto {
         );
     }
 }
-
-export default AESCrypto;
