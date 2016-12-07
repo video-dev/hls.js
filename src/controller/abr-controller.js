@@ -64,7 +64,7 @@ class AbrController extends EventHandler {
       we compute expected time of arrival of the complete fragment.
       we compare it to expected time of buffer starvation
     */
-    let hls = this.hls, v = hls.media,frag = this.fragCurrent, loader = frag.loader;
+    let hls = this.hls, v = hls.media,frag = this.fragCurrent, loader = frag.loader, minAutoLevel = this.minAutoLevel;
 
     // if loader has been destroyed or loading has been aborted, stop timer and return
     if(!loader || ( loader.stats && loader.stats.aborted)) {
@@ -94,7 +94,7 @@ class AbrController extends EventHandler {
           let fragLevelNextLoadedDelay, nextLoadLevel;
           // lets iterate through lower level and try to find the biggest one that could avoid rebuffering
           // we start from current level - 1 and we step down , until we find a matching level
-          for (nextLoadLevel = frag.level - 1 ; nextLoadLevel >=0 ; nextLoadLevel--) {
+          for (nextLoadLevel = frag.level - 1 ; nextLoadLevel > minAutoLevel ; nextLoadLevel--) {
             // compute time to load next fragment at lower level
             // 0.8 : consider only 80% of current bw to be conservative
             // 8 = bits per byte (bps/Bps)
@@ -107,8 +107,6 @@ class AbrController extends EventHandler {
           // only emergency switch down if it takes less time to load new fragment at lowest level instead
           // of finishing loading current one ...
           if (fragLevelNextLoadedDelay < fragLoadedDelay) {
-            // ensure nextLoadLevel is not negative
-            nextLoadLevel = Math.max(0,nextLoadLevel);
             logger.warn(`loading too slow, abort fragment loading and switch to level ${nextLoadLevel}:fragLoadedDelay[${nextLoadLevel}]<fragLoadedDelay[${frag.level-1}];bufferStarvationDelay:${fragLevelNextLoadedDelay.toFixed(1)}<${fragLoadedDelay.toFixed(1)}:${bufferStarvationDelay.toFixed(1)}`);
             // force next load level in auto mode
             hls.nextLoadLevel = nextLoadLevel;
@@ -150,7 +148,10 @@ class AbrController extends EventHandler {
     // and leading to wrong bw estimation
     // on bitrate test, also only update stats once (if tload = tbuffered == on FRAG_LOADED)
     if (stats.aborted !== true && frag.loadCounter === 1 && frag.type === 'main' && ((!frag.bitrateTest || stats.tload === stats.tbuffered))) {
-      let fragLoadingProcessingMs = stats.tbuffered - stats.trequest;
+      // use tparsed-trequest instead of tbuffered-trequest to compute fragLoadingProcessing; rationale is that  buffer appending only happens once media is attached
+      // in case we use config.startFragPrefetch while media is not attached yet, fragment might be parsed while media not attached yet, but it will only be buffered on media attached
+      // as a consequence it could happen really late in the process. meaning that appending duration might appears huge ... leading to underestimated throughput estimation
+      let fragLoadingProcessingMs = stats.tparsed - stats.trequest;
       logger.log(`latency/loading/parsing/append/kbps:${Math.round(stats.tfirst-stats.trequest)}/${Math.round(stats.tload-stats.tfirst)}/${Math.round(stats.tparsed-stats.tload)}/${Math.round(stats.tbuffered-stats.tparsed)}/${Math.round(8*stats.loaded/(stats.tbuffered-stats.trequest))}`);
       this.bwEstimator.sample(fragLoadingProcessingMs,stats.loaded);
       // if fragment has been loaded to perform a bitrate test, (hls.startLevel = -1), store bitrate test delay duration
@@ -214,8 +215,8 @@ class AbrController extends EventHandler {
   }
 
   get minAutoLevel() {
-    let hls = this.hls, levels = hls.levels, minAutoBitrate = hls.config.minAutoBitrate;
-    for (let i = 0; i < levels.length; i++) {
+    let hls = this.hls, levels = hls.levels, minAutoBitrate = hls.config.minAutoBitrate, len = levels ? levels.length : 0;
+    for (let i = 0; i < len; i++) {
       if (levels[i].bitrate > minAutoBitrate) {
         return i;
       }

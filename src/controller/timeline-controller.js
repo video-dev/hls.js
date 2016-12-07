@@ -155,6 +155,8 @@ class TimelineController extends EventHandler {
   }
 
   onMediaDetaching() {
+    this.clearCurrentCues(this.textTrack1);
+    this.clearCurrentCues(this.textTrack2);
   }
 
   onManifestLoading()
