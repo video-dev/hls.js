@@ -15,7 +15,7 @@ module.exports = {
     BUFFER_CREATED: 'hlsBufferCreated',
     // fired when we append a segment to the buffer - data: { segment: segment object }
     BUFFER_APPENDING: 'hlsBufferAppending',
-    // fired when we are done with appending a media segment to the buffer data : { parent : segment parent that triggered BUFFER_APPENDING }
+    // fired when we are done with appending a media segment to the buffer data : { parent : segment parent that triggered BUFFER_APPENDING , pending : nb of segments waiting for appending for this segment parent}
     BUFFER_APPENDED: 'hlsBufferAppended',
     // fired when the stream is finished and we want to notify the media buffer that there will be no more data
     BUFFER_EOS: 'hlsBufferEos',
