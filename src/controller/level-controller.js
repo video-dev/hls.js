@@ -39,21 +39,36 @@ class LevelController extends EventHandler {
         var levels0 = [],
             levels = [],
             bitrateStart,
-            i,
             bitrateSet = {},
             videoCodecFound = false,
             audioCodecFound = false,
-            hls = this.hls;
+            hls = this.hls,
+            brokenmp4inmp3 = /chrome|firefox/.test(
+                navigator.userAgent.toLowerCase()
+            ),
+            checkSupported = function(type, codec) {
+                return MediaSource.isTypeSupported(
+                    `${type}/mp4;codecs=${codec}`
+                );
+            };
 
         // regroup redundant level together
         data.levels.forEach(level => {
             if (level.videoCodec) {
                 videoCodecFound = true;
             }
+            // erase audio codec info if browser does not support mp4a.40.34. demuxer will autodetect codec and fallback to mpeg/audio
+            if (
+                brokenmp4inmp3 &&
+                level.audioCodec &&
+                level.audioCodec.indexOf('mp4a.40.34') !== -1
+            ) {
+                level.audioCodec = undefined;
+            }
             if (level.audioCodec || (level.attrs && level.attrs.AUDIO)) {
                 audioCodecFound = true;
             }
-            var redundantLevelId = bitrateSet[level.bitrate];
+            let redundantLevelId = bitrateSet[level.bitrate];
             if (redundantLevelId === undefined) {
                 bitrateSet[level.bitrate] = levels0.length;
                 level.url = [level.url];
@@ -74,21 +89,13 @@ class LevelController extends EventHandler {
         } else {
             levels = levels0;
         }
-
         // only keep level with supported audio/video codecs
         levels = levels.filter(function(level) {
-            var checkSupportedAudio = function(codec) {
-                return MediaSource.isTypeSupported(`audio/mp4;codecs=${codec}`);
-            };
-            var checkSupportedVideo = function(codec) {
-                return MediaSource.isTypeSupported(`video/mp4;codecs=${codec}`);
-            };
-            var audioCodec = level.audioCodec,
+            let audioCodec = level.audioCodec,
                 videoCodec = level.videoCodec;
-
             return (
-                (!audioCodec || checkSupportedAudio(audioCodec)) &&
-                (!videoCodec || checkSupportedVideo(videoCodec))
+                (!audioCodec || checkSupported('audio', audioCodec)) &&
+                (!videoCodec || checkSupported('video', videoCodec))
             );
         });
 
@@ -101,7 +108,7 @@ class LevelController extends EventHandler {
             });
             this._levels = levels;
             // find index of first level in sorted levels
-            for (i = 0; i < levels.length; i++) {
+            for (let i = 0; i < levels.length; i++) {
                 if (levels[i].bitrate === bitrateStart) {
                     this._firstLevel = i;
                     logger.log(
@@ -113,7 +120,7 @@ class LevelController extends EventHandler {
                 }
             }
             hls.trigger(Event.MANIFEST_PARSED, {
-                levels: this._levels,
+                levels: levels,
                 firstLevel: this._firstLevel,
                 stats: data.stats,
                 audio: audioCodecFound,
@@ -164,8 +171,8 @@ class LevelController extends EventHandler {
             if (this._level !== newLevel) {
                 logger.log(`switching to level ${newLevel}`);
                 this._level = newLevel;
+                this.hls.trigger(Event.LEVEL_SWITCH, { level: newLevel });
             }
-            this.hls.trigger(Event.LEVEL_SWITCH, { level: newLevel });
             var level = levels[newLevel],
                 levelDetails = level.details;
             // check if we need to load playlist for this level
@@ -228,6 +235,10 @@ class LevelController extends EventHandler {
     }
 
     set startLevel(newLevel) {
+        // if not in autostart level, ensure startLevel is greater than minAutoLevel
+        if (newLevel !== -1) {
+            newLevel = Math.max(newLevel, this.hls.abrController.minAutoLevel);
+        }
         this._startLevel = newLevel;
     }
 
@@ -240,7 +251,9 @@ class LevelController extends EventHandler {
             hls = this.hls,
             levelId,
             level,
-            levelError = false;
+            levelError = false,
+            abrController = hls.abrController,
+            minAutoLevel = abrController.minAutoLevel;
         // try to recover not fatal errors
         switch (details) {
             case ErrorDetails.FRAG_LOAD_ERROR:
@@ -279,7 +292,7 @@ class LevelController extends EventHandler {
                     logger.warn(
                         `level controller,${details}: emergency switch-down for next fragment`
                     );
-                    hls.abrController.nextAutoLevel = 0;
+                    abrController.nextAutoLevel = minAutoLevel;
                 } else if (level && level.details && level.details.live) {
                     logger.warn(
                         `level controller,${details} on live stream, discard`
@@ -293,8 +306,7 @@ class LevelController extends EventHandler {
                     details === ErrorDetails.LEVEL_LOAD_ERROR ||
                     details === ErrorDetails.LEVEL_LOAD_TIMEOUT
                 ) {
-                    let hls = this.hls,
-                        media = hls.media,
+                    let media = hls.media,
                         // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
                         mediaBuffered =
                             media &&

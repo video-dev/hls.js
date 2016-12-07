@@ -248,7 +248,7 @@ class Hls {
     }
 
     startLoad(startPosition = -1) {
-        logger.log('startLoad');
+        logger.log(`startLoad(${startPosition})`);
         this.levelController.startLoad();
         this.streamController.startLoad(startPosition);
         this.audioStreamController.startLoad(startPosition);
@@ -326,7 +326,10 @@ class Hls {
     /** Return first level (index of first level referenced in manifest)
      **/
     get firstLevel() {
-        return this.levelController.firstLevel;
+        return Math.max(
+            this.levelController.firstLevel,
+            this.abrController.minAutoLevel
+        );
     }
 
     /** set first level (index of first level referenced in manifest)

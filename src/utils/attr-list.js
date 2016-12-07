@@ -1,3 +1,6 @@
+const DECIMAL_RESOLUTION_REGEX = /^(\d+)x(\d+)$/;
+const ATTR_LIST_REGEX = /\s*(.+?)\s*=((?:\".*?\")|.*?)(?:,|$)/g;
+
 // adapted from https://github.com/kanongil/node-m3u8parse/blob/master/attrlist.js
 class AttrList {
     constructor(attrs) {
@@ -51,7 +54,7 @@ class AttrList {
     }
 
     decimalResolution(attrName) {
-        const res = /^(\d+)x(\d+)$/.exec(this[attrName]);
+        const res = DECIMAL_RESOLUTION_REGEX.exec(this[attrName]);
         if (res === null) {
             return undefined;
         }
@@ -62,10 +65,10 @@ class AttrList {
     }
 
     static parseAttrList(input) {
-        const re = /\s*(.+?)\s*=((?:\".*?\")|.*?)(?:,|$)/g;
         var match,
             attrs = {};
-        while ((match = re.exec(input)) !== null) {
+        ATTR_LIST_REGEX.lastIndex = 0;
+        while ((match = ATTR_LIST_REGEX.exec(input)) !== null) {
             var value = match[2],
                 quote = '"';
 

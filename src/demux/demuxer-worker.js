@@ -36,7 +36,7 @@ var DemuxerWorker = function(self) {
                     config
                 );
                 try {
-                    enableLogs(config.debug);
+                    enableLogs(config.debug === true);
                 } catch (err) {
                     console.warn('demuxerWorker: unable to enable logs');
                 }
