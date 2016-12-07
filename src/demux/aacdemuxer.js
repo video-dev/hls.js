@@ -7,12 +7,12 @@ import ID3 from '../demux/id3';
 
  class AACDemuxer {
 
-  constructor(observer, id, remuxerClass, config) {
+  constructor(observer, id, remuxerClass, config, typeSupported) {
     this.observer = observer;
     this.id = id;
     this.remuxerClass = remuxerClass;
     this.config = config;
-    this.remuxer = new this.remuxerClass(observer,id, config);
+    this.remuxer = new this.remuxerClass(observer,id, config, typeSupported);
     // id === 'main' when the demuxer is used to play an audio only stream and requires AAC files placed back-to-back in the order they are received.
     // id === 'audio' when the demuxer is used for multitrack audio and requires the use of timestamps to sync audio with video.
     this.useTimeStamp = id === 'audio';
@@ -20,7 +20,7 @@ import ID3 from '../demux/id3';
   }
 
   insertDiscontinuity() {
-    this._aacTrack = {container : 'audio/adts', type: 'audio', id :-1, sequenceNumber: 0, samples : [], len : 0};
+    this._aacTrack = {container : 'audio/adts', type: 'audio', id :-1, sequenceNumber: 0, isAAC : true , samples : [], len : 0};
   }
 
   // Source for probe info - https://wiki.multimedia.cx/index.php?title=ADTS
