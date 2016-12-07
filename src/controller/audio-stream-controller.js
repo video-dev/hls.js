@@ -54,7 +54,6 @@ class AudioStreamController extends EventHandler {
     this.ontick = this.tick.bind(this);
     this.initPTS=[];
     this.waitingFragment=null;
-    this.prevTrackId=-1;
   }
 
   destroy() {
@@ -176,7 +175,7 @@ class AudioStreamController extends EventHandler {
             bufferEnd = bufferInfo.end,
             fragPrevious = this.fragPrevious,
             maxBufLen = config.maxMaxBufferLength,
-            audioSwitch = (this.prevTrackId!== -1 && this.prevTrackId !== this.trackId);
+            audioSwitch = this.audioSwitch;
 
         // if buffer length is less than maxBufLen try to load a new fragment
         if (bufferLen < maxBufLen && this.trackId < this.tracks.length) {
@@ -188,7 +187,7 @@ class AudioStreamController extends EventHandler {
           }
 
         // we just got done loading the final fragment, check if we need to finalize media stream
-        if (!trackDetails.live && fragPrevious && fragPrevious.sn === trackDetails.endSN) {
+        if (!audioSwitch && !trackDetails.live && fragPrevious && fragPrevious.sn === trackDetails.endSN) {
             // if we are not seeking or if we are seeking but everything (almost) til the end is buffered, let's signal eos
             // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference when switching
             // between different renditions. using half frag duration should help cope with these cases.
@@ -209,16 +208,20 @@ class AudioStreamController extends EventHandler {
 
           // When switching audio track, reload audio as close as possible to currentTime
           if(audioSwitch){
-            logger.log(`switching track, find audio frag matching with currentTime/start:${pos}/${start}`);
-            bufferEnd = pos;
-            // if currentTime (pos) is less than alt audio playlist start time, it means that alt audio is ahead of currentTime
-            if (trackDetails.PTSKnown && pos < start) {
-              // if everything is buffered from pos to start, let's seek to start
-              if (bufferInfo.end > start) {
-                logger.log('alt audio track ahead of main track, seek to start of alt audio track');
-                this.media.currentTime = start;
-              } else {
-                return;
+            if (trackDetails.live && !trackDetails.PTSKnown) {
+              logger.log(`switching audiotrack, live stream, unknown PTS,load first fragment`);
+              bufferEnd = 0;
+            } else {
+              bufferEnd = pos;
+              // if currentTime (pos) is less than alt audio playlist start time, it means that alt audio is ahead of currentTime
+              if (trackDetails.PTSKnown && pos < start) {
+                // if everything is buffered from pos to start, let's seek to start
+                if (bufferInfo.end > start) {
+                  logger.log('alt audio track ahead of main track, seek to start of alt audio track');
+                  this.media.currentTime = start + 0.05;
+                } else {
+                  return;
+                }
               }
             }
           }
@@ -410,7 +413,7 @@ class AudioStreamController extends EventHandler {
   onAudioTrackSwitching(data) {
     // if any URL found on new audio track, it is an alternate audio track
     var altAudio = !!data.url;
-    let trackId = this.trackId = data.id;
+    this.trackId = data.id;
     this.state = State.IDLE;
 
     this.fragCurrent = null;
@@ -430,14 +433,12 @@ class AudioStreamController extends EventHandler {
     }
 
     //should we switch tracks ?
-    if(this.prevTrackId !== trackId){
-        //main audio track are handled by stream-controller
-      if(!altAudio) {
-        this.prevTrackId = trackId;
-      } else {
-        //switch to alt-audio, lets go idle to load new audio fragment
-        this.state=State.IDLE;
-      }
+    if(altAudio){
+      this.audioSwitch = true;
+      //main audio track are handled by stream-controller, just do something if switching to alt audio track
+      this.state=State.IDLE;
+      // increase fragment load Index to avoid frag loop loading error after buffer flush
+      this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
     }
     this.tick();
   }
@@ -521,7 +522,7 @@ class AudioStreamController extends EventHandler {
             sn = fragCurrent.sn,
             cc = fragCurrent.cc,
             audioCodec = this.config.defaultAudioCodec || track.audioCodec;
-        this.pendingAppending = 0;
+        this.appended = false;
         if(!this.demuxer) {
           this.demuxer = new Demuxer(this.hls,'audio');
         }
@@ -529,6 +530,7 @@ class AudioStreamController extends EventHandler {
         // If not we need to wait for it
         let initPTS = this.initPTS[cc];
         if (initPTS !== undefined){
+          this.pendingBuffering = -1;
           logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
           // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
           let accurateTimeOffset = false; //details.PTSKnown || !details.live;
@@ -560,12 +562,11 @@ class AudioStreamController extends EventHandler {
         logger.log(`audio track:audio,container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
         let initSegment = track.initSegment;
         if (initSegment) {
-          let audioSwitch = (this.prevTrackId!== -1 && this.prevTrackId !== this.trackId);
           let appendObj = {type: 'audio', data: initSegment, parent : 'audio',content : 'initSegment'};
-          if (audioSwitch) {
+          if (this.audioSwitch) {
             this.pendingData = [appendObj];
           } else {
-            this.pendingAppending++;
+            this.appended = true;
             this.hls.trigger(Event.BUFFER_APPENDING, appendObj);
           }
         }
@@ -590,29 +591,35 @@ class AudioStreamController extends EventHandler {
       logger.log(`parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
       LevelHelper.updateFragPTSDTS(track.details,frag.sn,data.startPTS,data.endPTS);
 
-      let audioSwitch = (this.prevTrackId!== -1 && this.prevTrackId !== trackId), media = this.media;
+      let audioSwitch = this.audioSwitch, media = this.media;
       //Only flush audio from old audio tracks when PTS is known on new audio track
       if(audioSwitch && media){
         let currentTime = media.currentTime;
-        if (currentTime >= data.startPTS && currentTime <= data.endPTS) {
+        logger.log('switching audio track : currentTime:'+ currentTime);
+        if (currentTime >= data.startPTS) {
+          logger.log('switching audio track : flushing all audio');
             hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0 , endOffset: Number.POSITIVE_INFINITY, type : 'audio'});
             //Lets announce that the initial audio track switch flush occur
-            this.prevTrackId=trackId;
+            this.audioSwitch=false;
             hls.trigger(Event.AUDIO_TRACK_SWITCHED, {id : trackId});
         }
       }
 
-      [data.data1, data.data2].forEach(buffer => {
-        if (buffer) {
-          let appendObj = {type: data.type, data: buffer, parent : 'audio',content : 'data'};
-          if (audioSwitch) {
-            this.pendingData.push(appendObj);
-          } else {
-            this.pendingAppending++;
-            hls.trigger(Event.BUFFER_APPENDING, appendObj);
+
+      if(!this.audioSwitch) {
+        [data.data1, data.data2].forEach(buffer => {
+          if (buffer) {
+            let appendObj = {type: data.type, data: buffer, parent : 'audio',content : 'data'};
+            // if we just switched audio, push pending data
+            if (audioSwitch) {
+              this.pendingData.push(appendObj);
+            } else {
+              this.appended = true;
+              hls.trigger(Event.BUFFER_APPENDING, appendObj);
+            }
           }
-        }
-      });
+        });
+      }
       //trigger handler right now
       this.tick();
     }
@@ -642,28 +649,28 @@ class AudioStreamController extends EventHandler {
 
   onBufferAppended(data) {
     if (data.parent === 'audio') {
-      switch (this.state) {
-        case State.PARSING:
-        case State.PARSED:
-          this.pendingAppending--;
-          this._checkAppendedParsed();
-          break;
-        default:
-          break;
+      const state = this.state;
+      if (state === State.PARSING || state === State.PARSED) {
+        this.pendingBuffering = data.pending;
+        this._checkAppendedParsed();
       }
     }
   }
 
   _checkAppendedParsed() {
     //trigger handler right now
-    if (this.state === State.PARSED && this.pendingAppending === 0)  {
-      var frag = this.fragCurrent, stats = this.stats;
+    if (this.state === State.PARSED && (!this.appended || this.pendingBuffering === 0))   {
+      let frag = this.fragCurrent, stats = this.stats, hls = this.hls;
       if (frag) {
         this.fragPrevious = frag;
         stats.tbuffered = performance.now();
-        this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag, id : 'audio'});
+        hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag, id : 'audio'});
         let media = this.mediaBuffer ? this.mediaBuffer : this.media;
         logger.log(`audio buffered : ${TimeRanges.toString(media.buffered)}`);
+        if (this.audioSwitch && this.appended) {
+          this.audioSwitch = false;
+          hls.trigger(Event.AUDIO_TRACK_SWITCHED, {id : this.trackId});
+        }
         this.state = State.IDLE;
       }
       this.tick();
@@ -728,13 +735,12 @@ class AudioStreamController extends EventHandler {
     if (pendingData) {
       logger.log('appending pending audio data on Buffer Flushed');
       pendingData.forEach(appendObj => {
-        this.pendingAppending++;
-        hls.trigger(Event.BUFFER_APPENDING, appendObj);
+        this.appended = true;
+        this.hls.trigger(Event.BUFFER_APPENDING, appendObj);
       });
-      this.pendingData = null;
+      this.pendingData = [];
+      this.state = State.PARSED;
     } else {
-      // increase fragment load Index to avoid frag loop loading error after buffer flush
-      this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
       // move to IDLE once flush complete. this should trigger new fragment loading
       this.state = State.IDLE;
       // reset reference to frag
