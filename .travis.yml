@@ -1,6 +1,5 @@
 language: node_js
-node_js:
-- 5.4.1
+node_js: node
 # don't connect to sauce labs unless running functional tests
 before_install: if [ "${TRAVIS_MODE}" != "funcTests" ]; then unset SAUCE_USERNAME && unset SAUCE_ACCESS_KEY; fi
 before_script: chmod +x ./scripts/*.sh
@@ -15,33 +14,45 @@ env:
     - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=chrome              TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=arte
     - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=MicrosoftEdge       TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=arte
     - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=firefox             TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=arte
-#    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME="internet explorer" TEST_BROWSER_PLATFORM="Windows 8.1" TEST_STREAM_ID=arte
     - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=safari              TEST_BROWSER_PLATFORM="OS X 10.11"  TEST_STREAM_ID=arte TEST_BROWSER_VERSION="9.0"
+#    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME="internet explorer" TEST_BROWSER_PLATFORM="Windows 8.1" TEST_STREAM_ID=arte
     - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=chrome              TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=bigBuckBunnyABR
     - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=MicrosoftEdge       TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=bigBuckBunnyABR
     - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=firefox             TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=bigBuckBunnyABR
-#    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME="internet explorer" TEST_BROWSER_PLATFORM="Windows 8.1" TEST_STREAM_ID=bigBuckBunnyABR
     - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=safari              TEST_BROWSER_PLATFORM="OS X 10.11"  TEST_STREAM_ID=bigBuckBunnyABR TEST_BROWSER_VERSION="9.0"
+#    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME="internet explorer" TEST_BROWSER_PLATFORM="Windows 8.1" TEST_STREAM_ID=bigBuckBunnyABR
     - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=chrome              TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=bigBuckBunny480p
     - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=MicrosoftEdge       TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=bigBuckBunny480p
     - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=firefox             TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=bigBuckBunny480p
-#    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME="internet explorer" TEST_BROWSER_PLATFORM="Windows 8.1" TEST_STREAM_ID=bigBuckBunny480p
     - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=safari              TEST_BROWSER_PLATFORM="OS X 10.11"  TEST_STREAM_ID=bigBuckBunny480p TEST_BROWSER_VERSION="9.0"
+#    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME="internet explorer" TEST_BROWSER_PLATFORM="Windows 8.1" TEST_STREAM_ID=bigBuckBunny480p
     - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=chrome              TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=issue666
     - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=MicrosoftEdge       TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=issue666
     - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=firefox             TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=issue666
-#    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME="internet explorer" TEST_BROWSER_PLATFORM="Windows 8.1" TEST_STREAM_ID=issue666
     - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=safari              TEST_BROWSER_PLATFORM="OS X 10.11"  TEST_STREAM_ID=issue666 TEST_BROWSER_VERSION="9.0"
+#    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME="internet explorer" TEST_BROWSER_PLATFORM="Windows 8.1" TEST_STREAM_ID=issue666
 #    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=chrome              TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=nasa
 #    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=MicrosoftEdge       TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=nasa
 #    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=firefox             TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=nasa
-#    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME="internet explorer" TEST_BROWSER_PLATFORM="Windows 8.1" TEST_STREAM_ID=nasa
 #    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=safari              TEST_BROWSER_PLATFORM="OS X 10.11"  TEST_STREAM_ID=nasa TEST_BROWSER_VERSION="9.0"
+#    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME="internet explorer" TEST_BROWSER_PLATFORM="Windows 8.1" TEST_STREAM_ID=nasa
     - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=chrome              TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=closedcaptions
     - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=MicrosoftEdge       TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=closedcaptions
     - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=firefox             TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=closedcaptions
-#    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME="internet explorer" TEST_BROWSER_PLATFORM="Windows 8.1" TEST_STREAM_ID=closedcaptions
 #    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=safari              TEST_BROWSER_PLATFORM="OS X 10.11"  TEST_STREAM_ID=closedcaptions TEST_BROWSER_VERSION="9.0"
+#    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME="internet explorer" TEST_BROWSER_PLATFORM="Windows 8.1" TEST_STREAM_ID=closedcaptions
+    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=chrome              TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=oceans_aes
+    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=MicrosoftEdge       TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=oceans_aes
+    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=firefox             TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=oceans_aes
+#    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=safari              TEST_BROWSER_PLATFORM="OS X 10.11"  TEST_STREAM_ID=oceans_aes TEST_BROWSER_VERSION="9.0"
+#    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME="internet explorer" TEST_BROWSER_PLATFORM="Windows 8.1" TEST_STREAM_ID=oceans_aes
+    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=chrome              TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=aac
+#    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=MicrosoftEdge       TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=aac
+#    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=firefox             TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=aac
+#    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=safari              TEST_BROWSER_PLATFORM="OS X 10.11"  TEST_STREAM_ID=oceans_aes TEST_BROWSER_VERSION="9.0"
+    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=chrome              TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=mp3
+    - TRAVIS_MODE=funcTests TEST_BROWSER_NAME=firefox             TEST_BROWSER_PLATFORM="Windows 10"  TEST_STREAM_ID=mp3
+
 
 addons:
   sauce_connect: true
