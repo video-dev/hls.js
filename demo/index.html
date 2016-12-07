@@ -370,7 +370,7 @@ $(document).ready(function() {
             parsing : data.stats.tparsed - data.stats.tload,
             buffer : data.stats.tbuffered - data.stats.tparsed,
             duration : data.stats.tbuffered - data.stats.tfirst,
-            bw : Math.round(8*data.stats.total/(data.stats.tbuffered - data.stats.tfirst)),
+            bw : Math.round(8*data.stats.total/(data.stats.tbuffered - data.stats.trequest)),
             size : data.stats.total
           };
           events.load.push(event);
@@ -481,6 +481,17 @@ $(document).ready(function() {
             stats.fragLoadEmergencyAborted++;
           }
         }
+       });
+
+       hls.on(Hls.Events.FRAG_DECRYPTED,function(event,data) {
+         if (!stats.fragDecrypted) {
+           stats.fragDecrypted = 0;
+           this.totalDecryptTime = 0;
+           stats.fragAvgDecryptTime = 0;
+         }
+         stats.fragDecrypted++;
+         this.totalDecryptTime += data.stats.tdecrypt - data.stats.tstart;
+         stats.fragAvgDecryptTime = this.totalDecryptTime / stats.fragDecrypted;
        });
 
        hls.on(Hls.Events.ERROR, function(event,data) {
@@ -795,16 +806,18 @@ function timeRangesToString(r) {
               + "Played:"
               + timeRangesToString(v.played) + "<br>";
 
-      for(var type in tracks) {
-        log += type + " Buffered:" + timeRangesToString(tracks[type].buffer.buffered) + "<br>";
-      }
+      if (hls.media) {
+        for(var type in tracks) {
+          log += type + " Buffered:" + timeRangesToString(tracks[type].buffer.buffered) + "<br>";
+        }
 
-      var videoPlaybackQuality = v.getVideoPlaybackQuality;
-      if(videoPlaybackQuality && typeof(videoPlaybackQuality) === typeof(Function)) {
-        log+="Dropped Frames:"+ v.getVideoPlaybackQuality().droppedVideoFrames + "<br>";
-        log+="Corrupted Frames:"+ v.getVideoPlaybackQuality().corruptedVideoFrames + "<br>";
-      } else if(v.webkitDroppedFrameCount) {
-        log+="Dropped Frames:"+ v.webkitDroppedFrameCount + "<br>";
+        var videoPlaybackQuality = v.getVideoPlaybackQuality;
+        if(videoPlaybackQuality && typeof(videoPlaybackQuality) === typeof(Function)) {
+          log+="Dropped Frames:"+ v.getVideoPlaybackQuality().droppedVideoFrames + "<br>";
+          log+="Corrupted Frames:"+ v.getVideoPlaybackQuality().corruptedVideoFrames + "<br>";
+        } else if(v.webkitDroppedFrameCount) {
+          log+="Dropped Frames:"+ v.webkitDroppedFrameCount + "<br>";
+        }
       }
       $("#buffered_log").html(log);
       $("#HlsStats").text(JSON.stringify(sortObject(stats),null,"\t"));
@@ -877,7 +890,7 @@ function timeRangesToString(r) {
   function goToMetricsPermaLink() {
     var url = document.URL;
     var b64 = getMetrics();
-    url = url.substr(0,url.lastIndexOf("/")+1) + 'metrics.html?data=' + b64;
+    url = url.substr(0,url.lastIndexOf("/")+1) + 'metrics.html#data=' + b64;
     console.log(url);
     window.open(url,'_blank');
   }

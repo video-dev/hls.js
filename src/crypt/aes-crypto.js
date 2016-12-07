@@ -1,4 +1,4 @@
-class AESCrypto {
+export default class AESCrypto {
   constructor(iv) {
     this.aesIV = iv;
   }
@@ -7,5 +7,3 @@ class AESCrypto {
     return window.crypto.subtle.decrypt({name: 'AES-CBC', iv: this.aesIV}, key, data);
   }
 }
-
-export default AESCrypto;

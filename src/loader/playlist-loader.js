@@ -2,12 +2,17 @@
  * Playlist Loader
 */
 
+import URLToolkit from 'url-toolkit';
 import Event from '../events';
 import EventHandler from '../event-handler';
 import {ErrorTypes, ErrorDetails} from '../errors';
-import URLHelper from '../utils/url';
 import AttrList from '../utils/attr-list';
 import {logger} from '../utils/logger';
+
+// https://regex101.com is your friend
+const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
+const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
+const LEVEL_PLAYLIST_REGEX = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF): *(\d*(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
 
 class PlaylistLoader extends EventHandler {
 
@@ -68,12 +73,12 @@ class PlaylistLoader extends EventHandler {
       retry = config.manifestLoadingMaxRetry;
       timeout = config.manifestLoadingTimeOut;
       retryDelay = config.manifestLoadingRetryDelay;
-      maxRetryDelay = config.manifestLoadingMaxRetryTimeOut;
+      maxRetryDelay = config.manifestLoadingMaxRetryTimeout;
     } else {
       retry = config.levelLoadingMaxRetry;
       timeout = config.levelLoadingTimeOut;
       retryDelay = config.levelLoadingRetryDelay;
-      maxRetryDelay = config.levelLoadingMaxRetryTimeOut;
+      maxRetryDelay = config.levelLoadingMaxRetryTimeout;
       logger.log(`loading playlist for level ${context.level}`);
     }
     loader  = this.loaders[context.type] = context.loader = typeof(config.pLoader) !== 'undefined' ? new config.pLoader(config) : new config.loader(config);
@@ -87,15 +92,13 @@ class PlaylistLoader extends EventHandler {
   }
 
   resolve(url, baseUrl) {
-    return URLHelper.buildAbsoluteURL(baseUrl, url);
+    return URLToolkit.buildAbsoluteURL(baseUrl, url);
   }
 
   parseMasterPlaylist(string, baseurl) {
     let levels = [], result;
-
-    // https://regex101.com is your friend
-    const re = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
-    while ((result = re.exec(string)) != null){
+    MASTER_PLAYLIST_REGEX.lastIndex = 0;
+    while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null){
       const level = {};
 
       var attrs = level.attrs = new AttrList(result[1]);
@@ -129,10 +132,8 @@ class PlaylistLoader extends EventHandler {
 
   parseMasterPlaylistMedia(string, baseurl, type) {
     let result, medias = [], id = 0;
-
-    // https://regex101.com is your friend
-    const re = /#EXT-X-MEDIA:(.*)/g;
-    while ((result = re.exec(string)) != null){
+    MASTER_PLAYLIST_MEDIA_REGEX.lastIndex = 0;
+    while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) != null){
       const media = {};
       var attrs = new AttrList(result[1]);
       if(attrs.TYPE === type) {
@@ -212,15 +213,14 @@ class PlaylistLoader extends EventHandler {
         programDateTime = null,
         frag = null,
         result,
-        regexp,
         duration = null,
         title = null,
         byteRangeEndOffset = null,
         byteRangeStartOffset = null,
         tagList = [];
 
-    regexp = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF): *(\d*(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
-    while ((result = regexp.exec(string)) !== null) {
+    LEVEL_PLAYLIST_REGEX.lastIndex = 0;
+    while ((result = LEVEL_PLAYLIST_REGEX.exec(string)) !== null) {
       result.shift();
       result = result.filter(function(n) { return (n !== undefined); });
       switch (result[0]) {
@@ -365,7 +365,6 @@ class PlaylistLoader extends EventHandler {
       if (string.indexOf('#EXTINF:') > 0) {
         let isLevel = (type !== 'audioTrack' && type !== 'subtitleTrack'),
             levelDetails = this.parseLevelPlaylist(string, url, level || id || 0, (type === 'audioTrack' ? 'audio' : (type === 'subtitleTrack' ? 'subtitle' : 'main') ));
-            levelDetails.tload = stats.tload;
         if (type === 'manifest') {
         // first request, stream manifest (no master playlist), fire manifest loaded event with level details
           hls.trigger(Event.MANIFEST_LOADED, {levels: [{url: url, details : levelDetails}], audioTracks : [], url: url, stats: stats});

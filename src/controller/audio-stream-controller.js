@@ -64,14 +64,14 @@ class AudioStreamController extends EventHandler {
 
   startLoad(startPosition) {
     if (this.tracks) {
-      var media = this.media, lastCurrentTime = this.lastCurrentTime;
+      var lastCurrentTime = this.lastCurrentTime;
       this.stopLoad();
       if (!this.timer) {
         this.timer = setInterval(this.ontick, 100);
       }
       this.fragLoadError = 0;
-      if (media && lastCurrentTime) {
-        logger.log(`configure startPosition @${lastCurrentTime}`);
+      if (lastCurrentTime > 0 && startPosition === -1) {
+        logger.log(`audio:override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(3)}`);
         this.state = State.IDLE;
       } else {
         this.lastCurrentTime = this.startPosition ? this.startPosition : startPosition;
@@ -256,6 +256,7 @@ class AudioStreamController extends EventHandler {
               frag.loadIdx = this.fragLoadIdx;
               this.fragCurrent = frag;
               this.startFragRequested = true;
+              this.nextLoadPosition = frag.start + frag.duration;
               hls.trigger(Event.FRAG_LOADING, {frag: frag});
               this.state = State.FRAG_LOADING;
             }
@@ -328,7 +329,7 @@ class AudioStreamController extends EventHandler {
       media.removeEventListener('ended', this.onvended);
       this.onvseeking = this.onvseeked  = this.onvended = null;
     }
-    this.media = null;
+    this.media = this.mediaBuffer = null;
     this.loadedmetadata = false;
     this.stopLoad();
   }
@@ -500,7 +501,6 @@ class AudioStreamController extends EventHandler {
           this.hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer, parent : 'audio',content : 'data'});
         }
       });
-      this.nextLoadPosition = data.endPTS;
       //trigger handler right now
       this.tick();
     }
