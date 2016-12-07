@@ -483,14 +483,17 @@
            }
            avcSample.frame = true;
            // retrieve slice type by parsing beginning of NAL unit (follow H264 spec, slice_header definition) to detect keyframe embedded in NDR
-           let sliceType = new ExpGolomb(unit.data).readSliceType();
-           // 2 : I slice, 4 : SI slice, 7 : I slice, 9: SI slice
-           // SI slice : A slice that is coded using intra prediction only and using quantisation of the prediction samples.
-           // An SI slice can be coded such that its decoded samples can be constructed identically to an SP slice.
-           // I slice: A slice that is not an SI slice that is decoded using intra prediction only.
-           //if (sliceType === 2 || sliceType === 7) {
-           if (sliceType === 2 || sliceType === 4 || sliceType === 7 || sliceType === 9) {
-              avcSample.key = true;
+           let data = unit.data;
+           if (data.length > 1) {
+             let sliceType = new ExpGolomb(data).readSliceType();
+             // 2 : I slice, 4 : SI slice, 7 : I slice, 9: SI slice
+             // SI slice : A slice that is coded using intra prediction only and using quantisation of the prediction samples.
+             // An SI slice can be coded such that its decoded samples can be constructed identically to an SP slice.
+             // I slice: A slice that is not an SI slice that is decoded using intra prediction only.
+             //if (sliceType === 2 || sliceType === 7) {
+             if (sliceType === 2 || sliceType === 4 || sliceType === 7 || sliceType === 9) {
+                avcSample.key = true;
+             }
            }
            break;
         //IDR
