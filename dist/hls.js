@@ -1849,6 +1849,7 @@ var BufferController = function (_EventHandler) {
         // Detach properly the MediaSource from the HTMLMediaElement as
         // suggested in https://github.com/w3c/media-source/issues/53.
         if (this.media) {
+          URL.revokeObjectURL(this.media.src);
           this.media.removeAttribute('src');
           this.media.load();
         }
@@ -4692,7 +4693,10 @@ var TimelineController = function (_EventHandler) {
     }
   }, {
     key: 'onMediaDetaching',
-    value: function onMediaDetaching() {}
+    value: function onMediaDetaching() {
+      this.clearCurrentCues(this.textTrack1);
+      this.clearCurrentCues(this.textTrack2);
+    }
   }, {
     key: 'onManifestLoading',
     value: function onManifestLoading() {
@@ -6951,14 +6955,17 @@ var TSDemuxer = function () {
             }
             avcSample.frame = true;
             // retrieve slice type by parsing beginning of NAL unit (follow H264 spec, slice_header definition) to detect keyframe embedded in NDR
-            var sliceType = new _expGolomb2.default(unit.data).readSliceType();
-            // 2 : I slice, 4 : SI slice, 7 : I slice, 9: SI slice
-            // SI slice : A slice that is coded using intra prediction only and using quantisation of the prediction samples.
-            // An SI slice can be coded such that its decoded samples can be constructed identically to an SP slice.
-            // I slice: A slice that is not an SI slice that is decoded using intra prediction only.
-            //if (sliceType === 2 || sliceType === 7) {
-            if (sliceType === 2 || sliceType === 4 || sliceType === 7 || sliceType === 9) {
-              avcSample.key = true;
+            var data = unit.data;
+            if (data.length > 1) {
+              var sliceType = new _expGolomb2.default(data).readSliceType();
+              // 2 : I slice, 4 : SI slice, 7 : I slice, 9: SI slice
+              // SI slice : A slice that is coded using intra prediction only and using quantisation of the prediction samples.
+              // An SI slice can be coded such that its decoded samples can be constructed identically to an SP slice.
+              // I slice: A slice that is not an SI slice that is decoded using intra prediction only.
+              //if (sliceType === 2 || sliceType === 7) {
+              if (sliceType === 2 || sliceType === 4 || sliceType === 7 || sliceType === 9) {
+                avcSample.key = true;
+              }
             }
             break;
           //IDR
@@ -8206,7 +8213,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.12';
+      return '0.6.13';
     }
   }, {
     key: 'Events',
@@ -8925,7 +8932,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 // https://regex101.com is your friend
 var MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
 var MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
-var LEVEL_PLAYLIST_REGEX = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF): *(\d+(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
+var LEVEL_PLAYLIST_REGEX = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF): *(\d*(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
 
 var PlaylistLoader = function (_EventHandler) {
   _inherits(PlaylistLoader, _EventHandler);
