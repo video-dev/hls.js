@@ -131,7 +131,7 @@ class PlaylistLoader extends EventHandler {
   }
 
   parseMasterPlaylistMedia(string, baseurl, type) {
-    let result, medias = [];
+    let result, medias = [], id = 0;
     MASTER_PLAYLIST_MEDIA_REGEX.lastIndex = 0;
     while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) != null){
       const media = {};
