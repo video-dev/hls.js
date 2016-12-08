@@ -222,6 +222,10 @@ class LevelController extends EventHandler {
         levelId = data.context.level;
         levelError = true;
         break;
+      case ErrorDetails.MANIFEST_EMPTY_ERROR:
+        levelId = data.context.level;
+        levelError = true;
+        break;
       default:
         break;
     }
