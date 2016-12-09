@@ -7,7 +7,6 @@ import Event from '../events';
 import { logger } from '../utils/logger';
 import MP4 from '../remux/mp4-generator';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import '../utils/polyfill';
 
 class MP4Remuxer {
     constructor(observer, id, config, typeSupported) {
@@ -239,7 +238,9 @@ class MP4Remuxer {
             lastPTS,
             lastDTS,
             inputSamples = track.samples,
-            outputSamples = [];
+            outputSamples = [],
+            ptsNormalize = this._PTSNormalize,
+            initDTS = this._initDTS;
 
         // for (let i = 0; i < track.samples.length; i++) {
         //   let avcSample = track.samples[i];
@@ -277,7 +278,7 @@ class MP4Remuxer {
         }
 
         // PTS is coded on 33bits, and can loop from -2^32 to 2^32
-        // PTSNormalize will make PTS/DTS value monotonic, we use last known DTS value as reference value
+        // ptsNormalize will make PTS/DTS value monotonic, we use last known DTS value as reference value
         let nextAvcDts;
         // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
         if (contiguous) {
@@ -290,14 +291,8 @@ class MP4Remuxer {
 
         // compute first DTS and last DTS, normalize them against reference value
         let sample = inputSamples[0];
-        firstDTS = Math.max(
-            this._PTSNormalize(sample.dts - this._initDTS, nextAvcDts),
-            0
-        );
-        firstPTS = Math.max(
-            this._PTSNormalize(sample.pts - this._initDTS, nextAvcDts),
-            0
-        );
+        firstDTS = Math.max(ptsNormalize(sample.dts - initDTS, nextAvcDts), 0);
+        firstPTS = Math.max(ptsNormalize(sample.pts - initDTS, nextAvcDts), 0);
 
         // check timestamp continuity accross consecutive fragments (this is to remove inter-fragment gap/hole)
         let delta = Math.round((firstDTS - nextAvcDts) / 90);
@@ -315,10 +310,10 @@ class MP4Remuxer {
                 }
                 // remove hole/gap : set DTS to next expected DTS
                 firstDTS = nextAvcDts;
-                inputSamples[0].dts = firstDTS + this._initDTS;
+                inputSamples[0].dts = firstDTS + initDTS;
                 // offset PTS as well, ensure that PTS is smaller or equal than new DTS
                 firstPTS = Math.max(firstPTS - delta, nextAvcDts);
-                inputSamples[0].pts = firstPTS + this._initDTS;
+                inputSamples[0].pts = firstPTS + initDTS;
                 logger.log(
                     `Video/PTS/DTS adjusted: ${Math.round(
                         firstPTS / 90
@@ -330,14 +325,8 @@ class MP4Remuxer {
 
         // compute lastPTS/lastDTS
         sample = inputSamples[inputSamples.length - 1];
-        lastDTS = Math.max(
-            this._PTSNormalize(sample.dts - this._initDTS, nextAvcDts),
-            0
-        );
-        lastPTS = Math.max(
-            this._PTSNormalize(sample.pts - this._initDTS, nextAvcDts),
-            0
-        );
+        lastDTS = Math.max(ptsNormalize(sample.dts - initDTS, nextAvcDts), 0);
+        lastPTS = Math.max(ptsNormalize(sample.pts - initDTS, nextAvcDts), 0);
         lastPTS = Math.max(lastPTS, lastDTS);
 
         let vendor = navigator.vendor,
@@ -368,7 +357,7 @@ class MP4Remuxer {
             } else {
                 // ensure sample monotonic DTS
                 sample.dts = Math.max(
-                    this._PTSNormalize(sample.dts - this._initDTS, nextAvcDts),
+                    ptsNormalize(sample.dts - initDTS, nextAvcDts),
                     firstDTS
                 );
                 // ensure dts is a multiple of scale factor to avoid rounding issues
@@ -379,7 +368,7 @@ class MP4Remuxer {
             // we normalize PTS against nextAvcDts, we also substract initDTS (some streams don't start @ PTS O)
             // and we ensure that computed value is greater or equal than sample DTS
             sample.pts = Math.max(
-                this._PTSNormalize(sample.pts - this._initDTS, nextAvcDts),
+                ptsNormalize(sample.pts - initDTS, nextAvcDts),
                 sample.dts
             );
             // ensure pts is a multiple of scale factor to avoid rounding issues
@@ -468,7 +457,7 @@ class MP4Remuxer {
                 );
             }
 
-            //console.log('PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${avcSample.pts}/${avcSample.dts}/${this._initDTS}/${ptsnorm}/${dtsnorm}/${(avcSample.pts/4294967296).toFixed(3)}');
+            //console.log('PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${avcSample.pts}/${avcSample.dts}/${initDTS}/${ptsnorm}/${dtsnorm}/${(avcSample.pts/4294967296).toFixed(3)}');
             outputSamples.push({
                 size: mp4SampleLength,
                 // constant duration
@@ -537,6 +526,8 @@ class MP4Remuxer {
                 (track.isAAC ? 1024 : 1152) /
                 track.audiosamplerate,
             pesFrameDuration = expectedSampleDuration * pes2mp4ScaleFactor,
+            ptsNormalize = this._PTSNormalize,
+            initDTS = this._initDTS,
             rawMPEG = !track.isAAC && this.typeSupported.mpeg;
 
         var view,
@@ -596,10 +587,7 @@ class MP4Remuxer {
             for (let i = 0, nextPtsNorm = nextAudioPts; i < samples0.length; ) {
                 // First, let's see how far off this frame is from where we expect it to be
                 var sample = samples0[i],
-                    ptsNorm = this._PTSNormalize(
-                        sample.pts - this._initDTS,
-                        nextAudioPts
-                    ),
+                    ptsNorm = ptsNormalize(sample.pts - initDTS, nextAudioPts),
                     delta = ptsNorm - nextPtsNorm;
 
                 // If we're overlapping by more than a duration, drop this sample
@@ -623,14 +611,14 @@ class MP4Remuxer {
                         ) / 1000}s due to ${Math.round(delta / 90)} ms gap.`
                     );
                     for (var j = 0; j < missing; j++) {
-                        newStamp = nextPtsNorm + this._initDTS;
-                        newStamp = Math.max(newStamp, this._initDTS);
+                        newStamp = nextPtsNorm + initDTS;
+                        newStamp = Math.max(newStamp, initDTS);
                         fillFrame = AAC.getSilentFrame(track.channelCount);
                         if (!fillFrame) {
                             logger.log(
                                 'Unable to get silent frame for given audio codec; duplicating last frame instead.'
                             );
-                            fillFrame = sample.unit.slice(0);
+                            fillFrame = sample.unit.subarray();
                         }
                         samples0.splice(i, 0, {
                             unit: fillFrame,
@@ -643,7 +631,7 @@ class MP4Remuxer {
                     }
 
                     // Adjust sample to next expected pts
-                    sample.pts = sample.dts = nextPtsNorm + this._initDTS;
+                    sample.pts = sample.dts = nextPtsNorm + initDTS;
                     nextPtsNorm += pesFrameDuration;
                     i += 1;
                 } else {
@@ -653,7 +641,7 @@ class MP4Remuxer {
                     }
                     nextPtsNorm += pesFrameDuration;
                     if (i === 0) {
-                        sample.pts = sample.dts = this._initDTS + nextAudioPts;
+                        sample.pts = sample.dts = initDTS + nextAudioPts;
                     } else {
                         sample.pts = sample.dts =
                             samples0[i - 1].pts + pesFrameDuration;
@@ -666,19 +654,19 @@ class MP4Remuxer {
         while (samples0.length) {
             audioSample = samples0.shift();
             unit = audioSample.unit;
-            pts = audioSample.pts - this._initDTS;
-            dts = audioSample.dts - this._initDTS;
+            pts = audioSample.pts - initDTS;
+            dts = audioSample.dts - initDTS;
             //logger.log(`Audio/PTS:${Math.round(pts/90)}`);
             // if not first sample
             if (lastDTS !== undefined) {
-                ptsnorm = this._PTSNormalize(pts, lastDTS);
-                dtsnorm = this._PTSNormalize(dts, lastDTS);
+                ptsnorm = ptsNormalize(pts, lastDTS);
+                dtsnorm = ptsNormalize(dts, lastDTS);
                 mp4Sample.duration = Math.round(
                     (dtsnorm - lastDTS) / pes2mp4ScaleFactor
                 );
             } else {
-                ptsnorm = this._PTSNormalize(pts, nextAudioPts);
-                dtsnorm = this._PTSNormalize(dts, nextAudioPts);
+                ptsnorm = ptsNormalize(pts, nextAudioPts);
+                dtsnorm = ptsNormalize(dts, nextAudioPts);
                 let delta = Math.round(
                         1000 * (ptsnorm - nextAudioPts) / pesTimeScale
                     ),
@@ -700,7 +688,7 @@ class MP4Remuxer {
                                     track.channelCount
                                 );
                                 if (!fillFrame) {
-                                    fillFrame = unit.slice(0);
+                                    fillFrame = unit.subarray();
                                 }
                                 track.len +=
                                     numMissingFrames * fillFrame.length;
@@ -744,7 +732,7 @@ class MP4Remuxer {
                         logger.log(
                             'Unable to get silent frame for given audio codec; duplicating this frame instead.'
                         );
-                        fillFrame = unit.slice(0);
+                        fillFrame = unit.subarray();
                     }
                     mdat.set(fillFrame, offset);
                     offset += fillFrame.byteLength;
@@ -765,7 +753,7 @@ class MP4Remuxer {
             }
             mdat.set(unit, offset);
             offset += unit.byteLength;
-            //console.log('PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${audioSample.pts}/${audioSample.dts}/${this._initDTS}/${ptsnorm}/${dtsnorm}/${(audioSample.pts/4294967296).toFixed(3)}');
+            //console.log('PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${audioSample.pts}/${audioSample.dts}/${initDTS}/${ptsnorm}/${dtsnorm}/${(audioSample.pts/4294967296).toFixed(3)}');
             mp4Sample = {
                 size: unit.byteLength,
                 cts: 0,
@@ -859,11 +847,7 @@ class MP4Remuxer {
         let samples = [];
         for (var i = 0; i < nbSamples; i++) {
             var stamp = startDTS + i * frameDuration;
-            samples.push({
-                unit: silentFrame.slice(0),
-                pts: stamp,
-                dts: stamp
-            });
+            samples.push({ unit: silentFrame, pts: stamp, dts: stamp });
             track.len += silentFrame.length;
         }
         track.samples = samples;
