@@ -114,17 +114,17 @@ class MP4Remuxer {
       }
       logger.log ('audio mp4 timescale :'+ audioTrack.timescale);
       if (!audioTrack.isAAC) {
-        if (typeSupported.mpeg === true) { // Chrome
+        if (typeSupported.mpeg) { // Chrome and Safari
           container = 'audio/mpeg';
           audioTrack.codec = '';
-        } else if (typeSupported.mp3 === true) { // Firefox
+        } else if (typeSupported.mp3) { // Firefox
           audioTrack.codec = 'mp3';
         }
       }
       tracks.audio = {
         container : container,
         codec :  audioTrack.codec,
-        initSegment : MP4.initSegment([audioTrack]),
+        initSegment : !audioTrack.isAAC && typeSupported.mpeg ? new Uint8Array() : MP4.initSegment([audioTrack]),
         metadata : {
           channelCount : audioTrack.channelCount
         }
@@ -392,9 +392,11 @@ class MP4Remuxer {
           mp4timeScale = track.timescale,
           pes2mp4ScaleFactor = pesTimeScale/mp4timeScale,
           expectedSampleDuration = track.timescale * (track.isAAC ? 1024 : 1152) / track.audiosamplerate,
-          pesFrameDuration = expectedSampleDuration * pes2mp4ScaleFactor;
+          pesFrameDuration = expectedSampleDuration * pes2mp4ScaleFactor,
+          rawMPEG = !track.isAAC && this.typeSupported.mpeg;
+
     var view,
-        offset = 8,
+        offset = rawMPEG ? 0 : 8,
         aacSample, mp4Sample,
         unit,
         mdat, moof,
@@ -538,10 +540,14 @@ class MP4Remuxer {
         if(track.len > 0) {
           /* concatenate the audio data and construct the mdat in place
             (need 8 more bytes to fill length and mdat type) */
-          mdat = new Uint8Array(track.len + 8);
-          view = new DataView(mdat.buffer);
-          view.setUint32(0, mdat.byteLength);
-          mdat.set(MP4.types.mdat, 4);
+          if (rawMPEG) {
+            mdat = new Uint8Array(track.len);
+          } else {
+            mdat = new Uint8Array(track.len + 8);
+            view = new DataView(mdat.buffer);
+            view.setUint32(0, mdat.byteLength);
+            mdat.set(MP4.types.mdat, 4);
+          }
         } else {
           // no audio samples
           return;
@@ -601,7 +607,11 @@ class MP4Remuxer {
       //logger.log('Audio/PTS/PTSend:' + aacSample.pts.toFixed(0) + '/' + this.nextAacDts.toFixed(0));
       track.len = 0;
       track.samples = samples;
-      moof = MP4.moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
+      if (rawMPEG) {
+        moof = new Uint8Array();
+      } else {
+        moof = MP4.moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
+      }
       track.samples = [];
       let audioData = {
         id : this.id,
