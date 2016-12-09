@@ -510,7 +510,7 @@ class MP4Remuxer {
             numMissingFrames = 0;
         // if fragment are contiguous, detect hole/overlapping between fragments
         // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
-        if (contiguous) {
+        if (contiguous && track.isAAC) {
           // log delta
           if (delta) {
             if (delta > 0) {
@@ -564,7 +564,7 @@ class MP4Remuxer {
           mp4Sample = {
             size: fillFrame.byteLength,
             cts: 0,
-            duration: (track.isAAC ? 1024 : 1152),
+            duration: 1024,
             flags: {
               isLeading: 0,
               isDependedOn: 0,
