@@ -697,13 +697,15 @@
     //logger.log('PES:' + Hex.hexDump(array));
     while (i < len) {
       value = array[i++];
+      // optimization. state 0 is the predominant case. let's handle it outside of the switch/case
+      if (!state) {
+        if (!value) {
+          state = 1;
+        }
+        continue;
+      }
       // finding 3 or 4-byte start codes (00 00 01 OR 00 00 00 01)
       switch (state) {
-        case 0:
-          if (value === 0) {
-            state = 1;
-          }
-          break;
         case 1:
           if( value === 0) {
             state = 2;
