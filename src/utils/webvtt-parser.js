@@ -18,13 +18,14 @@ const cueString2millis = function(timeString) {
 };
 
 const WebVTTParser = {
-    parse: function(vttByteArray, syncPTS, callBack, errorCallBack) {
+    parse: function(vttByteArray, syncPTS, discontinuity, callBack, errorCallBack) {
         // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
       let re = /\r\n|\n\r|\n|\r/g;
       let vttLines = String.fromCharCode.apply(null, new Uint8Array(vttByteArray)).trim().replace(re, '\n').split('\n');
       let cueTime = '00:00.000';
       let mpegTs = 0;
       let offsetMillis = 0;
+      let discontinuityOffset = 0;
       let cues = [];
       let parsingError;
       let inHeader = true;
@@ -35,8 +36,15 @@ const WebVTTParser = {
 
         parser.oncue = function(cue) {
             // Adjust cue timing; clamp cues to start no earlier than - and drop cues that don't end after - 0 on timeline.
-            cue.startTime = Math.max(0, cue.startTime + offsetMillis/1000);
-            cue.endTime += offsetMillis/1000;
+          let offsetSecs = offsetMillis/1000;
+
+          if (discontinuity.new) {
+            discontinuityOffset = discontinuity.start - offsetSecs;
+            discontinuity.new = false;
+          }
+          cue.startTime = discontinuityOffset + Math.max(0, cue.startTime + offsetSecs);
+            cue.endTime += discontinuityOffset + offsetSecs;
+
             // Fix encoding of special characters. TODO: Test with all sorts of weird characters.
             cue.text = decodeURIComponent(escape(cue.text));
             if(cue.endTime > 0) {

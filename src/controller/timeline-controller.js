@@ -148,7 +148,8 @@ class TimelineController extends EventHandler {
 
   onManifestLoading()
   {
-    this.lastSn = -1;
+    this.lastSn = -1; // Detect discontiguity in fragment parsing
+    this.lastDiscontinuity = { cc: 0, start: 0, new: false }; // Detect discontinuity in subtitle manifests
   }
 
   onManifestLoaded(data) {
@@ -198,11 +199,16 @@ class TimelineController extends EventHandler {
           logger.log(`timelineController: Tried to parse WebVTT frag without PTS. Saving frag for later...`);
           return;
         }
+
+        let discontinuity = this.lastDiscontinuity;
+        if (discontinuity.cc < data.frag.cc) {
+          discontinuity = { cc: data.frag.cc, start: data.frag.start, new: true };
+        }
         let textTracks = this.textTracks,
           hls = this.hls;
 
         // Parse the WebVTT file contents.
-        WebVTTParser.parse(data.payload, this.initPTS, function (cues) {
+        WebVTTParser.parse(data.payload, this.initPTS, discontinuity, function (cues) {
             // Add cues and trigger event with success true.
             cues.forEach(cue => {
               textTracks[data.frag.trackId].addCue(cue);
