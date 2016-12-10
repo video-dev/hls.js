@@ -13,7 +13,6 @@ class TimelineController extends EventHandler {
         super(
             hls,
             Event.MEDIA_ATTACHING,
-            Event.MEDIA_DETACHING,
             Event.FRAG_PARSING_USERDATA,
             Event.MANIFEST_LOADING,
             Event.MANIFEST_LOADED,
@@ -30,6 +29,7 @@ class TimelineController extends EventHandler {
         this.tracks = [];
         this.unparsedVttFrags = [];
         this.initPTS = undefined;
+        this.addedCues = {};
 
         if (this.config.enableCEA708Captions) {
             var self = this;
@@ -48,20 +48,20 @@ class TimelineController extends EventHandler {
                             self.textTrack1.textTrack1 = true;
                         } else {
                             self.textTrack1 = existingTrack1;
-                            self.clearCurrentCues(self.textTrack1);
-
                             let e = new window.Event('addtrack');
                             e.track = self.textTrack1;
                             self.media.dispatchEvent(e);
                         }
                     }
-
-                    self.Cues.newCue(
-                        self.textTrack1,
-                        startTime,
-                        endTime,
-                        screen
-                    );
+                    if (!self.addedCues['1' + startTime]) {
+                        self.Cues.newCue(
+                            self.textTrack1,
+                            startTime,
+                            endTime,
+                            screen
+                        );
+                        self.addedCues[startTime] = endTime;
+                    }
                 }
             };
 
@@ -79,19 +79,21 @@ class TimelineController extends EventHandler {
                             self.textTrack2.textTrack2 = true;
                         } else {
                             self.textTrack2 = existingTrack2;
-                            self.clearCurrentCues(self.textTrack2);
 
                             let e = new window.Event('addtrack');
                             e.track = self.textTrack2;
                             self.media.dispatchEvent(e);
                         }
                     }
-                    self.Cues.newCue(
-                        self.textTrack2,
-                        startTime,
-                        endTime,
-                        screen
-                    );
+                    if (!self.addedCues['2' + startTime]) {
+                        self.Cues.newCue(
+                            self.textTrack2,
+                            startTime,
+                            endTime,
+                            screen
+                        );
+                        self.addedCues[startTime] = endTime;
+                    }
                 }
             };
 
@@ -112,14 +114,6 @@ class TimelineController extends EventHandler {
                 this.onFragLoaded(frag);
             });
             this.unparsedVttFrags = [];
-        }
-    }
-
-    clearCurrentCues(track) {
-        if (track && track.cues) {
-            while (track.cues.length > 0) {
-                track.removeCue(track.cues[0]);
-            }
         }
     }
 
@@ -159,19 +153,15 @@ class TimelineController extends EventHandler {
         this.media = data.media;
     }
 
-    onMediaDetaching() {
-        this.clearCurrentCues(this.textTrack1);
-        this.clearCurrentCues(this.textTrack2);
-    }
-
     onManifestLoading() {
-        this.lastPts = Number.NEGATIVE_INFINITY;
+        this.lastSn = -1;
     }
 
     onManifestLoaded(data) {
         this.textTracks = [];
         this.unparsedVttFrags = this.unparsedVttFrags || [];
         this.initPTS = undefined;
+        this.addedCues = {};
 
         if (this.config.enableWebVTT) {
             this.tracks = data.subtitles || [];
@@ -202,14 +192,12 @@ class TimelineController extends EventHandler {
 
     onFragLoaded(data) {
         if (data.frag.type === 'main') {
-            var pts = data.frag.start; //Number.POSITIVE_INFINITY;
-            // if this is a frag for a previously loaded timerange, remove all captions
-            // TODO: consider just removing captions for the timerange
-            if (pts <= this.lastPts) {
-                this.clearCurrentCues(this.textTrack1);
-                this.clearCurrentCues(this.textTrack2);
+            var sn = data.frag.sn;
+            // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
+            if (sn !== this.lastSn + 1) {
+                this.cea608Parser.reset();
             }
-            this.lastPts = pts;
+            this.lastSn = sn;
         } else if (data.frag.type === 'subtitle') {
             // If fragment is subtitle type, parse as WebVTT.
             if (data.payload.byteLength) {
