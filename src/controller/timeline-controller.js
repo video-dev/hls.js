@@ -154,7 +154,8 @@ class TimelineController extends EventHandler {
     }
 
     onManifestLoading() {
-        this.lastSn = -1;
+        this.lastSn = -1; // Detect discontiguity in fragment parsing
+        this.lastDiscontinuity = { cc: 0, start: 0, new: false }; // Detect discontinuity in subtitle manifests
     }
 
     onManifestLoaded(data) {
@@ -209,6 +210,15 @@ class TimelineController extends EventHandler {
                     );
                     return;
                 }
+
+                let discontinuity = this.lastDiscontinuity;
+                if (discontinuity.cc < data.frag.cc) {
+                    discontinuity = {
+                        cc: data.frag.cc,
+                        start: data.frag.start,
+                        new: true
+                    };
+                }
                 let textTracks = this.textTracks,
                     hls = this.hls;
 
@@ -216,6 +226,7 @@ class TimelineController extends EventHandler {
                 WebVTTParser.parse(
                     data.payload,
                     this.initPTS,
+                    discontinuity,
                     function(cues) {
                         // Add cues and trigger event with success true.
                         cues.forEach(cue => {
