@@ -23,7 +23,7 @@
     "patch": "mversion p && npm run preparerelease",
     "minor": "mversion mi && npm run preparerelease",
     "major": "mversion ma && npm run preparerelease",
-    "minify": "uglifyjs dist/hls.js -c sequences=true,dead_code=true,conditionals=true,booleans=true,unused=true,if_return=true,join_vars=true,drop_console=true -m --mangle-props --mangle-regex='/^_/'  --screw-ie8 > dist/hls.min.js",
+    "minify": "uglifyjs dist/hls.js -c sequences=true,dead_code=true,conditionals=true,booleans=true,unused=true,if_return=true,join_vars=true,drop_console=true -m --mangle-props --mangle-regex=\"/^_/\"  --screw-ie8 > dist/hls.min.js",
     "watch": "watchify --debug -s Hls src/index.js -t [babelify] -o dist/hls.js",
     "pretest": "npm run lint",
     "test": "mocha --compilers js:babel-register --recursive tests/unit",
