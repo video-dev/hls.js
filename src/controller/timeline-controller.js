@@ -24,6 +24,19 @@ class TimelineController extends EventHandler {
     if (this.config.enableCEA708Captions)
     {
       var self = this;
+      var sendAddTrackEvent = function (track, media)
+      {
+        var e = null;
+        try {
+          e = new window.Event('addtrack');
+        } catch (err) {
+          //for IE11
+          e = document.createEvent('Event');
+          e.initEvent('addtrack', false, false);
+        }
+        e.track = track;
+        media.dispatchEvent(e);
+      };
 
       var channel1 =
       {
@@ -43,9 +56,7 @@ class TimelineController extends EventHandler {
               self.textTrack1 = existingTrack1;
               self.clearCurrentCues(self.textTrack1);
 
-              let e = new window.Event('addtrack');
-              e.track = self.textTrack1;
-              self.media.dispatchEvent(e);
+              sendAddTrackEvent(self.textTrack1, self.media);
             }
           }
 
@@ -71,9 +82,7 @@ class TimelineController extends EventHandler {
               self.textTrack2 = existingTrack2;
               self.clearCurrentCues(self.textTrack2);
 
-              let e = new window.Event('addtrack');
-              e.track = self.textTrack2;
-              self.media.dispatchEvent(e);
+              sendAddTrackEvent(self.textTrack2, self.media);
             }
           }
 
@@ -122,6 +131,19 @@ class TimelineController extends EventHandler {
   }
 
   destroy() {
+    //Clear all cues and related attributes from textTrack1 & textTrack2
+    //that HLSjs is using for 608/708 captions.
+    for (var i=1; i<=2; i++) {
+      var existingTrack = this.getExistingTrack(i.toString());
+      if (existingTrack) {
+        this.clearCurrentCues(existingTrack);
+        existingTrack.prevFragStartTime = undefined;
+        existingTrack.prevFragEndTime = undefined;
+        existingTrack.curFragEndTime = undefined;
+        existingTrack.curFragStartTime = undefined;
+        existingTrack.curFragLevel = undefined;
+      }
+    }
     EventHandler.prototype.destroy.call(this);
   }
 
@@ -149,18 +171,54 @@ class TimelineController extends EventHandler {
     {
       this.enabled = true;
     }
+    //To be used for clearing up roll-up captions
+    this.oldValAtLevelSwitched = this.hls.currentLevel;
   }
 
   onFragLoaded(data)
   {
     if (data.frag.type === 'main') {
       var pts = data.frag.start; //Number.POSITIVE_INFINITY;
-      // if this is a frag for a previously loaded timerange, remove all captions
-      // TODO: consider just removing captions for the timerange
-      if (pts <= this.lastPts)
-      {
-      this.clearCurrentCues(this.textTrack1);
-      this.clearCurrentCues(this.textTrack2);
+      var updateTrackFragData = function (track, frag){
+        //prevFragStartTime, prevFragEndTime, and curFragStartTime will be used for checking sequential fragment loading
+        //curFragEndTime will be used for deciding duplicate cues in Roll-up Captions
+        //curFragLevel will be used when deciding to add level tolerance for cues
+        if (track && frag){
+          track.prevFragStartTime = track.curFragStartTime;
+          track.prevFragEndTime = track.curFragEndTime;
+          track.curFragEndTime = frag.start + frag.duration;
+          track.curFragStartTime = frag.start;
+          track.curFragLevel = frag.level;
+        }
+      };
+
+      updateTrackFragData(this.textTrack1, data.frag);
+      updateTrackFragData(this.textTrack2, data.frag);
+
+      var isNonSequential = false;
+      var FRAG_TOLERANCE = 0.5;
+      if (this.textTrack1 && this.textTrack1.curFragStartTime && this.textTrack1.prevFragEndTime &&
+        Math.abs(this.textTrack1.curFragStartTime - this.textTrack1.prevFragEndTime) > FRAG_TOLERANCE) {
+        isNonSequential = true;
+      }
+      if (this.oldValAtLevelSwitched !== data.frag.level || isNonSequential) {
+        //We cannot trust the data in CaptionScreens when there's a level switch or when seeking.
+        //So, we reset them.
+        var curChIndex = (this.cea608Parser.currChNr) ? (this.cea608Parser.currChNr - 1) : -1;
+        if(curChIndex >= 0) {
+          var curCh = this.cea608Parser.channels[curChIndex];
+          var ws = curCh.writeScreen;
+          var los = curCh.lastOutputScreen;
+          if (ws) {
+            var oldRURows = ws.nrRollUpRows;
+            ws.reset();
+            ws.nrRollUpRows = oldRURows;
+          }
+          if (los) {
+            los.reset();
+          }
+        }
+        this.oldValAtLevelSwitched = data.frag.level;
       }
       this.lastPts = pts;
     }
@@ -210,3 +268,4 @@ class TimelineController extends EventHandler {
 }
 
 export default TimelineController;
+
