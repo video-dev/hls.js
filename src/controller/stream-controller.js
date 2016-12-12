@@ -462,6 +462,10 @@ class StreamController extends EventHandler {
       frag.autoLevel = hls.autoLevelEnabled;
       frag.bitrateTest = this.bitrateTest;
       hls.trigger(Event.FRAG_LOADING, {frag: frag});
+      // lazy demuxer init, as this could take some time ... do it during frag loading
+      if (!this.demuxer) {
+        this.demuxer = new Demuxer(hls,'main');
+      }
       this.state = State.FRAG_LOADING;
       return true;
     }
