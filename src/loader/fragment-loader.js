@@ -6,6 +6,7 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
+import URLToolkit from 'url-toolkit';
 
 class FragmentLoader extends EventHandler {
     constructor(hls) {
@@ -42,8 +43,11 @@ class FragmentLoader extends EventHandler {
                 : new config.loader(config);
 
         let loaderContext, loaderConfig, loaderCallbacks;
+        let url = frag.url
+            ? frag.url
+            : URLToolkit.buildAbsoluteURL(frag.baseurl, frag.relurl);
         loaderContext = {
-            url: frag.url,
+            url: url,
             frag: frag,
             responseType: 'arraybuffer',
             progressData: false

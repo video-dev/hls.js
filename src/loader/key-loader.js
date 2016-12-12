@@ -6,6 +6,7 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
+import URLToolkit from 'url-toolkit';
 
 class KeyLoader extends EventHandler {
     constructor(hls) {
@@ -31,7 +32,12 @@ class KeyLoader extends EventHandler {
             type = frag.type,
             loader = this.loaders[type],
             decryptdata = frag.decryptdata,
-            uri = decryptdata.uri;
+            uri = decryptdata.uri
+                ? decryptdata.uri
+                : URLToolkit.buildAbsoluteURL(
+                      decryptdata.baseuri,
+                      decryptdata.reluri
+                  );
         // if uri is different from previous one or if decrypt key not retrieved yet
         if (uri !== this.decrypturl || this.decryptkey === null) {
             let config = this.hls.config;
