@@ -12,7 +12,7 @@ import {logger} from '../utils/logger';
 // https://regex101.com is your friend
 const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
-const LEVEL_PLAYLIST_REGEX = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF): *(\d*(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
+const LEVEL_PLAYLIST_REGEX = /(?:#EXT(INF): *(\d*(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
 
 class PlaylistLoader extends EventHandler {
 
@@ -211,24 +211,33 @@ class PlaylistLoader extends EventHandler {
         title = null,
         byteRangeEndOffset = null,
         byteRangeStartOffset = null,
-        tagList = [];
+        tagList = [],
+        i;
 
     LEVEL_PLAYLIST_REGEX.lastIndex = 0;
+
     while ((result = LEVEL_PLAYLIST_REGEX.exec(string)) !== null) {
-      result.shift();
-      result = result.filter(function(n) { return (n !== undefined); });
-      switch (result[0]) {
+      for (i = 1;  i < result.length; i++) {
+        if (result[i] !== undefined) {
+          break;
+        }
+      }
+      const key = result[i],
+          value1 = result[i+1],
+          value2 = result[i+2];
+
+      switch (key) {
         case 'PLAYLIST-TYPE':
-          level.type = result[1].toUpperCase();
+          level.type = value1.toUpperCase();
           break;
         case 'MEDIA-SEQUENCE':
-          currentSN = level.startSN = parseInt(result[1]);
+          currentSN = level.startSN = parseInt(value1);
           break;
         case 'TARGETDURATION':
-          level.targetduration = parseFloat(result[1]);
+          level.targetduration = parseFloat(value1);
           break;
         case 'VERSION':
-          level.version = parseInt(result[1]);
+          level.version = parseInt(value1);
           break;
         case 'EXTM3U':
           break;
@@ -237,13 +246,13 @@ class PlaylistLoader extends EventHandler {
           break;
         case 'DIS':
           cc++;
-          tagList.push(result);
+          tagList.push([key]);
           break;
         case 'DISCONTINUITY-SEQ':
-          cc = parseInt(result[1]);
+          cc = parseInt(value1);
           break;
         case 'BYTERANGE':
-          var params = result[1].split('@');
+          var params = value1.split('@');
           if (params.length === 1) {
             byteRangeStartOffset = byteRangeEndOffset;
           } else {
@@ -252,15 +261,15 @@ class PlaylistLoader extends EventHandler {
           byteRangeEndOffset = parseInt(params[0]) + byteRangeStartOffset;
           break;
         case 'INF':
-          duration = parseFloat(result[1]);
-          title = result[2] ? result[2] : null;
-          tagList.push(result);
+          duration = parseFloat(value1);
+          title = value2 ? value2 : null;
+          tagList.push(value2 ? [ key,value1,value2 ] : [ key,value1 ]);
           break;
         case '': // url
           if (!isNaN(duration)) {
             var sn = currentSN++;
             fragdecryptdata = this.fragmentDecryptdataFromLevelkey(levelkey, sn);
-            var url = result[1] ? this.resolve(result[1], baseurl) : null;
+            var url = value1 ? this.resolve(value1, baseurl) : null;
             frag = {url: url,
                     type : type,
                     duration: duration,
@@ -288,7 +297,7 @@ class PlaylistLoader extends EventHandler {
           break;
         case 'KEY':
           // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
-          var decryptparams = result[1];
+          var decryptparams = value1;
           var keyAttrs = new AttrList(decryptparams);
           var decryptmethod = keyAttrs.enumeratedString('METHOD'),
               decrypturi = keyAttrs.URI,
@@ -306,7 +315,7 @@ class PlaylistLoader extends EventHandler {
           }
           break;
         case 'START':
-          let startParams = result[1];
+          let startParams = value1;
           let startAttrs = new AttrList(startParams);
           let startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
           //TIME-OFFSET can be 0
@@ -315,12 +324,11 @@ class PlaylistLoader extends EventHandler {
           }
           break;
         case 'PROGRAM-DATE-TIME':
-          programDateTime = new Date(Date.parse(result[1]));
-          tagList.push(result);
+          programDateTime = new Date(Date.parse(value1));
+          tagList.push([key, value1]);
           break;
         case '#':
-          result.shift();
-          tagList.push(result);
+          tagList.push(value2 ? [ value1,value2 ] : [ value1 ]);
           break;
         default:
           logger.warn(`line parsed but not handled: ${result}`);
