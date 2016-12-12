@@ -4604,6 +4604,18 @@ var TimelineController = function (_EventHandler) {
 
     if (_this.config.enableCEA708Captions) {
       var self = _this;
+      var sendAddTrackEvent = function sendAddTrackEvent(track, media) {
+        var e = null;
+        try {
+          e = new window.Event('addtrack');
+        } catch (err) {
+          //for IE11
+          e = document.createEvent('Event');
+          e.initEvent('addtrack', false, false);
+        }
+        e.track = track;
+        media.dispatchEvent(e);
+      };
 
       var channel1 = {
         'newCue': function newCue(startTime, endTime, screen) {
@@ -4617,9 +4629,7 @@ var TimelineController = function (_EventHandler) {
               self.textTrack1 = existingTrack1;
               self.clearCurrentCues(self.textTrack1);
 
-              var e = new window.Event('addtrack');
-              e.track = self.textTrack1;
-              self.media.dispatchEvent(e);
+              sendAddTrackEvent(self.textTrack1, self.media);
             }
           }
 
@@ -4639,9 +4649,7 @@ var TimelineController = function (_EventHandler) {
               self.textTrack2 = existingTrack2;
               self.clearCurrentCues(self.textTrack2);
 
-              var e = new window.Event('addtrack');
-              e.track = self.textTrack2;
-              self.media.dispatchEvent(e);
+              sendAddTrackEvent(self.textTrack2, self.media);
             }
           }
 
@@ -4789,16 +4797,17 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var AESCrypto = function () {
-  function AESCrypto(iv) {
+  function AESCrypto(subtle, iv) {
     _classCallCheck(this, AESCrypto);
 
+    this.subtle = subtle;
     this.aesIV = iv;
   }
 
   _createClass(AESCrypto, [{
     key: 'decrypt',
     value: function decrypt(data, key) {
-      return window.crypto.subtle.decrypt({ name: 'AES-CBC', iv: this.aesIV }, key, data);
+      return this.subtle.decrypt({ name: 'AES-CBC', iv: this.aesIV }, key, data);
     }
   }]);
 
@@ -5180,41 +5189,45 @@ var Decrypter = function () {
         this.decryptor.expandKey(key);
         callback(this.decryptor.decrypt(data, 0, iv));
       } else {
-        _logger.logger.log('decrypting by WebCrypto API');
+        (function () {
+          _logger.logger.log('decrypting by WebCrypto API');
+          var subtle = _this.subtle;
+          if (_this.key !== key) {
+            _this.key = key;
+            _this.fastAesKey = new _fastAesKey2.default(subtle, key);
+          }
 
-        if (this.key !== key) {
-          this.key = key;
-          this.fastAesKey = new _fastAesKey2.default(key);
-        }
-
-        this.fastAesKey.expandKey().then(function (aesKey) {
-          // decrypt using web crypto
-          var crypto = new _aesCrypto2.default(iv);
-          crypto.decrypt(data, aesKey).then(function (result) {
-            callback(result);
+          _this.fastAesKey.expandKey().then(function (aesKey) {
+            // decrypt using web crypto
+            var crypto = new _aesCrypto2.default(subtle, iv);
+            crypto.decrypt(data, aesKey).then(function (result) {
+              callback(result);
+            });
+          }).catch(function (err) {
+            _this.onWebCryptoError(err, data, key, iv, callback);
           });
-        }).catch(function (err) {
-          _this.onWebCryptoError(err, data, key, iv, callback);
-        });
+        })();
       }
     }
   }, {
     key: 'onWebCryptoError',
     value: function onWebCryptoError(err, data, key, iv, callback) {
-      if (this.hls.config.enableSoftwareAES) {
+      var hls = this.hls;
+      if (hls.config.enableSoftwareAES) {
         _logger.logger.log('disabling to use WebCrypto API');
         this.disableWebCrypto = true;
         this.decrypt(data, key, iv, callback);
       } else {
         _logger.logger.error('decrypting error : ' + err.message);
-        this.hls.trigger(Event.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_DECRYPT_ERROR, fatal: true, reason: err.message });
+        hls.trigger(Event.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_DECRYPT_ERROR, fatal: true, reason: err.message });
       }
     }
   }, {
     key: 'destroy',
     value: function destroy() {
-      if (this.decryptor) {
-        this.decryptor.destroy();
+      var decryptor = this.decryptor;
+      if (decryptor) {
+        decryptor.destroy();
         this.decryptor = undefined;
       }
     }
@@ -5237,16 +5250,17 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var FastAESKey = function () {
-  function FastAESKey(key) {
+  function FastAESKey(subtle, key) {
     _classCallCheck(this, FastAESKey);
 
+    this.subtle = subtle;
     this.key = key;
   }
 
   _createClass(FastAESKey, [{
     key: 'expandKey',
     value: function expandKey() {
-      return window.crypto.subtle.importKey('raw', this.key, { name: 'AES-CBC' }, false, ['encrypt', 'decrypt']);
+      return this.subtle.importKey('raw', this.key, { name: 'AES-CBC' }, false, ['encrypt', 'decrypt']);
     }
   }]);
 
@@ -8257,6 +8271,7 @@ var Hls = function () {
           maxMaxBufferLength: 600,
           enableWorker: true,
           enableSoftwareAES: true,
+          enableLazyURLResolve: false,
           manifestLoadingTimeOut: 10000,
           manifestLoadingMaxRetry: 1,
           manifestLoadingRetryDelay: 1000,
@@ -8650,6 +8665,10 @@ var _errors = _dereq_(26);
 
 var _logger = _dereq_(45);
 
+var _urlToolkit = _dereq_(2);
+
+var _urlToolkit2 = _interopRequireDefault(_urlToolkit);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -8703,7 +8722,8 @@ var FragmentLoader = function (_EventHandler) {
       var loaderContext = void 0,
           loaderConfig = void 0,
           loaderCallbacks = void 0;
-      loaderContext = { url: frag.url, frag: frag, responseType: 'arraybuffer', progressData: false };
+      var url = frag.url ? frag.url : _urlToolkit2.default.buildAbsoluteURL(frag.baseurl, frag.relurl);
+      loaderContext = { url: url, frag: frag, responseType: 'arraybuffer', progressData: false };
       var start = frag.byteRangeStartOffset,
           end = frag.byteRangeEndOffset;
       if (!isNaN(start) && !isNaN(end)) {
@@ -8762,7 +8782,7 @@ var FragmentLoader = function (_EventHandler) {
 
 exports.default = FragmentLoader;
 
-},{"26":26,"27":27,"28":28,"45":45}],35:[function(_dereq_,module,exports){
+},{"2":2,"26":26,"27":27,"28":28,"45":45}],35:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8782,6 +8802,10 @@ var _eventHandler2 = _interopRequireDefault(_eventHandler);
 var _errors = _dereq_(26);
 
 var _logger = _dereq_(45);
+
+var _urlToolkit = _dereq_(2);
+
+var _urlToolkit2 = _interopRequireDefault(_urlToolkit);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -8826,7 +8850,7 @@ var KeyLoader = function (_EventHandler) {
           type = frag.type,
           loader = this.loaders[type],
           decryptdata = frag.decryptdata,
-          uri = decryptdata.uri;
+          uri = decryptdata.uri ? decryptdata.uri : _urlToolkit2.default.buildAbsoluteURL(decryptdata.baseuri, decryptdata.reluri);
       // if uri is different from previous one or if decrypt key not retrieved yet
       if (uri !== this.decrypturl || this.decryptkey === null) {
         var config = this.hls.config;
@@ -8891,7 +8915,7 @@ var KeyLoader = function (_EventHandler) {
 
 exports.default = KeyLoader;
 
-},{"26":26,"27":27,"28":28,"45":45}],36:[function(_dereq_,module,exports){
+},{"2":2,"26":26,"27":27,"28":28,"45":45}],36:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8933,7 +8957,7 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 // https://regex101.com is your friend
 var MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
 var MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
-var LEVEL_PLAYLIST_REGEX = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT(INF): *(\d*(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
+var LEVEL_PLAYLIST_REGEX = /(?:#EXT(INF): *(\d*(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
 
 var PlaylistLoader = function (_EventHandler) {
   _inherits(PlaylistLoader, _EventHandler);
@@ -9156,26 +9180,35 @@ var PlaylistLoader = function (_EventHandler) {
           title = null,
           byteRangeEndOffset = null,
           byteRangeStartOffset = null,
-          tagList = [];
+          tagList = [],
+          i,
+          config = this.hls.config,
+          lazyURLResolve = config ? config.enableLazyURLResolve : false;
 
       LEVEL_PLAYLIST_REGEX.lastIndex = 0;
+
       while ((result = LEVEL_PLAYLIST_REGEX.exec(string)) !== null) {
-        result.shift();
-        result = result.filter(function (n) {
-          return n !== undefined;
-        });
-        switch (result[0]) {
+        for (i = 1; i < result.length; i++) {
+          if (result[i] !== undefined) {
+            break;
+          }
+        }
+        var key = result[i],
+            value1 = result[i + 1],
+            value2 = result[i + 2];
+
+        switch (key) {
           case 'PLAYLIST-TYPE':
-            level.type = result[1].toUpperCase();
+            level.type = value1.toUpperCase();
             break;
           case 'MEDIA-SEQUENCE':
-            currentSN = level.startSN = parseInt(result[1]);
+            currentSN = level.startSN = parseInt(value1);
             break;
           case 'TARGETDURATION':
-            level.targetduration = parseFloat(result[1]);
+            level.targetduration = parseFloat(value1);
             break;
           case 'VERSION':
-            level.version = parseInt(result[1]);
+            level.version = parseInt(value1);
             break;
           case 'EXTM3U':
             break;
@@ -9184,13 +9217,13 @@ var PlaylistLoader = function (_EventHandler) {
             break;
           case 'DIS':
             cc++;
-            tagList.push(result);
+            tagList.push([key]);
             break;
           case 'DISCONTINUITY-SEQ':
-            cc = parseInt(result[1]);
+            cc = parseInt(value1);
             break;
           case 'BYTERANGE':
-            var params = result[1].split('@');
+            var params = value1.split('@');
             if (params.length === 1) {
               byteRangeStartOffset = byteRangeEndOffset;
             } else {
@@ -9199,18 +9232,16 @@ var PlaylistLoader = function (_EventHandler) {
             byteRangeEndOffset = parseInt(params[0]) + byteRangeStartOffset;
             break;
           case 'INF':
-            duration = parseFloat(result[1]);
-            title = result[2] ? result[2] : null;
-            tagList.push(result);
+            duration = parseFloat(value1);
+            title = value2 ? value2 : null;
+            tagList.push(value2 ? [key, value1, value2] : [key, value1]);
             break;
           case '':
             // url
             if (!isNaN(duration)) {
               var sn = currentSN++;
               fragdecryptdata = this.fragmentDecryptdataFromLevelkey(levelkey, sn);
-              var url = result[1] ? this.resolve(result[1], baseurl) : null;
-              frag = { url: url,
-                type: type,
+              frag = { type: type,
                 duration: duration,
                 title: title,
                 start: totalduration,
@@ -9220,6 +9251,12 @@ var PlaylistLoader = function (_EventHandler) {
                 decryptdata: fragdecryptdata,
                 programDateTime: programDateTime,
                 tagList: tagList };
+              if (lazyURLResolve) {
+                frag.relurl = value1;
+                frag.baseurl = baseurl;
+              } else {
+                frag.url = value1 ? this.resolve(value1, baseurl) : null;
+              }
               // only include byte range options if used/needed
               if (byteRangeStartOffset !== null) {
                 frag.byteRangeStartOffset = byteRangeStartOffset;
@@ -9236,7 +9273,7 @@ var PlaylistLoader = function (_EventHandler) {
             break;
           case 'KEY':
             // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
-            var decryptparams = result[1];
+            var decryptparams = value1;
             var keyAttrs = new _attrList2.default(decryptparams);
             var decryptmethod = keyAttrs.enumeratedString('METHOD'),
                 decrypturi = keyAttrs.URI,
@@ -9246,7 +9283,12 @@ var PlaylistLoader = function (_EventHandler) {
               if (decrypturi && decryptmethod === 'AES-128') {
                 levelkey.method = decryptmethod;
                 // URI to get the key
-                levelkey.uri = this.resolve(decrypturi, baseurl);
+                if (lazyURLResolve) {
+                  levelkey.baseuri = baseurl;
+                  levelkey.reluri = decrypturi;
+                } else {
+                  levelkey.uri = this.resolve(decrypturi, baseurl);
+                }
                 levelkey.key = null;
                 // Initialization Vector (IV)
                 levelkey.iv = decryptiv;
@@ -9254,7 +9296,7 @@ var PlaylistLoader = function (_EventHandler) {
             }
             break;
           case 'START':
-            var startParams = result[1];
+            var startParams = value1;
             var startAttrs = new _attrList2.default(startParams);
             var startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
             //TIME-OFFSET can be 0
@@ -9263,12 +9305,11 @@ var PlaylistLoader = function (_EventHandler) {
             }
             break;
           case 'PROGRAM-DATE-TIME':
-            programDateTime = new Date(Date.parse(result[1]));
-            tagList.push(result);
+            programDateTime = new Date(Date.parse(value1));
+            tagList.push([key, value1]);
             break;
           case '#':
-            result.shift();
-            tagList.push(result);
+            tagList.push(value2 ? [value1, value2] : [value1]);
             break;
           default:
             _logger.logger.warn('line parsed but not handled: ' + result);
@@ -9276,7 +9317,7 @@ var PlaylistLoader = function (_EventHandler) {
         }
       }
       //logger.log('found ' + level.fragments.length + ' fragments');
-      if (frag && !frag.url) {
+      if (frag && !(frag.url || frag.relurl)) {
         level.fragments.pop();
         totalduration -= frag.duration;
       }
@@ -10001,7 +10042,7 @@ var MP4Remuxer = function () {
       }
 
       if (this.ISGenerated) {
-        // Purposefully remuxing audio before video, so that remuxVideo can use nextAacPts, which is
+        // Purposefully remuxing audio before video, so that remuxVideo can use nextAudioPts, which is
         // calculated in remuxAudio.
         //logger.log('nb AAC samples:' + audioTrack.samples.length);
         if (audioTrack.samples.length) {
@@ -10073,11 +10114,11 @@ var MP4Remuxer = function () {
         }
         _logger.logger.log('audio mp4 timescale :' + audioTrack.timescale);
         if (!audioTrack.isAAC) {
-          if (typeSupported.mpeg === true) {
-            // Chrome
+          if (typeSupported.mpeg) {
+            // Chrome and Safari
             container = 'audio/mpeg';
             audioTrack.codec = '';
-          } else if (typeSupported.mp3 === true) {
+          } else if (typeSupported.mp3) {
             // Firefox
             audioTrack.codec = 'mp3';
           }
@@ -10085,7 +10126,7 @@ var MP4Remuxer = function () {
         tracks.audio = {
           container: container,
           codec: audioTrack.codec,
-          initSegment: _mp4Generator2.default.initSegment([audioTrack]),
+          initSegment: !audioTrack.isAAC && typeSupported.mpeg ? new Uint8Array() : _mp4Generator2.default.initSegment([audioTrack]),
           metadata: {
             channelCount: audioTrack.channelCount
           }
@@ -10283,7 +10324,7 @@ var MP4Remuxer = function () {
               var maxBufferHole = config.maxBufferHole,
                   maxSeekHole = config.maxSeekHole,
                   gapTolerance = Math.floor(Math.min(maxBufferHole, maxSeekHole) * pesTimeScale),
-                  deltaToFrameEnd = (audioTrackLength ? firstPTS + audioTrackLength * pesTimeScale : this.nextAacPts) - avcSample.pts;
+                  deltaToFrameEnd = (audioTrackLength ? firstPTS + audioTrackLength * pesTimeScale : this.nextAudioPts) - avcSample.pts;
               if (deltaToFrameEnd > gapTolerance) {
                 // We subtract lastFrameDuration from deltaToFrameEnd to try to prevent any video
                 // frame overlap. maxBufferHole/maxSeekHole should be >> lastFrameDuration anyway.
@@ -10364,10 +10405,12 @@ var MP4Remuxer = function () {
           expectedSampleDuration = track.timescale * (track.isAAC ? 1024 : 1152) / track.audiosamplerate,
           pesFrameDuration = expectedSampleDuration * pes2mp4ScaleFactor,
           ptsNormalize = this._PTSNormalize,
-          initDTS = this._initDTS;
+          initDTS = this._initDTS,
+          rawMPEG = !track.isAAC && this.typeSupported.mpeg;
+
       var view,
-          offset = 8,
-          aacSample,
+          offset = rawMPEG ? 0 : 8,
+          audioSample,
           mp4Sample,
           unit,
           mdat,
@@ -10383,7 +10426,7 @@ var MP4Remuxer = function () {
           samples0 = [],
           fillFrame,
           newStamp,
-          nextAacPts;
+          nextAudioPts;
 
       track.samples.sort(function (a, b) {
         return a.pts - b.pts;
@@ -10399,12 +10442,12 @@ var MP4Remuxer = function () {
       // this helps ensuring audio continuity
       // and this also avoids audio glitches/cut when switching quality, or reporting wrong duration on first audio frame
 
-      nextAacPts = this.nextAacPts;
-      contiguous |= samples0.length && nextAacPts && (Math.abs(timeOffset - nextAacPts / pesTimeScale) < 0.1 || Math.abs(samples0[0].pts - nextAacPts - initDTS) < 20 * pesFrameDuration);
+      nextAudioPts = this.nextAudioPts;
+      contiguous |= samples0.length && nextAudioPts && (Math.abs(timeOffset - nextAudioPts / pesTimeScale) < 0.1 || Math.abs(samples0[0].pts - nextAudioPts - this._initDTS) < 20 * pesFrameDuration);
 
       if (!contiguous) {
-        // if fragments are not contiguous, let's use timeOffset to compute next AAC PTS
-        nextAacPts = timeOffset * pesTimeScale;
+        // if fragments are not contiguous, let's use timeOffset to compute next Audio PTS
+        nextAudioPts = timeOffset * pesTimeScale;
       }
       // If the audio track is missing samples, the frames seem to get "left-shifted" within the
       // resulting mp4 segment, causing sync issues and leaving gaps at the end of the audio segment.
@@ -10414,10 +10457,10 @@ var MP4Remuxer = function () {
 
       // only inject/drop audio frames in case time offset is accurate
       if (accurateTimeOffset && track.isAAC) {
-        for (var i = 0, nextPtsNorm = nextAacPts; i < samples0.length;) {
+        for (var i = 0, nextPtsNorm = nextAudioPts; i < samples0.length;) {
           // First, let's see how far off this frame is from where we expect it to be
           var sample = samples0[i],
-              ptsNorm = ptsNormalize(sample.pts - initDTS, nextAacPts),
+              ptsNorm = ptsNormalize(sample.pts - initDTS, nextAudioPts),
               delta = ptsNorm - nextPtsNorm;
 
           // If we're overlapping by more than a duration, drop this sample
@@ -10457,7 +10500,7 @@ var MP4Remuxer = function () {
                 }
                 nextPtsNorm += pesFrameDuration;
                 if (i === 0) {
-                  sample.pts = sample.dts = initDTS + nextAacPts;
+                  sample.pts = sample.dts = initDTS + nextAudioPts;
                 } else {
                   sample.pts = sample.dts = samples0[i - 1].pts + pesFrameDuration;
                 }
@@ -10467,10 +10510,10 @@ var MP4Remuxer = function () {
       }
 
       while (samples0.length) {
-        aacSample = samples0.shift();
-        unit = aacSample.unit;
-        pts = aacSample.pts - initDTS;
-        dts = aacSample.dts - initDTS;
+        audioSample = samples0.shift();
+        unit = audioSample.unit;
+        pts = audioSample.pts - initDTS;
+        dts = audioSample.dts - initDTS;
         //logger.log(`Audio/PTS:${Math.round(pts/90)}`);
         // if not first sample
         if (lastDTS !== undefined) {
@@ -10478,17 +10521,17 @@ var MP4Remuxer = function () {
           dtsnorm = ptsNormalize(dts, lastDTS);
           mp4Sample.duration = Math.round((dtsnorm - lastDTS) / pes2mp4ScaleFactor);
         } else {
-          ptsnorm = ptsNormalize(pts, nextAacPts);
-          dtsnorm = ptsNormalize(dts, nextAacPts);
-          var _delta = Math.round(1000 * (ptsnorm - nextAacPts) / pesTimeScale),
+          ptsnorm = ptsNormalize(pts, nextAudioPts);
+          dtsnorm = ptsNormalize(dts, nextAudioPts);
+          var _delta = Math.round(1000 * (ptsnorm - nextAudioPts) / pesTimeScale),
               numMissingFrames = 0;
           // if fragment are contiguous, detect hole/overlapping between fragments
           // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
-          if (contiguous) {
+          if (contiguous && track.isAAC) {
             // log delta
             if (_delta) {
               if (_delta > 0) {
-                numMissingFrames = Math.round((ptsnorm - nextAacPts) / pesFrameDuration);
+                numMissingFrames = Math.round((ptsnorm - nextAudioPts) / pesFrameDuration);
                 _logger.logger.log(_delta + ' ms hole between AAC samples detected,filling it');
                 if (numMissingFrames > 0) {
                   fillFrame = _aac2.default.getSilentFrame(track.channelCount);
@@ -10505,19 +10548,23 @@ var MP4Remuxer = function () {
                 continue;
               }
               // set PTS/DTS to expected PTS/DTS
-              ptsnorm = dtsnorm = nextAacPts;
+              ptsnorm = dtsnorm = nextAudioPts;
             }
           }
-          // remember first PTS of our aacSamples, ensure value is positive
+          // remember first PTS of our audioSamples, ensure value is positive
           firstPTS = Math.max(0, ptsnorm);
           firstDTS = Math.max(0, dtsnorm);
           if (track.len > 0) {
             /* concatenate the audio data and construct the mdat in place
               (need 8 more bytes to fill length and mdat type) */
-            mdat = new Uint8Array(track.len + 8);
-            view = new DataView(mdat.buffer);
-            view.setUint32(0, mdat.byteLength);
-            mdat.set(_mp4Generator2.default.types.mdat, 4);
+            if (rawMPEG) {
+              mdat = new Uint8Array(track.len);
+            } else {
+              mdat = new Uint8Array(track.len + 8);
+              view = new DataView(mdat.buffer);
+              view.setUint32(0, mdat.byteLength);
+              mdat.set(_mp4Generator2.default.types.mdat, 4);
+            }
           } else {
             // no audio samples
             return;
@@ -10534,7 +10581,7 @@ var MP4Remuxer = function () {
             mp4Sample = {
               size: fillFrame.byteLength,
               cts: 0,
-              duration: track.isAAC ? 1024 : 1152,
+              duration: 1024,
               flags: {
                 isLeading: 0,
                 isDependedOn: 0,
@@ -10548,7 +10595,7 @@ var MP4Remuxer = function () {
         }
         mdat.set(unit, offset);
         offset += unit.byteLength;
-        //console.log('PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${aacSample.pts}/${aacSample.dts}/${initDTS}/${ptsnorm}/${dtsnorm}/${(aacSample.pts/4294967296).toFixed(3)}');
+        //console.log('PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${audioSample.pts}/${audioSample.dts}/${initDTS}/${ptsnorm}/${dtsnorm}/${(audioSample.pts/4294967296).toFixed(3)}');
         mp4Sample = {
           size: unit.byteLength,
           cts: 0,
@@ -10572,12 +10619,16 @@ var MP4Remuxer = function () {
         mp4Sample.duration = lastSampleDuration;
       }
       if (nbSamples) {
-        // next aac sample PTS should be equal to last sample PTS + duration
-        this.nextAacPts = ptsnorm + pes2mp4ScaleFactor * lastSampleDuration;
-        //logger.log('Audio/PTS/PTSend:' + aacSample.pts.toFixed(0) + '/' + this.nextAacDts.toFixed(0));
+        // next audio sample PTS should be equal to last sample PTS + duration
+        this.nextAudioPts = ptsnorm + pes2mp4ScaleFactor * lastSampleDuration;
+        //logger.log('Audio/PTS/PTSend:' + audioSample.pts.toFixed(0) + '/' + this.nextAacDts.toFixed(0));
         track.len = 0;
         track.samples = samples;
-        moof = _mp4Generator2.default.moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
+        if (rawMPEG) {
+          moof = new Uint8Array();
+        } else {
+          moof = _mp4Generator2.default.moof(track.sequenceNumber++, firstDTS / pes2mp4ScaleFactor, track);
+        }
         track.samples = [];
         var audioData = {
           id: this.id,
@@ -10586,7 +10637,7 @@ var MP4Remuxer = function () {
           data1: moof,
           data2: mdat,
           startPTS: firstPTS / pesTimeScale,
-          endPTS: this.nextAacPts / pesTimeScale,
+          endPTS: this.nextAudioPts / pesTimeScale,
           startDTS: firstDTS / pesTimeScale,
           endDTS: (dtsnorm + pes2mp4ScaleFactor * lastSampleDuration) / pesTimeScale,
           type: 'audio',
@@ -10603,11 +10654,11 @@ var MP4Remuxer = function () {
       var pesTimeScale = this.PES_TIMESCALE,
           mp4timeScale = track.timescale ? track.timescale : track.audiosamplerate,
           pes2mp4ScaleFactor = pesTimeScale / mp4timeScale,
-          nextAacPts = this.nextAacPts,
+          nextAudioPts = this.nextAudioPts,
 
 
       // sync with video's timestamp
-      startDTS = (nextAacPts !== undefined ? nextAacPts : videoData.startDTS * pesTimeScale) + this._initDTS,
+      startDTS = (nextAudioPts !== undefined ? nextAudioPts : videoData.startDTS * pesTimeScale) + this._initDTS,
           endDTS = videoData.endDTS * pesTimeScale + this._initDTS,
 
       // one sample's duration value
