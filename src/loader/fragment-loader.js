@@ -6,6 +6,7 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
+import URLToolkit from 'url-toolkit';
 
 class FragmentLoader extends EventHandler {
 
@@ -40,7 +41,8 @@ class FragmentLoader extends EventHandler {
     loader  = this.loaders[type] = frag.loader = typeof(config.fLoader) !== 'undefined' ? new config.fLoader(config) : new config.loader(config);
 
     let loaderContext, loaderConfig, loaderCallbacks;
-    loaderContext = { url : frag.url, frag : frag, responseType : 'arraybuffer', progressData : false};
+    let url = frag.url ? frag.url : URLToolkit.buildAbsoluteURL(frag.baseurl,frag.relurl);
+    loaderContext = { url : url , frag : frag, responseType : 'arraybuffer', progressData : false};
     let start = frag.byteRangeStartOffset, end = frag.byteRangeEndOffset;
     if (!isNaN(start) && !isNaN(end)) {
       loaderContext.rangeStart = start;

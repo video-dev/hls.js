@@ -73,6 +73,7 @@ class Hls {
           maxMaxBufferLength: 600,
           enableWorker: true,
           enableSoftwareAES: true,
+          enableLazyURLResolve : false,
           manifestLoadingTimeOut: 10000,
           manifestLoadingMaxRetry: 1,
           manifestLoadingRetryDelay: 1000,

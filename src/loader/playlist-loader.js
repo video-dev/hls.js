@@ -212,7 +212,9 @@ class PlaylistLoader extends EventHandler {
         byteRangeEndOffset = null,
         byteRangeStartOffset = null,
         tagList = [],
-        i;
+        i,
+        config = this.hls.config,
+        lazyURLResolve = config ? config.enableLazyURLResolve : false;
 
     LEVEL_PLAYLIST_REGEX.lastIndex = 0;
 
@@ -269,9 +271,7 @@ class PlaylistLoader extends EventHandler {
           if (!isNaN(duration)) {
             var sn = currentSN++;
             fragdecryptdata = this.fragmentDecryptdataFromLevelkey(levelkey, sn);
-            var url = value1 ? this.resolve(value1, baseurl) : null;
-            frag = {url: url,
-                    type : type,
+            frag = {type : type,
                     duration: duration,
                     title: title,
                     start: totalduration,
@@ -281,6 +281,12 @@ class PlaylistLoader extends EventHandler {
                     decryptdata : fragdecryptdata,
                     programDateTime: programDateTime,
                     tagList: tagList};
+            if (lazyURLResolve) {
+              frag.relurl = value1;
+              frag.baseurl = baseurl;
+            } else {
+              frag.url = value1 ? this.resolve(value1, baseurl) : null;
+            }
             // only include byte range options if used/needed
             if(byteRangeStartOffset !== null) {
               frag.byteRangeStartOffset = byteRangeStartOffset;
@@ -307,7 +313,12 @@ class PlaylistLoader extends EventHandler {
             if ((decrypturi) && (decryptmethod === 'AES-128')) {
               levelkey.method = decryptmethod;
               // URI to get the key
-              levelkey.uri = this.resolve(decrypturi, baseurl);
+              if (lazyURLResolve) {
+                levelkey.baseuri = baseurl;
+                levelkey.reluri = decrypturi;
+              } else {
+                levelkey.uri = this.resolve(decrypturi, baseurl);
+              }
               levelkey.key = null;
               // Initialization Vector (IV)
               levelkey.iv = decryptiv;
@@ -336,7 +347,7 @@ class PlaylistLoader extends EventHandler {
       }
     }
     //logger.log('found ' + level.fragments.length + ' fragments');
-    if(frag && !frag.url) {
+    if(frag && !(frag.url || frag.relurl)) {
       level.fragments.pop();
       totalduration-=frag.duration;
     }
