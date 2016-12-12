@@ -3558,6 +3558,10 @@ var StreamController = function (_EventHandler) {
         frag.autoLevel = hls.autoLevelEnabled;
         frag.bitrateTest = this.bitrateTest;
         hls.trigger(_events2.default.FRAG_LOADING, { frag: frag });
+        // lazy demuxer init, as this could take some time ... do it during frag loading
+        if (!this.demuxer) {
+          this.demuxer = new _demuxer2.default(hls, 'main');
+        }
         this.state = State.FRAG_LOADING;
         return true;
       }
@@ -7179,20 +7183,17 @@ var TSDemuxer = function () {
       //logger.log('PES:' + Hex.hexDump(array));
       while (i < len) {
         value = array[i++];
+        // optimization. state 0 and 1 are the predominant case. let's handle them outside of the switch/case
+        if (!state) {
+          state = value ? 0 : 1;
+          continue;
+        }
+        if (state === 1) {
+          state = value ? 0 : 2;
+          continue;
+        }
         // finding 3 or 4-byte start codes (00 00 01 OR 00 00 00 01)
         switch (state) {
-          case 0:
-            if (value === 0) {
-              state = 1;
-            }
-            break;
-          case 1:
-            if (value === 0) {
-              state = 2;
-            } else {
-              state = 0;
-            }
-            break;
           case 2:
           case 3:
             if (value === 0) {
