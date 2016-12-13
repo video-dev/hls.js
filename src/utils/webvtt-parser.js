@@ -36,13 +36,13 @@ const WebVTTParser = {
 
         parser.oncue = function(cue) {
             // Adjust cue timing; clamp cues to start no earlier than - and drop cues that don't end after - 0 on timeline.
-          let offsetSecs = offsetMillis/1000;
+            let offsetSecs = offsetMillis/1000;
 
-          if (discontinuity.new) {
-            discontinuityOffset = discontinuity.start - offsetSecs;
-            discontinuity.new = false;
-          }
-          cue.startTime = discontinuityOffset + Math.max(0, cue.startTime + offsetSecs);
+            if (discontinuity.new) {
+              discontinuityOffset = discontinuity.start - offsetSecs;
+              discontinuity.new = false;
+            }
+            cue.startTime = discontinuityOffset + Math.max(0, cue.startTime + offsetSecs);
             cue.endTime += discontinuityOffset + offsetSecs;
 
             // Fix encoding of special characters. TODO: Test with all sorts of weird characters.
