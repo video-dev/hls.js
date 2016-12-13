@@ -19,6 +19,7 @@ class Fragment {
   constructor (state) {
     Object.assign(this, state);
     this._url = null;
+    this._byteRange = null;
   }
 
   get url() {
@@ -37,6 +38,30 @@ class Fragment {
       this._programDateTime = new Date(Date.parse(this.rawProgramDateTime))
     }
     return this._programDateTime;
+  }
+
+  get byteRange () {
+    if (!this._byteRange) {
+      this._byteRange = [];
+      if (this.rawByteRange) {
+        const params = this.rawByteRange.split('@', 2);
+        if (params.length === 1) {
+          this._byteRange[0] = this.prevFrag ? this.prevFrag.byteRangeEndOffset : 0;
+        } else {
+          this._byteRange[0] = parseInt(params[1]);
+        }
+        this._byteRange[1] = parseInt(params[0]) + this._byteRange[0];
+      }
+    }
+    return this._byteRange;
+  }
+
+  get byteRangeStartOffset () {
+    return this.byteRange[0];
+  }
+
+  get byteRangeEndOffset () {
+    return this.byteRange[1];
   }
 
 }
@@ -254,8 +279,7 @@ class PlaylistLoader extends EventHandler {
         result,
         duration = null,
         title = null,
-        byteRangeEndOffset = null,
-        byteRangeStartOffset = null,
+        rawByteRange = null,
         tagList = [],
         i,
         config = this.hls.config;
@@ -298,13 +322,7 @@ class PlaylistLoader extends EventHandler {
           cc = parseInt(value1);
           break;
         case 'BYTERANGE':
-          var params = value1.split('@', 2);
-          if (params.length === 1) {
-            byteRangeStartOffset = byteRangeEndOffset;
-          } else {
-            byteRangeStartOffset = parseInt(params[1]);
-          }
-          byteRangeEndOffset = parseInt(params[0]) + byteRangeStartOffset;
+          rawByteRange = value1;
           break;
         case 'INF':
           duration = parseFloat(value1);
@@ -316,6 +334,7 @@ class PlaylistLoader extends EventHandler {
             var sn = currentSN++;
             fragdecryptdata = this.fragmentDecryptdataFromLevelkey(levelkey, sn);
             frag = new Fragment({type : type,
+                    prevFrag: frag,
                     duration: duration,
                     title: title,
                     start: totalduration,
@@ -324,19 +343,15 @@ class PlaylistLoader extends EventHandler {
                     cc: cc,
                     baseurl: baseurl,
                     relurl: value1,
+                    rawByteRange: rawByteRange,
                     decryptdata : fragdecryptdata,
                     rawProgramDateTime: rawProgramDateTime,
                     tagList: tagList});
-            // only include byte range options if used/needed
-            if(byteRangeStartOffset !== null) {
-              frag.byteRangeStartOffset = byteRangeStartOffset;
-              frag.byteRangeEndOffset = byteRangeEndOffset;
-            }
             level.fragments.push(frag);
             totalduration += duration;
             duration = null;
             title = null;
-            byteRangeStartOffset = null;
+            rawByteRange = null;
             rawProgramDateTime = null;
             tagList = [];
           }
