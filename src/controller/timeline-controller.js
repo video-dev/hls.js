@@ -184,9 +184,8 @@ class TimelineController extends EventHandler {
   onFragLoaded(data) {
     if (data.frag.type === 'main') {
       var sn = data.frag.sn;
-      // if this frag isn't contiguous or if crossing a discontinuity zone,
-      // clear the parser so cues with bad start/end times aren't added to the textTrack
-      if (sn !== this.lastSn + 1 || this.lastDiscontinuity.cc !== data.frag.cc) {
+      // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
+      if (sn !== this.lastSn + 1) {
         this.cea608Parser.reset();
       }
       this.lastSn = sn;
