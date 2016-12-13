@@ -47,11 +47,13 @@ class Fragment {
       if (this.rawByteRange) {
         const params = this.rawByteRange.split('@', 2);
         if (params.length === 1) {
-          this._byteRange[0] = this.prevFrag ? this.prevFrag.byteRangeEndOffset : 0;
+          const frag = this.prevRawByteRange ? new Fragment({ rawByteRange: this.prevRawByteRange }) : null;
+          this._byteRange[0] = frag ? frag.byteRangeEndOffset : 0;
         } else {
           this._byteRange[0] = parseInt(params[1]);
         }
         this._byteRange[1] = parseInt(params[0]) + this._byteRange[0];
+        this.prevRawByteRange = null;
       }
     }
     return this._byteRange;
@@ -340,7 +342,7 @@ class PlaylistLoader extends EventHandler {
           if (!isNaN(duration)) {
             var sn = currentSN++;
             frag = new Fragment({type : type,
-                    prevFrag: frag,
+                    prevRawByteRange: frag ? frag.rawByteRange : undefined,
                     duration: duration,
                     title: title,
                     start: totalduration,
