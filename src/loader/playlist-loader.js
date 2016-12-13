@@ -36,7 +36,7 @@ class Fragment {
 
   get programDateTime() {
     if (!this._programDateTime && this.rawProgramDateTime) {
-      this._programDateTime = new Date(Date.parse(this.rawProgramDateTime))
+      this._programDateTime = new Date(Date.parse(this.rawProgramDateTime));
     }
     return this._programDateTime;
   }
@@ -52,6 +52,7 @@ class Fragment {
           this._byteRange[0] = parseInt(params[1]);
         }
         this._byteRange[1] = parseInt(params[0]) + this._byteRange[0];
+        this.prevFrag = null;
       }
     }
     return this._byteRange;
@@ -96,7 +97,7 @@ class Fragment {
     var decryptdata = levelkey;
 
     if (levelkey && levelkey.method && levelkey.uri && !levelkey.iv) {
-      decryptdata = this.cloneObj(levelkey);
+      decryptdata = Object.assign(new LevelKey(), this.cloneObj(levelkey));
       decryptdata.iv = this.createInitializationVector(segmentNumber);
     }
 
@@ -279,7 +280,7 @@ class PlaylistLoader extends EventHandler {
     var currentSN = 0,
         totalduration = 0,
         level = {type: null, version: null, url: baseurl, fragments: [], live: true, startSN: 0},
-        levelkey = {method : null, key : null, iv : null, uri : null},
+        levelkey = new LevelKey(),
         cc = 0,
         rawProgramDateTime = null,
         frag = null,
@@ -288,8 +289,7 @@ class PlaylistLoader extends EventHandler {
         title = null,
         rawByteRange = null,
         tagList = [],
-        i,
-        config = this.hls.config;
+        i;
 
     LEVEL_PLAYLIST_REGEX.lastIndex = 0;
 
