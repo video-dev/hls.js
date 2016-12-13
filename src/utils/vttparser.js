@@ -246,9 +246,16 @@ VTTParser.prototype = {
       self.buffer += self.decoder.decode(data, {stream: true});
     }
 
+    function fixLineBreaks(input) {
+      return input.replace(/<br(?: \/)?>/gi, '\n');
+    }
+
     function collectNextLine() {
       var buffer = self.buffer;
       var pos = 0;
+
+      buffer = fixLineBreaks(buffer);
+
       while (pos < buffer.length && buffer[pos] !== '\r' && buffer[pos] !== '\n') {
         ++pos;
       }
