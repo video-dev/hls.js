@@ -53,15 +53,7 @@ class TimelineController extends EventHandler {
                             self.media.dispatchEvent(e);
                         }
                     }
-                    if (!self.addedCues['1' + startTime]) {
-                        self.Cues.newCue(
-                            self.textTrack1,
-                            startTime,
-                            endTime,
-                            screen
-                        );
-                        self.addedCues['1' + startTime] = endTime;
-                    }
+                    self.addCues('textTrack1', startTime, endTime, screen);
                 }
             };
 
@@ -85,19 +77,30 @@ class TimelineController extends EventHandler {
                             self.media.dispatchEvent(e);
                         }
                     }
-                    if (!self.addedCues['2' + startTime]) {
-                        self.Cues.newCue(
-                            self.textTrack2,
-                            startTime,
-                            endTime,
-                            screen
-                        );
-                        self.addedCues['2' + startTime] = endTime;
-                    }
+                    self.addCues('textTrack2', startTime, endTime, screen);
                 }
             };
 
             this.cea608Parser = new Cea608Parser(0, channel1, channel2);
+        }
+    }
+
+    addCues(channel, startTime, endTime, screen) {
+        let addedCues = this.addedCues[channel];
+
+        if (!addedCues) {
+            addedCues = this.addedCues[channel] = {};
+        }
+
+        // Fragment start times don't always align on level switches.
+        // Adding a tolerance of .05s ensures we don't add duplicate cues during a level switch.
+        let key = Math.floor(startTime * 20);
+        let cuesAdded =
+            addedCues[key] || addedCues[key - 1] || addedCues[key + 1];
+
+        if (!cuesAdded) {
+            this.Cues.newCue(this[channel], startTime, endTime, screen);
+            addedCues[key] = endTime;
         }
     }
 
