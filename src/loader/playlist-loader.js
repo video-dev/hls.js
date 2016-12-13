@@ -14,6 +14,122 @@ const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 const LEVEL_PLAYLIST_REGEX = /(?:#EXT(INF): *(\d*(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
 
+class Fragment {
+    constructor(state) {
+        Object.assign(this, state);
+        this._url = null;
+        this._byteRange = null;
+        this._decryptdata = null;
+    }
+
+    get url() {
+        if (!this._url && this.relurl) {
+            this._url = URLToolkit.buildAbsoluteURL(this.baseurl, this.relurl);
+        }
+        return this._url;
+    }
+
+    set url(value) {
+        this._url = value;
+    }
+
+    get programDateTime() {
+        if (!this._programDateTime && this.rawProgramDateTime) {
+            this._programDateTime = new Date(
+                Date.parse(this.rawProgramDateTime)
+            );
+        }
+        return this._programDateTime;
+    }
+
+    get byteRange() {
+        if (!this._byteRange) {
+            this._byteRange = [];
+            if (this.rawByteRange) {
+                const params = this.rawByteRange.split('@', 2);
+                if (params.length === 1) {
+                    this._byteRange[0] = this.prevFrag
+                        ? this.prevFrag.byteRangeEndOffset
+                        : 0;
+                } else {
+                    this._byteRange[0] = parseInt(params[1]);
+                }
+                this._byteRange[1] = parseInt(params[0]) + this._byteRange[0];
+            }
+        }
+        return this._byteRange;
+    }
+
+    get byteRangeStartOffset() {
+        return this.byteRange[0];
+    }
+
+    get byteRangeEndOffset() {
+        return this.byteRange[1];
+    }
+
+    get decryptdata() {
+        if (!this._decryptdata) {
+            this._decryptdata = this.fragmentDecryptdataFromLevelkey(
+                this.levelkey,
+                this.sn
+            );
+        }
+        return this._decryptdata;
+    }
+
+    /**
+     * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
+     * @returns {Uint8Array}
+     */
+    createInitializationVector(segmentNumber) {
+        var uint8View = new Uint8Array(16);
+
+        for (var i = 12; i < 16; i++) {
+            uint8View[i] = (segmentNumber >> (8 * (15 - i))) & 0xff;
+        }
+
+        return uint8View;
+    }
+
+    /**
+     * Utility method for parseLevelPlaylist to get a fragment's decryption data from the currently parsed encryption key data
+     * @param levelkey - a playlist's encryption info
+     * @param segmentNumber - the fragment's segment number
+     * @returns {*} - an object to be applied as a fragment's decryptdata
+     */
+    fragmentDecryptdataFromLevelkey(levelkey, segmentNumber) {
+        var decryptdata = levelkey;
+
+        if (levelkey && levelkey.method && levelkey.uri && !levelkey.iv) {
+            decryptdata = this.cloneObj(levelkey);
+            decryptdata.iv = this.createInitializationVector(segmentNumber);
+        }
+
+        return decryptdata;
+    }
+
+    cloneObj(obj) {
+        return JSON.parse(JSON.stringify(obj));
+    }
+}
+
+class LevelKey {
+    constructor() {
+        this.method = null;
+        this.key = null;
+        this.iv = null;
+        this._uri = null;
+    }
+
+    get uri() {
+        if (!this._uri && this.reluri) {
+            this._uri = URLToolkit.buildAbsoluteURL(this.baseuri, this.reluri);
+        }
+        return this._uri;
+    }
+}
+
 class PlaylistLoader extends EventHandler {
     constructor(hls) {
         super(
@@ -167,36 +283,6 @@ class PlaylistLoader extends EventHandler {
         }
         return medias;
     }
-    /**
-     * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
-     * @returns {Uint8Array}
-     */
-    createInitializationVector(segmentNumber) {
-        var uint8View = new Uint8Array(16);
-
-        for (var i = 12; i < 16; i++) {
-            uint8View[i] = (segmentNumber >> (8 * (15 - i))) & 0xff;
-        }
-
-        return uint8View;
-    }
-
-    /**
-     * Utility method for parseLevelPlaylist to get a fragment's decryption data from the currently parsed encryption key data
-     * @param levelkey - a playlist's encryption info
-     * @param segmentNumber - the fragment's segment number
-     * @returns {*} - an object to be applied as a fragment's decryptdata
-     */
-    fragmentDecryptdataFromLevelkey(levelkey, segmentNumber) {
-        var decryptdata = levelkey;
-
-        if (levelkey && levelkey.method && levelkey.uri && !levelkey.iv) {
-            decryptdata = this.cloneObj(levelkey);
-            decryptdata.iv = this.createInitializationVector(segmentNumber);
-        }
-
-        return decryptdata;
-    }
 
     avc1toavcoti(codec) {
         var result,
@@ -213,13 +299,8 @@ class PlaylistLoader extends EventHandler {
         return result;
     }
 
-    cloneObj(obj) {
-        return JSON.parse(JSON.stringify(obj));
-    }
-
     parseLevelPlaylist(string, baseurl, id, type) {
         var currentSN = 0,
-            fragdecryptdata,
             totalduration = 0,
             level = {
                 type: null,
@@ -231,17 +312,15 @@ class PlaylistLoader extends EventHandler {
             },
             levelkey = { method: null, key: null, iv: null, uri: null },
             cc = 0,
-            programDateTime = null,
+            rawProgramDateTime = null,
             frag = null,
             result,
             duration = null,
             title = null,
-            byteRangeEndOffset = null,
-            byteRangeStartOffset = null,
+            rawByteRange = null,
             tagList = [],
             i,
-            config = this.hls.config,
-            lazyURLResolve = config ? config.enableLazyURLResolve : false;
+            config = this.hls.config;
 
         LEVEL_PLAYLIST_REGEX.lastIndex = 0;
 
@@ -281,14 +360,7 @@ class PlaylistLoader extends EventHandler {
                     cc = parseInt(value1);
                     break;
                 case 'BYTERANGE':
-                    var params = value1.split('@');
-                    if (params.length === 1) {
-                        byteRangeStartOffset = byteRangeEndOffset;
-                    } else {
-                        byteRangeStartOffset = parseInt(params[1]);
-                    }
-                    byteRangeEndOffset =
-                        parseInt(params[0]) + byteRangeStartOffset;
+                    rawByteRange = value1;
                     break;
                 case 'INF':
                     duration = parseFloat(value1);
@@ -300,41 +372,28 @@ class PlaylistLoader extends EventHandler {
                 case '': // url
                     if (!isNaN(duration)) {
                         var sn = currentSN++;
-                        fragdecryptdata = this.fragmentDecryptdataFromLevelkey(
-                            levelkey,
-                            sn
-                        );
-                        frag = {
+                        frag = new Fragment({
                             type: type,
+                            prevFrag: frag,
                             duration: duration,
                             title: title,
                             start: totalduration,
+                            levelkey: levelkey,
                             sn: sn,
                             level: id,
                             cc: cc,
-                            decryptdata: fragdecryptdata,
-                            programDateTime: programDateTime,
+                            baseurl: baseurl,
+                            relurl: value1,
+                            rawByteRange: rawByteRange,
+                            rawProgramDateTime: rawProgramDateTime,
                             tagList: tagList
-                        };
-                        if (lazyURLResolve) {
-                            frag.relurl = value1;
-                            frag.baseurl = baseurl;
-                        } else {
-                            frag.url = value1
-                                ? this.resolve(value1, baseurl)
-                                : null;
-                        }
-                        // only include byte range options if used/needed
-                        if (byteRangeStartOffset !== null) {
-                            frag.byteRangeStartOffset = byteRangeStartOffset;
-                            frag.byteRangeEndOffset = byteRangeEndOffset;
-                        }
+                        });
                         level.fragments.push(frag);
                         totalduration += duration;
                         duration = null;
                         title = null;
-                        byteRangeStartOffset = null;
-                        programDateTime = null;
+                        rawByteRange = null;
+                        rawProgramDateTime = null;
                         tagList = [];
                     }
                     break;
@@ -346,24 +405,12 @@ class PlaylistLoader extends EventHandler {
                         decrypturi = keyAttrs.URI,
                         decryptiv = keyAttrs.hexadecimalInteger('IV');
                     if (decryptmethod) {
-                        levelkey = {
-                            method: null,
-                            key: null,
-                            iv: null,
-                            uri: null
-                        };
+                        levelkey = new LevelKey();
                         if (decrypturi && decryptmethod === 'AES-128') {
                             levelkey.method = decryptmethod;
                             // URI to get the key
-                            if (lazyURLResolve) {
-                                levelkey.baseuri = baseurl;
-                                levelkey.reluri = decrypturi;
-                            } else {
-                                levelkey.uri = this.resolve(
-                                    decrypturi,
-                                    baseurl
-                                );
-                            }
+                            levelkey.baseuri = baseurl;
+                            levelkey.reluri = decrypturi;
                             levelkey.key = null;
                             // Initialization Vector (IV)
                             levelkey.iv = decryptiv;
@@ -382,7 +429,7 @@ class PlaylistLoader extends EventHandler {
                     }
                     break;
                 case 'PROGRAM-DATE-TIME':
-                    programDateTime = new Date(Date.parse(value1));
+                    rawProgramDateTime = value1;
                     tagList.push([key, value1]);
                     break;
                 case '#':
@@ -394,7 +441,7 @@ class PlaylistLoader extends EventHandler {
             }
         }
         //logger.log('found ' + level.fragments.length + ' fragments');
-        if (frag && !(frag.url || frag.relurl)) {
+        if (frag && !frag.relurl) {
             level.fragments.pop();
             totalduration -= frag.duration;
         }
