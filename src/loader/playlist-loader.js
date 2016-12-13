@@ -16,10 +16,11 @@ const LEVEL_PLAYLIST_REGEX = /(?:#EXT(INF): *(\d*(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)
 
 class Fragment {
 
-  constructor (state) {
+  constructor(state) {
     Object.assign(this, state);
     this._url = null;
     this._byteRange = null;
+    this._decryptdata = null;
   }
 
   get url() {
@@ -40,7 +41,7 @@ class Fragment {
     return this._programDateTime;
   }
 
-  get byteRange () {
+  get byteRange() {
     if (!this._byteRange) {
       this._byteRange = [];
       if (this.rawByteRange) {
@@ -56,19 +57,60 @@ class Fragment {
     return this._byteRange;
   }
 
-  get byteRangeStartOffset () {
+  get byteRangeStartOffset() {
     return this.byteRange[0];
   }
 
-  get byteRangeEndOffset () {
+  get byteRangeEndOffset() {
     return this.byteRange[1];
   }
 
+  get decryptdata() {
+    if (!this._decryptdata) {
+      this._decryptdata = this.fragmentDecryptdataFromLevelkey(this.levelkey, this.sn);
+    }
+    return this._decryptdata;
+  }
+
+  /**
+   * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
+   * @returns {Uint8Array}
+   */
+  createInitializationVector(segmentNumber) {
+    var uint8View = new Uint8Array(16);
+
+    for (var i = 12; i < 16; i++) {
+      uint8View[i] = (segmentNumber >> 8 * (15 - i)) & 0xff;
+    }
+
+    return uint8View;
+  }
+
+  /**
+   * Utility method for parseLevelPlaylist to get a fragment's decryption data from the currently parsed encryption key data
+   * @param levelkey - a playlist's encryption info
+   * @param segmentNumber - the fragment's segment number
+   * @returns {*} - an object to be applied as a fragment's decryptdata
+   */
+  fragmentDecryptdataFromLevelkey(levelkey, segmentNumber) {
+    var decryptdata = levelkey;
+
+    if (levelkey && levelkey.method && levelkey.uri && !levelkey.iv) {
+      decryptdata = this.cloneObj(levelkey);
+      decryptdata.iv = this.createInitializationVector(segmentNumber);
+    }
+
+    return decryptdata;
+  }
+
+  cloneObj(obj) {
+    return JSON.parse(JSON.stringify(obj));
+  }
 }
 
 class LevelKey {
 
-  constructor () {
+  constructor() {
     this.method = null;
     this.key = null;
     this.iv = null;
@@ -220,36 +262,6 @@ class PlaylistLoader extends EventHandler {
     }
     return medias;
   }
-  /**
-   * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
-   * @returns {Uint8Array}
-   */
-  createInitializationVector (segmentNumber) {
-    var uint8View = new Uint8Array(16);
-
-    for (var i = 12; i < 16; i++) {
-      uint8View[i] = (segmentNumber >> 8 * (15 - i)) & 0xff;
-    }
-
-    return uint8View;
-  }
-
-  /**
-   * Utility method for parseLevelPlaylist to get a fragment's decryption data from the currently parsed encryption key data
-   * @param levelkey - a playlist's encryption info
-   * @param segmentNumber - the fragment's segment number
-   * @returns {*} - an object to be applied as a fragment's decryptdata
-   */
-  fragmentDecryptdataFromLevelkey (levelkey, segmentNumber) {
-    var decryptdata = levelkey;
-
-    if (levelkey && levelkey.method && levelkey.uri && !levelkey.iv) {
-      decryptdata = this.cloneObj(levelkey);
-      decryptdata.iv = this.createInitializationVector(segmentNumber);
-    }
-
-    return decryptdata;
-  }
 
   avc1toavcoti(codec) {
     var result, avcdata = codec.split('.');
@@ -263,13 +275,8 @@ class PlaylistLoader extends EventHandler {
     return result;
   }
 
-  cloneObj(obj) {
-    return JSON.parse(JSON.stringify(obj));
-  }
-
   parseLevelPlaylist(string, baseurl, id, type) {
     var currentSN = 0,
-        fragdecryptdata,
         totalduration = 0,
         level = {type: null, version: null, url: baseurl, fragments: [], live: true, startSN: 0},
         levelkey = {method : null, key : null, iv : null, uri : null},
@@ -332,19 +339,18 @@ class PlaylistLoader extends EventHandler {
         case '': // url
           if (!isNaN(duration)) {
             var sn = currentSN++;
-            fragdecryptdata = this.fragmentDecryptdataFromLevelkey(levelkey, sn);
             frag = new Fragment({type : type,
                     prevFrag: frag,
                     duration: duration,
                     title: title,
                     start: totalduration,
+                    levelkey: levelkey,
                     sn: sn,
                     level: id,
                     cc: cc,
                     baseurl: baseurl,
                     relurl: value1,
                     rawByteRange: rawByteRange,
-                    decryptdata : fragdecryptdata,
                     rawProgramDateTime: rawProgramDateTime,
                     tagList: tagList});
             level.fragments.push(frag);
