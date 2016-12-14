@@ -36,7 +36,7 @@ class Fragment {
 
   get programDateTime() {
     if (!this._programDateTime && this.rawProgramDateTime) {
-      this._programDateTime = new Date(Date.parse(this.rawProgramDateTime))
+      this._programDateTime = new Date(Date.parse(this.rawProgramDateTime));
     }
     return this._programDateTime;
   }
@@ -290,8 +290,7 @@ class PlaylistLoader extends EventHandler {
         title = null,
         rawByteRange = null,
         tagList = [],
-        i,
-        config = this.hls.config;
+        i;
 
     LEVEL_PLAYLIST_REGEX.lastIndex = 0;
 
