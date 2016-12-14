@@ -173,7 +173,7 @@ var logger = {
     log : function(severity, msg) {
         var minLevel = this.verboseFilter[severity];
         if (this.verboseLevel >= minLevel) {
-            console.log(this.time + ' [' + severity + '] ' + msg);
+            console.log(this.time.toFixed(3) + ' [' + severity + '] ' + msg);
         }
     }
 };
@@ -366,7 +366,7 @@ class Row {
         }
         var char = getCharForByte(byte);
         if (this.pos >= NR_COLS) {
-            logger.log('ERROR', 'Cannot insert ' + byte.toString(16) +
+            logger.log('WARNING', 'Cannot insert ' + byte.toString(16) +
                         ' (' + char + ') at position ' + this.pos + '. Skipping it!');
             return;
         }
