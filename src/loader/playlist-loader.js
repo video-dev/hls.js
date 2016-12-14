@@ -341,11 +341,11 @@ class PlaylistLoader extends EventHandler {
               break;
             }
           }
-          const key = result[i];
+
           value1 = result[i+1];
           value2 = result[i+2];
 
-          switch (key) {
+          switch (result[i]) {
             case '#':
               frag.tagList.push(value2 ? [ value1,value2 ] : [ value1 ]);
               break;
@@ -368,7 +368,7 @@ class PlaylistLoader extends EventHandler {
               break;
             case 'DIS':
               cc++;
-              frag.tagList.push([key]);
+              frag.tagList.push(['DIS']);
               break;
             case 'DISCONTINUITY-SEQ':
               cc = parseInt(value1);
