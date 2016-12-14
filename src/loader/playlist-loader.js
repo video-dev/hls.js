@@ -12,7 +12,7 @@ import {logger} from '../utils/logger';
 // https://regex101.com is your friend
 const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
-const LEVEL_PLAYLIST_REGEX = /(?:#EXT(INF): *(\d*(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
+const LEVEL_PLAYLIST_REGEX = /(?:#EXT(INF): *(\d*(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
 
 class Fragment {
 
@@ -135,7 +135,6 @@ class PlaylistLoader extends EventHandler {
       Event.LEVEL_LOADING,
       Event.AUDIO_TRACK_LOADING);
     this.loaders = {};
-    this.createTagList = options && options.createTagList;
   }
 
   destroy() {
@@ -283,14 +282,12 @@ class PlaylistLoader extends EventHandler {
         level = {type: null, version: null, url: baseurl, fragments: [], live: true, startSN: 0},
         levelkey = new LevelKey(),
         cc = 0,
-        rawProgramDateTime = null,
-        frag = null,
+        prevFrag = null,
+        frag = new Fragment(),
         result,
-        duration = null,
-        title = null,
-        rawByteRange = null,
-        tagList = this.createTagList ? [] : undefined,
         i;
+
+    frag.tagList = [];
 
     LEVEL_PLAYLIST_REGEX.lastIndex = 0;
 
@@ -324,43 +321,37 @@ class PlaylistLoader extends EventHandler {
           break;
         case 'DIS':
           cc++;
-          tagList && tagList.push([key]);
+          frag.tagList.push([key]);
           break;
         case 'DISCONTINUITY-SEQ':
           cc = parseInt(value1);
           break;
         case 'BYTERANGE':
-          rawByteRange = value1;
+          frag.rawByteRange = value1;
           break;
         case 'INF':
-          duration = parseFloat(value1);
-          title = value2 ? value2 : null;
-          tagList && tagList.push(value2 ? [ key,value1,value2 ] : [ key,value1 ]);
+          frag.duration = parseFloat(value1);
+          frag.title = value2 ? value2 : null;
+          frag.tagList.push(value2 ? [ key,value1,value2 ] : [ key,value1 ]);
           break;
         case '': // url
-          if (!isNaN(duration)) {
+          if (!isNaN(frag.duration)) {
             var sn = currentSN++;
-            frag = new Fragment({type : type,
-                    prevFrag: frag,
-                    duration: duration,
-                    title: title,
+            Object.assign(frag, {type : type,
+                    prevFrag: prevFrag,
                     start: totalduration,
                     levelkey: levelkey,
                     sn: sn,
                     level: id,
                     cc: cc,
                     baseurl: baseurl,
-                    relurl: value1,
-                    rawByteRange: rawByteRange,
-                    rawProgramDateTime: rawProgramDateTime,
-                    tagList: tagList});
+                    relurl: value1});
             level.fragments.push(frag);
-            totalduration += duration;
-            duration = null;
-            title = null;
-            rawByteRange = null;
-            rawProgramDateTime = null;
-            tagList = tagList && [];
+            prevFrag = frag;
+            totalduration += frag.duration;
+
+            frag = new Fragment();
+            frag.tagList = [];
           }
           break;
         case 'KEY':
@@ -393,17 +384,18 @@ class PlaylistLoader extends EventHandler {
           }
           break;
         case 'PROGRAM-DATE-TIME':
-          rawProgramDateTime = value1;
-          tagList && tagList.push([key, value1]);
+          frag.rawProgramDateTime = value1;
+          frag.tagList.push([key, value1]);
           break;
         case '#':
-          tagList && tagList.push(value2 ? [ value1,value2 ] : [ value1 ]);
+          frag.tagList.push(value2 ? [ value1,value2 ] : [ value1 ]);
           break;
         default:
           logger.warn(`line parsed but not handled: ${result}`);
           break;
       }
     }
+    frag = prevFrag;
     //logger.log('found ' + level.fragments.length + ' fragments');
     if(frag && !frag.relurl) {
       level.fragments.pop();
