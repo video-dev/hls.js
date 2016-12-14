@@ -522,7 +522,7 @@ http://dummy.url.com/hls/live/segment/segment_022916_164500865_719933.ts
 http://dummy.url.com/hls/live/segment/segment_022916_164500865_719934.ts
 #EXTINF:9.25,
 http://dummy.url.com/hls/live/segment/segment_022916_164500865_719935.ts`;
-    var result = new PlaylistLoader({on: function () { }}, { createTagList: true }).parseLevelPlaylist(level, 'http://dummy.url.com/playlist.m3u8', 0);
+    var result = new PlaylistLoader({on: function () { }}).parseLevelPlaylist(level, 'http://dummy.url.com/playlist.m3u8', 0);
     assert.strictEqual(result.fragments.length, 10);
     assert.strictEqual(result.totalduration, 84.94);
     assert.strictEqual(result.targetduration, 10);
