@@ -13,6 +13,7 @@ class TimelineController extends EventHandler {
         super(
             hls,
             Event.MEDIA_ATTACHING,
+            Event.MEDIA_DETACHING,
             Event.FRAG_PARSING_USERDATA,
             Event.MANIFEST_LOADING,
             Event.MANIFEST_LOADED,
@@ -110,7 +111,7 @@ class TimelineController extends EventHandler {
 
         if (!cuesAdded) {
             this.Cues.newCue(this[channel], startTime, endTime, screen);
-            addedCues[key] = endTime;
+            addedCues[key] = true;
         }
     }
 
@@ -127,6 +128,14 @@ class TimelineController extends EventHandler {
                 this.onFragLoaded(frag);
             });
             this.unparsedVttFrags = [];
+        }
+    }
+
+    clearCurrentCues(track) {
+        if (track && track.cues) {
+            while (track.cues.length > 0) {
+                track.removeCue(track.cues[0]);
+            }
         }
     }
 
@@ -166,6 +175,12 @@ class TimelineController extends EventHandler {
         this.media = data.media;
     }
 
+    onMediaDetaching() {
+        this.clearCurrentCues(this.textTrack1);
+        this.clearCurrentCues(this.textTrack2);
+        this.addedCues = {};
+    }
+
     onManifestLoading() {
         this.lastSn = -1; // Detect discontiguity in fragment parsing
         this.lastDiscontinuity = { cc: 0, start: 0, new: false }; // Detect discontinuity in subtitle manifests
@@ -202,6 +217,9 @@ class TimelineController extends EventHandler {
 
     onLevelSwitch() {
         this.enabled = this.hls.currentLevel.closedCaptions !== 'NONE';
+        this.clearCurrentCues(this.textTrack1);
+        this.clearCurrentCues(this.textTrack2);
+        this.addedCues = {};
     }
 
     onFragLoaded(data) {
