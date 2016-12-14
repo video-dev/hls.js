@@ -12,12 +12,27 @@ import { logger } from '../utils/logger';
 // https://regex101.com is your friend
 const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
-const LEVEL_PLAYLIST_REGEX_FAST = /(?:#EXT(INF): *(\d*(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:(#)(.*)))(?:.*)\r?\n?/g;
-const LEVEL_PLAYLIST_REGEX_SLOW = /(?:#EXT(INF): *(\d*(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
+const LEVEL_PLAYLIST_REGEX_FAST = /#EXTINF: *([^,]+),?(.*)|(?!#)(\S.+)|#EXT-X-BYTERANGE: *(.+)|#EXT-X-PROGRAM-DATE-TIME:(.+)|(#.*)/g;
+const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
+
+class LevelKey {
+    constructor() {
+        this.method = null;
+        this.key = null;
+        this.iv = null;
+        this._uri = null;
+    }
+
+    get uri() {
+        if (!this._uri && this.reluri) {
+            this._uri = URLToolkit.buildAbsoluteURL(this.baseuri, this.reluri);
+        }
+        return this._uri;
+    }
+}
 
 class Fragment {
-    constructor(state) {
-        Object.assign(this, state);
+    constructor() {
         this._url = null;
         this._byteRange = null;
         this._decryptdata = null;
@@ -119,24 +134,8 @@ class Fragment {
     }
 }
 
-class LevelKey {
-    constructor() {
-        this.method = null;
-        this.key = null;
-        this.iv = null;
-        this._uri = null;
-    }
-
-    get uri() {
-        if (!this._uri && this.reluri) {
-            this._uri = URLToolkit.buildAbsoluteURL(this.baseuri, this.reluri);
-        }
-        return this._uri;
-    }
-}
-
 class PlaylistLoader extends EventHandler {
-    constructor(hls, options) {
+    constructor(hls) {
         super(
             hls,
             Event.MANIFEST_LOADING,
@@ -332,22 +331,18 @@ class PlaylistLoader extends EventHandler {
                     break;
                 }
             }
-            let key = result[i],
-                value1 = result[i + 1],
-                value2 = result[i + 2];
+            let value1 = result[i],
+                value2 = result[i + 1];
 
-            switch (key) {
-                case 'BYTERANGE':
-                    frag.rawByteRange = value1;
-                    break;
-                case 'INF':
+            switch (i) {
+                case 1: // INF
                     frag.duration = parseFloat(value1);
                     frag.title = value2 ? value2 : null;
                     frag.tagList.push(
-                        value2 ? [key, value1, value2] : [key, value1]
+                        value2 ? ['INF', value1, value2] : ['INF', value1]
                     );
                     break;
-                case '': // url
+                case 3: // url
                     if (!isNaN(frag.duration)) {
                         var sn = currentSN++;
                         Object.assign(frag, {
@@ -369,23 +364,25 @@ class PlaylistLoader extends EventHandler {
                         frag.tagList = [];
                     }
                     break;
-                case 'PROGRAM-DATE-TIME':
-                    frag.rawProgramDateTime = value1;
-                    frag.tagList.push([key, value1]);
+                case 4: // X-BYTERANGE
+                    frag.rawByteRange = value1;
                     break;
-                default: {
-                    LEVEL_PLAYLIST_REGEX_SLOW.lastIndex = 0;
-                    result = LEVEL_PLAYLIST_REGEX_SLOW.exec(result[0]);
+                case 5: // PROGRAM-DATE-TIME
+                    frag.rawProgramDateTime = value1;
+                    frag.tagList.push(['PROGRAM-DATE-TIME', value1]);
+                    break;
+                case 6:
+                    result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
                     for (i = 1; i < result.length; i++) {
                         if (result[i] !== undefined) {
                             break;
                         }
                     }
-                    key = result[i];
+
                     value1 = result[i + 1];
                     value2 = result[i + 2];
 
-                    switch (key) {
+                    switch (result[i]) {
                         case '#':
                             frag.tagList.push(
                                 value2 ? [value1, value2] : [value1]
@@ -410,7 +407,7 @@ class PlaylistLoader extends EventHandler {
                             break;
                         case 'DIS':
                             cc++;
-                            frag.tagList.push([key]);
+                            frag.tagList.push(['DIS']);
                             break;
                         case 'DISCONTINUITY-SEQ':
                             cc = parseInt(value1);
@@ -454,7 +451,10 @@ class PlaylistLoader extends EventHandler {
                             );
                             break;
                     }
-                }
+                    break;
+                default:
+                    logger.warn(`line parsed but not handled: ${result}`);
+                    break;
             }
         }
         frag = prevFrag;
