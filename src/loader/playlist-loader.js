@@ -129,12 +129,13 @@ class LevelKey {
 
 class PlaylistLoader extends EventHandler {
 
-  constructor(hls) {
+  constructor(hls, options) {
     super(hls,
       Event.MANIFEST_LOADING,
       Event.LEVEL_LOADING,
       Event.AUDIO_TRACK_LOADING);
     this.loaders = {};
+    this.createTagList = options && options.createTagList;
   }
 
   destroy() {
@@ -288,7 +289,7 @@ class PlaylistLoader extends EventHandler {
         duration = null,
         title = null,
         rawByteRange = null,
-        tagList = [],
+        tagList = this.createTagList ? [] : undefined,
         i;
 
     LEVEL_PLAYLIST_REGEX.lastIndex = 0;
@@ -323,7 +324,7 @@ class PlaylistLoader extends EventHandler {
           break;
         case 'DIS':
           cc++;
-          tagList.push([key]);
+          tagList && tagList.push([key]);
           break;
         case 'DISCONTINUITY-SEQ':
           cc = parseInt(value1);
@@ -334,7 +335,7 @@ class PlaylistLoader extends EventHandler {
         case 'INF':
           duration = parseFloat(value1);
           title = value2 ? value2 : null;
-          tagList.push(value2 ? [ key,value1,value2 ] : [ key,value1 ]);
+          tagList && tagList.push(value2 ? [ key,value1,value2 ] : [ key,value1 ]);
           break;
         case '': // url
           if (!isNaN(duration)) {
@@ -359,7 +360,7 @@ class PlaylistLoader extends EventHandler {
             title = null;
             rawByteRange = null;
             rawProgramDateTime = null;
-            tagList = [];
+            tagList = tagList && [];
           }
           break;
         case 'KEY':
@@ -393,10 +394,10 @@ class PlaylistLoader extends EventHandler {
           break;
         case 'PROGRAM-DATE-TIME':
           rawProgramDateTime = value1;
-          tagList.push([key, value1]);
+          tagList && tagList.push([key, value1]);
           break;
         case '#':
-          tagList.push(value2 ? [ value1,value2 ] : [ value1 ]);
+          tagList && tagList.push(value2 ? [ value1,value2 ] : [ value1 ]);
           break;
         default:
           logger.warn(`line parsed but not handled: ${result}`);
