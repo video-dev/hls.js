@@ -15,6 +15,24 @@ const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 const LEVEL_PLAYLIST_REGEX_FAST = /#EXTINF: *([^,]+),?(.*)|#EXT-X-BYTERANGE: *(.+)|#EXT-X-PROGRAM-DATE-TIME:(.+)|#.*|(\S.+)/g;
 const LEVEL_PLAYLIST_REGEX_SLOW = /(?:#EXT(INF): *(\d*(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
 
+class LevelKey {
+
+  constructor() {
+    this.method = null;
+    this.key = null;
+    this.iv = null;
+    this._uri = null;
+  }
+
+  get uri() {
+    if (!this._uri && this.reluri) {
+      this._uri = URLToolkit.buildAbsoluteURL(this.baseuri, this.reluri);
+    }
+    return this._uri;
+  }
+
+}
+
 class Fragment {
 
   constructor() {
@@ -109,27 +127,9 @@ class Fragment {
   }
 }
 
-class LevelKey {
-
-  constructor() {
-    this.method = null;
-    this.key = null;
-    this.iv = null;
-    this._uri = null;
-  }
-
-  get uri() {
-    if (!this._uri && this.reluri) {
-      this._uri = URLToolkit.buildAbsoluteURL(this.baseuri, this.reluri);
-    }
-    return this._uri;
-  }
-
-}
-
 class PlaylistLoader extends EventHandler {
 
-  constructor(hls, options) {
+  constructor(hls) {
     super(hls,
       Event.MANIFEST_LOADING,
       Event.LEVEL_LOADING,
@@ -292,7 +292,7 @@ class PlaylistLoader extends EventHandler {
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
 
     while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
-      for (i = 1;  i < result.length; i++) {
+      for (i = 1; i < result.length; i++) {
         if (result[i] !== undefined) {
           break;
         }
@@ -333,7 +333,7 @@ class PlaylistLoader extends EventHandler {
             frag.tagList = [];
           }
           break;
-        default: {
+        default:
           LEVEL_PLAYLIST_REGEX_SLOW.lastIndex = 0;
           result = LEVEL_PLAYLIST_REGEX_SLOW.exec(result[0]);
           for (i = 1; i < result.length; i++) {
@@ -406,7 +406,6 @@ class PlaylistLoader extends EventHandler {
               logger.warn(`line parsed but not handled: ${result}`);
               break;
           }
-        }
       }
     }
     frag = prevFrag;
