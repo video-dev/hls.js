@@ -17,8 +17,7 @@ const LEVEL_PLAYLIST_REGEX_SLOW = /(?:#EXT(INF): *(\d*(?:\.\d+)?)(?:,(.*))?)|(?:
 
 class Fragment {
 
-  constructor(state) {
-    Object.assign(this, state);
+  constructor() {
     this._url = null;
     this._byteRange = null;
     this._decryptdata = null;
