@@ -54,7 +54,7 @@ class TimelineController extends EventHandler {
           {
             //Enable reuse of existing text track.
             var existingTrack1 = self.getExistingTrack('1');
-            if(!existingTrack1)
+            if (!existingTrack1)
             {
               self.textTrack1 = self.createTextTrack('captions', 'English', 'en');
               self.textTrack1.textTrack1 = true;
@@ -67,10 +67,7 @@ class TimelineController extends EventHandler {
               sendAddTrackEvent(self.textTrack1, self.media);
             }
           }
-          if (!self.addedCues['1' + startTime]) {
-            self.Cues.newCue(self.textTrack1, startTime, endTime, screen);
-            self.addedCues['1' + startTime] = endTime;
-          }
+          self.addCues('textTrack1', startTime, endTime, screen);
         }
       };
 
@@ -82,7 +79,7 @@ class TimelineController extends EventHandler {
           {
             //Enable reuse of existing text track.
             var existingTrack2 = self.getExistingTrack('2');
-            if(!existingTrack2)
+            if (!existingTrack2)
             {
               self.textTrack2 = self.createTextTrack('captions', 'Spanish', 'es');
               self.textTrack2.textTrack2 = true;
@@ -94,10 +91,7 @@ class TimelineController extends EventHandler {
               sendAddTrackEvent(self.textTrack2, self.media);
             }
           }
-          if (!self.addedCues['2' + startTime]) {
-            self.Cues.newCue(self.textTrack2, startTime, endTime, screen);
-            self.addedCues['2' + startTime] = endTime;
-          }
+          self.addCues('textTrack2', startTime, endTime, screen);
         }
       };
 
@@ -105,15 +99,33 @@ class TimelineController extends EventHandler {
     }
   }
 
+  addCues(channel, startTime, endTime, screen) {
+    let addedCues = this.addedCues[channel];
+
+    if (!addedCues) {
+      addedCues = this.addedCues[channel] = {};
+    }
+
+    // Fragment start times don't always align on level switches.
+    // Adding a tolerance of .05s ensures we don't add duplicate cues during a level switch.
+    let key = Math.floor(startTime * 20);
+    let cuesAdded = addedCues[key] || addedCues[key - 1] || addedCues[key + 1];
+
+    if (!cuesAdded) {
+      this.Cues.newCue(this[channel], startTime, endTime, screen);
+      addedCues[key] = endTime;
+    }
+  }
+
   // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
   onInitPtsFound(data) {
-    if(typeof this.initPTS === 'undefined') {
+    if (typeof this.initPTS === 'undefined') {
       this.initPTS = data.initPTS;
     }
 
     // Due to asynchrony, initial PTS may arrive later than the first VTT fragments are loaded.
     // Parse any unparsed fragments upon receiving the initial PTS.
-    if(this.unparsedVttFrags.length) {
+    if (this.unparsedVttFrags.length) {
       this.unparsedVttFrags.forEach(frag => {
         this.onFragLoaded(frag);
       });
