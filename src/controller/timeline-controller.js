@@ -8,6 +8,22 @@ import Cea608Parser from '../utils/cea-608-parser';
 import WebVTTParser from '../utils/webvtt-parser';
 import {logger} from '../utils/logger';
 
+function clearCurrentCues(track) {
+  if (track && track.cues) {
+    while (track.cues.length > 0) {
+      track.removeCue(track.cues[0]);
+    }
+  }
+}
+
+function reuseVttTextTrack(inUseTrack, manifestTrack) {
+  return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
+}
+
+function intersection(x1, x2, y1, y2) {
+  return Math.min(x2, y2) - Math.max(x1, y1);
+}
+
 class TimelineController extends EventHandler {
 
   constructor(hls) {
@@ -28,7 +44,8 @@ class TimelineController extends EventHandler {
     this.tracks = [];
     this.unparsedVttFrags = [];
     this.initPTS = undefined;
-    this.addedCues = {};
+    this.cueRanges = [];
+    this.cueRanges[0] = this.currentCueRange = [];
 
     if (this.config.enableCEA708Captions)
     {
@@ -90,21 +107,24 @@ class TimelineController extends EventHandler {
   }
 
   addCues(channel, startTime, endTime, screen) {
-    let addedCues = this.addedCues[channel];
-
-    if (!addedCues) {
-      addedCues = this.addedCues[channel] = {};
+    // skip cues which overlap more than 50% with previously parsed time ranges
+    const ranges = this.cueRanges;
+    for (let i = ranges.length; i--;) {
+      let cueRange = ranges[i];
+      if (cueRange.length) {
+        let overlap = intersection(cueRange[0], cueRange[1], startTime, endTime);
+        if (overlap && (overlap / (endTime - startTime)) > 0.5) {
+          return;
+        }
+      }
     }
-
-    // Fragment start times don't always align on level switches.
-    // Adding a tolerance of .05s ensures we don't add duplicate cues during a level switch.
-    let key = Math.floor(startTime * 20);
-    let cuesAdded = addedCues[key] || addedCues[key - 1] || addedCues[key + 1];
-
-    if (!cuesAdded) {
-      this.Cues.newCue(this[channel], startTime, endTime, screen);
-      addedCues[key] = true;
+    // create/update current appended cue range
+    let currentRange = this.currentCueRange;
+    if (!currentRange.length) {
+      currentRange[0] = startTime;
     }
+    currentRange[1] = endTime;
+    this.Cues.newCue(this[channel], startTime, endTime, screen);
   }
 
   // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
@@ -123,24 +143,13 @@ class TimelineController extends EventHandler {
     }
   }
 
-  clearCurrentCues(track) {
-    if (track && track.cues) {
-      while (track.cues.length > 0) {
-        track.removeCue(track.cues[0]);
-      }
-    }
-  }
-
   getExistingTrack(channelNumber) {
     let media = this.media;
-    if (media)
-    {
-      for (let i = 0; i < media.textTracks.length; i++)
-      {
+    if (media) {
+      for (let i = 0; i < media.textTracks.length; i++) {
         let textTrack = media.textTracks[i];
         let propName = 'textTrack' + channelNumber;
-        if (textTrack[propName] === true)
-        {
+        if (textTrack[propName] === true) {
           return textTrack;
         }
       }
@@ -155,10 +164,6 @@ class TimelineController extends EventHandler {
     }
   }
 
-  reuseVttTextTrack(inUseTrack, manifestTrack) {
-    return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
-  }
-
   destroy() {
     EventHandler.prototype.destroy.call(this);
   }
@@ -168,9 +173,8 @@ class TimelineController extends EventHandler {
   }
 
   onMediaDetaching() {
-    this.clearCurrentCues(this.textTrack1);
-    this.clearCurrentCues(this.textTrack2);
-    this.addedCues = {};
+    clearCurrentCues(this.textTrack1);
+    clearCurrentCues(this.textTrack2);
   }
 
   onManifestLoading()
@@ -183,7 +187,8 @@ class TimelineController extends EventHandler {
     this.textTracks = [];
     this.unparsedVttFrags = this.unparsedVttFrags || [];
     this.initPTS = undefined;
-    this.addedCues = {};
+    this.cueRanges.length = 0;
+    this.cueRanges[0] = this.currentCueRange = [];
 
     if (this.config.enableWebVTT) {
       this.tracks = data.subtitles || [];
@@ -193,7 +198,7 @@ class TimelineController extends EventHandler {
         let textTrack;
         const inUseTrack = inUseTracks[index];
         // Reuse tracks with the same label, but do not reuse 608/708 tracks
-        if (this.reuseVttTextTrack(inUseTrack, track)) {
+        if (reuseVttTextTrack(inUseTrack, track)) {
           textTrack = inUseTrack;
         } else {
           textTrack = this.createTextTrack('subtitles', track.name, track.lang);
@@ -206,9 +211,6 @@ class TimelineController extends EventHandler {
 
   onLevelSwitch() {
     this.enabled = this.hls.currentLevel.closedCaptions !== 'NONE';
-    this.clearCurrentCues(this.textTrack1);
-    this.clearCurrentCues(this.textTrack2);
-    this.addedCues = {};
   }
 
   onFragLoaded(data) {
@@ -217,6 +219,11 @@ class TimelineController extends EventHandler {
       // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
       if (sn !== this.lastSn + 1) {
         this.cea608Parser.reset();
+        if (this.currentCueRange.length) {
+          let currentCueRange = [];
+          this.currentCueRange = currentCueRange;
+          this.cueRanges.push(currentCueRange);
+        }
       }
       this.lastSn = sn;
     }
@@ -226,7 +233,6 @@ class TimelineController extends EventHandler {
         // We need an initial synchronisation PTS. Store fragments as long as none has arrived.
         if (typeof this.initPTS === 'undefined') {
           this.unparsedVttFrags.push(data);
-          logger.log(`timelineController: Tried to parse WebVTT frag without PTS. Saving frag for later...`);
           return;
         }
 
@@ -261,10 +267,8 @@ class TimelineController extends EventHandler {
   onFragParsingUserdata(data) {
     // push all of the CEA-708 messages into the interpreter
     // immediately. It will create the proper timestamps based on our PTS value
-    if (this.enabled && this.config.enableCEA708Captions)
-    {
-      for (var i=0; i<data.samples.length; i++)
-      {
+    if (this.enabled && this.config.enableCEA708Captions) {
+      for (var i=0; i<data.samples.length; i++) {
         var ccdatas = this.extractCea608Data(data.samples[i].bytes);
         this.cea608Parser.addData(data.samples[i].pts, ccdatas);
       }
