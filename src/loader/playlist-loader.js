@@ -12,7 +12,7 @@ import {logger} from '../utils/logger';
 // https://regex101.com is your friend
 const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
-const LEVEL_PLAYLIST_REGEX_FAST = /#EXTINF: *([^,]+),?(.*)|#EXT-X-BYTERANGE: *(.+)|#EXT-X-PROGRAM-DATE-TIME:(.+)|(#.*)|(\S.+)/g;
+const LEVEL_PLAYLIST_REGEX_FAST = /#EXTINF: *([^,]+),?(.*)|(?!#)(\S.+)|#EXT-X-BYTERANGE: *(.+)|#EXT-X-PROGRAM-DATE-TIME:(.+)|(#.*)/g;
 const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
 
 class LevelKey {
@@ -306,14 +306,34 @@ class PlaylistLoader extends EventHandler {
           frag.title = value2 ? value2 : null;
           frag.tagList.push(value2 ? [ 'INF',value1,value2 ] : [ 'INF',value1 ]);
           break;
-        case 3: // X-BYTERANGE
+        case 3: // url
+          if (!isNaN(frag.duration)) {
+            var sn = currentSN++;
+            Object.assign(frag, {type : type,
+                    prevFrag: prevFrag,
+                    start: totalduration,
+                    levelkey: levelkey,
+                    sn: sn,
+                    level: id,
+                    cc: cc,
+                    baseurl: baseurl,
+                    relurl: value1});
+            level.fragments.push(frag);
+            prevFrag = frag;
+            totalduration += frag.duration;
+
+            frag = new Fragment();
+            frag.tagList = [];
+          }
+          break;
+        case 4: // X-BYTERANGE
           frag.rawByteRange = value1;
           break;
-        case 4: // PROGRAM-DATE-TIME
+        case 5: // PROGRAM-DATE-TIME
           frag.rawProgramDateTime = value1;
           frag.tagList.push(['PROGRAM-DATE-TIME', value1]);
           break;
-        case 5: // url
+        case 6:
           result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
           for (i = 1; i < result.length; i++) {
             if (result[i] !== undefined) {
@@ -384,26 +404,6 @@ class PlaylistLoader extends EventHandler {
             default:
               logger.warn(`line parsed but not handled: ${result}`);
               break;
-          }
-          break;
-        case 6:
-          if (!isNaN(frag.duration)) {
-            var sn = currentSN++;
-            Object.assign(frag, {type : type,
-                    prevFrag: prevFrag,
-                    start: totalduration,
-                    levelkey: levelkey,
-                    sn: sn,
-                    level: id,
-                    cc: cc,
-                    baseurl: baseurl,
-                    relurl: value1});
-            level.fragments.push(frag);
-            prevFrag = frag;
-            totalduration += frag.duration;
-
-            frag = new Fragment();
-            frag.tagList = [];
           }
           break;
         default:
