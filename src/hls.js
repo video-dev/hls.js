@@ -119,7 +119,8 @@ class Hls {
           abrBandWidthUpFactor : 0.7,
           maxStarvationDelay : 4,
           maxLoadingDelay : 4,
-          minAutoBitrate: 0
+          minAutoBitrate: 0,
+          proxy: false
         };
     }
     return Hls.defaultConfig;

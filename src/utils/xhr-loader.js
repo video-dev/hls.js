@@ -7,6 +7,10 @@ import {logger} from '../utils/logger';
 class XhrLoader {
 
   constructor(config) {
+    if (config) {
+      this.proxy = config.proxy;
+    }
+
     if (config && config.xhrSetup) {
       this.xhrSetup = config.xhrSetup;
     }
@@ -50,6 +54,11 @@ class XhrLoader {
 
     xhr.onreadystatechange = this.readystatechange.bind(this);
     xhr.onprogress = this.loadprogress.bind(this);
+
+    // reconfigure url for proxy
+    if (typeof this.proxy === 'string') {
+      context.url = this.proxy + '?url=' + encodeURIComponent(context.url);
+    }
 
     xhr.open('GET', context.url, true);
 
