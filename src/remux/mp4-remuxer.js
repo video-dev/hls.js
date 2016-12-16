@@ -379,7 +379,21 @@ class MP4Remuxer {
 
         /* concatenate the video data and construct the mdat in place
       (need 8 more bytes to fill length and mpdat type) */
-        mdat = new Uint8Array(track.len + 4 * track.nbNalu + 8);
+        let mdatSize = track.len + 4 * track.nbNalu + 8;
+        try {
+            mdat = new Uint8Array(mdatSize);
+        } catch (err) {
+            this.observer.trigger(Event.ERROR, {
+                type: ErrorTypes.MUX_ERROR,
+                level: this.level,
+                id: this.id,
+                details: ErrorDetails.REMUX_ALLOC_ERROR,
+                fatal: false,
+                bytes: mdatSize,
+                reason: `fail allocating video mdat ${mdatSize}`
+            });
+            return;
+        }
         let view = new DataView(mdat.buffer);
         view.setUint32(0, mdat.byteLength);
         mdat.set(MP4.types.mdat, 4);
@@ -712,10 +726,23 @@ class MP4Remuxer {
                 if (track.len > 0) {
                     /* concatenate the audio data and construct the mdat in place
             (need 8 more bytes to fill length and mdat type) */
-                    if (rawMPEG) {
-                        mdat = new Uint8Array(track.len);
-                    } else {
-                        mdat = new Uint8Array(track.len + 8);
+
+                    let mdatSize = rawMPEG ? track.len : track.len + 8;
+                    try {
+                        mdat = new Uint8Array(mdatSize);
+                    } catch (err) {
+                        this.observer.trigger(Event.ERROR, {
+                            type: ErrorTypes.MUX_ERROR,
+                            level: this.level,
+                            id: this.id,
+                            details: ErrorDetails.REMUX_ALLOC_ERROR,
+                            fatal: false,
+                            bytes: mdatSize,
+                            reason: `fail allocating audio mdat ${mdatSize}`
+                        });
+                        return;
+                    }
+                    if (!rawMPEG) {
                         view = new DataView(mdat.buffer);
                         view.setUint32(0, mdat.byteLength);
                         mdat.set(MP4.types.mdat, 4);
