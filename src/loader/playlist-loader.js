@@ -268,7 +268,7 @@ class PlaylistLoader extends EventHandler {
           tagList.push(value2 ? [ key,value1,value2 ] : [ key,value1 ]);
           break;
         case '': // url
-          if (!isNaN(duration)) {
+          if (duration && !isNaN(duration)) {//ignores fragments with duration zero
             var sn = currentSN++;
             fragdecryptdata = this.fragmentDecryptdataFromLevelkey(levelkey, sn);
             frag = {type : type,
