@@ -24,7 +24,8 @@ const WebVTTParser = {
     parse: function(
         vttByteArray,
         syncPTS,
-        discontinuity,
+        vttCCs,
+        cc,
         callBack,
         errorCallBack
     ) {
@@ -37,8 +38,8 @@ const WebVTTParser = {
             .split('\n');
         let cueTime = '00:00.000';
         let mpegTs = 0;
-        let offsetMillis = 0;
-        let discontinuityOffset = 0;
+        let localTime = 0;
+        let presentationTime = 0;
         let cues = [];
         let parsingError;
         let inHeader = true;
@@ -49,15 +50,32 @@ const WebVTTParser = {
 
         parser.oncue = function(cue) {
             // Adjust cue timing; clamp cues to start no earlier than - and drop cues that don't end after - 0 on timeline.
-            let offsetSecs = offsetMillis / 1000;
+            let currCC = vttCCs[cc];
 
-            if (discontinuity.new) {
-                discontinuityOffset = discontinuity.start - offsetSecs;
-                discontinuity.new = false;
+            if (currCC && currCC.new) {
+                // If we encounter a new discontinuity, update the discontinuity offset.
+                if (localTime) {
+                    // When local time is provided, the offset is the discontinuity start time
+                    vttCCs.ccOffset = currCC.start;
+                } else {
+                    // If we don't have local time, keep track of the time elapsed between discontinuities
+                    // where no cues are parsed
+                    let prevCC = vttCCs[currCC.prevCC];
+                    vttCCs.ccOffset +=
+                        currCC.start - (prevCC ? prevCC.start : 0);
+                }
+                currCC.new = false;
             }
-            cue.startTime =
-                discontinuityOffset + Math.max(0, cue.startTime + offsetSecs);
-            cue.endTime += discontinuityOffset + offsetSecs;
+
+            // Offset cue times by the start time of the current discontinuity
+            let cueOffset = vttCCs.ccOffset;
+            if (presentationTime && !localTime) {
+                // If we have MPEGTS but no LOCAL, we need to use the presentation time and add the discontinuity offset
+                cueOffset = presentationTime + vttCCs.ccOffset;
+            }
+
+            cue.startTime += cueOffset - localTime;
+            cue.endTime += cueOffset - localTime;
 
             // Fix encoding of special characters. TODO: Test with all sorts of weird characters.
             cue.text = decodeURIComponent(escape(cue.text));
@@ -102,10 +120,12 @@ const WebVTTParser = {
                         syncPTS = syncPTS < 0 ? syncPTS + 8589934592 : syncPTS;
                         // Adjust MPEGTS by sync PTS.
                         mpegTs -= syncPTS;
-                        // Calculate cue timing in milliseconds and adjust by MPEGTS converted to milliseconds from 90kHz.
-                        offsetMillis =
-                            cueString2millis(cueTime) + Math.floor(mpegTs / 90);
-                        if (offsetMillis === -1) {
+                        // Convert cue time to seconds
+                        localTime = cueString2millis(cueTime) / 1000;
+                        // Convert MPEGTS to seconds from 90kHz.
+                        presentationTime = mpegTs / 90000;
+
+                        if (localTime === -1) {
                             parsingError = new Error(
                                 `Malformed X-TIMESTAMP-MAP: ${line}`
                             );
