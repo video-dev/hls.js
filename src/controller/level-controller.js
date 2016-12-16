@@ -268,6 +268,9 @@ class LevelController extends EventHandler {
                 levelId = data.context.level;
                 levelError = true;
                 break;
+            case ErrorDetails.REMUX_ALLOC_ERROR:
+                levelId = data.level;
+                break;
             default:
                 break;
         }
