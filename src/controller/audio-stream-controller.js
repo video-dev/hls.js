@@ -186,18 +186,18 @@ class AudioStreamController extends EventHandler {
             break;
           }
 
-        // we just got done loading the final fragment, check if we need to finalize media stream
-        if (!audioSwitch && !trackDetails.live && fragPrevious && fragPrevious.sn === trackDetails.endSN) {
-            // if we are not seeking or if we are seeking but everything (almost) til the end is buffered, let's signal eos
-            // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference when switching
-            // between different renditions. using half frag duration should help cope with these cases.
-            if (!this.media.seeking || (this.media.duration-bufferEnd) < fragPrevious.duration/2) {
-            // Finalize the media stream
-            this.hls.trigger(Event.BUFFER_EOS,{ type : 'audio'});
-            this.state = State.ENDED;
-            break;
+          // we just got done loading the final fragment, check if we need to finalize media stream
+          if (!audioSwitch && !trackDetails.live && fragPrevious && fragPrevious.sn === trackDetails.endSN) {
+              // if we are not seeking or if we are seeking but everything (almost) til the end is buffered, let's signal eos
+              // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference when switching
+              // between different renditions. using half frag duration should help cope with these cases.
+              if (!this.media.seeking || (this.media.duration-bufferEnd) < fragPrevious.duration/2) {
+              // Finalize the media stream
+              this.hls.trigger(Event.BUFFER_EOS,{ type : 'audio'});
+              this.state = State.ENDED;
+              break;
+            }
           }
-        }
 
           // find fragment index, contiguous with end of buffer position
           let fragments = trackDetails.fragments,
@@ -232,32 +232,43 @@ class AudioStreamController extends EventHandler {
           } else {
             let foundFrag;
             let maxFragLookUpTolerance = config.maxFragLookUpTolerance;
+            let fragNext = (fragPrevious) ? fragments.find((fragment) => { return fragment.sn === fragPrevious.sn + 1; }) : undefined;
+            let fragmentWithinToleranceTest = (candidate) => {
+              // offset should be within fragment boundary - config.maxFragLookUpTolerance
+              // this is to cope with situations like
+              // bufferEnd = 9.991
+              // frag[Ø] : [0,10]
+              // frag[1] : [10,20]
+              // bufferEnd is within frag[0] range ... although what we are expecting is to return frag[1] here
+              //              frag start               frag start+duration
+              //                  |-----------------------------|
+              //              <--->                         <--->
+              //  ...--------><-----------------------------><---------....
+              // previous frag         matching fragment         next frag
+              //  return -1             return 0                 return 1
+              //logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
+              // Set the lookup tolerance to be small enough to detect the current segment - ensures we don't skip over very small segments
+              let candidateLookupTolerance = Math.min(maxFragLookUpTolerance, candidate.duration);
+              if ((candidate.start + candidate.duration - candidateLookupTolerance) <= bufferEnd) {
+                return 1;
+              }// if maxFragLookUpTolerance will have negative value then don't return -1 for first element
+              else if (candidate.start - candidateLookupTolerance > bufferEnd && candidate.start) {
+                return -1;
+              }
+              return 0;
+            };
+
             if (bufferEnd < end) {
               if (bufferEnd > end - maxFragLookUpTolerance) {
                 maxFragLookUpTolerance = 0;
               }
-              foundFrag = BinarySearch.search(fragments, (candidate) => {
-                // offset should be within fragment boundary - config.maxFragLookUpTolerance
-                // this is to cope with situations like
-                // bufferEnd = 9.991
-                // frag[Ø] : [0,10]
-                // frag[1] : [10,20]
-                // bufferEnd is within frag[0] range ... although what we are expecting is to return frag[1] here
-                    //              frag start               frag start+duration
-                    //                  |-----------------------------|
-                    //              <--->                         <--->
-                    //  ...--------><-----------------------------><---------....
-                    // previous frag         matching fragment         next frag
-                    //  return -1             return 0                 return 1
-                //logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
-                if ((candidate.start + candidate.duration - maxFragLookUpTolerance) <= bufferEnd) {
-                  return 1;
-                }
-                else if (candidate.start - maxFragLookUpTolerance > bufferEnd) {
-                  return -1;
-                }
-                return 0;
-              });
+              // Prefer the next fragment if it's within tolerance
+              if (fragNext && !fragmentWithinToleranceTest(fragNext)) {
+                foundFrag = fragNext;
+              } else {
+                foundFrag = BinarySearch.search(fragments, fragmentWithinToleranceTest);
+              }
+              foundFrag = (fragNext && fragmentWithinToleranceTest(fragNext) === 0) ? fragNext : BinarySearch.search(fragments, fragmentWithinToleranceTest);
             } else {
               // reach end of playlist
               foundFrag = fragments[fragLen-1];
