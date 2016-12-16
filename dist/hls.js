@@ -2145,8 +2145,14 @@ var BufferController = function (_EventHandler) {
         // let's recompute this.appended, which is used to avoid flush looping
         var appended = 0;
         var sourceBuffer = this.sourceBuffer;
-        for (var type in sourceBuffer) {
-          appended += sourceBuffer[type].buffered.length;
+        try {
+          for (var type in sourceBuffer) {
+            appended += sourceBuffer[type].buffered.length;
+          }
+        } catch (error) {
+          // error could be thrown while accessing buffered, in case sourcebuffer has already been removed from MediaSource
+          // this is harmess at this stage, catch this to avoid reporting an internal exception
+          _logger.logger.error('error while accessing sourceBuffer.buffered');
         }
         this.appended = appended;
         this.hls.trigger(_events2.default.BUFFER_FLUSHED);
@@ -2855,6 +2861,9 @@ var LevelController = function (_EventHandler) {
           levelId = data.context.level;
           levelError = true;
           break;
+        case _errors.ErrorDetails.REMUX_ALLOC_ERROR:
+          levelId = data.level;
+          break;
         default:
           break;
       }
@@ -2872,8 +2881,8 @@ var LevelController = function (_EventHandler) {
           // we could try to recover if in auto mode and current level not lowest level (0)
           var recoverable = this._manualLevel === -1 && levelId;
           if (recoverable) {
-            _logger.logger.warn('level controller,' + details + ': emergency switch-down for next fragment');
-            abrController.nextAutoLevel = minAutoLevel;
+            _logger.logger.warn('level controller,' + details + ': switch-down for next fragment');
+            abrController.nextAutoLevel = Math.max(minAutoLevel, levelId - 1);
           } else if (level && level.details && level.details.live) {
             _logger.logger.warn('level controller,' + details + ' on live stream, discard');
             if (levelError) {
@@ -4062,7 +4071,7 @@ var StreamController = function (_EventHandler) {
           if (ua.indexOf('android') !== -1 && track.container !== 'audio/mpeg') {
             // Exclude mpeg audio
             audioCodec = 'mp4a.40.2';
-            _logger.logger.log('Android: force audio codec to' + audioCodec);
+            _logger.logger.log('Android: force audio codec to ' + audioCodec);
           }
           track.levelCodec = audioCodec;
           track.id = data.id;
@@ -7555,6 +7564,8 @@ var ErrorTypes = exports.ErrorTypes = {
   NETWORK_ERROR: 'networkError',
   // Identifier for a media Error (video/parsing/mediasource error)
   MEDIA_ERROR: 'mediaError',
+  // Identifier for a mux Error (demuxing/remuxing)
+  MUX_ERROR: 'muxError',
   // Identifier for all other errors
   OTHER_ERROR: 'otherError'
 };
@@ -7586,8 +7597,11 @@ var ErrorDetails = exports.ErrorDetails = {
   FRAG_LOAD_TIMEOUT: 'fragLoadTimeOut',
   // Identifier for a fragment decryption error event - data: parsing error description
   FRAG_DECRYPT_ERROR: 'fragDecryptError',
-  // Identifier for a fragment parsing error event - data: parsing error description
+  // Identifier for a fragment parsing error event - data: { id : demuxer Id, reason : parsing error description }
+  // will be renamed DEMUX_PARSING_ERROR and switched to MUX_ERROR in the next major release
   FRAG_PARSING_ERROR: 'fragParsingError',
+  // Identifier for a remux alloc error event - data: { id : demuxer Id, bytes : nb of bytes on which allocation failed , reason : error text }
+  REMUX_ALLOC_ERROR: 'remuxAllocError',
   // Identifier for decrypt key load error - data: { frag : fragment object, response : { code: error code, text: error text }}
   KEY_LOAD_ERROR: 'keyLoadError',
   // Identifier for decrypt key load timeout error - data: { frag : fragment object}
@@ -8053,7 +8067,7 @@ var LevelHelper = function () {
     value: function updateFragPTSDTS(details, sn, startPTS, endPTS, startDTS, endDTS) {
       var fragIdx, fragments, frag, i;
       // exit if sn out of range
-      if (sn < details.startSN || sn > details.endSN) {
+      if (!details || sn < details.startSN || sn > details.endSN) {
         return 0;
       }
       fragIdx = sn - details.startSN;
@@ -8228,7 +8242,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.13';
+      return '0.6.14';
     }
   }, {
     key: 'Events',
@@ -10289,7 +10303,13 @@ var MP4Remuxer = function () {
 
       /* concatenate the video data and construct the mdat in place
         (need 8 more bytes to fill length and mpdat type) */
-      mdat = new Uint8Array(track.len + 4 * track.nbNalu + 8);
+      var mdatSize = track.len + 4 * track.nbNalu + 8;
+      try {
+        mdat = new Uint8Array(mdatSize);
+      } catch (err) {
+        this.observer.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MUX_ERROR, level: this.level, id: this.id, details: _errors.ErrorDetails.REMUX_ALLOC_ERROR, fatal: false, bytes: mdatSize, reason: 'fail allocating video mdat ' + mdatSize });
+        return;
+      }
       var view = new DataView(mdat.buffer);
       view.setUint32(0, mdat.byteLength);
       mdat.set(_mp4Generator2.default.types.mdat, 4);
@@ -10557,10 +10577,15 @@ var MP4Remuxer = function () {
           if (track.len > 0) {
             /* concatenate the audio data and construct the mdat in place
               (need 8 more bytes to fill length and mdat type) */
-            if (rawMPEG) {
-              mdat = new Uint8Array(track.len);
-            } else {
-              mdat = new Uint8Array(track.len + 8);
+
+            var mdatSize = rawMPEG ? track.len : track.len + 8;
+            try {
+              mdat = new Uint8Array(mdatSize);
+            } catch (err) {
+              this.observer.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MUX_ERROR, level: this.level, id: this.id, details: _errors.ErrorDetails.REMUX_ALLOC_ERROR, fatal: false, bytes: mdatSize, reason: 'fail allocating audio mdat ' + mdatSize });
+              return;
+            }
+            if (!rawMPEG) {
               view = new DataView(mdat.buffer);
               view.setUint32(0, mdat.byteLength);
               mdat.set(_mp4Generator2.default.types.mdat, 4);
