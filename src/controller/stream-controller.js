@@ -982,7 +982,7 @@ class StreamController extends EventHandler {
         // HE-AAC is broken on Android, always signal audio codec as AAC even if variant manifest states otherwise
         if(ua.indexOf('android') !== -1 && track.container !== 'audio/mpeg') { // Exclude mpeg audio
           audioCodec = 'mp4a.40.2';
-          logger.log(`Android: force audio codec to` + audioCodec);
+          logger.log(`Android: force audio codec to ${audioCodec}`);
         }
         track.levelCodec = audioCodec;
         track.id = data.id;
