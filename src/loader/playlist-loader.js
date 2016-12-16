@@ -12,7 +12,120 @@ import {logger} from '../utils/logger';
 // https://regex101.com is your friend
 const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
-const LEVEL_PLAYLIST_REGEX = /(?:#EXT(INF): *(\d*(?:\.\d+)?)(?:,(.*))?)|(?:(?!#)()(\S.+))|(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(BYTERANGE): *(\d+(?:@\d+(?:\.\d+)?)?)|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(PROGRAM-DATE-TIME):(.+))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*)))(?:.*)\r?\n?/g;
+const LEVEL_PLAYLIST_REGEX_FAST = /#EXTINF: *([^,]+),?(.*)|#EXT-X-BYTERANGE: *(.+)|#EXT-X-PROGRAM-DATE-TIME:(.+)|(#.*)|(\S.+)/g;
+const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
+
+class LevelKey {
+
+  constructor() {
+    this.method = null;
+    this.key = null;
+    this.iv = null;
+    this._uri = null;
+  }
+
+  get uri() {
+    if (!this._uri && this.reluri) {
+      this._uri = URLToolkit.buildAbsoluteURL(this.baseuri, this.reluri);
+    }
+    return this._uri;
+  }
+
+}
+
+class Fragment {
+
+  constructor() {
+    this._url = null;
+    this._byteRange = null;
+    this._decryptdata = null;
+  }
+
+  get url() {
+    if (!this._url && this.relurl) {
+      this._url = URLToolkit.buildAbsoluteURL(this.baseurl, this.relurl);
+    }
+    return this._url;
+  }
+
+  set url(value) {
+    this._url = value;
+  }
+
+  get programDateTime() {
+    if (!this._programDateTime && this.rawProgramDateTime) {
+      this._programDateTime = new Date(Date.parse(this.rawProgramDateTime));
+    }
+    return this._programDateTime;
+  }
+
+  get byteRange() {
+    if (!this._byteRange) {
+      this._byteRange = [];
+      if (this.rawByteRange) {
+        const params = this.rawByteRange.split('@', 2);
+        if (params.length === 1) {
+          this._byteRange[0] = this.prevFrag ? this.prevFrag.byteRangeEndOffset : 0;
+        } else {
+          this._byteRange[0] = parseInt(params[1]);
+        }
+        this._byteRange[1] = parseInt(params[0]) + this._byteRange[0];
+        this.prevFrag = null;
+      }
+    }
+    return this._byteRange;
+  }
+
+  get byteRangeStartOffset() {
+    return this.byteRange[0];
+  }
+
+  get byteRangeEndOffset() {
+    return this.byteRange[1];
+  }
+
+  get decryptdata() {
+    if (!this._decryptdata) {
+      this._decryptdata = this.fragmentDecryptdataFromLevelkey(this.levelkey, this.sn);
+    }
+    return this._decryptdata;
+  }
+
+  /**
+   * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
+   * @returns {Uint8Array}
+   */
+  createInitializationVector(segmentNumber) {
+    var uint8View = new Uint8Array(16);
+
+    for (var i = 12; i < 16; i++) {
+      uint8View[i] = (segmentNumber >> 8 * (15 - i)) & 0xff;
+    }
+
+    return uint8View;
+  }
+
+  /**
+   * Utility method for parseLevelPlaylist to get a fragment's decryption data from the currently parsed encryption key data
+   * @param levelkey - a playlist's encryption info
+   * @param segmentNumber - the fragment's segment number
+   * @returns {*} - an object to be applied as a fragment's decryptdata
+   */
+  fragmentDecryptdataFromLevelkey(levelkey, segmentNumber) {
+    var decryptdata = levelkey;
+
+    if (levelkey && levelkey.method && levelkey.uri && !levelkey.iv) {
+      decryptdata = Object.assign(new LevelKey(), this.cloneObj(levelkey));
+      decryptdata.iv = this.createInitializationVector(segmentNumber);
+    }
+
+    return decryptdata;
+  }
+
+  cloneObj(obj) {
+    return JSON.parse(JSON.stringify(obj));
+  }
+}
 
 class PlaylistLoader extends EventHandler {
 
@@ -150,36 +263,6 @@ class PlaylistLoader extends EventHandler {
     }
     return medias;
   }
-  /**
-   * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
-   * @returns {Uint8Array}
-   */
-  createInitializationVector (segmentNumber) {
-    var uint8View = new Uint8Array(16);
-
-    for (var i = 12; i < 16; i++) {
-      uint8View[i] = (segmentNumber >> 8 * (15 - i)) & 0xff;
-    }
-
-    return uint8View;
-  }
-
-  /**
-   * Utility method for parseLevelPlaylist to get a fragment's decryption data from the currently parsed encryption key data
-   * @param levelkey - a playlist's encryption info
-   * @param segmentNumber - the fragment's segment number
-   * @returns {*} - an object to be applied as a fragment's decryptdata
-   */
-  fragmentDecryptdataFromLevelkey (levelkey, segmentNumber) {
-    var decryptdata = levelkey;
-
-    if (levelkey && levelkey.method && levelkey.uri && !levelkey.iv) {
-      decryptdata = this.cloneObj(levelkey);
-      decryptdata.iv = this.createInitializationVector(segmentNumber);
-    }
-
-    return decryptdata;
-  }
 
   avc1toavcoti(codec) {
     var result, avcdata = codec.split('.');
@@ -193,161 +276,144 @@ class PlaylistLoader extends EventHandler {
     return result;
   }
 
-  cloneObj(obj) {
-    return JSON.parse(JSON.stringify(obj));
-  }
-
   parseLevelPlaylist(string, baseurl, id, type) {
     var currentSN = 0,
-        fragdecryptdata,
         totalduration = 0,
         level = {type: null, version: null, url: baseurl, fragments: [], live: true, startSN: 0},
-        levelkey = {method : null, key : null, iv : null, uri : null},
+        levelkey = new LevelKey(),
         cc = 0,
-        programDateTime = null,
-        frag = null,
+        prevFrag = null,
+        frag = new Fragment(),
         result,
-        duration = null,
-        title = null,
-        byteRangeEndOffset = null,
-        byteRangeStartOffset = null,
-        tagList = [],
-        i,
-        config = this.hls.config,
-        lazyURLResolve = config ? config.enableLazyURLResolve : false;
+        i;
 
-    LEVEL_PLAYLIST_REGEX.lastIndex = 0;
+    frag.tagList = [];
 
-    while ((result = LEVEL_PLAYLIST_REGEX.exec(string)) !== null) {
-      for (i = 1;  i < result.length; i++) {
+    LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
+
+    while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
+      for (i = 1; i < result.length; i++) {
         if (result[i] !== undefined) {
           break;
         }
       }
-      const key = result[i],
-          value1 = result[i+1],
+      let value1 = result[i],
+          value2 = result[i+1];
+
+      switch (i) {
+        case 1: // INF
+          frag.duration = parseFloat(value1);
+          frag.title = value2 ? value2 : null;
+          frag.tagList.push(value2 ? [ 'INF',value1,value2 ] : [ 'INF',value1 ]);
+          break;
+        case 3: // X-BYTERANGE
+          frag.rawByteRange = value1;
+          break;
+        case 4: // PROGRAM-DATE-TIME
+          frag.rawProgramDateTime = value1;
+          frag.tagList.push(['PROGRAM-DATE-TIME', value1]);
+          break;
+        case 5: // url
+          result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
+          for (i = 1; i < result.length; i++) {
+            if (result[i] !== undefined) {
+              break;
+            }
+          }
+
+          value1 = result[i+1];
           value2 = result[i+2];
 
-      switch (key) {
-        case 'PLAYLIST-TYPE':
-          level.type = value1.toUpperCase();
-          break;
-        case 'MEDIA-SEQUENCE':
-          currentSN = level.startSN = parseInt(value1);
-          break;
-        case 'TARGETDURATION':
-          level.targetduration = parseFloat(value1);
-          break;
-        case 'VERSION':
-          level.version = parseInt(value1);
-          break;
-        case 'EXTM3U':
-          break;
-        case 'ENDLIST':
-          level.live = false;
-          break;
-        case 'DIS':
-          cc++;
-          tagList.push([key]);
-          break;
-        case 'DISCONTINUITY-SEQ':
-          cc = parseInt(value1);
-          break;
-        case 'BYTERANGE':
-          var params = value1.split('@');
-          if (params.length === 1) {
-            byteRangeStartOffset = byteRangeEndOffset;
-          } else {
-            byteRangeStartOffset = parseInt(params[1]);
+          switch (result[i]) {
+            case '#':
+              frag.tagList.push(value2 ? [ value1,value2 ] : [ value1 ]);
+              break;
+            case 'PLAYLIST-TYPE':
+              level.type = value1.toUpperCase();
+              break;
+            case 'MEDIA-SEQUENCE':
+              currentSN = level.startSN = parseInt(value1);
+              break;
+            case 'TARGETDURATION':
+              level.targetduration = parseFloat(value1);
+              break;
+            case 'VERSION':
+              level.version = parseInt(value1);
+              break;
+            case 'EXTM3U':
+              break;
+            case 'ENDLIST':
+              level.live = false;
+              break;
+            case 'DIS':
+              cc++;
+              frag.tagList.push(['DIS']);
+              break;
+            case 'DISCONTINUITY-SEQ':
+              cc = parseInt(value1);
+              break;
+            case 'KEY':
+              // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
+              var decryptparams = value1;
+              var keyAttrs = new AttrList(decryptparams);
+              var decryptmethod = keyAttrs.enumeratedString('METHOD'),
+                  decrypturi = keyAttrs.URI,
+                  decryptiv = keyAttrs.hexadecimalInteger('IV');
+              if (decryptmethod) {
+                levelkey = new LevelKey();
+                if ((decrypturi) && (decryptmethod === 'AES-128')) {
+                  levelkey.method = decryptmethod;
+                  // URI to get the key
+                  levelkey.baseuri = baseurl;
+                  levelkey.reluri = decrypturi;
+                  levelkey.key = null;
+                  // Initialization Vector (IV)
+                  levelkey.iv = decryptiv;
+                }
+              }
+              break;
+            case 'START':
+              let startParams = value1;
+              let startAttrs = new AttrList(startParams);
+              let startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
+              //TIME-OFFSET can be 0
+              if ( !isNaN(startTimeOffset) ) {
+                level.startTimeOffset = startTimeOffset;
+              }
+              break;
+            default:
+              logger.warn(`line parsed but not handled: ${result}`);
+              break;
           }
-          byteRangeEndOffset = parseInt(params[0]) + byteRangeStartOffset;
           break;
-        case 'INF':
-          duration = parseFloat(value1);
-          title = value2 ? value2 : null;
-          tagList.push(value2 ? [ key,value1,value2 ] : [ key,value1 ]);
-          break;
-        case '': // url
-          if (!isNaN(duration)) {
+        case 6:
+          if (!isNaN(frag.duration)) {
             var sn = currentSN++;
-            fragdecryptdata = this.fragmentDecryptdataFromLevelkey(levelkey, sn);
-            frag = {type : type,
-                    duration: duration,
-                    title: title,
+            Object.assign(frag, {type : type,
+                    prevFrag: prevFrag,
                     start: totalduration,
+                    levelkey: levelkey,
                     sn: sn,
                     level: id,
                     cc: cc,
-                    decryptdata : fragdecryptdata,
-                    programDateTime: programDateTime,
-                    tagList: tagList};
-            if (lazyURLResolve) {
-              frag.relurl = value1;
-              frag.baseurl = baseurl;
-            } else {
-              frag.url = value1 ? this.resolve(value1, baseurl) : null;
-            }
-            // only include byte range options if used/needed
-            if(byteRangeStartOffset !== null) {
-              frag.byteRangeStartOffset = byteRangeStartOffset;
-              frag.byteRangeEndOffset = byteRangeEndOffset;
-            }
+                    baseurl: baseurl,
+                    relurl: value1});
             level.fragments.push(frag);
-            totalduration += duration;
-            duration = null;
-            title = null;
-            byteRangeStartOffset = null;
-            programDateTime = null;
-            tagList = [];
+            prevFrag = frag;
+            totalduration += frag.duration;
+
+            frag = new Fragment();
+            frag.tagList = [];
           }
-          break;
-        case 'KEY':
-          // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
-          var decryptparams = value1;
-          var keyAttrs = new AttrList(decryptparams);
-          var decryptmethod = keyAttrs.enumeratedString('METHOD'),
-              decrypturi = keyAttrs.URI,
-              decryptiv = keyAttrs.hexadecimalInteger('IV');
-          if (decryptmethod) {
-            levelkey = { method: null, key: null, iv: null, uri: null };
-            if ((decrypturi) && (decryptmethod === 'AES-128')) {
-              levelkey.method = decryptmethod;
-              // URI to get the key
-              if (lazyURLResolve) {
-                levelkey.baseuri = baseurl;
-                levelkey.reluri = decrypturi;
-              } else {
-                levelkey.uri = this.resolve(decrypturi, baseurl);
-              }
-              levelkey.key = null;
-              // Initialization Vector (IV)
-              levelkey.iv = decryptiv;
-            }
-          }
-          break;
-        case 'START':
-          let startParams = value1;
-          let startAttrs = new AttrList(startParams);
-          let startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
-          //TIME-OFFSET can be 0
-          if ( !isNaN(startTimeOffset) ) {
-            level.startTimeOffset = startTimeOffset;
-          }
-          break;
-        case 'PROGRAM-DATE-TIME':
-          programDateTime = new Date(Date.parse(value1));
-          tagList.push([key, value1]);
-          break;
-        case '#':
-          tagList.push(value2 ? [ value1,value2 ] : [ value1 ]);
           break;
         default:
           logger.warn(`line parsed but not handled: ${result}`);
           break;
       }
     }
+    frag = prevFrag;
     //logger.log('found ' + level.fragments.length + ' fragments');
-    if(frag && !(frag.url || frag.relurl)) {
+    if(frag && !frag.relurl) {
       level.fragments.pop();
       totalduration-=frag.duration;
     }
