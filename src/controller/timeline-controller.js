@@ -194,7 +194,8 @@ class TimelineController extends EventHandler {
 
     onManifestLoading() {
         this.lastSn = -1; // Detect discontiguity in fragment parsing
-        this.lastDiscontinuity = { cc: 0, start: 0, new: false }; // Detect discontinuity in subtitle manifests
+        this.prevCC = -1;
+        this.vttCCs = { ccOffset: 0 }; // Detect discontinuity in subtitle manifests
     }
 
     onManifestLoaded(data) {
@@ -232,8 +233,10 @@ class TimelineController extends EventHandler {
     }
 
     onFragLoaded(data) {
-        if (data.frag.type === 'main') {
-            var sn = data.frag.sn;
+        let frag = data.frag,
+            payload = data.payload;
+        if (frag.type === 'main') {
+            var sn = frag.sn;
             // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
             if (sn !== this.lastSn + 1) {
                 this.cea608Parser.reset();
@@ -244,39 +247,40 @@ class TimelineController extends EventHandler {
                 }
             }
             this.lastSn = sn;
-        } else if (data.frag.type === 'subtitle') {
+        } else if (frag.type === 'subtitle') {
             // If fragment is subtitle type, parse as WebVTT.
-            if (data.payload.byteLength) {
+            if (payload.byteLength) {
                 // We need an initial synchronisation PTS. Store fragments as long as none has arrived.
                 if (typeof this.initPTS === 'undefined') {
                     this.unparsedVttFrags.push(data);
                     return;
                 }
-
-                let discontinuity = this.lastDiscontinuity;
-                if (discontinuity.cc < data.frag.cc) {
-                    discontinuity = {
-                        cc: data.frag.cc,
-                        start: data.frag.start,
+                let vttCCs = this.vttCCs;
+                if (!vttCCs[frag.cc]) {
+                    vttCCs[frag.cc] = {
+                        start: frag.start,
+                        prevCC: this.prevCC,
                         new: true
                     };
+                    this.prevCC = frag.cc;
                 }
                 let textTracks = this.textTracks,
                     hls = this.hls;
 
                 // Parse the WebVTT file contents.
                 WebVTTParser.parse(
-                    data.payload,
+                    payload,
                     this.initPTS,
-                    discontinuity,
+                    vttCCs,
+                    frag.cc,
                     function(cues) {
                         // Add cues and trigger event with success true.
                         cues.forEach(cue => {
-                            textTracks[data.frag.trackId].addCue(cue);
+                            textTracks[frag.trackId].addCue(cue);
                         });
                         hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {
                             success: true,
-                            frag: data.frag
+                            frag: frag
                         });
                     },
                     function(e) {
@@ -284,7 +288,7 @@ class TimelineController extends EventHandler {
                         logger.log(`Failed to parse VTT cue: ${e}`);
                         hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {
                             success: false,
-                            frag: data.frag
+                            frag: frag
                         });
                     }
                 );
@@ -292,7 +296,7 @@ class TimelineController extends EventHandler {
                 // In case there is no payload, finish unsuccessfully.
                 this.hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {
                     success: false,
-                    frag: data.frag
+                    frag: frag
                 });
             }
         }
