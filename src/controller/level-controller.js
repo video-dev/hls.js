@@ -239,8 +239,8 @@ class LevelController extends EventHandler {
         // we could try to recover if in auto mode and current level not lowest level (0)
         let recoverable = ((this._manualLevel === -1) && levelId);
         if (recoverable) {
-          logger.warn(`level controller,${details}: emergency switch-down for next fragment`);
-          abrController.nextAutoLevel = minAutoLevel;
+          logger.warn(`level controller,${details}: switch-down for next fragment`);
+          abrController.nextAutoLevel = Math.max(minAutoLevel,levelId-1);
         } else if(level && level.details && level.details.live) {
           logger.warn(`level controller,${details} on live stream, discard`);
           if (levelError) {
