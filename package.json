@@ -44,7 +44,7 @@
     "browserify-derequire": "^0.9.4",
     "browserify-versionify": "^1.0.6",
     "bundle-collapser": "^1.2.1",
-    "chromedriver": "^2.24.1",
+    "chromedriver": "^2.26.0",
     "deep-strict-equal": "^0.2.0",
     "exorcist": "^0.4.0",
     "http-server": "^0.9.0",
