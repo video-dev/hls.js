@@ -298,16 +298,17 @@ class PlaylistLoader extends EventHandler {
         frag.tagList.push(result[2] ? [ 'INF',result[1],result[2] ] : [ 'INF',result[1] ]);
       } else if (result[3]) { // url
         if (!isNaN(frag.duration)) {
-          var sn = currentSN++;
-          Object.assign(frag, {type : type,
-                  prevFrag: prevFrag,
-                  start: totalduration,
-                  levelkey: levelkey,
-                  sn: sn,
-                  level: id,
-                  cc: cc,
-                  baseurl: baseurl,
-                  relurl: result[3]});
+          const sn = currentSN++;
+          frag.type = type;
+          frag.prevFrag = prevFrag;
+          frag.start = totalduration;
+          frag.levelkey = levelkey;
+          frag.sn = sn;
+          frag.level = id;
+          frag.cc = cc;
+          frag.baseurl = baseurl;
+          frag.relurl = result[3];
+
           level.fragments.push(frag);
           prevFrag = frag;
           totalduration += frag.duration;
