@@ -54,10 +54,11 @@
     "mversion": "^1.10.1",
     "opener": "^1.4.0",
     "parallelshell": "^2.0.0",
+    "requestidlecallback": "0.3.0",
     "rimraf": "^2.5.1",
+    "selenium-webdriver": "^3.0.0",
     "uglify-js": "^2.7.5",
     "url-toolkit": "^1.0.4",
-    "selenium-webdriver": "^3.0.0",
     "watchify": "^3.7.0",
     "webworkify": "^1.4.0"
   }
