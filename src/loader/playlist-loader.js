@@ -292,10 +292,12 @@ class PlaylistLoader extends EventHandler {
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
 
     while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
-      if (result[1]) { // INF
-        frag.duration = parseFloat(result[1]);
-        frag.title = result[2] ? result[2] : null;
-        frag.tagList.push(result[2] ? [ 'INF',result[1],result[2] ] : [ 'INF',result[1] ]);
+      const duration = result[1];
+      if (duration) { // INF
+        frag.duration = parseFloat(duration);
+        const title = result[2];
+        frag.title = title ? title : null;
+        frag.tagList.push(title ? [ 'INF',duration,title ] : [ 'INF',duration ]);
       } else if (result[3]) { // url
         if (!isNaN(frag.duration)) {
           const sn = currentSN++;
