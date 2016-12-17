@@ -12,7 +12,7 @@ import {logger} from '../utils/logger';
 // https://regex101.com is your friend
 const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
-const LEVEL_PLAYLIST_REGEX_FAST = /#EXTINF: *([^,]+),?(.*)|(?!#)(\S.+)|#EXT-X-BYTERANGE: *(.+)|#EXT-X-PROGRAM-DATE-TIME:(.+)|(#.*)/g;
+const LEVEL_PLAYLIST_REGEX_FAST = /#EXTINF: *([^,]+),?(.*)|(?!#)(\S.+)|#EXT-X-BYTERANGE: *(.+)|#EXT-X-PROGRAM-DATE-TIME:(.+)|#.*/g;
 const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
 
 class LevelKey {
@@ -292,123 +292,107 @@ class PlaylistLoader extends EventHandler {
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
 
     while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
-      for (i = 1; i < result.length; i++) {
-        if (result[i] !== undefined) {
-          break;
+      if (result[1]) { // INF
+        frag.duration = parseFloat(result[1]);
+        frag.title = result[2] ? result[2] : null;
+        frag.tagList.push(result[2] ? [ 'INF',result[1],result[2] ] : [ 'INF',result[1] ]);
+      } else if (result[3]) { // url
+        if (!isNaN(frag.duration)) {
+          const sn = currentSN++;
+          frag.type = type;
+          frag.prevFrag = prevFrag;
+          frag.start = totalduration;
+          frag.levelkey = levelkey;
+          frag.sn = sn;
+          frag.level = id;
+          frag.cc = cc;
+          frag.baseurl = baseurl;
+          frag.relurl = result[3];
+
+          level.fragments.push(frag);
+          prevFrag = frag;
+          totalduration += frag.duration;
+
+          frag = new Fragment();
+          frag.tagList = [];
         }
-      }
-      let value1 = result[i],
-          value2 = result[i+1];
-
-      switch (i) {
-        case 1: // INF
-          frag.duration = parseFloat(value1);
-          frag.title = value2 ? value2 : null;
-          frag.tagList.push(value2 ? [ 'INF',value1,value2 ] : [ 'INF',value1 ]);
-          break;
-        case 3: // url
-          if (!isNaN(frag.duration)) {
-            var sn = currentSN++;
-            Object.assign(frag, {type : type,
-                    prevFrag: prevFrag,
-                    start: totalduration,
-                    levelkey: levelkey,
-                    sn: sn,
-                    level: id,
-                    cc: cc,
-                    baseurl: baseurl,
-                    relurl: value1});
-            level.fragments.push(frag);
-            prevFrag = frag;
-            totalduration += frag.duration;
-
-            frag = new Fragment();
-            frag.tagList = [];
+      } else if (result[4]) { // X-BYTERANGE
+        frag.rawByteRange = result[4];
+      } else if (result[5]) { // PROGRAM-DATE-TIME
+        frag.rawProgramDateTime = result[5];
+        frag.tagList.push(['PROGRAM-DATE-TIME', result[5]]);
+      } else {
+        result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
+        for (i = 1; i < result.length; i++) {
+          if (result[i] !== undefined) {
+            break;
           }
-          break;
-        case 4: // X-BYTERANGE
-          frag.rawByteRange = value1;
-          break;
-        case 5: // PROGRAM-DATE-TIME
-          frag.rawProgramDateTime = value1;
-          frag.tagList.push(['PROGRAM-DATE-TIME', value1]);
-          break;
-        case 6:
-          result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
-          for (i = 1; i < result.length; i++) {
-            if (result[i] !== undefined) {
-              break;
+        }
+
+        const value1 = result[i+1];
+        const value2 = result[i+2];
+
+        switch (result[i]) {
+          case '#':
+            frag.tagList.push(value2 ? [ value1,value2 ] : [ value1 ]);
+            break;
+          case 'PLAYLIST-TYPE':
+            level.type = value1.toUpperCase();
+            break;
+          case 'MEDIA-SEQUENCE':
+            currentSN = level.startSN = parseInt(value1);
+            break;
+          case 'TARGETDURATION':
+            level.targetduration = parseFloat(value1);
+            break;
+          case 'VERSION':
+            level.version = parseInt(value1);
+            break;
+          case 'EXTM3U':
+            break;
+          case 'ENDLIST':
+            level.live = false;
+            break;
+          case 'DIS':
+            cc++;
+            frag.tagList.push(['DIS']);
+            break;
+          case 'DISCONTINUITY-SEQ':
+            cc = parseInt(value1);
+            break;
+          case 'KEY':
+            // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
+            var decryptparams = value1;
+            var keyAttrs = new AttrList(decryptparams);
+            var decryptmethod = keyAttrs.enumeratedString('METHOD'),
+                decrypturi = keyAttrs.URI,
+                decryptiv = keyAttrs.hexadecimalInteger('IV');
+            if (decryptmethod) {
+              levelkey = new LevelKey();
+              if ((decrypturi) && (decryptmethod === 'AES-128')) {
+                levelkey.method = decryptmethod;
+                // URI to get the key
+                levelkey.baseuri = baseurl;
+                levelkey.reluri = decrypturi;
+                levelkey.key = null;
+                // Initialization Vector (IV)
+                levelkey.iv = decryptiv;
+              }
             }
-          }
-
-          value1 = result[i+1];
-          value2 = result[i+2];
-
-          switch (result[i]) {
-            case '#':
-              frag.tagList.push(value2 ? [ value1,value2 ] : [ value1 ]);
-              break;
-            case 'PLAYLIST-TYPE':
-              level.type = value1.toUpperCase();
-              break;
-            case 'MEDIA-SEQUENCE':
-              currentSN = level.startSN = parseInt(value1);
-              break;
-            case 'TARGETDURATION':
-              level.targetduration = parseFloat(value1);
-              break;
-            case 'VERSION':
-              level.version = parseInt(value1);
-              break;
-            case 'EXTM3U':
-              break;
-            case 'ENDLIST':
-              level.live = false;
-              break;
-            case 'DIS':
-              cc++;
-              frag.tagList.push(['DIS']);
-              break;
-            case 'DISCONTINUITY-SEQ':
-              cc = parseInt(value1);
-              break;
-            case 'KEY':
-              // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
-              var decryptparams = value1;
-              var keyAttrs = new AttrList(decryptparams);
-              var decryptmethod = keyAttrs.enumeratedString('METHOD'),
-                  decrypturi = keyAttrs.URI,
-                  decryptiv = keyAttrs.hexadecimalInteger('IV');
-              if (decryptmethod) {
-                levelkey = new LevelKey();
-                if ((decrypturi) && (decryptmethod === 'AES-128')) {
-                  levelkey.method = decryptmethod;
-                  // URI to get the key
-                  levelkey.baseuri = baseurl;
-                  levelkey.reluri = decrypturi;
-                  levelkey.key = null;
-                  // Initialization Vector (IV)
-                  levelkey.iv = decryptiv;
-                }
-              }
-              break;
-            case 'START':
-              let startParams = value1;
-              let startAttrs = new AttrList(startParams);
-              let startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
-              //TIME-OFFSET can be 0
-              if ( !isNaN(startTimeOffset) ) {
-                level.startTimeOffset = startTimeOffset;
-              }
-              break;
-            default:
-              logger.warn(`line parsed but not handled: ${result}`);
-              break;
-          }
-          break;
-        default:
-          logger.warn(`line parsed but not handled: ${result}`);
-          break;
+            break;
+          case 'START':
+            let startParams = value1;
+            let startAttrs = new AttrList(startParams);
+            let startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
+            //TIME-OFFSET can be 0
+            if ( !isNaN(startTimeOffset) ) {
+              level.startTimeOffset = startTimeOffset;
+            }
+            break;
+          default:
+            logger.warn(`line parsed but not handled: ${result}`);
+            break;
+        }
       }
     }
     frag = prevFrag;
