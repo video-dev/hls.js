@@ -129,12 +129,13 @@ class Fragment {
 
 class PlaylistLoader extends EventHandler {
 
-  constructor(hls) {
+  constructor(hls, options = {}) {
     super(hls,
       Event.MANIFEST_LOADING,
       Event.LEVEL_LOADING,
       Event.AUDIO_TRACK_LOADING);
     this.loaders = {};
+    this.createTagList = options.createTagList !== false;
   }
 
   destroy() {
@@ -287,17 +288,21 @@ class PlaylistLoader extends EventHandler {
         result,
         i;
 
-    frag.tagList = [];
+    if (this.createTagList) {
+      frag.tagList = [];
+    }
 
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
 
     while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
-      const duration = result[1];
-      if (duration) { // INF
+      if (result[1]) { // INF
+        const duration = result[1];
         frag.duration = parseFloat(duration);
         const title = result[2];
         frag.title = title ? title : null;
-        frag.tagList.push(title ? [ 'INF',duration,title ] : [ 'INF',duration ]);
+        if (this.createTagList) {
+          frag.tagList.push(title ? [ 'INF',duration,title ] : [ 'INF',duration ]);
+        }
       } else if (result[3]) { // url
         if (!isNaN(frag.duration)) {
           const sn = currentSN++;
@@ -316,13 +321,17 @@ class PlaylistLoader extends EventHandler {
           totalduration += frag.duration;
 
           frag = new Fragment();
-          frag.tagList = [];
+          if (this.createTagList) {
+            frag.tagList = [];
+          }
         }
       } else if (result[4]) { // X-BYTERANGE
         frag.rawByteRange = result[4];
       } else if (result[5]) { // PROGRAM-DATE-TIME
         frag.rawProgramDateTime = result[5];
-        frag.tagList.push(['PROGRAM-DATE-TIME', result[5]]);
+        if (this.createTagList) {
+          frag.tagList.push(['PROGRAM-DATE-TIME', result[5]]);
+        }
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
         for (i = 1; i < result.length; i++) {
@@ -336,7 +345,9 @@ class PlaylistLoader extends EventHandler {
 
         switch (result[i]) {
           case '#':
-            frag.tagList.push(value2 ? [ value1,value2 ] : [ value1 ]);
+            if (this.createTagList) {
+              frag.tagList.push(value2 ? [ value1,value2 ] : [ value1 ]);
+            }
             break;
           case 'PLAYLIST-TYPE':
             level.type = value1.toUpperCase();
@@ -357,7 +368,9 @@ class PlaylistLoader extends EventHandler {
             break;
           case 'DIS':
             cc++;
-            frag.tagList.push(['DIS']);
+            if (this.createTagList) {
+              frag.tagList.push(['DIS']);
+            }
             break;
           case 'DISCONTINUITY-SEQ':
             cc = parseInt(value1);
@@ -401,7 +414,7 @@ class PlaylistLoader extends EventHandler {
     //logger.log('found ' + level.fragments.length + ' fragments');
     if(frag && !frag.relurl) {
       level.fragments.pop();
-      totalduration-=frag.duration;
+      totalduration -= frag.duration;
     }
     level.totalduration = totalduration;
     level.averagetargetduration = totalduration / level.fragments.length;
