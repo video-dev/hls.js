@@ -324,8 +324,20 @@ $(document).ready(function() {
           $("#HlsStatus").text(data.audioTracks.length + " audio tracks found");
           updateAudioTrackInfo();
        });
-       hls.on(Hls.Events.AUDIO_TRACK_SWITCH,function(event,data) {
+       hls.on(Hls.Events.AUDIO_TRACK_SWITCHING,function(event,data) {
           updateAudioTrackInfo();
+        var event = {time : performance.now() - events.t0, type : 'audio switching', name : '@' + data.id };
+        events.video.push(event);
+        lastAudioTrackSwitchingIdx = events.video.length-1;
+       });
+       hls.on(Hls.Events.AUDIO_TRACK_SWITCHED,function(event,data) {
+          updateAudioTrackInfo();
+        var event = {time : performance.now() - events.t0, type : 'audio switched', name : '@' + data.id };
+        if (lastAudioTrackSwitchingIdx !== undefined) {
+          events.video[lastAudioTrackSwitchingIdx].duration = event.time - events.video[lastAudioTrackSwitchingIdx].time;
+          lastAudioTrackSwitchingIdx = undefined;
+        }
+        events.video.push(event);
        });
        hls.on(Hls.Events.LEVEL_LOADED,function(event,data) {
           events.isLive = data.details.live;
@@ -631,7 +643,7 @@ $(document).ready(function() {
   }
 
 
-var lastSeekingIdx, lastStartPosition,lastDuration;
+var lastSeekingIdx, lastStartPosition,lastDuration, lastAudioTrackSwitchingIdx;
   function handleVideoEvent(evt) {
     var data = '';
     switch(evt.type) {

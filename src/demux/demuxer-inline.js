@@ -33,10 +33,16 @@ class DemuxerInline {
         level,
         sn,
         duration,
-        accurateTimeOffset
+        accurateTimeOffset,
+        defaultInitPTS
     ) {
         var demuxer = this.demuxer;
-        if (!demuxer) {
+        if (
+            !demuxer ||
+            // in case of continuity change, we might switch from content type (AAC container to TS container for example)
+            // so let's check that current demuxer is still valid
+            (cc !== this.cc && !demuxer.probe(data))
+        ) {
             let hls = this.hls,
                 id = this.id,
                 config = this.config,
@@ -60,6 +66,7 @@ class DemuxerInline {
                         typeSupported
                     );
                 }
+                demuxer.probe = TSDemuxer.probe;
             } else if (AACDemuxer.probe(data)) {
                 demuxer = new AACDemuxer(
                     hls,
@@ -68,6 +75,7 @@ class DemuxerInline {
                     config,
                     typeSupported
                 );
+                demuxer.probe = AACDemuxer.probe;
             } else {
                 hls.trigger(Event.ERROR, {
                     type: ErrorTypes.MEDIA_ERROR,
@@ -89,8 +97,10 @@ class DemuxerInline {
             level,
             sn,
             duration,
-            accurateTimeOffset
+            accurateTimeOffset,
+            defaultInitPTS
         );
+        this.cc = cc;
     }
 }
 

@@ -37,19 +37,25 @@ class MP4Remuxer {
     remux(
         level,
         sn,
+        cc,
         audioTrack,
         videoTrack,
         id3Track,
         textTrack,
         timeOffset,
         contiguous,
-        accurateTimeOffset
+        accurateTimeOffset,
+        defaultInitPTS
     ) {
         this.level = level;
         this.sn = sn;
         // generate Init Segment if needed
         if (!this.ISGenerated) {
-            this.generateIS(audioTrack, videoTrack, timeOffset);
+            this.generateIS(audioTrack, videoTrack, timeOffset, cc);
+        }
+
+        if (defaultInitPTS !== null) {
+            this._initPTS = this._initDTS = defaultInitPTS;
         }
 
         if (this.ISGenerated) {
@@ -113,7 +119,7 @@ class MP4Remuxer {
         });
     }
 
-    generateIS(audioTrack, videoTrack, timeOffset) {
+    generateIS(audioTrack, videoTrack, timeOffset, cc) {
         var observer = this.observer,
             audioSamples = audioTrack.samples,
             videoSamples = videoTrack.samples,
@@ -204,6 +210,11 @@ class MP4Remuxer {
                     initDTS,
                     videoSamples[0].dts - pesTimeScale * timeOffset
                 );
+                this.observer.trigger(Event.INIT_PTS_FOUND, {
+                    id: this.id,
+                    initPTS: initPTS,
+                    cc: cc
+                });
             }
         }
 
