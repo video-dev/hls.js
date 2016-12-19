@@ -286,9 +286,10 @@ class PlaylistLoader extends EventHandler {
         prevFrag = null,
         frag = new Fragment(),
         result,
+        createTagList = this.createTagList,
         i;
 
-    if (this.createTagList) {
+    if (createTagList) {
       frag.tagList = [];
     }
 
@@ -313,7 +314,7 @@ class PlaylistLoader extends EventHandler {
           totalduration += frag.duration;
 
           frag = new Fragment();
-          if (this.createTagList) {
+          if (createTagList) {
             frag.tagList = [];
           }
         }
@@ -322,14 +323,14 @@ class PlaylistLoader extends EventHandler {
         frag.duration = parseFloat(duration);
         const title = result[2];
         frag.title = title ? title : null;
-        if (this.createTagList) {
+        if (createTagList) {
           frag.tagList.push(title ? [ 'INF',duration,title ] : [ 'INF',duration ]);
         }
       } else if (result[3]) { // X-BYTERANGE
         frag.rawByteRange = result[3];
       } else if (result[4]) { // PROGRAM-DATE-TIME
         frag.rawProgramDateTime = result[4];
-        if (this.createTagList) {
+        if (createTagList) {
           frag.tagList.push(['PROGRAM-DATE-TIME', result[4]]);
         }
       } else {
@@ -345,7 +346,7 @@ class PlaylistLoader extends EventHandler {
 
         switch (result[i]) {
           case '#':
-            if (this.createTagList) {
+            if (createTagList) {
               frag.tagList.push(value2 ? [ value1,value2 ] : [ value1 ]);
             }
             break;
@@ -368,7 +369,7 @@ class PlaylistLoader extends EventHandler {
             break;
           case 'DIS':
             cc++;
-            if (this.createTagList) {
+            if (createTagList) {
               frag.tagList.push(['DIS']);
             }
             break;
