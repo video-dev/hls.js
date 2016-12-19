@@ -317,7 +317,7 @@ $(document).ready(function() {
        });
        hls.on(Hls.Events.MANIFEST_PARSED,function(event,data) {
          $("#HlsStatus").text("manifest successfully loaded," + hls.levels.length + " levels found");
-         stats = {levelNb: data.levels.length};
+         stats = {levelNb: data.levels.length, levelParsed : 0};
          updateLevelInfo();
        });
        hls.on(Hls.Events.AUDIO_TRACKS_UPDATED,function(event,data) {
@@ -340,6 +340,14 @@ $(document).ready(function() {
             parsing : data.stats.tparsed - data.stats.tload,
             duration : data.stats.tload - data.stats.tfirst
           };
+          const parsingDuration = data.stats.tparsed - data.stats.tload;
+          if (stats.levelParsed) {
+            this.sumLevelParsingMs += parsingDuration;
+          } else {
+            this.sumLevelParsingMs = parsingDuration;
+          }
+          stats.levelParsed++;
+          stats.levelParsingUs = Math.round(1000*this.sumLevelParsingMs / stats.levelParsed);
           events.load.push(event);
           refreshCanvas();
        });
