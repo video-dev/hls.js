@@ -59,13 +59,14 @@
   }
 
   // feed incoming data to the front of the parsing pipeline
-  append(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
+  append(dataIn, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
     this.timeOffset = timeOffset;
     this._duration = duration;
     this.contiguous = false;
     this.accurateTimeOffset = accurateTimeOffset;
+    this.defaultInitPTS = defaultInitPTS;
     if (cc !== this.lastCC) {
       logger.log('discontinuity detected');
       this.insertDiscontinuity();
@@ -282,21 +283,22 @@
     }
     // update tracks with chunk of partial reassembled PES
     avcTrack.pesData = avcData;
-    aacTrack.pesData = aacData;
+    audioTrack.pesData = audioData;
     id3Track.pesData = id3Data;
   }
 
 
   notifycomplete() {
     let avcTrack = this._avcTrack,
-        aacTrack = this._aacTrack,
+        audioTrack = this._audioTrack,
         id3Track = this._id3Track,
         avcData = avcTrack.pesData,
-        aacData = aacTrack.pesData,
+        audioData = audioTrack.pesData,
         id3Data = id3Track.pesData,
         parsePES = this._parsePES,
         parseAVCPES = this._parseAVCPES.bind(this),
         parseAACPES = this._parseAACPES.bind(this),
+        parseMPEGPES  = this._parseMPEGPES.bind(this),
         parseID3PES  = this._parseID3PES.bind(this),
         pes;
     // try to parse last PES packets
@@ -330,12 +332,12 @@
       // either id3Data null or PES truncated, keep it for next frag parsing
       id3Track.pesData = id3Data;
     }
-    this.remux(this.lastLevel,this.lastSN,null,this.timeOffset,defaultInitPTS);
+    this.remux(this.lastLevel,this.lastSN, this.lastCC, null,this.timeOffset);
     this.data = [];
     this.len = 0;
   }
 
-  remux(level, sn, cc, data, timeOffset,defaultInitPTS) {
+  remux(level, sn, cc, data, timeOffset) {
     let avcTrack = this._avcTrack, samples = avcTrack.samples, nbNalu = 0, naluLen = 0;
 
     // compute total/avc sample length and nb of NAL units
@@ -350,7 +352,7 @@
     }
     avcTrack.len = naluLen;
     avcTrack.nbNalu = nbNalu;
-    this.remuxer.remux(level, sn, cc, this._audioTrack, this._avcTrack, this._id3Track, this._txtTrack, timeOffset, this.contiguous, this.accurateTimeOffset, defaultInitPTS, data);
+    this.remuxer.remux(level, sn, cc, this._audioTrack, this._avcTrack, this._id3Track, this._txtTrack, timeOffset, this.contiguous, this.accurateTimeOffset, this.defaultInitPTS, data);
   }
 
   destroy() {
