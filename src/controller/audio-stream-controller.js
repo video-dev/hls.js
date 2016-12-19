@@ -24,7 +24,8 @@ const State = {
   PARSING : 'PARSING',
   PARSED : 'PARSED',
   ENDED : 'ENDED',
-  ERROR : 'ERROR'
+  ERROR : 'ERROR',
+  WAITING_INIT_PTS : 'WAITING_INIT_PTS'
 };
 
 class AudioStreamController extends EventHandler {
@@ -44,12 +45,17 @@ class AudioStreamController extends EventHandler {
       Event.ERROR,
       Event.BUFFER_CREATED,
       Event.BUFFER_APPENDED,
-      Event.BUFFER_FLUSHED);
+      Event.BUFFER_FLUSHED,
+      Event.INIT_PTS_FOUND);
 
     this.config = hls.config;
     this.audioCodecSwap = false;
     this.ticks = 0;
     this.ontick = this.tick.bind(this);
+    this.initPTS=null;
+    this.waitingFragment=null;
+    this.prevTrackId=-1;
+
   }
 
   destroy() {
@@ -60,6 +66,29 @@ class AudioStreamController extends EventHandler {
     }
     EventHandler.prototype.destroy.call(this);
     this.state = State.STOPPED;
+  }
+
+  //Signal that video PTS was found
+  onInitPtsFound(data) {
+    var demuxerId=data.id;
+    if(demuxerId === 'main') {
+      //Always update the new INIT PTS
+      //Can change due level switch
+      this.initPTS = data.initPTS;
+      logger.log(`InitPTS , ${this.initPTS}, found from video track`);
+
+      //If we are waiting we need to demux/remux the waiting frag
+      //With the new initPTS
+      if (this.state === State.WAITING_INIT_PTS) {
+        logger.log(`Waiting audio frag sending to demuxer`);
+        this.state = State.FRAG_LOADING;
+        //We have audio frag waiting or video pts
+        //Let process it
+        this.onFragLoaded(this.waitingFragment);
+        //Lets clean the waiting frag
+        this.waitingFragment = null;
+      }
+    }
   }
 
   startLoad(startPosition) {
@@ -184,6 +213,22 @@ class AudioStreamController extends EventHandler {
           } else {
             let foundFrag;
             let maxFragLookUpTolerance = config.maxFragLookUpTolerance;
+
+            var currentTime=this.media.currentTime;
+
+            // When switching audio track the bufferEnd should only be considered
+            // until the start of the current frag
+            //We change without buffer_flush for not hanging/delaying live streams
+            //First we need to download+remux to issue proper flush event
+            if(this.prevTrackId!==this.trackId){
+              for(let i=0;i<fragments.length;i++){
+                if(currentTime>fragments[i].start) {
+                  bufferEnd = fragments[i].start;
+                  break;
+                }
+              }
+            }
+
             if (bufferEnd < end) {
               if (bufferEnd > end - maxFragLookUpTolerance) {
                 maxFragLookUpTolerance = 0;
@@ -229,6 +274,22 @@ class AudioStreamController extends EventHandler {
             }
           }
           if(frag) {
+            //Only flush when we have a startPTS
+            //Calculating when we have a new track frag available to play
+            //Can be immediatly or in the future since on alt live playlist
+            //on currentTime the frag could not be available anymore
+            //Safe Flush if until we have a proper frag to switch
+            if(this.prevTrackId!==this.trackId && frag.startPTS!==undefined){
+              //Adding at least 1s for safety
+              let flushTime=Math.max(frag.start, this.media.currentTime)+1;
+              //Cleaning the past
+              this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0 , endOffset: this.media.currentTime, type : 'audio'});
+              //Cleaning the future when we can as safe
+              logger.log(`Audio track switch, flushing audio buffer at ${flushTime}, track ${this.trackId}, currentTime:${pos}`);
+              this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: flushTime , endOffset: Number.POSITIVE_INFINITY, type : 'audio'});
+              //Lets announce that the initial audio track switch flush occur
+              this.prevTrackId=this.trackId;
+            }
             //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
             if ((frag.decryptdata.uri != null) && (frag.decryptdata.key == null)) {
               logger.log(`Loading key for ${frag.sn} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${this.trackId}`);
@@ -281,6 +342,7 @@ class AudioStreamController extends EventHandler {
           this.state = State.IDLE;
         }
         break;
+      case State.WAITING_INIT_PTS:
       case State.STOPPED:
       case State.FRAG_LOADING:
       case State.PARSING:
@@ -369,6 +431,7 @@ class AudioStreamController extends EventHandler {
 
     this.fragCurrent = null;
     this.state = State.PAUSED;
+    this.waitingFragment=null;
     // destroy useless demuxer when switching audio to main
     if (!altAudio) {
       if (this.demuxer) {
@@ -381,27 +444,62 @@ class AudioStreamController extends EventHandler {
         this.timer = setInterval(this.ontick, 100);
       }
     }
-    // flush audio source buffer
-    this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0, endOffset: Number.POSITIVE_INFINITY, type : 'audio'});
+
+    //We switch tracks
+    //If Main audio we can flush imediatly
+    // If not we need to have the proper PTS to know where to flush
+    //Lets give time to properly download the frag and get PTS
+    if(this.prevTrackId!==this.trackId){
+      //If Original we have audio track lets flush immediately
+      if(!altAudio){
+        this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0 , endOffset: Number.POSITIVE_INFINITY, type : 'audio'});
+        this.prevTrackId=this.trackId;
+      }else{
+        //No Flush lets go idle to get proper pts to know where to flush
+        //No lag is expecting on audio switch on alt live streams
+        this.state=State.IDLE;
+      }
+    }
     this.tick();
   }
 
   onAudioTrackLoaded(data) {
-    var details = data.details,
+    var newDetails = data.details,
         trackId = data.id,
         track = this.tracks[trackId],
-        duration = details.totalduration;
+        duration = newDetails.totalduration,
+        sliding = 0;
 
-    logger.log(`track ${trackId} loaded [${details.startSN},${details.endSN}],duration:${duration}`);
-    details.PTSKnown = false;
-    track.details = details;
+    logger.log(`track ${trackId} loaded [${newDetails.startSN},${newDetails.endSN}],duration:${duration}`);
 
+    if (newDetails.live) {
+      var curDetails = track.details;
+      if (curDetails && newDetails.fragments.length > 0) {
+        // we already have details for that level, merge them
+        LevelHelper.mergeDetails(curDetails,newDetails);
+        sliding = newDetails.fragments[0].start;
+        // TODO
+        //this.liveSyncPosition = this.computeLivePosition(sliding, curDetails);
+        if (newDetails.PTSKnown) {
+          logger.log(`live audio playlist sliding:${sliding.toFixed(3)}`);
+        } else {
+          logger.log('live audio playlist - outdated PTS, unknown sliding');
+        }
+      } else {
+        newDetails.PTSKnown = false;
+        logger.log('live audio playlist - first load, unknown sliding');
+      }
+    } else {
+      newDetails.PTSKnown = false;
+    }
+    track.details = newDetails;
+    
     // compute start position
     if (!this.startFragRequested) {
     // compute start position if set to -1. use it straight away if value is defined
       if (this.startPosition === -1) {
         // first, check if start time offset has been set in playlist, if yes, use this value
-        let startTimeOffset = details.startTimeOffset;
+        let startTimeOffset = newDetails.startTimeOffset;
         if(!isNaN(startTimeOffset)) {
           logger.log(`start time offset found in playlist, adjust startPosition to ${startTimeOffset}`);
           this.startPosition = startTimeOffset;
@@ -447,10 +545,18 @@ class AudioStreamController extends EventHandler {
         if(!this.demuxer) {
           this.demuxer = new Demuxer(this.hls,'audio');
         }
-        logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
-        // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
-        let accurateTimeOffset = details.PTSKnown || !details.live;
-        this.demuxer.push(data.payload, audioCodec, null, start, fragCurrent.cc, trackId, sn, duration, fragCurrent.decryptdata,accurateTimeOffset);
+        //Check if we have video initPTS
+        // If not we need to wait for it
+        if (this.initPTS !== null ){
+          logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
+          // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
+          let accurateTimeOffset = details.PTSKnown || !details.live;
+          this.demuxer.push(data.payload, audioCodec, null, start, fragCurrent.cc, trackId, sn, duration, fragCurrent.decryptdata, accurateTimeOffset, this.initPTS);
+        } else {
+          logger.log(`unknown video PTS for audio frag ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId} , waiting for video pts`);
+          this.waitingFragment=data;
+          this.state=State.WAITING_INIT_PTS;
+        }
     }
     this.fragLoadError = 0;
   }

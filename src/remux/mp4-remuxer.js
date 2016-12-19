@@ -36,12 +36,16 @@ class MP4Remuxer {
     this.ISGenerated = false;
   }
 
-  remux(level,sn,audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous,accurateTimeOffset) {
+  remux(level,sn,audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous,accurateTimeOffset,defaultInitPTS) {
     this.level = level;
     this.sn = sn;
     // generate Init Segment if needed
     if (!this.ISGenerated) {
       this.generateIS(audioTrack,videoTrack,timeOffset);
+    }
+
+    if((defaultInitPTS!==null)){
+      this._initPTS=this._initDTS= defaultInitPTS;
     }
 
     if (this.ISGenerated) {
@@ -148,6 +152,7 @@ class MP4Remuxer {
       if (computePTSDTS) {
         initPTS = Math.min(initPTS,videoSamples[0].pts - pesTimeScale * timeOffset);
         initDTS = Math.min(initDTS,videoSamples[0].dts - pesTimeScale * timeOffset);
+        this.observer.trigger(Event.INIT_PTS_FOUND, { id: this.id, initPTS: initPTS});
       }
     }
 
