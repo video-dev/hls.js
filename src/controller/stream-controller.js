@@ -172,7 +172,6 @@ class StreamController extends EventHandler {
                 }
                 break;
             case State.ERROR:
-            case State.PAUSED:
             case State.STOPPED:
             case State.FRAG_LOADING:
             case State.PARSING:
@@ -758,12 +757,8 @@ class StreamController extends EventHandler {
         this.fragCurrent = null;
         // increase fragment load Index to avoid frag loop loading error after buffer flush
         this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
-        this.state = State.BUFFER_FLUSHING;
         // flush everything
-        this.hls.trigger(Event.BUFFER_FLUSHING, {
-            startOffset: 0,
-            endOffset: Number.POSITIVE_INFINITY
-        });
+        this.flushMainBuffer(0, Number.POSITIVE_INFINITY);
     }
 
     /*
@@ -801,11 +796,7 @@ class StreamController extends EventHandler {
             if (currentRange && currentRange.start > 1) {
                 // flush buffer preceding current fragment (flush until current fragment start offset)
                 // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
-                this.state = State.BUFFER_FLUSHING;
-                this.hls.trigger(Event.BUFFER_FLUSHING, {
-                    startOffset: 0,
-                    endOffset: currentRange.start - 1
-                });
+                this.flushMainBuffer(0, currentRange.start - 1);
             }
             if (!media.paused) {
                 // add a safety delay of 1s
@@ -838,14 +829,23 @@ class StreamController extends EventHandler {
                     }
                     this.fragCurrent = null;
                     // flush position is the start position of this new buffer
-                    this.state = State.BUFFER_FLUSHING;
-                    this.hls.trigger(Event.BUFFER_FLUSHING, {
-                        startOffset: nextRange.start,
-                        endOffset: Number.POSITIVE_INFINITY
-                    });
+                    this.flushMainBuffer(
+                        nextRange.start,
+                        Number.POSITIVE_INFINITY
+                    );
                 }
             }
         }
+    }
+
+    flushMainBuffer(startOffset, endOffset) {
+        this.state = State.BUFFER_FLUSHING;
+        let flushScope = { startOffset: startOffset, endOffset: endOffset };
+        // if alternate audio tracks are used, only flush video, otherwise flush everything
+        if (this.altAudio) {
+            flushScope.type = 'video';
+        }
+        this.hls.trigger(Event.BUFFER_FLUSHING, flushScope);
     }
 
     onMediaAttached(data) {
@@ -1621,12 +1621,8 @@ class StreamController extends EventHandler {
                             'buffer full error also media.currentTime is not buffered, flush everything'
                         );
                         this.fragCurrent = null;
-                        this.state = State.PAUSED;
                         // flush everything
-                        this.hls.trigger(Event.BUFFER_FLUSHING, {
-                            startOffset: 0,
-                            endOffset: Number.POSITIVE_INFINITY
-                        });
+                        this.flushMainBuffer(0, Number.POSITIVE_INFINITY);
                     }
                 }
                 break;
