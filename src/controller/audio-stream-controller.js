@@ -919,7 +919,7 @@ class AudioStreamController extends EventHandler {
 
     onBufferFlushed() {
         let pendingData = this.pendingData;
-        if (pendingData) {
+        if (pendingData && pendingData.length) {
             logger.log('appending pending audio data on Buffer Flushed');
             pendingData.forEach(appendObj => {
                 this.appended = true;
