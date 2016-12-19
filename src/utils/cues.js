@@ -1,4 +1,6 @@
-var Cues = {
+import { fixLineBreaks } from './vttparser';
+
+const Cues = {
 
   newCue: function(track, startTime, endTime, captionScreen) {
     var row;
@@ -31,7 +33,7 @@ var Cues = {
         }
         //To be used for cleaning-up orphaned roll-up captions
         row.cueStartTime = startTime;
-        cue = new VTTCue(startTime, endTime, text.trim());
+        cue = new VTTCue(startTime, endTime, fixLineBreaks(text.trim()));
 
         if (indent >= 16)
         {

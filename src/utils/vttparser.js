@@ -234,6 +234,10 @@ function parseCue(input, cue, regionList) {
   consumeCueSettings(input, cue);
 }
 
+function fixLineBreaks(input) {
+  return input.replace(/<br(?: \/)?>/gi, '\n');
+}
+
 VTTParser.prototype = {
   parse: function(data) {
     var self = this;
@@ -244,10 +248,6 @@ VTTParser.prototype = {
     if (data) {
       // Try to decode the data that we received.
       self.buffer += self.decoder.decode(data, {stream: true});
-    }
-
-    function fixLineBreaks(input) {
-      return input.replace(/<br(?: \/)?>/gi, '\n');
     }
 
     function collectNextLine() {
@@ -429,5 +429,7 @@ VTTParser.prototype = {
     return this;
   }
 };
+
+export { fixLineBreaks };
 
 export default VTTParser;
