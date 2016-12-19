@@ -296,7 +296,22 @@ class PlaylistLoader extends EventHandler {
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
 
     while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
-      if (result[5]) { // url
+      if (result[1]) { // INF
+        const duration = result[1];
+        frag.duration = parseFloat(duration);
+        const title = result[2];
+        frag.title = title ? title : null;
+        if (createTagList) {
+          frag.tagList.push(title ? [ 'INF',duration,title ] : [ 'INF',duration ]);
+        }
+      } else if (result[3]) { // X-BYTERANGE
+        frag.rawByteRange = result[3];
+      } else if (result[4]) { // PROGRAM-DATE-TIME
+        frag.rawProgramDateTime = result[4];
+        if (createTagList) {
+          frag.tagList.push(['PROGRAM-DATE-TIME', result[4]]);
+        }
+      } else if (result[5]) { // url
         if (!isNaN(frag.duration)) {
           const sn = currentSN++;
           frag.type = type;
@@ -317,21 +332,6 @@ class PlaylistLoader extends EventHandler {
           if (createTagList) {
             frag.tagList = [];
           }
-        }
-      } else if (result[1]) { // INF
-        const duration = result[1];
-        frag.duration = parseFloat(duration);
-        const title = result[2];
-        frag.title = title ? title : null;
-        if (createTagList) {
-          frag.tagList.push(title ? [ 'INF',duration,title ] : [ 'INF',duration ]);
-        }
-      } else if (result[3]) { // X-BYTERANGE
-        frag.rawByteRange = result[3];
-      } else if (result[4]) { // PROGRAM-DATE-TIME
-        frag.rawProgramDateTime = result[4];
-        if (createTagList) {
-          frag.tagList.push(['PROGRAM-DATE-TIME', result[4]]);
         }
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
