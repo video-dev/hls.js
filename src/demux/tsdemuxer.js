@@ -57,7 +57,7 @@
   }
 
   // feed incoming data to the front of the parsing pipeline
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset) {
+  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
     var start, len = data.length, stt, pid, atf, offset,pes,
         codecsOnly = this.remuxer.passthrough,
         unknownPIDs = false;
@@ -129,7 +129,7 @@
                   // if audio PID is undefined OR if we have audio codec info,
                   // we have all codec info !
                   if (avcTrack.codec && (audioId === -1 || audioTrack.codec)) {
-                    this.remux(level,sn,data,timeOffset);
+                    this.remux(level,sn,cc,data,timeOffset);
                     return;
                   }
                 }
@@ -154,7 +154,7 @@
                   // if video PID is undefined OR if we have video codec info,
                   // we have all codec infos !
                   if (audioTrack.codec && (avcId === -1 || avcTrack.codec)) {
-                    this.remux(level,sn,data,timeOffset);
+                    this.remux(level,sn,cc,data,timeOffset);
                     return;
                   }
                 }
@@ -257,10 +257,10 @@
       // either id3Data null or PES truncated, keep it for next frag parsing
       id3Track.pesData = id3Data;
     }
-    this.remux(level,sn,null,timeOffset);
+    this.remux(level,sn,cc,null,timeOffset,defaultInitPTS);
   }
 
-  remux(level, sn, data, timeOffset) {
+  remux(level, sn, cc, data, timeOffset,defaultInitPTS) {
     let avcTrack = this._avcTrack, samples = avcTrack.samples, nbNalu = 0, naluLen = 0;
 
     // compute total/avc sample length and nb of NAL units
@@ -275,7 +275,7 @@
     }
     avcTrack.len = naluLen;
     avcTrack.nbNalu = nbNalu;
-    this.remuxer.remux(level, sn, this._audioTrack, this._avcTrack, this._id3Track, this._txtTrack, timeOffset, this.contiguous, this.accurateTimeOffset, data);
+    this.remuxer.remux(level, sn, cc, this._audioTrack, this._avcTrack, this._id3Track, this._txtTrack, timeOffset, this.contiguous, this.accurateTimeOffset, defaultInitPTS, data);
   }
 
   destroy() {
