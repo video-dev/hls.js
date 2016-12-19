@@ -746,7 +746,8 @@ class AudioStreamController extends EventHandler {
             );
 
             let audioSwitch = this.audioSwitch,
-                media = this.media;
+                media = this.media,
+                appendOnBufferFlush = false;
             //Only flush audio from old audio tracks when PTS is known on new audio track
             if (audioSwitch && media) {
                 if (media.readyState) {
@@ -763,6 +764,7 @@ class AudioStreamController extends EventHandler {
                             endOffset: Number.POSITIVE_INFINITY,
                             type: 'audio'
                         });
+                        appendOnBufferFlush = true;
                         //Lets announce that the initial audio track switch flush occur
                         this.audioSwitch = false;
                         hls.trigger(Event.AUDIO_TRACK_SWITCHED, {
@@ -776,24 +778,25 @@ class AudioStreamController extends EventHandler {
                 }
             }
 
+            let pendingData = this.pendingData;
             if (!this.audioSwitch) {
                 [data.data1, data.data2].forEach(buffer => {
                     if (buffer) {
-                        let appendObj = {
+                        pendingData.push({
                             type: data.type,
                             data: buffer,
                             parent: 'audio',
                             content: 'data'
-                        };
-                        // if we just switched audio, push pending data
-                        if (audioSwitch) {
-                            this.pendingData.push(appendObj);
-                        } else {
-                            this.appended = true;
-                            hls.trigger(Event.BUFFER_APPENDING, appendObj);
-                        }
+                        });
                     }
                 });
+                if (!appendOnBufferFlush && pendingData.length) {
+                    pendingData.forEach(appendObj => {
+                        this.hls.trigger(Event.BUFFER_APPENDING, appendObj);
+                    });
+                    this.pendingData = [];
+                    this.appended = true;
+                }
             }
             //trigger handler right now
             this.tick();
@@ -938,9 +941,9 @@ class AudioStreamController extends EventHandler {
         if (pendingData && pendingData.length) {
             logger.log('appending pending audio data on Buffer Flushed');
             pendingData.forEach(appendObj => {
-                this.appended = true;
                 this.hls.trigger(Event.BUFFER_APPENDING, appendObj);
             });
+            this.appended = true;
             this.pendingData = [];
             this.state = State.PARSED;
         } else {
