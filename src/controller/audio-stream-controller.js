@@ -83,7 +83,7 @@ class AudioStreamController extends EventHandler {
             //If we are waiting we need to demux/remux the waiting frag
             //With the new initPTS
             if (this.state === State.WAITING_INIT_PTS) {
-                logger.log(`Waiting audio frag sending to demuxer`);
+                logger.log('sending pending audio frag to demuxer');
                 this.state = State.FRAG_LOADING;
                 //We have audio frag waiting or video pts
                 //Let process it
@@ -679,6 +679,11 @@ class AudioStreamController extends EventHandler {
             let tracks = data.tracks,
                 track;
 
+            // delete any video track found on audio demuxer
+            if (tracks.video) {
+                delete tracks.video;
+            }
+
             // include levelCodec in audio and video tracks
             track = tracks.audio;
             if (track) {
@@ -716,6 +721,7 @@ class AudioStreamController extends EventHandler {
         if (
             fragCurrent &&
             data.id === 'audio' &&
+            data.type === 'audio' &&
             data.sn === fragCurrent.sn &&
             data.level === fragCurrent.level &&
             this.state === State.PARSING
@@ -743,17 +749,27 @@ class AudioStreamController extends EventHandler {
                 media = this.media;
             //Only flush audio from old audio tracks when PTS is known on new audio track
             if (audioSwitch && media) {
-                let currentTime = media.currentTime;
-                logger.log(
-                    'switching audio track : currentTime:' + currentTime
-                );
-                if (currentTime >= data.startPTS) {
-                    logger.log('switching audio track : flushing all audio');
-                    hls.trigger(Event.BUFFER_FLUSHING, {
-                        startOffset: 0,
-                        endOffset: Number.POSITIVE_INFINITY,
-                        type: 'audio'
-                    });
+                if (media.readyState) {
+                    let currentTime = media.currentTime;
+                    logger.log(
+                        'switching audio track : currentTime:' + currentTime
+                    );
+                    if (currentTime >= data.startPTS) {
+                        logger.log(
+                            'switching audio track : flushing all audio'
+                        );
+                        hls.trigger(Event.BUFFER_FLUSHING, {
+                            startOffset: 0,
+                            endOffset: Number.POSITIVE_INFINITY,
+                            type: 'audio'
+                        });
+                        //Lets announce that the initial audio track switch flush occur
+                        this.audioSwitch = false;
+                        hls.trigger(Event.AUDIO_TRACK_SWITCHED, {
+                            id: trackId
+                        });
+                    }
+                } else {
                     //Lets announce that the initial audio track switch flush occur
                     this.audioSwitch = false;
                     hls.trigger(Event.AUDIO_TRACK_SWITCHED, { id: trackId });
