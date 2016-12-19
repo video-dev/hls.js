@@ -151,7 +151,7 @@ var getCharForByte = function(byte) {
 };
 
 var NR_ROWS = 15,
-    NR_COLS = 32;
+    NR_COLS = 100;
 // Tables to look up row from PAC data
 var rowsLowCh1 = {0x11 : 1, 0x12 : 3, 0x15 : 5, 0x16 : 7, 0x17 : 9, 0x10 : 11, 0x13 : 12, 0x14 : 14};
 var rowsHighCh1 = {0x11 : 2, 0x12 : 4, 0x15 : 6, 0x16 : 8, 0x17 : 10, 0x13 : 13, 0x14 : 15};
@@ -510,7 +510,7 @@ class CaptionScreen {
         //Make sure this only affects Roll-up Captions by checking this.nrRollUpRows
         if (this.nrRollUpRows && this.currRow !== newRow) {
           //clear all rows first
-          for (var i = 0; i < NR_ROWS; i++) {
+          for (let i = 0; i < NR_ROWS; i++) {
             this.rows[i].clear();
           }
 
@@ -521,7 +521,7 @@ class CaptionScreen {
           //We use the cueStartTime value to check this.
           var prevLineTime = lastOutputScreen.rows[topRowIndex].cueStartTime;
           if(prevLineTime && prevLineTime < logger.time) {
-            for (i = 0; i < this.nrRollUpRows; i++) {
+            for (let i = 0; i < this.nrRollUpRows; i++) {
               this.rows[newRow-this.nrRollUpRows+i+1].copy(lastOutputScreen.rows[topRowIndex+i]);
             }
           }
