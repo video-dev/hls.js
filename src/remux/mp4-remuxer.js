@@ -293,7 +293,7 @@ class MP4Remuxer {
       return;
     }
     let view = new DataView(mdat.buffer);
-    view.setUint32(0, mdat.byteLength);
+    view.setUint32(0, mdatSize);
     mdat.set(MP4.types.mdat, 4);
 
     for (let i = 0 ; i < nbSamples; i++) {
@@ -569,7 +569,7 @@ class MP4Remuxer {
           }
           if (!rawMPEG) {
             view = new DataView(mdat.buffer);
-            view.setUint32(0, mdat.byteLength);
+            view.setUint32(0, mdatSize);
             mdat.set(MP4.types.mdat, 4);
           }
         } else {
@@ -601,10 +601,11 @@ class MP4Remuxer {
         }
       }
       mdat.set(unit, offset);
-      offset += unit.byteLength;
+      let unitLen = unit.byteLength;
+      offset += unitLen;
       //console.log('PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${audioSample.pts}/${audioSample.dts}/${initDTS}/${ptsnorm}/${dtsnorm}/${(audioSample.pts/4294967296).toFixed(3)}');
       mp4Sample = {
-        size: unit.byteLength,
+        size: unitLen,
         cts: 0,
         duration: 0,
         flags: {
