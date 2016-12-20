@@ -1,13 +1,13 @@
 import VTTParser from './vttparser';
 
 const cueString2millis = function(timeString) {
-    let ts = parseInt(timeString.substr(-3)),
-        secs = parseInt(timeString.substr(-6, 2)),
-        mins = parseInt(timeString.substr(-9, 2)),
-        hours =
-            timeString.length > 9
-                ? parseInt(timeString.substr(0, timeString.indexOf(':')))
-                : 0;
+    let ts = parseInt(timeString.substr(-3));
+    let secs = parseInt(timeString.substr(-6, 2));
+    let mins = parseInt(timeString.substr(-9, 2));
+    let hours =
+        timeString.length > 9
+            ? parseInt(timeString.substr(0, timeString.indexOf(':')))
+            : 0;
 
     if (isNaN(ts) || isNaN(secs) || isNaN(mins) || isNaN(hours)) {
         return -1;
@@ -20,8 +20,39 @@ const cueString2millis = function(timeString) {
     return ts;
 };
 
+const calculateOffset = function(vttCCs, cc, presentationTime) {
+    let currCC = vttCCs[cc];
+    let prevCC = vttCCs[currCC.prevCC];
+
+    // This is the first discontinuity or cues have been processed since the last discontinuity
+    // Offset = current discontinuity time
+    if (!prevCC || (!prevCC.new && currCC.new)) {
+        vttCCs.ccOffset = vttCCs.presentationOffset = currCC.start;
+        currCC.new = false;
+        return;
+    }
+
+    // There have been discontinuities since cues were last parsed.
+    // Offset = time elapsed
+    while (prevCC && prevCC.new) {
+        vttCCs.ccOffset += currCC.start - prevCC.start;
+        currCC.new = false;
+        currCC = prevCC;
+        prevCC = vttCCs[currCC.prevCC];
+    }
+
+    vttCCs.presentationOffset = presentationTime;
+};
+
 const WebVTTParser = {
-    parse: function(vttByteArray, syncPTS, callBack, errorCallBack) {
+    parse: function(
+        vttByteArray,
+        syncPTS,
+        vttCCs,
+        cc,
+        callBack,
+        errorCallBack
+    ) {
         // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
         let re = /\r\n|\n\r|\n|\r/g;
         let vttLines = String.fromCharCode
@@ -31,7 +62,8 @@ const WebVTTParser = {
             .split('\n');
         let cueTime = '00:00.000';
         let mpegTs = 0;
-        let offsetMillis = 0;
+        let localTime = 0;
+        let presentationTime = 0;
         let cues = [];
         let parsingError;
         let inHeader = true;
@@ -42,8 +74,30 @@ const WebVTTParser = {
 
         parser.oncue = function(cue) {
             // Adjust cue timing; clamp cues to start no earlier than - and drop cues that don't end after - 0 on timeline.
-            cue.startTime = Math.max(0, cue.startTime + offsetMillis / 1000);
-            cue.endTime += offsetMillis / 1000;
+            let currCC = vttCCs[cc];
+            let cueOffset = vttCCs.ccOffset;
+
+            // Update offsets for new discontinuities
+            if (currCC && currCC.new) {
+                if (localTime) {
+                    // When local time is provided, offset = discontinuity start time - local time
+                    cueOffset = vttCCs.ccOffset = currCC.start;
+                } else {
+                    calculateOffset(vttCCs, cc, presentationTime);
+                }
+            }
+
+            if (presentationTime && !localTime) {
+                // If we have MPEGTS but no LOCAL time, offset = presentation time + discontinuity offset
+                cueOffset =
+                    presentationTime +
+                    vttCCs.ccOffset -
+                    vttCCs.presentationOffset;
+            }
+
+            cue.startTime += cueOffset - localTime;
+            cue.endTime += cueOffset - localTime;
+
             // Fix encoding of special characters. TODO: Test with all sorts of weird characters.
             cue.text = decodeURIComponent(escape(cue.text));
             if (cue.endTime > 0) {
@@ -87,10 +141,12 @@ const WebVTTParser = {
                         syncPTS = syncPTS < 0 ? syncPTS + 8589934592 : syncPTS;
                         // Adjust MPEGTS by sync PTS.
                         mpegTs -= syncPTS;
-                        // Calculate cue timing in milliseconds and adjust by MPEGTS converted to milliseconds from 90kHz.
-                        offsetMillis =
-                            cueString2millis(cueTime) + Math.floor(mpegTs / 90);
-                        if (offsetMillis === -1) {
+                        // Convert cue time to seconds
+                        localTime = cueString2millis(cueTime) / 1000;
+                        // Convert MPEGTS to seconds from 90kHz.
+                        presentationTime = mpegTs / 90000;
+
+                        if (localTime === -1) {
                             parsingError = new Error(
                                 `Malformed X-TIMESTAMP-MAP: ${line}`
                             );
