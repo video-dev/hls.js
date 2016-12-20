@@ -7,7 +7,7 @@ const cueString2millis = function(timeString) {
         hours = timeString.length > 9 ? parseInt(timeString.substr(0, timeString.indexOf(':'))) : 0;
 
     if (isNaN(ts) || isNaN(secs) || isNaN(mins) || isNaN(hours)) {
-      return -1;
+        return -1;
     }
 
     ts += 1000 * secs;
@@ -17,18 +17,42 @@ const cueString2millis = function(timeString) {
     return ts;
 };
 
+const calculateOffset = function(vttCCs, cc, presentationTime) {
+    let currCC = vttCCs[cc],
+        prevCC = vttCCs[currCC.prevCC];
+
+    // This is the first discontinuity or cues have been processed since the last discontinuity
+    // Offset = current discontinuity time
+    if (!prevCC || (!prevCC.new && currCC.new)) {
+        vttCCs.ccOffset = vttCCs.presentationOffset = currCC.start;
+        currCC.new = false;
+        return;
+    }
+
+    // There have been discontinuities since cues were last parsed.
+    // Offset = time elapsed
+    while (prevCC && prevCC.new) {
+        vttCCs.ccOffset += currCC.start - prevCC.start;
+        currCC.new = false;
+        currCC = prevCC;
+        prevCC = vttCCs[currCC.prevCC];
+    }
+
+    vttCCs.presentationOffset = presentationTime;
+};
+
 const WebVTTParser = {
     parse: function(vttByteArray, syncPTS, vttCCs, cc, callBack, errorCallBack) {
         // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
-        let re = /\r\n|\n\r|\n|\r/g;
-        let vttLines = String.fromCharCode.apply(null, new Uint8Array(vttByteArray)).trim().replace(re, '\n').split('\n');
-        let cueTime = '00:00.000';
-        let mpegTs = 0;
-        let localTime = 0;
-        let presentationTime = 0;
-        let cues = [];
-        let parsingError;
-        let inHeader = true;
+        let re = /\r\n|\n\r|\n|\r/g,
+            vttLines = String.fromCharCode.apply(null, new Uint8Array(vttByteArray)).trim().replace(re, '\n').split('\n'),
+            cueTime = '00:00.000',
+            mpegTs = 0,
+            localTime = 0,
+            presentationTime = 0,
+            cues = [],
+            parsingError,
+            inHeader = true;
         // let VTTCue = VTTCue || window.TextTrackCue;
 
         // Create parser object using VTTCue with TextTrackCue fallback on certain browsers.
@@ -36,27 +60,22 @@ const WebVTTParser = {
 
         parser.oncue = function(cue) {
             // Adjust cue timing; clamp cues to start no earlier than - and drop cues that don't end after - 0 on timeline.
-            let currCC = vttCCs[cc];
+            let currCC = vttCCs[cc],
+                cueOffset = vttCCs.ccOffset;
 
+            // Update offsets for new discontinuities
             if (currCC && currCC.new) {
-                // If we encounter a new discontinuity, update the discontinuity offset.
                 if (localTime) {
-                    // When local time is provided, the offset is the discontinuity start time
-                    vttCCs.ccOffset = currCC.start;
+                    // When local time is provided, offset = discontinuity start time - local time
+                    cueOffset = vttCCs.ccOffset = currCC.start;
                 } else {
-                    // If we don't have local time, keep track of the time elapsed between discontinuities
-                    // where no cues are parsed
-                    let prevCC = vttCCs[currCC.prevCC];
-                    vttCCs.ccOffset += currCC.start - (prevCC ? prevCC.start : 0);
+                    calculateOffset(vttCCs, cc, presentationTime);
                 }
-                currCC.new = false;
             }
 
-            // Offset cue times by the start time of the current discontinuity
-            let cueOffset = vttCCs.ccOffset;
             if (presentationTime && !localTime) {
-              // If we have MPEGTS but no LOCAL, we need to use the presentation time and add the discontinuity offset
-              cueOffset = presentationTime + vttCCs.ccOffset;
+                // If we have MPEGTS but no LOCAL time, offset = presentation time + discontinuity offset
+                cueOffset = presentationTime + vttCCs.ccOffset - vttCCs.presentationOffset;
             }
 
             cue.startTime += cueOffset - localTime;
@@ -66,7 +85,6 @@ const WebVTTParser = {
             cue.text = decodeURIComponent(escape(cue.text));
             if (cue.endTime > 0) {
               cues.push(cue);
-
             }
         };
 
@@ -93,8 +111,7 @@ const WebVTTParser = {
                     line.substr(16).split(',').forEach(timestamp => {
                         if (timestamp.startsWith('LOCAL:')) {
                           cueTime = timestamp.substr(6);
-                        }
-                        else if (timestamp.startsWith('MPEGTS:')) {
+                        } else if (timestamp.startsWith('MPEGTS:')) {
                           mpegTs = parseInt(timestamp.substr(7));
                         }
                     });
@@ -118,8 +135,7 @@ const WebVTTParser = {
                     }
                     // Return without parsing X-TIMESTAMP-MAP line.
                     return;
-                }
-                else if (line === '') {
+                } else if (line === '') {
                   inHeader = false;
                 }
             }
