@@ -413,9 +413,9 @@
       stream.size -= payloadStartOffset;
       //reassemble PES packet
       pesData = new Uint8Array(stream.size);
-      while (data.length) {
-        frag = data.shift();
-        var len = frag.byteLength;
+      for( let j = 0, dataLen = data.length; j < dataLen ; j++) {
+        frag = data[j];
+        let len = frag.byteLength;
         if (payloadStartOffset) {
           if (payloadStartOffset > len) {
             // trim full frag if PES header bigger than frag
