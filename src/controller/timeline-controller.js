@@ -185,7 +185,7 @@ class TimelineController extends EventHandler {
     onManifestLoading() {
         this.lastSn = -1; // Detect discontiguity in fragment parsing
         this.prevCC = -1;
-        this.vttCCs = { ccOffset: 0 }; // Detect discontinuity in subtitle manifests
+        this.vttCCs = { ccOffset: 0, presentationOffset: 0 }; // Detect discontinuity in subtitle manifests
     }
 
     onManifestLoaded(data) {
