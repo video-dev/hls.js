@@ -8,11 +8,11 @@ import EventHandler from '../event-handler';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import AttrList from '../utils/attr-list';
 import {logger} from '../utils/logger';
+import {request as requestIdleCallback} from 'requestidlecallback';
 
 // https://regex101.com is your friend
 const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
-const LEVEL_PLAYLIST_REGEX_FAST = /#EXTINF: *([^,]+),?(.*)|(?!#)(\S.+)|#EXT-X-BYTERANGE: *(.+)|#EXT-X-PROGRAM-DATE-TIME:(.+)|#.*/g;
 const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
 
 class LevelKey {
@@ -287,126 +287,133 @@ class PlaylistLoader extends EventHandler {
         result,
         i;
 
+    const LEVEL_PLAYLIST_REGEX_FAST = /#EXTINF: *([^,]+),?(.*)|(?!#)(\S.+)|#EXT-X-BYTERANGE: *(.+)|#EXT-X-PROGRAM-DATE-TIME:(.+)|#.*/g;
+
     frag.tagList = [];
 
-    LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
+    function next (deadline) {
+      while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
+        const duration = result[1];
+        if (duration) { // INF
+          frag.duration = parseFloat(duration);
+          const title = result[2];
+          frag.title = title ? title : null;
+          frag.tagList.push(title ? [ 'INF',duration,title ] : [ 'INF',duration ]);
+        } else if (result[3]) { // url
+          if (!isNaN(frag.duration)) {
+            const sn = currentSN++;
+            frag.type = type;
+            frag.prevFrag = prevFrag;
+            frag.start = totalduration;
+            frag.levelkey = levelkey;
+            frag.sn = sn;
+            frag.level = id;
+            frag.cc = cc;
+            frag.baseurl = baseurl;
+            frag.relurl = result[3];
 
-    while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
-      const duration = result[1];
-      if (duration) { // INF
-        frag.duration = parseFloat(duration);
-        const title = result[2];
-        frag.title = title ? title : null;
-        frag.tagList.push(title ? [ 'INF',duration,title ] : [ 'INF',duration ]);
-      } else if (result[3]) { // url
-        if (!isNaN(frag.duration)) {
-          const sn = currentSN++;
-          frag.type = type;
-          frag.prevFrag = prevFrag;
-          frag.start = totalduration;
-          frag.levelkey = levelkey;
-          frag.sn = sn;
-          frag.level = id;
-          frag.cc = cc;
-          frag.baseurl = baseurl;
-          frag.relurl = result[3];
+            level.fragments.push(frag);
+            prevFrag = frag;
+            totalduration += frag.duration;
 
-          level.fragments.push(frag);
-          prevFrag = frag;
-          totalduration += frag.duration;
+            frag = new Fragment();
+            frag.tagList = [];
+          }
+        } else if (result[4]) { // X-BYTERANGE
+          frag.rawByteRange = result[4];
+        } else if (result[5]) { // PROGRAM-DATE-TIME
+          frag.rawProgramDateTime = result[5];
+          frag.tagList.push(['PROGRAM-DATE-TIME', result[5]]);
+        } else {
+          result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
+          for (i = 1; i < result.length; i++) {
+            if (result[i] !== undefined) {
+              break;
+            }
+          }
 
-          frag = new Fragment();
-          frag.tagList = [];
-        }
-      } else if (result[4]) { // X-BYTERANGE
-        frag.rawByteRange = result[4];
-      } else if (result[5]) { // PROGRAM-DATE-TIME
-        frag.rawProgramDateTime = result[5];
-        frag.tagList.push(['PROGRAM-DATE-TIME', result[5]]);
-      } else {
-        result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
-        for (i = 1; i < result.length; i++) {
-          if (result[i] !== undefined) {
-            break;
+          const value1 = result[i+1];
+          const value2 = result[i+2];
+
+          switch (result[i]) {
+            case '#':
+              frag.tagList.push(value2 ? [ value1,value2 ] : [ value1 ]);
+              break;
+            case 'PLAYLIST-TYPE':
+              level.type = value1.toUpperCase();
+              break;
+            case 'MEDIA-SEQUENCE':
+              currentSN = level.startSN = parseInt(value1);
+              break;
+            case 'TARGETDURATION':
+              level.targetduration = parseFloat(value1);
+              break;
+            case 'VERSION':
+              level.version = parseInt(value1);
+              break;
+            case 'EXTM3U':
+              break;
+            case 'ENDLIST':
+              level.live = false;
+              break;
+            case 'DIS':
+              cc++;
+              frag.tagList.push(['DIS']);
+              break;
+            case 'DISCONTINUITY-SEQ':
+              cc = parseInt(value1);
+              break;
+            case 'KEY':
+              // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
+              var decryptparams = value1;
+              var keyAttrs = new AttrList(decryptparams);
+              var decryptmethod = keyAttrs.enumeratedString('METHOD'),
+                  decrypturi = keyAttrs.URI,
+                  decryptiv = keyAttrs.hexadecimalInteger('IV');
+              if (decryptmethod) {
+                levelkey = new LevelKey();
+                if ((decrypturi) && (decryptmethod === 'AES-128')) {
+                  levelkey.method = decryptmethod;
+                  // URI to get the key
+                  levelkey.baseuri = baseurl;
+                  levelkey.reluri = decrypturi;
+                  levelkey.key = null;
+                  // Initialization Vector (IV)
+                  levelkey.iv = decryptiv;
+                }
+              }
+              break;
+            case 'START':
+              let startParams = value1;
+              let startAttrs = new AttrList(startParams);
+              let startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
+              //TIME-OFFSET can be 0
+              if ( !isNaN(startTimeOffset) ) {
+                level.startTimeOffset = startTimeOffset;
+              }
+              break;
+            default:
+              logger.warn(`line parsed but not handled: ${result}`);
+              break;
           }
         }
-
-        const value1 = result[i+1];
-        const value2 = result[i+2];
-
-        switch (result[i]) {
-          case '#':
-            frag.tagList.push(value2 ? [ value1,value2 ] : [ value1 ]);
-            break;
-          case 'PLAYLIST-TYPE':
-            level.type = value1.toUpperCase();
-            break;
-          case 'MEDIA-SEQUENCE':
-            currentSN = level.startSN = parseInt(value1);
-            break;
-          case 'TARGETDURATION':
-            level.targetduration = parseFloat(value1);
-            break;
-          case 'VERSION':
-            level.version = parseInt(value1);
-            break;
-          case 'EXTM3U':
-            break;
-          case 'ENDLIST':
-            level.live = false;
-            break;
-          case 'DIS':
-            cc++;
-            frag.tagList.push(['DIS']);
-            break;
-          case 'DISCONTINUITY-SEQ':
-            cc = parseInt(value1);
-            break;
-          case 'KEY':
-            // https://tools.ietf.org/html/draft-pantos-http-live-streaming-08#section-3.4.4
-            var decryptparams = value1;
-            var keyAttrs = new AttrList(decryptparams);
-            var decryptmethod = keyAttrs.enumeratedString('METHOD'),
-                decrypturi = keyAttrs.URI,
-                decryptiv = keyAttrs.hexadecimalInteger('IV');
-            if (decryptmethod) {
-              levelkey = new LevelKey();
-              if ((decrypturi) && (decryptmethod === 'AES-128')) {
-                levelkey.method = decryptmethod;
-                // URI to get the key
-                levelkey.baseuri = baseurl;
-                levelkey.reluri = decrypturi;
-                levelkey.key = null;
-                // Initialization Vector (IV)
-                levelkey.iv = decryptiv;
-              }
-            }
-            break;
-          case 'START':
-            let startParams = value1;
-            let startAttrs = new AttrList(startParams);
-            let startTimeOffset = startAttrs.decimalFloatingPoint('TIME-OFFSET');
-            //TIME-OFFSET can be 0
-            if ( !isNaN(startTimeOffset) ) {
-              level.startTimeOffset = startTimeOffset;
-            }
-            break;
-          default:
-            logger.warn(`line parsed but not handled: ${result}`);
-            break;
+        if (!deadline || deadline.timeRemaining() < 5) {
+          return new Promise(requestIdleCallback).then(next);
         }
       }
+
+      frag = prevFrag;
+      //logger.log('found ' + level.fragments.length + ' fragments');
+      if(frag && !frag.relurl) {
+        level.fragments.pop();
+        totalduration-=frag.duration;
+      }
+      level.totalduration = totalduration;
+      level.averagetargetduration = totalduration / level.fragments.length;
+      level.endSN = currentSN - 1;
+      return Promise.resolve(level);
     }
-    frag = prevFrag;
-    //logger.log('found ' + level.fragments.length + ' fragments');
-    if(frag && !frag.relurl) {
-      level.fragments.pop();
-      totalduration-=frag.duration;
-    }
-    level.totalduration = totalduration;
-    level.averagetargetduration = totalduration / level.fragments.length;
-    level.endSN = currentSN - 1;
-    return level;
+    return next();
   }
 
   loadsuccess(response, stats, context) {
@@ -428,22 +435,25 @@ class PlaylistLoader extends EventHandler {
     //stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
     if (string.indexOf('#EXTM3U') === 0) {
       if (string.indexOf('#EXTINF:') > 0) {
-        let isLevel = (type !== 'audioTrack'),
-            levelDetails = this.parseLevelPlaylist(string, url, (isLevel ? level : id) || 0, isLevel ? 'main' : 'audio');
-        if (type === 'manifest') {
-        // first request, stream manifest (no master playlist), fire manifest loaded event with level details
-          hls.trigger(Event.MANIFEST_LOADED, {levels: [{url: url, details : levelDetails}], audioTracks : [], url: url, stats: stats});
-        }
-        stats.tparsed = performance.now();
-        if (levelDetails.targetduration) {
-          if (isLevel) {
-            hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: level || 0, id: id || 0, stats: stats});
-          } else {
-            hls.trigger(Event.AUDIO_TRACK_LOADED, {details: levelDetails, id: id, stats: stats});
-          }
-        } else {
-          hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'invalid targetduration'});
-        }
+        let isLevel = (type !== 'audioTrack');
+        this
+          .parseLevelPlaylist(string, url, (isLevel ? level : id) || 0, isLevel ? 'main' : 'audio')
+          .then(levelDetails => {
+            if (type === 'manifest') {
+            // first request, stream manifest (no master playlist), fire manifest loaded event with level details
+              hls.trigger(Event.MANIFEST_LOADED, {levels: [{url: url, details : levelDetails}], audioTracks : [], url: url, stats: stats});
+            }
+            stats.tparsed = performance.now();
+            if (levelDetails.targetduration) {
+              if (isLevel) {
+                hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: level || 0, id: id || 0, stats: stats});
+              } else {
+                hls.trigger(Event.AUDIO_TRACK_LOADED, {details: levelDetails, id: id, stats: stats});
+              }
+            } else {
+              hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'invalid targetduration'});
+            }
+          });
       } else {
         let levels = this.parseMasterPlaylist(string, url);
         // multi level playlist, parse level info
