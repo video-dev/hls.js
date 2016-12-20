@@ -297,16 +297,19 @@ class MP4Remuxer {
 
     for (let i = 0; i < inputSamples.length; i++) {
       let avcSample = inputSamples[i],
+          avcSampleUnits = avcSample.units.units,
           mp4SampleLength = 0,
           compositionTimeOffset;
       // convert NALU bitstream to MP4 format (prepend NALU with size field)
-      while (avcSample.units.units.length) {
-        let unit = avcSample.units.units.shift();
-        view.setUint32(offset, unit.data.byteLength);
+      while (avcSampleUnits.length) {
+        let unit = avcSampleUnits.shift(),
+            unitData = unit.data,
+            unitDataLen = unit.data.byteLength;
+        view.setUint32(offset, unitDataLen);
         offset += 4;
-        mdat.set(unit.data, offset);
-        offset += unit.data.byteLength;
-        mp4SampleLength += 4 + unit.data.byteLength;
+        mdat.set(unitData, offset);
+        offset += unitDataLen;
+        mp4SampleLength += 4 + unitDataLen;
       }
 
       if(!isSafari) {
