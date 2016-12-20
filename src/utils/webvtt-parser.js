@@ -1,13 +1,13 @@
 import VTTParser from './vttparser';
 
 const cueString2millis = function(timeString) {
-    let ts = parseInt(timeString.substr(-3)),
-        secs = parseInt(timeString.substr(-6, 2)),
-        mins = parseInt(timeString.substr(-9, 2)),
-        hours =
-            timeString.length > 9
-                ? parseInt(timeString.substr(0, timeString.indexOf(':')))
-                : 0;
+    let ts = parseInt(timeString.substr(-3));
+    let secs = parseInt(timeString.substr(-6, 2));
+    let mins = parseInt(timeString.substr(-9, 2));
+    let hours =
+        timeString.length > 9
+            ? parseInt(timeString.substr(0, timeString.indexOf(':')))
+            : 0;
 
     if (isNaN(ts) || isNaN(secs) || isNaN(mins) || isNaN(hours)) {
         return -1;
@@ -18,6 +18,30 @@ const cueString2millis = function(timeString) {
     ts += 60 * 60 * 1000 * hours;
 
     return ts;
+};
+
+const calculateOffset = function(vttCCs, cc, presentationTime) {
+    let currCC = vttCCs[cc];
+    let prevCC = vttCCs[currCC.prevCC];
+
+    // This is the first discontinuity or cues have been processed since the last discontinuity
+    // Offset = current discontinuity time
+    if (!prevCC || (!prevCC.new && currCC.new)) {
+        vttCCs.ccOffset = vttCCs.presentationOffset = currCC.start;
+        currCC.new = false;
+        return;
+    }
+
+    // There have been discontinuities since cues were last parsed.
+    // Offset = time elapsed
+    while (prevCC && prevCC.new) {
+        vttCCs.ccOffset += currCC.start - prevCC.start;
+        currCC.new = false;
+        currCC = prevCC;
+        prevCC = vttCCs[currCC.prevCC];
+    }
+
+    vttCCs.presentationOffset = presentationTime;
 };
 
 const WebVTTParser = {
@@ -51,27 +75,24 @@ const WebVTTParser = {
         parser.oncue = function(cue) {
             // Adjust cue timing; clamp cues to start no earlier than - and drop cues that don't end after - 0 on timeline.
             let currCC = vttCCs[cc];
+            let cueOffset = vttCCs.ccOffset;
 
+            // Update offsets for new discontinuities
             if (currCC && currCC.new) {
-                // If we encounter a new discontinuity, update the discontinuity offset.
                 if (localTime) {
-                    // When local time is provided, the offset is the discontinuity start time
-                    vttCCs.ccOffset = currCC.start;
+                    // When local time is provided, offset = discontinuity start time - local time
+                    cueOffset = vttCCs.ccOffset = currCC.start;
                 } else {
-                    // If we don't have local time, keep track of the time elapsed between discontinuities
-                    // where no cues are parsed
-                    let prevCC = vttCCs[currCC.prevCC];
-                    vttCCs.ccOffset +=
-                        currCC.start - (prevCC ? prevCC.start : 0);
+                    calculateOffset(vttCCs, cc, presentationTime);
                 }
-                currCC.new = false;
             }
 
-            // Offset cue times by the start time of the current discontinuity
-            let cueOffset = vttCCs.ccOffset;
             if (presentationTime && !localTime) {
-                // If we have MPEGTS but no LOCAL, we need to use the presentation time and add the discontinuity offset
-                cueOffset = presentationTime + vttCCs.ccOffset;
+                // If we have MPEGTS but no LOCAL time, offset = presentation time + discontinuity offset
+                cueOffset =
+                    presentationTime +
+                    vttCCs.ccOffset -
+                    vttCCs.presentationOffset;
             }
 
             cue.startTime += cueOffset - localTime;
