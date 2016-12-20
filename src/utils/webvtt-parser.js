@@ -1,10 +1,10 @@
 import VTTParser from './vttparser';
 
 const cueString2millis = function(timeString) {
-    let ts = parseInt(timeString.substr(-3)),
-        secs = parseInt(timeString.substr(-6,2)),
-        mins = parseInt(timeString.substr(-9,2)),
-        hours = timeString.length > 9 ? parseInt(timeString.substr(0, timeString.indexOf(':'))) : 0;
+    let ts = parseInt(timeString.substr(-3));
+    let secs = parseInt(timeString.substr(-6,2));
+    let mins = parseInt(timeString.substr(-9,2));
+    let hours = timeString.length > 9 ? parseInt(timeString.substr(0, timeString.indexOf(':'))) : 0;
 
     if (isNaN(ts) || isNaN(secs) || isNaN(mins) || isNaN(hours)) {
         return -1;
@@ -18,8 +18,8 @@ const cueString2millis = function(timeString) {
 };
 
 const calculateOffset = function(vttCCs, cc, presentationTime) {
-    let currCC = vttCCs[cc],
-        prevCC = vttCCs[currCC.prevCC];
+    let currCC = vttCCs[cc];
+    let prevCC = vttCCs[currCC.prevCC];
 
     // This is the first discontinuity or cues have been processed since the last discontinuity
     // Offset = current discontinuity time
@@ -44,15 +44,15 @@ const calculateOffset = function(vttCCs, cc, presentationTime) {
 const WebVTTParser = {
     parse: function(vttByteArray, syncPTS, vttCCs, cc, callBack, errorCallBack) {
         // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
-        let re = /\r\n|\n\r|\n|\r/g,
-            vttLines = String.fromCharCode.apply(null, new Uint8Array(vttByteArray)).trim().replace(re, '\n').split('\n'),
-            cueTime = '00:00.000',
-            mpegTs = 0,
-            localTime = 0,
-            presentationTime = 0,
-            cues = [],
-            parsingError,
-            inHeader = true;
+        let re = /\r\n|\n\r|\n|\r/g;
+        let vttLines = String.fromCharCode.apply(null, new Uint8Array(vttByteArray)).trim().replace(re, '\n').split('\n');
+        let cueTime = '00:00.000';
+        let mpegTs = 0;
+        let localTime = 0;
+        let presentationTime = 0;
+        let cues = [];
+        let parsingError;
+        let inHeader = true;
         // let VTTCue = VTTCue || window.TextTrackCue;
 
         // Create parser object using VTTCue with TextTrackCue fallback on certain browsers.
@@ -60,8 +60,8 @@ const WebVTTParser = {
 
         parser.oncue = function(cue) {
             // Adjust cue timing; clamp cues to start no earlier than - and drop cues that don't end after - 0 on timeline.
-            let currCC = vttCCs[cc],
-                cueOffset = vttCCs.ccOffset;
+            let currCC = vttCCs[cc];
+            let cueOffset = vttCCs.ccOffset;
 
             // Update offsets for new discontinuities
             if (currCC && currCC.new) {
