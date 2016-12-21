@@ -14,6 +14,7 @@ class LevelController extends EventHandler {
     super(hls,
       Event.MANIFEST_LOADED,
       Event.LEVEL_LOADED,
+      Event.LEVEL_REMOVED,
       Event.ERROR);
     this.ontick = this.tick.bind(this);
     this._manualLevel = this._autoLevelCapping = -1;
@@ -208,6 +209,7 @@ class LevelController extends EventHandler {
     }
 
     let details = data.details, hls = this.hls, levelId, level, levelError = false, abrController = hls.abrController, minAutoLevel = abrController.minAutoLevel;
+    let removeLevel = false;
     // try to recover not fatal errors
     switch(details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
@@ -225,6 +227,7 @@ class LevelController extends EventHandler {
       case ErrorDetails.MANIFEST_EMPTY_ERROR:
         levelId = data.context.level;
         levelError = true;
+        removeLevel = true;
         break;
       default:
         break;
@@ -238,6 +241,7 @@ class LevelController extends EventHandler {
       if (level.urlId < (level.url.length - 1)) {
         level.urlId++;
         level.details = undefined;
+        removeLevel = false;
         logger.warn(`level controller,${details} for level ${levelId}: switching to redundant stream id ${level.urlId}`);
       } else {
         // we could try to recover if in auto mode and current level not lowest level (0)
@@ -245,6 +249,7 @@ class LevelController extends EventHandler {
         if (recoverable) {
           logger.warn(`level controller,${details}: emergency switch-down for next fragment`);
           abrController.nextAutoLevel = minAutoLevel;
+          this.nextLoadLevel = minAutoLevel;
         } else if(level && level.details && level.details.live) {
           logger.warn(`level controller,${details} on live stream, discard`);
           if (levelError) {
@@ -273,6 +278,10 @@ class LevelController extends EventHandler {
             data.fatal = true;
             hls.trigger(Event.ERROR, data);
           }
+        }
+        if (removeLevel) {
+          console.warn('removeLevel')
+          hls.trigger(Event.LEVEL_REMOVED, { level: levelId });
         }
       }
     }
@@ -304,6 +313,10 @@ class LevelController extends EventHandler {
         this.timer = null;
       }
     }
+  }
+
+  onLevelRemoved(data) {
+    this._levels = this.levels.filter((level, index) => index !== data.level);
   }
 
   tick() {
