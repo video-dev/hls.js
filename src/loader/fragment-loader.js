@@ -30,17 +30,17 @@ class FragmentLoader extends EventHandler {
     let frag = data.frag,
         type = frag.type,
         loader = this.loaders[type],
-        config = this.hls.config;
+        config = this.hls.config,
+        progressData = !frag.bitrateTest;
 
-    frag.loaded = 0;
     if (loader) {
       logger.warn(`abort previous fragment loader for type:${type}`);
       loader.abort();
     }
-    loader  = this.loaders[type] = frag.loader = typeof(config.fLoader) !== 'undefined' ? new config.fLoader(config) : new config.loader(config);
+    loader  = this.loaders[type] = frag.loader = typeof(config.fLoader) !== 'undefined' ? new config.fLoader(config,progressData) : new config.loader(config,progressData);
 
     let loaderContext, loaderConfig, loaderCallbacks;
-    loaderContext = { url : frag.url, frag : frag, responseType : 'arraybuffer', progressData : false};
+    loaderContext = { url : frag.url, frag : frag, responseType : 'arraybuffer', progressData : progressData};
     let start = frag.byteRangeStartOffset, end = frag.byteRangeEndOffset;
     if (!isNaN(start) && !isNaN(end)) {
       loaderContext.rangeStart = start;
@@ -78,10 +78,9 @@ class FragmentLoader extends EventHandler {
   }
 
   // data will be used for progressive parsing
-  loadprogress(stats, context, data) { // jshint ignore:line
+  loadprogress(stats, context, data) {
     let frag = context.frag;
-    frag.loaded = stats.loaded;
-    this.hls.trigger(Event.FRAG_LOAD_PROGRESS, {frag: frag, stats: stats});
+    this.hls.trigger(Event.FRAG_LOAD_PROGRESS, {frag: frag, stats: stats, payload : data});
   }
 }
 

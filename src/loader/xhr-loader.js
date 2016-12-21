@@ -60,6 +60,7 @@ class XhrLoader {
     let stats = this.stats;
     stats.tfirst = 0;
     stats.loaded = 0;
+    stats.chunks = 0;
     if (this.xhrSetup) {
       this.xhrSetup(xhr, context.url);
     }
@@ -104,6 +105,7 @@ class XhrLoader {
             len = data.length;
           }
           stats.loaded = stats.total = len;
+          stats.chunks++;
           let response = { url : xhr.responseURL, data : data };
           this.callbacks.onSuccess(response, stats, context);
         } else {

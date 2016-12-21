@@ -25,7 +25,7 @@ class DemuxerInline {
     }
   }
 
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
+  append(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
     var demuxer = this.demuxer;
     if (!demuxer || 
        // in case of continuity change, we might switch from content type (AAC container to TS container for example)
@@ -52,8 +52,15 @@ class DemuxerInline {
       }
       this.demuxer = demuxer;
     }
-    demuxer.push(data,audioCodec,videoCodec,timeOffset,cc,level,sn,duration,accurateTimeOffset,defaultInitPTS);
+    demuxer.append(data,audioCodec,videoCodec,timeOffset,cc,level,sn,duration,accurateTimeOffset,defaultInitPTS);
     this.cc = cc;
+  }
+
+  notifycomplete() {
+    var demuxer = this.demuxer;
+    if(demuxer) {
+      demuxer.notifycomplete();
+    }
   }
 }
 

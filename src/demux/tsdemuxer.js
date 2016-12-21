@@ -48,6 +48,8 @@
     this.aacOverFlow = null;
     this.aacLastPTS = null;
     this.avcSample = null;
+    this.data = [];
+    this.len = 0;
     this.remuxer.switchLevel();
   }
 
@@ -57,16 +59,14 @@
   }
 
   // feed incoming data to the front of the parsing pipeline
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
-    var start, len = data.length, stt, pid, atf, offset,pes,
-        codecsOnly = this.remuxer.passthrough,
-        unknownPIDs = false;
-
+  append(dataIn, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
+    this.timeOffset = timeOffset;
     this._duration = duration;
     this.contiguous = false;
     this.accurateTimeOffset = accurateTimeOffset;
+    this.defaultInitPTS = defaultInitPTS;
     if (cc !== this.lastCC) {
       logger.log('discontinuity detected');
       this.insertDiscontinuity();
@@ -79,9 +79,14 @@
     } else if (sn === (this.lastSN+1)) {
       this.contiguous = true;
     }
+    //console.log(`trailer/arrayLen/in:${this.len}/${this.data.length}/${dataIn.length}`);
     this.lastSN = sn;
-
-    var pmtParsed = this.pmtParsed,
+    this.data.push({start : 0, data : dataIn});
+    this.len += dataIn.length;
+    var len = this.len, stt, pid, atf, offset,pes,
+        codecsOnly = this.remuxer.passthrough,
+        unknownPIDs = false,
+        pmtParsed = this.pmtParsed,
         avcTrack = this._avcTrack,
         audioTrack = this._audioTrack,
         id3Track = this._id3Track,
@@ -100,10 +105,50 @@
         parseMPEGPES = this._parseMPEGPES.bind(this),
         parseID3PES  = this._parseID3PES.bind(this);
 
-    // don't parse last TS packet if incomplete
-    len -= len % 188;
+    if (len < 188) {
+      return;
+    }
+
+    let dataObject = this.data.shift(),
+        data = dataObject.data,
+        start = dataObject.start,
+        i = 0;
+
     // loop through TS packets
-    for (start = 0; start < len; start += 188) {
+    for (i = 0 ; i + 188 <= len; i += 188, start += 188) {
+      if( (start + 188) > data.length) {
+        //console.log(`${start}/${start+188}/${data.length}`);
+        if (start < data.length) {
+          let remainingLen = data.length - start,
+              neededLen = 188 - remainingLen,
+              nextChunk = this.data[0],
+              appendedLen = Math.min(nextChunk.data.length,neededLen),
+              newData = new Uint8Array(remainingLen + appendedLen);
+          newData.set(data.subarray(start));
+          if(nextChunk) {
+            newData.set(nextChunk.data.subarray(0, appendedLen), remainingLen);
+            if (newData.length === 188) {
+              nextChunk.start = appendedLen;
+            } else {
+              this.data.shift();
+            }
+            data = newData;
+            start = 0;
+          }
+        } else {
+          data = this.data.shift();
+          if (data) {
+            start = data.start;
+            data = data.data;
+          }
+        }
+      }
+
+      if (start + 188 > data.length) {
+        i-=188;
+        start-=188;
+        continue;
+      }
       if (data[start] === 0x47) {
         stt = !!(data[start + 1] & 0x40);
         // pid is a 13-bit field starting at the last bit of TS[1]
@@ -210,8 +255,9 @@
             if (unknownPIDs && !pmtParsed) {
               logger.log('reparse from beginning');
               unknownPIDs = false;
-              // we set it to -188, the += 188 in the for loop will reset start to 0
-              start = -188;
+              // we set it to the start of the first packet of this data chunk
+              start = (start % 188) - 188;
+              i = -188;
             }
             pmtParsed = this.pmtParsed = true;
             break;
@@ -223,9 +269,38 @@
             break;
         }
       } else {
-        this.observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, id : this.id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47'});
+        this.observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, id : this.id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: `TS packet did not start with 0x47 @ offset ${i}`});
       }
     }
+
+    // check if there any remaining bytes left
+    let remainingLen = this.len = len - i;
+    //console.log('parsed/trailer:' + i + '/' + remainingLen);
+    if (remainingLen) {
+      if (this.data.length === 0) {
+        this.data.push({start :data.length - remainingLen , data : data});
+      }
+    }
+    // update tracks with chunk of partial reassembled PES
+    avcTrack.pesData = avcData;
+    audioTrack.pesData = audioData;
+    id3Track.pesData = id3Data;
+  }
+
+
+  notifycomplete() {
+    let avcTrack = this._avcTrack,
+        audioTrack = this._audioTrack,
+        id3Track = this._id3Track,
+        avcData = avcTrack.pesData,
+        audioData = audioTrack.pesData,
+        id3Data = id3Track.pesData,
+        parsePES = this._parsePES,
+        parseAVCPES = this._parseAVCPES.bind(this),
+        parseAACPES = this._parseAACPES.bind(this),
+        parseMPEGPES  = this._parseMPEGPES.bind(this),
+        parseID3PES  = this._parseID3PES.bind(this),
+        pes;
     // try to parse last PES packets
     if (avcData && (pes = parsePES(avcData))) {
       parseAVCPES(pes,true);
@@ -244,7 +319,7 @@
       audioTrack.pesData = null;
     } else {
       if (audioData && audioData.size) {
-        logger.log('last AAC PES packet truncated,might overlap between fragments');
+        logger.warn('last AAC PES packet truncated,might overlap between fragments');
       }
      // either audioData null or PES truncated, keep it for next frag parsing
       audioTrack.pesData = audioData;
@@ -257,10 +332,12 @@
       // either id3Data null or PES truncated, keep it for next frag parsing
       id3Track.pesData = id3Data;
     }
-    this.remux(level,sn,cc,null,timeOffset,defaultInitPTS);
+    this.remux(this.lastLevel,this.lastSN, this.lastCC, null,this.timeOffset);
+    this.data = [];
+    this.len = 0;
   }
 
-  remux(level, sn, cc, data, timeOffset,defaultInitPTS) {
+  remux(level, sn, cc, data, timeOffset) {
     let avcTrack = this._avcTrack, samples = avcTrack.samples, nbNalu = 0, naluLen = 0;
 
     // compute total/avc sample length and nb of NAL units
@@ -275,7 +352,7 @@
     }
     avcTrack.len = naluLen;
     avcTrack.nbNalu = nbNalu;
-    this.remuxer.remux(level, sn, cc, this._audioTrack, this._avcTrack, this._id3Track, this._txtTrack, timeOffset, this.contiguous, this.accurateTimeOffset, defaultInitPTS, data);
+    this.remuxer.remux(level, sn, cc, this._audioTrack, this._avcTrack, this._id3Track, this._txtTrack, timeOffset, this.contiguous, this.accurateTimeOffset, this.defaultInitPTS, data);
   }
 
   destroy() {

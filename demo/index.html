@@ -390,7 +390,7 @@ $(document).ready(function() {
             load : data.stats.tload - data.stats.tfirst,
             parsing : data.stats.tparsed - data.stats.tload,
             buffer : data.stats.tbuffered - data.stats.tparsed,
-            duration : data.stats.tbuffered - data.stats.tfirst,
+            duration : data.stats.tbuffered - data.stats.trequest,
             bw : Math.round(8*data.stats.total/(data.stats.tbuffered - data.stats.trequest)),
             size : data.stats.total
           };

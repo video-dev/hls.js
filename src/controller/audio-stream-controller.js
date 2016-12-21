@@ -534,7 +534,7 @@ class AudioStreamController extends EventHandler {
           logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
           // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
           let accurateTimeOffset = false; //details.PTSKnown || !details.live;
-          this.demuxer.push(data.payload, audioCodec, null, start, cc, trackId, sn, duration, fragCurrent.decryptdata, accurateTimeOffset, initPTS);
+          this.demuxer.append(data.payload, audioCodec, null, start, cc, trackId, sn, duration, fragCurrent.decryptdata, accurateTimeOffset, initPTS);
         } else {
           logger.log(`unknown video PTS for continuity counter ${cc}, waiting for video PTS before demuxing audio frag ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
           this.waitingFragment=data;

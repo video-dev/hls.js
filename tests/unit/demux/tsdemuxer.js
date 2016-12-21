@@ -24,21 +24,21 @@ describe('TS Demuxer', () => {
     assert.equal(TSDemuxer.probe(validTSFragment), true);
     assert.equal(TSDemuxer.probe(new Uint8Array([])), false);
   });
-  //  demuxer.push(data,audioCodec,videoCodec,timeOffset,cc,level,sn,duration);
+  //  demuxer.append(data,audioCodec,videoCodec,timeOffset,cc,level,sn,duration);
 
   it('detects a discontinuity', () => {
     var cc;
 
     // Initial feeds of data should not attempt to insert a discontinuity
     cc = 0;
-    demuxer.push([], 'a', 'v', 0, cc, 0, 0, 0)
+    demuxer.append([], 'a', 'v', 0, cc, 0, 0, 0)
     assert.equal(demuxer.remuxer.insertDiscontinuity__count, 0);
-    demuxer.push([], 'a', 'v', 0, cc, 0, 0, 0)
+    demuxer.append([], 'a', 'v', 0, cc, 0, 0, 0)
     assert.equal(demuxer.remuxer.insertDiscontinuity__count, 0);
 
     // Noticing a change to the continuity counter should trigger a remuxer discontinuity insertion
     cc = 1;
-    demuxer.push([], 'a', 'v', 0, cc, 0, 0, 0)
+    demuxer.append([], 'a', 'v', 0, cc, 0, 0, 0)
     assert.equal(demuxer.remuxer.insertDiscontinuity__count, 1);
   });
 
