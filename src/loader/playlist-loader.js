@@ -206,8 +206,9 @@ class PlaylistLoader extends EventHandler {
   parseMasterPlaylist(string, baseurl) {
     let levels = [], result;
     MASTER_PLAYLIST_REGEX.lastIndex = 0;
-    while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null){
+    while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
       const level = {};
+
       var attrs = level.attrs = new AttrList(result[1]);
       level.url = this.resolve(result[2], baseurl);
 
@@ -237,7 +238,7 @@ class PlaylistLoader extends EventHandler {
       // If so it must be discarded to avoid playback issues or to rely to heavliy on error management
       // According to https://developer.apple.com/library/content/qa/qa1767/_index.html
       // Audio-only rendition with EXT-X-STREAM-INF tag must have bitrate lower than 192 kbps
-      if (isFinite(bitrate) && !isNaN(bitrate) && bitrate <= 192000 && !('videoCodec' in level)) {
+      if (bitrate && isFinite(bitrate) && bitrate <= 192000 && !('videoCodec' in level)) {
         continue;
       }
 
