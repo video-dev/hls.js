@@ -4256,8 +4256,10 @@ var StreamController = function (_EventHandler) {
           if (!demuxer) {
             demuxer = this.demuxer = new _demuxer2.default(this.hls, 'main');
           }
-          // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
-          var accurateTimeOffset = details.PTSKnown || !details.live;
+          // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live) and if media is not seeking (this is to overcome potential timestamp drifts between playlists and fragments)
+          var media = this.media;
+          var mediaSeeking = media && media.seeking;
+          var accurateTimeOffset = !mediaSeeking && (details.PTSKnown || !details.live);
           demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata, accurateTimeOffset, null);
         }
       }
