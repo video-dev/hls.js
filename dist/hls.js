@@ -7159,8 +7159,8 @@ var TSDemuxer = function () {
         stream.size -= payloadStartOffset;
         //reassemble PES packet
         pesData = new Uint8Array(stream.size);
-        while (data.length) {
-          frag = data.shift();
+        for (var j = 0, dataLen = data.length; j < dataLen; j++) {
+          frag = data[j];
           var len = frag.byteLength;
           if (payloadStartOffset) {
             if (payloadStartOffset > len) {
@@ -7453,6 +7453,16 @@ var TSDemuxer = function () {
           lastUnitStart = -1,
           lastUnitType;
       //logger.log('PES:' + Hex.hexDump(array));
+
+      if (state === -1) {
+        // special use case where we found 3 or 4-byte start codes exactly at the end of previous PES packet
+        lastUnitStart = 0;
+        // NALu type is value read from offset 0
+        lastUnitType = array[0] & 0x1f;
+        state = 0;
+        i = 1;
+      }
+
       while (i < len) {
         value = array[i++];
         // optimization. state 0 and 1 are the predominant case. let's handle them outside of the switch/case
@@ -7464,68 +7474,54 @@ var TSDemuxer = function () {
           state = value ? 0 : 2;
           continue;
         }
-        // finding 3 or 4-byte start codes (00 00 01 OR 00 00 00 01)
-        switch (state) {
-          case 2:
-          case 3:
-            if (value === 0) {
-              state = 3;
-            } else if (value === 1) {
-              if (lastUnitStart >= 0) {
-                unit = { data: array.subarray(lastUnitStart, i - state - 1), type: lastUnitType };
-                //logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
-                units.push(unit);
-              } else {
-                // lastUnitStart is undefined => this is the first start code found in this PES packet
-                // first check if start code delimiter is overlapping between 2 PES packets,
-                // ie it started in last packet (lastState not zero)
-                // and ended at the beginning of this PES packet (i <= 4 - lastState)
-                var lastUnit = this._getLastNalUnit();
-                if (lastUnit) {
-                  if (lastState && i <= 4 - lastState) {
-                    // start delimiter overlapping between PES packets
-                    // strip start delimiter bytes from the end of last NAL unit
-                    // check if lastUnit had a state different from zero
-                    if (lastUnit.state) {
-                      // strip last bytes
-                      lastUnit.data = lastUnit.data.subarray(0, lastUnit.data.byteLength - lastState);
-                    }
-                  }
-                  // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
-                  overflow = i - state - 1;
-                  if (overflow > 0) {
-                    //logger.log('first NALU found with overflow:' + overflow);
-                    var tmp = new Uint8Array(lastUnit.data.byteLength + overflow);
-                    tmp.set(lastUnit.data, 0);
-                    tmp.set(array.subarray(0, overflow), lastUnit.data.byteLength);
-                    lastUnit.data = tmp;
-                  }
+        // here we have state either equal to 2 or 3
+        if (!value) {
+          state = 3;
+        } else if (value === 1) {
+          if (lastUnitStart >= 0) {
+            unit = { data: array.subarray(lastUnitStart, i - state - 1), type: lastUnitType };
+            //logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
+            units.push(unit);
+          } else {
+            // lastUnitStart is undefined => this is the first start code found in this PES packet
+            // first check if start code delimiter is overlapping between 2 PES packets,
+            // ie it started in last packet (lastState not zero)
+            // and ended at the beginning of this PES packet (i <= 4 - lastState)
+            var lastUnit = this._getLastNalUnit();
+            if (lastUnit) {
+              if (lastState && i <= 4 - lastState) {
+                // start delimiter overlapping between PES packets
+                // strip start delimiter bytes from the end of last NAL unit
+                // check if lastUnit had a state different from zero
+                if (lastUnit.state) {
+                  // strip last bytes
+                  lastUnit.data = lastUnit.data.subarray(0, lastUnit.data.byteLength - lastState);
                 }
               }
-              // check if we can read unit type
-              if (i < len) {
-                unitType = array[i] & 0x1f;
-                //logger.log('find NALU @ offset:' + i + ',type:' + unitType);
-                lastUnitStart = i;
-                lastUnitType = unitType;
-                state = 0;
-              } else {
-                // not enough byte to read unit type. let's read it on next PES parsing
-                state = -1;
+              // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
+              overflow = i - state - 1;
+              if (overflow > 0) {
+                //logger.log('first NALU found with overflow:' + overflow);
+                var tmp = new Uint8Array(lastUnit.data.byteLength + overflow);
+                tmp.set(lastUnit.data, 0);
+                tmp.set(array.subarray(0, overflow), lastUnit.data.byteLength);
+                lastUnit.data = tmp;
               }
-            } else {
-              state = 0;
             }
-            break;
-          case -1:
-            // special use case where we found 3 or 4-byte start codes exactly at the end of previous PES packet
-            lastUnitStart = 0;
-            // NALu type is value read from offset 0
-            lastUnitType = value & 0x1f;
+          }
+          // check if we can read unit type
+          if (i < len) {
+            unitType = array[i] & 0x1f;
+            //logger.log('find NALU @ offset:' + i + ',type:' + unitType);
+            lastUnitStart = i;
+            lastUnitType = unitType;
             state = 0;
-            break;
-          default:
-            break;
+          } else {
+            // not enough byte to read unit type. let's read it on next PES parsing
+            state = -1;
+          }
+        } else {
+          state = 0;
         }
       }
       if (lastUnitStart >= 0 && state >= 0) {
@@ -10515,6 +10511,7 @@ var MP4Remuxer = function () {
           lastDTS,
           inputSamples = track.samples,
           outputSamples = [],
+          nbSamples = inputSamples.length,
           ptsNormalize = this._PTSNormalize,
           initDTS = this._initDTS;
 
@@ -10603,7 +10600,7 @@ var MP4Remuxer = function () {
       }
 
       // normalize all PTS/DTS now ...
-      for (var _i = 0; _i < inputSamples.length; _i++) {
+      for (var _i = 0; _i < nbSamples; _i++) {
         var _sample = inputSamples[_i];
         if (isSafari) {
           // sample DTS is computed using a constant decoding offset (mp4SampleDuration) between samples
@@ -10631,26 +10628,29 @@ var MP4Remuxer = function () {
         return;
       }
       var view = new DataView(mdat.buffer);
-      view.setUint32(0, mdat.byteLength);
+      view.setUint32(0, mdatSize);
       mdat.set(_mp4Generator2.default.types.mdat, 4);
 
-      for (var _i2 = 0; _i2 < inputSamples.length; _i2++) {
+      for (var _i2 = 0; _i2 < nbSamples; _i2++) {
         var avcSample = inputSamples[_i2],
+            avcSampleUnits = avcSample.units.units,
             mp4SampleLength = 0,
             compositionTimeOffset = void 0;
         // convert NALU bitstream to MP4 format (prepend NALU with size field)
-        while (avcSample.units.units.length) {
-          var unit = avcSample.units.units.shift();
-          view.setUint32(offset, unit.data.byteLength);
+        for (var j = 0, nbUnits = avcSampleUnits.length; j < nbUnits; j++) {
+          var unit = avcSampleUnits[j],
+              unitData = unit.data,
+              unitDataLen = unit.data.byteLength;
+          view.setUint32(offset, unitDataLen);
           offset += 4;
-          mdat.set(unit.data, offset);
-          offset += unit.data.byteLength;
-          mp4SampleLength += 4 + unit.data.byteLength;
+          mdat.set(unitData, offset);
+          offset += unitDataLen;
+          mp4SampleLength += 4 + unitDataLen;
         }
 
         if (!isSafari) {
           // expected sample duration is the Decoding Timestamp diff of consecutive samples
-          if (_i2 < inputSamples.length - 1) {
+          if (_i2 < nbSamples - 1) {
             mp4SampleDuration = inputSamples[_i2 + 1].dts - avcSample.dts;
           } else {
             var config = this.config,
@@ -10762,8 +10762,8 @@ var MP4Remuxer = function () {
           dts,
           ptsnorm,
           dtsnorm,
-          samples = [],
-          samples0 = [],
+          outputSamples = [],
+          inputSamples = [],
           fillFrame,
           newStamp,
           nextAudioPts;
@@ -10771,7 +10771,7 @@ var MP4Remuxer = function () {
       track.samples.sort(function (a, b) {
         return a.pts - b.pts;
       });
-      samples0 = track.samples;
+      inputSamples = track.samples;
 
       // for audio samples, also consider consecutive fragments as being contiguous (even if a level switch occurs),
       // for sake of clarity:
@@ -10783,7 +10783,7 @@ var MP4Remuxer = function () {
       // and this also avoids audio glitches/cut when switching quality, or reporting wrong duration on first audio frame
 
       nextAudioPts = this.nextAudioPts;
-      contiguous |= samples0.length && nextAudioPts && (Math.abs(timeOffset - nextAudioPts / pesTimeScale) < 0.1 || Math.abs(samples0[0].pts - nextAudioPts - this._initDTS) < 20 * pesFrameDuration);
+      contiguous |= inputSamples.length && nextAudioPts && (Math.abs(timeOffset - nextAudioPts / pesTimeScale) < 0.1 || Math.abs(inputSamples[0].pts - nextAudioPts - this._initDTS) < 20 * pesFrameDuration);
 
       if (!contiguous) {
         // if fragments are not contiguous, let's use timeOffset to compute next Audio PTS
@@ -10797,16 +10797,16 @@ var MP4Remuxer = function () {
 
       // only inject/drop audio frames in case time offset is accurate
       if (accurateTimeOffset && track.isAAC) {
-        for (var i = 0, nextPtsNorm = nextAudioPts; i < samples0.length;) {
+        for (var i = 0, nextPtsNorm = nextAudioPts; i < inputSamples.length;) {
           // First, let's see how far off this frame is from where we expect it to be
-          var sample = samples0[i],
+          var sample = inputSamples[i],
               ptsNorm = ptsNormalize(sample.pts - initDTS, nextAudioPts),
               delta = ptsNorm - nextPtsNorm;
 
           // If we're overlapping by more than a duration, drop this sample
           if (delta <= -pesFrameDuration) {
             _logger.logger.warn('Dropping 1 audio frame @ ' + Math.round(nextPtsNorm / 90) / 1000 + 's due to ' + Math.round(Math.abs(delta / 90)) + ' ms overlap.');
-            samples0.splice(i, 1);
+            inputSamples.splice(i, 1);
             track.len -= sample.unit.length;
             // Don't touch nextPtsNorm or i
           }
@@ -10822,7 +10822,7 @@ var MP4Remuxer = function () {
                   _logger.logger.log('Unable to get silent frame for given audio codec; duplicating last frame instead.');
                   fillFrame = sample.unit.subarray();
                 }
-                samples0.splice(i, 0, { unit: fillFrame, pts: newStamp, dts: newStamp });
+                inputSamples.splice(i, 0, { unit: fillFrame, pts: newStamp, dts: newStamp });
                 track.len += fillFrame.length;
                 nextPtsNorm += pesFrameDuration;
                 i += 1;
@@ -10842,15 +10842,15 @@ var MP4Remuxer = function () {
                 if (i === 0) {
                   sample.pts = sample.dts = initDTS + nextAudioPts;
                 } else {
-                  sample.pts = sample.dts = samples0[i - 1].pts + pesFrameDuration;
+                  sample.pts = sample.dts = inputSamples[i - 1].pts + pesFrameDuration;
                 }
                 i += 1;
               }
         }
       }
 
-      while (samples0.length) {
-        audioSample = samples0.shift();
+      for (var _j = 0, _nbSamples = inputSamples.length; _j < _nbSamples; _j++) {
+        audioSample = inputSamples[_j];
         unit = audioSample.unit;
         pts = audioSample.pts - initDTS;
         dts = audioSample.dts - initDTS;
@@ -10907,7 +10907,7 @@ var MP4Remuxer = function () {
             }
             if (!rawMPEG) {
               view = new DataView(mdat.buffer);
-              view.setUint32(0, mdat.byteLength);
+              view.setUint32(0, mdatSize);
               mdat.set(_mp4Generator2.default.types.mdat, 4);
             }
           } else {
@@ -10935,14 +10935,15 @@ var MP4Remuxer = function () {
                 dependsOn: 1
               }
             };
-            samples.push(mp4Sample);
+            outputSamples.push(mp4Sample);
           }
         }
         mdat.set(unit, offset);
-        offset += unit.byteLength;
+        var unitLen = unit.byteLength;
+        offset += unitLen;
         //console.log('PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${audioSample.pts}/${audioSample.dts}/${initDTS}/${ptsnorm}/${dtsnorm}/${(audioSample.pts/4294967296).toFixed(3)}');
         mp4Sample = {
-          size: unit.byteLength,
+          size: unitLen,
           cts: 0,
           duration: 0,
           flags: {
@@ -10953,14 +10954,14 @@ var MP4Remuxer = function () {
             dependsOn: 1
           }
         };
-        samples.push(mp4Sample);
+        outputSamples.push(mp4Sample);
         lastDTS = dtsnorm;
       }
       var lastSampleDuration = 0;
-      var nbSamples = samples.length;
+      var nbSamples = outputSamples.length;
       //set last sample duration as being identical to previous sample
       if (nbSamples >= 2) {
-        lastSampleDuration = samples[nbSamples - 2].duration;
+        lastSampleDuration = outputSamples[nbSamples - 2].duration;
         mp4Sample.duration = lastSampleDuration;
       }
       if (nbSamples) {
@@ -10968,7 +10969,7 @@ var MP4Remuxer = function () {
         this.nextAudioPts = ptsnorm + pes2mp4ScaleFactor * lastSampleDuration;
         //logger.log('Audio/PTS/PTSend:' + audioSample.pts.toFixed(0) + '/' + this.nextAacDts.toFixed(0));
         track.len = 0;
-        track.samples = samples;
+        track.samples = outputSamples;
         if (rawMPEG) {
           moof = new Uint8Array();
         } else {
