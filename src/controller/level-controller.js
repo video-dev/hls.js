@@ -234,8 +234,8 @@ class LevelController extends EventHandler {
      */
     if (levelId !== undefined) {
       level = this._levels[levelId];
-      if (level.urlId < (level.url.length - 1)) {
-        level.urlId++;
+      if (level.url.length > 1) {
+        level.urlId = (level.urlId + 1) % level.url.length;
         level.details = undefined;
         logger.warn(`level controller,${details} for level ${levelId}: switching to redundant stream id ${level.urlId}`);
       } else {
