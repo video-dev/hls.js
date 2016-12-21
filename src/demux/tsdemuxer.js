@@ -888,6 +888,16 @@ class TSDemuxer {
             lastUnitStart = -1,
             lastUnitType;
         //logger.log('PES:' + Hex.hexDump(array));
+
+        if (state === -1) {
+            // special use case where we found 3 or 4-byte start codes exactly at the end of previous PES packet
+            lastUnitStart = 0;
+            // NALu type is value read from offset 0
+            lastUnitType = array[0] & 0x1f;
+            state = 0;
+            i = 1;
+        }
+
         while (i < len) {
             value = array[i++];
             // optimization. state 0 and 1 are the predominant case. let's handle them outside of the switch/case
@@ -965,13 +975,6 @@ class TSDemuxer {
                     } else {
                         state = 0;
                     }
-                    break;
-                case -1:
-                    // special use case where we found 3 or 4-byte start codes exactly at the end of previous PES packet
-                    lastUnitStart = 0;
-                    // NALu type is value read from offset 0
-                    lastUnitType = value & 0x1f;
-                    state = 0;
                     break;
                 default:
                     break;
