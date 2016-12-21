@@ -208,20 +208,20 @@ class PlaylistLoader extends EventHandler {
     MASTER_PLAYLIST_REGEX.lastIndex = 0;
     while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null){
       const level = {};
-
       var attrs = level.attrs = new AttrList(result[1]);
       level.url = this.resolve(result[2], baseurl);
 
       var resolution = attrs.decimalResolution('RESOLUTION');
-      if(resolution) {
+      if (resolution) {
         level.width = resolution.width;
         level.height = resolution.height;
       }
-      level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
+      var bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
+      level.bitrate = bitrate;
       level.name = attrs.NAME;
 
       var codecs = attrs.CODECS;
-      if(codecs) {
+      if (codecs) {
         codecs = codecs.split(/[ ,]+/);
         for (let i = 0; i < codecs.length; i++) {
           const codec = codecs[i];
@@ -231,6 +231,14 @@ class PlaylistLoader extends EventHandler {
             level.audioCodec = codec;
           }
         }
+      }
+
+      // HLS App-store compliance check - we need to determinte the presence of an audio-only stream 
+      // If so it must be discarded to avoid playback issues or to rely to heavliy on error management
+      // According to https://developer.apple.com/library/content/qa/qa1767/_index.html
+      // Audio-only rendition with EXT-X-STREAM-INF tag must have bitrate lower than 192 kbps
+      if (isFinite(bitrate) && !isNaN(bitrate) && bitrate <= 192000 && !('videoCodec' in level)) {
+        continue;
       }
 
       levels.push(level);
