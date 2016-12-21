@@ -51,7 +51,6 @@ class TimelineController extends EventHandler {
         this.unparsedVttFrags = [];
         this.initPTS = undefined;
         this.cueRanges = [];
-        this.cueRanges[0] = this.currentCueRange = [];
 
         if (this.config.enableCEA708Captions) {
             var self = this;
@@ -120,26 +119,27 @@ class TimelineController extends EventHandler {
     addCues(channel, startTime, endTime, screen) {
         // skip cues which overlap more than 50% with previously parsed time ranges
         const ranges = this.cueRanges;
+        let merged = false;
         for (let i = ranges.length; i--; ) {
             let cueRange = ranges[i];
-            if (cueRange.length) {
-                let overlap = intersection(
-                    cueRange[0],
-                    cueRange[1],
-                    startTime,
-                    endTime
-                );
-                if (overlap && overlap / (endTime - startTime) > 0.5) {
+            let overlap = intersection(
+                cueRange[0],
+                cueRange[1],
+                startTime,
+                endTime
+            );
+            if (overlap >= 0) {
+                cueRange[0] = Math.min(cueRange[0], startTime);
+                cueRange[1] = Math.max(cueRange[1], endTime);
+                merged = true;
+                if (overlap / (endTime - startTime) > 0.5) {
                     return;
                 }
             }
         }
-        // create/update current appended cue range
-        let currentRange = this.currentCueRange;
-        if (!currentRange.length) {
-            currentRange[0] = startTime;
+        if (!merged) {
+            ranges.push([startTime, endTime]);
         }
-        currentRange[1] = endTime;
         this.Cues.newCue(this[channel], startTime, endTime, screen);
     }
 
@@ -202,8 +202,7 @@ class TimelineController extends EventHandler {
         this.textTracks = [];
         this.unparsedVttFrags = this.unparsedVttFrags || [];
         this.initPTS = undefined;
-        this.cueRanges.length = 0;
-        this.cueRanges[0] = this.currentCueRange = [];
+        this.cueRanges = [];
 
         if (this.config.enableWebVTT) {
             this.tracks = data.subtitles || [];
@@ -240,11 +239,6 @@ class TimelineController extends EventHandler {
             // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
             if (sn !== this.lastSn + 1) {
                 this.cea608Parser.reset();
-                if (this.currentCueRange.length) {
-                    let currentCueRange = [];
-                    this.currentCueRange = currentCueRange;
-                    this.cueRanges.push(currentCueRange);
-                }
             }
             this.lastSn = sn;
         } else if (frag.type === 'subtitle') {
