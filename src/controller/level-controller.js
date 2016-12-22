@@ -349,7 +349,6 @@ class LevelController extends EventHandler {
                     }
                 }
                 if (removeLevel) {
-                    console.warn('removeLevel');
                     hls.trigger(Event.LEVEL_REMOVED, { level: levelId });
                 }
             }
