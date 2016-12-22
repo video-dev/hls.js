@@ -14,7 +14,6 @@ class LevelController extends EventHandler {
     super(hls,
       Event.MANIFEST_LOADED,
       Event.LEVEL_LOADED,
-      Event.LEVEL_REMOVED,
       Event.ERROR);
     this.ontick = this.tick.bind(this);
     this._manualLevel = this._autoLevelCapping = -1;
@@ -244,12 +243,19 @@ class LevelController extends EventHandler {
         removeLevel = false;
         logger.warn(`level controller,${details} for level ${levelId}: switching to redundant stream id ${level.urlId}`);
       } else {
+        if (removeLevel) {
+          this._levels = this.levels.filter((l, index) => index !== levelId);
+          hls.trigger(Event.LEVEL_REMOVED, { level: levelId });
+        }
         // we could try to recover if in auto mode and current level not lowest level (0)
         let recoverable = ((this._manualLevel === -1) && levelId);
         if (recoverable) {
           logger.warn(`level controller,${details}: emergency switch-down for next fragment`);
           abrController.nextAutoLevel = minAutoLevel;
-          this.nextLoadLevel = minAutoLevel;
+        } else if (removeLevel) {
+          // Recover by forcing to auto after removing the bad level
+          logger.warn(`Bad level encountered, forcing to auto mode`);
+          hls.currentLevel = -1;
         } else if(level && level.details && level.details.live) {
           logger.warn(`level controller,${details} on live stream, discard`);
           if (levelError) {
@@ -278,9 +284,6 @@ class LevelController extends EventHandler {
             data.fatal = true;
             hls.trigger(Event.ERROR, data);
           }
-        }
-        if (removeLevel) {
-          hls.trigger(Event.LEVEL_REMOVED, { level: levelId });
         }
       }
     }
@@ -312,10 +315,6 @@ class LevelController extends EventHandler {
         this.timer = null;
       }
     }
-  }
-
-  onLevelRemoved(data) {
-    this._levels = this.levels.filter((level, index) => index !== data.level);
   }
 
   tick() {
