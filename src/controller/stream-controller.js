@@ -1428,8 +1428,6 @@ _checkBuffer() {
 
   onLevelRemoved(data) {
     this.levels = this.levels.filter((level, index) => index !== data.level);
-    this.state = State.BUFFER_FLUSHING;
-    this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0, endOffset: Number.POSITIVE_INFINITY});
   }
 
   swapAudioCodec() {
