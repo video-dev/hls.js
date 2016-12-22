@@ -533,6 +533,14 @@ class TSDemuxer {
                         // decrement 2^33
                         pesDts -= 8589934592;
                     }
+                    if (pesPts - pesDts > 60 * 90000) {
+                        logger.warn(
+                            `${Math.round(
+                                (pesPts - pesDts) / 90000
+                            )}s delta between PTS and DTS, align them`
+                        );
+                        pesPts = pesDts;
+                    }
                 } else {
                     pesDts = pesPts;
                 }
