@@ -286,7 +286,6 @@ class LevelController extends EventHandler {
             if (level.urlId < level.url.length - 1) {
                 level.urlId++;
                 level.details = undefined;
-                removeLevel = false;
                 logger.warn(
                     `level controller,${details} for level ${levelId}: switching to redundant stream id ${
                         level.urlId
@@ -294,9 +293,13 @@ class LevelController extends EventHandler {
                 );
             } else {
                 if (removeLevel) {
+                    logger.warn(
+                        `Bad level encountered, removing & forcing to auto mode`
+                    );
                     this._levels = this.levels.filter(
                         (l, index) => index !== levelId
                     );
+                    hls.currentLevel = -1;
                     hls.trigger(Event.LEVEL_REMOVED, { level: levelId });
                 }
                 // we could try to recover if in auto mode and current level not lowest level (0)
@@ -306,10 +309,6 @@ class LevelController extends EventHandler {
                         `level controller,${details}: emergency switch-down for next fragment`
                     );
                     abrController.nextAutoLevel = minAutoLevel;
-                } else if (removeLevel) {
-                    // Recover by forcing to auto after removing the bad level
-                    logger.warn(`Bad level encountered, forcing to auto mode`);
-                    hls.currentLevel = -1;
                 } else if (level && level.details && level.details.live) {
                     logger.warn(
                         `level controller,${details} on live stream, discard`
