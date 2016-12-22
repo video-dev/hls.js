@@ -30,6 +30,17 @@ class LevelController extends EventHandler {
 
   startLoad() {
     this.canload = true;
+    let levels = this._levels;
+    // clean up live level details to force reload them, and reset load errors
+    if(levels) {
+      levels.forEach(level => {
+        level.loadError = 0;
+        const levelDetails = level.details;
+        if (levelDetails && levelDetails.live) {
+          level.details = undefined;
+        }
+      })
+    }
     // speed up live playlist refresh if timer exists
     if (this.timer) {
       this.tick();
