@@ -39,7 +39,7 @@ class LevelController extends EventHandler {
         if (levelDetails && levelDetails.live) {
           level.details = undefined;
         }
-      })
+      });
     }
     // speed up live playlist refresh if timer exists
     if (this.timer) {
