@@ -2924,7 +2924,7 @@ var LevelController = function (_EventHandler) {
   function LevelController(hls) {
     _classCallCheck(this, LevelController);
 
-    var _this = _possibleConstructorReturn(this, (LevelController.__proto__ || Object.getPrototypeOf(LevelController)).call(this, hls, _events2.default.MANIFEST_LOADED, _events2.default.LEVEL_LOADED, _events2.default.ERROR));
+    var _this = _possibleConstructorReturn(this, (LevelController.__proto__ || Object.getPrototypeOf(LevelController)).call(this, hls, _events2.default.MANIFEST_LOADED, _events2.default.LEVEL_LOADED, _events2.default.FRAG_LOADED, _events2.default.ERROR));
 
     _this.ontick = _this.tick.bind(_this);
     _this._manualLevel = _this._autoLevelCapping = -1;
@@ -2944,6 +2944,17 @@ var LevelController = function (_EventHandler) {
     key: 'startLoad',
     value: function startLoad() {
       this.canload = true;
+      var levels = this._levels;
+      // clean up live level details to force reload them, and reset load errors
+      if (levels) {
+        levels.forEach(function (level) {
+          level.loadError = 0;
+          var levelDetails = level.details;
+          if (levelDetails && levelDetails.live) {
+            level.details = undefined;
+          }
+        });
+      }
       // speed up live playlist refresh if timer exists
       if (this.timer) {
         this.tick();
@@ -3100,8 +3111,16 @@ var LevelController = function (_EventHandler) {
        */
       if (levelId !== undefined) {
         level = this._levels[levelId];
-        if (level.urlId < level.url.length - 1) {
-          level.urlId++;
+        if (!level.loadError) {
+          level.loadError = 1;
+        } else {
+          level.loadError++;
+        }
+        // if any redundant streams available and if we haven't try them all (level.loadError is reseted on successful frag/level load.
+        // if level.loadError reaches nbRedundantLevel it means that we tried them all, no hope  => let's switch down
+        var nbRedundantLevel = level.url.length;
+        if (nbRedundantLevel > 1 && level.loadError < nbRedundantLevel) {
+          level.urlId = (level.urlId + 1) % nbRedundantLevel;
           level.details = undefined;
           _logger.logger.warn('level controller,' + details + ' for level ' + levelId + ': switching to redundant stream id ' + level.urlId);
         } else {
@@ -3142,16 +3161,33 @@ var LevelController = function (_EventHandler) {
         }
       }
     }
+
+    // reset level load error counter on successful frag loaded
+
+  }, {
+    key: 'onFragLoaded',
+    value: function onFragLoaded(data) {
+      var fragLoaded = data.frag;
+      if (fragLoaded && fragLoaded.type === 'main') {
+        var level = this._levels[fragLoaded.level];
+        if (level) {
+          level.loadError = 0;
+        }
+      }
+    }
   }, {
     key: 'onLevelLoaded',
     value: function onLevelLoaded(data) {
+      var levelId = data.level;
       // only process level loaded events matching with expected level
-      if (data.level === this._level) {
+      if (levelId === this._level) {
+        var curLevel = this._levels[levelId];
+        // reset level load error counter on successful level loaded
+        curLevel.loadError = 0;
         var newDetails = data.details;
         // if current playlist is a live playlist, arm a timer to reload it
         if (newDetails.live) {
           var reloadInterval = 1000 * (newDetails.averagetargetduration ? newDetails.averagetargetduration : newDetails.targetduration),
-              curLevel = this._levels[data.level],
               curDetails = curLevel.details;
           if (curDetails && newDetails.endSN === curDetails.endSN) {
             // follow HLS Spec, If the client reloads a Playlist file and finds that it has not
@@ -4251,6 +4287,7 @@ var StreamController = function (_EventHandler) {
             }
           }
           this.pendingBuffering = -1;
+          this.appended = false;
           _logger.logger.log('Parsing ' + sn + ' of [' + details.startSN + ' ,' + details.endSN + '],level ' + level + ', cc ' + fragCurrent.cc);
           var demuxer = this.demuxer;
           if (!demuxer) {
@@ -4348,6 +4385,7 @@ var StreamController = function (_EventHandler) {
           _logger.logger.log('main track:' + trackName + ',container:' + track.container + ',codecs[level/parsed]=[' + track.levelCodec + '/' + track.codec + ']');
           var initSegment = track.initSegment;
           if (initSegment) {
+            this.appended = true;
             this.hls.trigger(_events2.default.BUFFER_APPENDING, { type: trackName, data: initSegment, parent: 'main', content: 'initSegment' });
           }
         }
@@ -4358,6 +4396,8 @@ var StreamController = function (_EventHandler) {
   }, {
     key: 'onFragParsingData',
     value: function onFragParsingData(data) {
+      var _this2 = this;
+
       var fragCurrent = this.fragCurrent;
       if (fragCurrent && data.id === 'main' && data.sn === fragCurrent.sn && data.level === fragCurrent.level && !(data.type === 'audio' && this.altAudio) && // filter out main audio if audio track is loaded through audio stream controller
       this.state === State.PARSING) {
@@ -4377,6 +4417,7 @@ var StreamController = function (_EventHandler) {
 
         [data.data1, data.data2].forEach(function (buffer) {
           if (buffer) {
+            _this2.appended = true;
             hls.trigger(_events2.default.BUFFER_APPENDING, { type: data.type, data: buffer, parent: 'main', content: 'data' });
           }
         });
@@ -4491,7 +4532,7 @@ var StreamController = function (_EventHandler) {
     key: '_checkAppendedParsed',
     value: function _checkAppendedParsed() {
       //trigger handler right now
-      if (this.state === State.PARSED && this.pendingBuffering === 0) {
+      if (this.state === State.PARSED && (!this.appended || this.pendingBuffering === 0)) {
         var frag = this.fragCurrent,
             stats = this.stats;
         if (frag) {
@@ -7150,6 +7191,10 @@ var TSDemuxer = function () {
               // decrement 2^33
               pesDts -= 8589934592;
             }
+            if (pesPts - pesDts > 60 * 90000) {
+              _logger.logger.warn(Math.round((pesPts - pesDts) / 90000) + 's delta between PTS and DTS, align them');
+              pesPts = pesDts;
+            }
           } else {
             pesDts = pesPts;
           }
@@ -8495,7 +8540,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.14';
+      return '0.6.15';
     }
   }, {
     key: 'Events',
