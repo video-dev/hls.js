@@ -10,7 +10,13 @@ import BufferHelper from '../helper/buffer-helper';
 
 class LevelController extends EventHandler {
     constructor(hls) {
-        super(hls, Event.MANIFEST_LOADED, Event.LEVEL_LOADED, Event.ERROR);
+        super(
+            hls,
+            Event.MANIFEST_LOADED,
+            Event.LEVEL_LOADED,
+            Event.FRAG_LOADED,
+            Event.ERROR
+        );
         this.ontick = this.tick.bind(this);
         this._manualLevel = this._autoLevelCapping = -1;
     }
@@ -280,8 +286,16 @@ class LevelController extends EventHandler {
      */
         if (levelId !== undefined) {
             level = this._levels[levelId];
-            if (level.urlId < level.url.length - 1) {
-                level.urlId++;
+            if (!level.loadError) {
+                level.loadError = 1;
+            } else {
+                level.loadError++;
+            }
+            // if any redundant streams available and if we haven't try them all (level.loadError is reseted on successful frag/level load.
+            // if level.loadError reaches nbRedundantLevel it means that we tried them all, no hope  => let's switch down
+            const nbRedundantLevel = level.url.length;
+            if (nbRedundantLevel > 1 && level.loadError < nbRedundantLevel) {
+                level.urlId = (level.urlId + 1) % nbRedundantLevel;
                 level.details = undefined;
                 logger.warn(
                     `level controller,${details} for level ${levelId}: switching to redundant stream id ${
@@ -344,9 +358,24 @@ class LevelController extends EventHandler {
         }
     }
 
+    // reset level load error counter on successful frag loaded
+    onFragLoaded(data) {
+        const fragLoaded = data.frag;
+        if (fragLoaded && fragLoaded.type === 'main') {
+            const level = this._levels[fragLoaded.level];
+            if (level) {
+                level.loadError = 0;
+            }
+        }
+    }
+
     onLevelLoaded(data) {
+        const levelId = data.level;
         // only process level loaded events matching with expected level
-        if (data.level === this._level) {
+        if (levelId === this._level) {
+            let curLevel = this._levels[levelId];
+            // reset level load error counter on successful level loaded
+            curLevel.loadError = 0;
             let newDetails = data.details;
             // if current playlist is a live playlist, arm a timer to reload it
             if (newDetails.live) {
@@ -355,7 +384,6 @@ class LevelController extends EventHandler {
                         (newDetails.averagetargetduration
                             ? newDetails.averagetargetduration
                             : newDetails.targetduration),
-                    curLevel = this._levels[data.level],
                     curDetails = curLevel.details;
                 if (curDetails && newDetails.endSN === curDetails.endSN) {
                     // follow HLS Spec, If the client reloads a Playlist file and finds that it has not
