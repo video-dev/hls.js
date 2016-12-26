@@ -568,6 +568,7 @@ class BufferController extends EventHandler {
                         // let's stop appending any segments, and report BUFFER_FULL_ERROR error
                         this.segments = [];
                         event.details = ErrorDetails.BUFFER_FULL_ERROR;
+                        event.fatal = false;
                         hls.trigger(Event.ERROR, event);
                         return;
                     }
