@@ -249,6 +249,11 @@ class Hls {
     this.attachMedia(media);
   }
 
+  updateSize() {
+    logger.log('updateSize');
+    this.capLevelController.detectPlayerSize();
+  }
+
   /** Return all quality levels **/
   get levels() {
     return this.levelController.levels;
