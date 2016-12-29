@@ -37,7 +37,7 @@ import ID3 from '../demux/id3';
   }
 
   // feed incoming data to the front of the parsing pipeline
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset) {
+  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset, defaultInitPTS) {
     var track,
         id3 = new ID3(data),
         pts, config, frameLength, frameDuration, frameIndex, offset, headerLength, stamp, len, aacSample;
@@ -110,8 +110,8 @@ import ID3 from '../demux/id3';
         break;
       }
     }
-    var id3Track = (id3.payload) ? { samples : [ { pts: pts, dts : pts, unit : id3.payload} ] } : { samples: [] };
-    this.remuxer.remux(level, sn , this._aacTrack, {samples : []}, id3Track, { samples: [] }, timeOffset, contiguous,accurateTimeOffset);
+    const id3Track = (id3.payload) ? { samples : [ { pts: pts, dts : pts, unit : id3.payload} ] } : { samples: [] };
+    this.remuxer.remux(level, sn, cc, this._aacTrack, {samples : []}, id3Track, { samples: [] }, timeOffset, contiguous,accurateTimeOffset, defaultInitPTS);
   }
 
   destroy() {

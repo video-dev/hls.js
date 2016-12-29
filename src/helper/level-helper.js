@@ -66,7 +66,7 @@ class LevelHelper {
   static updateFragPTSDTS(details,sn,startPTS,endPTS,startDTS,endDTS) {
     var fragIdx, fragments, frag, i;
     // exit if sn out of range
-    if (sn < details.startSN || sn > details.endSN) {
+    if (!details || sn < details.startSN || sn > details.endSN) {
       return 0;
     }
     fragIdx = sn - details.startSN;

@@ -701,7 +701,7 @@ If `abrBandWidthUpFactor * bandwidth average < level.bitrate` then ABR can switc
 (default: `0`)
 
 Return the capping/min bandwidth value that could be used by automatic level selection algorithm.
-Useful when browser or tab of the browser is not in the focus and bandwidth drops 
+Useful when browser or tab of the browser is not in the focus and bandwidth drops
 
 
 ## Video Binding/Unbinding API

@@ -49,6 +49,19 @@ class TimelineController extends EventHandler {
     if (this.config.enableCEA708Captions)
     {
       var self = this;
+      var sendAddTrackEvent = function (track, media)
+      {
+        var e = null;
+        try {
+          e = new window.Event('addtrack');
+        } catch (err) {
+          //for IE11
+          e = document.createEvent('Event');
+          e.initEvent('addtrack', false, false);
+        }
+        e.track = track;
+        media.dispatchEvent(e);
+      };
 
       var channel1 =
       {
@@ -66,9 +79,8 @@ class TimelineController extends EventHandler {
             else
             {
               self.textTrack1 = existingTrack1;
-              let e = new window.Event('addtrack');
-              e.track = self.textTrack1;
-              self.media.dispatchEvent(e);
+              self.clearCurrentCues(self.textTrack1);
+              sendAddTrackEvent(self.textTrack1, self.media);
             }
           }
           self.addCues('textTrack1', startTime, endTime, screen);
@@ -92,9 +104,7 @@ class TimelineController extends EventHandler {
             {
               self.textTrack2 = existingTrack2;
 
-              let e = new window.Event('addtrack');
-              e.track = self.textTrack2;
-              self.media.dispatchEvent(e);
+              sendAddTrackEvent(self.textTrack2, self.media);
             }
           }
           self.addCues('textTrack2', startTime, endTime, screen);
