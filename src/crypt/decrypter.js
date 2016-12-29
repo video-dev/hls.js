@@ -31,16 +31,16 @@ class Decrypter {
     }
     else {
       logger.log('decrypting by WebCrypto API');
-
+      const subtle = this.subtle;
       if (this.key !== key) {
         this.key = key;
-        this.fastAesKey = new FastAESKey(key);
+        this.fastAesKey = new FastAESKey(subtle,key);
       }
 
       this.fastAesKey.expandKey().
         then((aesKey) => {
           // decrypt using web crypto
-          let crypto = new AESCrypto(iv);
+          let crypto = new AESCrypto(subtle,iv);
           crypto.decrypt(data, aesKey).
             then((result) => {
               callback(result);
@@ -53,20 +53,22 @@ class Decrypter {
   }
 
   onWebCryptoError(err, data, key, iv, callback) {
-    if (this.hls.config.enableSoftwareAES) {
+    let hls = this.hls;
+    if (hls.config.enableSoftwareAES) {
       logger.log('disabling to use WebCrypto API');
       this.disableWebCrypto = true;
       this.decrypt(data, key, iv, callback);
     }
     else {
       logger.error(`decrypting error : ${err.message}`);
-      this.hls.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_DECRYPT_ERROR, fatal : true, reason : err.message});
+      hls.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_DECRYPT_ERROR, fatal : true, reason : err.message});
     }
   }
 
   destroy() {
-    if (this.decryptor) {
-      this.decryptor.destroy();
+    let decryptor = this.decryptor;
+    if (decryptor) {
+      decryptor.destroy();
       this.decryptor = undefined;
     }
   }
