@@ -46,7 +46,8 @@ class StreamController extends EventHandler {
             Event.AUDIO_TRACK_SWITCHED,
             Event.BUFFER_CREATED,
             Event.BUFFER_APPENDED,
-            Event.BUFFER_FLUSHED
+            Event.BUFFER_FLUSHED,
+            Event.LEVEL_REMOVED
         );
 
         this.config = hls.config;
@@ -1849,6 +1850,12 @@ class StreamController extends EventHandler {
         this.state = State.IDLE;
         // reset reference to frag
         this.fragPrevious = null;
+    }
+
+    onLevelRemoved(data) {
+        this.levels = this.levels.filter(
+            (level, index) => index !== data.level
+        );
     }
 
     swapAudioCodec() {

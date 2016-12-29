@@ -40,6 +40,8 @@ module.exports = {
     // fired when a level switch is requested - data: { level : id of new level }
     LEVEL_SWITCH: 'hlsLevelSwitch',
     // fired to notify that audio track lists has been updated data: { audioTracks : audioTracks}
+    LEVEL_REMOVED: 'hlsLevelRemoved',
+    // fired when a level should no longer be used
     AUDIO_TRACKS_UPDATED: 'hlsAudioTracksUpdated',
     // fired when an audio track switch occurs - data: {  id : audio track id} // deprecated
     AUDIO_TRACK_SWITCH: 'hlsAudioTrackSwitch',
