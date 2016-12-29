@@ -220,6 +220,7 @@ class LevelController extends EventHandler {
     }
 
     let details = data.details, hls = this.hls, levelId, level, levelError = false, abrController = hls.abrController, minAutoLevel = abrController.minAutoLevel;
+    let removeLevel = false;
     // try to recover not fatal errors
     switch(details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
@@ -236,6 +237,11 @@ class LevelController extends EventHandler {
         break;
       case ErrorDetails.REMUX_ALLOC_ERROR:
         levelId = data.level;
+        break;
+      case ErrorDetails.MANIFEST_EMPTY_ERROR:
+        levelId = data.context.level;
+        levelError = true;
+        removeLevel = true;
         break;
       default:
         break;
@@ -259,6 +265,12 @@ class LevelController extends EventHandler {
         level.details = undefined;
         logger.warn(`level controller,${details} for level ${levelId}: switching to redundant stream id ${level.urlId}`);
       } else {
+        if (removeLevel) {
+          logger.warn(`Bad level encountered, removing & forcing to auto mode`);
+          this._levels = this.levels.filter((l, index) => index !== levelId);
+          hls.currentLevel = -1;
+          hls.trigger(Event.LEVEL_REMOVED, { level: levelId });
+        }
         // we could try to recover if in auto mode and current level not lowest level (0)
         let recoverable = ((this._manualLevel === -1) && levelId);
         if (recoverable) {
@@ -319,6 +331,7 @@ class LevelController extends EventHandler {
       // if current playlist is a live playlist, arm a timer to reload it
       if (newDetails.live) {
         let reloadInterval = 1000*( newDetails.averagetargetduration ? newDetails.averagetargetduration : newDetails.targetduration),
+            curLevel = this._levels[data.level],
             curDetails = curLevel.details;
         if (curDetails && newDetails.endSN === curDetails.endSN) {
           // follow HLS Spec, If the client reloads a Playlist file and finds that it has not
