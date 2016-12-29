@@ -407,7 +407,7 @@ class PlaylistLoader extends EventHandler {
           }
           hls.trigger(Event.MANIFEST_LOADED, {levels, audioTracks, subtitles, url, stats});
         } else {
-          hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'no level found in manifest'});
+          hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_EMPTY_ERROR, fatal: false, url: url, reason: 'no level found in manifest', context });
         }
       }
     } else {

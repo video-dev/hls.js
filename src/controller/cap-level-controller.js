@@ -10,9 +10,9 @@ class CapLevelController extends EventHandler {
     super(hls,
       Event.FPS_DROP_LEVEL_CAPPING,
       Event.MEDIA_ATTACHING,
-      Event.MANIFEST_PARSED);   
+      Event.MANIFEST_PARSED);
 	}
-	
+
 	destroy() {
     if (this.hls.config.capLevelToPlayerSize) {
       this.media = this.restrictedLevels = null;
@@ -22,7 +22,7 @@ class CapLevelController extends EventHandler {
       }
     }
   }
-	
+
   onFpsDropLevelCapping(data) {
     if (!this.restrictedLevels) {
       this.restrictedLevels = [];
@@ -31,9 +31,9 @@ class CapLevelController extends EventHandler {
       this.restrictedLevels.push(data.droppedLevel);
     }
   }
-  
+
 	onMediaAttaching(data) {
-    this.media = data.media instanceof HTMLVideoElement ? data.media : null;  
+    this.media = data.media instanceof HTMLVideoElement ? data.media : null;
   }
 
   onManifestParsed(data) {
@@ -46,7 +46,7 @@ class CapLevelController extends EventHandler {
       this.detectPlayerSize();
     }
   }
-  
+
   detectPlayerSize() {
     if (this.media) {
       let levelsLength = this.levels ? this.levels.length : 0;
@@ -57,11 +57,11 @@ class CapLevelController extends EventHandler {
           // usually happen when the user go to the fullscreen mode.
           this.hls.streamController.nextLevelSwitch();
         }
-        this.autoLevelCapping = this.hls.autoLevelCapping;        
-      }  
+        this.autoLevelCapping = this.hls.autoLevelCapping;
+      }
     }
   }
-  
+
   /*
   * returns level should be the one with the dimensions equal or greater than the media (player) dimensions (so the video will be downscaled)
   */
@@ -73,7 +73,7 @@ class CapLevelController extends EventHandler {
         mHeight = this.mediaHeight,
         lWidth = 0,
         lHeight = 0;
-        
+
     for (i = 0; i <= capLevelIndex; i++) {
       level = this.levels[i];
       if (this.isLevelRestricted(i)) {
@@ -85,14 +85,14 @@ class CapLevelController extends EventHandler {
       if (mWidth <= lWidth || mHeight <= lHeight) {
         break;
       }
-    }  
+    }
     return result;
   }
-  
+
   isLevelRestricted(level) {
     return (this.restrictedLevels && this.restrictedLevels.indexOf(level) !== -1) ? true : false;
   }
-  
+
   get contentScaleFactor() {
     let pixelRatio = 1;
     try {
@@ -100,7 +100,7 @@ class CapLevelController extends EventHandler {
     } catch(e) {}
     return pixelRatio;
   }
-  
+
   get mediaWidth() {
     let width;
     if (this.media) {
@@ -109,12 +109,12 @@ class CapLevelController extends EventHandler {
     }
     return width;
   }
-  
+
   get mediaHeight() {
     let height;
     if (this.media) {
       height = this.media.height || this.media.clientHeight || this.media.offsetHeight;
-      height *= this.contentScaleFactor; 
+      height *= this.contentScaleFactor;
     }
     return height;
   }
