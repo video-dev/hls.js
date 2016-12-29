@@ -251,7 +251,9 @@ class Hls {
 
   updateSize() {
     logger.log('updateSize');
-    this.capLevelController.detectPlayerSize();
+    if (this.hls.config.capLevelToPlayerSize) {
+      this.capLevelController.detectPlayerSize();
+    }
   }
 
   /** Return all quality levels **/
