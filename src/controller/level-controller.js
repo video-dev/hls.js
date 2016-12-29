@@ -254,6 +254,7 @@ class LevelController extends EventHandler {
             levelError = false,
             abrController = hls.abrController,
             minAutoLevel = abrController.minAutoLevel;
+        let removeLevel = false;
         // try to recover not fatal errors
         switch (details) {
             case ErrorDetails.FRAG_LOAD_ERROR:
@@ -267,6 +268,11 @@ class LevelController extends EventHandler {
             case ErrorDetails.LEVEL_LOAD_TIMEOUT:
                 levelId = data.context.level;
                 levelError = true;
+                break;
+            case ErrorDetails.MANIFEST_EMPTY_ERROR:
+                levelId = data.context.level;
+                levelError = true;
+                removeLevel = true;
                 break;
             default:
                 break;
@@ -286,6 +292,16 @@ class LevelController extends EventHandler {
                     }`
                 );
             } else {
+                if (removeLevel) {
+                    logger.warn(
+                        `Bad level encountered, removing & forcing to auto mode`
+                    );
+                    this._levels = this.levels.filter(
+                        (l, index) => index !== levelId
+                    );
+                    hls.currentLevel = -1;
+                    hls.trigger(Event.LEVEL_REMOVED, { level: levelId });
+                }
                 // we could try to recover if in auto mode and current level not lowest level (0)
                 let recoverable = this._manualLevel === -1 && levelId;
                 if (recoverable) {
