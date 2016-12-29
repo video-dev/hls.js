@@ -103,7 +103,8 @@ class TSDemuxer {
         level,
         sn,
         duration,
-        accurateTimeOffset
+        accurateTimeOffset,
+        defaultInitPTS
     ) {
         var start,
             len = data.length,
@@ -185,7 +186,13 @@ class TSDemuxer {
                                         avcTrack.codec &&
                                         (audioId === -1 || audioTrack.codec)
                                     ) {
-                                        this.remux(level, sn, data, timeOffset);
+                                        this.remux(
+                                            level,
+                                            sn,
+                                            cc,
+                                            data,
+                                            timeOffset
+                                        );
                                         return;
                                     }
                                 }
@@ -215,7 +222,13 @@ class TSDemuxer {
                                         audioTrack.codec &&
                                         (avcId === -1 || avcTrack.codec)
                                     ) {
-                                        this.remux(level, sn, data, timeOffset);
+                                        this.remux(
+                                            level,
+                                            sn,
+                                            cc,
+                                            data,
+                                            timeOffset
+                                        );
                                         return;
                                     }
                                 }
@@ -335,10 +348,10 @@ class TSDemuxer {
             // either id3Data null or PES truncated, keep it for next frag parsing
             id3Track.pesData = id3Data;
         }
-        this.remux(level, sn, null, timeOffset);
+        this.remux(level, sn, cc, null, timeOffset, defaultInitPTS);
     }
 
-    remux(level, sn, data, timeOffset) {
+    remux(level, sn, cc, data, timeOffset, defaultInitPTS) {
         let avcTrack = this._avcTrack,
             samples = avcTrack.samples,
             nbNalu = 0,
@@ -362,6 +375,7 @@ class TSDemuxer {
         this.remuxer.remux(
             level,
             sn,
+            cc,
             this._audioTrack,
             this._avcTrack,
             this._id3Track,
@@ -369,6 +383,7 @@ class TSDemuxer {
             timeOffset,
             this.contiguous,
             this.accurateTimeOffset,
+            defaultInitPTS,
             data
         );
     }
@@ -518,6 +533,14 @@ class TSDemuxer {
                         // decrement 2^33
                         pesDts -= 8589934592;
                     }
+                    if (pesPts - pesDts > 60 * 90000) {
+                        logger.warn(
+                            `${Math.round(
+                                (pesPts - pesDts) / 90000
+                            )}s delta between PTS and DTS, align them`
+                        );
+                        pesPts = pesDts;
+                    }
                 } else {
                     pesDts = pesPts;
                 }
@@ -529,9 +552,9 @@ class TSDemuxer {
             stream.size -= payloadStartOffset;
             //reassemble PES packet
             pesData = new Uint8Array(stream.size);
-            while (data.length) {
-                frag = data.shift();
-                var len = frag.byteLength;
+            for (let j = 0, dataLen = data.length; j < dataLen; j++) {
+                frag = data[j];
+                let len = frag.byteLength;
                 if (payloadStartOffset) {
                     if (payloadStartOffset > len) {
                         // trim full frag if PES header bigger than frag
@@ -873,96 +896,86 @@ class TSDemuxer {
             lastUnitStart = -1,
             lastUnitType;
         //logger.log('PES:' + Hex.hexDump(array));
+
+        if (state === -1) {
+            // special use case where we found 3 or 4-byte start codes exactly at the end of previous PES packet
+            lastUnitStart = 0;
+            // NALu type is value read from offset 0
+            lastUnitType = array[0] & 0x1f;
+            state = 0;
+            i = 1;
+        }
+
         while (i < len) {
             value = array[i++];
-            // finding 3 or 4-byte start codes (00 00 01 OR 00 00 00 01)
-            switch (state) {
-                case 0:
-                    if (value === 0) {
-                        state = 1;
-                    }
-                    break;
-                case 1:
-                    if (value === 0) {
-                        state = 2;
-                    } else {
-                        state = 0;
-                    }
-                    break;
-                case 2:
-                case 3:
-                    if (value === 0) {
-                        state = 3;
-                    } else if (value === 1) {
-                        if (lastUnitStart >= 0) {
-                            unit = {
-                                data: array.subarray(
-                                    lastUnitStart,
-                                    i - state - 1
-                                ),
-                                type: lastUnitType
-                            };
-                            //logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
-                            units.push(unit);
-                        } else {
-                            // lastUnitStart is undefined => this is the first start code found in this PES packet
-                            // first check if start code delimiter is overlapping between 2 PES packets,
-                            // ie it started in last packet (lastState not zero)
-                            // and ended at the beginning of this PES packet (i <= 4 - lastState)
-                            let lastUnit = this._getLastNalUnit();
-                            if (lastUnit) {
-                                if (lastState && i <= 4 - lastState) {
-                                    // start delimiter overlapping between PES packets
-                                    // strip start delimiter bytes from the end of last NAL unit
-                                    // check if lastUnit had a state different from zero
-                                    if (lastUnit.state) {
-                                        // strip last bytes
-                                        lastUnit.data = lastUnit.data.subarray(
-                                            0,
-                                            lastUnit.data.byteLength - lastState
-                                        );
-                                    }
-                                }
-                                // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
-                                overflow = i - state - 1;
-                                if (overflow > 0) {
-                                    //logger.log('first NALU found with overflow:' + overflow);
-                                    let tmp = new Uint8Array(
-                                        lastUnit.data.byteLength + overflow
-                                    );
-                                    tmp.set(lastUnit.data, 0);
-                                    tmp.set(
-                                        array.subarray(0, overflow),
-                                        lastUnit.data.byteLength
-                                    );
-                                    lastUnit.data = tmp;
-                                }
+            // optimization. state 0 and 1 are the predominant case. let's handle them outside of the switch/case
+            if (!state) {
+                state = value ? 0 : 1;
+                continue;
+            }
+            if (state === 1) {
+                state = value ? 0 : 2;
+                continue;
+            }
+            // here we have state either equal to 2 or 3
+            if (!value) {
+                state = 3;
+            } else if (value === 1) {
+                if (lastUnitStart >= 0) {
+                    unit = {
+                        data: array.subarray(lastUnitStart, i - state - 1),
+                        type: lastUnitType
+                    };
+                    //logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
+                    units.push(unit);
+                } else {
+                    // lastUnitStart is undefined => this is the first start code found in this PES packet
+                    // first check if start code delimiter is overlapping between 2 PES packets,
+                    // ie it started in last packet (lastState not zero)
+                    // and ended at the beginning of this PES packet (i <= 4 - lastState)
+                    let lastUnit = this._getLastNalUnit();
+                    if (lastUnit) {
+                        if (lastState && i <= 4 - lastState) {
+                            // start delimiter overlapping between PES packets
+                            // strip start delimiter bytes from the end of last NAL unit
+                            // check if lastUnit had a state different from zero
+                            if (lastUnit.state) {
+                                // strip last bytes
+                                lastUnit.data = lastUnit.data.subarray(
+                                    0,
+                                    lastUnit.data.byteLength - lastState
+                                );
                             }
                         }
-                        // check if we can read unit type
-                        if (i < len) {
-                            unitType = array[i] & 0x1f;
-                            //logger.log('find NALU @ offset:' + i + ',type:' + unitType);
-                            lastUnitStart = i;
-                            lastUnitType = unitType;
-                            state = 0;
-                        } else {
-                            // not enough byte to read unit type. let's read it on next PES parsing
-                            state = -1;
+                        // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
+                        overflow = i - state - 1;
+                        if (overflow > 0) {
+                            //logger.log('first NALU found with overflow:' + overflow);
+                            let tmp = new Uint8Array(
+                                lastUnit.data.byteLength + overflow
+                            );
+                            tmp.set(lastUnit.data, 0);
+                            tmp.set(
+                                array.subarray(0, overflow),
+                                lastUnit.data.byteLength
+                            );
+                            lastUnit.data = tmp;
                         }
-                    } else {
-                        state = 0;
                     }
-                    break;
-                case -1:
-                    // special use case where we found 3 or 4-byte start codes exactly at the end of previous PES packet
-                    lastUnitStart = 0;
-                    // NALu type is value read from offset 0
-                    lastUnitType = value & 0x1f;
+                }
+                // check if we can read unit type
+                if (i < len) {
+                    unitType = array[i] & 0x1f;
+                    //logger.log('find NALU @ offset:' + i + ',type:' + unitType);
+                    lastUnitStart = i;
+                    lastUnitType = unitType;
                     state = 0;
-                    break;
-                default:
-                    break;
+                } else {
+                    // not enough byte to read unit type. let's read it on next PES parsing
+                    state = -1;
+                }
+            } else {
+                state = 0;
             }
         }
         if (lastUnitStart >= 0 && state >= 0) {

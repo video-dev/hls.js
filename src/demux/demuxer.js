@@ -93,7 +93,8 @@ class Demuxer {
         level,
         sn,
         duration,
-        accurateTimeOffset
+        accurateTimeOffset,
+        defaultInitPTS
     ) {
         let w = this.w;
         if (w) {
@@ -109,7 +110,8 @@ class Demuxer {
                     level: level,
                     sn: sn,
                     duration: duration,
-                    accurateTimeOffset: accurateTimeOffset
+                    accurateTimeOffset: accurateTimeOffset,
+                    defaultInitPTS: defaultInitPTS
                 },
                 [data]
             );
@@ -125,7 +127,8 @@ class Demuxer {
                     level,
                     sn,
                     duration,
-                    accurateTimeOffset
+                    accurateTimeOffset,
+                    defaultInitPTS
                 );
             }
         }
@@ -141,7 +144,8 @@ class Demuxer {
         sn,
         duration,
         decryptdata,
-        accurateTimeOffset
+        accurateTimeOffset,
+        defaultInitPTS
     ) {
         if (
             data.byteLength > 0 &&
@@ -176,7 +180,8 @@ class Demuxer {
                         level,
                         sn,
                         duration,
-                        accurateTimeOffset
+                        accurateTimeOffset,
+                        defaultInitPTS
                     );
                 }
             );
@@ -190,7 +195,8 @@ class Demuxer {
                 level,
                 sn,
                 duration,
-                accurateTimeOffset
+                accurateTimeOffset,
+                defaultInitPTS
             );
         }
     }
