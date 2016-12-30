@@ -780,6 +780,9 @@ Default value is `hls.firstLevel`.
 
 Default value is `-1` (no level capping).
 
+#### `hls.updateSize`
+- Will call `detectPlayerSize()` on `cap-level-controller.js` if `capLevelToPlayerSize` is enabled. When called after entering fullscreen, this will potentially decrease upswitch time by 1 second.
+
 ## Version Control
 
 #### `Hls.version`
