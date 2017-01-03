@@ -75,6 +75,7 @@ import ID3 from '../demux/id3';
       track.audiosamplerate = config.samplerate;
       track.channelCount = config.channelCount;
       track.codec = config.codec;
+      track.manifestCodec = audioCodec;
       track.duration = duration;
       logger.log(`parsed codec:${track.codec},rate:${config.samplerate},nb channel:${config.channelCount}`);
     }
