@@ -2451,6 +2451,7 @@ var BufferController = function (_EventHandler) {
               // let's stop appending any segments, and report BUFFER_FULL_ERROR error
               this.segments = [];
               event.details = _errors.ErrorDetails.BUFFER_FULL_ERROR;
+              event.fatal = false;
               hls.trigger(_events2.default.ERROR, event);
               return;
             }
@@ -5657,6 +5658,7 @@ var AACDemuxer = function () {
         track.audiosamplerate = config.samplerate;
         track.channelCount = config.channelCount;
         track.codec = config.codec;
+        track.manifestCodec = audioCodec;
         track.duration = duration;
         _logger.logger.log('parsed codec:' + track.codec + ',rate:' + config.samplerate + ',nb channel:' + config.channelCount);
       }
@@ -7684,11 +7686,13 @@ var TSDemuxer = function () {
         }
       }
       if (!track.audiosamplerate) {
-        config = _adts2.default.getAudioConfig(this.observer, data, offset, this.audioCodec);
+        var audioCodec = this.audioCodec;
+        config = _adts2.default.getAudioConfig(this.observer, data, offset, audioCodec);
         track.config = config.config;
         track.audiosamplerate = config.samplerate;
         track.channelCount = config.channelCount;
         track.codec = config.codec;
+        track.manifestCodec = audioCodec;
         track.duration = this._duration;
         _logger.logger.log('parsed codec:' + track.codec + ',rate:' + config.samplerate + ',nb channel:' + config.channelCount);
       }
@@ -8122,7 +8126,7 @@ module.exports = {
 };
 
 },{}],29:[function(_dereq_,module,exports){
-"use strict";
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
@@ -8142,20 +8146,37 @@ var AAC = function () {
   }
 
   _createClass(AAC, null, [{
-    key: "getSilentFrame",
-    value: function getSilentFrame(channelCount) {
-      if (channelCount === 1) {
-        return new Uint8Array([0x00, 0xc8, 0x00, 0x80, 0x23, 0x80]);
-      } else if (channelCount === 2) {
-        return new Uint8Array([0x21, 0x00, 0x49, 0x90, 0x02, 0x19, 0x00, 0x23, 0x80]);
-      } else if (channelCount === 3) {
-        return new Uint8Array([0x00, 0xc8, 0x00, 0x80, 0x20, 0x84, 0x01, 0x26, 0x40, 0x08, 0x64, 0x00, 0x8e]);
-      } else if (channelCount === 4) {
-        return new Uint8Array([0x00, 0xc8, 0x00, 0x80, 0x20, 0x84, 0x01, 0x26, 0x40, 0x08, 0x64, 0x00, 0x80, 0x2c, 0x80, 0x08, 0x02, 0x38]);
-      } else if (channelCount === 5) {
-        return new Uint8Array([0x00, 0xc8, 0x00, 0x80, 0x20, 0x84, 0x01, 0x26, 0x40, 0x08, 0x64, 0x00, 0x82, 0x30, 0x04, 0x99, 0x00, 0x21, 0x90, 0x02, 0x38]);
-      } else if (channelCount === 6) {
-        return new Uint8Array([0x00, 0xc8, 0x00, 0x80, 0x20, 0x84, 0x01, 0x26, 0x40, 0x08, 0x64, 0x00, 0x82, 0x30, 0x04, 0x99, 0x00, 0x21, 0x90, 0x02, 0x00, 0xb2, 0x00, 0x20, 0x08, 0xe0]);
+    key: 'getSilentFrame',
+    value: function getSilentFrame(codec, channelCount) {
+      switch (codec) {
+        case 'mp4a.40.2':
+          if (channelCount === 1) {
+            return new Uint8Array([0x00, 0xc8, 0x00, 0x80, 0x23, 0x80]);
+          } else if (channelCount === 2) {
+            return new Uint8Array([0x21, 0x00, 0x49, 0x90, 0x02, 0x19, 0x00, 0x23, 0x80]);
+          } else if (channelCount === 3) {
+            return new Uint8Array([0x00, 0xc8, 0x00, 0x80, 0x20, 0x84, 0x01, 0x26, 0x40, 0x08, 0x64, 0x00, 0x8e]);
+          } else if (channelCount === 4) {
+            return new Uint8Array([0x00, 0xc8, 0x00, 0x80, 0x20, 0x84, 0x01, 0x26, 0x40, 0x08, 0x64, 0x00, 0x80, 0x2c, 0x80, 0x08, 0x02, 0x38]);
+          } else if (channelCount === 5) {
+            return new Uint8Array([0x00, 0xc8, 0x00, 0x80, 0x20, 0x84, 0x01, 0x26, 0x40, 0x08, 0x64, 0x00, 0x82, 0x30, 0x04, 0x99, 0x00, 0x21, 0x90, 0x02, 0x38]);
+          } else if (channelCount === 6) {
+            return new Uint8Array([0x00, 0xc8, 0x00, 0x80, 0x20, 0x84, 0x01, 0x26, 0x40, 0x08, 0x64, 0x00, 0x82, 0x30, 0x04, 0x99, 0x00, 0x21, 0x90, 0x02, 0x00, 0xb2, 0x00, 0x20, 0x08, 0xe0]);
+          }
+          break;
+        // handle HE-AAC below (mp4a.40.5 / mp4a.40.29)
+        default:
+          if (channelCount === 1) {
+            // ffmpeg -y -f lavfi -i "aevalsrc=0:d=0.05" -c:a libfdk_aac -profile:a aac_he -b:a 4k output.aac && hexdump -v -e '16/1 "0x%x," "\n"' -v output.aac
+            return new Uint8Array([0x1, 0x40, 0x22, 0x80, 0xa3, 0x4e, 0xe6, 0x80, 0xba, 0x8, 0x0, 0x0, 0x0, 0x1c, 0x6, 0xf1, 0xc1, 0xa, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5e]);
+          } else if (channelCount === 2) {
+            // ffmpeg -y -f lavfi -i "aevalsrc=0|0:d=0.05" -c:a libfdk_aac -profile:a aac_he_v2 -b:a 4k output.aac && hexdump -v -e '16/1 "0x%x," "\n"' -v output.aac
+            return new Uint8Array([0x1, 0x40, 0x22, 0x80, 0xa3, 0x5e, 0xe6, 0x80, 0xba, 0x8, 0x0, 0x0, 0x0, 0x0, 0x95, 0x0, 0x6, 0xf1, 0xa1, 0xa, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5e]);
+          } else if (channelCount === 3) {
+            // ffmpeg -y -f lavfi -i "aevalsrc=0|0|0:d=0.05" -c:a libfdk_aac -profile:a aac_he_v2 -b:a 4k output.aac && hexdump -v -e '16/1 "0x%x," "\n"' -v output.aac
+            return new Uint8Array([0x1, 0x40, 0x22, 0x80, 0xa3, 0x5e, 0xe6, 0x80, 0xba, 0x8, 0x0, 0x0, 0x0, 0x0, 0x95, 0x0, 0x6, 0xf1, 0xa1, 0xa, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5a, 0x5e]);
+          }
+          break;
       }
       return null;
     }
@@ -10575,9 +10596,10 @@ var MP4Remuxer = function () {
       //   logger.log(avcSample.pts + '/' + avcSample.dts + ',' + unitsString + avcSample.units.length);
       // }
 
-      // sort video samples by DTS order
+      // sort video samples by DTS then PTS order
       inputSamples.sort(function (a, b) {
-        return a.dts - b.dts;
+        var deltadts = a.dts - b.dts;
+        return deltadts ? deltadts : a.pts - b.pts;
       });
 
       // handle broken streams with PTS < DTS, tolerance up 200ms (18000 in 90kHz timescale)
@@ -10864,7 +10886,7 @@ var MP4Remuxer = function () {
               for (var j = 0; j < missing; j++) {
                 newStamp = nextPtsNorm + initDTS;
                 newStamp = Math.max(newStamp, initDTS);
-                fillFrame = _aac2.default.getSilentFrame(track.channelCount);
+                fillFrame = _aac2.default.getSilentFrame(track.manifestCodec || track.codec, track.channelCount);
                 if (!fillFrame) {
                   _logger.logger.log('Unable to get silent frame for given audio codec; duplicating last frame instead.');
                   fillFrame = sample.unit.subarray();
@@ -10921,7 +10943,7 @@ var MP4Remuxer = function () {
                 numMissingFrames = Math.round((ptsnorm - nextAudioPts) / pesFrameDuration);
                 _logger.logger.log(_delta + ' ms hole between AAC samples detected,filling it');
                 if (numMissingFrames > 0) {
-                  fillFrame = _aac2.default.getSilentFrame(track.channelCount);
+                  fillFrame = _aac2.default.getSilentFrame(track.manifestCodec || track.codec, track.channelCount);
                   if (!fillFrame) {
                     fillFrame = unit.subarray();
                   }
@@ -10963,7 +10985,7 @@ var MP4Remuxer = function () {
           }
           for (var _i3 = 0; _i3 < numMissingFrames; _i3++) {
             newStamp = ptsnorm - (numMissingFrames - _i3) * pesFrameDuration;
-            fillFrame = _aac2.default.getSilentFrame(track.channelCount);
+            fillFrame = _aac2.default.getSilentFrame(track.manifestCodec || track.codec, track.channelCount);
             if (!fillFrame) {
               _logger.logger.log('Unable to get silent frame for given audio codec; duplicating this frame instead.');
               fillFrame = unit.subarray();
@@ -11064,7 +11086,7 @@ var MP4Remuxer = function () {
 
 
       // silent frame
-      silentFrame = _aac2.default.getSilentFrame(track.channelCount);
+      silentFrame = _aac2.default.getSilentFrame(track.manifestCodec || track.codec, track.channelCount);
 
       _logger.logger.warn('remux empty Audio');
       // Can't remux if we can't generate a silent frame...
