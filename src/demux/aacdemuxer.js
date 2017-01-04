@@ -64,7 +64,8 @@ class AACDemuxer {
         level,
         sn,
         duration,
-        accurateTimeOffset
+        accurateTimeOffset,
+        defaultInitPTS
     ) {
         var track,
             id3 = new ID3(data),
@@ -171,19 +172,21 @@ class AACDemuxer {
                 break;
             }
         }
-        var id3Track = id3.payload
+        const id3Track = id3.payload
             ? { samples: [{ pts: pts, dts: pts, unit: id3.payload }] }
             : { samples: [] };
         this.remuxer.remux(
             level,
             sn,
+            cc,
             this._aacTrack,
             { samples: [] },
             id3Track,
             { samples: [] },
             timeOffset,
             contiguous,
-            accurateTimeOffset
+            accurateTimeOffset,
+            defaultInitPTS
         );
     }
 
