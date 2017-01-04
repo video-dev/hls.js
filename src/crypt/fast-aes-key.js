@@ -1,10 +1,11 @@
 class FastAESKey {
-  constructor(key) {
+  constructor(subtle,key) {
+    this.subtle = subtle;
     this.key = key;
   }
 
   expandKey() {
-    return window.crypto.subtle.importKey('raw', this.key, {name: 'AES-CBC'}, false, ['encrypt', 'decrypt']);
+    return this.subtle.importKey('raw', this.key, {name: 'AES-CBC'}, false, ['encrypt', 'decrypt']);
   }
 }
 

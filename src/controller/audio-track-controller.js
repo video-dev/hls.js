@@ -12,12 +12,26 @@ class AudioTrackController extends EventHandler {
     super(hls, Event.MANIFEST_LOADING,
                Event.MANIFEST_LOADED,
                Event.AUDIO_TRACK_LOADED);
+    this.ticks = 0;
+    this.ontick = this.tick.bind(this);
   }
 
   destroy() {
     EventHandler.prototype.destroy.call(this);
   }
-
+  tick() {
+    this.ticks++;
+    if (this.ticks === 1) {
+      this.doTick();
+      if (this.ticks > 1) {
+        setTimeout(this.tick, 1);
+      }
+      this.ticks = 0;
+    }
+  }
+  doTick() {
+    this.updateTrack(this.trackId);
+  }
   onManifestLoading() {
     // reset audio tracks on manifest loading
     this.tracks = [];
@@ -90,8 +104,35 @@ class AudioTrackController extends EventHandler {
       }
       this.trackId = newId;
       logger.log(`switching to audioTrack ${newId}`);
-      let audioTrack = this.tracks[newId], type = audioTrack.type,url = audioTrack.url;
-      this.hls.trigger(Event.AUDIO_TRACK_SWITCH, {id: newId, type : type, url : url});
+      let audioTrack = this.tracks[newId],
+          hls = this.hls,
+          type = audioTrack.type,
+          url = audioTrack.url,
+          eventObj = {id: newId, type : type, url : url};
+      // keep AUDIO_TRACK_SWITCH for legacy reason
+      hls.trigger(Event.AUDIO_TRACK_SWITCH, eventObj);
+      hls.trigger(Event.AUDIO_TRACK_SWITCHING, eventObj);
+       // check if we need to load playlist for this audio Track
+       let details = audioTrack.details;
+      if (url && (details === undefined || details.live === true)) {
+        // track not retrieved yet, or live playlist we need to (re)load it
+        logger.log(`(re)loading playlist for audioTrack ${newId}`);
+        hls.trigger(Event.AUDIO_TRACK_LOADING, {url: url, id: newId});
+      }
+    }
+  }
+
+  updateTrack(newId) {
+    // check if level idx is valid
+    if (newId >= 0 && newId < this.tracks.length) {
+      // stopping live reloading timer if any
+      if (this.timer) {
+       clearInterval(this.timer);
+       this.timer = null;
+      }
+      this.trackId = newId;
+      logger.log(`updating audioTrack ${newId}`);
+      let audioTrack = this.tracks[newId], url = audioTrack.url;
        // check if we need to load playlist for this audio Track
        let details = audioTrack.details;
       if (url && (details === undefined || details.live === true)) {

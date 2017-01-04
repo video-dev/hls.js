@@ -14,6 +14,7 @@ class LevelController extends EventHandler {
     super(hls,
       Event.MANIFEST_LOADED,
       Event.LEVEL_LOADED,
+      Event.FRAG_LOADED,
       Event.ERROR);
     this.ontick = this.tick.bind(this);
     this._manualLevel = this._autoLevelCapping = -1;
@@ -29,6 +30,17 @@ class LevelController extends EventHandler {
 
   startLoad() {
     this.canload = true;
+    let levels = this._levels;
+    // clean up live level details to force reload them, and reset load errors
+    if(levels) {
+      levels.forEach(level => {
+        level.loadError = 0;
+        const levelDetails = level.details;
+        if (levelDetails && levelDetails.live) {
+          level.details = undefined;
+        }
+      });
+    }
     // speed up live playlist refresh if timer exists
     if (this.timer) {
       this.tick();
@@ -223,6 +235,9 @@ class LevelController extends EventHandler {
         levelId = data.context.level;
         levelError = true;
         break;
+      case ErrorDetails.REMUX_ALLOC_ERROR:
+        levelId = data.level;
+        break;
       case ErrorDetails.MANIFEST_EMPTY_ERROR:
         levelId = data.context.level;
         levelError = true;
@@ -237,8 +252,16 @@ class LevelController extends EventHandler {
      */
     if (levelId !== undefined) {
       level = this._levels[levelId];
-      if (level.urlId < (level.url.length - 1)) {
-        level.urlId++;
+      if(!level.loadError) {
+        level.loadError = 1;
+      } else {
+        level.loadError++;
+      }
+      // if any redundant streams available and if we haven't try them all (level.loadError is reseted on successful frag/level load.
+      // if level.loadError reaches nbRedundantLevel it means that we tried them all, no hope  => let's switch down
+      const nbRedundantLevel = level.url.length;
+     if (nbRedundantLevel > 1 && level.loadError < nbRedundantLevel) {
+        level.urlId = (level.urlId + 1) % nbRedundantLevel;
         level.details = undefined;
         logger.warn(`level controller,${details} for level ${levelId}: switching to redundant stream id ${level.urlId}`);
       } else {
@@ -251,9 +274,9 @@ class LevelController extends EventHandler {
         // we could try to recover if in auto mode and current level not lowest level (0)
         let recoverable = ((this._manualLevel === -1) && levelId);
         if (recoverable) {
-          logger.warn(`level controller,${details}: emergency switch-down for next fragment`);
-          abrController.nextAutoLevel = minAutoLevel;
-        }  else if(level && level.details && level.details.live) {
+          logger.warn(`level controller,${details}: switch-down for next fragment`);
+          abrController.nextAutoLevel = Math.max(minAutoLevel,levelId-1);
+        } else if(level && level.details && level.details.live) {
           logger.warn(`level controller,${details} on live stream, discard`);
           if (levelError) {
             // reset this._level so that another call to set level() will retrigger a frag load
@@ -286,9 +309,24 @@ class LevelController extends EventHandler {
     }
   }
 
+  // reset level load error counter on successful frag loaded
+  onFragLoaded(data) {
+    const fragLoaded = data.frag;
+    if (fragLoaded && fragLoaded.type === 'main') {
+      const level = this._levels[fragLoaded.level];
+      if (level) {
+        level.loadError = 0;
+      }
+    }
+  }
+
   onLevelLoaded(data) {
+    const levelId = data.level;
      // only process level loaded events matching with expected level
-     if (data.level === this._level) {
+    if (levelId === this._level) {
+      let curLevel = this._levels[levelId];
+      // reset level load error counter on successful level loaded
+      curLevel.loadError = 0;
       let newDetails = data.details;
       // if current playlist is a live playlist, arm a timer to reload it
       if (newDetails.live) {
