@@ -317,15 +317,27 @@ $(document).ready(function() {
        });
        hls.on(Hls.Events.MANIFEST_PARSED,function(event,data) {
          $("#HlsStatus").text("manifest successfully loaded," + hls.levels.length + " levels found");
-         stats = {levelNb: data.levels.length};
+         stats = {levelNb: data.levels.length, levelParsed : 0};
          updateLevelInfo();
        });
        hls.on(Hls.Events.AUDIO_TRACKS_UPDATED,function(event,data) {
           $("#HlsStatus").text(data.audioTracks.length + " audio tracks found");
           updateAudioTrackInfo();
        });
-       hls.on(Hls.Events.AUDIO_TRACK_SWITCH,function(event,data) {
+       hls.on(Hls.Events.AUDIO_TRACK_SWITCHING,function(event,data) {
           updateAudioTrackInfo();
+        var event = {time : performance.now() - events.t0, type : 'audio switching', name : '@' + data.id };
+        events.video.push(event);
+        lastAudioTrackSwitchingIdx = events.video.length-1;
+       });
+       hls.on(Hls.Events.AUDIO_TRACK_SWITCHED,function(event,data) {
+          updateAudioTrackInfo();
+        var event = {time : performance.now() - events.t0, type : 'audio switched', name : '@' + data.id };
+        if (lastAudioTrackSwitchingIdx !== undefined) {
+          events.video[lastAudioTrackSwitchingIdx].duration = event.time - events.video[lastAudioTrackSwitchingIdx].time;
+          lastAudioTrackSwitchingIdx = undefined;
+        }
+        events.video.push(event);
        });
        hls.on(Hls.Events.LEVEL_LOADED,function(event,data) {
           events.isLive = data.details.live;
@@ -340,6 +352,15 @@ $(document).ready(function() {
             parsing : data.stats.tparsed - data.stats.tload,
             duration : data.stats.tload - data.stats.tfirst
           };
+          const parsingDuration = data.stats.tparsed - data.stats.tload;
+          if (stats.levelParsed) {
+            this.sumLevelParsingMs += parsingDuration;
+          } else {
+            this.sumLevelParsingMs = parsingDuration;
+          }
+          stats.levelParsed++;
+          stats.levelParsingUs = Math.round(1000*this.sumLevelParsingMs / stats.levelParsed);
+          console.log("parsing level duration :" + stats.levelParsingUs + "us,count:" + stats.levelParsed);
           events.load.push(event);
           refreshCanvas();
        });
@@ -382,7 +403,10 @@ $(document).ready(function() {
           refreshCanvas();
           updateLevelInfo();
 
-          var latency = data.stats.tfirst - data.stats.trequest, process = data.stats.tbuffered - data.stats.trequest, bitrate = Math.round(8 * data.stats.length / (data.stats.tbuffered - data.stats.tfirst));
+          var latency = data.stats.tfirst - data.stats.trequest,
+              parsing = data.stats.tparsed - data.stats.tload,
+              process = data.stats.tbuffered - data.stats.trequest,
+              bitrate = Math.round(8 * data.stats.length / (data.stats.tbuffered - data.stats.tfirst));
           if (stats.fragBuffered) {
             stats.fragMinLatency = Math.min(stats.fragMinLatency, latency);
             stats.fragMaxLatency = Math.max(stats.fragMaxLatency, latency);
@@ -403,17 +427,21 @@ $(document).ready(function() {
             this.sumLatency = 0;
             this.sumKbps = 0;
             this.sumProcess = 0;
+            this.sumParsing = 0;
           }
           stats.fraglastLatency = latency;
           this.sumLatency += latency;
           stats.fragAvgLatency = Math.round(this.sumLatency / stats.fragBuffered);
           stats.fragLastProcess = process;
           this.sumProcess += process;
+          this.sumParsing += parsing;
           stats.fragAvgProcess = Math.round(this.sumProcess / stats.fragBuffered);
           stats.fragLastKbps = bitrate;
           this.sumKbps += bitrate;
           stats.fragAvgKbps = Math.round(this.sumKbps / stats.fragBuffered);
-          stats.fragBufferedBytes += data.stats.length;
+          stats.fragBufferedBytes += data.stats.total;
+          stats.fragparsingKbps = Math.round(8*stats.fragBufferedBytes / this.sumParsing);
+          stats.fragparsingMs = Math.round(this.sumParsing);
           stats.autoLevelCappingLast = hls.autoLevelCapping;
        });
        hls.on(Hls.Events.FRAG_CHANGED,function(event,data) {
@@ -626,7 +654,7 @@ $(document).ready(function() {
   }
 
 
-var lastSeekingIdx, lastStartPosition,lastDuration;
+var lastSeekingIdx, lastStartPosition,lastDuration, lastAudioTrackSwitchingIdx;
   function handleVideoEvent(evt) {
     var data = '';
     switch(evt.type) {

@@ -15,7 +15,7 @@ module.exports = {
   BUFFER_CREATED: 'hlsBufferCreated',
   // fired when we append a segment to the buffer - data: { segment: segment object }
   BUFFER_APPENDING: 'hlsBufferAppending',
-  // fired when we are done with appending a media segment to the buffer data : { parent : segment parent that triggered BUFFER_APPENDING }
+  // fired when we are done with appending a media segment to the buffer data : { parent : segment parent that triggered BUFFER_APPENDING , pending : nb of segments waiting for appending for this segment parent}
   BUFFER_APPENDED: 'hlsBufferAppended',
   // fired when the stream is finished and we want to notify the media buffer that there will be no more data
   BUFFER_EOS: 'hlsBufferEos',
@@ -43,8 +43,12 @@ module.exports = {
   LEVEL_REMOVED: 'hlsLevelRemoved',
   // fired when a level should no longer be used
   AUDIO_TRACKS_UPDATED: 'hlsAudioTracksUpdated',
-  // fired when an audio track switch occurs - data: {  id : audio track id}
+  // fired when an audio track switch occurs - data: {  id : audio track id} // deprecated
   AUDIO_TRACK_SWITCH: 'hlsAudioTrackSwitch',
+  // fired when an audio track switching is requested - data: {  id : audio track id}
+  AUDIO_TRACK_SWITCHING: 'hlsAudioTrackSwitching',
+  // fired when an audio track switch actually occurs - data: {  id : audio track id}
+  AUDIO_TRACK_SWITCHED: 'hlsAudioTrackSwitched',
   // fired when an audio track loading starts - data: { url : audio track URL  id : audio track id}
   AUDIO_TRACK_LOADING: 'hlsAudioTrackLoading',
   // fired when an audio track loading  finishes - data: { details : levelDetails object, id : audio track id, stats : { trequest, tfirst, tload, mtime} }
