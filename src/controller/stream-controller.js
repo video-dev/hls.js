@@ -1363,7 +1363,7 @@ _checkBuffer() {
             }
           }
           // if we are below threshold, try to jump to start of next buffer range if close
-          if(bufferInfo.len <= jumpThreshold) {
+          if(bufferInfo.len <= jumpThreshold || bufferInfo.len < this.config.maxFragLookUpTolerance) {
             // no buffer available @ currentTime, check if next buffer is close (within a config.maxSeekHole second range)
             var nextBufferStart = bufferInfo.nextStart, delta = nextBufferStart-currentTime;
             if(nextBufferStart &&
