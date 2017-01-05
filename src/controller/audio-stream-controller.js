@@ -166,7 +166,7 @@ class AudioStreamController extends EventHandler {
         // if we have not yet loaded any fragment, start loading from start position
         if (this.loadedmetadata) {
           pos = this.media.currentTime;
-        } else if (this.nextLoadPosition){
+        } else if (this.nextLoadPosition) {
           pos = this.nextLoadPosition;
         } else {
           pos = 0;
