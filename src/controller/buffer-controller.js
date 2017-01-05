@@ -447,7 +447,7 @@ class BufferController extends EventHandler {
         if (
             (levelDuration > this._msDuration &&
                 levelDuration > media.duration) ||
-            media.duration === Infinity
+            (media.duration === Infinity || isNaN(media.duration))
         ) {
             logger.log(
                 `Updating mediasource duration to ${levelDuration.toFixed(3)}`
