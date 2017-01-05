@@ -1472,7 +1472,7 @@ var AudioStreamController = function (_EventHandler) {
         // If not we need to wait for it
         var initPTS = this.initPTS[cc];
         if (initPTS !== undefined) {
-          this.pendingBuffering = -1;
+          this.pendingBuffering = true;
           _logger.logger.log('Demuxing ' + sn + ' of [' + details.startSN + ' ,' + details.endSN + '],track ' + trackId);
           // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
           var accurateTimeOffset = false; //details.PTSKnown || !details.live;
@@ -1512,6 +1512,8 @@ var AudioStreamController = function (_EventHandler) {
               this.pendingData = [appendObj];
             } else {
               this.appended = true;
+              // arm pending Buffering flag before appending a segment
+              this.pendingBuffering = true;
               this.hls.trigger(_events2.default.BUFFER_APPENDING, appendObj);
             }
           }
@@ -1568,6 +1570,8 @@ var AudioStreamController = function (_EventHandler) {
             });
             if (!appendOnBufferFlush && pendingData.length) {
               pendingData.forEach(function (appendObj) {
+                // arm pending Buffering flag before appending a segment
+                _this3.pendingBuffering = true;
                 _this3.hls.trigger(_events2.default.BUFFER_APPENDING, appendObj);
               });
               _this3.pendingData = [];
@@ -1604,7 +1608,8 @@ var AudioStreamController = function (_EventHandler) {
       if (data.parent === 'audio') {
         var state = this.state;
         if (state === State.PARSING || state === State.PARSED) {
-          this.pendingBuffering = data.pending;
+          // check if all buffers have been appended
+          this.pendingBuffering = data.pending > 0;
           this._checkAppendedParsed();
         }
       }
@@ -1613,7 +1618,7 @@ var AudioStreamController = function (_EventHandler) {
     key: '_checkAppendedParsed',
     value: function _checkAppendedParsed() {
       //trigger handler right now
-      if (this.state === State.PARSED && (!this.appended || this.pendingBuffering === 0)) {
+      if (this.state === State.PARSED && (!this.appended || !this.pendingBuffering)) {
         var frag = this.fragCurrent,
             stats = this.stats,
             hls = this.hls;
@@ -4287,7 +4292,7 @@ var StreamController = function (_EventHandler) {
               }
             }
           }
-          this.pendingBuffering = -1;
+          this.pendingBuffering = true;
           this.appended = false;
           _logger.logger.log('Parsing ' + sn + ' of [' + details.startSN + ' ,' + details.endSN + '],level ' + level + ', cc ' + fragCurrent.cc);
           var demuxer = this.demuxer;
@@ -4387,6 +4392,8 @@ var StreamController = function (_EventHandler) {
           var initSegment = track.initSegment;
           if (initSegment) {
             this.appended = true;
+            // arm pending Buffering flag before appending a segment
+            this.pendingBuffering = true;
             this.hls.trigger(_events2.default.BUFFER_APPENDING, { type: trackName, data: initSegment, parent: 'main', content: 'initSegment' });
           }
         }
@@ -4419,6 +4426,8 @@ var StreamController = function (_EventHandler) {
         [data.data1, data.data2].forEach(function (buffer) {
           if (buffer) {
             _this2.appended = true;
+            // arm pending Buffering flag before appending a segment
+            _this2.pendingBuffering = true;
             hls.trigger(_events2.default.BUFFER_APPENDING, { type: data.type, data: buffer, parent: 'main', content: 'data' });
           }
         });
@@ -4524,7 +4533,8 @@ var StreamController = function (_EventHandler) {
       if (data.parent === 'main') {
         var state = this.state;
         if (state === State.PARSING || state === State.PARSED) {
-          this.pendingBuffering = data.pending;
+          // check if all buffers have been appended
+          this.pendingBuffering = data.pending > 0;
           this._checkAppendedParsed();
         }
       }
@@ -4533,7 +4543,7 @@ var StreamController = function (_EventHandler) {
     key: '_checkAppendedParsed',
     value: function _checkAppendedParsed() {
       //trigger handler right now
-      if (this.state === State.PARSED && (!this.appended || this.pendingBuffering === 0)) {
+      if (this.state === State.PARSED && (!this.appended || !this.pendingBuffering)) {
         var frag = this.fragCurrent,
             stats = this.stats;
         if (frag) {
