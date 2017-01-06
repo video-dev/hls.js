@@ -1231,6 +1231,12 @@ class StreamController extends EventHandler {
             logger.warn(`mediaController: frag loading failed, retry in ${delay} ms`);
             this.retryDate = performance.now() + delay;
             // retry loading state
+            // if loadedmetadata is not set, it means that we are emergency switch down on first frag
+            // in that case, reset startFragRequested flag
+            if(!this.loadedmetadata) {
+              this.startFragRequested = false;
+              this.nextLoadPosition = this.startPosition
+            }
             this.state = State.FRAG_LOADING_WAITING_RETRY;
           } else {
             logger.error(`mediaController: ${data.details} reaches max retry, redispatch as fatal ...`);
@@ -1393,6 +1399,7 @@ _checkBuffer() {
     // in that case, reset startFragRequested flag
     if(!this.loadedmetadata) {
       this.startFragRequested = false;
+      this.nextLoadPosition = this.startPosition;
     }
     this.tick();
   }
