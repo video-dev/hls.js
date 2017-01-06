@@ -25,27 +25,35 @@ class DemuxerInline {
     }
   }
 
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset) {
+  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
     var demuxer = this.demuxer;
-    if (!demuxer) {
+    if (!demuxer || 
+       // in case of continuity change, we might switch from content type (AAC container to TS container for example)
+       // so let's check that current demuxer is still valid
+        (cc !== this.cc && !demuxer.probe(data))) {
       let hls = this.hls,
-          id = this.id;
+          id = this.id,
+          config = this.config,
+          typeSupported = this.typeSupported;
       // probe for content type
       if (TSDemuxer.probe(data)) {
         if (this.typeSupported.mp2t === true) {
-          demuxer = new TSDemuxer(hls, id, PassThroughRemuxer, this.config);
+          demuxer = new TSDemuxer(hls, id, PassThroughRemuxer, config, typeSupported);
         } else {
-          demuxer = new TSDemuxer(hls, id, MP4Remuxer, this.config);
+          demuxer = new TSDemuxer(hls, id, MP4Remuxer, config, typeSupported);
         }
+        demuxer.probe = TSDemuxer.probe;
       } else if(AACDemuxer.probe(data)) {
-        demuxer = new AACDemuxer(hls, id, MP4Remuxer, this.config);
+        demuxer = new AACDemuxer(hls, id, MP4Remuxer, config, typeSupported);
+        demuxer.probe = AACDemuxer.probe;
       } else {
         hls.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, id : id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found'});
         return;
       }
       this.demuxer = demuxer;
     }
-    demuxer.push(data,audioCodec,videoCodec,timeOffset,cc,level,sn,duration,accurateTimeOffset);
+    demuxer.push(data,audioCodec,videoCodec,timeOffset,cc,level,sn,duration,accurateTimeOffset,defaultInitPTS);
+    this.cc = cc;
   }
 }
 

@@ -179,6 +179,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       capLevelToPlayerSize: false,
       debug: false,
       defaultAudioCodec: undefined,
+      initialLiveManifestSize: 1,
       maxBufferLength: 30,
       maxMaxBufferLength: 600,
       maxBufferSize: 60*1000*1000,
@@ -221,7 +222,8 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       abrEwmaSlowVoD: 15.0,
       abrEwmaDefaultEstimate: 500000,
       abrBandWidthFactor: 0.8,
-      abrBandWidthUpFactor: 0.7
+      abrBandWidthUpFactor: 0.7,
+      minAutoBitrate: 0
   };
 
   var hls = new Hls(config);
@@ -269,6 +271,11 @@ A logger object could also be provided for custom logging: `config.debug = custo
   - `mp4a.40.2` (AAC-LC) or
   - `mp4a.40.5` (HE-AAC) or
   - `undefined` (guess based on sampling rate)
+
+#### ```initialLiveManifestSize```
+(default 1)
+
+number of segments needed to start a playback of Live stream.
 
 #### `maxBufferLength`
 
@@ -689,6 +696,12 @@ If `abrBandWidthFactor * bandwidth average < level.bitrate` then ABR can switch 
 
 Scale factor to be applied against measured bandwidth average, to determine whether we can switch up to a higher quality level.
 If `abrBandWidthUpFactor * bandwidth average < level.bitrate` then ABR can switch up to that quality level.
+
+#### `minAutoBitrate`
+(default: `0`)
+
+Return the capping/min bandwidth value that could be used by automatic level selection algorithm.
+Useful when browser or tab of the browser is not in the focus and bandwidth drops
 
 
 ## Video Binding/Unbinding API

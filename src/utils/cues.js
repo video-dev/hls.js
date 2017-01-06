@@ -29,6 +29,8 @@ var Cues = {
             indenting = false;
           }
         }
+        //To be used for cleaning-up orphaned roll-up captions
+        row.cueStartTime = startTime;
         cue = new VTTCue(startTime, endTime, text.trim());
 
         if (indent >= 16)
@@ -51,7 +53,8 @@ var Cues = {
           cue.line = (r > 7 ? r - 2 : r + 1);
         }
         cue.align = 'left';
-        cue.position = 100 * (indent / 32) + (navigator.userAgent.match(/Firefox\//) ? 50 : 0);
+        // Clamp the position between 0 and 100 - if out of these bounds, Firefox throws an exception and captions break
+        cue.position = Math.max(0, Math.min(100, 100 * (indent / 32) + (navigator.userAgent.match(/Firefox\//) ? 50 : 0)));
         track.addCue(cue);
       }
     }

@@ -18,13 +18,14 @@
 
  class TSDemuxer {
 
-  constructor(observer, id, remuxerClass, config) {
+  constructor(observer, id, remuxerClass, config, typeSupported) {
     this.observer = observer;
     this.id = id;
     this.remuxerClass = remuxerClass;
     this.config = config;
+    this.typeSupported = typeSupported;
     this.lastCC = 0;
-    this.remuxer = new this.remuxerClass(observer, id, config);
+    this.remuxer = new this.remuxerClass(observer, id, config, typeSupported);
   }
 
   static probe(data) {
@@ -40,7 +41,7 @@
     this.pmtParsed = false;
     this._pmtId = -1;
     this._avcTrack = {container : 'video/mp2t', type: 'video', id :-1, sequenceNumber: 0, samples : [], len : 0, dropped : 0};
-    this._aacTrack = {container : 'video/mp2t', type: 'audio', id :-1, sequenceNumber: 0, samples : [], len : 0};
+    this._audioTrack = {container : 'video/mp2t', type: 'audio', id :-1, sequenceNumber: 0, samples : [], len : 0, isAAC: true};
     this._id3Track = {type: 'id3', id :-1, sequenceNumber: 0, samples : [], len : 0};
     this._txtTrack = {type: 'text', id: -1, sequenceNumber: 0, samples : [], len : 0};
     // flush any partial content
@@ -56,7 +57,7 @@
   }
 
   // feed incoming data to the front of the parsing pipeline
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset) {
+  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
     var start, len = data.length, stt, pid, atf, offset,pes,
         codecsOnly = this.remuxer.passthrough,
         unknownPIDs = false;
@@ -82,20 +83,21 @@
 
     var pmtParsed = this.pmtParsed,
         avcTrack = this._avcTrack,
-        aacTrack = this._aacTrack,
+        audioTrack = this._audioTrack,
         id3Track = this._id3Track,
         avcId = avcTrack.id,
-        aacId = aacTrack.id,
+        audioId = audioTrack.id,
         id3Id = id3Track.id,
         pmtId = this._pmtId,
         avcData = avcTrack.pesData,
-        aacData = aacTrack.pesData,
+        audioData = audioTrack.pesData,
         id3Data = id3Track.pesData,
         parsePAT = this._parsePAT,
         parsePMT = this._parsePMT,
         parsePES = this._parsePES,
         parseAVCPES = this._parseAVCPES.bind(this),
         parseAACPES = this._parseAACPES.bind(this),
+        parseMPEGPES = this._parseMPEGPES.bind(this),
         parseID3PES  = this._parseID3PES.bind(this);
 
     // don't parse last TS packet if incomplete
@@ -126,8 +128,8 @@
                   // if we have video codec info AND
                   // if audio PID is undefined OR if we have audio codec info,
                   // we have all codec info !
-                  if (avcTrack.codec && (aacId === -1 || aacTrack.codec)) {
-                    this.remux(level,sn,data,timeOffset);
+                  if (avcTrack.codec && (audioId === -1 || audioTrack.codec)) {
+                    this.remux(level,sn,cc,data,timeOffset);
                     return;
                   }
                 }
@@ -139,25 +141,29 @@
               avcData.size += start + 188 - offset;
             }
             break;
-          case aacId:
+          case audioId:
             if (stt) {
-              if (aacData && (pes = parsePES(aacData))) {
-                parseAACPES(pes);
+              if (audioData && (pes = parsePES(audioData))) {
+                if (audioTrack.isAAC) {
+                  parseAACPES(pes);
+                } else {
+                  parseMPEGPES(pes);
+                }
                 if (codecsOnly) {
                   // here we now that we have audio codec info
                   // if video PID is undefined OR if we have video codec info,
                   // we have all codec infos !
-                  if (aacTrack.codec && (avcId === -1 || avcTrack.codec)) {
-                    this.remux(level,sn,data,timeOffset);
+                  if (audioTrack.codec && (avcId === -1 || avcTrack.codec)) {
+                    this.remux(level,sn,cc,data,timeOffset);
                     return;
                   }
                 }
               }
-              aacData = {data: [], size: 0};
+              audioData = {data: [], size: 0};
             }
-            if (aacData) {
-              aacData.data.push(data.subarray(offset, start + 188));
-              aacData.size += start + 188 - offset;
+            if (audioData) {
+              audioData.data.push(data.subarray(offset, start + 188));
+              audioData.size += start + 188 - offset;
             }
             break;
           case id3Id:
@@ -182,10 +188,25 @@
             if (stt) {
               offset += data[offset] + 1;
             }
-            let parsedPIDs = parsePMT(data, offset);
-            avcId = avcTrack.id = parsedPIDs.avc;
-            aacId = aacTrack.id = parsedPIDs.aac;
-            id3Id = id3Track.id = parsedPIDs.id3;
+            let parsedPIDs = parsePMT(data, offset, this.typeSupported.mpeg === true || this.typeSupported.mp3 === true);
+
+            // only update track id if track PID found while parsing PMT
+            // this is to avoid resetting the PID to -1 in case
+            // track PID transiently disappears from the stream
+            // this could happen in case of transient missing audio samples for example
+            avcId = parsedPIDs.avc;
+            if (avcId > 0) {
+              avcTrack.id = avcId;
+            }
+            audioId = parsedPIDs.audio;
+            if (audioId > 0) {
+              audioTrack.id = audioId;
+              audioTrack.isAAC = parsedPIDs.isAAC;
+            }
+            id3Id = parsedPIDs.id3;
+            if (id3Id > 0) {
+              id3Track.id = id3Id;
+            }
             if (unknownPIDs && !pmtParsed) {
               logger.log('reparse from beginning');
               unknownPIDs = false;
@@ -214,15 +235,19 @@
       avcTrack.pesData = avcData;
     }
 
-    if (aacData && (pes = parsePES(aacData))) {
-      parseAACPES(pes);
-      aacTrack.pesData = null;
+    if (audioData && (pes = parsePES(audioData))) {
+      if (audioTrack.isAAC) {
+        parseAACPES(pes);
+      } else {
+        parseMPEGPES(pes);
+      }
+      audioTrack.pesData = null;
     } else {
-      if (aacData && aacData.size) {
+      if (audioData && audioData.size) {
         logger.log('last AAC PES packet truncated,might overlap between fragments');
       }
-     // either aacData null or PES truncated, keep it for next frag parsing
-      aacTrack.pesData = aacData;
+     // either audioData null or PES truncated, keep it for next frag parsing
+      audioTrack.pesData = audioData;
     }
 
     if (id3Data && (pes = parsePES(id3Data))) {
@@ -232,28 +257,25 @@
       // either id3Data null or PES truncated, keep it for next frag parsing
       id3Track.pesData = id3Data;
     }
-    this.remux(level,sn,null,timeOffset);
+    this.remux(level,sn,cc,null,timeOffset,defaultInitPTS);
   }
 
-  remux(level, sn, data, timeOffset) {
-    let avcTrack = this._avcTrack, samples = avcTrack.samples;
+  remux(level, sn, cc, data, timeOffset,defaultInitPTS) {
+    let avcTrack = this._avcTrack, samples = avcTrack.samples, nbNalu = 0, naluLen = 0;
 
     // compute total/avc sample length and nb of NAL units
-    let trackData = samples.reduce(function(prevSampleData,curSample) {
-      let sampleData = curSample.units.units.reduce(function(prevUnitData,curUnit) {
-      return {
-        len : prevUnitData.len+curUnit.data.length,
-        nbNalu : prevUnitData.nbNalu+1
-        };
-      },{len : 0, nbNalu : 0});
-      curSample.length = sampleData.len;
-      return {
-        len : prevSampleData.len+sampleData.len,
-        nbNalu : prevSampleData.nbNalu+sampleData.nbNalu
-    };},{len : 0, nbNalu : 0});
-     avcTrack.len = trackData.len;
-     avcTrack.nbNalu = trackData.nbNalu;
-    this.remuxer.remux(level, sn, this._aacTrack, this._avcTrack, this._id3Track, this._txtTrack, timeOffset, this.contiguous, this.accurateTimeOffset, data);
+    for (let i = 0; i < samples.length; i++) {
+      let sample = samples[i], units = sample.units.units, nbUnits = units.length, sampleLen = 0;
+      for (let j = 0; j < nbUnits; j++) {
+        sampleLen += units[j].data.length;
+      }
+      naluLen += sampleLen;
+      nbNalu += nbUnits;
+      sample.length = sampleLen;
+    }
+    avcTrack.len = naluLen;
+    avcTrack.nbNalu = nbNalu;
+    this.remuxer.remux(level, sn, cc, this._audioTrack, this._avcTrack, this._id3Track, this._txtTrack, timeOffset, this.contiguous, this.accurateTimeOffset, defaultInitPTS, data);
   }
 
   destroy() {
@@ -268,8 +290,8 @@
     //logger.log('PMT PID:'  + this._pmtId);
   }
 
-  _parsePMT(data, offset) {
-    var sectionLength, tableEnd, programInfoLength, pid, result = { aac : -1, avc : -1, id3 : -1};
+  _parsePMT(data, offset, mpegSupported) {
+    var sectionLength, tableEnd, programInfoLength, pid, result = { audio : -1, avc : -1, id3 : -1, isAAC : true};
     sectionLength = (data[offset + 1] & 0x0f) << 8 | data[offset + 2];
     tableEnd = offset + 3 + sectionLength - 4;
     // to determine where the table is, we have to figure out how
@@ -283,8 +305,8 @@
         // ISO/IEC 13818-7 ADTS AAC (MPEG-2 lower bit-rate audio)
         case 0x0f:
           //logger.log('AAC PID:'  + pid);
-          if (result.aac === -1) {
-            result.aac = pid;
+          if (result.audio === -1) {
+            result.audio = pid;
           }
           break;
         // Packetized metadata (ID3)
@@ -299,6 +321,18 @@
           //logger.log('AVC PID:'  + pid);
           if (result.avc === -1) {
             result.avc = pid;
+          }
+          break;
+        // ISO/IEC 11172-3 (MPEG-1 audio)
+        // or ISO/IEC 13818-3 (MPEG-2 halved sample rate audio)
+        case 0x03:
+        case 0x04:
+          //logger.log('MPEG PID:'  + pid);
+          if (!mpegSupported) {
+            logger.log('MPEG audio found, not supported in this browser for now');
+          } else if (result.audio === -1) {
+            result.audio = pid;
+            result.isAAC = false;
           }
           break;
         case 0x24:
@@ -337,9 +371,9 @@
     pesPrefix = (frag[0] << 16) + (frag[1] << 8) + frag[2];
     if (pesPrefix === 1) {
       pesLen = (frag[4] << 8) + frag[5];
-      // if PES len is not zero and not matching with total len, stop parsing. PES might be truncated
+      // if PES parsed length is not zero and greater than total received length, stop parsing. PES might be truncated
       // minus 6 : PES header size
-      if (pesLen && pesLen !== stream.size - 6) {
+      if (pesLen && pesLen > stream.size - 6) {
         return null;
       }
       pesFlags = frag[7];
@@ -368,6 +402,10 @@
             // decrement 2^33
             pesDts -= 8589934592;
           }
+          if (pesPts - pesDts > 60*90000) {
+            logger.warn(`${Math.round((pesPts - pesDts)/90000)}s delta between PTS and DTS, align them`);
+            pesPts = pesDts;
+          }
         } else {
           pesDts = pesPts;
         }
@@ -379,9 +417,9 @@
       stream.size -= payloadStartOffset;
       //reassemble PES packet
       pesData = new Uint8Array(stream.size);
-      while (data.length) {
-        frag = data.shift();
-        var len = frag.byteLength;
+      for( let j = 0, dataLen = data.length; j < dataLen ; j++) {
+        frag = data[j];
+        let len = frag.byteLength;
         if (payloadStartOffset) {
           if (payloadStartOffset > len) {
             // trim full frag if PES header bigger than frag
@@ -408,7 +446,7 @@
   }
 
   pushAccesUnit(avcSample,avcTrack) {
-    if (avcSample.units.units.length) {
+    if (avcSample.units.units.length && avcSample.frame) {
       // only push AVC sample if starting with a keyframe is not mandatory OR
       //    if keyframe already found in this fragment OR
       //       keyframe found in last fragment (track.sps) AND
@@ -447,6 +485,20 @@
            if(debug && avcSample) {
             avcSample.debug += 'NDR ';
            }
+           avcSample.frame = true;
+           // retrieve slice type by parsing beginning of NAL unit (follow H264 spec, slice_header definition) to detect keyframe embedded in NDR
+           let data = unit.data;
+           if (data.length > 1) {
+             let sliceType = new ExpGolomb(data).readSliceType();
+             // 2 : I slice, 4 : SI slice, 7 : I slice, 9: SI slice
+             // SI slice : A slice that is coded using intra prediction only and using quantisation of the prediction samples.
+             // An SI slice can be coded such that its decoded samples can be constructed identically to an SP slice.
+             // I slice: A slice that is not an SI slice that is decoded using intra prediction only.
+             //if (sliceType === 2 || sliceType === 7) {
+             if (sliceType === 2 || sliceType === 4 || sliceType === 7 || sliceType === 9) {
+                avcSample.key = true;
+             }
+           }
            break;
         //IDR
         case 5:
@@ -459,6 +511,7 @@
             avcSample.debug += 'IDR ';
           }
           avcSample.key = true;
+          avcSample.frame = true;
           break;
         //SEI
         case 6:
@@ -646,82 +699,75 @@
     var i = 0, len = array.byteLength, value, overflow, track = this._avcTrack, state = track.naluState || 0, lastState = state;
     var units = [], unit, unitType, lastUnitStart = -1, lastUnitType;
     //logger.log('PES:' + Hex.hexDump(array));
+
+    if (state === -1) {
+    // special use case where we found 3 or 4-byte start codes exactly at the end of previous PES packet
+      lastUnitStart = 0;
+      // NALu type is value read from offset 0
+      lastUnitType = array[0] & 0x1f;
+      state = 0;
+      i = 1;
+    }
+
     while (i < len) {
       value = array[i++];
-      // finding 3 or 4-byte start codes (00 00 01 OR 00 00 00 01)
-      switch (state) {
-        case 0:
-          if (value === 0) {
-            state = 1;
-          }
-          break;
-        case 1:
-          if( value === 0) {
-            state = 2;
-          } else {
-            state = 0;
-          }
-          break;
-        case 2:
-        case 3:
-          if( value === 0) {
-            state = 3;
-          } else if (value === 1) {
-            if (lastUnitStart >=0) {
-              unit = {data: array.subarray(lastUnitStart, i - state - 1), type: lastUnitType};
-              //logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
-              units.push(unit);
-            } else {
-              // lastUnitStart is undefined => this is the first start code found in this PES packet
-              // first check if start code delimiter is overlapping between 2 PES packets,
-              // ie it started in last packet (lastState not zero)
-              // and ended at the beginning of this PES packet (i <= 4 - lastState)
-              let lastUnit = this._getLastNalUnit();
-              if (lastUnit) {
-                if(lastState &&  (i <= 4 - lastState)) {
-                  // start delimiter overlapping between PES packets
-                  // strip start delimiter bytes from the end of last NAL unit
-                    // check if lastUnit had a state different from zero
-                  if (lastUnit.state) {
-                    // strip last bytes
-                    lastUnit.data = lastUnit.data.subarray(0,lastUnit.data.byteLength - lastState);
-                  }
-                }
-                // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
-                overflow  = i - state - 1;
-                if (overflow > 0) {
-                  //logger.log('first NALU found with overflow:' + overflow);
-                  let tmp = new Uint8Array(lastUnit.data.byteLength + overflow);
-                  tmp.set(lastUnit.data, 0);
-                  tmp.set(array.subarray(0, overflow), lastUnit.data.byteLength);
-                  lastUnit.data = tmp;
-                }
+      // optimization. state 0 and 1 are the predominant case. let's handle them outside of the switch/case
+      if (!state) {
+        state = value ? 0 : 1;
+        continue;
+      }
+      if (state === 1) {
+        state = value ? 0 : 2;
+        continue;
+      }
+      // here we have state either equal to 2 or 3
+      if(!value) {
+        state = 3;
+      } else if (value === 1) {
+        if (lastUnitStart >=0) {
+          unit = {data: array.subarray(lastUnitStart, i - state - 1), type: lastUnitType};
+          //logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
+          units.push(unit);
+        } else {
+          // lastUnitStart is undefined => this is the first start code found in this PES packet
+          // first check if start code delimiter is overlapping between 2 PES packets,
+          // ie it started in last packet (lastState not zero)
+          // and ended at the beginning of this PES packet (i <= 4 - lastState)
+          let lastUnit = this._getLastNalUnit();
+          if (lastUnit) {
+            if(lastState &&  (i <= 4 - lastState)) {
+              // start delimiter overlapping between PES packets
+              // strip start delimiter bytes from the end of last NAL unit
+                // check if lastUnit had a state different from zero
+              if (lastUnit.state) {
+                // strip last bytes
+                lastUnit.data = lastUnit.data.subarray(0,lastUnit.data.byteLength - lastState);
               }
             }
-            // check if we can read unit type
-            if (i < len) {
-              unitType = array[i] & 0x1f;
-              //logger.log('find NALU @ offset:' + i + ',type:' + unitType);
-              lastUnitStart = i;
-              lastUnitType = unitType;
-              state = 0;
-            } else {
-              // not enough byte to read unit type. let's read it on next PES parsing
-              state = -1;
+            // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
+            overflow  = i - state - 1;
+            if (overflow > 0) {
+              //logger.log('first NALU found with overflow:' + overflow);
+              let tmp = new Uint8Array(lastUnit.data.byteLength + overflow);
+              tmp.set(lastUnit.data, 0);
+              tmp.set(array.subarray(0, overflow), lastUnit.data.byteLength);
+              lastUnit.data = tmp;
             }
-          } else {
-            state = 0;
           }
-          break;
-        case -1:
-        // special use case where we found 3 or 4-byte start codes exactly at the end of previous PES packet
-          lastUnitStart = 0;
-          // NALu type is value read from offset 0
-          lastUnitType = value & 0x1f;
+        }
+        // check if we can read unit type
+        if (i < len) {
+          unitType = array[i] & 0x1f;
+          //logger.log('find NALU @ offset:' + i + ',type:' + unitType);
+          lastUnitStart = i;
+          lastUnitType = unitType;
           state = 0;
-          break;
-        default:
-          break;
+        } else {
+          // not enough byte to read unit type. let's read it on next PES parsing
+          state = -1;
+        }
+      } else {
+        state = 0;
       }
     }
     if (lastUnitStart >=0 && state >=0) {
@@ -789,7 +835,7 @@
   }
 
   _parseAACPES(pes) {
-    var track = this._aacTrack,
+    var track = this._audioTrack,
         data = pes.data,
         pts = pes.pts,
         startOffset = 0,
@@ -826,11 +872,13 @@
       }
     }
     if (!track.audiosamplerate) {
-      config = ADTS.getAudioConfig(this.observer,data, offset, this.audioCodec);
+      const audioCodec = this.audioCodec;
+      config = ADTS.getAudioConfig(this.observer,data, offset, audioCodec);
       track.config = config.config;
       track.audiosamplerate = config.samplerate;
       track.channelCount = config.channelCount;
       track.codec = config.codec;
+      track.manifestCodec = audioCodec;
       track.duration = this._duration;
       logger.log(`parsed codec:${track.codec},rate:${config.samplerate},nb channel:${config.channelCount}`);
     }
@@ -883,6 +931,93 @@
     }
     this.aacOverFlow = aacOverFlow;
     this.aacLastPTS = stamp;
+  }
+
+  _parseMPEGPES(pes) {
+    var data = pes.data;
+    var pts = pes.pts;
+    var length = data.length;
+    var frameIndex = 0;
+    var offset = 0;
+    var parsed;
+
+    while (offset < length &&
+        (parsed = this._parseMpeg(data, offset, length, frameIndex++, pts)) > 0) {
+        offset += parsed;
+    }
+  }
+
+  _onMpegFrame(data, bitRate, sampleRate, channelCount, frameIndex, pts) {
+    var frameDuration = (1152 / sampleRate) * 1000;
+    var stamp = pts + frameIndex * frameDuration;
+    var track = this._audioTrack;
+
+    track.config = [];
+    track.channelCount = channelCount;
+    track.audiosamplerate = sampleRate;
+    track.duration = this._duration;
+    track.samples.push({unit: data, pts: stamp, dts: stamp});
+    track.len += data.length;
+  }
+
+  _onMpegNoise(data) {
+    logger.warn('mpeg audio has noise: ' + data.length + ' bytes');
+  }
+
+  _parseMpeg(data, start, end, frameIndex, pts) {
+    var BitratesMap = [
+        32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448,
+        32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384,
+        32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320,
+        32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256,
+        8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160];
+    var SamplingRateMap = [44100, 48000, 32000, 22050, 24000, 16000, 11025, 12000, 8000];
+
+    if (start + 2 > end) {
+        return -1; // we need at least 2 bytes to detect sync pattern
+    }
+    if (data[start] === 0xFF || (data[start + 1] & 0xE0) === 0xE0) {
+        // Using http://www.datavoyage.com/mpgscript/mpeghdr.htm as a reference
+        if (start + 24 > end) {
+            return -1;
+        }
+        var headerB = (data[start + 1] >> 3) & 3;
+        var headerC = (data[start + 1] >> 1) & 3;
+        var headerE = (data[start + 2] >> 4) & 15;
+        var headerF = (data[start + 2] >> 2) & 3;
+        var headerG = !!(data[start + 2] & 2);
+        if (headerB !== 1 && headerE !== 0 && headerE !== 15 && headerF !== 3) {
+            var columnInBitrates = headerB === 3 ? (3 - headerC) : (headerC === 3 ? 3 : 4);
+            var bitRate = BitratesMap[columnInBitrates * 14 + headerE - 1] * 1000;
+            var columnInSampleRates = headerB === 3 ? 0 : headerB === 2 ? 1 : 2;
+            var sampleRate = SamplingRateMap[columnInSampleRates * 3 + headerF];
+            var padding = headerG ? 1 : 0;
+            var channelCount = data[start + 3] >> 6 === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
+            var frameLength = headerC === 3 ?
+                ((headerB === 3 ? 12 : 6) * bitRate / sampleRate + padding) << 2 :
+                ((headerB === 3 ? 144 : 72) * bitRate / sampleRate + padding) | 0;
+            if (start + frameLength > end) {
+                return -1;
+            }
+            if (this._onMpegFrame) {
+                this._onMpegFrame(data.subarray(start, start + frameLength), bitRate, sampleRate, channelCount, frameIndex, pts);
+            }
+            return frameLength;
+        }
+    }
+    // noise or ID3, trying to skip
+    var offset = start + 2;
+    while (offset < end) {
+        if (data[offset - 1] === 0xFF && (data[offset] & 0xE0) === 0xE0) {
+            // sync pattern is found
+            if (this._onMpegNoise) {
+                this._onMpegNoise(data.subarray(start, offset - 1));
+            }
+            return offset - start - 1;
+        }
+        offset++;
+    }
+    return -1;
   }
 
   _parseID3PES(pes) {

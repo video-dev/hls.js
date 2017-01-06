@@ -18,6 +18,11 @@ var DemuxerWorker = function (self) {
   observer.off = function off (event, ...data) {
     observer.removeListener(event, ...data);
   };
+
+  var forwardMessage = function(ev,data) {
+    self.postMessage({event: ev, data:data });
+  };
+
   self.addEventListener('message', function (ev) {
     var data = ev.data;
     //console.log('demuxer cmd:' + data.cmd);
@@ -26,22 +31,20 @@ var DemuxerWorker = function (self) {
         let config = JSON.parse(data.config);
         self.demuxer = new DemuxerInline(observer, data.id, data.typeSupported, config);
         try {
-          enableLogs(config.debug);
+          enableLogs(config.debug === true);
         } catch(err) {
           console.warn('demuxerWorker: unable to enable logs');
         }
+        // signal end of worker init
+        forwardMessage('init',null);
         break;
       case 'demux':
-        self.demuxer.push(new Uint8Array(data.data), data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration,data.accurateTimeOffset);
+        self.demuxer.push(new Uint8Array(data.data), data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration,data.accurateTimeOffset,data.defaultInitPTS);
         break;
       default:
         break;
     }
   });
-
-  var forwardMessage = function(ev,data) {
-    self.postMessage({event: ev, data:data });
-  };
 
   // forward events to main thread
   observer.on(Event.FRAG_PARSING_INIT_SEGMENT, forwardMessage);
@@ -49,6 +52,7 @@ var DemuxerWorker = function (self) {
   observer.on(Event.ERROR, forwardMessage);
   observer.on(Event.FRAG_PARSING_METADATA, forwardMessage);
   observer.on(Event.FRAG_PARSING_USERDATA, forwardMessage);
+  observer.on(Event.INIT_PTS_FOUND, forwardMessage);
 
   // special case for FRAG_PARSING_DATA: pass data1/data2 as transferable object (no copy)
   observer.on(Event.FRAG_PARSING_DATA, function(ev, data) {

@@ -24,6 +24,19 @@ class TimelineController extends EventHandler {
     if (this.config.enableCEA708Captions)
     {
       var self = this;
+      var sendAddTrackEvent = function (track, media)
+      {
+        var e = null;
+        try {
+          e = new window.Event('addtrack');
+        } catch (err) {
+          //for IE11
+          e = document.createEvent('Event');
+          e.initEvent('addtrack', false, false);
+        }
+        e.track = track;
+        media.dispatchEvent(e);
+      };
 
       var channel1 =
       {
@@ -43,9 +56,7 @@ class TimelineController extends EventHandler {
               self.textTrack1 = existingTrack1;
               self.clearCurrentCues(self.textTrack1);
 
-              let e = new window.Event('addtrack');
-              e.track = self.textTrack1;
-              self.media.dispatchEvent(e);
+              sendAddTrackEvent(self.textTrack1, self.media);
             }
           }
 
@@ -71,9 +82,7 @@ class TimelineController extends EventHandler {
               self.textTrack2 = existingTrack2;
               self.clearCurrentCues(self.textTrack2);
 
-              let e = new window.Event('addtrack');
-              e.track = self.textTrack2;
-              self.media.dispatchEvent(e);
+              sendAddTrackEvent(self.textTrack2, self.media);
             }
           }
 
@@ -130,6 +139,8 @@ class TimelineController extends EventHandler {
   }
 
   onMediaDetaching() {
+    this.clearCurrentCues(this.textTrack1);
+    this.clearCurrentCues(this.textTrack2);
   }
 
   onManifestLoading()
@@ -167,7 +178,7 @@ class TimelineController extends EventHandler {
   onFragParsingUserdata(data) {
     // push all of the CEA-708 messages into the interpreter
     // immediately. It will create the proper timestamps based on our PTS value
-    if (this.enabled)
+    if (this.enabled && this.config.enableCEA708Captions)
     {
       for (var i=0; i<data.samples.length; i++)
       {

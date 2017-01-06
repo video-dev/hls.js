@@ -38,7 +38,7 @@ class KeyLoader extends EventHandler {
         let config = this.hls.config;
 
         if (loader) {
-          logger.warn(`abort previous fragment loader for type:${type}`);
+          logger.warn(`abort previous key loader for type:${type}`);
           loader.abort();
         }
         frag.loader = this.loaders[type] = new config.loader(config);
@@ -62,7 +62,7 @@ class KeyLoader extends EventHandler {
     this.decryptkey = frag.decryptdata.key = new Uint8Array(response.data);
     // detach fragment loader on load success
     frag.loader = undefined;
-    this.loaders[context.type] = undefined;
+    this.loaders[frag.type] = undefined;
     this.hls.trigger(Event.KEY_LOADED, {frag: frag});
   }
 
