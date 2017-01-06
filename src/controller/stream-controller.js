@@ -1564,6 +1564,12 @@ class StreamController extends EventHandler {
                         );
                         this.retryDate = performance.now() + delay;
                         // retry loading state
+                        // if loadedmetadata is not set, it means that we are emergency switch down on first frag
+                        // in that case, reset startFragRequested flag
+                        if (!this.loadedmetadata) {
+                            this.startFragRequested = false;
+                            this.nextLoadPosition = this.startPosition;
+                        }
                         this.state = State.FRAG_LOADING_WAITING_RETRY;
                     } else {
                         logger.error(
@@ -1776,6 +1782,7 @@ class StreamController extends EventHandler {
         // in that case, reset startFragRequested flag
         if (!this.loadedmetadata) {
             this.startFragRequested = false;
+            this.nextLoadPosition = this.startPosition;
         }
         this.tick();
     }
