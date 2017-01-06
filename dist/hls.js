@@ -2339,11 +2339,12 @@ var BufferController = function (_EventHandler) {
         // initialise to the value that the media source is reporting
         this._msDuration = mediaSource.duration;
       }
+      var duration = media.duration;
       // levelDuration was the last value we set.
       // not using mediaSource.duration as the browser may tweak this value
       // only update mediasource duration if its value increase, this is to avoid
       // flushing already buffered portion when switching between quality level
-      if (levelDuration > this._msDuration && levelDuration > media.duration) {
+      if (levelDuration > this._msDuration && levelDuration > duration || duration === Infinity || isNaN(duration)) {
         _logger.logger.log('Updating mediasource duration to ' + levelDuration.toFixed(3));
         this._msDuration = mediaSource.duration = levelDuration;
       }
@@ -4081,7 +4082,8 @@ var StreamController = function (_EventHandler) {
           config = this.config;
       _logger.logger.log('media seeking to ' + currentTime.toFixed(3));
       if (this.state === State.FRAG_LOADING) {
-        var bufferInfo = _bufferHelper2.default.bufferInfo(media, currentTime, this.config.maxBufferHole),
+        var mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
+        var bufferInfo = _bufferHelper2.default.bufferInfo(mediaBuffer, currentTime, this.config.maxBufferHole),
             fragCurrent = this.fragCurrent;
         // check if we are seeking to a unbuffered area AND if frag loading is in progress
         if (bufferInfo.len === 0 && fragCurrent) {
@@ -4594,6 +4596,12 @@ var StreamController = function (_EventHandler) {
               _logger.logger.warn('mediaController: frag loading failed, retry in ' + delay + ' ms');
               this.retryDate = performance.now() + delay;
               // retry loading state
+              // if loadedmetadata is not set, it means that we are emergency switch down on first frag
+              // in that case, reset startFragRequested flag
+              if (!this.loadedmetadata) {
+                this.startFragRequested = false;
+                this.nextLoadPosition = this.startPosition;
+              }
               this.state = State.FRAG_LOADING_WAITING_RETRY;
             } else {
               _logger.logger.error('mediaController: ' + data.details + ' reaches max retry, redispatch as fatal ...');
@@ -4680,14 +4688,15 @@ var StreamController = function (_EventHandler) {
       // if ready state different from HAVE_NOTHING (numeric value 0), we are allowed to seek
       if (media && media.readyState) {
         var currentTime = media.currentTime,
-            buffered = media.buffered;
+            mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media,
+            buffered = mediaBuffer.buffered;
         // adjust currentTime to start position on loaded metadata
         if (!this.loadedmetadata && buffered.length && !media.seeking) {
           this.loadedmetadata = true;
           // only adjust currentTime if different from startPosition or if startPosition not buffered
           // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
           var startPosition = this.startPosition,
-              startPositionBuffered = _bufferHelper2.default.isBuffered(media, startPosition);
+              startPositionBuffered = _bufferHelper2.default.isBuffered(mediaBuffer, startPosition);
           // if currentTime not matching with expected startPosition or startPosition not buffered
           if (currentTime !== startPosition || !startPositionBuffered) {
             _logger.logger.log('target start position:' + startPosition);
@@ -4760,6 +4769,7 @@ var StreamController = function (_EventHandler) {
       // in that case, reset startFragRequested flag
       if (!this.loadedmetadata) {
         this.startFragRequested = false;
+        this.nextLoadPosition = this.startPosition;
       }
       this.tick();
     }
@@ -8571,7 +8581,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.16';
+      return '0.6.17';
     }
   }, {
     key: 'Events',
