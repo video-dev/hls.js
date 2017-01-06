@@ -12,7 +12,7 @@ import {logger} from '../utils/logger';
 // https://regex101.com is your friend
 const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
-const LEVEL_PLAYLIST_REGEX_FAST = /#EXTINF: *([^,]+),?(.*)|(?!#)(\S.+)|#EXT-X-BYTERANGE: *(.+)|#EXT-X-PROGRAM-DATE-TIME:(.+)|#.*/g;
+const LEVEL_PLAYLIST_REGEX_FAST = /#(?:EXT(?:INF:([^,]+),?(.*)|-X-(?:BYTERANGE:(.+)|PROGRAM-DATE-TIME:(.+)))|.*)|(.+)/g;
 const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
 
 class LevelKey {
@@ -129,12 +129,13 @@ class Fragment {
 
 class PlaylistLoader extends EventHandler {
 
-  constructor(hls) {
+  constructor(hls, options = {}) {
     super(hls,
       Event.MANIFEST_LOADING,
       Event.LEVEL_LOADING,
       Event.AUDIO_TRACK_LOADING);
     this.loaders = {};
+    this.createTagList = options.createTagList !== false;
   }
 
   destroy() {
@@ -285,20 +286,32 @@ class PlaylistLoader extends EventHandler {
         prevFrag = null,
         frag = new Fragment(),
         result,
+        createTagList = this.createTagList,
         i;
 
-    frag.tagList = [];
+    if (createTagList) {
+      frag.tagList = [];
+    }
 
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
 
     while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
-      const duration = result[1];
-      if (duration) { // INF
+      if (result[1]) { // INF
+        const duration = result[1];
         frag.duration = parseFloat(duration);
         const title = result[2];
         frag.title = title ? title : null;
-        frag.tagList.push(title ? [ 'INF',duration,title ] : [ 'INF',duration ]);
-      } else if (result[3]) { // url
+        if (createTagList) {
+          frag.tagList.push(title ? [ 'INF',duration,title ] : [ 'INF',duration ]);
+        }
+      } else if (result[3]) { // X-BYTERANGE
+        frag.rawByteRange = result[3];
+      } else if (result[4]) { // PROGRAM-DATE-TIME
+        frag.rawProgramDateTime = result[4];
+        if (createTagList) {
+          frag.tagList.push(['PROGRAM-DATE-TIME', result[4]]);
+        }
+      } else if (result[5]) { // url
         if (!isNaN(frag.duration)) {
           const sn = currentSN++;
           frag.type = type;
@@ -309,20 +322,17 @@ class PlaylistLoader extends EventHandler {
           frag.level = id;
           frag.cc = cc;
           frag.baseurl = baseurl;
-          frag.relurl = result[3];
+          frag.relurl = result[5];
 
           level.fragments.push(frag);
           prevFrag = frag;
           totalduration += frag.duration;
 
           frag = new Fragment();
-          frag.tagList = [];
+          if (createTagList) {
+            frag.tagList = [];
+          }
         }
-      } else if (result[4]) { // X-BYTERANGE
-        frag.rawByteRange = result[4];
-      } else if (result[5]) { // PROGRAM-DATE-TIME
-        frag.rawProgramDateTime = result[5];
-        frag.tagList.push(['PROGRAM-DATE-TIME', result[5]]);
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
         for (i = 1; i < result.length; i++) {
@@ -336,7 +346,9 @@ class PlaylistLoader extends EventHandler {
 
         switch (result[i]) {
           case '#':
-            frag.tagList.push(value2 ? [ value1,value2 ] : [ value1 ]);
+            if (createTagList) {
+              frag.tagList.push(value2 ? [ value1,value2 ] : [ value1 ]);
+            }
             break;
           case 'PLAYLIST-TYPE':
             level.type = value1.toUpperCase();
@@ -357,7 +369,9 @@ class PlaylistLoader extends EventHandler {
             break;
           case 'DIS':
             cc++;
-            frag.tagList.push(['DIS']);
+            if (createTagList) {
+              frag.tagList.push(['DIS']);
+            }
             break;
           case 'DISCONTINUITY-SEQ':
             cc = parseInt(value1);
@@ -401,7 +415,7 @@ class PlaylistLoader extends EventHandler {
     //logger.log('found ' + level.fragments.length + ' fragments');
     if(frag && !frag.relurl) {
       level.fragments.pop();
-      totalduration-=frag.duration;
+      totalduration -= frag.duration;
     }
     level.totalduration = totalduration;
     level.averagetargetduration = totalduration / level.fragments.length;
