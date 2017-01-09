@@ -878,7 +878,7 @@
       track.audiosamplerate = config.samplerate;
       track.channelCount = config.channelCount;
       track.codec = config.codec;
-      track.manifestCodec = audioCodec;
+      track.manifestCodec = config.manifestCodec;
       track.duration = this._duration;
       logger.log(`parsed codec:${track.codec},rate:${config.samplerate},nb channel:${config.channelCount}`);
     }
