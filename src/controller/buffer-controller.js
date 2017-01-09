@@ -506,7 +506,7 @@ class BufferController extends EventHandler {
   flushBuffer(startOffset, endOffset, typeIn) {
     var sb, i, bufStart, bufEnd, flushStart, flushEnd, sourceBuffer = this.sourceBuffer;
     if (Object.keys(sourceBuffer).length) {
-      logger.log('flushBuffer,pos/start/end: ' + this.media.currentTime + '/' + startOffset + '/' + endOffset);
+      logger.log(`flushBuffer,pos/start/end: ${this.media.currentTime.toFixed(3)}/${startOffset}/${endOffset}`);
       // safeguard to avoid infinite looping : don't try to flush more than the nb of appended segments
       if (this.flushBufferCounter < this.appended) {
         for (var type in sourceBuffer) {
