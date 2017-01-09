@@ -12,6 +12,7 @@ class ADTS {
             adtsChanelConfig, // :int
             config,
             userAgent = navigator.userAgent.toLowerCase(),
+            manifestCodec = audioCodec,
             adtsSampleingRates = [
                 96000,
                 88200,
@@ -26,9 +27,9 @@ class ADTS {
                 11025,
                 8000,
                 7350
-            ];
-        // byte 2
-        adtsObjectType = ((data[offset + 2] & 0xc0) >>> 6) + 1;
+            ],
+            // byte 2
+            adtsObjectType = ((data[offset + 2] & 0xc0) >>> 6) + 1;
         adtsSampleingIndex = (data[offset + 2] & 0x3c) >>> 2;
         if (adtsSampleingIndex > adtsSampleingRates.length - 1) {
             observer.trigger(Event.ERROR, {
@@ -147,11 +148,16 @@ class ADTS {
             config[2] |= 2 << 2;
             config[3] = 0;
         }
+        // trick manifest codec on Opera and Vivaldi, always use AAC LC
+        if (/Vivaldi|OPR/i.test(userAgent)) {
+            manifestCodec = 'mp4a.40.2';
+        }
         return {
             config: config,
             samplerate: adtsSampleingRates[adtsSampleingIndex],
             channelCount: adtsChanelConfig,
-            codec: 'mp4a.40.' + adtsObjectType
+            codec: 'mp4a.40.' + adtsObjectType,
+            manifestCodec: manifestCodec
         };
     }
 }
