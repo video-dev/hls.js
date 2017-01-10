@@ -27,9 +27,9 @@ class ADTS {
                 11025,
                 8000,
                 7350
-            ],
-            // byte 2
-            adtsObjectType = ((data[offset + 2] & 0xc0) >>> 6) + 1;
+            ];
+        // byte 2
+        adtsObjectType = ((data[offset + 2] & 0xc0) >>> 6) + 1;
         adtsSampleingIndex = (data[offset + 2] & 0x3c) >>> 2;
         if (adtsSampleingIndex > adtsSampleingRates.length - 1) {
             observer.trigger(Event.ERROR, {
