@@ -2483,7 +2483,7 @@ var BufferController = function (_EventHandler) {
           flushEnd,
           sourceBuffer = this.sourceBuffer;
       if (Object.keys(sourceBuffer).length) {
-        _logger.logger.log('flushBuffer,pos/start/end: ' + this.media.currentTime + '/' + startOffset + '/' + endOffset);
+        _logger.logger.log('flushBuffer,pos/start/end: ' + this.media.currentTime.toFixed(3) + '/' + startOffset + '/' + endOffset);
         // safeguard to avoid infinite looping : don't try to flush more than the nb of appended segments
         if (this.flushBufferCounter < this.appended) {
           for (var type in sourceBuffer) {
@@ -5678,7 +5678,7 @@ var AACDemuxer = function () {
         track.audiosamplerate = config.samplerate;
         track.channelCount = config.channelCount;
         track.codec = config.codec;
-        track.manifestCodec = audioCodec;
+        track.manifestCodec = config.manifestCodec;
         track.duration = duration;
         _logger.logger.log('parsed codec:' + track.codec + ',rate:' + config.samplerate + ',nb channel:' + config.channelCount);
       }
@@ -5776,7 +5776,9 @@ var ADTS = function () {
           // :int
       config,
           userAgent = navigator.userAgent.toLowerCase(),
-          adtsSampleingRates = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
+          manifestCodec = audioCodec,
+          adtsSampleingRates = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350],
+
       // byte 2
       adtsObjectType = ((data[offset + 2] & 0xC0) >>> 6) + 1;
       adtsSampleingIndex = (data[offset + 2] & 0x3C) >>> 2;
@@ -5878,7 +5880,11 @@ var ADTS = function () {
         config[2] |= 2 << 2;
         config[3] = 0;
       }
-      return { config: config, samplerate: adtsSampleingRates[adtsSampleingIndex], channelCount: adtsChanelConfig, codec: 'mp4a.40.' + adtsObjectType };
+      // trick manifest codec on Opera and Vivaldi, always use AAC LC
+      if (/Vivaldi|OPR/i.test(userAgent)) {
+        manifestCodec = 'mp4a.40.2';
+      }
+      return { config: config, samplerate: adtsSampleingRates[adtsSampleingIndex], channelCount: adtsChanelConfig, codec: 'mp4a.40.' + adtsObjectType, manifestCodec: manifestCodec };
     }
   }]);
 
@@ -7712,7 +7718,7 @@ var TSDemuxer = function () {
         track.audiosamplerate = config.samplerate;
         track.channelCount = config.channelCount;
         track.codec = config.codec;
-        track.manifestCodec = audioCodec;
+        track.manifestCodec = config.manifestCodec;
         track.duration = this._duration;
         _logger.logger.log('parsed codec:' + track.codec + ',rate:' + config.samplerate + ',nb channel:' + config.channelCount);
       }
@@ -9300,7 +9306,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 // https://regex101.com is your friend
 var MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
 var MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
-var LEVEL_PLAYLIST_REGEX_FAST = /#EXTINF: *([^,]+),?(.*)|(?!#)(\S.+)|#EXT-X-BYTERANGE: *(.+)|#EXT-X-PROGRAM-DATE-TIME:(.+)|#.*/g;
+var LEVEL_PLAYLIST_REGEX_FAST = /#EXTINF:(\d*(?:\.\d+)?)(?:,(.*))?|(?!#)(\S.+)|#EXT-X-BYTERANGE: *(.+)|#EXT-X-PROGRAM-DATE-TIME:(.+)|#.*/g;
 var LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
 
 var LevelKey = function () {
