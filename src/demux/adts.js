@@ -21,7 +21,7 @@ import {ErrorTypes, ErrorDetails} from '../errors';
             24000, 22050,
             16000, 12000,
             11025, 8000,
-            7350],
+            7350];
     // byte 2
     adtsObjectType = ((data[offset + 2] & 0xC0) >>> 6) + 1;
     adtsSampleingIndex = ((data[offset + 2] & 0x3C) >>> 2);
