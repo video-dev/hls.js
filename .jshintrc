@@ -28,6 +28,7 @@
     "crypto"      : true,
     "fetch"       : true,
     "Request"     : true,
-    "Headers"     : true
+    "Headers"     : true,
+    "escape"      : true
   }
 }

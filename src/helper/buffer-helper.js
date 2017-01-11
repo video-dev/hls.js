@@ -20,11 +20,15 @@ class BufferHelper {
 
   static bufferInfo(media, pos,maxHoleDuration) {
     if (media) {
-      var vbuffered = media.buffered, buffered = [],i;
-      for (i = 0; i < vbuffered.length; i++) {
-        buffered.push({start: vbuffered.start(i), end: vbuffered.end(i)});
+      try {
+        var vbuffered = media.buffered, buffered = [], i;
+        for (i = 0; i < vbuffered.length; i++) {
+          buffered.push({start: vbuffered.start(i), end: vbuffered.end(i)});
+        }
+        return this.bufferedInfo(buffered, pos, maxHoleDuration);
+      } catch(e) {
+        return {len: 0, start: 0, end: 0, nextStart : undefined} ;
       }
-      return this.bufferedInfo(buffered,pos,maxHoleDuration);
     } else {
       return {len: 0, start: 0, end: 0, nextStart : undefined} ;
     }
@@ -82,7 +86,7 @@ class BufferHelper {
         break;
       }
     }
-    return {len: bufferLen, start: bufferStart, end: bufferEnd, nextStart : bufferStartNext};
+    return {len: bufferLen, start: bufferStart || 0, end: bufferEnd || 0, nextStart : bufferStartNext};
   }
 
 }
