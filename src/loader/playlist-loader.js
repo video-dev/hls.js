@@ -115,7 +115,10 @@ class Fragment {
     var decryptdata = levelkey;
 
     if (levelkey && levelkey.method && levelkey.uri && !levelkey.iv) {
-      decryptdata = Object.assign(new LevelKey(), this.cloneObj(levelkey));
+      decryptdata = new LevelKey();
+      decryptdata.method = levelkey.method;
+      decryptdata.baseuri = levelkey.baseuri;
+      decryptdata.reluri = levelkey.reluri;
       decryptdata.iv = this.createInitializationVector(segmentNumber);
     }
 
