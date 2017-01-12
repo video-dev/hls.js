@@ -315,7 +315,7 @@ class StreamController extends EventHandler {
     //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.media.seeking}`);
     let maxLatency = config.liveMaxLatencyDuration !== undefined ? config.liveMaxLatencyDuration : config.liveMaxLatencyDurationCount*levelDetails.targetduration;
 
-    if (bufferEnd < Math.max(start, end - maxLatency)) {
+    if (bufferEnd < Math.max(start-config.maxFragLookUpTolerance, end - maxLatency)) {
         let liveSyncPosition = this.liveSyncPosition = this.computeLivePosition(start, levelDetails);
         logger.log(`buffer end: ${bufferEnd.toFixed(3)} is located too far from the end of live sliding playlist, reset currentTime to : ${liveSyncPosition.toFixed(3)}`);
         bufferEnd = liveSyncPosition;
