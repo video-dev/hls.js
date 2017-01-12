@@ -7324,7 +7324,7 @@ var TSDemuxer = function () {
             avcSample.frame = true;
             // retrieve slice type by parsing beginning of NAL unit (follow H264 spec, slice_header definition) to detect keyframe embedded in NDR
             var data = unit.data;
-            if (data.length > 1) {
+            if (data.length > 4) {
               var sliceType = new _expGolomb2.default(data).readSliceType();
               // 2 : I slice, 4 : SI slice, 7 : I slice, 9: SI slice
               // SI slice : A slice that is coded using intra prediction only and using quantisation of the prediction samples.
@@ -9392,7 +9392,10 @@ var Fragment = function () {
       var decryptdata = levelkey;
 
       if (levelkey && levelkey.method && levelkey.uri && !levelkey.iv) {
-        decryptdata = Object.assign(new LevelKey(), this.cloneObj(levelkey));
+        decryptdata = new LevelKey();
+        decryptdata.method = levelkey.method;
+        decryptdata.baseuri = levelkey.baseuri;
+        decryptdata.reluri = levelkey.reluri;
         decryptdata.iv = this.createInitializationVector(segmentNumber);
       }
 
