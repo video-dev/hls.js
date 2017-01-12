@@ -390,7 +390,10 @@ class StreamController extends EventHandler {
                 : config.liveMaxLatencyDurationCount *
                   levelDetails.targetduration;
 
-        if (bufferEnd < Math.max(start, end - maxLatency)) {
+        if (
+            bufferEnd <
+            Math.max(start - config.maxFragLookUpTolerance, end - maxLatency)
+        ) {
             let liveSyncPosition = (this.liveSyncPosition = this.computeLivePosition(
                 start,
                 levelDetails
