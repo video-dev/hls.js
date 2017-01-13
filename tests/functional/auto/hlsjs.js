@@ -74,20 +74,21 @@ HttpServer.createServer({
 describe('testing hls.js playback in the browser with "'+stream.description+'" on "'+browserDescription+'"', function() {
   beforeEach(function() {
     var capabilities = {
-      browserName : browserConfig.name,
-      platform : browserConfig.platform,
-      version : browserConfig.version,
-      commandTimeout : 35,
-      customData : {
-        stream : stream
+      name: '"'+stream.description+'" on "'+browserDescription+'"',
+      browserName: browserConfig.name,
+      platform: browserConfig.platform,
+      version: browserConfig.version,
+      commandTimeout: 35,
+      customData: {
+        stream: stream
       }
     };
     if (onTravis) {
       capabilities['tunnel-identifier'] = process.env.TRAVIS_JOB_NUMBER;
-      capabilities.build = process.env.TRAVIS_BUILD_NUMBER;
+      capabilities.build = 'HLSJS-'+process.env.TRAVIS_BUILD_NUMBER;
       capabilities.username = process.env.SAUCE_USERNAME;
       capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
-      this.browser = new webdriver.Builder().usingServer('http://'+ process.env.SAUCE_USERNAME+':'+process.env.SAUCE_ACCESS_KEY+'@ondemand.saucelabs.com:80/wd/hub');
+      this.browser = new webdriver.Builder().usingServer('http://'+process.env.SAUCE_USERNAME+':'+process.env.SAUCE_ACCESS_KEY+'@ondemand.saucelabs.com:80/wd/hub');
     }
     else {
       this.browser = new webdriver.Builder();
