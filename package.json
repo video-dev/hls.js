@@ -27,7 +27,7 @@
     "watch": "watchify --debug -s Hls src/index.js -t [babelify] -o dist/hls.js",
     "pretest": "npm run lint",
     "test": "mocha --compilers js:babel-register --recursive tests/unit",
-    "testfunc": "mocha --compilers js:babel-register --recursive tests/functional/auto --timeout 40000",
+    "testfunc": "mocha --compilers js:babel-register tests/functional/auto/hlsjs.js --timeout 40000",
     "lint": "jshint src/",
     "serve": "http-server -p 8000 .",
     "open": "opener http://localhost:8000/demo/",
