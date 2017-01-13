@@ -65,12 +65,15 @@ if (browserConfig.platform) {
   browserDescription += ', '+browserConfig.platform;
 }
 
-HttpServer.createServer({
-  showDir: false,
-  autoIndex: false,
-  root: './',
-}).listen(8000, '127.0.0.1');
-
+if (!onTravis) {
+  // On travis web server is started in scripts/travis/before.sh
+  // There were intermittant issues when using this one
+  HttpServer.createServer({
+    showDir: false,
+    autoIndex: false,
+    root: './',
+  }).listen(8000, '127.0.0.1');
+}
 describe('testing hls.js playback in the browser with "'+stream.description+'" on "'+browserDescription+'"', function() {
   beforeEach(function() {
     var capabilities = {
