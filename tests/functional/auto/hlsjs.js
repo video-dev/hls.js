@@ -66,7 +66,8 @@ if (browserConfig.platform) {
 }
 
 if (!onTravis) {
-  // TODO comment
+  // On travis web server is started in scripts/travis/before.sh
+  // There were intermittant issues when using this one
   HttpServer.createServer({
     showDir: false,
     autoIndex: false,
