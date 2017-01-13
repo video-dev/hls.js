@@ -8,4 +8,8 @@ if [ "${TRAVIS_MODE}" = "funcTests" ]; then
     # wait until server started
     until curl -s 127.0.0.1:8000; do true; done > /dev/null
     echo "Started web server."
+else
+	# don't connect to sauce labs unless running functional tests
+	unset SAUCE_USERNAME
+	unset SAUCE_ACCESS_KEY
 fi
