@@ -65,11 +65,11 @@ if (browserConfig.platform) {
   browserDescription += ', '+browserConfig.platform;
 }
 
-HttpServer.createServer({
-  showDir: false,
-  autoIndex: false,
-  root: './',
-}).listen(8000, '127.0.0.1');
+// HttpServer.createServer({
+//   showDir: false,
+//   autoIndex: false,
+//   root: './',
+// }).listen(8000, '127.0.0.1');
 
 describe('testing hls.js playback in the browser with "'+stream.description+'" on "'+browserDescription+'"', function() {
   beforeEach(function() {
