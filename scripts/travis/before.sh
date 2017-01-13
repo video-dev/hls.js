@@ -4,12 +4,13 @@ set -ev
 
 if [ "${TRAVIS_MODE}" = "funcTests" ]; then
 	echo "Starting web server..."
-    nohup python -m SimpleHTTPServer 8000 > /dev/null 2>&1 &
-    # wait until server started
-    until curl -s 127.0.0.1:8000; do true; done > /dev/null
-    echo "Started web server."
+	nohup python -m SimpleHTTPServer 8000 > /dev/null 2>&1 &
+	# wait until server started
+	until curl -s 127.0.0.1:8000; do true; done > /dev/null
+	echo "Started web server."
 else
 	# don't connect to sauce labs unless running functional tests
+	echo "Disabling sauce labs..."
 	unset SAUCE_USERNAME
 	unset SAUCE_ACCESS_KEY
 fi
