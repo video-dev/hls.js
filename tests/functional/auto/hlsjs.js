@@ -65,15 +65,16 @@ if (browserConfig.platform) {
   browserDescription += ', '+browserConfig.platform;
 }
 
-var server = HttpServer.createServer({
-  showDir: false,
-  autoIndex: false,
-  root: './',
-});
-
+if (!onTravis) {
+  // TODO comment
+  HttpServer.createServer({
+    showDir: false,
+    autoIndex: false,
+    root: './',
+  }).listen(8000, '127.0.0.1');
+}
 describe('testing hls.js playback in the browser with "'+stream.description+'" on "'+browserDescription+'"', function() {
   beforeEach(function() {
-    server.listen(8000, '127.0.0.1');
     var capabilities = {
       name: '"'+stream.description+'" on "'+browserDescription+'"',
       browserName: browserConfig.name,
@@ -121,7 +122,6 @@ describe('testing hls.js playback in the browser with "'+stream.description+'" o
     console.log("Quitting browser...");
     return this.browser.quit().then(function() {
       console.log("Browser quit.");
-      server.close();
     });
   });
 
