@@ -4,6 +4,7 @@ node_js: node
 before_install: if [ "${TRAVIS_MODE}" != "funcTests" ]; then unset SAUCE_USERNAME && unset SAUCE_ACCESS_KEY; fi
 before_script: chmod +x ./scripts/*.sh
 script: ./scripts/travis.sh
+after_script: if [ "${TRAVIS_MODE}" = "funcTests" ]; then echo "Sauce connect log:" && cat /home/travis/sauce-connect.log; fi
 env:
   global:
     - SAUCE_USERNAME=mangui
