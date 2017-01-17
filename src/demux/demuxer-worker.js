@@ -45,7 +45,7 @@ var DemuxerWorker = function(self) {
                 break;
             case 'demux':
                 self.demuxer.push(
-                    new Uint8Array(data.data),
+                    data.data,
                     data.audioCodec,
                     data.videoCodec,
                     data.timeOffset,
@@ -53,6 +53,7 @@ var DemuxerWorker = function(self) {
                     data.level,
                     data.sn,
                     data.duration,
+                    data.decryptdata,
                     data.accurateTimeOffset,
                     data.defaultInitPTS
                 );

@@ -6,8 +6,9 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 
 class Decrypter {
-    constructor(hls) {
-        this.hls = hls;
+    constructor(observer, config) {
+        this.observer = observer;
+        this.config = config;
         try {
             const browserCrypto = window ? window.crypto : crypto;
             this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
@@ -21,7 +22,7 @@ class Decrypter {
     }
 
     decrypt(data, key, iv, callback) {
-        if (this.disableWebCrypto && this.hls.config.enableSoftwareAES) {
+        if (this.disableWebCrypto && this.config.enableSoftwareAES) {
             logger.log('decrypting by JavaScript Implementation');
             if (!this.decryptor) {
                 this.decryptor = new AESDecryptor();
@@ -52,14 +53,13 @@ class Decrypter {
     }
 
     onWebCryptoError(err, data, key, iv, callback) {
-        let hls = this.hls;
-        if (hls.config.enableSoftwareAES) {
+        if (this.config.enableSoftwareAES) {
             logger.log('disabling to use WebCrypto API');
             this.disableWebCrypto = true;
             this.decrypt(data, key, iv, callback);
         } else {
             logger.error(`decrypting error : ${err.message}`);
-            hls.trigger(Event.ERROR, {
+            this.observer.trigger(Event.ERROR, {
                 type: ErrorTypes.MEDIA_ERROR,
                 details: ErrorDetails.FRAG_DECRYPT_ERROR,
                 fatal: true,
