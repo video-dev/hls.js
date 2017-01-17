@@ -10,20 +10,27 @@ import FragmentLoader from './loader/fragment-loader';
 import AbrController from    './controller/abr-controller';
 import BufferController from  './controller/buffer-controller';
 import CapLevelController from  './controller/cap-level-controller';
-import AudioStreamController from  './controller/audio-stream-controller';
-import SubtitleStreamController from  './controller/subtitle-stream-controller';
 import StreamController from  './controller/stream-controller';
 import LevelController from  './controller/level-controller';
-import TimelineController from './controller/timeline-controller';
 import FPSController from './controller/fps-controller';
 import AudioTrackController from './controller/audio-track-controller';
-import SubtitleTrackController from './controller/subtitle-track-controller';
 import {logger, enableLogs} from './utils/logger';
 //import FetchLoader from './utils/fetch-loader';
 import XhrLoader from './utils/xhr-loader';
 import EventEmitter from 'events';
 import KeyLoader from './loader/key-loader';
+
+//#if altaudio
+import AudioStreamController from  './controller/audio-stream-controller';
+//#endif
+
+//#if subtitle
+import TimelineController from './controller/timeline-controller';
+import SubtitleStreamController from  './controller/subtitle-stream-controller';
+import SubtitleTrackController from './controller/subtitle-track-controller';
 import Cues from './utils/cues';
+//#endif
+
 
 class Hls {
 
@@ -105,11 +112,16 @@ class Hls {
           bufferController: BufferController,
           capLevelController: CapLevelController,
           fpsController: FPSController,
-          streamController: StreamController,
+//#if altaudio
           audioStreamController: AudioStreamController,
+          audioTrackController : AudioTrackController,
+//#endif
+//#if subtitle
           subtitleStreamController: SubtitleStreamController,
+          subtitleTrackController: SubtitleTrackController,
           timelineController: TimelineController,
           cueHandler: Cues,
+//#endif
           enableCEA708Captions: true,
           enableWebVTT: true,
           enableMP2TPassThrough: false,
@@ -169,40 +181,54 @@ class Hls {
     this.on = observer.on.bind(observer);
     this.off = observer.off.bind(observer);
     this.trigger = observer.trigger.bind(observer);
-    this.playlistLoader = new PlaylistLoader(this);
-    this.fragmentLoader = new FragmentLoader(this);
-    this.levelController = new LevelController(this);
-    this.abrController = new config.abrController(this);
-    this.bufferController = new config.bufferController(this);
-    this.capLevelController = new config.capLevelController(this);
-    this.fpsController = new config.fpsController(this);
-    this.streamController = new config.streamController(this);
-    this.audioStreamController = new config.audioStreamController(this);
-    this.subtitleStreamController = new config.subtitleStreamController(this);
-    this.timelineController = new config.timelineController(this);
-    this.audioTrackController = new AudioTrackController(this);
-    this.subtitleTrackController = new SubtitleTrackController(this);
-    this.keyLoader = new KeyLoader(this);
-  }
+
+    // network controllers
+    const levelController = this.levelController = new LevelController(this);
+    const streamController = this.streamController = new StreamController(this);
+    let networkControllers = [levelController, streamController];
+
+    // optional audio stream controller
+    let controller = config.audioStreamController;
+    if (controller) {
+      networkControllers.push(new controller(this));
+    }
+
+    // optional subtitle stream controller
+    controller = config.subtitleStreamController;
+    if (controller) {
+      networkControllers.push(new controller(this));
+    }
+
+
+    this.networkControllers = networkControllers;
+
+    // core controllers and network loaders
+    // hls.abrController is referenced in levelController, this would need to be fixed
+    const abrController = this.abrController = new config.abrController(this);
+    const bufferController  = new config.bufferController(this);
+    const capLevelController = new config.capLevelController(this);
+    const fpsController = new config.fpsController(this);
+    const playListLoader = new PlaylistLoader(this);
+    const fragmentLoader = new FragmentLoader(this);
+    const keyLoader = new KeyLoader(this);
+
+    let coreComponents = [ playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController ];
+
+
+    // optional audio track and subtitle controller
+    [config.audioTrackController, config.timelineController, config.subtitleTrackController].forEach(controller => {
+      if (controller) {
+        coreComponents.push(new controller(this));
+      }
+    });
+    this.coreComponents = coreComponents;
+  }x@
 
   destroy() {
     logger.log('destroy');
     this.trigger(Event.DESTROYING);
     this.detachMedia();
-    this.playlistLoader.destroy();
-    this.fragmentLoader.destroy();
-    this.levelController.destroy();
-    this.abrController.destroy();
-    this.bufferController.destroy();
-    this.capLevelController.destroy();
-    this.fpsController.destroy();
-    this.streamController.destroy();
-    this.audioStreamController.destroy();
-    this.subtitleStreamController.destroy();
-    this.timelineController.destroy();
-    this.audioTrackController.destroy();
-    this.subtitleTrackController.destroy();
-    this.keyLoader.destroy();
+    this.coreComponents.concat(this.networkControllers).forEach(component => {component.destroy();});
     this.url = null;
     this.observer.removeAllListeners();
   }
@@ -228,16 +254,12 @@ class Hls {
 
   startLoad(startPosition=-1) {
     logger.log(`startLoad(${startPosition})`);
-    this.levelController.startLoad();
-    this.streamController.startLoad(startPosition);
-    this.audioStreamController.startLoad(startPosition);
+    this.networkControllers.forEach(controller => {controller.startLoad(startPosition);});
   }
 
   stopLoad() {
     logger.log('stopLoad');
-    this.levelController.stopLoad();
-    this.streamController.stopLoad();
-    this.audioStreamController.stopLoad();
+    this.networkControllers.forEach(controller => {controller.stopLoad();});
   }
 
   swapAudioCodec() {
@@ -355,17 +377,22 @@ class Hls {
 
   /** get alternate audio tracks list from playlist **/
   get audioTracks() {
-    return this.audioTrackController.audioTracks;
+    const audioTrackController = this.audioTrackController;
+    return audioTrackController ? audioTrackController.audioTracks : [];
   }
 
   /** get index of the selected audio track (index in audio track lists) **/
   get audioTrack() {
-   return this.audioTrackController.audioTrack;
+    const audioTrackController = this.audioTrackController;
+    return audioTrackController ? audioTrackController.audioTrack : -1;
   }
 
   /** select an audio track, based on its index in audio track lists**/
   set audioTrack(audioTrackId) {
-    this.audioTrackController.audioTrack = audioTrackId;
+    const audioTrackController = this.audioTrackController;
+    if (audioTrackController) {
+      audioTrackController.audioTrack = audioTrackId;
+    }
   }
 
   get liveSyncPosition() {
@@ -374,17 +401,22 @@ class Hls {
 
   /** get alternate subtitle tracks list from playlist **/
   get subtitleTracks() {
-    return this.subtitleTrackController.subtitleTracks;
+    const subtitleTrackController = this.subtitleTrackController;
+    return subtitleTrackController ? subtitleTrackController.subtitleTracks : [];
   }
 
   /** get index of the selected subtitle track (index in subtitle track lists) **/
   get subtitleTrack() {
-   return this.subtitleTrackController.subtitleTrack;
+    const subtitleTrackController = this.subtitleTrackController;
+    return subtitleTrackController ? subtitleTrackController.subtitleTrack : -1;
   }
 
   /** select an subtitle track, based on its index in subtitle track lists**/
   set subtitleTrack(subtitleTrackId) {
-    this.subtitleTrackController.subtitleTrack = subtitleTrackId;
+    const subtitleTrackController = this.subtitleTrackController;
+    if (subtitleTrackController) {
+      subtitleTrackController.subtitleTrack = subtitleTrackId;
+    }
   }
 }
 
