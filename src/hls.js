@@ -183,9 +183,9 @@ class Hls {
     let networkControllers = [levelController, streamController];
 
     // optional audio stream controller
-    let controller = config.audioStreamController;
-    if (controller) {
-      networkControllers.push(new controller(this));
+    let Controller = config.audioStreamController;
+    if (Controller) {
+      networkControllers.push(new Controller(this));
     }
 
     this.networkControllers = networkControllers;
@@ -203,9 +203,9 @@ class Hls {
     let coreComponents = [ playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController ];
 
     // optional audio track and timeline controller
-    [config.audioTrackController, config.timelineController].forEach(controller => {
-      if (controller) {
-        coreComponents.push(new controller(this));
+    [config.audioTrackController, config.timelineController].forEach(Controller => {
+      if (Controller) {
+        coreComponents.push(new Controller(this));
       }
     });
     this.coreComponents = coreComponents;
