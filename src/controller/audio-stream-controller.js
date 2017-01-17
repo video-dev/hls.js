@@ -265,7 +265,7 @@ class AudioStreamController extends EventHandler {
                 maxFragLookUpTolerance = 0;
               }
               // Prefer the next fragment if it's within tolerance
-              if (fragNext && !fragmentWithinToleranceTest(fragNext) === 0) {
+              if (fragNext && fragmentWithinToleranceTest(fragNext) !== 0) {
                 foundFrag = fragNext;
               } else {
                 foundFrag = BinarySearch.search(fragments, fragmentWithinToleranceTest);
