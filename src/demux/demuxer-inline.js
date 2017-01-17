@@ -4,6 +4,7 @@
 
 import Event from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
+import Decrypter from '../crypt/decrypter';
 import AACDemuxer from '../demux/aacdemuxer';
 import TSDemuxer from '../demux/tsdemuxer';
 import MP4Remuxer from '../remux/mp4-remuxer';
@@ -25,6 +26,73 @@ class DemuxerInline {
     }
 
     push(
+        data,
+        audioCodec,
+        videoCodec,
+        timeOffset,
+        cc,
+        level,
+        sn,
+        duration,
+        decryptdata,
+        accurateTimeOffset,
+        defaultInitPTS
+    ) {
+        if (
+            data.byteLength > 0 &&
+            decryptdata != null &&
+            decryptdata.key != null &&
+            decryptdata.method === 'AES-128'
+        ) {
+            if (this.decrypter == null) {
+                this.decrypter = new Decrypter(this.hls, this.config);
+            }
+            var localthis = this;
+            var startTime = performance.now();
+            this.decrypter.decrypt(
+                data,
+                decryptdata.key.buffer,
+                decryptdata.iv.buffer,
+                function(decryptedData) {
+                    localthis.hls.trigger(Event.FRAG_DECRYPTED, {
+                        level: level,
+                        sn: sn,
+                        stats: {
+                            tstart: startTime,
+                            tdecrypt: performance.now()
+                        }
+                    });
+                    localthis.pushDecrypted(
+                        new Uint8Array(decryptedData),
+                        audioCodec,
+                        videoCodec,
+                        timeOffset,
+                        cc,
+                        level,
+                        sn,
+                        duration,
+                        accurateTimeOffset,
+                        defaultInitPTS
+                    );
+                }
+            );
+        } else {
+            this.pushDecrypted(
+                new Uint8Array(data),
+                audioCodec,
+                videoCodec,
+                timeOffset,
+                cc,
+                level,
+                sn,
+                duration,
+                accurateTimeOffset,
+                defaultInitPTS
+            );
+        }
+    }
+
+    pushDecrypted(
         data,
         audioCodec,
         videoCodec,
