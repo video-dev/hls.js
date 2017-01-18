@@ -47,6 +47,7 @@ var DemuxerWorker = function (self) {
   });
 
   // forward events to main thread
+  observer.on(Event.FRAG_DECRYPTED, forwardMessage);
   observer.on(Event.FRAG_PARSING_INIT_SEGMENT, forwardMessage);
   observer.on(Event.FRAG_PARSED, forwardMessage);
   observer.on(Event.ERROR, forwardMessage);
