@@ -48,18 +48,30 @@ class DemuxerInline {
                 this.decrypter = new Decrypter(this.hls, this.config);
             }
             var localthis = this;
-            var startTime = performance.now();
+            // performance.now() not available on WebWorker, at least on Safari Desktop
+            var startTime;
+            try {
+                startTime = performance.now();
+            } catch (error) {
+                startTime = Date.now();
+            }
             this.decrypter.decrypt(
                 data,
                 decryptdata.key.buffer,
                 decryptdata.iv.buffer,
                 function(decryptedData) {
+                    var endTime;
+                    try {
+                        endTime = performance.now();
+                    } catch (error) {
+                        endTime = Date.now();
+                    }
                     localthis.hls.trigger(Event.FRAG_DECRYPTED, {
                         level: level,
                         sn: sn,
                         stats: {
                             tstart: startTime,
-                            tdecrypt: performance.now()
+                            tdecrypt: endTime - startTime
                         }
                     });
                     localthis.pushDecrypted(
