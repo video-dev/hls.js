@@ -325,7 +325,7 @@ class AudioStreamController extends EventHandler {
                             // Prefer the next fragment if it's within tolerance
                             if (
                                 fragNext &&
-                                !fragmentWithinToleranceTest(fragNext)
+                                fragmentWithinToleranceTest(fragNext) !== 0
                             ) {
                                 foundFrag = fragNext;
                             } else {
@@ -334,14 +334,6 @@ class AudioStreamController extends EventHandler {
                                     fragmentWithinToleranceTest
                                 );
                             }
-                            foundFrag =
-                                fragNext &&
-                                fragmentWithinToleranceTest(fragNext) === 0
-                                    ? fragNext
-                                    : BinarySearch.search(
-                                          fragments,
-                                          fragmentWithinToleranceTest
-                                      );
                         } else {
                             // reach end of playlist
                             foundFrag = fragments[fragLen - 1];
