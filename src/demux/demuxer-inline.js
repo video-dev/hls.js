@@ -69,10 +69,7 @@ class DemuxerInline {
                     localthis.hls.trigger(Event.FRAG_DECRYPTED, {
                         level: level,
                         sn: sn,
-                        stats: {
-                            tstart: startTime,
-                            tdecrypt: endTime - startTime
-                        }
+                        stats: { tstart: startTime, tdecrypt: endTime }
                     });
                     localthis.pushDecrypted(
                         new Uint8Array(decryptedData),
