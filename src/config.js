@@ -19,9 +19,7 @@ import TimelineController from './controller/timeline-controller';
 import Cues from './utils/cues';
 //#endif
 
-class Config {
-  static get defaultConfig() {
-    return {
+export var hlsDefaultConfig = {
       autoStartLoad: true,
       startPosition: -1,
       defaultAudioCodec: undefined,
@@ -97,7 +95,3 @@ class Config {
       maxLoadingDelay : 4,
       minAutoBitrate: 0
     };
-  }
-}
-
-export default Config;
