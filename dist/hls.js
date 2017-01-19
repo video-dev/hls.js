@@ -2611,10 +2611,11 @@ var CapLevelController = function (_EventHandler) {
   }, {
     key: 'onManifestParsed',
     value: function onManifestParsed(data) {
-      if (this.hls.config.capLevelToPlayerSize) {
+      var hls = this.hls;
+      if (hls.config.capLevelToPlayerSize) {
         this.autoLevelCapping = Number.POSITIVE_INFINITY;
         this.levels = data.levels;
-        this.hls.firstLevel = this.getMaxLevel(data.firstLevel);
+        hls.firstLevel = this.getMaxLevel(data.firstLevel);
         clearInterval(this.timer);
         this.timer = setInterval(this.detectPlayerSize.bind(this), 1000);
         this.detectPlayerSize();
@@ -2626,13 +2627,14 @@ var CapLevelController = function (_EventHandler) {
       if (this.media) {
         var levelsLength = this.levels ? this.levels.length : 0;
         if (levelsLength) {
-          this.hls.autoLevelCapping = this.getMaxLevel(levelsLength - 1);
-          if (this.hls.autoLevelCapping > this.autoLevelCapping) {
+          var hls = this.hls;
+          hls.autoLevelCapping = this.getMaxLevel(levelsLength - 1);
+          if (hls.autoLevelCapping > this.autoLevelCapping) {
             // if auto level capping has a higher value for the previous one, flush the buffer using nextLevelSwitch
             // usually happen when the user go to the fullscreen mode.
-            this.hls.streamController.nextLevelSwitch();
+            hls.streamController.nextLevelSwitch();
           }
-          this.autoLevelCapping = this.hls.autoLevelCapping;
+          this.autoLevelCapping = hls.autoLevelCapping;
         }
       }
     }
@@ -2684,8 +2686,9 @@ var CapLevelController = function (_EventHandler) {
     key: 'mediaWidth',
     get: function get() {
       var width = void 0;
-      if (this.media) {
-        width = this.media.width || this.media.clientWidth || this.media.offsetWidth;
+      var media = this.media;
+      if (media) {
+        width = media.width || media.clientWidth || media.offsetWidth;
         width *= this.contentScaleFactor;
       }
       return width;
@@ -2694,8 +2697,9 @@ var CapLevelController = function (_EventHandler) {
     key: 'mediaHeight',
     get: function get() {
       var height = void 0;
-      if (this.media) {
-        height = this.media.height || this.media.clientHeight || this.media.offsetHeight;
+      var media = this.media;
+      if (media) {
+        height = media.height || media.clientHeight || media.offsetHeight;
         height *= this.contentScaleFactor;
       }
       return height;
@@ -2832,13 +2836,14 @@ var FPSController = function (_EventHandler) {
   }, {
     key: 'onMediaAttaching',
     value: function onMediaAttaching(data) {
-      if (this.hls.config.capLevelOnFPSDrop) {
-        this.video = data.media instanceof HTMLVideoElement ? data.media : null;
-        if (typeof this.video.getVideoPlaybackQuality === 'function') {
+      var config = this.hls.config;
+      if (config.capLevelOnFPSDrop) {
+        var video = this.video = data.media instanceof HTMLVideoElement ? data.media : null;
+        if (typeof video.getVideoPlaybackQuality === 'function') {
           this.isVideoPlaybackQualityAvailable = true;
         }
         clearInterval(this.timer);
-        this.timer = setInterval(this.checkFPSInterval.bind(this), this.hls.config.fpsDroppedMonitoringPeriod);
+        this.timer = setInterval(this.checkFPSInterval.bind(this), config.fpsDroppedMonitoringPeriod);
       }
     }
   }, {
@@ -2850,18 +2855,19 @@ var FPSController = function (_EventHandler) {
           var currentPeriod = currentTime - this.lastTime,
               currentDropped = droppedFrames - this.lastDroppedFrames,
               currentDecoded = decodedFrames - this.lastDecodedFrames,
-              droppedFPS = 1000 * currentDropped / currentPeriod;
-          this.hls.trigger(_events2.default.FPS_DROP, { currentDropped: currentDropped, currentDecoded: currentDecoded, totalDroppedFrames: droppedFrames });
+              droppedFPS = 1000 * currentDropped / currentPeriod,
+              hls = this.hls;
+          hls.trigger(_events2.default.FPS_DROP, { currentDropped: currentDropped, currentDecoded: currentDecoded, totalDroppedFrames: droppedFrames });
           if (droppedFPS > 0) {
             //logger.log('checkFPS : droppedFPS/decodedFPS:' + droppedFPS/(1000 * currentDecoded / currentPeriod));
-            if (currentDropped > this.hls.config.fpsDroppedMonitoringThreshold * currentDecoded) {
-              var currentLevel = this.hls.currentLevel;
+            if (currentDropped > hls.config.fpsDroppedMonitoringThreshold * currentDecoded) {
+              var currentLevel = hls.currentLevel;
               _logger.logger.warn('drop FPS ratio greater than max allowed value for currentLevel: ' + currentLevel);
-              if (currentLevel > 0 && (this.hls.autoLevelCapping === -1 || this.hls.autoLevelCapping >= currentLevel)) {
+              if (currentLevel > 0 && (hls.autoLevelCapping === -1 || hls.autoLevelCapping >= currentLevel)) {
                 currentLevel = currentLevel - 1;
-                this.hls.trigger(_events2.default.FPS_DROP_LEVEL_CAPPING, { level: currentLevel, droppedLevel: this.hls.currentLevel });
-                this.hls.autoLevelCapping = currentLevel;
-                this.hls.streamController.nextLevelSwitch();
+                hls.trigger(_events2.default.FPS_DROP_LEVEL_CAPPING, { level: currentLevel, droppedLevel: hls.currentLevel });
+                hls.autoLevelCapping = currentLevel;
+                hls.streamController.nextLevelSwitch();
               }
             }
           }
@@ -2874,12 +2880,13 @@ var FPSController = function (_EventHandler) {
   }, {
     key: 'checkFPSInterval',
     value: function checkFPSInterval() {
-      if (this.video) {
+      var video = this.video;
+      if (video) {
         if (this.isVideoPlaybackQualityAvailable) {
-          var videoPlaybackQuality = this.video.getVideoPlaybackQuality();
-          this.checkFPS(this.video, videoPlaybackQuality.totalVideoFrames, videoPlaybackQuality.droppedVideoFrames);
+          var videoPlaybackQuality = video.getVideoPlaybackQuality();
+          this.checkFPS(video, videoPlaybackQuality.totalVideoFrames, videoPlaybackQuality.droppedVideoFrames);
         } else {
-          this.checkFPS(this.video, this.video.webkitDecodedFrameCount, this.video.webkitDroppedFrameCount);
+          this.checkFPS(video, video.webkitDecodedFrameCount, video.webkitDroppedFrameCount);
         }
       }
     }
@@ -3673,7 +3680,7 @@ var StreamController = function (_EventHandler) {
       //logger.log(`start/pos/bufEnd/seeking:${start.toFixed(3)}/${pos.toFixed(3)}/${bufferEnd.toFixed(3)}/${this.media.seeking}`);
       var maxLatency = config.liveMaxLatencyDuration !== undefined ? config.liveMaxLatencyDuration : config.liveMaxLatencyDurationCount * levelDetails.targetduration;
 
-      if (bufferEnd < Math.max(start, end - maxLatency)) {
+      if (bufferEnd < Math.max(start - config.maxFragLookUpTolerance, end - maxLatency)) {
         var liveSyncPosition = this.liveSyncPosition = this.computeLivePosition(start, levelDetails);
         _logger.logger.log('buffer end: ' + bufferEnd.toFixed(3) + ' is located too far from the end of live sliding playlist, reset currentTime to : ' + liveSyncPosition.toFixed(3));
         bufferEnd = liveSyncPosition;
@@ -5491,39 +5498,37 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+/*globals self: false */
+
 var Decrypter = function () {
-  function Decrypter(hls) {
+  function Decrypter(observer, config) {
     _classCallCheck(this, Decrypter);
 
-    this.hls = hls;
+    this.observer = observer;
+    this.config = config;
     try {
-      var browserCrypto = window ? window.crypto : crypto;
+      var browserCrypto = crypto ? crypto : self.crypto;
       this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
     } catch (e) {}
-
-    this.disableWebCrypto = !this.supportsWebCrypto();
+    this.disableWebCrypto = !this.subtle;
   }
 
   _createClass(Decrypter, [{
-    key: 'supportsWebCrypto',
-    value: function supportsWebCrypto() {
-      return this.subtle && window.location.protocol === 'https:';
-    }
-  }, {
     key: 'decrypt',
     value: function decrypt(data, key, iv, callback) {
       var _this = this;
 
-      if (this.disableWebCrypto && this.hls.config.enableSoftwareAES) {
-        _logger.logger.log('decrypting by JavaScript Implementation');
-        if (!this.decryptor) {
-          this.decryptor = new _aesDecryptor2.default();
+      if (this.disableWebCrypto && this.config.enableSoftwareAES) {
+        _logger.logger.log('JS AES decrypt');
+        var decryptor = this.decryptor;
+        if (!decryptor) {
+          this.decryptor = decryptor = new _aesDecryptor2.default();
         }
-        this.decryptor.expandKey(key);
-        callback(this.decryptor.decrypt(data, 0, iv));
+        decryptor.expandKey(key);
+        callback(decryptor.decrypt(data, 0, iv));
       } else {
         (function () {
-          _logger.logger.log('decrypting by WebCrypto API');
+          _logger.logger.log('WebCrypto AES decrypt');
           var subtle = _this.subtle;
           if (_this.key !== key) {
             _this.key = key;
@@ -5545,14 +5550,13 @@ var Decrypter = function () {
   }, {
     key: 'onWebCryptoError',
     value: function onWebCryptoError(err, data, key, iv, callback) {
-      var hls = this.hls;
-      if (hls.config.enableSoftwareAES) {
-        _logger.logger.log('disabling to use WebCrypto API');
+      if (this.config.enableSoftwareAES) {
+        _logger.logger.log('WebCrypto Error, disable WebCrypto API');
         this.disableWebCrypto = true;
         this.decrypt(data, key, iv, callback);
       } else {
         _logger.logger.error('decrypting error : ' + err.message);
-        hls.trigger(Event.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_DECRYPT_ERROR, fatal: true, reason: err.message });
+        this.observer.trigger(Event.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_DECRYPT_ERROR, fatal: true, reason: err.message });
       }
     }
   }, {
@@ -5927,6 +5931,10 @@ var _events2 = _interopRequireDefault(_events);
 
 var _errors = _dereq_(26);
 
+var _decrypter = _dereq_(16);
+
+var _decrypter2 = _interopRequireDefault(_decrypter);
+
 var _aacdemuxer = _dereq_(18);
 
 var _aacdemuxer2 = _interopRequireDefault(_aacdemuxer);
@@ -5969,7 +5977,36 @@ var DemuxerInline = function () {
     }
   }, {
     key: 'push',
-    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset, defaultInitPTS) {
+    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset, defaultInitPTS) {
+      if (data.byteLength > 0 && decryptdata != null && decryptdata.key != null && decryptdata.method === 'AES-128') {
+        if (this.decrypter == null) {
+          this.decrypter = new _decrypter2.default(this.hls, this.config);
+        }
+        var localthis = this;
+        // performance.now() not available on WebWorker, at least on Safari Desktop
+        var startTime;
+        try {
+          startTime = performance.now();
+        } catch (error) {
+          startTime = Date.now();
+        }
+        this.decrypter.decrypt(data, decryptdata.key.buffer, decryptdata.iv.buffer, function (decryptedData) {
+          var endTime;
+          try {
+            endTime = performance.now();
+          } catch (error) {
+            endTime = Date.now();
+          }
+          localthis.hls.trigger(_events2.default.FRAG_DECRYPTED, { level: level, sn: sn, stats: { tstart: startTime, tdecrypt: endTime } });
+          localthis.pushDecrypted(new Uint8Array(decryptedData), audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset, defaultInitPTS);
+        });
+      } else {
+        this.pushDecrypted(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset, defaultInitPTS);
+      }
+    }
+  }, {
+    key: 'pushDecrypted',
+    value: function pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset, defaultInitPTS) {
       var demuxer = this.demuxer;
       if (!demuxer ||
       // in case of continuity change, we might switch from content type (AAC container to TS container for example)
@@ -6006,7 +6043,7 @@ var DemuxerInline = function () {
 
 exports.default = DemuxerInline;
 
-},{"18":18,"25":25,"26":26,"28":28,"38":38,"39":39}],21:[function(_dereq_,module,exports){
+},{"16":16,"18":18,"25":25,"26":26,"28":28,"38":38,"39":39}],21:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6073,7 +6110,7 @@ var DemuxerWorker = function DemuxerWorker(self) {
         forwardMessage('init', null);
         break;
       case 'demux':
-        self.demuxer.push(new Uint8Array(data.data), data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration, data.accurateTimeOffset, data.defaultInitPTS);
+        self.demuxer.push(data.data, data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration, data.decryptdata, data.accurateTimeOffset, data.defaultInitPTS);
         break;
       default:
         break;
@@ -6081,6 +6118,7 @@ var DemuxerWorker = function DemuxerWorker(self) {
   });
 
   // forward events to main thread
+  observer.on(_events2.default.FRAG_DECRYPTED, forwardMessage);
   observer.on(_events2.default.FRAG_PARSING_INIT_SEGMENT, forwardMessage);
   observer.on(_events2.default.FRAG_PARSED, forwardMessage);
   observer.on(_events2.default.ERROR, forwardMessage);
@@ -6123,10 +6161,6 @@ var _demuxerWorker = _dereq_(21);
 var _demuxerWorker2 = _interopRequireDefault(_demuxerWorker);
 
 var _logger = _dereq_(45);
-
-var _decrypter = _dereq_(16);
-
-var _decrypter2 = _interopRequireDefault(_decrypter);
 
 var _errors = _dereq_(26);
 
@@ -6187,41 +6221,19 @@ var Demuxer = function () {
           this.demuxer = null;
         }
       }
-      var decrypter = this.decrypter;
-      if (decrypter) {
-        decrypter.destroy();
-        this.decrypter = null;
-      }
-    }
-  }, {
-    key: 'pushDecrypted',
-    value: function pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset, defaultInitPTS) {
-      var w = this.w;
-      if (w) {
-        // post fragment payload as transferable objects (no copy)
-        w.postMessage({ cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn: sn, duration: duration, accurateTimeOffset: accurateTimeOffset, defaultInitPTS: defaultInitPTS }, [data]);
-      } else {
-        var demuxer = this.demuxer;
-        if (demuxer) {
-          demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset, defaultInitPTS);
-        }
-      }
     }
   }, {
     key: 'push',
     value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset, defaultInitPTS) {
-      if (data.byteLength > 0 && decryptdata != null && decryptdata.key != null && decryptdata.method === 'AES-128') {
-        if (this.decrypter == null) {
-          this.decrypter = new _decrypter2.default(this.hls);
-        }
-        var localthis = this;
-        var startTime = performance.now();
-        this.decrypter.decrypt(data, decryptdata.key.buffer, decryptdata.iv.buffer, function (decryptedData) {
-          localthis.hls.trigger(_events2.default.FRAG_DECRYPTED, { level: level, sn: sn, stats: { tstart: startTime, tdecrypt: performance.now() } });
-          localthis.pushDecrypted(decryptedData, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset, defaultInitPTS);
-        });
+      var w = this.w;
+      if (w) {
+        // post fragment payload as transferable objects (no copy)
+        w.postMessage({ cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn: sn, duration: duration, decryptdata: decryptdata, accurateTimeOffset: accurateTimeOffset, defaultInitPTS: defaultInitPTS }, [data]);
       } else {
-        this.pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset, defaultInitPTS);
+        var demuxer = this.demuxer;
+        if (demuxer) {
+          demuxer.push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset, defaultInitPTS);
+        }
       }
     }
   }, {
@@ -6252,7 +6264,7 @@ var Demuxer = function () {
 
 exports.default = Demuxer;
 
-},{"16":16,"20":20,"21":21,"26":26,"28":28,"3":3,"45":45}],23:[function(_dereq_,module,exports){
+},{"20":20,"21":21,"26":26,"28":28,"3":3,"45":45}],23:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6477,7 +6489,6 @@ var ExpGolomb = function () {
           frameCropRightOffset = 0,
           frameCropTopOffset = 0,
           frameCropBottomOffset = 0,
-          sarScale = 1,
           profileIdc,
           profileCompat,
           levelIdc,
@@ -6555,59 +6566,57 @@ var ExpGolomb = function () {
         frameCropTopOffset = readUEG();
         frameCropBottomOffset = readUEG();
       }
+      var pixelRatio = [1, 1];
       if (readBoolean()) {
         // vui_parameters_present_flag
         if (readBoolean()) {
           // aspect_ratio_info_present_flag
-          var sarRatio = void 0;
           var aspectRatioIdc = readUByte();
           switch (aspectRatioIdc) {
             case 1:
-              sarRatio = [1, 1];break;
+              pixelRatio = [1, 1];break;
             case 2:
-              sarRatio = [12, 11];break;
+              pixelRatio = [12, 11];break;
             case 3:
-              sarRatio = [10, 11];break;
+              pixelRatio = [10, 11];break;
             case 4:
-              sarRatio = [16, 11];break;
+              pixelRatio = [16, 11];break;
             case 5:
-              sarRatio = [40, 33];break;
+              pixelRatio = [40, 33];break;
             case 6:
-              sarRatio = [24, 11];break;
+              pixelRatio = [24, 11];break;
             case 7:
-              sarRatio = [20, 11];break;
+              pixelRatio = [20, 11];break;
             case 8:
-              sarRatio = [32, 11];break;
+              pixelRatio = [32, 11];break;
             case 9:
-              sarRatio = [80, 33];break;
+              pixelRatio = [80, 33];break;
             case 10:
-              sarRatio = [18, 11];break;
+              pixelRatio = [18, 11];break;
             case 11:
-              sarRatio = [15, 11];break;
+              pixelRatio = [15, 11];break;
             case 12:
-              sarRatio = [64, 33];break;
+              pixelRatio = [64, 33];break;
             case 13:
-              sarRatio = [160, 99];break;
+              pixelRatio = [160, 99];break;
             case 14:
-              sarRatio = [4, 3];break;
+              pixelRatio = [4, 3];break;
             case 15:
-              sarRatio = [3, 2];break;
+              pixelRatio = [3, 2];break;
             case 16:
-              sarRatio = [2, 1];break;
+              pixelRatio = [2, 1];break;
             case 255:
               {
-                sarRatio = [readUByte() << 8 | readUByte(), readUByte() << 8 | readUByte()];
+                pixelRatio = [readUByte() << 8 | readUByte(), readUByte() << 8 | readUByte()];
                 break;
               }
-          }
-          if (sarRatio) {
-            sarScale = sarRatio[0] / sarRatio[1];
           }
         }
       }
       return {
-        width: Math.ceil(((picWidthInMbsMinus1 + 1) * 16 - frameCropLeftOffset * 2 - frameCropRightOffset * 2) * sarScale),
-        height: (2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16 - (frameMbsOnlyFlag ? 2 : 4) * (frameCropTopOffset + frameCropBottomOffset)
+        width: Math.ceil((picWidthInMbsMinus1 + 1) * 16 - frameCropLeftOffset * 2 - frameCropRightOffset * 2),
+        height: (2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16 - (frameMbsOnlyFlag ? 2 : 4) * (frameCropTopOffset + frameCropBottomOffset),
+        pixelRatio: pixelRatio
       };
     }
   }, {
@@ -7434,6 +7443,7 @@ var TSDemuxer = function () {
               var config = expGolombDecoder.readSPS();
               track.width = config.width;
               track.height = config.height;
+              track.pixelRatio = config.pixelRatio;
               track.sps = [unit.data];
               track.duration = _this._duration;
               var codecarray = unit.data.subarray(1, 4);
@@ -9937,6 +9947,7 @@ var MP4 = function () {
         '.mp3': [],
         mvex: [],
         mvhd: [],
+        pasp: [],
         sdtp: [],
         stbl: [],
         stco: [],
@@ -10209,7 +10220,9 @@ var MP4 = function () {
       ]).concat(pps))),
           // "PPS"
       width = track.width,
-          height = track.height;
+          height = track.height,
+          hSpacing = track.pixelRatio[0],
+          vSpacing = track.pixelRatio[1];
       //console.log('avcc:' + Hex.hexDump(avcc));
       return MP4.box(MP4.types.avc1, new Uint8Array([0x00, 0x00, 0x00, // reserved
       0x00, 0x00, 0x00, // reserved
@@ -10229,8 +10242,10 @@ var MP4 = function () {
       0x11, 0x11]), // pre_defined = -1
       avcc, MP4.box(MP4.types.btrt, new Uint8Array([0x00, 0x1c, 0x9c, 0x80, // bufferSizeDB
       0x00, 0x2d, 0xc6, 0xc0, // maxBitrate
-      0x00, 0x2d, 0xc6, 0xc0])) // avgBitrate
-      );
+      0x00, 0x2d, 0xc6, 0xc0])), // avgBitrate
+      MP4.box(MP4.types.pasp, new Uint8Array([hSpacing >> 24, // hSpacing
+      hSpacing >> 16 & 0xFF, hSpacing >> 8 & 0xFF, hSpacing & 0xFF, vSpacing >> 24, // vSpacing
+      vSpacing >> 16 & 0xFF, vSpacing >> 8 & 0xFF, vSpacing & 0xFF])));
     }
   }, {
     key: 'esds',
