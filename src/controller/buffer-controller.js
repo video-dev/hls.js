@@ -291,7 +291,7 @@ class BufferController extends EventHandler {
   }
 
   onBufferAppendFail(data) {
-    logger.error(`sourceBuffer error:${data.event}`);
+    logger.error('sourceBuffer error:',data.event);
     // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
     // this error might not always be fatal (it is fatal if decode error is set, in that case
     // it will be followed by a mediaElement error ...)
