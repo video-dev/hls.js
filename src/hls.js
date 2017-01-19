@@ -14,7 +14,7 @@ import LevelController from './controller/level-controller';
 
 import { logger, enableLogs } from './utils/logger';
 import EventEmitter from 'events';
-import Config from './config';
+import { hlsDefaultConfig } from './config';
 
 class Hls {
     static get version() {
@@ -47,7 +47,7 @@ class Hls {
 
     static get DefaultConfig() {
         if (!Hls.defaultConfig) {
-            return Config.defaultConfig;
+            return hlsDefaultConfig;
         }
         return Hls.defaultConfig;
     }
