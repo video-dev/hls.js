@@ -5,6 +5,8 @@ import AESDecryptor from './aes-decryptor';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
 
+/*globals self: false */
+
 class Decrypter {
   constructor(observer,config) {
     this.observer = observer;
