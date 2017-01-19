@@ -7,30 +7,14 @@ import Event from './events';
 import {ErrorTypes, ErrorDetails} from './errors';
 import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
-import AbrController from    './controller/abr-controller';
-import BufferController from  './controller/buffer-controller';
-import CapLevelController from  './controller/cap-level-controller';
-import StreamController from  './controller/stream-controller';
-import LevelController from  './controller/level-controller';
-import FPSController from './controller/fps-controller';
-import AudioTrackController from './controller/audio-track-controller';
-import {logger, enableLogs} from './utils/logger';
-//import FetchLoader from './utils/fetch-loader';
-import XhrLoader from './utils/xhr-loader';
-import EventEmitter from 'events';
 import KeyLoader from './loader/key-loader';
 
-//#if altaudio
-import AudioStreamController from  './controller/audio-stream-controller';
-//#endif
+import StreamController from  './controller/stream-controller';
+import LevelController from  './controller/level-controller';
 
-//#if subtitle
-import TimelineController from './controller/timeline-controller';
-import SubtitleStreamController from  './controller/subtitle-stream-controller';
-import SubtitleTrackController from './controller/subtitle-track-controller';
-import Cues from './utils/cues';
-//#endif
-
+import {logger, enableLogs} from './utils/logger';
+import EventEmitter from 'events';
+import Config from './config';
 
 class Hls {
 
@@ -60,85 +44,7 @@ class Hls {
 
   static get DefaultConfig() {
     if(!Hls.defaultConfig) {
-       Hls.defaultConfig = {
-          autoStartLoad: true,
-          startPosition: -1,
-          defaultAudioCodec: undefined,
-          debug: false,
-          capLevelOnFPSDrop: false,
-          capLevelToPlayerSize: false,
-          initialLiveManifestSize: 1,
-          maxBufferLength: 30,
-          maxBufferSize: 60 * 1000 * 1000,
-          maxBufferHole: 0.5,
-          maxMaxBufferLength: 600,
-          maxSeekHole: 2,
-          lowBufferWatchdogPeriod: 0.5,
-          highBufferWatchdogPeriod: 3,
-          nudgeOffset: 0.1,
-          nudgeMaxRetry : 3,
-          maxFragLookUpTolerance: 0.2,
-          liveSyncDurationCount:3,
-          liveMaxLatencyDurationCount: Infinity,
-          liveSyncDuration: undefined,
-          liveMaxLatencyDuration: undefined,
-          enableWorker: true,
-          enableSoftwareAES: true,
-          manifestLoadingTimeOut: 10000,
-          manifestLoadingMaxRetry: 1,
-          manifestLoadingRetryDelay: 1000,
-          manifestLoadingMaxRetryTimeout: 64000,
-          startLevel: undefined,
-          levelLoadingTimeOut: 10000,
-          levelLoadingMaxRetry: 4,
-          levelLoadingRetryDelay: 1000,
-          levelLoadingMaxRetryTimeout: 64000,
-          fragLoadingTimeOut: 20000,
-          fragLoadingMaxRetry: 6,
-          fragLoadingRetryDelay: 1000,
-          fragLoadingMaxRetryTimeout: 64000,
-          fragLoadingLoopThreshold: 3,
-          startFragPrefetch: false,
-          fpsDroppedMonitoringPeriod: 5000,
-          fpsDroppedMonitoringThreshold: 0.2,
-          appendErrorMaxRetry: 3,
-          loader: XhrLoader,
-          //loader: FetchLoader,
-          fLoader: undefined,
-          pLoader: undefined,
-          xhrSetup: undefined,
-          fetchSetup: undefined,
-          abrController: AbrController,
-          bufferController: BufferController,
-          capLevelController: CapLevelController,
-          fpsController: FPSController,
-//#if altaudio
-          audioStreamController: AudioStreamController,
-          audioTrackController : AudioTrackController,
-//#endif
-//#if subtitle
-          subtitleStreamController: SubtitleStreamController,
-          subtitleTrackController: SubtitleTrackController,
-          timelineController: TimelineController,
-          cueHandler: Cues,
-//#endif
-          enableCEA708Captions: true,
-          enableWebVTT: true,
-          enableMP2TPassThrough: false,
-          stretchShortVideoTrack: false,
-          forceKeyFrameOnDiscontinuity: true,
-          abrEwmaFastLive: 3,
-          abrEwmaSlowLive: 9,
-          abrEwmaFastVoD: 3,
-          abrEwmaSlowVoD: 9,
-          abrEwmaDefaultEstimate: 5e5, // 500 kbps
-          abrBandWidthFactor : 0.95,
-          abrBandWidthUpFactor : 0.7,
-          abrMaxWithRealBitrate : false,
-          maxStarvationDelay : 4,
-          maxLoadingDelay : 4,
-          minAutoBitrate: 0
-        };
+      return Config.defaultConfig;
     }
     return Hls.defaultConfig;
   }
@@ -194,9 +100,9 @@ class Hls {
     }
 
     // optional subtitle stream controller
-    controller = config.subtitleStreamController;
-    if (controller) {
-      networkControllers.push(new controller(this));
+    Controller = config.subtitleStreamController;
+    if (Controller) {
+      networkControllers.push(new Controller(this));
     }
 
 
