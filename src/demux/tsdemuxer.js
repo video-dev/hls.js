@@ -778,6 +778,7 @@ class TSDemuxer {
                         var config = expGolombDecoder.readSPS();
                         track.width = config.width;
                         track.height = config.height;
+                        track.pixelRatio = config.pixelRatio;
                         track.sps = [unit.data];
                         track.duration = this._duration;
                         var codecarray = unit.data.subarray(1, 4);
