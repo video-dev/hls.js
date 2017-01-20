@@ -52,6 +52,7 @@ header {
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.3/FileSaver.min.js"></script>
 
 </head>
 <body>
@@ -1102,7 +1103,8 @@ function createfMP4(type) {
   if (fmp4Data[type].length) {
     var blob = new Blob([arrayConcat(fmp4Data[type])], {type: 'application/octet-stream'});
     var filename = type + '-' + new Date().toISOString() + '.mp4';
-    $('body').append('<a download="hlsjs-' + filename + '" href="' + window.URL.createObjectURL(blob) + '">Download ' + filename + ' track</a><br>');
+    saveAs(blob,filename);
+    //$('body').append('<a download="hlsjs-' + filename + '" href="' + window.URL.createObjectURL(blob) + '">Download ' + filename + ' track</a><br>');
   }
 }
 
