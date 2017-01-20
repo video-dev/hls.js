@@ -2243,7 +2243,7 @@ var BufferController = function (_EventHandler) {
   }, {
     key: 'onBufferAppendFail',
     value: function onBufferAppendFail(data) {
-      _logger.logger.error('sourceBuffer error:' + data.event);
+      _logger.logger.error('sourceBuffer error:', data.event);
       // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
       // this error might not always be fatal (it is fatal if decode error is set, in that case
       // it will be followed by a mediaElement error ...)
@@ -9439,16 +9439,16 @@ var Fragment = function () {
     key: 'byteRange',
     get: function get() {
       if (!this._byteRange) {
-        this._byteRange = [];
+        var byteRange = this._byteRange = [];
         if (this.rawByteRange) {
           var params = this.rawByteRange.split('@', 2);
           if (params.length === 1) {
-            this._byteRange[0] = this.prevFrag ? this.prevFrag.byteRangeEndOffset : 0;
+            var lastByteRangeEndOffset = this.lastByteRangeEndOffset;
+            byteRange[0] = lastByteRangeEndOffset ? lastByteRangeEndOffset : 0;
           } else {
-            this._byteRange[0] = parseInt(params[1]);
+            byteRange[0] = parseInt(params[1]);
           }
-          this._byteRange[1] = parseInt(params[0]) + this._byteRange[0];
-          this.prevFrag = null;
+          byteRange[1] = parseInt(params[0]) + byteRange[0];
         }
       }
       return this._byteRange;
@@ -9670,7 +9670,6 @@ var PlaylistLoader = function (_EventHandler) {
           if (!isNaN(frag.duration)) {
             var sn = currentSN++;
             frag.type = type;
-            frag.prevFrag = prevFrag;
             frag.start = totalduration;
             frag.levelkey = levelkey;
             frag.sn = sn;
@@ -9689,6 +9688,12 @@ var PlaylistLoader = function (_EventHandler) {
         } else if (result[4]) {
           // X-BYTERANGE
           frag.rawByteRange = result[4];
+          if (prevFrag) {
+            var lastByteRangeEndOffset = prevFrag.byteRangeEndOffset;
+            if (lastByteRangeEndOffset) {
+              frag.lastByteRangeEndOffset = lastByteRangeEndOffset;
+            }
+          }
         } else if (result[5]) {
           // PROGRAM-DATE-TIME
           frag.rawProgramDateTime = result[5];
