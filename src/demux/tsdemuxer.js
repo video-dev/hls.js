@@ -1103,16 +1103,18 @@ class TSDemuxer {
             }
         }
         if (!track.audiosamplerate) {
+            const audioCodec = this.audioCodec;
             config = ADTS.getAudioConfig(
                 this.observer,
                 data,
                 offset,
-                this.audioCodec
+                audioCodec
             );
             track.config = config.config;
             track.audiosamplerate = config.samplerate;
             track.channelCount = config.channelCount;
             track.codec = config.codec;
+            track.manifestCodec = audioCodec;
             track.duration = this._duration;
             logger.log(
                 `parsed codec:${track.codec},rate:${

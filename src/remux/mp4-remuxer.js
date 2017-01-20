@@ -268,9 +268,10 @@ class MP4Remuxer {
         //   logger.log(avcSample.pts + '/' + avcSample.dts + ',' + unitsString + avcSample.units.length);
         // }
 
-        // sort video samples by DTS order
+        // sort video samples by DTS then PTS order
         inputSamples.sort(function(a, b) {
-            return a.dts - b.dts;
+            const deltadts = a.dts - b.dts;
+            return deltadts ? deltadts : a.pts - b.pts;
         });
 
         // handle broken streams with PTS < DTS, tolerance up 200ms (18000 in 90kHz timescale)
@@ -647,7 +648,10 @@ class MP4Remuxer {
                     for (var j = 0; j < missing; j++) {
                         newStamp = nextPtsNorm + initDTS;
                         newStamp = Math.max(newStamp, initDTS);
-                        fillFrame = AAC.getSilentFrame(track.channelCount);
+                        fillFrame = AAC.getSilentFrame(
+                            track.manifestCodec || track.codec,
+                            track.channelCount
+                        );
                         if (!fillFrame) {
                             logger.log(
                                 'Unable to get silent frame for given audio codec; duplicating last frame instead.'
@@ -719,6 +723,7 @@ class MP4Remuxer {
                             );
                             if (numMissingFrames > 0) {
                                 fillFrame = AAC.getSilentFrame(
+                                    track.manifestCodec || track.codec,
                                     track.channelCount
                                 );
                                 if (!fillFrame) {
@@ -774,7 +779,10 @@ class MP4Remuxer {
                 for (let i = 0; i < numMissingFrames; i++) {
                     newStamp =
                         ptsnorm - (numMissingFrames - i) * pesFrameDuration;
-                    fillFrame = AAC.getSilentFrame(track.channelCount);
+                    fillFrame = AAC.getSilentFrame(
+                        track.manifestCodec || track.codec,
+                        track.channelCount
+                    );
                     if (!fillFrame) {
                         logger.log(
                             'Unable to get silent frame for given audio codec; duplicating this frame instead.'
@@ -881,7 +889,10 @@ class MP4Remuxer {
             // samples count of this segment's duration
             nbSamples = Math.ceil((endDTS - startDTS) / frameDuration),
             // silent frame
-            silentFrame = AAC.getSilentFrame(track.channelCount);
+            silentFrame = AAC.getSilentFrame(
+                track.manifestCodec || track.codec,
+                track.channelCount
+            );
 
         logger.warn('remux empty Audio');
         // Can't remux if we can't generate a silent frame...

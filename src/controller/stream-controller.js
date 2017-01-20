@@ -929,8 +929,9 @@ class StreamController extends EventHandler {
             config = this.config;
         logger.log(`media seeking to ${currentTime.toFixed(3)}`);
         if (this.state === State.FRAG_LOADING) {
+            let mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
             let bufferInfo = BufferHelper.bufferInfo(
-                    media,
+                    mediaBuffer,
                     currentTime,
                     this.config.maxBufferHole
                 ),
@@ -1187,7 +1188,7 @@ class StreamController extends EventHandler {
                         }
                     }
                 }
-                this.pendingBuffering = -1;
+                this.pendingBuffering = true;
                 this.appended = false;
                 logger.log(
                     `Parsing ${sn} of [${details.startSN} ,${
@@ -1318,6 +1319,8 @@ class StreamController extends EventHandler {
                 var initSegment = track.initSegment;
                 if (initSegment) {
                     this.appended = true;
+                    // arm pending Buffering flag before appending a segment
+                    this.pendingBuffering = true;
                     this.hls.trigger(Event.BUFFER_APPENDING, {
                         type: trackName,
                         data: initSegment,
@@ -1400,6 +1403,8 @@ class StreamController extends EventHandler {
             [data.data1, data.data2].forEach(buffer => {
                 if (buffer) {
                     this.appended = true;
+                    // arm pending Buffering flag before appending a segment
+                    this.pendingBuffering = true;
                     hls.trigger(Event.BUFFER_APPENDING, {
                         type: data.type,
                         data: buffer,
@@ -1528,7 +1533,8 @@ class StreamController extends EventHandler {
         if (data.parent === 'main') {
             const state = this.state;
             if (state === State.PARSING || state === State.PARSED) {
-                this.pendingBuffering = data.pending;
+                // check if all buffers have been appended
+                this.pendingBuffering = data.pending > 0;
                 this._checkAppendedParsed();
             }
         }
@@ -1538,7 +1544,7 @@ class StreamController extends EventHandler {
         //trigger handler right now
         if (
             this.state === State.PARSED &&
-            (!this.appended || this.pendingBuffering === 0)
+            (!this.appended || !this.pendingBuffering)
         ) {
             var frag = this.fragCurrent,
                 stats = this.stats;
@@ -1609,6 +1615,12 @@ class StreamController extends EventHandler {
                         );
                         this.retryDate = performance.now() + delay;
                         // retry loading state
+                        // if loadedmetadata is not set, it means that we are emergency switch down on first frag
+                        // in that case, reset startFragRequested flag
+                        if (!this.loadedmetadata) {
+                            this.startFragRequested = false;
+                            this.nextLoadPosition = this.startPosition;
+                        }
                         this.state = State.FRAG_LOADING_WAITING_RETRY;
                     } else {
                         logger.error(
@@ -1710,7 +1722,8 @@ class StreamController extends EventHandler {
         // if ready state different from HAVE_NOTHING (numeric value 0), we are allowed to seek
         if (media && media.readyState) {
             let currentTime = media.currentTime,
-                buffered = media.buffered;
+                mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media,
+                buffered = mediaBuffer.buffered;
             // adjust currentTime to start position on loaded metadata
             if (!this.loadedmetadata && buffered.length && !media.seeking) {
                 this.loadedmetadata = true;
@@ -1718,7 +1731,7 @@ class StreamController extends EventHandler {
                 // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
                 let startPosition = this.startPosition,
                     startPositionBuffered = BufferHelper.isBuffered(
-                        media,
+                        mediaBuffer,
                         startPosition
                     );
                 // if currentTime not matching with expected startPosition or startPosition not buffered
@@ -1821,6 +1834,7 @@ class StreamController extends EventHandler {
         // in that case, reset startFragRequested flag
         if (!this.loadedmetadata) {
             this.startFragRequested = false;
+            this.nextLoadPosition = this.startPosition;
         }
         this.tick();
     }
