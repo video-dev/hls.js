@@ -60,18 +60,18 @@ class Fragment {
 
     get byteRange() {
         if (!this._byteRange) {
-            this._byteRange = [];
+            let byteRange = (this._byteRange = []);
             if (this.rawByteRange) {
                 const params = this.rawByteRange.split('@', 2);
                 if (params.length === 1) {
-                    this._byteRange[0] = this.prevFrag
-                        ? this.prevFrag.byteRangeEndOffset
+                    const lastByteRangeEndOffset = this.lastByteRangeEndOffset;
+                    byteRange[0] = lastByteRangeEndOffset
+                        ? lastByteRangeEndOffset
                         : 0;
                 } else {
-                    this._byteRange[0] = parseInt(params[1]);
+                    byteRange[0] = parseInt(params[1]);
                 }
-                this._byteRange[1] = parseInt(params[0]) + this._byteRange[0];
-                this.prevFrag = null;
+                byteRange[1] = parseInt(params[0]) + byteRange[0];
             }
         }
         return this._byteRange;
@@ -350,7 +350,6 @@ class PlaylistLoader extends EventHandler {
                 if (!isNaN(frag.duration)) {
                     const sn = currentSN++;
                     frag.type = type;
-                    frag.prevFrag = prevFrag;
                     frag.start = totalduration;
                     frag.levelkey = levelkey;
                     frag.sn = sn;
@@ -369,6 +368,12 @@ class PlaylistLoader extends EventHandler {
             } else if (result[4]) {
                 // X-BYTERANGE
                 frag.rawByteRange = result[4];
+                if (prevFrag) {
+                    const lastByteRangeEndOffset = prevFrag.byteRangeEndOffset;
+                    if (lastByteRangeEndOffset) {
+                        frag.lastByteRangeEndOffset = lastByteRangeEndOffset;
+                    }
+                }
             } else if (result[5]) {
                 // PROGRAM-DATE-TIME
                 frag.rawProgramDateTime = result[5];
