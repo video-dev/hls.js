@@ -315,7 +315,7 @@ class PlaylistLoader extends EventHandler {
           frag.level = id;
           frag.cc = cc;
           frag.baseurl = baseurl;
-          frag.relurl = '' + result[3];
+          frag.relurl = (' ' + result[3]).slice(1);
 
           level.fragments.push(frag);
           prevFrag = frag;
