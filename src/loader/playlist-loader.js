@@ -62,9 +62,10 @@ class Fragment {
 
   get byteRange() {
     if (!this._byteRange) {
-      let byteRange = this._byteRange = [];
-      if (this.rawByteRange) {
-        const params = this.rawByteRange.split('@', 2);
+      const byteRange = this._byteRange = [];
+      const rawByteRange = this.rawByteRange;
+      if (rawByteRange) {
+        const params = rawByteRange.split('@', 2);
         if (params.length === 1) {
           const lastByteRangeEndOffset = this.lastByteRangeEndOffset;
           byteRange[0] = lastByteRangeEndOffset ? lastByteRangeEndOffset : 0;
