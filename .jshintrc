@@ -22,15 +22,14 @@
   "unused"    : true,
   "white"     : true,
   "globals"   : {
-    "console"           : true,
-    "MediaSource"       : true,
-    "performance"       : true,
-    "crypto"            : true,
-    "fetch"             : true,
-    "Request"           : true,
-    "Headers"           : true,
-    "escape"            : true,
-    "__VERSION__"       : true,
-    "__BUILD_VERSION__" : true
+    "console"     : true,
+    "MediaSource" : true,
+    "performance" : true,
+    "crypto"      : true,
+    "fetch"       : true,
+    "Request"     : true,
+    "Headers"     : true,
+    "escape"      : true,
+    "__VERSION__" : true
   }
 }
