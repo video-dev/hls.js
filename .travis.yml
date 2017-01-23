@@ -8,8 +8,7 @@ env:
   global:
     - SAUCE_USERNAME=mangui
   matrix:
-    - TRAVIS_MODE=buildLib
-    - TRAVIS_MODE=buildDist
+    - TRAVIS_MODE=build
     - TRAVIS_MODE=unitTests
     - TRAVIS_MODE=funcTests UA=chrome              OS="Windows 10"
     - TRAVIS_MODE=funcTests UA=firefox             OS="Windows 10"
