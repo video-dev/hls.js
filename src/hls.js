@@ -18,8 +18,7 @@ import { hlsDefaultConfig } from './config';
 
 class Hls {
     static get version() {
-        // replaced with browserify-versionify transform
-        return '__VERSION__';
+        return __VERSION__;
     }
 
     static isSupported() {
