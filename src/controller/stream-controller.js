@@ -485,17 +485,14 @@ class StreamController extends EventHandler {
   }
 
   getBufferRange(position) {
-    var i, range,
-        bufferRange = this.bufferRange;
-    if (bufferRange) {
-      for (i = bufferRange.length - 1; i >=0; i--) {
-        range = bufferRange[i];
-        if (position >= range.start && position <= range.end) {
-          return range;
-        }
+    return BinarySearch.search(this.bufferRange, function(range) {
+      if (position < range.start) {
+        return -1;
+      } else if (position > range.end) {
+        return 1;
       }
-    }
-    return null;
+      return 0;
+    });
   }
 
   get currentLevel() {
@@ -1075,9 +1072,6 @@ class StreamController extends EventHandler {
           hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer, parent : 'main',content : 'data'});
         }
       });
-
-      this.bufferRange.push({type: data.type, start: data.startPTS, end: data.endPTS, frag: frag});
-
       //trigger handler right now
       this.tick();
     }
@@ -1185,15 +1179,22 @@ class StreamController extends EventHandler {
   _checkAppendedParsed() {
     //trigger handler right now
     if (this.state === State.PARSED && (!this.appended || !this.pendingBuffering)) {
-      var frag = this.fragCurrent, stats = this.stats;
+      const frag = this.fragCurrent;
       if (frag) {
+        const media = this.mediaBuffer ? this.mediaBuffer : this.media;
+        logger.log(`main buffered : ${TimeRanges.toString(media.buffered)}`);
+        // filter potentially evicted bufferRange. this is to avoid memleak on live streams
+        let bufferRange = this.bufferRange.filter(range => {return BufferHelper.isBuffered(media,(range.start + range.end) / 2);});
+        // push new range
+        bufferRange.push({type: frag.type, start: frag.startPTS, end: frag.endPTS, frag: frag});
+        // sort, as we use BinarySearch for lookup in getBufferRange ...
+        this.bufferRange = bufferRange.sort(function(a,b) {return (a.start - b.start);});
         this.fragPrevious = frag;
+        const stats = this.stats;
         stats.tbuffered = performance.now();
         // we should get rid of this.fragLastKbps
         this.fragLastKbps = Math.round(8 * stats.total / (stats.tbuffered - stats.tfirst));
         this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag, id : 'main'});
-        let media = this.mediaBuffer ? this.mediaBuffer : this.media;
-        logger.log(`main buffered : ${TimeRanges.toString(media.buffered)}`);
         this.state = State.IDLE;
       }
       this.tick();
@@ -1425,21 +1426,11 @@ _checkBuffer() {
   }
 
   onBufferFlushed() {
-    /* after successful buffer flushing, rebuild buffer Range array
-      loop through existing buffer range and check if
-      corresponding range is still buffered. only push to new array already buffered range
+    /* after successful buffer flushing, filter flushed fragments from bufferRange
       use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
     */
-    let media = this.mediaBuffer ? this.mediaBuffer : this.media,
-        bufferRange = this.bufferRange,
-        newRange = [],range,i;
-    for (i = 0; i < bufferRange.length; i++) {
-      range = bufferRange[i];
-      if (BufferHelper.isBuffered(media,(range.start + range.end) / 2)) {
-        newRange.push(range);
-      }
-    }
-    this.bufferRange = newRange;
+    const media = this.mediaBuffer ? this.mediaBuffer : this.media;
+    this.bufferRange = this.bufferRange.filter(range => {return BufferHelper.isBuffered(media,(range.start + range.end) / 2);});
 
     // increase fragment load Index to avoid frag loop loading error after buffer flush
     this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
