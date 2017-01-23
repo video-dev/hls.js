@@ -185,9 +185,10 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       maxBufferSize: 60*1000*1000,
       maxBufferHole: 0.5,
       maxSeekHole: 2,
-      nudgeWatchdogPeriod: 1,
+      lowBufferWatchdogPeriod: 0.5,
+      highBufferWatchdogPeriod: 3,
       nudgeOffset: 0.1,
-      nudgeMaxRetry : 30,
+      nudgeMaxRetry : 3,
       maxFragLookUpTolerance: 0.2,
       liveSyncDurationCount: 3,
       liveMaxLatencyDurationCount: 10,
@@ -319,10 +320,16 @@ In case no quality level with this criteria can be found (lets say for example t
 
 max video loading delay used in  automatic start level selection : in that mode ABR controller will ensure that video loading time (ie the time to fetch the first fragment at lowest quality level + the time to fetch the fragment at the appropriate quality level is less than ```maxLoadingDelay``` )
 
-#### ```nudgeWatchdogPeriod```
-(default 1s)
+#### ```lowBufferWatchdogPeriod```
+(default 0.5s)
 
-if media element is expected to play and if currentTime has not moved for more than ```nudgeWatchdogPeriod``` and if there are enough buffer upfront, hls.js will try to nudge playhead to recover playback
+if media element is expected to play and if currentTime has not moved for more than ```lowBufferWatchdogPeriod``` and if there are less than `maxBufferHole` seconds buffered upfront, hls.js will try to nudge playhead to recover playback
+
+#### ```highBufferWatchdogPeriod```
+(default 3s)
+
+if media element is expected to play and if currentTime has not moved for more than ```highBufferWatchdogPeriod``` and if there are more than `maxBufferHole` seconds buffered upfront, hls.js will try to nudge playhead to recover playback
+
 
 #### ```nudgeOffset```
 (default 0.1s)
@@ -331,7 +338,7 @@ In case playback continues to stall after first playhead nudging, currentTime wi
 media.currentTime += (nb nudge retry -1)*nudgeOffset
 
 #### ```nudgeMaxRetry```
-(default 30)
+(default 3)
 
 Max nb of nudge retries before hls.js raise a fatal BUFFER_STALLED_ERROR
 

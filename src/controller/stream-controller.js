@@ -1359,8 +1359,10 @@ _checkBuffer() {
           // played moving, but was previously stalled => now not stuck anymore
           if (this.stalled) {
             this.stalled = undefined;
-            this.stallCount = 0;
-            logger.log(`playback not stuck anymore @${currentTime}`);
+            if (this.nudgeRetry) {
+              logger.log(`playback not stuck anymore @${currentTime}`);
+              this.nudgeRetry = 0;
+            }
           }
         } else {
           // playhead not moving
@@ -1370,41 +1372,44 @@ _checkBuffer() {
             const hls = this.hls;
             if(!this.stalled) {
               // stall just detected, store current time
-              logger.log(`playback seems stuck @${currentTime}`);
-              hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_STALLED_ERROR, fatal: false});
               this.stalled = tnow;
             } else {
               // playback already stalled, check stalling duration
               // if stalling for more than a given threshold, let's try to recover
               const stalledDuration = tnow - this.stalled;
+              const bufferLen = bufferInfo.len;
               // have we reached stall deadline ?
-              if (stalledDuration > config.nudgeWatchdogPeriod * 1000) {
+              if (bufferLen <= jumpThreshold && stalledDuration > config.lowBufferWatchdogPeriod * 1000) {
                 const nudgeRetry = this.nudgeRetry++;
                 const nudgeOffset = nudgeRetry * config.nudgeOffset;
+                logger.log(`playback stalling in low buffer @${currentTime}`);
+                hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_STALLED_ERROR, fatal: false, buffer : bufferLen});
                 // if buffer len is below threshold, try to jump to start of next buffer range if close
-                if(bufferInfo.len <= jumpThreshold) {
-                  // no buffer available @ currentTime, check if next buffer is close (within a config.maxSeekHole second range)
-                  var nextBufferStart = bufferInfo.nextStart, delta = nextBufferStart-currentTime;
-                  if(nextBufferStart &&
-                     (delta < config.maxSeekHole) &&
-                     (delta > 0)) {
-                    // next buffer is close ! adjust currentTime to nextBufferStart
-                    // this will ensure effective video decoding
-                      logger.log(`adjust currentTime from ${media.currentTime} to next buffered @ ${nextBufferStart} + nudge ${nudgeOffset}`);
-                      let hole = nextBufferStart + nudgeOffset - media.currentTime;
-                      media.currentTime = nextBufferStart + nudgeOffset;
-                      this.stalled = undefined;
-                      hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_SEEK_OVER_HOLE, fatal: false, hole : hole});
-                    }
-                } else {
+                // no buffer available @ currentTime, check if next buffer is close (within a config.maxSeekHole second range)
+                var nextBufferStart = bufferInfo.nextStart, delta = nextBufferStart-currentTime;
+                if(nextBufferStart &&
+                   (delta < config.maxSeekHole) &&
+                   (delta > 0)) {
+                  // next buffer is close ! adjust currentTime to nextBufferStart
+                  // this will ensure effective video decoding
+                  logger.log(`adjust currentTime from ${media.currentTime} to next buffered @ ${nextBufferStart} + nudge ${nudgeOffset}`);
+                  let hole = nextBufferStart + nudgeOffset - media.currentTime;
+                  media.currentTime = nextBufferStart + nudgeOffset;
                   this.stalled = undefined;
-                  if (nudgeRetry < config.nudgeMaxRetry) {
-                    // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
-                    media.currentTime += config.nudgeOffset + nudgeOffset;
-                    hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_NUDGE_ON_STALL, fatal: false});
-                  } else {
-                    hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_STALLED_ERROR, fatal: true});
-                  }
+                  hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_SEEK_OVER_HOLE, fatal: false, hole : hole});
+                }
+              } else if (bufferLen > jumpThreshold && stalledDuration > config.highBufferWatchdogPeriod * 1000) {
+                this.stalled = undefined;
+                const nudgeRetry = this.nudgeRetry++;
+                const nudgeOffset = nudgeRetry * config.nudgeOffset;
+                logger.log(`playback stalling in high buffer @${currentTime}`);
+                hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_STALLED_ERROR, fatal: false, buffer : bufferLen});
+                if (nudgeRetry < config.nudgeMaxRetry) {
+                  // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
+                  media.currentTime += config.nudgeOffset + nudgeOffset;
+                  hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_NUDGE_ON_STALL, fatal: false});
+                } else {
+                  hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_STALLED_ERROR, fatal: true});
                 }
               }
             }
