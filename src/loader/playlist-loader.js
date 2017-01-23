@@ -304,7 +304,8 @@ class PlaylistLoader extends EventHandler {
       const duration = result[1];
       if (duration) { // INF
         frag.duration = parseFloat(duration);
-        const title = result[2];
+        // avoid sliced strings    https://github.com/dailymotion/hls.js/issues/939
+        const title = (' ' + result[2]).slice(1);
         frag.title = title ? title : null;
         frag.tagList.push(title ? [ 'INF',duration,title ] : [ 'INF',duration ]);
       } else if (result[3]) { // url
@@ -317,7 +318,8 @@ class PlaylistLoader extends EventHandler {
           frag.level = id;
           frag.cc = cc;
           frag.baseurl = baseurl;
-          frag.relurl = result[3];
+          // avoid sliced strings    https://github.com/dailymotion/hls.js/issues/939
+          frag.relurl = (' ' + result[3]).slice(1);
 
           level.fragments.push(frag);
           prevFrag = frag;
@@ -327,7 +329,7 @@ class PlaylistLoader extends EventHandler {
           frag.tagList = [];
         }
       } else if (result[4]) { // X-BYTERANGE
-        frag.rawByteRange = result[4];
+        frag.rawByteRange = (' ' + result[4]).slice(1);
         if (prevFrag) {
           const lastByteRangeEndOffset = prevFrag.byteRangeEndOffset;
           if (lastByteRangeEndOffset) {
@@ -335,8 +337,9 @@ class PlaylistLoader extends EventHandler {
           }
         }
       } else if (result[5]) { // PROGRAM-DATE-TIME
-        frag.rawProgramDateTime = result[5];
-        frag.tagList.push(['PROGRAM-DATE-TIME', result[5]]);
+        // avoid sliced strings    https://github.com/dailymotion/hls.js/issues/939
+        frag.rawProgramDateTime = (' ' + result[5]).slice(1);
+        frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
         for (i = 1; i < result.length; i++) {
@@ -345,8 +348,9 @@ class PlaylistLoader extends EventHandler {
           }
         }
 
-        const value1 = result[i+1];
-        const value2 = result[i+2];
+        // avoid sliced strings    https://github.com/dailymotion/hls.js/issues/939
+        const value1 = (' ' + result[i+1]).slice(1);
+        const value2 = (' ' + result[i+2]).slice(1);
 
         switch (result[i]) {
           case '#':
