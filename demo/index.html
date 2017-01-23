@@ -1080,7 +1080,7 @@ function updateAudioTrackInfo() {
     for (var i = 0; i < sURLVariables.length; i++) {
       var sParameterName = sURLVariables[i].split('=');
       if (sParameterName[0] == sParam) {
-        return "undefined" == sParameterName[1] ? undefined : sParameterName[1];
+        return "undefined" == sParameterName[1] ? undefined : "false" == sParameterName[1] ? false : sParameterName[1];
       }
     }
     return defaultValue;
