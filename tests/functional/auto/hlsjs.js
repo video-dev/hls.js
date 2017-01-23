@@ -29,7 +29,7 @@ function retry(cb, numAttempts, interval) {
 }
 
 var onTravis = !!process.env.TRAVIS;
-var STREAM_ID = onTravis ? process.env.TEST_STREAM_ID : 'arte';
+var STREAM_ID = onTravis ? process.env.STREAM : 'arte';
 if (!STREAM_ID) {
   throw new Error('No stream ID.');
 }
@@ -39,20 +39,20 @@ if (!stream) {
 }
 var browserConfig = {version : 'latest'};
 if (onTravis) {
-  var TEST_BROWSER_VERSION = process.env.TEST_BROWSER_VERSION;
-  if (TEST_BROWSER_VERSION) {
-    browserConfig.version = TEST_BROWSER_VERSION;
+  var UA_VERSION = process.env.UA_VERSION;
+  if (UA_VERSION) {
+    browserConfig.version = UA_VERSION;
   }
-  var TEST_BROWSER_NAME = process.env.TEST_BROWSER_NAME;
-  if (!TEST_BROWSER_NAME) {
+  var UA = process.env.UA;
+  if (!UA) {
     throw new Error('No test browser name.')
   }
-  var TEST_BROWSER_PLATFORM = process.env.TEST_BROWSER_PLATFORM;
-  if (!TEST_BROWSER_PLATFORM) {
+  var OS = process.env.OS;
+  if (!OS) {
     throw new Error('No test browser platform.')
   }
-  browserConfig.name = TEST_BROWSER_NAME;
-  browserConfig.platform = TEST_BROWSER_PLATFORM;
+  browserConfig.name = UA;
+  browserConfig.platform = OS;
 }
 else {
   browserConfig.name = "chrome";
