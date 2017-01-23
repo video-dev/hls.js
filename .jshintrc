@@ -29,6 +29,7 @@
     "fetch"       : true,
     "Request"     : true,
     "Headers"     : true,
-    "escape"      : true
+    "escape"      : true,
+    "__VERSION__" : true
   }
 }

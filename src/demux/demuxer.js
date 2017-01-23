@@ -3,6 +3,7 @@ import DemuxerInline from '../demux/demuxer-inline';
 import DemuxerWorker from '../demux/demuxer-worker';
 import {logger} from '../utils/logger';
 import {ErrorTypes, ErrorDetails} from '../errors';
+import work from 'webworkify-webpack';
 
 class Demuxer {
 
@@ -18,8 +19,7 @@ class Demuxer {
         logger.log('demuxing in webworker');
         let w;
         try {
-          let work = require('webworkify');
-          w = this.w = work(DemuxerWorker);
+          w = this.w = work(require.resolve('../demux/demuxer-worker.js'));
           this.onwmsg = this.onWorkerMessage.bind(this);
           w.addEventListener('message', this.onwmsg);
           w.onerror = function(event) { hls.trigger(Event.ERROR, {type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event : 'demuxerWorker', err : { message : event.message + ' (' + event.filename + ':' + event.lineno + ')' }});};
