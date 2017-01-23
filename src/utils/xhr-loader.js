@@ -80,15 +80,12 @@ class XhrLoader {
       return;
     }
 
-    // in any case clear the current xhrs timeout
-    window.clearTimeout(this.requestTimeout);
-
-    // HEADERS_RECEIVED
+    // >= HEADERS_RECEIVED
     if (readyState >=2) {
+      // clear xhr timeout and rearm it if readyState less than 4
+      window.clearTimeout(this.requestTimeout);
       if (stats.tfirst === 0) {
         stats.tfirst = Math.max(performance.now(), stats.trequest);
-        // reset timeout to total timeout duration minus the time it took to receive headers
-        this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), config.timeout - (stats.tfirst-stats.trequest));
       }
       if (readyState === 4) {
         let status = xhr.status;
@@ -123,6 +120,9 @@ class XhrLoader {
             stats.retry++;
           }
         }
+      } else {
+        // readyState >= 2 AND readyState !==4 (readyState = HEADERS_RECEIVED || LOADING) rearm timeout as xhr not finished yet
+        this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), config.timeout);
       }
     }
   }
