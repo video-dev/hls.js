@@ -2,13 +2,13 @@ var pkgJson = require('./package.json')
 var path = require('path')
 var webpack = require('webpack')
 
-var buildVersion = process.env.BUILD_VERSION || 'full'
+var env = process.env.NODE_ENV
 
 var config = {
   entry: './src/index.js',
   output: {
     path: path.resolve(__dirname, 'dist'),
-    publicPath: '/hls.js/dist/',
+    publicPath: '/assets/',
     library: 'Hls',
     libraryTarget: 'umd'
   },
@@ -24,35 +24,39 @@ var config = {
       ],
       loader: 'babel-loader',
       options: {
-        'presets': [
-          ['env', {
-            'modules': false,
-            'loose': true
-          }]
-        ]
+        presets: ['es2015']
       }
     }]
   },
   plugins: [
     new webpack.optimize.OccurrenceOrderPlugin(),
     new webpack.DefinePlugin({
-      __VERSION__: JSON.stringify(pkgJson.version),
-      __BUILD_VERSION__: JSON.stringify(buildVersion)
+      __VERSION__: JSON.stringify(pkgJson.version)
     })
   ]
 }
 
-if (buildVersion === 'light') {
-  config.resolve = {
-    alias: {
-      './controller/audio-track-controller': '',
-      './controller/audio-stream-controller': '',
-      './utils/cues': '',
-      './controller/timeline-controller': '',
-      './controller/subtitle-track-controller': '',
-      './controller/subtitle-stream-controller': ''
-    }
-  };
+if (env === 'production') {
+  config.plugins.push(
+    new webpack.optimize.UglifyJsPlugin({
+      compressor: {
+        sequences: true,
+        dead_code: true,
+        conditionals: true,
+        booleans: true,
+        unused: true,
+        if_return: true,
+        join_vars: true,
+        drop_console: true
+      },
+      mangle: {
+        screw_ie8: true
+      },
+      output: {
+        screw_ie8: true
+      }
+    })
+  )
 }
 
 module.exports = config
