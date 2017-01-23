@@ -1,9 +1,9 @@
 import Event from '../events';
 import DemuxerInline from '../demux/demuxer-inline';
-import DemuxerWorker from '../demux/demuxer-worker';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import EventEmitter from 'events';
+import work from 'webworkify-webpack';
 
 class Demuxer {
     constructor(hls, id) {
@@ -49,8 +49,9 @@ class Demuxer {
             logger.log('demuxing in webworker');
             let w;
             try {
-                let work = require('webworkify');
-                w = this.w = work(DemuxerWorker);
+                w = this.w = work(
+                    require.resolve('../demux/demuxer-worker.js')
+                );
                 this.onwmsg = this.onWorkerMessage.bind(this);
                 w.addEventListener('message', this.onwmsg);
                 w.onerror = function(event) {
