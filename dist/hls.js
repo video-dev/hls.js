@@ -3854,18 +3854,14 @@ var StreamController = function (_EventHandler) {
   }, {
     key: 'getBufferRange',
     value: function getBufferRange(position) {
-      var i,
-          range,
-          bufferRange = this.bufferRange;
-      if (bufferRange) {
-        for (i = bufferRange.length - 1; i >= 0; i--) {
-          range = bufferRange[i];
-          if (position >= range.start && position <= range.end) {
-            return range;
-          }
+      return _binarySearch2.default.search(this.bufferRange, function (range) {
+        if (position < range.start) {
+          return -1;
+        } else if (position > range.end) {
+          return 1;
         }
-      }
-      return null;
+        return 0;
+      });
     }
   }, {
     key: 'followingBufferRange',
@@ -4440,9 +4436,6 @@ var StreamController = function (_EventHandler) {
             hls.trigger(_events2.default.BUFFER_APPENDING, { type: data.type, data: buffer, parent: 'main', content: 'data' });
           }
         });
-
-        this.bufferRange.push({ type: data.type, start: data.startPTS, end: data.endPTS, frag: frag });
-
         //trigger handler right now
         this.tick();
       }
@@ -4551,19 +4544,33 @@ var StreamController = function (_EventHandler) {
   }, {
     key: '_checkAppendedParsed',
     value: function _checkAppendedParsed() {
+      var _this3 = this;
+
       //trigger handler right now
       if (this.state === State.PARSED && (!this.appended || !this.pendingBuffering)) {
-        var frag = this.fragCurrent,
-            stats = this.stats;
+        var frag = this.fragCurrent;
         if (frag) {
-          this.fragPrevious = frag;
-          stats.tbuffered = performance.now();
-          // we should get rid of this.fragLastKbps
-          this.fragLastKbps = Math.round(8 * stats.total / (stats.tbuffered - stats.tfirst));
-          this.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: stats, frag: frag, id: 'main' });
-          var media = this.mediaBuffer ? this.mediaBuffer : this.media;
-          _logger.logger.log('main buffered : ' + _timeRanges2.default.toString(media.buffered));
-          this.state = State.IDLE;
+          (function () {
+            var media = _this3.mediaBuffer ? _this3.mediaBuffer : _this3.media;
+            _logger.logger.log('main buffered : ' + _timeRanges2.default.toString(media.buffered));
+            // filter potentially evicted bufferRange. this is to avoid memleak on live streams
+            var bufferRange = _this3.bufferRange.filter(function (range) {
+              return _bufferHelper2.default.isBuffered(media, (range.start + range.end) / 2);
+            });
+            // push new range
+            bufferRange.push({ type: frag.type, start: frag.startPTS, end: frag.endPTS, frag: frag });
+            // sort, as we use BinarySearch for lookup in getBufferRange ...
+            _this3.bufferRange = bufferRange.sort(function (a, b) {
+              return a.start - b.start;
+            });
+            _this3.fragPrevious = frag;
+            var stats = _this3.stats;
+            stats.tbuffered = performance.now();
+            // we should get rid of this.fragLastKbps
+            _this3.fragLastKbps = Math.round(8 * stats.total / (stats.tbuffered - stats.tfirst));
+            _this3.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: stats, frag: frag, id: 'main' });
+            _this3.state = State.IDLE;
+          })();
         }
         this.tick();
       }
@@ -4733,8 +4740,10 @@ var StreamController = function (_EventHandler) {
             // played moving, but was previously stalled => now not stuck anymore
             if (this.stalled) {
               this.stalled = undefined;
-              this.stallCount = 0;
-              _logger.logger.log('playback not stuck anymore @' + currentTime);
+              if (this.nudgeRetry) {
+                _logger.logger.log('playback not stuck anymore @' + currentTime);
+                this.nudgeRetry = 0;
+              }
             }
           } else {
             // playhead not moving
@@ -4744,40 +4753,43 @@ var StreamController = function (_EventHandler) {
               var hls = this.hls;
               if (!this.stalled) {
                 // stall just detected, store current time
-                _logger.logger.log('playback seems stuck @' + currentTime);
-                hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_STALLED_ERROR, fatal: false });
                 this.stalled = tnow;
               } else {
                 // playback already stalled, check stalling duration
                 // if stalling for more than a given threshold, let's try to recover
                 var stalledDuration = tnow - this.stalled;
+                var bufferLen = bufferInfo.len;
                 // have we reached stall deadline ?
-                if (stalledDuration > config.nudgeWatchdogPeriod * 1000) {
+                if (bufferLen <= jumpThreshold && stalledDuration > config.lowBufferWatchdogPeriod * 1000) {
                   var nudgeRetry = this.nudgeRetry++;
                   var nudgeOffset = nudgeRetry * config.nudgeOffset;
+                  _logger.logger.log('playback stalling in low buffer @' + currentTime);
+                  hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_STALLED_ERROR, fatal: false, buffer: bufferLen });
                   // if buffer len is below threshold, try to jump to start of next buffer range if close
-                  if (bufferInfo.len <= jumpThreshold) {
-                    // no buffer available @ currentTime, check if next buffer is close (within a config.maxSeekHole second range)
-                    var nextBufferStart = bufferInfo.nextStart,
-                        delta = nextBufferStart - currentTime;
-                    if (nextBufferStart && delta < config.maxSeekHole && delta > 0) {
-                      // next buffer is close ! adjust currentTime to nextBufferStart
-                      // this will ensure effective video decoding
-                      _logger.logger.log('adjust currentTime from ' + media.currentTime + ' to next buffered @ ' + nextBufferStart + ' + nudge ' + nudgeOffset);
-                      var hole = nextBufferStart + nudgeOffset - media.currentTime;
-                      media.currentTime = nextBufferStart + nudgeOffset;
-                      this.stalled = undefined;
-                      hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_SEEK_OVER_HOLE, fatal: false, hole: hole });
-                    }
-                  } else {
+                  // no buffer available @ currentTime, check if next buffer is close (within a config.maxSeekHole second range)
+                  var nextBufferStart = bufferInfo.nextStart,
+                      delta = nextBufferStart - currentTime;
+                  if (nextBufferStart && delta < config.maxSeekHole && delta > 0) {
+                    // next buffer is close ! adjust currentTime to nextBufferStart
+                    // this will ensure effective video decoding
+                    _logger.logger.log('adjust currentTime from ' + media.currentTime + ' to next buffered @ ' + nextBufferStart + ' + nudge ' + nudgeOffset);
+                    var hole = nextBufferStart + nudgeOffset - media.currentTime;
+                    media.currentTime = nextBufferStart + nudgeOffset;
                     this.stalled = undefined;
-                    if (nudgeRetry < config.nudgeMaxRetry) {
-                      // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
-                      media.currentTime += config.nudgeOffset + nudgeOffset;
-                      hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_NUDGE_ON_STALL, fatal: false });
-                    } else {
-                      hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_STALLED_ERROR, fatal: true });
-                    }
+                    hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_SEEK_OVER_HOLE, fatal: false, hole: hole });
+                  }
+                } else if (bufferLen > jumpThreshold && stalledDuration > config.highBufferWatchdogPeriod * 1000) {
+                  this.stalled = undefined;
+                  var _nudgeRetry = this.nudgeRetry++;
+                  var _nudgeOffset = _nudgeRetry * config.nudgeOffset;
+                  _logger.logger.log('playback stalling in high buffer @' + currentTime);
+                  hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_STALLED_ERROR, fatal: false, buffer: bufferLen });
+                  if (_nudgeRetry < config.nudgeMaxRetry) {
+                    // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
+                    media.currentTime += config.nudgeOffset + _nudgeOffset;
+                    hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_NUDGE_ON_STALL, fatal: false });
+                  } else {
+                    hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_STALLED_ERROR, fatal: true });
                   }
                 }
               }
@@ -4801,23 +4813,13 @@ var StreamController = function (_EventHandler) {
   }, {
     key: 'onBufferFlushed',
     value: function onBufferFlushed() {
-      /* after successful buffer flushing, rebuild buffer Range array
-        loop through existing buffer range and check if
-        corresponding range is still buffered. only push to new array already buffered range
+      /* after successful buffer flushing, filter flushed fragments from bufferRange
         use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
       */
-      var media = this.mediaBuffer ? this.mediaBuffer : this.media,
-          bufferRange = this.bufferRange,
-          newRange = [],
-          range = void 0,
-          i = void 0;
-      for (i = 0; i < bufferRange.length; i++) {
-        range = bufferRange[i];
-        if (_bufferHelper2.default.isBuffered(media, (range.start + range.end) / 2)) {
-          newRange.push(range);
-        }
-      }
-      this.bufferRange = newRange;
+      var media = this.mediaBuffer ? this.mediaBuffer : this.media;
+      this.bufferRange = this.bufferRange.filter(function (range) {
+        return _bufferHelper2.default.isBuffered(media, (range.start + range.end) / 2);
+      });
 
       // increase fragment load Index to avoid frag loop loading error after buffer flush
       this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
@@ -8648,16 +8650,17 @@ var Hls = function () {
           maxBufferLength: 30,
           maxBufferSize: 60 * 1000 * 1000,
           maxBufferHole: 0.5,
+          maxMaxBufferLength: 600,
           maxSeekHole: 2,
-          nudgeWatchdogPeriod: 1,
+          lowBufferWatchdogPeriod: 0.5,
+          highBufferWatchdogPeriod: 3,
           nudgeOffset: 0.1,
-          nudgeMaxRetry: 30,
+          nudgeMaxRetry: 3,
           maxFragLookUpTolerance: 0.2,
           liveSyncDurationCount: 3,
           liveMaxLatencyDurationCount: Infinity,
           liveSyncDuration: undefined,
           liveMaxLatencyDuration: undefined,
-          maxMaxBufferLength: 600,
           enableWorker: true,
           enableSoftwareAES: true,
           manifestLoadingTimeOut: 10000,
@@ -9662,7 +9665,8 @@ var PlaylistLoader = function (_EventHandler) {
         if (duration) {
           // INF
           frag.duration = parseFloat(duration);
-          var title = result[2];
+          // avoid sliced strings    https://github.com/dailymotion/hls.js/issues/939
+          var title = (' ' + result[2]).slice(1);
           frag.title = title ? title : null;
           frag.tagList.push(title ? ['INF', duration, title] : ['INF', duration]);
         } else if (result[3]) {
@@ -9676,7 +9680,8 @@ var PlaylistLoader = function (_EventHandler) {
             frag.level = id;
             frag.cc = cc;
             frag.baseurl = baseurl;
-            frag.relurl = result[3];
+            // avoid sliced strings    https://github.com/dailymotion/hls.js/issues/939
+            frag.relurl = (' ' + result[3]).slice(1);
 
             level.fragments.push(frag);
             prevFrag = frag;
@@ -9687,7 +9692,7 @@ var PlaylistLoader = function (_EventHandler) {
           }
         } else if (result[4]) {
           // X-BYTERANGE
-          frag.rawByteRange = result[4];
+          frag.rawByteRange = (' ' + result[4]).slice(1);
           if (prevFrag) {
             var lastByteRangeEndOffset = prevFrag.byteRangeEndOffset;
             if (lastByteRangeEndOffset) {
@@ -9696,8 +9701,9 @@ var PlaylistLoader = function (_EventHandler) {
           }
         } else if (result[5]) {
           // PROGRAM-DATE-TIME
-          frag.rawProgramDateTime = result[5];
-          frag.tagList.push(['PROGRAM-DATE-TIME', result[5]]);
+          // avoid sliced strings    https://github.com/dailymotion/hls.js/issues/939
+          frag.rawProgramDateTime = (' ' + result[5]).slice(1);
+          frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
         } else {
           result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
           for (i = 1; i < result.length; i++) {
@@ -9706,8 +9712,9 @@ var PlaylistLoader = function (_EventHandler) {
             }
           }
 
-          var value1 = result[i + 1];
-          var value2 = result[i + 2];
+          // avoid sliced strings    https://github.com/dailymotion/hls.js/issues/939
+          var value1 = (' ' + result[i + 1]).slice(1);
+          var value2 = (' ' + result[i + 2]).slice(1);
 
           switch (result[i]) {
             case '#':
@@ -13175,15 +13182,12 @@ var XhrLoader = function () {
         return;
       }
 
-      // in any case clear the current xhrs timeout
-      window.clearTimeout(this.requestTimeout);
-
-      // HEADERS_RECEIVED
+      // >= HEADERS_RECEIVED
       if (readyState >= 2) {
+        // clear xhr timeout and rearm it if readyState less than 4
+        window.clearTimeout(this.requestTimeout);
         if (stats.tfirst === 0) {
           stats.tfirst = Math.max(performance.now(), stats.trequest);
-          // reset timeout to total timeout duration minus the time it took to receive headers
-          this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), config.timeout - (stats.tfirst - stats.trequest));
         }
         if (readyState === 4) {
           var status = xhr.status;
@@ -13219,6 +13223,9 @@ var XhrLoader = function () {
               stats.retry++;
             }
           }
+        } else {
+          // readyState >= 2 AND readyState !==4 (readyState = HEADERS_RECEIVED || LOADING) rearm timeout as xhr not finished yet
+          this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), config.timeout);
         }
       }
     }
