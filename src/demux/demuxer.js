@@ -1,6 +1,5 @@
 import Event from '../events';
 import DemuxerInline from '../demux/demuxer-inline';
-import DemuxerWorker from '../demux/demuxer-worker';
 import {logger} from '../utils/logger';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import work from 'webworkify-webpack';
