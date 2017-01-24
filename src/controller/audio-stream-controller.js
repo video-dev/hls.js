@@ -23,6 +23,7 @@ const State = {
     WAITING_TRACK: 'WAITING_TRACK',
     PARSING: 'PARSING',
     PARSED: 'PARSED',
+    BUFFER_FLUSHING: 'BUFFER_FLUSHING',
     ENDED: 'ENDED',
     ERROR: 'ERROR',
     WAITING_INIT_PTS: 'WAITING_INIT_PTS'
@@ -161,7 +162,8 @@ class AudioStreamController extends EventHandler {
             case State.ERROR:
             //don't do anything in error state to avoid breaking further ...
             case State.PAUSED:
-                //don't do anything in paused state either ...
+            //don't do anything in paused state either ...
+            case State.BUFFER_FLUSHING:
                 break;
             case State.STARTING:
                 this.state = State.WAITING_TRACK;
@@ -764,6 +766,7 @@ class AudioStreamController extends EventHandler {
                         logger.log(
                             'switching audio track : flushing all audio'
                         );
+                        this.state = State.BUFFER_FLUSHING;
                         hls.trigger(Event.BUFFER_FLUSHING, {
                             startOffset: 0,
                             endOffset: Number.POSITIVE_INFINITY,
