@@ -14,7 +14,9 @@
   },
   "main": "./dist/hls.js",
   "scripts": {
-    "build": "cross-env NODE_ENV=production webpack --progress --output-filename hls.min.js",
+    "build:dist": "cross-env NODE_ENV=development webpack --progress --devtool source-map --output-filename hls.js",
+    "build:dist:min": "cross-env NODE_ENV=production webpack --progress --optimize-minimize --output-filename hls.min.js",
+    "build": "npm run build:dist && npm run build:dist:min",
     "preparerelease": "npm run build && npm run test && git add dist/* && git commit -m 'update dist'",
     "prerelease": "mversion prerelease && npm run preparerelease",
     "patch": "mversion p && npm run preparerelease",
