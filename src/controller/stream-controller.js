@@ -277,11 +277,11 @@ class StreamController extends EventHandler {
             fragPrevious.sn === levelDetails.endSN
         ) {
             // if everything (almost) til the end is buffered, let's signal eos
-            // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference when switching
-            // between different renditions. using half frag duration should help cope with these cases.
+            // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference
+            // using half frag duration should help cope with these cases.
             // also cope with almost zero last frag duration (max last frag duration with 100ms) refer to https://github.com/dailymotion/hls.js/pull/657
             if (
-                media.duration - bufferInfo.end <=
+                media.duration - Math.max(bufferInfo.end, fragPrevious.start) <=
                 Math.max(0.1, fragPrevious.duration / 2)
             ) {
                 // Finalize the media stream
