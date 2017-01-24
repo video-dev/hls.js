@@ -31,6 +31,11 @@ env:
     - TRAVIS_MODE=funcTests UA=firefox             OS="Windows 10"  STREAM=issue666
     - TRAVIS_MODE=funcTests UA=safari              OS="OS X 10.11"  STREAM=issue666 UA_VERSION="9.0"
 #    - TRAVIS_MODE=funcTests UA="internet explorer" OS="Windows 8.1" STREAM=issue666
+    - TRAVIS_MODE=funcTests UA=chrome              OS="Windows 10"  STREAM=issue649
+    - TRAVIS_MODE=funcTests UA=MicrosoftEdge       OS="Windows 10"  STREAM=issue649
+    - TRAVIS_MODE=funcTests UA=firefox             OS="Windows 10"  STREAM=issue649
+    - TRAVIS_MODE=funcTests UA=safari              OS="OS X 10.11"  STREAM=issue649 UA_VERSION="9.0"
+#    - TRAVIS_MODE=funcTests UA="internet explorer" OS="Windows 8.1" STREAM=issue649
 #    - TRAVIS_MODE=funcTests UA=chrome              OS="Windows 10"  STREAM=nasa
 #    - TRAVIS_MODE=funcTests UA=MicrosoftEdge       OS="Windows 10"  STREAM=nasa
 #    - TRAVIS_MODE=funcTests UA=firefox             OS="Windows 10"  STREAM=nasa
