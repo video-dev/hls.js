@@ -254,8 +254,11 @@ class AudioStreamController extends EventHandler {
                             bufferEnd = pos;
                             // if currentTime (pos) is less than alt audio playlist start time, it means that alt audio is ahead of currentTime
                             if (trackDetails.PTSKnown && pos < start) {
-                                // if everything is buffered from pos to start, let's seek to start
-                                if (bufferInfo.end > start) {
+                                // if everything is buffered from pos to start or if audio buffer upfront, let's seek to start
+                                if (
+                                    bufferInfo.end > start ||
+                                    bufferInfo.nextStart
+                                ) {
                                     logger.log(
                                         'alt audio track ahead of main track, seek to start of alt audio track'
                                     );
