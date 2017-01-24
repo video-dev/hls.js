@@ -1359,11 +1359,11 @@ _checkBuffer() {
         if (playheadMoving) {
           // played moving, but was previously stalled => now not stuck anymore
           if (this.stalled) {
-            this.stalled = undefined;
             if (this.stallReported) {
               logger.warn(`playback not stuck anymore @${currentTime}, after ${Math.round(performance.now()-this.stalled)}ms`);
               this.stallReported = false;
             }
+            this.stalled = undefined;
           }
         } else {
           // playhead not moving
