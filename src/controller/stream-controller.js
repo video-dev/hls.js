@@ -286,7 +286,7 @@ class StreamController extends EventHandler {
         return false;
       }
 
-      frag = this._ensureFragmentAtLivePoint({levelDetails, bufferEnd, start, end, fragPrevious, fragments, fragLen});
+      frag = this._ensureFragmentAtLivePoint(levelDetails, bufferEnd, start, end, fragPrevious, fragments, fragLen);
       // if it explicitely returns null don't load any fragment and exit function now
       if (frag === null) {
         return false;
@@ -299,15 +299,15 @@ class StreamController extends EventHandler {
       }
     }
     if (!frag) {
-      frag = this._findFragment({start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails});
+      frag = this._findFragment(start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails);
     }
     if(frag) {
-      return this._loadFragmentOrKey({frag, level, levelDetails, pos, bufferEnd});
+      return this._loadFragmentOrKey(frag, level, levelDetails, pos, bufferEnd);
     }
     return true;
   }
 
-  _ensureFragmentAtLivePoint({levelDetails, bufferEnd, start, end, fragPrevious, fragments, fragLen}) {
+  _ensureFragmentAtLivePoint(levelDetails, bufferEnd, start, end, fragPrevious, fragments, fragLen) {
     const config = this.hls.config, media = this.media;
 
     let frag;
@@ -362,7 +362,7 @@ class StreamController extends EventHandler {
     return frag;
   }
 
-  _findFragment({start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails}) {
+  _findFragment(start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails) {
     const config = this.hls.config;
 
     let frag,
@@ -428,7 +428,7 @@ class StreamController extends EventHandler {
     return frag;
   }
 
-  _loadFragmentOrKey({frag, level, levelDetails, pos, bufferEnd}) {
+  _loadFragmentOrKey(frag, level, levelDetails, pos, bufferEnd) {
     const hls = this.hls,
           config = hls.config;
 
