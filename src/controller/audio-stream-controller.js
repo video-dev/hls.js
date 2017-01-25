@@ -275,6 +275,24 @@ class AudioStreamController extends EventHandler {
                     // if bufferEnd before start of playlist, load first fragment
                     if (bufferEnd < start) {
                         frag = fragments[0];
+                        if (
+                            trackDetails.live &&
+                            frag.loadIdx &&
+                            frag.loadIdx === this.fragLoadIdx
+                        ) {
+                            // we just loaded this first fragment, and we are still lagging behind the start of the live playlist
+                            // let's force seek to start
+                            const nextBuffered = bufferInfo.nextStart
+                                ? bufferInfo.nextStart
+                                : start;
+                            logger.log(
+                                `no alt audio available @currentTime:${
+                                    this.media.currentTime
+                                }, seeking @${nextBuffered + 0.05}`
+                            );
+                            this.media.currentTime = nextBuffered + 0.05;
+                            return;
+                        }
                     } else {
                         let foundFrag;
                         let maxFragLookUpTolerance =
@@ -534,7 +552,9 @@ class AudioStreamController extends EventHandler {
             //main audio track are handled by stream-controller, just do something if switching to alt audio track
             this.state = State.IDLE;
             // increase fragment load Index to avoid frag loop loading error after buffer flush
-            this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+            if (this.fragLoadIdx !== undefined) {
+                this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+            }
         }
         this.tick();
     }
