@@ -1728,6 +1728,18 @@ var AudioStreamController = function (_EventHandler) {
         this.tick();
       }
     }
+  }, {
+    key: 'state',
+    set: function set(nextState) {
+      if (this.state !== nextState) {
+        var previousState = this.state;
+        this._state = nextState;
+        _logger.logger.log('audio:switch from ' + previousState + ' to ' + nextState);
+      }
+    },
+    get: function get() {
+      return this._state;
+    }
   }]);
 
   return AudioStreamController;
@@ -4847,7 +4859,7 @@ var StreamController = function (_EventHandler) {
       if (this.state !== nextState) {
         var previousState = this.state;
         this._state = nextState;
-        _logger.logger.log('engine state transition from ' + previousState + ' to ' + nextState);
+        _logger.logger.log('main:switch from ' + previousState + ' to ' + nextState);
         this.hls.trigger(_events2.default.STREAM_STATE_TRANSITION, { previousState: previousState, nextState: nextState });
       }
     },
