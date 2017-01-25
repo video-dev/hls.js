@@ -1726,17 +1726,16 @@ class StreamController extends EventHandler {
 
                 if (playheadMoving) {
                     // played moving, but was previously stalled => now not stuck anymore
-                    if (this.stalled) {
-                        if (this.stallReported) {
-                            logger.warn(
-                                `playback not stuck anymore @${currentTime}, after ${Math.round(
-                                    performance.now() - this.stalled
-                                )}ms`
-                            );
-                            this.stallReported = false;
-                        }
-                        this.stalled = undefined;
+                    if (this.stallReported) {
+                        logger.warn(
+                            `playback not stuck anymore @${currentTime}, after ${Math.round(
+                                performance.now() - this.stalled
+                            )}ms`
+                        );
+                        this.stallReported = false;
+                        this.nudgeRetry = 0;
                     }
+                    this.stalled = undefined;
                 } else {
                     // playhead not moving
                     if (expectedPlaying) {
@@ -1797,6 +1796,7 @@ class StreamController extends EventHandler {
                                         media.currentTime;
                                     media.currentTime =
                                         nextBufferStart + nudgeOffset;
+                                    // reset stalled so to rearm watchdog timer
                                     this.stalled = undefined;
                                     hls.trigger(Event.ERROR, {
                                         type: ErrorTypes.MEDIA_ERROR,
@@ -1811,15 +1811,21 @@ class StreamController extends EventHandler {
                                 stalledDuration >
                                     config.highBufferWatchdogPeriod * 1000
                             ) {
-                                logger.warn(
-                                    `playback stalling in high buffer @${currentTime}`
-                                );
-                                hls.trigger(Event.ERROR, {
-                                    type: ErrorTypes.MEDIA_ERROR,
-                                    details: ErrorDetails.BUFFER_STALLED_ERROR,
-                                    fatal: false,
-                                    buffer: bufferLen
-                                });
+                                // report stalled error once
+                                if (!this.stallReported) {
+                                    this.stallReported = true;
+                                    logger.warn(
+                                        `playback stalling in high buffer @${currentTime}`
+                                    );
+                                    hls.trigger(Event.ERROR, {
+                                        type: ErrorTypes.MEDIA_ERROR,
+                                        details:
+                                            ErrorDetails.BUFFER_STALLED_ERROR,
+                                        fatal: false,
+                                        buffer: bufferLen
+                                    });
+                                }
+                                // reset stalled so to rearm watchdog timer
                                 this.stalled = undefined;
                                 const nudgeRetry = this.nudgeRetry++;
                                 if (nudgeRetry < config.nudgeMaxRetry) {
