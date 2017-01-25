@@ -1353,7 +1353,7 @@ _checkBuffer() {
                                 media.ended  || // not playing when media is ended
                                 media.buffered.length === 0), // not playing if nothing buffered
             jumpThreshold = 0.5, // tolerance needed as some browsers stalls playback before reaching buffered range end
-            playheadMoving = currentTime > media.playbackRate*this.lastCurrentTime,
+            playheadMoving = currentTime !== this.lastCurrentTime,
             config = this.config;
 
         if (playheadMoving) {
