@@ -1161,6 +1161,16 @@ var AudioStreamController = function (_EventHandler) {
               // if bufferEnd before start of playlist, load first fragment
               if (bufferEnd < start) {
                 frag = fragments[0];
+                if (trackDetails.live && frag.loadIdx && frag.loadIdx === _this2.fragLoadIdx) {
+                  // we just loaded this first fragment, and we are still lagging behind the start of the live playlist
+                  // let's force seek to start
+                  var nextBuffered = bufferInfo.nextStart ? bufferInfo.nextStart : start;
+                  _logger.logger.log('no alt audio available @currentTime:' + _this2.media.currentTime + ', seeking @' + (nextBuffered + 0.05));
+                  _this2.media.currentTime = nextBuffered + 0.05;
+                  return {
+                    v: void 0
+                  };
+                }
               } else {
                 (function () {
                   var foundFrag = void 0;
@@ -1383,7 +1393,9 @@ var AudioStreamController = function (_EventHandler) {
         //main audio track are handled by stream-controller, just do something if switching to alt audio track
         this.state = State.IDLE;
         // increase fragment load Index to avoid frag loop loading error after buffer flush
-        this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+        if (this.fragLoadIdx !== undefined) {
+          this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+        }
       }
       this.tick();
     }
@@ -3612,15 +3624,11 @@ var StreamController = function (_EventHandler) {
       }
 
       // if we have the levelDetails for the selected variant, lets continue enrichen our stream (load keys/fragments or trigger EOS, etc..)
-      return this._fetchPayloadOrEos({ pos: pos, bufferInfo: bufferInfo, levelDetails: levelDetails });
+      return this._fetchPayloadOrEos(pos, bufferInfo, levelDetails);
     }
   }, {
     key: '_fetchPayloadOrEos',
-    value: function _fetchPayloadOrEos(_ref) {
-      var pos = _ref.pos,
-          bufferInfo = _ref.bufferInfo,
-          levelDetails = _ref.levelDetails;
-
+    value: function _fetchPayloadOrEos(pos, bufferInfo, levelDetails) {
       var fragPrevious = this.fragPrevious,
           level = this.level,
           fragments = levelDetails.fragments,
@@ -3645,7 +3653,7 @@ var StreamController = function (_EventHandler) {
           return false;
         }
 
-        frag = this._ensureFragmentAtLivePoint({ levelDetails: levelDetails, bufferEnd: bufferEnd, start: start, end: end, fragPrevious: fragPrevious, fragments: fragments, fragLen: fragLen });
+        frag = this._ensureFragmentAtLivePoint(levelDetails, bufferEnd, start, end, fragPrevious, fragments, fragLen);
         // if it explicitely returns null don't load any fragment and exit function now
         if (frag === null) {
           return false;
@@ -3657,24 +3665,16 @@ var StreamController = function (_EventHandler) {
         }
       }
       if (!frag) {
-        frag = this._findFragment({ start: start, fragPrevious: fragPrevious, fragLen: fragLen, fragments: fragments, bufferEnd: bufferEnd, end: end, levelDetails: levelDetails });
+        frag = this._findFragment(start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails);
       }
       if (frag) {
-        return this._loadFragmentOrKey({ frag: frag, level: level, levelDetails: levelDetails, pos: pos, bufferEnd: bufferEnd });
+        return this._loadFragmentOrKey(frag, level, levelDetails, pos, bufferEnd);
       }
       return true;
     }
   }, {
     key: '_ensureFragmentAtLivePoint',
-    value: function _ensureFragmentAtLivePoint(_ref2) {
-      var levelDetails = _ref2.levelDetails,
-          bufferEnd = _ref2.bufferEnd,
-          start = _ref2.start,
-          end = _ref2.end,
-          fragPrevious = _ref2.fragPrevious,
-          fragments = _ref2.fragments,
-          fragLen = _ref2.fragLen;
-
+    value: function _ensureFragmentAtLivePoint(levelDetails, bufferEnd, start, end, fragPrevious, fragments, fragLen) {
       var config = this.hls.config,
           media = this.media;
 
@@ -3731,15 +3731,7 @@ var StreamController = function (_EventHandler) {
     }
   }, {
     key: '_findFragment',
-    value: function _findFragment(_ref3) {
-      var start = _ref3.start,
-          fragPrevious = _ref3.fragPrevious,
-          fragLen = _ref3.fragLen,
-          fragments = _ref3.fragments,
-          bufferEnd = _ref3.bufferEnd,
-          end = _ref3.end,
-          levelDetails = _ref3.levelDetails;
-
+    value: function _findFragment(start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails) {
       var config = this.hls.config;
 
       var frag = void 0,
@@ -3806,13 +3798,7 @@ var StreamController = function (_EventHandler) {
     }
   }, {
     key: '_loadFragmentOrKey',
-    value: function _loadFragmentOrKey(_ref4) {
-      var frag = _ref4.frag,
-          level = _ref4.level,
-          levelDetails = _ref4.levelDetails,
-          pos = _ref4.pos,
-          bufferEnd = _ref4.bufferEnd;
-
+    value: function _loadFragmentOrKey(frag, level, levelDetails, pos, bufferEnd) {
       var hls = this.hls,
           config = hls.config;
 
