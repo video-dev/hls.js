@@ -296,10 +296,10 @@ class StreamController extends EventHandler {
         }
 
         // if we have the levelDetails for the selected variant, lets continue enrichen our stream (load keys/fragments or trigger EOS, etc..)
-        return this._fetchPayloadOrEos({ pos, bufferInfo, levelDetails });
+        return this._fetchPayloadOrEos(pos, bufferInfo, levelDetails);
     }
 
-    _fetchPayloadOrEos({ pos, bufferInfo, levelDetails }) {
+    _fetchPayloadOrEos(pos, bufferInfo, levelDetails) {
         const fragPrevious = this.fragPrevious,
             level = this.level,
             fragments = levelDetails.fragments,
