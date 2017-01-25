@@ -140,6 +140,18 @@ class AudioStreamController extends EventHandler {
         this.state = State.STOPPED;
     }
 
+    set state(nextState) {
+        if (this.state !== nextState) {
+            const previousState = this.state;
+            this._state = nextState;
+            logger.log(`audio:switch from ${previousState} to ${nextState}`);
+        }
+    }
+
+    get state() {
+        return this._state;
+    }
+
     tick() {
         this.ticks++;
         if (this.ticks === 1) {
