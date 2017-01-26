@@ -241,7 +241,7 @@ class AudioStreamController extends EventHandler {
           }
 
           // if bufferEnd before start of playlist, load first fragment
-          if (bufferEnd < start) {
+          if (bufferEnd <= start) {
             frag = fragments[0];
             if (trackDetails.live && frag.loadIdx && frag.loadIdx === this.fragLoadIdx) {
               // we just loaded this first fragment, and we are still lagging behind the start of the live playlist
@@ -280,6 +280,10 @@ class AudioStreamController extends EventHandler {
                 }
                 return 0;
               });
+              if(!foundFrag) {
+                logger.log(`frag not found @bufferEnd/start:${bufferEnd}/${start}`);
+              }
+
             } else {
               // reach end of playlist
               foundFrag = fragments[fragLen-1];
