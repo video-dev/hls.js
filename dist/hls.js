@@ -1159,7 +1159,7 @@ var AudioStreamController = function (_EventHandler) {
               }
 
               // if bufferEnd before start of playlist, load first fragment
-              if (bufferEnd < start) {
+              if (bufferEnd <= start) {
                 frag = fragments[0];
                 if (trackDetails.live && frag.loadIdx && frag.loadIdx === _this2.fragLoadIdx) {
                   // we just loaded this first fragment, and we are still lagging behind the start of the live playlist
@@ -1200,6 +1200,9 @@ var AudioStreamController = function (_EventHandler) {
                       }
                       return 0;
                     });
+                    if (!foundFrag) {
+                      _logger.logger.log('frag not found @bufferEnd/start:' + bufferEnd + '/' + start);
+                    }
                   } else {
                     // reach end of playlist
                     foundFrag = fragments[fragLen - 1];
@@ -4709,7 +4712,6 @@ var StreamController = function (_EventHandler) {
         // adjust currentTime to start position on loaded metadata
         if (!this.loadedmetadata && buffered.length && !media.seeking) {
           this.loadedmetadata = true;
-          this.nudgeRetry = 0;
           // only adjust currentTime if different from startPosition or if startPosition not buffered
           // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
           var startPosition = this.startPosition,
@@ -4743,9 +4745,9 @@ var StreamController = function (_EventHandler) {
             if (this.stallReported) {
               _logger.logger.warn('playback not stuck anymore @' + currentTime + ', after ' + Math.round(performance.now() - this.stalled) + 'ms');
               this.stallReported = false;
-              this.nudgeRetry = 0;
             }
             this.stalled = undefined;
+            this.nudgeRetry = 0;
           } else {
             // playhead not moving
             if (expectedPlaying) {
@@ -4761,6 +4763,7 @@ var StreamController = function (_EventHandler) {
                 // if stalling for more than a given threshold, let's try to recover
                 var stalledDuration = tnow - this.stalled;
                 var bufferLen = bufferInfo.len;
+                var nudgeRetry = this.nudgeRetry || 0;
                 // have we reached stall deadline ?
                 if (bufferLen <= jumpThreshold && stalledDuration > config.lowBufferWatchdogPeriod * 1000) {
                   // report stalled error once
@@ -4774,16 +4777,15 @@ var StreamController = function (_EventHandler) {
                   var nextBufferStart = bufferInfo.nextStart,
                       delta = nextBufferStart - currentTime;
                   if (nextBufferStart && delta < config.maxSeekHole && delta > 0) {
-                    var nudgeRetry = this.nudgeRetry++;
+                    this.nudgeRetry = nudgeRetry++;
                     var nudgeOffset = nudgeRetry * config.nudgeOffset;
                     // next buffer is close ! adjust currentTime to nextBufferStart
                     // this will ensure effective video decoding
                     _logger.logger.log('adjust currentTime from ' + media.currentTime + ' to next buffered @ ' + nextBufferStart + ' + nudge ' + nudgeOffset);
-                    var hole = nextBufferStart + nudgeOffset - media.currentTime;
                     media.currentTime = nextBufferStart + nudgeOffset;
                     // reset stalled so to rearm watchdog timer
                     this.stalled = undefined;
-                    hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_SEEK_OVER_HOLE, fatal: false, hole: hole });
+                    hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_SEEK_OVER_HOLE, fatal: false, hole: nextBufferStart + nudgeOffset - currentTime });
                   }
                 } else if (bufferLen > jumpThreshold && stalledDuration > config.highBufferWatchdogPeriod * 1000) {
                   // report stalled error once
@@ -4794,15 +4796,16 @@ var StreamController = function (_EventHandler) {
                   }
                   // reset stalled so to rearm watchdog timer
                   this.stalled = undefined;
-                  var _nudgeRetry = this.nudgeRetry++;
-                  if (_nudgeRetry < config.nudgeMaxRetry) {
+                  this.nudgeRetry = nudgeRetry++;
+                  if (nudgeRetry < config.nudgeMaxRetry) {
                     var _currentTime = media.currentTime;
-                    var targetTime = _currentTime + (_nudgeRetry + 1) * config.nudgeOffset;
+                    var targetTime = _currentTime + nudgeRetry * config.nudgeOffset;
                     _logger.logger.log('adjust currentTime from ' + _currentTime + ' to ' + targetTime);
                     // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
                     media.currentTime = targetTime;
                     hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_NUDGE_ON_STALL, fatal: false });
                   } else {
+                    _logger.logger.error('still stuck in high buffer @' + currentTime + ' after ' + config.nudgeMaxRetry + ', raise fatal error');
                     hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_STALLED_ERROR, fatal: true });
                   }
                 }
@@ -8632,7 +8635,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.18';
+      return '0.6.19';
     }
   }, {
     key: 'Events',
