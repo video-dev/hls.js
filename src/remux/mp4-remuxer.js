@@ -47,6 +47,11 @@ class MP4Remuxer {
         accurateTimeOffset,
         defaultInitPTS
     ) {
+        console.info(
+            `cc: ${cc} sn: ${sn} timeOffset: ${timeOffset} initPTS: ${
+                this._initPTS
+            }`
+        );
         this.level = level;
         this.sn = sn;
         // generate Init Segment if needed
@@ -80,7 +85,8 @@ class MP4Remuxer {
                         videoTrack,
                         timeOffset,
                         contiguous,
-                        audioTrackLength
+                        audioTrackLength,
+                        cc
                     );
                 }
             } else {
@@ -90,7 +96,8 @@ class MP4Remuxer {
                     videoData = this.remuxVideo(
                         videoTrack,
                         timeOffset,
-                        contiguous
+                        contiguous,
+                        cc
                     );
                 }
                 if (videoData && audioTrack.codec) {
@@ -237,7 +244,7 @@ class MP4Remuxer {
         }
     }
 
-    remuxVideo(track, timeOffset, contiguous, audioTrackLength) {
+    remuxVideo(track, timeOffset, contiguous, audioTrackLength, cc) {
         var offset = 8,
             pesTimeScale = this.PES_TIMESCALE,
             pes2mp4ScaleFactor = this.PES2MP4SCALEFACTOR,

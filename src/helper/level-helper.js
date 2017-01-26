@@ -6,10 +6,10 @@ import { logger } from '../utils/logger';
 
 class LevelHelper {
     static mergeDetails(oldDetails, newDetails) {
-        var start =
+        var startSn =
                 Math.max(oldDetails.startSN, newDetails.startSN) -
                 newDetails.startSN,
-            end =
+            endSn =
                 Math.min(oldDetails.endSN, newDetails.endSN) -
                 newDetails.startSN,
             delta = newDetails.startSN - oldDetails.startSN,
@@ -19,12 +19,12 @@ class LevelHelper {
             PTSFrag;
 
         // check if old/new playlists have fragments in common
-        if (end < start) {
+        if (endSn < startSn) {
             newDetails.PTSKnown = false;
             return;
         }
         // loop through overlapping SN and update startPTS , cc, and duration if any found
-        for (var i = start; i <= end; i++) {
+        for (var i = startSn; i <= endSn; i++) {
             var oldFrag = oldfragments[delta + i],
                 newFrag = newfragments[i];
             if (newFrag && oldFrag) {
@@ -159,6 +159,41 @@ class LevelHelper {
                 fragTo.start = fragFrom.start - fragTo.duration;
             }
         }
+    }
+
+    static adjustPtsByReference(referenceFrag, details) {
+        if (!details.fragments || !referenceFrag) {
+            return;
+        }
+        details.fragments.forEach(frag => {
+            if (frag) {
+                console.info(`oldStart ${frag.start}`);
+                frag.duration = referenceFrag.duration;
+                frag.start = frag.startPTS =
+                    referenceFrag.startPTS + frag.start;
+                console.info(`newStart ${frag.start}`);
+                frag.endPTS = referenceFrag.endPTS + frag.duration;
+            }
+        });
+        details.PTSKnown = true;
+    }
+
+    static alignPTSByCC(prevDetails, curDetails) {
+        const prevFrags = prevDetails.fragments;
+        const curFrags = curDetails.fragments;
+
+        // Find the first frag in the previous level which matches the starting CC
+        const startCC = curFrags[0].cc;
+        const prevStartFrag = prevFrags.find(frag => {
+            return frag.cc === startCC;
+        });
+
+        if (!prevStartFrag || (prevStartFrag && !prevStartFrag.startPTS)) {
+            console.info('No frag in previous level to align on');
+            return;
+        }
+
+        LevelHelper.adjustPtsByReference(prevStartFrag, curDetails);
     }
 }
 
