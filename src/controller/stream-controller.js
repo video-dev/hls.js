@@ -1685,7 +1685,6 @@ class StreamController extends EventHandler {
             // adjust currentTime to start position on loaded metadata
             if (!this.loadedmetadata && buffered.length && !media.seeking) {
                 this.loadedmetadata = true;
-                this.nudgeRetry = 0;
                 // only adjust currentTime if different from startPosition or if startPosition not buffered
                 // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
                 let startPosition = this.startPosition,
@@ -1730,9 +1729,9 @@ class StreamController extends EventHandler {
                             )}ms`
                         );
                         this.stallReported = false;
-                        this.nudgeRetry = 0;
                     }
                     this.stalled = undefined;
+                    this.nudgeRetry = 0;
                 } else {
                     // playhead not moving
                     if (expectedPlaying) {
@@ -1748,6 +1747,7 @@ class StreamController extends EventHandler {
                             // if stalling for more than a given threshold, let's try to recover
                             const stalledDuration = tnow - this.stalled;
                             const bufferLen = bufferInfo.len;
+                            let nudgeRetry = this.nudgeRetry || 0;
                             // have we reached stall deadline ?
                             if (
                                 bufferLen <= jumpThreshold &&
@@ -1777,7 +1777,7 @@ class StreamController extends EventHandler {
                                     delta < config.maxSeekHole &&
                                     delta > 0
                                 ) {
-                                    const nudgeRetry = this.nudgeRetry++;
+                                    this.nudgeRetry = nudgeRetry++;
                                     const nudgeOffset =
                                         nudgeRetry * config.nudgeOffset;
                                     // next buffer is close ! adjust currentTime to nextBufferStart
@@ -1787,10 +1787,6 @@ class StreamController extends EventHandler {
                                             media.currentTime
                                         } to next buffered @ ${nextBufferStart} + nudge ${nudgeOffset}`
                                     );
-                                    let hole =
-                                        nextBufferStart +
-                                        nudgeOffset -
-                                        media.currentTime;
                                     media.currentTime =
                                         nextBufferStart + nudgeOffset;
                                     // reset stalled so to rearm watchdog timer
@@ -1800,7 +1796,10 @@ class StreamController extends EventHandler {
                                         details:
                                             ErrorDetails.BUFFER_SEEK_OVER_HOLE,
                                         fatal: false,
-                                        hole: hole
+                                        hole:
+                                            nextBufferStart +
+                                            nudgeOffset -
+                                            currentTime
                                     });
                                 }
                             } else if (
@@ -1824,12 +1823,12 @@ class StreamController extends EventHandler {
                                 }
                                 // reset stalled so to rearm watchdog timer
                                 this.stalled = undefined;
-                                const nudgeRetry = this.nudgeRetry++;
+                                this.nudgeRetry = nudgeRetry++;
                                 if (nudgeRetry < config.nudgeMaxRetry) {
                                     const currentTime = media.currentTime;
                                     const targetTime =
                                         currentTime +
-                                        (nudgeRetry + 1) * config.nudgeOffset;
+                                        nudgeRetry * config.nudgeOffset;
                                     logger.log(
                                         `adjust currentTime from ${currentTime} to ${targetTime}`
                                     );
@@ -1842,6 +1841,11 @@ class StreamController extends EventHandler {
                                         fatal: false
                                     });
                                 } else {
+                                    logger.error(
+                                        `still stuck in high buffer @${currentTime} after ${
+                                            config.nudgeMaxRetry
+                                        }, raise fatal error`
+                                    );
                                     hls.trigger(Event.ERROR, {
                                         type: ErrorTypes.MEDIA_ERROR,
                                         details:
