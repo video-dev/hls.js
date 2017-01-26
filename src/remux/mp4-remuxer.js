@@ -37,6 +37,7 @@ class MP4Remuxer {
   }
 
   remux(level,sn,cc,audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous,accurateTimeOffset,defaultInitPTS) {
+    console.info(`cc: ${cc} sn: ${sn} timeOffset: ${timeOffset} initPTS: ${this._initPTS}`);
     this.level = level;
     this.sn = sn;
     // generate Init Segment if needed
@@ -60,13 +61,13 @@ class MP4Remuxer {
           if (audioData) {
             audioTrackLength = audioData.endPTS - audioData.startPTS;
           }
-          this.remuxVideo(videoTrack,timeOffset,contiguous,audioTrackLength);
+          this.remuxVideo(videoTrack,timeOffset,contiguous,audioTrackLength, cc);
         }
       } else {
         let videoData;
         //logger.log('nb AVC samples:' + videoTrack.samples.length);
         if (videoTrack.samples.length) {
-          videoData = this.remuxVideo(videoTrack,timeOffset,contiguous);
+          videoData = this.remuxVideo(videoTrack,timeOffset,contiguous, cc);
         }
         if (videoData && audioTrack.codec) {
           this.remuxEmptyAudio(audioTrack, timeOffset, contiguous, videoData);
@@ -169,7 +170,7 @@ class MP4Remuxer {
     }
   }
 
-  remuxVideo(track, timeOffset, contiguous, audioTrackLength) {
+  remuxVideo(track, timeOffset, contiguous, audioTrackLength, cc) {
     var offset = 8,
         pesTimeScale = this.PES_TIMESCALE,
         pes2mp4ScaleFactor = this.PES2MP4SCALEFACTOR,
