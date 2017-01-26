@@ -347,9 +347,13 @@ class StreamController extends EventHandler {
          compute playlist sliding and find the right one after in case it was not the right consecutive one */
       if (fragPrevious) {
         var targetSN = fragPrevious.sn + 1;
+        var targetCC = fragPrevious.cc + 1;
         if (targetSN >= levelDetails.startSN && targetSN <= levelDetails.endSN) {
           frag = fragments[targetSN - levelDetails.startSN];
           logger.log(`live playlist, switching playlist, load frag with next SN: ${frag.sn}`);
+        } else if (targetCC >= levelDetails.startCC && targetCC <= levelDetails.endCC) {
+          frag = fragments.find(f => f.cc === targetCC);
+          console.info(`Loading frag with next CC: ${ frag.cc }`);
         }
       }
       if (!frag) {
@@ -848,8 +852,15 @@ class StreamController extends EventHandler {
         duration = newDetails.totalduration,
         sliding = 0;
 
-    logger.log(`level ${newLevelId} loaded [${newDetails.startSN},${newDetails.endSN}],duration:${duration}`);
-    this.levelLastLoaded = newLevelId;
+    console.info(`level ${newLevelId} loaded [${newDetails.startSN},${newDetails.endSN}], cc [${newDetails.startCC}, ${newDetails.endCC}] duration:${duration}`);
+
+    let lastFrag;
+    if (this.fragPrevious) {
+      lastFrag = this.fragPrevious;
+    } else if (this.levelLastLoaded) {
+      const lastLevel = this.levels[this.levelLastLoaded].details;
+      lastFrag = lastLevel.fragments[lastLevel.fragments.length - 1];
+    }
 
     if (newDetails.live) {
       var curDetails = curLevel.details;
@@ -862,15 +873,30 @@ class StreamController extends EventHandler {
           logger.log(`live playlist sliding:${sliding.toFixed(3)}`);
         } else {
           logger.log('live playlist - outdated PTS, unknown sliding');
+          if (lastFrag) {
+            const { cc: prevCC } = lastFrag;
+            if (this.startFragRequested && (newDetails.endCC > newDetails.startCC || newDetails.startCC > prevCC)) {
+              console.info('Adjusting PTS by reference due to CC increase within level');
+              LevelHelper.alignPTSByCC(this.levels[this.levelLastLoaded].details, newDetails);
+            }
+          }
         }
       } else {
-        newDetails.PTSKnown = false;
         logger.log('live playlist - first load, unknown sliding');
+        newDetails.PTSKnown = false;
+        if (lastFrag) {
+          const { cc: prevCC } = lastFrag;
+          if (this.startFragRequested && (newDetails.endCC > newDetails.startCC || newDetails.startCC > prevCC)) {
+            console.info('Adjusting PTS by reference due to CC increase within level');
+            LevelHelper.alignPTSByCC(this.levels[this.levelLastLoaded].details, newDetails);
+          }
+        }
       }
     } else {
       newDetails.PTSKnown = false;
     }
     // override level info
+    this.levelLastLoaded = newLevelId;
     curLevel.details = newDetails;
     this.hls.trigger(Event.LEVEL_UPDATED, { details: newDetails, level: newLevelId });
 
@@ -1457,7 +1483,7 @@ _checkBuffer() {
     // move to IDLE once flush complete. this should trigger new fragment loading
     this.state = State.IDLE;
     // reset reference to frag
-    this.fragPrevious = null;
+    // this.fragPrevious = null;
   }
 
   onLevelRemoved(data) {
