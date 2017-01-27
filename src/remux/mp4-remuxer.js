@@ -37,7 +37,6 @@ class MP4Remuxer {
   }
 
   remux(level,sn,cc,audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous,accurateTimeOffset,defaultInitPTS) {
-    logger.log(`cc: ${cc} sn: ${sn} timeOffset: ${timeOffset} initPTS: ${this._initPTS}`);
     this.level = level;
     this.sn = sn;
     // generate Init Segment if needed
