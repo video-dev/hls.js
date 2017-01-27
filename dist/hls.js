@@ -4777,7 +4777,7 @@ var StreamController = function (_EventHandler) {
                   var nextBufferStart = bufferInfo.nextStart,
                       delta = nextBufferStart - currentTime;
                   if (nextBufferStart && delta < config.maxSeekHole && delta > 0) {
-                    this.nudgeRetry = nudgeRetry++;
+                    this.nudgeRetry = ++nudgeRetry;
                     var nudgeOffset = nudgeRetry * config.nudgeOffset;
                     // next buffer is close ! adjust currentTime to nextBufferStart
                     // this will ensure effective video decoding
@@ -4796,7 +4796,7 @@ var StreamController = function (_EventHandler) {
                   }
                   // reset stalled so to rearm watchdog timer
                   this.stalled = undefined;
-                  this.nudgeRetry = nudgeRetry++;
+                  this.nudgeRetry = ++nudgeRetry;
                   if (nudgeRetry < config.nudgeMaxRetry) {
                     var _currentTime = media.currentTime;
                     var targetTime = _currentTime + nudgeRetry * config.nudgeOffset;
