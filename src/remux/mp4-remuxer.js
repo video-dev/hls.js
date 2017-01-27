@@ -47,11 +47,6 @@ class MP4Remuxer {
         accurateTimeOffset,
         defaultInitPTS
     ) {
-        logger.log(
-            `cc: ${cc} sn: ${sn} timeOffset: ${timeOffset} initPTS: ${
-                this._initPTS
-            }`
-        );
         this.level = level;
         this.sn = sn;
         // generate Init Segment if needed
