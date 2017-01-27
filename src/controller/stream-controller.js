@@ -455,7 +455,11 @@ class StreamController extends EventHandler {
                     targetCC <= levelDetails.endCC
                 ) {
                     frag = fragments.find(f => f.cc === targetCC);
-                    console.info(`Loading frag with next CC: ${frag.cc}`);
+                    logger.log(
+                        `Live playlist switch, cannot find frag with target SN. Loading frag with next CC: ${
+                            frag.cc
+                        }`
+                    );
                 }
             }
             if (!frag) {
@@ -1044,13 +1048,14 @@ class StreamController extends EventHandler {
     }
 
     onLevelLoaded(data) {
-        var newDetails = data.details,
-            newLevelId = data.level,
-            curLevel = this.levels[newLevelId],
-            duration = newDetails.totalduration,
-            sliding = 0;
+        const newDetails = data.details;
+        const newLevelId = data.level;
+        const lastLevel = this.levels[this.levelLastLoaded];
+        const curLevel = this.levels[newLevelId];
+        const duration = newDetails.totalduration;
+        let sliding = 0;
 
-        console.info(
+        logger.log(
             `level ${newLevelId} loaded [${newDetails.startSN},${
                 newDetails.endSN
             }], cc [${newDetails.startCC}, ${
@@ -1058,16 +1063,8 @@ class StreamController extends EventHandler {
             }] duration:${duration}`
         );
 
-        let lastFrag;
-        if (this.fragPrevious) {
-            lastFrag = this.fragPrevious;
-        } else if (this.levelLastLoaded) {
-            const lastLevel = this.levels[this.levelLastLoaded].details;
-            lastFrag = lastLevel.fragments[lastLevel.fragments.length - 1];
-        }
-
         if (newDetails.live) {
-            var curDetails = curLevel.details;
+            const curDetails = curLevel.details;
             if (curDetails && newDetails.fragments.length > 0) {
                 // we already have details for that level, merge them
                 LevelHelper.mergeDetails(curDetails, newDetails);
@@ -1080,42 +1077,20 @@ class StreamController extends EventHandler {
                     logger.log(`live playlist sliding:${sliding.toFixed(3)}`);
                 } else {
                     logger.log('live playlist - outdated PTS, unknown sliding');
-                    if (lastFrag) {
-                        const { cc: prevCC } = lastFrag;
-                        if (
-                            this.startFragRequested &&
-                            (newDetails.endCC > newDetails.startCC ||
-                                newDetails.startCC > prevCC)
-                        ) {
-                            console.info(
-                                'Adjusting PTS by reference due to CC increase within level'
-                            );
-                            LevelHelper.alignPTSByCC(
-                                this.levels[this.levelLastLoaded].details,
-                                newDetails
-                            );
-                        }
-                    }
+                    LevelHelper.alignDiscontinuities(
+                        this.fragPrevious,
+                        lastLevel,
+                        newDetails
+                    );
                 }
             } else {
                 logger.log('live playlist - first load, unknown sliding');
                 newDetails.PTSKnown = false;
-                if (lastFrag) {
-                    const { cc: prevCC } = lastFrag;
-                    if (
-                        this.startFragRequested &&
-                        (newDetails.endCC > newDetails.startCC ||
-                            newDetails.startCC > prevCC)
-                    ) {
-                        console.info(
-                            'Adjusting PTS by reference due to CC increase within level'
-                        );
-                        LevelHelper.alignPTSByCC(
-                            this.levels[this.levelLastLoaded].details,
-                            newDetails
-                        );
-                    }
-                }
+                LevelHelper.alignDiscontinuities(
+                    this.fragPrevious,
+                    lastLevel,
+                    newDetails
+                );
             }
         } else {
             newDetails.PTSKnown = false;
@@ -1898,7 +1873,7 @@ class StreamController extends EventHandler {
         // move to IDLE once flush complete. this should trigger new fragment loading
         this.state = State.IDLE;
         // reset reference to frag
-        // this.fragPrevious = null;
+        this.fragPrevious = null;
     }
 
     onLevelRemoved(data) {

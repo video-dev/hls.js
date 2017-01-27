@@ -161,39 +161,56 @@ class LevelHelper {
         }
     }
 
-    static adjustPtsByReference(referenceFrag, details) {
-        if (!details.fragments || !referenceFrag) {
-            return;
-        }
-        details.fragments.forEach(frag => {
-            if (frag) {
-                console.info(`oldStart ${frag.start}`);
-                frag.duration = referenceFrag.duration;
-                frag.start = frag.startPTS =
-                    referenceFrag.startPTS + frag.start;
-                console.info(`newStart ${frag.start}`);
-                frag.endPTS = referenceFrag.endPTS + frag.duration;
+    // If a change in CC is detected, the PTS can no longer be relied upon
+    // Attempt to align the level by using the last level - find the last frag matching the current CC and use it's PTS
+    // as a reference
+    static alignDiscontinuities(lastFrag, lastLevel, details) {
+        if (lastLevel && lastLevel.details && details) {
+            if (
+                details.endCC > details.startCC ||
+                (lastFrag && lastFrag.cc < details.startCC)
+            ) {
+                logger.log(
+                    'Adjusting PTS using last level due to CC increase within current level'
+                );
+                LevelHelper.alignPTSByCC(lastLevel.details, details);
             }
-        });
-        details.PTSKnown = true;
+        }
     }
 
     static alignPTSByCC(prevDetails, curDetails) {
         const prevFrags = prevDetails.fragments;
         const curFrags = curDetails.fragments;
 
-        // Find the first frag in the previous level which matches the starting CC
-        const startCC = curFrags[0].cc;
-        const prevStartFrag = prevFrags.find(frag => {
-            return frag.cc === startCC;
-        });
-
-        if (!prevStartFrag || (prevStartFrag && !prevStartFrag.startPTS)) {
-            console.info('No frag in previous level to align on');
+        if (!curFrags.length || !prevFrags.length) {
+            logger.log('No fragments to align');
             return;
         }
 
-        LevelHelper.adjustPtsByReference(prevStartFrag, curDetails);
+        // Find the first frag in the previous level which matches the starting CC
+        const prevStartFrag = prevFrags.find(frag => {
+            return frag.cc === curFrags[0].cc;
+        });
+
+        if (!prevStartFrag || (prevStartFrag && !prevStartFrag.startPTS)) {
+            logger.log('No frag in previous level to align on');
+            return;
+        }
+
+        LevelHelper.adjustPtsByReferenceFrag(prevStartFrag, curDetails);
+    }
+
+    static adjustPtsByReferenceFrag(referenceFrag, details) {
+        details.fragments.forEach((frag, index) => {
+            if (frag) {
+                frag.duration = referenceFrag.duration;
+                frag.end = frag.endPTS =
+                    referenceFrag.endPTS + frag.duration * index;
+                frag.start = frag.startPTS =
+                    referenceFrag.startPTS + frag.start;
+            }
+        });
+        details.PTSKnown = true;
     }
 }
 
