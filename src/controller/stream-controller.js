@@ -1777,7 +1777,7 @@ class StreamController extends EventHandler {
                                     delta < config.maxSeekHole &&
                                     delta > 0
                                 ) {
-                                    this.nudgeRetry = nudgeRetry++;
+                                    this.nudgeRetry = ++nudgeRetry;
                                     const nudgeOffset =
                                         nudgeRetry * config.nudgeOffset;
                                     // next buffer is close ! adjust currentTime to nextBufferStart
@@ -1823,7 +1823,7 @@ class StreamController extends EventHandler {
                                 }
                                 // reset stalled so to rearm watchdog timer
                                 this.stalled = undefined;
-                                this.nudgeRetry = nudgeRetry++;
+                                this.nudgeRetry = ++nudgeRetry;
                                 if (nudgeRetry < config.nudgeMaxRetry) {
                                     const currentTime = media.currentTime;
                                     const targetTime =
