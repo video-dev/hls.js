@@ -129,10 +129,11 @@ describe('testing hls.js playback in the browser with "'+stream.description+'" o
       var callback = arguments[arguments.length - 1];
       startStream(url, callback);
       video.onloadeddata = function() {
-        callback('loadeddata');
+        callback({ code : 'loadeddata', logs : logString});
       };
     }, url).then(function(result) {
-      assert.strictEqual(result, 'loadeddata');
+      console.log(result.logs);
+      assert.strictEqual(result.code, 'loadeddata');
     });
   });
 
@@ -145,9 +146,12 @@ describe('testing hls.js playback in the browser with "'+stream.description+'" o
         video.onloadeddata = function() {
           switchToHighestLevel('next');
         };
-        window.setTimeout(function() { callback(video.readyState);}, 12000);
+        window.setTimeout(function() {
+          callback({ code : video.readyState, logs : logString});
+        }, 12000);
       }, url).then(function(result) {
-        assert.strictEqual(result, 4);
+        console.log(result.logs);
+        assert.strictEqual(result.code, 4);
       });
     });
   }
@@ -162,10 +166,11 @@ describe('testing hls.js playback in the browser with "'+stream.description+'" o
           window.setTimeout(function() { video.currentTime = video.duration - 5;}, 5000);
         };
         video.onseeked = function() {
-          callback('seeked');
+          callback({ code : 'seeked', logs : logString});
         };
       }, url).then(function(result) {
-        assert.strictEqual(result, 'seeked');
+        console.log(result.logs);
+        assert.strictEqual(result.code, 'seeked');
       });
     });
   } else {
@@ -178,10 +183,11 @@ describe('testing hls.js playback in the browser with "'+stream.description+'" o
           window.setTimeout(function() { video.currentTime = video.duration - 5;}, 2000);
         };
         video.onended = function() {
-          callback('ended');
+          callback({ code : 'ended', logs : logString});
         };
       }, url).then(function(result) {
-        assert.strictEqual(result, 'ended');
+        console.log(result.logs);
+        assert.strictEqual(result.code, 'ended');
       });
     });
   }
