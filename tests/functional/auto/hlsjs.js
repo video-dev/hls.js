@@ -76,7 +76,7 @@ for (var name in streams) {
         browserName: browserConfig.name,
         platform: browserConfig.platform,
         version: browserConfig.version,
-        commandTimeout: 35,
+        commandTimeout: 60,
         customData: {
           stream: stream
         }
@@ -134,9 +134,6 @@ for (var name in streams) {
       }, url).then(function(result) {
         console.log(result.logs);
         assert.strictEqual(result.code, 'loadeddata');
-      }, function (err) {
-        console.log('error while executing command:' + err);
-        console.log(result.logs);
       });
     });
 
