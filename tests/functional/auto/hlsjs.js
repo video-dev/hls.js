@@ -111,7 +111,9 @@ for (var name in streams) {
         }.bind(this)).then(function() {
           console.log("Test page loaded.");
         });
-      }.bind(this));
+      }.bind(this), function(err) {
+        console.log('error while Retrieving browser session:' + err);
+      });
     });
 
     afterEach(function() {
