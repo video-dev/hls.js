@@ -8,7 +8,7 @@ var config = {
   entry: './src/index.js',
   output: {
     path: path.resolve(__dirname, 'dist'),
-    publicPath: '/assets/',
+    publicPath: '/hls.js/dist/',
     library: 'Hls',
     libraryTarget: 'umd'
   },
