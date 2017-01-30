@@ -266,7 +266,9 @@ class AbrController extends EventHandler {
           // max video loading delay used in  automatic start level selection :
           // in that mode ABR controller will ensure that video loading time (ie the time to fetch the first fragment at lowest quality level +
           // the time to fetch the fragment at the appropriate quality level is less than ```maxLoadingDelay``` )
-          maxStarvationDelay = config.maxLoadingDelay - bitrateTestDelay;
+          // cap maxLoadingDelay and ensure it is not bigger 'than bitrate test' frag duration
+          const maxLoadingDelay = currentFragDuration ? Math.min(currentFragDuration,config.maxLoadingDelay) : config.maxLoadingDelay;
+          maxStarvationDelay = maxLoadingDelay - bitrateTestDelay;
           logger.trace(`bitrate test took ${Math.round(1000*bitrateTestDelay)}ms, set first fragment max fetchDuration to ${Math.round(1000*maxStarvationDelay)} ms`);
           // don't use conservative factor on bitrate test
           bwFactor = bwUpFactor = 1;
