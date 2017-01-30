@@ -134,6 +134,9 @@ for (var name in streams) {
       }, url).then(function(result) {
         console.log(result.logs);
         assert.strictEqual(result.code, 'loadeddata');
+      }, function (err) {
+        console.log('error while executing command:' + err);
+        console.log(result.logs);
       });
     });
 
