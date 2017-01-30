@@ -40,12 +40,12 @@
     </style>
     <script src="/dist/hls.js"></script>
     <script>
-      var video, hls;
+      var video, hls, logString ='';
 
       function startStream(streamUrl, callback) {
         if (Hls.isSupported()) {
           if (hls) {
-           callback('hlsjsAlreadyInitialised');
+            callback({ code : 'hlsjsAlreadyInitialised', logs : logString});
            return;
           }
           video = document.getElementById('video');
@@ -58,17 +58,17 @@
             });
             hls.on(Hls.Events.ERROR, function(event, data) {
               if (data.fatal) {
-                callback(data.details);
+                callback({ code : data.details, logs : logString});
               }
             });
             video.onerror = function(event) {
-              callback('video_error_' + video.error.code);
+              callback({ code : 'video_error_' + video.error.code, logs : logString});
             };
           } catch(err) {
-            callback('exception');
+            callback({ code : 'exception', logs : logString});
           }
         } else {
-          callback('notSupported');
+          callback({ code : 'notSupported', logs : logString});
         }
       }
 
@@ -132,6 +132,7 @@
             var line = document.createElement('pre');
             line.className = "line line-"+methodName;
             line.appendChild(text);
+            logString += a + '\n';
             inner.appendChild(line);
           }
         })();
