@@ -81,7 +81,7 @@ header {
       <label class="innerControls"><input id="enableStreaming" type=checkbox checked/> Enable Streaming</label>
       <label class="innerControls"><input id="autoRecoverError" type=checkbox checked/> Auto-Recover Media Error</label>
       <label class="innerControls"><input id="enableWorker" type=checkbox checked/> Enable Worker</label>
-      <label class="innerControls"><input id="dumpfMP4" type=checkbox checked/> dump fMP4</label>
+      <label class="innerControls"><input id="dumpfMP4" type=checkbox unchecked/> dump fMP4</label>
       <label class="innerControls">Level Capping <input id="levelCapping" type=number/></label>
       <label class="innerControls">default Audio Codec <input id="defaultAudioCodec"/></label>
       <div id="StreamPermalink" class="innerControls"></div>
@@ -1109,10 +1109,10 @@ function createfMP4(type) {
 }
 
 function arrayConcat(inputArray) {
-    let totalLength = inputArray.reduce( (prev,cur) => prev+cur.length ,0);
+    let totalLength = inputArray.reduce( function(prev,cur) { return prev+cur.length} ,0);
     let result = new Uint8Array(totalLength);
     let offset = 0;
-    inputArray.forEach(element => {
+    inputArray.forEach(function(element) {
       result.set(element, offset);
       offset += element.length;
     });
