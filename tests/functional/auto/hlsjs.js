@@ -145,9 +145,8 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
           callback({ code : video.readyState, logs : logString});
         }, 12000);
       }, url).then(function(result) {
-        console.log('$');
-        console.log(result.logs);
-        console.log('$');
+        console.log('$ ' + result.logs);
+        console.log('$ ');
         assert.strictEqual(result.code, 4);
       });
     }
@@ -165,9 +164,8 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
           callback({ code : 'seeked', logs : logString});
         };
       }, url).then(function(result) {
-        console.log('$');
-        console.log(result.logs);
-        console.log('$');
+        console.log('$ ' + result.logs);
+        console.log('$ ');
         assert.strictEqual(result.code, 'seeked');
       });
     }
@@ -185,9 +183,8 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
           callback({ code : 'ended', logs : logString});
         };
       }, url).then(function(result) {
-        console.log('$');
-        console.log(result.logs);
-        console.log('$');
+        console.log('$ ' + result.logs);
+        console.log('$ ');
         assert.strictEqual(result.code, 'ended');
       });
     }
