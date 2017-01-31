@@ -3,7 +3,7 @@ node_js: node
 # don't connect to sauce labs unless running functional tests
 # before_install: if [ "${TRAVIS_MODE}" != "funcTests" ]; then unset SAUCE_USERNAME && unset SAUCE_ACCESS_KEY; fi
 script: ./scripts/travis.sh
-after_script: if [ "${TRAVIS_MODE}" = "funcTests" ]; then echo "Sauce connect log:" && cat /home/travis/sauce-connect.log; fi
+after_script: if [ "${TRAVIS_MODE}" = "funcTests" ]; then echo -n "travis_fold:start:sauce_logs\nSauce connect log:\n" && cat /home/travis/sauce-connect.log && echo -n "\ntravis_fold:end:sauce_logs\n"; fi
 env:
   global:
     - SAUCE_USERNAME=mangui
