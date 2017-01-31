@@ -165,20 +165,39 @@ class LevelHelper {
     // Attempt to align the level by using the last level - find the last frag matching the current CC and use it's PTS
     // as a reference
     static alignDiscontinuities(lastFrag, lastLevel, details) {
+        if (
+            LevelHelper.shouldAlignOnDiscontinuities(
+                lastFrag,
+                lastLevel,
+                details
+            )
+        ) {
+            logger.log(
+                'Adjusting PTS using last level due to CC increase within current level'
+            );
+            const referenceFrag = LevelHelper.findDiscontinuousReferenceFrag(
+                lastLevel.details,
+                details
+            );
+            LevelHelper.adjustPtsByReferenceFrag(referenceFrag, details);
+        }
+    }
+
+    static shouldAlignOnDiscontinuities(lastFrag, lastLevel, details) {
+        let shouldAlign = false;
         if (lastLevel && lastLevel.details && details) {
             if (
                 details.endCC > details.startCC ||
                 (lastFrag && lastFrag.cc < details.startCC)
             ) {
-                logger.log(
-                    'Adjusting PTS using last level due to CC increase within current level'
-                );
-                LevelHelper.alignPTSByCC(lastLevel.details, details);
+                shouldAlign = true;
             }
         }
+        return shouldAlign;
     }
 
-    static alignPTSByCC(prevDetails, curDetails) {
+    // Find the first frag in the previous level which matches the CC of the first frag of the new level
+    static findDiscontinuousReferenceFrag(prevDetails, curDetails) {
         const prevFrags = prevDetails.fragments;
         const curFrags = curDetails.fragments;
 
@@ -187,7 +206,6 @@ class LevelHelper {
             return;
         }
 
-        // Find the first frag in the previous level which matches the starting CC
         const prevStartFrag = prevFrags.find(frag => {
             return frag.cc === curFrags[0].cc;
         });
@@ -197,7 +215,7 @@ class LevelHelper {
             return;
         }
 
-        LevelHelper.adjustPtsByReferenceFrag(prevStartFrag, curDetails);
+        return prevStartFrag;
     }
 
     static adjustPtsByReferenceFrag(referenceFrag, details) {
