@@ -56,7 +56,7 @@ class Demuxer {
 
   push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata,accurateTimeOffset,defaultInitPTS) {
     let w = this.w;
-    if (w) {
+    if (w && typeof(this.demuxer) === 'undefined') {
       // post fragment payload as transferable objects (no copy)
       w.postMessage({cmd: 'demux', data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset,defaultInitPTS}, [data]);
     } else {
@@ -89,4 +89,3 @@ class Demuxer {
 }
 
 export default Demuxer;
-
