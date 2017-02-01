@@ -159,7 +159,7 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
         var callback = arguments[arguments.length - 1];
         startStream(url, callback);
         video.onloadeddata = function() {
-          window.setTimeout(function() { video.currentTime = video.duration - 10;}, 5000);
+          window.setTimeout(function() { video.currentTime = video.duration - 5;}, 5000);
         };
         video.onseeked = function() {
           callback({ code : 'seeked', logs : logString});
@@ -179,7 +179,7 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
         var callback = arguments[arguments.length - 1];
         startStream(url, callback);
         video.onloadeddata = function() {
-          window.setTimeout(function() { video.currentTime = video.duration - 10;}, 2000);
+          window.setTimeout(function() { video.currentTime = video.duration - 5;}, 5000);
         };
         video.onended = function() {
           callback({ code : 'ended', logs : logString});
