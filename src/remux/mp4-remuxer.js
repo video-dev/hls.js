@@ -472,7 +472,8 @@ class MP4Remuxer {
           // Don't touch nextPtsNorm or i
         }
         // Otherwise, if we're more than a frame away from where we should be, insert missing frames
-        else if (delta >= pesFrameDuration) {
+        // also only inject silent audio frames if currentTime !== 0 (nextPtsNorm !== 0)
+        else if (delta >= pesFrameDuration && nextPtsNorm) {
           var missing = Math.round(delta / pesFrameDuration);
           logger.warn(`Injecting ${missing} audio frame @ ${Math.round(nextPtsNorm/90)/1000}s due to ${Math.round(delta / 90)} ms gap.`);
           for (var j = 0; j < missing; j++) {
