@@ -609,7 +609,9 @@ var AbrController = function (_EventHandler) {
               loadRate = Math.max(1, stats.bw ? stats.bw / 8 : stats.loaded * 1000 / requestDelay),
               // byte/s; at least 1 byte/s to avoid division by zero
           // compute expected fragment length using frag duration and level bitrate. also ensure that expected len is gte than already loaded size
-          expectedLen = stats.total ? stats.total : Math.max(stats.loaded, Math.round(frag.duration * levels[frag.level].bitrate / 8)),
+          level = levels[frag.level],
+              levelBitrate = level.realbitrate ? Math.max(level.realbitrate, level.bitrate) : level.bitrate,
+              expectedLen = stats.total ? stats.total : Math.max(stats.loaded, Math.round(frag.duration * levelBitrate / 8)),
               pos = v.currentTime,
               fragLoadedDelay = (expectedLen - stats.loaded) / loadRate,
               bufferStarvationDelay = (_bufferHelper2.default.bufferInfo(v, pos, hls.config.maxBufferHole).end - pos) / playbackRate;
@@ -625,7 +627,8 @@ var AbrController = function (_EventHandler) {
               // compute time to load next fragment at lower level
               // 0.8 : consider only 80% of current bw to be conservative
               // 8 = bits per byte (bps/Bps)
-              fragLevelNextLoadedDelay = frag.duration * levels[nextLoadLevel].bitrate / (8 * 0.8 * loadRate);
+              var levelNextBitrate = levels[nextLoadLevel].realbitrate ? Math.max(levels[nextLoadLevel].realbitrate, levels[nextLoadLevel].bitrate) : levels[nextLoadLevel].bitrate;
+              fragLevelNextLoadedDelay = frag.duration * levelNextBitrate / (8 * 0.8 * loadRate);
               if (fragLevelNextLoadedDelay < bufferStarvationDelay) {
                 // we found a lower level that be rebuffering free with current estimated bw !
                 break;
@@ -660,6 +663,13 @@ var AbrController = function (_EventHandler) {
         this.lastLoadedFragLevel = frag.level;
         // reset forced auto level value so that next level will be selected
         this._nextAutoLevel = -1;
+
+        // compute level average bitrate
+        var level = this.hls.levels[frag.level];
+        var loadedBytes = (level.loaded ? level.loaded.bytes : 0) + data.stats.loaded;
+        var loadedDuration = (level.loaded ? level.loaded.duration : 0) + data.frag.duration;
+        level.loaded = { bytes: loadedBytes, duration: loadedDuration };
+        level.realBitrate = Math.round(8 * loadedBytes / loadedDuration);
         // if fragment has been loaded to perform a bitrate test,
         if (data.frag.bitrateTest) {
           var stats = data.stats;
@@ -736,7 +746,7 @@ var AbrController = function (_EventHandler) {
         } else {
           adjustedbw = bwUpFactor * currentBw;
         }
-        var bitrate = levels[i].bitrate,
+        var bitrate = levels[i].realbitrate ? Math.max(levels[i].realbitrate, levels[i].bitrate) : levels[i].bitrate,
             fetchDuration = bitrate * avgDuration / adjustedbw;
 
         _logger.logger.trace('level/adjustedbw/bitrate/avgDuration/maxFetchDuration/fetchDuration: ' + i + '/' + Math.round(adjustedbw) + '/' + bitrate + '/' + avgDuration + '/' + maxFetchDuration + '/' + fetchDuration);
@@ -784,7 +794,8 @@ var AbrController = function (_EventHandler) {
         nextABRAutoLevel = Math.min(nextAutoLevel, nextABRAutoLevel);
       }
       if (minAutoBitrate !== undefined) {
-        while (levels[nextABRAutoLevel].bitrate < minAutoBitrate) {
+        var levelNextBitrate = levels[nextABRAutoLevel].realbitrate ? Math.max(levels[nextABRAutoLevel].realbitrate, levels[nextABRAutoLevel].bitrate) : levels[nextABRAutoLevel].bitrate;
+        while (levelNextBitrate < minAutoBitrate) {
           nextABRAutoLevel++;
         }
       }
@@ -801,7 +812,8 @@ var AbrController = function (_EventHandler) {
           minAutoBitrate = hls.config.minAutoBitrate,
           len = levels ? levels.length : 0;
       for (var i = 0; i < len; i++) {
-        if (levels[i].bitrate > minAutoBitrate) {
+        var levelNextBitrate = levels[i].realbitrate ? Math.max(levels[i].realbitrate, levels[i].bitrate) : levels[i].bitrate;
+        if (levelNextBitrate > minAutoBitrate) {
           return i;
         }
       }
@@ -860,7 +872,9 @@ var AbrController = function (_EventHandler) {
             // max video loading delay used in  automatic start level selection :
             // in that mode ABR controller will ensure that video loading time (ie the time to fetch the first fragment at lowest quality level +
             // the time to fetch the fragment at the appropriate quality level is less than ```maxLoadingDelay``` )
-            maxStarvationDelay = config.maxLoadingDelay - bitrateTestDelay;
+            // cap maxLoadingDelay and ensure it is not bigger 'than bitrate test' frag duration
+            var maxLoadingDelay = currentFragDuration ? Math.min(currentFragDuration, config.maxLoadingDelay) : config.maxLoadingDelay;
+            maxStarvationDelay = maxLoadingDelay - bitrateTestDelay;
             _logger.logger.trace('bitrate test took ' + Math.round(1000 * bitrateTestDelay) + 'ms, set first fragment max fetchDuration to ' + Math.round(1000 * maxStarvationDelay) + ' ms');
             // don't use conservative factor on bitrate test
             bwFactor = bwUpFactor = 1;
@@ -5830,8 +5844,8 @@ var ADTS = function () {
       // byte 3
       adtsChanelConfig |= (data[offset + 3] & 0xC0) >>> 6;
       _logger.logger.log('manifest codec:' + audioCodec + ',ADTS data:type:' + adtsObjectType + ',sampleingIndex:' + adtsSampleingIndex + '[' + adtsSampleingRates[adtsSampleingIndex] + 'Hz],channelConfig:' + adtsChanelConfig);
-      // firefox/Opera: freq less than 24kHz = AAC SBR (HE-AAC)
-      if (/firefox|OPR/i.test(userAgent)) {
+      // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
+      if (/firefox/i.test(userAgent)) {
         if (adtsSampleingIndex >= 6) {
           adtsObjectType = 5;
           config = new Array(4);
@@ -5850,7 +5864,7 @@ var ADTS = function () {
         config = new Array(2);
         adtsExtensionSampleingIndex = adtsSampleingIndex;
       } else {
-        /*  for other browsers (Chrome/Vivaldi ...)
+        /*  for other browsers (Chrome/Vivaldi/Opera ...)
             always force audio type to be HE-AAC SBR, as some browsers do not support audio codec switch properly (like Chrome ...)
         */
         adtsObjectType = 5;
@@ -5919,10 +5933,6 @@ var ADTS = function () {
         //    https://chromium.googlesource.com/chromium/src.git/+/master/media/formats/mp4/aac.cc
         config[2] |= 2 << 2;
         config[3] = 0;
-      }
-      // trick manifest codec on Opera and Vivaldi, always use AAC LC
-      if (/Vivaldi|OPR/i.test(userAgent)) {
-        manifestCodec = 'mp4a.40.2';
       }
       return { config: config, samplerate: adtsSampleingRates[adtsSampleingIndex], channelCount: adtsChanelConfig, codec: 'mp4a.40.' + adtsObjectType, manifestCodec: manifestCodec };
     }
@@ -10973,7 +10983,8 @@ var MP4Remuxer = function () {
             // Don't touch nextPtsNorm or i
           }
           // Otherwise, if we're more than a frame away from where we should be, insert missing frames
-          else if (delta >= pesFrameDuration) {
+          // also only inject silent audio frames if currentTime !== 0 (nextPtsNorm !== 0)
+          else if (delta >= pesFrameDuration && nextPtsNorm) {
               var missing = Math.round(delta / pesFrameDuration);
               _logger.logger.warn('Injecting ' + missing + ' audio frame @ ' + Math.round(nextPtsNorm / 90) / 1000 + 's due to ' + Math.round(delta / 90) + ' ms gap.');
               for (var j = 0; j < missing; j++) {
