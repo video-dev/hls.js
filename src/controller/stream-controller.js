@@ -629,7 +629,7 @@ class StreamController extends EventHandler {
         if (this.state !== nextState) {
             const previousState = this.state;
             this._state = nextState;
-            logger.log(`main:switch from ${previousState} to ${nextState}`);
+            logger.log(`main stream:${previousState}->${nextState}`);
             this.hls.trigger(Event.STREAM_STATE_TRANSITION, {
                 previousState,
                 nextState
