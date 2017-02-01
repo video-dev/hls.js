@@ -48,8 +48,8 @@ class ADTS {
                 adtsSampleingRates[adtsSampleingIndex]
             }Hz],channelConfig:${adtsChanelConfig}`
         );
-        // firefox/Opera: freq less than 24kHz = AAC SBR (HE-AAC)
-        if (/firefox|OPR/i.test(userAgent)) {
+        // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
+        if (/firefox/i.test(userAgent)) {
             if (adtsSampleingIndex >= 6) {
                 adtsObjectType = 5;
                 config = new Array(4);
@@ -68,7 +68,7 @@ class ADTS {
             config = new Array(2);
             adtsExtensionSampleingIndex = adtsSampleingIndex;
         } else {
-            /*  for other browsers (Chrome/Vivaldi ...)
+            /*  for other browsers (Chrome/Vivaldi/Opera ...)
           always force audio type to be HE-AAC SBR, as some browsers do not support audio codec switch properly (like Chrome ...)
       */
             adtsObjectType = 5;
@@ -147,10 +147,6 @@ class ADTS {
             //    https://chromium.googlesource.com/chromium/src.git/+/master/media/formats/mp4/aac.cc
             config[2] |= 2 << 2;
             config[3] = 0;
-        }
-        // trick manifest codec on Opera and Vivaldi, always use AAC LC
-        if (/Vivaldi|OPR/i.test(userAgent)) {
-            manifestCodec = 'mp4a.40.2';
         }
         return {
             config: config,
