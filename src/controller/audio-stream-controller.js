@@ -144,7 +144,7 @@ class AudioStreamController extends EventHandler {
         if (this.state !== nextState) {
             const previousState = this.state;
             this._state = nextState;
-            logger.log(`audio:switch from ${previousState} to ${nextState}`);
+            logger.log(`audio stream:${previousState}->${nextState}`);
         }
     }
 
