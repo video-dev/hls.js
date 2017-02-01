@@ -498,6 +498,17 @@ $(document).ready(function() {
         this.levelLastAuto = autoLevel;
        });
 
+       hls.on(Hls.Events.FRAG_DECRYPTED,function(event,data) {
+         if (!stats.fragDecrypted) {
+           stats.fragDecrypted = 0;
+           this.totalDecryptTime = 0;
+           stats.fragAvgDecryptTime = 0;
+         }
+         stats.fragDecrypted++;
+         this.totalDecryptTime += data.stats.tdecrypt - data.stats.tstart;
+         stats.fragAvgDecryptTime = this.totalDecryptTime / stats.fragDecrypted;
+       });
+
        hls.on(Hls.Events.FRAG_LOAD_EMERGENCY_ABORTED,function(event,data) {
         if (stats) {
           if (stats.fragLoadEmergencyAborted === undefined) {
