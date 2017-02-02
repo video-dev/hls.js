@@ -196,15 +196,17 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
   for (var name in streams) {
     var stream = streams[name];
     var url = stream.url;
-    it('should receive video loadeddata event for ' + stream.description, testLoadedData(url));
-    if (stream.abr) {
-      it('should "smooth switch" to highest level and still play(readyState === 4) after 12s for ' + stream.description, testSmoothSwitch(url));
-    }
+    if (!stream.blacklist_ua || stream.blacklist_ua.indexOf(browserConfig.name) === -1) {
+      it('should receive video loadeddata event for ' + stream.description, testLoadedData(url));
+      if (stream.abr) {
+        it('should "smooth switch" to highest level and still play(readyState === 4) after 12s for ' + stream.description, testSmoothSwitch(url));
+      }
 
-    if (stream.live) {
-      it('should seek near the end and receive video seeked event for ' + stream.description, testSeekOnLive(url));
-    } else {
-      it('should seek near the end and receive video ended event for ' + stream.description, testSeekOnVOD(url));
+      if (stream.live) {
+        it('should seek near the end and receive video seeked event for ' + stream.description, testSeekOnLive(url));
+      } else {
+        it('should seek near the end and receive video ended event for ' + stream.description, testSeekOnVOD(url));
+      }
     }
   }
 });
