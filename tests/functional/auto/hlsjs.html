@@ -51,6 +51,7 @@
           video = document.getElementById('video');
           try {
             hls = new Hls({debug: true});
+            console.log(navigator.userAgent);
             hls.loadSource(streamUrl);
             hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, function() {
@@ -58,10 +59,12 @@
             });
             hls.on(Hls.Events.ERROR, function(event, data) {
               if (data.fatal) {
+              console.log('hlsjs fatal error :' + data.details);
                 callback({ code : data.details, logs : logString});
               }
             });
             video.onerror = function(event) {
+              console.log('video error, code :' + video.error.code);
               callback({ code : 'video_error_' + video.error.code, logs : logString});
             };
           } catch(err) {
