@@ -51,6 +51,7 @@
           video = document.getElementById('video');
           try {
             hls = new Hls({debug: true});
+            console.log(navigator.userAgent);
             hls.loadSource(streamUrl);
             hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, function() {
