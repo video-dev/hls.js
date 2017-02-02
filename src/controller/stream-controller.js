@@ -52,6 +52,7 @@ class StreamController extends EventHandler {
         this.config = hls.config;
         this.audioCodecSwap = false;
         this.ticks = 0;
+        this._state = State.STOPPED;
         this.ontick = this.tick.bind(this);
     }
 
