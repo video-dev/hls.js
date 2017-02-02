@@ -176,7 +176,7 @@ class AACDemuxer {
             level,
             sn,
             cc,
-            this._aacTrack,
+            track,
             { samples: [] },
             { samples: [{ pts: pts, dts: pts, unit: id3.payload }] },
             { samples: [] },
