@@ -523,6 +523,8 @@ class StreamController extends EventHandler {
             frag = foundFrag;
             const curSNIdx = frag.sn - levelDetails.startSN;
             const sameLevel = fragPrevious && frag.level === fragPrevious.level;
+            const prevFrag = fragments[curSNIdx - 1];
+            const nextFrag = fragments[curSNIdx + 1];
             //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
             if (sameLevel && frag.sn === fragPrevious.sn) {
                 if (frag.sn < levelDetails.endSN) {
@@ -537,34 +539,41 @@ class StreamController extends EventHandler {
                         fragPrevious.dropped &&
                         curSNIdx
                     ) {
-                        frag = fragments[curSNIdx - 1];
+                        frag = prevFrag;
                         logger.warn(
                             `SN just loaded, with large PTS gap between audio and video, maybe frag is not starting with a keyframe ? load previous one to try to overcome this`
                         );
                         // decrement previous frag load counter to avoid frag loop loading error when next fragment will get reloaded
                         fragPrevious.loadCounter--;
                     } else {
-                        frag = fragments[curSNIdx + 1];
+                        frag = nextFrag;
                         logger.log(`SN just loaded, load next one: ${frag.sn}`);
                     }
                 } else {
                     frag = null;
                 }
             } else if (frag.dropped && !sameLevel) {
-                // If a fragment has dropped frames and it's in a different level/sequence, load the previous fragment to try and find the keyframe
-                // Reset the dropped count now since it won't be reset until we parse the fragment again, which prevents infinite backtracking on the same segment
-                logger.warn(
-                    'Loaded fragment with dropped frames, backtracking 1 segment to find a keyframe'
-                );
-                frag.dropped = 0;
-                if (curSNIdx) {
-                    const prev = fragments[curSNIdx - 1];
-                    if (prev.loadCounter) {
-                        prev.loadCounter--;
-                    }
-                    frag = prev;
+                // Only backtrack a max of 1 consecutive fragment to prevent sliding back too far when little or no frags start with keyframes
+                if (nextFrag && nextFrag.backtracked) {
+                    logger.warn(
+                        `Already backtracked from fragment ${curSNIdx +
+                            1}, will not backtrack to fragment ${curSNIdx}. Loading fragment ${curSNIdx +
+                            1}`
+                    );
+                    frag = nextFrag;
                 } else {
-                    frag = null;
+                    // If a fragment has dropped frames and it's in a different level/sequence, load the previous fragment to try and find the keyframe
+                    // Reset the dropped count now since it won't be reset until we parse the fragment again, which prevents infinite backtracking on the same segment
+                    logger.warn(
+                        'Loaded fragment with dropped frames, backtracking 1 segment to find a keyframe'
+                    );
+                    frag.dropped = 0;
+                    if (prevFrag && prevFrag.loadCounter) {
+                        prevFrag.loadCounter--;
+                        frag = prevFrag;
+                    } else {
+                        frag = null;
+                    }
                 }
             }
         }
