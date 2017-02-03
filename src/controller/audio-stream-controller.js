@@ -183,6 +183,11 @@ class AudioStreamController extends EventHandler {
                 this.loadedmetadata = false;
                 break;
             case State.IDLE:
+                const tracks = this.tracks;
+                // audio tracks not received => exit loop
+                if (!tracks) {
+                    break;
+                }
                 // if video not attached AND
                 // start fragment already requested OR start frag prefetch disable
                 // exit loop
@@ -214,11 +219,8 @@ class AudioStreamController extends EventHandler {
                     audioSwitch = this.audioSwitch;
 
                 // if buffer length is less than maxBufLen try to load a new fragment
-                if (
-                    bufferLen < maxBufLen &&
-                    this.trackId < this.tracks.length
-                ) {
-                    trackDetails = this.tracks[this.trackId].details;
+                if (bufferLen < maxBufLen && this.trackId < tracks.length) {
+                    trackDetails = tracks[this.trackId].details;
                     // if track info not retrieved yet, switch state and wait for track retrieval
                     if (typeof trackDetails === 'undefined') {
                         this.state = State.WAITING_TRACK;
