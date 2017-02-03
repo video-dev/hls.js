@@ -12,7 +12,7 @@
  import ADTS from './adts';
  import Event from '../events';
  import ExpGolomb from './exp-golomb';
-// import Hex from '../utils/hex';
+ import Hex from '../utils/hex';
  import {logger} from '../utils/logger';
  import {ErrorTypes, ErrorDetails} from '../errors';
 
@@ -469,10 +469,13 @@
     //logger.log('parse new PES');
     var track = this._avcTrack,
         units = this._parseAVCNALu(pes.data),
-        debug = false,
+        debug = true,
+        codecparsed = (track.codec !== undefined),
         expGolombDecoder,
         avcSample = this.avcSample,
         push,
+        spsIdx = [],
+        ppsIdx = [],
         i;
     //free pes.data to save up some memory
     pes.data = null;
@@ -592,38 +595,73 @@
           break;
         //SPS
         case 7:
-          push = true;
+          let spsData = unit.data;// = this.discardEPB(unit.data);
+          //console.log('SPS:' + Hex.hexDump(spsData));
+          let spsInfo = new ExpGolomb(spsData).readSPS();
+          let spsId = spsInfo.spsId;
           if(debug && avcSample) {
-            avcSample.debug += 'SPS ';
+            avcSample.debug += 'SPS' + spsId + ' ';
           }
-          if(!track.sps) {
-            expGolombDecoder = new ExpGolomb(unit.data);
-            var config = expGolombDecoder.readSPS();
-            track.width = config.width;
-            track.height = config.height;
-            track.pixelRatio = config.pixelRatio;
-            track.sps = [unit.data];
-            track.duration = this._duration;
-            var codecarray = unit.data.subarray(1, 4);
-            var codecstring = 'avc1.';
-            for (i = 0; i < 3; i++) {
-              var h = codecarray[i].toString(16);
-              if (h.length < 2) {
-                h = '0' + h;
+          let previousIdx = spsIdx[spsId];
+          if (previousIdx !== undefined) {
+            push = false;
+            //console.log('replace SPS @'+previousIdx);
+            // replace previous SPS with new one
+            avcSample.units.units[previousIdx].data = spsData;
+          } else {
+            push = true;
+            if(!track.sps) {
+              track.sps = [];
+              track.width = spsInfo.width;
+              track.height = spsInfo.height;
+              track.pixelRatio = spsInfo.pixelRatio;
+              track.duration = this._duration;
+              var codecarray = spsData.subarray(1, 4);
+              var codecstring = 'avc1.';
+              for (i = 0; i < 3; i++) {
+                var h = codecarray[i].toString(16);
+                if (h.length < 2) {
+                  h = '0' + h;
+                }
+                codecstring += h;
               }
-              codecstring += h;
+              track.codec = codecstring;
             }
-            track.codec = codecstring;
+            spsIdx[spsId] = avcSample.units.units.length;
+            //console.log('new SPS @'+spsIdx[spsId]);
+          }
+          if (!codecparsed) {
+            //console.log('update track.sps '+spsId);
+            track.sps[spsId] = spsData;
           }
           break;
         //PPS
         case 8:
-          push = true;
+          let ppsData = unit.data;
+          console.log('PPS:' + Hex.hexDump(ppsData));
+          let ppsInfo = new ExpGolomb(ppsData).readPPS();
+          spsId = ppsInfo.spsId;
+          let ppsId = ppsInfo.ppsId;
           if(debug && avcSample) {
-            avcSample.debug += 'PPS ';
+            avcSample.debug += 'PPS' + spsId + '' + ppsId + ' ';
           }
-          if (!track.pps) {
-            track.pps = [unit.data];
+          previousIdx = ppsIdx[ppsId];
+          if (previousIdx !== undefined) {
+            push = false;
+            //console.log('replace PPS @'+previousIdx);
+            // replace previous PPS with new one
+            avcSample.units.units[previousIdx].data = ppsData;
+          } else {
+            push = true;
+            ppsIdx[ppsId] = avcSample.units.units.length;
+            //console.log('new PPS @'+ppsIdx[ppsId]);
+          }
+          if (!codecparsed) {
+            if (!track.pps) {
+              track.pps = [];
+            }
+            //console.log('update track.pps '+ppsId);
+            track.pps[ppsId] = ppsData;
           }
           break;
         // AUD

@@ -178,6 +178,7 @@ class ExpGolomb {
       picHeightInMapUnitsMinus1,
       frameMbsOnlyFlag,
       scalingListCount,
+      spsId,
       i,
       readUByte = this.readUByte.bind(this),
       readBits = this.readBits.bind(this),
@@ -193,7 +194,7 @@ class ExpGolomb {
     profileCompat = readBits(5); // constraint_set[0-4]_flag, u(5)
     skipBits(3); // reserved_zero_3bits u(3),
     levelIdc = readUByte(); //level_idc u(8)
-    skipUEG(); // seq_parameter_set_id
+    spsId = readUEG(); // seq_parameter_set_id
     // some profiles have more optional data we don't need
     if (profileIdc === 100 ||
         profileIdc === 110 ||
@@ -283,10 +284,22 @@ class ExpGolomb {
       }
     }
     return {
+      spsId : spsId,
       width: Math.ceil((((picWidthInMbsMinus1 + 1) * 16) - frameCropLeftOffset * 2 - frameCropRightOffset * 2)),
       height: ((2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16) - ((frameMbsOnlyFlag? 2 : 4) * (frameCropTopOffset + frameCropBottomOffset)),
       pixelRatio : pixelRatio
     };
+  }
+
+  readPPS() {
+    var readUEG = this.readUEG.bind(this),
+        naluType = this.readUByte(),// skip NALu type
+        ppsId = readUEG(),
+        spsId = readUEG();
+    return {
+      spsId: spsId,
+      ppsId: ppsId
+    }
   }
 
   readSliceType() {
