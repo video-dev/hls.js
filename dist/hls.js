@@ -972,6 +972,7 @@ var AudioStreamController = function (_EventHandler) {
     _this.config = hls.config;
     _this.audioCodecSwap = false;
     _this.ticks = 0;
+    _this._state = State.STOPPED;
     _this.ontick = _this.tick.bind(_this);
     _this.initPTS = [];
     _this.waitingFragment = null;
@@ -1098,6 +1099,11 @@ var AudioStreamController = function (_EventHandler) {
             _this2.loadedmetadata = false;
             break;
           case State.IDLE:
+            var tracks = _this2.tracks;
+            // audio tracks not received => exit loop
+            if (!tracks) {
+              break;
+            }
             // if video not attached AND
             // start fragment already requested OR start frag prefetch disable
             // exit loop
@@ -1119,11 +1125,12 @@ var AudioStreamController = function (_EventHandler) {
                 bufferEnd = bufferInfo.end,
                 fragPrevious = _this2.fragPrevious,
                 maxBufLen = config.maxMaxBufferLength,
-                audioSwitch = _this2.audioSwitch;
+                audioSwitch = _this2.audioSwitch,
+                trackId = _this2.trackId;
 
             // if buffer length is less than maxBufLen try to load a new fragment
-            if (bufferLen < maxBufLen && _this2.trackId < _this2.tracks.length) {
-              trackDetails = _this2.tracks[_this2.trackId].details;
+            if (bufferLen < maxBufLen && trackId < tracks.length) {
+              trackDetails = tracks[trackId].details;
               // if track info not retrieved yet, switch state and wait for track retrieval
               if (typeof trackDetails === 'undefined') {
                 _this2.state = State.WAITING_TRACK;
@@ -1239,11 +1246,11 @@ var AudioStreamController = function (_EventHandler) {
               if (frag) {
                 //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
                 if (frag.decryptdata.uri != null && frag.decryptdata.key == null) {
-                  _logger.logger.log('Loading key for ' + frag.sn + ' of [' + trackDetails.startSN + ' ,' + trackDetails.endSN + '],track ' + _this2.trackId);
+                  _logger.logger.log('Loading key for ' + frag.sn + ' of [' + trackDetails.startSN + ' ,' + trackDetails.endSN + '],track ' + trackId);
                   _this2.state = State.KEY_LOADING;
                   hls.trigger(_events2.default.KEY_LOADING, { frag: frag });
                 } else {
-                  _logger.logger.log('Loading ' + frag.sn + ' of [' + trackDetails.startSN + ' ,' + trackDetails.endSN + '],track ' + _this2.trackId + ', currentTime:' + pos + ',bufferEnd:' + bufferEnd.toFixed(3));
+                  _logger.logger.log('Loading ' + frag.sn + ' of [' + trackDetails.startSN + ' ,' + trackDetails.endSN + '],track ' + trackId + ', currentTime:' + pos + ',bufferEnd:' + bufferEnd.toFixed(3));
                   // ensure that we are not reloading the same fragments in loop ...
                   if (_this2.fragLoadIdx !== undefined) {
                     _this2.fragLoadIdx++;
@@ -1751,7 +1758,7 @@ var AudioStreamController = function (_EventHandler) {
       if (this.state !== nextState) {
         var previousState = this.state;
         this._state = nextState;
-        _logger.logger.log('audio:switch from ' + previousState + ' to ' + nextState);
+        _logger.logger.log('audio stream:' + previousState + '->' + nextState);
       }
     },
     get: function get() {
@@ -3436,6 +3443,7 @@ var StreamController = function (_EventHandler) {
     _this.config = hls.config;
     _this.audioCodecSwap = false;
     _this.ticks = 0;
+    _this._state = State.STOPPED;
     _this.ontick = _this.tick.bind(_this);
     return _this;
   }
@@ -3639,8 +3647,8 @@ var StreamController = function (_EventHandler) {
         // if everything (almost) til the end is buffered, let's signal eos
         // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference
         // using half frag duration should help cope with these cases.
-        // also cope with almost zero last frag duration (max last frag duration with 100ms) refer to https://github.com/dailymotion/hls.js/pull/657
-        if (media.duration - Math.max(bufferInfo.end, fragPrevious.start) <= Math.max(0.1, fragPrevious.duration / 2)) {
+        // also cope with almost zero last frag duration (max last frag duration with 200ms) refer to https://github.com/dailymotion/hls.js/pull/657
+        if (media.duration - Math.max(bufferInfo.end, fragPrevious.start) <= Math.max(0.2, fragPrevious.duration / 2)) {
           // Finalize the media stream
           var data = {};
           if (this.altAudio) {
@@ -4876,7 +4884,7 @@ var StreamController = function (_EventHandler) {
       if (this.state !== nextState) {
         var previousState = this.state;
         this._state = nextState;
-        _logger.logger.log('main:switch from ' + previousState + ' to ' + nextState);
+        _logger.logger.log('main stream:' + previousState + '->' + nextState);
         this.hls.trigger(_events2.default.STREAM_STATE_TRANSITION, { previousState: previousState, nextState: nextState });
       }
     },
@@ -5765,7 +5773,7 @@ var AACDemuxer = function () {
           break;
         }
       }
-      this.remuxer.remux(level, sn, cc, this._aacTrack, { samples: [] }, { samples: [{ pts: pts, dts: pts, unit: id3.payload }] }, { samples: [] }, timeOffset, contiguous, accurateTimeOffset, defaultInitPTS);
+      this.remuxer.remux(level, sn, cc, track, { samples: [] }, { samples: [{ pts: pts, dts: pts, unit: id3.payload }] }, { samples: [] }, timeOffset, contiguous, accurateTimeOffset, defaultInitPTS);
     }
   }, {
     key: 'destroy',
@@ -8645,7 +8653,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.19';
+      return '0.6.20';
     }
   }, {
     key: 'Events',
