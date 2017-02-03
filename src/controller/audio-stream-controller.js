@@ -216,11 +216,12 @@ class AudioStreamController extends EventHandler {
                     bufferEnd = bufferInfo.end,
                     fragPrevious = this.fragPrevious,
                     maxBufLen = config.maxMaxBufferLength,
-                    audioSwitch = this.audioSwitch;
+                    audioSwitch = this.audioSwitch,
+                    trackId = this.trackId;
 
                 // if buffer length is less than maxBufLen try to load a new fragment
-                if (bufferLen < maxBufLen && this.trackId < tracks.length) {
-                    trackDetails = tracks[this.trackId].details;
+                if (bufferLen < maxBufLen && trackId < tracks.length) {
+                    trackDetails = tracks[trackId].details;
                     // if track info not retrieved yet, switch state and wait for track retrieval
                     if (typeof trackDetails === 'undefined') {
                         this.state = State.WAITING_TRACK;
@@ -392,7 +393,7 @@ class AudioStreamController extends EventHandler {
                             logger.log(
                                 `Loading key for ${frag.sn} of [${
                                     trackDetails.startSN
-                                } ,${trackDetails.endSN}],track ${this.trackId}`
+                                } ,${trackDetails.endSN}],track ${trackId}`
                             );
                             this.state = State.KEY_LOADING;
                             hls.trigger(Event.KEY_LOADING, { frag: frag });
@@ -400,9 +401,9 @@ class AudioStreamController extends EventHandler {
                             logger.log(
                                 `Loading ${frag.sn} of [${
                                     trackDetails.startSN
-                                } ,${trackDetails.endSN}],track ${
-                                    this.trackId
-                                }, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(
+                                } ,${
+                                    trackDetails.endSN
+                                }],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(
                                     3
                                 )}`
                             );
