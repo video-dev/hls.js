@@ -6,6 +6,7 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
+import {ResourceTypes} from './resource-types';
 
 class FragmentLoader extends EventHandler {
 
@@ -48,7 +49,7 @@ class FragmentLoader extends EventHandler {
     }
     loaderConfig = { timeout : config.fragLoadingTimeOut, maxRetry : 0 , retryDelay : 0, maxRetryDelay : config.fragLoadingMaxRetryTimeout};
     loaderCallbacks = { onSuccess : this.loadsuccess.bind(this), onError :this.loaderror.bind(this), onTimeout : this.loadtimeout.bind(this), onProgress: this.loadprogress.bind(this)};
-    loader.load(loaderContext,loaderConfig,loaderCallbacks);
+    loader.load(loaderContext,loaderConfig,loaderCallbacks,ResourceTypes.FRAGMENT);
   }
 
   loadsuccess(response, stats, context) {

@@ -8,6 +8,7 @@ import EventHandler from '../event-handler';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import AttrList from '../utils/attr-list';
 import {logger} from '../utils/logger';
+import {ResourceTypes} from './resource-types';
 
 // https://regex101.com is your friend
 const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
@@ -199,7 +200,7 @@ class PlaylistLoader extends EventHandler {
     let loaderConfig, loaderCallbacks;
     loaderConfig = { timeout : timeout, maxRetry : retry , retryDelay : retryDelay, maxRetryDelay : maxRetryDelay};
     loaderCallbacks = { onSuccess : this.loadsuccess.bind(this), onError :this.loaderror.bind(this), onTimeout : this.loadtimeout.bind(this)};
-    loader.load(context,loaderConfig,loaderCallbacks);
+    loader.load(context,loaderConfig,loaderCallbacks,ResourceTypes.PLAYLIST);
   }
 
   resolve(url, baseUrl) {

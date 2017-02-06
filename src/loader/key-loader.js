@@ -6,6 +6,7 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
+import {ResourceTypes} from './resource-types';
 
 class KeyLoader extends EventHandler {
 
@@ -49,7 +50,7 @@ class KeyLoader extends EventHandler {
         loaderContext = { url : uri, frag : frag, responseType : 'arraybuffer'};
         loaderConfig = { timeout : config.fragLoadingTimeOut, maxRetry : config.fragLoadingMaxRetry , retryDelay : config.fragLoadingRetryDelay, maxRetryDelay : config.fragLoadingMaxRetryTimeout};
         loaderCallbacks = { onSuccess : this.loadsuccess.bind(this), onError :this.loaderror.bind(this), onTimeout : this.loadtimeout.bind(this)};
-        frag.loader.load(loaderContext,loaderConfig,loaderCallbacks);
+        frag.loader.load(loaderContext,loaderConfig,loaderCallbacks,ResourceTypes.KEY);
       } else if (this.decryptkey) {
         // we already loaded this key, return it
         decryptdata.key = this.decryptkey;

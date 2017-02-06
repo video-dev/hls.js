@@ -2,6 +2,7 @@ const assert = require('assert');
 const bufferIsEqual = require('arraybuffer-equal');
 
 import PlaylistLoader from '../../../src/loader/playlist-loader';
+import {ResourceTypes} from '../../../src/loader/resource-types';
 
 describe('PlaylistLoader', () => {
   it('parses empty manifest returns empty array', () => {
@@ -596,6 +597,25 @@ Rollover38803/20160525T064049-01-69844069.ts
     assert.strictEqual(result.fragments[1].programDateTime.getTime(), 1464366894000);
     assert.strictEqual(result.fragments[2].url, 'http://video.example.com/Rollover38803/20160525T064049-01-69844069.ts');
     assert.strictEqual(result.fragments[2].programDateTime.getTime(), 1464366904000);
+  });
+
+  it('loads with the appropriate type', () => {
+    var resultType;
+    var loader = function() {
+      this.load = function(context, config, callbacks, type) {
+        resultType = type;
+      };
+    };
+
+    var playlistLoader = new PlaylistLoader({
+      on: function() {},
+      config: {
+        loader: loader
+      }
+    });
+
+    playlistLoader.load('foobar', {});
+    assert.strictEqual(resultType, ResourceTypes.PLAYLIST);
   });
 });
 

@@ -504,6 +504,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
      * @param {onProgressCallback} callbacks.onProgress - Callback triggered while loading is in progress.
      * @param {onErrorCallback} callbacks.onError - Callback triggered if any I/O error is met while loading fragment.
      * @param {onTimeoutCallback} callbacks.onTimeout - Callback triggered if loading is still not finished after a certain duration.
+     * @param {string} type The type of resources being loaded. One of `Hls.ResourceTypes.FRAGMENT`, `Hls.ResourceTypes.PLAYLIST`, or `Hls.ResourceTypes.KEY`
 
       @callback onSuccessCallback
       @param response {object} - response data
@@ -539,7 +540,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param context {object} - loader context
 
    */
-    this.load = function (context, config, callbacks) {};
+    this.load = function (context, config, callbacks, type) {};
 
     /** Abort any loading in progress. */
     this.abort = function () {};
@@ -583,11 +584,13 @@ Note: This will overwrite the default `loader`, as well as your own loader funct
 
 Parameter should be a function with two arguments `(xhr: XMLHttpRequest, url: string)`.
 If `xhrSetup` is specified, default loader will invoke it before calling `xhr.send()`.
-This allows user to easily modify/setup XHR. See example below.
+This allows user to easily modify/setup XHR. See example below. The type parameter
+is one of `Hls.ResourceTypes.FRAGMENT`, `Hls.ResourceTypes.PLAYLIST`, or `Hls.ResourceTypes.KEY`
+and can be used to differentiate between the different resource types that can be loaded.
 
 ```js
   var config = {
-    xhrSetup: function(xhr, url) {
+    xhrSetup: function(xhr, url, type) {
       xhr.withCredentials = true; // do send cookies
     }
   }
@@ -599,9 +602,12 @@ This allows user to easily modify/setup XHR. See example below.
 
 `Fetch` customization callback for Fetch based loader.
 
-Parameter should be a function with two arguments (`context` and `Request Init Params`).
+Parameter should be a function with three arguments (`context`, `Request Init Params`, and `type`).
 If `fetchSetup` is specified and Fetch loader is used, `fetchSetup` will be triggered to instantiate [Request](https://developer.mozilla.org/fr/docs/Web/API/Request) Object.
-This allows user to easily tweak Fetch loader. See example below.
+
+The type parameter is one of `Hls.ResourceTypes.FRAGMENT`, `Hls.ResourceTypes.PLAYLIST`,
+or `Hls.ResourceTypes.KEY` and can be used to differentiate between the different resource
+types that can be loaded. This allows user to easily tweak Fetch loader. See example below.
 
 ```js
   var config = {

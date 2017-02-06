@@ -7,6 +7,7 @@ import Event from './events';
 import {ErrorTypes, ErrorDetails} from './errors';
 import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
+import {ResourceTypes} from './loader/resource-types';
 import AbrController from    './controller/abr-controller';
 import BufferController from  './controller/buffer-controller';
 import CapLevelController from  './controller/cap-level-controller';
@@ -47,6 +48,10 @@ class Hls {
 
   static get ErrorDetails() {
     return ErrorDetails;
+  }
+
+  static get ResourceTypes() {
+    return ResourceTypes;
   }
 
   static get DefaultConfig() {
