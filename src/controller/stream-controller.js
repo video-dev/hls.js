@@ -197,7 +197,7 @@ class StreamController extends EventHandler {
     // if we have not yet loaded any fragment, start loading from start position
     let pos = 0;
     if (this.loadedmetadata) {
-      pos = this.media.currentTime;
+      pos = media.currentTime;
     } else if (this.nextLoadPosition) {
       pos = this.nextLoadPosition;
     }
