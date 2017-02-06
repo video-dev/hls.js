@@ -597,18 +597,35 @@ Rollover38803/20160525T064049-01-69844069.ts
     assert.strictEqual(result.fragments[2].url, 'http://video.example.com/Rollover38803/20160525T064049-01-69844069.ts');
     assert.strictEqual(result.fragments[2].programDateTime.getTime(), 1464366904000);
   });
-});
 
+  it('parses #EXTINF without a leading digit', () => {
+    var level = `#EXTM3U
+  #EXT-X-VERSION:3
+  #EXT-X-PLAYLIST-TYPE:VOD
+  #EXT-X-TARGETDURATION:14
+  #EXTINF:.360,
+  /sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(1)/video/107/282/158282701_mp4_h264_aac_hq.ts
+  #EXT-X-ENDLIST`;
+    var result = new PlaylistLoader({on : function() { }}).parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core',0);
+    assert.strictEqual(result.fragments.length, 1);
+    assert.strictEqual(result.fragments[0].duration, 0.360);
+  });
 
-it('parses #EXTINF without a leading digit', () => {
-  var level = `#EXTM3U
-#EXT-X-VERSION:3
-#EXT-X-PLAYLIST-TYPE:VOD
-#EXT-X-TARGETDURATION:14
-#EXTINF:.360,
-/sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(1)/video/107/282/158282701_mp4_h264_aac_hq.ts
-#EXT-X-ENDLIST`;
-  var result = new PlaylistLoader({on : function() { }}).parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core',0);
-  assert.strictEqual(result.fragments.length, 1);
-  assert.strictEqual(result.fragments[0].duration, 0.360);
+  it('parses #EXT-X-MAP URI', () => {
+    var level = `#EXTM3U
+  #EXT-X-TARGETDURATION:6
+  #EXT-X-VERSION:7
+  #EXT-X-MEDIA-SEQUENCE:1
+  #EXT-X-PLAYLIST-TYPE:VOD
+  #EXT-X-INDEPENDENT-SEGMENTS
+  #EXT-X-MAP:URI="main.mp4",BYTERANGE="718@0"
+  #EXTINF:6.00600,
+  #EXT-X-BYTERANGE:1543597@718
+  main.mp4`;
+    var result = new PlaylistLoader({on : function() { }}).parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core',0);
+    assert.strictEqual(result.initSegment.url, "http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/main.mp4");
+    assert.strictEqual(result.initSegment.byteRangeStartOffset, 0);
+    assert.strictEqual(result.initSegment.byteRangeEndOffset, 718);
+  });
+
 });
