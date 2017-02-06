@@ -306,6 +306,11 @@ function isUndefined(arg) {
 /* jshint ignore:start */
 (function(root) { 
 /* jshint ignore:end */
+
+  var HASH_SPLIT = /^([^#]*)(.*)$/;
+  var QUERY_SPLIT = /^([^\?]*)(.*)$/;
+  var DOMAIN_SPLIT = /^(([a-z]+:\/\/)?[^:\/]+(?::[0-9]+)?)?(\/?.*)$/i;
+
   var URLToolkit = {
     // build an absolute URL from a relative one using the provided baseURL
     // if relativeURL is an absolute URL it will be returned as is.
@@ -320,42 +325,46 @@ function isUndefined(arg) {
       var relativeURLQuery = null;
       var relativeURLHash = null;
 
-      var relativeURLHashSplit = /^([^#]*)(.*)$/.exec(relativeURL);
+      var relativeURLHashSplit = HASH_SPLIT.exec(relativeURL);
       if (relativeURLHashSplit) {
         relativeURLHash = relativeURLHashSplit[2];
         relativeURL = relativeURLHashSplit[1];
       }
-      var relativeURLQuerySplit = /^([^\?]*)(.*)$/.exec(relativeURL);
+      var relativeURLQuerySplit = QUERY_SPLIT.exec(relativeURL);
       if (relativeURLQuerySplit) {
         relativeURLQuery = relativeURLQuerySplit[2];
         relativeURL = relativeURLQuerySplit[1];
       }
 
-      var baseURLHashSplit = /^([^#]*)(.*)$/.exec(baseURL);
+      var baseURLHashSplit = HASH_SPLIT.exec(baseURL);
       if (baseURLHashSplit) {
         baseURL = baseURLHashSplit[1];
       }
-      var baseURLQuerySplit = /^([^\?]*)(.*)$/.exec(baseURL);
+      var baseURLQuerySplit = QUERY_SPLIT.exec(baseURL);
       if (baseURLQuerySplit) {
         baseURL = baseURLQuerySplit[1];
       }
 
-      var baseURLDomainSplit = /^(([a-z]+:)?\/\/[a-z0-9\.\-_~]+(:[0-9]+)?)?(\/.*)$/i.exec(baseURL);
+      var baseURLDomainSplit = DOMAIN_SPLIT.exec(baseURL);
       if (!baseURLDomainSplit) {
         throw new Error('Error trying to parse base URL.');
       }
       
-      // e.g. 'http:', 'https:', ''
+      // e.g. 'http://', 'https://', ''
       var baseURLProtocol = baseURLDomainSplit[2] || '';
-      // e.g. 'http://example.com', '//example.com', ''
+      // e.g. 'http://example.com', '//example.com', 'example.com', ''
       var baseURLProtocolDomain = baseURLDomainSplit[1] || '';
-      // e.g. '/a/b/c/playlist.m3u8'
-      var baseURLPath = baseURLDomainSplit[4];
+      // e.g. '/a/b/c/playlist.m3u8', 'a/b/c/playlist.m3u8'
+      var baseURLPath = baseURLDomainSplit[3];
+      if (baseURLPath.indexOf('/') !== 0 && baseURLProtocolDomain !== '') {
+        // this handles a base url of http://example.com (missing last slash)
+        baseURLPath = '/'+baseURLPath;
+      }
 
       var builtURL = null;
       if (/^\/\//.test(relativeURL)) {
         // relative url starts wth '//' so copy protocol (which may be '' if baseUrl didn't provide one)
-        builtURL = baseURLProtocol+'//'+URLToolkit.buildAbsolutePath('', relativeURL.substring(2));
+        builtURL = baseURLProtocol+URLToolkit.buildAbsolutePath('', relativeURL.substring(2));
       }
       else if (/^\//.test(relativeURL)) {
         // relative url starts with '/' so start from root of domain
@@ -610,7 +619,7 @@ var AbrController = function (_EventHandler) {
               // byte/s; at least 1 byte/s to avoid division by zero
           // compute expected fragment length using frag duration and level bitrate. also ensure that expected len is gte than already loaded size
           level = levels[frag.level],
-              levelBitrate = level.realbitrate ? Math.max(level.realbitrate, level.bitrate) : level.bitrate,
+              levelBitrate = level.realBitrate ? Math.max(level.realBitrate, level.bitrate) : level.bitrate,
               expectedLen = stats.total ? stats.total : Math.max(stats.loaded, Math.round(frag.duration * levelBitrate / 8)),
               pos = v.currentTime,
               fragLoadedDelay = (expectedLen - stats.loaded) / loadRate,
@@ -627,7 +636,7 @@ var AbrController = function (_EventHandler) {
               // compute time to load next fragment at lower level
               // 0.8 : consider only 80% of current bw to be conservative
               // 8 = bits per byte (bps/Bps)
-              var levelNextBitrate = levels[nextLoadLevel].realbitrate ? Math.max(levels[nextLoadLevel].realbitrate, levels[nextLoadLevel].bitrate) : levels[nextLoadLevel].bitrate;
+              var levelNextBitrate = levels[nextLoadLevel].realBitrate ? Math.max(levels[nextLoadLevel].realBitrate, levels[nextLoadLevel].bitrate) : levels[nextLoadLevel].bitrate;
               fragLevelNextLoadedDelay = frag.duration * levelNextBitrate / (8 * 0.8 * loadRate);
               if (fragLevelNextLoadedDelay < bufferStarvationDelay) {
                 // we found a lower level that be rebuffering free with current estimated bw !
@@ -746,7 +755,7 @@ var AbrController = function (_EventHandler) {
         } else {
           adjustedbw = bwUpFactor * currentBw;
         }
-        var bitrate = levels[i].realbitrate ? Math.max(levels[i].realbitrate, levels[i].bitrate) : levels[i].bitrate,
+        var bitrate = levels[i].realBitrate ? Math.max(levels[i].realBitrate, levels[i].bitrate) : levels[i].bitrate,
             fetchDuration = bitrate * avgDuration / adjustedbw;
 
         _logger.logger.trace('level/adjustedbw/bitrate/avgDuration/maxFetchDuration/fetchDuration: ' + i + '/' + Math.round(adjustedbw) + '/' + bitrate + '/' + avgDuration + '/' + maxFetchDuration + '/' + fetchDuration);
@@ -794,7 +803,7 @@ var AbrController = function (_EventHandler) {
         nextABRAutoLevel = Math.min(nextAutoLevel, nextABRAutoLevel);
       }
       if (minAutoBitrate !== undefined) {
-        var levelNextBitrate = levels[nextABRAutoLevel].realbitrate ? Math.max(levels[nextABRAutoLevel].realbitrate, levels[nextABRAutoLevel].bitrate) : levels[nextABRAutoLevel].bitrate;
+        var levelNextBitrate = levels[nextABRAutoLevel].realBitrate ? Math.max(levels[nextABRAutoLevel].realBitrate, levels[nextABRAutoLevel].bitrate) : levels[nextABRAutoLevel].bitrate;
         while (levelNextBitrate < minAutoBitrate) {
           nextABRAutoLevel++;
         }
@@ -812,7 +821,7 @@ var AbrController = function (_EventHandler) {
           minAutoBitrate = hls.config.minAutoBitrate,
           len = levels ? levels.length : 0;
       for (var i = 0; i < len; i++) {
-        var levelNextBitrate = levels[i].realbitrate ? Math.max(levels[i].realbitrate, levels[i].bitrate) : levels[i].bitrate;
+        var levelNextBitrate = levels[i].realBitrate ? Math.max(levels[i].realBitrate, levels[i].bitrate) : levels[i].bitrate;
         if (levelNextBitrate > minAutoBitrate) {
           return i;
         }
@@ -6236,6 +6245,7 @@ var Demuxer = function () {
           URL.revokeObjectURL(w.objectURL);
         }
         this.demuxer = new _demuxerInline2.default(hls, id, typeSupported);
+        this.w = undefined;
       }
     } else {
       this.demuxer = new _demuxerInline2.default(hls, id, typeSupported);
