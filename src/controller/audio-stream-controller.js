@@ -171,6 +171,7 @@ class AudioStreamController extends EventHandler {
         } else {
           pos = 0;
         }
+
         let media = this.mediaBuffer ? this.mediaBuffer : this.media,
             bufferInfo = BufferHelper.bufferInfo(media,pos,config.maxBufferHole),
             bufferLen = bufferInfo.len,
