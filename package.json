@@ -40,7 +40,7 @@
     "babel-preset-es2015": "^6.18.0",
     "babel-register": "^6.18.0",
     "babelify": "^7.2.0",
-    "browserify": "^13.2.0",
+    "browserify": "^14.0.0",
     "browserify-derequire": "^0.9.4",
     "browserify-versionify": "^1.0.6",
     "bundle-collapser": "^1.2.1",
