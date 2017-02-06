@@ -180,7 +180,7 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
 
 ## API and Configuration Parameters
 
-hls.js can be configured and controlled easily, click [here](API.md) for details.
+hls.js can be configured and controlled easily, click [here](doc/API.md) for details.
 
 
 ## License
@@ -208,7 +208,7 @@ npm run lint
 
 ## Design
 
-Click [here](design.md) for details.
+Click [here](doc/design.md) for details.
 
 ### Tested With
 
