@@ -106,8 +106,8 @@ class AbrController extends EventHandler {
                     ), // byte/s; at least 1 byte/s to avoid division by zero
                     // compute expected fragment length using frag duration and level bitrate. also ensure that expected len is gte than already loaded size
                     level = levels[frag.level],
-                    levelBitrate = level.realbitrate
-                        ? Math.max(level.realbitrate, level.bitrate)
+                    levelBitrate = level.realBitrate
+                        ? Math.max(level.realBitrate, level.bitrate)
                         : level.bitrate,
                     expectedLen = stats.total
                         ? stats.total
@@ -143,9 +143,9 @@ class AbrController extends EventHandler {
                         // compute time to load next fragment at lower level
                         // 0.8 : consider only 80% of current bw to be conservative
                         // 8 = bits per byte (bps/Bps)
-                        let levelNextBitrate = levels[nextLoadLevel].realbitrate
+                        let levelNextBitrate = levels[nextLoadLevel].realBitrate
                             ? Math.max(
-                                  levels[nextLoadLevel].realbitrate,
+                                  levels[nextLoadLevel].realBitrate,
                                   levels[nextLoadLevel].bitrate
                               )
                             : levels[nextLoadLevel].bitrate;
@@ -300,9 +300,9 @@ class AbrController extends EventHandler {
             nextABRAutoLevel = Math.min(nextAutoLevel, nextABRAutoLevel);
         }
         if (minAutoBitrate !== undefined) {
-            const levelNextBitrate = levels[nextABRAutoLevel].realbitrate
+            const levelNextBitrate = levels[nextABRAutoLevel].realBitrate
                 ? Math.max(
-                      levels[nextABRAutoLevel].realbitrate,
+                      levels[nextABRAutoLevel].realBitrate,
                       levels[nextABRAutoLevel].bitrate
                   )
                 : levels[nextABRAutoLevel].bitrate;
@@ -319,8 +319,8 @@ class AbrController extends EventHandler {
             minAutoBitrate = hls.config.minAutoBitrate,
             len = levels ? levels.length : 0;
         for (let i = 0; i < len; i++) {
-            const levelNextBitrate = levels[i].realbitrate
-                ? Math.max(levels[i].realbitrate, levels[i].bitrate)
+            const levelNextBitrate = levels[i].realBitrate
+                ? Math.max(levels[i].realBitrate, levels[i].bitrate)
                 : levels[i].bitrate;
             if (levelNextBitrate > minAutoBitrate) {
                 return i;
@@ -458,8 +458,8 @@ class AbrController extends EventHandler {
             } else {
                 adjustedbw = bwUpFactor * currentBw;
             }
-            const bitrate = levels[i].realbitrate
-                    ? Math.max(levels[i].realbitrate, levels[i].bitrate)
+            const bitrate = levels[i].realBitrate
+                    ? Math.max(levels[i].realBitrate, levels[i].bitrate)
                     : levels[i].bitrate,
                 fetchDuration = bitrate * avgDuration / adjustedbw;
 
