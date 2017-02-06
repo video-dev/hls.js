@@ -56,6 +56,7 @@ class Demuxer {
                     URL.revokeObjectURL(w.objectURL);
                 }
                 this.demuxer = new DemuxerInline(hls, id, typeSupported);
+                this.w = undefined;
             }
         } else {
             this.demuxer = new DemuxerInline(hls, id, typeSupported);
