@@ -13,7 +13,7 @@ import {logger} from '../utils/logger';
 const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 const LEVEL_PLAYLIST_REGEX_FAST = /#EXTINF:(\d*(?:\.\d+)?)(?:,(.*))?|(?!#)(\S.+)|#EXT-X-BYTERANGE: *(.+)|#EXT-X-PROGRAM-DATE-TIME:(.+)|#.*/g;
-const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
+const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:#EXT-X-(MAP):(.+))|(?:(#)(.*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
 
 class LevelKey {
 
@@ -39,6 +39,7 @@ class Fragment {
     this._url = null;
     this._byteRange = null;
     this._decryptdata = null;
+    this.tagList = [];
   }
 
   get url() {
@@ -296,8 +297,6 @@ class PlaylistLoader extends EventHandler {
         result,
         i;
 
-    frag.tagList = [];
-
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
 
     while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
@@ -326,7 +325,6 @@ class PlaylistLoader extends EventHandler {
           totalduration += frag.duration;
 
           frag = new Fragment();
-          frag.tagList = [];
         }
       } else if (result[4]) { // X-BYTERANGE
         frag.rawByteRange = (' ' + result[4]).slice(1);
@@ -408,6 +406,14 @@ class PlaylistLoader extends EventHandler {
             if ( !isNaN(startTimeOffset) ) {
               level.startTimeOffset = startTimeOffset;
             }
+            break;
+          case 'MAP':
+            let mapAttrs = new AttrList(value1);
+            frag.baseurl = baseurl;
+            frag.relurl = mapAttrs.URI;
+            frag.rawByteRange = mapAttrs.BYTERANGE;
+            level.initSegment = frag;
+            frag = new Fragment();
             break;
           default:
             logger.warn(`line parsed but not handled: ${result}`);
