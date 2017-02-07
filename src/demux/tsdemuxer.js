@@ -633,7 +633,7 @@ class TSDemuxer {
                     avcSample.frame = true;
                     // retrieve slice type by parsing beginning of NAL unit (follow H264 spec, slice_header definition) to detect keyframe embedded in NDR
                     let data = unit.data;
-                    if (data.length > 1) {
+                    if (data.length > 4) {
                         let sliceType = new ExpGolomb(data).readSliceType();
                         // 2 : I slice, 4 : SI slice, 7 : I slice, 9: SI slice
                         // SI slice : A slice that is coded using intra prediction only and using quantisation of the prediction samples.
@@ -778,6 +778,7 @@ class TSDemuxer {
                         var config = expGolombDecoder.readSPS();
                         track.width = config.width;
                         track.height = config.height;
+                        track.pixelRatio = config.pixelRatio;
                         track.sps = [unit.data];
                         track.duration = this._duration;
                         var codecarray = unit.data.subarray(1, 4);

@@ -172,7 +172,6 @@ class ExpGolomb {
             frameCropRightOffset = 0,
             frameCropTopOffset = 0,
             frameCropBottomOffset = 0,
-            sarScale = 1,
             profileIdc,
             profileCompat,
             levelIdc,
@@ -260,85 +259,82 @@ class ExpGolomb {
             frameCropTopOffset = readUEG();
             frameCropBottomOffset = readUEG();
         }
+        let pixelRatio = [1, 1];
         if (readBoolean()) {
             // vui_parameters_present_flag
             if (readBoolean()) {
                 // aspect_ratio_info_present_flag
-                let sarRatio;
                 const aspectRatioIdc = readUByte();
                 switch (aspectRatioIdc) {
                     case 1:
-                        sarRatio = [1, 1];
+                        pixelRatio = [1, 1];
                         break;
                     case 2:
-                        sarRatio = [12, 11];
+                        pixelRatio = [12, 11];
                         break;
                     case 3:
-                        sarRatio = [10, 11];
+                        pixelRatio = [10, 11];
                         break;
                     case 4:
-                        sarRatio = [16, 11];
+                        pixelRatio = [16, 11];
                         break;
                     case 5:
-                        sarRatio = [40, 33];
+                        pixelRatio = [40, 33];
                         break;
                     case 6:
-                        sarRatio = [24, 11];
+                        pixelRatio = [24, 11];
                         break;
                     case 7:
-                        sarRatio = [20, 11];
+                        pixelRatio = [20, 11];
                         break;
                     case 8:
-                        sarRatio = [32, 11];
+                        pixelRatio = [32, 11];
                         break;
                     case 9:
-                        sarRatio = [80, 33];
+                        pixelRatio = [80, 33];
                         break;
                     case 10:
-                        sarRatio = [18, 11];
+                        pixelRatio = [18, 11];
                         break;
                     case 11:
-                        sarRatio = [15, 11];
+                        pixelRatio = [15, 11];
                         break;
                     case 12:
-                        sarRatio = [64, 33];
+                        pixelRatio = [64, 33];
                         break;
                     case 13:
-                        sarRatio = [160, 99];
+                        pixelRatio = [160, 99];
                         break;
                     case 14:
-                        sarRatio = [4, 3];
+                        pixelRatio = [4, 3];
                         break;
                     case 15:
-                        sarRatio = [3, 2];
+                        pixelRatio = [3, 2];
                         break;
                     case 16:
-                        sarRatio = [2, 1];
+                        pixelRatio = [2, 1];
                         break;
                     case 255: {
-                        sarRatio = [
+                        pixelRatio = [
                             (readUByte() << 8) | readUByte(),
                             (readUByte() << 8) | readUByte()
                         ];
                         break;
                     }
                 }
-                if (sarRatio) {
-                    sarScale = sarRatio[0] / sarRatio[1];
-                }
             }
         }
         return {
             width: Math.ceil(
-                ((picWidthInMbsMinus1 + 1) * 16 -
+                (picWidthInMbsMinus1 + 1) * 16 -
                     frameCropLeftOffset * 2 -
-                    frameCropRightOffset * 2) *
-                    sarScale
+                    frameCropRightOffset * 2
             ),
             height:
                 (2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16 -
                 (frameMbsOnlyFlag ? 2 : 4) *
-                    (frameCropTopOffset + frameCropBottomOffset)
+                    (frameCropTopOffset + frameCropBottomOffset),
+            pixelRatio: pixelRatio
         };
     }
 

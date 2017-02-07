@@ -39,10 +39,11 @@ class CapLevelController extends EventHandler {
     }
 
     onManifestParsed(data) {
-        if (this.hls.config.capLevelToPlayerSize) {
+        const hls = this.hls;
+        if (hls.config.capLevelToPlayerSize) {
             this.autoLevelCapping = Number.POSITIVE_INFINITY;
             this.levels = data.levels;
-            this.hls.firstLevel = this.getMaxLevel(data.firstLevel);
+            hls.firstLevel = this.getMaxLevel(data.firstLevel);
             clearInterval(this.timer);
             this.timer = setInterval(this.detectPlayerSize.bind(this), 1000);
             this.detectPlayerSize();
@@ -53,13 +54,14 @@ class CapLevelController extends EventHandler {
         if (this.media) {
             let levelsLength = this.levels ? this.levels.length : 0;
             if (levelsLength) {
-                this.hls.autoLevelCapping = this.getMaxLevel(levelsLength - 1);
-                if (this.hls.autoLevelCapping > this.autoLevelCapping) {
+                const hls = this.hls;
+                hls.autoLevelCapping = this.getMaxLevel(levelsLength - 1);
+                if (hls.autoLevelCapping > this.autoLevelCapping) {
                     // if auto level capping has a higher value for the previous one, flush the buffer using nextLevelSwitch
                     // usually happen when the user go to the fullscreen mode.
-                    this.hls.streamController.nextLevelSwitch();
+                    hls.streamController.nextLevelSwitch();
                 }
-                this.autoLevelCapping = this.hls.autoLevelCapping;
+                this.autoLevelCapping = hls.autoLevelCapping;
             }
         }
     }
@@ -108,11 +110,9 @@ class CapLevelController extends EventHandler {
 
     get mediaWidth() {
         let width;
-        if (this.media) {
-            width =
-                this.media.width ||
-                this.media.clientWidth ||
-                this.media.offsetWidth;
+        const media = this.media;
+        if (media) {
+            width = media.width || media.clientWidth || media.offsetWidth;
             width *= this.contentScaleFactor;
         }
         return width;
@@ -120,11 +120,9 @@ class CapLevelController extends EventHandler {
 
     get mediaHeight() {
         let height;
-        if (this.media) {
-            height =
-                this.media.height ||
-                this.media.clientHeight ||
-                this.media.offsetHeight;
+        const media = this.media;
+        if (media) {
+            height = media.height || media.clientHeight || media.offsetHeight;
             height *= this.contentScaleFactor;
         }
         return height;
