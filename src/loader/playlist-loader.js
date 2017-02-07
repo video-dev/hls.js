@@ -403,9 +403,12 @@ class PlaylistLoader extends EventHandler {
             break;
           case 'MAP':
             let mapAttrs = new AttrList(value1);
-            frag.baseurl = baseurl;
             frag.relurl = mapAttrs.URI;
             frag.rawByteRange = mapAttrs.BYTERANGE;
+            frag.baseurl = baseurl;
+            frag.level = id;
+            frag.type = type;
+            frag.sn = 'initSegment';
             level.initSegment = frag;
             frag = new Fragment();
             break;
