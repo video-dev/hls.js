@@ -626,6 +626,7 @@ Rollover38803/20160525T064049-01-69844069.ts
     assert.strictEqual(result.initSegment.url, "http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/main.mp4");
     assert.strictEqual(result.initSegment.byteRangeStartOffset, 0);
     assert.strictEqual(result.initSegment.byteRangeEndOffset, 718);
+    assert.strictEqual(result.initSegment.sn, 'initSegment');
   });
 
 });
