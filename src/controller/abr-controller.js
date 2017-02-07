@@ -267,7 +267,7 @@ class AbrController extends EventHandler {
       logger.trace('rebuffering expected to happen, lets try to find a quality level minimizing the rebuffering');
       // not possible to get rid of rebuffering ... let's try to find level that will guarantee less than maxStarvationDelay of rebuffering
       // if no matching level found, logic will return 0
-      let maxStarvationDelay = config.maxStarvationDelay,
+      let maxStarvationDelay = currentFragDuration ? Math.min(currentFragDuration,config.maxStarvationDelay) : config.maxStarvationDelay;
           bwFactor = config.abrBandWidthFactor,
           bwUpFactor = config.abrBandWidthUpFactor;
       if (bufferStarvationDelay === 0) {
