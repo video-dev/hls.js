@@ -189,7 +189,7 @@ class AbrController extends EventHandler {
 
     onFragLoaded(data) {
         let frag = data.frag;
-        if (frag.type === 'main') {
+        if (frag.type === 'main' && !isNaN(frag.sn)) {
             // stop monitoring bw once frag loaded
             this.clearTimer();
             // store level id after successful fragment load
@@ -230,6 +230,7 @@ class AbrController extends EventHandler {
             stats.aborted !== true &&
             frag.loadCounter === 1 &&
             frag.type === 'main' &&
+            !isNaN(frag.sn) &&
             (!frag.bitrateTest || stats.tload === stats.tbuffered)
         ) {
             // use tparsed-trequest instead of tbuffered-trequest to compute fragLoadingProcessing; rationale is that  buffer appending only happens once media is attached
