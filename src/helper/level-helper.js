@@ -142,7 +142,9 @@ class LevelHelper {
     if (LevelHelper.shouldAlignOnDiscontinuities(lastFrag, lastLevel, details)) {
         logger.log('Adjusting PTS using last level due to CC increase within current level');
         const referenceFrag = LevelHelper.findDiscontinuousReferenceFrag(lastLevel.details, details);
-        LevelHelper.adjustPtsByReferenceFrag(referenceFrag, details);
+        if (referenceFrag) {
+          LevelHelper.adjustPtsByReferenceFrag(referenceFrag, details);
+        }
     }
   }
 
