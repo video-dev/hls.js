@@ -68,7 +68,7 @@ hls.js is (being) integrated in the following players:
  - [Akamai Adaptive Media Player (AMP)] (https://www.akamai.com/us/en/solutions/products/media-delivery/adaptive-media-player.jsp)
  - [Clappr] (https://github.com/clappr/clappr)
  - [Flowplayer] (https://www.flowplayer.org)  through [flowplayer-hlsjs] (https://github.com/flowplayer/flowplayer-hlsjs)
- - [MediaElement.js] (http://mediaelementjs.com/) integrated in [3.x-dev] (https://github.com/johndyer/mediaelement/tree/3.x-dev)
+ - [MediaElement.js] (http://www.mediaelementjs.com)
  - [Videojs] (http://videojs.com) through [Videojs-hlsjs] (https://github.com/benjipott/videojs-hlsjs)
  - [Videojs] (http://videojs.com) through [videojs-hls.js] (https://github.com/streamroot/videojs-hls.js). hls.js is integrated as a SourceHandler -- new feature in Video.js 5.
  - [Videojs] (http://videojs.com) through [videojs-contrib-hls.js](https://github.com/Peer5/videojs-contrib-hls.js). Production ready plug-in with full fallback compatibility built-in.
@@ -180,7 +180,7 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
 
 ## API and Configuration Parameters
 
-hls.js can be configured and controlled easily, click [here](API.md) for details.
+hls.js can be configured and controlled easily, click [here](doc/API.md) for details.
 
 
 ## License
@@ -208,7 +208,11 @@ npm run lint
 
 ## Design
 
-Click [here](design.md) for details.
+Click [here](doc/design.md) for details.
+
+### Tested With
+
+[<img src="https://cloud.githubusercontent.com/assets/7864462/12837037/452a17c6-cb73-11e5-9f39-fc96893bc9bf.png" alt="Browser Stack Logo" width="300">](https://www.browserstack.com/)
 
 [npm-image]: https://img.shields.io/npm/v/hls.js.svg?style=flat
 [npm-url]: https://npmjs.org/package/hls.js

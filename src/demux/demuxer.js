@@ -2,7 +2,6 @@ import Event from '../events';
 import DemuxerInline from '../demux/demuxer-inline';
 import DemuxerWorker from '../demux/demuxer-worker';
 import {logger} from '../utils/logger';
-import Decrypter from '../crypt/decrypter';
 import {ErrorTypes, ErrorDetails} from '../errors';
 
 class Demuxer {
@@ -33,6 +32,7 @@ class Demuxer {
             URL.revokeObjectURL(w.objectURL);
           }
           this.demuxer = new DemuxerInline(hls,id,typeSupported);
+          this.w = undefined;
         }
       } else {
         this.demuxer = new DemuxerInline(hls,id,typeSupported);
@@ -53,39 +53,18 @@ class Demuxer {
         this.demuxer = null;
       }
     }
-    let decrypter = this.decrypter;
-    if (decrypter) {
-      decrypter.destroy();
-      this.decrypter = null;
-    }
-  }
-
-  pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
-    let w = this.w;
-    if (w) {
-      // post fragment payload as transferable objects (no copy)
-      w.postMessage({cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn : sn, duration: duration, accurateTimeOffset : accurateTimeOffset, defaultInitPTS : defaultInitPTS }, [data]);
-    } else {
-      let demuxer = this.demuxer;
-      if (demuxer) {
-        demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS);
-      }
-    }
   }
 
   push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata,accurateTimeOffset,defaultInitPTS) {
-    if ((data.byteLength > 0) && (decryptdata != null) && (decryptdata.key != null) && (decryptdata.method === 'AES-128')) {
-      if (this.decrypter == null) {
-        this.decrypter = new Decrypter(this.hls);
-      }
-      var localthis = this;
-      var startTime = performance.now();
-      this.decrypter.decrypt(data, decryptdata.key.buffer, decryptdata.iv.buffer, function (decryptedData) {
-        localthis.hls.trigger(Event.FRAG_DECRYPTED, { level : level, sn : sn, stats: { tstart: startTime, tdecrypt: performance.now() } });
-        localthis.pushDecrypted(decryptedData, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset,defaultInitPTS);
-      });
+    let w = this.w;
+    if (w) {
+      // post fragment payload as transferable objects (no copy)
+      w.postMessage({cmd: 'demux', data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset,defaultInitPTS}, [data]);
     } else {
-      this.pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS);
+      let demuxer = this.demuxer;
+      if (demuxer) {
+        demuxer.push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,decryptdata, accurateTimeOffset,defaultInitPTS);
+      }
     }
   }
 
