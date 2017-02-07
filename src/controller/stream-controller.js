@@ -195,12 +195,13 @@ class StreamController extends EventHandler {
     }
 
     // if we have not yet loaded any fragment, start loading from start position
-    let pos;
+    let pos = 0;
     if (this.loadedmetadata) {
       pos = media.currentTime;
-    } else {
+    } else if (this.nextLoadPosition) {
       pos = this.nextLoadPosition;
     }
+
     // determine next load level
     let level = hls.nextLoadLevel,
         levelInfo = this.levels[level],
