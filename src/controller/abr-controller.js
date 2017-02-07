@@ -387,10 +387,10 @@ class AbrController extends EventHandler {
             // not possible to get rid of rebuffering ... let's try to find level that will guarantee less than maxStarvationDelay of rebuffering
             // if no matching level found, logic will return 0
             let maxStarvationDelay = currentFragDuration
-                ? Math.min(currentFragDuration, config.maxStarvationDelay)
-                : config.maxStarvationDelay;
-            (bwFactor = config.abrBandWidthFactor),
-                (bwUpFactor = config.abrBandWidthUpFactor);
+                    ? Math.min(currentFragDuration, config.maxStarvationDelay)
+                    : config.maxStarvationDelay,
+                bwFactor = config.abrBandWidthFactor,
+                bwUpFactor = config.abrBandWidthUpFactor;
             if (bufferStarvationDelay === 0) {
                 // in case buffer is empty, let's check if previous fragment was loaded to perform a bitrate test
                 let bitrateTestDelay = this.bitrateTestDelay;
