@@ -246,9 +246,11 @@ class AudioStreamController extends EventHandler {
               }
             }
           }
-
+          if (trackDetails.initSegment && !trackDetails.initSegment.data) {
+              frag = trackDetails.initSegment;
+           }
           // if bufferEnd before start of playlist, load first fragment
-          if (bufferEnd <= start) {
+          else if (bufferEnd <= start) {
             frag = fragments[0];
             if (trackDetails.live && frag.loadIdx && frag.loadIdx === this.fragLoadIdx) {
               // we just loaded this first fragment, and we are still lagging behind the start of the live playlist
@@ -317,7 +319,7 @@ class AudioStreamController extends EventHandler {
           }
           if(frag) {
             //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
-            if ((frag.decryptdata.uri != null) && (frag.decryptdata.key == null)) {
+            if (frag.decryptdata && (frag.decryptdata.uri != null) && (frag.decryptdata.key == null)) {
               logger.log(`Loading key for ${frag.sn} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}`);
               this.state = State.KEY_LOADING;
               hls.trigger(Event.KEY_LOADING, {frag: frag});
@@ -546,15 +548,13 @@ class AudioStreamController extends EventHandler {
   }
 
   onFragLoaded(data) {
-    var fragCurrent = this.fragCurrent;
+    var fragCurrent = this.fragCurrent,
+        fragLoaded = data.frag;
     if (this.state === State.FRAG_LOADING &&
         fragCurrent &&
-        data.frag.type === 'audio' &&
-        data.frag.level === fragCurrent.level &&
-        data.frag.sn === fragCurrent.sn) {
-        this.state = State.PARSING;
-        // transmux the MPEG-TS data to ISO-BMFF segments
-        this.stats = data.stats;
+        fragLoaded.type === 'audio' &&
+        fragLoaded.level === fragCurrent.level &&
+        fragLoaded.sn === fragCurrent.sn) {
         var track = this.tracks[this.trackId],
             details = track.details,
             duration = details.totalduration,
@@ -563,6 +563,27 @@ class AudioStreamController extends EventHandler {
             sn = fragCurrent.sn,
             cc = fragCurrent.cc,
             audioCodec = this.config.defaultAudioCodec || track.audioCodec;
+        this.stats = data.stats;
+      if (fragLoaded.sn === 'initSegment') {
+        let initSegmentData = { id : 'audio',
+                                level : trackId,
+                                sn : sn,
+                                unique : false,
+                                tracks : {
+                                  audio : {
+                                    container : 'audio/mp4',
+                                    codec : audioCodec,
+                                    initSegment : data.payload
+                                  }
+                                }
+                              };
+        this.state = State.PARSED;
+        stats.tparsed = performance.now();
+        details.initSegment.data = data.payload;
+        this.hls.trigger(Event.FRAG_PARSING_INIT_SEGMENT,initSegmentData);
+      } else {
+        this.state = State.PARSING;
+        // transmux the MPEG-TS data to ISO-BMFF segments
         this.appended = false;
         if(!this.demuxer) {
           this.demuxer = new Demuxer(this.hls,'audio');
@@ -581,6 +602,7 @@ class AudioStreamController extends EventHandler {
           this.waitingFragment=data;
           this.state=State.WAITING_INIT_PTS;
         }
+      }
     }
     this.fragLoadError = 0;
   }
@@ -591,7 +613,7 @@ class AudioStreamController extends EventHandler {
         data.id === 'audio' &&
         data.sn === fragCurrent.sn &&
         data.level === fragCurrent.level &&
-        this.state === State.PARSING) {
+        (this.state === State.PARSING || this.state === State.PARSED)) {
       let tracks = data.tracks, track;
 
       // delete any video track found on audio demuxer
