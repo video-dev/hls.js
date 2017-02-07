@@ -140,3 +140,136 @@ export function mergeDetails(oldDetails,newDetails) {
     // old and new level. reliable PTS info is thus relying on old level
     newDetails.PTSKnown = oldDetails.PTSKnown;
   }
+
+  static updateFragPTSDTS(details,sn,startPTS,endPTS,startDTS,endDTS) {
+    var fragIdx, fragments, frag, i;
+    // exit if sn out of range
+    if (!details || sn < details.startSN || sn > details.endSN) {
+      return 0;
+    }
+    fragIdx = sn - details.startSN;
+    fragments = details.fragments;
+    frag = fragments[fragIdx];
+    if(!isNaN(frag.startPTS)) {
+      // delta PTS between audio and video
+      let deltaPTS = Math.abs(frag.startPTS-startPTS);
+      if (isNaN(frag.deltaPTS)) {
+        frag.deltaPTS = deltaPTS;
+      } else {
+        frag.deltaPTS = Math.max(deltaPTS,frag.deltaPTS);
+      }
+      startPTS = Math.min(startPTS,frag.startPTS);
+      endPTS = Math.max(endPTS, frag.endPTS);
+      startDTS = Math.min(startDTS,frag.startDTS);
+      endDTS = Math.max(endDTS, frag.endDTS);
+    }
+
+    var drift = startPTS - frag.start;
+
+    frag.start = frag.startPTS = startPTS;
+    frag.endPTS = endPTS;
+    frag.startDTS = startDTS;
+    frag.endDTS = endDTS;
+    frag.duration = endPTS - startPTS;
+    // adjust fragment PTS/duration from seqnum-1 to frag 0
+    for(i = fragIdx ; i > 0 ; i--) {
+      LevelHelper.updatePTS(fragments,i,i-1);
+    }
+
+    // adjust fragment PTS/duration from seqnum to last frag
+    for(i = fragIdx ; i < fragments.length - 1 ; i++) {
+      LevelHelper.updatePTS(fragments,i,i+1);
+    }
+    details.PTSKnown = true;
+    //logger.log(`                                            frag start/end:${startPTS.toFixed(3)}/${endPTS.toFixed(3)}`);
+
+    return drift;
+  }
+
+  static updatePTS(fragments,fromIdx, toIdx) {
+    var fragFrom = fragments[fromIdx],fragTo = fragments[toIdx], fragToPTS = fragTo.startPTS;
+    // if we know startPTS[toIdx]
+    if(!isNaN(fragToPTS)) {
+      // update fragment duration.
+      // it helps to fix drifts between playlist reported duration and fragment real duration
+      if (toIdx > fromIdx) {
+        fragFrom.duration = fragToPTS-fragFrom.start;
+        if(fragFrom.duration < 0) {
+          logger.warn(`negative duration computed for frag ${fragFrom.sn},level ${fragFrom.level}, there should be some duration drift between playlist and fragment!`);
+        }
+      } else {
+        fragTo.duration = fragFrom.start - fragToPTS;
+        if(fragTo.duration < 0) {
+          logger.warn(`negative duration computed for frag ${fragTo.sn},level ${fragTo.level}, there should be some duration drift between playlist and fragment!`);
+        }
+      }
+    } else {
+      // we dont know startPTS[toIdx]
+      if (toIdx > fromIdx) {
+        fragTo.start = fragFrom.start + fragFrom.duration;
+      } else {
+        fragTo.start = fragFrom.start - fragTo.duration;
+      }
+    }
+  }
+
+  // If a change in CC is detected, the PTS can no longer be relied upon
+  // Attempt to align the level by using the last level - find the last frag matching the current CC and use it's PTS
+  // as a reference
+  static alignDiscontinuities(lastFrag, lastLevel, details) {
+    if (LevelHelper.shouldAlignOnDiscontinuities(lastFrag, lastLevel, details)) {
+        logger.log('Adjusting PTS using last level due to CC increase within current level');
+        const referenceFrag = LevelHelper.findDiscontinuousReferenceFrag(lastLevel.details, details);
+        LevelHelper.adjustPtsByReferenceFrag(referenceFrag, details);
+    }
+  }
+
+  static shouldAlignOnDiscontinuities(lastFrag, lastLevel, details) {
+    let shouldAlign = false;
+    if (lastLevel && lastLevel.details && details) {
+      if (details.endCC > details.startCC || (lastFrag && lastFrag.cc < details.startCC)) {
+        shouldAlign = true;
+      }
+    }
+    return shouldAlign;
+  }
+
+  // Find the first frag in the previous level which matches the CC of the first frag of the new level
+  static findDiscontinuousReferenceFrag(prevDetails, curDetails) {
+    const prevFrags = prevDetails.fragments;
+    const curFrags = curDetails.fragments;
+
+    if (!curFrags.length || !prevFrags.length) {
+      logger.log('No fragments to align');
+      return;
+    }
+
+    const prevStartFrag = prevFrags.find(frag => {
+      return frag.cc === curFrags[0].cc;
+    });
+
+    if (!prevStartFrag || (prevStartFrag && !prevStartFrag.startPTS)) {
+      logger.log('No frag in previous level to align on');
+      return;
+    }
+
+    return prevStartFrag;
+  }
+
+  static adjustPtsByReferenceFrag(referenceFrag, details) {
+    if (!referenceFrag) {
+      return;
+    }
+
+    details.fragments.forEach((frag, index) => {
+      if (frag) {
+        frag.duration = referenceFrag.duration;
+        frag.end = frag.endPTS = referenceFrag.endPTS + (frag.duration * index);
+        frag.start = frag.startPTS = referenceFrag.startPTS + frag.start;
+      }
+    });
+    details.PTSKnown = true;
+  }
+}
+
+export default LevelHelper;
