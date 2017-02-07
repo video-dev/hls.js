@@ -34,7 +34,7 @@ const mockFrags = [
 describe('level-helper', function () {
   it ('adjusts level fragments using a reference fragment', function () {
     const details = {
-      fragments: mockFrags,
+      fragments: mockFrags.slice(0),
       PTSKnown: false
     };
     const expected = [
@@ -59,6 +59,17 @@ describe('level-helper', function () {
     LevelHelper.adjustPtsByReferenceFrag(mockReferenceFrag, details);
     assert.deepEqual(expected, details.fragments);
     assert.equal(true, details.PTSKnown);
+  });
+
+  it ('does not adjust level fragments if there is no reference frag', function () {
+    const details = {
+      fragments: mockFrags.slice(0),
+      PTSKnown: false
+    };
+
+    LevelHelper.adjustPtsByReferenceFrag(undefined, details);
+    assert.deepEqual(mockFrags, details.fragments);
+    assert.equal(false, details.PTSKnown);
   });
 
   it('finds the first fragment in an array which matches the CC of the first fragment in another array', function () {

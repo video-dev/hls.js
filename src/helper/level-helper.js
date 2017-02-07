@@ -179,9 +179,7 @@ class LevelHelper {
                 lastLevel.details,
                 details
             );
-            if (referenceFrag) {
-                LevelHelper.adjustPtsByReferenceFrag(referenceFrag, details);
-            }
+            LevelHelper.adjustPtsByReferenceFrag(referenceFrag, details);
         }
     }
 
@@ -221,6 +219,10 @@ class LevelHelper {
     }
 
     static adjustPtsByReferenceFrag(referenceFrag, details) {
+        if (!referenceFrag) {
+            return;
+        }
+
         details.fragments.forEach((frag, index) => {
             if (frag) {
                 frag.duration = referenceFrag.duration;
