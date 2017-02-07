@@ -287,9 +287,13 @@ class AudioStreamController extends EventHandler {
                             }
                         }
                     }
-
-                    // if bufferEnd before start of playlist, load first fragment
-                    if (bufferEnd <= start) {
+                    if (
+                        trackDetails.initSegment &&
+                        !trackDetails.initSegment.data
+                    ) {
+                        frag = trackDetails.initSegment;
+                    } else if (bufferEnd <= start) {
+                        // if bufferEnd before start of playlist, load first fragment
                         frag = fragments[0];
                         if (
                             trackDetails.live &&
@@ -401,6 +405,7 @@ class AudioStreamController extends EventHandler {
                     if (frag) {
                         //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
                         if (
+                            frag.decryptdata &&
                             frag.decryptdata.uri != null &&
                             frag.decryptdata.key == null
                         ) {
@@ -666,17 +671,15 @@ class AudioStreamController extends EventHandler {
     }
 
     onFragLoaded(data) {
-        var fragCurrent = this.fragCurrent;
+        var fragCurrent = this.fragCurrent,
+            fragLoaded = data.frag;
         if (
             this.state === State.FRAG_LOADING &&
             fragCurrent &&
-            data.frag.type === 'audio' &&
-            data.frag.level === fragCurrent.level &&
-            data.frag.sn === fragCurrent.sn
+            fragLoaded.type === 'audio' &&
+            fragLoaded.level === fragCurrent.level &&
+            fragLoaded.sn === fragCurrent.sn
         ) {
-            this.state = State.PARSING;
-            // transmux the MPEG-TS data to ISO-BMFF segments
-            this.stats = data.stats;
             var track = this.tracks[this.trackId],
                 details = track.details,
                 duration = details.totalduration,
@@ -685,43 +688,69 @@ class AudioStreamController extends EventHandler {
                 sn = fragCurrent.sn,
                 cc = fragCurrent.cc,
                 audioCodec = this.config.defaultAudioCodec || track.audioCodec;
-            this.appended = false;
-            if (!this.demuxer) {
-                this.demuxer = new Demuxer(this.hls, 'audio');
-            }
-            //Check if we have video initPTS
-            // If not we need to wait for it
-            let initPTS = this.initPTS[cc];
-            if (initPTS !== undefined) {
-                this.pendingBuffering = true;
-                logger.log(
-                    `Demuxing ${sn} of [${details.startSN} ,${
-                        details.endSN
-                    }],track ${trackId}`
-                );
-                // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
-                let accurateTimeOffset = false; //details.PTSKnown || !details.live;
-                this.demuxer.push(
-                    data.payload,
-                    audioCodec,
-                    null,
-                    start,
-                    cc,
-                    trackId,
-                    sn,
-                    duration,
-                    fragCurrent.decryptdata,
-                    accurateTimeOffset,
-                    initPTS
+            this.stats = data.stats;
+            if (fragLoaded.sn === 'initSegment') {
+                let initSegmentData = {
+                    id: 'audio',
+                    level: trackId,
+                    sn: sn,
+                    unique: false,
+                    tracks: {
+                        audio: {
+                            container: 'audio/mp4',
+                            codec: audioCodec,
+                            initSegment: data.payload
+                        }
+                    }
+                };
+                this.state = State.PARSED;
+                stats.tparsed = performance.now();
+                details.initSegment.data = data.payload;
+                this.hls.trigger(
+                    Event.FRAG_PARSING_INIT_SEGMENT,
+                    initSegmentData
                 );
             } else {
-                logger.log(
-                    `unknown video PTS for continuity counter ${cc}, waiting for video PTS before demuxing audio frag ${sn} of [${
-                        details.startSN
-                    } ,${details.endSN}],track ${trackId}`
-                );
-                this.waitingFragment = data;
-                this.state = State.WAITING_INIT_PTS;
+                this.state = State.PARSING;
+                // transmux the MPEG-TS data to ISO-BMFF segments
+                this.appended = false;
+                if (!this.demuxer) {
+                    this.demuxer = new Demuxer(this.hls, 'audio');
+                }
+                //Check if we have video initPTS
+                // If not we need to wait for it
+                let initPTS = this.initPTS[cc];
+                if (initPTS !== undefined) {
+                    this.pendingBuffering = true;
+                    logger.log(
+                        `Demuxing ${sn} of [${details.startSN} ,${
+                            details.endSN
+                        }],track ${trackId}`
+                    );
+                    // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
+                    let accurateTimeOffset = false; //details.PTSKnown || !details.live;
+                    this.demuxer.push(
+                        data.payload,
+                        audioCodec,
+                        null,
+                        start,
+                        cc,
+                        trackId,
+                        sn,
+                        duration,
+                        fragCurrent.decryptdata,
+                        accurateTimeOffset,
+                        initPTS
+                    );
+                } else {
+                    logger.log(
+                        `unknown video PTS for continuity counter ${cc}, waiting for video PTS before demuxing audio frag ${sn} of [${
+                            details.startSN
+                        } ,${details.endSN}],track ${trackId}`
+                    );
+                    this.waitingFragment = data;
+                    this.state = State.WAITING_INIT_PTS;
+                }
             }
         }
         this.fragLoadError = 0;
@@ -734,7 +763,7 @@ class AudioStreamController extends EventHandler {
             data.id === 'audio' &&
             data.sn === fragCurrent.sn &&
             data.level === fragCurrent.level &&
-            this.state === State.PARSING
+            (this.state === State.PARSING || this.state === State.PARSED)
         ) {
             let tracks = data.tracks,
                 track;
