@@ -80,7 +80,9 @@ class Demuxer {
       // special case for FRAG_PARSING_DATA: data1 and data2 are transferable objects
       case Event.FRAG_PARSING_DATA:
         data.data.data1 = new Uint8Array(data.data1);
-        data.data.data2 = new Uint8Array(data.data2);
+        if (data.data2) {
+          data.data.data2 = new Uint8Array(data.data2);
+        }
         /* falls through */
       default:
         hls.trigger(data.event, data.data);
