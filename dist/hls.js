@@ -870,7 +870,7 @@ var AbrController = function (_EventHandler) {
         _logger.logger.trace('rebuffering expected to happen, lets try to find a quality level minimizing the rebuffering');
         // not possible to get rid of rebuffering ... let's try to find level that will guarantee less than maxStarvationDelay of rebuffering
         // if no matching level found, logic will return 0
-        var maxStarvationDelay = config.maxStarvationDelay,
+        var maxStarvationDelay = currentFragDuration ? Math.min(currentFragDuration, config.maxStarvationDelay) : config.maxStarvationDelay,
             bwFactor = config.abrBandWidthFactor,
             bwUpFactor = config.abrBandWidthUpFactor;
         if (bufferStarvationDelay === 0) {
@@ -8663,7 +8663,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.6.20';
+      return '0.6.21';
     }
   }, {
     key: 'Events',
@@ -9385,7 +9385,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 var MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
 var MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 var LEVEL_PLAYLIST_REGEX_FAST = /#EXTINF:(\d*(?:\.\d+)?)(?:,(.*))?|(?!#)(\S.+)|#EXT-X-BYTERANGE: *(.+)|#EXT-X-PROGRAM-DATE-TIME:(.+)|#.*/g;
-var LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
+var LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:#EXT-X-(MAP):(.+))|(?:(#)(.*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
 
 var LevelKey = function () {
   function LevelKey() {
@@ -9417,6 +9417,7 @@ var Fragment = function () {
     this._url = null;
     this._byteRange = null;
     this._decryptdata = null;
+    this.tagList = [];
   }
 
   _createClass(Fragment, [{
@@ -9701,8 +9702,6 @@ var PlaylistLoader = function (_EventHandler) {
           result,
           i;
 
-      frag.tagList = [];
-
       LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
 
       while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
@@ -9733,7 +9732,6 @@ var PlaylistLoader = function (_EventHandler) {
             totalduration += frag.duration;
 
             frag = new Fragment();
-            frag.tagList = [];
           }
         } else if (result[4]) {
           // X-BYTERANGE
@@ -9817,6 +9815,17 @@ var PlaylistLoader = function (_EventHandler) {
               if (!isNaN(startTimeOffset)) {
                 level.startTimeOffset = startTimeOffset;
               }
+              break;
+            case 'MAP':
+              var mapAttrs = new _attrList2.default(value1);
+              frag.relurl = mapAttrs.URI;
+              frag.rawByteRange = mapAttrs.BYTERANGE;
+              frag.baseurl = baseurl;
+              frag.level = id;
+              frag.type = type;
+              frag.sn = 'initSegment';
+              level.initSegment = frag;
+              frag = new Fragment();
               break;
             default:
               _logger.logger.warn('line parsed but not handled: ' + result);
