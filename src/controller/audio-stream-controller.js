@@ -684,7 +684,7 @@ class AudioStreamController extends EventHandler {
       let pendingData = this.pendingData;
       if(!this.audioSwitch) {
         [data.data1, data.data2].forEach(buffer => {
-          if (buffer) {
+          if (buffer && buffer.length) {
             pendingData.push({type: data.type, data: buffer, parent : 'audio',content : 'data'});
           }
         });

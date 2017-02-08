@@ -1128,15 +1128,13 @@ class StreamController extends EventHandler {
 
       // has remuxer dropped video frames located before first keyframe ?
       [data.data1, data.data2].forEach(buffer => {
-        if (buffer) {
-          // only append in PARSING state (rationale is that an appending error could happen synchronously on first segment appending)
-          // in that case it is useless to append following segments
-          if (this.state === State.PARSING) {
-            this.appended = true;
-            // arm pending Buffering flag before appending a segment
-            this.pendingBuffering = true;
-            hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer, parent : 'main',content : 'data'});
-          }
+        // only append in PARSING state (rationale is that an appending error could happen synchronously on first segment appending)
+        // in that case it is useless to append following segments
+        if (buffer && buffer.length && this.state === State.PARSING) {
+          this.appended = true;
+          // arm pending Buffering flag before appending a segment
+          this.pendingBuffering = true;
+          hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer, parent : 'main',content : 'data'});
         }
       });
       //trigger handler right now
