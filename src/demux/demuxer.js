@@ -81,6 +81,7 @@ class Demuxer {
 
     push(
         data,
+        initSegment,
         audioCodec,
         videoCodec,
         timeOffset,
@@ -99,6 +100,7 @@ class Demuxer {
                 {
                     cmd: 'demux',
                     data,
+                    initSegment,
                     audioCodec,
                     videoCodec,
                     timeOffset,
@@ -117,6 +119,7 @@ class Demuxer {
             if (demuxer) {
                 demuxer.push(
                     data,
+                    initSegment,
                     audioCodec,
                     videoCodec,
                     timeOffset,

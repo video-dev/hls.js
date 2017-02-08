@@ -457,7 +457,9 @@ class AudioStreamController extends EventHandler {
                             frag.loadIdx = this.fragLoadIdx;
                             this.fragCurrent = frag;
                             this.startFragRequested = true;
-                            this.nextLoadPosition = frag.start + frag.duration;
+                            this.nextLoadPosition =
+                                frag.start + frag.duration ||
+                                this.nextLoadPosition;
                             hls.trigger(Event.FRAG_LOADING, { frag: frag });
                             this.state = State.FRAG_LOADING;
                         }
@@ -687,29 +689,22 @@ class AudioStreamController extends EventHandler {
                 trackId = fragCurrent.level,
                 sn = fragCurrent.sn,
                 cc = fragCurrent.cc,
-                audioCodec = this.config.defaultAudioCodec || track.audioCodec;
-            this.stats = data.stats;
+                audioCodec =
+                    this.config.defaultAudioCodec ||
+                    track.audioCodec ||
+                    'mp4a.40.2',
+                stats = (this.stats = data.stats);
             if (fragLoaded.sn === 'initSegment') {
-                let initSegmentData = {
-                    id: 'audio',
-                    level: trackId,
-                    sn: sn,
-                    unique: false,
-                    tracks: {
-                        audio: {
-                            container: 'audio/mp4',
-                            codec: audioCodec,
-                            initSegment: data.payload
-                        }
-                    }
-                };
-                this.state = State.PARSED;
-                stats.tparsed = performance.now();
+                this.state = State.IDLE;
+
+                stats.tparsed = stats.tbuffered = performance.now();
                 details.initSegment.data = data.payload;
-                this.hls.trigger(
-                    Event.FRAG_PARSING_INIT_SEGMENT,
-                    initSegmentData
-                );
+                this.hls.trigger(Event.FRAG_BUFFERED, {
+                    stats: stats,
+                    frag: fragCurrent,
+                    id: 'audio'
+                });
+                this.tick();
             } else {
                 this.state = State.PARSING;
                 // transmux the MPEG-TS data to ISO-BMFF segments
@@ -720,7 +715,10 @@ class AudioStreamController extends EventHandler {
                 //Check if we have video initPTS
                 // If not we need to wait for it
                 let initPTS = this.initPTS[cc];
-                if (initPTS !== undefined) {
+                let initSegmentData = details.initSegment
+                    ? details.initSegment.data
+                    : null;
+                if (initSegmentData || initPTS !== undefined) {
                     this.pendingBuffering = true;
                     logger.log(
                         `Demuxing ${sn} of [${details.startSN} ,${
@@ -731,6 +729,7 @@ class AudioStreamController extends EventHandler {
                     let accurateTimeOffset = false; //details.PTSKnown || !details.live;
                     this.demuxer.push(
                         data.payload,
+                        initSegmentData,
                         audioCodec,
                         null,
                         start,
@@ -821,6 +820,11 @@ class AudioStreamController extends EventHandler {
                 track = this.tracks[trackId],
                 frag = this.fragCurrent,
                 hls = this.hls;
+
+            if (isNaN(data.endPTS)) {
+                data.endPTS = data.startPTS + fragCurrent.duration;
+                data.endDTS = data.startDTS + fragCurrent.duration;
+            }
 
             logger.log(
                 `parsed ${data.type},PTS:[${data.startPTS.toFixed(

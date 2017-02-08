@@ -6,6 +6,7 @@ import Event from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import Decrypter from '../crypt/decrypter';
 import AACDemuxer from '../demux/aacdemuxer';
+import MP4Demuxer from '../demux/mp4demuxer';
 import TSDemuxer from '../demux/tsdemuxer';
 import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
@@ -27,6 +28,7 @@ class DemuxerInline {
 
     push(
         data,
+        initSegment,
         audioCodec,
         videoCodec,
         timeOffset,
@@ -73,6 +75,7 @@ class DemuxerInline {
                     });
                     localthis.pushDecrypted(
                         new Uint8Array(decryptedData),
+                        new Uint8Array(initSegment),
                         audioCodec,
                         videoCodec,
                         timeOffset,
@@ -88,6 +91,7 @@ class DemuxerInline {
         } else {
             this.pushDecrypted(
                 new Uint8Array(data),
+                new Uint8Array(initSegment),
                 audioCodec,
                 videoCodec,
                 timeOffset,
@@ -103,6 +107,7 @@ class DemuxerInline {
 
     pushDecrypted(
         data,
+        initSegment,
         audioCodec,
         videoCodec,
         timeOffset,
@@ -153,6 +158,15 @@ class DemuxerInline {
                     typeSupported
                 );
                 demuxer.probe = AACDemuxer.probe;
+            } else if (MP4Demuxer.probe(data)) {
+                demuxer = new MP4Demuxer(
+                    hls,
+                    id,
+                    PassThroughRemuxer,
+                    config,
+                    typeSupported
+                );
+                demuxer.probe = MP4Demuxer.probe;
             } else {
                 hls.trigger(Event.ERROR, {
                     type: ErrorTypes.MEDIA_ERROR,
@@ -167,6 +181,7 @@ class DemuxerInline {
         }
         demuxer.push(
             data,
+            initSegment,
             audioCodec,
             videoCodec,
             timeOffset,

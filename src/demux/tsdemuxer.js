@@ -96,6 +96,7 @@ class TSDemuxer {
     // feed incoming data to the front of the parsing pipeline
     push(
         data,
+        initSegment,
         audioCodec,
         videoCodec,
         timeOffset,
