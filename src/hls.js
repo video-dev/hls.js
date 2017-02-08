@@ -42,6 +42,10 @@ class Hls {
     return ErrorDetails;
   }
 
+  static get LoaderXmlHttpRequest () {
+    return XhrLoader;
+  }
+
   static get DefaultConfig() {
     if(!Hls.defaultConfig) {
       return hlsDefaultConfig;
