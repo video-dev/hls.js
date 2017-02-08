@@ -57,7 +57,7 @@
   }
 
   // feed incoming data to the front of the parsing pipeline
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
+  push(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
     var start, len = data.length, stt, pid, atf, offset,pes,
         codecsOnly = this.remuxer.passthrough,
         unknownPIDs = false;

@@ -946,22 +946,11 @@ class StreamController extends EventHandler {
         this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: fragCurrent, id : 'main'});
         this.tick();
       } else if (fragLoaded.sn === 'initSegment') {
-        let initSegmentData = { id : 'main',
-                                level : fragLoaded.level,
-                                sn : fragLoaded.sn,
-                                unique : false,
-                                tracks : {
-                                  video : {
-                                    container : 'video/mp4',
-                                    codec : currentLevel.videoCodec,
-                                    initSegment : data.payload
-                                  }
-                                }
-                              };
-        this.state = State.PARSED;
-        stats.tparsed = performance.now();
+        this.state = State.IDLE;
+        stats.tparsed = stats.tbuffered = performance.now();
         details.initSegment.data = data.payload;
-        this.hls.trigger(Event.FRAG_PARSING_INIT_SEGMENT,initSegmentData);
+        this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: fragCurrent, id : 'main'});
+        this.tick();
       } else {
         this.state = State.PARSING;
         // transmux the MPEG-TS data to ISO-BMFF segments
@@ -994,7 +983,8 @@ class StreamController extends EventHandler {
         let media = this.media;
         let mediaSeeking = media && media.seeking;
         let accurateTimeOffset = !mediaSeeking && (details.PTSKnown || !details.live);
-        demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata, accurateTimeOffset,null);
+        let initSegmentData = details.initSegment ? details.initSegment.data : null;
+        demuxer.push(data.payload, initSegmentData,audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata, accurateTimeOffset,null);
       }
     }
     this.fragLoadError = 0;
@@ -1103,6 +1093,10 @@ class StreamController extends EventHandler {
         this.state === State.PARSING) {
       var level = this.levels[this.level],
           frag = this.fragCurrent;
+          if (isNaN(data.endPTS)) {
+            data.endPTS = data.startPTS + fragCurrent.duration;
+            data.endDTS = data.startDTS + fragCurrent.duration;
+          }
 
       logger.log(`Parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb},dropped:${data.dropped || 0}`);
 

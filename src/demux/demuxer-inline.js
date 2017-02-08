@@ -6,6 +6,7 @@ import Event from '../events';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import Decrypter from '../crypt/decrypter';
 import AACDemuxer from '../demux/aacdemuxer';
+import MP4Demuxer from '../demux/mp4demuxer';
 import TSDemuxer from '../demux/tsdemuxer';
 import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
@@ -26,7 +27,7 @@ class DemuxerInline {
     }
   }
 
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,decryptdata,accurateTimeOffset,defaultInitPTS) {
+  push(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,decryptdata,accurateTimeOffset,defaultInitPTS) {
     if ((data.byteLength > 0) && (decryptdata != null) && (decryptdata.key != null) && (decryptdata.method === 'AES-128')) {
       if (this.decrypter == null) {
         this.decrypter = new Decrypter(this.hls, this.config);
@@ -47,14 +48,14 @@ class DemuxerInline {
           endTime = Date.now();
         }
         localthis.hls.trigger(Event.FRAG_DECRYPTED, { level : level, sn : sn, stats: { tstart: startTime, tdecrypt: endTime } });
-        localthis.pushDecrypted(new Uint8Array(decryptedData), audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset,defaultInitPTS);
+        localthis.pushDecrypted(new Uint8Array(decryptedData), new Uint8Array(initSegment), audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset,defaultInitPTS);
       });
     } else {
-      this.pushDecrypted(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS);
+      this.pushDecrypted(new Uint8Array(data), new Uint8Array(initSegment), audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS);
     }
   }
 
-  pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
+  pushDecrypted(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
     var demuxer = this.demuxer;
     if (!demuxer || 
        // in case of continuity change, we might switch from content type (AAC container to TS container for example)
@@ -75,13 +76,16 @@ class DemuxerInline {
       } else if(AACDemuxer.probe(data)) {
         demuxer = new AACDemuxer(hls, id, MP4Remuxer, config, typeSupported);
         demuxer.probe = AACDemuxer.probe;
+      } else if(MP4Demuxer.probe(data)) {
+        demuxer = new MP4Demuxer(hls, id, PassThroughRemuxer, config, typeSupported);
+        demuxer.probe = MP4Demuxer.probe;
       } else {
         hls.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, id : id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found'});
         return;
       }
       this.demuxer = demuxer;
     }
-    demuxer.push(data,audioCodec,videoCodec,timeOffset,cc,level,sn,duration,accurateTimeOffset,defaultInitPTS);
+    demuxer.push(data,initSegment,audioCodec,videoCodec,timeOffset,cc,level,sn,duration,accurateTimeOffset,defaultInitPTS);
     this.cc = cc;
   }
 }

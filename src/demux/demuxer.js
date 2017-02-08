@@ -55,15 +55,15 @@ class Demuxer {
     }
   }
 
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata,accurateTimeOffset,defaultInitPTS) {
+  push(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata,accurateTimeOffset,defaultInitPTS) {
     let w = this.w;
     if (w) {
       // post fragment payload as transferable objects (no copy)
-      w.postMessage({cmd: 'demux', data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset,defaultInitPTS}, [data]);
+      w.postMessage({cmd: 'demux', data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset,defaultInitPTS}, [data]);
     } else {
       let demuxer = this.demuxer;
       if (demuxer) {
-        demuxer.push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,decryptdata, accurateTimeOffset,defaultInitPTS);
+        demuxer.push(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,decryptdata, accurateTimeOffset,defaultInitPTS);
       }
     }
   }

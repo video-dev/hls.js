@@ -31,14 +31,14 @@ describe('TS Demuxer', () => {
 
     // Initial feeds of data should not attempt to insert a discontinuity
     cc = 0;
-    demuxer.push([], 'a', 'v', 0, cc, 0, 0, 0)
+    demuxer.push([], null, 'a', 'v', 0, cc, 0, 0, 0)
     assert.equal(demuxer.remuxer.insertDiscontinuity__count, 0);
-    demuxer.push([], 'a', 'v', 0, cc, 0, 0, 0)
+    demuxer.push([], null, 'a', 'v', 0, cc, 0, 0, 0)
     assert.equal(demuxer.remuxer.insertDiscontinuity__count, 0);
 
     // Noticing a change to the continuity counter should trigger a remuxer discontinuity insertion
     cc = 1;
-    demuxer.push([], 'a', 'v', 0, cc, 0, 0, 0)
+    demuxer.push([], null, 'a', 'v', 0, cc, 0, 0, 0)
     assert.equal(demuxer.remuxer.insertDiscontinuity__count, 1);
   });
 
