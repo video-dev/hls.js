@@ -40,7 +40,11 @@ class XhrLoader {
   }
 
   loadInternal() {
-    var xhr, context = this.context;
+    var xhr, context = this.context, requestMethod = this.config.requestMethod;
+
+    if (requestMethod === undefined) {
+      requestMethod = 'GET';
+    }
 
     if (typeof XDomainRequest !== 'undefined') {
        xhr = this.loader = new XDomainRequest();
@@ -51,7 +55,7 @@ class XhrLoader {
     xhr.onreadystatechange = this.readystatechange.bind(this);
     xhr.onprogress = this.loadprogress.bind(this);
 
-    xhr.open('GET', context.url, true);
+    xhr.open(requestMethod, context.url, true);
 
     if (context.rangeEnd) {
       xhr.setRequestHeader('Range','bytes=' + context.rangeStart + '-' + (context.rangeEnd-1));
