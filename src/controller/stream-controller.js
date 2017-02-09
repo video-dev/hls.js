@@ -1094,7 +1094,7 @@ class StreamController extends EventHandler {
             // Causes findFragments to backtrack a segment and find the keyframe
             // Audio fragments arriving before video sets the nextLoadPosition, causing _findFragments to skip the backtracked fragment
             frag.backtracked = true;
-            this.nextLoadPosition = frag.startPTS;
+            this.nextLoadPosition = data.startPTS;
             this.state = State.IDLE;
             this.tick();
             return;
