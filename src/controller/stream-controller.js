@@ -1233,7 +1233,7 @@ class StreamController extends EventHandler {
                     !mediaSeeking && (details.PTSKnown || !details.live);
                 let initSegmentData = details.initSegment
                     ? details.initSegment.data
-                    : null;
+                    : [];
                 demuxer.push(
                     data.payload,
                     initSegmentData,

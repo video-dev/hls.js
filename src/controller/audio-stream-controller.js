@@ -717,7 +717,7 @@ class AudioStreamController extends EventHandler {
                 let initPTS = this.initPTS[cc];
                 let initSegmentData = details.initSegment
                     ? details.initSegment.data
-                    : null;
+                    : [];
                 if (initSegmentData || initPTS !== undefined) {
                     this.pendingBuffering = true;
                     logger.log(
