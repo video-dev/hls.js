@@ -365,7 +365,7 @@ class AudioStreamController extends EventHandler {
                             // Prefer the next fragment if it's within tolerance
                             if (
                                 fragNext &&
-                                !fragmentWithinToleranceTest(fragNext) === 0
+                                !fragmentWithinToleranceTest(fragNext)
                             ) {
                                 foundFrag = fragNext;
                             } else {
