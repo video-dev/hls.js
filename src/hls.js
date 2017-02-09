@@ -118,6 +118,7 @@ class Hls {
           abrEwmaDefaultEstimate: 5e5, // 500 kbps
           abrBandWidthFactor : 0.95,
           abrBandWidthUpFactor : 0.7,
+          abrMaxWithRealBitrate : false,
           maxStarvationDelay : 4,
           maxLoadingDelay : 4,
           minAutoBitrate: 0
