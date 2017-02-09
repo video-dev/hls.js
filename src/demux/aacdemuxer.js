@@ -124,6 +124,7 @@ class AACDemuxer {
             track.audiosamplerate = config.samplerate;
             track.channelCount = config.channelCount;
             track.codec = config.codec;
+            track.manifestCodec = audioCodec;
             track.duration = duration;
             logger.log(
                 `parsed codec:${track.codec},rate:${
