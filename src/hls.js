@@ -149,8 +149,23 @@ class Hls {
             fpsController
         ];
 
-        // optional audio track and timeline controller
-        [config.audioTrackController, config.timelineController].forEach(
+        // optional audio track and subtitle controller
+        Controller = config.audioTrackController;
+        if (Controller) {
+            let audioTrackController = new Controller(this);
+            this.audioTrackController = audioTrackController;
+            coreComponents.push(audioTrackController);
+        }
+
+        Controller = config.subtitleTrackController;
+        if (Controller) {
+            let subtitleTrackController = new Controller(this);
+            this.subtitleTrackController = subtitleTrackController;
+            coreComponents.push(subtitleTrackController);
+        }
+
+        // optional subtitle controller
+        [config.subtitleStreamController, config.timelineController].forEach(
             Controller => {
                 if (Controller) {
                     coreComponents.push(new Controller(this));
@@ -344,6 +359,30 @@ class Hls {
 
     get liveSyncPosition() {
         return this.streamController.liveSyncPosition;
+    }
+
+    /** get alternate subtitle tracks list from playlist **/
+    get subtitleTracks() {
+        const subtitleTrackController = this.subtitleTrackController;
+        return subtitleTrackController
+            ? subtitleTrackController.subtitleTracks
+            : [];
+    }
+
+    /** get index of the selected subtitle track (index in subtitle track lists) **/
+    get subtitleTrack() {
+        const subtitleTrackController = this.subtitleTrackController;
+        return subtitleTrackController
+            ? subtitleTrackController.subtitleTrack
+            : -1;
+    }
+
+    /** select an subtitle track, based on its index in subtitle track lists**/
+    set subtitleTrack(subtitleTrackId) {
+        const subtitleTrackController = this.subtitleTrackController;
+        if (subtitleTrackController) {
+            subtitleTrackController.subtitleTrack = subtitleTrackId;
+        }
     }
 }
 

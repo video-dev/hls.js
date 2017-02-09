@@ -151,7 +151,7 @@ var getCharForByte = function(byte) {
 };
 
 var NR_ROWS = 15,
-    NR_COLS = 32;
+    NR_COLS = 100;
 // Tables to look up row from PAC data
 var rowsLowCh1 = {
     0x11: 1,
@@ -587,7 +587,7 @@ class CaptionScreen {
         row.setCursor(absPos);
     }
 
-    setPAC(pacData, lastOutputScreen) {
+    setPAC(pacData) {
         logger.log('INFO', 'pacData = ' + JSON.stringify(pacData));
         var newRow = pacData.row - 1;
         if (this.nrRollUpRows && newRow < this.nrRollUpRows - 1) {
@@ -597,7 +597,7 @@ class CaptionScreen {
         //Make sure this only affects Roll-up Captions by checking this.nrRollUpRows
         if (this.nrRollUpRows && this.currRow !== newRow) {
             //clear all rows first
-            for (var i = 0; i < NR_ROWS; i++) {
+            for (let i = 0; i < NR_ROWS; i++) {
                 this.rows[i].clear();
             }
 
@@ -606,11 +606,12 @@ class CaptionScreen {
             var topRowIndex = this.currRow + 1 - this.nrRollUpRows;
             //We only copy if the last position was already shown.
             //We use the cueStartTime value to check this.
-            var prevLineTime = lastOutputScreen.rows[topRowIndex].cueStartTime;
+            var prevLineTime = this.lastOutputScreen.rows[topRowIndex]
+                .cueStartTime;
             if (prevLineTime && prevLineTime < logger.time) {
-                for (i = 0; i < this.nrRollUpRows; i++) {
+                for (let i = 0; i < this.nrRollUpRows; i++) {
                     this.rows[newRow - this.nrRollUpRows + i + 1].copy(
-                        lastOutputScreen.rows[topRowIndex + i]
+                        this.lastOutputScreen.rows[topRowIndex + i]
                     );
                 }
             }
@@ -734,7 +735,7 @@ class Cea608Channel {
     }
 
     setPAC(pacData) {
-        this.writeScreen.setPAC(pacData, this.lastOutputScreen);
+        this.writeScreen.setPAC(pacData);
     }
 
     setBkgData(bkgData) {
@@ -752,7 +753,6 @@ class Cea608Channel {
         } else {
             this.writeScreen = this.displayedMemory;
             this.writeScreen.reset();
-            this.lastOutputScreen.reset();
         }
         if (this.mode !== 'MODE_ROLL-UP') {
             this.displayedMemory.nrRollUpRows = null;
