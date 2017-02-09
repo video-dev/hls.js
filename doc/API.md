@@ -717,6 +717,13 @@ If `abrBandWidthFactor * bandwidth average < level.bitrate` then ABR can switch 
 Scale factor to be applied against measured bandwidth average, to determine whether we can switch up to a higher quality level.
 If `abrBandWidthUpFactor * bandwidth average < level.bitrate` then ABR can switch up to that quality level.
 
+#### `abrMaxWithRealBitrate`
+(default: `false`)
+
+max bitrate used in ABR by avg measured bitrate
+i.e. if bitrate signaled in variant manifest for a given level is 2Mb/s but average bitrate measured on this level is 2.5Mb/s, 
+then if config value is set to `true`, ABR will use 2.5 Mb/s for this quality level.
+
 #### `minAutoBitrate`
 (default: `0`)
 
