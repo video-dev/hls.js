@@ -5,8 +5,31 @@ var chromedriver = require('chromedriver');
 var HttpServer = require('http-server');
 var streams = require('../streams.json');
 
+function retry(cb, numAttempts, interval) {
+  numAttempts = numAttempts || 20;
+  interval = interval || 3000;
+  return new Promise(function(resolve, reject) {
+    var attempts = 0;
+    attempt();
+
+    function attempt() {
+      cb().then(function(res) {
+        resolve(res);
+      }).catch(function(e) {
+        if (++attempts >= numAttempts) {
+          // reject with the last error
+          reject(e);
+        }
+        else {
+          setTimeout(attempt, interval);
+        }
+      });
+    }
+  });
+}
+
 var onTravis = !!process.env.TRAVIS;
-var STREAM_ID = onTravis ? process.env.TEST_STREAM_ID : 'arte';
+var STREAM_ID = onTravis ? process.env.STREAM : 'arte';
 if (!STREAM_ID) {
   throw new Error('No stream ID.');
 }
@@ -16,20 +39,20 @@ if (!stream) {
 }
 var browserConfig = {version : 'latest'};
 if (onTravis) {
-  var TEST_BROWSER_VERSION = process.env.TEST_BROWSER_VERSION;
-  if (TEST_BROWSER_VERSION) {
-    browserConfig.version = TEST_BROWSER_VERSION;
+  var UA_VERSION = process.env.UA_VERSION;
+  if (UA_VERSION) {
+    browserConfig.version = UA_VERSION;
   }
-  var TEST_BROWSER_NAME = process.env.TEST_BROWSER_NAME;
-  if (!TEST_BROWSER_NAME) {
+  var UA = process.env.UA;
+  if (!UA) {
     throw new Error('No test browser name.')
   }
-  var TEST_BROWSER_PLATFORM = process.env.TEST_BROWSER_PLATFORM;
-  if (!TEST_BROWSER_PLATFORM) {
+  var OS = process.env.OS;
+  if (!OS) {
     throw new Error('No test browser platform.')
   }
-  browserConfig.name = TEST_BROWSER_NAME;
-  browserConfig.platform = TEST_BROWSER_PLATFORM;
+  browserConfig.name = UA;
+  browserConfig.platform = OS;
 }
 else {
   browserConfig.name = "chrome";
@@ -51,20 +74,21 @@ HttpServer.createServer({
 describe('testing hls.js playback in the browser with "'+stream.description+'" on "'+browserDescription+'"', function() {
   beforeEach(function() {
     var capabilities = {
-      browserName : browserConfig.name,
-      platform : browserConfig.platform,
-      version : browserConfig.version,
-      commandTimeout : 35,
-      customData : {
-        stream : stream
+      name: '"'+stream.description+'" on "'+browserDescription+'"',
+      browserName: browserConfig.name,
+      platform: browserConfig.platform,
+      version: browserConfig.version,
+      commandTimeout: 35,
+      customData: {
+        stream: stream
       }
     };
     if (onTravis) {
       capabilities['tunnel-identifier'] = process.env.TRAVIS_JOB_NUMBER;
-      capabilities.build = process.env.TRAVIS_BUILD_NUMBER;
+      capabilities.build = 'HLSJS-'+process.env.TRAVIS_BUILD_NUMBER;
       capabilities.username = process.env.SAUCE_USERNAME;
       capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
-      this.browser = new webdriver.Builder().usingServer('http://'+ process.env.SAUCE_USERNAME+':'+process.env.SAUCE_ACCESS_KEY+'@ondemand.saucelabs.com:80/wd/hub');
+      this.browser = new webdriver.Builder().usingServer('http://'+process.env.SAUCE_USERNAME+':'+process.env.SAUCE_ACCESS_KEY+'@ondemand.saucelabs.com:80/wd/hub');
     }
     else {
       this.browser = new webdriver.Builder();
@@ -74,11 +98,22 @@ describe('testing hls.js playback in the browser with "'+stream.description+'" o
     console.log("Retrieving web driver session...");
     return this.browser.getSession().then(function(session) {
       console.log("Web driver session id: "+session.getId());
-      console.log("Loading test page...");
-      return this.browser.get('http://localhost:8000/tests/functional/auto/hlsjs.html');
-    }.bind(this)).then(function() {
-      console.log("Test page loaded.");
-    });
+      if (onTravis) {
+        console.log("Job URL: https://saucelabs.com/jobs/"+session.getId());
+      }
+      return retry(function() {
+        console.log("Loading test page...");
+        return this.browser.get('http://127.0.0.1:8000/tests/functional/auto/hlsjs.html').then(function() {
+          // ensure that the page has loaded and we haven't got an error page
+          return this.browser.findElement(webdriver.By.css('body#hlsjs-functional-tests')).catch(function(e) {
+            console.log("Test page not loaded.");
+            return Promise.reject(e);
+          });
+        }.bind(this));
+      }.bind(this)).then(function() {
+        console.log("Test page loaded.");
+      });
+    }.bind(this));
   });
 
   afterEach(function() {
