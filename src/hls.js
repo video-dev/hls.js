@@ -156,11 +156,21 @@ class Hls {
         ];
 
         // optional audio track and subtitle controller
-        [
-            config.audioTrackController,
-            config.timelineController,
-            config.subtitleTrackController
-        ].forEach(Controller => {
+        Controller = config.audioTrackController;
+        if (Controller) {
+            let audioTrackController = new Controller(this);
+            this.audioTrackController = audioTrackController;
+            coreComponents.push(audioTrackController);
+        }
+
+        Controller = config.subtitleTrackController;
+        if (Controller) {
+            let subtitleTrackController = new Controller(this);
+            this.subtitleTrackController = subtitleTrackController;
+            coreComponents.push(subtitleTrackController);
+        }
+
+        [config.timelineController].forEach(Controller => {
             if (Controller) {
                 coreComponents.push(new Controller(this));
             }
