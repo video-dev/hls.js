@@ -125,12 +125,6 @@ class Hls {
             networkControllers.push(new Controller(this));
         }
 
-        // optional subtitle stream controller
-        Controller = config.subtitleStreamController;
-        if (Controller) {
-            networkControllers.push(new Controller(this));
-        }
-
         this.networkControllers = networkControllers;
 
         // core controllers and network loaders
@@ -170,11 +164,14 @@ class Hls {
             coreComponents.push(subtitleTrackController);
         }
 
-        [config.timelineController].forEach(Controller => {
-            if (Controller) {
-                coreComponents.push(new Controller(this));
+        // optional subtitle controller
+        [config.subtitleStreamController, config.timelineController].forEach(
+            Controller => {
+                if (Controller) {
+                    coreComponents.push(new Controller(this));
+                }
             }
-        });
+        );
         this.coreComponents = coreComponents;
     }
 
