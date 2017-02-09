@@ -137,11 +137,13 @@ class AbrController extends EventHandler {
       this._nextAutoLevel = -1;
 
       // compute level average bitrate
-      const level = this.hls.levels[frag.level];
-      let loadedBytes = (level.loaded ? level.loaded.bytes : 0) + data.stats.loaded;
-      let loadedDuration = (level.loaded ? level.loaded.duration : 0) + data.frag.duration;
-      level.loaded = { bytes : loadedBytes, duration : loadedDuration };
-      level.realBitrate = Math.round(8*loadedBytes/loadedDuration);
+      if (this.hls.config.abrMaxWithRealBitrate) {
+        const level = this.hls.levels[frag.level];
+        let loadedBytes = (level.loaded ? level.loaded.bytes : 0) + data.stats.loaded;
+        let loadedDuration = (level.loaded ? level.loaded.duration : 0) + data.frag.duration;
+        level.loaded = { bytes : loadedBytes, duration : loadedDuration };
+        level.realBitrate = Math.round(8*loadedBytes/loadedDuration);
+      }
       // if fragment has been loaded to perform a bitrate test,
       if (data.frag.bitrateTest) {
         let stats = data.stats;
