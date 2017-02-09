@@ -7,21 +7,14 @@ import Event from './events';
 import {ErrorTypes, ErrorDetails} from './errors';
 import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
-import AbrController from    './controller/abr-controller';
-import BufferController from  './controller/buffer-controller';
-import CapLevelController from  './controller/cap-level-controller';
-import AudioStreamController from  './controller/audio-stream-controller';
+import KeyLoader from './loader/key-loader';
+
 import StreamController from  './controller/stream-controller';
 import LevelController from  './controller/level-controller';
-import TimelineController from './controller/timeline-controller';
-import FPSController from './controller/fps-controller';
-import AudioTrackController from './controller/audio-track-controller';
+
 import {logger, enableLogs} from './utils/logger';
-//import FetchLoader from './utils/fetch-loader';
-import XhrLoader from './utils/xhr-loader';
 import EventEmitter from 'events';
-import KeyLoader from './loader/key-loader';
-import Cues from './utils/cues';
+import {hlsDefaultConfig} from './config';
 
 class Hls {
 
@@ -51,78 +44,7 @@ class Hls {
 
   static get DefaultConfig() {
     if(!Hls.defaultConfig) {
-       Hls.defaultConfig = {
-          autoStartLoad: true,
-          startPosition: -1,
-          defaultAudioCodec: undefined,
-          debug: false,
-          capLevelOnFPSDrop: false,
-          capLevelToPlayerSize: false,
-          initialLiveManifestSize: 1,
-          maxBufferLength: 30,
-          maxBufferSize: 60 * 1000 * 1000,
-          maxBufferHole: 0.5,
-          maxMaxBufferLength: 600,
-          maxSeekHole: 2,
-          lowBufferWatchdogPeriod: 0.5,
-          highBufferWatchdogPeriod: 3,
-          nudgeOffset: 0.1,
-          nudgeMaxRetry : 3,
-          maxFragLookUpTolerance: 0.2,
-          liveSyncDurationCount:3,
-          liveMaxLatencyDurationCount: Infinity,
-          liveSyncDuration: undefined,
-          liveMaxLatencyDuration: undefined,
-          enableWorker: true,
-          enableSoftwareAES: true,
-          manifestLoadingTimeOut: 10000,
-          manifestLoadingMaxRetry: 1,
-          manifestLoadingRetryDelay: 1000,
-          manifestLoadingMaxRetryTimeout: 64000,
-          startLevel: undefined,
-          levelLoadingTimeOut: 10000,
-          levelLoadingMaxRetry: 4,
-          levelLoadingRetryDelay: 1000,
-          levelLoadingMaxRetryTimeout: 64000,
-          fragLoadingTimeOut: 20000,
-          fragLoadingMaxRetry: 6,
-          fragLoadingRetryDelay: 1000,
-          fragLoadingMaxRetryTimeout: 64000,
-          fragLoadingLoopThreshold: 3,
-          startFragPrefetch: false,
-          fpsDroppedMonitoringPeriod: 5000,
-          fpsDroppedMonitoringThreshold: 0.2,
-          appendErrorMaxRetry: 3,
-          loader: XhrLoader,
-          //loader: FetchLoader,
-          fLoader: undefined,
-          pLoader: undefined,
-          xhrSetup: undefined,
-          fetchSetup: undefined,
-          abrController: AbrController,
-          bufferController: BufferController,
-          capLevelController: CapLevelController,
-          fpsController: FPSController,
-          streamController: StreamController,
-          audioStreamController: AudioStreamController,
-          timelineController: TimelineController,
-          cueHandler: Cues,
-          enableCEA708Captions: true,
-          enableMP2TPassThrough: false,
-          stretchShortVideoTrack: false,
-          forceKeyFrameOnDiscontinuity: true,
-          abrEwmaFastLive: 3,
-          abrEwmaSlowLive: 9,
-          abrEwmaFastVoD: 3,
-          abrEwmaSlowVoD: 9,
-          abrEwmaDefaultEstimate: 5e5, // 500 kbps
-          abrBandWidthFactor : 0.95,
-          abrBandWidthUpFactor : 0.7,
-          abrMaxWithRealBitrate : false,
-          maxStarvationDelay : 4,
-          maxLoadingDelay : 4,
-          minAutoBitrate: 0
-        };
+      return hlsDefaultConfig;
     }
     return Hls.defaultConfig;
   }
@@ -165,36 +87,46 @@ class Hls {
     this.on = observer.on.bind(observer);
     this.off = observer.off.bind(observer);
     this.trigger = observer.trigger.bind(observer);
-    this.playlistLoader = new PlaylistLoader(this);
-    this.fragmentLoader = new FragmentLoader(this);
-    this.levelController = new LevelController(this);
-    this.abrController = new config.abrController(this);
-    this.bufferController = new config.bufferController(this);
-    this.capLevelController = new config.capLevelController(this);
-    this.fpsController = new config.fpsController(this);
-    this.streamController = new config.streamController(this);
-    this.audioStreamController = new config.audioStreamController(this);
-    this.timelineController = new config.timelineController(this);
-    this.audioTrackController = new AudioTrackController(this);
-    this.keyLoader = new KeyLoader(this);
+
+    // network controllers
+    const levelController = this.levelController = new LevelController(this);
+    const streamController = this.streamController = new StreamController(this);
+    let networkControllers = [levelController, streamController];
+
+    // optional audio stream controller
+    let Controller = config.audioStreamController;
+    if (Controller) {
+      networkControllers.push(new Controller(this));
+    }
+
+    this.networkControllers = networkControllers;
+
+    // core controllers and network loaders
+    // hls.abrController is referenced in levelController, this would need to be fixed
+    const abrController = this.abrController = new config.abrController(this);
+    const bufferController  = new config.bufferController(this);
+    const capLevelController = new config.capLevelController(this);
+    const fpsController = new config.fpsController(this);
+    const playListLoader = new PlaylistLoader(this);
+    const fragmentLoader = new FragmentLoader(this);
+    const keyLoader = new KeyLoader(this);
+
+    let coreComponents = [ playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController ];
+
+    // optional audio track and timeline controller
+    [config.audioTrackController, config.timelineController].forEach(Controller => {
+      if (Controller) {
+        coreComponents.push(new Controller(this));
+      }
+    });
+    this.coreComponents = coreComponents;
   }
 
   destroy() {
     logger.log('destroy');
     this.trigger(Event.DESTROYING);
     this.detachMedia();
-    this.playlistLoader.destroy();
-    this.fragmentLoader.destroy();
-    this.levelController.destroy();
-    this.abrController.destroy();
-    this.bufferController.destroy();
-    this.capLevelController.destroy();
-    this.fpsController.destroy();
-    this.streamController.destroy();
-    this.audioStreamController.destroy();
-    this.timelineController.destroy();
-    this.audioTrackController.destroy();
-    this.keyLoader.destroy();
+    this.coreComponents.concat(this.networkControllers).forEach(component => {component.destroy();});
     this.url = null;
     this.observer.removeAllListeners();
   }
@@ -220,16 +152,12 @@ class Hls {
 
   startLoad(startPosition=-1) {
     logger.log(`startLoad(${startPosition})`);
-    this.levelController.startLoad();
-    this.streamController.startLoad(startPosition);
-    this.audioStreamController.startLoad(startPosition);
+    this.networkControllers.forEach(controller => {controller.startLoad(startPosition);});
   }
 
   stopLoad() {
     logger.log('stopLoad');
-    this.levelController.stopLoad();
-    this.streamController.stopLoad();
-    this.audioStreamController.stopLoad();
+    this.networkControllers.forEach(controller => {controller.stopLoad();});
   }
 
   swapAudioCodec() {
@@ -347,17 +275,22 @@ class Hls {
 
   /** get alternate audio tracks list from playlist **/
   get audioTracks() {
-    return this.audioTrackController.audioTracks;
+    const audioTrackController = this.audioTrackController;
+    return audioTrackController ? audioTrackController.audioTracks : [];
   }
 
   /** get index of the selected audio track (index in audio track lists) **/
   get audioTrack() {
-   return this.audioTrackController.audioTrack;
+    const audioTrackController = this.audioTrackController;
+    return audioTrackController ? audioTrackController.audioTrack : -1;
   }
 
   /** select an audio track, based on its index in audio track lists**/
   set audioTrack(audioTrackId) {
-    this.audioTrackController.audioTrack = audioTrackId;
+    const audioTrackController = this.audioTrackController;
+    if (audioTrackController) {
+      audioTrackController.audioTrack = audioTrackId;
+    }
   }
 
   get liveSyncPosition() {
