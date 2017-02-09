@@ -580,6 +580,7 @@ $(document).ready(function() {
             break;
         }
         if(data.fatal) {
+          console.log('fatal error :' + data.details);
           switch(data.type) {
             case Hls.ErrorTypes.MEDIA_ERROR:
               handleMediaError();
