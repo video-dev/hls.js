@@ -370,7 +370,7 @@ class StreamController extends EventHandler {
     let frag;
     let foundFrag;
     let maxFragLookUpTolerance = config.maxFragLookUpTolerance;
-    let fragNext = (fragPrevious) ? fragments.find((fragment) =>  fragment.sn === fragPrevious.sn + 1) : undefined;
+    const fragNext = fragPrevious ? fragments[fragPrevious.sn - fragments[0].sn + 1] : undefined;
     let fragmentWithinToleranceTest = (candidate) => {
       // offset should be within fragment boundary - config.maxFragLookUpTolerance
       // this is to cope with situations like
