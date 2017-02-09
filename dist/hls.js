@@ -674,11 +674,13 @@ var AbrController = function (_EventHandler) {
         this._nextAutoLevel = -1;
 
         // compute level average bitrate
-        var level = this.hls.levels[frag.level];
-        var loadedBytes = (level.loaded ? level.loaded.bytes : 0) + data.stats.loaded;
-        var loadedDuration = (level.loaded ? level.loaded.duration : 0) + data.frag.duration;
-        level.loaded = { bytes: loadedBytes, duration: loadedDuration };
-        level.realBitrate = Math.round(8 * loadedBytes / loadedDuration);
+        if (this.hls.config.abrMaxWithRealBitrate) {
+          var level = this.hls.levels[frag.level];
+          var loadedBytes = (level.loaded ? level.loaded.bytes : 0) + data.stats.loaded;
+          var loadedDuration = (level.loaded ? level.loaded.duration : 0) + data.frag.duration;
+          level.loaded = { bytes: loadedBytes, duration: loadedDuration };
+          level.realBitrate = Math.round(8 * loadedBytes / loadedDuration);
+        }
         // if fragment has been loaded to perform a bitrate test,
         if (data.frag.bitrateTest) {
           var stats = data.stats;
@@ -8751,6 +8753,7 @@ var Hls = function () {
           abrEwmaDefaultEstimate: 5e5, // 500 kbps
           abrBandWidthFactor: 0.95,
           abrBandWidthUpFactor: 0.7,
+          abrMaxWithRealBitrate: false,
           maxStarvationDelay: 4,
           maxLoadingDelay: 4,
           minAutoBitrate: 0
