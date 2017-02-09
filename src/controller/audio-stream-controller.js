@@ -23,6 +23,7 @@ const State = {
   WAITING_TRACK : 'WAITING_TRACK',
   PARSING : 'PARSING',
   PARSED : 'PARSED',
+  BUFFER_FLUSHING : 'BUFFER_FLUSHING',
   ENDED : 'ENDED',
   ERROR : 'ERROR',
   WAITING_INIT_PTS : 'WAITING_INIT_PTS'
@@ -147,6 +148,7 @@ class AudioStreamController extends EventHandler {
         //don't do anything in error state to avoid breaking further ...
       case State.PAUSED:
         //don't do anything in paused state either ...
+      case State.BUFFER_FLUSHING:
         break;
       case State.STARTING:
         this.state = State.WAITING_TRACK;
@@ -218,8 +220,8 @@ class AudioStreamController extends EventHandler {
               bufferEnd = pos;
               // if currentTime (pos) is less than alt audio playlist start time, it means that alt audio is ahead of currentTime
               if (trackDetails.PTSKnown && pos < start) {
-                // if everything is buffered from pos to start, let's seek to start
-                if (bufferInfo.end > start) {
+                // if everything is buffered from pos to start or if audio buffer upfront, let's seek to start
+                if (bufferInfo.end > start || bufferInfo.nextStart) {
                   logger.log('alt audio track ahead of main track, seek to start of alt audio track');
                   this.media.currentTime = start + 0.05;
                 } else {
@@ -620,11 +622,12 @@ class AudioStreamController extends EventHandler {
           logger.log('switching audio track : currentTime:'+ currentTime);
           if (currentTime >= data.startPTS) {
             logger.log('switching audio track : flushing all audio');
-              hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0 , endOffset: Number.POSITIVE_INFINITY, type : 'audio'});
-              appendOnBufferFlush = true;
-              //Lets announce that the initial audio track switch flush occur
-              this.audioSwitch = false;
-              hls.trigger(Event.AUDIO_TRACK_SWITCHED, {id : trackId});
+            this.state = State.BUFFER_FLUSHING;
+            hls.trigger(Event.BUFFER_FLUSHING, {startOffset: 0 , endOffset: Number.POSITIVE_INFINITY, type : 'audio'});
+            appendOnBufferFlush = true;
+            //Lets announce that the initial audio track switch flush occur
+            this.audioSwitch = false;
+            hls.trigger(Event.AUDIO_TRACK_SWITCHED, {id : trackId});
           }
         } else {
           //Lets announce that the initial audio track switch flush occur

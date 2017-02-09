@@ -25,6 +25,7 @@ class MP4 {
       '.mp3': [],
       mvex: [],
       mvhd: [],
+      pasp: [],
       sdtp: [],
       stbl: [],
       stco: [],
@@ -339,7 +340,9 @@ class MP4 {
             track.pps.length // numOfPictureParameterSets
           ]).concat(pps))), // "PPS"
         width = track.width,
-        height = track.height;
+        height = track.height,
+        hSpacing = track.pixelRatio[0],
+        vSpacing = track.pixelRatio[1];
     //console.log('avcc:' + Hex.hexDump(avcc));
     return MP4.box(MP4.types.avc1, new Uint8Array([
         0x00, 0x00, 0x00, // reserved
@@ -373,7 +376,16 @@ class MP4 {
           MP4.box(MP4.types.btrt, new Uint8Array([
             0x00, 0x1c, 0x9c, 0x80, // bufferSizeDB
             0x00, 0x2d, 0xc6, 0xc0, // maxBitrate
-            0x00, 0x2d, 0xc6, 0xc0])) // avgBitrate
+            0x00, 0x2d, 0xc6, 0xc0])), // avgBitrate
+          MP4.box(MP4.types.pasp, new Uint8Array([
+            (hSpacing >> 24),         // hSpacing
+            (hSpacing >> 16) & 0xFF,
+            (hSpacing >>  8) & 0xFF,
+            hSpacing & 0xFF,
+            (vSpacing >> 24),         // vSpacing
+            (vSpacing >> 16) & 0xFF,
+            (vSpacing >>  8) & 0xFF,
+            vSpacing & 0xFF]))
           );
   }
 
