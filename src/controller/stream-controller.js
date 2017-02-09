@@ -278,12 +278,13 @@ class StreamController extends EventHandler {
             fragPrevious &&
             fragPrevious.sn === levelDetails.endSN
         ) {
-            // if (we are not seeking AND current position is buffered) OR (if we are seeking but everything (almost) til the end is buffered), let's signal eos
-            // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference when switching
-            // between different renditions. using half frag duration should help cope with these cases.
+            // if everything (almost) til the end is buffered, let's signal eos
+            // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference
+            // using half frag duration should help cope with these cases.
+            // also cope with almost zero last frag duration (max last frag duration with 100ms) refer to https://github.com/dailymotion/hls.js/pull/657
             if (
-                (!media.seeking && bufferInfo.len) ||
-                media.duration - bufferInfo.end <= fragPrevious.duration / 2
+                media.duration - Math.max(bufferInfo.end, fragPrevious.start) <=
+                Math.max(0.1, fragPrevious.duration / 2)
             ) {
                 // Finalize the media stream
                 let data = {};
@@ -392,7 +393,10 @@ class StreamController extends EventHandler {
                 : config.liveMaxLatencyDurationCount *
                   levelDetails.targetduration;
 
-        if (bufferEnd < Math.max(start, end - maxLatency)) {
+        if (
+            bufferEnd <
+            Math.max(start - config.maxFragLookUpTolerance, end - maxLatency)
+        ) {
             let liveSyncPosition = (this.liveSyncPosition = this.computeLivePosition(
                 start,
                 levelDetails
@@ -679,18 +683,14 @@ class StreamController extends EventHandler {
     }
 
     getBufferRange(position) {
-        var i,
-            range,
-            bufferRange = this.bufferRange;
-        if (bufferRange) {
-            for (i = bufferRange.length - 1; i >= 0; i--) {
-                range = bufferRange[i];
-                if (position >= range.start && position <= range.end) {
-                    return range;
-                }
+        return BinarySearch.search(this.bufferRange, function(range) {
+            if (position < range.start) {
+                return -1;
+            } else if (position > range.end) {
+                return 1;
             }
-        }
-        return null;
+            return 0;
+        });
     }
 
     get currentLevel() {
@@ -1423,14 +1423,6 @@ class StreamController extends EventHandler {
                     });
                 }
             });
-
-            this.bufferRange.push({
-                type: data.type,
-                start: data.startPTS,
-                end: data.endPTS,
-                frag: frag
-            });
-
             //trigger handler right now
             this.tick();
         }
@@ -1556,10 +1548,32 @@ class StreamController extends EventHandler {
             this.state === State.PARSED &&
             (!this.appended || !this.pendingBuffering)
         ) {
-            var frag = this.fragCurrent,
-                stats = this.stats;
+            const frag = this.fragCurrent;
             if (frag) {
+                const media = this.mediaBuffer ? this.mediaBuffer : this.media;
+                logger.log(
+                    `main buffered : ${TimeRanges.toString(media.buffered)}`
+                );
+                // filter potentially evicted bufferRange. this is to avoid memleak on live streams
+                let bufferRange = this.bufferRange.filter(range => {
+                    return BufferHelper.isBuffered(
+                        media,
+                        (range.start + range.end) / 2
+                    );
+                });
+                // push new range
+                bufferRange.push({
+                    type: frag.type,
+                    start: frag.startPTS,
+                    end: frag.endPTS,
+                    frag: frag
+                });
+                // sort, as we use BinarySearch for lookup in getBufferRange ...
+                this.bufferRange = bufferRange.sort(function(a, b) {
+                    return a.start - b.start;
+                });
                 this.fragPrevious = frag;
+                const stats = this.stats;
                 stats.tbuffered = performance.now();
                 // we should get rid of this.fragLastKbps
                 this.fragLastKbps = Math.round(
@@ -1570,10 +1584,6 @@ class StreamController extends EventHandler {
                     frag: frag,
                     id: 'main'
                 });
-                let media = this.mediaBuffer ? this.mediaBuffer : this.media;
-                logger.log(
-                    `main buffered : ${TimeRanges.toString(media.buffered)}`
-                );
                 this.state = State.IDLE;
             }
             this.tick();
@@ -1737,6 +1747,7 @@ class StreamController extends EventHandler {
             // adjust currentTime to start position on loaded metadata
             if (!this.loadedmetadata && buffered.length && !media.seeking) {
                 this.loadedmetadata = true;
+                this.nudgeRetry = 0;
                 // only adjust currentTime if different from startPosition or if startPosition not buffered
                 // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
                 let startPosition = this.startPosition,
@@ -1773,64 +1784,129 @@ class StreamController extends EventHandler {
                         currentTime > media.playbackRate * this.lastCurrentTime,
                     config = this.config;
 
-                if (this.stalled && playheadMoving) {
-                    this.stalled = false;
-                    logger.log(`playback not stuck anymore @${currentTime}`);
-                }
-                // check buffer upfront
-                // if less than jumpThreshold second is buffered, let's check in more details
-                if (expectedPlaying && bufferInfo.len <= jumpThreshold) {
-                    if (playheadMoving) {
-                        // playhead moving
-                        jumpThreshold = 0;
-                        this.seekHoleNudgeDuration = 0;
-                    } else {
-                        // playhead not moving AND media expected to play
-                        if (!this.stalled) {
-                            this.seekHoleNudgeDuration = 0;
-                            logger.log(`playback seems stuck @${currentTime}`);
-                            this.hls.trigger(Event.ERROR, {
-                                type: ErrorTypes.MEDIA_ERROR,
-                                details: ErrorDetails.BUFFER_STALLED_ERROR,
-                                fatal: false
-                            });
-                            this.stalled = true;
-                        } else {
-                            this.seekHoleNudgeDuration +=
-                                config.seekHoleNudgeDuration;
-                        }
-                    }
-                    // if we are below threshold, try to jump to start of next buffer range if close
-                    if (bufferInfo.len <= jumpThreshold) {
-                        // no buffer available @ currentTime, check if next buffer is close (within a config.maxSeekHole second range)
-                        var nextBufferStart = bufferInfo.nextStart,
-                            delta = nextBufferStart - currentTime;
-                        if (
-                            nextBufferStart &&
-                            delta < config.maxSeekHole &&
-                            delta > 0
-                        ) {
-                            // next buffer is close ! adjust currentTime to nextBufferStart
-                            // this will ensure effective video decoding
-                            logger.log(
-                                `adjust currentTime from ${
-                                    media.currentTime
-                                } to next buffered @ ${nextBufferStart} + nudge ${
-                                    this.seekHoleNudgeDuration
-                                }`
+                if (playheadMoving) {
+                    // played moving, but was previously stalled => now not stuck anymore
+                    if (this.stalled) {
+                        if (this.stallReported) {
+                            logger.warn(
+                                `playback not stuck anymore @${currentTime}, after ${Math.round(
+                                    performance.now() - this.stalled
+                                )}ms`
                             );
-                            let hole =
-                                nextBufferStart +
-                                this.seekHoleNudgeDuration -
-                                media.currentTime;
-                            media.currentTime =
-                                nextBufferStart + this.seekHoleNudgeDuration;
-                            this.hls.trigger(Event.ERROR, {
-                                type: ErrorTypes.MEDIA_ERROR,
-                                details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
-                                fatal: false,
-                                hole: hole
-                            });
+                            this.stallReported = false;
+                        }
+                        this.stalled = undefined;
+                    }
+                } else {
+                    // playhead not moving
+                    if (expectedPlaying) {
+                        // playhead not moving BUT media expected to play
+                        const tnow = performance.now();
+                        const hls = this.hls;
+                        if (!this.stalled) {
+                            // stall just detected, store current time
+                            this.stalled = tnow;
+                            this.stallReported = false;
+                        } else {
+                            // playback already stalled, check stalling duration
+                            // if stalling for more than a given threshold, let's try to recover
+                            const stalledDuration = tnow - this.stalled;
+                            const bufferLen = bufferInfo.len;
+                            // have we reached stall deadline ?
+                            if (
+                                bufferLen <= jumpThreshold &&
+                                stalledDuration >
+                                    config.lowBufferWatchdogPeriod * 1000
+                            ) {
+                                // report stalled error once
+                                if (!this.stallReported) {
+                                    this.stallReported = true;
+                                    logger.warn(
+                                        `playback stalling in low buffer @${currentTime}`
+                                    );
+                                    hls.trigger(Event.ERROR, {
+                                        type: ErrorTypes.MEDIA_ERROR,
+                                        details:
+                                            ErrorDetails.BUFFER_STALLED_ERROR,
+                                        fatal: false,
+                                        buffer: bufferLen
+                                    });
+                                }
+                                // if buffer len is below threshold, try to jump to start of next buffer range if close
+                                // no buffer available @ currentTime, check if next buffer is close (within a config.maxSeekHole second range)
+                                var nextBufferStart = bufferInfo.nextStart,
+                                    delta = nextBufferStart - currentTime;
+                                if (
+                                    nextBufferStart &&
+                                    delta < config.maxSeekHole &&
+                                    delta > 0
+                                ) {
+                                    const nudgeRetry = this.nudgeRetry++;
+                                    const nudgeOffset =
+                                        nudgeRetry * config.nudgeOffset;
+                                    // next buffer is close ! adjust currentTime to nextBufferStart
+                                    // this will ensure effective video decoding
+                                    logger.log(
+                                        `adjust currentTime from ${
+                                            media.currentTime
+                                        } to next buffered @ ${nextBufferStart} + nudge ${nudgeOffset}`
+                                    );
+                                    let hole =
+                                        nextBufferStart +
+                                        nudgeOffset -
+                                        media.currentTime;
+                                    media.currentTime =
+                                        nextBufferStart + nudgeOffset;
+                                    this.stalled = undefined;
+                                    hls.trigger(Event.ERROR, {
+                                        type: ErrorTypes.MEDIA_ERROR,
+                                        details:
+                                            ErrorDetails.BUFFER_SEEK_OVER_HOLE,
+                                        fatal: false,
+                                        hole: hole
+                                    });
+                                }
+                            } else if (
+                                bufferLen > jumpThreshold &&
+                                stalledDuration >
+                                    config.highBufferWatchdogPeriod * 1000
+                            ) {
+                                logger.warn(
+                                    `playback stalling in high buffer @${currentTime}`
+                                );
+                                hls.trigger(Event.ERROR, {
+                                    type: ErrorTypes.MEDIA_ERROR,
+                                    details: ErrorDetails.BUFFER_STALLED_ERROR,
+                                    fatal: false,
+                                    buffer: bufferLen
+                                });
+                                this.stalled = undefined;
+                                const nudgeRetry = this.nudgeRetry++;
+                                if (nudgeRetry < config.nudgeMaxRetry) {
+                                    const currentTime = media.currentTime;
+                                    const targetTime =
+                                        currentTime +
+                                        (nudgeRetry + 1) * config.nudgeOffset;
+                                    logger.log(
+                                        `adjust currentTime from ${currentTime} to ${targetTime}`
+                                    );
+                                    // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
+                                    media.currentTime = targetTime;
+                                    hls.trigger(Event.ERROR, {
+                                        type: ErrorTypes.MEDIA_ERROR,
+                                        details:
+                                            ErrorDetails.BUFFER_NUDGE_ON_STALL,
+                                        fatal: false
+                                    });
+                                } else {
+                                    hls.trigger(Event.ERROR, {
+                                        type: ErrorTypes.MEDIA_ERROR,
+                                        details:
+                                            ErrorDetails.BUFFER_STALLED_ERROR,
+                                        fatal: true
+                                    });
+                                }
+                            }
                         }
                     }
                 }
@@ -1850,23 +1926,16 @@ class StreamController extends EventHandler {
     }
 
     onBufferFlushed() {
-        /* after successful buffer flushing, rebuild buffer Range array
-      loop through existing buffer range and check if
-      corresponding range is still buffered. only push to new array already buffered range
+        /* after successful buffer flushing, filter flushed fragments from bufferRange
       use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
     */
-        let media = this.mediaBuffer ? this.mediaBuffer : this.media,
-            bufferRange = this.bufferRange,
-            newRange = [],
-            range,
-            i;
-        for (i = 0; i < bufferRange.length; i++) {
-            range = bufferRange[i];
-            if (BufferHelper.isBuffered(media, (range.start + range.end) / 2)) {
-                newRange.push(range);
-            }
-        }
-        this.bufferRange = newRange;
+        const media = this.mediaBuffer ? this.mediaBuffer : this.media;
+        this.bufferRange = this.bufferRange.filter(range => {
+            return BufferHelper.isBuffered(
+                media,
+                (range.start + range.end) / 2
+            );
+        });
 
         // increase fragment load Index to avoid frag loop loading error after buffer flush
         this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;

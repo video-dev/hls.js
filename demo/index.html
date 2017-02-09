@@ -52,6 +52,7 @@ header {
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
 <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css">
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.3/FileSaver.min.js"></script>
 
 </head>
 <body>
@@ -80,6 +81,7 @@ header {
       <label class="innerControls"><input id="enableStreaming" type=checkbox checked/> Enable Streaming</label>
       <label class="innerControls"><input id="autoRecoverError" type=checkbox checked/> Auto-Recover Media Error</label>
       <label class="innerControls"><input id="enableWorker" type=checkbox checked/> Enable Worker</label>
+      <label class="innerControls"><input id="dumpfMP4" type=checkbox checked/> dump fMP4</label>
       <label class="innerControls">Level Capping <input id="levelCapping" type=number/></label>
       <label class="innerControls">default Audio Codec <input id="defaultAudioCodec"/></label>
       <div id="StreamPermalink" class="innerControls"></div>
@@ -121,6 +123,8 @@ header {
       <button type="button" class="btn btn-xs btn-warning" onclick="hls.startLoad()">start Load</button>
       <button type="button" class="btn btn-xs btn-warning" onclick="hls.stopLoad()">stop Load</button>
       <button type="button" class="btn btn-xs btn-warning" onclick="hls.recoverMediaError()">recover Media Error</button><br>
+      <button type="button" class="btn btn-xs btn-warning" onclick="createfMP4('audio');">create audio fmp4</button>
+      <button type="button" class="btn btn-xs btn-warning" onclick="createfMP4('video')">create video fmp4</button><br>
     </div>
 
     <div id='QualityLevelControl'>
@@ -226,11 +230,13 @@ $(document).ready(function() {
    $('#enableStreaming').click(function()      { enableStreaming = this.checked; loadStream($('#streamURL').val()); });
    $('#autoRecoverError').click(function()  { autoRecoverError = this.checked; updatePermalink();});
    $('#enableWorker').click(function()  { enableWorker = this.checked; updatePermalink();});
+   $('#dumpfMP4').click(function()  { dumpfMP4 = this.checked; updatePermalink();});
    $('#levelCapping').change(function()  { levelCapping = this.value; updatePermalink();});
    $('#defaultAudioCodec').change(function()  { defaultAudioCodec = this.value; updatePermalink();});
    $('#enableStreaming').prop( "checked", enableStreaming );
    $('#autoRecoverError').prop( "checked", autoRecoverError );
    $('#enableWorker').prop( "checked", enableWorker );
+   $('#dumpfMP4').prop( "checked", dumpfMP4 );
    $('#levelCapping').val(levelCapping);
    $('#defaultAudioCodec').val(defaultAudioCodec || "undefined");
 
@@ -240,12 +246,13 @@ $(document).ready(function() {
 
 
   'use strict';
-  var hls,events, stats,tracks,
+  var hls,events, stats,tracks,fmp4Data,
       enableStreaming = JSON.parse(getURLParam('enableStreaming',true))
       autoRecoverError = JSON.parse(getURLParam('autoRecoverError',true)),
       enableWorker = JSON.parse(getURLParam('enableWorker',true)),
       levelCapping = JSON.parse(getURLParam('levelCapping',-1)),
-      defaultAudioCodec = getURLParam('defaultAudioCodec',undefined);
+      defaultAudioCodec = getURLParam('defaultAudioCodec',undefined),
+      dumpfMP4 = getURLParam('dumpfMP4',false);
   var video = $('#video')[0];
   video.volume = 0.05;
   $("#currentVersion").html("Hls version:" + Hls.version);
@@ -274,6 +281,7 @@ $(document).ready(function() {
       $("#HlsStatus").text('loading ' + url);
        events = { url : url, t0 : performance.now(), load : [], buffer : [], video : [], level : [], bitrate : []};
        recoverDecodingErrorDate = recoverSwapAudioCodecDate = null;
+       fmp4Data = { 'audio': [], 'video': [] };
        hls = new Hls({debug:true, enableWorker : enableWorker, defaultAudioCodec : defaultAudioCodec});
        $("#HlsStatus").text('loading manifest and attaching video element...');
        hls.loadSource(url);
@@ -618,6 +626,12 @@ $(document).ready(function() {
        hls.on(Hls.Events.BUFFER_CREATED, function(event,data) {
         tracks = data.tracks;
        });
+
+        hls.on(Hls.Events.BUFFER_APPENDING, function(event,data) {
+          if (dumpfMP4) {
+            fmp4Data[data.type].push(data.data);
+          }
+        });
 
        hls.on(Hls.Events.FPS_DROP,function(event,data) {
           var evt = {time : performance.now() - events.t0, type : "frame drop", name : data.currentDropped + "/" + data.currentDecoded};
@@ -1077,7 +1091,7 @@ function updateAudioTrackInfo() {
     for (var i = 0; i < sURLVariables.length; i++) {
       var sParameterName = sURLVariables[i].split('=');
       if (sParameterName[0] == sParam) {
-        return "undefined" == sParameterName[1] ? undefined : sParameterName[1];
+        return "undefined" == sParameterName[1] ? undefined : "false" == sParameterName[1] ? false : sParameterName[1];
       }
     }
     return defaultValue;
@@ -1089,11 +1103,32 @@ function updateAudioTrackInfo() {
                     '&enableStreaming=' + enableStreaming +
                     '&autoRecoverError=' + autoRecoverError +
                     '&enableWorker=' + enableWorker +
+                    '&dumpfMP4=' + dumpfMP4 +
                     '&levelCapping=' + levelCapping +
                     '&defaultAudioCodec=' + defaultAudioCodec;
       var description = 'permalink: ' + "<a href=\"" + hlsLink + "\">" + hlsLink + "</a>";
       $("#StreamPermalink").html(description);
   }
+
+function createfMP4(type) {
+  if (fmp4Data[type].length) {
+    var blob = new Blob([arrayConcat(fmp4Data[type])], {type: 'application/octet-stream'});
+    var filename = type + '-' + new Date().toISOString() + '.mp4';
+    saveAs(blob,filename);
+    //$('body').append('<a download="hlsjs-' + filename + '" href="' + window.URL.createObjectURL(blob) + '">Download ' + filename + ' track</a><br>');
+  }
+}
+
+function arrayConcat(inputArray) {
+    let totalLength = inputArray.reduce( (prev,cur) => prev+cur.length ,0);
+    let result = new Uint8Array(totalLength);
+    let offset = 0;
+    inputArray.forEach(element => {
+      result.set(element, offset);
+      offset += element.length;
+    });
+    return result;
+}
 
   </script>
 </body>
