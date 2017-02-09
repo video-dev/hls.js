@@ -23,6 +23,7 @@ const State = {
     WAITING_TRACK: 'WAITING_TRACK',
     PARSING: 'PARSING',
     PARSED: 'PARSED',
+    BUFFER_FLUSHING: 'BUFFER_FLUSHING',
     ENDED: 'ENDED',
     ERROR: 'ERROR',
     WAITING_INIT_PTS: 'WAITING_INIT_PTS'
@@ -161,7 +162,8 @@ class AudioStreamController extends EventHandler {
             case State.ERROR:
             //don't do anything in error state to avoid breaking further ...
             case State.PAUSED:
-                //don't do anything in paused state either ...
+            //don't do anything in paused state either ...
+            case State.BUFFER_FLUSHING:
                 break;
             case State.STARTING:
                 this.state = State.WAITING_TRACK;
@@ -257,8 +259,11 @@ class AudioStreamController extends EventHandler {
                             bufferEnd = pos;
                             // if currentTime (pos) is less than alt audio playlist start time, it means that alt audio is ahead of currentTime
                             if (trackDetails.PTSKnown && pos < start) {
-                                // if everything is buffered from pos to start, let's seek to start
-                                if (bufferInfo.end > start) {
+                                // if everything is buffered from pos to start or if audio buffer upfront, let's seek to start
+                                if (
+                                    bufferInfo.end > start ||
+                                    bufferInfo.nextStart
+                                ) {
                                     logger.log(
                                         'alt audio track ahead of main track, seek to start of alt audio track'
                                     );
@@ -785,6 +790,7 @@ class AudioStreamController extends EventHandler {
                         logger.log(
                             'switching audio track : flushing all audio'
                         );
+                        this.state = State.BUFFER_FLUSHING;
                         hls.trigger(Event.BUFFER_FLUSHING, {
                             startOffset: 0,
                             endOffset: Number.POSITIVE_INFINITY,

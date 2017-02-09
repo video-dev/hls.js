@@ -59,6 +59,8 @@ export const ErrorDetails = {
     BUFFER_FULL_ERROR: 'bufferFullError',
     // Identifier for a buffer seek over hole event
     BUFFER_SEEK_OVER_HOLE: 'bufferSeekOverHole',
+    // Identifier for a buffer nudge on stall (playback is stuck although currentTime is in a buffered area)
+    BUFFER_NUDGE_ON_STALL: 'bufferNudgeOnStall',
     // Identifier for an internal exception happening inside hls.js while handling an event
     INTERNAL_EXCEPTION: 'internalException',
     // Malformed WebVTT contents

@@ -336,7 +336,7 @@ class BufferController extends EventHandler {
     }
 
     onBufferAppendFail(data) {
-        logger.error(`sourceBuffer error:${data.event}`);
+        logger.error('sourceBuffer error:', data.event);
         // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
         // this error might not always be fatal (it is fatal if decode error is set, in that case
         // it will be followed by a mediaElement error ...)
@@ -593,12 +593,9 @@ class BufferController extends EventHandler {
             sourceBuffer = this.sourceBuffer;
         if (Object.keys(sourceBuffer).length) {
             logger.log(
-                'flushBuffer,pos/start/end: ' +
-                    this.media.currentTime +
-                    '/' +
-                    startOffset +
-                    '/' +
-                    endOffset
+                `flushBuffer,pos/start/end: ${this.media.currentTime.toFixed(
+                    3
+                )}/${startOffset}/${endOffset}`
             );
             // safeguard to avoid infinite looping : don't try to flush more than the nb of appended segments
             if (this.flushBufferCounter < this.appended) {
