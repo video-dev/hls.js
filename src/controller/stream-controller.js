@@ -481,45 +481,61 @@ class StreamController extends EventHandler {
         levelDetails
     ) {
         const config = this.hls.config;
-
-        let frag,
-            foundFrag,
-            maxFragLookUpTolerance = config.maxFragLookUpTolerance;
+        let frag;
+        let foundFrag;
+        let maxFragLookUpTolerance = config.maxFragLookUpTolerance;
+        const fragNext = fragPrevious
+            ? fragments[fragPrevious.sn - fragments[0].sn + 1]
+            : undefined;
+        let fragmentWithinToleranceTest = candidate => {
+            // offset should be within fragment boundary - config.maxFragLookUpTolerance
+            // this is to cope with situations like
+            // bufferEnd = 9.991
+            // frag[Ø] : [0,10]
+            // frag[1] : [10,20]
+            // bufferEnd is within frag[0] range ... although what we are expecting is to return frag[1] here
+            //              frag start               frag start+duration
+            //                  |-----------------------------|
+            //              <--->                         <--->
+            //  ...--------><-----------------------------><---------....
+            // previous frag         matching fragment         next frag
+            //  return -1             return 0                 return 1
+            //logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
+            // Set the lookup tolerance to be small enough to detect the current segment - ensures we don't skip over very small segments
+            let candidateLookupTolerance = Math.min(
+                maxFragLookUpTolerance,
+                candidate.duration
+            );
+            if (
+                candidate.start +
+                    candidate.duration -
+                    candidateLookupTolerance <=
+                bufferEnd
+            ) {
+                return 1;
+            } else if (
+                candidate.start - candidateLookupTolerance > bufferEnd &&
+                candidate.start
+            ) {
+                // if maxFragLookUpTolerance will have negative value then don't return -1 for first element
+                return -1;
+            }
+            return 0;
+        };
 
         if (bufferEnd < end) {
             if (bufferEnd > end - maxFragLookUpTolerance) {
                 maxFragLookUpTolerance = 0;
             }
-            foundFrag = BinarySearch.search(fragments, candidate => {
-                // offset should be within fragment boundary - config.maxFragLookUpTolerance
-                // this is to cope with situations like
-                // bufferEnd = 9.991
-                // frag[Ø] : [0,10]
-                // frag[1] : [10,20]
-                // bufferEnd is within frag[0] range ... although what we are expecting is to return frag[1] here
-                //              frag start               frag start+duration
-                //                  |-----------------------------|
-                //              <--->                         <--->
-                //  ...--------><-----------------------------><---------....
-                // previous frag         matching fragment         next frag
-                //  return -1             return 0                 return 1
-                //logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
-                if (
-                    candidate.start +
-                        candidate.duration -
-                        maxFragLookUpTolerance <=
-                    bufferEnd
-                ) {
-                    return 1;
-                } else if (
-                    candidate.start - maxFragLookUpTolerance > bufferEnd &&
-                    candidate.start
-                ) {
-                    // if maxFragLookUpTolerance will have negative value then don't return -1 for first element
-                    return -1;
-                }
-                return 0;
-            });
+            // Prefer the next fragment if it's within tolerance
+            if (fragNext && !fragmentWithinToleranceTest(fragNext)) {
+                foundFrag = fragNext;
+            } else {
+                foundFrag = BinarySearch.search(
+                    fragments,
+                    fragmentWithinToleranceTest
+                );
+            }
         } else {
             // reach end of playlist
             foundFrag = fragments[fragLen - 1];
