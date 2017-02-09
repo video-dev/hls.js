@@ -581,7 +581,7 @@ class AudioStreamController extends EventHandler {
         //Check if we have video initPTS
         // If not we need to wait for it
         let initPTS = this.initPTS[cc];
-        let initSegmentData = details.initSegment ? details.initSegment.data : null;
+        let initSegmentData = details.initSegment ? details.initSegment.data : [];
         if (initSegmentData || initPTS !== undefined){
           this.pendingBuffering = true;
           logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);

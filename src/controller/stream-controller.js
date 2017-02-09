@@ -983,7 +983,7 @@ class StreamController extends EventHandler {
         let media = this.media;
         let mediaSeeking = media && media.seeking;
         let accurateTimeOffset = !mediaSeeking && (details.PTSKnown || !details.live);
-        let initSegmentData = details.initSegment ? details.initSegment.data : null;
+        let initSegmentData = details.initSegment ? details.initSegment.data : [];
         demuxer.push(data.payload, initSegmentData,audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata, accurateTimeOffset,null);
       }
     }
