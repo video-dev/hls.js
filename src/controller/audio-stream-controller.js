@@ -543,7 +543,7 @@ class AudioStreamController extends EventHandler {
         // If not we need to wait for it
         let initPTS = this.initPTS[cc];
         if (initPTS !== undefined){
-          this.pendingBuffering = -1;
+          this.pendingBuffering = true;
           logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
           // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
           let accurateTimeOffset = false; //details.PTSKnown || !details.live;
@@ -585,6 +585,8 @@ class AudioStreamController extends EventHandler {
             this.pendingData = [appendObj];
           } else {
             this.appended = true;
+            // arm pending Buffering flag before appending a segment
+            this.pendingBuffering = true;
             this.hls.trigger(Event.BUFFER_APPENDING, appendObj);
           }
         }
@@ -641,6 +643,8 @@ class AudioStreamController extends EventHandler {
         });
       if (!appendOnBufferFlush && pendingData.length) {
           pendingData.forEach(appendObj => {
+            // arm pending Buffering flag before appending a segment
+            this.pendingBuffering = true;
             this.hls.trigger(Event.BUFFER_APPENDING, appendObj);
           });
           this.pendingData = [];
@@ -678,7 +682,8 @@ class AudioStreamController extends EventHandler {
     if (data.parent === 'audio') {
       const state = this.state;
       if (state === State.PARSING || state === State.PARSED) {
-        this.pendingBuffering = data.pending;
+        // check if all buffers have been appended
+        this.pendingBuffering = (data.pending > 0);
         this._checkAppendedParsed();
       }
     }
@@ -686,7 +691,7 @@ class AudioStreamController extends EventHandler {
 
   _checkAppendedParsed() {
     //trigger handler right now
-    if (this.state === State.PARSED && (!this.appended || this.pendingBuffering === 0))   {
+    if (this.state === State.PARSED && (!this.appended || !this.pendingBuffering))   {
       let frag = this.fragCurrent, stats = this.stats, hls = this.hls;
       if (frag) {
         this.fragPrevious = frag;
