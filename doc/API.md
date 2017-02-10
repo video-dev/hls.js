@@ -10,11 +10,11 @@
   - [Third step: load a manifest](#third-step-load-a-manifest)
   - [Fourth step: control through `<video>` element](#fourth-step-control-through-video-element)
   - [Fifth step: error handling](#fifth-step-error-handling)
-  - [Fatal Error Recovery](#fatal-error-recovery)
-    - [`hls.startLoad()`](#hlsstartload)
-    - [`hls.recoverMediaError()`](#hlsrecovermediaerror)
-      - [Error recovery sample code](#error-recovery-sample-code)
-    - [`hls.swapAudioCodec()`](#hlsswapaudiocodec)
+    - [Fatal Error Recovery](#fatal-error-recovery)
+      - [`hls.startLoad()`](#hlsstartload)
+      - [`hls.recoverMediaError()`](#hlsrecovermediaerror)
+        - [Error recovery sample code](#error-recovery-sample-code)
+      - [`hls.swapAudioCodec()`](#hlsswapaudiocodec)
   - [Final step: destroying, switching between streams](#final-step-destroying-switching-between-streams)
 - [Fine Tuning](#fine-tuning)
   - [`Hls.DefaultConfig get/set`](#hlsdefaultconfig-getset)
@@ -66,7 +66,10 @@
   - [`abrEwmaDefaultEstimate`](#abrewmadefaultestimate)
   - [`abrBandWidthFactor`](#abrbandwidthfactor)
   - [`abrBandWidthUpFactor`](#abrbandwidthupfactor)
+<<<<<<< HEAD
   - [`abrMaxWithRealBitrate`](#abrmaxwithrealbitrate)
+=======
+>>>>>>> origin/expose-loader-definitions
   - [`minAutoBitrate`](#minautobitrate)
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
   - [`hls.attachMedia(videoElement)`](#hlsattachmediavideoelement)
@@ -221,19 +224,19 @@ See sample code below to listen to errors:
   }
 ```
 
-### Fatal Error Recovery
+#### Fatal Error Recovery
 
 Hls.js provides means to 'try to' recover fatal network and media errors, through these 2 methods:
 
-#### `hls.startLoad()`
+##### `hls.startLoad()`
 
 Should be invoked to recover network error.
 
-#### `hls.recoverMediaError()`
+##### `hls.recoverMediaError()`
 
 Should be invoked to recover media error.
 
-##### Error recovery sample code
+###### Error recovery sample code
 
 ```js
   hls.on(Hls.Events.ERROR, function (event, data) {
@@ -257,7 +260,7 @@ Should be invoked to recover media error.
   });
 ```
 
-#### `hls.swapAudioCodec()`
+##### `hls.swapAudioCodec()`
 
 If media error are still raised after calling `hls.recoverMediaError()`,
 calling this method, could be useful to workaround audio codec mismatch.
@@ -851,7 +854,6 @@ then if config value is set to `true`, ABR will use 2.5 Mb/s for this quality le
 
 ### `minAutoBitrate`
 
->>>>>>> add table of contents to the api documentation
 (default: `0`)
 
 Return the capping/min bandwidth value that could be used by automatic level selection algorithm.
