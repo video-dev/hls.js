@@ -31,7 +31,7 @@ class BufferHelper {
             }
             return this.bufferedInfo(buffered, pos, maxHoleDuration);
         } else {
-            return { len: 0, start: 0, end: 0, nextStart: undefined };
+            return { len: 0, start: pos, end: pos, nextStart: undefined };
         }
     }
 
