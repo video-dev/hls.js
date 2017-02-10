@@ -7,7 +7,6 @@ class PassThroughRemuxer {
   constructor(observer,id) {
     this.observer = observer;
     this.id = id;
-    this.ISGenerated = false;
   }
 
   destroy() {
@@ -17,7 +16,6 @@ class PassThroughRemuxer {
   }
 
   switchLevel() {
-    this.ISGenerated = false;
   }
 
   remux(level,sn,cc,audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous,accurateTimeOffset,defaultInitPTS,rawData) {

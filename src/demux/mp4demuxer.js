@@ -11,7 +11,6 @@ import Event from '../events';
     this.observer = observer;
     this.id = id;
     this.remuxerClass = remuxerClass;
-    this.config = config;
     this.remuxer = new this.remuxerClass(observer,id, config, typeSupported);
   }
 
