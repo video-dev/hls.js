@@ -238,21 +238,6 @@
       // either id3Data null or PES truncated, keep it for next frag parsing
       id3Track.pesData = id3Data;
     }
-
-    let samples = avcTrack.samples, nbNalu = 0, naluLen = 0;
-
-    // compute total/avc sample length and nb of NAL units
-    for (let i = 0; i < samples.length; i++) {
-      let sample = samples[i], units = sample.units.units, nbUnits = units.length, sampleLen = 0;
-      for (let j = 0; j < nbUnits; j++) {
-        sampleLen += units[j].data.length;
-      }
-      naluLen += sampleLen;
-      nbNalu += nbUnits;
-      sample.length = sampleLen;
-    }
-    avcTrack.len = naluLen;
-    avcTrack.nbNalu = nbNalu;
     this.remuxer.remux(level, sn, cc, audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, this.contiguous, accurateTimeOffset, defaultInitPTS);
   }
 
