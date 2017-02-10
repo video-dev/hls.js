@@ -1260,7 +1260,7 @@ class StreamController extends EventHandler {
             data.id === 'main' &&
             data.sn === fragCurrent.sn &&
             data.level === fragCurrent.level &&
-            (this.state === State.PARSING || this.state === State.PARSED)
+            this.state === State.PARSING
         ) {
             var tracks = data.tracks,
                 trackName,
