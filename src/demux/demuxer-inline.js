@@ -61,21 +61,23 @@ class DemuxerInline {
        // in case of continuity change, we might switch from content type (AAC container to TS container for example)
        // so let's check that current demuxer is still valid
         (cc !== this.cc && !this.probe(data))) {
-      let hls = this.hls,
-          id = this.id,
-          config = this.config,
-          typeSupported = this.typeSupported;
+      const hls = this.hls;
+      const id = this.id;
+      const muxConfig = [ {demux : TSDemuxer,  remux : MP4Remuxer},
+                          {demux : AACDemuxer, remux : MP4Remuxer},
+                          {demux : MP4Demuxer, remux : PassThroughRemuxer}];
+
       // probe for content type
-      if (TSDemuxer.probe(data)) {
-        demuxer = new TSDemuxer(hls, id, MP4Remuxer, config, typeSupported);
-        this.probe = TSDemuxer.probe;
-      } else if(AACDemuxer.probe(data)) {
-        demuxer = new AACDemuxer(hls, id, MP4Remuxer, config, typeSupported);
-        this.probe = AACDemuxer.probe;
-      } else if(MP4Demuxer.probe(data)) {
-        demuxer = new MP4Demuxer(hls, id, PassThroughRemuxer, config, typeSupported);
-        this.probe = MP4Demuxer.probe;
-      } else {
+      for (let i in muxConfig) {
+        const mux = muxConfig[i];
+        const probe = mux.demux.probe;
+        if(probe(data)) {
+          demuxer = new mux.demux(hls,id,mux.remux,this.config,this.typeSupported)
+          this.probe = probe;
+          break;
+        }
+      }
+      if(!demuxer) {
         hls.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, id : id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found'});
         return;
       }
