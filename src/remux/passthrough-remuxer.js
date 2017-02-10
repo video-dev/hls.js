@@ -7,16 +7,13 @@ class PassThroughRemuxer {
     constructor(observer, id) {
         this.observer = observer;
         this.id = id;
-        this.ISGenerated = false;
     }
 
     destroy() {}
 
     insertDiscontinuity() {}
 
-    switchLevel() {
-        this.ISGenerated = false;
-    }
+    switchLevel() {}
 
     remux(
         level,

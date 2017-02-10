@@ -9,7 +9,6 @@ class MP4Demuxer {
         this.observer = observer;
         this.id = id;
         this.remuxerClass = remuxerClass;
-        this.config = config;
         this.remuxer = new this.remuxerClass(
             observer,
             id,
