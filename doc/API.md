@@ -476,7 +476,7 @@ Such error could happen in loop with UHD streams, when internal buffer is full. 
 
 (default: standard `XMLHttpRequest`-based URL loader)
 
-Override standard URL loader by a custom one.
+Override standard URL loader by a custom one. Use composition and wrap internal implementation which could be exported by `Hls.LoaderXmlHttpRequest`.
 Could be useful for P2P or stubbing (testing).
 
 Use this, if you want to overwrite both the fragment and the playlist loader.
@@ -909,6 +909,33 @@ Full list of Events is available below:
   - `Hls.Events.DESTROYING` -  fired when hls.js instance starts destroying. Different from MEDIA_DETACHED as one could want to detach and reattach a video to the instance of hls.js to handle mid-rolls for example.
     - data: { }
 
+## Loader Composition
+
+You can export internal loader definition for your own implementation via static getter `Hls.LoaderXmlHttpRequest`.
+
+Example:
+
+```
+import Hls from 'hls.js';
+
+let myHls = new Hls({
+  pLoader: function (config) {
+    let loader = new Hls.LoaderXmlHttpRequest(config);
+    
+    this.abort = () => loader.abort();
+    this.destroy = () => loader.destroy();
+    this.load = (context, config, callbacks) => {
+      let {type, url} = context;
+  
+      if (type === 'manifest') {
+        console.log(`Manifest ${url} will be loaded.`);
+      }
+  
+      loader.load(context, config, callbacks);
+    };
+  }
+});
+```
 
 ## Errors
 
