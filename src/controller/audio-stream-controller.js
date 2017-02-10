@@ -345,7 +345,9 @@ class AudioStreamController extends EventHandler {
               frag.loadIdx = this.fragLoadIdx;
               this.fragCurrent = frag;
               this.startFragRequested = true;
-              this.nextLoadPosition = (frag.start + frag.duration) || this.nextLoadPosition;
+              if (!isNaN(frag.sn)) {
+                this.nextLoadPosition = frag.start + frag.duration;
+              }
               hls.trigger(Event.FRAG_LOADING, {frag: frag});
               this.state = State.FRAG_LOADING;
             }
