@@ -123,7 +123,7 @@ class DemuxerInline {
             !demuxer ||
             // in case of continuity change, we might switch from content type (AAC container to TS container for example)
             // so let's check that current demuxer is still valid
-            (cc !== this.cc && !demuxer.probe(data))
+            (cc !== this.cc && !this.probe(data))
         ) {
             let hls = this.hls,
                 id = this.id,
@@ -138,7 +138,7 @@ class DemuxerInline {
                     config,
                     typeSupported
                 );
-                demuxer.probe = TSDemuxer.probe;
+                this.probe = TSDemuxer.probe;
             } else if (AACDemuxer.probe(data)) {
                 demuxer = new AACDemuxer(
                     hls,
@@ -147,7 +147,7 @@ class DemuxerInline {
                     config,
                     typeSupported
                 );
-                demuxer.probe = AACDemuxer.probe;
+                this.probe = AACDemuxer.probe;
             } else if (MP4Demuxer.probe(data)) {
                 demuxer = new MP4Demuxer(
                     hls,
@@ -156,7 +156,7 @@ class DemuxerInline {
                     config,
                     typeSupported
                 );
-                demuxer.probe = MP4Demuxer.probe;
+                this.probe = MP4Demuxer.probe;
             } else {
                 hls.trigger(Event.ERROR, {
                     type: ErrorTypes.MEDIA_ERROR,
