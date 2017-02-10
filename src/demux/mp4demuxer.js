@@ -132,11 +132,13 @@ class MP4Demuxer {
             if (tkhd) {
                 let version = tkhd[0];
                 let index = version === 0 ? 12 : 20;
-                const trackId =
+                let trackId =
                     (tkhd[index] << 24) |
                     (tkhd[index + 1] << 16) |
                     (tkhd[index + 2] << 8) |
                     tkhd[index + 3];
+
+                trackId = trackId < 0 ? 4294967296 + trackId : trackId;
 
                 const mdhd = MP4Demuxer.findBox(trak, ['mdia', 'mdhd'])[0];
                 if (mdhd) {
