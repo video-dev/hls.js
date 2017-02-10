@@ -67,11 +67,7 @@ class DemuxerInline {
           typeSupported = this.typeSupported;
       // probe for content type
       if (TSDemuxer.probe(data)) {
-        if (this.typeSupported.mp2t === true) {
-          demuxer = new TSDemuxer(hls, id, PassThroughRemuxer, config, typeSupported);
-        } else {
-          demuxer = new TSDemuxer(hls, id, MP4Remuxer, config, typeSupported);
-        }
+        demuxer = new TSDemuxer(hls, id, MP4Remuxer, config, typeSupported);
         demuxer.probe = TSDemuxer.probe;
       } else if(AACDemuxer.probe(data)) {
         demuxer = new AACDemuxer(hls, id, MP4Remuxer, config, typeSupported);

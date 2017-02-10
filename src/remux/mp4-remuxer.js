@@ -21,10 +21,6 @@ class MP4Remuxer {
     this.MP4_TIMESCALE = this.PES_TIMESCALE / this.PES2MP4SCALEFACTOR;
   }
 
-  get passthrough() {
-    return false;
-  }
-
   destroy() {
   }
 
