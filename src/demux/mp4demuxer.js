@@ -30,7 +30,7 @@ import Event from '../events';
   static probe(data) {
     if (data.length >= 8) {
       const dataType = MP4Demuxer.bin2str(data.subarray(4,8));
-      return (dataType === 'moof' || dataType === 'ftyp');
+      return (['moof','ftyp','styp'].indexOf(dataType) >= 0);
     }
     return false;
   }
