@@ -356,9 +356,22 @@ class MP4Remuxer {
             );
         }
 
-        // normalize all PTS/DTS now ...
+        let nbNalu = 0,
+            naluLen = 0;
         for (let i = 0; i < nbSamples; i++) {
-            let sample = inputSamples[i];
+            // compute total/avc sample length and nb of NAL units
+            let sample = inputSamples[i],
+                units = sample.units.units,
+                nbUnits = units.length,
+                sampleLen = 0;
+            for (let j = 0; j < nbUnits; j++) {
+                sampleLen += units[j].data.length;
+            }
+            naluLen += sampleLen;
+            nbNalu += nbUnits;
+            sample.length = sampleLen;
+
+            // normalize PTS/DTS
             if (isSafari) {
                 // sample DTS is computed using a constant decoding offset (mp4SampleDuration) between samples
                 sample.dts =
@@ -388,7 +401,7 @@ class MP4Remuxer {
 
         /* concatenate the video data and construct the mdat in place
       (need 8 more bytes to fill length and mpdat type) */
-        let mdatSize = track.len + 4 * track.nbNalu + 8;
+        let mdatSize = naluLen + 4 * nbNalu + 8;
         try {
             mdat = new Uint8Array(mdatSize);
         } catch (err) {
