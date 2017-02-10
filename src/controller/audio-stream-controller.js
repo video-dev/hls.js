@@ -604,7 +604,7 @@ class AudioStreamController extends EventHandler {
         data.id === 'audio' &&
         data.sn === fragCurrent.sn &&
         data.level === fragCurrent.level &&
-        (this.state === State.PARSING || this.state === State.PARSED)) {
+        this.state === State.PARSING) {
       let tracks = data.tracks, track;
 
       // delete any video track found on audio demuxer
