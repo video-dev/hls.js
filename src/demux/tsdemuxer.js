@@ -114,7 +114,6 @@ class TSDemuxer {
             atf,
             offset,
             pes,
-            codecsOnly = this.remuxer.passthrough,
             unknownPIDs = false;
 
         this.audioCodec = audioCodec;
@@ -179,24 +178,6 @@ class TSDemuxer {
                         if (stt) {
                             if (avcData && (pes = parsePES(avcData))) {
                                 parseAVCPES(pes, false);
-                                if (codecsOnly) {
-                                    // if we have video codec info AND
-                                    // if audio PID is undefined OR if we have audio codec info,
-                                    // we have all codec info !
-                                    if (
-                                        avcTrack.codec &&
-                                        (audioId === -1 || audioTrack.codec)
-                                    ) {
-                                        this.remux(
-                                            level,
-                                            sn,
-                                            cc,
-                                            data,
-                                            timeOffset
-                                        );
-                                        return;
-                                    }
-                                }
                             }
                             avcData = { data: [], size: 0 };
                         }
@@ -214,24 +195,6 @@ class TSDemuxer {
                                     parseAACPES(pes);
                                 } else {
                                     parseMPEGPES(pes);
-                                }
-                                if (codecsOnly) {
-                                    // here we now that we have audio codec info
-                                    // if video PID is undefined OR if we have video codec info,
-                                    // we have all codec infos !
-                                    if (
-                                        audioTrack.codec &&
-                                        (avcId === -1 || avcTrack.codec)
-                                    ) {
-                                        this.remux(
-                                            level,
-                                            sn,
-                                            cc,
-                                            data,
-                                            timeOffset
-                                        );
-                                        return;
-                                    }
                                 }
                             }
                             audioData = { data: [], size: 0 };
@@ -349,12 +312,8 @@ class TSDemuxer {
             // either id3Data null or PES truncated, keep it for next frag parsing
             id3Track.pesData = id3Data;
         }
-        this.remux(level, sn, cc, null, timeOffset, defaultInitPTS);
-    }
 
-    remux(level, sn, cc, data, timeOffset, defaultInitPTS) {
-        let avcTrack = this._avcTrack,
-            samples = avcTrack.samples,
+        let samples = avcTrack.samples,
             nbNalu = 0,
             naluLen = 0;
 
@@ -377,15 +336,14 @@ class TSDemuxer {
             level,
             sn,
             cc,
-            this._audioTrack,
-            this._avcTrack,
-            this._id3Track,
+            audioTrack,
+            avcTrack,
+            id3Track,
             this._txtTrack,
             timeOffset,
             this.contiguous,
-            this.accurateTimeOffset,
-            defaultInitPTS,
-            data
+            accurateTimeOffset,
+            defaultInitPTS
         );
     }
 

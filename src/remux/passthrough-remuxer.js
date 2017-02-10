@@ -10,10 +10,6 @@ class PassThroughRemuxer {
         this.ISGenerated = false;
     }
 
-    get passthrough() {
-        return true;
-    }
-
     destroy() {}
 
     insertDiscontinuity() {}
@@ -56,7 +52,7 @@ class PassThroughRemuxer {
             dropped: 0
         });
         //notify end of parsing
-        this.observer.trigger(Event.FRAG_PARSED, {
+        observer.trigger(Event.FRAG_PARSED, {
             id: this.id,
             level: level,
             sn: sn

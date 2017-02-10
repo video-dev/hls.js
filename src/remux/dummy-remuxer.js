@@ -8,10 +8,6 @@ class DummyRemuxer {
         this.id = id;
     }
 
-    get passthrough() {
-        return false;
-    }
-
     destroy() {}
 
     insertDiscontinuity() {}

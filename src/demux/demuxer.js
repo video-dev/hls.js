@@ -10,9 +10,6 @@ class Demuxer {
         this.id = id;
         var typeSupported = {
             mp4: MediaSource.isTypeSupported('video/mp4'),
-            mp2t:
-                hls.config.enableMP2TPassThrough &&
-                MediaSource.isTypeSupported('video/mp2t'),
             mpeg: MediaSource.isTypeSupported('audio/mpeg'),
             mp3: MediaSource.isTypeSupported('audio/mp4; codecs="mp3"')
         };
