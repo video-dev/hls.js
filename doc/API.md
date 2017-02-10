@@ -1,5 +1,109 @@
+# API
 
-## Hello hls.js!
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+ 
+
+- [Getting started](#getting-started)
+  - [First step: setup and support](#first-step-setup-and-support)
+  - [Second step: instantiate Hls object and bind it to `<video>` element](#second-step-instantiate-hls-object-and-bind-it-to-video-element)
+  - [Third step: load a manifest](#third-step-load-a-manifest)
+  - [Fourth step: control through `<video>` element](#fourth-step-control-through-video-element)
+  - [Fifth step: error handling](#fifth-step-error-handling)
+  - [Fatal Error Recovery](#fatal-error-recovery)
+    - [`hls.startLoad()`](#hlsstartload)
+    - [`hls.recoverMediaError()`](#hlsrecovermediaerror)
+      - [Error recovery sample code](#error-recovery-sample-code)
+    - [`hls.swapAudioCodec()`](#hlsswapaudiocodec)
+  - [Final step: destroying, switching between streams](#final-step-destroying-switching-between-streams)
+- [Fine Tuning](#fine-tuning)
+  - [`Hls.DefaultConfig get/set`](#hlsdefaultconfig-getset)
+  - [`capLevelToPlayerSize`](#capleveltoplayersize)
+  - [`debug`](#debug)
+  - [`autoStartLoad`](#autostartload)
+  - [`startPosition`](#startposition)
+  - [`defaultAudioCodec`](#defaultaudiocodec)
+  - [`initialLiveManifestSize`](#initiallivemanifestsize)
+  - [`maxBufferLength`](#maxbufferlength)
+  - [`maxBufferSize`](#maxbuffersize)
+  - [`maxBufferHole`](#maxbufferhole)
+  - [`maxSeekHole`](#maxseekhole)
+  - [`maxStarvationDelay`](#maxstarvationdelay)
+  - [`maxLoadingDelay`](#maxloadingdelay)
+  - [`lowBufferWatchdogPeriod`](#lowbufferwatchdogperiod)
+  - [`highBufferWatchdogPeriod`](#highbufferwatchdogperiod)
+  - [`nudgeOffset`](#nudgeoffset)
+  - [`nudgeMaxRetry`](#nudgemaxretry)
+  - [`maxFragLookUpTolerance`](#maxfraglookuptolerance)
+  - [`maxMaxBufferLength`](#maxmaxbufferlength)
+  - [`liveSyncDurationCount`](#livesyncdurationcount)
+  - [`liveMaxLatencyDurationCount`](#livemaxlatencydurationcount)
+  - [`liveSyncDuration`](#livesyncduration)
+  - [`liveMaxLatencyDuration`](#livemaxlatencyduration)
+  - [`enableWorker`](#enableworker)
+  - [`enableSoftwareAES`](#enablesoftwareaes)
+  - [`startLevel`](#startlevel)
+  - [`fragLoadingTimeOut` / `manifestLoadingTimeOut` / `levelLoadingTimeOut`](#fragloadingtimeout--manifestloadingtimeout--levelloadingtimeout)
+  - [`fragLoadingMaxRetry` / `manifestLoadingMaxRetry` / `levelLoadingMaxRetry`](#fragloadingmaxretry--manifestloadingmaxretry--levelloadingmaxretry)
+  - [`fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout`](#fragloadingmaxretrytimeout--manifestloadingmaxretrytimeout--levelloadingmaxretrytimeout)
+  - [`fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay`](#fragloadingretrydelay--manifestloadingretrydelay--levelloadingretrydelay)
+  - [`startFragPrefetch`](#startfragprefetch)
+  - [`appendErrorMaxRetry`](#appenderrormaxretry)
+  - [`loader`](#loader)
+  - [`fLoader`](#floader)
+  - [`pLoader`](#ploader)
+  - [`xhrSetup`](#xhrsetup)
+  - [`fetchSetup`](#fetchsetup)
+  - [`abrController`](#abrcontroller)
+  - [`timelineController`](#timelinecontroller)
+  - [`enableCEA708Captions`](#enablecea708captions)
+  - [`stretchShortVideoTrack`](#stretchshortvideotrack)
+  - [`forceKeyFrameOnDiscontinuity`](#forcekeyframeondiscontinuity)
+  - [`abrEwmaFastLive`](#abrewmafastlive)
+  - [`abrEwmaSlowLive`](#abrewmaslowlive)
+  - [`abrEwmaFastVoD`](#abrewmafastvod)
+  - [`abrEwmaSlowVoD`](#abrewmaslowvod)
+  - [`abrEwmaDefaultEstimate`](#abrewmadefaultestimate)
+  - [`abrBandWidthFactor`](#abrbandwidthfactor)
+  - [`abrBandWidthUpFactor`](#abrbandwidthupfactor)
+  - [`abrMaxWithRealBitrate`](#abrmaxwithrealbitrate)
+  - [`minAutoBitrate`](#minautobitrate)
+- [Video Binding/Unbinding API](#video-bindingunbinding-api)
+  - [`hls.attachMedia(videoElement)`](#hlsattachmediavideoelement)
+  - [`hls.detachMedia()`](#hlsdetachmedia)
+- [Quality switch Control API](#quality-switch-control-api)
+  - [`hls.levels`](#hlslevels)
+  - [`hls.currentLevel`](#hlscurrentlevel)
+  - [`hls.nextLevel`](#hlsnextlevel)
+  - [`hls.loadLevel`](#hlsloadlevel)
+  - [`hls.nextLoadLevel`](#hlsnextloadlevel)
+  - [`hls.firstLevel`](#hlsfirstlevel)
+  - [`hls.startLevel`](#hlsstartlevel)
+  - [`hls.autoLevelEnabled`](#hlsautolevelenabled)
+  - [`hls.autoLevelCapping`](#hlsautolevelcapping)
+- [Version Control](#version-control)
+  - [`Hls.version`](#hlsversion)
+- [Network Loading Control API](#network-loading-control-api)
+  - [`hls.startLoad(startPosition=-1)`](#hlsstartloadstartposition-1)
+  - [`hls.stopLoad()`](#hlsstopload)
+- [Audio Tracks Control API](#audio-tracks-control-api)
+  - [`hls.audioTracks`](#hlsaudiotracks)
+  - [`hls.audioTrack`](#hlsaudiotrack)
+- [Live stream API](#live-stream-api)
+  - [`hls.liveSyncPosition`](#hlslivesyncposition)
+- [Runtime Events](#runtime-events)
+- [Loader Composition](#loader-composition)
+- [Errors](#errors)
+  - [Network Errors](#network-errors)
+  - [Media Errors](#media-errors)
+- [Objects](#objects)
+  - [Level](#level)
+  - [LevelDetails](#leveldetails)
+  - [Fragment](#fragment)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+## Getting started
 
 ### First step: setup and support
 
@@ -117,15 +221,15 @@ See sample code below to listen to errors:
   }
 ```
 
-#### Fatal Error Recovery
+### Fatal Error Recovery
 
 Hls.js provides means to 'try to' recover fatal network and media errors, through these 2 methods:
 
-##### `hls.startLoad()`
+#### `hls.startLoad()`
 
 Should be invoked to recover network error.
 
-##### `hls.recoverMediaError()`
+#### `hls.recoverMediaError()`
 
 Should be invoked to recover media error.
 
@@ -153,7 +257,7 @@ Should be invoked to recover media error.
   });
 ```
 
-##### `hls.swapAudioCodec()`
+#### `hls.swapAudioCodec()`
 
 If media error are still raised after calling `hls.recoverMediaError()`,
 calling this method, could be useful to workaround audio codec mismatch.
@@ -232,19 +336,19 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
   var hls = new Hls(config);
 ```
 
-#### `Hls.DefaultConfig get/set`
+### `Hls.DefaultConfig get/set`
 
 This getter/setter allows to retrieve and override Hls default configuration.
 This configuration will be applied by default to all instances.
 
-#### `capLevelToPlayerSize`
+### `capLevelToPlayerSize`
 
 (default: `false`)
 
   - if set to true, the adaptive algorithm with limit levels usable in auto-quality by the HTML video element dimensions (width and height)
   - if set to false, levels will not be limited. All available levels could be used in auto-quality mode taking only bandwidth into consideration.
 
-#### `debug`
+### `debug`
 
 (default: `false`)
 
@@ -252,20 +356,21 @@ Setting `config.debug = true;` will turn on debug logs on JS console.
 
 A logger object could also be provided for custom logging: `config.debug = customLogger;`.
 
-#### `autoStartLoad`
+### `autoStartLoad`
 
 (default: `true`)
 
  - if set to true, start level playlist and first fragments will be loaded automatically, after triggering of ```Hls.Events.MANIFEST_PARSED``` event
  - if set to false, an explicit API call (```hls.startLoad(startPosition=-1)```) will be needed to start quality level/fragment loading.
 
-#### ```startPosition```
+### `startPosition`
+
 (default -1)
 
  - if set to -1, playback will start from initialTime=0 for VoD and according to ```liveSyncDuration/liveSyncDurationCount``` config params for Live
  - Otherwise, playback will start from predefined value. (unless stated otherwise in ```autoStartLoad=false``` mode : in that case startPosition can be overrided using ```hls.startLoad(startPosition)```).
 
-#### `defaultAudioCodec`
+### `defaultAudioCodec`
 
 (default: `undefined`)
 
@@ -275,25 +380,26 @@ A logger object could also be provided for custom logging: `config.debug = custo
   - `mp4a.40.5` (HE-AAC) or
   - `undefined` (guess based on sampling rate)
 
-#### ```initialLiveManifestSize```
+### `initialLiveManifestSize`
+
 (default 1)
 
 number of segments needed to start a playback of Live stream.
 
-#### `maxBufferLength`
+### `maxBufferLength`
 
 (default: `30` seconds)
 
 Maximum buffer length in seconds. If buffer length is/become less than this value, a new fragment will be loaded.
 This is the guaranteed buffer length hls.js will try to reach, regardless of maxBufferSize.
 
-#### `maxBufferSize`
+### `maxBufferSize`
 
 (default: 60 MB)
 
 'Minimum' maximum buffer size in bytes. If buffer size upfront is bigger than this value, no fragment will be loaded.
 
-#### `maxBufferHole`
+### `maxBufferHole`
 
 (default: `0.5` seconds)
 
@@ -301,7 +407,7 @@ This is the guaranteed buffer length hls.js will try to reach, regardless of max
 When switching between quality level, fragments might not be perfectly aligned.
 This could result in small overlapping or hole in media buffer. This tolerance factor helps cope with this.
 
-#### `maxSeekHole`
+### `maxSeekHole`
 
 (default: `2` seconds)
 
@@ -309,40 +415,45 @@ In case playback is stalled, and a buffered range is available upfront, less tha
 hls.js will jump over this buffer hole to reach the beginning of this following buffered range.
 `maxSeekHole` allows to configure this jumpable threshold.
 
-#### ```maxStarvationDelay```
+### `maxStarvationDelay`
+
 (default 4s)
 
 ABR algorithm will always try to choose a quality level that should avoid rebuffering.
 In case no quality level with this criteria can be found (lets say for example that buffer length is 1s, but fetching a fragment at lowest quality is predicted to take around 2s ... ie we can forecast around 1s of rebuffering ...) then ABR algorithm will try to find a level that should guarantee less than ```maxStarvationDelay``` of buffering.
 
-#### ```maxLoadingDelay```
+### `maxLoadingDelay`
+
 (default 4s)
 
 max video loading delay used in  automatic start level selection : in that mode ABR controller will ensure that video loading time (ie the time to fetch the first fragment at lowest quality level + the time to fetch the fragment at the appropriate quality level is less than ```maxLoadingDelay``` )
 
-#### ```lowBufferWatchdogPeriod```
+### `lowBufferWatchdogPeriod`
+
 (default 0.5s)
 
 if media element is expected to play and if currentTime has not moved for more than ```lowBufferWatchdogPeriod``` and if there are less than `maxBufferHole` seconds buffered upfront, hls.js will try to nudge playhead to recover playback
 
-#### ```highBufferWatchdogPeriod```
+### `highBufferWatchdogPeriod`
+
 (default 3s)
 
 if media element is expected to play and if currentTime has not moved for more than ```highBufferWatchdogPeriod``` and if there are more than `maxBufferHole` seconds buffered upfront, hls.js will try to nudge playhead to recover playback
 
+### `nudgeOffset`
 
-#### ```nudgeOffset```
 (default 0.1s)
 
 In case playback continues to stall after first playhead nudging, currentTime will be nudged evenmore following nudgeOffset to try to restore playback.
 media.currentTime += (nb nudge retry -1)*nudgeOffset
 
-#### ```nudgeMaxRetry```
+### `nudgeMaxRetry`
+
 (default 3)
 
 Max nb of nudge retries before hls.js raise a fatal BUFFER_STALLED_ERROR
 
-#### `maxFragLookUpTolerance`
+### `maxFragLookUpTolerance`
 
 (default 0.2s)
 
@@ -350,6 +461,7 @@ This tolerance factor is used during fragment lookup.
 Instead of checking whether buffered.end is located within [start, end] range, frag lookup will be done by checking  within [start-maxFragLookUpTolerance, end-maxFragLookUpTolerance] range.
 
 This tolerance factor is used to cope with situations like:
+
 ```
 buffered.end = 9.991
 frag[0] : [0,10]
@@ -357,15 +469,16 @@ frag[1] : [10,20]
 ```
 `buffered.end` is within `frag[0]` range, but as we are close to `frag[1]`, `frag[1]` should be choosen instead
 
-If `maxFragLookUpTolerance = 0.2`,
-this lookup will be adjusted to
+If `maxFragLookUpTolerance = 0.2`, this lookup will be adjusted to
+
 ```
 frag[0] : [-0.2,9.8]
 frag[1] : [9.8,19.8]
 ```
+
 This time, `buffered.end` is within `frag[1]` range, and `frag[1]` will be the next fragment to be loaded, as expected.
 
-#### `maxMaxBufferLength`
+### `maxMaxBufferLength`
 
 (default 600s)
 
@@ -377,14 +490,16 @@ this is to mimic the browser behaviour (the buffer eviction algorithm is startin
 `maxBufferLength` is the minimum guaranteed buffer length that hls.js will try to achieve, even if that value exceeds the amount of bytes 60 MB of memory.
 `maxMaxBufferLength` acts as a capping value, as if bitrate is really low, you could need more than one hour of buffer to fill 60 MB.
 
-#### `liveSyncDurationCount`
+### `liveSyncDurationCount`
+
 (default: `3`)
 
 edge of live delay, expressed in multiple of `EXT-X-TARGETDURATION`.
 if set to 3, playback will start from fragment N-3, N being the last fragment of the live playlist.
 decreasing this value is likely to cause playback stalls.
 
-#### `liveMaxLatencyDurationCount`
+### `liveMaxLatencyDurationCount`
+
 (default: `Infinity`)
 
 maximum delay allowed from edge of live, expressed in multiple of `EXT-X-TARGETDURATION`.
@@ -392,7 +507,8 @@ if set to 10, the player will seek back to `liveSyncDurationCount` whenever the 
 If set, this value must be stricly superior to `liveSyncDurationCount`
 a value too close from `liveSyncDurationCount` is likely to cause playback stalls.
 
-#### `liveSyncDuration`
+### `liveSyncDuration`
+
 (default: `undefined`)
 
 Alternative parameter to ```liveSyncDurationCount```, expressed in seconds vs number of segments.
@@ -400,7 +516,7 @@ If defined in the configuration object, `liveSyncDuration` will take precedence 
 You can't define this parameter and either `liveSyncDurationCount` or `liveMaxLatencyDurationCount` in your configuration object at the same time.
 A value too low (inferior to ~3 segment durations) is likely to cause playback stalls.
 
-#### `liveMaxLatencyDuration`
+### `liveMaxLatencyDuration`
 
 (default: `undefined`)
 
@@ -410,25 +526,25 @@ If set, this value must be stricly superior to `liveSyncDuration` which must be 
 You can't define this parameter and either `liveSyncDurationCount` or `liveMaxLatencyDurationCount` in your configuration object at the same time.
 A value too close from `liveSyncDuration` is likely to cause playback stalls.
 
-#### `enableWorker`
+### `enableWorker`
 
 (default: `true`)
 
 Enable WebWorker (if available on browser) for TS demuxing/MP4 remuxing, to improve performance and avoid lag/frame drops.
 
-#### `enableSoftwareAES`
+### `enableSoftwareAES`
 
 (default: `true`)
 
 Enable to use JavaScript version AES decryption for fallback of WebCrypto API.
 
-#### `startLevel`
+### `startLevel`
 
 (default: `undefined`)
 
 When set, use this level as the default hls.startLevel. Keep in mind that the startLevel set with the API takes precedence over config.startLevel configuration parameter.
 
-#### `fragLoadingTimeOut` / `manifestLoadingTimeOut` / `levelLoadingTimeOut`
+### `fragLoadingTimeOut` / `manifestLoadingTimeOut` / `levelLoadingTimeOut`
 
 (default: 60000ms for fragment / 10000ms for level and manifest)
 
@@ -437,19 +553,19 @@ A timeout callback will be triggered if loading duration exceeds this timeout.
 no further action will be done : the load operation will not be cancelled/aborted.
 It is up to the application to catch this event and treat it as needed.
 
-#### `fragLoadingMaxRetry` / `manifestLoadingMaxRetry` / `levelLoadingMaxRetry`
+### `fragLoadingMaxRetry` / `manifestLoadingMaxRetry` / `levelLoadingMaxRetry`
 
 (default: `6` / `1` / `4`)
 
 Max number of load retries.
 
-#### `fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout`
+### `fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout`
 
 (default: `64000` ms)
 
 Maximum frag/manifest/key retry timeout (in milliseconds) in case I/O errors are met.
 
-#### `fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay`
+### `fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay`
 
 (default: `1000` ms)
 
@@ -458,21 +574,21 @@ Any I/O error will trigger retries every 500ms,1s,2s,4s,8s, ... capped to `fragL
 
 Prefetch start fragment although media not attached.
 
-#### `startFragPrefetch`
+### `startFragPrefetch`
 
 (default: `false`)
 
 Start prefetching start fragment although media not attached yet.
 Max number of append retries.
 
-#### ```appendErrorMaxRetry```
+### `appendErrorMaxRetry`
 
 (default: `3`)
 
 Max number of `sourceBuffer.appendBuffer()` retry upon error.
 Such error could happen in loop with UHD streams, when internal buffer is full. (Quota Exceeding Error will be triggered). In that case we need to wait for the browser to evict some data before being able to append buffer correctly.
 
-#### `loader`
+### `loader`
 
 (default: standard `XMLHttpRequest`-based URL loader)
 
@@ -549,7 +665,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
   }
 ```
 
-#### `fLoader`
+### `fLoader`
 
 (default: `undefined`)
 
@@ -562,7 +678,7 @@ Note: This will overwrite the default `loader`, as well as your own loader funct
   }
 ```
 
-#### `pLoader`
+### `pLoader`
 
 (default: `undefined`)
 
@@ -575,7 +691,7 @@ Note: This will overwrite the default `loader`, as well as your own loader funct
   }
 ```
 
-#### `xhrSetup`
+### `xhrSetup`
 
 (default: `undefined`)
 
@@ -593,7 +709,7 @@ This allows user to easily modify/setup XHR. See example below.
   }
 ```
 
-#### `fetchSetup`
+### `fetchSetup`
 
 (default: `undefined`)
 
@@ -613,7 +729,7 @@ This allows user to easily tweak Fetch loader. See example below.
   }
 ```
 
-#### `abrController`
+### `abrController`
 
 (default: internal ABR controller)
 
@@ -625,7 +741,7 @@ Parameter should be a class providing 2 getters, 2 setters and a `destroy()` met
  - get/set `autoLevelCapping`: capping/max level value that could be used by ABR Controller
  - `destroy()`: should clean-up all used resources
 
-#### `timelineController`
+### `timelineController`
 
 (default: internal track timeline controller)
 
@@ -635,7 +751,7 @@ Parameter should be a class with a `destroy()` method:
 
  - `destroy()` : should clean-up all used resources
 
-#### `enableCEA708Captions`
+### `enableCEA708Captions`
 
 (default: `true`)
 
@@ -643,7 +759,7 @@ whether or not to enable CEA-708 captions
 
 parameter should be a boolean
 
-#### `stretchShortVideoTrack`
+### `stretchShortVideoTrack`
 
 (default: `false`)
 
@@ -652,7 +768,8 @@ This helps playback continue in certain cases that might otherwise get stuck.
 
 parameter should be a boolean
 
-#### `forceKeyFrameOnDiscontinuity`
+### `forceKeyFrameOnDiscontinuity`
+
 (default: `true`)
 
 Whether or not to force having a key frame in the first AVC sample after a discontinuity.
@@ -662,7 +779,8 @@ Setting this parameter to false can also generate decoding weirdness when switch
 
 parameter should be a boolean
 
-#### `abrEwmaFastLive`
+### `abrEwmaFastLive`
+
 (default: `5.0`)
 
 Fast bitrate Exponential moving average half-life, used to compute average bitrate for Live streams.
@@ -671,7 +789,8 @@ Each of the sample is weighted by the fragment loading duration.
 
 parameter should be a float greater than 0
 
-#### `abrEwmaSlowLive`
+### `abrEwmaSlowLive`
+
 (default: `9.0`)
 
 Slow bitrate Exponential moving average half-life, used to compute average bitrate for Live streams.
@@ -680,7 +799,8 @@ Each of the sample is weighted by the fragment loading duration.
 
 parameter should be a float greater than [abrEwmaFastLive](#abrewmafastlive)
 
-#### `abrEwmaFastVoD`
+### `abrEwmaFastVoD`
+
 (default: `4.0`)
 
 Fast bitrate Exponential moving average half-life, used to compute average bitrate for VoD streams.
@@ -689,7 +809,8 @@ Each of the sample is weighted by the fragment loading duration.
 
 parameter should be a float greater than 0
 
-#### `abrEwmaSlowVoD`
+### `abrEwmaSlowVoD`
+
 (default: `15.0`)
 
 Slow bitrate Exponential moving average half-life, used to compute average bitrate for VoD streams.
@@ -698,33 +819,39 @@ Each of the sample is weighted by the fragment loading duration.
 
 parameter should be a float greater than [abrEwmaFastVoD](#abrewmafastvod)
 
-#### `abrEwmaDefaultEstimate`
+### `abrEwmaDefaultEstimate`
+
 (default: `500000`)
 
 Default bandwidth estimate in bits/second prior to collecting fragment bandwidth samples.
 
 parameter should be a float
 
-#### `abrBandWidthFactor`
+### `abrBandWidthFactor`
+
 (default: `0.8`)
 
 Scale factor to be applied against measured bandwidth average, to determine whether we can stay on current or lower quality level.
 If `abrBandWidthFactor * bandwidth average < level.bitrate` then ABR can switch to that level providing that it is equal or less than current level.
 
-#### `abrBandWidthUpFactor`
+### `abrBandWidthUpFactor`
+
 (default: `0.7`)
 
 Scale factor to be applied against measured bandwidth average, to determine whether we can switch up to a higher quality level.
 If `abrBandWidthUpFactor * bandwidth average < level.bitrate` then ABR can switch up to that quality level.
 
-#### `abrMaxWithRealBitrate`
+### `abrMaxWithRealBitrate`
+
 (default: `false`)
 
 max bitrate used in ABR by avg measured bitrate
 i.e. if bitrate signaled in variant manifest for a given level is 2Mb/s but average bitrate measured on this level is 2.5Mb/s, 
 then if config value is set to `true`, ABR will use 2.5 Mb/s for this quality level.
 
-#### `minAutoBitrate`
+### `minAutoBitrate`
+
+>>>>>>> add table of contents to the api documentation
 (default: `0`)
 
 Return the capping/min bandwidth value that could be used by automatic level selection algorithm.
@@ -733,7 +860,7 @@ Useful when browser or tab of the browser is not in the focus and bandwidth drop
 
 ## Video Binding/Unbinding API
 
-#### `hls.attachMedia(videoElement)`
+### `hls.attachMedia(videoElement)`
 
 Calling this method will:
 
@@ -741,7 +868,7 @@ Calling this method will:
  - create MediaSource and set it as video source
  - once MediaSource object is successfully created, MEDIA_ATTACHED event will be fired.
 
-#### `hls.detachMedia()`
+### `hls.detachMedia()`
 
 Calling this method will:
 
@@ -754,42 +881,42 @@ Calling this method will:
 By default, hls.js handles quality switch automatically, using heuristics based on fragment loading bitrate and quality level bandwidth exposed in the variant manifest.
 It is also possible to manually control quality swith using below API.
 
-#### `hls.levels`
+### `hls.levels`
 
 - get: Return array of available quality levels.
 
-#### `hls.currentLevel`
+### `hls.currentLevel`
 
 - get: Return current playback quality level.
 - set: Trigger an immediate quality level switch to new quality level. This will pause the video if it was playing, flush the whole buffer, and fetch fragment matching with current position and requested quality level. Then resume the video if needed once fetched fragment will have been buffered.
 
 Set to `-1` for automatic level selection.
 
-#### `hls.nextLevel`
+### `hls.nextLevel`
 
 - get: Return next playback quality level (playback quality level for next buffered fragment). Return `-1` if next fragment not buffered yet.
 - set: Trigger a quality level switch for next fragment. This could eventually flush already buffered next fragment.
 
 Set to `-1` for automatic level selection.
 
-#### `hls.loadLevel`
+### `hls.loadLevel`
 
 - get: return last loaded fragment quality level.
 - set: set quality level for next loaded fragment.
 
 Set to `-1` for automatic level selection.
 
-#### `hls.nextLoadLevel`
+### `hls.nextLoadLevel`
 
 - get: Return quality level that will be used to load next fragment.
 - set: Force quality level for next loaded fragment. Quality level will be forced only for that fragment.
 After a fragment at this quality level has been loaded, `hls.loadLevel` will prevail.
 
-#### `hls.firstLevel`
+### `hls.firstLevel`
 
 - get: First level index (index of first level appearing in Manifest. it is usually defined as start level hint for player).
 
-#### `hls.startLevel`
+### `hls.startLevel`
 
 - get/set: Start level index (level of first fragment that will be played back).
   - if not overrided by user: first level appearing in manifest will be used as start level.
@@ -797,11 +924,11 @@ After a fragment at this quality level has been loaded, `hls.loadLevel` will pre
 
 Default value is `hls.firstLevel`.
 
-#### `hls.autoLevelEnabled`
+### `hls.autoLevelEnabled`
 
 - get: Tell whether auto level selection is enabled or not.
 
-#### `hls.autoLevelCapping`
+### `hls.autoLevelCapping`
 
 - get/set: Capping/max level value that could be used by ABR Controller.
 
@@ -809,10 +936,9 @@ Default value is `-1` (no level capping).
 
 ## Version Control
 
-#### `Hls.version`
+### `Hls.version`
 
 Static getter: return hls.js dist version number.
-
 
 ## Network Loading Control API
 
@@ -820,26 +946,31 @@ By default, hls.js will automatically start loading quality level playlists, and
 
 However if `config.autoStartLoad` is set to `false`, the following method needs to be called to manually start playlist and fragments loading:
 
-#### ```hls.startLoad(startPosition=-1)```
+### `hls.startLoad(startPosition=-1)`
+
 Start/restart playlist/fragment loading. this is only effective if MANIFEST_PARSED event has been triggered and video element has been attached to hls object.
 
 startPosition is the initial position in the playlist.
 If startPosition is not set to -1, it allows to override default startPosition to the one you want (it will bypass hls.config.liveSync* config params for Live for example, so that user can start playback from whatever position)
 
-#### ```hls.stopLoad()```
+### `hls.stopLoad()`
+
 stop playlist/fragment loading. could be resumed later on by calling ```hls.startLoad()```
 
 ## Audio Tracks Control API
 
-#### ```hls.audioTracks```
+### `hls.audioTracks`
+
 get : array of audio tracks exposed in manifest
 
-#### ```hls.audioTrack```
+### `hls.audioTrack`
+
 get/set : audio track id (returned by)
 
 ## Live stream API
 
-#### ```hls.liveSyncPosition```
+### `hls.liveSyncPosition`
+
 get : position of live sync point (ie edge of live position minus safety delay defined by ```hls.config.liveSyncDuration```)
 
 ## Runtime Events
@@ -851,7 +982,6 @@ hls.on(Hls.Events.LEVEL_LOADED,function(event,data) {
   var level_duration = data.details.totalduration;
 });
 ```
-
 Full list of Events is available below:
 
   - `Hls.Events.MEDIA_ATTACHING`  - fired to attach Media to hls instance.
