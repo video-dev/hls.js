@@ -154,7 +154,9 @@ class LevelController extends EventHandler {
       if (this._level !== newLevel) {
         logger.log(`switching to level ${newLevel}`);
         this._level = newLevel;
-        this.hls.trigger(Event.LEVEL_SWITCH, levels[newLevel]);
+        var levelProperties = levels[newLevel];
+        levelProperties.level = newLevel;
+        this.hls.trigger(Event.LEVEL_SWITCH, levelProperties);
       }
       var level = levels[newLevel], levelDetails = level.details;
        // check if we need to load playlist for this level
