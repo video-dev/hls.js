@@ -158,6 +158,11 @@ class Hls {
     this.media = null;
   }
 
+  retrieveMedia() {
+    logger.log('retrieveMedia');
+    return this.media;
+  }
+
   loadSource(url) {
     logger.log(`loadSource:${url}`);
     this.url = url;
