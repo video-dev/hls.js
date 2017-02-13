@@ -8,6 +8,7 @@ import {ErrorTypes, ErrorDetails} from './errors';
 import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
 import KeyLoader from './loader/key-loader';
+import XhrLoader from './utils/xhr-loader';
 
 import StreamController from  './controller/stream-controller';
 import LevelController from  './controller/level-controller';
@@ -40,6 +41,10 @@ class Hls {
 
   static get ErrorDetails() {
     return ErrorDetails;
+  }
+
+  static get LoaderXmlHttpRequest () {
+    return XhrLoader;
   }
 
   static get DefaultConfig() {
