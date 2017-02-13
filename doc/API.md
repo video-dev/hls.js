@@ -749,6 +749,11 @@ Calling this method will:
  - signal the end of the stream on MediaSource
  - reset video source (`video.src = ''`)
 
+
+#### `hls.media`
+
+- get: Return the bound videoElement from the hls instance
+
 ## Quality switch Control API
 
 By default, hls.js handles quality switch automatically, using heuristics based on fragment loading bitrate and quality level bandwidth exposed in the variant manifest.
