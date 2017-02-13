@@ -66,10 +66,7 @@
   - [`abrEwmaDefaultEstimate`](#abrewmadefaultestimate)
   - [`abrBandWidthFactor`](#abrbandwidthfactor)
   - [`abrBandWidthUpFactor`](#abrbandwidthupfactor)
-<<<<<<< HEAD
   - [`abrMaxWithRealBitrate`](#abrmaxwithrealbitrate)
-=======
->>>>>>> origin/expose-loader-definitions
   - [`minAutoBitrate`](#minautobitrate)
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
   - [`hls.attachMedia(videoElement)`](#hlsattachmediavideoelement)
@@ -595,7 +592,7 @@ Such error could happen in loop with UHD streams, when internal buffer is full. 
 
 (default: standard `XMLHttpRequest`-based URL loader)
 
-Override standard URL loader by a custom one. Use composition and wrap internal implementation which could be exported by `Hls.LoaderXmlHttpRequest`.
+Override standard URL loader by a custom one. Use composition and wrap internal implementation which could be exported by `Hls.DefaultConfig.loader`.
 Could be useful for P2P or stubbing (testing).
 
 Use this, if you want to overwrite both the fragment and the playlist loader.
@@ -1048,7 +1045,7 @@ Full list of Events is available below:
 
 ## Loader Composition
 
-You can export internal loader definition for your own implementation via static getter `Hls.LoaderXmlHttpRequest`.
+You can export internal loader definition for your own implementation via static getter `Hls.DefaultConfig.loader`.
 
 Example:
 
@@ -1057,7 +1054,7 @@ import Hls from 'hls.js';
 
 let myHls = new Hls({
   pLoader: function (config) {
-    let loader = new Hls.LoaderXmlHttpRequest(config);
+    let loader = new Hls.DefaultConfig.loader(config);
     
     this.abort = () => loader.abort();
     this.destroy = () => loader.destroy();
