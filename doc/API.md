@@ -877,7 +877,7 @@ Full list of Events is available below:
   - `Hls.Events.LEVEL_PTS_UPDATED`  - fired when a level's PTS information has been updated after parsing a fragment
     -  data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment }
   - `Hls.Events.LEVEL_SWITCH`  - fired when a level switch is requested
-    -  data: { level : id of new level, it is the index of the array `Hls.levels` }
+    -  data: { `level` object( please see [below](#level) for more information )  }
   - `Hls.Events.KEY_LOADING`  - fired when a decryption key loading starts
     -  data: { frag : fragment object }
   - `Hls.Events.KEY_LOADED`  - fired when a decryption key loading is completed
@@ -957,7 +957,7 @@ Full list of errors is described below:
 
 ## Objects
 
-### Level
+### <a name="level"> Level
 
 A `Level` object represents a given quality level.
 It contains quality level related info, retrieved from manifest, such as:
