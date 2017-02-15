@@ -520,7 +520,7 @@ var _fpsController = _dereq_(9);
 
 var _fpsController2 = _interopRequireDefault(_fpsController);
 
-var _xhrLoader = _dereq_(43);
+var _xhrLoader = _dereq_(44);
 
 var _xhrLoader2 = _interopRequireDefault(_xhrLoader);
 
@@ -581,7 +581,6 @@ var hlsDefaultConfig = exports.hlsDefaultConfig = {
   bufferController: _bufferController2.default,
   capLevelController: _capLevelController2.default,
   fpsController: _fpsController2.default,
-  enableMP2TPassThrough: false,
   stretchShortVideoTrack: false,
   forceKeyFrameOnDiscontinuity: true,
   abrEwmaFastLive: 3,
@@ -597,7 +596,7 @@ var hlsDefaultConfig = exports.hlsDefaultConfig = {
   minAutoBitrate: 0
 };
 
-},{"43":43,"5":5,"6":6,"7":7,"9":9}],5:[function(_dereq_,module,exports){
+},{"44":44,"5":5,"6":6,"7":7,"9":9}],5:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -606,21 +605,21 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _eventHandler = _dereq_(25);
+var _eventHandler = _dereq_(26);
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _bufferHelper = _dereq_(28);
+var _bufferHelper = _dereq_(29);
 
 var _bufferHelper2 = _interopRequireDefault(_bufferHelper);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
-var _logger = _dereq_(41);
+var _logger = _dereq_(42);
 
 var _ewmaBandwidthEstimator = _dereq_(8);
 
@@ -769,7 +768,7 @@ var AbrController = function (_EventHandler) {
     key: 'onFragLoaded',
     value: function onFragLoaded(data) {
       var frag = data.frag;
-      if (frag.type === 'main') {
+      if (frag.type === 'main' && !isNaN(frag.sn)) {
         // stop monitoring bw once frag loaded
         this.clearTimer();
         // store level id after successful fragment load
@@ -802,7 +801,7 @@ var AbrController = function (_EventHandler) {
       // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
       // and leading to wrong bw estimation
       // on bitrate test, also only update stats once (if tload = tbuffered == on FRAG_LOADED)
-      if (stats.aborted !== true && frag.loadCounter === 1 && frag.type === 'main' && (!frag.bitrateTest || stats.tload === stats.tbuffered)) {
+      if (stats.aborted !== true && frag.loadCounter === 1 && frag.type === 'main' && !isNaN(frag.sn) && (!frag.bitrateTest || stats.tload === stats.tbuffered)) {
         // use tparsed-trequest instead of tbuffered-trequest to compute fragLoadingProcessing; rationale is that  buffer appending only happens once media is attached
         // in case we use config.startFragPrefetch while media is not attached yet, fragment might be parsed while media not attached yet, but it will only be buffered on media attached
         // as a consequence it could happen really late in the process. meaning that appending duration might appears huge ... leading to underestimated throughput estimation
@@ -1006,7 +1005,7 @@ var AbrController = function (_EventHandler) {
 
 exports.default = AbrController;
 
-},{"24":24,"25":25,"26":26,"28":28,"41":41,"8":8}],6:[function(_dereq_,module,exports){
+},{"25":25,"26":26,"27":27,"29":29,"42":42,"8":8}],6:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1015,17 +1014,17 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _eventHandler = _dereq_(25);
+var _eventHandler = _dereq_(26);
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _logger = _dereq_(41);
+var _logger = _dereq_(42);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -1634,7 +1633,7 @@ var BufferController = function (_EventHandler) {
 
 exports.default = BufferController;
 
-},{"24":24,"25":25,"26":26,"41":41}],7:[function(_dereq_,module,exports){
+},{"25":25,"26":26,"27":27,"42":42}],7:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1643,11 +1642,11 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _eventHandler = _dereq_(25);
+var _eventHandler = _dereq_(26);
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
@@ -1799,7 +1798,7 @@ var CapLevelController = function (_EventHandler) {
 
 exports.default = CapLevelController;
 
-},{"25":25,"26":26}],8:[function(_dereq_,module,exports){
+},{"26":26,"27":27}],8:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1814,7 +1813,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       * different half-lives.
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       */
 
-var _ewma = _dereq_(40);
+var _ewma = _dereq_(41);
 
 var _ewma2 = _interopRequireDefault(_ewma);
 
@@ -1875,7 +1874,7 @@ var EwmaBandWidthEstimator = function () {
 
 exports.default = EwmaBandWidthEstimator;
 
-},{"40":40}],9:[function(_dereq_,module,exports){
+},{"41":41}],9:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1884,15 +1883,15 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _eventHandler = _dereq_(25);
+var _eventHandler = _dereq_(26);
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _logger = _dereq_(41);
+var _logger = _dereq_(42);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -1985,7 +1984,7 @@ var FPSController = function (_EventHandler) {
 
 exports.default = FPSController;
 
-},{"25":25,"26":26,"41":41}],10:[function(_dereq_,module,exports){
+},{"26":26,"27":27,"42":42}],10:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1994,19 +1993,19 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _eventHandler = _dereq_(25);
+var _eventHandler = _dereq_(26);
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _logger = _dereq_(41);
+var _logger = _dereq_(42);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
-var _bufferHelper = _dereq_(28);
+var _bufferHelper = _dereq_(29);
 
 var _bufferHelper2 = _interopRequireDefault(_bufferHelper);
 
@@ -2406,7 +2405,7 @@ var LevelController = function (_EventHandler) {
 
 exports.default = LevelController;
 
-},{"24":24,"25":25,"26":26,"28":28,"41":41}],11:[function(_dereq_,module,exports){
+},{"25":25,"26":26,"27":27,"29":29,"42":42}],11:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2415,11 +2414,11 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _binarySearch = _dereq_(39);
+var _binarySearch = _dereq_(40);
 
 var _binarySearch2 = _interopRequireDefault(_binarySearch);
 
-var _bufferHelper = _dereq_(28);
+var _bufferHelper = _dereq_(29);
 
 var _bufferHelper2 = _interopRequireDefault(_bufferHelper);
 
@@ -2427,25 +2426,25 @@ var _demuxer = _dereq_(20);
 
 var _demuxer2 = _interopRequireDefault(_demuxer);
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _eventHandler = _dereq_(25);
+var _eventHandler = _dereq_(26);
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _levelHelper = _dereq_(29);
+var _levelHelper = _dereq_(30);
 
 var _levelHelper2 = _interopRequireDefault(_levelHelper);
 
-var _timeRanges = _dereq_(42);
+var _timeRanges = _dereq_(43);
 
 var _timeRanges2 = _interopRequireDefault(_timeRanges);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
-var _logger = _dereq_(41);
+var _logger = _dereq_(42);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -2721,23 +2720,27 @@ var StreamController = function (_EventHandler) {
           bufferEnd = bufferInfo.end,
           frag = void 0;
 
-      // in case of live playlist we need to ensure that requested position is not located before playlist start
-      if (levelDetails.live) {
-        var initialLiveManifestSize = this.config.initialLiveManifestSize;
-        if (fragLen < initialLiveManifestSize) {
-          _logger.logger.warn('Can not start playback of a level, reason: not enough fragments ' + fragLen + ' < ' + initialLiveManifestSize);
-          return false;
-        }
-
-        frag = this._ensureFragmentAtLivePoint(levelDetails, bufferEnd, start, end, fragPrevious, fragments, fragLen);
-        // if it explicitely returns null don't load any fragment and exit function now
-        if (frag === null) {
-          return false;
-        }
+      if (levelDetails.initSegment && !levelDetails.initSegment.data) {
+        frag = levelDetails.initSegment;
       } else {
-        // VoD playlist: if bufferEnd before start of playlist, load first fragment
-        if (bufferEnd < start) {
-          frag = fragments[0];
+        // in case of live playlist we need to ensure that requested position is not located before playlist start
+        if (levelDetails.live) {
+          var initialLiveManifestSize = this.config.initialLiveManifestSize;
+          if (fragLen < initialLiveManifestSize) {
+            _logger.logger.warn('Can not start playback of a level, reason: not enough fragments ' + fragLen + ' < ' + initialLiveManifestSize);
+            return false;
+          }
+
+          frag = this._ensureFragmentAtLivePoint(levelDetails, bufferEnd, start, end, fragPrevious, fragments, fragLen);
+          // if it explicitely returns null don't load any fragment and exit function now
+          if (frag === null) {
+            return false;
+          }
+        } else {
+          // VoD playlist: if bufferEnd before start of playlist, load first fragment
+          if (bufferEnd < start) {
+            frag = fragments[0];
+          }
         }
       }
       if (!frag) {
@@ -2906,7 +2909,7 @@ var StreamController = function (_EventHandler) {
           config = hls.config;
 
       //logger.log('loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
-      if (frag.decryptdata.uri != null && frag.decryptdata.key == null) {
+      if (frag.decryptdata && frag.decryptdata.uri != null && frag.decryptdata.key == null) {
         _logger.logger.log('Loading key for ' + frag.sn + ' of [' + levelDetails.startSN + ' ,' + levelDetails.endSN + '],level ' + level);
         this.state = State.KEY_LOADING;
         hls.trigger(_events2.default.KEY_LOADING, { frag: frag });
@@ -2932,7 +2935,9 @@ var StreamController = function (_EventHandler) {
         frag.loadIdx = this.fragLoadIdx;
         this.fragCurrent = frag;
         this.startFragRequested = true;
-        this.nextLoadPosition = frag.start + frag.duration;
+        if (!isNaN(frag.sn)) {
+          this.nextLoadPosition = frag.start + frag.duration;
+        }
         frag.autoLevel = hls.autoLevelEnabled;
         frag.bitrateTest = this.bitrateTest;
         hls.trigger(_events2.default.FRAG_LOADING, { frag: frag });
@@ -3360,6 +3365,7 @@ var StreamController = function (_EventHandler) {
         _logger.logger.log('Loaded  ' + fragCurrent.sn + ' of [' + details.startSN + ' ,' + details.endSN + '],level ' + fragCurrent.level);
         // reset frag bitrate test in any case after frag loaded event
         this.bitrateTest = false;
+        this.stats = stats;
         // if this frag was loaded to perform a bitrate test AND if hls.nextLoadLevel is greater than 0
         // then this means that we should be able to load a fragment at a higher quality level
         if (fragLoaded.bitrateTest === true && this.hls.nextLoadLevel) {
@@ -3369,10 +3375,15 @@ var StreamController = function (_EventHandler) {
           stats.tparsed = stats.tbuffered = performance.now();
           this.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: stats, frag: fragCurrent, id: 'main' });
           this.tick();
+        } else if (fragLoaded.sn === 'initSegment') {
+          this.state = State.IDLE;
+          stats.tparsed = stats.tbuffered = performance.now();
+          details.initSegment.data = data.payload;
+          this.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: stats, frag: fragCurrent, id: 'main' });
+          this.tick();
         } else {
           this.state = State.PARSING;
           // transmux the MPEG-TS data to ISO-BMFF segments
-          this.stats = stats;
           var duration = details.totalduration,
               start = !isNaN(fragCurrent.startDTS) ? fragCurrent.startDTS : fragCurrent.start,
               level = fragCurrent.level,
@@ -3402,7 +3413,8 @@ var StreamController = function (_EventHandler) {
           var media = this.media;
           var mediaSeeking = media && media.seeking;
           var accurateTimeOffset = !mediaSeeking && (details.PTSKnown || !details.live);
-          demuxer.push(data.payload, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata, accurateTimeOffset, null);
+          var initSegmentData = details.initSegment ? details.initSegment.data : [];
+          demuxer.push(data.payload, initSegmentData, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata, accurateTimeOffset, null);
         }
       }
       this.fragLoadError = 0;
@@ -3510,6 +3522,10 @@ var StreamController = function (_EventHandler) {
       this.state === State.PARSING) {
         var level = this.levels[this.level],
             frag = this.fragCurrent;
+        if (isNaN(data.endPTS)) {
+          data.endPTS = data.startPTS + fragCurrent.duration;
+          data.endDTS = data.startDTS + fragCurrent.duration;
+        }
 
         _logger.logger.log('Parsed ' + data.type + ',PTS:[' + data.startPTS.toFixed(3) + ',' + data.endPTS.toFixed(3) + '],DTS:[' + data.startDTS.toFixed(3) + '/' + data.endDTS.toFixed(3) + '],nb:' + data.nb + ',dropped:' + (data.dropped || 0));
 
@@ -3541,15 +3557,13 @@ var StreamController = function (_EventHandler) {
 
         // has remuxer dropped video frames located before first keyframe ?
         [data.data1, data.data2].forEach(function (buffer) {
-          if (buffer) {
-            // only append in PARSING state (rationale is that an appending error could happen synchronously on first segment appending)
-            // in that case it is useless to append following segments
-            if (_this2.state === State.PARSING) {
-              _this2.appended = true;
-              // arm pending Buffering flag before appending a segment
-              _this2.pendingBuffering = true;
-              hls.trigger(_events2.default.BUFFER_APPENDING, { type: data.type, data: buffer, parent: 'main', content: 'data' });
-            }
+          // only append in PARSING state (rationale is that an appending error could happen synchronously on first segment appending)
+          // in that case it is useless to append following segments
+          if (buffer && buffer.length && _this2.state === State.PARSING) {
+            _this2.appended = true;
+            // arm pending Buffering flag before appending a segment
+            _this2.pendingBuffering = true;
+            hls.trigger(_events2.default.BUFFER_APPENDING, { type: data.type, data: buffer, parent: 'main', content: 'data' });
           }
         });
         //trigger handler right now
@@ -4028,7 +4042,7 @@ var StreamController = function (_EventHandler) {
 
 exports.default = StreamController;
 
-},{"20":20,"24":24,"25":25,"26":26,"28":28,"29":29,"39":39,"41":41,"42":42}],12:[function(_dereq_,module,exports){
+},{"20":20,"25":25,"26":26,"27":27,"29":29,"30":30,"40":40,"42":42,"43":43}],12:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4393,9 +4407,9 @@ var _aesDecryptor = _dereq_(13);
 
 var _aesDecryptor2 = _interopRequireDefault(_aesDecryptor);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
-var _logger = _dereq_(41);
+var _logger = _dereq_(42);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -4478,7 +4492,7 @@ var Decrypter = function () {
 
 exports.default = Decrypter;
 
-},{"12":12,"13":13,"15":15,"24":24,"41":41}],15:[function(_dereq_,module,exports){
+},{"12":12,"13":13,"15":15,"25":25,"42":42}],15:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4525,7 +4539,7 @@ var _adts = _dereq_(17);
 
 var _adts2 = _interopRequireDefault(_adts);
 
-var _logger = _dereq_(41);
+var _logger = _dereq_(42);
 
 var _id = _dereq_(22);
 
@@ -4536,28 +4550,29 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var AACDemuxer = function () {
-  function AACDemuxer(observer, id, remuxerClass, config, typeSupported) {
+  function AACDemuxer(observer, id, remuxer, config) {
     _classCallCheck(this, AACDemuxer);
 
     this.observer = observer;
     this.id = id;
-    this.remuxerClass = remuxerClass;
     this.config = config;
-    this.remuxer = new this.remuxerClass(observer, id, config, typeSupported);
-    this.insertDiscontinuity();
+    this.remuxer = remuxer;
   }
 
   _createClass(AACDemuxer, [{
-    key: 'insertDiscontinuity',
-    value: function insertDiscontinuity() {
-      this._aacTrack = { container: 'audio/adts', type: 'audio', id: -1, sequenceNumber: 0, isAAC: true, samples: [], len: 0 };
+    key: 'resetInitSegment',
+    value: function resetInitSegment(initSegment, level, sn, audioCodec, videoCodec, duration) {
+      this._aacTrack = { container: 'audio/adts', type: 'audio', id: -1, sequenceNumber: 0, isAAC: true, samples: [], len: 0, manifestCodec: audioCodec, duration: duration };
     }
   }, {
-    key: 'push',
+    key: 'resetTimeStamp',
+    value: function resetTimeStamp() {}
+  }, {
+    key: 'append',
 
 
     // feed incoming data to the front of the parsing pipeline
-    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset, defaultInitPTS) {
+    value: function append(data, timeOffset, cc, level, sn, contiguous, accurateTimeOffset) {
       var track,
           id3 = new _id2.default(data),
           pts = 90 * id3.timeStamp,
@@ -4571,24 +4586,7 @@ var AACDemuxer = function () {
           len,
           aacSample;
 
-      var contiguous = false;
-      if (cc !== this.lastCC) {
-        _logger.logger.log(this.id + ' discontinuity detected');
-        this.lastCC = cc;
-        this.insertDiscontinuity();
-        this.remuxer.switchLevel();
-        this.remuxer.insertDiscontinuity();
-      } else if (level !== this.lastLevel) {
-        _logger.logger.log('audio track switch detected');
-        this.lastLevel = level;
-        this.remuxer.switchLevel();
-        this.insertDiscontinuity();
-      } else if (sn === this.lastSN + 1) {
-        contiguous = true;
-      }
       track = this._aacTrack;
-      this.lastSN = sn;
-      this.lastLevel = level;
 
       // look for ADTS header (0xFFFx)
       for (offset = id3.length, len = data.length; offset < len - 1; offset++) {
@@ -4598,13 +4596,11 @@ var AACDemuxer = function () {
       }
 
       if (!track.audiosamplerate) {
-        config = _adts2.default.getAudioConfig(this.observer, data, offset, audioCodec);
+        config = _adts2.default.getAudioConfig(this.observer, data, offset, track.manifestCodec);
         track.config = config.config;
         track.audiosamplerate = config.samplerate;
         track.channelCount = config.channelCount;
         track.codec = config.codec;
-        track.manifestCodec = config.manifestCodec;
-        track.duration = duration;
         _logger.logger.log('parsed codec:' + track.codec + ',rate:' + config.samplerate + ',nb channel:' + config.channelCount);
       }
       frameIndex = 0;
@@ -4635,7 +4631,7 @@ var AACDemuxer = function () {
           break;
         }
       }
-      this.remuxer.remux(level, sn, cc, track, { samples: [] }, { samples: [{ pts: pts, dts: pts, unit: id3.payload }] }, { samples: [] }, timeOffset, contiguous, accurateTimeOffset, defaultInitPTS);
+      this.remuxer.remux(level, sn, cc, track, { samples: [] }, { samples: [{ pts: pts, dts: pts, unit: id3.payload }] }, { samples: [] }, timeOffset, contiguous, accurateTimeOffset);
     }
   }, {
     key: 'destroy',
@@ -4665,7 +4661,7 @@ var AACDemuxer = function () {
 
 exports.default = AACDemuxer;
 
-},{"17":17,"22":22,"41":41}],17:[function(_dereq_,module,exports){
+},{"17":17,"22":22,"42":42}],17:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4677,9 +4673,9 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       */
 
 
-var _logger = _dereq_(41);
+var _logger = _dereq_(42);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -4813,7 +4809,7 @@ var ADTS = function () {
 
 exports.default = ADTS;
 
-},{"24":24,"41":41}],18:[function(_dereq_,module,exports){
+},{"25":25,"42":42}],18:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4824,11 +4820,13 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       *   probe fragments and instantiate appropriate demuxer depending on content type (TSDemuxer, AACDemuxer, ...)
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       */
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
+
+var _logger = _dereq_(42);
 
 var _decrypter = _dereq_(14);
 
@@ -4838,15 +4836,19 @@ var _aacdemuxer = _dereq_(16);
 
 var _aacdemuxer2 = _interopRequireDefault(_aacdemuxer);
 
-var _tsdemuxer = _dereq_(23);
+var _mp4demuxer = _dereq_(23);
+
+var _mp4demuxer2 = _interopRequireDefault(_mp4demuxer);
+
+var _tsdemuxer = _dereq_(24);
 
 var _tsdemuxer2 = _interopRequireDefault(_tsdemuxer);
 
-var _mp4Remuxer = _dereq_(36);
+var _mp4Remuxer = _dereq_(37);
 
 var _mp4Remuxer2 = _interopRequireDefault(_mp4Remuxer);
 
-var _passthroughRemuxer = _dereq_(37);
+var _passthroughRemuxer = _dereq_(38);
 
 var _passthroughRemuxer2 = _interopRequireDefault(_passthroughRemuxer);
 
@@ -4876,7 +4878,7 @@ var DemuxerInline = function () {
     }
   }, {
     key: 'push',
-    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset, defaultInitPTS) {
+    value: function push(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset, defaultInitPTS) {
       if (data.byteLength > 0 && decryptdata != null && decryptdata.key != null && decryptdata.method === 'AES-128') {
         if (this.decrypter == null) {
           this.decrypter = new _decrypter2.default(this.hls, this.config);
@@ -4897,43 +4899,63 @@ var DemuxerInline = function () {
             endTime = Date.now();
           }
           localthis.hls.trigger(_events2.default.FRAG_DECRYPTED, { level: level, sn: sn, stats: { tstart: startTime, tdecrypt: endTime } });
-          localthis.pushDecrypted(new Uint8Array(decryptedData), audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset, defaultInitPTS);
+          localthis.pushDecrypted(new Uint8Array(decryptedData), new Uint8Array(initSegment), audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset, defaultInitPTS);
         });
       } else {
-        this.pushDecrypted(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset, defaultInitPTS);
+        this.pushDecrypted(new Uint8Array(data), new Uint8Array(initSegment), audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset, defaultInitPTS);
       }
     }
   }, {
     key: 'pushDecrypted',
-    value: function pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset, defaultInitPTS) {
+    value: function pushDecrypted(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset, defaultInitPTS) {
       var demuxer = this.demuxer;
+      var id = this.id;
       if (!demuxer ||
       // in case of continuity change, we might switch from content type (AAC container to TS container for example)
       // so let's check that current demuxer is still valid
-      cc !== this.cc && !demuxer.probe(data)) {
-        var hls = this.hls,
-            id = this.id,
-            config = this.config,
-            typeSupported = this.typeSupported;
+      cc !== this.cc && !this.probe(data)) {
+        var hls = this.hls;
+        var muxConfig = [{ demux: _tsdemuxer2.default, remux: _mp4Remuxer2.default }, { demux: _aacdemuxer2.default, remux: _mp4Remuxer2.default }, { demux: _mp4demuxer2.default, remux: _passthroughRemuxer2.default }];
+
         // probe for content type
-        if (_tsdemuxer2.default.probe(data)) {
-          if (this.typeSupported.mp2t === true) {
-            demuxer = new _tsdemuxer2.default(hls, id, _passthroughRemuxer2.default, config, typeSupported);
-          } else {
-            demuxer = new _tsdemuxer2.default(hls, id, _mp4Remuxer2.default, config, typeSupported);
+        for (var i in muxConfig) {
+          var mux = muxConfig[i];
+          var probe = mux.demux.probe;
+          if (probe(data)) {
+            var _remuxer = this.remuxer = new mux.remux(hls, id, this.config, this.typeSupported);
+            demuxer = new mux.demux(hls, id, _remuxer, this.config, this.typeSupported);
+            this.probe = probe;
+            break;
           }
-          demuxer.probe = _tsdemuxer2.default.probe;
-        } else if (_aacdemuxer2.default.probe(data)) {
-          demuxer = new _aacdemuxer2.default(hls, id, _mp4Remuxer2.default, config, typeSupported);
-          demuxer.probe = _aacdemuxer2.default.probe;
-        } else {
+        }
+        if (!demuxer) {
           hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, id: id, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found' });
           return;
         }
         this.demuxer = demuxer;
+        this.lastCC = 0;
       }
-      demuxer.push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset, defaultInitPTS);
+      var contiguous = false;
+      var remuxer = this.remuxer;
+      if (cc !== this.lastCC) {
+        _logger.logger.log(id + ':discontinuity detected');
+        demuxer.resetInitSegment(initSegment, level, sn, audioCodec, videoCodec, duration);
+        remuxer.resetInitSegment();
+        demuxer.resetTimeStamp();
+        remuxer.resetTimeStamp(defaultInitPTS);
+        this.lastCC = cc;
+      }
+      if (level !== this.lastLevel) {
+        _logger.logger.log(id + ':switch detected');
+        demuxer.resetInitSegment(initSegment, level, sn, audioCodec, videoCodec, duration);
+        remuxer.resetInitSegment();
+        this.lastLevel = level;
+      } else if (sn === this.lastSN + 1) {
+        contiguous = true;
+      }
+      this.lastSN = sn;
       this.cc = cc;
+      demuxer.append(data, timeOffset, cc, level, sn, contiguous, accurateTimeOffset);
     }
   }]);
 
@@ -4942,7 +4964,7 @@ var DemuxerInline = function () {
 
 exports.default = DemuxerInline;
 
-},{"14":14,"16":16,"23":23,"24":24,"26":26,"36":36,"37":37}],19:[function(_dereq_,module,exports){
+},{"14":14,"16":16,"23":23,"24":24,"25":25,"27":27,"37":37,"38":38,"42":42}],19:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4953,11 +4975,11 @@ var _demuxerInline = _dereq_(18);
 
 var _demuxerInline2 = _interopRequireDefault(_demuxerInline);
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _logger = _dereq_(41);
+var _logger = _dereq_(42);
 
 var _events3 = _dereq_(1);
 
@@ -5009,7 +5031,7 @@ var DemuxerWorker = function DemuxerWorker(self) {
         forwardMessage('init', null);
         break;
       case 'demux':
-        self.demuxer.push(data.data, data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration, data.decryptdata, data.accurateTimeOffset, data.defaultInitPTS);
+        self.demuxer.push(data.data, data.initSegment, data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration, data.decryptdata, data.accurateTimeOffset, data.defaultInitPTS);
         break;
       default:
         break;
@@ -5027,18 +5049,25 @@ var DemuxerWorker = function DemuxerWorker(self) {
 
   // special case for FRAG_PARSING_DATA: pass data1/data2 as transferable object (no copy)
   observer.on(_events2.default.FRAG_PARSING_DATA, function (ev, data) {
-    var data1 = data.data1.buffer,
-        data2 = data.data2.buffer;
-    // remove data1 and data2 reference from data to avoid copying them ...
-    delete data.data1;
-    delete data.data2;
-    self.postMessage({ event: ev, data: data, data1: data1, data2: data2 }, [data1, data2]);
+    var transferable = [];
+    var message = { event: ev, data: data };
+    if (data.data1) {
+      message.data1 = data.data1.buffer;
+      transferable.push(data.data1.buffer);
+      delete data.data1;
+    }
+    if (data.data2) {
+      message.data2 = data.data2.buffer;
+      transferable.push(data.data2.buffer);
+      delete data.data2;
+    }
+    self.postMessage(message, transferable);
   });
 };
 
 exports.default = DemuxerWorker;
 
-},{"1":1,"18":18,"26":26,"41":41}],20:[function(_dereq_,module,exports){
+},{"1":1,"18":18,"27":27,"42":42}],20:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5047,7 +5076,7 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
@@ -5059,9 +5088,9 @@ var _demuxerWorker = _dereq_(19);
 
 var _demuxerWorker2 = _interopRequireDefault(_demuxerWorker);
 
-var _logger = _dereq_(41);
+var _logger = _dereq_(42);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -5075,7 +5104,6 @@ var Demuxer = function () {
     this.id = id;
     var typeSupported = {
       mp4: MediaSource.isTypeSupported('video/mp4'),
-      mp2t: hls.config.enableMP2TPassThrough && MediaSource.isTypeSupported('video/mp2t'),
       mpeg: MediaSource.isTypeSupported('audio/mpeg'),
       mp3: MediaSource.isTypeSupported('audio/mp4; codecs="mp3"')
     };
@@ -5103,7 +5131,6 @@ var Demuxer = function () {
     } else {
       this.demuxer = new _demuxerInline2.default(hls, id, typeSupported);
     }
-    this.demuxInitialized = true;
   }
 
   _createClass(Demuxer, [{
@@ -5124,15 +5151,15 @@ var Demuxer = function () {
     }
   }, {
     key: 'push',
-    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset, defaultInitPTS) {
+    value: function push(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset, defaultInitPTS) {
       var w = this.w;
       if (w) {
         // post fragment payload as transferable objects (no copy)
-        w.postMessage({ cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn: sn, duration: duration, decryptdata: decryptdata, accurateTimeOffset: accurateTimeOffset, defaultInitPTS: defaultInitPTS }, [data]);
+        w.postMessage({ cmd: 'demux', data: data, initSegment: initSegment, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn: sn, duration: duration, decryptdata: decryptdata, accurateTimeOffset: accurateTimeOffset, defaultInitPTS: defaultInitPTS }, [data]);
       } else {
         var demuxer = this.demuxer;
         if (demuxer) {
-          demuxer.push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset, defaultInitPTS);
+          demuxer.push(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset, defaultInitPTS);
         }
       }
     }
@@ -5150,7 +5177,9 @@ var Demuxer = function () {
         // special case for FRAG_PARSING_DATA: data1 and data2 are transferable objects
         case _events2.default.FRAG_PARSING_DATA:
           data.data.data1 = new Uint8Array(data.data1);
-          data.data.data2 = new Uint8Array(data.data2);
+          if (data.data2) {
+            data.data.data2 = new Uint8Array(data.data2);
+          }
         /* falls through */
         default:
           hls.trigger(data.event, data.data);
@@ -5164,7 +5193,7 @@ var Demuxer = function () {
 
 exports.default = Demuxer;
 
-},{"18":18,"19":19,"24":24,"26":26,"3":3,"41":41}],21:[function(_dereq_,module,exports){
+},{"18":18,"19":19,"25":25,"27":27,"3":3,"42":42}],21:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5175,7 +5204,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       * Parser for exponential Golomb codes, a variable-bitwidth number encoding scheme used by h264.
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
 
-var _logger = _dereq_(41);
+var _logger = _dereq_(42);
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -5536,7 +5565,7 @@ var ExpGolomb = function () {
 
 exports.default = ExpGolomb;
 
-},{"41":41}],22:[function(_dereq_,module,exports){
+},{"42":42}],22:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5548,7 +5577,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       */
 
 
-var _logger = _dereq_(41);
+var _logger = _dereq_(42);
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -5689,7 +5718,250 @@ var ID3 = function () {
 
 exports.default = ID3;
 
-},{"41":41}],23:[function(_dereq_,module,exports){
+},{"42":42}],23:[function(_dereq_,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * MP4 demuxer
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
+//import {logger} from '../utils/logger';
+
+
+var _events = _dereq_(27);
+
+var _events2 = _interopRequireDefault(_events);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var MP4Demuxer = function () {
+  function MP4Demuxer(observer, id, remuxer) {
+    _classCallCheck(this, MP4Demuxer);
+
+    this.observer = observer;
+    this.id = id;
+    this.remuxer = remuxer;
+  }
+
+  _createClass(MP4Demuxer, [{
+    key: 'resetTimeStamp',
+    value: function resetTimeStamp() {}
+  }, {
+    key: 'resetInitSegment',
+    value: function resetInitSegment(initSegment, level, sn, audioCodec, videoCodec, duration) {
+      //jshint unused:false
+      var initData = this.initData = MP4Demuxer.parseInitSegment(initSegment);
+      var tracks = {};
+      if (initData.audio) {
+        tracks.audio = { container: 'audio/mp4', codec: audioCodec, initSegment: initSegment };
+      }
+      if (initData.video) {
+        tracks.video = { container: 'video/mp4', codec: videoCodec, initSegment: initSegment };
+      }
+      this.observer.trigger(_events2.default.FRAG_PARSING_INIT_SEGMENT, { id: this.id, level: level, sn: sn, unique: false, tracks: tracks });
+    }
+  }, {
+    key: 'append',
+
+
+    // feed incoming data to the front of the parsing pipeline
+    value: function append(data, timeOffset, cc, level, sn, contiguous, accurateTimeOffset) {
+      var initData = this.initData;
+      var startDTS = MP4Demuxer.startDTS(initData, data);
+      this.remuxer.remux(level, sn, cc, initData.audio, initData.video, null, null, startDTS, contiguous, accurateTimeOffset, data);
+    }
+  }, {
+    key: 'destroy',
+    value: function destroy() {}
+  }], [{
+    key: 'probe',
+    value: function probe(data) {
+      if (data.length >= 8) {
+        var dataType = MP4Demuxer.bin2str(data.subarray(4, 8));
+        return ['moof', 'ftyp', 'styp'].indexOf(dataType) >= 0;
+      }
+      return false;
+    }
+  }, {
+    key: 'bin2str',
+    value: function bin2str(buffer) {
+      return String.fromCharCode.apply(null, buffer);
+    }
+
+    // Find the data for a box specified by its path
+
+  }, {
+    key: 'findBox',
+    value: function findBox(data, path) {
+      var results = [],
+          i,
+          size,
+          type,
+          end,
+          subresults;
+
+      if (!path.length) {
+        // short-circuit the search for empty paths
+        return null;
+      }
+
+      for (i = 0; i < data.byteLength;) {
+        size = data[i] << 24;
+        size |= data[i + 1] << 16;
+        size |= data[i + 2] << 8;
+        size |= data[i + 3];
+
+        type = MP4Demuxer.bin2str(data.subarray(i + 4, i + 8));
+
+        end = size > 1 ? i + size : data.byteLength;
+
+        if (type === path[0]) {
+          if (path.length === 1) {
+            // this is the end of the path and we've found the box we were
+            // looking for
+            results.push(data.subarray(i + 8, end));
+          } else {
+            // recursively search for the next box along the path
+            subresults = MP4Demuxer.findBox(data.subarray(i + 8, end), path.slice(1));
+            if (subresults.length) {
+              results = results.concat(subresults);
+            }
+          }
+        }
+        i = end;
+      }
+
+      // we've finished searching all of data
+      return results;
+    }
+
+    /**
+     * Parses an MP4 initialization segment and extracts stream type and
+     * timescale values for any declared tracks. Timescale values indicate the
+     * number of clock ticks per second to assume for time-based values
+     * elsewhere in the MP4.
+     *
+     * To determine the start time of an MP4, you need two pieces of
+     * information: the timescale unit and the earliest base media decode
+     * time. Multiple timescales can be specified within an MP4 but the
+     * base media decode time is always expressed in the timescale from
+     * the media header box for the track:
+     * ```
+     * moov > trak > mdia > mdhd.timescale
+     * moov > trak > mdia > hdlr
+     * ```
+     * @param init {Uint8Array} the bytes of the init segment
+     * @return {object} a hash of track type to timescale values or null if
+     * the init segment is malformed.
+     */
+
+  }, {
+    key: 'parseInitSegment',
+    value: function parseInitSegment(initSegment) {
+      var result = [];
+      var traks = MP4Demuxer.findBox(initSegment, ['moov', 'trak']);
+
+      traks.forEach(function (trak) {
+        var tkhd = MP4Demuxer.findBox(trak, ['tkhd'])[0];
+        if (tkhd) {
+          var version = tkhd[0];
+          var index = version === 0 ? 12 : 20;
+          var trackId = tkhd[index] << 24 | tkhd[index + 1] << 16 | tkhd[index + 2] << 8 | tkhd[index + 3];
+
+          trackId = trackId < 0 ? 4294967296 + trackId : trackId;
+
+          var mdhd = MP4Demuxer.findBox(trak, ['mdia', 'mdhd'])[0];
+          if (mdhd) {
+            version = mdhd[0];
+            index = version === 0 ? 12 : 20;
+            var timescale = mdhd[index] << 24 | mdhd[index + 1] << 16 | mdhd[index + 2] << 8 | mdhd[index + 3];
+
+            var hdlr = MP4Demuxer.findBox(trak, ['mdia', 'hdlr'])[0];
+            if (hdlr) {
+              var hdlrType = MP4Demuxer.bin2str(hdlr.subarray(8, 12));
+              var type = { 'soun': 'audio', 'vide': 'video' }[hdlrType];
+              if (type) {
+                result[trackId] = { timescale: timescale, type: type };
+                result[type] = { timescale: timescale, id: trackId };
+              }
+            }
+          }
+        }
+      });
+      return result;
+    }
+
+    /**
+     * Determine the base media decode start time, in seconds, for an MP4
+     * fragment. If multiple fragments are specified, the earliest time is
+     * returned.
+     *
+     * The base media decode time can be parsed from track fragment
+     * metadata:
+     * ```
+     * moof > traf > tfdt.baseMediaDecodeTime
+     * ```
+     * It requires the timescale value from the mdhd to interpret.
+     *
+     * @param timescale {object} a hash of track ids to timescale values.
+     * @return {number} the earliest base media decode start time for the
+     * fragment, in seconds
+     */
+
+  }, {
+    key: 'startDTS',
+    value: function startDTS(initData, fragment) {
+      var trafs, baseTimes, result;
+
+      // we need info from two childrend of each track fragment box
+      trafs = MP4Demuxer.findBox(fragment, ['moof', 'traf']);
+
+      // determine the start times for each track
+      baseTimes = [].concat.apply([], trafs.map(function (traf) {
+        return MP4Demuxer.findBox(traf, ['tfhd']).map(function (tfhd) {
+          var id, scale, baseTime;
+
+          // get the track id from the tfhd
+          id = tfhd[4] << 24 | tfhd[5] << 16 | tfhd[6] << 8 | tfhd[7];
+          // assume a 90kHz clock if no timescale was specified
+          scale = initData[id].timescale || 90e3;
+
+          // get the base media decode time from the tfdt
+          baseTime = MP4Demuxer.findBox(traf, ['tfdt']).map(function (tfdt) {
+            var version, result;
+
+            version = tfdt[0];
+            result = tfdt[4] << 24 | tfdt[5] << 16 | tfdt[6] << 8 | tfdt[7];
+            if (version === 1) {
+              result *= Math.pow(2, 32);
+              result += tfdt[8] << 24 | tfdt[9] << 16 | tfdt[10] << 8 | tfdt[11];
+            }
+            return result;
+          })[0];
+          baseTime = baseTime || Infinity;
+
+          // convert base time to seconds
+          return baseTime / scale;
+        });
+      }));
+
+      // return the minimum
+      result = Math.min.apply(null, baseTimes);
+      return isFinite(result) ? result : 0;
+    }
+  }]);
+
+  return MP4Demuxer;
+}();
+
+exports.default = MP4Demuxer;
+
+},{"27":27}],24:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5714,7 +5986,7 @@ var _adts = _dereq_(17);
 
 var _adts2 = _interopRequireDefault(_adts);
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
@@ -5722,30 +5994,28 @@ var _expGolomb = _dereq_(21);
 
 var _expGolomb2 = _interopRequireDefault(_expGolomb);
 
-var _logger = _dereq_(41);
+var _logger = _dereq_(42);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var TSDemuxer = function () {
-  function TSDemuxer(observer, id, remuxerClass, config, typeSupported) {
+  function TSDemuxer(observer, id, remuxer, config, typeSupported) {
     _classCallCheck(this, TSDemuxer);
 
     this.observer = observer;
     this.id = id;
-    this.remuxerClass = remuxerClass;
     this.config = config;
     this.typeSupported = typeSupported;
-    this.lastCC = 0;
-    this.remuxer = new this.remuxerClass(observer, id, config, typeSupported);
+    this.remuxer = remuxer;
   }
 
   _createClass(TSDemuxer, [{
-    key: 'switchLevel',
-    value: function switchLevel() {
+    key: 'resetInitSegment',
+    value: function resetInitSegment(initSegment, level, sn, audioCodec, videoCodec, duration) {
       this.pmtParsed = false;
       this._pmtId = -1;
       this._avcTrack = { container: 'video/mp2t', type: 'video', id: -1, sequenceNumber: 0, samples: [], len: 0, dropped: 0 };
@@ -5756,20 +6026,19 @@ var TSDemuxer = function () {
       this.aacOverFlow = null;
       this.aacLastPTS = null;
       this.avcSample = null;
-      this.remuxer.switchLevel();
+      this.audioCodec = audioCodec;
+      this.videoCodec = videoCodec;
+      this._duration = duration;
     }
   }, {
-    key: 'insertDiscontinuity',
-    value: function insertDiscontinuity() {
-      this.switchLevel();
-      this.remuxer.insertDiscontinuity();
-    }
+    key: 'resetTimeStamp',
+    value: function resetTimeStamp() {}
 
     // feed incoming data to the front of the parsing pipeline
 
   }, {
-    key: 'push',
-    value: function push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset, defaultInitPTS) {
+    key: 'append',
+    value: function append(data, timeOffset, cc, level, sn, contiguous, accurateTimeOffset) {
       var start,
           len = data.length,
           stt,
@@ -5777,28 +6046,8 @@ var TSDemuxer = function () {
           atf,
           offset,
           pes,
-          codecsOnly = this.remuxer.passthrough,
           unknownPIDs = false;
-
-      this.audioCodec = audioCodec;
-      this.videoCodec = videoCodec;
-      this._duration = duration;
-      this.contiguous = false;
-      this.accurateTimeOffset = accurateTimeOffset;
-      if (cc !== this.lastCC) {
-        _logger.logger.log('discontinuity detected');
-        this.insertDiscontinuity();
-        this.lastCC = cc;
-      }
-      if (level !== this.lastLevel) {
-        _logger.logger.log('level switch detected');
-        this.switchLevel();
-        this.lastLevel = level;
-      } else if (sn === this.lastSN + 1) {
-        this.contiguous = true;
-      }
-      this.lastSN = sn;
-
+      this.contiguous = contiguous;
       var pmtParsed = this.pmtParsed,
           avcTrack = this._avcTrack,
           audioTrack = this._audioTrack,
@@ -5842,15 +6091,6 @@ var TSDemuxer = function () {
               if (stt) {
                 if (avcData && (pes = parsePES(avcData))) {
                   parseAVCPES(pes, false);
-                  if (codecsOnly) {
-                    // if we have video codec info AND
-                    // if audio PID is undefined OR if we have audio codec info,
-                    // we have all codec info !
-                    if (avcTrack.codec && (audioId === -1 || audioTrack.codec)) {
-                      this.remux(level, sn, cc, data, timeOffset);
-                      return;
-                    }
-                  }
                 }
                 avcData = { data: [], size: 0 };
               }
@@ -5866,15 +6106,6 @@ var TSDemuxer = function () {
                     parseAACPES(pes);
                   } else {
                     parseMPEGPES(pes);
-                  }
-                  if (codecsOnly) {
-                    // here we now that we have audio codec info
-                    // if video PID is undefined OR if we have video codec info,
-                    // we have all codec infos !
-                    if (audioTrack.codec && (avcId === -1 || avcTrack.codec)) {
-                      this.remux(level, sn, cc, data, timeOffset);
-                      return;
-                    }
                   }
                 }
                 audioData = { data: [], size: 0 };
@@ -5975,37 +6206,11 @@ var TSDemuxer = function () {
         // either id3Data null or PES truncated, keep it for next frag parsing
         id3Track.pesData = id3Data;
       }
-      this.remux(level, sn, cc, null, timeOffset, defaultInitPTS);
-    }
-  }, {
-    key: 'remux',
-    value: function remux(level, sn, cc, data, timeOffset, defaultInitPTS) {
-      var avcTrack = this._avcTrack,
-          samples = avcTrack.samples,
-          nbNalu = 0,
-          naluLen = 0;
-
-      // compute total/avc sample length and nb of NAL units
-      for (var i = 0; i < samples.length; i++) {
-        var sample = samples[i],
-            units = sample.units.units,
-            nbUnits = units.length,
-            sampleLen = 0;
-        for (var j = 0; j < nbUnits; j++) {
-          sampleLen += units[j].data.length;
-        }
-        naluLen += sampleLen;
-        nbNalu += nbUnits;
-        sample.length = sampleLen;
-      }
-      avcTrack.len = naluLen;
-      avcTrack.nbNalu = nbNalu;
-      this.remuxer.remux(level, sn, cc, this._audioTrack, this._avcTrack, this._id3Track, this._txtTrack, timeOffset, this.contiguous, this.accurateTimeOffset, defaultInitPTS, data);
+      this.remuxer.remux(level, sn, cc, audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset);
     }
   }, {
     key: 'destroy',
     value: function destroy() {
-      this.switchLevel();
       this._initPTS = this._initDTS = undefined;
       this._duration = 0;
     }
@@ -6802,7 +7007,7 @@ var TSDemuxer = function () {
 
 exports.default = TSDemuxer;
 
-},{"17":17,"21":21,"24":24,"26":26,"41":41}],24:[function(_dereq_,module,exports){
+},{"17":17,"21":21,"25":25,"27":27,"42":42}],25:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6875,7 +7080,7 @@ var ErrorDetails = exports.ErrorDetails = {
   WEBVTT_EXCEPTION: 'webVTTException'
 };
 
-},{}],25:[function(_dereq_,module,exports){
+},{}],26:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6890,11 +7095,11 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
 
-var _logger = _dereq_(41);
+var _logger = _dereq_(42);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
@@ -6984,7 +7189,7 @@ var EventHandler = function () {
 
 exports.default = EventHandler;
 
-},{"24":24,"26":26,"41":41}],26:[function(_dereq_,module,exports){
+},{"25":25,"27":27,"42":42}],27:[function(_dereq_,module,exports){
 'use strict';
 
 module.exports = {
@@ -7092,7 +7297,7 @@ module.exports = {
   STREAM_STATE_TRANSITION: 'hlsStreamStateTransition'
 };
 
-},{}],27:[function(_dereq_,module,exports){
+},{}],28:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7154,7 +7359,7 @@ var AAC = function () {
 
 exports.default = AAC;
 
-},{}],28:[function(_dereq_,module,exports){
+},{}],29:[function(_dereq_,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -7270,7 +7475,7 @@ var BufferHelper = function () {
 
 exports.default = BufferHelper;
 
-},{}],29:[function(_dereq_,module,exports){
+},{}],30:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7281,7 +7486,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       * Level Helper class, providing methods dealing with playlist sliding and drift
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
 
-var _logger = _dereq_(41);
+var _logger = _dereq_(42);
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -7431,7 +7636,7 @@ var LevelHelper = function () {
 
 exports.default = LevelHelper;
 
-},{"41":41}],30:[function(_dereq_,module,exports){
+},{"42":42}],31:[function(_dereq_,module,exports){
 /**
  * HLS interface
  */
@@ -7443,21 +7648,21 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
-var _playlistLoader = _dereq_(34);
+var _playlistLoader = _dereq_(35);
 
 var _playlistLoader2 = _interopRequireDefault(_playlistLoader);
 
-var _fragmentLoader = _dereq_(32);
+var _fragmentLoader = _dereq_(33);
 
 var _fragmentLoader2 = _interopRequireDefault(_fragmentLoader);
 
-var _keyLoader = _dereq_(33);
+var _keyLoader = _dereq_(34);
 
 var _keyLoader2 = _interopRequireDefault(_keyLoader);
 
@@ -7469,7 +7674,7 @@ var _levelController = _dereq_(10);
 
 var _levelController2 = _interopRequireDefault(_levelController);
 
-var _logger = _dereq_(41);
+var _logger = _dereq_(42);
 
 var _events3 = _dereq_(1);
 
@@ -7892,15 +8097,15 @@ var Hls = function () {
 
 exports.default = Hls;
 
-},{"1":1,"10":10,"11":11,"24":24,"26":26,"32":32,"33":33,"34":34,"4":4,"41":41}],31:[function(_dereq_,module,exports){
+},{"1":1,"10":10,"11":11,"25":25,"27":27,"33":33,"34":34,"35":35,"4":4,"42":42}],32:[function(_dereq_,module,exports){
 'use strict';
 
 // This is mostly for support of the es6 module export
 // syntax with the babel compiler, it looks like it doesnt support
 // function exports like we are used to in node/commonjs
-module.exports = _dereq_(30).default;
+module.exports = _dereq_(31).default;
 
-},{"30":30}],32:[function(_dereq_,module,exports){
+},{"31":31}],33:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -7909,17 +8114,17 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _eventHandler = _dereq_(25);
+var _eventHandler = _dereq_(26);
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
-var _logger = _dereq_(41);
+var _logger = _dereq_(42);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -8033,7 +8238,7 @@ var FragmentLoader = function (_EventHandler) {
 
 exports.default = FragmentLoader;
 
-},{"24":24,"25":25,"26":26,"41":41}],33:[function(_dereq_,module,exports){
+},{"25":25,"26":26,"27":27,"42":42}],34:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8042,17 +8247,17 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _eventHandler = _dereq_(25);
+var _eventHandler = _dereq_(26);
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
-var _logger = _dereq_(41);
+var _logger = _dereq_(42);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -8162,7 +8367,7 @@ var KeyLoader = function (_EventHandler) {
 
 exports.default = KeyLoader;
 
-},{"24":24,"25":25,"26":26,"41":41}],34:[function(_dereq_,module,exports){
+},{"25":25,"26":26,"27":27,"42":42}],35:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -8177,21 +8382,21 @@ var _urlToolkit = _dereq_(2);
 
 var _urlToolkit2 = _interopRequireDefault(_urlToolkit);
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _eventHandler = _dereq_(25);
+var _eventHandler = _dereq_(26);
 
 var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
-var _attrList = _dereq_(38);
+var _attrList = _dereq_(39);
 
 var _attrList2 = _interopRequireDefault(_attrList);
 
-var _logger = _dereq_(41);
+var _logger = _dereq_(42);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -8802,7 +9007,7 @@ var PlaylistLoader = function (_EventHandler) {
 
 exports.default = PlaylistLoader;
 
-},{"2":2,"24":24,"25":25,"26":26,"38":38,"41":41}],35:[function(_dereq_,module,exports){
+},{"2":2,"25":25,"26":26,"27":27,"39":39,"42":42}],36:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9329,7 +9534,7 @@ var MP4 = function () {
 
 exports.default = MP4;
 
-},{}],36:[function(_dereq_,module,exports){
+},{}],37:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -9340,21 +9545,21 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       * fMP4 remuxer
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
 
-var _aac = _dereq_(27);
+var _aac = _dereq_(28);
 
 var _aac2 = _interopRequireDefault(_aac);
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
-var _logger = _dereq_(41);
+var _logger = _dereq_(42);
 
-var _mp4Generator = _dereq_(35);
+var _mp4Generator = _dereq_(36);
 
 var _mp4Generator2 = _interopRequireDefault(_mp4Generator);
 
-var _errors = _dereq_(24);
+var _errors = _dereq_(25);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -9378,27 +9583,23 @@ var MP4Remuxer = function () {
     key: 'destroy',
     value: function destroy() {}
   }, {
-    key: 'insertDiscontinuity',
-    value: function insertDiscontinuity() {
-      this._initPTS = this._initDTS = undefined;
+    key: 'resetTimeStamp',
+    value: function resetTimeStamp(defaultTimeStamp) {
+      this._initPTS = this._initDTS = defaultTimeStamp;
     }
   }, {
-    key: 'switchLevel',
-    value: function switchLevel() {
+    key: 'resetInitSegment',
+    value: function resetInitSegment() {
       this.ISGenerated = false;
     }
   }, {
     key: 'remux',
-    value: function remux(level, sn, cc, audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset, defaultInitPTS) {
+    value: function remux(level, sn, cc, audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
       this.level = level;
       this.sn = sn;
       // generate Init Segment if needed
       if (!this.ISGenerated) {
         this.generateIS(audioTrack, videoTrack, timeOffset, cc);
-      }
-
-      if (defaultInitPTS !== null) {
-        this._initPTS = this._initDTS = defaultInitPTS;
       }
 
       if (this.ISGenerated) {
@@ -9631,9 +9832,22 @@ var MP4Remuxer = function () {
         mp4SampleDuration = Math.round((lastDTS - firstDTS) / (pes2mp4ScaleFactor * (inputSamples.length - 1)));
       }
 
-      // normalize all PTS/DTS now ...
+      var nbNalu = 0,
+          naluLen = 0;
       for (var _i = 0; _i < nbSamples; _i++) {
-        var _sample = inputSamples[_i];
+        // compute total/avc sample length and nb of NAL units
+        var _sample = inputSamples[_i],
+            units = _sample.units.units,
+            nbUnits = units.length,
+            sampleLen = 0;
+        for (var j = 0; j < nbUnits; j++) {
+          sampleLen += units[j].data.length;
+        }
+        naluLen += sampleLen;
+        nbNalu += nbUnits;
+        _sample.length = sampleLen;
+
+        // normalize PTS/DTS
         if (isSafari) {
           // sample DTS is computed using a constant decoding offset (mp4SampleDuration) between samples
           _sample.dts = firstDTS + _i * pes2mp4ScaleFactor * mp4SampleDuration;
@@ -9652,7 +9866,7 @@ var MP4Remuxer = function () {
 
       /* concatenate the video data and construct the mdat in place
         (need 8 more bytes to fill length and mpdat type) */
-      var mdatSize = track.len + 4 * track.nbNalu + 8;
+      var mdatSize = naluLen + 4 * nbNalu + 8;
       try {
         mdat = new Uint8Array(mdatSize);
       } catch (err) {
@@ -9669,8 +9883,8 @@ var MP4Remuxer = function () {
             mp4SampleLength = 0,
             compositionTimeOffset = void 0;
         // convert NALU bitstream to MP4 format (prepend NALU with size field)
-        for (var j = 0, nbUnits = avcSampleUnits.length; j < nbUnits; j++) {
-          var unit = avcSampleUnits[j],
+        for (var _j = 0, _nbUnits = avcSampleUnits.length; _j < _nbUnits; _j++) {
+          var unit = avcSampleUnits[_j],
               unitData = unit.data,
               unitDataLen = unit.data.byteLength;
           view.setUint32(offset, unitDataLen);
@@ -9882,8 +10096,8 @@ var MP4Remuxer = function () {
         }
       }
 
-      for (var _j = 0, _nbSamples = inputSamples.length; _j < _nbSamples; _j++) {
-        audioSample = inputSamples[_j];
+      for (var _j2 = 0, _nbSamples = inputSamples.length; _j2 < _nbSamples; _j2++) {
+        audioSample = inputSamples[_j2];
         unit = audioSample.unit;
         pts = audioSample.pts - initDTS;
         dts = audioSample.dts - initDTS;
@@ -10144,11 +10358,6 @@ var MP4Remuxer = function () {
       }
       return value;
     }
-  }, {
-    key: 'passthrough',
-    get: function get() {
-      return false;
-    }
   }]);
 
   return MP4Remuxer;
@@ -10156,7 +10365,7 @@ var MP4Remuxer = function () {
 
 exports.default = MP4Remuxer;
 
-},{"24":24,"26":26,"27":27,"35":35,"41":41}],37:[function(_dereq_,module,exports){
+},{"25":25,"27":27,"28":28,"36":36,"42":42}],38:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -10168,7 +10377,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
 
 
-var _events = _dereq_(26);
+var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
 
@@ -10182,70 +10391,41 @@ var PassThroughRemuxer = function () {
 
     this.observer = observer;
     this.id = id;
-    this.ISGenerated = false;
   }
 
   _createClass(PassThroughRemuxer, [{
     key: 'destroy',
     value: function destroy() {}
   }, {
-    key: 'insertDiscontinuity',
-    value: function insertDiscontinuity() {}
+    key: 'resetTimeStamp',
+    value: function resetTimeStamp() {}
   }, {
-    key: 'switchLevel',
-    value: function switchLevel() {
-      this.ISGenerated = false;
-    }
+    key: 'resetInitSegment',
+    value: function resetInitSegment() {}
   }, {
     key: 'remux',
-    value: function remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, rawData) {
+    value: function remux(level, sn, cc, audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset, rawData) {
       var observer = this.observer;
-      // generate Init Segment if needed
-      if (!this.ISGenerated) {
-        var tracks = {},
-            data = { id: this.id, tracks: tracks, unique: true },
-            track = videoTrack,
-            codec = track.codec;
-
-        if (codec) {
-          data.tracks.video = {
-            container: track.container,
-            codec: codec,
-            metadata: {
-              width: track.width,
-              height: track.height
-            }
-          };
-        }
-
-        track = audioTrack;
-        codec = track.codec;
-        if (codec) {
-          data.tracks.audio = {
-            container: track.container,
-            codec: codec,
-            metadata: {
-              channelCount: track.channelCount
-            }
-          };
-        }
-        this.ISGenerated = true;
-        observer.trigger(_events2.default.FRAG_PARSING_INIT_SEGMENT, data);
+      var streamType = '';
+      if (audioTrack) {
+        streamType += 'audio';
+      }
+      if (videoTrack) {
+        streamType += 'video';
       }
       observer.trigger(_events2.default.FRAG_PARSING_DATA, {
         id: this.id,
+        level: level,
+        sn: sn,
         data1: rawData,
         startPTS: timeOffset,
         startDTS: timeOffset,
-        type: 'audiovideo',
+        type: streamType,
         nb: 1,
         dropped: 0
       });
-    }
-  }, {
-    key: 'passthrough',
-    get: function get() {
-      return true;
+      //notify end of parsing
+      observer.trigger(_events2.default.FRAG_PARSED, { id: this.id, level: level, sn: sn });
     }
   }]);
 
@@ -10254,7 +10434,7 @@ var PassThroughRemuxer = function () {
 
 exports.default = PassThroughRemuxer;
 
-},{"26":26}],38:[function(_dereq_,module,exports){
+},{"27":27}],39:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -10364,7 +10544,7 @@ var AttrList = function () {
 
 exports.default = AttrList;
 
-},{}],39:[function(_dereq_,module,exports){
+},{}],40:[function(_dereq_,module,exports){
 "use strict";
 
 var BinarySearch = {
@@ -10409,7 +10589,7 @@ var BinarySearch = {
 
 module.exports = BinarySearch;
 
-},{}],40:[function(_dereq_,module,exports){
+},{}],41:[function(_dereq_,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -10467,7 +10647,7 @@ var EWMA = function () {
 
 exports.default = EWMA;
 
-},{}],41:[function(_dereq_,module,exports){
+},{}],42:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -10552,7 +10732,7 @@ var enableLogs = exports.enableLogs = function enableLogs(debugConfig) {
 
 var logger = exports.logger = exportedLogger;
 
-},{}],42:[function(_dereq_,module,exports){
+},{}],43:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -10589,7 +10769,7 @@ var TimeRanges = function () {
 
 exports.default = TimeRanges;
 
-},{}],43:[function(_dereq_,module,exports){
+},{}],44:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -10600,7 +10780,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       * XHR based logger
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
 
-var _logger = _dereq_(41);
+var _logger = _dereq_(42);
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -10762,6 +10942,6 @@ var XhrLoader = function () {
 
 exports.default = XhrLoader;
 
-},{"41":41}]},{},[31])(31)
+},{"42":42}]},{},[32])(32)
 });
 //# sourceMappingURL=hls.light.js.map
