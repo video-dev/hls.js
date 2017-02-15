@@ -1919,7 +1919,7 @@ var AudioStreamController = function (_EventHandler) {
               this.fragCurrent = null;
               // flush everything
               this.state = State.BUFFER_FLUSHING;
-              this.hls.trigger(_events2.default.BUFFER_FLUSHING, { startOffset: startOffset, endOffset: endOffset, type: 'audio' });
+              this.hls.trigger(_events2.default.BUFFER_FLUSHING, { startOffset: 0, endOffset: Number.POSITIVE_INFINITY, type: 'audio' });
             }
           }
           break;
