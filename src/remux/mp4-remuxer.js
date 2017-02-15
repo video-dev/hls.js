@@ -21,31 +21,23 @@ class MP4Remuxer {
     this.MP4_TIMESCALE = this.PES_TIMESCALE / this.PES2MP4SCALEFACTOR;
   }
 
-  get passthrough() {
-    return false;
-  }
-
   destroy() {
   }
 
-  insertDiscontinuity() {
-    this._initPTS = this._initDTS = undefined;
+  resetTimeStamp(defaultTimeStamp) {
+    this._initPTS = this._initDTS = defaultTimeStamp;
   }
 
-  switchLevel() {
+  resetInitSegment() {
     this.ISGenerated = false;
   }
 
-  remux(level,sn,cc,audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous,accurateTimeOffset,defaultInitPTS) {
+  remux(level,sn,cc,audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous,accurateTimeOffset) {
     this.level = level;
     this.sn = sn;
     // generate Init Segment if needed
     if (!this.ISGenerated) {
       this.generateIS(audioTrack,videoTrack,timeOffset,cc);
-    }
-
-    if((defaultInitPTS!==null)){
-      this._initPTS=this._initDTS= defaultInitPTS;
     }
 
     if (this.ISGenerated) {
@@ -265,9 +257,18 @@ class MP4Remuxer {
       mp4SampleDuration = Math.round((lastDTS-firstDTS)/(pes2mp4ScaleFactor*(inputSamples.length-1)));
     }
 
-    // normalize all PTS/DTS now ...
+    let nbNalu = 0, naluLen = 0;
     for (let i = 0 ; i < nbSamples; i++) {
-      let sample = inputSamples[i];
+      // compute total/avc sample length and nb of NAL units
+      let sample = inputSamples[i], units = sample.units.units, nbUnits = units.length, sampleLen = 0;
+      for (let j = 0; j < nbUnits; j++) {
+        sampleLen += units[j].data.length;
+      }
+      naluLen += sampleLen;
+      nbNalu += nbUnits;
+      sample.length = sampleLen;
+
+      // normalize PTS/DTS
       if (isSafari) {
         // sample DTS is computed using a constant decoding offset (mp4SampleDuration) between samples
         sample.dts = firstDTS + i*pes2mp4ScaleFactor*mp4SampleDuration;
@@ -286,7 +287,7 @@ class MP4Remuxer {
 
     /* concatenate the video data and construct the mdat in place
       (need 8 more bytes to fill length and mpdat type) */
-    let mdatSize = track.len + (4 * track.nbNalu) + 8;
+    let mdatSize = naluLen + (4 * nbNalu) + 8;
     try {
       mdat = new Uint8Array(mdatSize);
     } catch(err) {

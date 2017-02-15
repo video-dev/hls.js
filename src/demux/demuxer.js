@@ -11,7 +11,6 @@ class Demuxer {
     this.id = id;
     var typeSupported = {
       mp4 : MediaSource.isTypeSupported('video/mp4'),
-      mp2t : hls.config.enableMP2TPassThrough && MediaSource.isTypeSupported('video/mp2t'),
       mpeg: MediaSource.isTypeSupported('audio/mpeg'),
       mp3: MediaSource.isTypeSupported('audio/mp4; codecs="mp3"')
     };
@@ -37,7 +36,6 @@ class Demuxer {
       } else {
         this.demuxer = new DemuxerInline(hls,id,typeSupported);
       }
-      this.demuxInitialized = true;
   }
 
   destroy() {
@@ -55,15 +53,15 @@ class Demuxer {
     }
   }
 
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata,accurateTimeOffset,defaultInitPTS) {
+  push(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata,accurateTimeOffset,defaultInitPTS) {
     let w = this.w;
     if (w) {
       // post fragment payload as transferable objects (no copy)
-      w.postMessage({cmd: 'demux', data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset,defaultInitPTS}, [data]);
+      w.postMessage({cmd: 'demux', data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset,defaultInitPTS}, [data]);
     } else {
       let demuxer = this.demuxer;
       if (demuxer) {
-        demuxer.push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,decryptdata, accurateTimeOffset,defaultInitPTS);
+        demuxer.push(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,decryptdata, accurateTimeOffset,defaultInitPTS);
       }
     }
   }
@@ -80,7 +78,9 @@ class Demuxer {
       // special case for FRAG_PARSING_DATA: data1 and data2 are transferable objects
       case Event.FRAG_PARSING_DATA:
         data.data.data1 = new Uint8Array(data.data1);
-        data.data.data2 = new Uint8Array(data.data2);
+        if (data.data2) {
+          data.data.data2 = new Uint8Array(data.data2);
+        }
         /* falls through */
       default:
         hls.trigger(data.event, data.data);
