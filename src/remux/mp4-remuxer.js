@@ -22,11 +22,11 @@ class MP4Remuxer {
 
     destroy() {}
 
-    insertDiscontinuity() {
+    resetTimeStamp() {
         this._initPTS = this._initDTS = undefined;
     }
 
-    switchLevel() {
+    resetInitSegment() {
         this.ISGenerated = false;
     }
 

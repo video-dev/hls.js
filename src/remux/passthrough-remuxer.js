@@ -11,9 +11,9 @@ class PassThroughRemuxer {
 
     destroy() {}
 
-    insertDiscontinuity() {}
+    resetTimeStamp() {}
 
-    switchLevel() {}
+    resetInitSegment() {}
 
     remux(
         level,

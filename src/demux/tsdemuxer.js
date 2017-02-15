@@ -17,19 +17,12 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
 class TSDemuxer {
-    constructor(observer, id, remuxerClass, config, typeSupported) {
+    constructor(observer, id, remuxer, config, typeSupported) {
         this.observer = observer;
         this.id = id;
-        this.remuxerClass = remuxerClass;
         this.config = config;
         this.typeSupported = typeSupported;
-        this.lastCC = 0;
-        this.remuxer = new this.remuxerClass(
-            observer,
-            id,
-            config,
-            typeSupported
-        );
+        this.remuxer = remuxer;
     }
 
     static probe(data) {
@@ -46,7 +39,7 @@ class TSDemuxer {
         }
     }
 
-    switchLevel() {
+    resetInitSegment() {
         this.pmtParsed = false;
         this._pmtId = -1;
         this._avcTrack = {
@@ -85,13 +78,9 @@ class TSDemuxer {
         this.aacOverFlow = null;
         this.aacLastPTS = null;
         this.avcSample = null;
-        this.remuxer.switchLevel();
     }
 
-    insertDiscontinuity() {
-        this.switchLevel();
-        this.remuxer.insertDiscontinuity();
-    }
+    resetTimeStamp() {}
 
     // feed incoming data to the front of the parsing pipeline
     push(
@@ -103,6 +92,7 @@ class TSDemuxer {
         cc,
         level,
         sn,
+        contiguous,
         duration,
         accurateTimeOffset,
         defaultInitPTS
@@ -119,20 +109,7 @@ class TSDemuxer {
         this.audioCodec = audioCodec;
         this.videoCodec = videoCodec;
         this._duration = duration;
-        this.contiguous = false;
-        if (cc !== this.lastCC) {
-            logger.log('discontinuity detected');
-            this.insertDiscontinuity();
-            this.lastCC = cc;
-        }
-        if (level !== this.lastLevel) {
-            logger.log('level switch detected');
-            this.switchLevel();
-            this.lastLevel = level;
-        } else if (sn === this.lastSN + 1) {
-            this.contiguous = true;
-        }
-        this.lastSN = sn;
+        this.contiguous = contiguous;
 
         var pmtParsed = this.pmtParsed,
             avcTrack = this._avcTrack,
@@ -320,14 +297,13 @@ class TSDemuxer {
             id3Track,
             this._txtTrack,
             timeOffset,
-            this.contiguous,
+            contiguous,
             accurateTimeOffset,
             defaultInitPTS
         );
     }
 
     destroy() {
-        this.switchLevel();
         this._initPTS = this._initDTS = undefined;
         this._duration = 0;
     }

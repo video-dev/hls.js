@@ -6,21 +6,14 @@ import { logger } from '../utils/logger';
 import ID3 from '../demux/id3';
 
 class AACDemuxer {
-    constructor(observer, id, remuxerClass, config, typeSupported) {
+    constructor(observer, id, remuxer, config) {
         this.observer = observer;
         this.id = id;
-        this.remuxerClass = remuxerClass;
         this.config = config;
-        this.remuxer = new this.remuxerClass(
-            observer,
-            id,
-            config,
-            typeSupported
-        );
-        this.insertDiscontinuity();
+        this.remuxer = remuxer;
     }
 
-    insertDiscontinuity() {
+    resetInitSegment() {
         this._aacTrack = {
             container: 'audio/adts',
             type: 'audio',
@@ -31,6 +24,9 @@ class AACDemuxer {
             len: 0
         };
     }
+
+    //
+    resetTimeStamp() {}
 
     static probe(data) {
         // check if data contains ID3 timestamp and ADTS sync worc
@@ -66,6 +62,7 @@ class AACDemuxer {
         cc,
         level,
         sn,
+        contiguous,
         duration,
         accurateTimeOffset,
         defaultInitPTS
@@ -83,24 +80,7 @@ class AACDemuxer {
             len,
             aacSample;
 
-        let contiguous = false;
-        if (cc !== this.lastCC) {
-            logger.log(`${this.id} discontinuity detected`);
-            this.lastCC = cc;
-            this.insertDiscontinuity();
-            this.remuxer.switchLevel();
-            this.remuxer.insertDiscontinuity();
-        } else if (level !== this.lastLevel) {
-            logger.log('audio track switch detected');
-            this.lastLevel = level;
-            this.remuxer.switchLevel();
-            this.insertDiscontinuity();
-        } else if (sn === this.lastSN + 1) {
-            contiguous = true;
-        }
         track = this._aacTrack;
-        this.lastSN = sn;
-        this.lastLevel = level;
 
         // look for ADTS header (0xFFFx)
         for (
