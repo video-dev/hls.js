@@ -295,7 +295,7 @@ class BufferController extends EventHandler {
     // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
     // this error might not always be fatal (it is fatal if decode error is set, in that case
     // it will be followed by a mediaElement error ...)
-    this.hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_APPENDING_ERROR, fatal: false, frag: this.fragCurrent});
+    this.hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_APPENDING_ERROR, fatal: false});
   }
 
   // on BUFFER_EOS mark matching sourcebuffer(s) as ended and trigger checkEos()
@@ -462,7 +462,7 @@ class BufferController extends EventHandler {
           // in case any error occured while appending, put back segment in segments table
           logger.error(`error while trying to append buffer:${err.message}`);
           segments.unshift(segment);
-          var event = {type: ErrorTypes.MEDIA_ERROR};
+          var event = {type: ErrorTypes.MEDIA_ERROR, parent : segment.parent};
           if(err.code !== 22) {
             if (this.appendError) {
               this.appendError++;
@@ -470,7 +470,6 @@ class BufferController extends EventHandler {
               this.appendError = 1;
             }
             event.details = ErrorDetails.BUFFER_APPEND_ERROR;
-            event.frag = this.fragCurrent;
             /* with UHD content, we could get loop of quota exceeded error until
               browser is able to evict some data from sourcebuffer. retrying help recovering this
             */
