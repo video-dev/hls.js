@@ -65,7 +65,6 @@
     this.videoCodec = videoCodec;
     this._duration = duration;
     this.contiguous = false;
-    this.accurateTimeOffset = accurateTimeOffset;
     if (cc !== this.lastCC) {
       logger.log('discontinuity detected');
       this.insertDiscontinuity();
