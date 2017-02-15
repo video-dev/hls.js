@@ -36,7 +36,6 @@ class Demuxer {
       } else {
         this.demuxer = new DemuxerInline(hls,id,typeSupported);
       }
-      this.demuxInitialized = true;
   }
 
   destroy() {
