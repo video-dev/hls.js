@@ -1043,8 +1043,8 @@ class AudioStreamController extends EventHandler {
                         // flush everything
                         this.state = State.BUFFER_FLUSHING;
                         this.hls.trigger(Event.BUFFER_FLUSHING, {
-                            startOffset: startOffset,
-                            endOffset: endOffset,
+                            startOffset: 0,
+                            endOffset: Number.POSITIVE_INFINITY,
                             type: 'audio'
                         });
                     }
