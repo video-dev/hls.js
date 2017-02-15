@@ -6,5 +6,6 @@
 	"nasa": {"url": "http://nasatv-lh.akamaihd.net/i/NASA_101@319270/index_1000_av-p.m3u8?sd=10&rebase=on", "description": "NASA live stream", "live": true, "abr": false, "blacklist_ua" : ["internet explorer","safari"]},
   "closedcaptions" : {"url": "http://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8", "description": "CNN special report, with CC", "live": false, "abr": false, "blacklist_ua" : ["safari"]},
   "oceans_aes": {"url": "http://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8", "description": "AES encrypted,ABR", "live": false , "abr": true},
-  "mp3": {"url": "https://player.webvideocore.net/CL1olYogIrDWvwqiIKK7eLBkzvO18gwo9ERMzsyXzwt_t-ya8ygf2kQBZww38JJT/8i4vvznv8408.m3u8", "description": "MP3 VOD demo", "live": false , "abr": false, "blacklist_ua" : ["safari"]}
+  "mp3": {"url": "https://player.webvideocore.net/CL1olYogIrDWvwqiIKK7eLBkzvO18gwo9ERMzsyXzwt_t-ya8ygf2kQBZww38JJT/8i4vvznv8408.m3u8", "description": "MP3 VOD demo", "live": false , "abr": false, "blacklist_ua" : ["safari"]},
+  "fmp4": {"url": "https://d2zihajmogu5jn.cloudfront.net/advanced-fmp4/master.m3u8", "description": "HLS fMP4 multiple audio tracks", "live": false , "abr": false, "blacklist_ua" : ["safari"]}
 }

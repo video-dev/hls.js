@@ -17,19 +17,12 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
 class TSDemuxer {
-    constructor(observer, id, remuxerClass, config, typeSupported) {
+    constructor(observer, id, remuxer, config, typeSupported) {
         this.observer = observer;
         this.id = id;
-        this.remuxerClass = remuxerClass;
         this.config = config;
         this.typeSupported = typeSupported;
-        this.lastCC = 0;
-        this.remuxer = new this.remuxerClass(
-            observer,
-            id,
-            config,
-            typeSupported
-        );
+        this.remuxer = remuxer;
     }
 
     static probe(data) {
@@ -46,7 +39,7 @@ class TSDemuxer {
         }
     }
 
-    switchLevel() {
+    resetInitSegment(initSegment, level, sn, audioCodec, videoCodec, duration) {
         this.pmtParsed = false;
         this._pmtId = -1;
         this._avcTrack = {
@@ -85,27 +78,15 @@ class TSDemuxer {
         this.aacOverFlow = null;
         this.aacLastPTS = null;
         this.avcSample = null;
-        this.remuxer.switchLevel();
+        this.audioCodec = audioCodec;
+        this.videoCodec = videoCodec;
+        this._duration = duration;
     }
 
-    insertDiscontinuity() {
-        this.switchLevel();
-        this.remuxer.insertDiscontinuity();
-    }
+    resetTimeStamp() {}
 
     // feed incoming data to the front of the parsing pipeline
-    push(
-        data,
-        audioCodec,
-        videoCodec,
-        timeOffset,
-        cc,
-        level,
-        sn,
-        duration,
-        accurateTimeOffset,
-        defaultInitPTS
-    ) {
+    append(data, timeOffset, cc, level, sn, contiguous, accurateTimeOffset) {
         var start,
             len = data.length,
             stt,
@@ -113,28 +94,8 @@ class TSDemuxer {
             atf,
             offset,
             pes,
-            codecsOnly = this.remuxer.passthrough,
             unknownPIDs = false;
-
-        this.audioCodec = audioCodec;
-        this.videoCodec = videoCodec;
-        this._duration = duration;
-        this.contiguous = false;
-        this.accurateTimeOffset = accurateTimeOffset;
-        if (cc !== this.lastCC) {
-            logger.log('discontinuity detected');
-            this.insertDiscontinuity();
-            this.lastCC = cc;
-        }
-        if (level !== this.lastLevel) {
-            logger.log('level switch detected');
-            this.switchLevel();
-            this.lastLevel = level;
-        } else if (sn === this.lastSN + 1) {
-            this.contiguous = true;
-        }
-        this.lastSN = sn;
-
+        this.contiguous = contiguous;
         var pmtParsed = this.pmtParsed,
             avcTrack = this._avcTrack,
             audioTrack = this._audioTrack,
@@ -178,24 +139,6 @@ class TSDemuxer {
                         if (stt) {
                             if (avcData && (pes = parsePES(avcData))) {
                                 parseAVCPES(pes, false);
-                                if (codecsOnly) {
-                                    // if we have video codec info AND
-                                    // if audio PID is undefined OR if we have audio codec info,
-                                    // we have all codec info !
-                                    if (
-                                        avcTrack.codec &&
-                                        (audioId === -1 || audioTrack.codec)
-                                    ) {
-                                        this.remux(
-                                            level,
-                                            sn,
-                                            cc,
-                                            data,
-                                            timeOffset
-                                        );
-                                        return;
-                                    }
-                                }
                             }
                             avcData = { data: [], size: 0 };
                         }
@@ -213,24 +156,6 @@ class TSDemuxer {
                                     parseAACPES(pes);
                                 } else {
                                     parseMPEGPES(pes);
-                                }
-                                if (codecsOnly) {
-                                    // here we now that we have audio codec info
-                                    // if video PID is undefined OR if we have video codec info,
-                                    // we have all codec infos !
-                                    if (
-                                        audioTrack.codec &&
-                                        (avcId === -1 || avcTrack.codec)
-                                    ) {
-                                        this.remux(
-                                            level,
-                                            sn,
-                                            cc,
-                                            data,
-                                            timeOffset
-                                        );
-                                        return;
-                                    }
                                 }
                             }
                             audioData = { data: [], size: 0 };
@@ -348,48 +273,21 @@ class TSDemuxer {
             // either id3Data null or PES truncated, keep it for next frag parsing
             id3Track.pesData = id3Data;
         }
-        this.remux(level, sn, cc, null, timeOffset, defaultInitPTS);
-    }
-
-    remux(level, sn, cc, data, timeOffset, defaultInitPTS) {
-        let avcTrack = this._avcTrack,
-            samples = avcTrack.samples,
-            nbNalu = 0,
-            naluLen = 0;
-
-        // compute total/avc sample length and nb of NAL units
-        for (let i = 0; i < samples.length; i++) {
-            let sample = samples[i],
-                units = sample.units.units,
-                nbUnits = units.length,
-                sampleLen = 0;
-            for (let j = 0; j < nbUnits; j++) {
-                sampleLen += units[j].data.length;
-            }
-            naluLen += sampleLen;
-            nbNalu += nbUnits;
-            sample.length = sampleLen;
-        }
-        avcTrack.len = naluLen;
-        avcTrack.nbNalu = nbNalu;
         this.remuxer.remux(
             level,
             sn,
             cc,
-            this._audioTrack,
-            this._avcTrack,
-            this._id3Track,
+            audioTrack,
+            avcTrack,
+            id3Track,
             this._txtTrack,
             timeOffset,
-            this.contiguous,
-            this.accurateTimeOffset,
-            defaultInitPTS,
-            data
+            contiguous,
+            accurateTimeOffset
         );
     }
 
     destroy() {
-        this.switchLevel();
         this._initPTS = this._initDTS = undefined;
         this._duration = 0;
     }

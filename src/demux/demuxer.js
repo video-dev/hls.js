@@ -10,9 +10,6 @@ class Demuxer {
         this.id = id;
         var typeSupported = {
             mp4: MediaSource.isTypeSupported('video/mp4'),
-            mp2t:
-                hls.config.enableMP2TPassThrough &&
-                MediaSource.isTypeSupported('video/mp2t'),
             mpeg: MediaSource.isTypeSupported('audio/mpeg'),
             mp3: MediaSource.isTypeSupported('audio/mp4; codecs="mp3"')
         };
@@ -61,7 +58,6 @@ class Demuxer {
         } else {
             this.demuxer = new DemuxerInline(hls, id, typeSupported);
         }
-        this.demuxInitialized = true;
     }
 
     destroy() {
@@ -81,6 +77,7 @@ class Demuxer {
 
     push(
         data,
+        initSegment,
         audioCodec,
         videoCodec,
         timeOffset,
@@ -99,6 +96,7 @@ class Demuxer {
                 {
                     cmd: 'demux',
                     data,
+                    initSegment,
                     audioCodec,
                     videoCodec,
                     timeOffset,
@@ -117,6 +115,7 @@ class Demuxer {
             if (demuxer) {
                 demuxer.push(
                     data,
+                    initSegment,
                     audioCodec,
                     videoCodec,
                     timeOffset,
@@ -144,7 +143,9 @@ class Demuxer {
             // special case for FRAG_PARSING_DATA: data1 and data2 are transferable objects
             case Event.FRAG_PARSING_DATA:
                 data.data.data1 = new Uint8Array(data.data1);
-                data.data.data2 = new Uint8Array(data.data2);
+                if (data.data2) {
+                    data.data.data2 = new Uint8Array(data.data2);
+                }
             /* falls through */
             default:
                 hls.trigger(data.event, data.data);

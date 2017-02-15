@@ -4,8 +4,10 @@
 
 import Event from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
+import { logger } from '../utils/logger';
 import Decrypter from '../crypt/decrypter';
 import AACDemuxer from '../demux/aacdemuxer';
+import MP4Demuxer from '../demux/mp4demuxer';
 import TSDemuxer from '../demux/tsdemuxer';
 import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
@@ -27,6 +29,7 @@ class DemuxerInline {
 
     push(
         data,
+        initSegment,
         audioCodec,
         videoCodec,
         timeOffset,
@@ -73,6 +76,7 @@ class DemuxerInline {
                     });
                     localthis.pushDecrypted(
                         new Uint8Array(decryptedData),
+                        new Uint8Array(initSegment),
                         audioCodec,
                         videoCodec,
                         timeOffset,
@@ -88,6 +92,7 @@ class DemuxerInline {
         } else {
             this.pushDecrypted(
                 new Uint8Array(data),
+                new Uint8Array(initSegment),
                 audioCodec,
                 videoCodec,
                 timeOffset,
@@ -103,6 +108,7 @@ class DemuxerInline {
 
     pushDecrypted(
         data,
+        initSegment,
         audioCodec,
         videoCodec,
         timeOffset,
@@ -114,46 +120,43 @@ class DemuxerInline {
         defaultInitPTS
     ) {
         var demuxer = this.demuxer;
+        const id = this.id;
         if (
             !demuxer ||
             // in case of continuity change, we might switch from content type (AAC container to TS container for example)
             // so let's check that current demuxer is still valid
-            (cc !== this.cc && !demuxer.probe(data))
+            (cc !== this.cc && !this.probe(data))
         ) {
-            let hls = this.hls,
-                id = this.id,
-                config = this.config,
-                typeSupported = this.typeSupported;
+            const hls = this.hls;
+            const muxConfig = [
+                { demux: TSDemuxer, remux: MP4Remuxer },
+                { demux: AACDemuxer, remux: MP4Remuxer },
+                { demux: MP4Demuxer, remux: PassThroughRemuxer }
+            ];
+
             // probe for content type
-            if (TSDemuxer.probe(data)) {
-                if (this.typeSupported.mp2t === true) {
-                    demuxer = new TSDemuxer(
+            for (let i in muxConfig) {
+                const mux = muxConfig[i];
+                const probe = mux.demux.probe;
+                if (probe(data)) {
+                    const remuxer = (this.remuxer = new mux.remux(
                         hls,
                         id,
-                        PassThroughRemuxer,
-                        config,
-                        typeSupported
-                    );
-                } else {
-                    demuxer = new TSDemuxer(
+                        this.config,
+                        this.typeSupported
+                    ));
+                    demuxer = new mux.demux(
                         hls,
                         id,
-                        MP4Remuxer,
-                        config,
-                        typeSupported
+                        remuxer,
+                        this.config,
+                        this.typeSupported
                     );
+                    this.probe = probe;
+                    break;
                 }
-                demuxer.probe = TSDemuxer.probe;
-            } else if (AACDemuxer.probe(data)) {
-                demuxer = new AACDemuxer(
-                    hls,
-                    id,
-                    MP4Remuxer,
-                    config,
-                    typeSupported
-                );
-                demuxer.probe = AACDemuxer.probe;
-            } else {
+            }
+            if (!demuxer) {
                 hls.trigger(Event.ERROR, {
                     type: ErrorTypes.MEDIA_ERROR,
                     id: id,
@@ -164,20 +167,51 @@ class DemuxerInline {
                 return;
             }
             this.demuxer = demuxer;
+            this.lastCC = 0;
         }
-        demuxer.push(
+        let contiguous = false;
+        const remuxer = this.remuxer;
+        if (cc !== this.lastCC) {
+            logger.log(`${id}:discontinuity detected`);
+            demuxer.resetInitSegment(
+                initSegment,
+                level,
+                sn,
+                audioCodec,
+                videoCodec,
+                duration
+            );
+            remuxer.resetInitSegment();
+            demuxer.resetTimeStamp();
+            remuxer.resetTimeStamp(defaultInitPTS);
+            this.lastCC = cc;
+        }
+        if (level !== this.lastLevel) {
+            logger.log(`${id}:switch detected`);
+            demuxer.resetInitSegment(
+                initSegment,
+                level,
+                sn,
+                audioCodec,
+                videoCodec,
+                duration
+            );
+            remuxer.resetInitSegment();
+            this.lastLevel = level;
+        } else if (sn === this.lastSN + 1) {
+            contiguous = true;
+        }
+        this.lastSN = sn;
+        this.cc = cc;
+        demuxer.append(
             data,
-            audioCodec,
-            videoCodec,
             timeOffset,
             cc,
             level,
             sn,
-            duration,
-            accurateTimeOffset,
-            defaultInitPTS
+            contiguous,
+            accurateTimeOffset
         );
-        this.cc = cc;
     }
 }
 

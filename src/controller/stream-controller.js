@@ -318,33 +318,38 @@ class StreamController extends EventHandler {
             bufferEnd = bufferInfo.end,
             frag;
 
-        // in case of live playlist we need to ensure that requested position is not located before playlist start
-        if (levelDetails.live) {
-            let initialLiveManifestSize = this.config.initialLiveManifestSize;
-            if (fragLen < initialLiveManifestSize) {
-                logger.warn(
-                    `Can not start playback of a level, reason: not enough fragments ${fragLen} < ${initialLiveManifestSize}`
-                );
-                return false;
-            }
-
-            frag = this._ensureFragmentAtLivePoint(
-                levelDetails,
-                bufferEnd,
-                start,
-                end,
-                fragPrevious,
-                fragments,
-                fragLen
-            );
-            // if it explicitely returns null don't load any fragment and exit function now
-            if (frag === null) {
-                return false;
-            }
+        if (levelDetails.initSegment && !levelDetails.initSegment.data) {
+            frag = levelDetails.initSegment;
         } else {
-            // VoD playlist: if bufferEnd before start of playlist, load first fragment
-            if (bufferEnd < start) {
-                frag = fragments[0];
+            // in case of live playlist we need to ensure that requested position is not located before playlist start
+            if (levelDetails.live) {
+                let initialLiveManifestSize = this.config
+                    .initialLiveManifestSize;
+                if (fragLen < initialLiveManifestSize) {
+                    logger.warn(
+                        `Can not start playback of a level, reason: not enough fragments ${fragLen} < ${initialLiveManifestSize}`
+                    );
+                    return false;
+                }
+
+                frag = this._ensureFragmentAtLivePoint(
+                    levelDetails,
+                    bufferEnd,
+                    start,
+                    end,
+                    fragPrevious,
+                    fragments,
+                    fragLen
+                );
+                // if it explicitely returns null don't load any fragment and exit function now
+                if (frag === null) {
+                    return false;
+                }
+            } else {
+                // VoD playlist: if bufferEnd before start of playlist, load first fragment
+                if (bufferEnd < start) {
+                    frag = fragments[0];
+                }
             }
         }
         if (!frag) {
@@ -606,7 +611,11 @@ class StreamController extends EventHandler {
             config = hls.config;
 
         //logger.log('loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
-        if (frag.decryptdata.uri != null && frag.decryptdata.key == null) {
+        if (
+            frag.decryptdata &&
+            frag.decryptdata.uri != null &&
+            frag.decryptdata.key == null
+        ) {
             logger.log(
                 `Loading key for ${frag.sn} of [${levelDetails.startSN} ,${
                     levelDetails.endSN
@@ -650,7 +659,9 @@ class StreamController extends EventHandler {
             frag.loadIdx = this.fragLoadIdx;
             this.fragCurrent = frag;
             this.startFragRequested = true;
-            this.nextLoadPosition = frag.start + frag.duration;
+            if (!isNaN(frag.sn)) {
+                this.nextLoadPosition = frag.start + frag.duration;
+            }
             frag.autoLevel = hls.autoLevelEnabled;
             frag.bitrateTest = this.bitrateTest;
             hls.trigger(Event.FRAG_LOADING, { frag: frag });
@@ -1156,6 +1167,7 @@ class StreamController extends EventHandler {
             );
             // reset frag bitrate test in any case after frag loaded event
             this.bitrateTest = false;
+            this.stats = stats;
             // if this frag was loaded to perform a bitrate test AND if hls.nextLoadLevel is greater than 0
             // then this means that we should be able to load a fragment at a higher quality level
             if (fragLoaded.bitrateTest === true && this.hls.nextLoadLevel) {
@@ -1169,10 +1181,19 @@ class StreamController extends EventHandler {
                     id: 'main'
                 });
                 this.tick();
+            } else if (fragLoaded.sn === 'initSegment') {
+                this.state = State.IDLE;
+                stats.tparsed = stats.tbuffered = performance.now();
+                details.initSegment.data = data.payload;
+                this.hls.trigger(Event.FRAG_BUFFERED, {
+                    stats: stats,
+                    frag: fragCurrent,
+                    id: 'main'
+                });
+                this.tick();
             } else {
                 this.state = State.PARSING;
                 // transmux the MPEG-TS data to ISO-BMFF segments
-                this.stats = stats;
                 let duration = details.totalduration,
                     start = !isNaN(fragCurrent.startDTS)
                         ? fragCurrent.startDTS
@@ -1211,8 +1232,12 @@ class StreamController extends EventHandler {
                 let mediaSeeking = media && media.seeking;
                 let accurateTimeOffset =
                     !mediaSeeking && (details.PTSKnown || !details.live);
+                let initSegmentData = details.initSegment
+                    ? details.initSegment.data
+                    : [];
                 demuxer.push(
                     data.payload,
+                    initSegmentData,
                     audioCodec,
                     currentLevel.videoCodec,
                     start,
@@ -1353,6 +1378,10 @@ class StreamController extends EventHandler {
         ) {
             var level = this.levels[this.level],
                 frag = this.fragCurrent;
+            if (isNaN(data.endPTS)) {
+                data.endPTS = data.startPTS + fragCurrent.duration;
+                data.endDTS = data.startDTS + fragCurrent.duration;
+            }
 
             logger.log(
                 `Parsed ${data.type},PTS:[${data.startPTS.toFixed(
@@ -1408,20 +1437,18 @@ class StreamController extends EventHandler {
 
             // has remuxer dropped video frames located before first keyframe ?
             [data.data1, data.data2].forEach(buffer => {
-                if (buffer) {
-                    // only append in PARSING state (rationale is that an appending error could happen synchronously on first segment appending)
-                    // in that case it is useless to append following segments
-                    if (this.state === State.PARSING) {
-                        this.appended = true;
-                        // arm pending Buffering flag before appending a segment
-                        this.pendingBuffering = true;
-                        hls.trigger(Event.BUFFER_APPENDING, {
-                            type: data.type,
-                            data: buffer,
-                            parent: 'main',
-                            content: 'data'
-                        });
-                    }
+                // only append in PARSING state (rationale is that an appending error could happen synchronously on first segment appending)
+                // in that case it is useless to append following segments
+                if (buffer && buffer.length && this.state === State.PARSING) {
+                    this.appended = true;
+                    // arm pending Buffering flag before appending a segment
+                    this.pendingBuffering = true;
+                    hls.trigger(Event.BUFFER_APPENDING, {
+                        type: data.type,
+                        data: buffer,
+                        parent: 'main',
+                        content: 'data'
+                    });
                 }
             });
             //trigger handler right now

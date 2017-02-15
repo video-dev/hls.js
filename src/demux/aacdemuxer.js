@@ -6,21 +6,14 @@ import { logger } from '../utils/logger';
 import ID3 from '../demux/id3';
 
 class AACDemuxer {
-    constructor(observer, id, remuxerClass, config, typeSupported) {
+    constructor(observer, id, remuxer, config) {
         this.observer = observer;
         this.id = id;
-        this.remuxerClass = remuxerClass;
         this.config = config;
-        this.remuxer = new this.remuxerClass(
-            observer,
-            id,
-            config,
-            typeSupported
-        );
-        this.insertDiscontinuity();
+        this.remuxer = remuxer;
     }
 
-    insertDiscontinuity() {
+    resetInitSegment(initSegment, level, sn, audioCodec, videoCodec, duration) {
         this._aacTrack = {
             container: 'audio/adts',
             type: 'audio',
@@ -28,9 +21,13 @@ class AACDemuxer {
             sequenceNumber: 0,
             isAAC: true,
             samples: [],
-            len: 0
+            len: 0,
+            manifestCodec: audioCodec,
+            duration: duration
         };
     }
+
+    resetTimeStamp() {}
 
     static probe(data) {
         // check if data contains ID3 timestamp and ADTS sync worc
@@ -57,18 +54,7 @@ class AACDemuxer {
     }
 
     // feed incoming data to the front of the parsing pipeline
-    push(
-        data,
-        audioCodec,
-        videoCodec,
-        timeOffset,
-        cc,
-        level,
-        sn,
-        duration,
-        accurateTimeOffset,
-        defaultInitPTS
-    ) {
+    append(data, timeOffset, cc, level, sn, contiguous, accurateTimeOffset) {
         var track,
             id3 = new ID3(data),
             pts = 90 * id3.timeStamp,
@@ -82,24 +68,7 @@ class AACDemuxer {
             len,
             aacSample;
 
-        let contiguous = false;
-        if (cc !== this.lastCC) {
-            logger.log(`${this.id} discontinuity detected`);
-            this.lastCC = cc;
-            this.insertDiscontinuity();
-            this.remuxer.switchLevel();
-            this.remuxer.insertDiscontinuity();
-        } else if (level !== this.lastLevel) {
-            logger.log('audio track switch detected');
-            this.lastLevel = level;
-            this.remuxer.switchLevel();
-            this.insertDiscontinuity();
-        } else if (sn === this.lastSN + 1) {
-            contiguous = true;
-        }
         track = this._aacTrack;
-        this.lastSN = sn;
-        this.lastLevel = level;
 
         // look for ADTS header (0xFFFx)
         for (
@@ -117,14 +86,12 @@ class AACDemuxer {
                 this.observer,
                 data,
                 offset,
-                audioCodec
+                track.manifestCodec
             );
             track.config = config.config;
             track.audiosamplerate = config.samplerate;
             track.channelCount = config.channelCount;
             track.codec = config.codec;
-            track.manifestCodec = config.manifestCodec;
-            track.duration = duration;
             logger.log(
                 `parsed codec:${track.codec},rate:${
                     config.samplerate
@@ -182,8 +149,7 @@ class AACDemuxer {
             { samples: [] },
             timeOffset,
             contiguous,
-            accurateTimeOffset,
-            defaultInitPTS
+            accurateTimeOffset
         );
     }
 

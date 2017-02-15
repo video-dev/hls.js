@@ -85,7 +85,6 @@ export var hlsDefaultConfig = {
     enableCEA708Captions: true,
     enableWebVTT: true,
     //#endif
-    enableMP2TPassThrough: false,
     stretchShortVideoTrack: false,
     forceKeyFrameOnDiscontinuity: true,
     abrEwmaFastLive: 3,
