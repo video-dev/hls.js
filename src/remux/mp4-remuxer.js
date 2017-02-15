@@ -22,8 +22,8 @@ class MP4Remuxer {
 
     destroy() {}
 
-    resetTimeStamp() {
-        this._initPTS = this._initDTS = undefined;
+    resetTimeStamp(defaultTimeStamp) {
+        this._initPTS = this._initDTS = defaultTimeStamp;
     }
 
     resetInitSegment() {
@@ -40,18 +40,13 @@ class MP4Remuxer {
         textTrack,
         timeOffset,
         contiguous,
-        accurateTimeOffset,
-        defaultInitPTS
+        accurateTimeOffset
     ) {
         this.level = level;
         this.sn = sn;
         // generate Init Segment if needed
         if (!this.ISGenerated) {
             this.generateIS(audioTrack, videoTrack, timeOffset, cc);
-        }
-
-        if (defaultInitPTS !== null) {
-            this._initPTS = this._initDTS = defaultInitPTS;
         }
 
         if (this.ISGenerated) {

@@ -13,7 +13,7 @@ class AACDemuxer {
         this.remuxer = remuxer;
     }
 
-    resetInitSegment() {
+    resetInitSegment(initSegment, level, sn, audioCodec, videoCodec, duration) {
         this._aacTrack = {
             container: 'audio/adts',
             type: 'audio',
@@ -21,11 +21,12 @@ class AACDemuxer {
             sequenceNumber: 0,
             isAAC: true,
             samples: [],
-            len: 0
+            len: 0,
+            manifestCodec: audioCodec,
+            duration: duration
         };
     }
 
-    //
     resetTimeStamp() {}
 
     static probe(data) {
@@ -53,20 +54,7 @@ class AACDemuxer {
     }
 
     // feed incoming data to the front of the parsing pipeline
-    push(
-        data,
-        initSegment,
-        audioCodec,
-        videoCodec,
-        timeOffset,
-        cc,
-        level,
-        sn,
-        contiguous,
-        duration,
-        accurateTimeOffset,
-        defaultInitPTS
-    ) {
+    append(data, timeOffset, cc, level, sn, contiguous, accurateTimeOffset) {
         var track,
             id3 = new ID3(data),
             pts = 90 * id3.timeStamp,
@@ -98,14 +86,12 @@ class AACDemuxer {
                 this.observer,
                 data,
                 offset,
-                audioCodec
+                track.manifestCodec
             );
             track.config = config.config;
             track.audiosamplerate = config.samplerate;
             track.channelCount = config.channelCount;
             track.codec = config.codec;
-            track.manifestCodec = config.manifestCodec;
-            track.duration = duration;
             logger.log(
                 `parsed codec:${track.codec},rate:${
                     config.samplerate
@@ -163,8 +149,7 @@ class AACDemuxer {
             { samples: [] },
             timeOffset,
             contiguous,
-            accurateTimeOffset,
-            defaultInitPTS
+            accurateTimeOffset
         );
     }
 

@@ -39,7 +39,7 @@ class TSDemuxer {
         }
     }
 
-    resetInitSegment() {
+    resetInitSegment(initSegment, level, sn, audioCodec, videoCodec, duration) {
         this.pmtParsed = false;
         this._pmtId = -1;
         this._avcTrack = {
@@ -78,25 +78,15 @@ class TSDemuxer {
         this.aacOverFlow = null;
         this.aacLastPTS = null;
         this.avcSample = null;
+        this.audioCodec = audioCodec;
+        this.videoCodec = videoCodec;
+        this._duration = duration;
     }
 
     resetTimeStamp() {}
 
     // feed incoming data to the front of the parsing pipeline
-    push(
-        data,
-        initSegment,
-        audioCodec,
-        videoCodec,
-        timeOffset,
-        cc,
-        level,
-        sn,
-        contiguous,
-        duration,
-        accurateTimeOffset,
-        defaultInitPTS
-    ) {
+    append(data, timeOffset, cc, level, sn, contiguous, accurateTimeOffset) {
         var start,
             len = data.length,
             stt,
@@ -105,12 +95,7 @@ class TSDemuxer {
             offset,
             pes,
             unknownPIDs = false;
-
-        this.audioCodec = audioCodec;
-        this.videoCodec = videoCodec;
-        this._duration = duration;
         this.contiguous = contiguous;
-
         var pmtParsed = this.pmtParsed,
             avcTrack = this._avcTrack,
             audioTrack = this._audioTrack,
@@ -298,8 +283,7 @@ class TSDemuxer {
             this._txtTrack,
             timeOffset,
             contiguous,
-            accurateTimeOffset,
-            defaultInitPTS
+            accurateTimeOffset
         );
     }
 

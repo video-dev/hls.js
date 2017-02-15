@@ -26,7 +26,6 @@ class PassThroughRemuxer {
         timeOffset,
         contiguous,
         accurateTimeOffset,
-        defaultInitPTS,
         rawData
     ) {
         var observer = this.observer;

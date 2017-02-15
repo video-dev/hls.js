@@ -178,21 +178,23 @@ class DemuxerInline {
                 level,
                 sn,
                 audioCodec,
-                videoCodec
+                videoCodec,
+                duration
             );
             remuxer.resetInitSegment();
             demuxer.resetTimeStamp();
-            remuxer.resetTimeStamp();
+            remuxer.resetTimeStamp(defaultInitPTS);
             this.lastCC = cc;
         }
         if (level !== this.lastLevel) {
-            logger.log(`${id}:level switch detected`);
+            logger.log(`${id}:switch detected`);
             demuxer.resetInitSegment(
                 initSegment,
                 level,
                 sn,
                 audioCodec,
-                videoCodec
+                videoCodec,
+                duration
             );
             remuxer.resetInitSegment();
             this.lastLevel = level;
@@ -201,19 +203,14 @@ class DemuxerInline {
         }
         this.lastSN = sn;
         this.cc = cc;
-        demuxer.push(
+        demuxer.append(
             data,
-            initSegment,
-            audioCodec,
-            videoCodec,
             timeOffset,
             cc,
             level,
             sn,
             contiguous,
-            duration,
-            accurateTimeOffset,
-            defaultInitPTS
+            accurateTimeOffset
         );
     }
 }
