@@ -1377,16 +1377,13 @@ var AudioStreamController = function (_EventHandler) {
                       }
                     return 0;
                   };
-                  if (!foundFrag) {
-                    _logger.logger.log('frag not found @bufferEnd/start:' + bufferEnd + '/' + start);
-                  }
 
                   if (bufferEnd < end) {
                     if (bufferEnd > end - maxFragLookUpTolerance) {
                       maxFragLookUpTolerance = 0;
                     }
                     // Prefer the next fragment if it's within tolerance
-                    if (fragNext && !fragmentWithinToleranceTest(fragNext) === 0) {
+                    if (fragNext && !fragmentWithinToleranceTest(fragNext)) {
                       foundFrag = fragNext;
                     } else {
                       foundFrag = _binarySearch2.default.search(fragments, fragmentWithinToleranceTest);
@@ -1776,9 +1773,13 @@ var AudioStreamController = function (_EventHandler) {
             });
             if (!appendOnBufferFlush && pendingData.length) {
               pendingData.forEach(function (appendObj) {
-                // arm pending Buffering flag before appending a segment
-                _this3.pendingBuffering = true;
-                _this3.hls.trigger(_events2.default.BUFFER_APPENDING, appendObj);
+                // only append in PARSING state (rationale is that an appending error could happen synchronously on first segment appending)
+                // in that case it is useless to append following segments
+                if (_this3.state === State.PARSING) {
+                  // arm pending Buffering flag before appending a segment
+                  _this3.pendingBuffering = true;
+                  _this3.hls.trigger(_events2.default.BUFFER_APPENDING, appendObj);
+                }
               });
               _this3.pendingData = [];
               _this3.appended = true;
@@ -1891,6 +1892,35 @@ var AudioStreamController = function (_EventHandler) {
             // if fatal error, stop processing, otherwise move to IDLE to retry loading
             this.state = data.fatal ? State.ERROR : State.IDLE;
             _logger.logger.warn('audioStreamController: ' + data.details + ' while loading frag,switch to ' + this.state + ' state ...');
+          }
+          break;
+        case _errors.ErrorDetails.BUFFER_FULL_ERROR:
+          // if in appending state
+          if (data.parent === 'audio' && (this.state === State.PARSING || this.state === State.PARSED)) {
+            var media = this.mediaBuffer,
+                currentTime = this.media.currentTime,
+                mediaBuffered = media && _bufferHelper2.default.isBuffered(media, currentTime) && _bufferHelper2.default.isBuffered(media, currentTime + 0.5);
+            // reduce max buf len if current position is buffered
+            if (mediaBuffered) {
+              var _config = this.config;
+              if (_config.maxMaxBufferLength >= _config.maxBufferLength) {
+                // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
+                _config.maxMaxBufferLength /= 2;
+                _logger.logger.warn('audio:reduce max buffer length to ' + _config.maxMaxBufferLength + 's');
+                // increase fragment load Index to avoid frag loop loading error after buffer flush
+                this.fragLoadIdx += 2 * _config.fragLoadingLoopThreshold;
+              }
+              this.state = State.IDLE;
+            } else {
+              // current position is not buffered, but browser is still complaining about buffer full error
+              // this happens on IE/Edge, refer to https://github.com/dailymotion/hls.js/pull/708
+              // in that case flush the whole audio buffer to recover
+              _logger.logger.warn('buffer full error also media.currentTime is not buffered, flush audio buffer');
+              this.fragCurrent = null;
+              // flush everything
+              this.state = State.BUFFER_FLUSHING;
+              this.hls.trigger(_events2.default.BUFFER_FLUSHING, { startOffset: startOffset, endOffset: endOffset, type: 'audio' });
+            }
           }
           break;
         default:
@@ -2465,7 +2495,7 @@ var BufferController = function (_EventHandler) {
       // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
       // this error might not always be fatal (it is fatal if decode error is set, in that case
       // it will be followed by a mediaElement error ...)
-      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_APPENDING_ERROR, fatal: false, frag: this.fragCurrent });
+      this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.BUFFER_APPENDING_ERROR, fatal: false });
     }
 
     // on BUFFER_EOS mark matching sourcebuffer(s) as ended and trigger checkEos()
@@ -2648,7 +2678,7 @@ var BufferController = function (_EventHandler) {
             // in case any error occured while appending, put back segment in segments table
             _logger.logger.error('error while trying to append buffer:' + err.message);
             segments.unshift(segment);
-            var event = { type: _errors.ErrorTypes.MEDIA_ERROR };
+            var event = { type: _errors.ErrorTypes.MEDIA_ERROR, parent: segment.parent };
             if (err.code !== 22) {
               if (this.appendError) {
                 this.appendError++;
@@ -2656,7 +2686,6 @@ var BufferController = function (_EventHandler) {
                 this.appendError = 1;
               }
               event.details = _errors.ErrorDetails.BUFFER_APPEND_ERROR;
-              event.frag = this.fragCurrent;
               /* with UHD content, we could get loop of quota exceeded error until
                 browser is able to evict some data from sourcebuffer. retrying help recovering this
               */
@@ -3288,7 +3317,9 @@ var LevelController = function (_EventHandler) {
         if (this._level !== newLevel) {
           _logger.logger.log('switching to level ' + newLevel);
           this._level = newLevel;
-          this.hls.trigger(_events2.default.LEVEL_SWITCH, { level: newLevel });
+          var levelProperties = levels[newLevel];
+          levelProperties.level = newLevel;
+          this.hls.trigger(_events2.default.LEVEL_SWITCH, levelProperties);
         }
         var level = levels[newLevel],
             levelDetails = level.details;
@@ -4650,7 +4681,7 @@ var StreamController = function (_EventHandler) {
               // Causes findFragments to backtrack a segment and find the keyframe
               // Audio fragments arriving before video sets the nextLoadPosition, causing _findFragments to skip the backtracked fragment
               frag.backtracked = true;
-              this.nextLoadPosition = frag.startPTS;
+              this.nextLoadPosition = data.startPTS;
               this.state = State.IDLE;
               this.tick();
               return;
@@ -4670,10 +4701,14 @@ var StreamController = function (_EventHandler) {
         // has remuxer dropped video frames located before first keyframe ?
         [data.data1, data.data2].forEach(function (buffer) {
           if (buffer) {
-            _this2.appended = true;
-            // arm pending Buffering flag before appending a segment
-            _this2.pendingBuffering = true;
-            hls.trigger(_events2.default.BUFFER_APPENDING, { type: data.type, data: buffer, parent: 'main', content: 'data' });
+            // only append in PARSING state (rationale is that an appending error could happen synchronously on first segment appending)
+            // in that case it is useless to append following segments
+            if (_this2.state === State.PARSING) {
+              _this2.appended = true;
+              // arm pending Buffering flag before appending a segment
+              _this2.pendingBuffering = true;
+              hls.trigger(_events2.default.BUFFER_APPENDING, { type: data.type, data: buffer, parent: 'main', content: 'data' });
+            }
           }
         });
         //trigger handler right now
@@ -4903,10 +4938,10 @@ var StreamController = function (_EventHandler) {
           break;
         case _errors.ErrorDetails.BUFFER_FULL_ERROR:
           // if in appending state
-          if (this.state === State.PARSING || this.state === State.PARSED) {
+          if (data.parent === 'main' && (this.state === State.PARSING || this.state === State.PARSED)) {
             // reduce max buf len if current position is buffered
             if (mediaBuffered) {
-              this._reduceMaxBufferLength(frag.duration);
+              this._reduceMaxBufferLength(this.config.maxBufferLength);
               this.state = State.IDLE;
             } else {
               // current position is not buffered, but browser is still complaining about buffer full error
@@ -4930,7 +4965,7 @@ var StreamController = function (_EventHandler) {
       if (config.maxMaxBufferLength >= minLength) {
         // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
         config.maxMaxBufferLength /= 2;
-        _logger.logger.warn('reduce max buffer length to ' + config.maxMaxBufferLength + 's and switch to IDLE state');
+        _logger.logger.warn('main:reduce max buffer length to ' + config.maxMaxBufferLength + 's');
         // increase fragment load Index to avoid frag loop loading error after buffer flush
         this.fragLoadIdx += 2 * config.fragLoadingLoopThreshold;
       }
@@ -9056,7 +9091,7 @@ var BufferHelper = function () {
         }
         return this.bufferedInfo(buffered, pos, maxHoleDuration);
       } else {
-        return { len: 0, start: 0, end: 0, nextStart: undefined };
+        return { len: 0, start: pos, end: pos, nextStart: undefined };
       }
     }
   }, {
