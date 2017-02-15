@@ -24,24 +24,20 @@ class MP4Remuxer {
   destroy() {
   }
 
-  resetTimeStamp() {
-    this._initPTS = this._initDTS = undefined;
+  resetTimeStamp(defaultTimeStamp) {
+    this._initPTS = this._initDTS = defaultTimeStamp;
   }
 
   resetInitSegment() {
     this.ISGenerated = false;
   }
 
-  remux(level,sn,cc,audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous,accurateTimeOffset,defaultInitPTS) {
+  remux(level,sn,cc,audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous,accurateTimeOffset) {
     this.level = level;
     this.sn = sn;
     // generate Init Segment if needed
     if (!this.ISGenerated) {
       this.generateIS(audioTrack,videoTrack,timeOffset,cc);
-    }
-
-    if((defaultInitPTS!==null)){
-      this._initPTS=this._initDTS= defaultInitPTS;
     }
 
     if (this.ISGenerated) {

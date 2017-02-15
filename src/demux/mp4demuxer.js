@@ -17,7 +17,8 @@ import Event from '../events';
 
   }
 
-  resetInitSegment(initSegment,level,sn,audioCodec,videoCodec) {
+  resetInitSegment(initSegment,level,sn,audioCodec,videoCodec, duration) {
+    //jshint unused:false
     const initData = this.initData = MP4Demuxer.parseInitSegment(initSegment);
     var tracks = {};
     if (initData.audio) {
@@ -210,10 +211,10 @@ static startDTS(initData, fragment) {
 }
 
   // feed incoming data to the front of the parsing pipeline
-  push(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, contiguous, duration,accurateTimeOffset, defaultInitPTS) {
+  append(data, timeOffset, cc, level, sn, contiguous,accurateTimeOffset) {
     const initData = this.initData;
     const startDTS = MP4Demuxer.startDTS(initData,data);
-    this.remuxer.remux(level, sn , cc, initData.audio, initData.video, null, null, startDTS, contiguous,accurateTimeOffset, defaultInitPTS,data);
+    this.remuxer.remux(level, sn , cc, initData.audio, initData.video, null, null, startDTS, contiguous,accurateTimeOffset,data);
   }
 
   destroy() {

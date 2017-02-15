@@ -90,15 +90,15 @@ class DemuxerInline {
     const remuxer = this.remuxer;
     if (cc !== this.lastCC) {
       logger.log(`${id}:discontinuity detected`);
-      demuxer.resetInitSegment(initSegment,level,sn,audioCodec,videoCodec);
+      demuxer.resetInitSegment(initSegment,level,sn,audioCodec,videoCodec,duration);
       remuxer.resetInitSegment();
       demuxer.resetTimeStamp();
-      remuxer.resetTimeStamp();
+      remuxer.resetTimeStamp(defaultInitPTS);
       this.lastCC = cc;
     }
     if (level !== this.lastLevel) {
-      logger.log(`${id}:level switch detected`);
-      demuxer.resetInitSegment(initSegment,level,sn,audioCodec,videoCodec);
+      logger.log(`${id}:switch detected`);
+      demuxer.resetInitSegment(initSegment,level,sn,audioCodec,videoCodec,duration);
       remuxer.resetInitSegment();
       this.lastLevel = level;
     } else if (sn === (this.lastSN+1)) {
@@ -106,7 +106,7 @@ class DemuxerInline {
     }
     this.lastSN = sn;
     this.cc = cc;
-    demuxer.push(data,initSegment,audioCodec,videoCodec,timeOffset,cc,level,sn,contiguous, duration,accurateTimeOffset,defaultInitPTS);
+    demuxer.append(data,timeOffset,cc,level,sn,contiguous,accurateTimeOffset);
   }
 }
 

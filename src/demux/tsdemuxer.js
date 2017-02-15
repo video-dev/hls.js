@@ -35,7 +35,7 @@
     }
   }
 
-  resetInitSegment() {
+  resetInitSegment(initSegment,level,sn,audioCodec,videoCodec, duration) {
     this.pmtParsed = false;
     this._pmtId = -1;
     this._avcTrack = {container : 'video/mp2t', type: 'video', id :-1, sequenceNumber: 0, samples : [], len : 0, dropped : 0};
@@ -46,22 +46,19 @@
     this.aacOverFlow = null;
     this.aacLastPTS = null;
     this.avcSample = null;
+    this.audioCodec = audioCodec;
+    this.videoCodec = videoCodec;
+    this._duration = duration;
   }
 
   resetTimeStamp() {
   }
 
   // feed incoming data to the front of the parsing pipeline
-  push(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, contiguous, duration,accurateTimeOffset,defaultInitPTS) {
+  append(data, timeOffset, cc, level, sn, contiguous,accurateTimeOffset) {
     var start, len = data.length, stt, pid, atf, offset,pes,
         unknownPIDs = false;
-
-    this.audioCodec = audioCodec;
-    this.videoCodec = videoCodec;
-    this._duration = duration;
     this.contiguous = contiguous;
-
-
     var pmtParsed = this.pmtParsed,
         avcTrack = this._avcTrack,
         audioTrack = this._audioTrack,
@@ -220,7 +217,7 @@
       // either id3Data null or PES truncated, keep it for next frag parsing
       id3Track.pesData = id3Data;
     }
-    this.remuxer.remux(level, sn, cc, audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset, defaultInitPTS);
+    this.remuxer.remux(level, sn, cc, audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset);
   }
 
   destroy() {
