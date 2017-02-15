@@ -18,14 +18,12 @@
 
  class TSDemuxer {
 
-  constructor(observer, id, remuxerClass, config, typeSupported) {
+  constructor(observer, id, remuxer, config, typeSupported) {
     this.observer = observer;
     this.id = id;
-    this.remuxerClass = remuxerClass;
     this.config = config;
     this.typeSupported = typeSupported;
-    this.lastCC = 0;
-    this.remuxer = new this.remuxerClass(observer, id, config, typeSupported);
+    this.remuxer = remuxer;
   }
 
   static probe(data) {
@@ -37,7 +35,7 @@
     }
   }
 
-  switchLevel() {
+  resetInitSegment() {
     this.pmtParsed = false;
     this._pmtId = -1;
     this._avcTrack = {container : 'video/mp2t', type: 'video', id :-1, sequenceNumber: 0, samples : [], len : 0, dropped : 0};
@@ -48,36 +46,21 @@
     this.aacOverFlow = null;
     this.aacLastPTS = null;
     this.avcSample = null;
-    this.remuxer.switchLevel();
   }
 
-  insertDiscontinuity() {
-    this.switchLevel();
-    this.remuxer.insertDiscontinuity();
+  resetTimeStamp() {
   }
 
   // feed incoming data to the front of the parsing pipeline
-  push(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
+  push(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, contiguous, duration,accurateTimeOffset,defaultInitPTS) {
     var start, len = data.length, stt, pid, atf, offset,pes,
         unknownPIDs = false;
 
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
     this._duration = duration;
-    this.contiguous = false;
-    if (cc !== this.lastCC) {
-      logger.log('discontinuity detected');
-      this.insertDiscontinuity();
-      this.lastCC = cc;
-    }
-    if (level !== this.lastLevel) {
-      logger.log('level switch detected');
-      this.switchLevel();
-      this.lastLevel = level;
-    } else if (sn === (this.lastSN+1)) {
-      this.contiguous = true;
-    }
-    this.lastSN = sn;
+    this.contiguous = contiguous;
+
 
     var pmtParsed = this.pmtParsed,
         avcTrack = this._avcTrack,
@@ -237,11 +220,10 @@
       // either id3Data null or PES truncated, keep it for next frag parsing
       id3Track.pesData = id3Data;
     }
-    this.remuxer.remux(level, sn, cc, audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, this.contiguous, accurateTimeOffset, defaultInitPTS);
+    this.remuxer.remux(level, sn, cc, audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset, defaultInitPTS);
   }
 
   destroy() {
-    this.switchLevel();
     this._initPTS = this._initDTS = undefined;
     this._duration = 0;
   }

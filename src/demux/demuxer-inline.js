@@ -4,6 +4,7 @@
 
 import Event from '../events';
 import {ErrorTypes, ErrorDetails} from '../errors';
+import {logger} from '../utils/logger';
 import Decrypter from '../crypt/decrypter';
 import AACDemuxer from '../demux/aacdemuxer';
 import MP4Demuxer from '../demux/mp4demuxer';
@@ -57,12 +58,12 @@ class DemuxerInline {
 
   pushDecrypted(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
     var demuxer = this.demuxer;
+    const id = this.id;
     if (!demuxer || 
        // in case of continuity change, we might switch from content type (AAC container to TS container for example)
        // so let's check that current demuxer is still valid
         (cc !== this.cc && !this.probe(data))) {
       const hls = this.hls;
-      const id = this.id;
       const muxConfig = [ {demux : TSDemuxer,  remux : MP4Remuxer},
                           {demux : AACDemuxer, remux : MP4Remuxer},
                           {demux : MP4Demuxer, remux : PassThroughRemuxer}];
@@ -72,7 +73,8 @@ class DemuxerInline {
         const mux = muxConfig[i];
         const probe = mux.demux.probe;
         if(probe(data)) {
-          demuxer = new mux.demux(hls,id,mux.remux,this.config,this.typeSupported)
+          const remuxer = this.remuxer = new mux.remux(hls,id,this.config,this.typeSupported);
+          demuxer = new mux.demux(hls,id,remuxer,this.config,this.typeSupported);
           this.probe = probe;
           break;
         }
@@ -82,9 +84,29 @@ class DemuxerInline {
         return;
       }
       this.demuxer = demuxer;
+      this.lastCC = 0;
     }
-    demuxer.push(data,initSegment,audioCodec,videoCodec,timeOffset,cc,level,sn,duration,accurateTimeOffset,defaultInitPTS);
+    let contiguous = false;
+    const remuxer = this.remuxer;
+    if (cc !== this.lastCC) {
+      logger.log(`${id}:discontinuity detected`);
+      demuxer.resetInitSegment(initSegment,level,sn,audioCodec,videoCodec);
+      remuxer.resetInitSegment();
+      demuxer.resetTimeStamp();
+      remuxer.resetTimeStamp();
+      this.lastCC = cc;
+    }
+    if (level !== this.lastLevel) {
+      logger.log(`${id}:level switch detected`);
+      demuxer.resetInitSegment(initSegment,level,sn,audioCodec,videoCodec);
+      remuxer.resetInitSegment();
+      this.lastLevel = level;
+    } else if (sn === (this.lastSN+1)) {
+      contiguous = true;
+    }
+    this.lastSN = sn;
     this.cc = cc;
+    demuxer.push(data,initSegment,audioCodec,videoCodec,timeOffset,cc,level,sn,contiguous, duration,accurateTimeOffset,defaultInitPTS);
   }
 }
 

@@ -12,10 +12,10 @@ class PassThroughRemuxer {
   destroy() {
   }
 
-  insertDiscontinuity() {
+  resetTimeStamp() {
   }
 
-  switchLevel() {
+  resetInitSegment() {
   }
 
   remux(level,sn,cc,audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous,accurateTimeOffset,defaultInitPTS,rawData) {

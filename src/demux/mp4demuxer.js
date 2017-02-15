@@ -1,20 +1,23 @@
 /**
  * MP4 demuxer
  */
-import {logger} from '../utils/logger';
+//import {logger} from '../utils/logger';
 import Event from '../events';
 
 
  class MP4Demuxer {
 
-  constructor(observer, id, remuxerClass, config, typeSupported) {
+  constructor(observer, id, remuxer) {
     this.observer = observer;
     this.id = id;
-    this.remuxerClass = remuxerClass;
-    this.remuxer = new this.remuxerClass(observer,id, config, typeSupported);
+    this.remuxer = remuxer;
   }
 
-  insertDiscontinuity(initSegment,level,sn,audioCodec,videoCodec) {
+  resetTimeStamp() {
+
+  }
+
+  resetInitSegment(initSegment,level,sn,audioCodec,videoCodec) {
     const initData = this.initData = MP4Demuxer.parseInitSegment(initSegment);
     var tracks = {};
     if (initData.audio) {
@@ -207,25 +210,7 @@ static startDTS(initData, fragment) {
 }
 
   // feed incoming data to the front of the parsing pipeline
-  push(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset, defaultInitPTS) {
-    let contiguous = false;
-    if (cc !== this.lastCC) {
-      logger.log(`${this.id} discontinuity detected`);
-      this.lastCC = cc;
-      this.insertDiscontinuity(initSegment,level,sn,audioCodec,videoCodec);
-      this.remuxer.switchLevel();
-      this.remuxer.insertDiscontinuity(initSegment,level,sn,audioCodec,videoCodec);
-    } else if (level !== this.lastLevel) {
-      logger.log('audio track switch detected');
-      this.lastLevel = level;
-      this.remuxer.switchLevel();
-      this.insertDiscontinuity(initSegment,level,sn,audioCodec,videoCodec);
-    } else if (sn === (this.lastSN+1)) {
-      contiguous = true;
-    }
-    this.lastSN = sn;
-    this.lastLevel = level;
-
+  push(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, contiguous, duration,accurateTimeOffset, defaultInitPTS) {
     const initData = this.initData;
     const startDTS = MP4Demuxer.startDTS(initData,data);
     this.remuxer.remux(level, sn , cc, initData.audio, initData.video, null, null, startDTS, contiguous,accurateTimeOffset, defaultInitPTS,data);

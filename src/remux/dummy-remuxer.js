@@ -11,7 +11,11 @@ class DummyRemuxer {
   destroy() {
   }
 
-  insertDiscontinuity() {
+  resetInitSegment() {
+  }
+
+
+  resetTimeStamp() {
   }
 
   remux(audioTrack,videoTrack,id3Track,textTrack,timeOffset) {
