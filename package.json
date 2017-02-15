@@ -1,6 +1,6 @@
 {
   "name": "hls.js",
-  "version": "0.6.21",
+  "version": "0.7.0",
   "license": "Apache-2.0",
   "description": "Media Source Extension - HLS library, by/for Dailymotion",
   "homepage": "https://github.com/dailymotion/hls.js",
@@ -43,7 +43,7 @@
     "babel-register": "^6.18.0",
     "babelify": "^7.2.0",
     "browserify": "^14.0.0",
-    "browserify-conditionalify" : "^1.0.0",
+    "browserify-conditionalify": "^1.0.0",
     "browserify-derequire": "^0.9.4",
     "browserify-versionify": "^1.0.6",
     "bundle-collapser": "^1.2.1",
