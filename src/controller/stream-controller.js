@@ -1114,10 +1114,14 @@ class StreamController extends EventHandler {
       // has remuxer dropped video frames located before first keyframe ?
       [data.data1, data.data2].forEach(buffer => {
         if (buffer) {
-          this.appended = true;
-          // arm pending Buffering flag before appending a segment
-          this.pendingBuffering = true;
-          hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer, parent : 'main',content : 'data'});
+          // only append in PARSING state (rationale is that an appending error could happen synchronously on first segment appending)
+          // in that case it is useless to append following segments
+          if (this.state === State.PARSING) {
+            this.appended = true;
+            // arm pending Buffering flag before appending a segment
+            this.pendingBuffering = true;
+            hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer, parent : 'main',content : 'data'});
+          }
         }
       });
       //trigger handler right now
@@ -1334,10 +1338,10 @@ class StreamController extends EventHandler {
         break;
       case ErrorDetails.BUFFER_FULL_ERROR:
         // if in appending state
-        if (this.state === State.PARSING || this.state === State.PARSED) {
+        if (data.parent === 'main' && (this.state === State.PARSING || this.state === State.PARSED)) {
           // reduce max buf len if current position is buffered
           if (mediaBuffered) {
-            this._reduceMaxBufferLength(frag.duration);
+            this._reduceMaxBufferLength(this.config.maxBufferLength);
             this.state = State.IDLE;
           } else {
             // current position is not buffered, but browser is still complaining about buffer full error
@@ -1360,7 +1364,7 @@ class StreamController extends EventHandler {
     if (config.maxMaxBufferLength >= minLength) {
       // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
       config.maxMaxBufferLength/=2;
-      logger.warn(`reduce max buffer length to ${config.maxMaxBufferLength}s and switch to IDLE state`);
+      logger.warn(`main:reduce max buffer length to ${config.maxMaxBufferLength}s`);
       // increase fragment load Index to avoid frag loop loading error after buffer flush
       this.fragLoadIdx += 2 * config.fragLoadingLoopThreshold;
     }
