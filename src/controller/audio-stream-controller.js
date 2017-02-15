@@ -286,9 +286,6 @@ class AudioStreamController extends EventHandler {
               }
               return 0;
             };
-            if(!foundFrag) {
-              logger.log(`frag not found @bufferEnd/start:${bufferEnd}/${start}`);
-            }
 
             if (bufferEnd < end) {
               if (bufferEnd > end - maxFragLookUpTolerance) {
@@ -675,9 +672,13 @@ class AudioStreamController extends EventHandler {
         });
       if (!appendOnBufferFlush && pendingData.length) {
           pendingData.forEach(appendObj => {
-            // arm pending Buffering flag before appending a segment
-            this.pendingBuffering = true;
-            this.hls.trigger(Event.BUFFER_APPENDING, appendObj);
+            // only append in PARSING state (rationale is that an appending error could happen synchronously on first segment appending)
+            // in that case it is useless to append following segments
+            if (this.state === State.PARSING) {
+              // arm pending Buffering flag before appending a segment
+              this.pendingBuffering = true;
+              this.hls.trigger(Event.BUFFER_APPENDING, appendObj);
+            }
           });
           this.pendingData = [];
           this.appended = true;
@@ -787,6 +788,35 @@ class AudioStreamController extends EventHandler {
             // if fatal error, stop processing, otherwise move to IDLE to retry loading
             this.state = data.fatal ? State.ERROR : State.IDLE;
             logger.warn(`audioStreamController: ${data.details} while loading frag,switch to ${this.state} state ...`);
+        }
+        break;
+      case ErrorDetails.BUFFER_FULL_ERROR:
+        // if in appending state
+        if (data.parent === 'audio' && (this.state === State.PARSING || this.state === State.PARSED)) {
+          const media = this.mediaBuffer,
+                currentTime = this.media.currentTime,
+                mediaBuffered = media && BufferHelper.isBuffered(media,currentTime) && BufferHelper.isBuffered(media,currentTime+0.5);
+          // reduce max buf len if current position is buffered
+          if (mediaBuffered) {
+            const config = this.config;
+            if(config.maxMaxBufferLength >= config.maxBufferLength) {
+              // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
+              config.maxMaxBufferLength/=2;
+              logger.warn(`audio:reduce max buffer length to ${config.maxMaxBufferLength}s`);
+              // increase fragment load Index to avoid frag loop loading error after buffer flush
+              this.fragLoadIdx += 2 * config.fragLoadingLoopThreshold;
+            }
+            this.state = State.IDLE;
+          } else {
+            // current position is not buffered, but browser is still complaining about buffer full error
+            // this happens on IE/Edge, refer to https://github.com/dailymotion/hls.js/pull/708
+            // in that case flush the whole audio buffer to recover
+            logger.warn('buffer full error also media.currentTime is not buffered, flush audio buffer');
+            this.fragCurrent = null;
+            // flush everything
+            this.state = State.BUFFER_FLUSHING;
+            this.hls.trigger(Event.BUFFER_FLUSHING, {startOffset: startOffset, endOffset: endOffset, type : 'audio'});
+          }
         }
         break;
       default:
