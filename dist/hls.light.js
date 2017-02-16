@@ -3414,7 +3414,7 @@ var StreamController = function (_EventHandler) {
           var mediaSeeking = media && media.seeking;
           var accurateTimeOffset = !mediaSeeking && (details.PTSKnown || !details.live);
           var initSegmentData = details.initSegment ? details.initSegment.data : [];
-          demuxer.push(data.payload, initSegmentData, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata, accurateTimeOffset, null);
+          demuxer.push(data.payload, initSegmentData, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata, accurateTimeOffset, undefined);
         }
       }
       this.fragLoadError = 0;
