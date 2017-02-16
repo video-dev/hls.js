@@ -1247,7 +1247,7 @@ class StreamController extends EventHandler {
                     duration,
                     fragCurrent.decryptdata,
                     accurateTimeOffset,
-                    null
+                    undefined
                 );
             }
         }
