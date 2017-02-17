@@ -238,7 +238,7 @@ class AudioStreamController extends EventHandler {
             let foundFrag;
             let maxFragLookUpTolerance = config.maxFragLookUpTolerance;
             const fragNext = fragPrevious ? fragments[fragPrevious.sn - fragments[0].sn + 1] : undefined;
-            let fragmentWithinToleranceTest = (candidate) => {
+            const fragmentWithinToleranceTest = (candidate) => {
               // offset should be within fragment boundary - config.maxFragLookUpTolerance
               // this is to cope with situations like
               // bufferEnd = 9.991
@@ -268,7 +268,7 @@ class AudioStreamController extends EventHandler {
                 maxFragLookUpTolerance = 0;
               }
               // Prefer the next fragment if it's within tolerance
-              if (fragNext && fragmentWithinToleranceTest(fragNext) !== 0) {
+              if (fragNext && !fragmentWithinToleranceTest(fragNext)) {
                 foundFrag = fragNext;
               } else {
                 foundFrag = BinarySearch.search(fragments, fragmentWithinToleranceTest);
