@@ -70,7 +70,7 @@ class AudioStreamController extends EventHandler {
 
   //Signal that video PTS was found
   onInitPtsFound(data) {
-    var demuxerId=data.id, cc = data.cc, initPTS = data.initPTS;
+    var demuxerId=data.id, cc = data.frag.cc, initPTS = data.initPTS;
     if(demuxerId === 'main') {
       //Always update the new INIT PTS
       //Can change due level switch
@@ -560,13 +560,12 @@ class AudioStreamController extends EventHandler {
         var track = this.tracks[this.trackId],
             details = track.details,
             duration = details.totalduration,
-            start = fragCurrent.start,
             trackId = fragCurrent.level,
             sn = fragCurrent.sn,
             cc = fragCurrent.cc,
             audioCodec = this.config.defaultAudioCodec || track.audioCodec || 'mp4a.40.2',
             stats = this.stats = data.stats;
-      if (fragLoaded.sn === 'initSegment') {
+      if (sn === 'initSegment') {
         this.state = State.IDLE;
 
         stats.tparsed = stats.tbuffered = performance.now();
@@ -589,7 +588,7 @@ class AudioStreamController extends EventHandler {
           logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
           // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
           let accurateTimeOffset = false; //details.PTSKnown || !details.live;
-          this.demuxer.push(data.payload, initSegmentData, audioCodec, null, start, cc, trackId, sn, duration, fragCurrent.decryptdata, accurateTimeOffset, initPTS);
+          this.demuxer.push(data.payload, initSegmentData, audioCodec, null, fragCurrent, duration, accurateTimeOffset, initPTS);
         } else {
           logger.log(`unknown video PTS for continuity counter ${cc}, waiting for video PTS before demuxing audio frag ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
           this.waitingFragment=data;
