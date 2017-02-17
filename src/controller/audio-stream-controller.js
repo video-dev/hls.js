@@ -52,6 +52,7 @@ class AudioStreamController extends EventHandler {
     this.config = hls.config;
     this.audioCodecSwap = false;
     this.ticks = 0;
+    this._state = State.STOPPED;
     this.ontick = this.tick.bind(this);
     this.initPTS=[];
     this.waitingFragment=null;
@@ -129,6 +130,18 @@ class AudioStreamController extends EventHandler {
     this.state = State.STOPPED;
   }
 
+  set state(nextState) {
+    if (this.state !== nextState) {
+      const previousState = this.state;
+      this._state = nextState;
+      logger.log(`audio stream:${previousState}->${nextState}`);
+    }
+  }
+
+  get state() {
+    return this._state;
+  }
+
   tick() {
     this.ticks++;
     if (this.ticks === 1) {
@@ -155,6 +168,11 @@ class AudioStreamController extends EventHandler {
         this.loadedmetadata = false;
         break;
       case State.IDLE:
+        const tracks = this.tracks;
+        // audio tracks not received => exit loop
+        if (!tracks) {
+          break;
+        }
         // if video not attached AND
         // start fragment already requested OR start frag prefetch disable
         // exit loop
@@ -180,11 +198,12 @@ class AudioStreamController extends EventHandler {
             bufferEnd = bufferInfo.end,
             fragPrevious = this.fragPrevious,
             maxBufLen = config.maxMaxBufferLength,
-            audioSwitch = this.audioSwitch;
+            audioSwitch = this.audioSwitch,
+            trackId = this.trackId;
 
         // if buffer length is less than maxBufLen try to load a new fragment
-        if (bufferLen < maxBufLen && this.trackId < this.tracks.length) {
-          trackDetails = this.tracks[this.trackId].details;
+        if (bufferLen < maxBufLen && trackId < tracks.length) {
+          trackDetails = tracks[trackId].details;
           // if track info not retrieved yet, switch state and wait for track retrieval
           if (typeof trackDetails === 'undefined') {
             this.state = State.WAITING_TRACK;
@@ -232,8 +251,16 @@ class AudioStreamController extends EventHandler {
           }
 
           // if bufferEnd before start of playlist, load first fragment
-          if (bufferEnd < start) {
+          if (bufferEnd <= start) {
             frag = fragments[0];
+            if (trackDetails.live && frag.loadIdx && frag.loadIdx === this.fragLoadIdx) {
+              // we just loaded this first fragment, and we are still lagging behind the start of the live playlist
+              // let's force seek to start
+              const nextBuffered = bufferInfo.nextStart ? bufferInfo.nextStart : start;
+              logger.log(`no alt audio available @currentTime:${this.media.currentTime}, seeking @${nextBuffered + 0.05}`);
+              this.media.currentTime = nextBuffered + 0.05;
+              return;
+            }
           } else {
             let foundFrag;
             let maxFragLookUpTolerance = config.maxFragLookUpTolerance;
@@ -262,6 +289,9 @@ class AudioStreamController extends EventHandler {
               }
               return 0;
             };
+            if(!foundFrag) {
+              logger.log(`frag not found @bufferEnd/start:${bufferEnd}/${start}`);
+            }
 
             if (bufferEnd < end) {
               if (bufferEnd > end - maxFragLookUpTolerance) {
@@ -294,11 +324,11 @@ class AudioStreamController extends EventHandler {
           if(frag) {
             //logger.log('      loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
             if ((frag.decryptdata.uri != null) && (frag.decryptdata.key == null)) {
-              logger.log(`Loading key for ${frag.sn} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${this.trackId}`);
+              logger.log(`Loading key for ${frag.sn} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}`);
               this.state = State.KEY_LOADING;
               hls.trigger(Event.KEY_LOADING, {frag: frag});
             } else {
-              logger.log(`Loading ${frag.sn} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${this.trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
+              logger.log(`Loading ${frag.sn} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
               // ensure that we are not reloading the same fragments in loop ...
               if (this.fragLoadIdx !== undefined) {
                 this.fragLoadIdx++;
@@ -453,7 +483,9 @@ class AudioStreamController extends EventHandler {
       //main audio track are handled by stream-controller, just do something if switching to alt audio track
       this.state=State.IDLE;
       // increase fragment load Index to avoid frag loop loading error after buffer flush
-      this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+      if (this.fragLoadIdx !== undefined) {
+        this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+      }
     }
     this.tick();
   }
