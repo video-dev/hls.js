@@ -195,12 +195,12 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       enableWorker: true,
       enableSoftwareAES: true,
       manifestLoadingTimeOut: 10000,
-      manifestLoadingMaxRetry: 6,
+      manifestLoadingMaxRetry: 1,
       manifestLoadingRetryDelay: 500,
       manifestLoadingMaxRetryTimeout : 64000,
       startLevel: undefined,
       levelLoadingTimeOut: 10000,
-      levelLoadingMaxRetry: 6,
+      levelLoadingMaxRetry: 4,
       levelLoadingRetryDelay: 500,
       levelLoadingMaxRetryTimeout: 64000,
       fragLoadingTimeOut: 20000,
@@ -439,7 +439,7 @@ It is up to the application to catch this event and treat it as needed.
 
 #### `fragLoadingMaxRetry` / `manifestLoadingMaxRetry` / `levelLoadingMaxRetry`
 
-(default: `3`)
+(default: `6` / `1` / `4`)
 
 Max number of load retries.
 
