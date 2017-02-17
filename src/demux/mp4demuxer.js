@@ -5,15 +5,14 @@
 import Event from '../events';
 
 class MP4Demuxer {
-    constructor(observer, id, remuxer) {
+    constructor(observer, remuxer) {
         this.observer = observer;
-        this.id = id;
         this.remuxer = remuxer;
     }
 
     resetTimeStamp() {}
 
-    resetInitSegment(initSegment, level, sn, audioCodec, videoCodec, duration) {
+    resetInitSegment(initSegment, audioCodec, videoCodec, duration) {
         //jshint unused:false
         const initData = (this.initData = MP4Demuxer.parseInitSegment(
             initSegment
@@ -34,9 +33,6 @@ class MP4Demuxer {
             };
         }
         this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
-            id: this.id,
-            level: level,
-            sn: sn,
             unique: false,
             tracks: tracks
         });
@@ -244,13 +240,10 @@ class MP4Demuxer {
     }
 
     // feed incoming data to the front of the parsing pipeline
-    append(data, timeOffset, cc, level, sn, contiguous, accurateTimeOffset) {
+    append(data, timeOffset, contiguous, accurateTimeOffset) {
         const initData = this.initData;
         const startDTS = MP4Demuxer.startDTS(initData, data);
         this.remuxer.remux(
-            level,
-            sn,
-            cc,
             initData.audio,
             initData.video,
             null,

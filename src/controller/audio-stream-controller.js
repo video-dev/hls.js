@@ -72,7 +72,7 @@ class AudioStreamController extends EventHandler {
     //Signal that video PTS was found
     onInitPtsFound(data) {
         var demuxerId = data.id,
-            cc = data.cc,
+            cc = data.frag.cc,
             initPTS = data.initPTS;
         if (demuxerId === 'main') {
             //Always update the new INIT PTS
@@ -686,7 +686,6 @@ class AudioStreamController extends EventHandler {
             var track = this.tracks[this.trackId],
                 details = track.details,
                 duration = details.totalduration,
-                start = fragCurrent.start,
                 trackId = fragCurrent.level,
                 sn = fragCurrent.sn,
                 cc = fragCurrent.cc,
@@ -695,7 +694,7 @@ class AudioStreamController extends EventHandler {
                     track.audioCodec ||
                     'mp4a.40.2',
                 stats = (this.stats = data.stats);
-            if (fragLoaded.sn === 'initSegment') {
+            if (sn === 'initSegment') {
                 this.state = State.IDLE;
 
                 stats.tparsed = stats.tbuffered = performance.now();
@@ -733,12 +732,8 @@ class AudioStreamController extends EventHandler {
                         initSegmentData,
                         audioCodec,
                         null,
-                        start,
-                        cc,
-                        trackId,
-                        sn,
+                        fragCurrent,
                         duration,
-                        fragCurrent.decryptdata,
                         accurateTimeOffset,
                         initPTS
                     );
