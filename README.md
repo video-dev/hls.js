@@ -180,7 +180,7 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
 
 ## API and Configuration Parameters
 
-hls.js can be configured and controlled easily, click [here](API.md) for details.
+hls.js can be configured and controlled easily, click [here](doc/API.md) for details.
 
 
 ## License
@@ -208,7 +208,11 @@ npm run lint
 
 ## Design
 
-Click [here](design.md) for details.
+Click [here](doc/design.md) for details.
+
+### Tested With
+
+[<img src="https://cloud.githubusercontent.com/assets/7864462/12837037/452a17c6-cb73-11e5-9f39-fc96893bc9bf.png" alt="Browser Stack Logo" width="300">](https://www.browserstack.com/)
 
 [npm-image]: https://img.shields.io/npm/v/hls.js.svg?style=flat
 [npm-url]: https://npmjs.org/package/hls.js

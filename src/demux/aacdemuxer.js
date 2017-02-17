@@ -180,7 +180,7 @@ class AACDemuxer {
             level,
             sn,
             cc,
-            this._aacTrack,
+            track,
             { samples: [] },
             id3Track,
             { samples: [] },

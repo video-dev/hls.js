@@ -636,8 +636,9 @@ class MP4Remuxer {
                     inputSamples.splice(i, 1);
                     track.len -= sample.unit.length;
                     // Don't touch nextPtsNorm or i
-                } else if (delta >= pesFrameDuration) {
+                } else if (delta >= pesFrameDuration && nextPtsNorm) {
                     // Otherwise, if we're more than a frame away from where we should be, insert missing frames
+                    // also only inject silent audio frames if currentTime !== 0 (nextPtsNorm !== 0)
                     var missing = Math.round(delta / pesFrameDuration);
                     logger.warn(
                         `Injecting ${missing} audio frame @ ${Math.round(
