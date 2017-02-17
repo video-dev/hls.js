@@ -53,6 +53,7 @@ class StreamController extends EventHandler {
         this.config = hls.config;
         this.audioCodecSwap = false;
         this.ticks = 0;
+        this._state = State.STOPPED;
         this.ontick = this.tick.bind(this);
     }
 
@@ -281,10 +282,10 @@ class StreamController extends EventHandler {
             // if everything (almost) til the end is buffered, let's signal eos
             // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference
             // using half frag duration should help cope with these cases.
-            // also cope with almost zero last frag duration (max last frag duration with 100ms) refer to https://github.com/dailymotion/hls.js/pull/657
+            // also cope with almost zero last frag duration (max last frag duration with 200ms) refer to https://github.com/dailymotion/hls.js/pull/657
             if (
                 media.duration - Math.max(bufferInfo.end, fragPrevious.start) <=
-                Math.max(0.1, fragPrevious.duration / 2)
+                Math.max(0.2, fragPrevious.duration / 2)
             ) {
                 // Finalize the media stream
                 let data = {};
@@ -298,10 +299,10 @@ class StreamController extends EventHandler {
         }
 
         // if we have the levelDetails for the selected variant, lets continue enrichen our stream (load keys/fragments or trigger EOS, etc..)
-        return this._fetchPayloadOrEos({ pos, bufferInfo, levelDetails });
+        return this._fetchPayloadOrEos(pos, bufferInfo, levelDetails);
     }
 
-    _fetchPayloadOrEos({ pos, bufferInfo, levelDetails }) {
+    _fetchPayloadOrEos(pos, bufferInfo, levelDetails) {
         const fragPrevious = this.fragPrevious,
             level = this.level,
             fragments = levelDetails.fragments,
@@ -329,7 +330,7 @@ class StreamController extends EventHandler {
                 return false;
             }
 
-            frag = this._ensureFragmentAtLivePoint({
+            frag = this._ensureFragmentAtLivePoint(
                 levelDetails,
                 bufferEnd,
                 start,
@@ -337,7 +338,7 @@ class StreamController extends EventHandler {
                 fragPrevious,
                 fragments,
                 fragLen
-            });
+            );
             // if it explicitely returns null don't load any fragment and exit function now
             if (frag === null) {
                 return false;
@@ -349,7 +350,7 @@ class StreamController extends EventHandler {
             }
         }
         if (!frag) {
-            frag = this._findFragment({
+            frag = this._findFragment(
                 start,
                 fragPrevious,
                 fragLen,
@@ -357,21 +358,21 @@ class StreamController extends EventHandler {
                 bufferEnd,
                 end,
                 levelDetails
-            });
+            );
         }
         if (frag) {
-            return this._loadFragmentOrKey({
+            return this._loadFragmentOrKey(
                 frag,
                 level,
                 levelDetails,
                 pos,
                 bufferEnd
-            });
+            );
         }
         return true;
     }
 
-    _ensureFragmentAtLivePoint({
+    _ensureFragmentAtLivePoint(
         levelDetails,
         bufferEnd,
         start,
@@ -379,7 +380,7 @@ class StreamController extends EventHandler {
         fragPrevious,
         fragments,
         fragLen
-    }) {
+    ) {
         const config = this.hls.config,
             media = this.media;
 
@@ -472,7 +473,7 @@ class StreamController extends EventHandler {
         return frag;
     }
 
-    _findFragment({
+    _findFragment(
         start,
         fragPrevious,
         fragLen,
@@ -480,7 +481,7 @@ class StreamController extends EventHandler {
         bufferEnd,
         end,
         levelDetails
-    }) {
+    ) {
         const config = this.hls.config;
         let frag;
         let foundFrag;
@@ -602,7 +603,7 @@ class StreamController extends EventHandler {
         return frag;
     }
 
-    _loadFragmentOrKey({ frag, level, levelDetails, pos, bufferEnd }) {
+    _loadFragmentOrKey(frag, level, levelDetails, pos, bufferEnd) {
         const hls = this.hls,
             config = hls.config;
 
@@ -668,9 +669,7 @@ class StreamController extends EventHandler {
         if (this.state !== nextState) {
             const previousState = this.state;
             this._state = nextState;
-            logger.log(
-                `engine state transition from ${previousState} to ${nextState}`
-            );
+            logger.log(`main stream:${previousState}->${nextState}`);
             this.hls.trigger(Event.STREAM_STATE_TRANSITION, {
                 previousState,
                 nextState
@@ -1747,7 +1746,6 @@ class StreamController extends EventHandler {
             // adjust currentTime to start position on loaded metadata
             if (!this.loadedmetadata && buffered.length && !media.seeking) {
                 this.loadedmetadata = true;
-                this.nudgeRetry = 0;
                 // only adjust currentTime if different from startPosition or if startPosition not buffered
                 // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
                 let startPosition = this.startPosition,
@@ -1780,23 +1778,21 @@ class StreamController extends EventHandler {
                         media.buffered.length === 0
                     ), // not playing if nothing buffered
                     jumpThreshold = 0.5, // tolerance needed as some browsers stalls playback before reaching buffered range end
-                    playheadMoving =
-                        currentTime > media.playbackRate * this.lastCurrentTime,
+                    playheadMoving = currentTime !== this.lastCurrentTime,
                     config = this.config;
 
                 if (playheadMoving) {
                     // played moving, but was previously stalled => now not stuck anymore
-                    if (this.stalled) {
-                        if (this.stallReported) {
-                            logger.warn(
-                                `playback not stuck anymore @${currentTime}, after ${Math.round(
-                                    performance.now() - this.stalled
-                                )}ms`
-                            );
-                            this.stallReported = false;
-                        }
-                        this.stalled = undefined;
+                    if (this.stallReported) {
+                        logger.warn(
+                            `playback not stuck anymore @${currentTime}, after ${Math.round(
+                                performance.now() - this.stalled
+                            )}ms`
+                        );
+                        this.stallReported = false;
                     }
+                    this.stalled = undefined;
+                    this.nudgeRetry = 0;
                 } else {
                     // playhead not moving
                     if (expectedPlaying) {
@@ -1812,6 +1808,7 @@ class StreamController extends EventHandler {
                             // if stalling for more than a given threshold, let's try to recover
                             const stalledDuration = tnow - this.stalled;
                             const bufferLen = bufferInfo.len;
+                            let nudgeRetry = this.nudgeRetry || 0;
                             // have we reached stall deadline ?
                             if (
                                 bufferLen <= jumpThreshold &&
@@ -1841,7 +1838,7 @@ class StreamController extends EventHandler {
                                     delta < config.maxSeekHole &&
                                     delta > 0
                                 ) {
-                                    const nudgeRetry = this.nudgeRetry++;
+                                    this.nudgeRetry = ++nudgeRetry;
                                     const nudgeOffset =
                                         nudgeRetry * config.nudgeOffset;
                                     // next buffer is close ! adjust currentTime to nextBufferStart
@@ -1851,19 +1848,19 @@ class StreamController extends EventHandler {
                                             media.currentTime
                                         } to next buffered @ ${nextBufferStart} + nudge ${nudgeOffset}`
                                     );
-                                    let hole =
-                                        nextBufferStart +
-                                        nudgeOffset -
-                                        media.currentTime;
                                     media.currentTime =
                                         nextBufferStart + nudgeOffset;
+                                    // reset stalled so to rearm watchdog timer
                                     this.stalled = undefined;
                                     hls.trigger(Event.ERROR, {
                                         type: ErrorTypes.MEDIA_ERROR,
                                         details:
                                             ErrorDetails.BUFFER_SEEK_OVER_HOLE,
                                         fatal: false,
-                                        hole: hole
+                                        hole:
+                                            nextBufferStart +
+                                            nudgeOffset -
+                                            currentTime
                                     });
                                 }
                             } else if (
@@ -1871,22 +1868,28 @@ class StreamController extends EventHandler {
                                 stalledDuration >
                                     config.highBufferWatchdogPeriod * 1000
                             ) {
-                                logger.warn(
-                                    `playback stalling in high buffer @${currentTime}`
-                                );
-                                hls.trigger(Event.ERROR, {
-                                    type: ErrorTypes.MEDIA_ERROR,
-                                    details: ErrorDetails.BUFFER_STALLED_ERROR,
-                                    fatal: false,
-                                    buffer: bufferLen
-                                });
+                                // report stalled error once
+                                if (!this.stallReported) {
+                                    this.stallReported = true;
+                                    logger.warn(
+                                        `playback stalling in high buffer @${currentTime}`
+                                    );
+                                    hls.trigger(Event.ERROR, {
+                                        type: ErrorTypes.MEDIA_ERROR,
+                                        details:
+                                            ErrorDetails.BUFFER_STALLED_ERROR,
+                                        fatal: false,
+                                        buffer: bufferLen
+                                    });
+                                }
+                                // reset stalled so to rearm watchdog timer
                                 this.stalled = undefined;
-                                const nudgeRetry = this.nudgeRetry++;
+                                this.nudgeRetry = ++nudgeRetry;
                                 if (nudgeRetry < config.nudgeMaxRetry) {
                                     const currentTime = media.currentTime;
                                     const targetTime =
                                         currentTime +
-                                        (nudgeRetry + 1) * config.nudgeOffset;
+                                        nudgeRetry * config.nudgeOffset;
                                     logger.log(
                                         `adjust currentTime from ${currentTime} to ${targetTime}`
                                     );
@@ -1899,6 +1902,11 @@ class StreamController extends EventHandler {
                                         fatal: false
                                     });
                                 } else {
+                                    logger.error(
+                                        `still stuck in high buffer @${currentTime} after ${
+                                            config.nudgeMaxRetry
+                                        }, raise fatal error`
+                                    );
                                     hls.trigger(Event.ERROR, {
                                         type: ErrorTypes.MEDIA_ERROR,
                                         details:
