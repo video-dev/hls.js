@@ -112,7 +112,7 @@ import ID3 from '../demux/id3';
       }
     }
     const id3Track = (id3.payload) ? { samples : [ { pts: pts, dts : pts, unit : id3.payload} ] } : { samples: [] };
-    this.remuxer.remux(level, sn, cc, this._aacTrack, {samples : []}, id3Track, { samples: [] }, timeOffset, contiguous,accurateTimeOffset, defaultInitPTS);
+    this.remuxer.remux(level, sn , cc, track,{samples : []}, id3Track, { samples: [] }, timeOffset, contiguous,accurateTimeOffset, defaultInitPTS);
   }
 
   destroy() {
