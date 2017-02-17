@@ -50,9 +50,9 @@ var DemuxerWorker = function(self) {
                     data.audioCodec,
                     data.videoCodec,
                     data.timeOffset,
-                    data.cc,
-                    data.level,
-                    data.sn,
+                    data.discontinuity,
+                    data.trackSwitch,
+                    data.contiguous,
                     data.duration,
                     data.accurateTimeOffset,
                     data.defaultInitPTS
