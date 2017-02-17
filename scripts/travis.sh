@@ -12,7 +12,7 @@ elif [ "${TRAVIS_MODE}" = "unitTests" ]; then
 elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
 	npm run builddist
 	n=0
-	maxRetries=3
+	maxRetries=1
 	until [ $n -ge ${maxRetries} ]
 	do
 		if [ $n -gt 0 ]; then
