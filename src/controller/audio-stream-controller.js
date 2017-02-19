@@ -752,12 +752,13 @@ class AudioStreamController extends EventHandler {
     }
 
     onFragParsingInitSegment(data) {
-        let fragCurrent = this.fragCurrent;
+        const fragCurrent = this.fragCurrent;
+        const fragNew = data.frag;
         if (
             fragCurrent &&
             data.id === 'audio' &&
-            data.sn === fragCurrent.sn &&
-            data.level === fragCurrent.level &&
+            fragNew.sn === fragCurrent.sn &&
+            fragNew.level === fragCurrent.level &&
             this.state === State.PARSING
         ) {
             let tracks = data.tracks,
@@ -803,18 +804,18 @@ class AudioStreamController extends EventHandler {
     }
 
     onFragParsingData(data) {
-        let fragCurrent = this.fragCurrent;
+        const fragCurrent = this.fragCurrent;
+        const fragNew = data.frag;
         if (
             fragCurrent &&
             data.id === 'audio' &&
             data.type === 'audio' &&
-            data.sn === fragCurrent.sn &&
-            data.level === fragCurrent.level &&
+            fragNew.sn === fragCurrent.sn &&
+            fragNew.level === fragCurrent.level &&
             this.state === State.PARSING
         ) {
             let trackId = this.trackId,
                 track = this.tracks[trackId],
-                frag = this.fragCurrent,
                 hls = this.hls;
 
             if (isNaN(data.endPTS)) {
@@ -831,7 +832,7 @@ class AudioStreamController extends EventHandler {
             );
             LevelHelper.updateFragPTSDTS(
                 track.details,
-                frag.sn,
+                fragCurrent.sn,
                 data.startPTS,
                 data.endPTS
             );
@@ -902,12 +903,13 @@ class AudioStreamController extends EventHandler {
     }
 
     onFragParsed(data) {
-        let fragCurrent = this.fragCurrent;
+        const fragCurrent = this.fragCurrent;
+        const fragNew = data.frag;
         if (
             fragCurrent &&
             data.id === 'audio' &&
-            data.sn === fragCurrent.sn &&
-            data.level === fragCurrent.level &&
+            fragNew.sn === fragCurrent.sn &&
+            fragNew.level === fragCurrent.level &&
             this.state === State.PARSING
         ) {
             this.stats.tparsed = performance.now();
