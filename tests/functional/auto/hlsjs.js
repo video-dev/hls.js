@@ -85,7 +85,7 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
       this.browser = new webdriver.Builder();
     }
     this.browser = this.browser.withCapabilities(capabilities).build();
-    //this.browser.manage().timeouts().setScriptTimeout(40000);
+    this.browser.manage().timeouts().setScriptTimeout(75000);
     console.log("Retrieving web driver session...");
     return this.browser.getSession().then(function(session) {
       console.log("Web driver session id: "+session.getId());
