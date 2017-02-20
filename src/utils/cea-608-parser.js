@@ -606,13 +606,16 @@ class CaptionScreen {
             var topRowIndex = this.currRow + 1 - this.nrRollUpRows;
             //We only copy if the last position was already shown.
             //We use the cueStartTime value to check this.
-            var prevLineTime = this.lastOutputScreen.rows[topRowIndex]
-                .cueStartTime;
-            if (prevLineTime && prevLineTime < logger.time) {
-                for (let i = 0; i < this.nrRollUpRows; i++) {
-                    this.rows[newRow - this.nrRollUpRows + i + 1].copy(
-                        this.lastOutputScreen.rows[topRowIndex + i]
-                    );
+            const lastOutputScreen = this.lastOutputScreen;
+            if (lastOutputScreen) {
+                var prevLineTime =
+                    lastOutputScreen.rows[topRowIndex].cueStartTime;
+                if (prevLineTime && prevLineTime < logger.time) {
+                    for (let i = 0; i < this.nrRollUpRows; i++) {
+                        this.rows[newRow - this.nrRollUpRows + i + 1].copy(
+                            lastOutputScreen.rows[topRowIndex + i]
+                        );
+                    }
                 }
             }
         }
