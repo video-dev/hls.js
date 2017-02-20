@@ -502,10 +502,11 @@ class PlaylistLoader extends EventHandler {
         if (string.indexOf('#EXTM3U') === 0) {
             if (string.indexOf('#EXTINF:') > 0) {
                 let isLevel = type !== 'audioTrack' && type !== 'subtitleTrack',
+                    levelId = !isNaN(level) ? level : !isNaN(id) ? id : 0,
                     levelDetails = this.parseLevelPlaylist(
                         string,
                         url,
-                        level || id || 0,
+                        levelId,
                         type === 'audioTrack'
                             ? 'audio'
                             : type === 'subtitleTrack' ? 'subtitle' : 'main'
