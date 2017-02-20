@@ -8898,7 +8898,8 @@ var PlaylistLoader = function (_EventHandler) {
       if (string.indexOf('#EXTM3U') === 0) {
         if (string.indexOf('#EXTINF:') > 0) {
           var isLevel = type !== 'audioTrack' && type !== 'subtitleTrack',
-              levelDetails = this.parseLevelPlaylist(string, url, level || id || 0, type === 'audioTrack' ? 'audio' : type === 'subtitleTrack' ? 'subtitle' : 'main');
+              levelId = !isNaN(level) ? level : !isNaN(id) ? id : 0,
+              levelDetails = this.parseLevelPlaylist(string, url, levelId, type === 'audioTrack' ? 'audio' : type === 'subtitleTrack' ? 'subtitle' : 'main');
           levelDetails.tload = stats.tload;
           if (type === 'manifest') {
             // first request, stream manifest (no master playlist), fire manifest loaded event with level details
