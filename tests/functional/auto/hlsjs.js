@@ -72,7 +72,7 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
       browserName: browserConfig.name,
       platform: browserConfig.platform,
       version: browserConfig.version,
-      commandTimeout: 60,
+      commandTimeout: 90,
     };
     if (onTravis) {
       capabilities['tunnel-identifier'] = process.env.TRAVIS_JOB_NUMBER;
@@ -85,7 +85,7 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
       this.browser = new webdriver.Builder();
     }
     this.browser = this.browser.withCapabilities(capabilities).build();
-    this.browser.manage().timeouts().setScriptTimeout(40000);
+    //this.browser.manage().timeouts().setScriptTimeout(40000);
     console.log("Retrieving web driver session...");
     return this.browser.getSession().then(function(session) {
       console.log("Web driver session id: "+session.getId());
