@@ -1049,7 +1049,7 @@ You can export internal loader definition for your own implementation via static
 
 Example:
 
-```
+```js
 import Hls from 'hls.js';
 
 let myHls = new Hls({
