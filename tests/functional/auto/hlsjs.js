@@ -110,15 +110,16 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
   });
 
   afterEach(function() {
-    this.browser.executeScript('return logString').then(function(return_value){
+    var browser = this.browser;
+    browser.executeScript('return logString').then(function(return_value){
       console.log('travis_fold:start:debug_logs');
       console.log('logs');
       console.log(return_value);
       console.log('travis_fold:end:debug_logs');
-    });
-    console.log("Quitting browser...");
-    return this.browser.quit().then(function() {
-      console.log("Browser quit.");
+      console.log("Quitting browser...");
+      return browser.quit().then(function() {
+        console.log("Browser quit.");
+      });
     });
   });
 
