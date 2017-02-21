@@ -7,8 +7,8 @@ import {logger} from '../utils/logger';
 class LevelHelper {
 
   static mergeDetails(oldDetails,newDetails) {
-    var start = Math.max(oldDetails.startSN,newDetails.startSN)-newDetails.startSN,
-        end = Math.min(oldDetails.endSN,newDetails.endSN)-newDetails.startSN,
+    var startSn = Math.max(oldDetails.startSN,newDetails.startSN)-newDetails.startSN,
+        endSn = Math.min(oldDetails.endSN,newDetails.endSN)-newDetails.startSN,
         delta = newDetails.startSN - oldDetails.startSN,
         oldfragments = oldDetails.fragments,
         newfragments = newDetails.fragments,
@@ -16,12 +16,12 @@ class LevelHelper {
         PTSFrag;
 
     // check if old/new playlists have fragments in common
-    if ( end < start) {
+    if (endSn < startSn) {
       newDetails.PTSKnown = false;
       return;
     }
     // loop through overlapping SN and update startPTS , cc, and duration if any found
-    for(var i = start ; i <= end ; i++) {
+    for(var i = startSn ; i <= endSn ; i++) {
       var oldFrag = oldfragments[delta+i],
           newFrag = newfragments[i];
       if (newFrag && oldFrag) {
@@ -133,6 +133,64 @@ class LevelHelper {
         fragTo.start = fragFrom.start - fragTo.duration;
       }
     }
+  }
+
+  // If a change in CC is detected, the PTS can no longer be relied upon
+  // Attempt to align the level by using the last level - find the last frag matching the current CC and use it's PTS
+  // as a reference
+  static alignDiscontinuities(lastFrag, lastLevel, details) {
+    if (LevelHelper.shouldAlignOnDiscontinuities(lastFrag, lastLevel, details)) {
+        logger.log('Adjusting PTS using last level due to CC increase within current level');
+        const referenceFrag = LevelHelper.findDiscontinuousReferenceFrag(lastLevel.details, details);
+        LevelHelper.adjustPtsByReferenceFrag(referenceFrag, details);
+    }
+  }
+
+  static shouldAlignOnDiscontinuities(lastFrag, lastLevel, details) {
+    let shouldAlign = false;
+    if (lastLevel && lastLevel.details && details) {
+      if (details.endCC > details.startCC || (lastFrag && lastFrag.cc < details.startCC)) {
+        shouldAlign = true;
+      }
+    }
+    return shouldAlign;
+  }
+
+  // Find the first frag in the previous level which matches the CC of the first frag of the new level
+  static findDiscontinuousReferenceFrag(prevDetails, curDetails) {
+    const prevFrags = prevDetails.fragments;
+    const curFrags = curDetails.fragments;
+
+    if (!curFrags.length || !prevFrags.length) {
+      logger.log('No fragments to align');
+      return;
+    }
+
+    const prevStartFrag = prevFrags.find(frag => {
+      return frag.cc === curFrags[0].cc;
+    });
+
+    if (!prevStartFrag || (prevStartFrag && !prevStartFrag.startPTS)) {
+      logger.log('No frag in previous level to align on');
+      return;
+    }
+
+    return prevStartFrag;
+  }
+
+  static adjustPtsByReferenceFrag(referenceFrag, details) {
+    if (!referenceFrag) {
+      return;
+    }
+
+    details.fragments.forEach((frag, index) => {
+      if (frag) {
+        frag.duration = referenceFrag.duration;
+        frag.end = frag.endPTS = referenceFrag.endPTS + (frag.duration * index);
+        frag.start = frag.startPTS = referenceFrag.startPTS + frag.start;
+      }
+    });
+    details.PTSKnown = true;
   }
 }
 

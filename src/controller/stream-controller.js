@@ -350,9 +350,13 @@ class StreamController extends EventHandler {
          compute playlist sliding and find the right one after in case it was not the right consecutive one */
       if (fragPrevious) {
         var targetSN = fragPrevious.sn + 1;
+        var targetCC = fragPrevious.cc + 1;
         if (targetSN >= levelDetails.startSN && targetSN <= levelDetails.endSN) {
           frag = fragments[targetSN - levelDetails.startSN];
           logger.log(`live playlist, switching playlist, load frag with next SN: ${frag.sn}`);
+        } else if (targetCC >= levelDetails.startCC && targetCC <= levelDetails.endCC) {
+          frag = fragments.find(f => f.cc === targetCC);
+          logger.log(`Live playlist switch, cannot find frag with target SN. Loading frag with next CC: ${ frag.cc }`);
         }
       }
       if (!frag) {
@@ -848,17 +852,17 @@ class StreamController extends EventHandler {
   }
 
   onLevelLoaded(data) {
-    var newDetails = data.details,
-        newLevelId = data.level,
-        curLevel = this.levels[newLevelId],
-        duration = newDetails.totalduration,
-        sliding = 0;
+    const newDetails = data.details;
+    const newLevelId = data.level;
+    const lastLevel = this.levels[this.levelLastLoaded];
+    const curLevel = this.levels[newLevelId];
+    const duration = newDetails.totalduration;
+    let sliding = 0;
 
-    logger.log(`level ${newLevelId} loaded [${newDetails.startSN},${newDetails.endSN}],duration:${duration}`);
-    this.levelLastLoaded = newLevelId;
+    logger.log(`level ${newLevelId} loaded [${newDetails.startSN},${newDetails.endSN}], cc [${newDetails.startCC}, ${newDetails.endCC}] duration:${duration}`);
 
     if (newDetails.live) {
-      var curDetails = curLevel.details;
+      const curDetails = curLevel.details;
       if (curDetails && newDetails.fragments.length > 0) {
         // we already have details for that level, merge them
         LevelHelper.mergeDetails(curDetails,newDetails);
@@ -868,15 +872,18 @@ class StreamController extends EventHandler {
           logger.log(`live playlist sliding:${sliding.toFixed(3)}`);
         } else {
           logger.log('live playlist - outdated PTS, unknown sliding');
+          LevelHelper.alignDiscontinuities(this.fragPrevious, lastLevel, newDetails);
         }
       } else {
-        newDetails.PTSKnown = false;
         logger.log('live playlist - first load, unknown sliding');
+        newDetails.PTSKnown = false;
+        LevelHelper.alignDiscontinuities(this.fragPrevious, lastLevel, newDetails);
       }
     } else {
       newDetails.PTSKnown = false;
     }
     // override level info
+    this.levelLastLoaded = newLevelId;
     curLevel.details = newDetails;
     this.hls.trigger(Event.LEVEL_UPDATED, { details: newDetails, level: newLevelId });
 
