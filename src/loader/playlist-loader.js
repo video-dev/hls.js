@@ -479,6 +479,8 @@ class PlaylistLoader extends EventHandler {
         level.totalduration = totalduration;
         level.averagetargetduration = totalduration / level.fragments.length;
         level.endSN = currentSN - 1;
+        level.startCC = level.fragments[0] ? level.fragments[0].cc : 0;
+        level.endCC = cc;
         return level;
     }
 
