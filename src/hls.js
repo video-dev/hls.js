@@ -312,7 +312,12 @@ class Hls {
   **/
     set startLevel(newLevel) {
         logger.log(`set startLevel:${newLevel}`);
-        this.levelController.startLevel = newLevel;
+        const hls = this;
+        // if not in automatic start level detection, ensure startLevel is greater than minAutoLevel
+        if (newLevel !== -1) {
+            newLevel = Math.max(newLevel, hls.minAutoLevel);
+        }
+        hls.levelController.startLevel = newLevel;
     }
 
     /** Return the capping/max level value that could be used by automatic level selection algorithm **/
@@ -382,7 +387,7 @@ class Hls {
     // forced value is valid for one fragment. upon succesful frag loading at forced level, this value will be resetted to -1 by ABR controller
     set nextAutoLevel(nextLevel) {
         const hls = this;
-        hls.abrController.nextAutoLevel = Math.min(hls.minAutoLevel, nextLevel);
+        hls.abrController.nextAutoLevel = Math.max(hls.minAutoLevel, nextLevel);
     }
 
     /** get alternate audio tracks list from playlist **/
