@@ -28,8 +28,9 @@ class DemuxerInline {
 
   push(data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration,accurateTimeOffset,defaultInitPTS) {
     if ((data.byteLength > 0) && (decryptdata != null) && (decryptdata.key != null) && (decryptdata.method === 'AES-128')) {
-      if (this.decrypter == null) {
-        this.decrypter = new Decrypter(this.observer, this.config);
+      let decrypter = this.decrypter;
+      if (decrypter == null) {
+        decrypter = this.decrypter = new Decrypter(this.observer, this.config);
       }
       var localthis = this;
       // performance.now() not available on WebWorker, at least on Safari Desktop
@@ -39,7 +40,7 @@ class DemuxerInline {
       } catch(error) {
         startTime = Date.now();
       }
-      this.decrypter.decrypt(data, decryptdata.key.buffer, decryptdata.iv.buffer, function (decryptedData) {
+      decrypter.decrypt(data, decryptdata.key.buffer, decryptdata.iv.buffer, function (decryptedData) {
         var endTime;
         try {
           endTime = performance.now();
@@ -61,6 +62,8 @@ class DemuxerInline {
        // so let's check that current demuxer is still valid
         (discontinuity && !this.probe(data))) {
       const observer = this.observer;
+      const typeSupported = this.typeSupported;
+      const config = this.config;
       const muxConfig = [ {demux : TSDemuxer,  remux : MP4Remuxer},
                           {demux : AACDemuxer, remux : MP4Remuxer},
                           {demux : MP4Demuxer, remux : PassThroughRemuxer}];
@@ -70,8 +73,8 @@ class DemuxerInline {
         const mux = muxConfig[i];
         const probe = mux.demux.probe;
         if(probe(data)) {
-          const remuxer = this.remuxer = new mux.remux(observer,this.config,this.typeSupported);
-          demuxer = new mux.demux(observer,remuxer,this.config,this.typeSupported);
+          const remuxer = this.remuxer = new mux.remux(observer,config,typeSupported);
+          demuxer = new mux.demux(observer,remuxer,config,typeSupported);
           this.probe = probe;
           break;
         }
