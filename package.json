@@ -57,7 +57,7 @@
     "mversion": "^1.10.1",
     "opener": "^1.4.0",
     "parallelshell": "^2.0.0",
-    "rimraf": "^2.5.1",
+    "rimraf": "^2.6.0",
     "uglify-js": "^2.7.5",
     "url-toolkit": "^1.0.10",
     "selenium-webdriver": "^2.52.0",
