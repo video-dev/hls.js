@@ -28,7 +28,7 @@ class DemuxerInline {
     }
   }
 
-  push(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,decryptdata,accurateTimeOffset,defaultInitPTS) {
+  push(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset, defaultInitPTS) {
     if ((data.byteLength > 0) && (decryptdata != null) && (decryptdata.key != null) && (decryptdata.method === 'AES-128')) {
       if (this.decrypter == null) {
         this.decrypter = new Decrypter(this.hls, this.config);
@@ -49,14 +49,14 @@ class DemuxerInline {
           endTime = Date.now();
         }
         localthis.hls.trigger(Event.FRAG_DECRYPTED, { level : level, sn : sn, stats: { tstart: startTime, tdecrypt: endTime } });
-        localthis.pushDecrypted(new Uint8Array(decryptedData), new Uint8Array(initSegment), audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset,defaultInitPTS);
+        localthis.pushDecrypted(new Uint8Array(decryptedData), new Uint8Array(initSegment), audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset, defaultInitPTS);
       });
     } else {
-      this.pushDecrypted(new Uint8Array(data), new Uint8Array(initSegment), audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS);
+      this.pushDecrypted(new Uint8Array(data), new Uint8Array(initSegment), audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset, defaultInitPTS);
     }
   }
 
-  pushDecrypted(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
+  pushDecrypted(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset, defaultInitPTS) {
     var demuxer = this.demuxer;
     const id = this.id;
     if (!demuxer || 
@@ -106,6 +106,9 @@ class DemuxerInline {
     }
     this.lastSN = sn;
     this.cc = cc;
+    if (typeof demuxer.setDecryptData === 'function') {
+      demuxer.setDecryptData(decryptdata);
+    }
     demuxer.append(data,timeOffset,cc,level,sn,contiguous,accurateTimeOffset);
   }
 }

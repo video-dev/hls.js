@@ -18,6 +18,10 @@ class Decrypter {
     this.disableWebCrypto = !this.subtle;
   }
 
+  isSync() {
+    return (this.disableWebCrypto && this.config.enableSoftwareAES);
+  }
+
   decrypt(data, key, iv, callback) {
     if (this.disableWebCrypto && this.config.enableSoftwareAES) {
       logger.log('JS AES decrypt');
