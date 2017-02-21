@@ -84,6 +84,7 @@ class DemuxerInline {
                         level,
                         sn,
                         duration,
+                        decryptdata,
                         accurateTimeOffset,
                         defaultInitPTS
                     );
@@ -100,6 +101,7 @@ class DemuxerInline {
                 level,
                 sn,
                 duration,
+                decryptdata,
                 accurateTimeOffset,
                 defaultInitPTS
             );
@@ -116,6 +118,7 @@ class DemuxerInline {
         level,
         sn,
         duration,
+        decryptdata,
         accurateTimeOffset,
         defaultInitPTS
     ) {
@@ -203,6 +206,9 @@ class DemuxerInline {
         }
         this.lastSN = sn;
         this.cc = cc;
+        if (typeof demuxer.setDecryptData === 'function') {
+            demuxer.setDecryptData(decryptdata);
+        }
         demuxer.append(
             data,
             timeOffset,

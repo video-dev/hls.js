@@ -126,6 +126,8 @@ design idea is pretty simple :
      - it also tries to workaround as best as it can audio codec switch (HE-AAC to AAC and vice versa), without having to restart the MediaSource.
      - it also controls the remuxing process :
       - upon discontinuity or level switch detection, it will also notifies the remuxer so that it can reset its state.
+  - [src/demux/sample-aes.js][]
+    - sample aes decrypter
   - [src/helper/aac.js][]
     - helper class to create silent AAC frames (useful to handle streams with audio holes)
   - [src/helper/buffer-helper.js][]
@@ -197,6 +199,7 @@ design idea is pretty simple :
 [src/demux/demuxer-worker.js]: src/demux/demuxer-worker.js
 [src/demux/exp-golomb.js]: src/demux/exp-golomb.js
 [src/demux/id3.js]: src/demux/id3.js
+[src/demux/sample-aes.js]: src/demux/sample-aes.js
 [src/demux/tsdemuxer.js]: src/demux/tsdemuxer.js
 [src/helper/aac.js]: src/helper/aac.js
 [src/helper/buffer-helper.js]: src/helper/buffer-helper.js
