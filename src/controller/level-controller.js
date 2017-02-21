@@ -18,7 +18,7 @@ class LevelController extends EventHandler {
             Event.ERROR
         );
         this.ontick = this.tick.bind(this);
-        this._manualLevel = this._autoLevelCapping = -1;
+        this._manualLevel = -1;
     }
 
     destroy() {
@@ -256,7 +256,7 @@ class LevelController extends EventHandler {
     set startLevel(newLevel) {
         // if not in autostart level, ensure startLevel is greater than minAutoLevel
         if (newLevel !== -1) {
-            newLevel = Math.max(newLevel, this.hls.abrController.minAutoLevel);
+            newLevel = Math.max(newLevel, this.hls.minAutoLevel);
         }
         this._startLevel = newLevel;
     }
@@ -271,8 +271,7 @@ class LevelController extends EventHandler {
             levelId,
             level,
             levelError = false,
-            abrController = hls.abrController,
-            minAutoLevel = abrController.minAutoLevel;
+            minAutoLevel = hls.minAutoLevel;
         // try to recover not fatal errors
         switch (details) {
             case ErrorDetails.FRAG_LOAD_ERROR:
@@ -322,10 +321,7 @@ class LevelController extends EventHandler {
                     logger.warn(
                         `level controller,${details}: switch-down for next fragment`
                     );
-                    abrController.nextAutoLevel = Math.max(
-                        minAutoLevel,
-                        levelId - 1
-                    );
+                    hls.nextAutoLevel = Math.max(minAutoLevel, levelId - 1);
                 } else if (level && level.details && level.details.live) {
                     logger.warn(
                         `level controller,${details} on live stream, discard`
@@ -434,14 +430,14 @@ class LevelController extends EventHandler {
         if (this._manualLevel !== -1) {
             return this._manualLevel;
         } else {
-            return this.hls.abrController.nextAutoLevel;
+            return this.hls.nextAutoLevel;
         }
     }
 
     set nextLoadLevel(nextLevel) {
         this.level = nextLevel;
         if (this._manualLevel === -1) {
-            this.hls.abrController.nextAutoLevel = nextLevel;
+            this.hls.nextAutoLevel = nextLevel;
         }
     }
 }
