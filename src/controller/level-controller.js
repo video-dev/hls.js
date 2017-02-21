@@ -143,7 +143,8 @@ class LevelController extends EventHandler {
   }
 
  setLevelInternal(newLevel) {
-    let levels = this._levels;
+    const levels = this._levels;
+    const hls = this.hls;
     // check if level idx is valid
     if (newLevel >= 0 && newLevel < levels.length) {
       // stopping live reloading timer if any
@@ -156,18 +157,18 @@ class LevelController extends EventHandler {
         this._level = newLevel;
         var levelProperties = levels[newLevel];
         levelProperties.level = newLevel;
-        this.hls.trigger(Event.LEVEL_SWITCH, levelProperties);
+        hls.trigger(Event.LEVEL_SWITCH, levelProperties);
       }
       var level = levels[newLevel], levelDetails = level.details;
        // check if we need to load playlist for this level
       if (!levelDetails || levelDetails.live === true) {
         // level not retrieved yet, or live playlist we need to (re)load it
         var urlId = level.urlId;
-        this.hls.trigger(Event.LEVEL_LOADING, {url: level.url[urlId], level: newLevel, id: urlId});
+        hls.trigger(Event.LEVEL_LOADING, {url: level.url[urlId], level: newLevel, id: urlId});
       }
     } else {
       // invalid level id given, trigger error
-      this.hls.trigger(Event.ERROR, {type : ErrorTypes.OTHER_ERROR, details: ErrorDetails.LEVEL_SWITCH_ERROR, level: newLevel, fatal: false, reason: 'invalid level idx'});
+      hls.trigger(Event.ERROR, {type : ErrorTypes.OTHER_ERROR, details: ErrorDetails.LEVEL_SWITCH_ERROR, level: newLevel, fatal: false, reason: 'invalid level idx'});
     }
  }
 
@@ -209,10 +210,6 @@ class LevelController extends EventHandler {
   }
 
   set startLevel(newLevel) {
-    // if not in autostart level, ensure startLevel is greater than minAutoLevel
-    if (newLevel !== -1) {
-      newLevel = Math.max(newLevel, this.hls.minAutoLevel);
-    }
     this._startLevel = newLevel;
   }
 
@@ -221,7 +218,7 @@ class LevelController extends EventHandler {
       return;
     }
 
-    let details = data.details, hls = this.hls, levelId, level, levelError = false, minAutoLevel = hls.minAutoLevel;
+    let details = data.details, hls = this.hls, levelId, level, levelError = false;
     // try to recover not fatal errors
     switch(details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
@@ -265,7 +262,7 @@ class LevelController extends EventHandler {
         let recoverable = ((this._manualLevel === -1) && levelId);
         if (recoverable) {
           logger.warn(`level controller,${details}: switch-down for next fragment`);
-          hls.nextAutoLevel = Math.max(minAutoLevel,levelId-1);
+          hls.nextAutoLevel = Math.max(0,levelId-1);
         } else if(level && level.details && level.details.live) {
           logger.warn(`level controller,${details} on live stream, discard`);
           if (levelError) {
