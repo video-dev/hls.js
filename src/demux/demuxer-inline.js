@@ -45,8 +45,12 @@ class DemuxerInline {
             decryptdata.key != null &&
             decryptdata.method === 'AES-128'
         ) {
-            if (this.decrypter == null) {
-                this.decrypter = new Decrypter(this.observer, this.config);
+            let decrypter = this.decrypter;
+            if (decrypter == null) {
+                decrypter = this.decrypter = new Decrypter(
+                    this.observer,
+                    this.config
+                );
             }
             var localthis = this;
             // performance.now() not available on WebWorker, at least on Safari Desktop
@@ -56,7 +60,7 @@ class DemuxerInline {
             } catch (error) {
                 startTime = Date.now();
             }
-            this.decrypter.decrypt(
+            decrypter.decrypt(
                 data,
                 decryptdata.key.buffer,
                 decryptdata.iv.buffer,
@@ -123,6 +127,8 @@ class DemuxerInline {
             (discontinuity && !this.probe(data))
         ) {
             const observer = this.observer;
+            const typeSupported = this.typeSupported;
+            const config = this.config;
             const muxConfig = [
                 { demux: TSDemuxer, remux: MP4Remuxer },
                 { demux: AACDemuxer, remux: MP4Remuxer },
@@ -136,14 +142,14 @@ class DemuxerInline {
                 if (probe(data)) {
                     const remuxer = (this.remuxer = new mux.remux(
                         observer,
-                        this.config,
-                        this.typeSupported
+                        config,
+                        typeSupported
                     ));
                     demuxer = new mux.demux(
                         observer,
                         remuxer,
-                        this.config,
-                        this.typeSupported
+                        config,
+                        typeSupported
                     );
                     this.probe = probe;
                     break;
