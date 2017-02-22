@@ -72,7 +72,7 @@ class AudioStreamController extends EventHandler {
     //Signal that video PTS was found
     onInitPtsFound(data) {
         var demuxerId = data.id,
-            cc = data.cc,
+            cc = data.frag.cc,
             initPTS = data.initPTS;
         if (demuxerId === 'main') {
             //Always update the new INIT PTS
@@ -686,7 +686,6 @@ class AudioStreamController extends EventHandler {
             var track = this.tracks[this.trackId],
                 details = track.details,
                 duration = details.totalduration,
-                start = fragCurrent.start,
                 trackId = fragCurrent.level,
                 sn = fragCurrent.sn,
                 cc = fragCurrent.cc,
@@ -695,7 +694,7 @@ class AudioStreamController extends EventHandler {
                     track.audioCodec ||
                     'mp4a.40.2',
                 stats = (this.stats = data.stats);
-            if (fragLoaded.sn === 'initSegment') {
+            if (sn === 'initSegment') {
                 this.state = State.IDLE;
 
                 stats.tparsed = stats.tbuffered = performance.now();
@@ -733,12 +732,8 @@ class AudioStreamController extends EventHandler {
                         initSegmentData,
                         audioCodec,
                         null,
-                        start,
-                        cc,
-                        trackId,
-                        sn,
+                        fragCurrent,
                         duration,
-                        fragCurrent.decryptdata,
                         accurateTimeOffset,
                         initPTS
                     );
@@ -757,12 +752,13 @@ class AudioStreamController extends EventHandler {
     }
 
     onFragParsingInitSegment(data) {
-        let fragCurrent = this.fragCurrent;
+        const fragCurrent = this.fragCurrent;
+        const fragNew = data.frag;
         if (
             fragCurrent &&
             data.id === 'audio' &&
-            data.sn === fragCurrent.sn &&
-            data.level === fragCurrent.level &&
+            fragNew.sn === fragCurrent.sn &&
+            fragNew.level === fragCurrent.level &&
             this.state === State.PARSING
         ) {
             let tracks = data.tracks,
@@ -808,18 +804,18 @@ class AudioStreamController extends EventHandler {
     }
 
     onFragParsingData(data) {
-        let fragCurrent = this.fragCurrent;
+        const fragCurrent = this.fragCurrent;
+        const fragNew = data.frag;
         if (
             fragCurrent &&
             data.id === 'audio' &&
             data.type === 'audio' &&
-            data.sn === fragCurrent.sn &&
-            data.level === fragCurrent.level &&
+            fragNew.sn === fragCurrent.sn &&
+            fragNew.level === fragCurrent.level &&
             this.state === State.PARSING
         ) {
             let trackId = this.trackId,
                 track = this.tracks[trackId],
-                frag = this.fragCurrent,
                 hls = this.hls;
 
             if (isNaN(data.endPTS)) {
@@ -836,7 +832,7 @@ class AudioStreamController extends EventHandler {
             );
             LevelHelper.updateFragPTSDTS(
                 track.details,
-                frag.sn,
+                fragCurrent.sn,
                 data.startPTS,
                 data.endPTS
             );
@@ -907,12 +903,13 @@ class AudioStreamController extends EventHandler {
     }
 
     onFragParsed(data) {
-        let fragCurrent = this.fragCurrent;
+        const fragCurrent = this.fragCurrent;
+        const fragNew = data.frag;
         if (
             fragCurrent &&
             data.id === 'audio' &&
-            data.sn === fragCurrent.sn &&
-            data.level === fragCurrent.level &&
+            fragNew.sn === fragCurrent.sn &&
+            fragNew.level === fragCurrent.level &&
             this.state === State.PARSING
         ) {
             this.stats.tparsed = performance.now();

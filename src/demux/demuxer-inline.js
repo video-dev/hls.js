@@ -4,7 +4,6 @@
 
 import Event from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import { logger } from '../utils/logger';
 import Decrypter from '../crypt/decrypter';
 import AACDemuxer from '../demux/aacdemuxer';
 import MP4Demuxer from '../demux/mp4demuxer';
@@ -13,11 +12,10 @@ import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
 
 class DemuxerInline {
-    constructor(hls, id, typeSupported, config = null) {
-        this.hls = hls;
-        this.id = id;
-        this.config = this.hls.config || config;
+    constructor(observer, typeSupported, config) {
+        this.observer = observer;
         this.typeSupported = typeSupported;
+        this.config = config;
     }
 
     destroy() {
@@ -29,15 +27,15 @@ class DemuxerInline {
 
     push(
         data,
+        decryptdata,
         initSegment,
         audioCodec,
         videoCodec,
         timeOffset,
-        cc,
-        level,
-        sn,
+        discontinuity,
+        trackSwitch,
+        contiguous,
         duration,
-        decryptdata,
         accurateTimeOffset,
         defaultInitPTS
     ) {
@@ -47,8 +45,12 @@ class DemuxerInline {
             decryptdata.key != null &&
             decryptdata.method === 'AES-128'
         ) {
-            if (this.decrypter == null) {
-                this.decrypter = new Decrypter(this.hls, this.config);
+            let decrypter = this.decrypter;
+            if (decrypter == null) {
+                decrypter = this.decrypter = new Decrypter(
+                    this.observer,
+                    this.config
+                );
             }
             var localthis = this;
             // performance.now() not available on WebWorker, at least on Safari Desktop
@@ -58,7 +60,7 @@ class DemuxerInline {
             } catch (error) {
                 startTime = Date.now();
             }
-            this.decrypter.decrypt(
+            decrypter.decrypt(
                 data,
                 decryptdata.key.buffer,
                 decryptdata.iv.buffer,
@@ -69,22 +71,20 @@ class DemuxerInline {
                     } catch (error) {
                         endTime = Date.now();
                     }
-                    localthis.hls.trigger(Event.FRAG_DECRYPTED, {
-                        level: level,
-                        sn: sn,
+                    localthis.observer.trigger(Event.FRAG_DECRYPTED, {
                         stats: { tstart: startTime, tdecrypt: endTime }
                     });
                     localthis.pushDecrypted(
                         new Uint8Array(decryptedData),
+                        decryptdata,
                         new Uint8Array(initSegment),
                         audioCodec,
                         videoCodec,
                         timeOffset,
-                        cc,
-                        level,
-                        sn,
+                        discontinuity,
+                        trackSwitch,
+                        contiguous,
                         duration,
-                        decryptdata,
                         accurateTimeOffset,
                         defaultInitPTS
                     );
@@ -93,15 +93,15 @@ class DemuxerInline {
         } else {
             this.pushDecrypted(
                 new Uint8Array(data),
+                decryptdata,
                 new Uint8Array(initSegment),
                 audioCodec,
                 videoCodec,
                 timeOffset,
-                cc,
-                level,
-                sn,
+                discontinuity,
+                trackSwitch,
+                contiguous,
                 duration,
-                decryptdata,
                 accurateTimeOffset,
                 defaultInitPTS
             );
@@ -110,27 +110,28 @@ class DemuxerInline {
 
     pushDecrypted(
         data,
+        decryptdata,
         initSegment,
         audioCodec,
         videoCodec,
         timeOffset,
-        cc,
-        level,
-        sn,
+        discontinuity,
+        trackSwitch,
+        contiguous,
         duration,
-        decryptdata,
         accurateTimeOffset,
         defaultInitPTS
     ) {
         var demuxer = this.demuxer;
-        const id = this.id;
         if (
             !demuxer ||
             // in case of continuity change, we might switch from content type (AAC container to TS container for example)
             // so let's check that current demuxer is still valid
-            (cc !== this.cc && !this.probe(data))
+            (discontinuity && !this.probe(data))
         ) {
-            const hls = this.hls;
+            const observer = this.observer;
+            const typeSupported = this.typeSupported;
+            const config = this.config;
             const muxConfig = [
                 { demux: TSDemuxer, remux: MP4Remuxer },
                 { demux: AACDemuxer, remux: MP4Remuxer },
@@ -143,26 +144,23 @@ class DemuxerInline {
                 const probe = mux.demux.probe;
                 if (probe(data)) {
                     const remuxer = (this.remuxer = new mux.remux(
-                        hls,
-                        id,
-                        this.config,
-                        this.typeSupported
+                        observer,
+                        config,
+                        typeSupported
                     ));
                     demuxer = new mux.demux(
-                        hls,
-                        id,
+                        observer,
                         remuxer,
-                        this.config,
-                        this.typeSupported
+                        config,
+                        typeSupported
                     );
                     this.probe = probe;
                     break;
                 }
             }
             if (!demuxer) {
-                hls.trigger(Event.ERROR, {
+                observer.trigger(Event.ERROR, {
                     type: ErrorTypes.MEDIA_ERROR,
-                    id: id,
                     details: ErrorDetails.FRAG_PARSING_ERROR,
                     fatal: true,
                     reason: 'no demux matching with content found'
@@ -170,54 +168,26 @@ class DemuxerInline {
                 return;
             }
             this.demuxer = demuxer;
-            this.lastCC = 0;
         }
-        let contiguous = false;
         const remuxer = this.remuxer;
-        if (cc !== this.lastCC) {
-            logger.log(`${id}:discontinuity detected`);
+
+        if (discontinuity || trackSwitch) {
             demuxer.resetInitSegment(
                 initSegment,
-                level,
-                sn,
                 audioCodec,
                 videoCodec,
                 duration
             );
             remuxer.resetInitSegment();
+        }
+        if (discontinuity) {
             demuxer.resetTimeStamp();
             remuxer.resetTimeStamp(defaultInitPTS);
-            this.lastCC = cc;
         }
-        if (level !== this.lastLevel) {
-            logger.log(`${id}:switch detected`);
-            demuxer.resetInitSegment(
-                initSegment,
-                level,
-                sn,
-                audioCodec,
-                videoCodec,
-                duration
-            );
-            remuxer.resetInitSegment();
-            this.lastLevel = level;
-        } else if (sn === this.lastSN + 1) {
-            contiguous = true;
-        }
-        this.lastSN = sn;
-        this.cc = cc;
         if (typeof demuxer.setDecryptData === 'function') {
             demuxer.setDecryptData(decryptdata);
         }
-        demuxer.append(
-            data,
-            timeOffset,
-            cc,
-            level,
-            sn,
-            contiguous,
-            accurateTimeOffset
-        );
+        demuxer.append(data, timeOffset, contiguous, accurateTimeOffset);
     }
 }
 

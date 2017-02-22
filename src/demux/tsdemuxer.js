@@ -18,9 +18,8 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
 class TSDemuxer {
-    constructor(observer, id, remuxer, config, typeSupported) {
+    constructor(observer, remuxer, config, typeSupported) {
         this.observer = observer;
-        this.id = id;
         this.config = config;
         this.typeSupported = typeSupported;
         this.remuxer = remuxer;
@@ -58,7 +57,7 @@ class TSDemuxer {
         }
     }
 
-    resetInitSegment(initSegment, level, sn, audioCodec, videoCodec, duration) {
+    resetInitSegment(initSegment, audioCodec, videoCodec, duration) {
         this.pmtParsed = false;
         this._pmtId = -1;
         this._avcTrack = {
@@ -105,7 +104,7 @@ class TSDemuxer {
     resetTimeStamp() {}
 
     // feed incoming data to the front of the parsing pipeline
-    append(data, timeOffset, cc, level, sn, contiguous, accurateTimeOffset) {
+    append(data, timeOffset, contiguous, accurateTimeOffset) {
         var start,
             len = data.length,
             stt,
@@ -253,7 +252,6 @@ class TSDemuxer {
             } else {
                 this.observer.trigger(Event.ERROR, {
                     type: ErrorTypes.MEDIA_ERROR,
-                    id: this.id,
                     details: ErrorDetails.FRAG_PARSING_ERROR,
                     fatal: false,
                     reason: 'TS packet did not start with 0x47'
@@ -296,9 +294,6 @@ class TSDemuxer {
 
         if (this.sampleAes == null) {
             this.remuxer.remux(
-                level,
-                sn,
-                cc,
                 audioTrack,
                 avcTrack,
                 id3Track,
@@ -309,9 +304,6 @@ class TSDemuxer {
             );
         } else {
             this.decryptAndRemux(
-                level,
-                sn,
-                cc,
                 audioTrack,
                 avcTrack,
                 id3Track,
@@ -324,9 +316,6 @@ class TSDemuxer {
     }
 
     decryptAndRemux(
-        level,
-        sn,
-        cc,
         audioTrack,
         videoTrack,
         id3Track,
@@ -339,9 +328,6 @@ class TSDemuxer {
             let localthis = this;
             this.sampleAes.decryptAacSamples(audioTrack.samples, 0, function() {
                 localthis.decryptAndRemuxAvc(
-                    level,
-                    sn,
-                    cc,
                     audioTrack,
                     videoTrack,
                     id3Track,
@@ -353,9 +339,6 @@ class TSDemuxer {
             });
         } else {
             this.decryptAndRemuxAvc(
-                level,
-                sn,
-                cc,
                 audioTrack,
                 videoTrack,
                 id3Track,
@@ -368,9 +351,6 @@ class TSDemuxer {
     }
 
     decryptAndRemuxAvc(
-        level,
-        sn,
-        cc,
         audioTrack,
         videoTrack,
         id3Track,
@@ -387,9 +367,6 @@ class TSDemuxer {
                 0,
                 function() {
                     localthis.remuxer.remux(
-                        level,
-                        sn,
-                        cc,
                         audioTrack,
                         videoTrack,
                         id3Track,
@@ -402,9 +379,6 @@ class TSDemuxer {
             );
         } else {
             this.remuxer.remux(
-                level,
-                sn,
-                cc,
                 audioTrack,
                 videoTrack,
                 id3Track,
@@ -1140,7 +1114,6 @@ class TSDemuxer {
             logger.warn(`parsing error:${reason}`);
             this.observer.trigger(Event.ERROR, {
                 type: ErrorTypes.MEDIA_ERROR,
-                id: this.id,
                 details: ErrorDetails.FRAG_PARSING_ERROR,
                 fatal: fatal,
                 reason: reason
