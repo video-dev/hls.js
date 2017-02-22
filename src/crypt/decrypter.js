@@ -11,6 +11,7 @@ class Decrypter {
   constructor(observer,config) {
     this.observer = observer;
     this.config = config;
+    this.logEnabled = true;
     try {
       const browserCrypto = crypto ? crypto : self.crypto;
       this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
@@ -24,7 +25,10 @@ class Decrypter {
 
   decrypt(data, key, iv, callback) {
     if (this.disableWebCrypto && this.config.enableSoftwareAES) {
-      logger.log('JS AES decrypt');
+      if (this.logEnabled) {
+        logger.log('JS AES decrypt');
+        this.logEnabled = false;
+      }
       let decryptor = this.decryptor;
       if (!decryptor) {
         this.decryptor = decryptor = new AESDecryptor();
@@ -33,7 +37,10 @@ class Decrypter {
       callback(decryptor.decrypt(data, 0, iv));
     }
     else {
-      logger.log('WebCrypto AES decrypt');
+      if (this.logEnabled) {
+        logger.log('WebCrypto AES decrypt');
+        this.logEnabled = false;
+      }
       const subtle = this.subtle;
       if (this.key !== key) {
         this.key = key;
@@ -59,6 +66,7 @@ class Decrypter {
     if (this.config.enableSoftwareAES) {
       logger.log('WebCrypto Error, disable WebCrypto API');
       this.disableWebCrypto = true;
+      this.logEnabled = true;
       this.decrypt(data, key, iv, callback);
     }
     else {
