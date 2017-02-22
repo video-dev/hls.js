@@ -110,9 +110,16 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
   });
 
   afterEach(function() {
-    console.log("Quitting browser...");
-    return this.browser.quit().then(function() {
-      console.log("Browser quit.");
+    var browser = this.browser;
+    browser.executeScript('return logString').then(function(return_value){
+      console.log('travis_fold:start:debug_logs');
+      console.log('logs');
+      console.log(return_value);
+      console.log('travis_fold:end:debug_logs');
+      console.log("Quitting browser...");
+      return browser.quit().then(function() {
+        console.log("Browser quit.");
+      });
     });
   });
 
@@ -125,9 +132,6 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
           callback({ code : 'loadeddata', logs : logString});
         };
       }, url).then(function(result) {
-        console.log('travis_fold:start:debug_logs');
-        console.log(result.logs);
-        console.log('travis_fold:end:debug_logs');
         assert.strictEqual(result.code, 'loadeddata');
       });
     }
@@ -145,9 +149,6 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
           callback({ code : video.readyState, logs : logString});
         }, 12000);
       }, url).then(function(result) {
-        console.log('travis_fold:start:debug_logs');
-        console.log(result.logs);
-        console.log('travis_fold:end:debug_logs');
         assert.strictEqual(result.code, 4);
       });
     }
@@ -165,9 +166,6 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
           callback({ code : 'seeked', logs : logString});
         };
       }, url).then(function(result) {
-        console.log('travis_fold:start:debug_logs');
-        console.log(result.logs);
-        console.log('travis_fold:end:debug_logs');
         assert.strictEqual(result.code, 'seeked');
       });
     }
