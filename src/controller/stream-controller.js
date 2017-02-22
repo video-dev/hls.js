@@ -1195,9 +1195,6 @@ class StreamController extends EventHandler {
                 this.state = State.PARSING;
                 // transmux the MPEG-TS data to ISO-BMFF segments
                 let duration = details.totalduration,
-                    start = !isNaN(fragCurrent.startDTS)
-                        ? fragCurrent.startDTS
-                        : fragCurrent.start,
                     level = fragCurrent.level,
                     sn = fragCurrent.sn,
                     audioCodec =
@@ -1240,12 +1237,8 @@ class StreamController extends EventHandler {
                     initSegmentData,
                     audioCodec,
                     currentLevel.videoCodec,
-                    start,
-                    fragCurrent.cc,
-                    level,
-                    sn,
+                    fragCurrent,
                     duration,
-                    fragCurrent.decryptdata,
                     accurateTimeOffset,
                     undefined
                 );
@@ -1255,12 +1248,13 @@ class StreamController extends EventHandler {
     }
 
     onFragParsingInitSegment(data) {
-        let fragCurrent = this.fragCurrent;
+        const fragCurrent = this.fragCurrent;
+        const fragNew = data.frag;
         if (
             fragCurrent &&
             data.id === 'main' &&
-            data.sn === fragCurrent.sn &&
-            data.level === fragCurrent.level &&
+            fragNew.sn === fragCurrent.sn &&
+            fragNew.level === fragCurrent.level &&
             this.state === State.PARSING
         ) {
             var tracks = data.tracks,
@@ -1367,17 +1361,18 @@ class StreamController extends EventHandler {
     }
 
     onFragParsingData(data) {
-        let fragCurrent = this.fragCurrent;
+        const fragCurrent = this.fragCurrent;
+        const fragNew = data.frag;
         if (
             fragCurrent &&
             data.id === 'main' &&
-            data.sn === fragCurrent.sn &&
-            data.level === fragCurrent.level &&
+            fragNew.sn === fragCurrent.sn &&
+            fragNew.level === fragCurrent.level &&
             !(data.type === 'audio' && this.altAudio) && // filter out main audio if audio track is loaded through audio stream controller
             this.state === State.PARSING
         ) {
             var level = this.levels[this.level],
-                frag = this.fragCurrent;
+                frag = fragCurrent;
             if (isNaN(data.endPTS)) {
                 data.endPTS = data.startPTS + fragCurrent.duration;
                 data.endDTS = data.startDTS + fragCurrent.duration;
@@ -1457,12 +1452,13 @@ class StreamController extends EventHandler {
     }
 
     onFragParsed(data) {
-        let fragCurrent = this.fragCurrent;
+        const fragCurrent = this.fragCurrent;
+        const fragNew = data.frag;
         if (
             fragCurrent &&
             data.id === 'main' &&
-            data.sn === fragCurrent.sn &&
-            data.level === fragCurrent.level &&
+            fragNew.sn === fragCurrent.sn &&
+            fragNew.level === fragCurrent.level &&
             this.state === State.PARSING
         ) {
             this.stats.tparsed = performance.now();
