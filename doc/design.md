@@ -199,7 +199,7 @@ design idea is pretty simple :
 [src/demux/demuxer-worker.js]: ../src/demux/demuxer-worker.js
 [src/demux/exp-golomb.js]: ../src/demux/exp-golomb.js
 [src/demux/id3.js]: ../src/demux/id3.js
-[src/demux/sample-aes.js]: src/demux/sample-aes.js
+[src/demux/sample-aes.js]: ../src/demux/sample-aes.js
 [src/demux/tsdemuxer.js]: ../src/demux/tsdemuxer.js
 [src/helper/aac.js]: ../src/helper/aac.js
 [src/helper/buffer-helper.js]: ../src/helper/buffer-helper.js
