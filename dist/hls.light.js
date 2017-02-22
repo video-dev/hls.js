@@ -646,10 +646,9 @@ var AbrController = function (_EventHandler) {
     var _this = _possibleConstructorReturn(this, (AbrController.__proto__ || Object.getPrototypeOf(AbrController)).call(this, hls, _events2.default.FRAG_LOADING, _events2.default.FRAG_LOADED, _events2.default.FRAG_BUFFERED, _events2.default.ERROR));
 
     _this.lastLoadedFragLevel = 0;
-    _this._autoLevelCapping = -1;
     _this._nextAutoLevel = -1;
     _this.hls = hls;
-    _this.onCheck = _this.abandonRulesCheck.bind(_this);
+    _this.onCheck = _this._abandonRulesCheck.bind(_this);
     return _this;
   }
 
@@ -669,7 +668,7 @@ var AbrController = function (_EventHandler) {
         }
         // lazy init of bw Estimator, rationale is that we use different params for Live/VoD
         // so we need to wait for stream manifest / playlist type to instantiate it.
-        if (!this.bwEstimator) {
+        if (!this._bwEstimator) {
           var hls = this.hls,
               level = data.frag.level,
               isLive = hls.levels[level].details.live,
@@ -684,14 +683,14 @@ var AbrController = function (_EventHandler) {
             ewmaFast = config.abrEwmaFastVoD;
             ewmaSlow = config.abrEwmaSlowVoD;
           }
-          this.bwEstimator = new _ewmaBandwidthEstimator2.default(hls, ewmaSlow, ewmaFast, config.abrEwmaDefaultEstimate);
+          this._bwEstimator = new _ewmaBandwidthEstimator2.default(hls, ewmaSlow, ewmaFast, config.abrEwmaDefaultEstimate);
         }
         this.fragCurrent = frag;
       }
     }
   }, {
-    key: 'abandonRulesCheck',
-    value: function abandonRulesCheck() {
+    key: '_abandonRulesCheck',
+    value: function _abandonRulesCheck() {
       /*
         monitor fragment retrieval time...
         we compute expected time of arrival of the complete fragment.
@@ -701,7 +700,7 @@ var AbrController = function (_EventHandler) {
           v = hls.media,
           frag = this.fragCurrent,
           loader = frag.loader,
-          minAutoLevel = this.minAutoLevel;
+          minAutoLevel = hls.minAutoLevel;
 
       // if loader has been destroyed or loading has been aborted, stop timer and return
       if (!loader || loader.stats && loader.stats.aborted) {
@@ -753,7 +752,7 @@ var AbrController = function (_EventHandler) {
               // force next load level in auto mode
               hls.nextLoadLevel = nextLoadLevel;
               // update bw estimate for this fragment before cancelling load (this will help reducing the bw)
-              this.bwEstimator.sample(requestDelay, stats.loaded);
+              this._bwEstimator.sample(requestDelay, stats.loaded);
               //abort fragment loading
               loader.abort();
               // stop abandon rules timer
@@ -807,7 +806,7 @@ var AbrController = function (_EventHandler) {
         // as a consequence it could happen really late in the process. meaning that appending duration might appears huge ... leading to underestimated throughput estimation
         var fragLoadingProcessingMs = stats.tparsed - stats.trequest;
         _logger.logger.log('latency/loading/parsing/append/kbps:' + Math.round(stats.tfirst - stats.trequest) + '/' + Math.round(stats.tload - stats.tfirst) + '/' + Math.round(stats.tparsed - stats.tload) + '/' + Math.round(stats.tbuffered - stats.tparsed) + '/' + Math.round(8 * stats.loaded / (stats.tbuffered - stats.trequest)));
-        this.bwEstimator.sample(fragLoadingProcessingMs, stats.loaded);
+        this._bwEstimator.sample(fragLoadingProcessingMs, stats.loaded);
         // if fragment has been loaded to perform a bitrate test, (hls.startLevel = -1), store bitrate test delay duration
         if (frag.bitrateTest) {
           this.bitrateTestDelay = fragLoadingProcessingMs / 1000;
@@ -838,11 +837,11 @@ var AbrController = function (_EventHandler) {
       }
     }
 
-    /** Return the capping/max level value that could be used by automatic level selection algorithm **/
+    // return next auto level
 
   }, {
-    key: 'findBestLevel',
-    value: function findBestLevel(currentLevel, currentFragDuration, currentBw, minAutoLevel, maxAutoLevel, maxFetchDuration, bwFactor, bwUpFactor, levels) {
+    key: '_findBestLevel',
+    value: function _findBestLevel(currentLevel, currentFragDuration, currentBw, minAutoLevel, maxAutoLevel, maxFetchDuration, bwFactor, bwUpFactor, levels) {
       for (var i = maxAutoLevel; i >= minAutoLevel; i--) {
         var levelInfo = levels[i],
             levelDetails = levelInfo.details,
@@ -878,40 +877,19 @@ var AbrController = function (_EventHandler) {
       return -1;
     }
   }, {
-    key: 'autoLevelCapping',
-    get: function get() {
-      return this._autoLevelCapping;
-    }
-
-    /** set the capping/max level value that could be used by automatic level selection algorithm **/
-    ,
-    set: function set(newLevel) {
-      this._autoLevelCapping = newLevel;
-    }
-  }, {
     key: 'nextAutoLevel',
     get: function get() {
-      var nextAutoLevel = this._nextAutoLevel,
-          bwEstimator = this.bwEstimator,
-          hls = this.hls,
-          levels = hls.levels,
-          minAutoBitrate = hls.config.minAutoBitrate;
-      // in case next auto level has been forced, and bw not available or not reliable
-      if (nextAutoLevel !== -1 && (!bwEstimator || !bwEstimator.canEstimate())) {
-        // cap next auto level by max auto level
-        return Math.min(nextAutoLevel, this.maxAutoLevel);
+      var forcedAutoLevel = this._nextAutoLevel;
+      var bwEstimator = this._bwEstimator;
+      // in case next auto level has been forced, and bw not available or not reliable, return forced value
+      if (forcedAutoLevel !== -1 && (!bwEstimator || !bwEstimator.canEstimate())) {
+        return forcedAutoLevel;
       }
       // compute next level using ABR logic
-      var nextABRAutoLevel = this.nextABRAutoLevel;
-      if (nextAutoLevel !== -1) {
-        // nextAutoLevel is defined, use it to cap ABR computed quality level
-        nextABRAutoLevel = Math.min(nextAutoLevel, nextABRAutoLevel);
-      }
-      if (minAutoBitrate !== undefined) {
-        var levelNextBitrate = levels[nextABRAutoLevel].realBitrate ? Math.max(levels[nextABRAutoLevel].realBitrate, levels[nextABRAutoLevel].bitrate) : levels[nextABRAutoLevel].bitrate;
-        while (levelNextBitrate < minAutoBitrate) {
-          nextABRAutoLevel++;
-        }
+      var nextABRAutoLevel = this._nextABRAutoLevel;
+      // if forced auto level has been defined, use it to cap ABR computed quality level
+      if (forcedAutoLevel !== -1) {
+        nextABRAutoLevel = Math.min(forcedAutoLevel, nextABRAutoLevel);
       }
       return nextABRAutoLevel;
     },
@@ -919,41 +897,13 @@ var AbrController = function (_EventHandler) {
       this._nextAutoLevel = nextLevel;
     }
   }, {
-    key: 'minAutoLevel',
+    key: '_nextABRAutoLevel',
     get: function get() {
       var hls = this.hls,
-          levels = hls.levels,
-          minAutoBitrate = hls.config.minAutoBitrate,
-          len = levels ? levels.length : 0;
-      for (var i = 0; i < len; i++) {
-        var levelNextBitrate = levels[i].realBitrate ? Math.max(levels[i].realBitrate, levels[i].bitrate) : levels[i].bitrate;
-        if (levelNextBitrate > minAutoBitrate) {
-          return i;
-        }
-      }
-      return 0;
-    }
-  }, {
-    key: 'maxAutoLevel',
-    get: function get() {
-      var levels = this.hls.levels,
-          autoLevelCapping = this._autoLevelCapping,
-          maxAutoLevel;
-      if (autoLevelCapping === -1 && levels && levels.length) {
-        maxAutoLevel = levels.length - 1;
-      } else {
-        maxAutoLevel = autoLevelCapping;
-      }
-      return maxAutoLevel;
-    }
-  }, {
-    key: 'nextABRAutoLevel',
-    get: function get() {
-      var hls = this.hls,
-          maxAutoLevel = this.maxAutoLevel,
+          maxAutoLevel = hls.maxAutoLevel,
           levels = hls.levels,
           config = hls.config,
-          minAutoLevel = this.minAutoLevel;
+          minAutoLevel = hls.minAutoLevel;
       var v = hls.media,
           currentLevel = this.lastLoadedFragLevel,
           currentFragDuration = this.fragCurrent ? this.fragCurrent.duration : 0,
@@ -962,13 +912,13 @@ var AbrController = function (_EventHandler) {
       // playbackRate is the absolute value of the playback rate; if v.playbackRate is 0, we use 1 to load as
       // if we're playing back at the normal rate.
       playbackRate = v && v.playbackRate !== 0 ? Math.abs(v.playbackRate) : 1.0,
-          avgbw = this.bwEstimator ? this.bwEstimator.getEstimate() : config.abrEwmaDefaultEstimate,
+          avgbw = this._bwEstimator ? this._bwEstimator.getEstimate() : config.abrEwmaDefaultEstimate,
 
       // bufferStarvationDelay is the wall-clock time left until the playback buffer is exhausted.
       bufferStarvationDelay = (_bufferHelper2.default.bufferInfo(v, pos, config.maxBufferHole).end - pos) / playbackRate;
 
       // First, look to see if we can find a level matching with our avg bandwidth AND that could also guarantee no rebuffering at all
-      var bestLevel = this.findBestLevel(currentLevel, currentFragDuration, avgbw, minAutoLevel, maxAutoLevel, bufferStarvationDelay, config.abrBandWidthFactor, config.abrBandWidthUpFactor, levels);
+      var bestLevel = this._findBestLevel(currentLevel, currentFragDuration, avgbw, minAutoLevel, maxAutoLevel, bufferStarvationDelay, config.abrBandWidthFactor, config.abrBandWidthUpFactor, levels);
       if (bestLevel >= 0) {
         return bestLevel;
       } else {
@@ -994,7 +944,7 @@ var AbrController = function (_EventHandler) {
             bwFactor = bwUpFactor = 1;
           }
         }
-        bestLevel = this.findBestLevel(currentLevel, currentFragDuration, avgbw, minAutoLevel, maxAutoLevel, bufferStarvationDelay + maxStarvationDelay, bwFactor, bwUpFactor, levels);
+        bestLevel = this._findBestLevel(currentLevel, currentFragDuration, avgbw, minAutoLevel, maxAutoLevel, bufferStarvationDelay + maxStarvationDelay, bwFactor, bwUpFactor, levels);
         return Math.max(bestLevel, 0);
       }
     }
@@ -2028,7 +1978,7 @@ var LevelController = function (_EventHandler) {
     var _this = _possibleConstructorReturn(this, (LevelController.__proto__ || Object.getPrototypeOf(LevelController)).call(this, hls, _events2.default.MANIFEST_LOADED, _events2.default.LEVEL_LOADED, _events2.default.FRAG_LOADED, _events2.default.ERROR));
 
     _this.ontick = _this.tick.bind(_this);
-    _this._manualLevel = _this._autoLevelCapping = -1;
+    _this._manualLevel = -1;
     return _this;
   }
 
@@ -2147,6 +2097,7 @@ var LevelController = function (_EventHandler) {
     key: 'setLevelInternal',
     value: function setLevelInternal(newLevel) {
       var levels = this._levels;
+      var hls = this.hls;
       // check if level idx is valid
       if (newLevel >= 0 && newLevel < levels.length) {
         // stopping live reloading timer if any
@@ -2159,7 +2110,7 @@ var LevelController = function (_EventHandler) {
           this._level = newLevel;
           var levelProperties = levels[newLevel];
           levelProperties.level = newLevel;
-          this.hls.trigger(_events2.default.LEVEL_SWITCH, levelProperties);
+          hls.trigger(_events2.default.LEVEL_SWITCH, levelProperties);
         }
         var level = levels[newLevel],
             levelDetails = level.details;
@@ -2167,11 +2118,11 @@ var LevelController = function (_EventHandler) {
         if (!levelDetails || levelDetails.live === true) {
           // level not retrieved yet, or live playlist we need to (re)load it
           var urlId = level.urlId;
-          this.hls.trigger(_events2.default.LEVEL_LOADING, { url: level.url[urlId], level: newLevel, id: urlId });
+          hls.trigger(_events2.default.LEVEL_LOADING, { url: level.url[urlId], level: newLevel, id: urlId });
         }
       } else {
         // invalid level id given, trigger error
-        this.hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.OTHER_ERROR, details: _errors.ErrorDetails.LEVEL_SWITCH_ERROR, level: newLevel, fatal: false, reason: 'invalid level idx' });
+        hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.OTHER_ERROR, details: _errors.ErrorDetails.LEVEL_SWITCH_ERROR, level: newLevel, fatal: false, reason: 'invalid level idx' });
       }
     }
   }, {
@@ -2185,9 +2136,7 @@ var LevelController = function (_EventHandler) {
           hls = this.hls,
           levelId = void 0,
           level = void 0,
-          levelError = false,
-          abrController = hls.abrController,
-          minAutoLevel = abrController.minAutoLevel;
+          levelError = false;
       // try to recover not fatal errors
       switch (details) {
         case _errors.ErrorDetails.FRAG_LOAD_ERROR:
@@ -2231,7 +2180,7 @@ var LevelController = function (_EventHandler) {
           var recoverable = this._manualLevel === -1 && levelId;
           if (recoverable) {
             _logger.logger.warn('level controller,' + details + ': switch-down for next fragment');
-            abrController.nextAutoLevel = Math.max(minAutoLevel, levelId - 1);
+            hls.nextAutoLevel = Math.max(0, levelId - 1);
           } else if (level && level.details && level.details.live) {
             _logger.logger.warn('level controller,' + details + ' on live stream, discard');
             if (levelError) {
@@ -2377,10 +2326,6 @@ var LevelController = function (_EventHandler) {
       }
     },
     set: function set(newLevel) {
-      // if not in autostart level, ensure startLevel is greater than minAutoLevel
-      if (newLevel !== -1) {
-        newLevel = Math.max(newLevel, this.hls.abrController.minAutoLevel);
-      }
       this._startLevel = newLevel;
     }
   }, {
@@ -2389,13 +2334,13 @@ var LevelController = function (_EventHandler) {
       if (this._manualLevel !== -1) {
         return this._manualLevel;
       } else {
-        return this.hls.abrController.nextAutoLevel;
+        return this.hls.nextAutoLevel;
       }
     },
     set: function set(nextLevel) {
       this.level = nextLevel;
       if (this._manualLevel === -1) {
-        this.hls.abrController.nextAutoLevel = nextLevel;
+        this.hls.nextAutoLevel = nextLevel;
       }
     }
   }]);
@@ -3385,7 +3330,6 @@ var StreamController = function (_EventHandler) {
           this.state = State.PARSING;
           // transmux the MPEG-TS data to ISO-BMFF segments
           var duration = details.totalduration,
-              start = !isNaN(fragCurrent.startDTS) ? fragCurrent.startDTS : fragCurrent.start,
               level = fragCurrent.level,
               sn = fragCurrent.sn,
               audioCodec = this.config.defaultAudioCodec || currentLevel.audioCodec;
@@ -3414,7 +3358,7 @@ var StreamController = function (_EventHandler) {
           var mediaSeeking = media && media.seeking;
           var accurateTimeOffset = !mediaSeeking && (details.PTSKnown || !details.live);
           var initSegmentData = details.initSegment ? details.initSegment.data : [];
-          demuxer.push(data.payload, initSegmentData, audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata, accurateTimeOffset, undefined);
+          demuxer.push(data.payload, initSegmentData, audioCodec, currentLevel.videoCodec, fragCurrent, duration, accurateTimeOffset, undefined);
         }
       }
       this.fragLoadError = 0;
@@ -3423,7 +3367,8 @@ var StreamController = function (_EventHandler) {
     key: 'onFragParsingInitSegment',
     value: function onFragParsingInitSegment(data) {
       var fragCurrent = this.fragCurrent;
-      if (fragCurrent && data.id === 'main' && data.sn === fragCurrent.sn && data.level === fragCurrent.level && this.state === State.PARSING) {
+      var fragNew = data.frag;
+      if (fragCurrent && data.id === 'main' && fragNew.sn === fragCurrent.sn && fragNew.level === fragCurrent.level && this.state === State.PARSING) {
         var tracks = data.tracks,
             trackName,
             track;
@@ -3518,10 +3463,11 @@ var StreamController = function (_EventHandler) {
       var _this2 = this;
 
       var fragCurrent = this.fragCurrent;
-      if (fragCurrent && data.id === 'main' && data.sn === fragCurrent.sn && data.level === fragCurrent.level && !(data.type === 'audio' && this.altAudio) && // filter out main audio if audio track is loaded through audio stream controller
+      var fragNew = data.frag;
+      if (fragCurrent && data.id === 'main' && fragNew.sn === fragCurrent.sn && fragNew.level === fragCurrent.level && !(data.type === 'audio' && this.altAudio) && // filter out main audio if audio track is loaded through audio stream controller
       this.state === State.PARSING) {
         var level = this.levels[this.level],
-            frag = this.fragCurrent;
+            frag = fragCurrent;
         if (isNaN(data.endPTS)) {
           data.endPTS = data.startPTS + fragCurrent.duration;
           data.endDTS = data.startDTS + fragCurrent.duration;
@@ -3574,7 +3520,8 @@ var StreamController = function (_EventHandler) {
     key: 'onFragParsed',
     value: function onFragParsed(data) {
       var fragCurrent = this.fragCurrent;
-      if (fragCurrent && data.id === 'main' && data.sn === fragCurrent.sn && data.level === fragCurrent.level && this.state === State.PARSING) {
+      var fragNew = data.frag;
+      if (fragCurrent && data.id === 'main' && fragNew.sn === fragCurrent.sn && fragNew.level === fragCurrent.level && this.state === State.PARSING) {
         this.stats.tparsed = performance.now();
         this.state = State.PARSED;
         this._checkAppendedParsed();
@@ -4550,18 +4497,17 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var AACDemuxer = function () {
-  function AACDemuxer(observer, id, remuxer, config) {
+  function AACDemuxer(observer, remuxer, config) {
     _classCallCheck(this, AACDemuxer);
 
     this.observer = observer;
-    this.id = id;
     this.config = config;
     this.remuxer = remuxer;
   }
 
   _createClass(AACDemuxer, [{
     key: 'resetInitSegment',
-    value: function resetInitSegment(initSegment, level, sn, audioCodec, videoCodec, duration) {
+    value: function resetInitSegment(initSegment, audioCodec, videoCodec, duration) {
       this._aacTrack = { container: 'audio/adts', type: 'audio', id: -1, sequenceNumber: 0, isAAC: true, samples: [], len: 0, manifestCodec: audioCodec, duration: duration };
     }
   }, {
@@ -4572,7 +4518,7 @@ var AACDemuxer = function () {
 
 
     // feed incoming data to the front of the parsing pipeline
-    value: function append(data, timeOffset, cc, level, sn, contiguous, accurateTimeOffset) {
+    value: function append(data, timeOffset, contiguous, accurateTimeOffset) {
       var track,
           id3 = new _id2.default(data),
           pts = 90 * id3.timeStamp,
@@ -4631,7 +4577,7 @@ var AACDemuxer = function () {
           break;
         }
       }
-      this.remuxer.remux(level, sn, cc, track, { samples: [] }, { samples: [{ pts: pts, dts: pts, unit: id3.payload }] }, { samples: [] }, timeOffset, contiguous, accurateTimeOffset);
+      this.remuxer.remux(track, { samples: [] }, { samples: [{ pts: pts, dts: pts, unit: id3.payload }] }, { samples: [] }, timeOffset, contiguous, accurateTimeOffset);
     }
   }, {
     key: 'destroy',
@@ -4826,8 +4772,6 @@ var _events2 = _interopRequireDefault(_events);
 
 var _errors = _dereq_(25);
 
-var _logger = _dereq_(42);
-
 var _decrypter = _dereq_(14);
 
 var _decrypter2 = _interopRequireDefault(_decrypter);
@@ -4857,15 +4801,12 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var DemuxerInline = function () {
-  function DemuxerInline(hls, id, typeSupported) {
-    var config = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
-
+  function DemuxerInline(observer, typeSupported, config) {
     _classCallCheck(this, DemuxerInline);
 
-    this.hls = hls;
-    this.id = id;
-    this.config = this.hls.config || config;
+    this.observer = observer;
     this.typeSupported = typeSupported;
+    this.config = config;
   }
 
   _createClass(DemuxerInline, [{
@@ -4878,10 +4819,11 @@ var DemuxerInline = function () {
     }
   }, {
     key: 'push',
-    value: function push(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset, defaultInitPTS) {
+    value: function push(data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS) {
       if (data.byteLength > 0 && decryptdata != null && decryptdata.key != null && decryptdata.method === 'AES-128') {
-        if (this.decrypter == null) {
-          this.decrypter = new _decrypter2.default(this.hls, this.config);
+        var decrypter = this.decrypter;
+        if (decrypter == null) {
+          decrypter = this.decrypter = new _decrypter2.default(this.observer, this.config);
         }
         var localthis = this;
         // performance.now() not available on WebWorker, at least on Safari Desktop
@@ -4891,30 +4833,31 @@ var DemuxerInline = function () {
         } catch (error) {
           startTime = Date.now();
         }
-        this.decrypter.decrypt(data, decryptdata.key.buffer, decryptdata.iv.buffer, function (decryptedData) {
+        decrypter.decrypt(data, decryptdata.key.buffer, decryptdata.iv.buffer, function (decryptedData) {
           var endTime;
           try {
             endTime = performance.now();
           } catch (error) {
             endTime = Date.now();
           }
-          localthis.hls.trigger(_events2.default.FRAG_DECRYPTED, { level: level, sn: sn, stats: { tstart: startTime, tdecrypt: endTime } });
-          localthis.pushDecrypted(new Uint8Array(decryptedData), new Uint8Array(initSegment), audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset, defaultInitPTS);
+          localthis.observer.trigger(_events2.default.FRAG_DECRYPTED, { stats: { tstart: startTime, tdecrypt: endTime } });
+          localthis.pushDecrypted(new Uint8Array(decryptedData), new Uint8Array(initSegment), audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS);
         });
       } else {
-        this.pushDecrypted(new Uint8Array(data), new Uint8Array(initSegment), audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset, defaultInitPTS);
+        this.pushDecrypted(new Uint8Array(data), new Uint8Array(initSegment), audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS);
       }
     }
   }, {
     key: 'pushDecrypted',
-    value: function pushDecrypted(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset, defaultInitPTS) {
+    value: function pushDecrypted(data, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS) {
       var demuxer = this.demuxer;
-      var id = this.id;
       if (!demuxer ||
       // in case of continuity change, we might switch from content type (AAC container to TS container for example)
       // so let's check that current demuxer is still valid
-      cc !== this.cc && !this.probe(data)) {
-        var hls = this.hls;
+      discontinuity && !this.probe(data)) {
+        var observer = this.observer;
+        var typeSupported = this.typeSupported;
+        var config = this.config;
         var muxConfig = [{ demux: _tsdemuxer2.default, remux: _mp4Remuxer2.default }, { demux: _aacdemuxer2.default, remux: _mp4Remuxer2.default }, { demux: _mp4demuxer2.default, remux: _passthroughRemuxer2.default }];
 
         // probe for content type
@@ -4922,40 +4865,29 @@ var DemuxerInline = function () {
           var mux = muxConfig[i];
           var probe = mux.demux.probe;
           if (probe(data)) {
-            var _remuxer = this.remuxer = new mux.remux(hls, id, this.config, this.typeSupported);
-            demuxer = new mux.demux(hls, id, _remuxer, this.config, this.typeSupported);
+            var _remuxer = this.remuxer = new mux.remux(observer, config, typeSupported);
+            demuxer = new mux.demux(observer, _remuxer, config, typeSupported);
             this.probe = probe;
             break;
           }
         }
         if (!demuxer) {
-          hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, id: id, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found' });
+          observer.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found' });
           return;
         }
         this.demuxer = demuxer;
-        this.lastCC = 0;
       }
-      var contiguous = false;
       var remuxer = this.remuxer;
-      if (cc !== this.lastCC) {
-        _logger.logger.log(id + ':discontinuity detected');
-        demuxer.resetInitSegment(initSegment, level, sn, audioCodec, videoCodec, duration);
+
+      if (discontinuity || trackSwitch) {
+        demuxer.resetInitSegment(initSegment, audioCodec, videoCodec, duration);
         remuxer.resetInitSegment();
+      }
+      if (discontinuity) {
         demuxer.resetTimeStamp();
         remuxer.resetTimeStamp(defaultInitPTS);
-        this.lastCC = cc;
       }
-      if (level !== this.lastLevel) {
-        _logger.logger.log(id + ':switch detected');
-        demuxer.resetInitSegment(initSegment, level, sn, audioCodec, videoCodec, duration);
-        remuxer.resetInitSegment();
-        this.lastLevel = level;
-      } else if (sn === this.lastSN + 1) {
-        contiguous = true;
-      }
-      this.lastSN = sn;
-      this.cc = cc;
-      demuxer.append(data, timeOffset, cc, level, sn, contiguous, accurateTimeOffset);
+      demuxer.append(data, timeOffset, contiguous, accurateTimeOffset);
     }
   }]);
 
@@ -4964,7 +4896,7 @@ var DemuxerInline = function () {
 
 exports.default = DemuxerInline;
 
-},{"14":14,"16":16,"23":23,"24":24,"25":25,"27":27,"37":37,"38":38,"42":42}],19:[function(_dereq_,module,exports){
+},{"14":14,"16":16,"23":23,"24":24,"25":25,"27":27,"37":37,"38":38}],19:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5021,7 +4953,7 @@ var DemuxerWorker = function DemuxerWorker(self) {
     switch (data.cmd) {
       case 'init':
         var config = JSON.parse(data.config);
-        self.demuxer = new _demuxerInline2.default(observer, data.id, data.typeSupported, config);
+        self.demuxer = new _demuxerInline2.default(observer, data.typeSupported, config);
         try {
           (0, _logger.enableLogs)(config.debug === true);
         } catch (err) {
@@ -5031,7 +4963,7 @@ var DemuxerWorker = function DemuxerWorker(self) {
         forwardMessage('init', null);
         break;
       case 'demux':
-        self.demuxer.push(data.data, data.initSegment, data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration, data.decryptdata, data.accurateTimeOffset, data.defaultInitPTS);
+        self.demuxer.push(data.data, data.decryptdata, data.initSegment, data.audioCodec, data.videoCodec, data.timeOffset, data.discontinuity, data.trackSwitch, data.contiguous, data.duration, data.accurateTimeOffset, data.defaultInitPTS);
         break;
       default:
         break;
@@ -5092,6 +5024,10 @@ var _logger = _dereq_(42);
 
 var _errors = _dereq_(25);
 
+var _events3 = _dereq_(1);
+
+var _events4 = _interopRequireDefault(_events3);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -5102,12 +5038,48 @@ var Demuxer = function () {
 
     this.hls = hls;
     this.id = id;
+    // observer setup
+    var observer = this.observer = new _events4.default();
+    var config = hls.config;
+    observer.trigger = function trigger(event) {
+      for (var _len = arguments.length, data = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+        data[_key - 1] = arguments[_key];
+      }
+
+      observer.emit.apply(observer, [event, event].concat(data));
+    };
+
+    observer.off = function off(event) {
+      for (var _len2 = arguments.length, data = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+        data[_key2 - 1] = arguments[_key2];
+      }
+
+      observer.removeListener.apply(observer, [event].concat(data));
+    };
+
+    var forwardMessage = function (ev, data) {
+      data = data || {};
+      data.frag = this.frag;
+      data.id = this.id;
+      hls.trigger(ev, data);
+    }.bind(this);
+
+    // forward events to main thread
+    observer.on(_events2.default.FRAG_DECRYPTED, forwardMessage);
+    observer.on(_events2.default.FRAG_PARSING_INIT_SEGMENT, forwardMessage);
+    observer.on(_events2.default.FRAG_PARSING_DATA, forwardMessage);
+    observer.on(_events2.default.FRAG_PARSED, forwardMessage);
+    observer.on(_events2.default.ERROR, forwardMessage);
+    observer.on(_events2.default.FRAG_PARSING_METADATA, forwardMessage);
+    observer.on(_events2.default.FRAG_PARSING_USERDATA, forwardMessage);
+    observer.on(_events2.default.INIT_PTS_FOUND, forwardMessage);
+
     var typeSupported = {
       mp4: MediaSource.isTypeSupported('video/mp4'),
       mpeg: MediaSource.isTypeSupported('audio/mpeg'),
       mp3: MediaSource.isTypeSupported('audio/mp4; codecs="mp3"')
     };
-    if (hls.config.enableWorker && typeof Worker !== 'undefined') {
+    if (config.enableWorker && typeof Worker !== 'undefined') {
       _logger.logger.log('demuxing in webworker');
       var w = void 0;
       try {
@@ -5118,18 +5090,18 @@ var Demuxer = function () {
         w.onerror = function (event) {
           hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.OTHER_ERROR, details: _errors.ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event: 'demuxerWorker', err: { message: event.message + ' (' + event.filename + ':' + event.lineno + ')' } });
         };
-        w.postMessage({ cmd: 'init', typeSupported: typeSupported, id: id, config: JSON.stringify(hls.config) });
+        w.postMessage({ cmd: 'init', typeSupported: typeSupported, id: id, config: JSON.stringify(config) });
       } catch (err) {
         _logger.logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
         if (w) {
           // revoke the Object URL that was used to create demuxer worker, so as not to leak it
           URL.revokeObjectURL(w.objectURL);
         }
-        this.demuxer = new _demuxerInline2.default(hls, id, typeSupported);
+        this.demuxer = new _demuxerInline2.default(observer, id, typeSupported, config);
         this.w = undefined;
       }
     } else {
-      this.demuxer = new _demuxerInline2.default(hls, id, typeSupported);
+      this.demuxer = new _demuxerInline2.default(observer, id, typeSupported, config);
     }
   }
 
@@ -5148,18 +5120,37 @@ var Demuxer = function () {
           this.demuxer = null;
         }
       }
+      var observer = this.observer;
+      if (observer) {
+        observer.removeAllListeners();
+        this.observer = null;
+      }
     }
   }, {
     key: 'push',
-    value: function push(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset, defaultInitPTS) {
+    value: function push(data, initSegment, audioCodec, videoCodec, frag, duration, accurateTimeOffset, defaultInitPTS) {
       var w = this.w;
+      var timeOffset = !isNaN(frag.startDTS) ? frag.startDTS : frag.start;
+      var decryptdata = frag.decryptdata;
+      var lastFrag = this.frag;
+      var discontinuity = !(lastFrag && frag.cc === lastFrag.cc);
+      var trackSwitch = !(lastFrag && frag.level === lastFrag.level);
+      var nextSN = lastFrag && frag.sn === lastFrag.sn + 1;
+      var contiguous = !discontinuity && !trackSwitch && nextSN;
+      if (discontinuity) {
+        _logger.logger.log(this.id + ':discontinuity detected');
+      }
+      if (trackSwitch) {
+        _logger.logger.log(this.id + ':switch detected');
+      }
+      this.frag = frag;
       if (w) {
         // post fragment payload as transferable objects (no copy)
-        w.postMessage({ cmd: 'demux', data: data, initSegment: initSegment, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn: sn, duration: duration, decryptdata: decryptdata, accurateTimeOffset: accurateTimeOffset, defaultInitPTS: defaultInitPTS }, [data]);
+        w.postMessage({ cmd: 'demux', data: data, decryptdata: decryptdata, initSegment: initSegment, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, discontinuity: discontinuity, trackSwitch: trackSwitch, contiguous: contiguous, duration: duration, accurateTimeOffset: accurateTimeOffset, defaultInitPTS: defaultInitPTS }, [data]);
       } else {
         var demuxer = this.demuxer;
         if (demuxer) {
-          demuxer.push(data, initSegment, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata, accurateTimeOffset, defaultInitPTS);
+          demuxer.push(data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS);
         }
       }
     }
@@ -5182,6 +5173,9 @@ var Demuxer = function () {
           }
         /* falls through */
         default:
+          data.data = data.data || {};
+          data.data.frag = this.frag;
+          data.data.id = this.id;
           hls.trigger(data.event, data.data);
           break;
       }
@@ -5193,7 +5187,7 @@ var Demuxer = function () {
 
 exports.default = Demuxer;
 
-},{"18":18,"19":19,"25":25,"27":27,"3":3,"42":42}],21:[function(_dereq_,module,exports){
+},{"1":1,"18":18,"19":19,"25":25,"27":27,"3":3,"42":42}],21:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5740,11 +5734,10 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var MP4Demuxer = function () {
-  function MP4Demuxer(observer, id, remuxer) {
+  function MP4Demuxer(observer, remuxer) {
     _classCallCheck(this, MP4Demuxer);
 
     this.observer = observer;
-    this.id = id;
     this.remuxer = remuxer;
   }
 
@@ -5753,7 +5746,7 @@ var MP4Demuxer = function () {
     value: function resetTimeStamp() {}
   }, {
     key: 'resetInitSegment',
-    value: function resetInitSegment(initSegment, level, sn, audioCodec, videoCodec, duration) {
+    value: function resetInitSegment(initSegment, audioCodec, videoCodec, duration) {
       //jshint unused:false
       var initData = this.initData = MP4Demuxer.parseInitSegment(initSegment);
       var tracks = {};
@@ -5763,17 +5756,17 @@ var MP4Demuxer = function () {
       if (initData.video) {
         tracks.video = { container: 'video/mp4', codec: videoCodec, initSegment: initSegment };
       }
-      this.observer.trigger(_events2.default.FRAG_PARSING_INIT_SEGMENT, { id: this.id, level: level, sn: sn, unique: false, tracks: tracks });
+      this.observer.trigger(_events2.default.FRAG_PARSING_INIT_SEGMENT, { unique: false, tracks: tracks });
     }
   }, {
     key: 'append',
 
 
     // feed incoming data to the front of the parsing pipeline
-    value: function append(data, timeOffset, cc, level, sn, contiguous, accurateTimeOffset) {
+    value: function append(data, timeOffset, contiguous, accurateTimeOffset) {
       var initData = this.initData;
       var startDTS = MP4Demuxer.startDTS(initData, data);
-      this.remuxer.remux(level, sn, cc, initData.audio, initData.video, null, null, startDTS, contiguous, accurateTimeOffset, data);
+      this.remuxer.remux(initData.audio, initData.video, null, null, startDTS, contiguous, accurateTimeOffset, data);
     }
   }, {
     key: 'destroy',
@@ -6003,11 +5996,10 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var TSDemuxer = function () {
-  function TSDemuxer(observer, id, remuxer, config, typeSupported) {
+  function TSDemuxer(observer, remuxer, config, typeSupported) {
     _classCallCheck(this, TSDemuxer);
 
     this.observer = observer;
-    this.id = id;
     this.config = config;
     this.typeSupported = typeSupported;
     this.remuxer = remuxer;
@@ -6015,7 +6007,7 @@ var TSDemuxer = function () {
 
   _createClass(TSDemuxer, [{
     key: 'resetInitSegment',
-    value: function resetInitSegment(initSegment, level, sn, audioCodec, videoCodec, duration) {
+    value: function resetInitSegment(initSegment, audioCodec, videoCodec, duration) {
       this.pmtParsed = false;
       this._pmtId = -1;
       this._avcTrack = { container: 'video/mp2t', type: 'video', id: -1, sequenceNumber: 0, samples: [], len: 0, dropped: 0 };
@@ -6038,7 +6030,7 @@ var TSDemuxer = function () {
 
   }, {
     key: 'append',
-    value: function append(data, timeOffset, cc, level, sn, contiguous, accurateTimeOffset) {
+    value: function append(data, timeOffset, contiguous, accurateTimeOffset) {
       var start,
           len = data.length,
           stt,
@@ -6172,7 +6164,7 @@ var TSDemuxer = function () {
               break;
           }
         } else {
-          this.observer.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, id: this.id, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47' });
+          this.observer.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47' });
         }
       }
       // try to parse last PES packets
@@ -6206,7 +6198,7 @@ var TSDemuxer = function () {
         // either id3Data null or PES truncated, keep it for next frag parsing
         id3Track.pesData = id3Data;
       }
-      this.remuxer.remux(level, sn, cc, audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset);
+      this.remuxer.remux(audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset);
     }
   }, {
     key: 'destroy',
@@ -6838,7 +6830,7 @@ var TSDemuxer = function () {
           fatal = true;
         }
         _logger.logger.warn('parsing error:' + reason);
-        this.observer.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, id: this.id, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason });
+        this.observer.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason });
         if (fatal) {
           return;
         }
@@ -7049,12 +7041,12 @@ var ErrorDetails = exports.ErrorDetails = {
   FRAG_LOOP_LOADING_ERROR: 'fragLoopLoadingError',
   // Identifier for fragment load timeout error - data: { frag : fragment object}
   FRAG_LOAD_TIMEOUT: 'fragLoadTimeOut',
-  // Identifier for a fragment decryption error event - data: parsing error description
+  // Identifier for a fragment decryption error event - data: {id : demuxer Id,frag: fragment object, reason : parsing error description }
   FRAG_DECRYPT_ERROR: 'fragDecryptError',
   // Identifier for a fragment parsing error event - data: { id : demuxer Id, reason : parsing error description }
   // will be renamed DEMUX_PARSING_ERROR and switched to MUX_ERROR in the next major release
   FRAG_PARSING_ERROR: 'fragParsingError',
-  // Identifier for a remux alloc error event - data: { id : demuxer Id, bytes : nb of bytes on which allocation failed , reason : error text }
+  // Identifier for a remux alloc error event - data: { id : demuxer Id, frag : fragment object, bytes : nb of bytes on which allocation failed , reason : error text }
   REMUX_ALLOC_ERROR: 'remuxAllocError',
   // Identifier for decrypt key load error - data: { frag : fragment object, response : { code: error code, text: error text }}
   KEY_LOAD_ERROR: 'keyLoadError',
@@ -7255,7 +7247,7 @@ module.exports = {
   SUBTITLE_TRACK_LOADED: 'hlsSubtitleTrackLoaded',
   // fired when a subtitle fragment has been processed - data: { success : boolean, frag : the processed frag}
   SUBTITLE_FRAG_PROCESSED: 'hlsSubtitleFragProcessed',
-  // fired when the first timestamp is found. - data: { id : demuxer id, initPTS: initPTS }
+  // fired when the first timestamp is found. - data: { id : demuxer id, initPTS: initPTS , frag : fragment object}
   INIT_PTS_FOUND: 'hlsInitPtsFound',
   // fired when a fragment loading starts - data: { frag : fragment object}
   FRAG_LOADING: 'hlsFragLoading',
@@ -7265,17 +7257,17 @@ module.exports = {
   FRAG_LOAD_EMERGENCY_ABORTED: 'hlsFragLoadEmergencyAborted',
   // fired when a fragment loading is completed - data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length}}
   FRAG_LOADED: 'hlsFragLoaded',
-  // fired when a fragment has finished decrypting - data: { level : levelId, sn : sequence number }
+  // fired when a fragment has finished decrypting - data: { id : demuxer id, frag: fragment object, stats : {tstart,tdecrypt} }
   FRAG_DECRYPTED: 'hlsFragDecrypted',
-  // fired when Init Segment has been extracted from fragment - data: { id : demuxer id, level : levelId, sn : sequence number, moov : moov MP4 box, codecs : codecs found while parsing fragment}
+  // fired when Init Segment has been extracted from fragment - data: { id : demuxer id, frag: fragment object, moov : moov MP4 box, codecs : codecs found while parsing fragment}
   FRAG_PARSING_INIT_SEGMENT: 'hlsFragParsingInitSegment',
-  // fired when parsing sei text is completed - data: { id : demuxer id, , level : levelId, sn : sequence number, samples : [ sei samples pes ] }
+  // fired when parsing sei text is completed - data: { id : demuxer id, , frag: fragment object, samples : [ sei samples pes ] }
   FRAG_PARSING_USERDATA: 'hlsFragParsingUserdata',
-  // fired when parsing id3 is completed - data: { id : demuxer id, , level : levelId, sn : sequence number, samples : [ id3 samples pes ] }
+  // fired when parsing id3 is completed - data: { id : demuxer id, frag: fragment object, samples : [ id3 samples pes ] }
   FRAG_PARSING_METADATA: 'hlsFragParsingMetadata',
-  // fired when data have been extracted from fragment - data: { id : demuxer id, level : levelId, sn : sequence number, data1 : moof MP4 box or TS fragments, data2 : mdat MP4 box or null}
+  // fired when data have been extracted from fragment - data: { id : demuxer id, frag: fragment object, data1 : moof MP4 box or TS fragments, data2 : mdat MP4 box or null}
   FRAG_PARSING_DATA: 'hlsFragParsingData',
-  // fired when fragment parsing is completed - data: { id : demuxer id; level : levelId, sn : sequence number, }
+  // fired when fragment parsing is completed - data: { id : demuxer id,frag: fragment object }
   FRAG_PARSED: 'hlsFragParsed',
   // fired when fragment remuxed MP4 boxes have all been appended into SourceBuffer - data: { id : demuxer id,frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length} }
   FRAG_BUFFERED: 'hlsFragBuffered',
@@ -7757,6 +7749,7 @@ var Hls = function () {
 
     (0, _logger.enableLogs)(config.debug);
     this.config = config;
+    this._autoLevelCapping = -1;
     // observer setup
     var observer = this.observer = new _events4.default();
     observer.trigger = function trigger(event) {
@@ -7838,6 +7831,7 @@ var Hls = function () {
       });
       this.url = null;
       this.observer.removeAllListeners();
+      this._autoLevelCapping = -1;
     }
   }, {
     key: 'attachMedia',
@@ -7969,7 +7963,7 @@ var Hls = function () {
   }, {
     key: 'firstLevel',
     get: function get() {
-      return Math.max(this.levelController.firstLevel, this.abrController.minAutoLevel);
+      return Math.max(this.levelController.firstLevel, this.minAutoLevel);
     }
 
     /** set first level (index of first level referenced in manifest)
@@ -7998,7 +7992,12 @@ var Hls = function () {
     ,
     set: function set(newLevel) {
       _logger.logger.log('set startLevel:' + newLevel);
-      this.levelController.startLevel = newLevel;
+      var hls = this;
+      // if not in automatic start level detection, ensure startLevel is greater than minAutoLevel
+      if (newLevel !== -1) {
+        newLevel = Math.max(newLevel, hls.minAutoLevel);
+      }
+      hls.levelController.startLevel = newLevel;
     }
 
     /** Return the capping/max level value that could be used by automatic level selection algorithm **/
@@ -8006,14 +8005,14 @@ var Hls = function () {
   }, {
     key: 'autoLevelCapping',
     get: function get() {
-      return this.abrController.autoLevelCapping;
+      return this._autoLevelCapping;
     }
 
     /** set the capping/max level value that could be used by automatic level selection algorithm **/
     ,
     set: function set(newLevel) {
       _logger.logger.log('set autoLevelCapping:' + newLevel);
-      this.abrController.autoLevelCapping = newLevel;
+      this._autoLevelCapping = newLevel;
     }
 
     /* check if we are in automatic level selection mode */
@@ -8030,6 +8029,60 @@ var Hls = function () {
     key: 'manualLevel',
     get: function get() {
       return this.levelController.manualLevel;
+    }
+
+    /* return min level selectable in auto mode according to config.minAutoBitrate */
+
+  }, {
+    key: 'minAutoLevel',
+    get: function get() {
+      var hls = this,
+          levels = hls.levels,
+          minAutoBitrate = hls.config.minAutoBitrate,
+          len = levels ? levels.length : 0;
+      for (var i = 0; i < len; i++) {
+        var levelNextBitrate = levels[i].realBitrate ? Math.max(levels[i].realBitrate, levels[i].bitrate) : levels[i].bitrate;
+        if (levelNextBitrate > minAutoBitrate) {
+          return i;
+        }
+      }
+      return 0;
+    }
+
+    /* return max level selectable in auto mode according to autoLevelCapping */
+
+  }, {
+    key: 'maxAutoLevel',
+    get: function get() {
+      var hls = this;
+      var levels = hls.levels;
+      var autoLevelCapping = hls.autoLevelCapping;
+      var maxAutoLevel = void 0;
+      if (autoLevelCapping === -1 && levels && levels.length) {
+        maxAutoLevel = levels.length - 1;
+      } else {
+        maxAutoLevel = autoLevelCapping;
+      }
+      return maxAutoLevel;
+    }
+
+    // return next auto level
+
+  }, {
+    key: 'nextAutoLevel',
+    get: function get() {
+      var hls = this;
+      // ensure next auto level is between  min and max auto level
+      return Math.min(Math.max(hls.abrController.nextAutoLevel, hls.minAutoLevel), hls.maxAutoLevel);
+    }
+
+    // this setter is used to force next auto level
+    // this is useful to force a switch down in auto mode : in case of load error on level N, hls.js can set nextAutoLevel to N-1 for example)
+    // forced value is valid for one fragment. upon succesful frag loading at forced level, this value will be resetted to -1 by ABR controller
+    ,
+    set: function set(nextLevel) {
+      var hls = this;
+      hls.abrController.nextAutoLevel = Math.max(hls.minAutoLevel, nextLevel);
     }
 
     /** get alternate audio tracks list from playlist **/
@@ -9567,11 +9620,10 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var MP4Remuxer = function () {
-  function MP4Remuxer(observer, id, config, typeSupported) {
+  function MP4Remuxer(observer, config, typeSupported) {
     _classCallCheck(this, MP4Remuxer);
 
     this.observer = observer;
-    this.id = id;
     this.config = config;
     this.typeSupported = typeSupported;
     this.ISGenerated = false;
@@ -9595,12 +9647,10 @@ var MP4Remuxer = function () {
     }
   }, {
     key: 'remux',
-    value: function remux(level, sn, cc, audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
-      this.level = level;
-      this.sn = sn;
+    value: function remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
       // generate Init Segment if needed
       if (!this.ISGenerated) {
-        this.generateIS(audioTrack, videoTrack, timeOffset, cc);
+        this.generateIS(audioTrack, videoTrack, timeOffset);
       }
 
       if (this.ISGenerated) {
@@ -9637,11 +9687,11 @@ var MP4Remuxer = function () {
         this.remuxText(textTrack, timeOffset);
       }
       //notify end of parsing
-      this.observer.trigger(_events2.default.FRAG_PARSED, { id: this.id, level: this.level, sn: this.sn });
+      this.observer.trigger(_events2.default.FRAG_PARSED);
     }
   }, {
     key: 'generateIS',
-    value: function generateIS(audioTrack, videoTrack, timeOffset, cc) {
+    value: function generateIS(audioTrack, videoTrack, timeOffset) {
       var observer = this.observer,
           audioSamples = audioTrack.samples,
           videoSamples = videoTrack.samples,
@@ -9649,7 +9699,7 @@ var MP4Remuxer = function () {
           typeSupported = this.typeSupported,
           container = 'audio/mp4',
           tracks = {},
-          data = { id: this.id, level: this.level, sn: this.sn, tracks: tracks, unique: false },
+          data = { tracks: tracks, unique: false },
           computePTSDTS = this._initPTS === undefined,
           initPTS,
           initDTS;
@@ -9713,7 +9763,7 @@ var MP4Remuxer = function () {
         if (computePTSDTS) {
           initPTS = Math.min(initPTS, videoSamples[0].pts - pesTimeScale * timeOffset);
           initDTS = Math.min(initDTS, videoSamples[0].dts - pesTimeScale * timeOffset);
-          this.observer.trigger(_events2.default.INIT_PTS_FOUND, { id: this.id, initPTS: initPTS, cc: cc });
+          this.observer.trigger(_events2.default.INIT_PTS_FOUND, { initPTS: initPTS });
         }
       }
 
@@ -9725,7 +9775,7 @@ var MP4Remuxer = function () {
           this._initDTS = initDTS;
         }
       } else {
-        observer.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, id: this.id, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'no audio/video samples found' });
+        observer.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'no audio/video samples found' });
       }
     }
   }, {
@@ -9871,7 +9921,7 @@ var MP4Remuxer = function () {
       try {
         mdat = new Uint8Array(mdatSize);
       } catch (err) {
-        this.observer.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MUX_ERROR, level: this.level, id: this.id, details: _errors.ErrorDetails.REMUX_ALLOC_ERROR, fatal: false, bytes: mdatSize, reason: 'fail allocating video mdat ' + mdatSize });
+        this.observer.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MUX_ERROR, details: _errors.ErrorDetails.REMUX_ALLOC_ERROR, fatal: false, bytes: mdatSize, reason: 'fail allocating video mdat ' + mdatSize });
         return;
       }
       var view = new DataView(mdat.buffer);
@@ -9967,9 +10017,6 @@ var MP4Remuxer = function () {
       track.samples = [];
 
       var data = {
-        id: this.id,
-        level: this.level,
-        sn: this.sn,
         data1: moof,
         data2: mdat,
         startPTS: firstPTS / pesTimeScale,
@@ -10150,7 +10197,7 @@ var MP4Remuxer = function () {
             try {
               mdat = new Uint8Array(mdatSize);
             } catch (err) {
-              this.observer.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MUX_ERROR, level: this.level, id: this.id, details: _errors.ErrorDetails.REMUX_ALLOC_ERROR, fatal: false, bytes: mdatSize, reason: 'fail allocating audio mdat ' + mdatSize });
+              this.observer.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MUX_ERROR, details: _errors.ErrorDetails.REMUX_ALLOC_ERROR, fatal: false, bytes: mdatSize, reason: 'fail allocating audio mdat ' + mdatSize });
               return;
             }
             if (!rawMPEG) {
@@ -10225,9 +10272,6 @@ var MP4Remuxer = function () {
         }
         track.samples = [];
         var audioData = {
-          id: this.id,
-          level: this.level,
-          sn: this.sn,
           data1: moof,
           data2: mdat,
           startPTS: firstPTS / pesTimeScale,
@@ -10299,9 +10343,6 @@ var MP4Remuxer = function () {
           sample.dts = (sample.dts - this._initDTS) / this.PES_TIMESCALE;
         }
         this.observer.trigger(_events2.default.FRAG_PARSING_METADATA, {
-          id: this.id,
-          level: this.level,
-          sn: this.sn,
           samples: track.samples
         });
       }
@@ -10327,9 +10368,6 @@ var MP4Remuxer = function () {
           sample.pts = (sample.pts - this._initPTS) / this.PES_TIMESCALE;
         }
         this.observer.trigger(_events2.default.FRAG_PARSING_USERDATA, {
-          id: this.id,
-          level: this.level,
-          sn: this.sn,
           samples: track.samples
         });
       }
@@ -10387,11 +10425,10 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var PassThroughRemuxer = function () {
-  function PassThroughRemuxer(observer, id) {
+  function PassThroughRemuxer(observer) {
     _classCallCheck(this, PassThroughRemuxer);
 
     this.observer = observer;
-    this.id = id;
   }
 
   _createClass(PassThroughRemuxer, [{
@@ -10405,7 +10442,7 @@ var PassThroughRemuxer = function () {
     value: function resetInitSegment() {}
   }, {
     key: 'remux',
-    value: function remux(level, sn, cc, audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset, rawData) {
+    value: function remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset, rawData) {
       var observer = this.observer;
       var streamType = '';
       if (audioTrack) {
@@ -10415,9 +10452,6 @@ var PassThroughRemuxer = function () {
         streamType += 'video';
       }
       observer.trigger(_events2.default.FRAG_PARSING_DATA, {
-        id: this.id,
-        level: level,
-        sn: sn,
         data1: rawData,
         startPTS: timeOffset,
         startDTS: timeOffset,
@@ -10426,7 +10460,7 @@ var PassThroughRemuxer = function () {
         dropped: 0
       });
       //notify end of parsing
-      observer.trigger(_events2.default.FRAG_PARSED, { id: this.id, level: level, sn: sn });
+      observer.trigger(_events2.default.FRAG_PARSED);
     }
   }]);
 
