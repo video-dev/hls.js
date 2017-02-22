@@ -3,9 +3,8 @@
 */
 
 class DummyRemuxer {
-  constructor(observer, id) {
+  constructor(observer) {
     this.observer = observer;
-    this.id = id;
   }
 
   destroy() {

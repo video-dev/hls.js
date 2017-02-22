@@ -7,9 +7,8 @@ import Event from '../events';
 
  class MP4Demuxer {
 
-  constructor(observer, id, remuxer) {
+  constructor(observer, remuxer) {
     this.observer = observer;
-    this.id = id;
     this.remuxer = remuxer;
   }
 
@@ -17,7 +16,7 @@ import Event from '../events';
 
   }
 
-  resetInitSegment(initSegment,level,sn,audioCodec,videoCodec, duration) {
+  resetInitSegment(initSegment,audioCodec,videoCodec, duration) {
     //jshint unused:false
     const initData = this.initData = MP4Demuxer.parseInitSegment(initSegment);
     var tracks = {};
@@ -27,7 +26,7 @@ import Event from '../events';
     if (initData.video) {
       tracks.video = { container : 'video/mp4', codec : videoCodec, initSegment : initSegment};
     }
-    this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT,{ id : this.id, level : level, sn : sn, unique : false, tracks : tracks });
+    this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT,{ unique : false, tracks : tracks });
   }
 
   static probe(data) {
@@ -211,10 +210,10 @@ static startDTS(initData, fragment) {
 }
 
   // feed incoming data to the front of the parsing pipeline
-  append(data, timeOffset, cc, level, sn, contiguous,accurateTimeOffset) {
+  append(data, timeOffset,contiguous,accurateTimeOffset) {
     const initData = this.initData;
     const startDTS = MP4Demuxer.startDTS(initData,data);
-    this.remuxer.remux(level, sn , cc, initData.audio, initData.video, null, null, startDTS, contiguous,accurateTimeOffset,data);
+    this.remuxer.remux(initData.audio, initData.video, null, null, startDTS, contiguous,accurateTimeOffset,data);
   }
 
   destroy() {
