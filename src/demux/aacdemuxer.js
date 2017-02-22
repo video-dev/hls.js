@@ -7,14 +7,13 @@ import ID3 from '../demux/id3';
 
  class AACDemuxer {
 
-  constructor(observer, id, remuxer, config) {
+  constructor(observer, remuxer, config) {
     this.observer = observer;
-    this.id = id;
     this.config = config;
     this.remuxer = remuxer;
   }
 
-  resetInitSegment(initSegment,level,sn,audioCodec,videoCodec, duration) {
+  resetInitSegment(initSegment,audioCodec,videoCodec, duration) {
     this._aacTrack = {container : 'audio/adts', type: 'audio', id :-1, sequenceNumber: 0, isAAC : true , samples : [], len : 0, manifestCodec : audioCodec, duration : duration};
   }
 
@@ -38,7 +37,7 @@ import ID3 from '../demux/id3';
 
 
   // feed incoming data to the front of the parsing pipeline
-  append(data, timeOffset, cc, level, sn, contiguous,accurateTimeOffset) {
+  append(data, timeOffset, contiguous,accurateTimeOffset) {
     var track,
         id3 = new ID3(data),
         pts = 90*id3.timeStamp,
@@ -91,7 +90,7 @@ import ID3 from '../demux/id3';
         break;
       }
     }
-    this.remuxer.remux(level, sn , cc, track,{samples : []}, {samples : [ { pts: pts, dts : pts, unit : id3.payload} ]}, { samples: [] }, timeOffset, contiguous,accurateTimeOffset);
+    this.remuxer.remux(track,{samples : []}, {samples : [ { pts: pts, dts : pts, unit : id3.payload} ]}, { samples: [] }, timeOffset, contiguous,accurateTimeOffset);
   }
 
   destroy() {

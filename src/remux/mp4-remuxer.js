@@ -10,9 +10,8 @@ import MP4 from '../remux/mp4-generator';
 import {ErrorTypes, ErrorDetails} from '../errors';
 
 class MP4Remuxer {
-  constructor(observer, id, config, typeSupported) {
+  constructor(observer, config, typeSupported) {
     this.observer = observer;
-    this.id = id;
     this.config = config;
     this.typeSupported = typeSupported;
     this.ISGenerated = false;
@@ -32,12 +31,10 @@ class MP4Remuxer {
     this.ISGenerated = false;
   }
 
-  remux(level,sn,cc,audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous,accurateTimeOffset) {
-    this.level = level;
-    this.sn = sn;
+  remux(audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous,accurateTimeOffset) {
     // generate Init Segment if needed
     if (!this.ISGenerated) {
-      this.generateIS(audioTrack,videoTrack,timeOffset,cc);
+      this.generateIS(audioTrack,videoTrack,timeOffset);
     }
 
     if (this.ISGenerated) {
@@ -74,10 +71,10 @@ class MP4Remuxer {
       this.remuxText(textTrack,timeOffset);
     }
     //notify end of parsing
-    this.observer.trigger(Event.FRAG_PARSED, { id : this.id , level : this.level, sn : this.sn});
+    this.observer.trigger(Event.FRAG_PARSED);
   }
 
-  generateIS(audioTrack,videoTrack,timeOffset,cc) {
+  generateIS(audioTrack,videoTrack,timeOffset) {
     var observer = this.observer,
         audioSamples = audioTrack.samples,
         videoSamples = videoTrack.samples,
@@ -85,7 +82,7 @@ class MP4Remuxer {
         typeSupported = this.typeSupported,
         container = 'audio/mp4',
         tracks = {},
-        data = { id : this.id, level : this.level, sn : this.sn, tracks : tracks, unique : false },
+        data = { tracks : tracks, unique : false },
         computePTSDTS = (this._initPTS === undefined),
         initPTS, initDTS;
 
@@ -144,7 +141,7 @@ class MP4Remuxer {
       if (computePTSDTS) {
         initPTS = Math.min(initPTS,videoSamples[0].pts - pesTimeScale * timeOffset);
         initDTS = Math.min(initDTS,videoSamples[0].dts - pesTimeScale * timeOffset);
-        this.observer.trigger(Event.INIT_PTS_FOUND, { id: this.id, initPTS: initPTS, cc: cc});
+        this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS});
       }
     }
 
@@ -156,7 +153,7 @@ class MP4Remuxer {
         this._initDTS = initDTS;
       }
     } else {
-      observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, id : this.id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'no audio/video samples found'});
+      observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'no audio/video samples found'});
     }
   }
 
@@ -291,7 +288,7 @@ class MP4Remuxer {
     try {
       mdat = new Uint8Array(mdatSize);
     } catch(err) {
-      this.observer.trigger(Event.ERROR, {type : ErrorTypes.MUX_ERROR, level: this.level, id : this.id, details: ErrorDetails.REMUX_ALLOC_ERROR, fatal: false, bytes : mdatSize, reason: `fail allocating video mdat ${mdatSize}`});
+      this.observer.trigger(Event.ERROR, {type : ErrorTypes.MUX_ERROR, details: ErrorDetails.REMUX_ALLOC_ERROR, fatal: false, bytes : mdatSize, reason: `fail allocating video mdat ${mdatSize}`});
       return;
     }
     let view = new DataView(mdat.buffer);
@@ -388,9 +385,6 @@ class MP4Remuxer {
     track.samples = [];
 
     let data = {
-      id : this.id,
-      level : this.level,
-      sn : this.sn,
       data1: moof,
       data2: mdat,
       startPTS: firstPTS / pesTimeScale,
@@ -567,7 +561,7 @@ class MP4Remuxer {
           try {
             mdat = new Uint8Array(mdatSize);
           } catch(err) {
-            this.observer.trigger(Event.ERROR, {type : ErrorTypes.MUX_ERROR, level: this.level, id : this.id, details: ErrorDetails.REMUX_ALLOC_ERROR, fatal: false, bytes : mdatSize, reason: `fail allocating audio mdat ${mdatSize}`});
+            this.observer.trigger(Event.ERROR, {type : ErrorTypes.MUX_ERROR, details: ErrorDetails.REMUX_ALLOC_ERROR, fatal: false, bytes : mdatSize, reason: `fail allocating audio mdat ${mdatSize}`});
             return;
           }
           if (!rawMPEG) {
@@ -642,9 +636,6 @@ class MP4Remuxer {
       }
       track.samples = [];
       let audioData = {
-        id : this.id,
-        level : this.level,
-        sn : this.sn,
         data1: moof,
         data2: mdat,
         startPTS: firstPTS / pesTimeScale,
@@ -709,9 +700,6 @@ class MP4Remuxer {
         sample.dts = ((sample.dts - this._initDTS) / this.PES_TIMESCALE);
       }
       this.observer.trigger(Event.FRAG_PARSING_METADATA, {
-        id : this.id,
-        level : this.level,
-        sn : this.sn,
         samples:track.samples
       });
     }
@@ -735,9 +723,6 @@ class MP4Remuxer {
         sample.pts = ((sample.pts - this._initPTS) / this.PES_TIMESCALE);
       }
       this.observer.trigger(Event.FRAG_PARSING_USERDATA, {
-        id : this.id,
-        level : this.level,
-        sn : this.sn,
         samples:track.samples
       });
     }

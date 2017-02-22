@@ -1016,20 +1016,24 @@ Full list of Events is available below:
     -  data: { frag : fragment object }
   - `Hls.Events.KEY_LOADED`  - fired when a decryption key loading is completed
     -  data: { frag : fragment object }
+  - `Hls.Events.INIT_PTS_FOUND`  - fired when first timestamp has been found
+    -  data: { id : demuxer id, frag : fragment object, initPTS: initPTS }
   - `Hls.Events.FRAG_LOADING`  - fired when a fragment loading starts
     -  data: { frag : fragment object }
   - `Hls.Events.FRAG_LOAD_PROGRESS`  - fired when a fragment load is in progress
     - data: { frag : fragment object with frag.loaded=stats.loaded, stats : { trequest, tfirst, loaded, total } }
   - `Hls.Events.FRAG_LOADED`  - fired when a fragment loading is completed
     -  data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length}}
+  - `Hls.Events.FRAG_DECRYPTED`  - fired when a fragment decryption is completed
+    -  data: { id : demuxer id, frag : fragment object, stats : { tstart, tdecrypt}}
   - `Hls.Events.FRAG_PARSING_INIT_SEGMENT` - fired when Init Segment has been extracted from fragment
-    -  data: { id: demuxer id, moov : moov MP4 box, codecs : codecs found while parsing fragment}
+    -  data: { id: demuxer id, frag : fragment object, moov : moov MP4 box, codecs : codecs found while parsing fragment}
   - `Hls.Events.FRAG_PARSING_METADATA`  - fired when parsing id3 is completed
-      -  data: { id: demuxer id, samples : [ id3 pes - pts and dts timestamp are relative, values are in seconds]}
+      -  data: { id: demuxer id, frag : fragment object, samples : [ id3 pes - pts and dts timestamp are relative, values are in seconds]}
   - `Hls.Events.FRAG_PARSING_DATA`  - fired when moof/mdat have been extracted from fragment
-    -  data: { id: demuxer id, moof : moof MP4 box, mdat : mdat MP4 box, startPTS : PTS of first sample, endPTS : PTS of last sample, startDTS : DTS of first sample, endDTS : DTS of last sample, type : stream type (audio or video), nb : number of samples}
+    -  data: { id: demuxer id, frag : fragment object, moof : moof MP4 box, mdat : mdat MP4 box, startPTS : PTS of first sample, endPTS : PTS of last sample, startDTS : DTS of first sample, endDTS : DTS of last sample, type : stream type (audio or video), nb : number of samples}
   - `Hls.Events.FRAG_PARSED`  - fired when fragment parsing is completed
-    -  data: { id: demuxer id}
+    -  data: { id: demuxer id,frag : fragment object}
   - `Hls.Events.FRAG_BUFFERED`  - fired when fragment remuxed MP4 boxes have all been appended into SourceBuffer
     -  data: { id: demuxer id, frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length} }
   - `Hls.Events.FRAG_CHANGED`  - fired when fragment matching with current video position is changing

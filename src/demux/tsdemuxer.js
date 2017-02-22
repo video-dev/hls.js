@@ -19,9 +19,8 @@
 
  class TSDemuxer {
 
-  constructor(observer, id, remuxer, config, typeSupported) {
+  constructor(observer, remuxer, config, typeSupported) {
     this.observer = observer;
-    this.id = id;
     this.config = config;
     this.typeSupported = typeSupported;
     this.remuxer = remuxer;
@@ -45,7 +44,7 @@
     }
   }
 
-  resetInitSegment(initSegment,level,sn,audioCodec,videoCodec, duration) {
+  resetInitSegment(initSegment,audioCodec,videoCodec, duration) {
     this.pmtParsed = false;
     this._pmtId = -1;
     this._avcTrack = {container : 'video/mp2t', type: 'video', id :-1, sequenceNumber: 0, samples : [], len : 0, dropped : 0};
@@ -65,7 +64,7 @@
   }
 
   // feed incoming data to the front of the parsing pipeline
-  append(data, timeOffset, cc, level, sn, contiguous,accurateTimeOffset) {
+  append(data, timeOffset, contiguous,accurateTimeOffset) {
     var start, len = data.length, stt, pid, atf, offset,pes,
         unknownPIDs = false;
     this.contiguous = contiguous;
@@ -193,7 +192,7 @@
             break;
         }
       } else {
-        this.observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, id : this.id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47'});
+        this.observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47'});
       }
     }
     // try to parse last PES packets
@@ -229,31 +228,31 @@
     }
 
     if (this.sampleAes == null) {
-      this.remuxer.remux(level, sn, cc, audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset);
+      this.remuxer.remux(audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset);
     } else {
-      this.decryptAndRemux(level, sn, cc, audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset);
+      this.decryptAndRemux(audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset);
     }
   }
 
-  decryptAndRemux(level, sn, cc, audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
+  decryptAndRemux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
     if (audioTrack.samples && audioTrack.isAAC) {
       let localthis = this;
       this.sampleAes.decryptAacSamples(audioTrack.samples, 0, function() {
-        localthis.decryptAndRemuxAvc(level, sn, cc, audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
+        localthis.decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
       });
     } else {
-      this.decryptAndRemuxAvc(level, sn, cc, audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
+      this.decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
     }
   }
 
-  decryptAndRemuxAvc(level, sn, cc, audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
+  decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
     if (videoTrack.samples) {
       let localthis = this;
       this.sampleAes.decryptAvcSamples(videoTrack.samples, 0, 0, function () {
-        localthis.remuxer.remux(level, sn, cc, audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
+        localthis.remuxer.remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
       });
     } else {
-      this.remuxer.remux(level, sn, cc, audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
+      this.remuxer.remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
     }
   }
 
@@ -864,7 +863,7 @@
         fatal = true;
       }
       logger.warn(`parsing error:${reason}`);
-      this.observer.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, id : this.id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason});
+      this.observer.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason});
       if (fatal) {
         return;
       }
