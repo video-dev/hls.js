@@ -520,6 +520,7 @@ $(document).ready(function() {
        });
 
        hls.on(Hls.Events.ERROR, function(event,data) {
+        console.warn(data);
         switch(data.details) {
           case Hls.ErrorDetails.MANIFEST_LOAD_ERROR:
             try {
