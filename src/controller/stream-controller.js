@@ -769,8 +769,17 @@ class StreamController extends EventHandler {
             if (rangeCurrent) {
                 var fragPlaying = rangeCurrent.frag;
                 if (fragPlaying !== this.fragPlaying) {
-                    this.fragPlaying = fragPlaying;
                     this.hls.trigger(Event.FRAG_CHANGED, { frag: fragPlaying });
+                    const fragPlayingLevel = fragPlaying.level;
+                    if (
+                        !this.fragPlaying ||
+                        this.fragPlaying.level !== fragPlayingLevel
+                    ) {
+                        this.hls.trigger(Event.LEVEL_SWITCHED, {
+                            level: fragPlayingLevel
+                        });
+                    }
+                    this.fragPlaying = fragPlaying;
                 }
             }
         }

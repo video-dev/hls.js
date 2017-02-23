@@ -305,7 +305,7 @@ $(document).ready(function() {
        hls.on(Hls.Events.FRAG_PARSING_METADATA, function(event, data) {
          //console.log("Id3 samples ", data.samples);
        });
-       hls.on(Hls.Events.LEVEL_SWITCH,function(event,data) {
+       hls.on(Hls.Events.LEVEL_SWITCHING,function(event,data) {
           events.level.push({time : performance.now() - events.t0, id : data.level, bitrate : Math.round(hls.levels[data.level].bitrate/1000)});
           updateLevelInfo();
        });
@@ -452,6 +452,12 @@ $(document).ready(function() {
           stats.fragparsingMs = Math.round(this.sumParsing);
           stats.autoLevelCappingLast = hls.autoLevelCapping;
        });
+       hls.on(Hls.Events.LEVEL_SWITCHED,function(event,data) {
+        var event = {time : performance.now() - events.t0, type : 'level switched', name : data.level };
+        events.video.push(event);
+        refreshCanvas();
+        updateLevelInfo();
+      });
        hls.on(Hls.Events.FRAG_CHANGED,function(event,data) {
         var event = {time : performance.now() - events.t0, type : 'frag changed', name : data.frag.sn + ' @ ' + data.frag.level };
         events.video.push(event);

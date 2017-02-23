@@ -38,7 +38,7 @@ class TimelineController extends EventHandler {
             Event.MANIFEST_LOADING,
             Event.MANIFEST_LOADED,
             Event.FRAG_LOADED,
-            Event.LEVEL_SWITCH,
+            Event.LEVEL_SWITCHING,
             Event.INIT_PTS_FOUND
         );
 
@@ -227,7 +227,7 @@ class TimelineController extends EventHandler {
         }
     }
 
-    onLevelSwitch() {
+    onLevelSwitching() {
         this.enabled = this.hls.currentLevel.closedCaptions !== 'NONE';
     }
 
