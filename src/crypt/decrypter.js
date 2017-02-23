@@ -51,9 +51,14 @@ class Decrypter {
                 .then(aesKey => {
                     // decrypt using web crypto
                     let crypto = new AESCrypto(subtle, iv);
-                    crypto.decrypt(data, aesKey).then(result => {
-                        callback(result);
-                    });
+                    crypto
+                        .decrypt(data, aesKey)
+                        .catch(err => {
+                            this.onWebCryptoError(err, data, key, iv, callback);
+                        })
+                        .then(result => {
+                            callback(result);
+                        });
                 })
                 .catch(err => {
                     this.onWebCryptoError(err, data, key, iv, callback);
