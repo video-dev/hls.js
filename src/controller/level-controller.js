@@ -157,7 +157,9 @@ class LevelController extends EventHandler {
         this._level = newLevel;
         var levelProperties = levels[newLevel];
         levelProperties.level = newLevel;
+        // LEVEL_SWITCH to be deprecated in next major release
         hls.trigger(Event.LEVEL_SWITCH, levelProperties);
+        hls.trigger(Event.LEVEL_SWITCHING, levelProperties);
       }
       var level = levels[newLevel], levelDetails = level.details;
        // check if we need to load playlist for this level
