@@ -19,6 +19,7 @@ function clearCurrentCues(track) {
 function reuseVttTextTrack(inUseTrack, manifestTrack) {
     return (
         inUseTrack &&
+        (!inUseTrack._id || /^subtitle/.test(inUseTrack._id)) &&
         inUseTrack.label === manifestTrack.name &&
         !(inUseTrack.textTrack1 || inUseTrack.textTrack2)
     );
