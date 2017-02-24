@@ -89,6 +89,15 @@ class Hls {
     this.off = observer.off.bind(observer);
     this.trigger = observer.trigger.bind(observer);
 
+    // core controllers and network loaders
+    const abrController = this.abrController = new config.abrController(this);
+    const bufferController  = new config.bufferController(this);
+    const capLevelController = new config.capLevelController(this);
+    const fpsController = new config.fpsController(this);
+    const playListLoader = new PlaylistLoader(this);
+    const fragmentLoader = new FragmentLoader(this);
+    const keyLoader = new KeyLoader(this);
+
     // network controllers
     const levelController = this.levelController = new LevelController(this);
     const streamController = this.streamController = new StreamController(this);
@@ -99,18 +108,7 @@ class Hls {
     if (Controller) {
       networkControllers.push(new Controller(this));
     }
-
     this.networkControllers = networkControllers;
-
-    // core controllers and network loaders
-    // hls.abrController is referenced in levelController, this would need to be fixed
-    const abrController = this.abrController = new config.abrController(this);
-    const bufferController  = new config.bufferController(this);
-    const capLevelController = new config.capLevelController(this);
-    const fpsController = new config.fpsController(this);
-    const playListLoader = new PlaylistLoader(this);
-    const fragmentLoader = new FragmentLoader(this);
-    const keyLoader = new KeyLoader(this);
 
     let coreComponents = [ playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController ];
 
