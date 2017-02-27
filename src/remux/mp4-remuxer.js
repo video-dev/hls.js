@@ -82,7 +82,7 @@ class MP4Remuxer {
         typeSupported = this.typeSupported,
         container = 'audio/mp4',
         tracks = {},
-        data = { tracks : tracks, unique : false },
+        data = { tracks : tracks },
         computePTSDTS = (this._initPTS === undefined),
         initPTS, initDTS;
 

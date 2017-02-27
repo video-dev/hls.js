@@ -26,7 +26,7 @@ import Event from '../events';
     if (initData.video) {
       tracks.video = { container : 'video/mp4', codec : videoCodec, initSegment : initSegment};
     }
-    this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT,{ unique : false, tracks : tracks });
+    this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT,{ tracks : tracks });
   }
 
   static probe(data) {
