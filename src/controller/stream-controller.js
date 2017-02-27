@@ -1047,30 +1047,6 @@ class StreamController extends EventHandler {
         track.levelCodec = this.levels[this.level].videoCodec;
         track.id = data.id;
       }
-
-      // if remuxer specify that a unique track needs to generated,
-      // let's merge all tracks together
-      if (data.unique) {
-        var mergedTrack = {
-            codec : '',
-            levelCodec : ''
-          };
-        for (trackName in data.tracks) {
-          track = tracks[trackName];
-          mergedTrack.container = track.container;
-          if (mergedTrack.codec) {
-            mergedTrack.codec +=  ',';
-            mergedTrack.levelCodec +=  ',';
-          }
-          if(track.codec) {
-            mergedTrack.codec +=  track.codec;
-          }
-          if (track.levelCodec) {
-            mergedTrack.levelCodec +=  track.levelCodec;
-          }
-        }
-        tracks = { audiovideo : mergedTrack };
-      }
       this.hls.trigger(Event.BUFFER_CODECS,tracks);
       // loop through tracks that are going to be provided to bufferController
       for (trackName in tracks) {
