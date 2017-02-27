@@ -164,6 +164,8 @@ class StreamController extends EventHandler {
     }
     // check buffer
     this._checkBuffer();
+    // save the last current-time in case of media/detach or MEDIA_ERR_DECODE.
+    this._saveLastCurrentTime();
     // check/update current fragment
     this._checkFragmentChanged();
   }
@@ -560,19 +562,27 @@ class StreamController extends EventHandler {
     }
   }
 
-  _checkFragmentChanged() {
-    var fragPlayingCurrent, currentTime, video = this.media;
+  _saveLastCurrentTime() {
+    const video = this.media;
     if (video && video.readyState && video.seeking === false) {
-      currentTime = video.currentTime;
+      const currentTime = video.currentTime;
       /* if video element is in seeked state, currentTime can only increase.
         (assuming that playback rate is positive ...)
         As sometimes currentTime jumps back to zero after a
         media decode error, check this, to avoid seeking back to
         wrong position after a media decode error
       */
-      if(currentTime > video.playbackRate*this.lastCurrentTime) {
+      if (currentTime > video.playbackRate*this.lastCurrentTime) {
         this.lastCurrentTime = currentTime;
       }
+    }
+  }
+
+  _checkFragmentChanged() {
+    var fragPlayingCurrent, currentTime, video = this.media;
+    if (video && video.readyState && video.seeking === false) {
+      currentTime = video.currentTime;
+
       if (BufferHelper.isBuffered(video,currentTime)) {
         fragPlayingCurrent = this.getBufferedFrag(currentTime);
       } else if (BufferHelper.isBuffered(video,currentTime + 0.1)) {
