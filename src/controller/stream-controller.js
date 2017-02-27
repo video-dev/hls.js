@@ -519,11 +519,11 @@ class StreamController extends EventHandler {
     return this._state;
   }
 
-  getBufferRange(position) {
-    return BinarySearch.search(this.bufferRange, function(range) {
-      if (position < range.start) {
+  getBufferedFrag(position) {
+    return BinarySearch.search(this._bufferedFrags, function(frag) {
+      if (position < frag.startPTS) {
         return -1;
-      } else if (position > range.end) {
+      } else if (position > frag.endPTS) {
         return 1;
       }
       return 0;
@@ -533,43 +533,43 @@ class StreamController extends EventHandler {
   get currentLevel() {
     let media = this.media;
     if (media) {
-      var range = this.getBufferRange(media.currentTime);
-      if (range) {
-        return range.frag.level;
+      const frag = this.getBufferedFrag(media.currentTime);
+      if (frag) {
+        return frag.level;
       }
     }
     return -1;
   }
 
-  get nextBufferRange() {
+  get nextBufferedFrag() {
     let media = this.media;
     if (media) {
       // first get end range of current fragment
-      return this.followingBufferRange(this.getBufferRange(media.currentTime));
+      return this.followingBufferedFrag(this.getBufferedFrag(media.currentTime));
     } else {
       return null;
     }
   }
 
-  followingBufferRange(range) {
-    if (range) {
+  followingBufferedFrag(frag) {
+    if (frag) {
       // try to get range of next fragment (500ms after this range)
-      return this.getBufferRange(range.end + 0.5);
+      return this.getBufferedFrag(frag.endPTS + 0.5);
     }
     return null;
   }
 
   get nextLevel() {
-    var range = this.nextBufferRange;
-    if (range) {
-      return range.frag.level;
+    const frag = this.nextBufferedFrag;
+    if (frag) {
+      return frag.level;
     } else {
       return -1;
     }
   }
 
   _checkFragmentChanged() {
-    var rangeCurrent, currentTime, video = this.media;
+    var fragPlayingCurrent, currentTime, video = this.media;
     if (video && video.readyState && video.seeking === false) {
       currentTime = video.currentTime;
       /* if video element is in seeked state, currentTime can only increase.
@@ -582,17 +582,17 @@ class StreamController extends EventHandler {
         this.lastCurrentTime = currentTime;
       }
       if (BufferHelper.isBuffered(video,currentTime)) {
-        rangeCurrent = this.getBufferRange(currentTime);
+        fragPlayingCurrent = this.getBufferedFrag(currentTime);
       } else if (BufferHelper.isBuffered(video,currentTime + 0.1)) {
         /* ensure that FRAG_CHANGED event is triggered at startup,
           when first video frame is displayed and playback is paused.
           add a tolerance of 100ms, in case current position is not buffered,
           check if current pos+100ms is buffered and use that buffer range
           for FRAG_CHANGED event reporting */
-        rangeCurrent = this.getBufferRange(currentTime + 0.1);
+        fragPlayingCurrent = this.getBufferedFrag(currentTime + 0.1);
       }
-      if (rangeCurrent) {
-        var fragPlaying = rangeCurrent.frag;
+      if (fragPlayingCurrent) {
+        var fragPlaying = fragPlayingCurrent;
         if (fragPlaying !== this.fragPlaying) {
           this.hls.trigger(Event.FRAG_CHANGED, {frag: fragPlaying});
           const fragPlayingLevel = fragPlaying.level;
@@ -664,14 +664,14 @@ class StreamController extends EventHandler {
     let media = this.media;
     // ensure that media is defined and that metadata are available (to retrieve currentTime)
     if (media && media.readyState) {
-      let fetchdelay, currentRange, nextRange;
+      let fetchdelay, fragPlayingCurrent, nextBufferedFrag;
       // increase fragment load Index to avoid frag loop loading error after buffer flush
       this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
-      currentRange = this.getBufferRange(media.currentTime);
-      if (currentRange && currentRange.start > 1) {
+      fragPlayingCurrent = this.getBufferedFrag(media.currentTime);
+      if (fragPlayingCurrent && fragPlayingCurrent.startPTS > 1) {
         // flush buffer preceding current fragment (flush until current fragment start offset)
         // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
-        this.flushMainBuffer(0,currentRange.start - 1);
+        this.flushMainBuffer(0,fragPlayingCurrent.startPTS - 1);
       }
       if (!media.paused) {
         // add a safety delay of 1s
@@ -686,11 +686,11 @@ class StreamController extends EventHandler {
       }
       //logger.log('fetchdelay:'+fetchdelay);
       // find buffer range that will be reached once new fragment will be fetched
-      nextRange = this.getBufferRange(media.currentTime + fetchdelay);
-      if (nextRange) {
+      nextBufferedFrag = this.getBufferedFrag(media.currentTime + fetchdelay);
+      if (nextBufferedFrag) {
         // we can flush buffer range following this one without stalling playback
-        nextRange = this.followingBufferRange(nextRange);
-        if (nextRange) {
+        nextBufferedFrag = this.followingBufferedFrag(nextBufferedFrag);
+        if (nextBufferedFrag) {
           // if we are here, we can also cancel any loading/demuxing in progress, as they are useless
           var fragCurrent = this.fragCurrent;
           if (fragCurrent && fragCurrent.loader) {
@@ -698,7 +698,7 @@ class StreamController extends EventHandler {
           }
           this.fragCurrent = null;
           // flush position is the start position of this new buffer
-          this.flushMainBuffer(nextRange.start , Number.POSITIVE_INFINITY);
+          this.flushMainBuffer(nextBufferedFrag.startPTS , Number.POSITIVE_INFINITY);
         }
       }
     }
@@ -822,7 +822,7 @@ class StreamController extends EventHandler {
     // reset buffer on manifest loading
     logger.log('trigger BUFFER_RESET');
     this.hls.trigger(Event.BUFFER_RESET);
-    this.bufferRange = [];
+    this._bufferedFrags = [];
     this.stalled = false;
     this.startPosition = this.lastCurrentTime = 0;
   }
@@ -1256,12 +1256,12 @@ class StreamController extends EventHandler {
       if (frag) {
         const media = this.mediaBuffer ? this.mediaBuffer : this.media;
         logger.log(`main buffered : ${TimeRanges.toString(media.buffered)}`);
-        // filter potentially evicted bufferRange. this is to avoid memleak on live streams
-        let bufferRange = this.bufferRange.filter(range => {return BufferHelper.isBuffered(media,(range.start + range.end) / 2);});
+        // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
+        let bufferedFrags = this._bufferedFrags.filter(frag => {return BufferHelper.isBuffered(media,(frag.startPTS + frag.endPTS) / 2);});
         // push new range
-        bufferRange.push({type: frag.type, start: frag.startPTS, end: frag.endPTS, frag: frag});
-        // sort, as we use BinarySearch for lookup in getBufferRange ...
-        this.bufferRange = bufferRange.sort(function(a,b) {return (a.start - b.start);});
+        bufferedFrags.push(frag);
+        // sort frags, as we use BinarySearch for lookup in getBufferedFrag ...
+        this._bufferedFrags = bufferedFrags.sort(function(a,b) {return (a.startPTS - b.startPTS);});
         this.fragPrevious = frag;
         const stats = this.stats;
         stats.tbuffered = performance.now();
@@ -1516,11 +1516,11 @@ _checkBuffer() {
   }
 
   onBufferFlushed() {
-    /* after successful buffer flushing, filter flushed fragments from bufferRange
+    /* after successful buffer flushing, filter flushed fragments from bufferedFrags
       use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
     */
     const media = this.mediaBuffer ? this.mediaBuffer : this.media;
-    this.bufferRange = this.bufferRange.filter(range => {return BufferHelper.isBuffered(media,(range.start + range.end) / 2);});
+    this._bufferedFrags = this._bufferedFrags.filter(frag => {return BufferHelper.isBuffered(media,(frag.startPTS + frag.endPTS) / 2);});
 
     // increase fragment load Index to avoid frag loop loading error after buffer flush
     this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
