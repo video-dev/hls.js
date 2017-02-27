@@ -33,7 +33,6 @@ class MP4Demuxer {
             };
         }
         this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
-            unique: false,
             tracks: tracks
         });
     }
