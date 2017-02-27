@@ -52,15 +52,10 @@ class StreamController extends EventHandler {
     this.audioCodecSwap = false;
     this.ticks = 0;
     this._state = State.STOPPED;
-    this.ontick = this.tick.bind(this);
   }
 
   destroy() {
     this.stopLoad();
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
     EventHandler.prototype.destroy.call(this);
     this.state = State.STOPPED;
   }
@@ -69,9 +64,6 @@ class StreamController extends EventHandler {
     if (this.levels) {
       let lastCurrentTime = this.lastCurrentTime, hls = this.hls;
       this.stopLoad();
-      if (!this.timer) {
-        this.timer = setInterval(this.ontick, 100);
-      }
       this.level = -1;
       this.fragLoadError = 0;
       if (!this.startFragRequested) {

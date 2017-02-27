@@ -13,18 +13,19 @@ class AudioTrackController extends EventHandler {
                Event.MANIFEST_LOADED,
                Event.AUDIO_TRACK_LOADED);
     this.ticks = 0;
-    this.ontick = this.tick.bind(this);
+    this.ontick = this._tick.bind(this);
   }
 
   destroy() {
     EventHandler.prototype.destroy.call(this);
   }
-  tick() {
+
+  _tick() {
     this.ticks++;
     if (this.ticks === 1) {
       this.doTick();
       if (this.ticks > 1) {
-        setTimeout(this.tick, 1);
+        setTimeout(this._tick, 1);
       }
       this.ticks = 0;
     }
