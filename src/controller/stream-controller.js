@@ -1654,9 +1654,8 @@ class StreamController extends EventHandler {
                                 data.details
                             } reaches max retry, redispatch as fatal ...`
                         );
-                        // redispatch same error but with fatal set to true
+                        // switch error to fatal
                         data.fatal = true;
-                        this.hls.trigger(Event.ERROR, data);
                         this.state = State.ERROR;
                     }
                 }
@@ -1673,9 +1672,8 @@ class StreamController extends EventHandler {
                         // buffer empty. report as fatal if in manual mode or if lowest level.
                         // level controller takes care of emergency switch down logic
                         if (!frag.autoLevel || frag.level === 0) {
-                            // redispatch same error but with fatal set to true
+                            // switch error to fatal
                             data.fatal = true;
-                            this.hls.trigger(Event.ERROR, data);
                             this.state = State.ERROR;
                         }
                     }
