@@ -792,9 +792,8 @@ class AudioStreamController extends EventHandler {
             this.state = State.FRAG_LOADING_WAITING_RETRY;
           } else {
             logger.error(`audioStreamController: ${data.details} reaches max retry, redispatch as fatal ...`);
-            // redispatch same error but with fatal set to true
+            // switch error to fatal
             data.fatal = true;
-            this.hls.trigger(Event.ERROR, data);
             this.state = State.ERROR;
           }
         }

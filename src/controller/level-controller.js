@@ -289,9 +289,8 @@ class LevelController extends EventHandler {
               clearTimeout(this.timer);
               this.timer = null;
             }
-            // redispatch same error but with fatal set to true
+            // switch error to fatal
             data.fatal = true;
-            hls.trigger(Event.ERROR, data);
           }
         }
       }
