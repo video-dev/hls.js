@@ -442,7 +442,7 @@
   }
 
   pushAccesUnit(avcSample,avcTrack) {
-    if (avcSample.units.units.length && avcSample.frame) {
+    if (avcSample.units.length && avcSample.frame) {
       // only push AVC sample if starting with a keyframe is not mandatory OR
       //    if keyframe already found in this fragment OR
       //       keyframe found in last fragment (track.sps) AND
@@ -643,7 +643,7 @@
       }
       if(avcSample && push) {
         let units = avcSample.units;
-        units.units.push(unit);
+        units.push(unit);
       }
     });
     // if last PES packet, push samples
@@ -654,7 +654,7 @@
   }
 
   _createAVCSample(key,pts,dts,debug) {
-    return { key : key, pts : pts, dts : dts, units : { units : [], length : 0}, debug : debug};
+    return { key : key, pts : pts, dts : dts, units : [], debug : debug};
   }
 
   _insertSampleInOrder(arr, data) {
@@ -681,12 +681,12 @@
   _getLastNalUnit() {
     let avcSample = this.avcSample, lastUnit;
     // try to fallback to previous sample if current one is empty
-    if (!avcSample || avcSample.units.units.length === 0) {
+    if (!avcSample || avcSample.units.length === 0) {
       let track = this._avcTrack, samples = track.samples;
       avcSample = samples[samples.length-1];
     }
     if (avcSample) {
-      let units = avcSample.units.units;
+      let units = avcSample.units;
       lastUnit = units[units.length - 1];
     }
     return lastUnit;

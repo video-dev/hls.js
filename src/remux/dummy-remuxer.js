@@ -30,8 +30,8 @@ class DummyRemuxer {
     while (track.samples.length) {
       avcSample = track.samples.shift();
       // loop through AVC sample NALUs
-      while (avcSample.units.units.length) {
-        unit = avcSample.units.units.shift();
+      while (avcSample.units.length) {
+        unit = avcSample.units.shift();
       }
     }
     //please lint

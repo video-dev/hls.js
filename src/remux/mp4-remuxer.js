@@ -174,7 +174,7 @@ class MP4Remuxer {
 
   // for (let i = 0; i < track.samples.length; i++) {
   //   let avcSample = track.samples[i];
-  //   let units = avcSample.units.units;
+  //   let units = avcSample.units;
   //   let unitsString = '';
   //   for (let j = 0; j < units.length ; j++) {
   //     unitsString += units[j].type + ',';
@@ -257,7 +257,7 @@ class MP4Remuxer {
     let nbNalu = 0, naluLen = 0;
     for (let i = 0 ; i < nbSamples; i++) {
       // compute total/avc sample length and nb of NAL units
-      let sample = inputSamples[i], units = sample.units.units, nbUnits = units.length, sampleLen = 0;
+      let sample = inputSamples[i], units = sample.units, nbUnits = units.length, sampleLen = 0;
       for (let j = 0; j < nbUnits; j++) {
         sampleLen += units[j].data.length;
       }
@@ -297,7 +297,7 @@ class MP4Remuxer {
 
     for (let i = 0 ; i < nbSamples; i++) {
       let avcSample = inputSamples[i],
-          avcSampleUnits = avcSample.units.units,
+          avcSampleUnits = avcSample.units,
           mp4SampleLength = 0,
           compositionTimeOffset;
       // convert NALU bitstream to MP4 format (prepend NALU with size field)
