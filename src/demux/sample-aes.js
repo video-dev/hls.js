@@ -128,7 +128,7 @@ class SampleAesDecrypter {
                 return;
             }
 
-            let curUnits = samples[sampleIndex].units.units;
+            let curUnits = samples[sampleIndex].units;
             for (; ; unitIndex++) {
                 if (unitIndex >= curUnits.length) {
                     break;
