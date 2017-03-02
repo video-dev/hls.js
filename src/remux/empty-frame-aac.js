@@ -1,9 +1,9 @@
 /**
- *  AAC helper
+ *  Empty AAC Frame
  */
 
-class AAC {
-  static getSilentFrame(codec,channelCount) {
+class EmptyFrameAAC {
+  static getFrame(codec,channelCount) {
     switch(codec) {
       case 'mp4a.40.2':
         if (channelCount === 1) {
@@ -38,4 +38,4 @@ class AAC {
   }
 }
 
-export default AAC;
+export default EmptyFrameAAC;

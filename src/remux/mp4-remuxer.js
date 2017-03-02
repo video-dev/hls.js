@@ -3,7 +3,7 @@
 */
 
 
-import AAC from '../helper/aac';
+import EmptyFrameAAC from '../remux/empty-frame-aac';
 import Event from '../events';
 import {logger} from '../utils/logger';
 import MP4 from '../remux/mp4-generator';
@@ -474,7 +474,7 @@ class MP4Remuxer {
           for (var j = 0; j < missing; j++) {
             newStamp = nextPtsNorm + initDTS;
             newStamp = Math.max(newStamp, initDTS);
-            fillFrame = AAC.getSilentFrame(track.manifestCodec || track.codec,track.channelCount);
+            fillFrame = EmptyFrameAAC.getFrame(track.manifestCodec || track.codec,track.channelCount);
             if (!fillFrame) {
               logger.log('Unable to get silent frame for given audio codec; duplicating last frame instead.');
               fillFrame = sample.unit.subarray();
@@ -532,7 +532,7 @@ class MP4Remuxer {
               numMissingFrames = Math.round((ptsnorm - nextAudioPts) / pesFrameDuration);
               logger.log(`${delta} ms hole between AAC samples detected,filling it`);
               if (numMissingFrames > 0) {
-                fillFrame = AAC.getSilentFrame(track.manifestCodec || track.codec,track.channelCount);
+                fillFrame = EmptyFrameAAC.getFrame(track.manifestCodec || track.codec,track.channelCount);
                 if (!fillFrame) {
                   fillFrame = unit.subarray();
                 }
@@ -575,7 +575,7 @@ class MP4Remuxer {
         }
         for (let i = 0; i < numMissingFrames; i++) {
           newStamp = ptsnorm - (numMissingFrames - i) * pesFrameDuration;
-          fillFrame = AAC.getSilentFrame(track.manifestCodec || track.codec,track.channelCount);
+          fillFrame = EmptyFrameAAC.getFrame(track.manifestCodec || track.codec,track.channelCount);
           if (!fillFrame) {
             logger.log('Unable to get silent frame for given audio codec; duplicating this frame instead.');
             fillFrame = unit.subarray();
@@ -668,7 +668,7 @@ class MP4Remuxer {
         nbSamples = Math.ceil((endDTS - startDTS) / frameDuration),
 
         // silent frame
-        silentFrame = AAC.getSilentFrame(track.manifestCodec || track.codec,track.channelCount);
+        silentFrame = EmptyFrameAAC.getFrame(track.manifestCodec || track.codec,track.channelCount);
 
         logger.warn('remux empty Audio');
     // Can't remux if we can't generate a silent frame...
