@@ -419,7 +419,11 @@ class BufferController extends EventHandler {
         logger.error('error while accessing sourceBuffer.buffered');
       }
       this.appended = appended;
-      this.hls.trigger(Event.BUFFER_FLUSHED);
+
+      // Enforce async for buffer-flushing/buffer-flushed sequence.
+      setTimeout(function() {
+        this.hls.trigger(Event.BUFFER_FLUSHED);
+      }.bind(this), 0);
     }
   }
 
@@ -443,7 +447,7 @@ class BufferController extends EventHandler {
             if(!sb.updating) {
               // reset sourceBuffer ended flag before appending segment
               sb.ended = false;
-              //logger.log(`appending ${segment.content} ${type} SB, size:${segment.data.length}, ${segment.parent}`);
+              logger.log(`appending ${segment.content} ${type} SB, size:${segment.data.length}, ${segment.parent}`);
               this.parent = segment.parent;
               sb.appendBuffer(segment.data);
               this.appendError = 0;

@@ -9,6 +9,7 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import LevelHelper from '../helper/level-helper';
 import TimeRanges from '../utils/timeRanges';
+import StreamController from '../controller/stream-controller';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
 
@@ -29,7 +30,7 @@ const State = {
   WAITING_INIT_PTS : 'WAITING_INIT_PTS'
 };
 
-class AudioStreamController extends EventHandler {
+class AudioStreamController extends StreamController {
 
   constructor(hls) {
     super(hls,
@@ -49,6 +50,7 @@ class AudioStreamController extends EventHandler {
       Event.BUFFER_FLUSHED,
       Event.INIT_PTS_FOUND);
 
+    this.type = 'audio';
     this.config = hls.config;
     this.audioCodecSwap = false;
     this.ticks = 0;
@@ -182,7 +184,7 @@ class AudioStreamController extends EventHandler {
         } else {
           pos = this.nextLoadPosition;
         }
-        let media = this.mediaBuffer ? this.mediaBuffer : this.media,
+        let media = this.mediaBuffer,
             bufferInfo = BufferHelper.bufferInfo(media,pos,config.maxBufferHole),
             bufferLen = bufferInfo.len,
             bufferEnd = bufferInfo.end,
@@ -738,7 +740,7 @@ class AudioStreamController extends EventHandler {
         this.fragPrevious = frag;
         stats.tbuffered = performance.now();
         hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag, id : 'audio'});
-        let media = this.mediaBuffer ? this.mediaBuffer : this.media;
+        let media = this.mediaBuffer;
         logger.log(`audio buffered : ${TimeRanges.toString(media.buffered)}`);
         if (this.audioSwitch && this.appended) {
           this.audioSwitch = false;

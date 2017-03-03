@@ -9,7 +9,8 @@ import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
 import KeyLoader from './loader/key-loader';
 
-import StreamController from  './controller/stream-controller';
+import BufferedFragController from './controller/buffered-frag-controller';
+import MainStreamController from  './controller/main-stream-controller';
 import LevelController from  './controller/level-controller';
 
 import {logger, enableLogs} from './utils/logger';
@@ -99,9 +100,10 @@ class Hls {
     const keyLoader = new KeyLoader(this);
 
     // network controllers
-    const levelController = this.levelController = new LevelController(this);
-    const streamController = this.streamController = new StreamController(this);
-    let networkControllers = [levelController, streamController];
+    const bufferedFragController = this.bufferedFragController = new BufferedFragController(this);
+    const levelController        = this.levelController = new LevelController(this);
+    const mainStreamController   = this.mainStreamController = new MainStreamController(this);
+    let networkControllers       = [bufferedFragController, levelController, mainStreamController];
 
     // optional audio stream controller
     let Controller = config.audioStreamController;
@@ -170,7 +172,11 @@ class Hls {
 
     const networkControllers = this.networkControllers;
 
-    networkControllers.forEach(controller => {controller.startLoad(startPosition);});
+    networkControllers.forEach(controller => {
+      if (typeof controller.startLoad === 'function') {
+        controller.startLoad(startPosition);
+      }
+    });
 
     if (!this.timer) {
       this.timer = setInterval(function() {
@@ -196,7 +202,7 @@ class Hls {
 
   swapAudioCodec() {
     logger.log('swapAudioCodec');
-    this.streamController.swapAudioCodec();
+    this.mainStreamController.swapAudioCodec();
   }
 
   recoverMediaError() {
@@ -213,26 +219,26 @@ class Hls {
 
   /** Return current playback quality level **/
   get currentLevel() {
-    return this.streamController.currentLevel;
+    return this.bufferedFragController.currentLevel;
   }
 
   /* set quality level immediately (-1 for automatic level selection) */
   set currentLevel(newLevel) {
     logger.log(`set currentLevel:${newLevel}`);
     this.loadLevel = newLevel;
-    this.streamController.immediateLevelSwitch();
+    this.bufferedFragController.immediateLevelSwitch();
   }
 
   /** Return next playback quality level (quality level of next fragment) **/
   get nextLevel() {
-    return this.streamController.nextLevel;
+    return this.bufferedFragController.nextLevel;
   }
 
   /* set quality level for next fragment (-1 for automatic level selection) */
   set nextLevel(newLevel) {
     logger.log(`set nextLevel:${newLevel}`);
     this.levelController.manualLevel = newLevel;
-    this.streamController.nextLevelSwitch();
+    this.bufferedFragController.nextLevelSwitch();
   }
 
   /** Return the quality level of current/last loaded fragment **/
@@ -374,7 +380,7 @@ class Hls {
   }
 
   get liveSyncPosition() {
-    return this.streamController.liveSyncPosition;
+    return this.mainStreamController.liveSyncPosition;
   }
 
   /** get alternate subtitle tracks list from playlist **/

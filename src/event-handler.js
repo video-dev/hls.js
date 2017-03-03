@@ -61,12 +61,12 @@ class EventHandler {
       }
       return this[funcName].bind(this, data);
     };
-    try {
+    //try {
       eventToFunction.call(this, event, data).call();
-    } catch (err) {
-      logger.error(`internal error happened while processing ${event}:${err.message}`);
-      this.hls.trigger(Event.ERROR, {type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: false, event : event, err : err});
-    }
+    //} catch (err) {
+      //logger.error(`internal error happened while processing ${event}:${err.message}`);
+      //this.hls.trigger(Event.ERROR, {type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: false, event : event, err : err});
+    //}
   }
 }
 
