@@ -457,7 +457,7 @@
       }
     }
     if(avcSample.debug.length) {
-      logger.log(avcSample.pts + '/' + avcSample.dts + ':' + avcSample.debug + ',' + avcSample.units.length);
+      logger.log(avcSample.pts + '/' + avcSample.dts + ':' + avcSample.debug);
     }
   }
 
