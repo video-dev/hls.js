@@ -1373,11 +1373,11 @@ _checkBuffer() {
             mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media,
              buffered = mediaBuffer.buffered;
       // adjust currentTime to start position on loaded metadata
-      if(!this.loadedmetadata && buffered.length && !media.seeking) {
+      if(!this.loadedmetadata && buffered.length) {
         this.loadedmetadata = true;
         // only adjust currentTime if different from startPosition or if startPosition not buffered
         // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
-        let startPosition = this.startPosition,
+        let startPosition = media.seeking ? currentTime : this.startPosition,
             startPositionBuffered = BufferHelper.isBuffered(mediaBuffer,startPosition);
         // if currentTime not matching with expected startPosition or startPosition not buffered
         if (currentTime !== startPosition || !startPositionBuffered) {
