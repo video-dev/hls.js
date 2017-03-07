@@ -4,8 +4,8 @@
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
-class ADTS {
-    static getAudioConfig(observer, data, offset, audioCodec) {
+const ADTS = {
+    getAudioConfig: function(observer, data, offset, audioCodec) {
         var adtsObjectType, // :int
             adtsSampleingIndex, // :int
             adtsExtensionSampleingIndex, // :int
@@ -156,6 +156,6 @@ class ADTS {
             manifestCodec: manifestCodec
         };
     }
-}
+};
 
-export default ADTS;
+module.exports = ADTS;
