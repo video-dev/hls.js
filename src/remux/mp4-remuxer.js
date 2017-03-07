@@ -185,10 +185,11 @@ class MP4Remuxer {
   //   logger.log(avcSample.pts + '/' + avcSample.dts + ',' + unitsString + avcSample.units.length);
   // }
 
-    // sort video samples by DTS then PTS order
+    // sort video samples by DTS then PTS then demux id order
     inputSamples.sort(function(a, b) {
       const deltadts = a.dts - b.dts;
-      return deltadts ? deltadts : (a.pts - b.pts);
+      const deltapts = a.pts - b.pts;
+      return deltadts ? deltadts : deltapts ? deltapts : (a.id - b.id);
     });
 
     // handle broken streams with PTS < DTS, tolerance up 200ms (18000 in 90kHz timescale)
