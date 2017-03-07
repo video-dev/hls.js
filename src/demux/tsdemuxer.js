@@ -602,6 +602,8 @@ class TSDemuxer {
 
     pushAccesUnit(avcSample, avcTrack) {
         if (avcSample.units.length && avcSample.frame) {
+            const samples = avcTrack.samples;
+            const nbSamples = samples.length;
             // only push AVC sample if starting with a keyframe is not mandatory OR
             //    if keyframe already found in this fragment OR
             //       keyframe found in last fragment (track.sps) AND
@@ -609,9 +611,10 @@ class TSDemuxer {
             if (
                 !this.config.forceKeyFrameOnDiscontinuity ||
                 avcSample.key === true ||
-                (avcTrack.sps && (avcTrack.samples.length || this.contiguous))
+                (avcTrack.sps && (nbSamples || this.contiguous))
             ) {
-                avcTrack.samples.push(avcSample);
+                avcSample.id = nbSamples;
+                samples.push(avcSample);
             } else {
                 // dropped samples, track it
                 avcTrack.dropped++;
@@ -619,13 +622,7 @@ class TSDemuxer {
         }
         if (avcSample.debug.length) {
             logger.log(
-                avcSample.pts +
-                    '/' +
-                    avcSample.dts +
-                    ':' +
-                    avcSample.debug +
-                    ',' +
-                    avcSample.units.length
+                avcSample.pts + '/' + avcSample.dts + ':' + avcSample.debug
             );
         }
     }
