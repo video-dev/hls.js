@@ -3761,11 +3761,11 @@ var StreamController = function (_EventHandler) {
             mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media,
             buffered = mediaBuffer.buffered;
         // adjust currentTime to start position on loaded metadata
-        if (!this.loadedmetadata && buffered.length && !media.seeking) {
+        if (!this.loadedmetadata && buffered.length) {
           this.loadedmetadata = true;
           // only adjust currentTime if different from startPosition or if startPosition not buffered
           // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
-          var startPosition = this.startPosition,
+          var startPosition = media.seeking ? currentTime : this.startPosition,
               startPositionBuffered = _bufferHelper2.default.isBuffered(mediaBuffer, startPosition);
           // if currentTime not matching with expected startPosition or startPosition not buffered
           if (currentTime !== startPosition || !startPositionBuffered) {
@@ -6591,19 +6591,22 @@ var TSDemuxer = function () {
     key: 'pushAccesUnit',
     value: function pushAccesUnit(avcSample, avcTrack) {
       if (avcSample.units.length && avcSample.frame) {
+        var samples = avcTrack.samples;
+        var nbSamples = samples.length;
         // only push AVC sample if starting with a keyframe is not mandatory OR
         //    if keyframe already found in this fragment OR
         //       keyframe found in last fragment (track.sps) AND
         //          samples already appended (we already found a keyframe in this fragment) OR fragment is contiguous
-        if (!this.config.forceKeyFrameOnDiscontinuity || avcSample.key === true || avcTrack.sps && (avcTrack.samples.length || this.contiguous)) {
-          avcTrack.samples.push(avcSample);
+        if (!this.config.forceKeyFrameOnDiscontinuity || avcSample.key === true || avcTrack.sps && (nbSamples || this.contiguous)) {
+          avcSample.id = nbSamples;
+          samples.push(avcSample);
         } else {
           // dropped samples, track it
           avcTrack.dropped++;
         }
       }
       if (avcSample.debug.length) {
-        _logger.logger.log(avcSample.pts + '/' + avcSample.dts + ':' + avcSample.debug + ',' + avcSample.units.length);
+        _logger.logger.log(avcSample.pts + '/' + avcSample.dts + ':' + avcSample.debug);
       }
     }
   }, {
@@ -7859,7 +7862,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.7.2';
+      return '0.7.3';
     }
   }, {
     key: 'Events',
@@ -9979,10 +9982,11 @@ var MP4Remuxer = function () {
       //   logger.log(avcSample.pts + '/' + avcSample.dts + ',' + unitsString + avcSample.units.length);
       // }
 
-      // sort video samples by DTS then PTS order
+      // sort video samples by DTS then PTS then demux id order
       inputSamples.sort(function (a, b) {
         var deltadts = a.dts - b.dts;
-        return deltadts ? deltadts : a.pts - b.pts;
+        var deltapts = a.pts - b.pts;
+        return deltadts ? deltadts : deltapts ? deltapts : a.id - b.id;
       });
 
       // handle broken streams with PTS < DTS, tolerance up 200ms (18000 in 90kHz timescale)
