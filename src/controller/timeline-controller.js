@@ -73,12 +73,15 @@ class TimelineController extends EventHandler {
                         //Enable reuse of existing text track.
                         var existingTrack1 = self.getExistingTrack('1');
                         if (!existingTrack1) {
-                            self.textTrack1 = self.createTextTrack(
+                            const textTrack1 = self.createTextTrack(
                                 'captions',
                                 'English',
                                 'en'
                             );
-                            self.textTrack1.textTrack1 = true;
+                            if (textTrack1) {
+                                textTrack1.textTrack1 = true;
+                                self.textTrack1 = textTrack1;
+                            }
                         } else {
                             self.textTrack1 = existingTrack1;
                             self.clearCurrentCues(self.textTrack1);
@@ -96,12 +99,15 @@ class TimelineController extends EventHandler {
                         //Enable reuse of existing text track.
                         var existingTrack2 = self.getExistingTrack('2');
                         if (!existingTrack2) {
-                            self.textTrack2 = self.createTextTrack(
+                            const textTrack2 = self.createTextTrack(
                                 'captions',
                                 'Spanish',
                                 'es'
                             );
-                            self.textTrack2.textTrack2 = true;
+                            if (textTrack2) {
+                                textTrack2.textTrack2 = true;
+                                self.textTrack2 = textTrack2;
+                            }
                         } else {
                             self.textTrack2 = existingTrack2;
 
@@ -160,7 +166,7 @@ class TimelineController extends EventHandler {
     }
 
     getExistingTrack(channelNumber) {
-        let media = this.media;
+        const media = this.media;
         if (media) {
             for (let i = 0; i < media.textTracks.length; i++) {
                 let textTrack = media.textTracks[i];
@@ -174,8 +180,9 @@ class TimelineController extends EventHandler {
     }
 
     createTextTrack(kind, label, lang) {
-        if (this.media) {
-            return this.media.addTextTrack(kind, label, lang);
+        const media = this.media;
+        if (media) {
+            return media.addTextTrack(kind, label, lang);
         }
     }
 
