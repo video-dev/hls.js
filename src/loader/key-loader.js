@@ -80,7 +80,8 @@ class KeyLoader extends EventHandler {
       loader.abort();
     }
     this.loaders[context.type] = undefined;
-    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_ERROR, fatal: false, frag: frag, response: response});
+    let fatal = response.code === 403 ? true : false;
+    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.KEY_LOAD_ERROR, fatal: fatal, frag: frag, response: response});
   }
 
   loadtimeout(stats, context) {
