@@ -34,7 +34,7 @@
     "serve": "http-server -p 8000 .",
     "open": "opener http://localhost:8000/demo/",
     "live-reload": "live-reload --port 8001 dist/",
-    "dev": "npm run build && (npm run open -s & parallelshell 'npm run live-reload -s' 'npm run serve -s' 'npm run watch -s')"
+    "dev": "npm run builddist && (npm run open -s & parallelshell 'npm run live-reload -s' 'npm run serve -s' 'npm run watch -s')"
   },
   "devDependencies": {
     "arraybuffer-equal": "^1.0.4",
