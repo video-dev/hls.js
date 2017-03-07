@@ -5617,8 +5617,11 @@ var TimelineController = function (_EventHandler) {
             //Enable reuse of existing text track.
             var existingTrack1 = self.getExistingTrack('1');
             if (!existingTrack1) {
-              self.textTrack1 = self.createTextTrack('captions', 'English', 'en');
-              self.textTrack1.textTrack1 = true;
+              var textTrack1 = self.createTextTrack('captions', 'English', 'en');
+              if (textTrack1) {
+                textTrack1.textTrack1 = true;
+                self.textTrack1 = textTrack1;
+              }
             } else {
               self.textTrack1 = existingTrack1;
               self.clearCurrentCues(self.textTrack1);
@@ -5636,8 +5639,11 @@ var TimelineController = function (_EventHandler) {
             //Enable reuse of existing text track.
             var existingTrack2 = self.getExistingTrack('2');
             if (!existingTrack2) {
-              self.textTrack2 = self.createTextTrack('captions', 'Spanish', 'es');
-              self.textTrack2.textTrack2 = true;
+              var textTrack2 = self.createTextTrack('captions', 'Spanish', 'es');
+              if (textTrack2) {
+                textTrack2.textTrack2 = true;
+                self.textTrack2 = textTrack2;
+              }
             } else {
               self.textTrack2 = existingTrack2;
 
@@ -5715,8 +5721,9 @@ var TimelineController = function (_EventHandler) {
   }, {
     key: 'createTextTrack',
     value: function createTextTrack(kind, label, lang) {
-      if (this.media) {
-        return this.media.addTextTrack(kind, label, lang);
+      var media = this.media;
+      if (media) {
+        return media.addTextTrack(kind, label, lang);
       }
     }
   }, {
@@ -6516,150 +6523,133 @@ exports.default = AACDemuxer;
 },{"22":22,"27":27,"50":50}],22:[function(_dereq_,module,exports){
 'use strict';
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      *  ADTS parser helper
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
-
-
 var _logger = _dereq_(50);
 
 var _errors = _dereq_(31);
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var ADTS = function () {
-  function ADTS() {
-    _classCallCheck(this, ADTS);
-  }
-
-  _createClass(ADTS, null, [{
-    key: 'getAudioConfig',
-    value: function getAudioConfig(observer, data, offset, audioCodec) {
-      var adtsObjectType,
-          // :int
-      adtsSampleingIndex,
-          // :int
-      adtsExtensionSampleingIndex,
-          // :int
-      adtsChanelConfig,
-          // :int
-      config,
-          userAgent = navigator.userAgent.toLowerCase(),
-          manifestCodec = audioCodec,
-          adtsSampleingRates = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
-      // byte 2
-      adtsObjectType = ((data[offset + 2] & 0xC0) >>> 6) + 1;
-      adtsSampleingIndex = (data[offset + 2] & 0x3C) >>> 2;
-      if (adtsSampleingIndex > adtsSampleingRates.length - 1) {
-        observer.trigger(Event.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'invalid ADTS sampling index:' + adtsSampleingIndex });
-        return;
-      }
-      adtsChanelConfig = (data[offset + 2] & 0x01) << 2;
-      // byte 3
-      adtsChanelConfig |= (data[offset + 3] & 0xC0) >>> 6;
-      _logger.logger.log('manifest codec:' + audioCodec + ',ADTS data:type:' + adtsObjectType + ',sampleingIndex:' + adtsSampleingIndex + '[' + adtsSampleingRates[adtsSampleingIndex] + 'Hz],channelConfig:' + adtsChanelConfig);
-      // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
-      if (/firefox/i.test(userAgent)) {
-        if (adtsSampleingIndex >= 6) {
-          adtsObjectType = 5;
-          config = new Array(4);
-          // HE-AAC uses SBR (Spectral Band Replication) , high frequencies are constructed from low frequencies
-          // there is a factor 2 between frame sample rate and output sample rate
-          // multiply frequency by 2 (see table below, equivalent to substract 3)
-          adtsExtensionSampleingIndex = adtsSampleingIndex - 3;
-        } else {
-          adtsObjectType = 2;
-          config = new Array(2);
-          adtsExtensionSampleingIndex = adtsSampleingIndex;
-        }
-        // Android : always use AAC
-      } else if (userAgent.indexOf('android') !== -1) {
+/**
+ *  ADTS parser helper
+ */
+var ADTS = {
+  getAudioConfig: function getAudioConfig(observer, data, offset, audioCodec) {
+    var adtsObjectType,
+        // :int
+    adtsSampleingIndex,
+        // :int
+    adtsExtensionSampleingIndex,
+        // :int
+    adtsChanelConfig,
+        // :int
+    config,
+        userAgent = navigator.userAgent.toLowerCase(),
+        manifestCodec = audioCodec,
+        adtsSampleingRates = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
+    // byte 2
+    adtsObjectType = ((data[offset + 2] & 0xC0) >>> 6) + 1;
+    adtsSampleingIndex = (data[offset + 2] & 0x3C) >>> 2;
+    if (adtsSampleingIndex > adtsSampleingRates.length - 1) {
+      observer.trigger(Event.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'invalid ADTS sampling index:' + adtsSampleingIndex });
+      return;
+    }
+    adtsChanelConfig = (data[offset + 2] & 0x01) << 2;
+    // byte 3
+    adtsChanelConfig |= (data[offset + 3] & 0xC0) >>> 6;
+    _logger.logger.log('manifest codec:' + audioCodec + ',ADTS data:type:' + adtsObjectType + ',sampleingIndex:' + adtsSampleingIndex + '[' + adtsSampleingRates[adtsSampleingIndex] + 'Hz],channelConfig:' + adtsChanelConfig);
+    // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
+    if (/firefox/i.test(userAgent)) {
+      if (adtsSampleingIndex >= 6) {
+        adtsObjectType = 5;
+        config = new Array(4);
+        // HE-AAC uses SBR (Spectral Band Replication) , high frequencies are constructed from low frequencies
+        // there is a factor 2 between frame sample rate and output sample rate
+        // multiply frequency by 2 (see table below, equivalent to substract 3)
+        adtsExtensionSampleingIndex = adtsSampleingIndex - 3;
+      } else {
         adtsObjectType = 2;
         config = new Array(2);
         adtsExtensionSampleingIndex = adtsSampleingIndex;
-      } else {
-        /*  for other browsers (Chrome/Vivaldi/Opera ...)
-            always force audio type to be HE-AAC SBR, as some browsers do not support audio codec switch properly (like Chrome ...)
-        */
-        adtsObjectType = 5;
-        config = new Array(4);
-        // if (manifest codec is HE-AAC or HE-AACv2) OR (manifest codec not specified AND frequency less than 24kHz)
-        if (audioCodec && (audioCodec.indexOf('mp4a.40.29') !== -1 || audioCodec.indexOf('mp4a.40.5') !== -1) || !audioCodec && adtsSampleingIndex >= 6) {
-          // HE-AAC uses SBR (Spectral Band Replication) , high frequencies are constructed from low frequencies
-          // there is a factor 2 between frame sample rate and output sample rate
-          // multiply frequency by 2 (see table below, equivalent to substract 3)
-          adtsExtensionSampleingIndex = adtsSampleingIndex - 3;
-        } else {
-          // if (manifest codec is AAC) AND (frequency less than 24kHz AND nb channel is 1) OR (manifest codec not specified and mono audio)
-          // Chrome fails to play back with low frequency AAC LC mono when initialized with HE-AAC.  This is not a problem with stereo.
-          if (audioCodec && audioCodec.indexOf('mp4a.40.2') !== -1 && adtsSampleingIndex >= 6 && adtsChanelConfig === 1 || !audioCodec && adtsChanelConfig === 1) {
-            adtsObjectType = 2;
-            config = new Array(2);
-          }
-          adtsExtensionSampleingIndex = adtsSampleingIndex;
-        }
       }
-      /* refer to http://wiki.multimedia.cx/index.php?title=MPEG-4_Audio#Audio_Specific_Config
-          ISO 14496-3 (AAC).pdf - Table 1.13 — Syntax of AudioSpecificConfig()
-        Audio Profile / Audio Object Type
-        0: Null
-        1: AAC Main
-        2: AAC LC (Low Complexity)
-        3: AAC SSR (Scalable Sample Rate)
-        4: AAC LTP (Long Term Prediction)
-        5: SBR (Spectral Band Replication)
-        6: AAC Scalable
-       sampling freq
-        0: 96000 Hz
-        1: 88200 Hz
-        2: 64000 Hz
-        3: 48000 Hz
-        4: 44100 Hz
-        5: 32000 Hz
-        6: 24000 Hz
-        7: 22050 Hz
-        8: 16000 Hz
-        9: 12000 Hz
-        10: 11025 Hz
-        11: 8000 Hz
-        12: 7350 Hz
-        13: Reserved
-        14: Reserved
-        15: frequency is written explictly
-        Channel Configurations
-        These are the channel configurations:
-        0: Defined in AOT Specifc Config
-        1: 1 channel: front-center
-        2: 2 channels: front-left, front-right
+      // Android : always use AAC
+    } else if (userAgent.indexOf('android') !== -1) {
+      adtsObjectType = 2;
+      config = new Array(2);
+      adtsExtensionSampleingIndex = adtsSampleingIndex;
+    } else {
+      /*  for other browsers (Chrome/Vivaldi/Opera ...)
+          always force audio type to be HE-AAC SBR, as some browsers do not support audio codec switch properly (like Chrome ...)
       */
-      // audioObjectType = profile => profile, the MPEG-4 Audio Object Type minus 1
-      config[0] = adtsObjectType << 3;
-      // samplingFrequencyIndex
-      config[0] |= (adtsSampleingIndex & 0x0E) >> 1;
-      config[1] |= (adtsSampleingIndex & 0x01) << 7;
-      // channelConfiguration
-      config[1] |= adtsChanelConfig << 3;
-      if (adtsObjectType === 5) {
-        // adtsExtensionSampleingIndex
-        config[1] |= (adtsExtensionSampleingIndex & 0x0E) >> 1;
-        config[2] = (adtsExtensionSampleingIndex & 0x01) << 7;
-        // adtsObjectType (force to 2, chrome is checking that object type is less than 5 ???
-        //    https://chromium.googlesource.com/chromium/src.git/+/master/media/formats/mp4/aac.cc
-        config[2] |= 2 << 2;
-        config[3] = 0;
+      adtsObjectType = 5;
+      config = new Array(4);
+      // if (manifest codec is HE-AAC or HE-AACv2) OR (manifest codec not specified AND frequency less than 24kHz)
+      if (audioCodec && (audioCodec.indexOf('mp4a.40.29') !== -1 || audioCodec.indexOf('mp4a.40.5') !== -1) || !audioCodec && adtsSampleingIndex >= 6) {
+        // HE-AAC uses SBR (Spectral Band Replication) , high frequencies are constructed from low frequencies
+        // there is a factor 2 between frame sample rate and output sample rate
+        // multiply frequency by 2 (see table below, equivalent to substract 3)
+        adtsExtensionSampleingIndex = adtsSampleingIndex - 3;
+      } else {
+        // if (manifest codec is AAC) AND (frequency less than 24kHz AND nb channel is 1) OR (manifest codec not specified and mono audio)
+        // Chrome fails to play back with low frequency AAC LC mono when initialized with HE-AAC.  This is not a problem with stereo.
+        if (audioCodec && audioCodec.indexOf('mp4a.40.2') !== -1 && adtsSampleingIndex >= 6 && adtsChanelConfig === 1 || !audioCodec && adtsChanelConfig === 1) {
+          adtsObjectType = 2;
+          config = new Array(2);
+        }
+        adtsExtensionSampleingIndex = adtsSampleingIndex;
       }
-      return { config: config, samplerate: adtsSampleingRates[adtsSampleingIndex], channelCount: adtsChanelConfig, codec: 'mp4a.40.' + adtsObjectType, manifestCodec: manifestCodec };
     }
-  }]);
+    /* refer to http://wiki.multimedia.cx/index.php?title=MPEG-4_Audio#Audio_Specific_Config
+        ISO 14496-3 (AAC).pdf - Table 1.13 — Syntax of AudioSpecificConfig()
+      Audio Profile / Audio Object Type
+      0: Null
+      1: AAC Main
+      2: AAC LC (Low Complexity)
+      3: AAC SSR (Scalable Sample Rate)
+      4: AAC LTP (Long Term Prediction)
+      5: SBR (Spectral Band Replication)
+      6: AAC Scalable
+     sampling freq
+      0: 96000 Hz
+      1: 88200 Hz
+      2: 64000 Hz
+      3: 48000 Hz
+      4: 44100 Hz
+      5: 32000 Hz
+      6: 24000 Hz
+      7: 22050 Hz
+      8: 16000 Hz
+      9: 12000 Hz
+      10: 11025 Hz
+      11: 8000 Hz
+      12: 7350 Hz
+      13: Reserved
+      14: Reserved
+      15: frequency is written explictly
+      Channel Configurations
+      These are the channel configurations:
+      0: Defined in AOT Specifc Config
+      1: 1 channel: front-center
+      2: 2 channels: front-left, front-right
+    */
+    // audioObjectType = profile => profile, the MPEG-4 Audio Object Type minus 1
+    config[0] = adtsObjectType << 3;
+    // samplingFrequencyIndex
+    config[0] |= (adtsSampleingIndex & 0x0E) >> 1;
+    config[1] |= (adtsSampleingIndex & 0x01) << 7;
+    // channelConfiguration
+    config[1] |= adtsChanelConfig << 3;
+    if (adtsObjectType === 5) {
+      // adtsExtensionSampleingIndex
+      config[1] |= (adtsExtensionSampleingIndex & 0x0E) >> 1;
+      config[2] = (adtsExtensionSampleingIndex & 0x01) << 7;
+      // adtsObjectType (force to 2, chrome is checking that object type is less than 5 ???
+      //    https://chromium.googlesource.com/chromium/src.git/+/master/media/formats/mp4/aac.cc
+      config[2] |= 2 << 2;
+      config[3] = 0;
+    }
+    return { config: config, samplerate: adtsSampleingRates[adtsSampleingIndex], channelCount: adtsChanelConfig, codec: 'mp4a.40.' + adtsObjectType, manifestCodec: manifestCodec };
+  }
+};
 
-  return ADTS;
-}();
-
-exports.default = ADTS;
+module.exports = ADTS;
 
 },{"31":31,"50":50}],23:[function(_dereq_,module,exports){
 'use strict';
@@ -7986,7 +7976,7 @@ var SampleAesDecrypter = function () {
           return;
         }
 
-        var curUnits = samples[sampleIndex].units.units;
+        var curUnits = samples[sampleIndex].units;
         for (;; unitIndex++) {
           if (unitIndex >= curUnits.length) {
             break;
@@ -8519,7 +8509,7 @@ var TSDemuxer = function () {
   }, {
     key: 'pushAccesUnit',
     value: function pushAccesUnit(avcSample, avcTrack) {
-      if (avcSample.units.units.length && avcSample.frame) {
+      if (avcSample.units.length && avcSample.frame) {
         // only push AVC sample if starting with a keyframe is not mandatory OR
         //    if keyframe already found in this fragment OR
         //       keyframe found in last fragment (track.sps) AND
@@ -8718,7 +8708,7 @@ var TSDemuxer = function () {
         }
         if (avcSample && push) {
           var _units = avcSample.units;
-          _units.units.push(unit);
+          _units.push(unit);
         }
       });
       // if last PES packet, push samples
@@ -8730,7 +8720,7 @@ var TSDemuxer = function () {
   }, {
     key: '_createAVCSample',
     value: function _createAVCSample(key, pts, dts, debug) {
-      return { key: key, pts: pts, dts: dts, units: { units: [], length: 0 }, debug: debug };
+      return { key: key, pts: pts, dts: dts, units: [], debug: debug };
     }
   }, {
     key: '_insertSampleInOrder',
@@ -8757,13 +8747,13 @@ var TSDemuxer = function () {
       var avcSample = this.avcSample,
           lastUnit = void 0;
       // try to fallback to previous sample if current one is empty
-      if (!avcSample || avcSample.units.units.length === 0) {
+      if (!avcSample || avcSample.units.length === 0) {
         var track = this._avcTrack,
             samples = track.samples;
         avcSample = samples[samples.length - 1];
       }
       if (avcSample) {
-        var units = avcSample.units.units;
+        var units = avcSample.units;
         lastUnit = units[units.length - 1];
       }
       return lastUnit;
@@ -9490,279 +9480,242 @@ exports.default = AAC;
 },{}],35:[function(_dereq_,module,exports){
 "use strict";
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
 /**
- * Buffer Helper class, providing methods dealing buffer length retrieval
+ * Buffer Helper utils, providing methods dealing buffer length retrieval
 */
 
-var BufferHelper = function () {
-  function BufferHelper() {
-    _classCallCheck(this, BufferHelper);
-  }
-
-  _createClass(BufferHelper, null, [{
-    key: "isBuffered",
-    value: function isBuffered(media, position) {
-      if (media) {
-        var buffered = media.buffered;
-        for (var i = 0; i < buffered.length; i++) {
-          if (position >= buffered.start(i) && position <= buffered.end(i)) {
-            return true;
-          }
+var BufferHelper = {
+  isBuffered: function isBuffered(media, position) {
+    if (media) {
+      var buffered = media.buffered;
+      for (var i = 0; i < buffered.length; i++) {
+        if (position >= buffered.start(i) && position <= buffered.end(i)) {
+          return true;
         }
       }
-      return false;
     }
-  }, {
-    key: "bufferInfo",
-    value: function bufferInfo(media, pos, maxHoleDuration) {
-      if (media) {
-        var vbuffered = media.buffered,
-            buffered = [],
-            i;
-        for (i = 0; i < vbuffered.length; i++) {
-          buffered.push({ start: vbuffered.start(i), end: vbuffered.end(i) });
-        }
-        return this.bufferedInfo(buffered, pos, maxHoleDuration);
-      } else {
-        return { len: 0, start: pos, end: pos, nextStart: undefined };
-      }
-    }
-  }, {
-    key: "bufferedInfo",
-    value: function bufferedInfo(buffered, pos, maxHoleDuration) {
-      var buffered2 = [],
+    return false;
+  },
 
-      // bufferStart and bufferEnd are buffer boundaries around current video position
-      bufferLen,
-          bufferStart,
-          bufferEnd,
-          bufferStartNext,
+  bufferInfo: function bufferInfo(media, pos, maxHoleDuration) {
+    if (media) {
+      var vbuffered = media.buffered,
+          buffered = [],
           i;
-      // sort on buffer.start/smaller end (IE does not always return sorted buffered range)
-      buffered.sort(function (a, b) {
-        var diff = a.start - b.start;
-        if (diff) {
-          return diff;
-        } else {
-          return b.end - a.end;
-        }
-      });
-      // there might be some small holes between buffer time range
-      // consider that holes smaller than maxHoleDuration are irrelevant and build another
-      // buffer time range representations that discards those holes
-      for (i = 0; i < buffered.length; i++) {
-        var buf2len = buffered2.length;
-        if (buf2len) {
-          var buf2end = buffered2[buf2len - 1].end;
-          // if small hole (value between 0 or maxHoleDuration ) or overlapping (negative)
-          if (buffered[i].start - buf2end < maxHoleDuration) {
-            // merge overlapping time ranges
-            // update lastRange.end only if smaller than item.end
-            // e.g.  [ 1, 15] with  [ 2,8] => [ 1,15] (no need to modify lastRange.end)
-            // whereas [ 1, 8] with  [ 2,15] => [ 1,15] ( lastRange should switch from [1,8] to [1,15])
-            if (buffered[i].end > buf2end) {
-              buffered2[buf2len - 1].end = buffered[i].end;
-            }
-          } else {
-            // big hole
-            buffered2.push(buffered[i]);
+      for (i = 0; i < vbuffered.length; i++) {
+        buffered.push({ start: vbuffered.start(i), end: vbuffered.end(i) });
+      }
+      return this.bufferedInfo(buffered, pos, maxHoleDuration);
+    } else {
+      return { len: 0, start: pos, end: pos, nextStart: undefined };
+    }
+  },
+
+  bufferedInfo: function bufferedInfo(buffered, pos, maxHoleDuration) {
+    var buffered2 = [],
+
+    // bufferStart and bufferEnd are buffer boundaries around current video position
+    bufferLen,
+        bufferStart,
+        bufferEnd,
+        bufferStartNext,
+        i;
+    // sort on buffer.start/smaller end (IE does not always return sorted buffered range)
+    buffered.sort(function (a, b) {
+      var diff = a.start - b.start;
+      if (diff) {
+        return diff;
+      } else {
+        return b.end - a.end;
+      }
+    });
+    // there might be some small holes between buffer time range
+    // consider that holes smaller than maxHoleDuration are irrelevant and build another
+    // buffer time range representations that discards those holes
+    for (i = 0; i < buffered.length; i++) {
+      var buf2len = buffered2.length;
+      if (buf2len) {
+        var buf2end = buffered2[buf2len - 1].end;
+        // if small hole (value between 0 or maxHoleDuration ) or overlapping (negative)
+        if (buffered[i].start - buf2end < maxHoleDuration) {
+          // merge overlapping time ranges
+          // update lastRange.end only if smaller than item.end
+          // e.g.  [ 1, 15] with  [ 2,8] => [ 1,15] (no need to modify lastRange.end)
+          // whereas [ 1, 8] with  [ 2,15] => [ 1,15] ( lastRange should switch from [1,8] to [1,15])
+          if (buffered[i].end > buf2end) {
+            buffered2[buf2len - 1].end = buffered[i].end;
           }
         } else {
-          // first value
+          // big hole
           buffered2.push(buffered[i]);
         }
+      } else {
+        // first value
+        buffered2.push(buffered[i]);
       }
-      for (i = 0, bufferLen = 0, bufferStart = bufferEnd = pos; i < buffered2.length; i++) {
-        var start = buffered2[i].start,
-            end = buffered2[i].end;
-        //logger.log('buf start/end:' + buffered.start(i) + '/' + buffered.end(i));
-        if (pos + maxHoleDuration >= start && pos < end) {
-          // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
-          bufferStart = start;
-          bufferEnd = end;
-          bufferLen = bufferEnd - pos;
-        } else if (pos + maxHoleDuration < start) {
-          bufferStartNext = start;
-          break;
-        }
-      }
-      return { len: bufferLen, start: bufferStart, end: bufferEnd, nextStart: bufferStartNext };
     }
-  }]);
+    for (i = 0, bufferLen = 0, bufferStart = bufferEnd = pos; i < buffered2.length; i++) {
+      var start = buffered2[i].start,
+          end = buffered2[i].end;
+      //logger.log('buf start/end:' + buffered.start(i) + '/' + buffered.end(i));
+      if (pos + maxHoleDuration >= start && pos < end) {
+        // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
+        bufferStart = start;
+        bufferEnd = end;
+        bufferLen = bufferEnd - pos;
+      } else if (pos + maxHoleDuration < start) {
+        bufferStartNext = start;
+        break;
+      }
+    }
+    return { len: bufferLen, start: bufferStart, end: bufferEnd, nextStart: bufferStartNext };
+  }
+};
 
-  return BufferHelper;
-}();
-
-exports.default = BufferHelper;
+module.exports = BufferHelper;
 
 },{}],36:[function(_dereq_,module,exports){
 'use strict';
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * Level Helper class, providing methods dealing with playlist sliding and drift
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
-
 var _logger = _dereq_(50);
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+var LevelHelper = {
 
-var LevelHelper = function () {
-  function LevelHelper() {
-    _classCallCheck(this, LevelHelper);
-  }
+  mergeDetails: function mergeDetails(oldDetails, newDetails) {
+    var start = Math.max(oldDetails.startSN, newDetails.startSN) - newDetails.startSN,
+        end = Math.min(oldDetails.endSN, newDetails.endSN) - newDetails.startSN,
+        delta = newDetails.startSN - oldDetails.startSN,
+        oldfragments = oldDetails.fragments,
+        newfragments = newDetails.fragments,
+        ccOffset = 0,
+        PTSFrag;
 
-  _createClass(LevelHelper, null, [{
-    key: 'mergeDetails',
-    value: function mergeDetails(oldDetails, newDetails) {
-      var start = Math.max(oldDetails.startSN, newDetails.startSN) - newDetails.startSN,
-          end = Math.min(oldDetails.endSN, newDetails.endSN) - newDetails.startSN,
-          delta = newDetails.startSN - oldDetails.startSN,
-          oldfragments = oldDetails.fragments,
-          newfragments = newDetails.fragments,
-          ccOffset = 0,
-          PTSFrag;
-
-      // check if old/new playlists have fragments in common
-      if (end < start) {
-        newDetails.PTSKnown = false;
-        return;
-      }
-      // loop through overlapping SN and update startPTS , cc, and duration if any found
-      for (var i = start; i <= end; i++) {
-        var oldFrag = oldfragments[delta + i],
-            newFrag = newfragments[i];
-        if (newFrag && oldFrag) {
-          ccOffset = oldFrag.cc - newFrag.cc;
-          if (!isNaN(oldFrag.startPTS)) {
-            newFrag.start = newFrag.startPTS = oldFrag.startPTS;
-            newFrag.endPTS = oldFrag.endPTS;
-            newFrag.duration = oldFrag.duration;
-            PTSFrag = newFrag;
-          }
-        }
-      }
-
-      if (ccOffset) {
-        _logger.logger.log('discontinuity sliding from playlist, take drift into account');
-        for (i = 0; i < newfragments.length; i++) {
-          newfragments[i].cc += ccOffset;
-        }
-      }
-
-      // if at least one fragment contains PTS info, recompute PTS information for all fragments
-      if (PTSFrag) {
-        LevelHelper.updateFragPTSDTS(newDetails, PTSFrag.sn, PTSFrag.startPTS, PTSFrag.endPTS, PTSFrag.startDTS, PTSFrag.endDTS);
-      } else {
-        // ensure that delta is within oldfragments range
-        // also adjust sliding in case delta is 0 (we could have old=[50-60] and new=old=[50-61])
-        // in that case we also need to adjust start offset of all fragments
-        if (delta >= 0 && delta < oldfragments.length) {
-          // adjust start by sliding offset
-          var sliding = oldfragments[delta].start;
-          for (i = 0; i < newfragments.length; i++) {
-            newfragments[i].start += sliding;
-          }
-        }
-      }
-      // if we are here, it means we have fragments overlapping between
-      // old and new level. reliable PTS info is thus relying on old level
-      newDetails.PTSKnown = oldDetails.PTSKnown;
+    // check if old/new playlists have fragments in common
+    if (end < start) {
+      newDetails.PTSKnown = false;
       return;
     }
-  }, {
-    key: 'updateFragPTSDTS',
-    value: function updateFragPTSDTS(details, sn, startPTS, endPTS, startDTS, endDTS) {
-      var fragIdx, fragments, frag, i;
-      // exit if sn out of range
-      if (!details || sn < details.startSN || sn > details.endSN) {
-        return 0;
-      }
-      fragIdx = sn - details.startSN;
-      fragments = details.fragments;
-      frag = fragments[fragIdx];
-      if (!isNaN(frag.startPTS)) {
-        // delta PTS between audio and video
-        var deltaPTS = Math.abs(frag.startPTS - startPTS);
-        if (isNaN(frag.deltaPTS)) {
-          frag.deltaPTS = deltaPTS;
-        } else {
-          frag.deltaPTS = Math.max(deltaPTS, frag.deltaPTS);
+    // loop through overlapping SN and update startPTS , cc, and duration if any found
+    for (var i = start; i <= end; i++) {
+      var oldFrag = oldfragments[delta + i],
+          newFrag = newfragments[i];
+      if (newFrag && oldFrag) {
+        ccOffset = oldFrag.cc - newFrag.cc;
+        if (!isNaN(oldFrag.startPTS)) {
+          newFrag.start = newFrag.startPTS = oldFrag.startPTS;
+          newFrag.endPTS = oldFrag.endPTS;
+          newFrag.duration = oldFrag.duration;
+          PTSFrag = newFrag;
         }
-        startPTS = Math.min(startPTS, frag.startPTS);
-        endPTS = Math.max(endPTS, frag.endPTS);
-        startDTS = Math.min(startDTS, frag.startDTS);
-        endDTS = Math.max(endDTS, frag.endDTS);
       }
-
-      var drift = startPTS - frag.start;
-
-      frag.start = frag.startPTS = startPTS;
-      frag.endPTS = endPTS;
-      frag.startDTS = startDTS;
-      frag.endDTS = endDTS;
-      frag.duration = endPTS - startPTS;
-      // adjust fragment PTS/duration from seqnum-1 to frag 0
-      for (i = fragIdx; i > 0; i--) {
-        LevelHelper.updatePTS(fragments, i, i - 1);
-      }
-
-      // adjust fragment PTS/duration from seqnum to last frag
-      for (i = fragIdx; i < fragments.length - 1; i++) {
-        LevelHelper.updatePTS(fragments, i, i + 1);
-      }
-      details.PTSKnown = true;
-      //logger.log(`                                            frag start/end:${startPTS.toFixed(3)}/${endPTS.toFixed(3)}`);
-
-      return drift;
     }
-  }, {
-    key: 'updatePTS',
-    value: function updatePTS(fragments, fromIdx, toIdx) {
-      var fragFrom = fragments[fromIdx],
-          fragTo = fragments[toIdx],
-          fragToPTS = fragTo.startPTS;
-      // if we know startPTS[toIdx]
-      if (!isNaN(fragToPTS)) {
-        // update fragment duration.
-        // it helps to fix drifts between playlist reported duration and fragment real duration
-        if (toIdx > fromIdx) {
-          fragFrom.duration = fragToPTS - fragFrom.start;
-          if (fragFrom.duration < 0) {
-            _logger.logger.warn('negative duration computed for frag ' + fragFrom.sn + ',level ' + fragFrom.level + ', there should be some duration drift between playlist and fragment!');
-          }
-        } else {
-          fragTo.duration = fragFrom.start - fragToPTS;
-          if (fragTo.duration < 0) {
-            _logger.logger.warn('negative duration computed for frag ' + fragTo.sn + ',level ' + fragTo.level + ', there should be some duration drift between playlist and fragment!');
-          }
+
+    if (ccOffset) {
+      _logger.logger.log('discontinuity sliding from playlist, take drift into account');
+      for (i = 0; i < newfragments.length; i++) {
+        newfragments[i].cc += ccOffset;
+      }
+    }
+
+    // if at least one fragment contains PTS info, recompute PTS information for all fragments
+    if (PTSFrag) {
+      LevelHelper.updateFragPTSDTS(newDetails, PTSFrag.sn, PTSFrag.startPTS, PTSFrag.endPTS, PTSFrag.startDTS, PTSFrag.endDTS);
+    } else {
+      // ensure that delta is within oldfragments range
+      // also adjust sliding in case delta is 0 (we could have old=[50-60] and new=old=[50-61])
+      // in that case we also need to adjust start offset of all fragments
+      if (delta >= 0 && delta < oldfragments.length) {
+        // adjust start by sliding offset
+        var sliding = oldfragments[delta].start;
+        for (i = 0; i < newfragments.length; i++) {
+          newfragments[i].start += sliding;
+        }
+      }
+    }
+    // if we are here, it means we have fragments overlapping between
+    // old and new level. reliable PTS info is thus relying on old level
+    newDetails.PTSKnown = oldDetails.PTSKnown;
+    return;
+  },
+
+  updateFragPTSDTS: function updateFragPTSDTS(details, sn, startPTS, endPTS, startDTS, endDTS) {
+    var fragIdx, fragments, frag, i;
+    // exit if sn out of range
+    if (!details || sn < details.startSN || sn > details.endSN) {
+      return 0;
+    }
+    fragIdx = sn - details.startSN;
+    fragments = details.fragments;
+    frag = fragments[fragIdx];
+    if (!isNaN(frag.startPTS)) {
+      // delta PTS between audio and video
+      var deltaPTS = Math.abs(frag.startPTS - startPTS);
+      if (isNaN(frag.deltaPTS)) {
+        frag.deltaPTS = deltaPTS;
+      } else {
+        frag.deltaPTS = Math.max(deltaPTS, frag.deltaPTS);
+      }
+      startPTS = Math.min(startPTS, frag.startPTS);
+      endPTS = Math.max(endPTS, frag.endPTS);
+      startDTS = Math.min(startDTS, frag.startDTS);
+      endDTS = Math.max(endDTS, frag.endDTS);
+    }
+
+    var drift = startPTS - frag.start;
+
+    frag.start = frag.startPTS = startPTS;
+    frag.endPTS = endPTS;
+    frag.startDTS = startDTS;
+    frag.endDTS = endDTS;
+    frag.duration = endPTS - startPTS;
+    // adjust fragment PTS/duration from seqnum-1 to frag 0
+    for (i = fragIdx; i > 0; i--) {
+      LevelHelper.updatePTS(fragments, i, i - 1);
+    }
+
+    // adjust fragment PTS/duration from seqnum to last frag
+    for (i = fragIdx; i < fragments.length - 1; i++) {
+      LevelHelper.updatePTS(fragments, i, i + 1);
+    }
+    details.PTSKnown = true;
+    //logger.log(`                                            frag start/end:${startPTS.toFixed(3)}/${endPTS.toFixed(3)}`);
+
+    return drift;
+  },
+
+  updatePTS: function updatePTS(fragments, fromIdx, toIdx) {
+    var fragFrom = fragments[fromIdx],
+        fragTo = fragments[toIdx],
+        fragToPTS = fragTo.startPTS;
+    // if we know startPTS[toIdx]
+    if (!isNaN(fragToPTS)) {
+      // update fragment duration.
+      // it helps to fix drifts between playlist reported duration and fragment real duration
+      if (toIdx > fromIdx) {
+        fragFrom.duration = fragToPTS - fragFrom.start;
+        if (fragFrom.duration < 0) {
+          _logger.logger.warn('negative duration computed for frag ' + fragFrom.sn + ',level ' + fragFrom.level + ', there should be some duration drift between playlist and fragment!');
         }
       } else {
-        // we dont know startPTS[toIdx]
-        if (toIdx > fromIdx) {
-          fragTo.start = fragFrom.start + fragFrom.duration;
-        } else {
-          fragTo.start = fragFrom.start - fragTo.duration;
+        fragTo.duration = fragFrom.start - fragToPTS;
+        if (fragTo.duration < 0) {
+          _logger.logger.warn('negative duration computed for frag ' + fragTo.sn + ',level ' + fragTo.level + ', there should be some duration drift between playlist and fragment!');
         }
       }
+    } else {
+      // we dont know startPTS[toIdx]
+      if (toIdx > fromIdx) {
+        fragTo.start = fragFrom.start + fragFrom.duration;
+      } else {
+        fragTo.start = fragFrom.start - fragTo.duration;
+      }
     }
-  }]);
+  }
+}; /**
+    * Level Helper class, providing methods dealing with playlist sliding and drift
+   */
 
-  return LevelHelper;
-}();
-
-exports.default = LevelHelper;
+module.exports = LevelHelper;
 
 },{"50":50}],37:[function(_dereq_,module,exports){
 /**
@@ -11934,7 +11887,7 @@ var MP4Remuxer = function () {
 
       // for (let i = 0; i < track.samples.length; i++) {
       //   let avcSample = track.samples[i];
-      //   let units = avcSample.units.units;
+      //   let units = avcSample.units;
       //   let unitsString = '';
       //   for (let j = 0; j < units.length ; j++) {
       //     unitsString += units[j].type + ',';
@@ -12022,7 +11975,7 @@ var MP4Remuxer = function () {
       for (var _i = 0; _i < nbSamples; _i++) {
         // compute total/avc sample length and nb of NAL units
         var _sample = inputSamples[_i],
-            units = _sample.units.units,
+            units = _sample.units,
             nbUnits = units.length,
             sampleLen = 0;
         for (var j = 0; j < nbUnits; j++) {
@@ -12064,7 +12017,7 @@ var MP4Remuxer = function () {
 
       for (var _i2 = 0; _i2 < nbSamples; _i2++) {
         var avcSample = inputSamples[_i2],
-            avcSampleUnits = avcSample.units.units,
+            avcSampleUnits = avcSample.units,
             mp4SampleLength = 0,
             compositionTimeOffset = void 0;
         // convert NALU bitstream to MP4 format (prepend NALU with size field)
@@ -14290,39 +14243,22 @@ var logger = exports.logger = exportedLogger;
 },{}],51:[function(_dereq_,module,exports){
 'use strict';
 
-Object.defineProperty(exports, "__esModule", {
-  value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
 /**
  *  TimeRanges to string helper
  */
 
-var TimeRanges = function () {
-  function TimeRanges() {
-    _classCallCheck(this, TimeRanges);
-  }
-
-  _createClass(TimeRanges, null, [{
-    key: 'toString',
-    value: function toString(r) {
-      var log = '',
-          len = r.length;
-      for (var i = 0; i < len; i++) {
-        log += '[' + r.start(i).toFixed(3) + ',' + r.end(i).toFixed(3) + ']';
-      }
-      return log;
+var TimeRanges = {
+  toString: function toString(r) {
+    var log = '',
+        len = r.length;
+    for (var i = 0; i < len; i++) {
+      log += '[' + r.start(i).toFixed(3) + ',' + r.end(i).toFixed(3) + ']';
     }
-  }]);
+    return log;
+  }
+};
 
-  return TimeRanges;
-}();
-
-exports.default = TimeRanges;
+module.exports = TimeRanges;
 
 },{}],52:[function(_dereq_,module,exports){
 'use strict';
