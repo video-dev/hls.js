@@ -73,8 +73,11 @@ class TimelineController extends EventHandler {
             var existingTrack1 = self.getExistingTrack('1');
             if (!existingTrack1)
             {
-              self.textTrack1 = self.createTextTrack('captions', 'English', 'en');
-              self.textTrack1.textTrack1 = true;
+              const textTrack1 = self.createTextTrack('captions', 'English', 'en');
+              if (textTrack1) {
+                textTrack1.textTrack1 = true;
+                self.textTrack1 = textTrack1;
+              }
             }
             else
             {
@@ -98,8 +101,11 @@ class TimelineController extends EventHandler {
             var existingTrack2 = self.getExistingTrack('2');
             if (!existingTrack2)
             {
-              self.textTrack2 = self.createTextTrack('captions', 'Spanish', 'es');
-              self.textTrack2.textTrack2 = true;
+              const textTrack2 = self.createTextTrack('captions', 'Spanish', 'es');
+              if (textTrack2) {
+                textTrack2.textTrack2 = true;
+                self.textTrack2 = textTrack2;
+              }
             }
             else
             {
@@ -155,7 +161,7 @@ class TimelineController extends EventHandler {
   }
 
   getExistingTrack(channelNumber) {
-    let media = this.media;
+    const media = this.media;
     if (media) {
       for (let i = 0; i < media.textTracks.length; i++) {
         let textTrack = media.textTracks[i];
@@ -169,9 +175,10 @@ class TimelineController extends EventHandler {
   }
 
   createTextTrack(kind, label, lang) {
-    if (this.media)
+    const media = this.media;
+    if (media)
     {
-      return this.media.addTextTrack(kind, label, lang);
+      return media.addTextTrack(kind, label, lang);
     }
   }
 
