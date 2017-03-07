@@ -125,7 +125,7 @@ class XhrLoader {
               this.retryDelay = Math.min(2 * this.retryDelay, config.maxRetryDelay);
             }
             if (this.onWarn) {
-              this.onWarn(event);
+                this.onWarn(event, context, status);
             }
             stats.retry++;
           }

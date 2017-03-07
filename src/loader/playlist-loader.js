@@ -396,8 +396,8 @@ class PlaylistLoader extends EventHandler {
     }
   }
 
-  loadwarn(response, context) {
-    this.hls.trigger(Event.WARN, { type: ErrorTypes.NETWORK_ERROR, url: context.loader.url, loader: context.loader, response: response, context : context });
+  loadwarn(response, context, status) {
+    this.hls.trigger(Event.WARN, { type: ErrorTypes.NETWORK_ERROR, url: context.loader.url, loader: context.loader, response: response, context : context, status: status });
   }
 
   loaderror(response, context) {
