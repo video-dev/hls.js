@@ -4,9 +4,9 @@
 
 import {logger} from '../utils/logger';
 
-class LevelHelper {
+const LevelHelper = {
 
-  static mergeDetails(oldDetails,newDetails) {
+  mergeDetails : function(oldDetails,newDetails) {
     var start = Math.max(oldDetails.startSN,newDetails.startSN)-newDetails.startSN,
         end = Math.min(oldDetails.endSN,newDetails.endSN)-newDetails.startSN,
         delta = newDetails.startSN - oldDetails.startSN,
@@ -61,9 +61,9 @@ class LevelHelper {
     // old and new level. reliable PTS info is thus relying on old level
     newDetails.PTSKnown = oldDetails.PTSKnown;
     return;
-  }
+  },
 
-  static updateFragPTSDTS(details,sn,startPTS,endPTS,startDTS,endDTS) {
+  updateFragPTSDTS : function(details,sn,startPTS,endPTS,startDTS,endDTS) {
     var fragIdx, fragments, frag, i;
     // exit if sn out of range
     if (!details || sn < details.startSN || sn > details.endSN) {
@@ -106,9 +106,9 @@ class LevelHelper {
     //logger.log(`                                            frag start/end:${startPTS.toFixed(3)}/${endPTS.toFixed(3)}`);
 
     return drift;
-  }
+  },
 
-  static updatePTS(fragments,fromIdx, toIdx) {
+  updatePTS : function(fragments,fromIdx, toIdx) {
     var fragFrom = fragments[fromIdx],fragTo = fragments[toIdx], fragToPTS = fragTo.startPTS;
     // if we know startPTS[toIdx]
     if(!isNaN(fragToPTS)) {
@@ -134,6 +134,6 @@ class LevelHelper {
       }
     }
   }
-}
+};
 
-export default LevelHelper;
+module.exports = LevelHelper;
