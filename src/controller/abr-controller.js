@@ -9,7 +9,7 @@ import EventHandler from '../event-handler';
 import BufferHelper from '../helper/buffer-helper';
 import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
-import EwmaBandWidthEstimator from './ewma-bandwidth-estimator';
+import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
 
 class AbrController extends EventHandler {
     constructor(hls) {
