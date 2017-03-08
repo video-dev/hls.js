@@ -1117,9 +1117,9 @@ function createfMP4(type) {
 }
 
 function arrayConcat(inputArray) {
-    let totalLength = inputArray.reduce( function(prev,cur) { return prev+cur.length} ,0);
-    let result = new Uint8Array(totalLength);
-    let offset = 0;
+    var totalLength = inputArray.reduce( function(prev,cur) { return prev+cur.length} ,0);
+    var result = new Uint8Array(totalLength);
+    var offset = 0;
     inputArray.forEach(function(element) {
       result.set(element, offset);
       offset += element.length;
