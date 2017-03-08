@@ -25,7 +25,9 @@ class LevelKey {
 
     get uri() {
         if (!this._uri && this.reluri) {
-            this._uri = URLToolkit.buildAbsoluteURL(this.baseuri, this.reluri);
+            this._uri = URLToolkit.buildAbsoluteURL(this.baseuri, this.reluri, {
+                alwaysNormalize: true
+            });
         }
         return this._uri;
     }
@@ -41,7 +43,9 @@ class Fragment {
 
     get url() {
         if (!this._url && this.relurl) {
-            this._url = URLToolkit.buildAbsoluteURL(this.baseurl, this.relurl);
+            this._url = URLToolkit.buildAbsoluteURL(this.baseurl, this.relurl, {
+                alwaysNormalize: true
+            });
         }
         return this._url;
     }
@@ -229,7 +233,9 @@ class PlaylistLoader extends EventHandler {
     }
 
     resolve(url, baseUrl) {
-        return URLToolkit.buildAbsoluteURL(baseUrl, url);
+        return URLToolkit.buildAbsoluteURL(baseUrl, url, {
+            alwaysNormalize: true
+        });
     }
 
     parseMasterPlaylist(string, baseurl) {
