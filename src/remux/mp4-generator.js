@@ -3,6 +3,9 @@
  */
 
 //import Hex from '../utils/hex';
+
+const UINT32_MAX = Math.pow(2, 32) - 1;
+
 class MP4 {
     static init() {
         MP4.types = {
@@ -276,17 +279,27 @@ class MP4 {
 
     static mdhd(timescale, duration) {
         duration *= timescale;
+        const upperWordDuration = Math.floor(duration / (UINT32_MAX + 1));
+        const lowerWordDuration = Math.floor(duration % (UINT32_MAX + 1));
         return MP4.box(
             MP4.types.mdhd,
             new Uint8Array([
-                0x00, // version 0
+                0x01, // version 1
                 0x00,
                 0x00,
                 0x00, // flags
                 0x00,
                 0x00,
                 0x00,
+                0x00,
+                0x00,
+                0x00,
+                0x00,
                 0x02, // creation_time
+                0x00,
+                0x00,
+                0x00,
+                0x00,
                 0x00,
                 0x00,
                 0x00,
@@ -295,10 +308,14 @@ class MP4 {
                 (timescale >> 16) & 0xff,
                 (timescale >> 8) & 0xff,
                 timescale & 0xff, // timescale
-                duration >> 24,
-                (duration >> 16) & 0xff,
-                (duration >> 8) & 0xff,
-                duration & 0xff, // duration
+                upperWordDuration >> 24,
+                (upperWordDuration >> 16) & 0xff,
+                (upperWordDuration >> 8) & 0xff,
+                upperWordDuration & 0xff,
+                lowerWordDuration >> 24,
+                (lowerWordDuration >> 16) & 0xff,
+                (lowerWordDuration >> 8) & 0xff,
+                lowerWordDuration & 0xff,
                 0x55,
                 0xc4, // 'und' language (undetermined)
                 0x00,
@@ -388,27 +405,41 @@ class MP4 {
 
     static mvhd(timescale, duration) {
         duration *= timescale;
+        const upperWordDuration = Math.floor(duration / (UINT32_MAX + 1));
+        const lowerWordDuration = Math.floor(duration % (UINT32_MAX + 1));
         var bytes = new Uint8Array([
-            0x00, // version 0
+            0x01, // version 1
             0x00,
             0x00,
             0x00, // flags
             0x00,
             0x00,
             0x00,
-            0x01, // creation_time
             0x00,
             0x00,
             0x00,
-            0x02, // modification_time
+            0x00,
+            0x02, // creation_time
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x03, // modification_time
             (timescale >> 24) & 0xff,
             (timescale >> 16) & 0xff,
             (timescale >> 8) & 0xff,
             timescale & 0xff, // timescale
-            (duration >> 24) & 0xff,
-            (duration >> 16) & 0xff,
-            (duration >> 8) & 0xff,
-            duration & 0xff, // duration
+            upperWordDuration >> 24,
+            (upperWordDuration >> 16) & 0xff,
+            (upperWordDuration >> 8) & 0xff,
+            upperWordDuration & 0xff,
+            lowerWordDuration >> 24,
+            (lowerWordDuration >> 16) & 0xff,
+            (lowerWordDuration >> 8) & 0xff,
+            lowerWordDuration & 0xff,
             0x00,
             0x01,
             0x00,
@@ -815,22 +846,32 @@ class MP4 {
         var id = track.id,
             duration = track.duration * track.timescale,
             width = track.width,
-            height = track.height;
+            height = track.height,
+            upperWordDuration = Math.floor(duration / (UINT32_MAX + 1)),
+            lowerWordDuration = Math.floor(duration % (UINT32_MAX + 1));
         return MP4.box(
             MP4.types.tkhd,
             new Uint8Array([
-                0x00, // version 0
+                0x01, // version 1
                 0x00,
                 0x00,
                 0x07, // flags
                 0x00,
                 0x00,
                 0x00,
-                0x00, // creation_time
                 0x00,
                 0x00,
                 0x00,
-                0x00, // modification_time
+                0x00,
+                0x02, // creation_time
+                0x00,
+                0x00,
+                0x00,
+                0x00,
+                0x00,
+                0x00,
+                0x00,
+                0x03, // modification_time
                 (id >> 24) & 0xff,
                 (id >> 16) & 0xff,
                 (id >> 8) & 0xff,
@@ -839,10 +880,14 @@ class MP4 {
                 0x00,
                 0x00,
                 0x00, // reserved
-                duration >> 24,
-                (duration >> 16) & 0xff,
-                (duration >> 8) & 0xff,
-                duration & 0xff, // duration
+                upperWordDuration >> 24,
+                (upperWordDuration >> 16) & 0xff,
+                (upperWordDuration >> 8) & 0xff,
+                upperWordDuration & 0xff,
+                lowerWordDuration >> 24,
+                (lowerWordDuration >> 16) & 0xff,
+                (lowerWordDuration >> 8) & 0xff,
+                lowerWordDuration & 0xff,
                 0x00,
                 0x00,
                 0x00,
@@ -909,7 +954,13 @@ class MP4 {
 
     static traf(track, baseMediaDecodeTime) {
         var sampleDependencyTable = MP4.sdtp(track),
-            id = track.id;
+            id = track.id,
+            upperWordBaseMediaDecodeTime = Math.floor(
+                baseMediaDecodeTime / (UINT32_MAX + 1)
+            ),
+            lowerWordBaseMediaDecodeTime = Math.floor(
+                baseMediaDecodeTime % (UINT32_MAX + 1)
+            );
         return MP4.box(
             MP4.types.traf,
             MP4.box(
@@ -928,21 +979,25 @@ class MP4 {
             MP4.box(
                 MP4.types.tfdt,
                 new Uint8Array([
-                    0x00, // version 0
+                    0x01, // version 1
                     0x00,
                     0x00,
                     0x00, // flags
-                    baseMediaDecodeTime >> 24,
-                    (baseMediaDecodeTime >> 16) & 0xff,
-                    (baseMediaDecodeTime >> 8) & 0xff,
-                    baseMediaDecodeTime & 0xff // baseMediaDecodeTime
+                    upperWordBaseMediaDecodeTime >> 24,
+                    (upperWordBaseMediaDecodeTime >> 16) & 0xff,
+                    (upperWordBaseMediaDecodeTime >> 8) & 0xff,
+                    upperWordBaseMediaDecodeTime & 0xff,
+                    lowerWordBaseMediaDecodeTime >> 24,
+                    (lowerWordBaseMediaDecodeTime >> 16) & 0xff,
+                    (lowerWordBaseMediaDecodeTime >> 8) & 0xff,
+                    lowerWordBaseMediaDecodeTime & 0xff
                 ])
             ),
             MP4.trun(
                 track,
                 sampleDependencyTable.length +
                 16 + // tfhd
-                16 + // tfdt
+                20 + // tfdt
                 8 + // traf header
                 16 + // mfhd
                 8 + // moof header
