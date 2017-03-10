@@ -757,7 +757,7 @@ class MP4 {
     }
 
     static mp4a(track) {
-        var audiosamplerate = track.audiosamplerate;
+        var samplerate = track.samplerate;
         return MP4.box(
             MP4.types.mp4a,
             new Uint8Array([
@@ -785,8 +785,8 @@ class MP4 {
                 0x00,
                 0x00,
                 0x00, // reserved2
-                (audiosamplerate >> 8) & 0xff,
-                audiosamplerate & 0xff, //
+                (samplerate >> 8) & 0xff,
+                samplerate & 0xff, //
                 0x00,
                 0x00
             ]),
@@ -795,7 +795,7 @@ class MP4 {
     }
 
     static mp3(track) {
-        var audiosamplerate = track.audiosamplerate;
+        var samplerate = track.samplerate;
         return MP4.box(
             MP4.types['.mp3'],
             new Uint8Array([
@@ -823,8 +823,8 @@ class MP4 {
                 0x00,
                 0x00,
                 0x00, // reserved2
-                (audiosamplerate >> 8) & 0xff,
-                audiosamplerate & 0xff, //
+                (samplerate >> 8) & 0xff,
+                samplerate & 0xff, //
                 0x00,
                 0x00
             ])

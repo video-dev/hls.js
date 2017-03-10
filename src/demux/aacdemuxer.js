@@ -22,7 +22,8 @@ class AACDemuxer {
             samples: [],
             len: 0,
             manifestCodec: audioCodec,
-            duration: duration
+            duration: duration,
+            inputTimeScale: 90000
         };
     }
 
@@ -80,7 +81,7 @@ class AACDemuxer {
             }
         }
 
-        if (!track.audiosamplerate) {
+        if (!track.samplerate) {
             config = ADTS.getAudioConfig(
                 this.observer,
                 data,
@@ -88,7 +89,7 @@ class AACDemuxer {
                 track.manifestCodec
             );
             track.config = config.config;
-            track.audiosamplerate = config.samplerate;
+            track.samplerate = config.samplerate;
             track.channelCount = config.channelCount;
             track.codec = config.codec;
             logger.log(
@@ -98,7 +99,7 @@ class AACDemuxer {
             );
         }
         frameIndex = 0;
-        frameDuration = 1024 * 90000 / track.audiosamplerate;
+        frameDuration = 1024 * 90000 / track.samplerate;
         while (offset + 5 < len) {
             // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
             headerLength = !!(data[offset + 1] & 0x01) ? 7 : 9;

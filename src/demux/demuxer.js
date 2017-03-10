@@ -37,11 +37,14 @@ class Demuxer {
         observer.on(Event.FRAG_PARSING_USERDATA, forwardMessage);
         observer.on(Event.INIT_PTS_FOUND, forwardMessage);
 
-        var typeSupported = {
+        const typeSupported = {
             mp4: MediaSource.isTypeSupported('video/mp4'),
             mpeg: MediaSource.isTypeSupported('audio/mpeg'),
             mp3: MediaSource.isTypeSupported('audio/mp4; codecs="mp3"')
         };
+        // navigator.vendor is not always available in Web Worker
+        // refer to https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/navigator
+        const vendor = navigator.vendor;
         if (config.enableWorker && typeof Worker !== 'undefined') {
             logger.log('demuxing in webworker');
             let w;
@@ -70,6 +73,7 @@ class Demuxer {
                 w.postMessage({
                     cmd: 'init',
                     typeSupported: typeSupported,
+                    vendor: vendor,
                     id: id,
                     config: JSON.stringify(config)
                 });
@@ -83,18 +87,18 @@ class Demuxer {
                 }
                 this.demuxer = new DemuxerInline(
                     observer,
-                    id,
                     typeSupported,
-                    config
+                    config,
+                    vendor
                 );
                 this.w = undefined;
             }
         } else {
             this.demuxer = new DemuxerInline(
                 observer,
-                id,
                 typeSupported,
-                config
+                config,
+                vendor
             );
         }
     }

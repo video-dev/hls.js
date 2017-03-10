@@ -64,6 +64,7 @@ class TSDemuxer {
             container: 'video/mp2t',
             type: 'video',
             id: -1,
+            inputTimeScale: 90000,
             sequenceNumber: 0,
             samples: [],
             len: 0,
@@ -73,6 +74,7 @@ class TSDemuxer {
             container: 'video/mp2t',
             type: 'audio',
             id: -1,
+            inputTimeScale: 90000,
             sequenceNumber: 0,
             samples: [],
             len: 0,
@@ -81,6 +83,7 @@ class TSDemuxer {
         this._id3Track = {
             type: 'id3',
             id: -1,
+            inputTimeScale: 90000,
             sequenceNumber: 0,
             samples: [],
             len: 0
@@ -88,6 +91,7 @@ class TSDemuxer {
         this._txtTrack = {
             type: 'text',
             id: -1,
+            inputTimeScale: 90000,
             sequenceNumber: 0,
             samples: [],
             len: 0
@@ -1113,7 +1117,7 @@ class TSDemuxer {
                 return;
             }
         }
-        if (!track.audiosamplerate) {
+        if (!track.samplerate) {
             const audioCodec = this.audioCodec;
             config = ADTS.getAudioConfig(
                 this.observer,
@@ -1122,7 +1126,7 @@ class TSDemuxer {
                 audioCodec
             );
             track.config = config.config;
-            track.audiosamplerate = config.samplerate;
+            track.samplerate = config.samplerate;
             track.channelCount = config.channelCount;
             track.codec = config.codec;
             track.manifestCodec = config.manifestCodec;
@@ -1134,7 +1138,7 @@ class TSDemuxer {
             );
         }
         frameIndex = 0;
-        frameDuration = 1024 * 90000 / track.audiosamplerate;
+        frameDuration = 1024 * 90000 / track.samplerate;
 
         // if last AAC frame is overflowing, we should ensure timestamps are contiguous:
         // first sample PTS should be equal to last sample PTS + frameDuration
@@ -1228,7 +1232,7 @@ class TSDemuxer {
 
         track.config = [];
         track.channelCount = channelCount;
-        track.audiosamplerate = sampleRate;
+        track.samplerate = sampleRate;
         track.duration = this._duration;
         track.samples.push({ unit: data, pts: stamp, dts: stamp });
         track.len += data.length;

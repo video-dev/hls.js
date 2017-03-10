@@ -32,7 +32,8 @@ var DemuxerWorker = function(self) {
                 self.demuxer = new DemuxerInline(
                     observer,
                     data.typeSupported,
-                    config
+                    config,
+                    data.vendor
                 );
                 try {
                     enableLogs(config.debug === true);
