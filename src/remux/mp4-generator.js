@@ -428,7 +428,7 @@ class MP4 {
   }
 
   static mp4a(track) {
-    var audiosamplerate = track.audiosamplerate;
+    var samplerate = track.samplerate;
       return MP4.box(MP4.types.mp4a, new Uint8Array([
       0x00, 0x00, 0x00, // reserved
       0x00, 0x00, 0x00, // reserved
@@ -438,14 +438,14 @@ class MP4 {
       0x00, track.channelCount, // channelcount
       0x00, 0x10, // sampleSize:16bits
       0x00, 0x00, 0x00, 0x00, // reserved2
-      (audiosamplerate >> 8) & 0xFF,
-      audiosamplerate & 0xff, //
+      (samplerate >> 8) & 0xFF,
+      samplerate & 0xff, //
       0x00, 0x00]),
       MP4.box(MP4.types.esds, MP4.esds(track)));
   }
 
   static mp3(track) {
-    var audiosamplerate = track.audiosamplerate;
+    var samplerate = track.samplerate;
       return MP4.box(MP4.types['.mp3'], new Uint8Array([
       0x00, 0x00, 0x00, // reserved
       0x00, 0x00, 0x00, // reserved
@@ -455,8 +455,8 @@ class MP4 {
       0x00, track.channelCount, // channelcount
       0x00, 0x10, // sampleSize:16bits
       0x00, 0x00, 0x00, 0x00, // reserved2
-      (audiosamplerate >> 8) & 0xFF,
-      audiosamplerate & 0xff, //
+      (samplerate >> 8) & 0xFF,
+      samplerate & 0xff, //
       0x00, 0x00]));
   }
 

@@ -47,10 +47,10 @@
   resetInitSegment(initSegment,audioCodec,videoCodec, duration) {
     this.pmtParsed = false;
     this._pmtId = -1;
-    this._avcTrack = {container : 'video/mp2t', type: 'video', id :-1, sequenceNumber: 0, samples : [], len : 0, dropped : 0};
-    this._audioTrack = {container : 'video/mp2t', type: 'audio', id :-1, sequenceNumber: 0, samples : [], len : 0, isAAC: true};
-    this._id3Track = {type: 'id3', id :-1, sequenceNumber: 0, samples : [], len : 0};
-    this._txtTrack = {type: 'text', id: -1, sequenceNumber: 0, samples : [], len : 0};
+    this._avcTrack = {container : 'video/mp2t', type: 'video', id :-1, inputTimeScale : 90000, sequenceNumber: 0, samples : [], len : 0, dropped : 0};
+    this._audioTrack = {container : 'video/mp2t', type: 'audio', id :-1, inputTimeScale : 90000, sequenceNumber: 0, samples : [], len : 0, isAAC: true};
+    this._id3Track = {type: 'id3', id :-1, inputTimeScale : 90000, sequenceNumber: 0, samples : [], len : 0};
+    this._txtTrack = {type: 'text', id: -1, inputTimeScale : 90000, sequenceNumber: 0, samples : [], len : 0};
     // flush any partial content
     this.aacOverFlow = null;
     this.aacLastPTS = null;
@@ -871,11 +871,11 @@
         return;
       }
     }
-    if (!track.audiosamplerate) {
+    if (!track.samplerate) {
       const audioCodec = this.audioCodec;
       config = ADTS.getAudioConfig(this.observer,data, offset, audioCodec);
       track.config = config.config;
-      track.audiosamplerate = config.samplerate;
+      track.samplerate = config.samplerate;
       track.channelCount = config.channelCount;
       track.codec = config.codec;
       track.manifestCodec = config.manifestCodec;
@@ -883,7 +883,7 @@
       logger.log(`parsed codec:${track.codec},rate:${config.samplerate},nb channel:${config.channelCount}`);
     }
     frameIndex = 0;
-    frameDuration = 1024 * 90000 / track.audiosamplerate;
+    frameDuration = 1024 * 90000 / track.samplerate;
 
     // if last AAC frame is overflowing, we should ensure timestamps are contiguous:
     // first sample PTS should be equal to last sample PTS + frameDuration
@@ -954,7 +954,7 @@
 
     track.config = [];
     track.channelCount = channelCount;
-    track.audiosamplerate = sampleRate;
+    track.samplerate = sampleRate;
     track.duration = this._duration;
     track.samples.push({unit: data, pts: stamp, dts: stamp});
     track.len += data.length;
