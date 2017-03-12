@@ -84,7 +84,7 @@ class TimelineController extends EventHandler {
                             }
                         } else {
                             self.textTrack1 = existingTrack1;
-                            self.clearCurrentCues(self.textTrack1);
+                            clearCurrentCues(self.textTrack1);
 
                             sendAddTrackEvent(self.textTrack1, self.media);
                         }
@@ -110,6 +110,7 @@ class TimelineController extends EventHandler {
                             }
                         } else {
                             self.textTrack2 = existingTrack2;
+                            clearCurrentCues(self.textTrack2);
 
                             sendAddTrackEvent(self.textTrack2, self.media);
                         }
