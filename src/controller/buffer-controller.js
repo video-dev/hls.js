@@ -49,7 +49,7 @@ class BufferController extends EventHandler {
         // is greater than 100ms (this is enough to handle seek for VOD or level change for LIVE videos). At the time of change we issue
         // `SourceBuffer.abort()` and adjusting `SourceBuffer.timestampOffset` if `SourceBuffer.updating` is false or awaiting `updateend`
         // event if SB is in updating state.
-        // More info here: https://github.com/dailymotion/hls.js/issues/332#issuecomment-257986486
+        // More info here: https://github.com/video-dev/hls.js/issues/332#issuecomment-257986486
 
         if (
             type === 'audio' &&
@@ -413,7 +413,7 @@ class BufferController extends EventHandler {
         this.updateMediaElementDuration();
     }
 
-    // https://github.com/dailymotion/hls.js/issues/355
+    // https://github.com/video-dev/hls.js/issues/355
     updateMediaElementDuration() {
         let media = this.media,
             mediaSource = this.mediaSource,
