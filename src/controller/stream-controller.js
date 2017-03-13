@@ -280,7 +280,7 @@ class StreamController extends EventHandler {
             // if everything (almost) til the end is buffered, let's signal eos
             // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference
             // using half frag duration should help cope with these cases.
-            // also cope with almost zero last frag duration (max last frag duration with 200ms) refer to https://github.com/dailymotion/hls.js/pull/657
+            // also cope with almost zero last frag duration (max last frag duration with 200ms) refer to https://github.com/video-dev/hls.js/pull/657
             if (
                 media.duration - Math.max(bufferInfo.end, fragPrevious.start) <=
                 Math.max(0.2, fragPrevious.duration / 2)
@@ -1713,7 +1713,7 @@ class StreamController extends EventHandler {
                         this.state = State.IDLE;
                     } else {
                         // current position is not buffered, but browser is still complaining about buffer full error
-                        // this happens on IE/Edge, refer to https://github.com/dailymotion/hls.js/pull/708
+                        // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
                         // in that case flush the whole buffer to recover
                         logger.warn(
                             'buffer full error also media.currentTime is not buffered, flush everything'

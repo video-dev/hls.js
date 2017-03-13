@@ -2,18 +2,17 @@
   "name": "hls.js",
   "version": "0.7.3",
   "license": "Apache-2.0",
-  "description": "Media Source Extension - HLS library, by/for Dailymotion",
-  "homepage": "https://github.com/dailymotion/hls.js",
+  "description": "JavaScript HLS client using MediaSourceExtension",
+  "homepage": "https://github.com/video-dev/hls.js",
   "authors": "Guillaume du Pontavice <guillaume.dupontavice@dailymotion.com>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dailymotion/hls.js"
+    "url": "https://github.com/video-dev/hls.js"
   },
   "bugs": {
-    "url": "https://github.com/dailymotion/hls.js/issues"
+    "url": "https://github.com/video-dev/hls.js/issues"
   },
   "main": "./dist/hls.js",
-  "private": false,
   "scripts": {
     "build": "npm run buildlib && rimraf dist/* && npm run builddist && npm run builddistlight",
     "buildlib": "rimraf lib/* && babel src --out-dir lib",
