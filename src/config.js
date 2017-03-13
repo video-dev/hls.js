@@ -68,7 +68,6 @@ export var hlsDefaultConfig = {
     fLoader: undefined,
     pLoader: undefined,
     xhrSetup: undefined,
-    xhrSetupBeforeOpen: undefined,
     fetchSetup: undefined,
     abrController: AbrController,
     bufferController: BufferController,

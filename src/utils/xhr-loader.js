@@ -9,9 +9,6 @@ class XhrLoader {
         if (config && config.xhrSetup) {
             this.xhrSetup = config.xhrSetup;
         }
-        if (config && config.xhrSetupBeforeOpen) {
-            this.xhrSetupBeforeOpen = config.xhrSetupBeforeOpen;
-        }
     }
 
     destroy() {
@@ -54,15 +51,6 @@ class XhrLoader {
         xhr.onreadystatechange = this.readystatechange.bind(this);
         xhr.onprogress = this.loadprogress.bind(this);
 
-        // IE/Edge on Win 10 thows an error on xhr.open for protocol mismatch
-        // for things like protocol matching on ts chunks this must be done here
-        // Issue #1020
-        if (this.xhrSetupBeforeOpen) {
-            this.xhrSetupBeforeOpen(xhr, context.url);
-        }
-
-        xhr.open('GET', context.url, true);
-
         if (context.rangeEnd) {
             xhr.setRequestHeader(
                 'Range',
@@ -75,6 +63,10 @@ class XhrLoader {
         stats.loaded = 0;
         if (this.xhrSetup) {
             this.xhrSetup(xhr, context.url);
+        }
+
+        if (!xhr.readyState) {
+            xhr.open('GET', context.url, true);
         }
         // setup timeout before we perform request
         this.requestTimeout = window.setTimeout(

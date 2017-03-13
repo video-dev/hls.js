@@ -53,7 +53,6 @@
   - [`fLoader`](#floader)
   - [`pLoader`](#ploader)
   - [`xhrSetup`](#xhrsetup)
-  - [`xhrSetupBeforeOpen`](#xhrSetupBeforeOpen)
   - [`fetchSetup`](#fetchsetup)
   - [`abrController`](#abrcontroller)
   - [`timelineController`](#timelinecontroller)
@@ -318,7 +317,6 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       fLoader: customFragmentLoader,
       pLoader: customPlaylistLoader,
       xhrSetup: XMLHttpRequestSetupCallback,
-      xhrSetupBeforeOpen: XMLHttpRequestSetupBeforeOpenCallback,
       fetchSetup: FetchSetupCallback,
       abrController: customAbrController,
       timelineController: TimelineController,
@@ -706,24 +704,6 @@ This allows user to easily modify/setup XHR. See example below.
 ```js
   var config = {
     xhrSetup: function(xhr, url) {
-      xhr.withCredentials = true; // do send cookies
-    }
-  }
-```
-### `xhrSetupBeforeOpen`
-
-(default: `undefined`)
-
-`XMLHttpRequest` customization callback for default XHR based loader. This is called earlier
-in the process than xhrSetup which occurs just before `xhr.send()`
-
-Parameter should be a function with two arguments `(xhr: XMLHttpRequest, url: string)`.
-If `xhrSetup` is specified, default loader will invoke it before calling `xhr.open()`.
-This allows user to easily modify/setup XHR. See example below.
-
-```js
-  var config = {
-    xhrSetupBeforeOpen: function(xhr, url) {
       xhr.withCredentials = true; // do send cookies
     }
   }
