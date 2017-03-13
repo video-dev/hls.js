@@ -73,7 +73,7 @@ class TimelineController extends EventHandler {
             var existingTrack1 = self.getExistingTrack('1');
             if (!existingTrack1)
             {
-              const textTrack1 = self.createTextTrack('captions', 'English', 'en');
+              const textTrack1 = self.createTextTrack('captions', self.config.captionsTextTrack1Label, self.config.captionsTextTrack1LanguageCode);
               if (textTrack1) {
                 textTrack1.textTrack1 = true;
                 self.textTrack1 = textTrack1;
@@ -101,7 +101,7 @@ class TimelineController extends EventHandler {
             var existingTrack2 = self.getExistingTrack('2');
             if (!existingTrack2)
             {
-              const textTrack2 = self.createTextTrack('captions', 'Spanish', 'es');
+              const textTrack2 = self.createTextTrack('captions', self.config.captionsTextTrack2Label, self.config.captionsTextTrack1LanguageCode);
               if (textTrack2) {
                 textTrack2.textTrack2 = true;
                 self.textTrack2 = textTrack2;
