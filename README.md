@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/dailymotion/hls.js.svg?branch=master)](https://travis-ci.org/dailymotion/hls.js)
+[![Build Status](https://travis-ci.org/video-dev/hls.js.svg?branch=master)](https://travis-ci.org/video-dev/hls.js)
 [![npm][npm-image]][npm-url]
 
 Join the discussion: [![Slack Status](http://video-dev.org/badge.svg)](http://video-dev.org/)
