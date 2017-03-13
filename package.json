@@ -2,7 +2,7 @@
   "name": "hls.js",
   "version": "0.7.3",
   "license": "Apache-2.0",
-  "description": "Media Source Extension - HLS library, by/for Dailymotion",
+  "description": "JavaScript HLS client using MediaSourceExtension",
   "homepage": "https://github.com/video-dev/hls.js",
   "authors": "Guillaume du Pontavice <guillaume.dupontavice@dailymotion.com>",
   "repository": {
