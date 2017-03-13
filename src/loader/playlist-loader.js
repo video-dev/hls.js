@@ -303,7 +303,7 @@ class PlaylistLoader extends EventHandler {
       const duration = result[1];
       if (duration) { // INF
         frag.duration = parseFloat(duration);
-        // avoid sliced strings    https://github.com/dailymotion/hls.js/issues/939
+        // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         const title = (' ' + result[2]).slice(1);
         frag.title = title ? title : null;
         frag.tagList.push(title ? [ 'INF',duration,title ] : [ 'INF',duration ]);
@@ -317,7 +317,7 @@ class PlaylistLoader extends EventHandler {
           frag.level = id;
           frag.cc = cc;
           frag.baseurl = baseurl;
-          // avoid sliced strings    https://github.com/dailymotion/hls.js/issues/939
+          // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           frag.relurl = (' ' + result[3]).slice(1);
 
           level.fragments.push(frag);
@@ -335,7 +335,7 @@ class PlaylistLoader extends EventHandler {
           }
         }
       } else if (result[5]) { // PROGRAM-DATE-TIME
-        // avoid sliced strings    https://github.com/dailymotion/hls.js/issues/939
+        // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         frag.rawProgramDateTime = (' ' + result[5]).slice(1);
         frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
       } else {
@@ -346,7 +346,7 @@ class PlaylistLoader extends EventHandler {
           }
         }
 
-        // avoid sliced strings    https://github.com/dailymotion/hls.js/issues/939
+        // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         const value1 = (' ' + result[i+1]).slice(1);
         const value2 = (' ' + result[i+2]).slice(1);
 

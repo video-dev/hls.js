@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/dailymotion/hls.js.svg?branch=master)](https://travis-ci.org/dailymotion/hls.js)
 [![npm][npm-image]][npm-url]
 
-Join the discussion: [![Slack Status](https://hlsjs.herokuapp.com/badge.svg)](https://hlsjs.herokuapp.com/)
+Join the discussion: [![Slack Status](http://video-dev.org/badge.svg)](http://video-dev.org/)
 
 # ![hls.js](https://cloud.githubusercontent.com/assets/616833/19739063/e10be95a-9bb9-11e6-8100-2896f8500138.png)
 hls.js is a JavaScript library which implements an [HTTP Live Streaming] client.
@@ -24,7 +24,7 @@ hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
 
 ## Demo
 
-[http://dailymotion.github.io/hls.js/demo](http://dailymotion.github.io/hls.js/demo)
+[http://video-dev.github.io/hls.js/demo](http://video-dev.github.io/hls.js/demo)
 
 ## Getting Started
 
@@ -196,7 +196,7 @@ Pull requests are welcome. Here is a quick guide on how to start.
 
  - First, checkout the repository and install required dependencies
 ```sh
-git clone https://github.com/dailymotion/hls.js.git
+git clone https://github.com/video-dev/hls.js.git
 # setup dev environement
 cd hls.js
 npm install
