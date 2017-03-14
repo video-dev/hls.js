@@ -50,13 +50,6 @@ class XhrLoader {
 
         xhr.onreadystatechange = this.readystatechange.bind(this);
         xhr.onprogress = this.loadprogress.bind(this);
-
-        if (context.rangeEnd) {
-            xhr.setRequestHeader(
-                'Range',
-                'bytes=' + context.rangeStart + '-' + (context.rangeEnd - 1)
-            );
-        }
         xhr.responseType = context.responseType;
         let stats = this.stats;
         stats.tfirst = 0;
@@ -67,6 +60,12 @@ class XhrLoader {
 
         if (!xhr.readyState) {
             xhr.open('GET', context.url, true);
+        }
+        if (context.rangeEnd) {
+            xhr.setRequestHeader(
+                'Range',
+                'bytes=' + context.rangeStart + '-' + (context.rangeEnd - 1)
+            );
         }
         // setup timeout before we perform request
         this.requestTimeout = window.setTimeout(
