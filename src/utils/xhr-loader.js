@@ -47,10 +47,6 @@ class XhrLoader {
         } else {
             xhr = this.loader = new XMLHttpRequest();
         }
-
-        xhr.onreadystatechange = this.readystatechange.bind(this);
-        xhr.onprogress = this.loadprogress.bind(this);
-        xhr.responseType = context.responseType;
         let stats = this.stats;
         stats.tfirst = 0;
         stats.loaded = 0;
@@ -67,6 +63,10 @@ class XhrLoader {
                 'bytes=' + context.rangeStart + '-' + (context.rangeEnd - 1)
             );
         }
+        xhr.onreadystatechange = this.readystatechange.bind(this);
+        xhr.onprogress = this.loadprogress.bind(this);
+        xhr.responseType = context.responseType;
+
         // setup timeout before we perform request
         this.requestTimeout = window.setTimeout(
             this.loadtimeout.bind(this),
