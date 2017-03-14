@@ -451,8 +451,10 @@ class StreamController extends EventHandler {
            // Reset the dropped count now since it won't be reset until we parse the fragment again, which prevents infinite backtracking on the same segment
            logger.warn('Loaded fragment with dropped frames, backtracking 1 segment to find a keyframe');
            frag.dropped = 0;
-           if (prevFrag && prevFrag.loadCounter) {
-             prevFrag.loadCounter--;
+           if (prevFrag) {
+             if (prevFrag.loadCounter) {
+               prevFrag.loadCounter--;
+             }
              frag = prevFrag;
            } else {
              frag = null;
