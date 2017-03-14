@@ -594,8 +594,10 @@ class StreamController extends EventHandler {
                         'Loaded fragment with dropped frames, backtracking 1 segment to find a keyframe'
                     );
                     frag.dropped = 0;
-                    if (prevFrag && prevFrag.loadCounter) {
-                        prevFrag.loadCounter--;
+                    if (prevFrag) {
+                        if (prevFrag.loadCounter) {
+                            prevFrag.loadCounter--;
+                        }
                         frag = prevFrag;
                     } else {
                         frag = null;
