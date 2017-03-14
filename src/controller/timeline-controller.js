@@ -203,9 +203,13 @@ class TimelineController extends EventHandler {
     this.vttCCs = {ccOffset: 0, presentationOffset: 0}; // Detect discontinuity in subtitle manifests
 
     // clear outdated subtitles
-    if (this.media && this.media.textTracks) {
-      for (let i = 0; i < this.media.textTracks.length; i++) {
-        clearCurrentCues(this.media.textTracks[i]);
+    const media = this.media
+    if (media) {
+      const textTracks = media.textTracks;
+      if (textTracks) {
+        for (let i = 0; i < textTracks.length; i++) {
+          clearCurrentCues(textTracks[i]);
+        }
       }
     }
   }
