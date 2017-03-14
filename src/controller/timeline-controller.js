@@ -204,6 +204,17 @@ class TimelineController extends EventHandler {
         this.lastSn = -1; // Detect discontiguity in fragment parsing
         this.prevCC = -1;
         this.vttCCs = { ccOffset: 0, presentationOffset: 0 }; // Detect discontinuity in subtitle manifests
+
+        // clear outdated subtitles
+        const media = this.media;
+        if (media) {
+            const textTracks = media.textTracks;
+            if (textTracks) {
+                for (let i = 0; i < textTracks.length; i++) {
+                    clearCurrentCues(textTracks[i]);
+                }
+            }
+        }
     }
 
     onManifestLoaded(data) {
