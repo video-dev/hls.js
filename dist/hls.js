@@ -621,6 +621,10 @@ var hlsDefaultConfig = exports.hlsDefaultConfig = {
       cueHandler: _cues2.default,
       enableCEA708Captions: true, // used by timeline-controller
       enableWebVTT: true, // used by timeline-controller
+      captionsTextTrack1Label: 'English', // used by timeline-controller
+      captionsTextTrack1LanguageCode: 'en', // used by timeline-controller
+      captionsTextTrack2Label: 'Spanish', // used by timeline-controller
+      captionsTextTrack2LanguageCode: 'es', // used by timeline-controller
       //#endif
       stretchShortVideoTrack: false, // used by mp4-remuxer
       forceKeyFrameOnDiscontinuity: true, // used by ts-demuxer
@@ -1882,7 +1886,7 @@ var AudioStreamController = function (_EventHandler) {
               this.state = State.IDLE;
             } else {
               // current position is not buffered, but browser is still complaining about buffer full error
-              // this happens on IE/Edge, refer to https://github.com/dailymotion/hls.js/pull/708
+              // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
               // in that case flush the whole audio buffer to recover
               _logger.logger.warn('buffer full error also media.currentTime is not buffered, flush audio buffer');
               this.fragCurrent = null;
@@ -2203,7 +2207,7 @@ var BufferController = function (_EventHandler) {
       // is greater than 100ms (this is enough to handle seek for VOD or level change for LIVE videos). At the time of change we issue
       // `SourceBuffer.abort()` and adjusting `SourceBuffer.timestampOffset` if `SourceBuffer.updating` is false or awaiting `updateend`
       // event if SB is in updating state.
-      // More info here: https://github.com/dailymotion/hls.js/issues/332#issuecomment-257986486
+      // More info here: https://github.com/video-dev/hls.js/issues/332#issuecomment-257986486
 
       if (type === 'audio' && audioTrack && audioTrack.container === 'audio/mpeg') {
         // Chrome audio mp3 track
@@ -2378,7 +2382,7 @@ var BufferController = function (_EventHandler) {
   }, {
     key: 'onSBUpdateError',
     value: function onSBUpdateError(event) {
-      _logger.logger.error('sourceBuffer error:' + event);
+      _logger.logger.error('sourceBuffer error:', event);
       // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
       // this error might not always be fatal (it is fatal if decode error is set, in that case
       // it will be followed by a mediaElement error ...)
@@ -2534,7 +2538,7 @@ var BufferController = function (_EventHandler) {
       this.updateMediaElementDuration();
     }
 
-    // https://github.com/dailymotion/hls.js/issues/355
+    // https://github.com/video-dev/hls.js/issues/355
 
   }, {
     key: 'updateMediaElementDuration',
@@ -3734,7 +3738,7 @@ var StreamController = function (_EventHandler) {
         // if everything (almost) til the end is buffered, let's signal eos
         // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference
         // using half frag duration should help cope with these cases.
-        // also cope with almost zero last frag duration (max last frag duration with 200ms) refer to https://github.com/dailymotion/hls.js/pull/657
+        // also cope with almost zero last frag duration (max last frag duration with 200ms) refer to https://github.com/video-dev/hls.js/pull/657
         if (media.duration - Math.max(bufferInfo.end, fragPrevious.start) <= Math.max(0.2, fragPrevious.duration / 2)) {
           // Finalize the media stream
           var data = {};
@@ -3940,8 +3944,10 @@ var StreamController = function (_EventHandler) {
             // Reset the dropped count now since it won't be reset until we parse the fragment again, which prevents infinite backtracking on the same segment
             _logger.logger.warn('Loaded fragment with dropped frames, backtracking 1 segment to find a keyframe');
             frag.dropped = 0;
-            if (prevFrag && prevFrag.loadCounter) {
-              prevFrag.loadCounter--;
+            if (prevFrag) {
+              if (prevFrag.loadCounter) {
+                prevFrag.loadCounter--;
+              }
               frag = prevFrag;
             } else {
               frag = null;
@@ -4829,7 +4835,7 @@ var StreamController = function (_EventHandler) {
               this.state = State.IDLE;
             } else {
               // current position is not buffered, but browser is still complaining about buffer full error
-              // this happens on IE/Edge, refer to https://github.com/dailymotion/hls.js/pull/708
+              // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
               // in that case flush the whole buffer to recover
               _logger.logger.warn('buffer full error also media.currentTime is not buffered, flush everything');
               this.fragCurrent = null;
@@ -5541,14 +5547,14 @@ var TimelineController = function (_EventHandler) {
             //Enable reuse of existing text track.
             var existingTrack1 = self.getExistingTrack('1');
             if (!existingTrack1) {
-              var textTrack1 = self.createTextTrack('captions', 'English', 'en');
+              var textTrack1 = self.createTextTrack('captions', self.config.captionsTextTrack1Label, self.config.captionsTextTrack1LanguageCode);
               if (textTrack1) {
                 textTrack1.textTrack1 = true;
                 self.textTrack1 = textTrack1;
               }
             } else {
               self.textTrack1 = existingTrack1;
-              self.clearCurrentCues(self.textTrack1);
+              clearCurrentCues(self.textTrack1);
 
               sendAddTrackEvent(self.textTrack1, self.media);
             }
@@ -5563,13 +5569,14 @@ var TimelineController = function (_EventHandler) {
             //Enable reuse of existing text track.
             var existingTrack2 = self.getExistingTrack('2');
             if (!existingTrack2) {
-              var textTrack2 = self.createTextTrack('captions', 'Spanish', 'es');
+              var textTrack2 = self.createTextTrack('captions', self.config.captionsTextTrack2Label, self.config.captionsTextTrack1LanguageCode);
               if (textTrack2) {
                 textTrack2.textTrack2 = true;
                 self.textTrack2 = textTrack2;
               }
             } else {
               self.textTrack2 = existingTrack2;
+              clearCurrentCues(self.textTrack2);
 
               sendAddTrackEvent(self.textTrack2, self.media);
             }
@@ -5672,6 +5679,17 @@ var TimelineController = function (_EventHandler) {
       this.lastSn = -1; // Detect discontiguity in fragment parsing
       this.prevCC = -1;
       this.vttCCs = { ccOffset: 0, presentationOffset: 0 }; // Detect discontinuity in subtitle manifests
+
+      // clear outdated subtitles
+      var media = this.media;
+      if (media) {
+        var textTracks = media.textTracks;
+        if (textTracks) {
+          for (var i = 0; i < textTracks.length; i++) {
+            clearCurrentCues(textTracks[i]);
+          }
+        }
+      }
     }
   }, {
     key: 'onManifestLoaded',
@@ -10491,7 +10509,7 @@ var LevelKey = function () {
     key: 'uri',
     get: function get() {
       if (!this._uri && this.reluri) {
-        this._uri = _urlToolkit2.default.buildAbsoluteURL(this.baseuri, this.reluri);
+        this._uri = _urlToolkit2.default.buildAbsoluteURL(this.baseuri, this.reluri, { alwaysNormalize: true });
       }
       return this._uri;
     }
@@ -10559,7 +10577,7 @@ var Fragment = function () {
     key: 'url',
     get: function get() {
       if (!this._url && this.relurl) {
-        this._url = _urlToolkit2.default.buildAbsoluteURL(this.baseurl, this.relurl);
+        this._url = _urlToolkit2.default.buildAbsoluteURL(this.baseurl, this.relurl, { alwaysNormalize: true });
       }
       return this._url;
     },
@@ -10703,7 +10721,7 @@ var PlaylistLoader = function (_EventHandler) {
   }, {
     key: 'resolve',
     value: function resolve(url, baseUrl) {
-      return _urlToolkit2.default.buildAbsoluteURL(baseUrl, url);
+      return _urlToolkit2.default.buildAbsoluteURL(baseUrl, url, { alwaysNormalize: true });
     }
   }, {
     key: 'parseMasterPlaylist',
@@ -10806,7 +10824,7 @@ var PlaylistLoader = function (_EventHandler) {
         if (duration) {
           // INF
           frag.duration = parseFloat(duration);
-          // avoid sliced strings    https://github.com/dailymotion/hls.js/issues/939
+          // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           var title = (' ' + result[2]).slice(1);
           frag.title = title ? title : null;
           frag.tagList.push(title ? ['INF', duration, title] : ['INF', duration]);
@@ -10821,7 +10839,7 @@ var PlaylistLoader = function (_EventHandler) {
             frag.level = id;
             frag.cc = cc;
             frag.baseurl = baseurl;
-            // avoid sliced strings    https://github.com/dailymotion/hls.js/issues/939
+            // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
             frag.relurl = (' ' + result[3]).slice(1);
 
             level.fragments.push(frag);
@@ -10841,7 +10859,7 @@ var PlaylistLoader = function (_EventHandler) {
           }
         } else if (result[5]) {
           // PROGRAM-DATE-TIME
-          // avoid sliced strings    https://github.com/dailymotion/hls.js/issues/939
+          // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           frag.rawProgramDateTime = (' ' + result[5]).slice(1);
           frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
         } else {
@@ -10852,7 +10870,7 @@ var PlaylistLoader = function (_EventHandler) {
             }
           }
 
-          // avoid sliced strings    https://github.com/dailymotion/hls.js/issues/939
+          // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           var value1 = (' ' + result[i + 1]).slice(1);
           var value2 = (' ' + result[i + 2]).slice(1);
 
@@ -13990,6 +14008,12 @@ var Cues = {
         }
         //To be used for cleaning-up orphaned roll-up captions
         row.cueStartTime = startTime;
+
+        // Give a slight bump to the endTime if it's equal to startTime to avoid a SyntaxError in IE
+        if (startTime === endTime) {
+          endTime += 0.0001;
+        }
+
         cue = new VTTCue(startTime, endTime, (0, _vttparser.fixLineBreaks)(text.trim()));
 
         if (indent >= 16) {
