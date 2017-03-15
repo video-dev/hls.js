@@ -84,6 +84,10 @@ export var hlsDefaultConfig = {
     cueHandler: Cues,
     enableCEA708Captions: true, // used by timeline-controller
     enableWebVTT: true, // used by timeline-controller
+    captionsTextTrack1Label: 'English', // used by timeline-controller
+    captionsTextTrack1LanguageCode: 'en', // used by timeline-controller
+    captionsTextTrack2Label: 'Spanish', // used by timeline-controller
+    captionsTextTrack2LanguageCode: 'es', // used by timeline-controller
     //#endif
     stretchShortVideoTrack: false, // used by mp4-remuxer
     forceKeyFrameOnDiscontinuity: true, // used by ts-demuxer
