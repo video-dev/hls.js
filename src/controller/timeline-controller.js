@@ -73,7 +73,7 @@ class TimelineController extends EventHandler {
             var existingTrack1 = self.getExistingTrack('1');
             if (!existingTrack1)
             {
-              const textTrack1 = self.createTextTrack('captions', 'English', 'en');
+              const textTrack1 = self.createTextTrack('captions', self.config.captionsTextTrack1Label, self.config.captionsTextTrack1LanguageCode);
               if (textTrack1) {
                 textTrack1.textTrack1 = true;
                 self.textTrack1 = textTrack1;
@@ -101,7 +101,7 @@ class TimelineController extends EventHandler {
             var existingTrack2 = self.getExistingTrack('2');
             if (!existingTrack2)
             {
-              const textTrack2 = self.createTextTrack('captions', 'Spanish', 'es');
+              const textTrack2 = self.createTextTrack('captions', self.config.captionsTextTrack2Label, self.config.captionsTextTrack1LanguageCode);
               if (textTrack2) {
                 textTrack2.textTrack2 = true;
                 self.textTrack2 = textTrack2;
@@ -201,6 +201,17 @@ class TimelineController extends EventHandler {
     this.lastSn = -1; // Detect discontiguity in fragment parsing
     this.prevCC = -1;
     this.vttCCs = {ccOffset: 0, presentationOffset: 0}; // Detect discontinuity in subtitle manifests
+
+    // clear outdated subtitles
+    const media = this.media;
+    if (media) {
+      const textTracks = media.textTracks;
+      if (textTracks) {
+        for (let i = 0; i < textTracks.length; i++) {
+          clearCurrentCues(textTracks[i]);
+        }
+      }
+    }
   }
 
   onManifestLoaded(data) {
