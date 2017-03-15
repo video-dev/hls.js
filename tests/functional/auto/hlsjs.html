@@ -50,7 +50,11 @@
           }
           video = document.getElementById('video');
           try {
-            hls = new Hls({debug: true});
+            hls = new Hls({debug: true,
+                           xhrSetup: function(xhr, url) {
+                             xhr.withCredentials = true; // do send cookies
+                           }
+                          });
             console.log(navigator.userAgent);
             hls.loadSource(streamUrl);
             hls.attachMedia(video);
