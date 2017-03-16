@@ -105,6 +105,6 @@ module.exports = {
   KEY_LOADED: 'hlsKeyLoaded',
   // fired upon stream controller state transitions - data: {previousState, nextState}
   STREAM_STATE_TRANSITION: 'hlsStreamStateTransition',
-  // fired when playback unstack after a stall report - data: {currentTime, after}
+  // fired when playback unstuck after a stall report - data: {currentTime, after}
   PLAYBACK_NOT_STUCK_ANYMORE: 'hlsPlaybackNotStuckAnymore'
 };
