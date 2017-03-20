@@ -75,7 +75,7 @@ class PlaylistLoader extends EventHandler {
     context.responseType = '';
 
     let loaderConfig, loaderCallbacks;
-    loaderConfig = { timeout : timeout, maxRetry : retry , retryDelay : retryDelay, maxRetryDelay : maxRetryDelay};
+    loaderConfig = { timeout : timeout, maxRetry : retry , retryDelay : retryDelay, maxRetryDelay : maxRetryDelay, xhr4XXRetry: config.xhr4XXRetry, xhr200EmptyRetry: config.xhr200EmptyRetry };
     loaderCallbacks = { onSuccess : this.loadsuccess.bind(this), onError :this.loaderror.bind(this), onTimeout : this.loadtimeout.bind(this)};
     loader.load(context,loaderConfig,loaderCallbacks,config.loadingBackOff, this.loadwarn.bind(this));
   }

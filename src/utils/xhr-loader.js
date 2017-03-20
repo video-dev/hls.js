@@ -95,6 +95,7 @@ class XhrLoader {
       if (readyState === 4) {
         let status = xhr.status;
         // http status between 200 to 299 are all successful
+        let retry = false;
         if (status >= 200 && status < 300)  {
           stats.tload = Math.max(stats.tfirst,performance.now());
           let data,len;
@@ -105,12 +106,20 @@ class XhrLoader {
             data = xhr.responseText;
             len = data.length;
           }
-          stats.loaded = stats.total = len;
-          let response = { url : xhr.responseURL, data : data };
-          this.callbacks.onSuccess(response, stats, context);
+          if (len === 0 && status === 200 && config.xhr200EmptyRetry) {
+            retry = true;
+          } else {
+            stats.loaded = stats.total = len;
+            let response = { url : xhr.responseURL, data : data };
+            this.callbacks.onSuccess(response, stats, context);
+          }
         } else {
+          retry = true;
+        }
+
+        if (retry) {
             // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
-          if (stats.retry >= config.maxRetry || (status >= 400 && status < 499)) {
+          if (stats.retry >= config.maxRetry || (!config.xhr4XXRetry && status >= 400 && status < 499) ) {
             logger.error(`${status} while loading ${context.url}` );
             this.callbacks.onError({ code : status, text : xhr.statusText}, context);
           } else {

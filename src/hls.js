@@ -96,6 +96,8 @@ class Hls {
           fLoader: undefined,
           pLoader: undefined,
           xhrSetup: undefined,
+          xhr4XXRetry: false,
+          xhr200EmptyRetry: false,
           fetchSetup: undefined,
           abrController: AbrController,
           bufferController: BufferController,

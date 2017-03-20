@@ -245,8 +245,8 @@ class LevelController extends EventHandler {
             clearTimeout(this.timer);
             this.timer = null;
           }
-          // redispatch same error but with fatal set to true
-          data.fatal = true;
+          // Non-fatal error so player can retry
+          //data.fatal = true;
           hls.trigger(Event.ERROR, data);
         }
       }
