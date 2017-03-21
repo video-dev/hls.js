@@ -16,7 +16,7 @@ class LevelController extends EventHandler {
       Event.LEVEL_LOADED,
       Event.FRAG_LOADED,
       Event.ERROR);
-    this.ontick = this.tick.bind(this);
+    this.ontick = this._tick.bind(this);
     this._manualLevel = -1;
   }
 
@@ -43,7 +43,7 @@ class LevelController extends EventHandler {
     }
     // speed up live playlist refresh if timer exists
     if (this.timer) {
-      this.tick();
+      this._tick();
     }
   }
 
@@ -339,7 +339,7 @@ class LevelController extends EventHandler {
     }
   }
 
-  tick() {
+  _tick() {
     var levelId = this._level;
     if (levelId !== undefined && this.canload) {
       var level = this._levels[levelId], urlId = level.urlId;

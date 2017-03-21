@@ -167,12 +167,32 @@ class Hls {
 
   startLoad(startPosition=-1) {
     logger.log(`startLoad(${startPosition})`);
-    this.networkControllers.forEach(controller => {controller.startLoad(startPosition);});
+
+    const networkControllers = this.networkControllers;
+
+    networkControllers.forEach(controller => controller.startLoad(startPosition));
+
+    if (!this.timerID) {
+      this.timerID = setInterval(() => {
+        networkControllers.forEach((controller) => {
+          if (typeof controller['tick'] === 'function') {
+            controller.tick();
+          }
+        });
+      }, 100);
+    }
   }
 
   stopLoad() {
     logger.log('stopLoad');
-    this.networkControllers.forEach(controller => {controller.stopLoad();});
+
+    const networkControllers = this.networkControllers;
+
+    networkControllers.forEach(controller => controller.stopLoad());
+
+    if (this.timerID) {
+      this.timerID = clearInterval(this.timerID);
+    }
   }
 
   swapAudioCodec() {

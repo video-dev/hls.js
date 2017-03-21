@@ -53,17 +53,12 @@ class AudioStreamController extends EventHandler {
     this.audioCodecSwap = false;
     this.ticks = 0;
     this._state = State.STOPPED;
-    this.ontick = this.tick.bind(this);
     this.initPTS=[];
     this.waitingFragment=null;
   }
 
   destroy() {
     this.stopLoad();
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
     EventHandler.prototype.destroy.call(this);
     this.state = State.STOPPED;
   }
@@ -95,9 +90,6 @@ class AudioStreamController extends EventHandler {
     if (this.tracks) {
       var lastCurrentTime = this.lastCurrentTime;
       this.stopLoad();
-      if (!this.timer) {
-        this.timer = setInterval(this.ontick, 100);
-      }
       this.fragLoadError = 0;
       if (lastCurrentTime > 0 && startPosition === -1) {
         logger.log(`audio:override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(3)}`);
@@ -467,11 +459,6 @@ class AudioStreamController extends EventHandler {
       if (this.demuxer) {
         this.demuxer.destroy();
         this.demuxer = null;
-      }
-    } else {
-      // switching to audio track, start timer if not already started
-      if (!this.timer) {
-        this.timer = setInterval(this.ontick, 100);
       }
     }
 
