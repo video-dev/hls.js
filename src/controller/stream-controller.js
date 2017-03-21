@@ -1,7 +1,7 @@
 /*
  * Stream Controller
 */
-
+import BaseStreamController from '../controller/base-stream-controller';
 import BinarySearch from '../utils/binary-search';
 import BufferHelper from '../helper/buffer-helper';
 import Demuxer from '../demux/demuxer';
@@ -26,10 +26,10 @@ const State = {
   ERROR : 'ERROR'
 };
 
-class StreamController extends EventHandler {
+class StreamController extends BaseStreamController {
 
   constructor(hls) {
-    super(hls,
+    super('main', hls,
       Event.MEDIA_ATTACHED,
       Event.MEDIA_DETACHING,
       Event.MANIFEST_LOADING,
@@ -209,7 +209,7 @@ class StreamController extends EventHandler {
     // determine next candidate fragment to be loaded, based on current position and end of buffer position
     // ensure up to `config.maxMaxBufferLength` of buffer upfront
 
-    const bufferInfo = BufferHelper.bufferInfo(this.mediaBuffer ? this.mediaBuffer : media, pos, config.maxBufferHole),
+    const bufferInfo = BufferHelper.bufferInfo(this.mediaBuffer, pos, config.maxBufferHole),
           bufferLen = bufferInfo.len;
     // Stay idle if we are still with buffer margins
     if (bufferLen >= maxBufLen) {
@@ -761,7 +761,7 @@ class StreamController extends EventHandler {
     let media = this.media, currentTime = media ? media.currentTime : undefined, config = this.config;
     logger.log(`media seeking to ${currentTime.toFixed(3)}`);
     if (this.state === State.FRAG_LOADING) {
-      let mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
+      let mediaBuffer = this.mediaBuffer;
       let bufferInfo = BufferHelper.bufferInfo(mediaBuffer,currentTime,this.config.maxBufferHole),
           fragCurrent = this.fragCurrent;
       // check if we are seeking to a unbuffered area AND if frag loading is in progress
@@ -1227,7 +1227,7 @@ class StreamController extends EventHandler {
     if (this.state === State.PARSED && (!this.appended || !this.pendingBuffering)) {
       const frag = this.fragCurrent;
       if (frag) {
-        const media = this.mediaBuffer ? this.mediaBuffer : this.media;
+        const media = this.mediaBuffer;
         logger.log(`main buffered : ${TimeRanges.toString(media.buffered)}`);
         // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
         let bufferedFrags = this._bufferedFrags.filter(frag => {return BufferHelper.isBuffered(media,(frag.startPTS + frag.endPTS) / 2);});
@@ -1367,7 +1367,7 @@ _checkBuffer() {
     // if ready state different from HAVE_NOTHING (numeric value 0), we are allowed to seek
     if(media && media.readyState) {
         let currentTime = media.currentTime,
-            mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media,
+            mediaBuffer = this.mediaBuffer,
              buffered = mediaBuffer.buffered;
       // adjust currentTime to start position on loaded metadata
       if(!this.loadedmetadata && buffered.length) {
@@ -1490,7 +1490,7 @@ _checkBuffer() {
     /* after successful buffer flushing, filter flushed fragments from bufferedFrags
       use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
     */
-    const media = this.mediaBuffer ? this.mediaBuffer : this.media;
+    const media = this.mediaBuffer;
     this._bufferedFrags = this._bufferedFrags.filter(frag => {return BufferHelper.isBuffered(media,(frag.startPTS + frag.endPTS) / 2);});
 
     // increase fragment load Index to avoid frag loop loading error after buffer flush

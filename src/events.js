@@ -7,6 +7,8 @@ module.exports = {
   MEDIA_DETACHING: 'hlsMediaDetaching',
   // fired when MediaSource has been detached from media element - data: { }
   MEDIA_DETACHED: 'hlsMediaDetached',
+  // fired when the media-buffer (the media object containing buffered time-ranges) changes - data { type: 'main|audio', mediaBuffer:HTMLMediaElement|SourceBuffer }
+  MEDIA_BUFFER_UPDATED: 'hlsMediaBufferUpdated',
   // fired when we buffer is going to be resetted
   BUFFER_RESET: 'hlsBufferReset',
   // fired when we know about the codecs that we need buffers for to push into - data: {tracks : { container, codec, levelCodec, initSegment, metadata }}

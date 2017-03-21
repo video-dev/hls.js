@@ -1,7 +1,7 @@
 /*
  * Audio Stream Controller
 */
-
+import BaseStreamController from '../controller/base-stream-controller';
 import BinarySearch from '../utils/binary-search';
 import BufferHelper from '../helper/buffer-helper';
 import Demuxer from '../demux/demuxer';
@@ -29,10 +29,10 @@ const State = {
   WAITING_INIT_PTS : 'WAITING_INIT_PTS'
 };
 
-class AudioStreamController extends EventHandler {
+class AudioStreamController extends BaseStreamController {
 
   constructor(hls) {
-    super(hls,
+    super('audio', hls,
       Event.MEDIA_ATTACHED,
       Event.MEDIA_DETACHING,
       Event.AUDIO_TRACKS_UPDATED,
@@ -181,7 +181,7 @@ class AudioStreamController extends EventHandler {
         } else {
           pos = this.nextLoadPosition;
         }
-        let media = this.mediaBuffer ? this.mediaBuffer : this.media,
+        let media = this.mediaBuffer,
             bufferInfo = BufferHelper.bufferInfo(media,pos,config.maxBufferHole),
             bufferLen = bufferInfo.len,
             bufferEnd = bufferInfo.end,
@@ -738,7 +738,7 @@ class AudioStreamController extends EventHandler {
         this.fragPrevious = frag;
         stats.tbuffered = performance.now();
         hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag, id : 'audio'});
-        let media = this.mediaBuffer ? this.mediaBuffer : this.media;
+        let media = this.mediaBuffer;
         logger.log(`audio buffered : ${TimeRanges.toString(media.buffered)}`);
         if (this.audioSwitch && this.appended) {
           this.audioSwitch = false;
