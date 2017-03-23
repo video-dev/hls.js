@@ -277,12 +277,18 @@ class StreamController extends EventHandler {
             fragPrevious &&
             fragPrevious.sn === levelDetails.endSN
         ) {
+            // fragPrevious is last fragment. retrieve level duration using last frag start offset + duration
+            // real duration might be lower than initial duration if there are drifts between real frag duration and playlist signaling
+            const duration = Math.min(
+                media.duration,
+                fragPrevious.start + fragPrevious.duration
+            );
             // if everything (almost) til the end is buffered, let's signal eos
             // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference
             // using half frag duration should help cope with these cases.
             // also cope with almost zero last frag duration (max last frag duration with 200ms) refer to https://github.com/video-dev/hls.js/pull/657
             if (
-                media.duration - Math.max(bufferInfo.end, fragPrevious.start) <=
+                duration - Math.max(bufferInfo.end, fragPrevious.start) <=
                 Math.max(0.2, fragPrevious.duration / 2)
             ) {
                 // Finalize the media stream
