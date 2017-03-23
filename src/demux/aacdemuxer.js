@@ -7,20 +7,19 @@ import ID3 from '../demux/id3';
 
  class AACDemuxer {
 
-  constructor(observer, id, remuxerClass, config, typeSupported) {
+  constructor(observer, remuxer, config) {
     this.observer = observer;
-    this.id = id;
-    this.remuxerClass = remuxerClass;
     this.config = config;
-    this.remuxer = new this.remuxerClass(observer,id, config, typeSupported);
-    // id === 'main' when the demuxer is used to play an audio only stream and requires AAC files placed back-to-back in the order they are received.
-    // id === 'audio' when the demuxer is used for multitrack audio and requires the use of timestamps to sync audio with video.
+    this.remuxer = remuxer;
     this.useTimeStamp = id === 'audio';
     this.insertDiscontinuity();
   }
 
-  insertDiscontinuity() {
-    this._aacTrack = {container : 'audio/adts', type: 'audio', id :-1, sequenceNumber: 0, isAAC : true , samples : [], len : 0};
+  resetInitSegment(initSegment,audioCodec,videoCodec, duration) {
+    this._aacTrack = {container : 'audio/adts', type: 'audio', id :-1, sequenceNumber: 0, isAAC : true , samples : [], len : 0, manifestCodec : audioCodec, duration : duration, inputTimeScale : 90000};
+  }
+
+  resetTimeStamp() {
   }
 
   // Source for probe info - https://wiki.multimedia.cx/index.php?title=ADTS
@@ -37,7 +36,7 @@ import ID3 from '../demux/id3';
   }
 
   // feed incoming data to the front of the parsing pipeline
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset, defaultInitPTS) {
+  append(data, timeOffset, contiguous,accurateTimeOffset) {
     var track,
         id3 = new ID3(data),
         pts, config, frameLength, frameDuration, frameIndex, offset, headerLength, stamp, len, aacSample;
@@ -45,44 +44,25 @@ import ID3 from '../demux/id3';
     // Use ID3 Timestamp if needed, as in v4 audio tracks.  Otherwise, concat AAC audio in the order it comes in.
     pts = (this.useTimeStamp) ? 90 * id3.timeStamp : timeOffset * 90000;
 
-    let contiguous = false;
-    if (cc !== this.lastCC) {
-      logger.log(`${this.id} discontinuity detected`);
-      this.lastCC = cc;
-      this.insertDiscontinuity();
-      this.remuxer.switchLevel();
-      this.remuxer.insertDiscontinuity();
-    } else if (level !== this.lastLevel) {
-      logger.log('audio track switch detected');
-      this.lastLevel = level;
-      this.remuxer.switchLevel();
-      this.insertDiscontinuity();
-    } else if (sn === (this.lastSN+1)) {
-      contiguous = true;
-    }
     track = this._aacTrack;
-    this.lastSN = sn;
-    this.lastLevel = level;
 
-    // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
-    for (offset = id3.length || 0, len = data.length; offset < len - 1; offset++) {
-      if ((data[offset] === 0xff) && (data[offset+1] & 0xf6) === 0xf0) {
+    // look for ADTS header (0xFFFx)
+    for (offset = id3.length, len = data.length; offset < len - 1; offset++) {
+      if ((data[offset] === 0xff) && (data[offset+1] & 0xf0) === 0xf0) {
         break;
       }
     }
 
-    if (!track.audiosamplerate) {
-      config = ADTS.getAudioConfig(this.observer,data, offset, audioCodec);
+    if (!track.samplerate) {
+      config = ADTS.getAudioConfig(this.observer,data, offset, track.manifestCodec);
       track.config = config.config;
-      track.audiosamplerate = config.samplerate;
+      track.samplerate = config.samplerate;
       track.channelCount = config.channelCount;
       track.codec = config.codec;
-      track.manifestCodec = config.manifestCodec;
-      track.duration = duration;
       logger.log(`parsed codec:${track.codec},rate:${config.samplerate},nb channel:${config.channelCount}`);
     }
     frameIndex = 0;
-    frameDuration = 1024 * 90000 / track.audiosamplerate;
+    frameDuration = 1024 * 90000 / track.samplerate;
     while ((offset + 5) < len) {
       // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
       headerLength = (!!(data[offset + 1] & 0x01) ? 7 : 9);
@@ -112,7 +92,13 @@ import ID3 from '../demux/id3';
       }
     }
     const id3Track = (id3.payload) ? { samples : [ { pts: pts, dts : pts, unit : id3.payload} ] } : { samples: [] };
-    this.remuxer.remux(level, sn , cc, track,{samples : []}, id3Track, { samples: [] }, timeOffset, contiguous,accurateTimeOffset, defaultInitPTS);
+    this.remuxer.remux(track,
+                        {samples : []},
+                        id3Track,
+                        {samples : []},
+                        timeOffset,
+                        contiguous,
+                        accurateTimeOffset);
   }
 
   destroy() {

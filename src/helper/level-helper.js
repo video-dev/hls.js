@@ -4,11 +4,11 @@
 
 import {logger} from '../utils/logger';
 
-class LevelHelper {
+const LevelHelper = {
 
-  static mergeDetails(oldDetails,newDetails) {
-    var startSn = Math.max(oldDetails.startSN,newDetails.startSN)-newDetails.startSN,
-        endSn = Math.min(oldDetails.endSN,newDetails.endSN)-newDetails.startSN,
+  mergeDetails : function(oldDetails,newDetails) {
+    var start = Math.max(oldDetails.startSN,newDetails.startSN)-newDetails.startSN,
+        end = Math.min(oldDetails.endSN,newDetails.endSN)-newDetails.startSN,
         delta = newDetails.startSN - oldDetails.startSN,
         oldfragments = oldDetails.fragments,
         newfragments = newDetails.fragments,
@@ -16,12 +16,12 @@ class LevelHelper {
         PTSFrag;
 
     // check if old/new playlists have fragments in common
-    if (endSn < startSn) {
+    if ( end < start) {
       newDetails.PTSKnown = false;
       return;
     }
     // loop through overlapping SN and update startPTS , cc, and duration if any found
-    for(var i = startSn ; i <= endSn ; i++) {
+    for(var i = start ; i <= end ; i++) {
       var oldFrag = oldfragments[delta+i],
           newFrag = newfragments[i];
       if (newFrag && oldFrag) {
@@ -61,9 +61,9 @@ class LevelHelper {
     // old and new level. reliable PTS info is thus relying on old level
     newDetails.PTSKnown = oldDetails.PTSKnown;
     return;
-  }
+  },
 
-  static updateFragPTSDTS(details,sn,startPTS,endPTS,startDTS,endDTS) {
+  updateFragPTSDTS : function(details,sn,startPTS,endPTS,startDTS,endDTS) {
     var fragIdx, fragments, frag, i;
     // exit if sn out of range
     if (!details || sn < details.startSN || sn > details.endSN) {
@@ -106,9 +106,9 @@ class LevelHelper {
     //logger.log(`                                            frag start/end:${startPTS.toFixed(3)}/${endPTS.toFixed(3)}`);
 
     return drift;
-  }
+  },
 
-  static updatePTS(fragments,fromIdx, toIdx) {
+  updatePTS : function(fragments,fromIdx, toIdx) {
     var fragFrom = fragments[fromIdx],fragTo = fragments[toIdx], fragToPTS = fragTo.startPTS;
     // if we know startPTS[toIdx]
     if(!isNaN(fragToPTS)) {
@@ -133,20 +133,22 @@ class LevelHelper {
         fragTo.start = fragFrom.start - fragTo.duration;
       }
     }
-  }
+  },
 
   // If a change in CC is detected, the PTS can no longer be relied upon
   // Attempt to align the level by using the last level - find the last frag matching the current CC and use it's PTS
   // as a reference
-  static alignDiscontinuities(lastFrag, lastLevel, details) {
-    if (LevelHelper.shouldAlignOnDiscontinuities(lastFrag, lastLevel, details)) {
-        logger.log('Adjusting PTS using last level due to CC increase within current level');
-        const referenceFrag = LevelHelper.findDiscontinuousReferenceFrag(lastLevel.details, details);
-        LevelHelper.adjustPtsByReferenceFrag(referenceFrag, details);
-    }
+  alignDiscontinuities: function(lastFrag, lastLevel, details) {
+  if (shouldAlignOnDiscontinuities(lastFrag, lastLevel, details)) {
+    logger.log('Adjusting PTS using last level due to CC increase within current level');
+    const referenceFrag = findDiscontinuousReferenceFrag(lastLevel.details, details);
+    adjustPtsByReferenceFrag(referenceFrag, details);
   }
+}
+};
 
-  static shouldAlignOnDiscontinuities(lastFrag, lastLevel, details) {
+
+const shouldAlignOnDiscontinuities = function (lastFrag, lastLevel, details) {
     let shouldAlign = false;
     if (lastLevel && lastLevel.details && details) {
       if (details.endCC > details.startCC || (lastFrag && lastFrag.cc < details.startCC)) {
@@ -154,10 +156,10 @@ class LevelHelper {
       }
     }
     return shouldAlign;
-  }
+  };
 
   // Find the first frag in the previous level which matches the CC of the first frag of the new level
-  static findDiscontinuousReferenceFrag(prevDetails, curDetails) {
+  const findDiscontinuousReferenceFrag = function (prevDetails, curDetails) {
     const prevFrags = prevDetails.fragments;
     const curFrags = curDetails.fragments;
 
@@ -176,9 +178,9 @@ class LevelHelper {
     }
 
     return prevStartFrag;
-  }
+  };
 
-  static adjustPtsByReferenceFrag(referenceFrag, details) {
+  const adjustPtsByReferenceFrag = function(referenceFrag, details) {
     if (!referenceFrag) {
       return;
     }
@@ -191,7 +193,6 @@ class LevelHelper {
       }
     });
     details.PTSKnown = true;
-  }
-}
+};
 
-export default LevelHelper;
+module.exports = LevelHelper;

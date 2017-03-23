@@ -2,19 +2,8 @@ class AESDecryptor {
   constructor() {
     // Static after running initTable
     this.rcon = [0x0, 0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36];
-
-    this.subMix = [];
-    this.subMix[0] = new Uint32Array(256);
-    this.subMix[1] = new Uint32Array(256);
-    this.subMix[2] = new Uint32Array(256);
-    this.subMix[3] = new Uint32Array(256);
-
-    this.invSubMix = [];
-    this.invSubMix[0] = new Uint32Array(256);
-    this.invSubMix[1] = new Uint32Array(256);
-    this.invSubMix[2] = new Uint32Array(256);
-    this.invSubMix[3] = new Uint32Array(256);
-
+    this.subMix = [new Uint32Array(256),new Uint32Array(256),new Uint32Array(256),new Uint32Array(256)];
+    this.invSubMix = [new Uint32Array(256),new Uint32Array(256),new Uint32Array(256),new Uint32Array(256)];
     this.sBox = new Uint32Array(256);
     this.invSBox = new Uint32Array(256);
 
@@ -28,7 +17,7 @@ class AESDecryptor {
   uint8ArrayToUint32Array_(arrayBuffer) {
     let view = new DataView(arrayBuffer);
     let newArray = new Uint32Array(4);
-    for (let i = 0; i < newArray.length; i++) {
+    for (let i = 0; i < 4; i++) {
       newArray[i] = view.getUint32(i * 4);
     }
     return newArray;
@@ -37,14 +26,16 @@ class AESDecryptor {
   initTable() {
     let sBox = this.sBox;
     let invSBox = this.invSBox;
-    let subMix0 = this.subMix[0];
-    let subMix1 = this.subMix[1];
-    let subMix2 = this.subMix[2];
-    let subMix3 = this.subMix[3];
-    let invSubMix0 = this.invSubMix[0];
-    let invSubMix1 = this.invSubMix[1];
-    let invSubMix2 = this.invSubMix[2];
-    let invSubMix3 = this.invSubMix[3];
+    let subMix = this.subMix;
+    let subMix0 = subMix[0];
+    let subMix1 = subMix[1];
+    let subMix2 = subMix[2];
+    let subMix3 = subMix[3];
+    let invSubMix  = this.invSubMix;
+    let invSubMix0 = invSubMix[0];
+    let invSubMix1 = invSubMix[1];
+    let invSubMix2 = invSubMix[2];
+    let invSubMix3 = invSubMix[3];
 
     let d = new Uint32Array(256);
     let x = 0;
@@ -119,15 +110,16 @@ class AESDecryptor {
     let ksRow;
     let invKsRow;
 
-    let keySchedule = this.keySchedule = new Uint32Array(this.ksRows);
-    let invKeySchedule = this.invKeySchedule = new Uint32Array(this.ksRows);
+    let keySchedule = this.keySchedule = new Uint32Array(ksRows);
+    let invKeySchedule = this.invKeySchedule = new Uint32Array(ksRows);
     let sbox = this.sBox;
     let rcon = this.rcon;
 
-    let invSubMix0 = this.invSubMix[0];
-    let invSubMix1 = this.invSubMix[1];
-    let invSubMix2 = this.invSubMix[2];
-    let invSubMix3 = this.invSubMix[3];
+    let invSubMix  = this.invSubMix;
+    let invSubMix0 = invSubMix[0];
+    let invSubMix1 = invSubMix[1];
+    let invSubMix2 = invSubMix[2];
+    let invSubMix3 = invSubMix[3];
 
     let prev;
     let t;
@@ -184,10 +176,11 @@ class AESDecryptor {
     let invKeySchedule = this.invKeySchedule;
     let invSBOX = this.invSBox;
 
-    let invSubMix0 = this.invSubMix[0];
-    let invSubMix1 = this.invSubMix[1];
-    let invSubMix2 = this.invSubMix[2];
-    let invSubMix3 = this.invSubMix[3];
+    let invSubMix  = this.invSubMix;
+    let invSubMix0 = invSubMix[0];
+    let invSubMix1 = invSubMix[1];
+    let invSubMix2 = invSubMix[2];
+    let invSubMix3 = invSubMix[3];
 
     let initVector = this.uint8ArrayToUint32Array_(aesIV);
     let initVector0 = initVector[0];
@@ -203,12 +196,13 @@ class AESDecryptor {
     let inputWords0, inputWords1, inputWords2, inputWords3;
 
     var ksRow, i;
+    let swapWord = this.networkToHostOrderSwap;
 
     while (offset < inputInt32.length) {
-      inputWords0 = this.networkToHostOrderSwap(inputInt32[offset]);
-      inputWords1 = this.networkToHostOrderSwap(inputInt32[offset + 1]);
-      inputWords2 = this.networkToHostOrderSwap(inputInt32[offset + 2]);
-      inputWords3 = this.networkToHostOrderSwap(inputInt32[offset + 3]);
+      inputWords0 = swapWord(inputInt32[offset]);
+      inputWords1 = swapWord(inputInt32[offset + 1]);
+      inputWords2 = swapWord(inputInt32[offset + 2]);
+      inputWords3 = swapWord(inputInt32[offset + 3]);
 
       s0 = inputWords0 ^ invKeySchedule[0];
       s1 = inputWords3 ^ invKeySchedule[1];
@@ -240,10 +234,10 @@ class AESDecryptor {
       ksRow = ksRow + 3;
 
       // Write
-      outputInt32[offset] = this.networkToHostOrderSwap(t0 ^ initVector0);
-      outputInt32[offset + 1] = this.networkToHostOrderSwap(t3 ^ initVector1);
-      outputInt32[offset + 2] = this.networkToHostOrderSwap(t2 ^ initVector2);
-      outputInt32[offset + 3] = this.networkToHostOrderSwap(t1 ^ initVector3);
+      outputInt32[offset] = swapWord(t0 ^ initVector0);
+      outputInt32[offset + 1] = swapWord(t3 ^ initVector1);
+      outputInt32[offset + 2] = swapWord(t2 ^ initVector2);
+      outputInt32[offset + 3] = swapWord(t1 ^ initVector3);
 
       // reset initVector to last 4 unsigned int
       initVector0 = inputWords0;

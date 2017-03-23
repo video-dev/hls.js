@@ -17,8 +17,7 @@ function clearCurrentCues(track) {
 }
 
 function reuseVttTextTrack(inUseTrack, manifestTrack) {
-  return inUseTrack && (!inUseTrack._id || /^subtitle/.test(inUseTrack._id)) &&
-    inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
+  return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);
 }
 
 function intersection(x1, x2, y1, y2) {
@@ -34,7 +33,7 @@ class TimelineController extends EventHandler {
                 Event.MANIFEST_LOADING,
                 Event.MANIFEST_LOADED,
                 Event.FRAG_LOADED,
-                Event.LEVEL_SWITCH,
+                Event.LEVEL_SWITCHING,
                 Event.INIT_PTS_FOUND);
 
     this.hls = hls;
@@ -74,13 +73,17 @@ class TimelineController extends EventHandler {
             var existingTrack1 = self.getExistingTrack('1');
             if (!existingTrack1)
             {
-              self.textTrack1 = self.createTextTrack('captions', 'English', 'en');
-              self.textTrack1.textTrack1 = true;
+              const textTrack1 = self.createTextTrack('captions', self.config.captionsTextTrack1Label, self.config.captionsTextTrack1LanguageCode);
+              if (textTrack1) {
+                textTrack1.textTrack1 = true;
+                self.textTrack1 = textTrack1;
+              }
             }
             else
             {
               self.textTrack1 = existingTrack1;
-              self.clearCurrentCues(self.textTrack1);
+              clearCurrentCues(self.textTrack1);
+
               sendAddTrackEvent(self.textTrack1, self.media);
             }
           }
@@ -98,12 +101,16 @@ class TimelineController extends EventHandler {
             var existingTrack2 = self.getExistingTrack('2');
             if (!existingTrack2)
             {
-              self.textTrack2 = self.createTextTrack('captions', 'Spanish', 'es');
-              self.textTrack2.textTrack2 = true;
+              const textTrack2 = self.createTextTrack('captions', self.config.captionsTextTrack2Label, self.config.captionsTextTrack1LanguageCode);
+              if (textTrack2) {
+                textTrack2.textTrack2 = true;
+                self.textTrack2 = textTrack2;
+              }
             }
             else
             {
               self.textTrack2 = existingTrack2;
+              clearCurrentCues(self.textTrack2);
 
               sendAddTrackEvent(self.textTrack2, self.media);
             }
@@ -155,7 +162,7 @@ class TimelineController extends EventHandler {
   }
 
   getExistingTrack(channelNumber) {
-    let media = this.media;
+    const media = this.media;
     if (media) {
       for (let i = 0; i < media.textTracks.length; i++) {
         let textTrack = media.textTracks[i];
@@ -169,9 +176,10 @@ class TimelineController extends EventHandler {
   }
 
   createTextTrack(kind, label, lang) {
-    if (this.media)
+    const media = this.media;
+    if (media)
     {
-      return this.media.addTextTrack(kind, label, lang);
+      return media.addTextTrack(kind, label, lang);
     }
   }
 
@@ -193,6 +201,17 @@ class TimelineController extends EventHandler {
     this.lastSn = -1; // Detect discontiguity in fragment parsing
     this.prevCC = -1;
     this.vttCCs = {ccOffset: 0, presentationOffset: 0}; // Detect discontinuity in subtitle manifests
+
+    // clear outdated subtitles
+    const media = this.media;
+    if (media) {
+      const textTracks = media.textTracks;
+      if (textTracks) {
+        for (let i = 0; i < textTracks.length; i++) {
+          clearCurrentCues(textTracks[i]);
+        }
+      }
+    }
   }
 
   onManifestLoaded(data) {
@@ -220,7 +239,7 @@ class TimelineController extends EventHandler {
     }
   }
 
-  onLevelSwitch() {
+  onLevelSwitching() {
     this.enabled = this.hls.currentLevel.closedCaptions !== 'NONE';
   }
 
