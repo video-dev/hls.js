@@ -1,7 +1,7 @@
 const assert = require('assert');
 
 import AbrController from '../../../src/controller/abr-controller';
-import EwmaBandWidthEstimator from '../../../src/controller/ewma-bandwidth-estimator';
+import EwmaBandWidthEstimator from '../../../src/utils/ewma-bandwidth-estimator';
 import Hls from '../../../src/hls';
 
 

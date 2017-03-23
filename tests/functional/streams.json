@@ -3,8 +3,10 @@
 	"bigBuckBunny480p": {"url": "http://www.streambox.fr/playlists/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8", "description": "big buck bunny,480p", "live": false, "abr": false, "blacklist_ua" : ["internet explorer"]},
 	"issue666": {"url": "http://www.streambox.fr/playlists/cisq0gim60007xzvi505emlxx.m3u8", "description": "hls.js/issues/666", "live": false, "abr": false,"blacklist_ua" : ["internet explorer"]},
   "issue649": {"url": "http://level3cdn.screen9.com/M/V/e/X/eXLpum-4HGEg67ECxUnqWQ_720p_hls/playlist.m3u8?token=089899b60a6e85dd2239a", "description": "hls.js/issues/649", "live": false, "abr": false},
-	"nasa": {"url": "http://nasatv-lh.akamaihd.net/i/NASA_101@319270/index_1000_av-p.m3u8?sd=10&rebase=on", "description": "NASA live stream", "live": true, "abr": true,"blacklist_ua" : ["internet explorer","safari"]},
+	"nasa": {"url": "http://nasatv-lh.akamaihd.net/i/NASA_101@319270/index_1000_av-p.m3u8?sd=10&rebase=on", "description": "NASA live stream", "live": true, "abr": false, "blacklist_ua" : ["internet explorer","safari"]},
   "closedcaptions" : {"url": "http://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8", "description": "CNN special report, with CC", "live": false, "abr": false, "blacklist_ua" : ["safari"]},
   "oceans_aes": {"url": "http://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8", "description": "AES encrypted,ABR", "live": false , "abr": true},
-  "mp3": {"url": "https://player.webvideocore.net/CL1olYogIrDWvwqiIKK7eLBkzvO18gwo9ERMzsyXzwt_t-ya8ygf2kQBZww38JJT/8i4vvznv8408.m3u8", "description": "MP3 VOD demo", "live": false , "abr": false, "blacklist_ua" : ["safari"]}
+  "bbb_aes": {"url": "http://streambox.fr/playlists/sample_aes/index.m3u8", "description": "SAMPLE-AES encrypted", "live": false , "abr": false},
+  "mp3": {"url": "https://player.webvideocore.net/CL1olYogIrDWvwqiIKK7eLBkzvO18gwo9ERMzsyXzwt_t-ya8ygf2kQBZww38JJT/8i4vvznv8408.m3u8", "description": "MP3 VOD demo", "live": false , "abr": false, "blacklist_ua" : ["safari"]},
+  "fmp4": {"url": "https://d2zihajmogu5jn.cloudfront.net/advanced-fmp4/master.m3u8", "description": "HLS fMP4 multiple audio tracks", "live": false , "abr": false, "blacklist_ua" : ["safari"]}
 }
