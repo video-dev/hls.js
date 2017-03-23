@@ -9,7 +9,7 @@ import EventHandler from '../event-handler';
 import BufferHelper from '../helper/buffer-helper';
 import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
-import EwmaBandWidthEstimator from './ewma-bandwidth-estimator';
+import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
 
 class AbrController extends EventHandler {
     constructor(hls) {
@@ -21,10 +21,9 @@ class AbrController extends EventHandler {
             Event.ERROR
         );
         this.lastLoadedFragLevel = 0;
-        this._autoLevelCapping = -1;
         this._nextAutoLevel = -1;
         this.hls = hls;
-        this.onCheck = this.abandonRulesCheck.bind(this);
+        this.onCheck = this._abandonRulesCheck.bind(this);
     }
 
     destroy() {
@@ -40,7 +39,7 @@ class AbrController extends EventHandler {
             }
             // lazy init of bw Estimator, rationale is that we use different params for Live/VoD
             // so we need to wait for stream manifest / playlist type to instantiate it.
-            if (!this.bwEstimator) {
+            if (!this._bwEstimator) {
                 let hls = this.hls,
                     level = data.frag.level,
                     isLive = hls.levels[level].details.live,
@@ -55,7 +54,7 @@ class AbrController extends EventHandler {
                     ewmaFast = config.abrEwmaFastVoD;
                     ewmaSlow = config.abrEwmaSlowVoD;
                 }
-                this.bwEstimator = new EwmaBandWidthEstimator(
+                this._bwEstimator = new EwmaBandWidthEstimator(
                     hls,
                     ewmaSlow,
                     ewmaFast,
@@ -66,7 +65,7 @@ class AbrController extends EventHandler {
         }
     }
 
-    abandonRulesCheck() {
+    _abandonRulesCheck() {
         /*
       monitor fragment retrieval time...
       we compute expected time of arrival of the complete fragment.
@@ -76,7 +75,7 @@ class AbrController extends EventHandler {
             v = hls.media,
             frag = this.fragCurrent,
             loader = frag.loader,
-            minAutoLevel = this.minAutoLevel;
+            minAutoLevel = hls.minAutoLevel;
 
         // if loader has been destroyed or loading has been aborted, stop timer and return
         if (!loader || (loader.stats && loader.stats.aborted)) {
@@ -172,7 +171,7 @@ class AbrController extends EventHandler {
                         // force next load level in auto mode
                         hls.nextLoadLevel = nextLoadLevel;
                         // update bw estimate for this fragment before cancelling load (this will help reducing the bw)
-                        this.bwEstimator.sample(requestDelay, stats.loaded);
+                        this._bwEstimator.sample(requestDelay, stats.loaded);
                         //abort fragment loading
                         loader.abort();
                         // stop abandon rules timer
@@ -189,7 +188,7 @@ class AbrController extends EventHandler {
 
     onFragLoaded(data) {
         let frag = data.frag;
-        if (frag.type === 'main') {
+        if (frag.type === 'main' && !isNaN(frag.sn)) {
             // stop monitoring bw once frag loaded
             this.clearTimer();
             // store level id after successful fragment load
@@ -198,13 +197,18 @@ class AbrController extends EventHandler {
             this._nextAutoLevel = -1;
 
             // compute level average bitrate
-            const level = this.hls.levels[frag.level];
-            let loadedBytes =
-                (level.loaded ? level.loaded.bytes : 0) + data.stats.loaded;
-            let loadedDuration =
-                (level.loaded ? level.loaded.duration : 0) + data.frag.duration;
-            level.loaded = { bytes: loadedBytes, duration: loadedDuration };
-            level.realBitrate = Math.round(8 * loadedBytes / loadedDuration);
+            if (this.hls.config.abrMaxWithRealBitrate) {
+                const level = this.hls.levels[frag.level];
+                let loadedBytes =
+                    (level.loaded ? level.loaded.bytes : 0) + data.stats.loaded;
+                let loadedDuration =
+                    (level.loaded ? level.loaded.duration : 0) +
+                    data.frag.duration;
+                level.loaded = { bytes: loadedBytes, duration: loadedDuration };
+                level.realBitrate = Math.round(
+                    8 * loadedBytes / loadedDuration
+                );
+            }
             // if fragment has been loaded to perform a bitrate test,
             if (data.frag.bitrateTest) {
                 let stats = data.stats;
@@ -225,6 +229,7 @@ class AbrController extends EventHandler {
             stats.aborted !== true &&
             frag.loadCounter === 1 &&
             frag.type === 'main' &&
+            !isNaN(frag.sn) &&
             (!frag.bitrateTest || stats.tload === stats.tbuffered)
         ) {
             // use tparsed-trequest instead of tbuffered-trequest to compute fragLoadingProcessing; rationale is that  buffer appending only happens once media is attached
@@ -240,7 +245,7 @@ class AbrController extends EventHandler {
                     8 * stats.loaded / (stats.tbuffered - stats.trequest)
                 )}`
             );
-            this.bwEstimator.sample(fragLoadingProcessingMs, stats.loaded);
+            this._bwEstimator.sample(fragLoadingProcessingMs, stats.loaded);
             // if fragment has been loaded to perform a bitrate test, (hls.startLevel = -1), store bitrate test delay duration
             if (frag.bitrateTest) {
                 this.bitrateTestDelay = fragLoadingProcessingMs / 1000;
@@ -269,84 +274,31 @@ class AbrController extends EventHandler {
         }
     }
 
-    /** Return the capping/max level value that could be used by automatic level selection algorithm **/
-    get autoLevelCapping() {
-        return this._autoLevelCapping;
-    }
-
-    /** set the capping/max level value that could be used by automatic level selection algorithm **/
-    set autoLevelCapping(newLevel) {
-        this._autoLevelCapping = newLevel;
-    }
-
+    // return next auto level
     get nextAutoLevel() {
-        let nextAutoLevel = this._nextAutoLevel,
-            bwEstimator = this.bwEstimator,
-            hls = this.hls,
-            levels = hls.levels,
-            minAutoBitrate = hls.config.minAutoBitrate;
-        // in case next auto level has been forced, and bw not available or not reliable
+        const forcedAutoLevel = this._nextAutoLevel;
+        const bwEstimator = this._bwEstimator;
+        // in case next auto level has been forced, and bw not available or not reliable, return forced value
         if (
-            nextAutoLevel !== -1 &&
+            forcedAutoLevel !== -1 &&
             (!bwEstimator || !bwEstimator.canEstimate())
         ) {
-            // cap next auto level by max auto level
-            return Math.min(nextAutoLevel, this.maxAutoLevel);
+            return forcedAutoLevel;
         }
         // compute next level using ABR logic
-        let nextABRAutoLevel = this.nextABRAutoLevel;
-        if (nextAutoLevel !== -1) {
-            // nextAutoLevel is defined, use it to cap ABR computed quality level
-            nextABRAutoLevel = Math.min(nextAutoLevel, nextABRAutoLevel);
-        }
-        if (minAutoBitrate !== undefined) {
-            const levelNextBitrate = levels[nextABRAutoLevel].realBitrate
-                ? Math.max(
-                      levels[nextABRAutoLevel].realBitrate,
-                      levels[nextABRAutoLevel].bitrate
-                  )
-                : levels[nextABRAutoLevel].bitrate;
-            while (levelNextBitrate < minAutoBitrate) {
-                nextABRAutoLevel++;
-            }
+        let nextABRAutoLevel = this._nextABRAutoLevel;
+        // if forced auto level has been defined, use it to cap ABR computed quality level
+        if (forcedAutoLevel !== -1) {
+            nextABRAutoLevel = Math.min(forcedAutoLevel, nextABRAutoLevel);
         }
         return nextABRAutoLevel;
     }
-
-    get minAutoLevel() {
-        let hls = this.hls,
-            levels = hls.levels,
-            minAutoBitrate = hls.config.minAutoBitrate,
-            len = levels ? levels.length : 0;
-        for (let i = 0; i < len; i++) {
-            const levelNextBitrate = levels[i].realBitrate
-                ? Math.max(levels[i].realBitrate, levels[i].bitrate)
-                : levels[i].bitrate;
-            if (levelNextBitrate > minAutoBitrate) {
-                return i;
-            }
-        }
-        return 0;
-    }
-
-    get maxAutoLevel() {
-        var levels = this.hls.levels,
-            autoLevelCapping = this._autoLevelCapping,
-            maxAutoLevel;
-        if (autoLevelCapping === -1 && levels && levels.length) {
-            maxAutoLevel = levels.length - 1;
-        } else {
-            maxAutoLevel = autoLevelCapping;
-        }
-        return maxAutoLevel;
-    }
-
-    get nextABRAutoLevel() {
+    get _nextABRAutoLevel() {
         var hls = this.hls,
-            maxAutoLevel = this.maxAutoLevel,
+            maxAutoLevel = hls.maxAutoLevel,
             levels = hls.levels,
             config = hls.config,
-            minAutoLevel = this.minAutoLevel;
+            minAutoLevel = hls.minAutoLevel;
         const v = hls.media,
             currentLevel = this.lastLoadedFragLevel,
             currentFragDuration = this.fragCurrent
@@ -357,8 +309,8 @@ class AbrController extends EventHandler {
             // if we're playing back at the normal rate.
             playbackRate =
                 v && v.playbackRate !== 0 ? Math.abs(v.playbackRate) : 1.0,
-            avgbw = this.bwEstimator
-                ? this.bwEstimator.getEstimate()
+            avgbw = this._bwEstimator
+                ? this._bwEstimator.getEstimate()
                 : config.abrEwmaDefaultEstimate,
             // bufferStarvationDelay is the wall-clock time left until the playback buffer is exhausted.
             bufferStarvationDelay =
@@ -367,7 +319,7 @@ class AbrController extends EventHandler {
                 playbackRate;
 
         // First, look to see if we can find a level matching with our avg bandwidth AND that could also guarantee no rebuffering at all
-        let bestLevel = this.findBestLevel(
+        let bestLevel = this._findBestLevel(
             currentLevel,
             currentFragDuration,
             avgbw,
@@ -415,7 +367,7 @@ class AbrController extends EventHandler {
                     bwFactor = bwUpFactor = 1;
                 }
             }
-            bestLevel = this.findBestLevel(
+            bestLevel = this._findBestLevel(
                 currentLevel,
                 currentFragDuration,
                 avgbw,
@@ -430,7 +382,7 @@ class AbrController extends EventHandler {
         }
     }
 
-    findBestLevel(
+    _findBestLevel(
         currentLevel,
         currentFragDuration,
         currentBw,

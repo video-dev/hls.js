@@ -2,8 +2,8 @@
  *  TimeRanges to string helper
  */
 
-class TimeRanges {
-    static toString(r) {
+const TimeRanges = {
+    toString: function(r) {
         var log = '',
             len = r.length;
         for (var i = 0; i < len; i++) {
@@ -12,6 +12,6 @@ class TimeRanges {
         }
         return log;
     }
-}
+};
 
-export default TimeRanges;
+module.exports = TimeRanges;
