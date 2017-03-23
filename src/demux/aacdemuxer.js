@@ -10,8 +10,6 @@ class AACDemuxer {
         this.observer = observer;
         this.config = config;
         this.remuxer = remuxer;
-        this.useTimeStamp = id === 'audio';
-        this.insertDiscontinuity();
     }
 
     resetInitSegment(initSegment, audioCodec, videoCodec, duration) {
@@ -66,7 +64,7 @@ class AACDemuxer {
             aacSample;
 
         // Use ID3 Timestamp if needed, as in v4 audio tracks.  Otherwise, concat AAC audio in the order it comes in.
-        pts = this.useTimeStamp ? 90 * id3.timeStamp : timeOffset * 90000;
+        pts = id3.timeStamp ? 90 * id3.timeStamp : timeOffset * 90000;
 
         track = this._aacTrack;
 
