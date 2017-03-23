@@ -11,8 +11,6 @@ import ID3 from '../demux/id3';
     this.observer = observer;
     this.config = config;
     this.remuxer = remuxer;
-    this.useTimeStamp = id === 'audio';
-    this.insertDiscontinuity();
   }
 
   resetInitSegment(initSegment,audioCodec,videoCodec, duration) {
@@ -42,7 +40,7 @@ import ID3 from '../demux/id3';
         pts, config, frameLength, frameDuration, frameIndex, offset, headerLength, stamp, len, aacSample;
 
     // Use ID3 Timestamp if needed, as in v4 audio tracks.  Otherwise, concat AAC audio in the order it comes in.
-    pts = (this.useTimeStamp) ? 90 * id3.timeStamp : timeOffset * 90000;
+    pts = (id3.timeStamp) ? 90 * id3.timeStamp : timeOffset * 90000;
 
     track = this._aacTrack;
 
