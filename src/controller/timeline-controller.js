@@ -226,12 +226,15 @@ class TimelineController extends EventHandler {
 
       this.tracks.forEach((track, index) => {
         let textTrack;
-        const inUseTrack = inUseTracks[index];
-        // Reuse tracks with the same label, but do not reuse 608/708 tracks
-        if (reuseVttTextTrack(inUseTrack, track)) {
-          textTrack = inUseTrack;
-        } else {
-          textTrack = this.createTextTrack('subtitles', track.name, track.lang);
+        if (index < inUseTracks.length) {
+          const inUseTrack = inUseTracks[index];
+          // Reuse tracks with the same label, but do not reuse 608/708 tracks
+          if (reuseVttTextTrack(inUseTrack, track)) {
+            textTrack = inUseTrack;
+          }
+        }
+        if (!textTrack) {
+            textTrack = this.createTextTrack('subtitles', track.name, track.lang);          
         }
         textTrack.mode = track.default ? 'showing' : 'hidden';
         this.textTracks.push(textTrack);
