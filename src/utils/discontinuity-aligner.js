@@ -1,6 +1,6 @@
 import { logger } from '../utils/logger';
 
-const shouldAlignOnDiscontinuities = function(lastFrag, lastLevel, details) {
+export function shouldAlignOnDiscontinuities(lastFrag, lastLevel, details) {
     let shouldAlign = false;
     if (lastLevel && lastLevel.details && details) {
         if (
@@ -11,10 +11,10 @@ const shouldAlignOnDiscontinuities = function(lastFrag, lastLevel, details) {
         }
     }
     return shouldAlign;
-};
+}
 
 // Find the first frag in the previous level which matches the CC of the first frag of the new level
-const findDiscontinuousReferenceFrag = function(prevDetails, curDetails) {
+export function findDiscontinuousReferenceFrag(prevDetails, curDetails) {
     const prevFrags = prevDetails.fragments;
     const curFrags = curDetails.fragments;
 
@@ -33,9 +33,9 @@ const findDiscontinuousReferenceFrag = function(prevDetails, curDetails) {
     }
 
     return prevStartFrag;
-};
+}
 
-const adjustPtsByReferenceFrag = function(referenceFrag, details) {
+export function adjustPtsByReferenceFrag(referenceFrag, details) {
     if (!referenceFrag) {
         return;
     }
@@ -49,7 +49,7 @@ const adjustPtsByReferenceFrag = function(referenceFrag, details) {
         }
     });
     details.PTSKnown = true;
-};
+}
 
 // If a change in CC is detected, the PTS can no longer be relied upon
 // Attempt to align the level by using the last level - find the last frag matching the current CC and use it's PTS
