@@ -11,6 +11,7 @@ import LevelHelper from '../helper/level-helper';
 import TimeRanges from '../utils/timeRanges';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
+import alignDiscontinuities from '../utils/discontinuity-aligner';
 
 const State = {
     STOPPED: 'STOPPED',
@@ -1111,7 +1112,7 @@ class StreamController extends EventHandler {
                     logger.log(`live playlist sliding:${sliding.toFixed(3)}`);
                 } else {
                     logger.log('live playlist - outdated PTS, unknown sliding');
-                    LevelHelper.alignDiscontinuities(
+                    alignDiscontinuities(
                         this.fragPrevious,
                         lastLevel,
                         newDetails
@@ -1120,11 +1121,7 @@ class StreamController extends EventHandler {
             } else {
                 logger.log('live playlist - first load, unknown sliding');
                 newDetails.PTSKnown = false;
-                LevelHelper.alignDiscontinuities(
-                    this.fragPrevious,
-                    lastLevel,
-                    newDetails
-                );
+                alignDiscontinuities(this.fragPrevious, lastLevel, newDetails);
             }
         } else {
             newDetails.PTSKnown = false;
