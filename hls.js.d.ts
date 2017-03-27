@@ -1222,6 +1222,6 @@ interface Fragment {
 
 declare var Hls: HlsFactory;
 
-declare module 'hlsjs' {
+declare module 'hls.js' {
   export = Hls;
 }
