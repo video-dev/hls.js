@@ -7,6 +7,3 @@ npm-debug.log
 
 # ignore JetBrains
 .idea/*
-
-# ignore vscode
-.vscode/
