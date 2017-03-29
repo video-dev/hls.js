@@ -16,10 +16,6 @@ function filterSubtitleTracks(textTrackList) {
   return tracks;
 }
 
-function isSubtitleTrack(track) {
-  return track.kind === 'subtitles';
-}
-
 class SubtitleTrackController extends EventHandler {
 
   constructor(hls) {
