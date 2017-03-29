@@ -60,7 +60,7 @@ design idea is pretty simple :
       - average half-life are configurable , refer to abrEwma* config params
   - [src/controller/fps-controller.js][]
     - in charge of monitoring frame rate, and fire FPS_DROP event in case FPS drop exceeds configured threshold. disabled for now.
-  - [src/controller/id3-track-controller.js](src/controller/id3-track-controller.js)
+  - [src/controller/id3-track-controller.js](../src/controller/id3-track-controller.js)
     - in charge of creating the id3 metadata text track and adding cues to that track in response to the FRAG_PARSING_METADATA event. the raw id3 data is base64 encoded and stored in the cue's text property.
   - [src/controller/level-controller.js][]
     - level controller is handling quality level set/get ((re)loading stream manifest/switching levels)  
