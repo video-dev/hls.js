@@ -577,7 +577,8 @@ class StreamController extends EventHandler {
                         deltaPTS &&
                         deltaPTS > config.maxBufferHole &&
                         fragPrevious.dropped &&
-                        curSNIdx
+                        curSNIdx &&
+                        !frag.backtracked
                     ) {
                         frag = prevFrag;
                         logger.warn(
