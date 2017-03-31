@@ -57,6 +57,10 @@
   - [`abrController`](#abrcontroller)
   - [`timelineController`](#timelinecontroller)
   - [`enableCEA708Captions`](#enablecea708captions)
+    [`captionsTextTrack1Label`](#captionsTextTrack1Label)
+    [`captionsTextTrack1LanguageCode`](#captionsTextTrack1LanguageCode)
+    [`captionsTextTrack2Label`](#captionsTextTrack2Label)
+    [`captionsTextTrack2LanguageCode`](#captionsTextTrack2LanguageCode)
   - [`stretchShortVideoTrack`](#stretchshortvideotrack)
   - [`forceKeyFrameOnDiscontinuity`](#forcekeyframeondiscontinuity)
   - [`abrEwmaFastLive`](#abrewmafastlive)
@@ -758,6 +762,38 @@ Parameter should be a class with a `destroy()` method:
 whether or not to enable CEA-708 captions
 
 parameter should be a boolean
+
+### `captionsTextTrack1Label`
+
+(default: `English`)
+
+Label for the text track generated for CEA-708 captions track 1. This is how it will appear in the browser's native menu for subtitles and captions.
+
+parameter should be a string
+
+### `captionsTextTrack1LanguageCode`
+
+(default: `en`)
+
+RFC 3066 language code for the text track generated for CEA-708 captions track 1.
+
+parameter should be a string
+
+### `captionsTextTrack2Label`
+
+(default: `Spanish`)
+
+Label for the text track generated for CEA-708 captions track 2. This is how it will appear in the browser's native menu for subtitles and captions.
+
+parameter should be a string
+
+### `captionsTextTrack2LanguageCode`
+
+(default: `es`)
+
+RFC 3066 language code for the text track generated for CEA-708 captions track 2.
+
+parameter should be a string
 
 ### `stretchShortVideoTrack`
 

@@ -303,98 +303,155 @@ function isUndefined(arg) {
 }
 
 },{}],2:[function(_dereq_,module,exports){
+// see https://tools.ietf.org/html/rfc1808
+
 /* jshint ignore:start */
 (function(root) { 
 /* jshint ignore:end */
 
-  var HASH_SPLIT = /^([^#]*)(.*)$/;
-  var QUERY_SPLIT = /^([^\?]*)(.*)$/;
-  var DOMAIN_SPLIT = /^(([a-z]+:\/\/)?[^:\/]+(?::[0-9]+)?)?(\/?.*)$/i;
+  var URL_REGEX = /^((?:[^\/;?#]+:)?)(\/\/[^\/\;?#]*)?(.*?)??(;.*?)?(\?.*?)?(#.*?)?$/;
+  var FIRST_SEGMENT_REGEX = /^([^\/;?#]*)(.*)$/;
+  var SLASH_DOT_REGEX = /(?:\/|^)\.(?=\/)/g;
+  var SLASH_DOT_DOT_REGEX = /(?:\/|^)\.\.\/(?!\.\.\/).*?(?=\/)/g;
 
-  var URLToolkit = {
-    // build an absolute URL from a relative one using the provided baseURL
-    // if relativeURL is an absolute URL it will be returned as is.
-    buildAbsoluteURL: function(baseURL, relativeURL) {
+  var URLToolkit = { // jshint ignore:line
+    // If opts.alwaysNormalize is true then the path will always be normalized even when it starts with / or //
+    // E.g
+    // With opts.alwaysNormalize = false (default, spec compliant)
+    // http://a.com/b/cd + /e/f/../g => http://a.com/e/f/../g
+    // With opts.alwaysNormalize = true (default, not spec compliant)
+    // http://a.com/b/cd + /e/f/../g => http://a.com/e/g
+    buildAbsoluteURL: function(baseURL, relativeURL, opts) {
+      opts = opts || {};
       // remove any remaining space and CRLF
+      baseURL = baseURL.trim();
       relativeURL = relativeURL.trim();
-      if (/^[a-z]+:/i.test(relativeURL)) {
-        // complete url, not relative
-        return relativeURL;
+      if (!relativeURL) {
+        // 2a) If the embedded URL is entirely empty, it inherits the
+        // entire base URL (i.e., is set equal to the base URL)
+        // and we are done.
+        if (!opts.alwaysNormalize) {
+          return baseURL;
+        }
+        var basePartsForNormalise = this.parseURL(baseURL);
+        if (!baseParts) {
+          throw new Error('Error trying to parse base URL.');
+        }
+        basePartsForNormalise.path = URLToolkit.normalizePath(basePartsForNormalise.path);
+        return URLToolkit.buildURLFromParts(basePartsForNormalise);
       }
-
-      var relativeURLQuery = null;
-      var relativeURLHash = null;
-
-      var relativeURLHashSplit = HASH_SPLIT.exec(relativeURL);
-      if (relativeURLHashSplit) {
-        relativeURLHash = relativeURLHashSplit[2];
-        relativeURL = relativeURLHashSplit[1];
+      var relativeParts = this.parseURL(relativeURL);
+      if (!relativeParts) {
+        throw new Error('Error trying to parse relative URL.');
       }
-      var relativeURLQuerySplit = QUERY_SPLIT.exec(relativeURL);
-      if (relativeURLQuerySplit) {
-        relativeURLQuery = relativeURLQuerySplit[2];
-        relativeURL = relativeURLQuerySplit[1];
+      if (relativeParts.scheme) {
+        // 2b) If the embedded URL starts with a scheme name, it is
+        // interpreted as an absolute URL and we are done.
+        if (!opts.alwaysNormalize) {
+          return relativeURL;
+        }
+        relativeParts.path = URLToolkit.normalizePath(relativeParts.path);
+        return URLToolkit.buildURLFromParts(relativeParts);
       }
-
-      var baseURLHashSplit = HASH_SPLIT.exec(baseURL);
-      if (baseURLHashSplit) {
-        baseURL = baseURLHashSplit[1];
-      }
-      var baseURLQuerySplit = QUERY_SPLIT.exec(baseURL);
-      if (baseURLQuerySplit) {
-        baseURL = baseURLQuerySplit[1];
-      }
-
-      var baseURLDomainSplit = DOMAIN_SPLIT.exec(baseURL);
-      if (!baseURLDomainSplit) {
+      var baseParts = this.parseURL(baseURL);
+      if (!baseParts) {
         throw new Error('Error trying to parse base URL.');
       }
-      
-      // e.g. 'http://', 'https://', ''
-      var baseURLProtocol = baseURLDomainSplit[2] || '';
-      // e.g. 'http://example.com', '//example.com', 'example.com', ''
-      var baseURLProtocolDomain = baseURLDomainSplit[1] || '';
-      // e.g. '/a/b/c/playlist.m3u8', 'a/b/c/playlist.m3u8'
-      var baseURLPath = baseURLDomainSplit[3];
-      if (baseURLPath.indexOf('/') !== 0 && baseURLProtocolDomain !== '') {
-        // this handles a base url of http://example.com (missing last slash)
-        baseURLPath = '/'+baseURLPath;
+      if (!baseParts.netLoc && baseParts.path && baseParts.path[0] !== '/') {
+        // If netLoc missing and path doesn't start with '/', assume everthing before the first '/' is the netLoc
+        // This causes 'example.com/a' to be handled as '//example.com/a' instead of '/example.com/a'
+        var pathParts = FIRST_SEGMENT_REGEX.exec(baseParts.path);
+        baseParts.netLoc = pathParts[1];
+        baseParts.path = pathParts[2];
       }
-
-      var builtURL = null;
-      if (/^\/\//.test(relativeURL)) {
-        // relative url starts wth '//' so copy protocol (which may be '' if baseUrl didn't provide one)
-        builtURL = baseURLProtocol+URLToolkit.buildAbsolutePath('', relativeURL.substring(2));
+      if (baseParts.netLoc && !baseParts.path) {
+        baseParts.path = '/';
       }
-      else if (/^\//.test(relativeURL)) {
-        // relative url starts with '/' so start from root of domain
-        builtURL = baseURLProtocolDomain+'/'+URLToolkit.buildAbsolutePath('', relativeURL.substring(1));
+      var builtParts = {
+        // 2c) Otherwise, the embedded URL inherits the scheme of
+        // the base URL.
+        scheme: baseParts.scheme,
+        netLoc: relativeParts.netLoc,
+        path: null,
+        params: relativeParts.params,
+        query: relativeParts.query,
+        fragment: relativeParts.fragment
+      };
+      if (!relativeParts.netLoc) {
+        // 3) If the embedded URL's <net_loc> is non-empty, we skip to
+        // Step 7.  Otherwise, the embedded URL inherits the <net_loc>
+        // (if any) of the base URL.
+        builtParts.netLoc = baseParts.netLoc;
+        // 4) If the embedded URL path is preceded by a slash "/", the
+        // path is not relative and we skip to Step 7.
+        if (relativeParts.path[0] !== '/') {
+          if (!relativeParts.path) {
+            // 5) If the embedded URL path is empty (and not preceded by a
+            // slash), then the embedded URL inherits the base URL path
+            builtParts.path = baseParts.path;
+            // 5a) if the embedded URL's <params> is non-empty, we skip to
+            // step 7; otherwise, it inherits the <params> of the base
+            // URL (if any) and
+            if (!relativeParts.params) {
+              builtParts.params = baseParts.params;
+              // 5b) if the embedded URL's <query> is non-empty, we skip to
+              // step 7; otherwise, it inherits the <query> of the base
+              // URL (if any) and we skip to step 7.
+              if (!relativeParts.query) {
+                builtParts.query = baseParts.query;
+              }
+            }
+          } else {
+            // 6) The last segment of the base URL's path (anything
+            // following the rightmost slash "/", or the entire path if no
+            // slash is present) is removed and the embedded URL's path is
+            // appended in its place.
+            var baseURLPath = baseParts.path;
+            var newPath = baseURLPath.substring(0, baseURLPath.lastIndexOf('/') + 1) + relativeParts.path;
+            builtParts.path = URLToolkit.normalizePath(newPath);
+          }
+        }
       }
-      else {
-        builtURL = URLToolkit.buildAbsolutePath(baseURLProtocolDomain+baseURLPath, relativeURL);
+      if (builtParts.path === null) {
+        builtParts.path = opts.alwaysNormalize ? URLToolkit.normalizePath(relativeParts.path) : relativeParts.path;
       }
-
-      // put the query and hash parts back
-      if (relativeURLQuery) {
-        builtURL += relativeURLQuery;
-      }
-      if (relativeURLHash) {
-        builtURL += relativeURLHash;
-      }
-      return builtURL;
+      return URLToolkit.buildURLFromParts(builtParts);
     },
-
-    // build an absolute path using the provided basePath
-    // adapted from https://developer.mozilla.org/en-US/docs/Web/API/document/cookie#Using_relative_URLs_in_the_path_parameter
-    // this does not handle the case where relativePath is "/" or "//". These cases should be handled outside this.
-    buildAbsolutePath: function(basePath, relativePath) {
-      var sRelPath = relativePath;
-      var nUpLn, sDir = '', sPath = basePath.replace(/[^\/]*$/, sRelPath.replace(/(\/|^)(?:\.?\/+)+/g, '$1'));
-      for (var nEnd, nStart = 0; nEnd = sPath.indexOf('/../', nStart), nEnd > -1; nStart = nEnd + nUpLn) {
-        nUpLn = /^\/(?:\.\.\/)*/.exec(sPath.slice(nEnd))[0].length;
-        sDir = (sDir + sPath.substring(nStart, nEnd)).replace(new RegExp('(?:\\\/+[^\\\/]*){0,' + ((nUpLn - 1) / 3) + '}$'), '/');
+    parseURL: function(url) {
+      var parts = URL_REGEX.exec(url);
+      if (!parts) {
+        return null;
       }
-      return sDir + sPath.substr(nStart);
+      return {
+        scheme: parts[1] || '',
+        netLoc: parts[2] || '',
+        path: parts[3] || '',
+        params: parts[4] || '',
+        query: parts[5] || '',
+        fragment: parts[6] || ''
+      };
+    },
+    normalizePath: function(path) {
+      // The following operations are
+      // then applied, in order, to the new path:
+      // 6a) All occurrences of "./", where "." is a complete path
+      // segment, are removed.
+      // 6b) If the path ends with "." as a complete path segment,
+      // that "." is removed.
+      path = path.split('').reverse().join('').replace(SLASH_DOT_REGEX, '');
+      // 6c) All occurrences of "<segment>/../", where <segment> is a
+      // complete path segment not equal to "..", are removed.
+      // Removal of these path segments is performed iteratively,
+      // removing the leftmost matching pattern on each iteration,
+      // until no matching pattern remains.
+      // 6d) If the path ends with "<segment>/..", where <segment> is a
+      // complete path segment not equal to "..", that
+      // "<segment>/.." is removed.
+      while (path.length !== (path = path.replace(SLASH_DOT_DOT_REGEX, '')).length) {} // jshint ignore:line
+      return path.split('').reverse().join('');
+    },
+    buildURLFromParts: function(parts) {
+      return parts.scheme + parts.netLoc + parts.path + parts.params + parts.query + parts.fragment;
     }
   };
 
@@ -1024,7 +1081,7 @@ var BufferController = function (_EventHandler) {
       // is greater than 100ms (this is enough to handle seek for VOD or level change for LIVE videos). At the time of change we issue
       // `SourceBuffer.abort()` and adjusting `SourceBuffer.timestampOffset` if `SourceBuffer.updating` is false or awaiting `updateend`
       // event if SB is in updating state.
-      // More info here: https://github.com/dailymotion/hls.js/issues/332#issuecomment-257986486
+      // More info here: https://github.com/video-dev/hls.js/issues/332#issuecomment-257986486
 
       if (type === 'audio' && audioTrack && audioTrack.container === 'audio/mpeg') {
         // Chrome audio mp3 track
@@ -1199,7 +1256,7 @@ var BufferController = function (_EventHandler) {
   }, {
     key: 'onSBUpdateError',
     value: function onSBUpdateError(event) {
-      _logger.logger.error('sourceBuffer error:' + event);
+      _logger.logger.error('sourceBuffer error:', event);
       // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
       // this error might not always be fatal (it is fatal if decode error is set, in that case
       // it will be followed by a mediaElement error ...)
@@ -1355,7 +1412,7 @@ var BufferController = function (_EventHandler) {
       this.updateMediaElementDuration();
     }
 
-    // https://github.com/dailymotion/hls.js/issues/355
+    // https://github.com/video-dev/hls.js/issues/355
 
   }, {
     key: 'updateMediaElementDuration',
@@ -2552,11 +2609,14 @@ var StreamController = function (_EventHandler) {
       // we just got done loading the final fragment, check if we need to finalize media stream
       var fragPrevious = this.fragPrevious;
       if (!levelDetails.live && fragPrevious && fragPrevious.sn === levelDetails.endSN) {
+        // fragPrevious is last fragment. retrieve level duration using last frag start offset + duration
+        // real duration might be lower than initial duration if there are drifts between real frag duration and playlist signaling
+        var duration = Math.min(media.duration, fragPrevious.start + fragPrevious.duration);
         // if everything (almost) til the end is buffered, let's signal eos
         // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference
         // using half frag duration should help cope with these cases.
-        // also cope with almost zero last frag duration (max last frag duration with 200ms) refer to https://github.com/dailymotion/hls.js/pull/657
-        if (media.duration - Math.max(bufferInfo.end, fragPrevious.start) <= Math.max(0.2, fragPrevious.duration / 2)) {
+        // also cope with almost zero last frag duration (max last frag duration with 200ms) refer to https://github.com/video-dev/hls.js/pull/657
+        if (duration - Math.max(bufferInfo.end, fragPrevious.start) <= Math.max(0.2, fragPrevious.duration / 2)) {
           // Finalize the media stream
           var data = {};
           if (this.altAudio) {
@@ -2761,8 +2821,10 @@ var StreamController = function (_EventHandler) {
             // Reset the dropped count now since it won't be reset until we parse the fragment again, which prevents infinite backtracking on the same segment
             _logger.logger.warn('Loaded fragment with dropped frames, backtracking 1 segment to find a keyframe');
             frag.dropped = 0;
-            if (prevFrag && prevFrag.loadCounter) {
-              prevFrag.loadCounter--;
+            if (prevFrag) {
+              if (prevFrag.loadCounter) {
+                prevFrag.loadCounter--;
+              }
               frag = prevFrag;
             } else {
               frag = null;
@@ -3526,33 +3588,29 @@ var StreamController = function (_EventHandler) {
   }, {
     key: '_checkAppendedParsed',
     value: function _checkAppendedParsed() {
-      var _this3 = this;
-
       //trigger handler right now
       if (this.state === State.PARSED && (!this.appended || !this.pendingBuffering)) {
         var frag = this.fragCurrent;
         if (frag) {
-          (function () {
-            var media = _this3.mediaBuffer ? _this3.mediaBuffer : _this3.media;
-            _logger.logger.log('main buffered : ' + _timeRanges2.default.toString(media.buffered));
-            // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
-            var bufferedFrags = _this3._bufferedFrags.filter(function (frag) {
-              return _bufferHelper2.default.isBuffered(media, (frag.startPTS + frag.endPTS) / 2);
-            });
-            // push new range
-            bufferedFrags.push(frag);
-            // sort frags, as we use BinarySearch for lookup in getBufferedFrag ...
-            _this3._bufferedFrags = bufferedFrags.sort(function (a, b) {
-              return a.startPTS - b.startPTS;
-            });
-            _this3.fragPrevious = frag;
-            var stats = _this3.stats;
-            stats.tbuffered = performance.now();
-            // we should get rid of this.fragLastKbps
-            _this3.fragLastKbps = Math.round(8 * stats.total / (stats.tbuffered - stats.tfirst));
-            _this3.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: stats, frag: frag, id: 'main' });
-            _this3.state = State.IDLE;
-          })();
+          var media = this.mediaBuffer ? this.mediaBuffer : this.media;
+          _logger.logger.log('main buffered : ' + _timeRanges2.default.toString(media.buffered));
+          // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
+          var bufferedFrags = this._bufferedFrags.filter(function (frag) {
+            return _bufferHelper2.default.isBuffered(media, (frag.startPTS + frag.endPTS) / 2);
+          });
+          // push new range
+          bufferedFrags.push(frag);
+          // sort frags, as we use BinarySearch for lookup in getBufferedFrag ...
+          this._bufferedFrags = bufferedFrags.sort(function (a, b) {
+            return a.startPTS - b.startPTS;
+          });
+          this.fragPrevious = frag;
+          var stats = this.stats;
+          stats.tbuffered = performance.now();
+          // we should get rid of this.fragLastKbps
+          this.fragLastKbps = Math.round(8 * stats.total / (stats.tbuffered - stats.tfirst));
+          this.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: stats, frag: frag, id: 'main' });
+          this.state = State.IDLE;
         }
         this.tick();
       }
@@ -3650,7 +3708,7 @@ var StreamController = function (_EventHandler) {
               this.state = State.IDLE;
             } else {
               // current position is not buffered, but browser is still complaining about buffer full error
-              // this happens on IE/Edge, refer to https://github.com/dailymotion/hls.js/pull/708
+              // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
               // in that case flush the whole buffer to recover
               _logger.logger.warn('buffer full error also media.currentTime is not buffered, flush everything');
               this.fragCurrent = null;
@@ -4297,29 +4355,27 @@ var Decrypter = function () {
         decryptor.expandKey(key);
         callback(decryptor.decrypt(data, 0, iv));
       } else {
-        (function () {
-          if (_this.logEnabled) {
-            _logger.logger.log('WebCrypto AES decrypt');
-            _this.logEnabled = false;
-          }
-          var subtle = _this.subtle;
-          if (_this.key !== key) {
-            _this.key = key;
-            _this.fastAesKey = new _fastAesKey2.default(subtle, key);
-          }
+        if (this.logEnabled) {
+          _logger.logger.log('WebCrypto AES decrypt');
+          this.logEnabled = false;
+        }
+        var subtle = this.subtle;
+        if (this.key !== key) {
+          this.key = key;
+          this.fastAesKey = new _fastAesKey2.default(subtle, key);
+        }
 
-          _this.fastAesKey.expandKey().then(function (aesKey) {
-            // decrypt using web crypto
-            var crypto = new _aesCrypto2.default(subtle, iv);
-            crypto.decrypt(data, aesKey).catch(function (err) {
-              _this.onWebCryptoError(err, data, key, iv, callback);
-            }).then(function (result) {
-              callback(result);
-            });
-          }).catch(function (err) {
+        this.fastAesKey.expandKey().then(function (aesKey) {
+          // decrypt using web crypto
+          var crypto = new _aesCrypto2.default(subtle, iv);
+          crypto.decrypt(data, aesKey).catch(function (err) {
             _this.onWebCryptoError(err, data, key, iv, callback);
+          }).then(function (result) {
+            callback(result);
           });
-        })();
+        }).catch(function (err) {
+          _this.onWebCryptoError(err, data, key, iv, callback);
+        });
       }
     }
   }, {
@@ -5038,7 +5094,7 @@ var Demuxer = function () {
       var discontinuity = !(lastFrag && frag.cc === lastFrag.cc);
       var trackSwitch = !(lastFrag && frag.level === lastFrag.level);
       var nextSN = lastFrag && frag.sn === lastFrag.sn + 1;
-      var contiguous = !discontinuity && !trackSwitch && nextSN;
+      var contiguous = !trackSwitch && nextSN;
       if (discontinuity) {
         _logger.logger.log(this.id + ':discontinuity detected');
       }
@@ -6275,15 +6331,11 @@ var TSDemuxer = function () {
   }, {
     key: 'decryptAndRemux',
     value: function decryptAndRemux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
-      var _this = this;
-
       if (audioTrack.samples && audioTrack.isAAC) {
-        (function () {
-          var localthis = _this;
-          _this.sampleAes.decryptAacSamples(audioTrack.samples, 0, function () {
-            localthis.decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
-          });
-        })();
+        var localthis = this;
+        this.sampleAes.decryptAacSamples(audioTrack.samples, 0, function () {
+          localthis.decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
+        });
       } else {
         this.decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
       }
@@ -6291,15 +6343,11 @@ var TSDemuxer = function () {
   }, {
     key: 'decryptAndRemuxAvc',
     value: function decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
-      var _this2 = this;
-
       if (videoTrack.samples) {
-        (function () {
-          var localthis = _this2;
-          _this2.sampleAes.decryptAvcSamples(videoTrack.samples, 0, 0, function () {
-            localthis.remuxer.remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
-          });
-        })();
+        var localthis = this;
+        this.sampleAes.decryptAvcSamples(videoTrack.samples, 0, 0, function () {
+          localthis.remuxer.remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
+        });
       } else {
         this.remuxer.remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
       }
@@ -6534,7 +6582,7 @@ var TSDemuxer = function () {
   }, {
     key: '_parseAVCPES',
     value: function _parseAVCPES(pes, last) {
-      var _this3 = this;
+      var _this = this;
 
       //logger.log('parse new PES');
       var track = this._avcTrack,
@@ -6575,7 +6623,7 @@ var TSDemuxer = function () {
             push = true;
             // handle PES not starting with AUD
             if (!avcSample) {
-              avcSample = _this3.avcSample = _this3._createAVCSample(true, pes.pts, pes.dts, '');
+              avcSample = _this.avcSample = _this._createAVCSample(true, pes.pts, pes.dts, '');
             }
             if (debug) {
               avcSample.debug += 'IDR ';
@@ -6589,7 +6637,7 @@ var TSDemuxer = function () {
             if (debug && avcSample) {
               avcSample.debug += 'SEI ';
             }
-            expGolombDecoder = new _expGolomb2.default(_this3.discardEPB(unit.data));
+            expGolombDecoder = new _expGolomb2.default(_this.discardEPB(unit.data));
 
             // skip frameType
             expGolombDecoder.readUByte();
@@ -6645,7 +6693,7 @@ var TSDemuxer = function () {
                           byteArray.push(expGolombDecoder.readUByte());
                         }
 
-                        _this3._insertSampleInOrder(_this3._txtTrack.samples, { type: 3, pts: pes.pts, bytes: byteArray });
+                        _this._insertSampleInOrder(_this._txtTrack.samples, { type: 3, pts: pes.pts, bytes: byteArray });
                       }
                     }
                   }
@@ -6670,7 +6718,7 @@ var TSDemuxer = function () {
               track.height = config.height;
               track.pixelRatio = config.pixelRatio;
               track.sps = [unit.data];
-              track.duration = _this3._duration;
+              track.duration = _this._duration;
               var codecarray = unit.data.subarray(1, 4);
               var codecstring = 'avc1.';
               for (i = 0; i < 3; i++) {
@@ -6697,9 +6745,9 @@ var TSDemuxer = function () {
           case 9:
             push = false;
             if (avcSample) {
-              _this3.pushAccesUnit(avcSample, track);
+              _this.pushAccesUnit(avcSample, track);
             }
-            avcSample = _this3.avcSample = _this3._createAVCSample(false, pes.pts, pes.dts, debug ? 'AUD ' : '');
+            avcSample = _this.avcSample = _this._createAVCSample(false, pes.pts, pes.dts, debug ? 'AUD ' : '');
             break;
           // Filler Data
           case 12:
@@ -7784,7 +7832,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.7.3';
+      return '0.7.4';
     }
   }, {
     key: 'Events',
@@ -8572,7 +8620,7 @@ var LevelKey = function () {
     key: 'uri',
     get: function get() {
       if (!this._uri && this.reluri) {
-        this._uri = _urlToolkit2.default.buildAbsoluteURL(this.baseuri, this.reluri);
+        this._uri = _urlToolkit2.default.buildAbsoluteURL(this.baseuri, this.reluri, { alwaysNormalize: true });
       }
       return this._uri;
     }
@@ -8640,7 +8688,7 @@ var Fragment = function () {
     key: 'url',
     get: function get() {
       if (!this._url && this.relurl) {
-        this._url = _urlToolkit2.default.buildAbsoluteURL(this.baseurl, this.relurl);
+        this._url = _urlToolkit2.default.buildAbsoluteURL(this.baseurl, this.relurl, { alwaysNormalize: true });
       }
       return this._url;
     },
@@ -8784,7 +8832,7 @@ var PlaylistLoader = function (_EventHandler) {
   }, {
     key: 'resolve',
     value: function resolve(url, baseUrl) {
-      return _urlToolkit2.default.buildAbsoluteURL(baseUrl, url);
+      return _urlToolkit2.default.buildAbsoluteURL(baseUrl, url, { alwaysNormalize: true });
     }
   }, {
     key: 'parseMasterPlaylist',
@@ -8887,7 +8935,7 @@ var PlaylistLoader = function (_EventHandler) {
         if (duration) {
           // INF
           frag.duration = parseFloat(duration);
-          // avoid sliced strings    https://github.com/dailymotion/hls.js/issues/939
+          // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           var title = (' ' + result[2]).slice(1);
           frag.title = title ? title : null;
           frag.tagList.push(title ? ['INF', duration, title] : ['INF', duration]);
@@ -8902,7 +8950,7 @@ var PlaylistLoader = function (_EventHandler) {
             frag.level = id;
             frag.cc = cc;
             frag.baseurl = baseurl;
-            // avoid sliced strings    https://github.com/dailymotion/hls.js/issues/939
+            // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
             frag.relurl = (' ' + result[3]).slice(1);
 
             level.fragments.push(frag);
@@ -8922,7 +8970,7 @@ var PlaylistLoader = function (_EventHandler) {
           }
         } else if (result[5]) {
           // PROGRAM-DATE-TIME
-          // avoid sliced strings    https://github.com/dailymotion/hls.js/issues/939
+          // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           frag.rawProgramDateTime = (' ' + result[5]).slice(1);
           frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
         } else {
@@ -8933,7 +8981,7 @@ var PlaylistLoader = function (_EventHandler) {
             }
           }
 
-          // avoid sliced strings    https://github.com/dailymotion/hls.js/issues/939
+          // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           var value1 = (' ' + result[i + 1]).slice(1);
           var value2 = (' ' + result[i + 2]).slice(1);
 
@@ -11016,22 +11064,31 @@ var XhrLoader = function () {
       } else {
         xhr = this.loader = new XMLHttpRequest();
       }
-
-      xhr.onreadystatechange = this.readystatechange.bind(this);
-      xhr.onprogress = this.loadprogress.bind(this);
-
-      xhr.open('GET', context.url, true);
-
-      if (context.rangeEnd) {
-        xhr.setRequestHeader('Range', 'bytes=' + context.rangeStart + '-' + (context.rangeEnd - 1));
-      }
-      xhr.responseType = context.responseType;
       var stats = this.stats;
       stats.tfirst = 0;
       stats.loaded = 0;
-      if (this.xhrSetup) {
-        this.xhrSetup(xhr, context.url);
+      var xhrSetup = this.xhrSetup;
+      if (xhrSetup) {
+        try {
+          xhrSetup(xhr, context.url);
+        } catch (e) {
+          // fix xhrSetup: (xhr, url) => {xhr.setRequestHeader("Content-Language", "test");}
+          // not working, as xhr.setRequestHeader expects xhr.readyState === OPEN
+          xhr.open('GET', context.url, true);
+          xhrSetup(xhr, context.url);
+        }
       }
+
+      if (!xhr.readyState) {
+        xhr.open('GET', context.url, true);
+      }
+      if (context.rangeEnd) {
+        xhr.setRequestHeader('Range', 'bytes=' + context.rangeStart + '-' + (context.rangeEnd - 1));
+      }
+      xhr.onreadystatechange = this.readystatechange.bind(this);
+      xhr.onprogress = this.loadprogress.bind(this);
+      xhr.responseType = context.responseType;
+
       // setup timeout before we perform request
       this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), this.config.timeout);
       xhr.send();

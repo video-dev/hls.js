@@ -1,7 +1,7 @@
-[![Build Status](https://travis-ci.org/dailymotion/hls.js.svg?branch=master)](https://travis-ci.org/dailymotion/hls.js)
+[![Build Status](https://travis-ci.org/video-dev/hls.js.svg?branch=master)](https://travis-ci.org/video-dev/hls.js)
 [![npm][npm-image]][npm-url]
 
-Join the discussion: [![Slack Status](https://hlsjs.herokuapp.com/badge.svg)](https://hlsjs.herokuapp.com/)
+Join the discussion: [![Slack Status](http://video-dev.org/badge.svg)](http://video-dev.org/)
 
 # ![hls.js](https://cloud.githubusercontent.com/assets/616833/19739063/e10be95a-9bb9-11e6-8100-2896f8500138.png)
 hls.js is a JavaScript library which implements an [HTTP Live Streaming] client.
@@ -24,7 +24,7 @@ hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
 
 ## Demo
 
-[http://dailymotion.github.io/hls.js/demo](http://dailymotion.github.io/hls.js/demo)
+[http://video-dev.github.io/hls.js/demo](http://video-dev.github.io/hls.js/demo)
 
 ## Getting Started
 
@@ -66,21 +66,21 @@ HTMLVideoElement control and events could be used seamlessly.
 
 hls.js is (being) integrated in the following players:
 
- - [Akamai Adaptive Media Player (AMP)] (https://www.akamai.com/us/en/solutions/products/media-delivery/adaptive-media-player.jsp)
- - [Clappr] (https://github.com/clappr/clappr)
- - [Flowplayer] (https://www.flowplayer.org)  through [flowplayer-hlsjs] (https://github.com/flowplayer/flowplayer-hlsjs)
- - [MediaElement.js] (http://www.mediaelementjs.com)
- - [Videojs] (http://videojs.com) through [Videojs-hlsjs] (https://github.com/benjipott/videojs-hlsjs)
- - [Videojs] (http://videojs.com) through [videojs-hls.js] (https://github.com/streamroot/videojs-hls.js). hls.js is integrated as a SourceHandler -- new feature in Video.js 5.
- - [Videojs] (http://videojs.com) through [videojs-contrib-hls.js](https://github.com/Peer5/videojs-contrib-hls.js). Production ready plug-in with full fallback compatibility built-in.
+ - [Akamai Adaptive Media Player (AMP)](https://www.akamai.com/us/en/solutions/products/media-delivery/adaptive-media-player.jsp)
+ - [Clappr](https://github.com/clappr/clappr)
+ - [Flowplayer](https://www.flowplayer.org)  through [flowplayer-hlsjs](https://github.com/flowplayer/flowplayer-hlsjs)
+ - [MediaElement.js](http://www.mediaelementjs.com)
+ - [Videojs](http://videojs.com) through [Videojs-hlsjs](https://github.com/benjipott/videojs-hlsjs)
+ - [Videojs](http://videojs.com) through [videojs-hls.js](https://github.com/streamroot/videojs-hls.js). hls.js is integrated as a SourceHandler -- new feature in Video.js 5.
+ - [Videojs](http://videojs.com) through [videojs-contrib-hls.js](https://github.com/Peer5/videojs-contrib-hls.js). Production ready plug-in with full fallback compatibility built-in.
 
 
 ## Chrome/Firefox integration
 
 made by [gramk](https://github.com/gramk/chrome-hls),plays hls from address bar and m3u8 links 
 
- - Chrome [native-hls] (https://chrome.google.com/webstore/detail/native-hls-playback/emnphkkblegpebimobpbekeedfgemhof)
- - Firefox [native-hls] (https://addons.mozilla.org/en-US/firefox/addon/native_hls_playback/)
+ - Chrome [native-hls](https://chrome.google.com/webstore/detail/native-hls-playback/emnphkkblegpebimobpbekeedfgemhof)
+ - Firefox [native-hls](https://addons.mozilla.org/en-US/firefox/addon/native_hls_playback/)
 
 
 
@@ -89,8 +89,8 @@ made by [gramk](https://github.com/gramk/chrome-hls),plays hls from address bar 
 No external JS libs are needed.
 Prepackaged build is included in the [dist] (dist) folder:
 
- - [hls.js] (dist/hls.js)
- - [hls.min.js] (dist/hls.min.js)
+ - [hls.js](dist/hls.js)
+ - [hls.min.js](dist/hls.min.js)
 
 If you want to bundle the application yourself, use node
 
@@ -196,7 +196,7 @@ Pull requests are welcome. Here is a quick guide on how to start.
 
  - First, checkout the repository and install required dependencies
 ```sh
-git clone https://github.com/dailymotion/hls.js.git
+git clone https://github.com/video-dev/hls.js.git
 # setup dev environement
 cd hls.js
 npm install

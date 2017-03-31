@@ -242,11 +242,14 @@ class StreamController extends EventHandler {
     // we just got done loading the final fragment, check if we need to finalize media stream
     let fragPrevious = this.fragPrevious;
     if (!levelDetails.live && fragPrevious && fragPrevious.sn === levelDetails.endSN) {
+        // fragPrevious is last fragment. retrieve level duration using last frag start offset + duration
+        // real duration might be lower than initial duration if there are drifts between real frag duration and playlist signaling
+        const duration = Math.min(media.duration,fragPrevious.start + fragPrevious.duration);
         // if everything (almost) til the end is buffered, let's signal eos
         // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference
         // using half frag duration should help cope with these cases.
-        // also cope with almost zero last frag duration (max last frag duration with 200ms) refer to https://github.com/dailymotion/hls.js/pull/657
-        if (media.duration - Math.max(bufferInfo.end,fragPrevious.start) <= Math.max(0.2,fragPrevious.duration/2)) {
+        // also cope with almost zero last frag duration (max last frag duration with 200ms) refer to https://github.com/video-dev/hls.js/pull/657
+        if (duration - Math.max(bufferInfo.end,fragPrevious.start) <= Math.max(0.2,fragPrevious.duration/2)) {
         // Finalize the media stream
         let data = {};
         if (this.altAudio) {
@@ -448,8 +451,10 @@ class StreamController extends EventHandler {
            // Reset the dropped count now since it won't be reset until we parse the fragment again, which prevents infinite backtracking on the same segment
            logger.warn('Loaded fragment with dropped frames, backtracking 1 segment to find a keyframe');
            frag.dropped = 0;
-           if (prevFrag && prevFrag.loadCounter) {
-             prevFrag.loadCounter--;
+           if (prevFrag) {
+             if (prevFrag.loadCounter) {
+               prevFrag.loadCounter--;
+             }
              frag = prevFrag;
            } else {
              frag = null;
@@ -1340,7 +1345,7 @@ class StreamController extends EventHandler {
             this.state = State.IDLE;
           } else {
             // current position is not buffered, but browser is still complaining about buffer full error
-            // this happens on IE/Edge, refer to https://github.com/dailymotion/hls.js/pull/708
+            // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
             // in that case flush the whole buffer to recover
             logger.warn('buffer full error also media.currentTime is not buffered, flush everything');
             this.fragCurrent = null;

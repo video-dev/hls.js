@@ -47,22 +47,31 @@ class XhrLoader {
     } else {
        xhr = this.loader = new XMLHttpRequest();
     }
-
-    xhr.onreadystatechange = this.readystatechange.bind(this);
-    xhr.onprogress = this.loadprogress.bind(this);
-
-    xhr.open('GET', context.url, true);
-
-    if (context.rangeEnd) {
-      xhr.setRequestHeader('Range','bytes=' + context.rangeStart + '-' + (context.rangeEnd-1));
-    }
-    xhr.responseType = context.responseType;
     let stats = this.stats;
     stats.tfirst = 0;
     stats.loaded = 0;
-    if (this.xhrSetup) {
-      this.xhrSetup(xhr, context.url);
+    const xhrSetup = this.xhrSetup;
+    if (xhrSetup) {
+      try {
+        xhrSetup(xhr, context.url);
+      } catch(e) {
+        // fix xhrSetup: (xhr, url) => {xhr.setRequestHeader("Content-Language", "test");}
+        // not working, as xhr.setRequestHeader expects xhr.readyState === OPEN
+        xhr.open('GET', context.url, true);
+        xhrSetup(xhr, context.url);        
+      }
     }
+
+    if (!xhr.readyState) {
+      xhr.open('GET', context.url, true);
+    }
+    if (context.rangeEnd) {
+      xhr.setRequestHeader('Range','bytes=' + context.rangeStart + '-' + (context.rangeEnd-1));
+    }
+    xhr.onreadystatechange = this.readystatechange.bind(this);
+    xhr.onprogress = this.loadprogress.bind(this);
+    xhr.responseType = context.responseType;
+
     // setup timeout before we perform request
     this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), this.config.timeout);
     xhr.send();

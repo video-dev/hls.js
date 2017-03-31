@@ -199,7 +199,7 @@ class AudioStreamController extends EventHandler {
             trackId = this.trackId;
 
         // if buffer length is less than maxBufLen try to load a new fragment
-        if (bufferLen < maxBufLen && trackId < tracks.length) {
+        if ((bufferLen < maxBufLen || audioSwitch) && trackId < tracks.length) {
           trackDetails = tracks[trackId].details;
           // if track info not retrieved yet, switch state and wait for track retrieval
           if (typeof trackDetails === 'undefined') {
@@ -829,7 +829,7 @@ class AudioStreamController extends EventHandler {
             this.state = State.IDLE;
           } else {
             // current position is not buffered, but browser is still complaining about buffer full error
-            // this happens on IE/Edge, refer to https://github.com/dailymotion/hls.js/pull/708
+            // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
             // in that case flush the whole audio buffer to recover
             logger.warn('buffer full error also media.currentTime is not buffered, flush audio buffer');
             this.fragCurrent = null;
