@@ -1286,7 +1286,7 @@ var AudioStreamController = function (_EventHandler) {
               trackId = this.trackId;
 
           // if buffer length is less than maxBufLen try to load a new fragment
-          if (bufferLen < maxBufLen && trackId < tracks.length) {
+          if ((bufferLen < maxBufLen || audioSwitch) && trackId < tracks.length) {
             trackDetails = tracks[trackId].details;
             // if track info not retrieved yet, switch state and wait for track retrieval
             if (typeof trackDetails === 'undefined') {
@@ -15276,8 +15276,16 @@ var XhrLoader = function () {
       var stats = this.stats;
       stats.tfirst = 0;
       stats.loaded = 0;
-      if (this.xhrSetup) {
-        this.xhrSetup(xhr, context.url);
+      var xhrSetup = this.xhrSetup;
+      if (xhrSetup) {
+        try {
+          xhrSetup(xhr, context.url);
+        } catch (e) {
+          // fix xhrSetup: (xhr, url) => {xhr.setRequestHeader("Content-Language", "test");}
+          // not working, as xhr.setRequestHeader expects xhr.readyState === OPEN
+          xhr.open('GET', context.url, true);
+          xhrSetup(xhr, context.url);
+        }
       }
 
       if (!xhr.readyState) {
