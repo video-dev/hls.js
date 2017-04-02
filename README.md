@@ -137,7 +137,6 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
     - ISO/IEC 11172-3 / ISO/IEC 13818-3 (MPEG-1/2 Audio Layer III) Elementary Stream
     - Packetized metadata (ID3) Elementary Stream
   - AAC container (audio only streams)
-  - MPEG Audio container (MPEG-1/2 Audio Layer III audio only streams)
   - Timed Metadata for HTTP Live Streaming (in ID3 format, carried in MPEG-2 TS)
   - AES-128 decryption
   - SAMPLE-AES decryption
@@ -162,6 +161,7 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - [Redundant/Failover Playlists](https://developer.apple.com/library/ios/documentation/NetworkingInternet/Conceptual/StreamingMediaGuide/UsingHTTPLiveStreaming/UsingHTTPLiveStreaming.html#//apple_ref/doc/uid/TP40008332-CH102-SW22)
 
 ## Not Supported (Yet)
+  - MPEG Audio container (MPEG-1/2 Audio Layer III audio only streams)
   - MP3 Elementary Stream in Edge for Windows 10+
 
 ### Supported M3U8 tags
