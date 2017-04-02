@@ -102,7 +102,7 @@ class StreamController extends EventHandler {
             this.nextLoadPosition = this.startPosition = this.lastCurrentTime = startPosition;
             this.tick();
         } else {
-            logger.warn('cannot start loading as manifest not parsed yet');
+            this.forceStartLoad = true;
             this.state = State.STOPPED;
         }
     }
@@ -121,6 +121,7 @@ class StreamController extends EventHandler {
             this.demuxer = null;
         }
         this.state = State.STOPPED;
+        this.forceStartLoad = false;
     }
 
     tick() {
@@ -1069,7 +1070,7 @@ class StreamController extends EventHandler {
         this.startLevelLoaded = false;
         this.startFragRequested = false;
         let config = this.config;
-        if (config.autoStartLoad) {
+        if (config.autoStartLoad || this.forceStartLoad) {
             this.hls.startLoad(config.startPosition);
         }
     }
