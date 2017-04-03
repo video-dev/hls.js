@@ -50,8 +50,16 @@ class XhrLoader {
     let stats = this.stats;
     stats.tfirst = 0;
     stats.loaded = 0;
-    if (this.xhrSetup) {
-      this.xhrSetup(xhr, context.url);
+    const xhrSetup = this.xhrSetup;
+    if (xhrSetup) {
+      try {
+        xhrSetup(xhr, context.url);
+      } catch(e) {
+        // fix xhrSetup: (xhr, url) => {xhr.setRequestHeader("Content-Language", "test");}
+        // not working, as xhr.setRequestHeader expects xhr.readyState === OPEN
+        xhr.open('GET', context.url, true);
+        xhrSetup(xhr, context.url);        
+      }
     }
 
     if (!xhr.readyState) {

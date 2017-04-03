@@ -202,7 +202,7 @@ class AudioStreamController extends EventHandler {
             trackId = this.trackId;
 
         // if buffer length is less than maxBufLen try to load a new fragment
-        if (bufferLen < maxBufLen && trackId < tracks.length) {
+        if ((bufferLen < maxBufLen || audioSwitch) && trackId < tracks.length) {
           trackDetails = tracks[trackId].details;
           // if track info not retrieved yet, switch state and wait for track retrieval
           if (typeof trackDetails === 'undefined') {

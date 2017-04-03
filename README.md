@@ -66,21 +66,21 @@ HTMLVideoElement control and events could be used seamlessly.
 
 hls.js is (being) integrated in the following players:
 
- - [Akamai Adaptive Media Player (AMP)] (https://www.akamai.com/us/en/solutions/products/media-delivery/adaptive-media-player.jsp)
- - [Clappr] (https://github.com/clappr/clappr)
- - [Flowplayer] (https://www.flowplayer.org)  through [flowplayer-hlsjs] (https://github.com/flowplayer/flowplayer-hlsjs)
- - [MediaElement.js] (http://www.mediaelementjs.com)
- - [Videojs] (http://videojs.com) through [Videojs-hlsjs] (https://github.com/benjipott/videojs-hlsjs)
- - [Videojs] (http://videojs.com) through [videojs-hls.js] (https://github.com/streamroot/videojs-hls.js). hls.js is integrated as a SourceHandler -- new feature in Video.js 5.
- - [Videojs] (http://videojs.com) through [videojs-contrib-hls.js](https://github.com/Peer5/videojs-contrib-hls.js). Production ready plug-in with full fallback compatibility built-in.
+ - [Akamai Adaptive Media Player (AMP)](https://www.akamai.com/us/en/solutions/products/media-delivery/adaptive-media-player.jsp)
+ - [Clappr](https://github.com/clappr/clappr)
+ - [Flowplayer](https://www.flowplayer.org)  through [flowplayer-hlsjs](https://github.com/flowplayer/flowplayer-hlsjs)
+ - [MediaElement.js](http://www.mediaelementjs.com)
+ - [Videojs](http://videojs.com) through [Videojs-hlsjs](https://github.com/benjipott/videojs-hlsjs)
+ - [Videojs](http://videojs.com) through [videojs-hls.js](https://github.com/streamroot/videojs-hls.js). hls.js is integrated as a SourceHandler -- new feature in Video.js 5.
+ - [Videojs](http://videojs.com) through [videojs-contrib-hls.js](https://github.com/Peer5/videojs-contrib-hls.js). Production ready plug-in with full fallback compatibility built-in.
 
 
 ## Chrome/Firefox integration
 
 made by [gramk](https://github.com/gramk/chrome-hls),plays hls from address bar and m3u8 links 
 
- - Chrome [native-hls] (https://chrome.google.com/webstore/detail/native-hls-playback/emnphkkblegpebimobpbekeedfgemhof)
- - Firefox [native-hls] (https://addons.mozilla.org/en-US/firefox/addon/native_hls_playback/)
+ - Chrome [native-hls](https://chrome.google.com/webstore/detail/native-hls-playback/emnphkkblegpebimobpbekeedfgemhof)
+ - Firefox [native-hls](https://addons.mozilla.org/en-US/firefox/addon/native_hls_playback/)
 
 
 
@@ -89,8 +89,8 @@ made by [gramk](https://github.com/gramk/chrome-hls),plays hls from address bar 
 No external JS libs are needed.
 Prepackaged build is included in the [dist] (dist) folder:
 
- - [hls.js] (dist/hls.js)
- - [hls.min.js] (dist/hls.min.js)
+ - [hls.js](dist/hls.js)
+ - [hls.min.js](dist/hls.min.js)
 
 If you want to bundle the application yourself, use node
 
@@ -137,7 +137,6 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
     - ISO/IEC 11172-3 / ISO/IEC 13818-3 (MPEG-1/2 Audio Layer III) Elementary Stream
     - Packetized metadata (ID3) Elementary Stream
   - AAC container (audio only streams)
-  - MPEG Audio container (MPEG-1/2 Audio Layer III audio only streams)
   - Timed Metadata for HTTP Live Streaming (in ID3 format, carried in MPEG-2 TS)
   - AES-128 decryption
   - SAMPLE-AES decryption
@@ -162,6 +161,7 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - [Redundant/Failover Playlists](https://developer.apple.com/library/ios/documentation/NetworkingInternet/Conceptual/StreamingMediaGuide/UsingHTTPLiveStreaming/UsingHTTPLiveStreaming.html#//apple_ref/doc/uid/TP40008332-CH102-SW22)
 
 ## Not Supported (Yet)
+  - MPEG Audio container (MPEG-1/2 Audio Layer III audio only streams)
   - MP3 Elementary Stream in Edge for Windows 10+
 
 ### Supported M3U8 tags
