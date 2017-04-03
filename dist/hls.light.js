@@ -2246,9 +2246,11 @@ var LevelController = function (_EventHandler) {
     value: function tick() {
       var levelId = this._level;
       if (levelId !== undefined && this.canload) {
-        var level = this._levels[levelId],
-            urlId = level.urlId;
-        this.hls.trigger(_events2.default.LEVEL_LOADING, { url: level.url[urlId], level: levelId, id: urlId });
+        var level = this._levels[levelId];
+        if (level && level.url) {
+          var urlId = level.urlId;
+          this.hls.trigger(_events2.default.LEVEL_LOADING, { url: level.url[urlId], level: levelId, id: urlId });
+        }
       }
     }
   }, {
@@ -2458,7 +2460,7 @@ var StreamController = function (_EventHandler) {
         this.nextLoadPosition = this.startPosition = this.lastCurrentTime = startPosition;
         this.tick();
       } else {
-        _logger.logger.warn('cannot start loading as manifest not parsed yet');
+        this.forceStartLoad = true;
         this.state = State.STOPPED;
       }
     }
@@ -2478,6 +2480,7 @@ var StreamController = function (_EventHandler) {
         this.demuxer = null;
       }
       this.state = State.STOPPED;
+      this.forceStartLoad = false;
     }
   }, {
     key: 'tick',
@@ -3210,7 +3213,7 @@ var StreamController = function (_EventHandler) {
       this.startLevelLoaded = false;
       this.startFragRequested = false;
       var config = this.config;
-      if (config.autoStartLoad) {
+      if (config.autoStartLoad || this.forceStartLoad) {
         this.hls.startLoad(config.startPosition);
       }
     }
@@ -7783,6 +7786,10 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+var _urlToolkit = _dereq_(2);
+
+var _urlToolkit2 = _interopRequireDefault(_urlToolkit);
+
 var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
@@ -7832,7 +7839,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.7.4';
+      return '0.7.5';
     }
   }, {
     key: 'Events',
@@ -7991,6 +7998,7 @@ var Hls = function () {
   }, {
     key: 'loadSource',
     value: function loadSource(url) {
+      url = _urlToolkit2.default.buildAbsoluteURL(window.location.href, url, { alwaysNormalize: true });
       _logger.logger.log('loadSource:' + url);
       this.url = url;
       // when attaching to a source URL, trigger a playlist load
@@ -8291,7 +8299,7 @@ var Hls = function () {
 
 exports.default = Hls;
 
-},{"1":1,"10":10,"25":25,"27":27,"33":33,"34":34,"35":35,"4":4,"43":43,"9":9}],32:[function(_dereq_,module,exports){
+},{"1":1,"10":10,"2":2,"25":25,"27":27,"33":33,"34":34,"35":35,"4":4,"43":43,"9":9}],32:[function(_dereq_,module,exports){
 'use strict';
 
 // This is mostly for support of the es6 module export
