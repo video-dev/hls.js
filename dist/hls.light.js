@@ -2246,9 +2246,11 @@ var LevelController = function (_EventHandler) {
     value: function tick() {
       var levelId = this._level;
       if (levelId !== undefined && this.canload) {
-        var level = this._levels[levelId],
-            urlId = level.urlId;
-        this.hls.trigger(_events2.default.LEVEL_LOADING, { url: level.url[urlId], level: levelId, id: urlId });
+        var level = this._levels[levelId];
+        if (level && level.url) {
+          var urlId = level.urlId;
+          this.hls.trigger(_events2.default.LEVEL_LOADING, { url: level.url[urlId], level: levelId, id: urlId });
+        }
       }
     }
   }, {
@@ -2458,7 +2460,7 @@ var StreamController = function (_EventHandler) {
         this.nextLoadPosition = this.startPosition = this.lastCurrentTime = startPosition;
         this.tick();
       } else {
-        _logger.logger.warn('cannot start loading as manifest not parsed yet');
+        this.forceStartLoad = true;
         this.state = State.STOPPED;
       }
     }
@@ -2478,6 +2480,7 @@ var StreamController = function (_EventHandler) {
         this.demuxer = null;
       }
       this.state = State.STOPPED;
+      this.forceStartLoad = false;
     }
   }, {
     key: 'tick',
@@ -2609,11 +2612,14 @@ var StreamController = function (_EventHandler) {
       // we just got done loading the final fragment, check if we need to finalize media stream
       var fragPrevious = this.fragPrevious;
       if (!levelDetails.live && fragPrevious && fragPrevious.sn === levelDetails.endSN) {
+        // fragPrevious is last fragment. retrieve level duration using last frag start offset + duration
+        // real duration might be lower than initial duration if there are drifts between real frag duration and playlist signaling
+        var duration = Math.min(media.duration, fragPrevious.start + fragPrevious.duration);
         // if everything (almost) til the end is buffered, let's signal eos
         // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference
         // using half frag duration should help cope with these cases.
         // also cope with almost zero last frag duration (max last frag duration with 200ms) refer to https://github.com/video-dev/hls.js/pull/657
-        if (media.duration - Math.max(bufferInfo.end, fragPrevious.start) <= Math.max(0.2, fragPrevious.duration / 2)) {
+        if (duration - Math.max(bufferInfo.end, fragPrevious.start) <= Math.max(0.2, fragPrevious.duration / 2)) {
           // Finalize the media stream
           var data = {};
           if (this.altAudio) {
@@ -3207,7 +3213,7 @@ var StreamController = function (_EventHandler) {
       this.startLevelLoaded = false;
       this.startFragRequested = false;
       var config = this.config;
-      if (config.autoStartLoad) {
+      if (config.autoStartLoad || this.forceStartLoad) {
         this.hls.startLoad(config.startPosition);
       }
     }
@@ -3585,33 +3591,29 @@ var StreamController = function (_EventHandler) {
   }, {
     key: '_checkAppendedParsed',
     value: function _checkAppendedParsed() {
-      var _this3 = this;
-
       //trigger handler right now
       if (this.state === State.PARSED && (!this.appended || !this.pendingBuffering)) {
         var frag = this.fragCurrent;
         if (frag) {
-          (function () {
-            var media = _this3.mediaBuffer ? _this3.mediaBuffer : _this3.media;
-            _logger.logger.log('main buffered : ' + _timeRanges2.default.toString(media.buffered));
-            // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
-            var bufferedFrags = _this3._bufferedFrags.filter(function (frag) {
-              return _bufferHelper2.default.isBuffered(media, (frag.startPTS + frag.endPTS) / 2);
-            });
-            // push new range
-            bufferedFrags.push(frag);
-            // sort frags, as we use BinarySearch for lookup in getBufferedFrag ...
-            _this3._bufferedFrags = bufferedFrags.sort(function (a, b) {
-              return a.startPTS - b.startPTS;
-            });
-            _this3.fragPrevious = frag;
-            var stats = _this3.stats;
-            stats.tbuffered = performance.now();
-            // we should get rid of this.fragLastKbps
-            _this3.fragLastKbps = Math.round(8 * stats.total / (stats.tbuffered - stats.tfirst));
-            _this3.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: stats, frag: frag, id: 'main' });
-            _this3.state = State.IDLE;
-          })();
+          var media = this.mediaBuffer ? this.mediaBuffer : this.media;
+          _logger.logger.log('main buffered : ' + _timeRanges2.default.toString(media.buffered));
+          // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
+          var bufferedFrags = this._bufferedFrags.filter(function (frag) {
+            return _bufferHelper2.default.isBuffered(media, (frag.startPTS + frag.endPTS) / 2);
+          });
+          // push new range
+          bufferedFrags.push(frag);
+          // sort frags, as we use BinarySearch for lookup in getBufferedFrag ...
+          this._bufferedFrags = bufferedFrags.sort(function (a, b) {
+            return a.startPTS - b.startPTS;
+          });
+          this.fragPrevious = frag;
+          var stats = this.stats;
+          stats.tbuffered = performance.now();
+          // we should get rid of this.fragLastKbps
+          this.fragLastKbps = Math.round(8 * stats.total / (stats.tbuffered - stats.tfirst));
+          this.hls.trigger(_events2.default.FRAG_BUFFERED, { stats: stats, frag: frag, id: 'main' });
+          this.state = State.IDLE;
         }
         this.tick();
       }
@@ -4356,29 +4358,27 @@ var Decrypter = function () {
         decryptor.expandKey(key);
         callback(decryptor.decrypt(data, 0, iv));
       } else {
-        (function () {
-          if (_this.logEnabled) {
-            _logger.logger.log('WebCrypto AES decrypt');
-            _this.logEnabled = false;
-          }
-          var subtle = _this.subtle;
-          if (_this.key !== key) {
-            _this.key = key;
-            _this.fastAesKey = new _fastAesKey2.default(subtle, key);
-          }
+        if (this.logEnabled) {
+          _logger.logger.log('WebCrypto AES decrypt');
+          this.logEnabled = false;
+        }
+        var subtle = this.subtle;
+        if (this.key !== key) {
+          this.key = key;
+          this.fastAesKey = new _fastAesKey2.default(subtle, key);
+        }
 
-          _this.fastAesKey.expandKey().then(function (aesKey) {
-            // decrypt using web crypto
-            var crypto = new _aesCrypto2.default(subtle, iv);
-            crypto.decrypt(data, aesKey).catch(function (err) {
-              _this.onWebCryptoError(err, data, key, iv, callback);
-            }).then(function (result) {
-              callback(result);
-            });
-          }).catch(function (err) {
+        this.fastAesKey.expandKey().then(function (aesKey) {
+          // decrypt using web crypto
+          var crypto = new _aesCrypto2.default(subtle, iv);
+          crypto.decrypt(data, aesKey).catch(function (err) {
             _this.onWebCryptoError(err, data, key, iv, callback);
+          }).then(function (result) {
+            callback(result);
           });
-        })();
+        }).catch(function (err) {
+          _this.onWebCryptoError(err, data, key, iv, callback);
+        });
       }
     }
   }, {
@@ -5097,7 +5097,7 @@ var Demuxer = function () {
       var discontinuity = !(lastFrag && frag.cc === lastFrag.cc);
       var trackSwitch = !(lastFrag && frag.level === lastFrag.level);
       var nextSN = lastFrag && frag.sn === lastFrag.sn + 1;
-      var contiguous = !discontinuity && !trackSwitch && nextSN;
+      var contiguous = !trackSwitch && nextSN;
       if (discontinuity) {
         _logger.logger.log(this.id + ':discontinuity detected');
       }
@@ -6334,15 +6334,11 @@ var TSDemuxer = function () {
   }, {
     key: 'decryptAndRemux',
     value: function decryptAndRemux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
-      var _this = this;
-
       if (audioTrack.samples && audioTrack.isAAC) {
-        (function () {
-          var localthis = _this;
-          _this.sampleAes.decryptAacSamples(audioTrack.samples, 0, function () {
-            localthis.decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
-          });
-        })();
+        var localthis = this;
+        this.sampleAes.decryptAacSamples(audioTrack.samples, 0, function () {
+          localthis.decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
+        });
       } else {
         this.decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
       }
@@ -6350,15 +6346,11 @@ var TSDemuxer = function () {
   }, {
     key: 'decryptAndRemuxAvc',
     value: function decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
-      var _this2 = this;
-
       if (videoTrack.samples) {
-        (function () {
-          var localthis = _this2;
-          _this2.sampleAes.decryptAvcSamples(videoTrack.samples, 0, 0, function () {
-            localthis.remuxer.remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
-          });
-        })();
+        var localthis = this;
+        this.sampleAes.decryptAvcSamples(videoTrack.samples, 0, 0, function () {
+          localthis.remuxer.remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
+        });
       } else {
         this.remuxer.remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
       }
@@ -6593,7 +6585,7 @@ var TSDemuxer = function () {
   }, {
     key: '_parseAVCPES',
     value: function _parseAVCPES(pes, last) {
-      var _this3 = this;
+      var _this = this;
 
       //logger.log('parse new PES');
       var track = this._avcTrack,
@@ -6634,7 +6626,7 @@ var TSDemuxer = function () {
             push = true;
             // handle PES not starting with AUD
             if (!avcSample) {
-              avcSample = _this3.avcSample = _this3._createAVCSample(true, pes.pts, pes.dts, '');
+              avcSample = _this.avcSample = _this._createAVCSample(true, pes.pts, pes.dts, '');
             }
             if (debug) {
               avcSample.debug += 'IDR ';
@@ -6648,7 +6640,7 @@ var TSDemuxer = function () {
             if (debug && avcSample) {
               avcSample.debug += 'SEI ';
             }
-            expGolombDecoder = new _expGolomb2.default(_this3.discardEPB(unit.data));
+            expGolombDecoder = new _expGolomb2.default(_this.discardEPB(unit.data));
 
             // skip frameType
             expGolombDecoder.readUByte();
@@ -6704,7 +6696,7 @@ var TSDemuxer = function () {
                           byteArray.push(expGolombDecoder.readUByte());
                         }
 
-                        _this3._insertSampleInOrder(_this3._txtTrack.samples, { type: 3, pts: pes.pts, bytes: byteArray });
+                        _this._insertSampleInOrder(_this._txtTrack.samples, { type: 3, pts: pes.pts, bytes: byteArray });
                       }
                     }
                   }
@@ -6729,7 +6721,7 @@ var TSDemuxer = function () {
               track.height = config.height;
               track.pixelRatio = config.pixelRatio;
               track.sps = [unit.data];
-              track.duration = _this3._duration;
+              track.duration = _this._duration;
               var codecarray = unit.data.subarray(1, 4);
               var codecstring = 'avc1.';
               for (i = 0; i < 3; i++) {
@@ -6756,9 +6748,9 @@ var TSDemuxer = function () {
           case 9:
             push = false;
             if (avcSample) {
-              _this3.pushAccesUnit(avcSample, track);
+              _this.pushAccesUnit(avcSample, track);
             }
-            avcSample = _this3.avcSample = _this3._createAVCSample(false, pes.pts, pes.dts, debug ? 'AUD ' : '');
+            avcSample = _this.avcSample = _this._createAVCSample(false, pes.pts, pes.dts, debug ? 'AUD ' : '');
             break;
           // Filler Data
           case 12:
@@ -7794,6 +7786,10 @@ Object.defineProperty(exports, "__esModule", {
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+var _urlToolkit = _dereq_(2);
+
+var _urlToolkit2 = _interopRequireDefault(_urlToolkit);
+
 var _events = _dereq_(27);
 
 var _events2 = _interopRequireDefault(_events);
@@ -7843,7 +7839,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.7.4';
+      return '0.7.5';
     }
   }, {
     key: 'Events',
@@ -8002,6 +7998,7 @@ var Hls = function () {
   }, {
     key: 'loadSource',
     value: function loadSource(url) {
+      url = _urlToolkit2.default.buildAbsoluteURL(window.location.href, url, { alwaysNormalize: true });
       _logger.logger.log('loadSource:' + url);
       this.url = url;
       // when attaching to a source URL, trigger a playlist load
@@ -8302,7 +8299,7 @@ var Hls = function () {
 
 exports.default = Hls;
 
-},{"1":1,"10":10,"25":25,"27":27,"33":33,"34":34,"35":35,"4":4,"43":43,"9":9}],32:[function(_dereq_,module,exports){
+},{"1":1,"10":10,"2":2,"25":25,"27":27,"33":33,"34":34,"35":35,"4":4,"43":43,"9":9}],32:[function(_dereq_,module,exports){
 'use strict';
 
 // This is mostly for support of the es6 module export
@@ -11075,22 +11072,31 @@ var XhrLoader = function () {
       } else {
         xhr = this.loader = new XMLHttpRequest();
       }
-
-      xhr.onreadystatechange = this.readystatechange.bind(this);
-      xhr.onprogress = this.loadprogress.bind(this);
-
-      xhr.open('GET', context.url, true);
-
-      if (context.rangeEnd) {
-        xhr.setRequestHeader('Range', 'bytes=' + context.rangeStart + '-' + (context.rangeEnd - 1));
-      }
-      xhr.responseType = context.responseType;
       var stats = this.stats;
       stats.tfirst = 0;
       stats.loaded = 0;
-      if (this.xhrSetup) {
-        this.xhrSetup(xhr, context.url);
+      var xhrSetup = this.xhrSetup;
+      if (xhrSetup) {
+        try {
+          xhrSetup(xhr, context.url);
+        } catch (e) {
+          // fix xhrSetup: (xhr, url) => {xhr.setRequestHeader("Content-Language", "test");}
+          // not working, as xhr.setRequestHeader expects xhr.readyState === OPEN
+          xhr.open('GET', context.url, true);
+          xhrSetup(xhr, context.url);
+        }
       }
+
+      if (!xhr.readyState) {
+        xhr.open('GET', context.url, true);
+      }
+      if (context.rangeEnd) {
+        xhr.setRequestHeader('Range', 'bytes=' + context.rangeStart + '-' + (context.rangeEnd - 1));
+      }
+      xhr.onreadystatechange = this.readystatechange.bind(this);
+      xhr.onprogress = this.loadprogress.bind(this);
+      xhr.responseType = context.responseType;
+
       // setup timeout before we perform request
       this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), this.config.timeout);
       xhr.send();
