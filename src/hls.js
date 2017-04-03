@@ -3,6 +3,7 @@
  */
 'use strict';
 
+import URLToolkit from 'url-toolkit';
 import Event from './events';
 import { ErrorTypes, ErrorDetails } from './errors';
 import PlaylistLoader from './loader/playlist-loader';
@@ -201,6 +202,9 @@ class Hls {
     }
 
     loadSource(url) {
+        url = URLToolkit.buildAbsoluteURL(window.location.href, url, {
+            alwaysNormalize: true
+        });
         logger.log(`loadSource:${url}`);
         this.url = url;
         // when attaching to a source URL, trigger a playlist load
