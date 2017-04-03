@@ -354,10 +354,12 @@ class LevelController extends EventHandler {
 
   tick() {
     var levelId = this._level;
-    var level = this._levels[levelId];
-    if (level && this.canload) {
-      var urlId = level.urlId;
-      this.hls.trigger(Event.LEVEL_LOADING, {url: level.url[urlId], level: levelId, id: urlId});
+    if (levelId !== undefined && this.canload) {
+      var level = this._levels[levelId];
+      if (level && level.url) {
+        var urlId = level.urlId;
+        this.hls.trigger(Event.LEVEL_LOADING, {url: level.url[urlId], level: levelId, id: urlId});
+      }
     }
   }
 
