@@ -9,6 +9,9 @@
     "type": "git",
     "url": "https://github.com/video-dev/hls.js"
   },
+  "publishConfig":{
+    "registry":"http://registry.npmjs.org"
+  },
   "bugs": {
     "url": "https://github.com/video-dev/hls.js/issues"
   },
