@@ -139,11 +139,7 @@ class StreamController extends EventHandler {
         this.fragLoadError = 0;
         break;
       case State.IDLE:
-        // when this returns false there was an error and we shall return immediatly
-        // from current tick
-        if (!this._doTickIdle()) {
-          return;
-        }
+        this._doTickIdle();
         break;
       case State.WAITING_LEVEL:
         var level = this.levels[this.level];
@@ -191,7 +187,7 @@ class StreamController extends EventHandler {
     // => if start level loaded and media not attached but start frag prefetch is enabled and start frag not requested yet, we will not exit loop
     if (this.levelLastLoaded !== undefined && !media &&
       (this.startFragRequested || !config.startFragPrefetch)) {
-      return true;
+      return;
     }
 
     // if we have not yet loaded any fragment, start loading from start position
@@ -222,7 +218,7 @@ class StreamController extends EventHandler {
           bufferLen = bufferInfo.len;
     // Stay idle if we are still with buffer margins
     if (bufferLen >= maxBufLen) {
-      return true;
+      return;
     }
 
     // if buffer length is less than maxBufLen try to load a new fragment ...
@@ -237,7 +233,7 @@ class StreamController extends EventHandler {
     // a useless and outdated fragment (that might even introduce load error if it is already out of the live playlist)
     if (typeof levelDetails === 'undefined' || levelDetails.live && this.levelLastLoaded !== level) {
       this.state = State.WAITING_LEVEL;
-      return true;
+      return;
     }
 
     // we just got done loading the final fragment, check if we need to finalize media stream
@@ -258,12 +254,12 @@ class StreamController extends EventHandler {
         }
         this.hls.trigger(Event.BUFFER_EOS,data);
         this.state = State.ENDED;
-        return true;
+        return;
       }
     }
 
     // if we have the levelDetails for the selected variant, lets continue enrichen our stream (load keys/fragments or trigger EOS, etc..)
-    return this._fetchPayloadOrEos(pos, bufferInfo, levelDetails);
+    this._fetchPayloadOrEos(pos, bufferInfo, levelDetails);
   }
 
   _fetchPayloadOrEos(pos, bufferInfo, levelDetails) {
@@ -274,7 +270,7 @@ class StreamController extends EventHandler {
 
     // empty playlist
     if (fragLen === 0) {
-      return false;
+      return;
     }
 
     // find fragment index, contiguous with end of buffer position
@@ -291,13 +287,13 @@ class StreamController extends EventHandler {
         let initialLiveManifestSize = this.config.initialLiveManifestSize;
         if(fragLen < initialLiveManifestSize){
           logger.warn(`Can not start playback of a level, reason: not enough fragments ${fragLen} < ${initialLiveManifestSize}`);
-          return false;
+          return;
         }
 
         frag = this._ensureFragmentAtLivePoint(levelDetails, bufferEnd, start, end, fragPrevious, fragments, fragLen);
         // if it explicitely returns null don't load any fragment and exit function now
         if (frag === null) {
-          return false;
+          return;
         }
 
       } else {
@@ -311,9 +307,9 @@ class StreamController extends EventHandler {
       frag = this._findFragment(start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails);
     }
     if(frag) {
-      return this._loadFragmentOrKey(frag, level, levelDetails, pos, bufferEnd);
+      this._loadFragmentOrKey(frag, level, levelDetails, pos, bufferEnd);
     }
-    return true;
+    return;
   }
 
   _ensureFragmentAtLivePoint(levelDetails, bufferEnd, start, end, fragPrevious, fragments, fragLen) {
@@ -489,7 +485,7 @@ class StreamController extends EventHandler {
         // if this frag has already been loaded 3 times, and if it has been reloaded recently
         if (frag.loadCounter > maxThreshold && (Math.abs(this.fragLoadIdx - frag.loadIdx) < maxThreshold)) {
           hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal: false, frag: frag});
-          return false;
+          return;
         }
       } else {
         frag.loadCounter = 1;
@@ -508,7 +504,7 @@ class StreamController extends EventHandler {
         this.demuxer = new Demuxer(hls,'main');
       }
       this.state = State.FRAG_LOADING;
-      return true;
+      return;
     }
   }
 
