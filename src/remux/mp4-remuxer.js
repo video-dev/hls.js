@@ -681,7 +681,11 @@ class MP4Remuxer {
                         } else if (delta < -12) {
                             // drop overlapping audio frames... browser will deal with it
                             logger.log(
-                                `${-delta} ms overlapping between AAC samples detected, drop frame`
+                                `drop overlapping AAC sample, expected/parsed/delta:${(
+                                    nextAudioPts / inputTimeScale
+                                ).toFixed(3)}s/${(
+                                    ptsnorm / inputTimeScale
+                                ).toFixed(3)}s/${-delta}ms`
                             );
                             track.len -= unit.byteLength;
                             continue;
