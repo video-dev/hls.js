@@ -1073,7 +1073,7 @@ Full list of Events is available below:
   - `Hls.Events.FRAG_PARSED`  - fired when fragment parsing is completed
     -  data: { id: demuxer id,frag : fragment object}
   - `Hls.Events.FRAG_BUFFERED`  - fired when fragment remuxed MP4 boxes have all been appended into SourceBuffer
-    -  data: { id: demuxer id, frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length} }
+    -  data: { id: demuxer id, frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length, bwEstimate} }
   - `Hls.Events.FRAG_CHANGED`  - fired when fragment matching with current video position is changing
     -  data: { frag : fragment object }
   - `Hls.Events.FPS_DROP` - triggered when FPS drop in last monitoring period is higher than given threshold
