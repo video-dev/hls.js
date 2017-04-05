@@ -221,6 +221,7 @@ class AbrController extends EventHandler {
     onFragBuffered(data) {
         var stats = data.stats,
             frag = data.frag;
+        data.stats.bwEstimate = this._bwEstimator.getEstimate();
         // only update stats on first frag buffering
         // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
         // and leading to wrong bw estimation

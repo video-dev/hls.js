@@ -1185,7 +1185,6 @@ class StreamController extends EventHandler {
                 this.state = State.IDLE;
                 this.startFragRequested = false;
                 stats.tparsed = stats.tbuffered = performance.now();
-                stats.bwEstimate = this.hls.abrController._bwEstimator.getEstimate();
                 this.hls.trigger(Event.FRAG_BUFFERED, {
                     stats: stats,
                     frag: fragCurrent,
@@ -1196,7 +1195,6 @@ class StreamController extends EventHandler {
                 this.state = State.IDLE;
                 stats.tparsed = stats.tbuffered = performance.now();
                 details.initSegment.data = data.payload;
-                stats.bwEstimate = this.hls.abrController._bwEstimator.getEstimate();
                 this.hls.trigger(Event.FRAG_BUFFERED, {
                     stats: stats,
                     frag: fragCurrent,
@@ -1586,7 +1584,6 @@ class StreamController extends EventHandler {
                 this.fragLastKbps = Math.round(
                     8 * stats.total / (stats.tbuffered - stats.tfirst)
                 );
-                stats.bwEstimate = this.hls.abrController._bwEstimator.getEstimate();
                 this.hls.trigger(Event.FRAG_BUFFERED, {
                     stats: stats,
                     frag: frag,
