@@ -951,14 +951,12 @@ class StreamController extends EventHandler {
         this.state = State.IDLE;
         this.startFragRequested = false;
         stats.tparsed = stats.tbuffered = performance.now();
-        stats.bwEstimate = this.hls.abrController._bwEstimator.getEstimate();
         this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: fragCurrent, id : 'main'});
         this.tick();
       } else if (fragLoaded.sn === 'initSegment') {
         this.state = State.IDLE;
         stats.tparsed = stats.tbuffered = performance.now();
         details.initSegment.data = data.payload;
-        stats.bwEstimate = this.hls.abrController._bwEstimator.getEstimate();
         this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: fragCurrent, id : 'main'});
         this.tick();
       } else {
@@ -1247,7 +1245,6 @@ class StreamController extends EventHandler {
         stats.tbuffered = performance.now();
         // we should get rid of this.fragLastKbps
         this.fragLastKbps = Math.round(8 * stats.total / (stats.tbuffered - stats.tfirst));
-        stats.bwEstimate = this.hls.abrController._bwEstimator.getEstimate(); 
         this.hls.trigger(Event.FRAG_BUFFERED, {stats: stats, frag: frag, id : 'main'});
         this.state = State.IDLE;
       }
