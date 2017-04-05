@@ -221,7 +221,6 @@ class AbrController extends EventHandler {
     onFragBuffered(data) {
         var stats = data.stats,
             frag = data.frag;
-        data.stats.bwEstimate = this._bwEstimator.getEstimate();
         // only update stats on first frag buffering
         // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
         // and leading to wrong bw estimation
@@ -247,6 +246,7 @@ class AbrController extends EventHandler {
                 )}`
             );
             this._bwEstimator.sample(fragLoadingProcessingMs, stats.loaded);
+            data.stats.bwEstimate = this._bwEstimator.getEstimate();
             // if fragment has been loaded to perform a bitrate test, (hls.startLevel = -1), store bitrate test delay duration
             if (frag.bitrateTest) {
                 this.bitrateTestDelay = fragLoadingProcessingMs / 1000;
