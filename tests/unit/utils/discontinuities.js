@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustPtsByReferenceFrag } from '../../../src/utils/discontinuity-aligner';
+import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustPtsByReferenceFrag } from '../../../src/utils/discontinuities';
 
 const mockReferenceFrag = {
   start: 20,

@@ -11,7 +11,7 @@ import LevelHelper from '../helper/level-helper';
 import TimeRanges from '../utils/timeRanges';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
-import alignDiscontinuities from '../utils/discontinuity-aligner';
+import { alignDiscontinuities } from '../utils/discontinuities';
 
 const State = {
     STOPPED: 'STOPPED',
