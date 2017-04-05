@@ -156,7 +156,7 @@ class LevelHelper {
             if (toIdx > fromIdx) {
                 fragTo.start = fragFrom.start + fragFrom.duration;
             } else {
-                fragTo.start = fragFrom.start - fragTo.duration;
+                fragTo.start = Math.max(fragFrom.start - fragTo.duration, 0);
             }
         }
     }
