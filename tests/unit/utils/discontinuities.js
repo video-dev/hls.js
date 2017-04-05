@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-import LevelHelper from '../../../src/helper/level-helper';
+import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustPtsByReferenceFrag } from '../../../src/utils/discontinuities';
 
 const mockReferenceFrag = {
   start: 20,
@@ -56,7 +56,7 @@ describe('level-helper', function () {
       }
     ];
 
-    LevelHelper.adjustPtsByReferenceFrag(mockReferenceFrag, details);
+    adjustPtsByReferenceFrag(mockReferenceFrag, details);
     assert.deepEqual(expected, details.fragments);
     assert.equal(true, details.PTSKnown);
   });
@@ -67,7 +67,7 @@ describe('level-helper', function () {
       PTSKnown: false
     };
 
-    LevelHelper.adjustPtsByReferenceFrag(undefined, details);
+    adjustPtsByReferenceFrag(undefined, details);
     assert.deepEqual(mockFrags, details.fragments);
     assert.equal(false, details.PTSKnown);
   });
@@ -80,25 +80,25 @@ describe('level-helper', function () {
       fragments: mockFrags
     };
     const expected = mockReferenceFrag;
-    const actual = LevelHelper.findDiscontinuousReferenceFrag(prevDetails, curDetails);
+    const actual = findDiscontinuousReferenceFrag(prevDetails, curDetails);
     assert.equal(expected, actual);
   });
 
   it('returns undefined if there are no frags in the previous level', function () {
     const expected = undefined;
-    const actual = LevelHelper.findDiscontinuousReferenceFrag({ fragments: [] }, { fragments: mockFrags });
+    const actual = findDiscontinuousReferenceFrag({ fragments: [] }, { fragments: mockFrags });
     assert.equal(expected, actual);
   });
 
   it('returns undefined if there are no matching frags in the previous level', function () {
     const expected = undefined;
-    const actual = LevelHelper.findDiscontinuousReferenceFrag({ fragments: [{ cc: 10 }] }, { fragments: mockFrags });
+    const actual = findDiscontinuousReferenceFrag({ fragments: [{ cc: 10 }] }, { fragments: mockFrags });
     assert.equal(expected, actual);
   });
 
   it('returns undefined if there are no frags in the current level', function () {
     const expected = undefined;
-    const actual = LevelHelper.findDiscontinuousReferenceFrag({ fragments: [{ cc: 0 }] }, { fragments: [] });
+    const actual = findDiscontinuousReferenceFrag({ fragments: [{ cc: 0 }] }, { fragments: [] });
     assert.equal(expected, actual);
   });
 
@@ -111,7 +111,7 @@ describe('level-helper', function () {
       endCC: 1
     };
 
-    const actual = LevelHelper.shouldAlignOnDiscontinuities(null, lastLevel, curDetails);
+    const actual = shouldAlignOnDiscontinuities(null, lastLevel, curDetails);
     assert.equal(true, actual);
   });
 
@@ -127,7 +127,7 @@ describe('level-helper', function () {
       endCC: 1
     };
 
-    const actual = LevelHelper.shouldAlignOnDiscontinuities(lastFrag, lastLevel, curDetails);
+    const actual = shouldAlignOnDiscontinuities(lastFrag, lastLevel, curDetails);
     assert.equal(true, actual);
   });
 
@@ -143,7 +143,7 @@ describe('level-helper', function () {
       cc: 1
     };
 
-    const actual = LevelHelper.shouldAlignOnDiscontinuities(lastFrag, lastLevel, curDetails);
+    const actual = shouldAlignOnDiscontinuities(lastFrag, lastLevel, curDetails);
     assert.equal(false, actual);
   });
 
@@ -156,7 +156,7 @@ describe('level-helper', function () {
       cc: 1
     };
 
-    const actual = LevelHelper.shouldAlignOnDiscontinuities(lastFrag, null, curDetails);
+    const actual = shouldAlignOnDiscontinuities(lastFrag, null, curDetails);
     assert.equal(false, actual);
   });
 
@@ -171,7 +171,7 @@ describe('level-helper', function () {
       cc: 1
     };
 
-    const actual = LevelHelper.shouldAlignOnDiscontinuities(lastFrag, lastLevel, curDetails);
+    const actual = shouldAlignOnDiscontinuities(lastFrag, lastLevel, curDetails);
     assert.equal(false, actual);
   });
 
@@ -183,7 +183,7 @@ describe('level-helper', function () {
       cc: 1
     };
 
-    const actual = LevelHelper.shouldAlignOnDiscontinuities(lastFrag, lastLevel, null);
+    const actual = shouldAlignOnDiscontinuities(lastFrag, lastLevel, null);
     assert.equal(false, actual);
   });
 });

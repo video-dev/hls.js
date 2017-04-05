@@ -3,8 +3,8 @@
 <!-- Replace [ ] with [x] to check off the list -->
 - [ ] The stream has correct Access-Control-Allow-Origin headers (CORS)
 - [ ] There are no network errors such as 404s in the browser console when trying to play the stream
-- [ ] The issue observed is not already reported by searching on Github under https://github.com/dailymotion/hls.js/issues
-- [ ] The issue occurs in the latest reference client on http://dailymotion.github.io/hls.js/demo and not just on my page
+- [ ] The issue observed is not already reported by searching on Github under https://github.com/video-dev/hls.js/issues
+- [ ] The issue occurs in the latest reference client on http://video-dev.github.io/hls.js/demo and not just on my page
 * Link to playable M3U8 file: 
 * Hls.js version: 
 * Browser name/version: 
