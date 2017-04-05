@@ -500,7 +500,7 @@ class CaptionScreen {
         row.setCursor(absPos);
     }
 
-    setPAC(pacData, lastOutputScreen) {
+    setPAC(pacData) {
         logger.log('INFO', 'pacData = ' + JSON.stringify(pacData));
         var newRow = pacData.row - 1;
         if (this.nrRollUpRows  && newRow < this.nrRollUpRows - 1) {
@@ -519,10 +519,13 @@ class CaptionScreen {
           var topRowIndex = this.currRow + 1 - (this.nrRollUpRows);
           //We only copy if the last position was already shown.
           //We use the cueStartTime value to check this.
-          var prevLineTime = lastOutputScreen.rows[topRowIndex].cueStartTime;
-          if(prevLineTime && prevLineTime < logger.time) {
-            for (let i = 0; i < this.nrRollUpRows; i++) {
-              this.rows[newRow-this.nrRollUpRows+i+1].copy(lastOutputScreen.rows[topRowIndex+i]);
+          const lastOutputScreen = this.lastOutputScreen;
+          if (lastOutputScreen) {
+            var prevLineTime = lastOutputScreen.rows[topRowIndex].cueStartTime;
+            if(prevLineTime && prevLineTime < logger.time) {
+              for (let i = 0; i < this.nrRollUpRows; i++) {
+                this.rows[newRow-this.nrRollUpRows+i+1].copy(lastOutputScreen.rows[topRowIndex+i]);
+              }
             }
           }
         }
@@ -642,7 +645,7 @@ class Cea608Channel
     }
 
     setPAC(pacData) {
-        this.writeScreen.setPAC(pacData, this.lastOutputScreen);
+        this.writeScreen.setPAC(pacData);
     }
 
     setBkgData(bkgData) {
@@ -660,7 +663,6 @@ class Cea608Channel
         } else {
             this.writeScreen = this.displayedMemory;
             this.writeScreen.reset();
-            this.lastOutputScreen.reset();
         }
         if (this.mode !== 'MODE_ROLL-UP') {
             this.displayedMemory.nrRollUpRows = null;
