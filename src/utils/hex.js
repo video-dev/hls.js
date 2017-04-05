@@ -1,5 +1,9 @@
-class Hex {
-    static hexDump(array) {
+/**
+ *  hex dump helper class
+ */
+
+const Hex = {
+    hexDump: function(array) {
         var i,
             str = '';
         for (i = 0; i < array.length; i++) {
@@ -11,6 +15,6 @@ class Hex {
         }
         return str;
     }
-}
+};
 
-export default Hex;
+module.exports = Hex;

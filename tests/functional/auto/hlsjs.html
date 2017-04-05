@@ -38,7 +38,7 @@
         white-space: pre-wrap;
       }
     </style>
-    <script src="/dist/hls.js"></script>
+    <script src="/dist/hls.min.js"></script>
     <script>
       var video, hls, logString ='';
 
@@ -59,7 +59,11 @@
             });
             hls.on(Hls.Events.ERROR, function(event, data) {
               if (data.fatal) {
-              console.log('hlsjs fatal error :' + data.details);
+                console.log('hlsjs fatal error :' + data.details);
+                if (data.details === Hls.ErrorDetails.INTERNAL_EXCEPTION) {
+                  console.log('exception in :' + data.event);
+                  console.log(data.err.stack ? JSON.stringify(data.err.stack) : data.err.message);
+                }
                 callback({ code : data.details, logs : logString});
               }
             });

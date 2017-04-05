@@ -26,6 +26,12 @@ const Cues = {
                 }
                 //To be used for cleaning-up orphaned roll-up captions
                 row.cueStartTime = startTime;
+
+                // Give a slight bump to the endTime if it's equal to startTime to avoid a SyntaxError in IE
+                if (startTime === endTime) {
+                    endTime += 0.0001;
+                }
+
                 cue = new VTTCue(
                     startTime,
                     endTime,

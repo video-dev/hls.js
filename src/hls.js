@@ -3,27 +3,19 @@
  */
 'use strict';
 
+import URLToolkit from 'url-toolkit';
 import Event from './events';
 import { ErrorTypes, ErrorDetails } from './errors';
 import PlaylistLoader from './loader/playlist-loader';
 import FragmentLoader from './loader/fragment-loader';
-import AbrController from './controller/abr-controller';
-import BufferController from './controller/buffer-controller';
-import CapLevelController from './controller/cap-level-controller';
-import AudioStreamController from './controller/audio-stream-controller';
-import SubtitleStreamController from './controller/subtitle-stream-controller';
+import KeyLoader from './loader/key-loader';
+
 import StreamController from './controller/stream-controller';
 import LevelController from './controller/level-controller';
-import TimelineController from './controller/timeline-controller';
-import FPSController from './controller/fps-controller';
-import AudioTrackController from './controller/audio-track-controller';
-import SubtitleTrackController from './controller/subtitle-track-controller';
+
 import { logger, enableLogs } from './utils/logger';
-//import FetchLoader from './utils/fetch-loader';
-import XhrLoader from './utils/xhr-loader';
 import EventEmitter from 'events';
-import KeyLoader from './loader/key-loader';
-import Cues from './utils/cues';
+import { hlsDefaultConfig } from './config';
 
 class Hls {
     static get version() {
@@ -56,79 +48,7 @@ class Hls {
 
     static get DefaultConfig() {
         if (!Hls.defaultConfig) {
-            Hls.defaultConfig = {
-                autoStartLoad: true,
-                startPosition: -1,
-                defaultAudioCodec: undefined,
-                debug: false,
-                capLevelOnFPSDrop: false,
-                capLevelToPlayerSize: false,
-                initialLiveManifestSize: 1,
-                maxBufferLength: 30,
-                maxBufferSize: 60 * 1000 * 1000,
-                maxBufferHole: 0.5,
-                maxMaxBufferLength: 600,
-                maxSeekHole: 2,
-                lowBufferWatchdogPeriod: 0.5,
-                highBufferWatchdogPeriod: 3,
-                nudgeOffset: 0.1,
-                nudgeMaxRetry: 3,
-                maxFragLookUpTolerance: 0.2,
-                liveSyncDurationCount: 3,
-                liveMaxLatencyDurationCount: Infinity,
-                liveSyncDuration: undefined,
-                liveMaxLatencyDuration: undefined,
-                enableWorker: true,
-                enableSoftwareAES: true,
-                manifestLoadingTimeOut: 10000,
-                manifestLoadingMaxRetry: 1,
-                manifestLoadingRetryDelay: 1000,
-                manifestLoadingMaxRetryTimeout: 64000,
-                startLevel: undefined,
-                levelLoadingTimeOut: 10000,
-                levelLoadingMaxRetry: 4,
-                levelLoadingRetryDelay: 1000,
-                levelLoadingMaxRetryTimeout: 64000,
-                fragLoadingTimeOut: 20000,
-                fragLoadingMaxRetry: 6,
-                fragLoadingRetryDelay: 1000,
-                fragLoadingMaxRetryTimeout: 64000,
-                fragLoadingLoopThreshold: 3,
-                startFragPrefetch: false,
-                fpsDroppedMonitoringPeriod: 5000,
-                fpsDroppedMonitoringThreshold: 0.2,
-                appendErrorMaxRetry: 3,
-                loader: XhrLoader,
-                //loader: FetchLoader,
-                fLoader: undefined,
-                pLoader: undefined,
-                xhrSetup: undefined,
-                fetchSetup: undefined,
-                abrController: AbrController,
-                bufferController: BufferController,
-                capLevelController: CapLevelController,
-                fpsController: FPSController,
-                streamController: StreamController,
-                audioStreamController: AudioStreamController,
-                subtitleStreamController: SubtitleStreamController,
-                timelineController: TimelineController,
-                cueHandler: Cues,
-                enableCEA708Captions: true,
-                enableWebVTT: true,
-                enableMP2TPassThrough: false,
-                stretchShortVideoTrack: false,
-                forceKeyFrameOnDiscontinuity: true,
-                abrEwmaFastLive: 3,
-                abrEwmaSlowLive: 9,
-                abrEwmaFastVoD: 3,
-                abrEwmaSlowVoD: 9,
-                abrEwmaDefaultEstimate: 5e5, // 500 kbps
-                abrBandWidthFactor: 0.95,
-                abrBandWidthUpFactor: 0.7,
-                maxStarvationDelay: 4,
-                maxLoadingDelay: 4,
-                minAutoBitrate: 0
-            };
+            return hlsDefaultConfig;
         }
         return Hls.defaultConfig;
     }
@@ -178,6 +98,7 @@ class Hls {
 
         enableLogs(config.debug);
         this.config = config;
+        this._autoLevelCapping = -1;
         // observer setup
         var observer = (this.observer = new EventEmitter());
         observer.trigger = function trigger(event, ...data) {
@@ -190,44 +111,82 @@ class Hls {
         this.on = observer.on.bind(observer);
         this.off = observer.off.bind(observer);
         this.trigger = observer.trigger.bind(observer);
-        this.playlistLoader = new PlaylistLoader(this);
-        this.fragmentLoader = new FragmentLoader(this);
-        this.levelController = new LevelController(this);
-        this.abrController = new config.abrController(this);
-        this.bufferController = new config.bufferController(this);
-        this.capLevelController = new config.capLevelController(this);
-        this.fpsController = new config.fpsController(this);
-        this.streamController = new config.streamController(this);
-        this.audioStreamController = new config.audioStreamController(this);
-        this.subtitleStreamController = new config.subtitleStreamController(
+
+        // core controllers and network loaders
+        const abrController = (this.abrController = new config.abrController(
             this
+        ));
+        const bufferController = new config.bufferController(this);
+        const capLevelController = new config.capLevelController(this);
+        const fpsController = new config.fpsController(this);
+        const playListLoader = new PlaylistLoader(this);
+        const fragmentLoader = new FragmentLoader(this);
+        const keyLoader = new KeyLoader(this);
+
+        // network controllers
+        const levelController = (this.levelController = new LevelController(
+            this
+        ));
+        const streamController = (this.streamController = new StreamController(
+            this
+        ));
+        let networkControllers = [levelController, streamController];
+
+        // optional audio stream controller
+        let Controller = config.audioStreamController;
+        if (Controller) {
+            networkControllers.push(new Controller(this));
+        }
+        this.networkControllers = networkControllers;
+
+        let coreComponents = [
+            playListLoader,
+            fragmentLoader,
+            keyLoader,
+            abrController,
+            bufferController,
+            capLevelController,
+            fpsController
+        ];
+
+        // optional audio track and subtitle controller
+        Controller = config.audioTrackController;
+        if (Controller) {
+            let audioTrackController = new Controller(this);
+            this.audioTrackController = audioTrackController;
+            coreComponents.push(audioTrackController);
+        }
+
+        Controller = config.subtitleTrackController;
+        if (Controller) {
+            let subtitleTrackController = new Controller(this);
+            this.subtitleTrackController = subtitleTrackController;
+            coreComponents.push(subtitleTrackController);
+        }
+
+        // optional subtitle controller
+        [config.subtitleStreamController, config.timelineController].forEach(
+            Controller => {
+                if (Controller) {
+                    coreComponents.push(new Controller(this));
+                }
+            }
         );
-        this.timelineController = new config.timelineController(this);
-        this.audioTrackController = new AudioTrackController(this);
-        this.subtitleTrackController = new SubtitleTrackController(this);
-        this.keyLoader = new KeyLoader(this);
+        this.coreComponents = coreComponents;
     }
 
     destroy() {
         logger.log('destroy');
         this.trigger(Event.DESTROYING);
         this.detachMedia();
-        this.playlistLoader.destroy();
-        this.fragmentLoader.destroy();
-        this.levelController.destroy();
-        this.abrController.destroy();
-        this.bufferController.destroy();
-        this.capLevelController.destroy();
-        this.fpsController.destroy();
-        this.streamController.destroy();
-        this.audioStreamController.destroy();
-        this.subtitleStreamController.destroy();
-        this.timelineController.destroy();
-        this.audioTrackController.destroy();
-        this.subtitleTrackController.destroy();
-        this.keyLoader.destroy();
+        this.coreComponents
+            .concat(this.networkControllers)
+            .forEach(component => {
+                component.destroy();
+            });
         this.url = null;
         this.observer.removeAllListeners();
+        this._autoLevelCapping = -1;
     }
 
     attachMedia(media) {
@@ -243,6 +202,9 @@ class Hls {
     }
 
     loadSource(url) {
+        url = URLToolkit.buildAbsoluteURL(window.location.href, url, {
+            alwaysNormalize: true
+        });
         logger.log(`loadSource:${url}`);
         this.url = url;
         // when attaching to a source URL, trigger a playlist load
@@ -251,16 +213,16 @@ class Hls {
 
     startLoad(startPosition = -1) {
         logger.log(`startLoad(${startPosition})`);
-        this.levelController.startLoad();
-        this.streamController.startLoad(startPosition);
-        this.audioStreamController.startLoad(startPosition);
+        this.networkControllers.forEach(controller => {
+            controller.startLoad(startPosition);
+        });
     }
 
     stopLoad() {
         logger.log('stopLoad');
-        this.levelController.stopLoad();
-        this.streamController.stopLoad();
-        this.audioStreamController.stopLoad();
+        this.networkControllers.forEach(controller => {
+            controller.stopLoad();
+        });
     }
 
     swapAudioCodec() {
@@ -273,13 +235,6 @@ class Hls {
         var media = this.media;
         this.detachMedia();
         this.attachMedia(media);
-    }
-
-    updateSize() {
-        logger.log('updateSize');
-        if (this.config.capLevelToPlayerSize) {
-            this.capLevelController.detectPlayerSize();
-        }
     }
 
     /** Return all quality levels **/
@@ -335,10 +290,7 @@ class Hls {
     /** Return first level (index of first level referenced in manifest)
      **/
     get firstLevel() {
-        return Math.max(
-            this.levelController.firstLevel,
-            this.abrController.minAutoLevel
-        );
+        return Math.max(this.levelController.firstLevel, this.minAutoLevel);
     }
 
     /** set first level (index of first level referenced in manifest)
@@ -362,18 +314,23 @@ class Hls {
   **/
     set startLevel(newLevel) {
         logger.log(`set startLevel:${newLevel}`);
-        this.levelController.startLevel = newLevel;
+        const hls = this;
+        // if not in automatic start level detection, ensure startLevel is greater than minAutoLevel
+        if (newLevel !== -1) {
+            newLevel = Math.max(newLevel, hls.minAutoLevel);
+        }
+        hls.levelController.startLevel = newLevel;
     }
 
     /** Return the capping/max level value that could be used by automatic level selection algorithm **/
     get autoLevelCapping() {
-        return this.abrController.autoLevelCapping;
+        return this._autoLevelCapping;
     }
 
     /** set the capping/max level value that could be used by automatic level selection algorithm **/
     set autoLevelCapping(newLevel) {
         logger.log(`set autoLevelCapping:${newLevel}`);
-        this.abrController.autoLevelCapping = newLevel;
+        this._autoLevelCapping = newLevel;
     }
 
     /* check if we are in automatic level selection mode */
@@ -386,19 +343,73 @@ class Hls {
         return this.levelController.manualLevel;
     }
 
+    /* return min level selectable in auto mode according to config.minAutoBitrate */
+    get minAutoLevel() {
+        let hls = this,
+            levels = hls.levels,
+            minAutoBitrate = hls.config.minAutoBitrate,
+            len = levels ? levels.length : 0;
+        for (let i = 0; i < len; i++) {
+            const levelNextBitrate = levels[i].realBitrate
+                ? Math.max(levels[i].realBitrate, levels[i].bitrate)
+                : levels[i].bitrate;
+            if (levelNextBitrate > minAutoBitrate) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    /* return max level selectable in auto mode according to autoLevelCapping */
+    get maxAutoLevel() {
+        const hls = this;
+        const levels = hls.levels;
+        const autoLevelCapping = hls.autoLevelCapping;
+        let maxAutoLevel;
+        if (autoLevelCapping === -1 && levels && levels.length) {
+            maxAutoLevel = levels.length - 1;
+        } else {
+            maxAutoLevel = autoLevelCapping;
+        }
+        return maxAutoLevel;
+    }
+
+    // return next auto level
+    get nextAutoLevel() {
+        const hls = this;
+        // ensure next auto level is between  min and max auto level
+        return Math.min(
+            Math.max(hls.abrController.nextAutoLevel, hls.minAutoLevel),
+            hls.maxAutoLevel
+        );
+    }
+
+    // this setter is used to force next auto level
+    // this is useful to force a switch down in auto mode : in case of load error on level N, hls.js can set nextAutoLevel to N-1 for example)
+    // forced value is valid for one fragment. upon succesful frag loading at forced level, this value will be resetted to -1 by ABR controller
+    set nextAutoLevel(nextLevel) {
+        const hls = this;
+        hls.abrController.nextAutoLevel = Math.max(hls.minAutoLevel, nextLevel);
+    }
+
     /** get alternate audio tracks list from playlist **/
     get audioTracks() {
-        return this.audioTrackController.audioTracks;
+        const audioTrackController = this.audioTrackController;
+        return audioTrackController ? audioTrackController.audioTracks : [];
     }
 
     /** get index of the selected audio track (index in audio track lists) **/
     get audioTrack() {
-        return this.audioTrackController.audioTrack;
+        const audioTrackController = this.audioTrackController;
+        return audioTrackController ? audioTrackController.audioTrack : -1;
     }
 
     /** select an audio track, based on its index in audio track lists**/
     set audioTrack(audioTrackId) {
-        this.audioTrackController.audioTrack = audioTrackId;
+        const audioTrackController = this.audioTrackController;
+        if (audioTrackController) {
+            audioTrackController.audioTrack = audioTrackId;
+        }
     }
 
     get liveSyncPosition() {
@@ -407,17 +418,26 @@ class Hls {
 
     /** get alternate subtitle tracks list from playlist **/
     get subtitleTracks() {
-        return this.subtitleTrackController.subtitleTracks;
+        const subtitleTrackController = this.subtitleTrackController;
+        return subtitleTrackController
+            ? subtitleTrackController.subtitleTracks
+            : [];
     }
 
     /** get index of the selected subtitle track (index in subtitle track lists) **/
     get subtitleTrack() {
-        return this.subtitleTrackController.subtitleTrack;
+        const subtitleTrackController = this.subtitleTrackController;
+        return subtitleTrackController
+            ? subtitleTrackController.subtitleTrack
+            : -1;
     }
 
     /** select an subtitle track, based on its index in subtitle track lists**/
     set subtitleTrack(subtitleTrackId) {
-        this.subtitleTrackController.subtitleTrack = subtitleTrackId;
+        const subtitleTrackController = this.subtitleTrackController;
+        if (subtitleTrackController) {
+            subtitleTrackController.subtitleTrack = subtitleTrackId;
+        }
     }
 }
 

@@ -4,3 +4,6 @@ bower_components/*
 /streams.js
 lib
 npm-debug.log
+
+# ignore JetBrains
+.idea/*
