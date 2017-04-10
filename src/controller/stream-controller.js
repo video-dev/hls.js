@@ -11,7 +11,7 @@ import LevelHelper from '../helper/level-helper';
 import TimeRanges from '../utils/timeRanges';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
-import { alignDiscontinuities } from '../utils/discontinuities';
+import { alignDiscontinuities, findFirstFragWithCC } from '../utils/discontinuities';
 
 const State = {
   STOPPED : 'STOPPED',
@@ -364,7 +364,7 @@ class StreamController extends EventHandler {
           frag = fragments[targetSN - levelDetails.startSN];
           logger.log(`live playlist, switching playlist, load frag with next SN: ${frag.sn}`);
         } else if (targetCC >= levelDetails.startCC && targetCC <= levelDetails.endCC) {
-          frag = fragments.find(f => f.cc === targetCC);
+          frag = findFirstFragWithCC(fragments, targetCC);
           logger.log(`Live playlist switch, cannot find frag with target SN. Loading frag with next CC: ${ frag.cc }`);
         }
       }
