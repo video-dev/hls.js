@@ -1,6 +1,20 @@
 import BinarySearch from './binary-search';
 import { logger } from '../utils/logger';
 
+export function findFirstFragWithCC(fragments, cc) {
+    let firstFrag = null;
+
+    for (let i = 0; i < fragments.length; i += 1) {
+        const currentFrag = fragments[i];
+        if (currentFrag && currentFrag.cc === cc) {
+            firstFrag = currentFrag;
+            break;
+        }
+    }
+
+    return firstFrag;
+}
+
 export function findFragWithCC(fragments, CC) {
     return BinarySearch.search(fragments, candidate => {
         if (candidate.cc < CC) {
@@ -36,9 +50,7 @@ export function findDiscontinuousReferenceFrag(prevDetails, curDetails) {
         return;
     }
 
-    const prevStartFrag = prevFrags.find(frag => {
-        return frag.cc === curFrags[0].cc;
-    });
+    const prevStartFrag = findFirstFragWithCC(prevFrags, curFrags[0].cc);
 
     if (!prevStartFrag || (prevStartFrag && !prevStartFrag.startPTS)) {
         logger.log('No frag in previous level to align on');
