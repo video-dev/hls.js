@@ -1107,7 +1107,7 @@ class StreamController extends EventHandler {
         }
       }
 
-      var drift = LevelHelper.updateFragPTSDTS(level.details,frag.sn,data.startPTS,data.endPTS,data.startDTS,data.endDTS),
+      var drift = LevelHelper.updateFragPTSDTS(level.details,frag,data.startPTS,data.endPTS,data.startDTS,data.endDTS),
           hls = this.hls;
       hls.trigger(Event.LEVEL_PTS_UPDATED, {details: level.details, level: this.level, drift: drift, type: data.type, start: data.startPTS, end: data.endPTS});
 
