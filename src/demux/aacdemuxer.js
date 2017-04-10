@@ -89,7 +89,7 @@ import ID3 from '../demux/id3';
         break;
       }
     }
-    const id3Track = (id3.payload) ? { samples : [ { pts: pts, dts : pts, unit : id3.payload} ] } : { samples: [] };
+    const id3Track = (id3.payload) ? { samples : [{ pts: pts, dts : pts, unit : id3.payload}], inputTimeScale: 90000 } : { samples: [] };
     this.remuxer.remux(track,
                         {samples : []},
                         id3Track,
