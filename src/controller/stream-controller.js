@@ -1400,7 +1400,7 @@ class StreamController extends EventHandler {
 
             var drift = LevelHelper.updateFragPTSDTS(
                     level.details,
-                    frag.sn,
+                    frag,
                     data.startPTS,
                     data.endPTS,
                     data.startDTS,

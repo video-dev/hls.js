@@ -835,7 +835,7 @@ class AudioStreamController extends EventHandler {
             );
             LevelHelper.updateFragPTSDTS(
                 track.details,
-                fragCurrent.sn,
+                fragCurrent,
                 data.startPTS,
                 data.endPTS
             );
