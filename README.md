@@ -87,7 +87,7 @@ made by [gramk](https://github.com/gramk/chrome-hls),plays hls from address bar 
 ## Dependencies
 
 No external JS libs are needed.
-Prepackaged build is included in the [dist] (dist) folder:
+Prepackaged build is included in the [dist](dist) folder:
 
  - [hls.js](dist/hls.js)
  - [hls.min.js](dist/hls.min.js)
