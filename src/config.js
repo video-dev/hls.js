@@ -22,47 +22,47 @@ import SubtitleStreamController from  './controller/subtitle-stream-controller';
 //#endif
 
 export var hlsDefaultConfig = {
-      autoStartLoad: true,
-      startPosition: -1,
-      defaultAudioCodec: undefined,
-      debug: false,
-      capLevelOnFPSDrop: false,
-      capLevelToPlayerSize: false,
-      initialLiveManifestSize: 1,
-      maxBufferLength: 30,
-      maxBufferSize: 60 * 1000 * 1000,
-      maxBufferHole: 0.5,
-      maxSeekHole: 2,
-      lowBufferWatchdogPeriod: 0.5,
-      highBufferWatchdogPeriod: 3,
-      nudgeOffset: 0.1,
-      nudgeMaxRetry : 3,
-      maxFragLookUpTolerance: 0.2,
-      liveSyncDurationCount:3,
-      liveMaxLatencyDurationCount: Infinity,
-      liveSyncDuration: undefined,
-      liveMaxLatencyDuration: undefined,
-      maxMaxBufferLength: 600,
-      enableWorker: true,
-      enableSoftwareAES: true,
-      manifestLoadingTimeOut: 10000,
-      manifestLoadingMaxRetry: 1,
-      manifestLoadingRetryDelay: 1000,
-      manifestLoadingMaxRetryTimeout: 64000,
-      startLevel: undefined,
-      levelLoadingTimeOut: 10000,
-      levelLoadingMaxRetry: 4,
-      levelLoadingRetryDelay: 1000,
-      levelLoadingMaxRetryTimeout: 64000,
-      fragLoadingTimeOut: 20000,
-      fragLoadingMaxRetry: 6,
-      fragLoadingRetryDelay: 1000,
-      fragLoadingMaxRetryTimeout: 64000,
-      fragLoadingLoopThreshold: 3,
-      startFragPrefetch: false,
-      fpsDroppedMonitoringPeriod: 5000,
-      fpsDroppedMonitoringThreshold: 0.2,
-      appendErrorMaxRetry: 3,
+      autoStartLoad: true,                    // used by stream-controller
+      startPosition: -1,                      // used by stream-controller
+      defaultAudioCodec: undefined,           // used by stream-controller
+      debug: false,                           // used by logger
+      capLevelOnFPSDrop: false,               // used by fps-controller
+      capLevelToPlayerSize: false,            // used by cap-level-controller
+      initialLiveManifestSize: 1,             // used by stream-controller
+      maxBufferLength: 30,                    // used by stream-controller
+      maxBufferSize: 60 * 1000 * 1000,        // used by stream-controller
+      maxBufferHole: 0.5,                     // used by stream-controller
+      maxSeekHole: 2,                         // used by stream-controller
+      lowBufferWatchdogPeriod: 0.5,           // used by stream-controller
+      highBufferWatchdogPeriod: 3,            // used by stream-controller
+      nudgeOffset: 0.1,                       // used by stream-controller
+      nudgeMaxRetry : 3,                      // used by stream-controller
+      maxFragLookUpTolerance: 0.2,            // used by stream-controller
+      liveSyncDurationCount:3,                // used by stream-controller
+      liveMaxLatencyDurationCount: Infinity,  // used by stream-controller
+      liveSyncDuration: undefined,            // used by stream-controller
+      liveMaxLatencyDuration: undefined,      // used by stream-controller
+      maxMaxBufferLength: 600,                // used by stream-controller
+      enableWorker: true,                     // used by demuxer
+      enableSoftwareAES: true,                // used by decrypter
+      manifestLoadingTimeOut: 10000,          // used by playlist-loader
+      manifestLoadingMaxRetry: 1,             // used by playlist-loader
+      manifestLoadingRetryDelay: 1000,        // used by playlist-loader
+      manifestLoadingMaxRetryTimeout: 64000,  // used by playlist-loader
+      startLevel: undefined,                  // used by level-controller
+      levelLoadingTimeOut: 10000,             // used by playlist-loader
+      levelLoadingMaxRetry: 4,                // used by playlist-loader
+      levelLoadingRetryDelay: 1000,           // used by playlist-loader
+      levelLoadingMaxRetryTimeout: 64000,     // used by playlist-loader
+      fragLoadingTimeOut: 20000,              // used by fragment-loader
+      fragLoadingMaxRetry: 6,                 // used by fragment-loader
+      fragLoadingRetryDelay: 1000,            // used by fragment-loader
+      fragLoadingMaxRetryTimeout: 64000,      // used by fragment-loader
+      fragLoadingLoopThreshold: 3,            // used by stream-controller
+      startFragPrefetch: false,               // used by stream-controller
+      fpsDroppedMonitoringPeriod: 5000,       // used by fps-controller
+      fpsDroppedMonitoringThreshold: 0.2,     // used by fps-controller
+      appendErrorMaxRetry: 3,                 // used by buffer-controller
       loader: XhrLoader,
       //loader: FetchLoader,
       fLoader: undefined,
@@ -82,20 +82,24 @@ export var hlsDefaultConfig = {
       subtitleTrackController: SubtitleTrackController,
       timelineController: TimelineController,
       cueHandler: Cues,
-      enableCEA708Captions: true,
-      enableWebVTT: true,
+      enableCEA708Captions: true,               // used by timeline-controller
+      enableWebVTT: true,                       // used by timeline-controller
+      captionsTextTrack1Label: 'English',       // used by timeline-controller
+      captionsTextTrack1LanguageCode: 'en',      // used by timeline-controller
+      captionsTextTrack2Label: 'Spanish',       // used by timeline-controller
+      captionsTextTrack2LanguageCode: 'es',     // used by timeline-controller
 //#endif
-      stretchShortVideoTrack: false,
-      forceKeyFrameOnDiscontinuity: true,
-      abrEwmaFastLive: 3,
-      abrEwmaSlowLive: 9,
-      abrEwmaFastVoD: 3,
-      abrEwmaSlowVoD: 9,
-      abrEwmaDefaultEstimate: 5e5, // 500 kbps
-      abrBandWidthFactor : 0.95,
-      abrBandWidthUpFactor : 0.7,
-      abrMaxWithRealBitrate : false,
-      maxStarvationDelay : 4,
-      maxLoadingDelay : 4,
-      minAutoBitrate: 0
+      stretchShortVideoTrack: false,            // used by mp4-remuxer
+      forceKeyFrameOnDiscontinuity: true,       // used by ts-demuxer
+      abrEwmaFastLive: 3,                       // used by abr-controller
+      abrEwmaSlowLive: 9,                       // used by abr-controller
+      abrEwmaFastVoD: 3,                        // used by abr-controller
+      abrEwmaSlowVoD: 9,                        // used by abr-controller
+      abrEwmaDefaultEstimate: 5e5, // 500 kbps  // used by abr-controller
+      abrBandWidthFactor : 0.95,                // used by abr-controller
+      abrBandWidthUpFactor : 0.7,               // used by abr-controller
+      abrMaxWithRealBitrate : false,            // used by abr-controller
+      maxStarvationDelay : 4,                   // used by abr-controller
+      maxLoadingDelay : 4,                      // used by abr-controller
+      minAutoBitrate: 0                         // used by hls
     };

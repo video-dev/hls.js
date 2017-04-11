@@ -49,7 +49,7 @@ class BufferController extends EventHandler {
     // is greater than 100ms (this is enough to handle seek for VOD or level change for LIVE videos). At the time of change we issue
     // `SourceBuffer.abort()` and adjusting `SourceBuffer.timestampOffset` if `SourceBuffer.updating` is false or awaiting `updateend`
     // event if SB is in updating state.
-    // More info here: https://github.com/dailymotion/hls.js/issues/332#issuecomment-257986486
+    // More info here: https://github.com/video-dev/hls.js/issues/332#issuecomment-257986486
 
     if (type === 'audio' && audioTrack && audioTrack.container === 'audio/mpeg') { // Chrome audio mp3 track
       let audioBuffer = this.sourceBuffer.audio;
@@ -215,7 +215,7 @@ class BufferController extends EventHandler {
   }
 
   onSBUpdateError(event) {
-    logger.error(`sourceBuffer error:${event}`);
+    logger.error('sourceBuffer error:', event);
     // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
     // this error might not always be fatal (it is fatal if decode error is set, in that case
     // it will be followed by a mediaElement error ...)
@@ -357,7 +357,7 @@ class BufferController extends EventHandler {
     this.updateMediaElementDuration();
   }
 
-  // https://github.com/dailymotion/hls.js/issues/355
+  // https://github.com/video-dev/hls.js/issues/355
   updateMediaElementDuration() {
     let media = this.media,
         mediaSource = this.mediaSource,

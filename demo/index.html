@@ -59,7 +59,7 @@ header {
   <div class="header-container">
     <header class="wrapper clearfix">
       <h1>
-        <a target="_blank" href="https://github.com/dailymotion/hls.js">
+        <a target="_blank" href="https://github.com/video-dev/hls.js">
           <img src="https://cloud.githubusercontent.com/assets/616833/19739063/e10be95a-9bb9-11e6-8100-2896f8500138.png"/>
         </a>
       </h1>
@@ -238,7 +238,7 @@ $(document).ready(function() {
    $('#levelCapping').val(levelCapping);
    $('#defaultAudioCodec').val(defaultAudioCodec || "undefined");
 
-   $('h2').append(' <a target=_blank href=https://github.com/dailymotion/hls.js/releases/tag/v' + Hls.version + '>v' + Hls.version + '</a>');
+   $('h2').append(' <a target=_blank href=https://github.com/video-dev/hls.js/releases/tag/v' + Hls.version + '>v' + Hls.version + '</a>');
 
 });
 
@@ -303,7 +303,7 @@ $(document).ready(function() {
        hls.on(Hls.Events.FRAG_PARSING_METADATA, function(event, data) {
          //console.log("Id3 samples ", data.samples);
        });
-       hls.on(Hls.Events.LEVEL_SWITCH,function(event,data) {
+       hls.on(Hls.Events.LEVEL_SWITCHING,function(event,data) {
           events.level.push({time : performance.now() - events.t0, id : data.level, bitrate : Math.round(hls.levels[data.level].bitrate/1000)});
           updateLevelInfo();
        });
@@ -450,6 +450,12 @@ $(document).ready(function() {
           stats.fragparsingMs = Math.round(this.sumParsing);
           stats.autoLevelCappingLast = hls.autoLevelCapping;
        });
+       hls.on(Hls.Events.LEVEL_SWITCHED,function(event,data) {
+        var event = {time : performance.now() - events.t0, type : 'level switched', name : data.level };
+        events.video.push(event);
+        refreshCanvas();
+        updateLevelInfo();
+      });
        hls.on(Hls.Events.FRAG_CHANGED,function(event,data) {
         var event = {time : performance.now() - events.t0, type : 'frag changed', name : data.frag.sn + ' @ ' + data.frag.level };
         events.video.push(event);
@@ -518,6 +524,7 @@ $(document).ready(function() {
        });
 
        hls.on(Hls.Events.ERROR, function(event,data) {
+        console.warn(data);
         switch(data.details) {
           case Hls.ErrorDetails.MANIFEST_LOAD_ERROR:
             try {
@@ -1108,9 +1115,9 @@ function createfMP4(type) {
 }
 
 function arrayConcat(inputArray) {
-    let totalLength = inputArray.reduce( function(prev,cur) { return prev+cur.length} ,0);
-    let result = new Uint8Array(totalLength);
-    let offset = 0;
+    var totalLength = inputArray.reduce( function(prev,cur) { return prev+cur.length} ,0);
+    var result = new Uint8Array(totalLength);
+    var offset = 0;
     inputArray.forEach(function(element) {
       result.set(element, offset);
       offset += element.length;

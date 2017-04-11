@@ -70,7 +70,7 @@ class AudioStreamController extends EventHandler {
 
   //Signal that video PTS was found
   onInitPtsFound(data) {
-    var demuxerId=data.id, cc = data.cc, initPTS = data.initPTS;
+    var demuxerId=data.id, cc = data.frag.cc, initPTS = data.initPTS;
     if(demuxerId === 'main') {
       //Always update the new INIT PTS
       //Can change due level switch
@@ -199,7 +199,7 @@ class AudioStreamController extends EventHandler {
             trackId = this.trackId;
 
         // if buffer length is less than maxBufLen try to load a new fragment
-        if (bufferLen < maxBufLen && trackId < tracks.length) {
+        if ((bufferLen < maxBufLen || audioSwitch) && trackId < tracks.length) {
           trackDetails = tracks[trackId].details;
           // if track info not retrieved yet, switch state and wait for track retrieval
           if (typeof trackDetails === 'undefined') {
@@ -560,13 +560,12 @@ class AudioStreamController extends EventHandler {
         var track = this.tracks[this.trackId],
             details = track.details,
             duration = details.totalduration,
-            start = fragCurrent.start,
             trackId = fragCurrent.level,
             sn = fragCurrent.sn,
             cc = fragCurrent.cc,
             audioCodec = this.config.defaultAudioCodec || track.audioCodec || 'mp4a.40.2',
             stats = this.stats = data.stats;
-      if (fragLoaded.sn === 'initSegment') {
+      if (sn === 'initSegment') {
         this.state = State.IDLE;
 
         stats.tparsed = stats.tbuffered = performance.now();
@@ -589,7 +588,7 @@ class AudioStreamController extends EventHandler {
           logger.log(`Demuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
           // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
           let accurateTimeOffset = false; //details.PTSKnown || !details.live;
-          this.demuxer.push(data.payload, initSegmentData, audioCodec, null, start, cc, trackId, sn, duration, fragCurrent.decryptdata, accurateTimeOffset, initPTS);
+          this.demuxer.push(data.payload, initSegmentData, audioCodec, null, fragCurrent, duration, accurateTimeOffset, initPTS);
         } else {
           logger.log(`unknown video PTS for continuity counter ${cc}, waiting for video PTS before demuxing audio frag ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
           this.waitingFragment=data;
@@ -601,11 +600,12 @@ class AudioStreamController extends EventHandler {
   }
 
   onFragParsingInitSegment(data) {
-    let fragCurrent = this.fragCurrent;
+    const fragCurrent = this.fragCurrent;
+    const fragNew = data.frag;
     if (fragCurrent &&
         data.id === 'audio' &&
-        data.sn === fragCurrent.sn &&
-        data.level === fragCurrent.level &&
+        fragNew.sn === fragCurrent.sn &&
+        fragNew.level === fragCurrent.level &&
         this.state === State.PARSING) {
       let tracks = data.tracks, track;
 
@@ -640,16 +640,16 @@ class AudioStreamController extends EventHandler {
   }
 
   onFragParsingData(data) {
-    let fragCurrent = this.fragCurrent;
+    const fragCurrent = this.fragCurrent;
+    const fragNew = data.frag;
     if (fragCurrent &&
         data.id === 'audio' &&
         data.type === 'audio' &&
-        data.sn === fragCurrent.sn &&
-        data.level === fragCurrent.level &&
+        fragNew.sn === fragCurrent.sn &&
+        fragNew.level === fragCurrent.level &&
         this.state === State.PARSING) {
       let trackId= this.trackId,
           track = this.tracks[trackId],
-          frag = this.fragCurrent,
           hls = this.hls;
 
       if (isNaN(data.endPTS)) {
@@ -658,7 +658,7 @@ class AudioStreamController extends EventHandler {
       }
 
       logger.log(`parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
-      LevelHelper.updateFragPTSDTS(track.details,frag.sn,data.startPTS,data.endPTS);
+      LevelHelper.updateFragPTSDTS(track.details,fragCurrent,data.startPTS,data.endPTS);
 
       let audioSwitch = this.audioSwitch, media = this.media, appendOnBufferFlush = false;
       //Only flush audio from old audio tracks when PTS is known on new audio track
@@ -710,11 +710,12 @@ class AudioStreamController extends EventHandler {
   }
 
   onFragParsed(data) {
-    let fragCurrent = this.fragCurrent;
+    const fragCurrent = this.fragCurrent;
+    const fragNew = data.frag;
     if (fragCurrent &&
         data.id === 'audio' &&
-        data.sn === fragCurrent.sn &&
-        data.level === fragCurrent.level &&
+        fragNew.sn === fragCurrent.sn &&
+        fragNew.level === fragCurrent.level &&
         this.state === State.PARSING) {
       this.stats.tparsed = performance.now();
       this.state = State.PARSED;
@@ -791,9 +792,8 @@ class AudioStreamController extends EventHandler {
             this.state = State.FRAG_LOADING_WAITING_RETRY;
           } else {
             logger.error(`audioStreamController: ${data.details} reaches max retry, redispatch as fatal ...`);
-            // redispatch same error but with fatal set to true
+            // switch error to fatal
             data.fatal = true;
-            this.hls.trigger(Event.ERROR, data);
             this.state = State.ERROR;
           }
         }
@@ -829,7 +829,7 @@ class AudioStreamController extends EventHandler {
             this.state = State.IDLE;
           } else {
             // current position is not buffered, but browser is still complaining about buffer full error
-            // this happens on IE/Edge, refer to https://github.com/dailymotion/hls.js/pull/708
+            // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
             // in that case flush the whole audio buffer to recover
             logger.warn('buffer full error also media.currentTime is not buffered, flush audio buffer');
             this.fragCurrent = null;

@@ -12,18 +12,27 @@
  import ADTS from './adts';
  import Event from '../events';
  import ExpGolomb from './exp-golomb';
+ import SampleAesDecrypter from './sample-aes';
 // import Hex from '../utils/hex';
  import {logger} from '../utils/logger';
  import {ErrorTypes, ErrorDetails} from '../errors';
 
  class TSDemuxer {
 
-  constructor(observer, id, remuxer, config, typeSupported) {
+  constructor(observer, remuxer, config, typeSupported) {
     this.observer = observer;
-    this.id = id;
     this.config = config;
     this.typeSupported = typeSupported;
     this.remuxer = remuxer;
+    this.sampleAes = null;
+  }
+
+  setDecryptData(decryptdata) {
+    if ((decryptdata != null) && (decryptdata.key != null) && (decryptdata.method === 'SAMPLE-AES')) {
+      this.sampleAes = new SampleAesDecrypter(this.observer, this.config, decryptdata, this.discardEPB);
+    } else {
+      this.sampleAes = null;
+    }
   }
 
   static probe(data) {
@@ -35,13 +44,13 @@
     }
   }
 
-  resetInitSegment(initSegment,level,sn,audioCodec,videoCodec, duration) {
+  resetInitSegment(initSegment,audioCodec,videoCodec, duration) {
     this.pmtParsed = false;
     this._pmtId = -1;
-    this._avcTrack = {container : 'video/mp2t', type: 'video', id :-1, sequenceNumber: 0, samples : [], len : 0, dropped : 0};
-    this._audioTrack = {container : 'video/mp2t', type: 'audio', id :-1, sequenceNumber: 0, samples : [], len : 0, isAAC: true};
-    this._id3Track = {type: 'id3', id :-1, sequenceNumber: 0, samples : [], len : 0};
-    this._txtTrack = {type: 'text', id: -1, sequenceNumber: 0, samples : [], len : 0};
+    this._avcTrack = {container : 'video/mp2t', type: 'video', id :-1, inputTimeScale : 90000, sequenceNumber: 0, samples : [], len : 0, dropped : 0};
+    this._audioTrack = {container : 'video/mp2t', type: 'audio', id :-1, inputTimeScale : 90000, sequenceNumber: 0, samples : [], len : 0, isAAC: true};
+    this._id3Track = {type: 'id3', id :-1, inputTimeScale : 90000, sequenceNumber: 0, samples : [], len : 0};
+    this._txtTrack = {type: 'text', id: -1, inputTimeScale : 90000, sequenceNumber: 0, samples : [], len : 0};
     // flush any partial content
     this.aacOverFlow = null;
     this.aacLastPTS = null;
@@ -55,7 +64,7 @@
   }
 
   // feed incoming data to the front of the parsing pipeline
-  append(data, timeOffset, cc, level, sn, contiguous,accurateTimeOffset) {
+  append(data, timeOffset, contiguous,accurateTimeOffset) {
     var start, len = data.length, stt, pid, atf, offset,pes,
         unknownPIDs = false;
     this.contiguous = contiguous;
@@ -148,7 +157,7 @@
             if (stt) {
               offset += data[offset] + 1;
             }
-            let parsedPIDs = parsePMT(data, offset, this.typeSupported.mpeg === true || this.typeSupported.mp3 === true);
+            let parsedPIDs = parsePMT(data, offset, this.typeSupported.mpeg === true || this.typeSupported.mp3 === true, this.sampleAes != null);
 
             // only update track id if track PID found while parsing PMT
             // this is to avoid resetting the PID to -1 in case
@@ -183,7 +192,7 @@
             break;
         }
       } else {
-        this.observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, id : this.id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47'});
+        this.observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47'});
       }
     }
     // try to parse last PES packets
@@ -217,7 +226,34 @@
       // either id3Data null or PES truncated, keep it for next frag parsing
       id3Track.pesData = id3Data;
     }
-    this.remuxer.remux(level, sn, cc, audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset);
+
+    if (this.sampleAes == null) {
+      this.remuxer.remux(audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset);
+    } else {
+      this.decryptAndRemux(audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset);
+    }
+  }
+
+  decryptAndRemux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
+    if (audioTrack.samples && audioTrack.isAAC) {
+      let localthis = this;
+      this.sampleAes.decryptAacSamples(audioTrack.samples, 0, function() {
+        localthis.decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
+      });
+    } else {
+      this.decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
+    }
+  }
+
+  decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
+    if (videoTrack.samples) {
+      let localthis = this;
+      this.sampleAes.decryptAvcSamples(videoTrack.samples, 0, 0, function () {
+        localthis.remuxer.remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
+      });
+    } else {
+      this.remuxer.remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
+    }
   }
 
   destroy() {
@@ -231,7 +267,7 @@
     //logger.log('PMT PID:'  + this._pmtId);
   }
 
-  _parsePMT(data, offset, mpegSupported) {
+  _parsePMT(data, offset, mpegSupported, isSampleAes) {
     var sectionLength, tableEnd, programInfoLength, pid, result = { audio : -1, avc : -1, id3 : -1, isAAC : true};
     sectionLength = (data[offset + 1] & 0x0f) << 8 | data[offset + 2];
     tableEnd = offset + 3 + sectionLength - 4;
@@ -243,6 +279,13 @@
     while (offset < tableEnd) {
       pid = (data[offset + 1] & 0x1F) << 8 | data[offset + 2];
       switch(data[offset]) {
+        case 0xcf:     // SAMPLE-AES AAC
+          if (!isSampleAes) {
+            logger.log('unkown stream type:'  + data[offset]);
+            break;
+          }
+          /* falls through */
+
         // ISO/IEC 13818-7 ADTS AAC (MPEG-2 lower bit-rate audio)
         case 0x0f:
           //logger.log('AAC PID:'  + pid);
@@ -250,6 +293,7 @@
             result.audio = pid;
           }
           break;
+
         // Packetized metadata (ID3)
         case 0x15:
           //logger.log('ID3 PID:'  + pid);
@@ -257,6 +301,14 @@
             result.id3 = pid;
           }
           break;
+
+        case 0xdb:     // SAMPLE-AES AVC
+          if (!isSampleAes) {
+            logger.log('unkown stream type:'  + data[offset]);
+            break;
+          }
+          /* falls through */
+
         // ITU-T Rec. H.264 and ISO/IEC 14496-10 (lower bit-rate video)
         case 0x1b:
           //logger.log('AVC PID:'  + pid);
@@ -264,6 +316,7 @@
             result.avc = pid;
           }
           break;
+
         // ISO/IEC 11172-3 (MPEG-1 audio)
         // or ISO/IEC 13818-3 (MPEG-2 halved sample rate audio)
         case 0x03:
@@ -276,9 +329,11 @@
             result.isAAC = false;
           }
           break;
+
         case 0x24:
           logger.warn('HEVC stream type found, not supported for now');
           break;
+
         default:
           logger.log('unkown stream type:'  + data[offset]);
           break;
@@ -387,22 +442,25 @@
   }
 
   pushAccesUnit(avcSample,avcTrack) {
-    if (avcSample.units.units.length && avcSample.frame) {
+    if (avcSample.units.length && avcSample.frame) {
+      const samples = avcTrack.samples;
+      const nbSamples = samples.length;
       // only push AVC sample if starting with a keyframe is not mandatory OR
       //    if keyframe already found in this fragment OR
       //       keyframe found in last fragment (track.sps) AND
       //          samples already appended (we already found a keyframe in this fragment) OR fragment is contiguous
       if (!this.config.forceKeyFrameOnDiscontinuity ||
           avcSample.key === true ||
-          (avcTrack.sps && (avcTrack.samples.length || this.contiguous))) {
-        avcTrack.samples.push(avcSample);
+          (avcTrack.sps && (nbSamples || this.contiguous))) {
+        avcSample.id = nbSamples;
+        samples.push(avcSample);
       } else {
         // dropped samples, track it
         avcTrack.dropped++;
       }
     }
     if(avcSample.debug.length) {
-      logger.log(avcSample.pts + '/' + avcSample.dts + ':' + avcSample.debug + ',' + avcSample.units.length);
+      logger.log(avcSample.pts + '/' + avcSample.dts + ':' + avcSample.debug);
     }
   }
 
@@ -588,7 +646,7 @@
       }
       if(avcSample && push) {
         let units = avcSample.units;
-        units.units.push(unit);
+        units.push(unit);
       }
     });
     // if last PES packet, push samples
@@ -599,7 +657,7 @@
   }
 
   _createAVCSample(key,pts,dts,debug) {
-    return { key : key, pts : pts, dts : dts, units : { units : [], length : 0}, debug : debug};
+    return { key : key, pts : pts, dts : dts, units : [], debug : debug};
   }
 
   _insertSampleInOrder(arr, data) {
@@ -626,12 +684,12 @@
   _getLastNalUnit() {
     let avcSample = this.avcSample, lastUnit;
     // try to fallback to previous sample if current one is empty
-    if (!avcSample || avcSample.units.units.length === 0) {
+    if (!avcSample || avcSample.units.length === 0) {
       let track = this._avcTrack, samples = track.samples;
       avcSample = samples[samples.length-1];
     }
     if (avcSample) {
-      let units = avcSample.units.units;
+      let units = avcSample.units;
       lastUnit = units[units.length - 1];
     }
     return lastUnit;
@@ -808,16 +866,16 @@
         fatal = true;
       }
       logger.warn(`parsing error:${reason}`);
-      this.observer.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, id : this.id, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason});
+      this.observer.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason});
       if (fatal) {
         return;
       }
     }
-    if (!track.audiosamplerate) {
+    if (!track.samplerate) {
       const audioCodec = this.audioCodec;
       config = ADTS.getAudioConfig(this.observer,data, offset, audioCodec);
       track.config = config.config;
-      track.audiosamplerate = config.samplerate;
+      track.samplerate = config.samplerate;
       track.channelCount = config.channelCount;
       track.codec = config.codec;
       track.manifestCodec = config.manifestCodec;
@@ -825,7 +883,7 @@
       logger.log(`parsed codec:${track.codec},rate:${config.samplerate},nb channel:${config.channelCount}`);
     }
     frameIndex = 0;
-    frameDuration = 1024 * 90000 / track.audiosamplerate;
+    frameDuration = 1024 * 90000 / track.samplerate;
 
     // if last AAC frame is overflowing, we should ensure timestamps are contiguous:
     // first sample PTS should be equal to last sample PTS + frameDuration
@@ -896,7 +954,7 @@
 
     track.config = [];
     track.channelCount = channelCount;
-    track.audiosamplerate = sampleRate;
+    track.samplerate = sampleRate;
     track.duration = this._duration;
     track.samples.push({unit: data, pts: stamp, dts: stamp});
     track.len += data.length;

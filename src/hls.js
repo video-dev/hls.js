@@ -3,6 +3,7 @@
  */
 'use strict';
 
+import URLToolkit from 'url-toolkit';
 import Event from './events';
 import {ErrorTypes, ErrorDetails} from './errors';
 import PlaylistLoader from './loader/playlist-loader';
@@ -74,6 +75,7 @@ class Hls {
 
     enableLogs(config.debug);
     this.config = config;
+    this._autoLevelCapping = -1;
     // observer setup
     var observer = this.observer = new EventEmitter();
     observer.trigger = function trigger (event, ...data) {
@@ -87,6 +89,15 @@ class Hls {
     this.off = observer.off.bind(observer);
     this.trigger = observer.trigger.bind(observer);
 
+    // core controllers and network loaders
+    const abrController = this.abrController = new config.abrController(this);
+    const bufferController  = new config.bufferController(this);
+    const capLevelController = new config.capLevelController(this);
+    const fpsController = new config.fpsController(this);
+    const playListLoader = new PlaylistLoader(this);
+    const fragmentLoader = new FragmentLoader(this);
+    const keyLoader = new KeyLoader(this);
+
     // network controllers
     const levelController = this.levelController = new LevelController(this);
     const streamController = this.streamController = new StreamController(this);
@@ -97,18 +108,7 @@ class Hls {
     if (Controller) {
       networkControllers.push(new Controller(this));
     }
-
     this.networkControllers = networkControllers;
-
-    // core controllers and network loaders
-    // hls.abrController is referenced in levelController, this would need to be fixed
-    const abrController = this.abrController = new config.abrController(this);
-    const bufferController  = new config.bufferController(this);
-    const capLevelController = new config.capLevelController(this);
-    const fpsController = new config.fpsController(this);
-    const playListLoader = new PlaylistLoader(this);
-    const fragmentLoader = new FragmentLoader(this);
-    const keyLoader = new KeyLoader(this);
 
     let coreComponents = [ playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController ];
 
@@ -143,6 +143,7 @@ class Hls {
     this.coreComponents.concat(this.networkControllers).forEach(component => {component.destroy();});
     this.url = null;
     this.observer.removeAllListeners();
+    this._autoLevelCapping = -1;
   }
 
   attachMedia(media) {
@@ -158,6 +159,7 @@ class Hls {
   }
 
   loadSource(url) {
+    url = URLToolkit.buildAbsoluteURL(window.location.href, url, { alwaysNormalize: true });
     logger.log(`loadSource:${url}`);
     this.url = url;
     // when attaching to a source URL, trigger a playlist load
@@ -239,7 +241,7 @@ class Hls {
   /** Return first level (index of first level referenced in manifest)
   **/
   get firstLevel() {
-    return Math.max(this.levelController.firstLevel, this.abrController.minAutoLevel);
+    return Math.max(this.levelController.firstLevel, this.minAutoLevel);
   }
 
   /** set first level (index of first level referenced in manifest)
@@ -263,18 +265,23 @@ class Hls {
   **/
   set startLevel(newLevel) {
     logger.log(`set startLevel:${newLevel}`);
-    this.levelController.startLevel = newLevel;
+    const hls = this;
+    // if not in automatic start level detection, ensure startLevel is greater than minAutoLevel
+    if (newLevel !== -1) {
+      newLevel = Math.max(newLevel,hls.minAutoLevel);
+    }
+    hls.levelController.startLevel = newLevel;
   }
 
   /** Return the capping/max level value that could be used by automatic level selection algorithm **/
   get autoLevelCapping() {
-    return this.abrController.autoLevelCapping;
+    return this._autoLevelCapping;
   }
 
   /** set the capping/max level value that could be used by automatic level selection algorithm **/
   set autoLevelCapping(newLevel) {
     logger.log(`set autoLevelCapping:${newLevel}`);
-    this.abrController.autoLevelCapping = newLevel;
+    this._autoLevelCapping = newLevel;
   }
 
   /* check if we are in automatic level selection mode */
@@ -285,6 +292,47 @@ class Hls {
   /* return manual level */
   get manualLevel() {
     return this.levelController.manualLevel;
+  }
+
+  /* return min level selectable in auto mode according to config.minAutoBitrate */
+  get minAutoLevel() {
+    let hls = this, levels = hls.levels, minAutoBitrate = hls.config.minAutoBitrate, len = levels ? levels.length : 0;
+    for (let i = 0; i < len; i++) {
+      const levelNextBitrate = levels[i].realBitrate ? Math.max(levels[i].realBitrate,levels[i].bitrate) : levels[i].bitrate;
+      if (levelNextBitrate > minAutoBitrate) {
+        return i;
+      }
+    }
+    return 0;
+  }
+
+  /* return max level selectable in auto mode according to autoLevelCapping */
+  get maxAutoLevel() {
+    const hls = this;
+    const levels = hls.levels;
+    const autoLevelCapping = hls.autoLevelCapping;
+    let maxAutoLevel;
+    if (autoLevelCapping=== -1 && levels && levels.length) {
+      maxAutoLevel = levels.length - 1;
+    } else {
+      maxAutoLevel = autoLevelCapping;
+    }
+    return maxAutoLevel;
+  }
+
+  // return next auto level
+  get nextAutoLevel() {
+    const hls = this;
+    // ensure next auto level is between  min and max auto level
+    return Math.min(Math.max(hls.abrController.nextAutoLevel,hls.minAutoLevel),hls.maxAutoLevel);
+  }
+
+  // this setter is used to force next auto level
+  // this is useful to force a switch down in auto mode : in case of load error on level N, hls.js can set nextAutoLevel to N-1 for example)
+  // forced value is valid for one fragment. upon succesful frag loading at forced level, this value will be resetted to -1 by ABR controller
+  set nextAutoLevel(nextLevel) {
+    const hls = this;
+    hls.abrController.nextAutoLevel = Math.max(hls.minAutoLevel,nextLevel);
   }
 
   /** get alternate audio tracks list from playlist **/

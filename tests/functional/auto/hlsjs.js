@@ -183,9 +183,6 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
           callback({ code : 'ended', logs : logString});
         };
       }, url).then(function(result) {
-        console.log('travis_fold:start:debug_logs');
-        console.log(result.logs);
-        console.log('travis_fold:end:debug_logs');
         assert.strictEqual(result.code, 'ended');
       });
     }
