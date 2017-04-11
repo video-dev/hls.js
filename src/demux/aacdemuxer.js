@@ -92,7 +92,7 @@ import ID3 from '../demux/id3';
     }
     this.remuxer.remux(track,
                         {samples : []},
-                        {samples : [ { pts: pts, dts : pts, unit : id3.payload} ]},
+                        {samples : [ { pts: pts, dts : pts, unit : id3.payload}], inputTimeScale : 90000},
                         {samples : []},
                         timeOffset,
                         contiguous,
