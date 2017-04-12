@@ -51,6 +51,7 @@ class TimelineController extends EventHandler {
         this.unparsedVttFrags = [];
         this.initPTS = undefined;
         this.cueRanges = [];
+        this.manifestCaptionsLabels = {};
 
         if (this.config.enableCEA708Captions) {
             var self = this;
@@ -73,15 +74,18 @@ class TimelineController extends EventHandler {
                         //Enable reuse of existing text track.
                         var existingTrack1 = self.getExistingTrack('1');
                         if (!existingTrack1) {
-                            const textTrack1 = self.createTextTrack(
+                            var track1Label =
+                                self.manifestCaptionsLabels
+                                    .captionsTextTrack1Label || 'English';
+                            var track1Lang =
+                                self.manifestCaptionsLabels
+                                    .captionsTextTrack1Language || 'en';
+                            self.textTrack1 = self.createTextTrack(
                                 'captions',
-                                self.config.captionsTextTrack1Label,
-                                self.config.captionsTextTrack1LanguageCode
+                                track1Label,
+                                track1Lang
                             );
-                            if (textTrack1) {
-                                textTrack1.textTrack1 = true;
-                                self.textTrack1 = textTrack1;
-                            }
+                            self.textTrack1.textTrack1 = true;
                         } else {
                             self.textTrack1 = existingTrack1;
                             clearCurrentCues(self.textTrack1);
@@ -99,15 +103,18 @@ class TimelineController extends EventHandler {
                         //Enable reuse of existing text track.
                         var existingTrack2 = self.getExistingTrack('2');
                         if (!existingTrack2) {
-                            const textTrack2 = self.createTextTrack(
+                            var track2Label =
+                                self.manifestCaptionsLabels
+                                    .captionsTextTrack2Label || 'Español';
+                            var track2Lang =
+                                self.manifestCaptionsLabels
+                                    .captionsTextTrack2Language || 'es';
+                            self.textTrack2 = self.createTextTrack(
                                 'captions',
-                                self.config.captionsTextTrack2Label,
-                                self.config.captionsTextTrack1LanguageCode
+                                track2Label,
+                                track2Lang
                             );
-                            if (textTrack2) {
-                                textTrack2.textTrack2 = true;
-                                self.textTrack2 = textTrack2;
-                            }
+                            self.textTrack2.textTrack2 = true;
                         } else {
                             self.textTrack2 = existingTrack2;
                             clearCurrentCues(self.textTrack2);
@@ -222,6 +229,7 @@ class TimelineController extends EventHandler {
         this.unparsedVttFrags = this.unparsedVttFrags || [];
         this.initPTS = undefined;
         this.cueRanges = [];
+        this.manifestCaptionsLabels = {};
 
         if (this.config.enableWebVTT) {
             this.tracks = data.subtitles || [];
@@ -264,12 +272,16 @@ class TimelineController extends EventHandler {
                 }
 
                 index = instreamIdMatch[1];
-                this.config['captionsTextTrack' + index + 'Label'] =
+                this.manifestCaptionsLabels[
+                    'captionsTextTrack' + index + 'Label'
+                ] =
                     captionsTrack.name;
 
                 if (captionsTrack.lang) {
                     // optional attribute
-                    this.config['captionsTextTrack' + index + 'LanguageCode'] =
+                    this.manifestCaptionsLabels[
+                        'captionsTextTrack' + index + 'LanguageCode'
+                    ] =
                         captionsTrack.lang;
                 }
             }
