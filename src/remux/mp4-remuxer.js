@@ -531,7 +531,7 @@ class MP4Remuxer {
         // for audio samples, also consider consecutive fragments as being contiguous (even if a level switch occurs),
         // for sake of clarity:
         // consecutive fragments are frags with
-        //  - less than 100ms gaps between new time offset and next expected PTS OR
+        //  - less than 100ms gaps between new time offset (if accurate) and next expected PTS OR
         //  - less than 20 audio frames distance
         // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
         // this helps ensuring audio continuity
@@ -541,7 +541,8 @@ class MP4Remuxer {
         contiguous |=
             inputSamples.length &&
             nextAudioPts &&
-            (Math.abs(timeOffset - nextAudioPts / inputTimeScale) < 0.1 ||
+            ((accurateTimeOffset &&
+                Math.abs(timeOffset - nextAudioPts / inputTimeScale) < 0.1) ||
                 Math.abs(inputSamples[0].pts - nextAudioPts - initDTS) <
                     20 * inputSampleDuration);
 
