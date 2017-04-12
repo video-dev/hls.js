@@ -91,12 +91,16 @@ Prepackaged build is included in the [dist](dist) folder:
 
  - [hls.js](dist/hls.js)
  - [hls.min.js](dist/hls.min.js)
+ - [hls.light.js](dist/hls.light.js)
+ - [hls.light.min.js](dist/hls.light.min.js)
 
 If you want to bundle the application yourself, use node
 
 ```
 npm install hls.js
 ```
+
+**NOTE:** `hls.light.*.js` dist files do not include subtitling and alternate-audio features.
 
 ## Installation
 
