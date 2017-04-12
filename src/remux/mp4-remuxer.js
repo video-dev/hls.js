@@ -48,6 +48,11 @@ class MP4Remuxer {
           if (audioData) {
             audioTrackLength = audioData.endPTS - audioData.startPTS;
           }
+          // if initSegment was generated without video samples, regenerate it again
+          if (!videoTrack.timescale) {
+            logger.warn('regenerate InitSegment as video detected');
+            this.generateIS(audioTrack,videoTrack,timeOffset); 
+          }
           this.remuxVideo(videoTrack,timeOffset,contiguous,audioTrackLength);
         }
       } else {
