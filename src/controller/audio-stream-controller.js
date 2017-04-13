@@ -658,7 +658,7 @@ class AudioStreamController extends EventHandler {
       }
 
       logger.log(`parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
-      LevelHelper.updateFragPTSDTS(track.details,fragCurrent.sn,data.startPTS,data.endPTS);
+      LevelHelper.updateFragPTSDTS(track.details,fragCurrent,data.startPTS,data.endPTS);
 
       let audioSwitch = this.audioSwitch, media = this.media, appendOnBufferFlush = false;
       //Only flush audio from old audio tracks when PTS is known on new audio track

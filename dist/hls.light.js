@@ -864,6 +864,7 @@ var AbrController = function (_EventHandler) {
         var fragLoadingProcessingMs = stats.tparsed - stats.trequest;
         _logger.logger.log('latency/loading/parsing/append/kbps:' + Math.round(stats.tfirst - stats.trequest) + '/' + Math.round(stats.tload - stats.tfirst) + '/' + Math.round(stats.tparsed - stats.tload) + '/' + Math.round(stats.tbuffered - stats.tparsed) + '/' + Math.round(8 * stats.loaded / (stats.tbuffered - stats.trequest)));
         this._bwEstimator.sample(fragLoadingProcessingMs, stats.loaded);
+        stats.bwEstimate = this._bwEstimator.getEstimate();
         // if fragment has been loaded to perform a bitrate test, (hls.startLevel = -1), store bitrate test delay duration
         if (frag.bitrateTest) {
           this.bitrateTestDelay = fragLoadingProcessingMs / 1000;
@@ -2506,11 +2507,7 @@ var StreamController = function (_EventHandler) {
           this.fragLoadError = 0;
           break;
         case State.IDLE:
-          // when this returns false there was an error and we shall return immediatly
-          // from current tick
-          if (!this._doTickIdle()) {
-            return;
-          }
+          this._doTickIdle();
           break;
         case State.WAITING_LEVEL:
           var level = this.levels[this.level];
@@ -2560,7 +2557,7 @@ var StreamController = function (_EventHandler) {
       // exit loop
       // => if start level loaded and media not attached but start frag prefetch is enabled and start frag not requested yet, we will not exit loop
       if (this.levelLastLoaded !== undefined && !media && (this.startFragRequested || !config.startFragPrefetch)) {
-        return true;
+        return;
       }
 
       // if we have not yet loaded any fragment, start loading from start position
@@ -2591,7 +2588,7 @@ var StreamController = function (_EventHandler) {
           bufferLen = bufferInfo.len;
       // Stay idle if we are still with buffer margins
       if (bufferLen >= maxBufLen) {
-        return true;
+        return;
       }
 
       // if buffer length is less than maxBufLen try to load a new fragment ...
@@ -2606,7 +2603,7 @@ var StreamController = function (_EventHandler) {
       // a useless and outdated fragment (that might even introduce load error if it is already out of the live playlist)
       if (typeof levelDetails === 'undefined' || levelDetails.live && this.levelLastLoaded !== level) {
         this.state = State.WAITING_LEVEL;
-        return true;
+        return;
       }
 
       // we just got done loading the final fragment, check if we need to finalize media stream
@@ -2627,12 +2624,12 @@ var StreamController = function (_EventHandler) {
           }
           this.hls.trigger(_events2.default.BUFFER_EOS, data);
           this.state = State.ENDED;
-          return true;
+          return;
         }
       }
 
       // if we have the levelDetails for the selected variant, lets continue enrichen our stream (load keys/fragments or trigger EOS, etc..)
-      return this._fetchPayloadOrEos(pos, bufferInfo, levelDetails);
+      this._fetchPayloadOrEos(pos, bufferInfo, levelDetails);
     }
   }, {
     key: '_fetchPayloadOrEos',
@@ -2644,7 +2641,7 @@ var StreamController = function (_EventHandler) {
 
       // empty playlist
       if (fragLen === 0) {
-        return false;
+        return;
       }
 
       // find fragment index, contiguous with end of buffer position
@@ -2661,13 +2658,13 @@ var StreamController = function (_EventHandler) {
           var initialLiveManifestSize = this.config.initialLiveManifestSize;
           if (fragLen < initialLiveManifestSize) {
             _logger.logger.warn('Can not start playback of a level, reason: not enough fragments ' + fragLen + ' < ' + initialLiveManifestSize);
-            return false;
+            return;
           }
 
           frag = this._ensureFragmentAtLivePoint(levelDetails, bufferEnd, start, end, fragPrevious, fragments, fragLen);
           // if it explicitely returns null don't load any fragment and exit function now
           if (frag === null) {
-            return false;
+            return;
           }
         } else {
           // VoD playlist: if bufferEnd before start of playlist, load first fragment
@@ -2680,9 +2677,9 @@ var StreamController = function (_EventHandler) {
         frag = this._findFragment(start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails);
       }
       if (frag) {
-        return this._loadFragmentOrKey(frag, level, levelDetails, pos, bufferEnd);
+        this._loadFragmentOrKey(frag, level, levelDetails, pos, bufferEnd);
       }
-      return true;
+      return;
     }
   }, {
     key: '_ensureFragmentAtLivePoint',
@@ -2862,7 +2859,7 @@ var StreamController = function (_EventHandler) {
           // if this frag has already been loaded 3 times, and if it has been reloaded recently
           if (frag.loadCounter > maxThreshold && Math.abs(this.fragLoadIdx - frag.loadIdx) < maxThreshold) {
             hls.trigger(_events2.default.ERROR, { type: _errors.ErrorTypes.MEDIA_ERROR, details: _errors.ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal: false, frag: frag });
-            return false;
+            return;
           }
         } else {
           frag.loadCounter = 1;
@@ -2881,7 +2878,7 @@ var StreamController = function (_EventHandler) {
           this.demuxer = new _demuxer2.default(hls, 'main');
         }
         this.state = State.FRAG_LOADING;
-        return true;
+        return;
       }
     }
   }, {
@@ -3467,7 +3464,7 @@ var StreamController = function (_EventHandler) {
           }
         }
 
-        var drift = _levelHelper2.default.updateFragPTSDTS(level.details, frag.sn, data.startPTS, data.endPTS, data.startDTS, data.endDTS),
+        var drift = _levelHelper2.default.updateFragPTSDTS(level.details, frag, data.startPTS, data.endPTS, data.startDTS, data.endDTS),
             hls = this.hls;
         hls.trigger(_events2.default.LEVEL_PTS_UPDATED, { details: level.details, level: this.level, drift: drift, type: data.type, start: data.startPTS, end: data.endPTS });
 
@@ -4548,7 +4545,7 @@ var AACDemuxer = function () {
           break;
         }
       }
-      this.remuxer.remux(track, { samples: [] }, { samples: [{ pts: pts, dts: pts, unit: id3.payload }] }, { samples: [] }, timeOffset, contiguous, accurateTimeOffset);
+      this.remuxer.remux(track, { samples: [] }, { samples: [{ pts: pts, dts: pts, unit: id3.payload }], inputTimeScale: 90000 }, { samples: [] }, timeOffset, contiguous, accurateTimeOffset);
     }
   }, {
     key: 'destroy',
@@ -7676,7 +7673,7 @@ var LevelHelper = {
 
     // if at least one fragment contains PTS info, recompute PTS information for all fragments
     if (PTSFrag) {
-      LevelHelper.updateFragPTSDTS(newDetails, PTSFrag.sn, PTSFrag.startPTS, PTSFrag.endPTS, PTSFrag.startDTS, PTSFrag.endDTS);
+      LevelHelper.updateFragPTSDTS(newDetails, PTSFrag, PTSFrag.startPTS, PTSFrag.endPTS, PTSFrag.startDTS, PTSFrag.endDTS);
     } else {
       // ensure that delta is within oldfragments range
       // also adjust sliding in case delta is 0 (we could have old=[50-60] and new=old=[50-61])
@@ -7695,15 +7692,8 @@ var LevelHelper = {
     return;
   },
 
-  updateFragPTSDTS: function updateFragPTSDTS(details, sn, startPTS, endPTS, startDTS, endDTS) {
-    var fragIdx, fragments, frag, i;
-    // exit if sn out of range
-    if (!details || sn < details.startSN || sn > details.endSN) {
-      return 0;
-    }
-    fragIdx = sn - details.startSN;
-    fragments = details.fragments;
-    frag = fragments[fragIdx];
+  updateFragPTSDTS: function updateFragPTSDTS(details, frag, startPTS, endPTS, startDTS, endDTS) {
+    // update frag PTS/DTS
     if (!isNaN(frag.startPTS)) {
       // delta PTS between audio and video
       var deltaPTS = Math.abs(frag.startPTS - startPTS);
@@ -7719,12 +7709,21 @@ var LevelHelper = {
     }
 
     var drift = startPTS - frag.start;
-
     frag.start = frag.startPTS = startPTS;
     frag.endPTS = endPTS;
     frag.startDTS = startDTS;
     frag.endDTS = endDTS;
     frag.duration = endPTS - startPTS;
+
+    var sn = frag.sn;
+    // exit if sn out of range
+    if (!details || sn < details.startSN || sn > details.endSN) {
+      return 0;
+    }
+    var fragIdx, fragments, i;
+    fragIdx = sn - details.startSN;
+    fragments = details.fragments;
+    frag = fragments[fragIdx];
     // adjust fragment PTS/duration from seqnum-1 to frag 0
     for (i = fragIdx; i > 0; i--) {
       LevelHelper.updatePTS(fragments, i, i - 1);
@@ -7764,7 +7763,7 @@ var LevelHelper = {
       if (toIdx > fromIdx) {
         fragTo.start = fragFrom.start + fragFrom.duration;
       } else {
-        fragTo.start = fragFrom.start - fragTo.duration;
+        fragTo.start = Math.max(fragFrom.start - fragTo.duration, 0);
       }
     }
   }
@@ -9821,6 +9820,11 @@ var MP4Remuxer = function () {
             if (audioData) {
               audioTrackLength = audioData.endPTS - audioData.startPTS;
             }
+            // if initSegment was generated without video samples, regenerate it again
+            if (!videoTrack.timescale) {
+              _logger.logger.warn('regenerate InitSegment as video detected');
+              this.generateIS(audioTrack, videoTrack, timeOffset);
+            }
             this.remuxVideo(videoTrack, timeOffset, contiguous, audioTrackLength);
           }
         } else {
@@ -10209,14 +10213,14 @@ var MP4Remuxer = function () {
       // for audio samples, also consider consecutive fragments as being contiguous (even if a level switch occurs),
       // for sake of clarity:
       // consecutive fragments are frags with
-      //  - less than 100ms gaps between new time offset and next expected PTS OR
+      //  - less than 100ms gaps between new time offset (if accurate) and next expected PTS OR
       //  - less than 20 audio frames distance
       // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
       // this helps ensuring audio continuity
       // and this also avoids audio glitches/cut when switching quality, or reporting wrong duration on first audio frame
 
       nextAudioPts = this.nextAudioPts;
-      contiguous |= inputSamples.length && nextAudioPts && (Math.abs(timeOffset - nextAudioPts / inputTimeScale) < 0.1 || Math.abs(inputSamples[0].pts - nextAudioPts - initDTS) < 20 * inputSampleDuration);
+      contiguous |= inputSamples.length && nextAudioPts && (accurateTimeOffset && Math.abs(timeOffset - nextAudioPts / inputTimeScale) < 0.1 || Math.abs(inputSamples[0].pts - nextAudioPts - initDTS) < 20 * inputSampleDuration);
 
       if (!contiguous) {
         // if fragments are not contiguous, let's use timeOffset to compute next Audio PTS
@@ -10317,7 +10321,7 @@ var MP4Remuxer = function () {
                 // if we have frame overlap, overlapping for more than half a frame duraion
               } else if (_delta < -12) {
                 // drop overlapping audio frames... browser will deal with it
-                _logger.logger.log(-_delta + ' ms overlapping between AAC samples detected, drop frame');
+                _logger.logger.log('drop overlapping AAC sample, expected/parsed/delta:' + (nextAudioPts / inputTimeScale).toFixed(3) + 's/' + (ptsnorm / inputTimeScale).toFixed(3) + 's/' + -_delta + 'ms');
                 track.len -= unit.byteLength;
                 continue;
               }
