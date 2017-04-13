@@ -720,8 +720,8 @@ class AudioStreamController extends EventHandler {
                 let initPTS = this.initPTS[cc];
                 let initSegmentData = details.initSegment
                     ? details.initSegment.data
-                    : new ArrayBuffer(0);
-                if (initSegmentData.byteLength > 0 || initPTS !== undefined) {
+                    : [];
+                if (details.initSegment || initPTS !== undefined) {
                     this.pendingBuffering = true;
                     logger.log(
                         `Demuxing ${sn} of [${details.startSN} ,${
