@@ -656,7 +656,7 @@ class StreamController extends EventHandler {
                     levelDetails.endSN
                 }],level ${level}, currentTime:${pos.toFixed(
                     3
-                )},bufferEnd:${bufferEnd.toFixed(3)}`
+                )},bufferEnd:${bufferEnd}`
             );
             // ensure that we are not reloading the same fragments in loop ...
             if (this.fragLoadIdx !== undefined) {
