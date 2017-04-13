@@ -49,22 +49,31 @@ class XhrLoader {
     } else {
        xhr = this.loader = new XMLHttpRequest();
     }
-
-    xhr.onreadystatechange = this.readystatechange.bind(this);
-    xhr.onprogress = this.loadprogress.bind(this);
-
-    xhr.open('GET', context.url, true);
-
-    if (context.rangeEnd) {
-      xhr.setRequestHeader('Range','bytes=' + context.rangeStart + '-' + (context.rangeEnd-1));
-    }
-    xhr.responseType = context.responseType;
     let stats = this.stats;
     stats.tfirst = 0;
     stats.loaded = 0;
-    if (this.xhrSetup) {
-      this.xhrSetup(xhr, context.url);
+    const xhrSetup = this.xhrSetup;
+    if (xhrSetup) {
+      try {
+        xhrSetup(xhr, context.url);
+      } catch(e) {
+        // fix xhrSetup: (xhr, url) => {xhr.setRequestHeader("Content-Language", "test");}
+        // not working, as xhr.setRequestHeader expects xhr.readyState === OPEN
+        xhr.open('GET', context.url, true);
+        xhrSetup(xhr, context.url);        
+      }
     }
+
+    if (!xhr.readyState) {
+      xhr.open('GET', context.url, true);
+    }
+    if (context.rangeEnd) {
+      xhr.setRequestHeader('Range','bytes=' + context.rangeStart + '-' + (context.rangeEnd-1));
+    }
+    xhr.onreadystatechange = this.readystatechange.bind(this);
+    xhr.onprogress = this.loadprogress.bind(this);
+    xhr.responseType = context.responseType;
+
     // setup timeout before we perform request
     this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), this.config.timeout);
     xhr.send();
@@ -82,15 +91,12 @@ class XhrLoader {
       return;
     }
 
-    // in any case clear the current xhrs timeout
-    window.clearTimeout(this.requestTimeout);
-
-    // HEADERS_RECEIVED
+    // >= HEADERS_RECEIVED
     if (readyState >=2) {
+      // clear xhr timeout and rearm it if readyState less than 4
+      window.clearTimeout(this.requestTimeout);
       if (stats.tfirst === 0) {
         stats.tfirst = Math.max(performance.now(), stats.trequest);
-        // reset timeout to total timeout duration minus the time it took to receive headers
-        this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), config.timeout - (stats.tfirst-stats.trequest));
       }
       if (readyState === 4) {
         let status = xhr.status;
@@ -139,6 +145,9 @@ class XhrLoader {
             stats.retry++;
           }
         }
+      } else {
+        // readyState >= 2 AND readyState !==4 (readyState = HEADERS_RECEIVED || LOADING) rearm timeout as xhr not finished yet
+        this.requestTimeout = window.setTimeout(this.loadtimeout.bind(this), config.timeout);
       }
     }
   }

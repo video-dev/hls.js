@@ -1,6 +1,6 @@
 {
   "name": "metacdn.hls.js",
-  "version": "0.6.5",
+  "version": "0.7.5",
   "license": "Apache-2.0",
   "description": "Media Source Extension - HLS library, forked from dailymotion/hls.js",
   "homepage": "https://github.com/MetaCDN/hls.js",

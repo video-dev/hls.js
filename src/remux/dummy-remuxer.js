@@ -3,19 +3,18 @@
 */
 
 class DummyRemuxer {
-  constructor(observer, id) {
+  constructor(observer) {
     this.observer = observer;
-    this.id = id;
-  }
-
-  get passthrough() {
-    return false;
   }
 
   destroy() {
   }
 
-  insertDiscontinuity() {
+  resetInitSegment() {
+  }
+
+
+  resetTimeStamp() {
   }
 
   remux(audioTrack,videoTrack,id3Track,textTrack,timeOffset) {
@@ -31,8 +30,8 @@ class DummyRemuxer {
     while (track.samples.length) {
       avcSample = track.samples.shift();
       // loop through AVC sample NALUs
-      while (avcSample.units.units.length) {
-        unit = avcSample.units.units.shift();
+      while (avcSample.units.length) {
+        unit = avcSample.units.shift();
       }
     }
     //please lint

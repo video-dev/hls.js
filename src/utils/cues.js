@@ -1,4 +1,6 @@
-var Cues = {
+import { fixLineBreaks } from './vttparser';
+
+const Cues = {
 
   newCue: function(track, startTime, endTime, captionScreen) {
     var row;
@@ -29,7 +31,16 @@ var Cues = {
             indenting = false;
           }
         }
-        cue = new VTTCue(startTime, endTime, text.trim());
+        //To be used for cleaning-up orphaned roll-up captions
+        row.cueStartTime = startTime;
+
+        // Give a slight bump to the endTime if it's equal to startTime to avoid a SyntaxError in IE
+        if (startTime === endTime)
+        {
+          endTime += 0.0001;
+        }
+
+        cue = new VTTCue(startTime, endTime, fixLineBreaks(text.trim()));
 
         if (indent >= 16)
         {
@@ -51,7 +62,8 @@ var Cues = {
           cue.line = (r > 7 ? r - 2 : r + 1);
         }
         cue.align = 'left';
-        cue.position = 100 * (indent / 32) + (navigator.userAgent.match(/Firefox\//) ? 50 : 0);
+        // Clamp the position between 0 and 100 - if out of these bounds, Firefox throws an exception and captions break
+        cue.position = Math.max(0, Math.min(100, 100 * (indent / 32) + (navigator.userAgent.match(/Firefox\//) ? 50 : 0)));
         track.addCue(cue);
       }
     }

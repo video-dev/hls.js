@@ -15,8 +15,9 @@ class FragmentLoader extends EventHandler {
   }
 
   destroy() {
-    for (let loaderName in this.loaders) {
-      let loader = this.loaders[loaderName];
+    let loaders = this.loaders;
+    for (let loaderName in loaders) {
+      let loader = loaders[loaderName];
       if (loader) {
         loader.destroy();
       }

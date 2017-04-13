@@ -9,7 +9,7 @@ class ExpGolomb {
   constructor(data) {
     this.data = data;
     // the number of bytes left to examine in this.data
-    this.bytesAvailable = this.data.byteLength;
+    this.bytesAvailable = data.byteLength;
     // the current word being examined
     this.word = 0; // :uint
     // the number of bits left to examine in the current word
@@ -19,13 +19,15 @@ class ExpGolomb {
   // ():void
   loadWord() {
     var
-      position = this.data.byteLength - this.bytesAvailable,
+      data = this.data,
+      bytesAvailable = this.bytesAvailable,
+      position = data.byteLength - bytesAvailable,
       workingBytes = new Uint8Array(4),
-      availableBytes = Math.min(4, this.bytesAvailable);
+      availableBytes = Math.min(4, bytesAvailable);
     if (availableBytes === 0) {
       throw new Error('no bytes available');
     }
-    workingBytes.set(this.data.subarray(position, position + availableBytes));
+    workingBytes.set(data.subarray(position, position + availableBytes));
     this.word = new DataView(workingBytes.buffer).getUint32(0);
     // track the amount of this.data that has been processed
     this.bitsAvailable = availableBytes * 8;
@@ -171,19 +173,27 @@ class ExpGolomb {
       frameCropRightOffset = 0,
       frameCropTopOffset = 0,
       frameCropBottomOffset = 0,
-      sarScale = 1,
       profileIdc,profileCompat,levelIdc,
       numRefFramesInPicOrderCntCycle, picWidthInMbsMinus1,
       picHeightInMapUnitsMinus1,
       frameMbsOnlyFlag,
       scalingListCount,
-      i;
-    this.readUByte();
-    profileIdc = this.readUByte(); // profile_idc
-    profileCompat = this.readBits(5); // constraint_set[0-4]_flag, u(5)
-    this.skipBits(3); // reserved_zero_3bits u(3),
-    levelIdc = this.readUByte(); //level_idc u(8)
-    this.skipUEG(); // seq_parameter_set_id
+      i,
+      readUByte = this.readUByte.bind(this),
+      readBits = this.readBits.bind(this),
+      readUEG = this.readUEG.bind(this),
+      readBoolean = this.readBoolean.bind(this),
+      skipBits = this.skipBits.bind(this),
+      skipEG = this.skipEG.bind(this),
+      skipUEG = this.skipUEG.bind(this),
+      skipScalingList = this.skipScalingList.bind(this);
+
+    readUByte();
+    profileIdc = readUByte(); // profile_idc
+    profileCompat = readBits(5); // constraint_set[0-4]_flag, u(5)
+    skipBits(3); // reserved_zero_3bits u(3),
+    levelIdc = readUByte(); //level_idc u(8)
+    skipUEG(); // seq_parameter_set_id
     // some profiles have more optional data we don't need
     if (profileIdc === 100 ||
         profileIdc === 110 ||
@@ -194,90 +204,88 @@ class ExpGolomb {
         profileIdc === 86  ||
         profileIdc === 118 ||
         profileIdc === 128) {
-      var chromaFormatIdc = this.readUEG();
+      var chromaFormatIdc = readUEG();
       if (chromaFormatIdc === 3) {
-        this.skipBits(1); // separate_colour_plane_flag
+        skipBits(1); // separate_colour_plane_flag
       }
-      this.skipUEG(); // bit_depth_luma_minus8
-      this.skipUEG(); // bit_depth_chroma_minus8
-      this.skipBits(1); // qpprime_y_zero_transform_bypass_flag
-      if (this.readBoolean()) { // seq_scaling_matrix_present_flag
+      skipUEG(); // bit_depth_luma_minus8
+      skipUEG(); // bit_depth_chroma_minus8
+      skipBits(1); // qpprime_y_zero_transform_bypass_flag
+      if (readBoolean()) { // seq_scaling_matrix_present_flag
         scalingListCount = (chromaFormatIdc !== 3) ? 8 : 12;
         for (i = 0; i < scalingListCount; i++) {
-          if (this.readBoolean()) { // seq_scaling_list_present_flag[ i ]
+          if (readBoolean()) { // seq_scaling_list_present_flag[ i ]
             if (i < 6) {
-              this.skipScalingList(16);
+              skipScalingList(16);
             } else {
-              this.skipScalingList(64);
+              skipScalingList(64);
             }
           }
         }
       }
     }
-    this.skipUEG(); // log2_max_frame_num_minus4
-    var picOrderCntType = this.readUEG();
+    skipUEG(); // log2_max_frame_num_minus4
+    var picOrderCntType = readUEG();
     if (picOrderCntType === 0) {
-      this.readUEG(); //log2_max_pic_order_cnt_lsb_minus4
+      readUEG(); //log2_max_pic_order_cnt_lsb_minus4
     } else if (picOrderCntType === 1) {
-      this.skipBits(1); // delta_pic_order_always_zero_flag
-      this.skipEG(); // offset_for_non_ref_pic
-      this.skipEG(); // offset_for_top_to_bottom_field
-      numRefFramesInPicOrderCntCycle = this.readUEG();
+      skipBits(1); // delta_pic_order_always_zero_flag
+      skipEG(); // offset_for_non_ref_pic
+      skipEG(); // offset_for_top_to_bottom_field
+      numRefFramesInPicOrderCntCycle = readUEG();
       for(i = 0; i < numRefFramesInPicOrderCntCycle; i++) {
-        this.skipEG(); // offset_for_ref_frame[ i ]
+        skipEG(); // offset_for_ref_frame[ i ]
       }
     }
-    this.skipUEG(); // max_num_ref_frames
-    this.skipBits(1); // gaps_in_frame_num_value_allowed_flag
-    picWidthInMbsMinus1 = this.readUEG();
-    picHeightInMapUnitsMinus1 = this.readUEG();
-    frameMbsOnlyFlag = this.readBits(1);
+    skipUEG(); // max_num_ref_frames
+    skipBits(1); // gaps_in_frame_num_value_allowed_flag
+    picWidthInMbsMinus1 = readUEG();
+    picHeightInMapUnitsMinus1 = readUEG();
+    frameMbsOnlyFlag = readBits(1);
     if (frameMbsOnlyFlag === 0) {
-      this.skipBits(1); // mb_adaptive_frame_field_flag
+      skipBits(1); // mb_adaptive_frame_field_flag
     }
-    this.skipBits(1); // direct_8x8_inference_flag
-    if (this.readBoolean()) { // frame_cropping_flag
-      frameCropLeftOffset = this.readUEG();
-      frameCropRightOffset = this.readUEG();
-      frameCropTopOffset = this.readUEG();
-      frameCropBottomOffset = this.readUEG();
+    skipBits(1); // direct_8x8_inference_flag
+    if (readBoolean()) { // frame_cropping_flag
+      frameCropLeftOffset = readUEG();
+      frameCropRightOffset = readUEG();
+      frameCropTopOffset = readUEG();
+      frameCropBottomOffset = readUEG();
     }
-    if (this.readBoolean()) {
+    let pixelRatio = [1,1];
+    if (readBoolean()) {
       // vui_parameters_present_flag
-      if (this.readBoolean()) {
+      if (readBoolean()) {
         // aspect_ratio_info_present_flag
-        let sarRatio;
-        const aspectRatioIdc = this.readUByte();
+        const aspectRatioIdc = readUByte();
         switch (aspectRatioIdc) {
-          case 1: sarRatio = [1,1]; break;
-          case 2: sarRatio = [12,11]; break;
-          case 3: sarRatio = [10,11]; break;
-          case 4: sarRatio = [16,11]; break;
-          case 5: sarRatio = [40,33]; break;
-          case 6: sarRatio = [24,11]; break;
-          case 7: sarRatio = [20,11]; break;
-          case 8: sarRatio = [32,11]; break;
-          case 9: sarRatio = [80,33]; break;
-          case 10: sarRatio = [18,11]; break;
-          case 11: sarRatio = [15,11]; break;
-          case 12: sarRatio = [64,33]; break;
-          case 13: sarRatio = [160,99]; break;
-          case 14: sarRatio = [4,3]; break;
-          case 15: sarRatio = [3,2]; break;
-          case 16: sarRatio = [2,1]; break;
+          case 1: pixelRatio = [1,1]; break;
+          case 2: pixelRatio = [12,11]; break;
+          case 3: pixelRatio = [10,11]; break;
+          case 4: pixelRatio = [16,11]; break;
+          case 5: pixelRatio = [40,33]; break;
+          case 6: pixelRatio = [24,11]; break;
+          case 7: pixelRatio = [20,11]; break;
+          case 8: pixelRatio = [32,11]; break;
+          case 9: pixelRatio = [80,33]; break;
+          case 10: pixelRatio = [18,11]; break;
+          case 11: pixelRatio = [15,11]; break;
+          case 12: pixelRatio = [64,33]; break;
+          case 13: pixelRatio = [160,99]; break;
+          case 14: pixelRatio = [4,3]; break;
+          case 15: pixelRatio = [3,2]; break;
+          case 16: pixelRatio = [2,1]; break;
           case 255: {
-            sarRatio = [this.readUByte() << 8 | this.readUByte(), this.readUByte() << 8 | this.readUByte()];
+            pixelRatio = [readUByte() << 8 | readUByte(), readUByte() << 8 | readUByte()];
             break;
           }
-        }
-        if (sarRatio) {
-          sarScale = sarRatio[0] / sarRatio[1];
         }
       }
     }
     return {
-      width: Math.ceil((((picWidthInMbsMinus1 + 1) * 16) - frameCropLeftOffset * 2 - frameCropRightOffset * 2) * sarScale),
-      height: ((2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16) - ((frameMbsOnlyFlag? 2 : 4) * (frameCropTopOffset + frameCropBottomOffset))
+      width: Math.ceil((((picWidthInMbsMinus1 + 1) * 16) - frameCropLeftOffset * 2 - frameCropRightOffset * 2)),
+      height: ((2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16) - ((frameMbsOnlyFlag? 2 : 4) * (frameCropTopOffset + frameCropBottomOffset)),
+      pixelRatio : pixelRatio
     };
   }
 

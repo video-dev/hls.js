@@ -15,7 +15,7 @@ module.exports = {
   BUFFER_CREATED: 'hlsBufferCreated',
   // fired when we append a segment to the buffer - data: { segment: segment object }
   BUFFER_APPENDING: 'hlsBufferAppending',
-  // fired when we are done with appending a media segment to the buffer data : { parent : segment parent that triggered BUFFER_APPENDING }
+  // fired when we are done with appending a media segment to the buffer data : { parent : segment parent that triggered BUFFER_APPENDING , pending : nb of segments waiting for appending for this segment parent}
   BUFFER_APPENDED: 'hlsBufferAppended',
   // fired when the stream is finished and we want to notify the media buffer that there will be no more data
   BUFFER_EOS: 'hlsBufferEos',
@@ -29,6 +29,12 @@ module.exports = {
   MANIFEST_LOADED: 'hlsManifestLoaded',
   // fired after manifest has been parsed - data: { levels : [available quality levels] , firstLevel : index of first quality level appearing in Manifest}
   MANIFEST_PARSED: 'hlsManifestParsed',
+  // fired when a level switch is requested - data: { level : id of new level } // deprecated in favor LEVEL_SWITCHING
+  LEVEL_SWITCH: 'hlsLevelSwitch',
+  // fired when a level switch is requested - data: { level : id of new level }
+  LEVEL_SWITCHING: 'hlsLevelSwitching',
+  // fired when a level switch is effective - data: { level : id of new level }
+  LEVEL_SWITCHED: 'hlsLevelSwitched',
   // fired when a level playlist loading starts - data: { url : level URL  level : id of level being loaded}
   LEVEL_LOADING: 'hlsLevelLoading',
   // fired when a level playlist loading finishes - data: { details : levelDetails object, level : id of loaded level, stats : { trequest, tfirst, tload, mtime} }
@@ -37,16 +43,30 @@ module.exports = {
   LEVEL_UPDATED: 'hlsLevelUpdated',
   // fired when a level's PTS information has been updated after parsing a fragment - data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment }
   LEVEL_PTS_UPDATED: 'hlsLevelPtsUpdated',
-  // fired when a level switch is requested - data: { level : id of new level }
-  LEVEL_SWITCH: 'hlsLevelSwitch',
   // fired to notify that audio track lists has been updated data: { audioTracks : audioTracks}
   AUDIO_TRACKS_UPDATED: 'hlsAudioTracksUpdated',
-  // fired when an audio track switch occurs - data: {  id : audio track id}
+  // fired when an audio track switch occurs - data: {  id : audio track id} // deprecated in favor AUDIO_TRACK_SWITCHING
   AUDIO_TRACK_SWITCH: 'hlsAudioTrackSwitch',
+  // fired when an audio track switching is requested - data: {  id : audio track id}
+  AUDIO_TRACK_SWITCHING: 'hlsAudioTrackSwitching',
+  // fired when an audio track switch actually occurs - data: {  id : audio track id}
+  AUDIO_TRACK_SWITCHED: 'hlsAudioTrackSwitched',
   // fired when an audio track loading starts - data: { url : audio track URL  id : audio track id}
   AUDIO_TRACK_LOADING: 'hlsAudioTrackLoading',
   // fired when an audio track loading  finishes - data: { details : levelDetails object, id : audio track id, stats : { trequest, tfirst, tload, mtime} }
   AUDIO_TRACK_LOADED: 'hlsAudioTrackLoaded',
+  // fired to notify that subtitle track lists has been updated data: { subtitleTracks : subtitleTracks}
+  SUBTITLE_TRACKS_UPDATED: 'hlsSubtitleTracksUpdated',
+  // fired when an subtitle track switch occurs - data: {  id : subtitle track id}
+  SUBTITLE_TRACK_SWITCH: 'hlsSubtitleTrackSwitch',
+  // fired when an subtitle track loading starts - data: { url : subtitle track URL  id : subtitle track id}
+  SUBTITLE_TRACK_LOADING: 'hlsSubtitleTrackLoading',
+  // fired when an subtitle track loading  finishes - data: { details : levelDetails object, id : subtitle track id, stats : { trequest, tfirst, tload, mtime} }
+  SUBTITLE_TRACK_LOADED: 'hlsSubtitleTrackLoaded',
+  // fired when a subtitle fragment has been processed - data: { success : boolean, frag : the processed frag}
+  SUBTITLE_FRAG_PROCESSED: 'hlsSubtitleFragProcessed',
+  // fired when the first timestamp is found. - data: { id : demuxer id, initPTS: initPTS , frag : fragment object}
+  INIT_PTS_FOUND: 'hlsInitPtsFound',
   // fired when a fragment loading starts - data: { frag : fragment object}
   FRAG_LOADING: 'hlsFragLoading',
   // fired when a fragment loading is progressing - data: { frag : fragment object, { trequest, tfirst, loaded}}
@@ -55,15 +75,17 @@ module.exports = {
   FRAG_LOAD_EMERGENCY_ABORTED: 'hlsFragLoadEmergencyAborted',
   // fired when a fragment loading is completed - data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length}}
   FRAG_LOADED: 'hlsFragLoaded',
-  // fired when Init Segment has been extracted from fragment - data: { id : demuxer id, level : levelId, sn : sequence number, moov : moov MP4 box, codecs : codecs found while parsing fragment}
+  // fired when a fragment has finished decrypting - data: { id : demuxer id, frag: fragment object, stats : {tstart,tdecrypt} }
+  FRAG_DECRYPTED: 'hlsFragDecrypted',
+  // fired when Init Segment has been extracted from fragment - data: { id : demuxer id, frag: fragment object, moov : moov MP4 box, codecs : codecs found while parsing fragment}
   FRAG_PARSING_INIT_SEGMENT: 'hlsFragParsingInitSegment',
-  // fired when parsing sei text is completed - data: { id : demuxer id, , level : levelId, sn : sequence number, samples : [ sei samples pes ] }
+  // fired when parsing sei text is completed - data: { id : demuxer id, , frag: fragment object, samples : [ sei samples pes ] }
   FRAG_PARSING_USERDATA: 'hlsFragParsingUserdata',
-  // fired when parsing id3 is completed - data: { id : demuxer id, , level : levelId, sn : sequence number, samples : [ id3 samples pes ] }
+  // fired when parsing id3 is completed - data: { id : demuxer id, frag: fragment object, samples : [ id3 samples pes ] }
   FRAG_PARSING_METADATA: 'hlsFragParsingMetadata',
-  // fired when data have been extracted from fragment - data: { id : demuxer id, level : levelId, sn : sequence number, data1 : moof MP4 box or TS fragments, data2 : mdat MP4 box or null}
+  // fired when data have been extracted from fragment - data: { id : demuxer id, frag: fragment object, data1 : moof MP4 box or TS fragments, data2 : mdat MP4 box or null}
   FRAG_PARSING_DATA: 'hlsFragParsingData',
-  // fired when fragment parsing is completed - data: { id : demuxer id; level : levelId, sn : sequence number, }
+  // fired when fragment parsing is completed - data: { id : demuxer id,frag: fragment object }
   FRAG_PARSED: 'hlsFragParsed',
   // fired when fragment remuxed MP4 boxes have all been appended into SourceBuffer - data: { id : demuxer id,frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length} }
   FRAG_BUFFERED: 'hlsFragBuffered',

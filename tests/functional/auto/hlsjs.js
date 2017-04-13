@@ -1,17 +1,34 @@
-var assert = require("assert");
-var webdriver = require("selenium-webdriver");
+var assert = require('assert');
+var webdriver = require('selenium-webdriver');
 // requiring this automatically adds the chromedriver binary to the PATH
-var chromedriver = require("chromedriver");
-var HttpServer = require("http-server");
+var chromedriver = require('chromedriver');
+var HttpServer = require('http-server');
+var streams = require('../streams.json');
 
-var STREAMS = [
-  { url : 'http://www.streambox.fr/playlists/test_001/stream.m3u8', description : 'ARTE China,ABR', live : false , abr : true},
-  { url : 'http://www.streambox.fr/playlists/x36xhzz/x36xhzz.m3u8', description : 'big buck bunny,ABR', live : false, abr : false},
-  { url : 'http://www.streambox.fr/playlists/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8', description : 'big buck bunny,480p', live : false, abr : false},
-  { url : 'http://www.streambox.fr/playlists/cisq0gim60007xzvi505emlxx.m3u8', description : 'https://github.com/dailymotion/hls.js/issues/666', live : false, abr : false},
-  { url : 'http://nasatv-lh.akamaihd.net/i/NASA_101@319270/index_1000_av-p.m3u8?sd=10&rebase=on', description : 'NASA live stream', live : true, abr : true}
- ];
+function retry(cb, numAttempts, interval) {
+  numAttempts = numAttempts || 20;
+  interval = interval || 3000;
+  return new Promise(function(resolve, reject) {
+    var attempts = 0;
+    attempt();
 
+    function attempt() {
+      cb().then(function(res) {
+        resolve(res);
+      }).catch(function(e) {
+        if (++attempts >= numAttempts) {
+          // reject with the last error
+          reject(e);
+        }
+        else {
+          setTimeout(attempt, interval);
+        }
+      });
+    }
+  });
+}
+
+var onTravis = !!process.env.TRAVIS;
 
 HttpServer.createServer({
   showDir: false,
@@ -19,98 +36,172 @@ HttpServer.createServer({
   root: './',
 }).listen(8000, '127.0.0.1');
 
-describe("testing hls.js playback in the browser", function() {
+
+var browserConfig = {version : 'latest'};
+if (onTravis) {
+  var UA_VERSION = process.env.UA_VERSION;
+  if (UA_VERSION) {
+    browserConfig.version = UA_VERSION;
+  }
+  var UA = process.env.UA;
+  if (!UA) {
+    throw new Error('No test browser name.')
+  }
+  var OS = process.env.OS;
+  if (!OS) {
+    throw new Error('No test browser platform.')
+  }
+  browserConfig.name = UA;
+  browserConfig.platform = OS;
+}
+else {
+  browserConfig.name = "chrome";
+}
+var browserDescription = browserConfig.name;
+if (browserConfig.version) {
+  browserDescription += ' ('+browserConfig.version+')';
+}
+if (browserConfig.platform) {
+  browserDescription += ', '+browserConfig.platform;
+}
+
+describe('testing hls.js playback in the browser on "'+browserDescription+'"', function() {
   beforeEach(function() {
-    if (process.env.SAUCE_USERNAME != undefined) {
-      this.browser = new webdriver.Builder()
-      .usingServer('http://'+ process.env.SAUCE_USERNAME+':'+process.env.SAUCE_ACCESS_KEY+'@ondemand.saucelabs.com:80/wd/hub')
-      .withCapabilities({
-        'tunnel-identifier': process.env.TRAVIS_JOB_NUMBER,
-        build: process.env.TRAVIS_BUILD_NUMBER,
-        username: process.env.SAUCE_USERNAME,
-        accessKey: process.env.SAUCE_ACCESS_KEY,
-        browserName : 'chrome',
-        platform : 'Windows 10',
-        version : '53.0'
-      }).build();
-    } else {
-      this.browser = new webdriver.Builder()
-      .withCapabilities({
-        browserName : 'chrome'
-      }).build();
+    var capabilities = {
+      name: '"'+stream.description+'" on "'+browserDescription+'"',
+      browserName: browserConfig.name,
+      platform: browserConfig.platform,
+      version: browserConfig.version,
+      commandTimeout: 90,
+    };
+    if (onTravis) {
+      capabilities['tunnel-identifier'] = process.env.TRAVIS_JOB_NUMBER;
+      capabilities.build = 'HLSJS-'+process.env.TRAVIS_BUILD_NUMBER;
+      capabilities.username = process.env.SAUCE_USERNAME;
+      capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
+      this.browser = new webdriver.Builder().usingServer('http://'+process.env.SAUCE_USERNAME+':'+process.env.SAUCE_ACCESS_KEY+'@ondemand.saucelabs.com:80/wd/hub');
     }
-    this.browser.manage().timeouts().setScriptTimeout(40000);
-    return this.browser.get("http://localhost:8000/tests/functional/auto/hlsjs.html");
+    else {
+      this.browser = new webdriver.Builder();
+    }
+    this.browser = this.browser.withCapabilities(capabilities).build();
+    this.browser.manage().timeouts().setScriptTimeout(75000);
+    console.log("Retrieving web driver session...");
+    return this.browser.getSession().then(function(session) {
+      console.log("Web driver session id: "+session.getId());
+      if (onTravis) {
+        console.log("Job URL: https://saucelabs.com/jobs/"+session.getId());
+      }
+      return retry(function() {
+        console.log("Loading test page...");
+        return this.browser.get('http://127.0.0.1:8000/tests/functional/auto/hlsjs.html').then(function() {
+          // ensure that the page has loaded and we haven't got an error page
+          return this.browser.findElement(webdriver.By.css('body#hlsjs-functional-tests')).catch(function(e) {
+            console.log("Test page not loaded.");
+            return Promise.reject(e);
+          });
+        }.bind(this));
+      }.bind(this)).then(function() {
+        console.log("Test page loaded.");
+      });
+    }.bind(this), function(err) {
+      console.log('error while Retrieving browser session:' + err);
+    });
   });
 
   afterEach(function() {
-    return this.browser.quit();
+    var browser = this.browser;
+    browser.executeScript('return logString').then(function(return_value){
+      console.log('travis_fold:start:debug_logs');
+      console.log('logs');
+      console.log(return_value);
+      console.log('travis_fold:end:debug_logs');
+      console.log("Quitting browser...");
+      return browser.quit().then(function() {
+        console.log("Browser quit.");
+      });
+    });
   });
 
-
-
-  STREAMS.forEach(function(stream) {
-    it("should receive video loadeddata event for " + stream.description, function() {
-      var url = stream.url;
+  const testLoadedData = function(url) {
+    return function() {
       return this.browser.executeAsyncScript(function(url) {
         var callback = arguments[arguments.length - 1];
         startStream(url, callback);
         video.onloadeddata = function() {
-          callback('loadeddata');
+          callback({ code : 'loadeddata', logs : logString});
         };
       }, url).then(function(result) {
-        assert.strictEqual(result, 'loadeddata');
-      });
-    });
-
-    if (stream.abr) {
-      it("should 'smooth switch' to highest level and still play(readyState === 4) after 12s for " + stream.description, function() {
-        var url = stream.url;
-        return this.browser.executeAsyncScript(function(url) {
-          var callback = arguments[arguments.length - 1];
-          startStream(url, callback);
-          video.onloadeddata = function() {
-            switchToHighestLevel('next');
-          };
-          window.setTimeout(function() { callback(video.readyState);},12000);
-        }, url).then(function(result) {
-          assert.strictEqual(result, 4);
-        });
+        assert.strictEqual(result.code, 'loadeddata');
       });
     }
+  }
 
-    if (stream.live) {
-      it("should seek near the end and receive video seeked event for " + stream.description, function() {
-        var url = stream.url;
-        return this.browser.executeAsyncScript(function(url) {
-          var callback = arguments[arguments.length - 1];
-          startStream(url, callback);
-          video.onloadeddata = function() {
-            window.setTimeout(function() { video.currentTime = video.duration - 5;},5000);
-          };
-          video.onseeked = function() {
-            callback('seeked');
-          };
-        }, url).then(function(result) {
-          assert.strictEqual(result, 'seeked');
-        });
-      });
-    } else {
-      it("should seek near the end and receive video ended event for " + stream.description, function() {
-        var url = stream.url;
-        return this.browser.executeAsyncScript(function(url) {
-          var callback = arguments[arguments.length - 1];
-          startStream(url, callback);
-          video.onloadeddata = function() {
-            video.currentTime = video.duration - 5;
-          };
-          video.onended = function() {
-            callback('ended');
-          };
-        }, url).then(function(result) {
-          assert.strictEqual(result, 'ended');
-        });
+  const testSmoothSwitch = function(url) {
+    return function() {
+      return this.browser.executeAsyncScript(function(url) {
+        var callback = arguments[arguments.length - 1];
+        startStream(url, callback);
+        video.onloadeddata = function() {
+          switchToHighestLevel('next');
+        };
+        window.setTimeout(function() {
+          callback({ code : video.readyState, logs : logString});
+        }, 12000);
+      }, url).then(function(result) {
+        assert.strictEqual(result.code, 4);
       });
     }
-  });
+  }
+
+  const testSeekOnLive = function(url) {
+    return function() {
+      return this.browser.executeAsyncScript(function(url) {
+        var callback = arguments[arguments.length - 1];
+        startStream(url, callback);
+        video.onloadeddata = function() {
+          window.setTimeout(function() { video.currentTime = video.duration - 5;}, 5000);
+        };
+        video.onseeked = function() {
+          callback({ code : 'seeked', logs : logString});
+        };
+      }, url).then(function(result) {
+        assert.strictEqual(result.code, 'seeked');
+      });
+    }
+  }
+
+  const testSeekOnVOD = function(url) {
+    return function() {
+      return this.browser.executeAsyncScript(function(url) {
+        var callback = arguments[arguments.length - 1];
+        startStream(url, callback);
+        video.onloadeddata = function() {
+          window.setTimeout(function() { video.currentTime = video.duration - 5;}, 5000);
+        };
+        video.onended = function() {
+          callback({ code : 'ended', logs : logString});
+        };
+      }, url).then(function(result) {
+        assert.strictEqual(result.code, 'ended');
+      });
+    }
+  }
+
+  for (var name in streams) {
+    var stream = streams[name];
+    var url = stream.url;
+    if (!stream.blacklist_ua || stream.blacklist_ua.indexOf(browserConfig.name) === -1) {
+      it('should receive video loadeddata event for ' + stream.description, testLoadedData(url));
+      if (stream.abr) {
+        it('should "smooth switch" to highest level and still play(readyState === 4) after 12s for ' + stream.description, testSmoothSwitch(url));
+      }
+
+      if (stream.live) {
+        it('should seek near the end and receive video seeked event for ' + stream.description, testSeekOnLive(url));
+      } else {
+        it('should seek near the end and receive video ended event for ' + stream.description, testSeekOnVOD(url));
+      }
+    }
+  }
 });

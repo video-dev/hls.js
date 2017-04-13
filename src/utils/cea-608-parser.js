@@ -151,7 +151,7 @@ var getCharForByte = function(byte) {
 };
 
 var NR_ROWS = 15,
-    NR_COLS = 32;
+    NR_COLS = 100;
 // Tables to look up row from PAC data
 var rowsLowCh1 = {0x11 : 1, 0x12 : 3, 0x15 : 5, 0x16 : 7, 0x17 : 9, 0x10 : 11, 0x13 : 12, 0x14 : 14};
 var rowsHighCh1 = {0x11 : 2, 0x12 : 4, 0x15 : 6, 0x16 : 8, 0x17 : 10, 0x13 : 13, 0x14 : 15};
@@ -506,6 +506,30 @@ class CaptionScreen {
         if (this.nrRollUpRows  && newRow < this.nrRollUpRows - 1) {
                 newRow = this.nrRollUpRows-1;
         }
+
+        //Make sure this only affects Roll-up Captions by checking this.nrRollUpRows
+        if (this.nrRollUpRows && this.currRow !== newRow) {
+          //clear all rows first
+          for (let i = 0; i < NR_ROWS; i++) {
+            this.rows[i].clear();
+          }
+
+          //Copy this.nrRollUpRows rows from lastOutputScreen and place it in the newRow location
+          //topRowIndex - the start of rows to copy (inclusive index)
+          var topRowIndex = this.currRow + 1 - (this.nrRollUpRows);
+          //We only copy if the last position was already shown.
+          //We use the cueStartTime value to check this.
+          const lastOutputScreen = this.lastOutputScreen;
+          if (lastOutputScreen) {
+            var prevLineTime = lastOutputScreen.rows[topRowIndex].cueStartTime;
+            if(prevLineTime && prevLineTime < logger.time) {
+              for (let i = 0; i < this.nrRollUpRows; i++) {
+                this.rows[newRow-this.nrRollUpRows+i+1].copy(lastOutputScreen.rows[topRowIndex+i]);
+              }
+            }
+          }
+        }
+
         this.currRow = newRow;
         var row = this.rows[this.currRow];
         if (pacData.indent !== null) {
