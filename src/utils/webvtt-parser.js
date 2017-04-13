@@ -1,7 +1,7 @@
 import VTTParser from './vttparser';
 
 // String.prototype.startsWith is not supported in IE11
-const startsWith = function(inputString, searchString, position){
+const startsWith = function(inputString, searchString, position) {
   return inputString.substr(position || 0, searchString.length) === searchString;
 };
 
