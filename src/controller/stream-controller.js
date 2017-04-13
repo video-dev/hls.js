@@ -990,7 +990,7 @@ class StreamController extends EventHandler {
         let media = this.media;
         let mediaSeeking = media && media.seeking;
         let accurateTimeOffset = !mediaSeeking && (details.PTSKnown || !details.live);
-        let initSegmentData = details.initSegment ? details.initSegment.data : new ArrayBuffer(0);
+        let initSegmentData = details.initSegment ? details.initSegment.data : [];
         demuxer.push(data.payload, initSegmentData,audioCodec, currentLevel.videoCodec, fragCurrent, duration, accurateTimeOffset,undefined);
       }
     }
