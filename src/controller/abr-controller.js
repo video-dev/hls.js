@@ -246,6 +246,7 @@ class AbrController extends EventHandler {
                 )}`
             );
             this._bwEstimator.sample(fragLoadingProcessingMs, stats.loaded);
+            stats.bwEstimate = this._bwEstimator.getEstimate();
             // if fragment has been loaded to perform a bitrate test, (hls.startLevel = -1), store bitrate test delay duration
             if (frag.bitrateTest) {
                 this.bitrateTestDelay = fragLoadingProcessingMs / 1000;

@@ -142,7 +142,10 @@ class AACDemuxer {
         this.remuxer.remux(
             track,
             { samples: [] },
-            { samples: [{ pts: pts, dts: pts, unit: id3.payload }] },
+            {
+                samples: [{ pts: pts, dts: pts, unit: id3.payload }],
+                inputTimeScale: 90000
+            },
             { samples: [] },
             timeOffset,
             contiguous,

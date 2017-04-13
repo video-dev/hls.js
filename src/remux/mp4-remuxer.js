@@ -64,6 +64,11 @@ class MP4Remuxer {
                         audioTrackLength =
                             audioData.endPTS - audioData.startPTS;
                     }
+                    // if initSegment was generated without video samples, regenerate it again
+                    if (!videoTrack.timescale) {
+                        logger.warn('regenerate InitSegment as video detected');
+                        this.generateIS(audioTrack, videoTrack, timeOffset);
+                    }
                     this.remuxVideo(
                         videoTrack,
                         timeOffset,
@@ -531,7 +536,7 @@ class MP4Remuxer {
         // for audio samples, also consider consecutive fragments as being contiguous (even if a level switch occurs),
         // for sake of clarity:
         // consecutive fragments are frags with
-        //  - less than 100ms gaps between new time offset and next expected PTS OR
+        //  - less than 100ms gaps between new time offset (if accurate) and next expected PTS OR
         //  - less than 20 audio frames distance
         // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
         // this helps ensuring audio continuity
@@ -541,7 +546,8 @@ class MP4Remuxer {
         contiguous |=
             inputSamples.length &&
             nextAudioPts &&
-            (Math.abs(timeOffset - nextAudioPts / inputTimeScale) < 0.1 ||
+            ((accurateTimeOffset &&
+                Math.abs(timeOffset - nextAudioPts / inputTimeScale) < 0.1) ||
                 Math.abs(inputSamples[0].pts - nextAudioPts - initDTS) <
                     20 * inputSampleDuration);
 
@@ -681,7 +687,11 @@ class MP4Remuxer {
                         } else if (delta < -12) {
                             // drop overlapping audio frames... browser will deal with it
                             logger.log(
-                                `${-delta} ms overlapping between AAC samples detected, drop frame`
+                                `drop overlapping AAC sample, expected/parsed/delta:${(
+                                    nextAudioPts / inputTimeScale
+                                ).toFixed(3)}s/${(
+                                    ptsnorm / inputTimeScale
+                                ).toFixed(3)}s/${-delta}ms`
                             );
                             track.len -= unit.byteLength;
                             continue;
