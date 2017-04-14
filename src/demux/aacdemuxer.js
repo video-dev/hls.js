@@ -44,9 +44,9 @@ import ID3 from '../demux/id3';
 
     track = this._aacTrack;
 
-    // look for ADTS header (0xFFFx)
-    for (offset = id3.length, len = data.length; offset < len - 1; offset++) {
-      if ((data[offset] === 0xff) && (data[offset+1] & 0xf0) === 0xf0) {
+    // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
+    for (offset = id3.length || 0, len = data.length; offset < len - 1; offset++) {
+      if ((data[offset] === 0xff) && (data[offset+1] & 0xf6) === 0xf0) {
         break;
       }
     }
