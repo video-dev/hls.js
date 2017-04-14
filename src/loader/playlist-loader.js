@@ -280,6 +280,7 @@ class PlaylistLoader extends EventHandler {
             var attrs = new AttrList(result[1]);
             if (attrs.TYPE === type) {
                 media.groupId = attrs['GROUP-ID'];
+                media.instreamId = attrs['INSTREAM-ID'];
                 media.name = attrs.NAME;
                 media.type = type;
                 media.default = attrs.DEFAULT === 'YES';
@@ -568,6 +569,11 @@ class PlaylistLoader extends EventHandler {
                         url,
                         'SUBTITLES'
                     );
+                    let captions = this.parseMasterPlaylistMedia(
+                        string,
+                        url,
+                        'CLOSED-CAPTIONS'
+                    );
                     if (audioTracks.length) {
                         // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
                         let embeddedAudioFound = false;
@@ -593,6 +599,7 @@ class PlaylistLoader extends EventHandler {
                         levels,
                         audioTracks,
                         subtitles,
+                        captions,
                         url,
                         stats
                     });
