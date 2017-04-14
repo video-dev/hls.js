@@ -46,10 +46,12 @@ class TimelineController extends EventHandler {
     this.unparsedVttFrags = [];
     this.initPTS = undefined;
     this.cueRanges = [];
+    this.manifestCaptionsLabels = {};
 
     if (this.config.enableCEA708Captions)
     {
       var self = this;
+      var captionsLabels = this.manifestCaptionsLabels;
       var sendAddTrackEvent = function (track, media)
       {
         var e = null;
@@ -74,7 +76,8 @@ class TimelineController extends EventHandler {
             var existingTrack1 = self.getExistingTrack('1');
             if (!existingTrack1)
             {
-              self.textTrack1 = self.createTextTrack('captions', 'English', 'en');
+              self.textTrack1 = self.createTextTrack('captions', captionsLabels.captionsTextTrack1Label,
+                captionsLabels.captionsTextTrack1LanguageCode);
               self.textTrack1.textTrack1 = true;
             }
             else
@@ -98,7 +101,8 @@ class TimelineController extends EventHandler {
             var existingTrack2 = self.getExistingTrack('2');
             if (!existingTrack2)
             {
-              self.textTrack2 = self.createTextTrack('captions', 'Spanish', 'es');
+              self.textTrack2 = self.createTextTrack('captions', captionsLabels.captionsTextTrack2Label,
+                captionsLabels.captionsTextTrack2LanguageCode);
               self.textTrack2.textTrack2 = true;
             }
             else
@@ -200,6 +204,12 @@ class TimelineController extends EventHandler {
     this.unparsedVttFrags = this.unparsedVttFrags || [];
     this.initPTS = undefined;
     this.cueRanges = [];
+    var captionsLabels = this.manifestCaptionsLabels;
+
+    captionsLabels.captionsTextTrack1Label = 'English';
+    captionsLabels.captionsTextTrack1LanguageCode = 'en';
+    captionsLabels.captionsTextTrack2Label = 'Español';
+    captionsLabels.captionsTextTrack2LanguageCode = 'es';
 
     if (this.config.enableWebVTT) {
       this.tracks = data.subtitles || [];
@@ -207,15 +217,35 @@ class TimelineController extends EventHandler {
 
       this.tracks.forEach((track, index) => {
         let textTrack;
-        const inUseTrack = inUseTracks[index];
-        // Reuse tracks with the same label, but do not reuse 608/708 tracks
-        if (reuseVttTextTrack(inUseTrack, track)) {
-          textTrack = inUseTrack;
-        } else {
-          textTrack = this.createTextTrack('subtitles', track.name, track.lang);
+      const inUseTrack = inUseTracks[index];
+      // Reuse tracks with the same label, but do not reuse 608/708 tracks
+      if (reuseVttTextTrack(inUseTrack, track)) {
+        textTrack = inUseTrack;
+      } else {
+        textTrack = this.createTextTrack('subtitles', track.name, track.lang);
+      }
+      textTrack.mode = track.default ? 'showing' : 'hidden';
+      this.textTracks.push(textTrack);
+    });
+    }
+
+    if (this.config.enableCEA708Captions && data.captions) {
+      let index;
+      let instreamIdMatch;
+
+      data.captions.forEach(function (captionsTrack) {
+        instreamIdMatch = /(?:CC|SERVICE)([1-2])/.exec(captionsTrack.instreamId);
+
+        if (!instreamIdMatch) {
+          return;
         }
-        textTrack.mode = track.default ? 'showing' : 'hidden';
-        this.textTracks.push(textTrack);
+
+        index = instreamIdMatch[1];
+        captionsLabels['captionsTextTrack' + index + 'Label'] = captionsTrack.name;
+
+        if (captionsTrack.lang) { // optional attribute
+          captionsLabels['captionsTextTrack' + index + 'LanguageCode'] = captionsTrack.lang;
+        }
       });
     }
   }
