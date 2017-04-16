@@ -583,7 +583,6 @@ Prefetch start fragment although media not attached.
 (default: `false`)
 
 Start prefetching start fragment although media not attached yet.
-Max number of append retries.
 
 ### `appendErrorMaxRetry`
 
