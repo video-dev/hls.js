@@ -206,9 +206,9 @@ class TimelineController extends EventHandler {
     this.cueRanges = [];
     var captionsLabels = this.manifestCaptionsLabels;
 
-    captionsLabels.captionsTextTrack1Label = 'English';
+    captionsLabels.captionsTextTrack1Label = 'Unknown CC';
     captionsLabels.captionsTextTrack1LanguageCode = 'en';
-    captionsLabels.captionsTextTrack2Label = 'Español';
+    captionsLabels.captionsTextTrack2Label = 'Unknown CC';
     captionsLabels.captionsTextTrack2LanguageCode = 'es';
 
     if (this.config.enableWebVTT) {
