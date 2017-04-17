@@ -67,7 +67,7 @@ class XhrLoader {
                 xhr.open('GET', context.url, true);
             }
         } catch (e) {
-            // IE11 throws an exception on xhr.open if attempting to access an HTTPS resource over HTTP
+            // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
             this.callbacks.onError(
                 { code: xhr.status, text: e.message },
                 context
