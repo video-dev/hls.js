@@ -255,6 +255,7 @@ class PlaylistLoader extends EventHandler {
       var attrs = new AttrList(result[1]);
       if(attrs.TYPE === type) {
         media.groupId = attrs['GROUP-ID'];
+        media.instreamId = attrs['INSTREAM-ID'];
         media.name = attrs.NAME;
         media.type = type;
         media.default = (attrs.DEFAULT === 'YES');
@@ -486,6 +487,7 @@ class PlaylistLoader extends EventHandler {
         if (levels.length) {
           let audioTracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO');
           let subtitles = this.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
+          let captions = this.parseMasterPlaylistMedia(string, url, 'CLOSED-CAPTIONS');
           if (audioTracks.length) {
             // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
             let embeddedAudioFound = false;
@@ -501,7 +503,7 @@ class PlaylistLoader extends EventHandler {
               audioTracks.unshift({ type : 'main', name : 'main'});
             }
           }
-          hls.trigger(Event.MANIFEST_LOADED, {levels, audioTracks, subtitles, url, stats});
+          hls.trigger(Event.MANIFEST_LOADED, {levels, audioTracks, subtitles, captions, url, stats});
         } else {
           hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_EMPTY_ERROR, fatal: false, url: url, reason: 'no level found in manifest', context });
         }
