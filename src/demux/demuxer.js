@@ -2,21 +2,51 @@ import Event from '../events';
 import DemuxerInline from '../demux/demuxer-inline';
 import DemuxerWorker from '../demux/demuxer-worker';
 import {logger} from '../utils/logger';
-import Decrypter from '../crypt/decrypter';
 import {ErrorTypes, ErrorDetails} from '../errors';
+import EventEmitter from 'events';
 
 class Demuxer {
 
   constructor(hls, id) {
     this.hls = hls;
     this.id = id;
-    var typeSupported = {
+    // observer setup
+    const observer = this.observer = new EventEmitter();
+    const config = hls.config;
+    observer.trigger = function trigger (event, ...data) {
+      observer.emit(event, event, ...data);
+    };
+
+    observer.off = function off (event, ...data) {
+      observer.removeListener(event, ...data);
+    };
+
+    var forwardMessage = function(ev,data) {
+      data = data || {};
+      data.frag = this.frag;
+      data.id = this.id;
+      hls.trigger(ev,data);
+    }.bind(this);
+
+    // forward events to main thread
+    observer.on(Event.FRAG_DECRYPTED, forwardMessage);
+    observer.on(Event.FRAG_PARSING_INIT_SEGMENT, forwardMessage);
+    observer.on(Event.FRAG_PARSING_DATA, forwardMessage);
+    observer.on(Event.FRAG_PARSED, forwardMessage);
+    observer.on(Event.ERROR, forwardMessage);
+    observer.on(Event.FRAG_PARSING_METADATA, forwardMessage);
+    observer.on(Event.FRAG_PARSING_USERDATA, forwardMessage);
+    observer.on(Event.INIT_PTS_FOUND, forwardMessage);
+
+    const typeSupported = {
       mp4 : MediaSource.isTypeSupported('video/mp4'),
-      mp2t : hls.config.enableMP2TPassThrough && MediaSource.isTypeSupported('video/mp2t'),
       mpeg: MediaSource.isTypeSupported('audio/mpeg'),
       mp3: MediaSource.isTypeSupported('audio/mp4; codecs="mp3"')
     };
-    if (hls.config.enableWorker && (typeof(Worker) !== 'undefined')) {
+    // navigator.vendor is not always available in Web Worker
+    // refer to https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/navigator
+    const vendor = navigator.vendor;
+    if (config.enableWorker && (typeof(Worker) !== 'undefined')) {
         logger.log('demuxing in webworker');
         let w;
         try {
@@ -25,19 +55,19 @@ class Demuxer {
           this.onwmsg = this.onWorkerMessage.bind(this);
           w.addEventListener('message', this.onwmsg);
           w.onerror = function(event) { hls.trigger(Event.ERROR, {type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event : 'demuxerWorker', err : { message : event.message + ' (' + event.filename + ':' + event.lineno + ')' }});};
-          w.postMessage({cmd: 'init', typeSupported : typeSupported, id : id, config: JSON.stringify(hls.config)});
+          w.postMessage({cmd: 'init', typeSupported : typeSupported, vendor : vendor, id : id, config: JSON.stringify(config)});
         } catch(err) {
           logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
           if (w) {
             // revoke the Object URL that was used to create demuxer worker, so as not to leak it
             URL.revokeObjectURL(w.objectURL);
           }
-          this.demuxer = new DemuxerInline(hls,id,typeSupported);
+          this.demuxer = new DemuxerInline(observer,typeSupported,config,vendor);
+          this.w = undefined;
         }
       } else {
-        this.demuxer = new DemuxerInline(hls,id,typeSupported);
+        this.demuxer = new DemuxerInline(observer,typeSupported,config, vendor);
       }
-      this.demuxInitialized = true;
   }
 
   destroy() {
@@ -53,39 +83,37 @@ class Demuxer {
         this.demuxer = null;
       }
     }
-    let decrypter = this.decrypter;
-    if (decrypter) {
-      decrypter.destroy();
-      this.decrypter = null;
+    let observer = this.observer;
+    if (observer) {
+      observer.removeAllListeners();
+      this.observer = null;
     }
   }
 
-  pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS) {
-    let w = this.w;
+  push(data, initSegment, audioCodec, videoCodec, frag, duration,accurateTimeOffset,defaultInitPTS) {
+    const w = this.w;
+    const timeOffset = !isNaN(frag.startDTS) ? frag.startDTS  : frag.start;
+    const decryptdata = frag.decryptdata;
+    const lastFrag = this.frag;
+    const discontinuity = !(lastFrag && (frag.cc === lastFrag.cc));
+    const trackSwitch = !(lastFrag && (frag.level === lastFrag.level));
+    const nextSN = lastFrag && (frag.sn === (lastFrag.sn+1));
+    const contiguous = !trackSwitch && nextSN;
+    if (discontinuity) {
+      logger.log(`${this.id}:discontinuity detected`);
+    }
+    if (trackSwitch) {
+      logger.log(`${this.id}:switch detected`);
+    }
+    this.frag = frag;
     if (w) {
       // post fragment payload as transferable objects (no copy)
-      w.postMessage({cmd: 'demux', data: data, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, cc: cc, level: level, sn : sn, duration: duration, accurateTimeOffset : accurateTimeOffset, defaultInitPTS : defaultInitPTS }, [data]);
+      w.postMessage({cmd: 'demux', data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset,defaultInitPTS}, [data]);
     } else {
       let demuxer = this.demuxer;
       if (demuxer) {
-        demuxer.push(new Uint8Array(data), audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS);
+        demuxer.push(data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset,defaultInitPTS);
       }
-    }
-  }
-
-  push(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, decryptdata,accurateTimeOffset,defaultInitPTS) {
-    if ((data.byteLength > 0) && (decryptdata != null) && (decryptdata.key != null) && (decryptdata.method === 'AES-128')) {
-      if (this.decrypter == null) {
-        this.decrypter = new Decrypter(this.hls);
-      }
-      var localthis = this;
-      var startTime = performance.now();
-      this.decrypter.decrypt(data, decryptdata.key.buffer, decryptdata.iv.buffer, function (decryptedData) {
-        localthis.hls.trigger(Event.FRAG_DECRYPTED, { level : level, sn : sn, stats: { tstart: startTime, tdecrypt: performance.now() } });
-        localthis.pushDecrypted(decryptedData, audioCodec, videoCodec, timeOffset, cc, level, sn, duration, accurateTimeOffset,defaultInitPTS);
-      });
-    } else {
-      this.pushDecrypted(data, audioCodec, videoCodec, timeOffset, cc, level, sn, duration,accurateTimeOffset,defaultInitPTS);
     }
   }
 
@@ -101,9 +129,14 @@ class Demuxer {
       // special case for FRAG_PARSING_DATA: data1 and data2 are transferable objects
       case Event.FRAG_PARSING_DATA:
         data.data.data1 = new Uint8Array(data.data1);
-        data.data.data2 = new Uint8Array(data.data2);
+        if (data.data2) {
+          data.data.data2 = new Uint8Array(data.data2);
+        }
         /* falls through */
       default:
+        data.data = data.data || {};
+        data.data.frag = this.frag;
+        data.data.id = this.id;
         hls.trigger(data.event, data.data);
         break;
     }

@@ -5,31 +5,54 @@ var chromedriver = require('chromedriver');
 var HttpServer = require('http-server');
 var streams = require('../streams.json');
 
+function retry(cb, numAttempts, interval) {
+  numAttempts = numAttempts || 20;
+  interval = interval || 3000;
+  return new Promise(function(resolve, reject) {
+    var attempts = 0;
+    attempt();
+
+    function attempt() {
+      cb().then(function(res) {
+        resolve(res);
+      }).catch(function(e) {
+        if (++attempts >= numAttempts) {
+          // reject with the last error
+          reject(e);
+        }
+        else {
+          setTimeout(attempt, interval);
+        }
+      });
+    }
+  });
+}
+
 var onTravis = !!process.env.TRAVIS;
-var STREAM_ID = onTravis ? process.env.TEST_STREAM_ID : 'arte';
-if (!STREAM_ID) {
-  throw new Error('No stream ID.');
-}
-var stream = streams[STREAM_ID];
-if (!stream) {
-  throw new Error('Could not find stream "'+stream_ID+'"');
-}
+
+HttpServer.createServer({
+  showDir: false,
+  autoIndex: false,
+  root: './',
+}).listen(8000, '127.0.0.1');
+
+
 var browserConfig = {version : 'latest'};
 if (onTravis) {
-  var TEST_BROWSER_VERSION = process.env.TEST_BROWSER_VERSION;
-  if (TEST_BROWSER_VERSION) {
-    browserConfig.version = TEST_BROWSER_VERSION;
+  var UA_VERSION = process.env.UA_VERSION;
+  if (UA_VERSION) {
+    browserConfig.version = UA_VERSION;
   }
-  var TEST_BROWSER_NAME = process.env.TEST_BROWSER_NAME;
-  if (!TEST_BROWSER_NAME) {
+  var UA = process.env.UA;
+  if (!UA) {
     throw new Error('No test browser name.')
   }
-  var TEST_BROWSER_PLATFORM = process.env.TEST_BROWSER_PLATFORM;
-  if (!TEST_BROWSER_PLATFORM) {
+  var OS = process.env.OS;
+  if (!OS) {
     throw new Error('No test browser platform.')
   }
-  browserConfig.name = TEST_BROWSER_NAME;
-  browserConfig.platform = TEST_BROWSER_PLATFORM;
+  browserConfig.name = UA;
+  browserConfig.platform = OS;
 }
 else {
   browserConfig.name = "chrome";
@@ -42,84 +65,97 @@ if (browserConfig.platform) {
   browserDescription += ', '+browserConfig.platform;
 }
 
-HttpServer.createServer({
-  showDir: false,
-  autoIndex: false,
-  root: './',
-}).listen(8000, '127.0.0.1');
-
-describe('testing hls.js playback in the browser with "'+stream.description+'" on "'+browserDescription+'"', function() {
+describe('testing hls.js playback in the browser on "'+browserDescription+'"', function() {
   beforeEach(function() {
     var capabilities = {
-      browserName : browserConfig.name,
-      platform : browserConfig.platform,
-      version : browserConfig.version,
-      commandTimeout : 35,
-      customData : {
-        stream : stream
-      }
+      name: '"'+stream.description+'" on "'+browserDescription+'"',
+      browserName: browserConfig.name,
+      platform: browserConfig.platform,
+      version: browserConfig.version,
+      commandTimeout: 90,
     };
     if (onTravis) {
       capabilities['tunnel-identifier'] = process.env.TRAVIS_JOB_NUMBER;
-      capabilities.build = process.env.TRAVIS_BUILD_NUMBER;
+      capabilities.build = 'HLSJS-'+process.env.TRAVIS_BUILD_NUMBER;
       capabilities.username = process.env.SAUCE_USERNAME;
       capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
-      this.browser = new webdriver.Builder().usingServer('http://'+ process.env.SAUCE_USERNAME+':'+process.env.SAUCE_ACCESS_KEY+'@ondemand.saucelabs.com:80/wd/hub');
+      this.browser = new webdriver.Builder().usingServer('http://'+process.env.SAUCE_USERNAME+':'+process.env.SAUCE_ACCESS_KEY+'@ondemand.saucelabs.com:80/wd/hub');
     }
     else {
       this.browser = new webdriver.Builder();
     }
     this.browser = this.browser.withCapabilities(capabilities).build();
-    this.browser.manage().timeouts().setScriptTimeout(40000);
+    this.browser.manage().timeouts().setScriptTimeout(75000);
     console.log("Retrieving web driver session...");
     return this.browser.getSession().then(function(session) {
       console.log("Web driver session id: "+session.getId());
-      console.log("Loading test page...");
-      return this.browser.get('http://localhost:8000/tests/functional/auto/hlsjs.html');
-    }.bind(this)).then(function() {
-      console.log("Test page loaded.");
+      if (onTravis) {
+        console.log("Job URL: https://saucelabs.com/jobs/"+session.getId());
+      }
+      return retry(function() {
+        console.log("Loading test page...");
+        return this.browser.get('http://127.0.0.1:8000/tests/functional/auto/hlsjs.html').then(function() {
+          // ensure that the page has loaded and we haven't got an error page
+          return this.browser.findElement(webdriver.By.css('body#hlsjs-functional-tests')).catch(function(e) {
+            console.log("Test page not loaded.");
+            return Promise.reject(e);
+          });
+        }.bind(this));
+      }.bind(this)).then(function() {
+        console.log("Test page loaded.");
+      });
+    }.bind(this), function(err) {
+      console.log('error while Retrieving browser session:' + err);
     });
   });
 
   afterEach(function() {
-    console.log("Quitting browser...");
-    return this.browser.quit().then(function() {
-      console.log("Browser quit.");
+    var browser = this.browser;
+    browser.executeScript('return logString').then(function(return_value){
+      console.log('travis_fold:start:debug_logs');
+      console.log('logs');
+      console.log(return_value);
+      console.log('travis_fold:end:debug_logs');
+      console.log("Quitting browser...");
+      return browser.quit().then(function() {
+        console.log("Browser quit.");
+      });
     });
   });
 
-  it('should receive video loadeddata event', function() {
-    var url = stream.url;
-    return this.browser.executeAsyncScript(function(url) {
-      var callback = arguments[arguments.length - 1];
-      startStream(url, callback);
-      video.onloadeddata = function() {
-        callback('loadeddata');
-      };
-    }, url).then(function(result) {
-      assert.strictEqual(result, 'loadeddata');
-    });
-  });
+  const testLoadedData = function(url) {
+    return function() {
+      return this.browser.executeAsyncScript(function(url) {
+        var callback = arguments[arguments.length - 1];
+        startStream(url, callback);
+        video.onloadeddata = function() {
+          callback({ code : 'loadeddata', logs : logString});
+        };
+      }, url).then(function(result) {
+        assert.strictEqual(result.code, 'loadeddata');
+      });
+    }
+  }
 
-  if (stream.abr) {
-    it('should "smooth switch" to highest level and still play(readyState === 4) after 12s', function() {
-      var url = stream.url;
+  const testSmoothSwitch = function(url) {
+    return function() {
       return this.browser.executeAsyncScript(function(url) {
         var callback = arguments[arguments.length - 1];
         startStream(url, callback);
         video.onloadeddata = function() {
           switchToHighestLevel('next');
         };
-        window.setTimeout(function() { callback(video.readyState);}, 12000);
+        window.setTimeout(function() {
+          callback({ code : video.readyState, logs : logString});
+        }, 12000);
       }, url).then(function(result) {
-        assert.strictEqual(result, 4);
+        assert.strictEqual(result.code, 4);
       });
-    });
+    }
   }
 
-  if (stream.live) {
-    it('should seek near the end and receive video seeked event', function() {
-      var url = stream.url;
+  const testSeekOnLive = function(url) {
+    return function() {
       return this.browser.executeAsyncScript(function(url) {
         var callback = arguments[arguments.length - 1];
         startStream(url, callback);
@@ -127,27 +163,45 @@ describe('testing hls.js playback in the browser with "'+stream.description+'" o
           window.setTimeout(function() { video.currentTime = video.duration - 5;}, 5000);
         };
         video.onseeked = function() {
-          callback('seeked');
+          callback({ code : 'seeked', logs : logString});
         };
       }, url).then(function(result) {
-        assert.strictEqual(result, 'seeked');
+        assert.strictEqual(result.code, 'seeked');
       });
-    });
-  } else {
-    it('should seek near the end and receive video ended event', function() {
-      var url = stream.url;
+    }
+  }
+
+  const testSeekOnVOD = function(url) {
+    return function() {
       return this.browser.executeAsyncScript(function(url) {
         var callback = arguments[arguments.length - 1];
         startStream(url, callback);
         video.onloadeddata = function() {
-          window.setTimeout(function() { video.currentTime = video.duration - 5;}, 2000);
+          window.setTimeout(function() { video.currentTime = video.duration - 5;}, 5000);
         };
         video.onended = function() {
-          callback('ended');
+          callback({ code : 'ended', logs : logString});
         };
       }, url).then(function(result) {
-        assert.strictEqual(result, 'ended');
+        assert.strictEqual(result.code, 'ended');
       });
-    });
+    }
+  }
+
+  for (var name in streams) {
+    var stream = streams[name];
+    var url = stream.url;
+    if (!stream.blacklist_ua || stream.blacklist_ua.indexOf(browserConfig.name) === -1) {
+      it('should receive video loadeddata event for ' + stream.description, testLoadedData(url));
+      if (stream.abr) {
+        it('should "smooth switch" to highest level and still play(readyState === 4) after 12s for ' + stream.description, testSmoothSwitch(url));
+      }
+
+      if (stream.live) {
+        it('should seek near the end and receive video seeked event for ' + stream.description, testSeekOnLive(url));
+      } else {
+        it('should seek near the end and receive video ended event for ' + stream.description, testSeekOnVOD(url));
+      }
+    }
   }
 });

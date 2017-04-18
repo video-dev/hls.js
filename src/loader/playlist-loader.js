@@ -13,7 +13,7 @@ import {logger} from '../utils/logger';
 const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 const LEVEL_PLAYLIST_REGEX_FAST = /#EXTINF:(\d*(?:\.\d+)?)(?:,(.*))?|(?!#)(\S.+)|#EXT-X-BYTERANGE: *(.+)|#EXT-X-PROGRAM-DATE-TIME:(.+)|#.*/g;
-const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:(#)(.*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
+const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:#EXT-X-(MAP):(.+))|(?:(#)(.*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
 
 class LevelKey {
 
@@ -26,7 +26,7 @@ class LevelKey {
 
   get uri() {
     if (!this._uri && this.reluri) {
-      this._uri = URLToolkit.buildAbsoluteURL(this.baseuri, this.reluri);
+      this._uri = URLToolkit.buildAbsoluteURL(this.baseuri, this.reluri, { alwaysNormalize: true });
     }
     return this._uri;
   }
@@ -39,11 +39,12 @@ class Fragment {
     this._url = null;
     this._byteRange = null;
     this._decryptdata = null;
+    this.tagList = [];
   }
 
   get url() {
     if (!this._url && this.relurl) {
-      this._url = URLToolkit.buildAbsoluteURL(this.baseurl, this.relurl);
+      this._url = URLToolkit.buildAbsoluteURL(this.baseurl, this.relurl, { alwaysNormalize: true });
     }
     return this._url;
   }
@@ -61,16 +62,16 @@ class Fragment {
 
   get byteRange() {
     if (!this._byteRange) {
-      this._byteRange = [];
+      let byteRange = this._byteRange = [];
       if (this.rawByteRange) {
         const params = this.rawByteRange.split('@', 2);
         if (params.length === 1) {
-          this._byteRange[0] = this.prevFrag ? this.prevFrag.byteRangeEndOffset : 0;
+          const lastByteRangeEndOffset = this.lastByteRangeEndOffset;
+          byteRange[0] = lastByteRangeEndOffset ? lastByteRangeEndOffset : 0;
         } else {
-          this._byteRange[0] = parseInt(params[1]);
+          byteRange[0] = parseInt(params[1]);
         }
-        this._byteRange[1] = parseInt(params[0]) + this._byteRange[0];
-        this.prevFrag = null;
+        byteRange[1] = parseInt(params[0]) + byteRange[0];
       }
     }
     return this._byteRange;
@@ -115,7 +116,10 @@ class Fragment {
     var decryptdata = levelkey;
 
     if (levelkey && levelkey.method && levelkey.uri && !levelkey.iv) {
-      decryptdata = Object.assign(new LevelKey(), this.cloneObj(levelkey));
+      decryptdata = new LevelKey();
+      decryptdata.method = levelkey.method;
+      decryptdata.baseuri = levelkey.baseuri;
+      decryptdata.reluri = levelkey.reluri;
       decryptdata.iv = this.createInitializationVector(segmentNumber);
     }
 
@@ -133,7 +137,8 @@ class PlaylistLoader extends EventHandler {
     super(hls,
       Event.MANIFEST_LOADING,
       Event.LEVEL_LOADING,
-      Event.AUDIO_TRACK_LOADING);
+      Event.AUDIO_TRACK_LOADING,
+      Event.SUBTITLE_TRACK_LOADING);
     this.loaders = {};
   }
 
@@ -158,6 +163,10 @@ class PlaylistLoader extends EventHandler {
 
   onAudioTrackLoading(data) {
     this.load(data.url, { type : 'audioTrack', id : data.id});
+  }
+
+  onSubtitleTrackLoading(data) {
+    this.load(data.url, { type : 'subtitleTrack', id : data.id});
   }
 
   load(url, context) {
@@ -200,7 +209,7 @@ class PlaylistLoader extends EventHandler {
   }
 
   resolve(url, baseUrl) {
-    return URLToolkit.buildAbsoluteURL(baseUrl, url);
+    return URLToolkit.buildAbsoluteURL(baseUrl, url, { alwaysNormalize: true });
   }
 
   parseMasterPlaylist(string, baseurl) {
@@ -239,7 +248,7 @@ class PlaylistLoader extends EventHandler {
   }
 
   parseMasterPlaylistMedia(string, baseurl, type) {
-    let result, medias = [];
+    let result, medias = [], id = 0;
     MASTER_PLAYLIST_MEDIA_REGEX.lastIndex = 0;
     while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) != null){
       const media = {};
@@ -258,6 +267,7 @@ class PlaylistLoader extends EventHandler {
         if(!media.name) {
             media.name = media.lang;
         }
+        media.id = id++;
         medias.push(media);
       }
     }
@@ -287,42 +297,47 @@ class PlaylistLoader extends EventHandler {
         result,
         i;
 
-    frag.tagList = [];
-
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
 
     while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
       const duration = result[1];
       if (duration) { // INF
         frag.duration = parseFloat(duration);
-        const title = result[2];
+        // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
+        const title = (' ' + result[2]).slice(1);
         frag.title = title ? title : null;
         frag.tagList.push(title ? [ 'INF',duration,title ] : [ 'INF',duration ]);
       } else if (result[3]) { // url
         if (!isNaN(frag.duration)) {
           const sn = currentSN++;
           frag.type = type;
-          frag.prevFrag = prevFrag;
           frag.start = totalduration;
           frag.levelkey = levelkey;
           frag.sn = sn;
           frag.level = id;
           frag.cc = cc;
           frag.baseurl = baseurl;
-          frag.relurl = result[3];
+          // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
+          frag.relurl = (' ' + result[3]).slice(1);
 
           level.fragments.push(frag);
           prevFrag = frag;
           totalduration += frag.duration;
 
           frag = new Fragment();
-          frag.tagList = [];
         }
       } else if (result[4]) { // X-BYTERANGE
-        frag.rawByteRange = result[4];
+        frag.rawByteRange = (' ' + result[4]).slice(1);
+        if (prevFrag) {
+          const lastByteRangeEndOffset = prevFrag.byteRangeEndOffset;
+          if (lastByteRangeEndOffset) {
+            frag.lastByteRangeEndOffset = lastByteRangeEndOffset;
+          }
+        }
       } else if (result[5]) { // PROGRAM-DATE-TIME
-        frag.rawProgramDateTime = result[5];
-        frag.tagList.push(['PROGRAM-DATE-TIME', result[5]]);
+        // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
+        frag.rawProgramDateTime = (' ' + result[5]).slice(1);
+        frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
         for (i = 1; i < result.length; i++) {
@@ -331,8 +346,9 @@ class PlaylistLoader extends EventHandler {
           }
         }
 
-        const value1 = result[i+1];
-        const value2 = result[i+2];
+        // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
+        const value1 = (' ' + result[i+1]).slice(1);
+        const value2 = (' ' + result[i+2]).slice(1);
 
         switch (result[i]) {
           case '#':
@@ -371,7 +387,7 @@ class PlaylistLoader extends EventHandler {
                 decryptiv = keyAttrs.hexadecimalInteger('IV');
             if (decryptmethod) {
               levelkey = new LevelKey();
-              if ((decrypturi) && (decryptmethod === 'AES-128')) {
+              if ((decrypturi) && (['AES-128', 'SAMPLE-AES'].indexOf(decryptmethod) >= 0)) {
                 levelkey.method = decryptmethod;
                 // URI to get the key
                 levelkey.baseuri = baseurl;
@@ -390,6 +406,17 @@ class PlaylistLoader extends EventHandler {
             if ( !isNaN(startTimeOffset) ) {
               level.startTimeOffset = startTimeOffset;
             }
+            break;
+          case 'MAP':
+            let mapAttrs = new AttrList(value1);
+            frag.relurl = mapAttrs.URI;
+            frag.rawByteRange = mapAttrs.BYTERANGE;
+            frag.baseurl = baseurl;
+            frag.level = id;
+            frag.type = type;
+            frag.sn = 'initSegment';
+            level.initSegment = frag;
+            frag = new Fragment();
             break;
           default:
             logger.warn(`line parsed but not handled: ${result}`);
@@ -428,8 +455,10 @@ class PlaylistLoader extends EventHandler {
     //stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
     if (string.indexOf('#EXTM3U') === 0) {
       if (string.indexOf('#EXTINF:') > 0) {
-        let isLevel = (type !== 'audioTrack'),
-            levelDetails = this.parseLevelPlaylist(string, url, (isLevel ? level : id) || 0, isLevel ? 'main' : 'audio');
+        let isLevel = (type !== 'audioTrack' && type !== 'subtitleTrack'),
+            levelId = !isNaN(level) ? level : !isNaN(id) ? id : 0,
+            levelDetails = this.parseLevelPlaylist(string, url, levelId, (type === 'audioTrack' ? 'audio' : (type === 'subtitleTrack' ? 'subtitle' : 'main') ));
+            levelDetails.tload = stats.tload;
         if (type === 'manifest') {
         // first request, stream manifest (no master playlist), fire manifest loaded event with level details
           hls.trigger(Event.MANIFEST_LOADED, {levels: [{url: url, details : levelDetails}], audioTracks : [], url: url, stats: stats});
@@ -439,7 +468,12 @@ class PlaylistLoader extends EventHandler {
           if (isLevel) {
             hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: level || 0, id: id || 0, stats: stats});
           } else {
-            hls.trigger(Event.AUDIO_TRACK_LOADED, {details: levelDetails, id: id, stats: stats});
+            if (type === 'audioTrack') {
+              hls.trigger(Event.AUDIO_TRACK_LOADED, {details: levelDetails, id: id, stats: stats});
+            }
+            else if (type === 'subtitleTrack') {
+              hls.trigger(Event.SUBTITLE_TRACK_LOADED, {details: levelDetails, id: id, stats: stats});
+            }
           }
         } else {
           hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'invalid targetduration'});
@@ -448,11 +482,12 @@ class PlaylistLoader extends EventHandler {
         let levels = this.parseMasterPlaylist(string, url);
         // multi level playlist, parse level info
         if (levels.length) {
-          let audiotracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO');
-          if (audiotracks.length) {
+          let audioTracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO');
+          let subtitles = this.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
+          if (audioTracks.length) {
             // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
             let embeddedAudioFound = false;
-            audiotracks.forEach(audioTrack => {
+            audioTracks.forEach(audioTrack => {
               if(!audioTrack.url) {
                 embeddedAudioFound = true;
               }
@@ -461,10 +496,10 @@ class PlaylistLoader extends EventHandler {
             // this could happen with playlists with alt audio rendition in which quality levels (main) contains both audio+video. but with mixed audio track not signaled
             if (embeddedAudioFound === false && levels[0].audioCodec && !levels[0].attrs.AUDIO) {
               logger.log('audio codec signaled in quality level, but no embedded audio track signaled, create one');
-              audiotracks.unshift({ type : 'main', name : 'main'});
+              audioTracks.unshift({ type : 'main', name : 'main'});
             }
           }
-          hls.trigger(Event.MANIFEST_LOADED, {levels: levels, audioTracks : audiotracks, url: url, stats: stats});
+          hls.trigger(Event.MANIFEST_LOADED, {levels, audioTracks, subtitles, url, stats});
         } else {
           if (type === 'manifest') {
             hls.trigger(Event.ERROR, {

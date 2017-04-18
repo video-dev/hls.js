@@ -18,7 +18,7 @@ class LevelController extends EventHandler {
       Event.LEVEL_REMOVED,
       Event.ERROR);
     this.ontick = this.tick.bind(this);
-    this._manualLevel = this._autoLevelCapping = -1;
+    this._manualLevel = -1;
   }
 
   destroy() {
@@ -144,7 +144,8 @@ class LevelController extends EventHandler {
   }
 
  setLevelInternal(newLevel) {
-    let levels = this._levels;
+    const levels = this._levels;
+    const hls = this.hls;
     // check if level idx is valid
     if (newLevel >= 0 && newLevel < levels.length) {
       // stopping live reloading timer if any
@@ -155,18 +156,22 @@ class LevelController extends EventHandler {
       if (this._level !== newLevel) {
         logger.log(`switching to level ${newLevel}`);
         this._level = newLevel;
-        this.hls.trigger(Event.LEVEL_SWITCH, {level: newLevel});
+        var levelProperties = levels[newLevel];
+        levelProperties.level = newLevel;
+        // LEVEL_SWITCH to be deprecated in next major release
+        hls.trigger(Event.LEVEL_SWITCH, levelProperties);
+        hls.trigger(Event.LEVEL_SWITCHING, levelProperties);
       }
       var level = levels[newLevel], levelDetails = level.details;
        // check if we need to load playlist for this level
       if (!levelDetails || levelDetails.live === true) {
         // level not retrieved yet, or live playlist we need to (re)load it
         var urlId = level.urlId;
-        this.hls.trigger(Event.LEVEL_LOADING, {url: level.url[urlId], level: newLevel, id: urlId});
+        hls.trigger(Event.LEVEL_LOADING, {url: level.url[urlId], level: newLevel, id: urlId});
       }
     } else {
       // invalid level id given, trigger error
-      this.hls.trigger(Event.ERROR, {type : ErrorTypes.OTHER_ERROR, details: ErrorDetails.LEVEL_SWITCH_ERROR, level: newLevel, fatal: false, reason: 'invalid level idx'});
+      hls.trigger(Event.ERROR, {type : ErrorTypes.OTHER_ERROR, details: ErrorDetails.LEVEL_SWITCH_ERROR, level: newLevel, fatal: false, reason: 'invalid level idx'});
     }
  }
 
@@ -208,10 +213,6 @@ class LevelController extends EventHandler {
   }
 
   set startLevel(newLevel) {
-    // if not in autostart level, ensure startLevel is greater than minAutoLevel
-    if (newLevel !== -1) {
-      newLevel = Math.max(newLevel, this.hls.abrController.minAutoLevel);
-    }
     this._startLevel = newLevel;
   }
 
@@ -220,7 +221,7 @@ class LevelController extends EventHandler {
       return;
     }
 
-    let details = data.details, hls = this.hls, levelId, level, levelError = false, abrController = hls.abrController, minAutoLevel = abrController.minAutoLevel;
+    let details = data.details, hls = this.hls, levelId, level, levelError = false;
     let removeLevel = false;
     // try to recover not fatal errors
     switch(details) {
@@ -276,7 +277,7 @@ class LevelController extends EventHandler {
         let recoverable = ((this._manualLevel === -1) && levelId);
         if (recoverable) {
           logger.warn(`level controller,${details}: switch-down for next fragment`);
-          abrController.nextAutoLevel = Math.max(minAutoLevel,levelId-1);
+          hls.nextAutoLevel = Math.max(0,levelId-1);
         }  else if(level && level.details && level.details.live) {
           logger.warn(`level controller,${details} on live stream, discard`);
           if (levelError) {
@@ -301,9 +302,8 @@ class LevelController extends EventHandler {
               clearTimeout(this.timer);
               this.timer = null;
             }
-            // redispatch same error but with fatal set to true
+            // switch error to fatal
             data.fatal = true;
-            hls.trigger(Event.ERROR, data);
           }
         }
       }
@@ -355,8 +355,11 @@ class LevelController extends EventHandler {
   tick() {
     var levelId = this._level;
     if (levelId !== undefined && this.canload) {
-      var level = this._levels[levelId], urlId = level.urlId;
-      this.hls.trigger(Event.LEVEL_LOADING, {url: level.url[urlId], level: levelId, id: urlId});
+      var level = this._levels[levelId];
+      if (level && level.url) {
+        var urlId = level.urlId;
+        this.hls.trigger(Event.LEVEL_LOADING, {url: level.url[urlId], level: levelId, id: urlId});
+      }
     }
   }
 
@@ -364,14 +367,14 @@ class LevelController extends EventHandler {
     if (this._manualLevel !== -1) {
       return this._manualLevel;
     } else {
-     return this.hls.abrController.nextAutoLevel;
+     return this.hls.nextAutoLevel;
     }
   }
 
   set nextLoadLevel(nextLevel) {
     this.level = nextLevel;
     if (this._manualLevel === -1) {
-      this.hls.abrController.nextAutoLevel = nextLevel;
+      this.hls.nextAutoLevel = nextLevel;
     }
   }
 }
