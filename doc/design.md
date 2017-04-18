@@ -1,4 +1,4 @@
-##design principle
+## Design principle
 
 design idea is pretty simple :
 
@@ -7,7 +7,7 @@ design idea is pretty simple :
    - each subsystem heavily relies on events for internal/external communications.
    - Events are handled using [browserified](http://browserify.org/) [EventEmitter](https://nodejs.org/api/events.html)
 
-##code structure
+## Code structure
 
   - [src/config.js][]
     - definition of default Hls Config. entry point for conditional compilation (altaudio/subtitle)
