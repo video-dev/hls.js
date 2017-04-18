@@ -505,7 +505,7 @@ class PlaylistLoader extends EventHandler {
           }
           hls.trigger(Event.MANIFEST_LOADED, {levels, audioTracks, subtitles, captions, url, stats});
         } else {
-          if (context.type === 'manifest') {
+          if (type === 'manifest') {
             hls.trigger(Event.ERROR, {
               type: ErrorTypes.NETWORK_ERROR,
               details: ErrorDetails.MANIFEST_PARSING_ERROR,
