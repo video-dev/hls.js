@@ -315,7 +315,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       fragLoadingMaxRetry: 6,
       fragLoadingRetryDelay: 500,
       fragLoadingMaxRetryTimeout: 64000,
-      startFragPrefech: false,
+      startFragPrefetch: false,
       appendErrorMaxRetry: 3,
       loader: customLoader,
       fLoader: customFragmentLoader,
