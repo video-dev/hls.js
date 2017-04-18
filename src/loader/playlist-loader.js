@@ -617,7 +617,7 @@ class PlaylistLoader extends EventHandler {
                         stats
                     });
                 } else {
-                    if (context.type === 'manifest') {
+                    if (type === 'manifest') {
                         hls.trigger(Event.ERROR, {
                             type: ErrorTypes.NETWORK_ERROR,
                             details: ErrorDetails.MANIFEST_PARSING_ERROR,
