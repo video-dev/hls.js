@@ -1,13 +1,13 @@
 {
-  "name": "hls.js",
+  "name": "vdb-player-hls-js",
   "version": "0.6.16",
   "license": "Apache-2.0",
-  "description": "Media Source Extension - HLS library, by/for Dailymotion",
-  "homepage": "https://github.com/dailymotion/hls.js",
+  "description": "MSE-based HLS client, forked from http://dailymotion.github.io/hls.js/demo",
+  "homepage": "https://github.com/vidible/vdb-player-hls-js",
   "authors": "Guillaume du Pontavice <guillaume.dupontavice@dailymotion.com>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dailymotion/hls.js"
+    "url": "https://github.com/vidible/vdb-player-hls-js"
   },
   "bugs": {
     "url": "https://github.com/dailymotion/hls.js/issues"
