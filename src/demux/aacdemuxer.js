@@ -21,15 +21,16 @@ import ID3 from '../demux/id3';
   }
 
   static probe(data) {
-    // check if data contains ID3 timestamp and ADTS sync worc
-    var id3 = new ID3(data), offset,len;
+    // check if data contains ID3 timestamp and ADTS sync word
+    var id3 = new ID3(data);
     if(id3.hasTimeStamp) {
       // look for ADTS header (0xFFFx)
-      for (offset = id3.length, len = data.length; offset < len - 1; offset++) {
-        if ((data[offset] === 0xff) && (data[offset+1] & 0xf0) === 0xf0) {
-          //logger.log('ADTS sync word found !');
-          return true;
-        }
+      var offset = id3.length;
+      // Layer bits (position 14 and 15) in header should be always 0 for ADTS
+      // More info https://wiki.multimedia.cx/index.php?title=ADTS
+      if ((data[offset] === 0xff) && (data[offset+1] & 0xf0) === 0xf0 && (data[offset+1] & 0x06) >> 1 === 0x00) {
+        //logger.log('ADTS sync word found !');
+        return true;
       }
     }
     return false;
@@ -41,16 +42,11 @@ import ID3 from '../demux/id3';
     var track,
         id3 = new ID3(data),
         pts = 90*id3.timeStamp,
-        config, frameLength, frameDuration, frameIndex, offset, headerLength, stamp, len, aacSample;
+        offset = id3.length,
+        len = data.length,
+        config, frameLength, frameDuration, frameIndex, headerLength, stamp, aacSample;
 
     track = this._audioTrack;
-
-    // look for ADTS header (0xFFFx)
-    for (offset = id3.length, len = data.length; offset < len - 1; offset++) {
-      if ((data[offset] === 0xff) && (data[offset+1] & 0xf0) === 0xf0) {
-        break;
-      }
-    }
 
     if (!track.samplerate) {
       config = ADTS.getAudioConfig(this.observer,data, offset, track.manifestCodec);

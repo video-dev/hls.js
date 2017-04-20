@@ -21,14 +21,15 @@ import ID3 from '../demux/id3';
 
   static probe(data) {
     // check if data contains ID3 timestamp and MPEG sync word
-    var id3 = new ID3(data), offset,len;
+    var id3 = new ID3(data);
     if (id3.hasTimeStamp) {
       // look for MPEG header (0xFFEx)
-      for (offset = id3.length, len = data.length; offset < len - 1; offset++) {
-        if ((data[offset] === 0xff) && (data[offset+1] & 0xe0) === 0xe0) {
-          //logger.log('MPEG sync word found !');
-          return true;
-        }
+      var offset = id3.length;
+      // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
+      // More info http://www.mp3-tech.org/programmer/frame_header.html
+      if ((data[offset] === 0xff) && (data[offset+1] & 0xe0) === 0xe0 && (data[offset+1] & 0x06) >> 1 !== 0x00) {
+        //logger.log('MPEG sync word found !');
+        return true;
       }
     }
     return false;
@@ -39,17 +40,10 @@ import ID3 from '../demux/id3';
   append(data, timeOffset,contiguous,accurateTimeOffset) {
     var id3 = new ID3(data);
     var pts = 90*id3.timeStamp;
-    var length;
-    var offset;
+    var length = data.length;
+    var offset = id3.length;
     var frameIndex = 0;
     var parsed;
-
-    // look for ADTS header (0xFFEx)
-    for (offset = id3.length, length = data.length; offset < length - 1; offset++) {
-      if ((data[offset] === 0xff) && (data[offset+1] & 0xe0) === 0xe0) {
-        break;
-      }
-    }
 
     while (offset < length &&
         (parsed = this._parseMpeg(data, offset, length, frameIndex++, pts)) > 0) {
