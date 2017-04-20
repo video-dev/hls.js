@@ -14,7 +14,7 @@ import ID3 from '../demux/id3';
   }
 
   resetInitSegment(initSegment,audioCodec,videoCodec, duration) {
-    this._aacTrack = {container : 'audio/adts', type: 'audio', id :-1, sequenceNumber: 0, isAAC : true , samples : [], len : 0, manifestCodec : audioCodec, duration : duration, inputTimeScale : 90000};
+    this._audioTrack = {container : 'audio/adts', type: 'audio', id :-1, sequenceNumber: 0, isAAC : true , samples : [], len : 0, manifestCodec : audioCodec, duration : duration, inputTimeScale : 90000};
   }
 
   resetTimeStamp() {
@@ -43,7 +43,7 @@ import ID3 from '../demux/id3';
         pts = 90*id3.timeStamp,
         config, frameLength, frameDuration, frameIndex, offset, headerLength, stamp, len, aacSample;
 
-    track = this._aacTrack;
+    track = this._audioTrack;
 
     // look for ADTS header (0xFFFx)
     for (offset = id3.length, len = data.length; offset < len - 1; offset++) {
