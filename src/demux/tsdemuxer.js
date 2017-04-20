@@ -948,7 +948,7 @@
   }
 
   _onMpegFrame(data, bitRate, sampleRate, channelCount, frameIndex, pts) {
-    var frameDuration = (1152 / sampleRate) * 1000;
+    var frameDuration = 1152 * 90000 / sampleRate;
     var stamp = pts + frameIndex * frameDuration;
     var track = this._audioTrack;
 
