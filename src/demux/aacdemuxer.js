@@ -13,7 +13,7 @@ class AACDemuxer {
     }
 
     resetInitSegment(initSegment, audioCodec, videoCodec, duration) {
-        this._aacTrack = {
+        this._audioTrack = {
             container: 'audio/adts',
             type: 'audio',
             id: -1,
@@ -68,7 +68,7 @@ class AACDemuxer {
             len,
             aacSample;
 
-        track = this._aacTrack;
+        track = this._audioTrack;
 
         // look for ADTS header (0xFFFx)
         for (
