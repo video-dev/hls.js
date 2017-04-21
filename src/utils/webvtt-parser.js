@@ -1,5 +1,12 @@
 import VTTParser from './vttparser';
 
+// String.prototype.startsWith is not supported in IE11
+const startsWith = function(inputString, searchString, position) {
+    return (
+        inputString.substr(position || 0, searchString.length) === searchString
+    );
+};
+
 const cueString2millis = function(timeString) {
     let ts = parseInt(timeString.substr(-3));
     let secs = parseInt(timeString.substr(-6, 2));
@@ -121,7 +128,7 @@ const WebVTTParser = {
         vttLines.forEach(line => {
             if (inHeader) {
                 // Look for X-TIMESTAMP-MAP in header.
-                if (line.startsWith('X-TIMESTAMP-MAP=')) {
+                if (startsWith(line, 'X-TIMESTAMP-MAP=')) {
                     // Once found, no more are allowed anyway, so stop searching.
                     inHeader = false;
                     // Extract LOCAL and MPEGTS.
@@ -129,9 +136,9 @@ const WebVTTParser = {
                         .substr(16)
                         .split(',')
                         .forEach(timestamp => {
-                            if (timestamp.startsWith('LOCAL:')) {
+                            if (startsWith(timestamp, 'LOCAL:')) {
                                 cueTime = timestamp.substr(6);
-                            } else if (timestamp.startsWith('MPEGTS:')) {
+                            } else if (startsWith(timestamp, 'MPEGTS:')) {
                                 mpegTs = parseInt(timestamp.substr(7));
                             }
                         });
