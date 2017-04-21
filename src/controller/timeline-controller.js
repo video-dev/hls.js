@@ -69,6 +69,18 @@ class TimelineController extends EventHandler {
                 e.track = track;
                 media.dispatchEvent(e);
             };
+            var sendAddCueEvent = function(cueData) {
+                var e = null;
+                try {
+                    e = new window.Event('addcue');
+                } catch (err) {
+                    //for IE11
+                    e = document.createEvent('Event');
+                    e.initEvent('addcue', false, false);
+                }
+                e.cueData = cueData;
+                self.media.dispatchEvent(e);
+            };
 
             var channel1 = {
                 newCue: function(startTime, endTime, screen) {
@@ -89,7 +101,13 @@ class TimelineController extends EventHandler {
                             sendAddTrackEvent(self.textTrack1, self.media);
                         }
                     }
-                    self.addCues('textTrack1', startTime, endTime, screen);
+                    self.addCues(
+                        'textTrack1',
+                        startTime,
+                        endTime,
+                        screen,
+                        sendAddCueEvent
+                    );
                 }
             };
 
@@ -112,7 +130,13 @@ class TimelineController extends EventHandler {
                             sendAddTrackEvent(self.textTrack2, self.media);
                         }
                     }
-                    self.addCues('textTrack2', startTime, endTime, screen);
+                    self.addCues(
+                        'textTrack2',
+                        startTime,
+                        endTime,
+                        screen,
+                        sendAddCueEvent
+                    );
                 }
             };
 
@@ -120,7 +144,7 @@ class TimelineController extends EventHandler {
         }
     }
 
-    addCues(channel, startTime, endTime, screen) {
+    addCues(channel, startTime, endTime, screen, sendAddCueEventCb) {
         // skip cues which overlap more than 50% with previously parsed time ranges
         const ranges = this.cueRanges;
         let merged = false;
@@ -144,7 +168,13 @@ class TimelineController extends EventHandler {
         if (!merged) {
             ranges.push([startTime, endTime]);
         }
-        this.Cues.newCue(this[channel], startTime, endTime, screen);
+        this.Cues.newCue(
+            this[channel],
+            startTime,
+            endTime,
+            screen,
+            sendAddCueEventCb
+        );
     }
 
     // Triggered when an initial PTS is found; used for synchronisation of WebVTT.

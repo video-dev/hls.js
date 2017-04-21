@@ -1,7 +1,7 @@
 import { fixLineBreaks } from './vttparser';
 
 const Cues = {
-    newCue: function(track, startTime, endTime, captionScreen) {
+    newCue: function(track, startTime, endTime, captionScreen, callback) {
         var row;
         var cue;
         var indenting;
@@ -62,6 +62,10 @@ const Cues = {
                     )
                 );
                 track.addCue(cue);
+                callback({
+                    type: 'captions',
+                    cue: cue
+                });
             }
         }
     }
