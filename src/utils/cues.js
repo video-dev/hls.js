@@ -1,9 +1,11 @@
 import { fixLineBreaks } from './vttparser';
+//import { VTTCue } from './vttcue';
 
 const Cues = {
-    newCue: function(track, startTime, endTime, captionScreen, callback) {
+    newCues: function(startTime, endTime, captionScreen) {
         var row;
         var cue;
+        var cues = [];
         var indenting;
         var indent;
         var text;
@@ -61,13 +63,10 @@ const Cues = {
                             (navigator.userAgent.match(/Firefox\//) ? 50 : 0)
                     )
                 );
-                track.addCue(cue);
-                callback({
-                    type: 'captions',
-                    cue: cue
-                });
+                cues.push(cue);
             }
         }
+        return cues;
     }
 };
 
