@@ -47,37 +47,37 @@ class TimelineController extends EventHandler {
     this.initPTS = undefined;
     this.cueRanges = [];
     this.manifestCaptionsLabels = {};
+    this.sendAddTrackEvent = function (track, media)
+    {
+      var e = null;
+      try {
+        e = new window.Event('addtrack');
+      } catch (err) {
+        //for IE11
+        e = document.createEvent('Event');
+        e.initEvent('addtrack', false, false);
+      }
+      e.track = track;
+      media.dispatchEvent(e);
+    };
+    this.sendAddCueEvent = function (cueData)
+    {
+      var e = null;
+      try {
+        e = new window.Event('addcue');
+      } catch (err) {
+        //for IE11
+        e = document.createEvent('Event');
+        e.initEvent('addcue', false, false);
+      }
+      e.cueData = cueData;
+      self.media.dispatchEvent(e);
+    };
 
     if (this.config.enableCEA708Captions)
     {
       var self = this;
       var captionsLabels = this.manifestCaptionsLabels;
-      var sendAddTrackEvent = function (track, media)
-      {
-        var e = null;
-        try {
-          e = new window.Event('addtrack');
-        } catch (err) {
-          //for IE11
-          e = document.createEvent('Event');
-          e.initEvent('addtrack', false, false);
-        }
-        e.track = track;
-        media.dispatchEvent(e);
-      };
-      var sendAddCueEvent = function (cueData)
-      {
-        var e = null;
-        try {
-          e = new window.Event('addcue');
-        } catch (err) {
-          //for IE11
-          e = document.createEvent('Event');
-          e.initEvent('addcue', false, false);
-        }
-        e.cueData = cueData;
-        self.media.dispatchEvent(e);
-      };
 
       var channel1 =
       {
@@ -98,10 +98,10 @@ class TimelineController extends EventHandler {
               self.textTrack1 = existingTrack1;
               clearCurrentCues(self.textTrack1);
 
-              sendAddTrackEvent(self.textTrack1, self.media);
+              self.sendAddTrackEvent(self.textTrack1, self.media);
             }
           }
-          self.addCues('textTrack1', startTime, endTime, screen, sendAddCueEvent);
+          self.addCues('textTrack1', startTime, endTime, screen, self.sendAddCueEvent);
         }
       };
 
@@ -124,10 +124,10 @@ class TimelineController extends EventHandler {
               self.textTrack2 = existingTrack2;
               clearCurrentCues(self.textTrack2);
 
-              sendAddTrackEvent(self.textTrack2, self.media);
+              self.sendAddTrackEvent(self.textTrack2, self.media);
             }
           }
-          self.addCues('textTrack2', startTime, endTime, screen, sendAddCueEvent);
+          self.addCues('textTrack2', startTime, endTime, screen, self.sendAddCueEvent);
         }
       };
 
@@ -135,7 +135,7 @@ class TimelineController extends EventHandler {
     }
   }
 
-  addCues(channel, startTime, endTime, screen, sendAddCueEventCb) {
+  addCues(channel, startTime, endTime, screen, sendAddCueFunc) {
     // skip cues which overlap more than 50% with previously parsed time ranges
     const ranges = this.cueRanges;
     let merged = false;
@@ -154,7 +154,12 @@ class TimelineController extends EventHandler {
     if (!merged) {
       ranges.push([startTime, endTime]);
     }
-    this.Cues.newCue(this[channel], startTime, endTime, screen, sendAddCueEventCb);
+    var cues = this.Cues.newCues(startTime, endTime, screen);
+    if (cues && this.config.renderNatively) {
+      cues.forEach((cue) => { this[channel].addCue(cue); });
+    } else {
+      cues.forEach((cue) => { sendAddCueFunc({ type: 'captions', cue: cue }); });
+    }
   }
 
   // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
@@ -244,11 +249,13 @@ class TimelineController extends EventHandler {
 
       this.tracks.forEach((track, index) => {
         let textTrack;
-        if (index < inUseTracks.length) {const inUseTrack = inUseTracks[index];
-        // Reuse tracks with the same label, but do not reuse 608/708 tracks
-        if (reuseVttTextTrack(inUseTrack, track)) {
-          textTrack = inUseTrack;
-        } }
+        if (index < inUseTracks.length) {
+          const inUseTrack = inUseTracks[index];
+          // Reuse tracks with the same label, but do not reuse 608/708 tracks
+          if (reuseVttTextTrack(inUseTrack, track)) {
+            textTrack = inUseTrack;
+          }
+        }
         if (!textTrack) {
           textTrack = this.createTextTrack('subtitles', track.name, track.lang);
         }
@@ -284,7 +291,8 @@ class TimelineController extends EventHandler {
 
   onFragLoaded(data) {
     let frag = data.frag,
-      payload = data.payload;
+        payload = data.payload,
+        self = this;
     if (frag.type === 'main') {
       var sn = frag.sn;
       // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
@@ -313,19 +321,24 @@ class TimelineController extends EventHandler {
         WebVTTParser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
             // Add cues and trigger event with success true.
             cues.forEach(cue => {
-              textTracks[frag.trackId].addCue(cue);
+              // Change from captions
+              if (self.config.renderNatively) {
+                textTracks[frag.trackId].addCue(cue);
+              } else {
+                self.sendAddCueEvent({ type: 'captions', track: textTracks[frag.trackId]._id, cue: cue });
+              }
             });
-            hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: true, frag: frag});
+            hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
           },
           function (e) {
             // Something went wrong while parsing. Trigger event with success false.
             logger.log(`Failed to parse VTT cue: ${e}`);
-            hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: false, frag: frag});
+            hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag });
           });
       }
       else {
         // In case there is no payload, finish unsuccessfully.
-        this.hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: false, frag: frag});
+        this.hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag });
       }
     }
   }
