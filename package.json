@@ -9,6 +9,9 @@
     "type": "git",
     "url": "https://github.com/vidible/vdb-player-hls-js"
   },
+  "publishConfig": {
+    "registry": "https://artifactory-prod.vidible.aolcloud.net/artifactory/api/npm/libs-npm-local"
+  },
   "bugs": {
     "url": "https://github.com/dailymotion/hls.js/issues"
   },
