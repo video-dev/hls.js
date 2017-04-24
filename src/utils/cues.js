@@ -1,16 +1,16 @@
 import { fixLineBreaks } from './vttparser';
-//import { VTTCue } from './vttcue';
+import VTTCue from './vttcue';
+
 
 const Cues = {
 
-  newCues: function(startTime, endTime, captionScreen) {
+  createCues: function(startTime, endTime, captionScreen) {
     var row;
     var cue;
     var cues = [];
     var indenting;
     var indent;
     var text;
-    var VTTCue = window.VTTCue || window.TextTrackCue;
 
     for (var r=0; r<captionScreen.rows.length; r++)
     {
