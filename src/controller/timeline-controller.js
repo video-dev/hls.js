@@ -60,7 +60,7 @@ class TimelineController extends EventHandler {
       e.track = track;
       media.dispatchEvent(e);
     };
-    this.sendAddCueEvent = function (cueData)
+    this.sendAddCueEvent = function (cueData, media)
     {
       var e = null;
       try {
@@ -71,12 +71,11 @@ class TimelineController extends EventHandler {
         e.initEvent('addcue', false, false);
       }
       e.cueData = cueData;
-      self.media.dispatchEvent(e);
+      media.dispatchEvent(e);
     };
 
     if (this.config.enableCEA708Captions)
     {
-      var self = this;
       var captionsLabels = this.manifestCaptionsLabels;
 
       var channel1 =
@@ -160,7 +159,7 @@ class TimelineController extends EventHandler {
     if (this.config.renderNatively) {
       cues.forEach((cue) => { this[channel].addCue(cue); });
     } else {
-      cues.forEach((cue) => { self.sendAddCueEvent({ type: 'captions', cue: cue }); });
+      cues.forEach((cue) => { self.sendAddCueEvent({ type: 'captions', cue: cue }, self.media); });
     }
   }
 
@@ -322,9 +321,9 @@ class TimelineController extends EventHandler {
         // Parse the WebVTT file contents.
         WebVTTParser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
             if (self.config.renderNatively) {
-              cues.forEach(cue => { textTracks[frag.trackId].addCue(cue) });
+              cues.forEach(cue => { textTracks[frag.trackId].addCue(cue); });
             } else {
-              cues.forEach(cue => { self.sendAddCueEvent({ type: 'captions', track: textTracks[frag.trackId]._id, cue: cue })} );
+              cues.forEach(cue => { self.sendAddCueEvent({ type: 'captions', track: textTracks[frag.trackId]._id, cue: cue }, self.media); } );
             }
             hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
           },
