@@ -79,6 +79,7 @@ class TimelineController extends EventHandler {
         };
 
         if (this.config.enableCEA708Captions) {
+            var self = this;
             var captionsLabels = this.manifestCaptionsLabels;
 
             var channel1 = {
