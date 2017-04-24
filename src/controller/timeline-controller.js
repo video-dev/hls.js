@@ -101,13 +101,7 @@ class TimelineController extends EventHandler {
                             self.sendAddTrackEvent(self.textTrack1, self.media);
                         }
                     }
-                    self.addCues(
-                        'textTrack1',
-                        startTime,
-                        endTime,
-                        screen,
-                        self.sendAddCueEvent
-                    );
+                    self.addCues('textTrack1', startTime, endTime, screen);
                 }
             };
 
@@ -130,13 +124,7 @@ class TimelineController extends EventHandler {
                             self.sendAddTrackEvent(self.textTrack2, self.media);
                         }
                     }
-                    self.addCues(
-                        'textTrack2',
-                        startTime,
-                        endTime,
-                        screen,
-                        self.sendAddCueEvent
-                    );
+                    self.addCues('textTrack2', startTime, endTime, screen);
                 }
             };
 
@@ -144,7 +132,7 @@ class TimelineController extends EventHandler {
         }
     }
 
-    addCues(channel, startTime, endTime, screen, sendAddCueFunc) {
+    addCues(channel, startTime, endTime, screen) {
         // skip cues which overlap more than 50% with previously parsed time ranges
         const ranges = this.cueRanges;
         let merged = false;
@@ -168,14 +156,16 @@ class TimelineController extends EventHandler {
         if (!merged) {
             ranges.push([startTime, endTime]);
         }
-        var cues = this.Cues.newCues(startTime, endTime, screen);
-        if (cues && this.config.renderNatively) {
+
+        let cues = this.Cues.createCues(startTime, endTime, screen);
+        let self = this;
+        if (this.config.renderNatively) {
             cues.forEach(cue => {
                 this[channel].addCue(cue);
             });
         } else {
             cues.forEach(cue => {
-                sendAddCueFunc({ type: 'captions', cue: cue });
+                self.sendAddCueEvent({ type: 'captions', cue: cue });
             });
         }
     }
@@ -354,19 +344,19 @@ class TimelineController extends EventHandler {
                     vttCCs,
                     frag.cc,
                     function(cues) {
-                        // Add cues and trigger event with success true.
-                        cues.forEach(cue => {
-                            // Change from captions
-                            if (self.config.renderNatively) {
+                        if (self.config.renderNatively) {
+                            cues.forEach(cue => {
                                 textTracks[frag.trackId].addCue(cue);
-                            } else {
+                            });
+                        } else {
+                            cues.forEach(cue => {
                                 self.sendAddCueEvent({
                                     type: 'captions',
                                     track: textTracks[frag.trackId]._id,
                                     cue: cue
                                 });
-                            }
-                        });
+                            });
+                        }
                         hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {
                             success: true,
                             frag: frag
