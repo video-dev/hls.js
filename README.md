@@ -112,6 +112,12 @@ Or type
 npm install --save hls.js
 ```
 
+Optionally there is a declaration file available to help with code completion and hinting within your IDE for the hls.js api
+
+```sh
+npm install --save-dev @types/hls.js
+```
+
 ## Compatibility
 hls.js is compatible with browsers supporting MSE with 'video/MP4' inputs.
 As of today, it is supported on:
