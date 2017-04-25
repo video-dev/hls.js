@@ -53,30 +53,6 @@ class TimelineController extends EventHandler {
         this.initPTS = undefined;
         this.cueRanges = [];
         this.manifestCaptionsLabels = {};
-        this.sendAddTrackEvent = function(track, media) {
-            var e = null;
-            try {
-                e = new window.Event('addtrack');
-            } catch (err) {
-                //for IE11
-                e = document.createEvent('Event');
-                e.initEvent('addtrack', false, false);
-            }
-            e.track = track;
-            media.dispatchEvent(e);
-        };
-        this.sendAddCueEvent = function(cueData, media) {
-            var e = null;
-            try {
-                e = new window.Event('addcue');
-            } catch (err) {
-                //for IE11
-                e = document.createEvent('Event');
-                e.initEvent('addcue', false, false);
-            }
-            e.cueData = cueData;
-            media.dispatchEvent(e);
-        };
 
         if (this.config.enableCEA708Captions) {
             var self = this;
@@ -98,7 +74,11 @@ class TimelineController extends EventHandler {
                             self.textTrack1 = existingTrack1;
                             clearCurrentCues(self.textTrack1);
 
-                            self.sendAddTrackEvent(self.textTrack1, self.media);
+                            sendCustomEvent(
+                                'addtrack',
+                                { track: self.textTrack1 },
+                                self.hls
+                            );
                         }
                     }
                     self.addCues('textTrack1', startTime, endTime, screen);
@@ -121,7 +101,11 @@ class TimelineController extends EventHandler {
                             self.textTrack2 = existingTrack2;
                             clearCurrentCues(self.textTrack2);
 
-                            self.sendAddTrackEvent(self.textTrack2, self.media);
+                            sendCustomEvent(
+                                'addtrack',
+                                { track: self.textTrack2 },
+                                self.hls
+                            );
                         }
                     }
                     self.addCues('textTrack2', startTime, endTime, screen);
@@ -158,16 +142,19 @@ class TimelineController extends EventHandler {
         }
 
         let cues = this.Cues.createCues(startTime, endTime, screen);
-        let self = this;
         if (this.config.renderNatively) {
             cues.forEach(cue => {
                 this[channel].addCue(cue);
             });
         } else {
             cues.forEach(cue => {
-                self.sendAddCueEvent(
-                    { type: 'captions', cue: cue },
-                    self.media
+                sendCustomEvent(
+                    'addcue',
+                    {
+                        track: this[channel],
+                        cueData: { type: 'captions', cue: cue }
+                    },
+                    this.hls
                 );
             });
         }
@@ -224,7 +211,7 @@ class TimelineController extends EventHandler {
     }
 
     onManifestLoading() {
-        this.lastSn = -1; // Detect discontiguity in fragment parsing
+        this.lastSn = -1; // Detect discontinuity in fragment parsing
         this.prevCC = -1;
         this.vttCCs = { ccOffset: 0, presentationOffset: 0 }; // Detect discontinuity in subtitle manifests
 
@@ -253,28 +240,45 @@ class TimelineController extends EventHandler {
         captionsLabels.captionsTextTrack2LanguageCode = 'es';
 
         if (this.config.enableWebVTT) {
+            const sameTracks =
+                this.tracks &&
+                data.subtitles &&
+                this.tracks.length === data.subtitles.length;
             this.tracks = data.subtitles || [];
-            const inUseTracks = this.media ? this.media.textTracks : [];
 
-            this.tracks.forEach((track, index) => {
-                let textTrack;
-                if (index < inUseTracks.length) {
-                    const inUseTrack = inUseTracks[index];
-                    // Reuse tracks with the same label, but do not reuse 608/708 tracks
-                    if (reuseVttTextTrack(inUseTrack, track)) {
-                        textTrack = inUseTrack;
+            if (this.config.renderNatively) {
+                let inUseTracks = this.media ? this.media.textTracks : [];
+
+                this.tracks.forEach((track, index) => {
+                    let textTrack;
+                    if (index < inUseTracks.length) {
+                        const inUseTrack = inUseTracks[index];
+                        // Reuse tracks with the same label, but do not reuse 608/708 tracks
+                        if (reuseVttTextTrack(inUseTrack, track)) {
+                            textTrack = inUseTrack;
+                        }
                     }
-                }
-                if (!textTrack) {
-                    textTrack = this.createTextTrack(
-                        'subtitles',
-                        track.name,
-                        track.lang
-                    );
-                }
-                textTrack.mode = track.default ? 'showing' : 'hidden';
-                this.textTracks.push(textTrack);
-            });
+                    if (!textTrack) {
+                        textTrack = this.createTextTrack(
+                            'subtitles',
+                            track.name,
+                            track.lang
+                        );
+                    }
+                    textTrack.mode = track.default ? 'showing' : 'hidden';
+                    this.textTracks.push(textTrack);
+                });
+            } else if (!sameTracks) {
+                // Coverts tracks to a flash-like list for consumption
+                let tracksList = this.tracks.map(track => {
+                    return {
+                        label: track.name,
+                        kind: track.type.toLowerCase() /*'file': track.url,*/,
+                        default: track.default
+                    };
+                });
+                this.hls.trigger('jwplayerRenderedSubtitleTracks', tracksList);
+            }
         }
 
         if (this.config.enableCEA708Captions && data.captions) {
@@ -310,11 +314,12 @@ class TimelineController extends EventHandler {
     }
 
     onFragLoaded(data) {
-        let frag = data.frag,
-            payload = data.payload,
-            self = this;
+        let frag = data.frag;
+        let payload = data.payload;
+        let self = this;
+
         if (frag.type === 'main') {
-            var sn = frag.sn;
+            let sn = frag.sn;
             // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
             if (sn !== this.lastSn + 1) {
                 this.cea608Parser.reset();
@@ -337,8 +342,11 @@ class TimelineController extends EventHandler {
                     };
                     this.prevCC = frag.cc;
                 }
-                let textTracks = this.textTracks,
-                    hls = this.hls;
+
+                let hls = this.hls;
+                let tracks = self.config.renderNatively
+                    ? this.textTracks
+                    : this.tracks;
 
                 // Parse the WebVTT file contents.
                 WebVTTParser.parse(
@@ -349,17 +357,20 @@ class TimelineController extends EventHandler {
                     function(cues) {
                         if (self.config.renderNatively) {
                             cues.forEach(cue => {
-                                textTracks[frag.trackId].addCue(cue);
+                                tracks[frag.trackId].addCue(cue);
                             });
                         } else {
                             cues.forEach(cue => {
-                                self.sendAddCueEvent(
+                                sendCustomEvent(
+                                    'addcue',
                                     {
-                                        type: 'captions',
-                                        track: textTracks[frag.trackId]._id,
-                                        cue: cue
+                                        cueData: {
+                                            type: 'captions',
+                                            track: 'subtitles' + frag.trackId,
+                                            cue: cue
+                                        }
                                     },
-                                    self.media
+                                    self.hls
                                 );
                             });
                         }
@@ -426,5 +437,9 @@ class TimelineController extends EventHandler {
         return actualCCBytes;
     }
 }
+
+const sendCustomEvent = (eventName, payload, emitter) => {
+    emitter.trigger(eventName, payload);
+};
 
 export default TimelineController;
