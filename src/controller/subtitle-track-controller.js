@@ -6,6 +6,16 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import {logger} from '../utils/logger';
 
+function filterSubtitleTracks(textTrackList) {
+  let tracks = [];
+  for (let i = 0; i < textTrackList.length; i++) {
+    if (textTrackList[i].kind === 'subtitles') {
+      tracks.push(textTrackList[i]);
+    }
+  }
+  return tracks;
+}
+
 class SubtitleTrackController extends EventHandler {
 
   constructor(hls) {
@@ -38,9 +48,9 @@ class SubtitleTrackController extends EventHandler {
       }
 
       let trackId = -1;
-      let tracks = this.media.textTracks;
-      for(let id = 0; id< tracks.length; id++) {
-        if(tracks[id].mode === 'showing') {
+      let tracks = filterSubtitleTracks(this.media.textTracks);
+      for (let id = 0; id < tracks.length; id++) {
+        if (tracks[id].mode === 'showing') {
           trackId = id;
         }
       }
