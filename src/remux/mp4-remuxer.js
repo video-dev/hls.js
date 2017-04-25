@@ -51,6 +51,11 @@ class MP4Remuxer {
             // calculated in remuxAudio.
             //logger.log('nb AAC samples:' + audioTrack.samples.length);
             if (audioTrack.samples.length) {
+                // if initSegment was generated without video samples, regenerate it again
+                if (!audioTrack.timescale) {
+                    logger.warn('regenerate InitSegment as audio detected');
+                    this.generateIS(audioTrack, videoTrack, timeOffset);
+                }
                 let audioData = this.remuxAudio(
                     audioTrack,
                     timeOffset,
