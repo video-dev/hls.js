@@ -4,11 +4,6 @@
 
 import Event from '../events';
 import EventHandler from '../event-handler';
-import {logger} from '../utils/logger';
-
-function base64Encode(data) {
-  return btoa(String.fromCharCode.apply(null, data));
-}
 
 class ID3TrackController extends EventHandler {
 
@@ -177,7 +172,7 @@ class ID3TrackController extends EventHandler {
 
     let char2;
     let char3;
-    let out = "";
+    let out = '';
     let i = 0;
     let length = array.length;
 
