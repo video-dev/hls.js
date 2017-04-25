@@ -76,6 +76,7 @@ class TSDemuxer {
             type: 'audio',
             id: -1,
             inputTimeScale: 90000,
+            duration: duration,
             sequenceNumber: 0,
             samples: [],
             len: 0,
@@ -1131,7 +1132,6 @@ class TSDemuxer {
             track.channelCount = config.channelCount;
             track.codec = config.codec;
             track.manifestCodec = config.manifestCodec;
-            track.duration = this._duration;
             logger.log(
                 `parsed codec:${track.codec},rate:${
                     config.samplerate
