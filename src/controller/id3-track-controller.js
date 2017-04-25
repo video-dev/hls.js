@@ -4,11 +4,6 @@
 
 import Event from '../events';
 import EventHandler from '../event-handler';
-import { logger } from '../utils/logger';
-
-function base64Encode(data) {
-    return btoa(String.fromCharCode.apply(null, data));
-}
 
 class ID3TrackController extends EventHandler {
     constructor(hls) {
