@@ -25,6 +25,10 @@ function intersection(x1, x2, y1, y2) {
   return Math.min(x2, y2) - Math.max(x1, y1);
 }
 
+const sendCustomEvent = (eventName, payload, emitter) => {
+  emitter.trigger(eventName, payload);
+};
+
 class TimelineController extends EventHandler {
 
   constructor(hls) {
@@ -369,9 +373,5 @@ class TimelineController extends EventHandler {
     return actualCCBytes;
   }
 }
-
-const sendCustomEvent = (eventName, payload, emitter) => {
-  emitter.trigger(eventName, payload);
-};
 
 export default TimelineController;
