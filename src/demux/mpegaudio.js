@@ -3,9 +3,9 @@
  */
 import {logger} from '../utils/logger';
 
-class MpegAudio {
+const MpegAudio = {
 
-  static onFrame(track, data, bitRate, sampleRate, channelCount, frameIndex, pts) {
+  onFrame: function(track, data, bitRate, sampleRate, channelCount, frameIndex, pts) {
     var frameDuration = 1152 * 90000 / sampleRate;
     var stamp = pts + frameIndex * frameDuration;
 
@@ -14,13 +14,13 @@ class MpegAudio {
     track.samplerate = sampleRate;
     track.samples.push({unit: data, pts: stamp, dts: stamp});
     track.len += data.length;
-  }
+  },
 
-  static onNoise(data) {
+  onNoise: function(data) {
     logger.warn('mpeg audio has noise: ' + data.length + ' bytes');
-  }
+  },
 
-  static parseFrames(track, data, start, end, frameIndex, pts) {
+  parseFrames: function(track, data, start, end, frameIndex, pts) {
     var BitratesMap = [
         32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448,
         32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384,
@@ -73,9 +73,9 @@ class MpegAudio {
         offset++;
     }
     return -1;
-  }
+  },
 
-  static parse(track, data, offset, pts) {
+  parse: function(track, data, offset, pts) {
     var length = data.length;
     var frameIndex = 0;
     var parsed;
@@ -85,6 +85,6 @@ class MpegAudio {
         offset += parsed;
     }
   }
-}
+};
 
-export default MpegAudio;
+module.exports = MpegAudio;
