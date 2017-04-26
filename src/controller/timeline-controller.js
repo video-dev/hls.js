@@ -25,10 +25,6 @@ function intersection(x1, x2, y1, y2) {
   return Math.min(x2, y2) - Math.max(x1, y1);
 }
 
-const sendCustomEvent = (eventName, payload, emitter) => {
-  emitter.trigger(eventName, payload);
-};
-
 class TimelineController extends EventHandler {
 
   constructor(hls) {
@@ -57,54 +53,70 @@ class TimelineController extends EventHandler {
       var self = this;
       var captionsLabels = this.manifestCaptionsLabels;
 
-      var channel1 =
-      {
-        'newCue': function(startTime, endTime, screen)
-        {
-          if (!self.textTrack1)
-          {
-            //Enable reuse of existing text track.
-            var existingTrack1 = self.getExistingTrack('1');
-            if (!existingTrack1)
-            {
-              self.textTrack1 = self.createTextTrack('captions', captionsLabels.captionsTextTrack1Label,
-                captionsLabels.captionsTextTrack1LanguageCode);
-              self.textTrack1.textTrack1 = true;
-            }
-            else
-            {
-              self.textTrack1 = existingTrack1;
-              clearCurrentCues(self.textTrack1);
+      var channel1 = {
+        'newCue': function(startTime, endTime, screen) {
+          if (!self.textTrack1) {
+            if (self.config.renderNatively) {
+              //Enable reuse of existing text track.
+              var existingTrack1 = self.getExistingTrack('1');
+              if (!existingTrack1) {
+                self.textTrack1 = self.createTextTrack('captions', captionsLabels.captionsTextTrack1Label,
+                  captionsLabels.captionsTextTrack1LanguageCode);
+                self.textTrack1.textTrack1 = true;
+              } else {
+                self.textTrack1 = existingTrack1;
+                clearCurrentCues(self.textTrack1);
 
-              sendCustomEvent('addtrack', {track: self.textTrack1}, self.hls);
+                let event = new window.Event('addtrack');
+                event.track = self.textTrack1;
+                self.media.dispatchEvent(event);
+              }
+            } else {
+              // Create a list of a single track for the provider to consume
+              self.textTrack1 = {
+                '_id': 'textTrack1',
+                'label': captionsLabels.captionsTextTrack1Label,
+                'kind': 'captions',
+                'default': false
+              };
+              self.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: [ self.textTrack1] });
             }
           }
+
           self.addCues('textTrack1', startTime, endTime, screen);
         }
       };
 
-      var channel2 =
-      {
-        'newCue': function(startTime, endTime, screen)
-        {
-          if (!self.textTrack2)
-          {
-            //Enable reuse of existing text track.
-            var existingTrack2 = self.getExistingTrack('2');
-            if (!existingTrack2)
-            {
-              self.textTrack2 = self.createTextTrack('captions', captionsLabels.captionsTextTrack2Label,
-                captionsLabels.captionsTextTrack2LanguageCode);
-              self.textTrack2.textTrack2 = true;
-            }
-            else
-            {
-              self.textTrack2 = existingTrack2;
-              clearCurrentCues(self.textTrack2);
+      var channel2 = {
+        'newCue': function(startTime, endTime, screen) {
+          if (!self.textTrack2) {
+            if (self.config.renderNatively) {
+              //Enable reuse of existing text track.
+              var existingTrack2 = self.getExistingTrack('2');
+              if (!existingTrack2) {
+                self.textTrack2 = self.createTextTrack('captions', captionsLabels.captionsTextTrack2Label,
+                  captionsLabels.captionsTextTrack2LanguageCode);
+                self.textTrack2.textTrack2 = true;
+              } else {
+                self.textTrack2 = existingTrack2;
+                clearCurrentCues(self.textTrack2);
 
-              sendCustomEvent('addtrack', {track: self.textTrack2}, self.hls);
+                let event = new window.Event('addtrack');
+                event.track = self.textTrack2;
+                self.media.dispatchEvent(event);
+              }
+            } else {
+              // Create a list of a single track for the provider to consume
+              self.textTrack2 = {
+                '_id': 'textTrack2',
+                'label': captionsLabels.captionsTextTrack2Label,
+                'kind': 'captions',
+                'default': false
+              };
+              self.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: [ self.textTrack2] });
             }
           }
+
           self.addCues('textTrack2', startTime, endTime, screen);
         }
       };
@@ -137,7 +149,7 @@ class TimelineController extends EventHandler {
     if (this.config.renderNatively) {
       cues.forEach((cue) => { this[channel].addCue(cue); });
     } else {
-      cues.forEach((cue) => { sendCustomEvent('addcue', {track: this[channel], cueData: { type: 'captions', cue: cue }}, this.hls); });
+      cues.forEach((cue) => { this.hls.trigger(Event.CUE_PARSED, { cueData: { type: 'captions', cue: cue, track: channel } }); });
     }
   }
 
@@ -249,11 +261,11 @@ class TimelineController extends EventHandler {
         let tracksList = this.tracks.map((track) => {
           return {
             'label': track.name,
-            'kind': track.type.toLowerCase(), /*'file': track.url,*/
+            'kind': track.type.toLowerCase(),
             'default': track.default
           };
         });
-        this.hls.trigger('jwplayerRenderedSubtitleTracks', tracksList);
+        this.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: tracksList });
       }
     }
 
@@ -317,7 +329,7 @@ class TimelineController extends EventHandler {
             if (self.config.renderNatively) {
               cues.forEach(cue => { tracks[frag.trackId].addCue(cue); });
             } else {
-              cues.forEach(cue => { sendCustomEvent('addcue', {cueData: { type: 'captions', track: 'subtitles'+frag.trackId, cue: cue }}, self.hls); });
+              cues.forEach(cue => { this.hls.trigger(Event.CUE_PARSED, { cueData: { type: 'subtitles', track: 'subtitles'+frag.trackId, cue: cue } }); });
             }
             hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
           },
