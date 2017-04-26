@@ -581,10 +581,10 @@ class MP4Remuxer {
                 // If we're overlapping by more than a duration, drop this sample
                 if (delta <= -inputSampleDuration) {
                     logger.warn(
-                        `Dropping 1 audio frame @ ${(
+                        `Dropping audio frame @ ${(
                             nextPtsNorm / inputTimeScale
-                        ).toFixed(3)}s due to ${Math.abs(
-                            1000 * delta / inputTimeScale
+                        ).toFixed(3)}s due to ${Math.round(
+                            Math.abs(1000 * delta / inputTimeScale)
                         )} ms overlap.`
                     );
                     inputSamples.splice(i, 1);
@@ -597,9 +597,9 @@ class MP4Remuxer {
                     logger.warn(
                         `Injecting ${missing} audio frame @ ${(
                             nextPtsNorm / inputTimeScale
-                        ).toFixed(3)}s due to ${1000 *
-                            delta /
-                            inputTimeScale} ms gap.`
+                        ).toFixed(3)}s due to ${Math.round(
+                            1000 * delta / inputTimeScale
+                        )} ms gap.`
                     );
                     for (var j = 0; j < missing; j++) {
                         newStamp = nextPtsNorm + initDTS;
