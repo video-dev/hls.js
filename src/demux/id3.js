@@ -8,6 +8,7 @@ import {logger} from '../utils/logger';
 
   constructor(data) {
     this._hasTimeStamp = false;
+    this._length = 0;
     var offset = 0, byte1,byte2,byte3,byte4,tagSize,endPos,header,len;
       do {
         header = this.readUTF(data,offset,3);
