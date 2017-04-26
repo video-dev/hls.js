@@ -30,19 +30,27 @@ class MP3Demuxer {
 
     static probe(data) {
         // check if data contains ID3 timestamp and MPEG sync word
-        var id3 = new ID3(data);
+        var id3 = new ID3(data),
+            offset,
+            length;
         if (id3.hasTimeStamp) {
-            // look for MPEG header (0xFFEx)
-            var offset = id3.length;
+            // Look for MPEG header | 1111 1111 | 111X XYZX | where X can be either 0 or 1 and Y or Z should be 1
             // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
             // More info http://www.mp3-tech.org/programmer/frame_header.html
-            if (
-                data[offset] === 0xff &&
-                (data[offset + 1] & 0xe0) === 0xe0 &&
-                (data[offset + 1] & 0x06) >> 1 !== 0x00
+            for (
+                offset = id3.length,
+                    length = Math.min(data.length - 1, offset + 100);
+                offset < length;
+                offset++
             ) {
-                //logger.log('MPEG sync word found !');
-                return true;
+                if (
+                    data[offset] === 0xff &&
+                    (data[offset + 1] & 0xe0) === 0xe0 &&
+                    (data[offset + 1] & 0x06) !== 0x00
+                ) {
+                    //logger.log('MPEG sync word found !');
+                    return true;
+                }
             }
         }
         return false;
@@ -52,6 +60,23 @@ class MP3Demuxer {
     append(data, timeOffset, contiguous, accurateTimeOffset) {
         var id3 = new ID3(data);
         var pts = 90 * id3.timeStamp;
+        var afterID3 = id3.length;
+        var offset, length;
+
+        // Look for MPEG header
+        for (
+            offset = afterID3, length = data.length;
+            offset < length - 1;
+            offset++
+        ) {
+            if (
+                data[offset] === 0xff &&
+                (data[offset + 1] & 0xe0) === 0xe0 &&
+                (data[offset + 1] & 0x06) !== 0x00
+            ) {
+                break;
+            }
+        }
 
         MpegAudio.parse(this._audioTrack, data, id3.length, pts);
 
