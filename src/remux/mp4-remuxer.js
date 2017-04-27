@@ -481,7 +481,7 @@ class MP4Remuxer {
         // Otherwise, just adjust pts
         else {
           if (Math.abs(delta) > (0.1 * inputSampleDuration)) {
-            logger.log(`Invalid frame delta ${Math.round(ptsNorm - nextPtsNorm + inputSampleDuration)} at PTS ${Math.round(ptsNorm / 90)} (should be ${Math.round(inputSampleDuration)}).`);
+            // logger.log(`Invalid frame delta ${Math.round(ptsNorm - nextPtsNorm + inputSampleDuration)} at PTS ${Math.round(ptsNorm / 90)} (should be ${Math.round(inputSampleDuration)}).`);
           }
           nextPtsNorm += inputSampleDuration;
           if (i === 0) {
