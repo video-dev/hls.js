@@ -41,6 +41,11 @@ class MP4Remuxer {
       // calculated in remuxAudio.
       //logger.log('nb AAC samples:' + audioTrack.samples.length);
       if (audioTrack.samples.length) {
+        // if initSegment was generated without video samples, regenerate it again
+        if (!audioTrack.timescale) {
+          logger.warn('regenerate InitSegment as audio detected');
+          this.generateIS(audioTrack,videoTrack,timeOffset); 
+        }
         let audioData = this.remuxAudio(audioTrack,timeOffset,contiguous,accurateTimeOffset);
         //logger.log('nb AVC samples:' + videoTrack.samples.length);
         if (videoTrack.samples.length) {
@@ -451,7 +456,7 @@ class MP4Remuxer {
 
         // If we're overlapping by more than a duration, drop this sample
         if (delta <= -inputSampleDuration) {
-          logger.warn(`Dropping 1 audio frame @ ${(nextPtsNorm/inputTimeScale).toFixed(3)}s due to ${Math.abs(1000*delta/inputTimeScale)} ms overlap.`);
+          logger.warn(`Dropping audio frame @ ${(nextPtsNorm/inputTimeScale).toFixed(3)}s due to ${Math.round(Math.abs(1000*delta/inputTimeScale))} ms overlap.`);
           inputSamples.splice(i, 1);
           track.len -= sample.unit.length;
           // Don't touch nextPtsNorm or i
@@ -460,7 +465,7 @@ class MP4Remuxer {
         // also only inject silent audio frames if currentTime !== 0 (nextPtsNorm !== 0)
         else if (delta >= inputSampleDuration && nextPtsNorm) {
           var missing = Math.round(delta / inputSampleDuration);
-          logger.warn(`Injecting ${missing} audio frame @ ${(nextPtsNorm/inputTimeScale).toFixed(3)}s due to ${1000*delta/inputTimeScale} ms gap.`);
+          logger.warn(`Injecting ${missing} audio frame @ ${(nextPtsNorm/inputTimeScale).toFixed(3)}s due to ${Math.round(1000*delta/inputTimeScale)} ms gap.`);
           for (var j = 0; j < missing; j++) {
             newStamp = nextPtsNorm + initDTS;
             newStamp = Math.max(newStamp, initDTS);
