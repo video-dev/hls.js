@@ -67,6 +67,10 @@ module.exports = {
     SUBTITLE_TRACK_LOADED: 'hlsSubtitleTrackLoaded',
     // fired when a subtitle fragment has been processed - data: { success : boolean, frag : the processed frag}
     SUBTITLE_FRAG_PROCESSED: 'hlsSubtitleFragProcessed',
+    // fired when a VTTCue to be managed externally has been parsed - data: { cueData: { type: string, track: string, cue: VTTCue } }
+    CUE_PARSED: 'hlsCueParsed',
+    // fired when a text track to be managed externally is found - data: { tracks: [ { label: string, kind: string, default: boolean } ] }
+    NON_NATIVE_TEXT_TRACKS_FOUND: 'hlsNonNativeTextTracksFound',
     // fired when the first timestamp is found. - data: { id : demuxer id, initPTS: initPTS , frag : fragment object}
     INIT_PTS_FOUND: 'hlsInitPtsFound',
     // fired when a fragment loading starts - data: { frag : fragment object}
