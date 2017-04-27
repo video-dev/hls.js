@@ -257,7 +257,7 @@ class TimelineController extends EventHandler {
           this.textTracks.push(textTrack);
         });
       } else if (!sameTracks) {
-        // Coverts tracks to a flash-like list for consumption
+        // Create a list of tracks for the provider to consume
         let tracksList = this.tracks.map((track) => {
           return {
             'label': track.name,
