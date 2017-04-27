@@ -19,8 +19,8 @@
   "scripts": {
     "build": "npm run buildlib && rimraf dist/* && npm run builddist && npm run builddistlight",
     "buildlib": "rimraf lib/* && babel src --out-dir lib",
-    "builddistlight": "browserify -t [browserify-conditionalify --definitions [--subtitle 0 --altaudio 0 ] ] -t browserify-versionify -t [babelify] -p browserify-derequire -p bundle-collapser/plugin -s Hls src/index.js --debug | exorcist dist/hls.light.js.map -b . > dist/hls.light.js && npm run minifylight",
-    "builddist": "browserify -t browserify-versionify -t [babelify] -p browserify-derequire -p bundle-collapser/plugin -s Hls src/index.js --debug | exorcist dist/hls.js.map -b . > dist/hls.js && npm run minify",
+    "builddistlight": "browserify -t [browserify-conditionalify --definitions [--subtitle 0 --altaudio 0 ] ] -t browserify-versionify -t [babelify] -p browserify-derequire -p bundle-collapser/plugin -s Hls src/index.js --debug | exorcist dist/hls.light.js.map -b . > dist/hls.light.js && npm run minifylight && node scripts/foldersize.js dist",
+    "builddist": "browserify -t browserify-versionify -t [babelify] -p browserify-derequire -p bundle-collapser/plugin -s Hls src/index.js --debug | exorcist dist/hls.js.map -b . > dist/hls.js && npm run minify && node scripts/foldersize.js dist",
     "preparerelease": "npm run build && npm run test && git add dist/* && git commit -m 'update dist'",
     "prerelease": "mversion prerelease && npm run preparerelease",
     "patch": "mversion p && npm run preparerelease",
