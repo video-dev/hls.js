@@ -10,6 +10,7 @@ import FPSController from './controller/fps-controller';
 import XhrLoader from './utils/xhr-loader';
 //import FetchLoader from './utils/fetch-loader';
 
+//#if altaudio
 import AudioTrackController from './controller/audio-track-controller';
 import AudioStreamController from './controller/audio-stream-controller';
 
@@ -18,7 +19,30 @@ import TimelineController from './controller/timeline-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
 import SubtitleStreamController from './controller/subtitle-stream-controller';
 
-export var hlsDefaultConfig = {
+if (typeof __BUILD_VERSION__ === 'undefined' || __BUILD_VERSION__ === 'full') {
+    var fullConfig = {
+        //#if altaudio
+        audioStreamController: AudioStreamController,
+        audioTrackController: AudioTrackController,
+        //#endif
+        //#if subtitle
+        subtitleStreamController: SubtitleStreamController,
+        subtitleTrackController: SubtitleTrackController,
+        timelineController: TimelineController,
+        cueHandler: Cues,
+        enableCEA708Captions: true, // used by timeline-controller
+        enableWebVTT: true, // used by timeline-controller
+        captionsTextTrack1Label: 'English', // used by timeline-controller
+        captionsTextTrack1LanguageCode: 'en', // used by timeline-controller
+        captionsTextTrack2Label: 'Spanish', // used by timeline-controller
+        captionsTextTrack2LanguageCode: 'es' // used by timeline-controller
+        //#endif
+    };
+} else {
+    var fullConfig = {};
+}
+
+export var hlsDefaultConfig = Object.assign({}, fullConfig, {
     autoStartLoad: true, // used by stream-controller
     startPosition: -1, // used by stream-controller
     defaultAudioCodec: undefined, // used by stream-controller
@@ -83,19 +107,4 @@ export var hlsDefaultConfig = {
     maxStarvationDelay: 4, // used by abr-controller
     maxLoadingDelay: 4, // used by abr-controller
     minAutoBitrate: 0 // used by hls
-};
-
-if (typeof __BUILD_VERSION__ === 'undefined' || __BUILD_VERSION__ === 'full') {
-    hlsDefaultConfig.audioStreamController = AudioStreamController;
-    hlsDefaultConfig.audioTrackController = AudioTrackController;
-    hlsDefaultConfig.subtitleStreamController = SubtitleStreamController;
-    hlsDefaultConfig.subtitleTrackController = SubtitleTrackController;
-    hlsDefaultConfig.timelineController = TimelineController;
-    hlsDefaultConfig.cueHandler = Cues;
-    hlsDefaultConfig.enableCEA708Captions = true; // used by timeline-controller
-    hlsDefaultConfig.enableWebVTT = true; // used by timeline-controller
-    hlsDefaultConfig.captionsTextTrack1Label = 'English'; // used by timeline-controller
-    hlsDefaultConfig.captionsTextTrack1LanguageCode = 'en'; // used by timeline-controller
-    hlsDefaultConfig.captionsTextTrack2Label = 'Spanish'; // used by timeline-controller
-    hlsDefaultConfig.captionsTextTrack2LanguageCode = 'es'; // used by timeline-controller
-}
+});
