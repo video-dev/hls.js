@@ -50,7 +50,7 @@ const Cues = {
                 if (navigator.userAgent.match(/Firefox\//)) {
                     cue.line = r + 1;
                 } else {
-                    cue.line = r > 7 ? r - 2 : r + 1;
+                    cue.line = r > 7 ? r - 3 : r + 1;
                 }
                 cue.align = 'left';
                 // Clamp the position between 0 and 100 - if out of these bounds, Firefox throws an exception and captions break
