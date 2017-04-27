@@ -579,9 +579,15 @@ class MP4Remuxer {
                     inputSamples.splice(i, 1);
                     track.len -= sample.unit.length;
                     // Don't touch nextPtsNorm or i
-                } else if (delta >= inputSampleDuration && nextPtsNorm) {
-                    // Otherwise, if we're more than a frame away from where we should be, insert missing frames
-                    // also only inject silent audio frames if currentTime !== 0 (nextPtsNorm !== 0)
+                } else if (
+                    delta >= inputSampleDuration &&
+                    delta <= inputSamples.length * inputSampleDuration &&
+                    nextPtsNorm
+                ) {
+                    // Insert missing frames if:
+                    // 1: We're more than one frame away
+                    // 2: Not more than # of samples away
+                    // 3: currentTime (aka nextPtsNorm) is not 0
                     var missing = Math.round(delta / inputSampleDuration);
                     logger.warn(
                         `Injecting ${missing} audio frame @ ${(
@@ -618,9 +624,15 @@ class MP4Remuxer {
                     nextPtsNorm += inputSampleDuration;
                     i += 1;
                 } else {
-                    // Otherwise, we're within half a frame duration, so just adjust pts
+                    // Otherwise, just adjust pts
                     if (Math.abs(delta) > 0.1 * inputSampleDuration) {
-                        //logger.log(`Invalid frame delta ${Math.round(ptsNorm - nextPtsNorm + inputSampleDuration)} at PTS ${Math.round(ptsNorm / 90)} (should be ${Math.round(inputSampleDuration)}).`);
+                        logger.log(
+                            `Invalid frame delta ${Math.round(
+                                ptsNorm - nextPtsNorm + inputSampleDuration
+                            )} at PTS ${Math.round(
+                                ptsNorm / 90
+                            )} (should be ${Math.round(inputSampleDuration)}).`
+                        );
                     }
                     nextPtsNorm += inputSampleDuration;
                     if (i === 0) {
