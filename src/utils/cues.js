@@ -1,14 +1,16 @@
 import { fixLineBreaks } from './vttparser';
+import VTTCue from './vttcue';
+
 
 const Cues = {
 
-  newCue: function(track, startTime, endTime, captionScreen) {
+  createCues: function(startTime, endTime, captionScreen) {
     var row;
     var cue;
+    var cues = [];
     var indenting;
     var indent;
     var text;
-    var VTTCue = window.VTTCue || window.TextTrackCue;
 
     for (var r=0; r<captionScreen.rows.length; r++)
     {
@@ -64,9 +66,10 @@ const Cues = {
         cue.align = 'left';
         // Clamp the position between 0 and 100 - if out of these bounds, Firefox throws an exception and captions break
         cue.position = Math.max(0, Math.min(100, 100 * (indent / 32) + (navigator.userAgent.match(/Firefox\//) ? 50 : 0)));
-        track.addCue(cue);
+        cues.push(cue);
       }
     }
+    return cues;
   }
 
 };

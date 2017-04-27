@@ -52,68 +52,71 @@ class TimelineController extends EventHandler {
     {
       var self = this;
       var captionsLabels = this.manifestCaptionsLabels;
-      var sendAddTrackEvent = function (track, media)
-      {
-        var e = null;
-        try {
-          e = new window.Event('addtrack');
-        } catch (err) {
-          //for IE11
-          e = document.createEvent('Event');
-          e.initEvent('addtrack', false, false);
-        }
-        e.track = track;
-        media.dispatchEvent(e);
-      };
 
-      var channel1 =
-      {
-        'newCue': function(startTime, endTime, screen)
-        {
-          if (!self.textTrack1)
-          {
-            //Enable reuse of existing text track.
-            var existingTrack1 = self.getExistingTrack('1');
-            if (!existingTrack1)
-            {
-              self.textTrack1 = self.createTextTrack('captions', captionsLabels.captionsTextTrack1Label,
-                captionsLabels.captionsTextTrack1LanguageCode);
-              self.textTrack1.textTrack1 = true;
-            }
-            else
-            {
-              self.textTrack1 = existingTrack1;
-              clearCurrentCues(self.textTrack1);
+      var channel1 = {
+        'newCue': function(startTime, endTime, screen) {
+          if (!self.textTrack1) {
+            if (self.config.renderNatively) {
+              //Enable reuse of existing text track.
+              var existingTrack1 = self.getExistingTrack('1');
+              if (!existingTrack1) {
+                self.textTrack1 = self.createTextTrack('captions', captionsLabels.captionsTextTrack1Label,
+                  captionsLabels.captionsTextTrack1LanguageCode);
+                self.textTrack1.textTrack1 = true;
+              } else {
+                self.textTrack1 = existingTrack1;
+                clearCurrentCues(self.textTrack1);
 
-              sendAddTrackEvent(self.textTrack1, self.media);
+                let event = new window.Event('addtrack');
+                event.track = self.textTrack1;
+                self.media.dispatchEvent(event);
+              }
+            } else {
+              // Create a list of a single track for the provider to consume
+              self.textTrack1 = {
+                '_id': 'textTrack1',
+                'label': captionsLabels.captionsTextTrack1Label,
+                'kind': 'captions',
+                'default': false
+              };
+              self.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: [ self.textTrack1] });
             }
           }
+
           self.addCues('textTrack1', startTime, endTime, screen);
         }
       };
 
-      var channel2 =
-      {
-        'newCue': function(startTime, endTime, screen)
-        {
-          if (!self.textTrack2)
-          {
-            //Enable reuse of existing text track.
-            var existingTrack2 = self.getExistingTrack('2');
-            if (!existingTrack2)
-            {
-              self.textTrack2 = self.createTextTrack('captions', captionsLabels.captionsTextTrack2Label,
-                captionsLabels.captionsTextTrack2LanguageCode);
-              self.textTrack2.textTrack2 = true;
-            }
-            else
-            {
-              self.textTrack2 = existingTrack2;
-              clearCurrentCues(self.textTrack2);
+      var channel2 = {
+        'newCue': function(startTime, endTime, screen) {
+          if (!self.textTrack2) {
+            if (self.config.renderNatively) {
+              //Enable reuse of existing text track.
+              var existingTrack2 = self.getExistingTrack('2');
+              if (!existingTrack2) {
+                self.textTrack2 = self.createTextTrack('captions', captionsLabels.captionsTextTrack2Label,
+                  captionsLabels.captionsTextTrack2LanguageCode);
+                self.textTrack2.textTrack2 = true;
+              } else {
+                self.textTrack2 = existingTrack2;
+                clearCurrentCues(self.textTrack2);
 
-              sendAddTrackEvent(self.textTrack2, self.media);
+                let event = new window.Event('addtrack');
+                event.track = self.textTrack2;
+                self.media.dispatchEvent(event);
+              }
+            } else {
+              // Create a list of a single track for the provider to consume
+              self.textTrack2 = {
+                '_id': 'textTrack2',
+                'label': captionsLabels.captionsTextTrack2Label,
+                'kind': 'captions',
+                'default': false
+              };
+              self.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: [ self.textTrack2] });
             }
           }
+
           self.addCues('textTrack2', startTime, endTime, screen);
         }
       };
@@ -141,7 +144,13 @@ class TimelineController extends EventHandler {
     if (!merged) {
       ranges.push([startTime, endTime]);
     }
-    this.Cues.newCue(this[channel], startTime, endTime, screen);
+
+    let cues = this.Cues.createCues(startTime, endTime, screen);
+    if (this.config.renderNatively) {
+      cues.forEach((cue) => { this[channel].addCue(cue); });
+    } else {
+      cues.forEach((cue) => { this.hls.trigger(Event.CUE_PARSED, { cueData: { type: 'captions', cue: cue, track: channel } }); });
+    }
   }
 
   // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
@@ -197,7 +206,7 @@ class TimelineController extends EventHandler {
 
   onManifestLoading()
   {
-    this.lastSn = -1; // Detect discontiguity in fragment parsing
+    this.lastSn = -1; // Detect discontinuity in fragment parsing
     this.prevCC = -1;
     this.vttCCs = {ccOffset: 0, presentationOffset: 0}; // Detect discontinuity in subtitle manifests
 
@@ -226,22 +235,38 @@ class TimelineController extends EventHandler {
     captionsLabels.captionsTextTrack2LanguageCode = 'es';
 
     if (this.config.enableWebVTT) {
+      const sameTracks = this.tracks && data.subtitles && this.tracks.length === data.subtitles.length;
       this.tracks = data.subtitles || [];
-      const inUseTracks = this.media ? this.media.textTracks : [];
 
-      this.tracks.forEach((track, index) => {
-        let textTrack;
-        if (index < inUseTracks.length) {const inUseTrack = inUseTracks[index];
-        // Reuse tracks with the same label, but do not reuse 608/708 tracks
-        if (reuseVttTextTrack(inUseTrack, track)) {
-          textTrack = inUseTrack;
-        } }
-        if (!textTrack) {
-          textTrack = this.createTextTrack('subtitles', track.name, track.lang);
-        }
-        textTrack.mode = track.default ? 'showing' : 'hidden';
-        this.textTracks.push(textTrack);
-      });
+      if (this.config.renderNatively) {
+        let inUseTracks = this.media ? this.media.textTracks : [];
+
+        this.tracks.forEach((track, index) => {
+          let textTrack;
+          if (index < inUseTracks.length) {
+            const inUseTrack = inUseTracks[index];
+            // Reuse tracks with the same label, but do not reuse 608/708 tracks
+            if (reuseVttTextTrack(inUseTrack, track)) {
+              textTrack = inUseTrack;
+            }
+          }
+          if (!textTrack) {
+            textTrack = this.createTextTrack('subtitles', track.name, track.lang);
+          }
+          textTrack.mode = track.default ? 'showing' : 'hidden';
+          this.textTracks.push(textTrack);
+        });
+      } else if (!sameTracks) {
+        // Create a list of tracks for the provider to consume
+        let tracksList = this.tracks.map((track) => {
+          return {
+            'label': track.name,
+            'kind': track.type.toLowerCase(),
+            'default': track.default
+          };
+        });
+        this.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: tracksList });
+      }
     }
 
     if (this.config.enableCEA708Captions && data.captions) {
@@ -270,10 +295,12 @@ class TimelineController extends EventHandler {
   }
 
   onFragLoaded(data) {
-    let frag = data.frag,
-      payload = data.payload;
+    let frag = data.frag;
+    let payload = data.payload;
+    let self = this;
+
     if (frag.type === 'main') {
-      var sn = frag.sn;
+      let sn = frag.sn;
       // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
       if (sn !== this.lastSn + 1) {
         this.cea608Parser.reset();
@@ -293,26 +320,28 @@ class TimelineController extends EventHandler {
           vttCCs[frag.cc] = { start: frag.start, prevCC: this.prevCC, new: true };
           this.prevCC = frag.cc;
         }
-        let textTracks = this.textTracks,
-          hls = this.hls;
+
+        let hls = this.hls;
+        let tracks = (self.config.renderNatively) ? this.textTracks : this.tracks;
 
         // Parse the WebVTT file contents.
         WebVTTParser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
-            // Add cues and trigger event with success true.
-            cues.forEach(cue => {
-              textTracks[frag.trackId].addCue(cue);
-            });
-            hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: true, frag: frag});
+            if (self.config.renderNatively) {
+              cues.forEach(cue => { tracks[frag.trackId].addCue(cue); });
+            } else {
+              cues.forEach(cue => { self.hls.trigger(Event.CUE_PARSED, { cueData: { type: 'subtitles', track: 'subtitles'+frag.trackId, cue: cue } }); });
+            }
+            hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
           },
           function (e) {
             // Something went wrong while parsing. Trigger event with success false.
             logger.log(`Failed to parse VTT cue: ${e}`);
-            hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: false, frag: frag});
+            hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag });
           });
       }
       else {
         // In case there is no payload, finish unsuccessfully.
-        this.hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: false, frag: frag});
+        this.hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag });
       }
     }
   }
