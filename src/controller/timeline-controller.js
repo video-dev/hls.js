@@ -329,7 +329,7 @@ class TimelineController extends EventHandler {
             if (self.config.renderNatively) {
               cues.forEach(cue => { tracks[frag.trackId].addCue(cue); });
             } else {
-              cues.forEach(cue => { this.hls.trigger(Event.CUE_PARSED, { cueData: { type: 'subtitles', track: 'subtitles'+frag.trackId, cue: cue } }); });
+              cues.forEach(cue => { self.hls.trigger(Event.CUE_PARSED, { cueData: { type: 'subtitles', track: 'subtitles'+frag.trackId, cue: cue } }); });
             }
             hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
           },
