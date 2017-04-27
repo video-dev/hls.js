@@ -19,7 +19,9 @@
   "scripts": {
     "build:dist": "cross-env NODE_ENV=development webpack --progress --devtool source-map --output-filename hls.js",
     "build:dist:min": "cross-env NODE_ENV=production webpack --progress --optimize-minimize --output-filename hls.min.js",
-    "build": "npm run build:dist && npm run build:dist:min",
+    "build:dist:light": "cross-env NODE_ENV=development BUILD_VERSION=light webpack --progress --devtool source-map --output-filename hls.light.js",
+    "build:dist:light:min": "cross-env NODE_ENV=production BUILD_VERSION=light webpack --progress --optimize-minimize --output-filename hls.light.min.js",
+    "build": "npm run build:dist && npm run build:dist:min && npm run build:dist:light && npm run build:dist:light:min",
     "preparerelease": "npm run build && npm run test && git add dist/* && git commit -m 'update dist'",
     "prerelease": "mversion prerelease && npm run preparerelease",
     "patch": "mversion p && npm run preparerelease",
@@ -37,8 +39,8 @@
   "devDependencies": {
     "arraybuffer-equal": "^1.0.4",
     "babel-core": "^6.22.1",
-    "babel-preset-latest": "^6.22.0",
     "babel-loader": "^6.2.10",
+    "babel-preset-env": "^1.3.3",
     "babel-register": "^6.18.0",
     "chromedriver": "^2.27.1",
     "cross-env": "^3.1.4",
@@ -48,7 +50,7 @@
     "mocha": "^3.0.2",
     "mversion": "^1.10.1",
     "selenium-webdriver": "^2.52.0",
-    "webpack": "^2.2.0",
+    "webpack": "^2.4.0",
     "webpack-dev-server": "^2.2.0",
     "webworkify-webpack": "^2.0.0"
   }
