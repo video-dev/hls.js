@@ -10,25 +10,18 @@ import FPSController from './controller/fps-controller';
 import XhrLoader from './utils/xhr-loader';
 //import FetchLoader from './utils/fetch-loader';
 
-//#if altaudio
 import AudioTrackController from './controller/audio-track-controller';
 import AudioStreamController from './controller/audio-stream-controller';
-//#endif
 
-//#if subtitle
 import Cues from './utils/cues';
 import TimelineController from './controller/timeline-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
 import SubtitleStreamController from './controller/subtitle-stream-controller';
-//#endif
 
 if (typeof __BUILD_VERSION__ === 'undefined' || __BUILD_VERSION__ === 'full') {
     var fullConfig = {
-        //#if altaudio
         audioStreamController: AudioStreamController,
         audioTrackController: AudioTrackController,
-        //#endif
-        //#if subtitle
         subtitleStreamController: SubtitleStreamController,
         subtitleTrackController: SubtitleTrackController,
         timelineController: TimelineController,
@@ -39,7 +32,6 @@ if (typeof __BUILD_VERSION__ === 'undefined' || __BUILD_VERSION__ === 'full') {
         captionsTextTrack1LanguageCode: 'en', // used by timeline-controller
         captionsTextTrack2Label: 'Spanish', // used by timeline-controller
         captionsTextTrack2LanguageCode: 'es' // used by timeline-controller
-        //#endif
     };
 } else {
     var fullConfig = {};
