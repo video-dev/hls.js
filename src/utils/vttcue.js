@@ -103,7 +103,6 @@ export default (function() {
     var _line = 'auto';
     var _lineAlign = 'start';
     var _position = 50;
-    var _positionAlign = 'middle';
     var _size = 50;
     var _align = 'middle';
 
@@ -232,20 +231,6 @@ export default (function() {
           throw new Error('Position must be between 0 and 100.');
         }
         _position = value;
-        this.hasBeenReset = true;
-      }
-    }));
-
-    Object.defineProperty(cue, 'positionAlign', extend({}, baseObj, {
-      get: function () {
-        return _positionAlign;
-      },
-      set: function (value) {
-        var setting = findAlignSetting(value);
-        if (!setting) {
-          throw new SyntaxError('An invalid or illegal string was specified.');
-        }
-        _positionAlign = setting;
         this.hasBeenReset = true;
       }
     }));
