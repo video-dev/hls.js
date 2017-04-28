@@ -2,7 +2,6 @@ var pkgJson = require('./package.json')
 var path = require('path')
 var webpack = require('webpack')
 
-var env = process.env.NODE_ENV
 var buildVersion = process.env.BUILD_VERSION || 'full'
 
 var config = {
