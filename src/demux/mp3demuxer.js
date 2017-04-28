@@ -55,7 +55,7 @@ import MpegAudio from './mpegaudio';
 
     this.remuxer.remux(this._audioTrack,
                         {samples : []},
-                        {samples : [ { pts: pts, dts : pts, unit : id3.payload}], inputTimeScale : 90000},
+                        {samples : [ { pts: pts, dts : pts, data : id3.payload}], inputTimeScale : 90000},
                         {samples : []},
                         timeOffset,
                         contiguous,
