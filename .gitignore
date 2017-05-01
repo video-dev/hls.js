@@ -7,5 +7,3 @@ npm-debug.log
 
 # ignore JetBrains
 .idea/*
-
-dist/*
