@@ -331,7 +331,7 @@ class TimelineController extends EventHandler {
             } else {
               let track = tracks[frag.trackId];
               let trackId = track.default ? 'default' : 'subtitles' + frag.trackId;
-              this.hls.trigger(Event.CUES_PARSED, { type: 'subtitles', cues: cues, track: trackId });
+              hls.trigger(Event.CUES_PARSED, { type: 'subtitles', cues: cues, track: trackId });
             }
             hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
           },
