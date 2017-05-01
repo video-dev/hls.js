@@ -9,6 +9,9 @@ import {logger} from '../utils/logger';
 import MP4 from '../remux/mp4-generator';
 import {ErrorTypes, ErrorDetails} from '../errors';
 
+// 10 seconds
+const MAX_SILENT_FRAME_DURATION = 10 * 60 * 1000;
+
 class MP4Remuxer {
   constructor(observer, config, typeSupported, vendor) {
     this.observer = observer;
@@ -444,16 +447,21 @@ class MP4Remuxer {
             ptsNorm = ptsNormalize(sample.pts - initDTS, nextAudioPts),
             delta = ptsNorm - nextPtsNorm;
 
+        const duration = Math.abs(1000*delta/inputTimeScale);
+
         // If we're overlapping by more than a duration, drop this sample
         if (delta <= -inputSampleDuration) {
-          logger.warn(`Dropping 1 audio frame @ ${(nextPtsNorm/inputTimeScale).toFixed(3)}s due to ${Math.abs(1000*delta/inputTimeScale)} ms overlap.`);
+          logger.warn(`Dropping 1 audio frame @ ${(nextPtsNorm/inputTimeScale).toFixed(3)}s due to ${duration} ms overlap.`);
           inputSamples.splice(i, 1);
           track.len -= sample.unit.length;
           // Don't touch nextPtsNorm or i
         }
-        // Otherwise, if we're more than a frame away from where we should be, insert missing frames
-        // also only inject silent audio frames if currentTime !== 0 (nextPtsNorm !== 0)
-        else if (delta >= inputSampleDuration && nextPtsNorm) {
+
+        // Insert missing frames if:
+        // 1: We're more than one frame away
+        // 2: Not more than MAX_SILENT_FRAME_DURATION away
+        // 3: currentTime (aka nextPtsNorm) is not 0
+        else if (delta >= inputSampleDuration && duration < MAX_SILENT_FRAME_DURATION && nextPtsNorm) {
           var missing = Math.round(delta / inputSampleDuration);
           logger.warn(`Injecting ${missing} audio frame @ ${(nextPtsNorm/inputTimeScale).toFixed(3)}s due to ${1000*delta/inputTimeScale} ms gap.`);
           for (var j = 0; j < missing; j++) {
@@ -475,10 +483,10 @@ class MP4Remuxer {
           nextPtsNorm += inputSampleDuration;
           i += 1;
         }
-        // Otherwise, we're within half a frame duration, so just adjust pts
+        // Otherwise, just adjust pts
         else {
           if (Math.abs(delta) > (0.1 * inputSampleDuration)) {
-            //logger.log(`Invalid frame delta ${Math.round(ptsNorm - nextPtsNorm + inputSampleDuration)} at PTS ${Math.round(ptsNorm / 90)} (should be ${Math.round(inputSampleDuration)}).`);
+            // logger.log(`Invalid frame delta ${Math.round(ptsNorm - nextPtsNorm + inputSampleDuration)} at PTS ${Math.round(ptsNorm / 90)} (should be ${Math.round(inputSampleDuration)}).`);
           }
           nextPtsNorm += inputSampleDuration;
           if (i === 0) {
