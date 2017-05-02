@@ -25,7 +25,7 @@ const hash = function(text) {
         hash = (hash * 33) ^ text.charCodeAt(--i);
     }
     return (hash >>> 0).toString();
-}
+};
 
 const calculateOffset = function(vttCCs, cc, presentationTime) {
     let currCC = vttCCs[cc];
