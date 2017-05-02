@@ -10,7 +10,7 @@ import MP4 from '../remux/mp4-generator';
 import {ErrorTypes, ErrorDetails} from '../errors';
 
 // 10 seconds
-const MAX_SILENT_FRAME_DURATION = 10 * 60 * 1000;
+const MAX_SILENT_FRAME_DURATION = 10 * 1000;
 
 class MP4Remuxer {
   constructor(observer, config, typeSupported, vendor) {
@@ -521,7 +521,7 @@ class MP4Remuxer {
         if (contiguous && track.isAAC) {
           // log delta
           if (delta) {
-            if (delta > 0) {
+            if (delta > 0 && delta < MAX_SILENT_FRAME_DURATION) {
               numMissingFrames = Math.round((ptsnorm - nextAudioPts) / inputSampleDuration);
               logger.log(`${delta} ms hole between AAC samples detected,filling it`);
               if (numMissingFrames > 0) {
