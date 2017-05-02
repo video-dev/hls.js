@@ -20,6 +20,16 @@ const cueString2millis = function(timeString) {
     return ts;
 };
 
+// From https://github.com/darkskyapp/string-hash
+const hash = function(text) {
+    let hash = 5381;
+    let i = text.length;
+    while (i) {
+        hash = (hash * 33) ^ text.charCodeAt(--i);
+    }
+    return (hash >>> 0).toString();
+};
+
 const calculateOffset = function(vttCCs, cc, presentationTime) {
     let currCC = vttCCs[cc];
     let prevCC = vttCCs[currCC.prevCC];
@@ -97,6 +107,7 @@ const WebVTTParser = {
 
             cue.startTime += cueOffset - localTime;
             cue.endTime += cueOffset - localTime;
+            cue.id = hash(cue.startTime) + hash(cue.endTime) + hash(cue.text);
 
             // Fix encoding of special characters. TODO: Test with all sorts of weird characters.
             cue.text = decodeURIComponent(escape(cue.text));
