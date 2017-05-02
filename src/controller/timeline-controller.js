@@ -277,7 +277,9 @@ class TimelineController extends EventHandler {
         WebVTTParser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
             // Add cues and trigger event with success true.
             cues.forEach(cue => {
-              textTracks[frag.trackId].addCue(cue);
+              if (!textTracks[frag.trackId].cues.getCueById(cue.id)) {
+                textTracks[frag.trackId].addCue(cue);
+              }
             });
             hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: true, frag: frag});
           },
