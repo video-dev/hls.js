@@ -277,6 +277,9 @@ class TimelineController extends EventHandler {
         WebVTTParser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
             // Add cues and trigger event with success true.
             cues.forEach(cue => {
+              // Sometimes there are cue overlaps on segmented vtts so the same
+              // cue can appear more than once in different vtt files.
+              // This avoid showing duplicated cues with same timecode and text.
               if (!textTracks[frag.trackId].cues.getCueById(cue.id)) {
                 textTracks[frag.trackId].addCue(cue);
               }
