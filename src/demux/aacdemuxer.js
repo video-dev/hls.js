@@ -14,19 +14,21 @@ import ID3 from '../demux/id3';
   }
 
   resetInitSegment(initSegment,audioCodec,videoCodec, duration) {
-    this._aacTrack = {container : 'audio/adts', type: 'audio', id :-1, sequenceNumber: 0, isAAC : true , samples : [], len : 0, manifestCodec : audioCodec, duration : duration, inputTimeScale : 90000};
+    this._audioTrack = {container : 'audio/adts', type: 'audio', id :-1, sequenceNumber: 0, isAAC : true , samples : [], len : 0, manifestCodec : audioCodec, duration : duration, inputTimeScale : 90000};
   }
 
   resetTimeStamp() {
   }
 
   static probe(data) {
-    // check if data contains ID3 timestamp and ADTS sync worc
-    var id3 = new ID3(data), offset,len;
+    // check if data contains ID3 timestamp and ADTS sync word
+    var id3 = new ID3(data), offset, length;
     if(id3.hasTimeStamp) {
-      // look for ADTS header (0xFFFx)
-      for (offset = id3.length, len = data.length; offset < len - 1; offset++) {
-        if ((data[offset] === 0xff) && (data[offset+1] & 0xf0) === 0xf0) {
+      // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
+      // Layer bits (position 14 and 15) in header should be always 0 for ADTS
+      // More info https://wiki.multimedia.cx/index.php?title=ADTS
+      for (offset = id3.length, length = Math.min(data.length - 1, offset + 100); offset < length; offset++) {
+        if ((data[offset] === 0xff) && (data[offset+1] & 0xf6) === 0xf0) {
           //logger.log('ADTS sync word found !');
           return true;
         }
@@ -41,13 +43,13 @@ import ID3 from '../demux/id3';
     var track,
         id3 = new ID3(data),
         pts = 90*id3.timeStamp,
-        config, frameLength, frameDuration, frameIndex, offset, headerLength, stamp, len, aacSample;
+        config, frameLength, frameDuration, frameIndex, offset, headerLength, stamp, length, aacSample;
 
-    track = this._aacTrack;
+    track = this._audioTrack;
 
-    // look for ADTS header (0xFFFx)
-    for (offset = id3.length, len = data.length; offset < len - 1; offset++) {
-      if ((data[offset] === 0xff) && (data[offset+1] & 0xf0) === 0xf0) {
+    // Look for ADTS header
+    for (offset = id3.length, length = data.length; offset < length - 1; offset++) {
+      if ((data[offset] === 0xff) && (data[offset+1] & 0xf6) === 0xf0) {
         break;
       }
     }
@@ -62,7 +64,7 @@ import ID3 from '../demux/id3';
     }
     frameIndex = 0;
     frameDuration = 1024 * 90000 / track.samplerate;
-    while ((offset + 5) < len) {
+    while ((offset + 5) < length) {
       // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
       headerLength = (!!(data[offset + 1] & 0x01) ? 7 : 9);
       // retrieve frame size
@@ -72,7 +74,7 @@ import ID3 from '../demux/id3';
       frameLength  -= headerLength;
       //stamp = pes.pts;
 
-      if ((frameLength > 0) && ((offset + headerLength + frameLength) <= len)) {
+      if ((frameLength > 0) && ((offset + headerLength + frameLength) <= length)) {
         stamp = pts + frameIndex * frameDuration;
         //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
         aacSample = {unit: data.subarray(offset + headerLength, offset + headerLength + frameLength), pts: stamp, dts: stamp};
@@ -81,8 +83,8 @@ import ID3 from '../demux/id3';
         offset += frameLength + headerLength;
         frameIndex++;
         // look for ADTS header (0xFFFx)
-        for ( ; offset < (len - 1); offset++) {
-          if ((data[offset] === 0xff) && ((data[offset + 1] & 0xf0) === 0xf0)) {
+        for ( ; offset < (length - 1); offset++) {
+          if ((data[offset] === 0xff) && ((data[offset + 1] & 0xf6) === 0xf0)) {
             break;
           }
         }
@@ -92,7 +94,7 @@ import ID3 from '../demux/id3';
     }
     this.remuxer.remux(track,
                         {samples : []},
-                        {samples : [ { pts: pts, dts : pts, unit : id3.payload}], inputTimeScale : 90000},
+                        {samples : [ { pts: pts, dts : pts, data : id3.payload}], inputTimeScale : 90000},
                         {samples : []},
                         timeOffset,
                         contiguous,

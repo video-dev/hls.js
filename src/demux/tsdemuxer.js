@@ -10,6 +10,7 @@
 */
 
  import ADTS from './adts';
+ import MpegAudio from './mpegaudio';
  import Event from '../events';
  import ExpGolomb from './exp-golomb';
  import SampleAesDecrypter from './sample-aes';
@@ -48,7 +49,7 @@
     this.pmtParsed = false;
     this._pmtId = -1;
     this._avcTrack = {container : 'video/mp2t', type: 'video', id :-1, inputTimeScale : 90000, sequenceNumber: 0, samples : [], len : 0, dropped : 0};
-    this._audioTrack = {container : 'video/mp2t', type: 'audio', id :-1, inputTimeScale : 90000, sequenceNumber: 0, samples : [], len : 0, isAAC: true};
+    this._audioTrack = {container : 'video/mp2t', type: 'audio', id :-1, inputTimeScale : 90000, duration: duration, sequenceNumber: 0, samples : [], len : 0, isAAC: true};
     this._id3Track = {type: 'id3', id :-1, inputTimeScale : 90000, sequenceNumber: 0, samples : [], len : 0};
     this._txtTrack = {type: 'text', id: -1, inputTimeScale : 90000, sequenceNumber: 0, samples : [], len : 0};
     // flush any partial content
@@ -879,7 +880,6 @@
       track.channelCount = config.channelCount;
       track.codec = config.codec;
       track.manifestCodec = config.manifestCodec;
-      track.duration = this._duration;
       logger.log(`parsed codec:${track.codec},rate:${config.samplerate},nb channel:${config.channelCount}`);
     }
     frameIndex = 0;
@@ -934,90 +934,7 @@
   }
 
   _parseMPEGPES(pes) {
-    var data = pes.data;
-    var pts = pes.pts;
-    var length = data.length;
-    var frameIndex = 0;
-    var offset = 0;
-    var parsed;
-
-    while (offset < length &&
-        (parsed = this._parseMpeg(data, offset, length, frameIndex++, pts)) > 0) {
-        offset += parsed;
-    }
-  }
-
-  _onMpegFrame(data, bitRate, sampleRate, channelCount, frameIndex, pts) {
-    var frameDuration = (1152 / sampleRate) * 1000;
-    var stamp = pts + frameIndex * frameDuration;
-    var track = this._audioTrack;
-
-    track.config = [];
-    track.channelCount = channelCount;
-    track.samplerate = sampleRate;
-    track.duration = this._duration;
-    track.samples.push({unit: data, pts: stamp, dts: stamp});
-    track.len += data.length;
-  }
-
-  _onMpegNoise(data) {
-    logger.warn('mpeg audio has noise: ' + data.length + ' bytes');
-  }
-
-  _parseMpeg(data, start, end, frameIndex, pts) {
-    var BitratesMap = [
-        32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448,
-        32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384,
-        32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320,
-        32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256,
-        8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160];
-    var SamplingRateMap = [44100, 48000, 32000, 22050, 24000, 16000, 11025, 12000, 8000];
-
-    if (start + 2 > end) {
-        return -1; // we need at least 2 bytes to detect sync pattern
-    }
-    if (data[start] === 0xFF || (data[start + 1] & 0xE0) === 0xE0) {
-        // Using http://www.datavoyage.com/mpgscript/mpeghdr.htm as a reference
-        if (start + 24 > end) {
-            return -1;
-        }
-        var headerB = (data[start + 1] >> 3) & 3;
-        var headerC = (data[start + 1] >> 1) & 3;
-        var headerE = (data[start + 2] >> 4) & 15;
-        var headerF = (data[start + 2] >> 2) & 3;
-        var headerG = !!(data[start + 2] & 2);
-        if (headerB !== 1 && headerE !== 0 && headerE !== 15 && headerF !== 3) {
-            var columnInBitrates = headerB === 3 ? (3 - headerC) : (headerC === 3 ? 3 : 4);
-            var bitRate = BitratesMap[columnInBitrates * 14 + headerE - 1] * 1000;
-            var columnInSampleRates = headerB === 3 ? 0 : headerB === 2 ? 1 : 2;
-            var sampleRate = SamplingRateMap[columnInSampleRates * 3 + headerF];
-            var padding = headerG ? 1 : 0;
-            var channelCount = data[start + 3] >> 6 === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
-            var frameLength = headerC === 3 ?
-                ((headerB === 3 ? 12 : 6) * bitRate / sampleRate + padding) << 2 :
-                ((headerB === 3 ? 144 : 72) * bitRate / sampleRate + padding) | 0;
-            if (start + frameLength > end) {
-                return -1;
-            }
-            if (this._onMpegFrame) {
-                this._onMpegFrame(data.subarray(start, start + frameLength), bitRate, sampleRate, channelCount, frameIndex, pts);
-            }
-            return frameLength;
-        }
-    }
-    // noise or ID3, trying to skip
-    var offset = start + 2;
-    while (offset < end) {
-        if (data[offset - 1] === 0xFF && (data[offset] & 0xE0) === 0xE0) {
-            // sync pattern is found
-            if (this._onMpegNoise) {
-                this._onMpegNoise(data.subarray(start, offset - 1));
-            }
-            return offset - start - 1;
-        }
-        offset++;
-    }
-    return -1;
+    MpegAudio.parse(this._audioTrack, pes.data, 0, pes.pts);
   }
 
   _parseID3PES(pes) {
