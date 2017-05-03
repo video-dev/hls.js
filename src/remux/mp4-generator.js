@@ -26,6 +26,8 @@ class MP4 {
       moov: [],
       mp4a: [],
       '.mp3': [],
+      dac3: [],
+      'ac-3': [],
       mvex: [],
       mvhd: [],
       pasp: [],
@@ -427,9 +429,18 @@ class MP4 {
       ].concat([configlen]).concat(track.config).concat([0x06, 0x01, 0x02])); // GASpecificConfig)); // length + audio config descriptor
   }
 
-  static mp4a(track) {
+  static dac3(track) {
+    let extraData = track.extraData;
+    return new Uint8Array([
+      (extraData >> 16) & 0xff,
+      (extraData >> 8) & 0xff,
+      (extraData) & 0xff
+    ]);
+  }
+
+  static audioStsd(track) {
     var samplerate = track.samplerate;
-      return MP4.box(MP4.types.mp4a, new Uint8Array([
+    return new Uint8Array([
       0x00, 0x00, 0x00, // reserved
       0x00, 0x00, 0x00, // reserved
       0x00, 0x01, // data_reference_index
@@ -440,30 +451,30 @@ class MP4 {
       0x00, 0x00, 0x00, 0x00, // reserved2
       (samplerate >> 8) & 0xFF,
       samplerate & 0xff, //
-      0x00, 0x00]),
+      0x00, 0x00]);
+  }
+
+  static mp4a(track) {
+    return MP4.box(MP4.types.mp4a, MP4.audioStsd(track),
       MP4.box(MP4.types.esds, MP4.esds(track)));
   }
 
   static mp3(track) {
-    var samplerate = track.samplerate;
-      return MP4.box(MP4.types['.mp3'], new Uint8Array([
-      0x00, 0x00, 0x00, // reserved
-      0x00, 0x00, 0x00, // reserved
-      0x00, 0x01, // data_reference_index
-      0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, // reserved
-      0x00, track.channelCount, // channelcount
-      0x00, 0x10, // sampleSize:16bits
-      0x00, 0x00, 0x00, 0x00, // reserved2
-      (samplerate >> 8) & 0xFF,
-      samplerate & 0xff, //
-      0x00, 0x00]));
+    return MP4.box(MP4.types['.mp3'], MP4.audioStsd(track));
+  }
+
+  static ac3(track) {
+    return MP4.box(MP4.types['ac-3'], MP4.audioStsd(track),
+      MP4.box(MP4.types.dac3, MP4.dac3(track)));
   }
 
   static stsd(track) {
     if (track.type === 'audio') {
-      if (!track.isAAC && track.codec === 'mp3') {
+      if (track.segmentCodec === 'mp3' && track.codec === 'mp3') {
         return MP4.box(MP4.types.stsd, MP4.STSD, MP4.mp3(track));
+      }
+      if (track.segmentCodec === 'ac3') {
+        return MP4.box(MP4.types.stsd, MP4.STSD, MP4.ac3(track));
       }
       return MP4.box(MP4.types.stsd, MP4.STSD, MP4.mp4a(track));
     } else {

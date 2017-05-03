@@ -48,7 +48,7 @@
     this.pmtParsed = false;
     this._pmtId = -1;
     this._avcTrack = {container : 'video/mp2t', type: 'video', id :-1, inputTimeScale : 90000, sequenceNumber: 0, samples : [], len : 0, dropped : 0};
-    this._audioTrack = {container : 'video/mp2t', type: 'audio', id :-1, inputTimeScale : 90000, sequenceNumber: 0, samples : [], len : 0, isAAC: true};
+    this._audioTrack = {container : 'video/mp2t', type: 'audio', id :-1, inputTimeScale : 90000, sequenceNumber: 0, samples : [], len : 0, segmentCodec: 'aac'};
     this._id3Track = {type: 'id3', id :-1, inputTimeScale : 90000, sequenceNumber: 0, samples : [], len : 0};
     this._txtTrack = {type: 'text', id: -1, inputTimeScale : 90000, sequenceNumber: 0, samples : [], len : 0};
     // flush any partial content
@@ -85,6 +85,7 @@
         parseAVCPES = this._parseAVCPES.bind(this),
         parseAACPES = this._parseAACPES.bind(this),
         parseMPEGPES = this._parseMPEGPES.bind(this),
+        parseAC3PES = this._parseAC3PES.bind(this),
         parseID3PES  = this._parseID3PES.bind(this);
 
     // don't parse last TS packet if incomplete
@@ -122,10 +123,19 @@
           case audioId:
             if (stt) {
               if (audioData && (pes = parsePES(audioData))) {
-                if (audioTrack.isAAC) {
+                switch (audioTrack.segmentCodec)
+                {
+                case 'aac':
                   parseAACPES(pes);
-                } else {
+                  break;
+
+                case 'mp3':
                   parseMPEGPES(pes);
+                  break;
+
+                case 'ac3':
+                  parseAC3PES(pes);
+                  break;
                 }
               }
               audioData = {data: [], size: 0};
@@ -157,7 +167,7 @@
             if (stt) {
               offset += data[offset] + 1;
             }
-            let parsedPIDs = parsePMT(data, offset, this.typeSupported.mpeg === true || this.typeSupported.mp3 === true, this.sampleAes != null);
+            let parsedPIDs = parsePMT(data, offset, this.typeSupported, this.sampleAes != null);
 
             // only update track id if track PID found while parsing PMT
             // this is to avoid resetting the PID to -1 in case
@@ -170,7 +180,7 @@
             audioId = parsedPIDs.audio;
             if (audioId > 0) {
               audioTrack.id = audioId;
-              audioTrack.isAAC = parsedPIDs.isAAC;
+              audioTrack.segmentCodec = parsedPIDs.segmentCodec;
             }
             id3Id = parsedPIDs.id3;
             if (id3Id > 0) {
@@ -205,10 +215,19 @@
     }
 
     if (audioData && (pes = parsePES(audioData))) {
-      if (audioTrack.isAAC) {
+      switch (audioTrack.segmentCodec)
+      {
+      case 'aac':
         parseAACPES(pes);
-      } else {
+        break;
+
+      case 'mp3':
         parseMPEGPES(pes);
+        break;
+
+      case 'ac3':
+        parseAC3PES(pes);
+        break;
       }
       audioTrack.pesData = null;
     } else {
@@ -235,7 +254,7 @@
   }
 
   decryptAndRemux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
-    if (audioTrack.samples && audioTrack.isAAC) {
+    if (audioTrack.samples && audioTrack.segmentCodec === 'aac') {
       let localthis = this;
       this.sampleAes.decryptAacSamples(audioTrack.samples, 0, function() {
         localthis.decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
@@ -267,8 +286,8 @@
     //logger.log('PMT PID:'  + this._pmtId);
   }
 
-  _parsePMT(data, offset, mpegSupported, isSampleAes) {
-    var sectionLength, tableEnd, programInfoLength, pid, result = { audio : -1, avc : -1, id3 : -1, isAAC : true};
+  _parsePMT(data, offset, typeSupported, isSampleAes) {
+    var sectionLength, tableEnd, programInfoLength, pid, result = { audio : -1, avc : -1, id3 : -1, segmentCodec : 'aac'};
     sectionLength = (data[offset + 1] & 0x0f) << 8 | data[offset + 2];
     tableEnd = offset + 3 + sectionLength - 4;
     // to determine where the table is, we have to figure out how
@@ -322,11 +341,20 @@
         case 0x03:
         case 0x04:
           //logger.log('MPEG PID:'  + pid);
-          if (!mpegSupported) {
+          if (typeSupported.mpeg !== true && typeSupported.mp3 !== true) {
             logger.log('MPEG audio found, not supported in this browser for now');
           } else if (result.audio === -1) {
             result.audio = pid;
-            result.isAAC = false;
+            result.segmentCodec = 'mp3';
+          }
+          break;
+
+        case 0x81:
+          if (typeSupported.ac3 !== true) {
+            logger.log('AC-3 audio found, not supported in this browser for now');
+          } else if (result.audio === -1) {
+            result.audio = pid;
+            result.segmentCodec = 'ac3';
           }
           break;
 
@@ -1018,6 +1046,136 @@
         offset++;
     }
     return -1;
+  }
+
+  _parseAC3PES(pes) {
+    var data = pes.data;
+    var pts = pes.pts;
+    var length = data.length;
+    var frameIndex = 0;
+    var offset = 0;
+    var parsed;
+
+    while (offset < length &&
+        (parsed = this._parseAC3(data, offset, length, frameIndex++, pts)) > 0) {
+        offset += parsed;
+    }
+  }
+
+  _onAC3Frame(data, sampleRate, channelCount, extraData, frameIndex, pts) {
+    var frameDuration = (1536 / sampleRate) * 1000;
+    var stamp = pts + frameIndex * frameDuration;
+    var track = this._audioTrack;
+
+    track.config = [];
+    track.channelCount = channelCount;
+    track.extraData = extraData;
+    track.samplerate = sampleRate;
+    track.duration = this._duration;
+    track.samples.push({unit: data, pts: stamp, dts: stamp});
+    track.len += data.length;
+  }
+
+  _parseAC3(data, start, end, frameIndex, pts) {
+    if (start + 8 > end) {
+        return -1;    // not enough bytes left
+    }
+
+    if (data[start] !== 0x0b || data[start + 1] !== 0x77) {
+        return -1;    // invalid magic
+    }
+
+    // get sample rate
+    let samplingRateCode = data[start + 4] >> 6;
+    if (samplingRateCode >= 3) {
+        return -1;    // invalid sampling rate
+    }
+
+    let samplingRateMap = [48000, 44100, 32000];
+    let sampleRate = samplingRateMap[samplingRateCode];
+
+    // get frame size
+    let frameSizeCode = data[start + 4] & 0x3f;
+    let frameSizeMap = [
+        64,   69,   96,
+        64,   70,   96,
+        80,   87,   120,
+        80,   88,   120,
+        96,   104,  144,
+        96,   105,  144,
+        112,  121,  168,
+        112,  122,  168,
+        128,  139,  192,
+        128,  140,  192,
+        160,  174,  240,
+        160,  175,  240,
+        192,  208,  288,
+        192,  209,  288,
+        224,  243,  336,
+        224,  244,  336,
+        256,  278,  384,
+        256,  279,  384,
+        320,  348,  480,
+        320,  349,  480,
+        384,  417,  576,
+        384,  418,  576,
+        448,  487,  672,
+        448,  488,  672,
+        512,  557,  768,
+        512,  558,  768,
+        640,  696,  960,
+        640,  697,  960,
+        768,  835,  1152,
+        768,  836,  1152,
+        896,  975,  1344,
+        896,  976,  1344,
+        1024, 1114, 1536,
+        1024, 1115, 1536,
+        1152, 1253, 1728,
+        1152, 1254, 1728,
+        1280, 1393, 1920,
+        1280, 1394, 1920,
+    ];
+
+    let frameLength = frameSizeMap[frameSizeCode * 3 + samplingRateCode] * 2;
+    if (start + frameLength > end) {
+        return -1;
+    }
+
+    // get channel count
+    let channelMode = data[start + 6] >> 5;
+    let skipCount = 0;
+    if (channelMode === 2) {
+        skipCount += 2;
+    } else {
+      if ((channelMode & 1) && channelMode !== 1) {
+        skipCount += 2;
+      }
+      if (channelMode & 4) {
+        skipCount += 2;
+      }
+    }
+
+    let lfeon = (((data[start + 6] << 8) | data[start + 7]) >> (12 - skipCount)) & 1;
+
+    let channelsMap = [2, 1, 2, 3, 3, 4, 4, 5];
+    let channelCount = channelsMap[channelMode] + lfeon;
+
+    // build dac3 box (save it as a single int)
+    let bsid = data[start + 5] >> 3;
+    let bsmod = data[start + 5] & 7;
+
+    let extraData =
+        (samplingRateCode << 22) |
+        (bsid << 17) |
+        (bsmod << 14) |
+        (channelMode << 11) |
+        (lfeon << 10) |
+        ((frameSizeCode >> 1) << 5);
+
+    this._onAC3Frame(data.subarray(start, start + frameLength), sampleRate, channelCount, extraData, frameIndex, pts);
+
+    return frameLength;
   }
 
   _parseID3PES(pes) {

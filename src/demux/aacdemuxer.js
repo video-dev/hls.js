@@ -14,7 +14,7 @@ import ID3 from '../demux/id3';
   }
 
   resetInitSegment(initSegment,audioCodec,videoCodec, duration) {
-    this._aacTrack = {container : 'audio/adts', type: 'audio', id :-1, sequenceNumber: 0, isAAC : true , samples : [], len : 0, manifestCodec : audioCodec, duration : duration, inputTimeScale : 90000};
+    this._aacTrack = {container : 'audio/adts', type: 'audio', id :-1, sequenceNumber: 0, segmentCodec : 'aac' , samples : [], len : 0, manifestCodec : audioCodec, duration : duration, inputTimeScale : 90000};
   }
 
   resetTimeStamp() {
