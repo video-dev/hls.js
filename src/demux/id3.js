@@ -7,6 +7,7 @@ import { logger } from '../utils/logger';
 class ID3 {
     constructor(data) {
         this._hasTimeStamp = false;
+        this._length = 0;
         var offset = 0,
             byte1,
             byte2,
