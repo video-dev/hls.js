@@ -14,7 +14,7 @@ env:
     - TRAVIS_MODE=funcTests UA=chrome              OS="Windows 10"
     - TRAVIS_MODE=funcTests UA=firefox             OS="Windows 10"
     - TRAVIS_MODE=funcTests UA=chrome              OS="Windows 7"
-    - TRAVIS_MODE=funcTests UA=firefox             OS="Windows 7"
+    - TRAVIS_MODE=funcTests UA=firefox             OS="Windows 7" UA_VERSION="53.0"
     - TRAVIS_MODE=funcTests UA=MicrosoftEdge       OS="Windows 10"
     - TRAVIS_MODE=funcTests UA="internet explorer" OS="Windows 8.1"
     - TRAVIS_MODE=funcTests UA=chrome              OS="OS X 10.11"
