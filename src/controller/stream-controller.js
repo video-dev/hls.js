@@ -1326,8 +1326,8 @@ class StreamController extends EventHandler {
             this.state = State.ERROR;
             logger.warn(`streamController: ${data.details},switch to ${this.state} state ...`);
           } else {
-            // in cas of non fatal error while waiting level load to be completed, switch back to IDLE
-            if (this.state === State.WAITING_LEVEL) {
+            // in case of non fatal error while loading level, if level controller is not retrying to load level , switch back to IDLE
+            if (!data.levelRetry && this.state === State.WAITING_LEVEL) {
               this.state = State.IDLE;
             }
           }
