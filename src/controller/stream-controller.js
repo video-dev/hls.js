@@ -764,7 +764,7 @@ class StreamController extends EventHandler {
 
   onMediaSeeking() {
     let media = this.media, currentTime = media ? media.currentTime : undefined, config = this.config;
-    logger.log(`media seeking to ${currentTime.toFixed(3)}`);
+    logger.log(`media seeking to ${typeof currentTime === 'number' ? currentTime.toFixed(3) : currentTime}`);
     if (this.state === State.FRAG_LOADING) {
       let mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
       let bufferInfo = BufferHelper.bufferInfo(mediaBuffer,currentTime,this.config.maxBufferHole),
