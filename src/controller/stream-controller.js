@@ -765,10 +765,10 @@ class StreamController extends EventHandler {
   onMediaSeeking() {
     let media = this.media, currentTime = media ? media.currentTime : undefined, config = this.config;
     logger.log(`media seeking to ${currentTime.toFixed(3)}`);
+    let mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
+    let bufferInfo = BufferHelper.bufferInfo(mediaBuffer,currentTime,this.config.maxBufferHole);
     if (this.state === State.FRAG_LOADING) {
-      let mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
-      let bufferInfo = BufferHelper.bufferInfo(mediaBuffer,currentTime,this.config.maxBufferHole),
-          fragCurrent = this.fragCurrent;
+      let fragCurrent = this.fragCurrent;
       // check if we are seeking to a unbuffered area AND if frag loading is in progress
       if (bufferInfo.len === 0 && fragCurrent) {
         let tolerance = config.maxFragLookUpTolerance,
@@ -789,6 +789,10 @@ class StreamController extends EventHandler {
         }
       }
     } else if (this.state === State.ENDED) {
+        // if seeking to unbuffered area, clean up fragPrevious
+        if (bufferInfo.len === 0) {
+          this.fragPrevious = 0;
+        }
         // switch to IDLE state to check for potential new fragment
         this.state = State.IDLE;
     }
