@@ -1053,7 +1053,7 @@ Full list of Events is available below:
     -  data: { levels : [available quality levels], audioTracks : [ available audio tracks], url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
   - `Hls.Events.MANIFEST_PARSED`  - fired after manifest has been parsed
     -  data: { levels : [ available quality levels ], firstLevel : index of first quality level appearing in Manifest }
-  - `Hls.Events.LEVEL_SWITCH`  - fired when a level switch is requested (deprecated in favor of LEVEL_SWITCHING)
+  - `Hls.Events.LEVEL_SWITCH`  - fired when a level switch is requested (deprecated in favor of `LEVEL_SWITCHING`)
     -  data: { level : id of new level }
   - `Hls.Events.LEVEL_SWITCHING`  - fired when a level switch is requested
     -  data: { `level` object (please see [below](#level) for more information) }
@@ -1069,7 +1069,7 @@ Full list of Events is available below:
     -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), level : id of updated level, drift: PTS drift observed when parsing last fragment }
   - `Hls.Events.AUDIO_TRACKS_UPDATED`  - fired to notify that audio track lists has been updated
     -  data: { audioTracks : audioTracks }
-  - `Hls.Events.AUDIO_TRACK_SWITCH`  - fired when an audio track switch occurs (deprecated in favor of AUDIO_TRACK_SWITCHING)
+  - `Hls.Events.AUDIO_TRACK_SWITCH`  - fired when an audio track switch occurs (deprecated in favor of `AUDIO_TRACK_SWITCHING`)
     -  data: { audioTracks : audioTracks }
   - `Hls.Events.AUDIO_TRACK_SWITCHING`  - fired when an audio track switching is requested
     -  data: { id : audio track id }
