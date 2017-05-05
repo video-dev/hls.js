@@ -1040,7 +1040,7 @@ Full list of Events is available below:
    - `Hls.Events.BUFFER_APPENDING`  - fired when we append a segment to the buffer
     -  data: { segment : segment object }
   - `Hls.Events.BUFFER_APPENDED`  - fired when we are done with appending a media segment to the buffer
-    -  data: { parent : segment parent that triggered BUFFER_APPENDING, pending : nb of segments waiting for appending for this segment parent }
+    -  data: { parent : segment parent that triggered `BUFFER_APPENDING`, pending : nb of segments waiting for appending for this segment parent }
   - `Hls.Events.BUFFER_EOS`  - fired when the stream is finished and we want to notify the media buffer that there will be no more data
     -  data: { }
   - `Hls.Events.BUFFER_FLUSHING`  - fired when the media buffer should be flushed
@@ -1121,7 +1121,7 @@ Full list of Events is available below:
     - data: { level: suggested new auto level capping by fps controller, droppedLevel : level has too many dropped frames and will be restricted }
   - `Hls.Events.ERROR` -  Identifier for an error event
     - data: { type : error type, details : error details, fatal : is error fatal or not, other error specific data }
-  - `Hls.Events.DESTROYING` -  fired when hls.js instance starts destroying. Different from MEDIA_DETACHED as one could want to detach and reattach a video to the instance of hls.js to handle mid-rolls for example
+  - `Hls.Events.DESTROYING` -  fired when hls.js instance starts destroying. Different from `MEDIA_DETACHED` as one could want to detach and reattach a video to the instance of hls.js to handle mid-rolls for example
     - data: { }
   - `Hls.Events.KEY_LOADING`  - fired when a decryption key loading starts
     -  data: { frag : fragment object }
