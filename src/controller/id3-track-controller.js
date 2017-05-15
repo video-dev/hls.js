@@ -51,52 +51,104 @@ class ID3TrackController extends EventHandler {
     let Cue = window.WebKitDataCue || window.VTTCue || window.TextTrackCue;
 
     for (let i = 0; i < samples.length; i++) {
-      let id3Frame = this.parseID3Frame(samples[i].data);
-      let frame = this.decodeID3Frame(id3Frame);
-      if (frame) {
-        let cue = new Cue(startTime, endTime, '');
-        cue.value = frame;
-        this.id3Track.addCue(cue);
+      const frames = this.parseID3Tag(samples[i].data);
+      if (frames) {
+        for(let j = 0; j < frames.length; j++) {
+          const cue = new Cue(startTime, endTime, '');
+          cue.value = frames[j];
+          this.id3Track.addCue(cue);
+        }
       }
     }
   }
 
-  parseID3Frame(data) {
-    if (data.length < 21) {
+  parseID3Tag(data) {
+    if (data.length < 10) {
       return undefined;
     }
 
-    /* http://id3.org/id3v2.3.0
-    [0]     = 'I'
-    [1]     = 'D'
-    [2]     = '3'
-    [3,4]   = {Version}
-    [5]     = {Flags}
-    [6-9]   = {ID3 Size}
-    [10-13] = {Frame ID}
-    [14-17] = {Frame Size}
-    [18,19] = {Frame Flags}
-    */
-    if (data[0] === 73 &&  // I
-        data[1] === 68 &&  // D
-        data[2] === 51) {  // 3
+    let offset = 0;
+    let frames = [];
 
-      let type = String.fromCharCode(data[10], data[11], data[12], data[13]);
-      data = data.subarray(20);
-      return { type, data };
+    while (offset < data.length) {
+      /* http://id3.org/id3v2.3.0
+      [0]     = 'I'
+      [1]     = 'D'
+      [2]     = '3'
+      [3,4]   = {Version}
+      [5]     = {Flags}
+      [6-9]   = {ID3 Size}
+      */
+      const header = String.fromCharCode(data[offset++], data[offset++], data[offset++]);
+      if (header === 'ID3') {
+
+        //skip version and flags
+        offset += 3;
+
+        let size = 0;
+        size  = ((data[offset++] & 0x7f) << 21);
+        size |= ((data[offset++] & 0x7f) << 14);
+        size |= ((data[offset++] & 0x7f) << 7);
+        size |=  (data[offset++] & 0x7f);
+
+        const decodedFrames = this.decodeID3Frames(data.subarray(offset, offset + size));
+        frames = frames.concat(decodedFrames);
+
+        offset += size;
+      } else if (header === '3DI') {
+        //footer is same size as header
+        offset += 7;
+      }
     }
+
+    return frames;
+  }
+
+  decodeID3Frames(data) {
+    let offset = 0;
+    let frames = [];
+
+    while (offset < data.length) {
+      /*
+      Frame ID       $xx xx xx xx (four characters)
+      Size           $xx xx xx xx
+      Flags          $xx xx
+      */
+      const type = String.fromCharCode(data[offset++], data[offset++], data[offset++], data[offset++]);
+
+      let size = 0;
+      size  = (data[offset++] << 24);
+      size |= (data[offset++] << 16);
+      size |= (data[offset++] << 8);
+      size |=  data[offset++];
+
+      //skip flags
+      offset+=2;
+
+      const frame = this.decodeID3Frame({ type, size, data: data.subarray(offset, offset + size) });
+      if (frame) {
+        frames.push(frame);
+      }
+      offset += size;
+    }
+
+    return frames;
   }
 
   decodeID3Frame(frame) {
-    if (frame.type === 'TXXX') {
-      return this.decodeTxxxFrame(frame);
-    } else if (frame.type === 'PRIV') {
+    if (frame.type === 'PRIV') {
       return this.decodePrivFrame(frame);
+    } else if (frame.type === 'TXXX') {
+      return this.decodeTxxxFrame(frame);
     } else if (frame.type[0] === 'T') {
       return this.decodeTextFrame(frame);
-    } else {
-      return undefined;
+    } else if (frame.type === 'WXXX') {
+      return this.decodeWXXXFrame(frame);
+    } else if (frame.type[0] === 'W') {
+      return this.decodeURLLinkFrame(frame);
     }
+
+    return undefined;
   }
 
   decodeTxxxFrame(frame) {
@@ -116,12 +168,12 @@ class ID3TrackController extends EventHandler {
     }
 
     let index = 1;
-    let description = this.utf8ArrayToStr(frame.data.subarray(index));
+    const description = this.utf8ArrayToStr(frame.data.subarray(index));
 
     index += description.length + 1;
-    let value = this.utf8ArrayToStr(frame.data.subarray(index));
+    const value = this.utf8ArrayToStr(frame.data.subarray(index));
 
-    return { key: 'TXXX', description, data: value };
+    return { key: frame.type, info: description, data: value };
   }
 
   decodeTextFrame(frame) {
@@ -140,8 +192,8 @@ class ID3TrackController extends EventHandler {
       return undefined;
     }
 
-    let data = frame.data.subarray(1);
-    return { key: frame.type, data: this.utf8ArrayToStr(data) };
+    const text = this.utf8ArrayToStr(frame.data.subarray(1));
+    return { key: frame.type, data: text };
   }
 
   decodePrivFrame(frame) {
@@ -153,10 +205,43 @@ class ID3TrackController extends EventHandler {
       return undefined;
     }
 
-    let owner = this.utf8ArrayToStr(frame.data);
-    let privateData = frame.data.subarray(owner.length + 1);
+    const owner = this.utf8ArrayToStr(frame.data);
+    const privateData = new Uint8Array(frame.data.subarray(owner.length + 1));
 
-    return { key: 'PRIV', info: owner, data: privateData.buffer };
+    return { key: frame.type, info: owner, data: privateData.buffer };
+  }
+
+  decodeWXXXFrame(frame) {
+    /*
+    Format:
+    [0]   = {Text Encoding}
+    [1-?] = {Description}\0{URL}
+    */
+    if (frame.size < 2) {
+      return undefined;
+    }
+
+    if (frame.data[0] !== 3) {
+      //only support UTF-8
+      return undefined;
+    }
+
+    let index = 1;
+    const description = this.utf8ArrayToStr(frame.data.subarray(index));
+
+    index += description.length + 1;
+    const value = this.utf8ArrayToStr(frame.data.subarray(index));
+
+    return { key: frame.type, info: description, data: value };
+  }
+
+  decodeURLLinkFrame(frame) {
+    /*
+    Format:
+    [0-?]   = {URL}
+    */
+    const url = this.utf8ArrayToStr(frame.data);
+    return { key: frame.type, data: url };
   }
 
   // http://stackoverflow.com/questions/8936984/uint8array-to-string-in-javascript/22373197
