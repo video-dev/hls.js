@@ -128,10 +128,10 @@ class ID3TrackController extends EventHandler {
             );
 
             let size = 0;
-            size = data[offset++] << 24;
-            size |= data[offset++] << 16;
-            size |= data[offset++] << 8;
-            size |= data[offset++];
+            size = (data[offset++] & 0x7f) << 21;
+            size |= (data[offset++] & 0x7f) << 14;
+            size |= (data[offset++] & 0x7f) << 7;
+            size |= data[offset++] & 0x7f;
 
             //skip flags
             offset += 2;
