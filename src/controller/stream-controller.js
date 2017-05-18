@@ -199,8 +199,13 @@ class StreamController extends EventHandler {
     }
     // determine next load level
     let level = hls.nextLoadLevel,
-        levelInfo = this.levels[level],
-        levelBitrate = levelInfo.bitrate,
+        levelInfo = this.levels[level];
+
+    if (!levelInfo) {
+      return;
+    }
+
+    let levelBitrate = levelInfo.bitrate,
         maxBufLen;
 
     // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
