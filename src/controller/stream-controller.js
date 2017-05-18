@@ -769,7 +769,9 @@ class StreamController extends EventHandler {
 
   onMediaSeeking() {
     let media = this.media, currentTime = media ? media.currentTime : undefined, config = this.config;
-    logger.log(`media seeking to ${currentTime.toFixed(3)}`);
+    if (currentTime) {
+      logger.log(`media seeking to ${currentTime.toFixed(3)}`);
+    }
     let mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
     let bufferInfo = BufferHelper.bufferInfo(mediaBuffer,currentTime,this.config.maxBufferHole);
     if (this.state === State.FRAG_LOADING) {
@@ -817,7 +819,10 @@ class StreamController extends EventHandler {
   }
 
   onMediaSeeked() {
-    logger.log(`media seeked to ${this.media.currentTime.toFixed(3)}`);
+    const media = this.media, currentTime = media ? media.currentTime : undefined;
+    if (currentTime) {
+      logger.log(`media seeked to ${currentTime.toFixed(3)}`);
+    }
     // tick to speed up FRAGMENT_PLAYING triggering
     this.tick();
   }
