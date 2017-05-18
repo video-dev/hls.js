@@ -214,8 +214,13 @@ class StreamController extends EventHandler {
         }
         // determine next load level
         let level = hls.nextLoadLevel,
-            levelInfo = this.levels[level],
-            levelBitrate = levelInfo.bitrate,
+            levelInfo = this.levels[level];
+
+        if (!levelInfo) {
+            return;
+        }
+
+        let levelBitrate = levelInfo.bitrate,
             maxBufLen;
 
         // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
@@ -281,12 +286,12 @@ class StreamController extends EventHandler {
                 fragPrevious.start + fragPrevious.duration
             );
             // if everything (almost) til the end is buffered, let's signal eos
-            // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference
-            // using half frag duration should help cope with these cases.
+            // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference (audio/video offsets...)
+            // tolerate up to one frag duration to cope with these cases.
             // also cope with almost zero last frag duration (max last frag duration with 200ms) refer to https://github.com/video-dev/hls.js/pull/657
             if (
                 duration - Math.max(bufferInfo.end, fragPrevious.start) <=
-                Math.max(0.2, fragPrevious.duration / 2)
+                Math.max(0.2, fragPrevious.duration)
             ) {
                 // Finalize the media stream
                 let data = {};
@@ -955,7 +960,9 @@ class StreamController extends EventHandler {
         let media = this.media,
             currentTime = media ? media.currentTime : undefined,
             config = this.config;
-        logger.log(`media seeking to ${currentTime.toFixed(3)}`);
+        if (!isNaN(currentTime)) {
+            logger.log(`media seeking to ${currentTime.toFixed(3)}`);
+        }
         let mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
         let bufferInfo = BufferHelper.bufferInfo(
             mediaBuffer,
@@ -1018,7 +1025,11 @@ class StreamController extends EventHandler {
     }
 
     onMediaSeeked() {
-        logger.log(`media seeked to ${this.media.currentTime.toFixed(3)}`);
+        const media = this.media,
+            currentTime = media ? media.currentTime : undefined;
+        if (!isNaN(currentTime)) {
+            logger.log(`media seeked to ${currentTime.toFixed(3)}`);
+        }
         // tick to speed up FRAGMENT_PLAYING triggering
         this.tick();
     }

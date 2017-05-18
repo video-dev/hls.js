@@ -26,13 +26,24 @@ class Hls {
 
     static isSupported() {
         window.MediaSource = window.MediaSource || window.WebKitMediaSource;
-        return (
+        window.SourceBuffer = window.SourceBuffer || window.WebKitSourceBuffer;
+
+        const isTypeSupported =
             window.MediaSource &&
             typeof window.MediaSource.isTypeSupported === 'function' &&
             window.MediaSource.isTypeSupported(
                 'video/mp4; codecs="avc1.42E01E,mp4a.40.2"'
-            )
-        );
+            );
+        const hasSupportedSourceBuffer =
+            window.SourceBuffer &&
+            window.SourceBuffer.prototype &&
+            typeof window.SourceBuffer.prototype.appendBuffer === 'function' &&
+            typeof window.SourceBuffer.prototype.remove === 'function';
+        const isSafari =
+            navigator.vendor && navigator.vendor.indexOf('Apple') > -1;
+
+        // safari does not expose SourceBuffer globally so checking SourceBuffer.prototype is impossible
+        return isTypeSupported && (hasSupportedSourceBuffer || isSafari);
     }
 
     static get Events() {
