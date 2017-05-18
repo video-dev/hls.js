@@ -104,8 +104,8 @@ const WebVTTParser = {
                 }
             }
 
-            if (presentationTime && !localTime) {
-                // If we have MPEGTS but no LOCAL time, offset = presentation time + discontinuity offset
+            if (presentationTime) {
+                // If we have MPEGTS, offset = presentation time + discontinuity offset
                 cueOffset =
                     presentationTime +
                     vttCCs.ccOffset -
