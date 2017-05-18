@@ -769,7 +769,7 @@ class StreamController extends EventHandler {
 
   onMediaSeeking() {
     let media = this.media, currentTime = media ? media.currentTime : undefined, config = this.config;
-    if (currentTime) {
+    if (!isNaN(currentTime)) {
       logger.log(`media seeking to ${currentTime.toFixed(3)}`);
     }
     let mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
@@ -820,7 +820,7 @@ class StreamController extends EventHandler {
 
   onMediaSeeked() {
     const media = this.media, currentTime = media ? media.currentTime : undefined;
-    if (currentTime) {
+    if (!isNaN(currentTime)) {
       logger.log(`media seeked to ${currentTime.toFixed(3)}`);
     }
     // tick to speed up FRAGMENT_PLAYING triggering
