@@ -2819,8 +2819,13 @@ var StreamController = function (_EventHandler) {
       }
       // determine next load level
       var level = hls.nextLoadLevel,
-          levelInfo = this.levels[level],
-          levelBitrate = levelInfo.bitrate,
+          levelInfo = this.levels[level];
+
+      if (!levelInfo) {
+        return;
+      }
+
+      var levelBitrate = levelInfo.bitrate,
           maxBufLen = void 0;
 
       // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
@@ -2863,10 +2868,10 @@ var StreamController = function (_EventHandler) {
         // real duration might be lower than initial duration if there are drifts between real frag duration and playlist signaling
         var duration = Math.min(media.duration, fragPrevious.start + fragPrevious.duration);
         // if everything (almost) til the end is buffered, let's signal eos
-        // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference
-        // using half frag duration should help cope with these cases.
+        // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference (audio/video offsets...)
+        // tolerate up to one frag duration to cope with these cases.
         // also cope with almost zero last frag duration (max last frag duration with 200ms) refer to https://github.com/video-dev/hls.js/pull/657
-        if (duration - Math.max(bufferInfo.end, fragPrevious.start) <= Math.max(0.2, fragPrevious.duration / 2)) {
+        if (duration - Math.max(bufferInfo.end, fragPrevious.start) <= Math.max(0.2, fragPrevious.duration)) {
           // Finalize the media stream
           var data = {};
           if (this.altAudio) {
@@ -8201,7 +8206,14 @@ var Hls = function () {
     key: 'isSupported',
     value: function isSupported() {
       window.MediaSource = window.MediaSource || window.WebKitMediaSource;
-      return window.MediaSource && typeof window.MediaSource.isTypeSupported === 'function' && window.MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
+      window.SourceBuffer = window.SourceBuffer || window.WebKitSourceBuffer;
+
+      var isTypeSupported = window.MediaSource && typeof window.MediaSource.isTypeSupported === 'function' && window.MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
+      var hasSupportedSourceBuffer = window.SourceBuffer && window.SourceBuffer.prototype && typeof window.SourceBuffer.prototype.appendBuffer === 'function' && typeof window.SourceBuffer.prototype.remove === 'function';
+      var isSafari = navigator.vendor && navigator.vendor.indexOf('Apple') > -1;
+
+      // safari does not expose SourceBuffer globally so checking SourceBuffer.prototype is impossible
+      return isTypeSupported && (hasSupportedSourceBuffer || isSafari);
     }
   }, {
     key: 'version',
@@ -10145,6 +10157,9 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+// 10 seconds
+var MAX_SILENT_FRAME_DURATION = 10 * 1000;
+
 var MP4Remuxer = function () {
   function MP4Remuxer(observer, config, typeSupported, vendor) {
     _classCallCheck(this, MP4Remuxer);
@@ -10615,16 +10630,21 @@ var MP4Remuxer = function () {
               ptsNorm = ptsNormalize(sample.pts - initDTS, nextAudioPts),
               delta = ptsNorm - nextPtsNorm;
 
+          var duration = Math.abs(1000 * delta / inputTimeScale);
+
           // If we're overlapping by more than a duration, drop this sample
           if (delta <= -inputSampleDuration) {
-            _logger.logger.warn('Dropping audio frame @ ' + (nextPtsNorm / inputTimeScale).toFixed(3) + 's due to ' + Math.round(Math.abs(1000 * delta / inputTimeScale)) + ' ms overlap.');
+            _logger.logger.warn('Dropping 1 audio frame @ ' + (nextPtsNorm / inputTimeScale).toFixed(3) + 's due to ' + duration + ' ms overlap.');
             inputSamples.splice(i, 1);
             track.len -= sample.unit.length;
             // Don't touch nextPtsNorm or i
           }
-          // Otherwise, if we're more than a frame away from where we should be, insert missing frames
-          // also only inject silent audio frames if currentTime !== 0 (nextPtsNorm !== 0)
-          else if (delta >= inputSampleDuration && nextPtsNorm) {
+
+          // Insert missing frames if:
+          // 1: We're more than one frame away
+          // 2: Not more than MAX_SILENT_FRAME_DURATION away
+          // 3: currentTime (aka nextPtsNorm) is not 0
+          else if (delta >= inputSampleDuration && duration < MAX_SILENT_FRAME_DURATION && nextPtsNorm) {
               var missing = Math.round(delta / inputSampleDuration);
               _logger.logger.warn('Injecting ' + missing + ' audio frame @ ' + (nextPtsNorm / inputTimeScale).toFixed(3) + 's due to ' + Math.round(1000 * delta / inputTimeScale) + ' ms gap.');
               for (var j = 0; j < missing; j++) {
@@ -10646,10 +10666,10 @@ var MP4Remuxer = function () {
               nextPtsNorm += inputSampleDuration;
               i += 1;
             }
-            // Otherwise, we're within half a frame duration, so just adjust pts
+            // Otherwise, just adjust pts
             else {
                 if (Math.abs(delta) > 0.1 * inputSampleDuration) {
-                  //logger.log(`Invalid frame delta ${Math.round(ptsNorm - nextPtsNorm + inputSampleDuration)} at PTS ${Math.round(ptsNorm / 90)} (should be ${Math.round(inputSampleDuration)}).`);
+                  // logger.log(`Invalid frame delta ${Math.round(ptsNorm - nextPtsNorm + inputSampleDuration)} at PTS ${Math.round(ptsNorm / 90)} (should be ${Math.round(inputSampleDuration)}).`);
                 }
                 nextPtsNorm += inputSampleDuration;
                 if (i === 0) {
@@ -10683,7 +10703,7 @@ var MP4Remuxer = function () {
           if (contiguous && track.isAAC) {
             // log delta
             if (_delta) {
-              if (_delta > 0) {
+              if (_delta > 0 && _delta < MAX_SILENT_FRAME_DURATION) {
                 numMissingFrames = Math.round((ptsnorm - nextAudioPts) / inputSampleDuration);
                 _logger.logger.log(_delta + ' ms hole between AAC samples detected,filling it');
                 if (numMissingFrames > 0) {
@@ -11455,20 +11475,27 @@ var XhrLoader = function () {
       stats.tfirst = 0;
       stats.loaded = 0;
       var xhrSetup = this.xhrSetup;
-      if (xhrSetup) {
-        try {
-          xhrSetup(xhr, context.url);
-        } catch (e) {
-          // fix xhrSetup: (xhr, url) => {xhr.setRequestHeader("Content-Language", "test");}
-          // not working, as xhr.setRequestHeader expects xhr.readyState === OPEN
-          xhr.open('GET', context.url, true);
-          xhrSetup(xhr, context.url);
+
+      try {
+        if (xhrSetup) {
+          try {
+            xhrSetup(xhr, context.url);
+          } catch (e) {
+            // fix xhrSetup: (xhr, url) => {xhr.setRequestHeader("Content-Language", "test");}
+            // not working, as xhr.setRequestHeader expects xhr.readyState === OPEN
+            xhr.open('GET', context.url, true);
+            xhrSetup(xhr, context.url);
+          }
         }
+        if (!xhr.readyState) {
+          xhr.open('GET', context.url, true);
+        }
+      } catch (e) {
+        // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
+        this.callbacks.onError({ code: xhr.status, text: e.message }, context);
+        return;
       }
 
-      if (!xhr.readyState) {
-        xhr.open('GET', context.url, true);
-      }
       if (context.rangeEnd) {
         xhr.setRequestHeader('Range', 'bytes=' + context.rangeStart + '-' + (context.rangeEnd - 1));
       }
