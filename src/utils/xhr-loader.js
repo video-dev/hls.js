@@ -51,20 +51,27 @@ class XhrLoader {
     stats.tfirst = 0;
     stats.loaded = 0;
     const xhrSetup = this.xhrSetup;
-    if (xhrSetup) {
-      try {
-        xhrSetup(xhr, context.url);
-      } catch(e) {
-        // fix xhrSetup: (xhr, url) => {xhr.setRequestHeader("Content-Language", "test");}
-        // not working, as xhr.setRequestHeader expects xhr.readyState === OPEN
-        xhr.open('GET', context.url, true);
-        xhrSetup(xhr, context.url);        
+
+    try {
+      if (xhrSetup) {
+        try {
+          xhrSetup(xhr, context.url);
+        } catch (e) {
+          // fix xhrSetup: (xhr, url) => {xhr.setRequestHeader("Content-Language", "test");}
+          // not working, as xhr.setRequestHeader expects xhr.readyState === OPEN
+          xhr.open('GET', context.url, true);
+          xhrSetup(xhr, context.url);
+        }
       }
+      if (!xhr.readyState) {
+        xhr.open('GET', context.url, true);
+      }
+    } catch (e) {
+      // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
+      this.callbacks.onError({ code : xhr.status, text: e.message }, context);
+      return;
     }
 
-    if (!xhr.readyState) {
-      xhr.open('GET', context.url, true);
-    }
     if (context.rangeEnd) {
       xhr.setRequestHeader('Range','bytes=' + context.rangeStart + '-' + (context.rangeEnd-1));
     }
