@@ -23,6 +23,10 @@ import ID3 from '../demux/id3';
   static probe(data) {
     // check if data contains ID3 timestamp and ADTS sync word
     var id3 = new ID3(data), offset, length;
+    var id3Tag = id3.getTagData(data, 0);
+    if(id3Tag) {
+      var timeStamp = id3.getTimeStamp(id3Tag);
+    }
     if(id3.hasTimeStamp) {
       // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
       // Layer bits (position 14 and 15) in header should be always 0 for ADTS
