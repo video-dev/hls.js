@@ -1403,7 +1403,7 @@ _checkBuffer() {
             var bufferedStart = buffered.start(0);
             if (Math.abs(bufferedStart - startPosition) <= this.config.maxSeekHole) {
               startPosition = bufferedStart;
-              _logger.logger.log('target start position not buffered, seek to buffered.start(0) ' + startPosition);
+              logger.log('target start position not buffered, seek to buffered.start(0) ' + startPosition);
             }
           }
           logger.log(`adjust currentTime from ${currentTime} to ${startPosition}`);
