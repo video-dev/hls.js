@@ -1400,8 +1400,11 @@ _checkBuffer() {
           logger.log(`target start position:${startPosition}`);
           // if startPosition not buffered, let's seek to buffered.start(0)
           if(!startPositionBuffered) {
-            startPosition = buffered.start(0);
-            logger.log(`target start position not buffered, seek to buffered.start(0) ${startPosition}`);
+            var bufferedStart = buffered.start(0);
+            if (Math.abs(bufferedStart - startPosition) <= this.config.maxSeekHole) {
+              startPosition = bufferedStart;
+              _logger.logger.log('target start position not buffered, seek to buffered.start(0) ' + startPosition);
+            }
           }
           logger.log(`adjust currentTime from ${currentTime} to ${startPosition}`);
           media.currentTime = startPosition;
