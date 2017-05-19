@@ -80,7 +80,7 @@ const WebVTTParser = {
 
             // Update offsets for new discontinuities
             if (currCC && currCC.new) {
-                if (localTime) {
+                if (localTime !== undefined) {
                     // When local time is provided, offset = discontinuity start time - local time
                     cueOffset = vttCCs.ccOffset = currCC.start;
                 } else {
