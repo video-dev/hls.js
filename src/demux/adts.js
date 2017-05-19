@@ -126,6 +126,18 @@ import {ErrorTypes, ErrorDetails} from '../errors';
       config[3] = 0;
     }
     return {config: config, samplerate: adtsSampleingRates[adtsSampleingIndex], channelCount: adtsChanelConfig, codec: ('mp4a.40.' + adtsObjectType), manifestCodec : manifestCodec};
+  },
+
+  isHeader: function(data, offset) {
+    // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
+    // Layer bits (position 14 and 15) in header should be always 0 for ADTS
+    // More info https://wiki.multimedia.cx/index.php?title=ADTS
+    if (offset + 1 < data.length) {
+      if ((data[offset] === 0xff) && ((data[offset + 1] & 0xf6) === 0xf0)) {
+        return true;
+      }
+    }
+    return false;
   }
 };
 

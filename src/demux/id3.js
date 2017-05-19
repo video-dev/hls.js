@@ -51,6 +51,14 @@ import {logger} from '../utils/logger';
 
   static isID3Header(data, offset) {
     /*
+    * http://id3.org/id3v2.3.0
+    * [0]     = 'I'
+    * [1]     = 'D'
+    * [2]     = '3'
+    * [3,4]   = {Version}
+    * [5]     = {Flags}
+    * [6-9]   = {ID3 Size}
+    *
     * An ID3v2 tag can be detected with the following pattern:
     *  $49 44 33 yy yy xx zz zz zz zz
     * Where yy is less than $FF, xx is the 'flags' byte and zz is less than $80
@@ -91,39 +99,34 @@ import {logger} from '../utils/logger';
     return false;
   }
 
-  getTagData(data, offset) {
-    if (ID3.isID3Header(data, offset)) {
-      let tagLength = 10;
+  static getID3Data(data, offset) {
+    let tags = [];
+    const front = offset;
+    let length = 0;
 
-      //skip ID3
-      //offset += 3;
+    while (ID3.isID3Header(data, offset)) {
+      //ID3 header is 10 bytes
+      length += 10;
 
-      //skip version and flags
-      //offset += 3;
+      const size = ID3._readSize(data, offset + 6);
+      length += size;
 
-      const size = this._readSize(data, offset + 6);
-      //size  = ((data[offset++] & 0x7f) << 21);
-      //size |= ((data[offset++] & 0x7f) << 14);
-      //size |= ((data[offset++] & 0x7f) << 7);
-      //size |=  (data[offset++] & 0x7f);
-
-      //const frameData = data.subarray(offset, offset + size);
-
-      //offset += size;
-      tagLength += size;
-
-      if (ID3.isID3Footer(data, offset)) {
-        //offset += 10;
-        tagLength += 10;
+      if (ID3.isID3Footer(data, offset + 10)) {
+        //ID3 footer is 10 bytes
+        length += 10;
       }
 
-      return data.subarray(offset, offset + tagLength);
+      offset += length;
+    }
+
+    if (length > 0) {
+      return data.subarray(front, front + length);
     }
 
     return undefined;
   }
 
-  _readSize(data, offset) {
+  static _readSize(data, offset) {
     let size = 0;
     size  = ((data[offset]   & 0x7f) << 21);
     size |= ((data[offset+1] & 0x7f) << 14);
@@ -132,37 +135,59 @@ import {logger} from '../utils/logger';
     return size;
   }
 
-  getTimeStamp(tagData) {
-    let offset = 0;
-    if (ID3.isID3Header(tagData, offset)) {
-      const size = this._readSize(tagData, offset + 6);
-      //size of timestamp frame is 63 bytes (including frame header)
-      if (size >= 63) {
-        offset = 10;
-        //frame header is 10 bytes
-        while (offset + 10 < tagData.length) {
-          const frame = this.getFrameInfo(tagData.subarray(offset));
-          if (frame.type === 'PRIV' && frame.size === 53) {
-            const timestamp = this.decodeTimeStampFrame(frame);
-            return timestamp;
-          } else {
-            offset += frame.size;
-          }
-        }
+  static getTimeStamp(data) {
+    const frames = ID3.decodeID3Data(data);
+    for(let i = 0; i < frames.length; i++) {
+      const frame = frames[i];
+      if (ID3.isTimeStampFrame(frame)) {
+        return ID3._readTimeStamp(frame);
       }
     }
+
+/*
+    let offset = 0;
+
+    while (ID3.isID3Header(data, offset)) {
+      const size = ID3._readSize(data, offset + 6);
+      //size of timestamp frame is 63 bytes (including frame header)
+      if (size >= 63) {
+        //skip past ID3 header
+        offset += 10;
+        //loop through frames in the ID3 tag
+        while (offset + 8 < size) {
+          const frameData = ID3._getFrameData(data.subarray(offset));
+          if (frameData.type === 'PRIV' && frameData.size === 53) {
+            const frame = ID3._decodePrivFrame(frameData);
+            if (frame.data.byteLength === 8 && frame.info === 'com.apple.streaming.transportStreamTimestamp') {
+              return ID3._readTimeStamp(frame);
+            }
+          }
+
+          //skip frame header and frame data
+          offset += frameData.size + 10;
+        }
+      }
+
+      if (ID3.isID3Footer(data, offset)) {
+        offset += 10;
+      }
+    }*/
 
     return undefined;
   }
 
-  getFrameInfo(data) {
+  static isTimeStampFrame(frame) {
+    return (frame && frame.key === 'PRIV' && frame.info === 'com.apple.streaming.transportStreamTimestamp');
+  }
+
+  static _getFrameData(data) {
     /*
     Frame ID       $xx xx xx xx (four characters)
     Size           $xx xx xx xx
     Flags          $xx xx
     */
     const type = String.fromCharCode(data[0], data[1], data[2], data[3]);
-    const size = this._readSize(data, 4);
+    const size = ID3._readSize(data, 4);
 
     //skip frame id, size, and flags
     let offset = 10;
@@ -170,37 +195,49 @@ import {logger} from '../utils/logger';
     return { type, size, data: data.subarray(offset, offset + size) };
   }
 
-  readFrameData(data) {
-    /*
-    Frame ID       $xx xx xx xx (four characters)
-    Size           $xx xx xx xx
-    Flags          $xx xx
-    */
-    const type = String.fromCharCode(data[0], data[1], data[2], data[3]);
-    const size = this._readSize(data, 4);
+  static decodeID3Data(data) {
+    let offset = 0;
+    const frames = [];
 
-    //skip frame id, size, and flags
-    let offset = 10;
+    while (ID3.isID3Header(data, offset)) {
+      const size = ID3._readSize(data, offset + 6);
+      //skip past ID3 header
+      offset += 10;
+      const end = offset + size;
+      //loop through frames in the ID3 tag
+      while (offset + 8 < end) {
+        const frameData = ID3._getFrameData(data.subarray(offset));
+        const frame = ID3._decodeFrame(frameData);
+        if (frame) {
+          frames.push(frame);
+        }
+        //skip frame header and frame data
+        offset += frameData.size + 10;
+      }
 
-    return this.decodeID3Frame({ type, size, data: data.subarray(offset, offset + size) });
+      if (ID3.isID3Footer(data, offset)) {
+        offset += 10;
+      }
+    }
+
+    return frames;
   }
 
-  decodeFrame(frame) {
+  static _decodeFrame(frame) {
     if (frame.type === 'PRIV') {
-      return this.decodePrivFrame(frame);
+      return ID3._decodePrivFrame(frame);
     } else if (frame.type[0] === 'T') {
-      return this.decodeTextFrame(frame);
+      return ID3._decodeTextFrame(frame);
     } else if (frame.type[0] === 'W') {
-      return this.decodeURLFrame(frame);
+      return ID3._decodeURLFrame(frame);
     }
 
     return undefined;
   }
 
-  decodeTimeStampFrame(frame) {
-    const privFrame = this.decodePrivFrame(frame);
-    if (privFrame.data.byteLength === 8 && privFrame.info === 'com.apple.streaming.transportStreamTimestamp') {
-      const data = new Uint8Array(privFrame.data);
+  static _readTimeStamp(timeStampFrame) {
+    if (timeStampFrame.data.byteLength === 8) {
+      const data = new Uint8Array(timeStampFrame.data);
       // timestamp is 33 bit expressed as a big-endian eight-octet number,
       // with the upper 31 bits set to zero.
       const pts33Bit = data[3] & 0x1;
@@ -220,7 +257,7 @@ import {logger} from '../utils/logger';
     return undefined;
   }
 
-  decodePrivFrame(frame) {
+  static _decodePrivFrame(frame) {
     /*
     Format: <text string>\0<binary data>
     */
@@ -228,19 +265,14 @@ import {logger} from '../utils/logger';
       return undefined;
     }
 
-    const owner = this.utf8ArrayToStr(frame.data);
+    const owner = ID3._utf8ArrayToStr(frame.data);
     const privateData = new Uint8Array(frame.data.subarray(owner.length + 1));
 
     return { key: frame.type, info: owner, data: privateData.buffer };
   }
 
-  decodeTextFrame(frame) {
+  static _decodeTextFrame(frame) {
     if (frame.size < 2) {
-      return undefined;
-    }
-
-    if (frame.data[0] !== 3) {
-      //only support UTF-8
       return undefined;
     }
 
@@ -251,10 +283,10 @@ import {logger} from '../utils/logger';
       [1-?] = {Description}\0{Value}
       */
       let index = 1;
-      const description = this.utf8ArrayToStr(frame.data.subarray(index));
+      const description = ID3._utf8ArrayToStr(frame.data.subarray(index));
 
       index += description.length + 1;
-      const value = this.utf8ArrayToStr(frame.data.subarray(index));
+      const value = ID3._utf8ArrayToStr(frame.data.subarray(index));
 
       return { key: frame.type, info: description, data: value };
     } else {
@@ -263,13 +295,37 @@ import {logger} from '../utils/logger';
       [0]   = {Text Encoding}
       [1-?] = {Value}
       */
-      const text = this.utf8ArrayToStr(frame.data.subarray(1));
+      const text = ID3._utf8ArrayToStr(frame.data.subarray(1));
       return { key: frame.type, data: text };
     }
   }
 
-  decodeURLFrame(frame) {
+  static _decodeURLFrame(frame) {
+    if (frame.type === 'WXXX') {
+      /*
+      Format:
+      [0]   = {Text Encoding}
+      [1-?] = {Description}\0{URL}
+      */
+      if (frame.size < 2) {
+        return undefined;
+      }
 
+      let index = 1;
+      const description = ID3._utf8ArrayToStr(frame.data.subarray(index));
+
+      index += description.length + 1;
+      const value = ID3._utf8ArrayToStr(frame.data.subarray(index));
+
+      return { key: frame.type, info: description, data: value };
+    } else {
+      /*
+      Format:
+      [0-?] = {URL}
+      */
+      const url = ID3._utf8ArrayToStr(frame.data);
+      return { key: frame.type, data: url };
+    }
   }
 
   readUTF(data,start,len) {
@@ -314,7 +370,7 @@ import {logger} from '../utils/logger';
                 timestamp = ((data[offset++] << 23) +
                              (data[offset++] << 15) +
                              (data[offset++] <<  7) +
-                             data[offset++]) /45;
+                              data[offset++]) /45;
 
                 if (pts33Bit) {
                     timestamp   += 47721858.84; // 2^32 / 90
@@ -355,7 +411,7 @@ import {logger} from '../utils/logger';
    * LastModified: Dec 25 1999
    * This library is free.  You can redistribute it and/or modify it.
    */
-  utf8ArrayToStr(array) {
+  static _utf8ArrayToStr(array) {
 
     let char2;
     let char3;
