@@ -53,7 +53,7 @@ class ID3TrackController extends EventHandler {
         let Cue = window.WebKitDataCue || window.VTTCue || window.TextTrackCue;
 
         for (let i = 0; i < samples.length; i++) {
-            const frames = ID3.decodeID3Data(samples[i].data);
+            const frames = ID3.getID3Frames(samples[i].data);
             if (frames) {
                 for (let j = 0; j < frames.length; j++) {
                     const frame = frames[j];

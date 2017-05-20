@@ -2,60 +2,14 @@
  * ID3 parser
  */
 import { logger } from '../utils/logger';
-//import Hex from '../utils/hex';
 
 class ID3 {
-    constructor(data) {
-        this._hasTimeStamp = false;
-        this._length = 0;
-        var offset = 0,
-            byte1,
-            byte2,
-            byte3,
-            byte4,
-            tagSize,
-            endPos,
-            header,
-            len;
-        do {
-            header = this.readUTF(data, offset, 3);
-            offset += 3;
-            // first check for ID3 header
-            if (header === 'ID3') {
-                // skip 24 bits
-                offset += 3;
-                // retrieve tag(s) length
-                byte1 = data[offset++] & 0x7f;
-                byte2 = data[offset++] & 0x7f;
-                byte3 = data[offset++] & 0x7f;
-                byte4 = data[offset++] & 0x7f;
-                tagSize = (byte1 << 21) + (byte2 << 14) + (byte3 << 7) + byte4;
-                endPos = offset + tagSize;
-                //logger.log(`ID3 tag found, size/end: ${tagSize}/${endPos}`);
-
-                // read ID3 tags
-                this._parseID3Frames(data, offset, endPos);
-                offset = endPos;
-            } else if (header === '3DI') {
-                // http://id3.org/id3v2.4.0-structure chapter 3.4.   ID3v2 footer
-                offset += 7;
-                logger.log(`3DI footer found, end: ${offset}`);
-            } else {
-                offset -= 3;
-                len = offset;
-                if (len) {
-                    //logger.log(`ID3 len: ${len}`);
-                    if (!this.hasTimeStamp) {
-                        logger.warn('ID3 tag found, but no timestamp');
-                    }
-                    this._length = len;
-                    this._payload = data.subarray(0, len);
-                }
-                return;
-            }
-        } while (true);
-    }
-
+    /**
+     * Returns true if an ID3 header can be found at offset in data
+     * @param {Uint8Array} data - The data to search in
+     * @param {number} offset - The offset at which to start searching
+     * @return {boolean} - True if an ID3 header is found
+     */
     static isID3Header(data, offset) {
         /*
     * http://id3.org/id3v2.3.0
@@ -95,6 +49,12 @@ class ID3 {
         return false;
     }
 
+    /**
+     * Returns true if an ID3 footer can be found at offset in data
+     * @param {Uint8Array} data - The data to search in
+     * @param {number} offset - The offset at which to start searching
+     * @return {boolean} - True if an ID3 footer is found
+     */
     static isID3Footer(data, offset) {
         /*
     * The footer is a copy of the header, but with a different identifier
@@ -124,6 +84,12 @@ class ID3 {
         return false;
     }
 
+    /**
+     * Returns any adjacent ID3 tags found in data starting at offset as one block of data
+     * @param {Uint8Array} data - The data to search in
+     * @param {number} offset - The offset at which to start searching
+     * @return {Uint8Array} - The block of data containing any ID3 tags found
+     */
     static getID3Data(data, offset) {
         let tags = [];
         const front = offset;
@@ -160,8 +126,13 @@ class ID3 {
         return size;
     }
 
+    /**
+     * Searches for the Elementary Stream timestamp found in the ID3 data chunk
+     * @param {Uint8Array} data - Block of data containing one or more ID3 tags
+     * @return {number} - The timestamp
+     */
     static getTimeStamp(data) {
-        const frames = ID3.decodeID3Data(data);
+        const frames = ID3.getID3Frames(data);
         for (let i = 0; i < frames.length; i++) {
             const frame = frames[i];
             if (ID3.isTimeStampFrame(frame)) {
@@ -169,38 +140,13 @@ class ID3 {
             }
         }
 
-        /*
-    let offset = 0;
-
-    while (ID3.isID3Header(data, offset)) {
-      const size = ID3._readSize(data, offset + 6);
-      //size of timestamp frame is 63 bytes (including frame header)
-      if (size >= 63) {
-        //skip past ID3 header
-        offset += 10;
-        //loop through frames in the ID3 tag
-        while (offset + 8 < size) {
-          const frameData = ID3._getFrameData(data.subarray(offset));
-          if (frameData.type === 'PRIV' && frameData.size === 53) {
-            const frame = ID3._decodePrivFrame(frameData);
-            if (frame.data.byteLength === 8 && frame.info === 'com.apple.streaming.transportStreamTimestamp') {
-              return ID3._readTimeStamp(frame);
-            }
-          }
-
-          //skip frame header and frame data
-          offset += frameData.size + 10;
-        }
-      }
-
-      if (ID3.isID3Footer(data, offset)) {
-        offset += 10;
-      }
-    }*/
-
         return undefined;
     }
 
+    /**
+     * Returns true if the ID3 frame is an Elementary Stream timestamp frame
+     * @param {ID3 frame} frame
+     */
     static isTimeStampFrame(frame) {
         return (
             frame &&
@@ -224,18 +170,23 @@ class ID3 {
         return { type, size, data: data.subarray(offset, offset + size) };
     }
 
-    static decodeID3Data(data) {
+    /**
+     * Returns an array of ID3 frames found in all the ID3 tags in the id3Data
+     * @param {Uint8Array} id3Data - The ID3 data containing one or more ID3 tags
+     * @return {ID3 frame[]} - Array for ID3 frame objects
+     */
+    static getID3Frames(id3Data) {
         let offset = 0;
         const frames = [];
 
-        while (ID3.isID3Header(data, offset)) {
-            const size = ID3._readSize(data, offset + 6);
+        while (ID3.isID3Header(id3Data, offset)) {
+            const size = ID3._readSize(id3Data, offset + 6);
             //skip past ID3 header
             offset += 10;
             const end = offset + size;
             //loop through frames in the ID3 tag
             while (offset + 8 < end) {
-                const frameData = ID3._getFrameData(data.subarray(offset));
+                const frameData = ID3._getFrameData(id3Data.subarray(offset));
                 const frame = ID3._decodeFrame(frameData);
                 if (frame) {
                     frames.push(frame);
@@ -244,7 +195,7 @@ class ID3 {
                 offset += frameData.size + 10;
             }
 
-            if (ID3.isID3Footer(data, offset)) {
+            if (ID3.isID3Footer(id3Data, offset)) {
                 offset += 10;
             }
         }
@@ -355,85 +306,6 @@ class ID3 {
             const url = ID3._utf8ArrayToStr(frame.data);
             return { key: frame.type, data: url };
         }
-    }
-
-    readUTF(data, start, len) {
-        var result = '',
-            offset = start,
-            end = start + len;
-        do {
-            result += String.fromCharCode(data[offset++]);
-        } while (offset < end);
-        return result;
-    }
-
-    _parseID3Frames(data, offset, endPos) {
-        var tagId, tagLen, tagStart, tagFlags, timestamp;
-        while (offset + 8 <= endPos) {
-            tagId = this.readUTF(data, offset, 4);
-            offset += 4;
-
-            tagLen =
-                ((data[offset++] << (24 + data[offset++])) <<
-                    (16 + data[offset++])) <<
-                (8 + data[offset++]);
-
-            tagFlags = data[offset++] << (8 + data[offset++]);
-
-            tagStart = offset;
-            //logger.log("ID3 tag id:" + tagId);
-            switch (tagId) {
-                case 'PRIV':
-                    //logger.log('parse frame:' + Hex.hexDump(data.subarray(offset,endPos)));
-                    // owner should be "com.apple.streaming.transportStreamTimestamp"
-                    if (
-                        this.readUTF(data, offset, 44) ===
-                        'com.apple.streaming.transportStreamTimestamp'
-                    ) {
-                        offset += 44;
-                        // smelling even better ! we found the right descriptor
-                        // skip null character (string end) + 3 first bytes
-                        offset += 4;
-
-                        // timestamp is 33 bit expressed as a big-endian eight-octet number, with the upper 31 bits set to zero.
-                        var pts33Bit = data[offset++] & 0x1;
-                        this._hasTimeStamp = true;
-
-                        timestamp =
-                            ((data[offset++] << 23) +
-                                (data[offset++] << 15) +
-                                (data[offset++] << 7) +
-                                data[offset++]) /
-                            45;
-
-                        if (pts33Bit) {
-                            timestamp += 47721858.84; // 2^32 / 90
-                        }
-                        timestamp = Math.round(timestamp);
-                        logger.trace(`ID3 timestamp found: ${timestamp}`);
-                        this._timeStamp = timestamp;
-                    }
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
-
-    get hasTimeStamp() {
-        return this._hasTimeStamp;
-    }
-
-    get timeStamp() {
-        return this._timeStamp;
-    }
-
-    get length() {
-        return this._length;
-    }
-
-    get payload() {
-        return this._payload;
     }
 
     // http://stackoverflow.com/questions/8936984/uint8array-to-string-in-javascript/22373197
