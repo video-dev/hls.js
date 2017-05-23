@@ -49,6 +49,15 @@ class MP4Demuxer {
         return String.fromCharCode.apply(null, buffer);
     }
 
+    static readUint32(buffer, offset) {
+        const val =
+            (buffer[offset] << 24) |
+            (buffer[offset + 1] << 16) |
+            (buffer[offset + 2] << 8) |
+            buffer[offset + 3];
+        return val < 0 ? 4294967296 + val : val;
+    }
+
     // Find the data for a box specified by its path
     static findBox(data, path) {
         var results = [],
@@ -64,11 +73,7 @@ class MP4Demuxer {
         }
 
         for (i = 0; i < data.byteLength; ) {
-            size = data[i] << 24;
-            size |= data[i + 1] << 16;
-            size |= data[i + 2] << 8;
-            size |= data[i + 3];
-
+            size = MP4Demuxer.readUint32(data, i);
             type = MP4Demuxer.bin2str(data.subarray(i + 4, i + 8));
 
             end = size > 1 ? i + size : data.byteLength;
@@ -124,23 +129,13 @@ class MP4Demuxer {
             if (tkhd) {
                 let version = tkhd[0];
                 let index = version === 0 ? 12 : 20;
-                let trackId =
-                    (tkhd[index] << 24) |
-                    (tkhd[index + 1] << 16) |
-                    (tkhd[index + 2] << 8) |
-                    tkhd[index + 3];
-
-                trackId = trackId < 0 ? 4294967296 + trackId : trackId;
+                let trackId = MP4Demuxer.readUint32(tkhd, index);
 
                 const mdhd = MP4Demuxer.findBox(trak, ['mdia', 'mdhd'])[0];
                 if (mdhd) {
                     version = mdhd[0];
                     index = version === 0 ? 12 : 20;
-                    const timescale =
-                        (mdhd[index] << 24) |
-                        (mdhd[index + 1] << 16) |
-                        (mdhd[index + 2] << 8) |
-                        mdhd[index + 3];
+                    const timescale = MP4Demuxer.readUint32(mdhd, index);
 
                     const hdlr = MP4Demuxer.findBox(trak, ['mdia', 'hdlr'])[0];
                     if (hdlr) {
@@ -195,11 +190,7 @@ class MP4Demuxer {
                     var id, scale, baseTime;
 
                     // get the track id from the tfhd
-                    id =
-                        (tfhd[4] << 24) |
-                        (tfhd[5] << 16) |
-                        (tfhd[6] << 8) |
-                        tfhd[7];
+                    id = MP4Demuxer.readUint32(tfhd, 4);
                     // assume a 90kHz clock if no timescale was specified
                     scale = initData[id].timescale || 90e3;
 
@@ -210,18 +201,11 @@ class MP4Demuxer {
                         var version, result;
 
                         version = tfdt[0];
-                        result =
-                            (tfdt[4] << 24) |
-                            (tfdt[5] << 16) |
-                            (tfdt[6] << 8) |
-                            tfdt[7];
+                        result = MP4Demuxer.readUint32(tfdt, 4);
                         if (version === 1) {
                             result *= Math.pow(2, 32);
-                            result +=
-                                (tfdt[8] << 24) |
-                                (tfdt[9] << 16) |
-                                (tfdt[10] << 8) |
-                                tfdt[11];
+
+                            result += MP4Demuxer.readUint32(tfdt, 8);
                         }
                         return result;
                     })[0];
