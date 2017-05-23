@@ -70,8 +70,8 @@ class AACDemuxer {
         let pts = 90 * ID3.getTimeStamp(id3Data);
         stamp = pts;
 
-        let samples = [];
-        samples.push({ pts: pts, dts: pts, data: id3Data });
+        let id3Samples = [];
+        id3Samples.push({ pts: pts, dts: pts, data: id3Data });
 
         track = this._audioTrack;
         start = id3Data.length;
@@ -110,27 +110,32 @@ class AACDemuxer {
                     frameIndex,
                     frameDuration
                 );
-                stamp = aacFrame.stamp;
-                headerLength = aacFrame.headerLength;
-                frameLength = aacFrame.frameLength;
+                if (aacFrame) {
+                    stamp = aacFrame.stamp;
+                    headerLength = aacFrame.headerLength;
+                    frameLength = aacFrame.frameLength;
 
-                //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
+                    //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
 
-                aacSample = {
-                    unit: data.subarray(
-                        offset + headerLength,
-                        offset + headerLength + frameLength
-                    ),
-                    pts: stamp,
-                    dts: stamp
-                };
-                track.samples.push(aacSample);
-                track.len += frameLength;
-                offset += frameLength + headerLength;
-                frameIndex++;
-            } else if (ID3.isID3Header(data, offset)) {
+                    aacSample = {
+                        unit: data.subarray(
+                            offset + headerLength,
+                            offset + headerLength + frameLength
+                        ),
+                        pts: stamp,
+                        dts: stamp
+                    };
+                    track.samples.push(aacSample);
+                    track.len += frameLength;
+                    offset += frameLength + headerLength;
+                    frameIndex++;
+                } else {
+                    //logger.log('Unable to parse AAC frame');
+                    offset++;
+                }
+            } else if (ID3.isHeader(data, offset)) {
                 id3Data = ID3.getID3Data(data, offset);
-                samples.push({ pts: stamp, dts: stamp, data: id3Data });
+                id3Samples.push({ pts: stamp, dts: stamp, data: id3Data });
                 offset += id3Data.length;
             } else {
                 //nothing found, keep looking
@@ -141,7 +146,7 @@ class AACDemuxer {
         this.remuxer.remux(
             track,
             { samples: [] },
-            { samples: samples, inputTimeScale: 90000 },
+            { samples: id3Samples, inputTimeScale: 90000 },
             { samples: [] },
             timeOffset,
             contiguous,
@@ -168,6 +173,8 @@ class AACDemuxer {
             //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
             return { headerLength, frameLength, stamp };
         }
+
+        return undefined;
     }
 
     destroy() {}

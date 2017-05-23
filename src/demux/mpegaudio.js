@@ -4,6 +4,91 @@
 import { logger } from '../utils/logger';
 
 const MpegAudio = {
+    BitratesMap: [
+        32,
+        64,
+        96,
+        128,
+        160,
+        192,
+        224,
+        256,
+        288,
+        320,
+        352,
+        384,
+        416,
+        448,
+        32,
+        48,
+        56,
+        64,
+        80,
+        96,
+        112,
+        128,
+        160,
+        192,
+        224,
+        256,
+        320,
+        384,
+        32,
+        40,
+        48,
+        56,
+        64,
+        80,
+        96,
+        112,
+        128,
+        160,
+        192,
+        224,
+        256,
+        320,
+        32,
+        48,
+        56,
+        64,
+        80,
+        96,
+        112,
+        128,
+        144,
+        160,
+        176,
+        192,
+        224,
+        256,
+        8,
+        16,
+        24,
+        32,
+        40,
+        48,
+        56,
+        64,
+        80,
+        96,
+        112,
+        128,
+        144,
+        160
+    ],
+
+    SamplingRateMap: [
+        44100,
+        48000,
+        32000,
+        22050,
+        24000,
+        16000,
+        11025,
+        12000,
+        8000
+    ],
+
     onFrame: function(
         track,
         data,
@@ -115,7 +200,7 @@ const MpegAudio = {
         if (start + 2 > end) {
             return -1; // we need at least 2 bytes to detect sync pattern
         }
-        if (data[start] === 0xff || (data[start + 1] & 0xe0) === 0xe0) {
+        if (this.isHeader(data, start)) {
             // Using http://www.datavoyage.com/mpgscript/mpeghdr.htm as a reference
             if (start + 24 > end) {
                 return -1;
@@ -169,7 +254,7 @@ const MpegAudio = {
         // noise or ID3, trying to skip
         var offset = start + 2;
         while (offset < end) {
-            if (data[offset - 1] === 0xff && (data[offset] & 0xe0) === 0xe0) {
+            if (this.isHeader(data, offset - 1)) {
                 // sync pattern is found
                 this.onNoise(data.subarray(start, offset - 1));
 
@@ -197,6 +282,21 @@ const MpegAudio = {
             )) > 0
         ) {
             offset += parsed;
+        }
+    },
+
+    isHeader: function(data, offset) {
+        // Look for MPEG header | 1111 1111 | 111X XYZX | where X can be either 0 or 1 and Y or Z should be 1
+        // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
+        // More info http://www.mp3-tech.org/programmer/frame_header.html
+        if (offset + 1 < data.length) {
+            if (
+                data[offset] === 0xff &&
+                (data[offset + 1] & 0xe0) === 0xe0 &&
+                (data[offset + 1] & 0x06) !== 0x00
+            ) {
+                return true;
+            }
         }
     }
 };

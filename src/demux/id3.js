@@ -10,7 +10,7 @@ class ID3 {
      * @param {number} offset - The offset at which to start searching
      * @return {boolean} - True if an ID3 header is found
      */
-    static isID3Header(data, offset) {
+    static isHeader(data, offset) {
         /*
     * http://id3.org/id3v2.3.0
     * [0]     = 'I'
@@ -55,7 +55,7 @@ class ID3 {
      * @param {number} offset - The offset at which to start searching
      * @return {boolean} - True if an ID3 footer is found
      */
-    static isID3Footer(data, offset) {
+    static isFooter(data, offset) {
         /*
     * The footer is a copy of the header, but with a different identifier
     */
@@ -95,14 +95,14 @@ class ID3 {
         const front = offset;
         let length = 0;
 
-        while (ID3.isID3Header(data, offset)) {
+        while (ID3.isHeader(data, offset)) {
             //ID3 header is 10 bytes
             length += 10;
 
             const size = ID3._readSize(data, offset + 6);
             length += size;
 
-            if (ID3.isID3Footer(data, offset + 10)) {
+            if (ID3.isFooter(data, offset + 10)) {
                 //ID3 footer is 10 bytes
                 length += 10;
             }
@@ -179,7 +179,7 @@ class ID3 {
         let offset = 0;
         const frames = [];
 
-        while (ID3.isID3Header(id3Data, offset)) {
+        while (ID3.isHeader(id3Data, offset)) {
             const size = ID3._readSize(id3Data, offset + 6);
             //skip past ID3 header
             offset += 10;
@@ -195,7 +195,7 @@ class ID3 {
                 offset += frameData.size + 10;
             }
 
-            if (ID3.isID3Footer(id3Data, offset)) {
+            if (ID3.isFooter(id3Data, offset)) {
                 offset += 10;
             }
         }

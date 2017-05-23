@@ -42,11 +42,7 @@ class MP3Demuxer {
                 offset < length;
                 offset++
             ) {
-                if (
-                    data[offset] === 0xff &&
-                    (data[offset + 1] & 0xe0) === 0xe0 &&
-                    (data[offset + 1] & 0x06) !== 0x00
-                ) {
+                if (MpegAudio.isHeader(data, offset)) {
                     //logger.log('MPEG sync word found !');
                     return true;
                 }
@@ -60,37 +56,98 @@ class MP3Demuxer {
         let id3Data = ID3.getID3Data(data, 0);
         let pts = 90 * ID3.getTimeStamp(id3Data);
         var afterID3 = id3Data.length;
-        var offset, length;
+        var offset;
+        var length = data.length;
+        var frameIndex = 0,
+            stamp = 0;
+        var track = this._audioTrack;
 
-        // Look for MPEG header
-        for (
-            offset = afterID3, length = data.length;
-            offset < length - 1;
-            offset++
-        ) {
-            if (
-                data[offset] === 0xff &&
-                (data[offset + 1] & 0xe0) === 0xe0 &&
-                (data[offset + 1] & 0x06) !== 0x00
-            ) {
-                break;
+        let id3Samples = [];
+        id3Samples.push({ pts: pts, dts: pts, data: id3Data });
+
+        while (offset < length - 1) {
+            if (MpegAudio.isHeader(data, offset)) {
+                // Using http://www.datavoyage.com/mpgscript/mpeghdr.htm as a reference
+                if (offset + 24 > length) {
+                    break;
+                }
+
+                var frame = this.parseMpegAudioFrame(data, offset);
+                if (frame && offset + frame.frameLength < length) {
+                    var frameDuration = 1152 * 90000 / frame.sampleRate;
+                    stamp = pts + frameIndex * frameDuration;
+                    var sampleData = data.subarray(
+                        offset,
+                        offset + frameLength
+                    );
+
+                    track.config = [];
+                    track.channelCount = frame.channelCount;
+                    track.samplerate = sampleRate;
+                    track.samples.push({
+                        unit: data.subarray(offset, offset + frameLength),
+                        pts: stamp,
+                        dts: stamp
+                    });
+                    track.len += data.length;
+
+                    frameIndex++;
+                    offset += frameLength;
+                } else {
+                    //logger.log('Unable to parse Mpeg audio frame');
+                    offset++;
+                }
+            } else if (ID3.isHeader(data, offset)) {
+                id3Data = ID3.getID3Data(data, offset);
+                id3Samples.push({ pts: stamp, dts: stamp, data: id3Data });
+                offset += id3Data.length;
+            } else {
+                //nothing found, keep looking
+                offset++;
             }
         }
 
-        MpegAudio.parse(this._audioTrack, data, id3.length, pts);
-
         this.remuxer.remux(
-            this._audioTrack,
+            track,
             { samples: [] },
-            {
-                samples: [{ pts: pts, dts: pts, data: id3.payload }],
-                inputTimeScale: 90000
-            },
+            { samples: id3Samples, inputTimeScale: 90000 },
             { samples: [] },
             timeOffset,
             contiguous,
             accurateTimeOffset
         );
+    }
+
+    parseMpegAudioFrame(data, offset) {
+        var headerB = (data[offset + 1] >> 3) & 3;
+        var headerC = (data[offset + 1] >> 1) & 3;
+        var headerE = (data[offset + 2] >> 4) & 15;
+        var headerF = (data[offset + 2] >> 2) & 3;
+        var headerG = !!(data[offset + 2] & 2);
+        if (headerB !== 1 && headerE !== 0 && headerE !== 15 && headerF !== 3) {
+            var columnInBitrates =
+                headerB === 3 ? 3 - headerC : headerC === 3 ? 3 : 4;
+            var bitRate =
+                MpegAudio.BitratesMap[columnInBitrates * 14 + headerE - 1] *
+                1000;
+            var columnInSampleRates = headerB === 3 ? 0 : headerB === 2 ? 1 : 2;
+            var sampleRate =
+                MpegAudio.SamplingRateMap[columnInSampleRates * 3 + headerF];
+            var padding = headerG ? 1 : 0;
+            var channelCount = data[offset + 3] >> 6 === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
+            var frameLength =
+                headerC === 3
+                    ? ((headerB === 3 ? 12 : 6) * bitRate / sampleRate +
+                          padding) <<
+                      2
+                    : ((headerB === 3 ? 144 : 72) * bitRate / sampleRate +
+                          padding) |
+                      0;
+
+            return { sampleRate, channelCount, frameLength };
+        }
+
+        return undefined;
     }
 
     destroy() {}
