@@ -80,7 +80,7 @@ const WebVTTParser = {
 
             // Update offsets for new discontinuities
             if (currCC && currCC.new) {
-                if (localTime) {
+                if (localTime !== undefined) {
                     // When local time is provided, offset = discontinuity start time - local time
                     cueOffset = vttCCs.ccOffset = currCC.start;
                 } else {
@@ -88,8 +88,8 @@ const WebVTTParser = {
                 }
             }
 
-            if (presentationTime && !localTime) {
-                // If we have MPEGTS but no LOCAL time, offset = presentation time + discontinuity offset
+            if (presentationTime) {
+                // If we have MPEGTS, offset = presentation time + discontinuity offset
                 cueOffset = presentationTime + vttCCs.ccOffset - vttCCs.presentationOffset;
             }
 
