@@ -222,7 +222,7 @@ See sample code below to listen to errors:
       default:
         break;
     }
-  }
+  });
 ```
 
 #### Fatal Error Recovery
