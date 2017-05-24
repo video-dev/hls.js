@@ -429,7 +429,7 @@ class TimelineController extends EventHandler {
         }
     }
 
-    onFragParsingInitSegment(data) {
+    onFragParsingInitSegment() {
         // If we receive this event, we have not received an onInitPtsFound event. This happens when the video track has no samples (but has audio)
         // In order to have captions display, which requires an initPTS, we assume one of 90000
         if (typeof this.initPTS === 'undefined') {
