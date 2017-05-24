@@ -40,53 +40,28 @@ import ID3 from '../demux/id3';
 
   // feed incoming data to the front of the parsing pipeline
   append(data, timeOffset, contiguous, accurateTimeOffset) {
-    var track,
-        config, frameLength, frameDuration, frameIndex, offset, headerLength, stamp, length, aacSample, start;
+    var track = this._audioTrack,
+        id3Data = ID3.getID3Data(data, 0),
+        pts = 90 * ID3.getTimeStamp(id3Data),
+        frameIndex = 0,
+        stamp = pts,
+        length = data.length,
+        offset = id3Data.length,
+        config, frameIndex, offset;
 
-    let id3Data = ID3.getID3Data(data, 0);
-    let pts = 90 * ID3.getTimeStamp(id3Data);
-    stamp = pts;
-
-    let id3Samples = [];
-    id3Samples.push({ pts: pts, dts : pts, data : id3Data });
-
-    track = this._audioTrack;
-    start = id3Data.length;
-
-    frameIndex = 0;
-
-    offset = start;
-    length = data.length
+    let id3Samples = [{ pts: stamp, dts : stamp, data : id3Data }];
 
     while (offset < length - 1) {
       if (ADTS.isHeader(data, offset) && (offset + 5) < length) {
-        if (!track.samplerate) {
-          config = ADTS.getAudioConfig(this.observer,data, offset, track.manifestCodec);
-          track.config = config.config;
-          track.samplerate = config.samplerate;
-          track.channelCount = config.channelCount;
-          track.codec = config.codec;
-          logger.log(`parsed codec:${track.codec},rate:${config.samplerate},nb channel:${config.channelCount}`);
-        }
-
-        frameDuration = 1024 * 90000 / track.samplerate;
-
-        var aacFrame = this.parseAACFrame(data, offset, pts, frameIndex, frameDuration);
-        if (aacFrame) {
-          stamp = aacFrame.stamp;
-          headerLength = aacFrame.headerLength;
-          frameLength = aacFrame.frameLength;
-
-          //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
-
-          aacSample = { unit: data.subarray(offset + headerLength, offset + headerLength + frameLength), pts: stamp, dts: stamp };
-          track.samples.push(aacSample);
-          track.len += frameLength;
-          offset += frameLength + headerLength;
+        ADTS.initTrackConfig(track, this.observer, data, offset, track.manifestCodec);
+        var frame = ADTS.appendFrame(track, data, offset, pts, frameIndex);
+        if (frame) {
+          offset += frame.length;
+          stamp = frame.sample.pts;
           frameIndex++;
         } else {
           //logger.log('Unable to parse AAC frame');
-          offset++;
+          break;
         }
       } else if (ID3.isHeader(data, offset)) {
         id3Data = ID3.getID3Data(data, offset);
@@ -105,28 +80,6 @@ import ID3 from '../demux/id3';
                         timeOffset,
                         contiguous,
                         accurateTimeOffset);
-  }
-
-  parseAACFrame(data, offset, pts, frameIndex, frameDuration) {
-    var headerLength, frameLength, stamp;
-    var length = data.length;
-
-    // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
-    headerLength = (!!(data[offset + 1] & 0x01) ? 7 : 9);
-    // retrieve frame size
-    frameLength = ((data[offset + 3] & 0x03) << 11) |
-                   (data[offset + 4] << 3) |
-                  ((data[offset + 5] & 0xE0) >>> 5);
-    frameLength  -= headerLength;
-    //stamp = pes.pts;
-
-    if ((frameLength > 0) && ((offset + headerLength + frameLength) <= length)) {
-      stamp = pts + frameIndex * frameDuration;
-      //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
-      return { headerLength, frameLength, stamp }
-    }
-
-    return undefined;
   }
 
   destroy() {

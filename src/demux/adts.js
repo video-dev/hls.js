@@ -138,6 +138,63 @@ import {ErrorTypes, ErrorDetails} from '../errors';
       }
     }
     return false;
+  },
+
+  initTrackConfig: function(track, observer, data, offset, audioCodec) {
+    if (!track.samplerate) {
+      var config = this.getAudioConfig(observer, data, offset, audioCodec);
+      track.config = config.config;
+      track.samplerate = config.samplerate;
+      track.channelCount = config.channelCount;
+      track.codec = config.codec;
+      track.manifestCodec = config.manifestCodec;
+      logger.log(`parsed codec:${track.codec},rate:${config.samplerate},nb channel:${config.channelCount}`);
+    }
+  },
+
+  getFrameDuration: function(samplerate) {
+    return 1024 * 90000 / samplerate;
+  },
+
+  appendFrame: function(track, data, offset, pts, frameIndex) {
+    var frameDuration = this.getFrameDuration(track.samplerate);
+    var aacFrame = this.parseFrameHeader(data, offset, pts, frameIndex, frameDuration);
+    if (aacFrame) {
+      var stamp = aacFrame.stamp;
+      var headerLength = aacFrame.headerLength;
+      var frameLength = aacFrame.frameLength;
+
+      //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
+      var aacSample = { unit: data.subarray(offset + headerLength, offset + headerLength + frameLength), pts: stamp, dts: stamp };
+
+      track.samples.push(aacSample);
+      track.len += frameLength;
+
+      return { sample: aacSample, length: frameLength + headerLength };
+    }
+
+    return undefined;
+  },
+
+  parseFrameHeader: function(data, offset, pts, frameIndex, frameDuration) {
+    var headerLength, frameLength, stamp;
+    var length = data.length;
+
+    // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
+    headerLength = (!!(data[offset + 1] & 0x01) ? 7 : 9);
+    // retrieve frame size
+    frameLength = ((data[offset + 3] & 0x03) << 11) |
+                   (data[offset + 4] << 3) |
+                  ((data[offset + 5] & 0xE0) >>> 5);
+    frameLength -= headerLength;
+
+    if ((frameLength > 0) && ((offset + headerLength + frameLength) <= length)) {
+      stamp = pts + frameIndex * frameDuration;
+      //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
+      return { headerLength, frameLength, stamp }
+    }
+
+    return undefined;
   }
 };
 
