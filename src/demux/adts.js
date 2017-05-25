@@ -158,11 +158,11 @@ import {ErrorTypes, ErrorDetails} from '../errors';
 
   appendFrame: function(track, data, offset, pts, frameIndex) {
     var frameDuration = this.getFrameDuration(track.samplerate);
-    var aacFrame = this.parseFrameHeader(data, offset, pts, frameIndex, frameDuration);
-    if (aacFrame) {
-      var stamp = aacFrame.stamp;
-      var headerLength = aacFrame.headerLength;
-      var frameLength = aacFrame.frameLength;
+    var header = this.parseFrameHeader(data, offset, pts, frameIndex, frameDuration);
+    if (header) {
+      var stamp = header.stamp;
+      var headerLength = header.headerLength;
+      var frameLength = header.frameLength;
 
       //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
       var aacSample = { unit: data.subarray(offset + headerLength, offset + headerLength + frameLength), pts: stamp, dts: stamp };

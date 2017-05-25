@@ -887,7 +887,8 @@
       }
     }
 
-    while (offset < (len - 1)) {
+    //scan for aac samples
+    while (offset < len) {
       if (ADTS.isHeader(data, offset) && (offset + 5) < len) {
         var frame = ADTS.appendFrame(track, data, offset, pts, frameIndex);
         if (frame) {
@@ -915,7 +916,27 @@
   }
 
   _parseMPEGPES(pes) {
-    MpegAudio.parse(this._audioTrack, pes.data, 0, pes.pts);
+    var data = pes.data;
+    var length = data.length;
+    var frameIndex = 0;
+    var offset = 0;
+    var pts = pes.pts;
+
+    while (offset < length) {
+      if (MpegAudio.isHeader(data, offset)) {
+        var frame = MpegAudio.appendFrame(this._audioTrack, data, offset, pts, frameIndex);
+        if (frame) {
+          offset += frame.length;
+          frameIndex++;
+        } else {
+          //logger.log('Unable to parse Mpeg audio frame');
+          break;
+        }
+      } else {
+        //nothing found, keep looking
+        offset++;
+      }
+    }
   }
 
   _parseID3PES(pes) {
