@@ -243,6 +243,23 @@ class MP4Remuxer {
         //   logger.log(avcSample.pts + '/' + avcSample.dts + ',' + unitsString + avcSample.units.length);
         // }
 
+        // PTS is coded on 33bits, and can loop from -2^32 to 2^32
+        // ptsNormalize will make PTS/DTS value monotonic, we use last known DTS value as reference value
+        let nextAvcDts;
+        // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
+        if (contiguous) {
+            // if parsed fragment is contiguous with last one, let's use last DTS value as reference
+            nextAvcDts = this.nextAvcDts;
+        } else {
+            // if not contiguous, let's use target timeOffset
+            nextAvcDts = timeOffset * timeScale;
+        }
+
+        inputSamples.forEach(function(sample) {
+            sample.pts = ptsNormalize(sample.pts - initDTS, nextAvcDts);
+            sample.dts = ptsNormalize(sample.dts - initDTS, nextAvcDts);
+        });
+
         // sort video samples by DTS then PTS then demux id order
         inputSamples.sort(function(a, b) {
             const deltadts = a.dts - b.dts;
@@ -267,22 +284,10 @@ class MP4Remuxer {
             }
         }
 
-        // PTS is coded on 33bits, and can loop from -2^32 to 2^32
-        // ptsNormalize will make PTS/DTS value monotonic, we use last known DTS value as reference value
-        let nextAvcDts;
-        // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
-        if (contiguous) {
-            // if parsed fragment is contiguous with last one, let's use last DTS value as reference
-            nextAvcDts = this.nextAvcDts;
-        } else {
-            // if not contiguous, let's use target timeOffset
-            nextAvcDts = timeOffset * timeScale;
-        }
-
         // compute first DTS and last DTS, normalize them against reference value
         let sample = inputSamples[0];
-        firstDTS = Math.max(ptsNormalize(sample.dts - initDTS, nextAvcDts), 0);
-        firstPTS = Math.max(ptsNormalize(sample.pts - initDTS, nextAvcDts), 0);
+        firstDTS = Math.max(sample.dts, 0);
+        firstPTS = Math.max(sample.pts, 0);
 
         // check timestamp continuity accross consecutive fragments (this is to remove inter-fragment gap/hole)
         let delta = Math.round((firstDTS - nextAvcDts) / 90);
@@ -315,9 +320,8 @@ class MP4Remuxer {
 
         // compute lastPTS/lastDTS
         sample = inputSamples[inputSamples.length - 1];
-        lastDTS = Math.max(ptsNormalize(sample.dts - initDTS, nextAvcDts), 0);
-        lastPTS = Math.max(ptsNormalize(sample.pts - initDTS, nextAvcDts), 0);
-        lastPTS = Math.max(lastPTS, lastDTS);
+        lastDTS = Math.max(sample.dts, 0);
+        lastPTS = Math.max(sample.pts, 0, lastDTS);
 
         const isSafari = this.isSafari;
         // on Safari let's signal the same sample duration for all samples
@@ -350,17 +354,11 @@ class MP4Remuxer {
                 sample.dts = firstDTS + i * mp4SampleDuration;
             } else {
                 // ensure sample monotonic DTS
-                sample.dts = Math.max(
-                    ptsNormalize(sample.dts - initDTS, nextAvcDts),
-                    firstDTS
-                );
+                sample.dts = Math.max(sample.dts, firstDTS);
             }
             // we normalize PTS against nextAvcDts, we also substract initDTS (some streams don't start @ PTS O)
             // and we ensure that computed value is greater or equal than sample DTS
-            sample.pts = Math.max(
-                ptsNormalize(sample.pts - initDTS, nextAvcDts),
-                sample.dts
-            );
+            sample.pts = Math.max(sample.pts, sample.dts);
         }
 
         /* concatenate the video data and construct the mdat in place
@@ -536,9 +534,6 @@ class MP4Remuxer {
             newStamp,
             nextAudioPts;
 
-        track.samples.sort(function(a, b) {
-            return a.pts - b.pts;
-        });
         inputSamples = track.samples;
 
         // for audio samples, also consider consecutive fragments as being contiguous (even if a level switch occurs),
@@ -563,6 +558,18 @@ class MP4Remuxer {
             // if fragments are not contiguous, let's use timeOffset to compute next Audio PTS
             nextAudioPts = timeOffset * inputTimeScale;
         }
+
+        // compute normalized PTS
+        inputSamples.forEach(function(sample) {
+            sample.pts = ptsNormalize(sample.pts - initDTS, nextAudioPts);
+        });
+
+        // sort based on normalized PTS (this is to avoid sorting issues in case timestamp
+        // reloop in the middle of our samples array)
+        inputSamples.sort(function(a, b) {
+            return a.pts - b.pts;
+        });
+
         // If the audio track is missing samples, the frames seem to get "left-shifted" within the
         // resulting mp4 segment, causing sync issues and leaving gaps at the end of the audio segment.
         // In an effort to prevent this from happening, we inject frames here where there are gaps.
@@ -578,7 +585,7 @@ class MP4Remuxer {
             ) {
                 // First, let's see how far off this frame is from where we expect it to be
                 var sample = inputSamples[i],
-                    ptsNorm = ptsNormalize(sample.pts - initDTS, nextAudioPts),
+                    ptsNorm = sample.pts,
                     delta = ptsNorm - nextPtsNorm;
 
                 const duration = Math.abs(1000 * delta / inputTimeScale);
@@ -659,17 +666,15 @@ class MP4Remuxer {
             unit = audioSample.unit;
             pts = audioSample.pts - initDTS;
             dts = audioSample.dts - initDTS;
+            ptsnorm = pts;
+            dtsnorm = dts;
             //logger.log(`Audio/PTS:${Math.round(pts/90)}`);
             // if not first sample
             if (lastDTS !== undefined) {
-                ptsnorm = ptsNormalize(pts, lastDTS);
-                dtsnorm = ptsNormalize(dts, lastDTS);
                 mp4Sample.duration = Math.round(
                     (dtsnorm - lastDTS) / scaleFactor
                 );
             } else {
-                ptsnorm = ptsNormalize(pts, nextAudioPts);
-                dtsnorm = ptsNormalize(dts, nextAudioPts);
                 let delta = Math.round(
                         1000 * (ptsnorm - nextAudioPts) / inputTimeScale
                     ),
