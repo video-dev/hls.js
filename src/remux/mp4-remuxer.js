@@ -699,9 +699,9 @@ class MP4Remuxer {
                             logger.log(
                                 `drop overlapping AAC sample, expected/parsed/delta:${(
                                     nextAudioPts / inputTimeScale
-                                ).toFixed(3)}s/${(
-                                    ptsnorm / inputTimeScale
-                                ).toFixed(3)}s/${-delta}ms`
+                                ).toFixed(3)}s/${(pts / inputTimeScale).toFixed(
+                                    3
+                                )}s/${-delta}ms`
                             );
                             track.len -= unit.byteLength;
                             continue;
