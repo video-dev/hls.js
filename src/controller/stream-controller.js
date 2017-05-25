@@ -583,7 +583,7 @@ class StreamController extends EventHandler {
                     } else {
                         frag = null;
                     }
-                } else {
+                } else if (frag.backtracked) {
                     // Only backtrack a max of 1 consecutive fragment to prevent sliding back too far when little or no frags start with keyframes
                     if (nextFrag && nextFrag.backtracked) {
                         logger.warn(
