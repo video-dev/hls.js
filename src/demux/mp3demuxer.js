@@ -37,7 +37,7 @@ class MP3Demuxer {
             // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
             // More info http://www.mp3-tech.org/programmer/frame_header.html
             for (
-                offset = id3.length,
+                offset = id3Data.length,
                     length = Math.min(data.length - 1, offset + 100);
                 offset < length;
                 offset++
@@ -55,47 +55,30 @@ class MP3Demuxer {
     append(data, timeOffset, contiguous, accurateTimeOffset) {
         let id3Data = ID3.getID3Data(data, 0);
         let pts = 90 * ID3.getTimeStamp(id3Data);
-        var afterID3 = id3Data.length;
-        var offset;
+        var offset = id3Data.length;
         var length = data.length;
         var frameIndex = 0,
             stamp = 0;
         var track = this._audioTrack;
 
-        let id3Samples = [];
-        id3Samples.push({ pts: pts, dts: pts, data: id3Data });
+        let id3Samples = [{ pts: pts, dts: pts, data: id3Data }];
 
-        while (offset < length - 1) {
+        while (offset < length) {
             if (MpegAudio.isHeader(data, offset)) {
-                // Using http://www.datavoyage.com/mpgscript/mpeghdr.htm as a reference
-                if (offset + 24 > length) {
-                    break;
-                }
-
-                var frame = this.parseMpegAudioFrame(data, offset);
-                if (frame && offset + frame.frameLength < length) {
-                    var frameDuration = 1152 * 90000 / frame.sampleRate;
-                    stamp = pts + frameIndex * frameDuration;
-                    var sampleData = data.subarray(
-                        offset,
-                        offset + frameLength
-                    );
-
-                    track.config = [];
-                    track.channelCount = frame.channelCount;
-                    track.samplerate = sampleRate;
-                    track.samples.push({
-                        unit: data.subarray(offset, offset + frameLength),
-                        pts: stamp,
-                        dts: stamp
-                    });
-                    track.len += data.length;
-
+                var frame = MpegAudio.appendFrame(
+                    track,
+                    data,
+                    offset,
+                    pts,
+                    frameIndex
+                );
+                if (frame) {
+                    offset += frame.length;
+                    stamp = frame.sample.pts;
                     frameIndex++;
-                    offset += frameLength;
                 } else {
                     //logger.log('Unable to parse Mpeg audio frame');
-                    offset++;
+                    break;
                 }
             } else if (ID3.isHeader(data, offset)) {
                 id3Data = ID3.getID3Data(data, offset);
@@ -116,38 +99,6 @@ class MP3Demuxer {
             contiguous,
             accurateTimeOffset
         );
-    }
-
-    parseMpegAudioFrame(data, offset) {
-        var headerB = (data[offset + 1] >> 3) & 3;
-        var headerC = (data[offset + 1] >> 1) & 3;
-        var headerE = (data[offset + 2] >> 4) & 15;
-        var headerF = (data[offset + 2] >> 2) & 3;
-        var headerG = !!(data[offset + 2] & 2);
-        if (headerB !== 1 && headerE !== 0 && headerE !== 15 && headerF !== 3) {
-            var columnInBitrates =
-                headerB === 3 ? 3 - headerC : headerC === 3 ? 3 : 4;
-            var bitRate =
-                MpegAudio.BitratesMap[columnInBitrates * 14 + headerE - 1] *
-                1000;
-            var columnInSampleRates = headerB === 3 ? 0 : headerB === 2 ? 1 : 2;
-            var sampleRate =
-                MpegAudio.SamplingRateMap[columnInSampleRates * 3 + headerF];
-            var padding = headerG ? 1 : 0;
-            var channelCount = data[offset + 3] >> 6 === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
-            var frameLength =
-                headerC === 3
-                    ? ((headerB === 3 ? 12 : 6) * bitRate / sampleRate +
-                          padding) <<
-                      2
-                    : ((headerB === 3 ? 144 : 72) * bitRate / sampleRate +
-                          padding) |
-                      0;
-
-            return { sampleRate, channelCount, frameLength };
-        }
-
-        return undefined;
     }
 
     destroy() {}
