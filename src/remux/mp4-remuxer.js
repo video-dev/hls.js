@@ -466,15 +466,15 @@ class MP4Remuxer {
     if (accurateTimeOffset && track.isAAC) {
       for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length; ) {
         // First, let's see how far off this frame is from where we expect it to be
-        var sample = inputSamples[i],
-            pts = sample.pts,
-            delta = pts - nextPts;
+        var sample = inputSamples[i], delta;
+        pts = sample.pts;
+        delta = pts - nextPts;
 
         const duration = Math.abs(1000*delta/inputTimeScale);
 
         // If we're overlapping by more than a duration, drop this sample
         if (delta <= -inputSampleDuration) {
-          logger.warn(`Dropping 1 audio frame @ ${(nextPtsNorm/inputTimeScale).toFixed(3)}s due to ${duration} ms overlap.`);
+          logger.warn(`Dropping 1 audio frame @ ${(nextPts/inputTimeScale).toFixed(3)}s due to ${duration} ms overlap.`);
           inputSamples.splice(i, 1);
           track.len -= sample.unit.length;
           // Don't touch nextPtsNorm or i
@@ -486,7 +486,7 @@ class MP4Remuxer {
         // 3: currentTime (aka nextPtsNorm) is not 0
         else if (delta >= inputSampleDuration && duration < MAX_SILENT_FRAME_DURATION && nextPts) {
           var missing = Math.round(delta / inputSampleDuration);
-          logger.warn(`Injecting ${missing} audio frame @ ${(nextPtsNorm/inputTimeScale).toFixed(3)}s due to ${Math.round(1000*delta/inputTimeScale)} ms gap.`);
+          logger.warn(`Injecting ${missing} audio frame @ ${(nextPts/inputTimeScale).toFixed(3)}s due to ${Math.round(1000*delta/inputTimeScale)} ms gap.`);
           for (var j = 0; j < missing; j++) {
             newStamp = Math.max(nextPts,0);
             fillFrame = AAC.getSilentFrame(track.manifestCodec || track.codec,track.channelCount);
