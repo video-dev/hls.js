@@ -581,8 +581,9 @@ class MP4Remuxer {
             for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length; ) {
                 // First, let's see how far off this frame is from where we expect it to be
                 var sample = inputSamples[i],
-                    pts = sample.pts,
-                    delta = pts - nextPts;
+                    delta;
+                pts = sample.pts;
+                delta = pts - nextPts;
 
                 const duration = Math.abs(1000 * delta / inputTimeScale);
 
@@ -590,7 +591,7 @@ class MP4Remuxer {
                 if (delta <= -inputSampleDuration) {
                     logger.warn(
                         `Dropping 1 audio frame @ ${(
-                            nextPtsNorm / inputTimeScale
+                            nextPts / inputTimeScale
                         ).toFixed(3)}s due to ${duration} ms overlap.`
                     );
                     inputSamples.splice(i, 1);
@@ -608,7 +609,7 @@ class MP4Remuxer {
                     var missing = Math.round(delta / inputSampleDuration);
                     logger.warn(
                         `Injecting ${missing} audio frame @ ${(
-                            nextPtsNorm / inputTimeScale
+                            nextPts / inputTimeScale
                         ).toFixed(3)}s due to ${Math.round(
                             1000 * delta / inputTimeScale
                         )} ms gap.`
