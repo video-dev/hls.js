@@ -127,7 +127,7 @@ import {logger} from '../utils/logger';
 
   /**
    * Returns true if the ID3 frame is an Elementary Stream timestamp frame
-   * @param {ID3 frame} frame 
+   * @param {ID3 frame} frame
    */
   static isTimeStampFrame(frame) {
     return (frame && frame.key === 'PRIV' && frame.info === 'com.apple.streaming.transportStreamTimestamp');
@@ -151,7 +151,7 @@ import {logger} from '../utils/logger';
   /**
    * Returns an array of ID3 frames found in all the ID3 tags in the id3Data
    * @param {Uint8Array} id3Data - The ID3 data containing one or more ID3 tags
-   * @return {ID3 frame[]} - Array for ID3 frame objects
+   * @return {ID3 frame[]} - Array of ID3 frame objects
    */
   static getID3Frames(id3Data) {
     let offset = 0;
