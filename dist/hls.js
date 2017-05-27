@@ -631,7 +631,7 @@ var hlsDefaultConfig = exports.hlsDefaultConfig = {
       highBufferWatchdogPeriod: 3, // used by stream-controller
       nudgeOffset: 0.1, // used by stream-controller
       nudgeMaxRetry: 3, // used by stream-controller
-      maxFragLookUpTolerance: 0.2, // used by stream-controller
+      maxFragLookUpTolerance: 0.25, // used by stream-controller
       liveSyncDurationCount: 3, // used by stream-controller
       liveMaxLatencyDurationCount: Infinity, // used by stream-controller
       liveSyncDuration: undefined, // used by stream-controller
@@ -10140,15 +10140,14 @@ var Hls = function () {
   _createClass(Hls, null, [{
     key: 'isSupported',
     value: function isSupported() {
-      window.MediaSource = window.MediaSource || window.WebKitMediaSource;
-      window.SourceBuffer = window.SourceBuffer || window.WebKitSourceBuffer;
+      var mediaSource = window.MediaSource = window.MediaSource || window.WebKitMediaSource;
+      var sourceBuffer = window.SourceBuffer = window.SourceBuffer || window.WebKitSourceBuffer;
+      var isTypeSupported = mediaSource && typeof mediaSource.isTypeSupported === 'function' && mediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
 
-      var isTypeSupported = window.MediaSource && typeof window.MediaSource.isTypeSupported === 'function' && window.MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
-      var hasSupportedSourceBuffer = window.SourceBuffer && window.SourceBuffer.prototype && typeof window.SourceBuffer.prototype.appendBuffer === 'function' && typeof window.SourceBuffer.prototype.remove === 'function';
-      var isSafari = navigator.vendor && navigator.vendor.indexOf('Apple') > -1;
-
-      // safari does not expose SourceBuffer globally so checking SourceBuffer.prototype is impossible
-      return isTypeSupported && (hasSupportedSourceBuffer || isSafari);
+      // if SourceBuffer is exposed ensure its API is valid
+      // safari and old version of Chrome doe not expose SourceBuffer globally so checking SourceBuffer.prototype is impossible
+      var sourceBufferValidAPI = !sourceBuffer || sourceBuffer.prototype && typeof sourceBuffer.prototype.appendBuffer === 'function' && typeof sourceBuffer.prototype.remove === 'function';
+      return isTypeSupported && sourceBufferValidAPI;
     }
   }, {
     key: 'version',
