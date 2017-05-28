@@ -1,8 +1,6 @@
 /**
  * ID3 parser
  */
-import { logger } from '../utils/logger';
-
 class ID3 {
     /**
      * Returns true if an ID3 header can be found at offset in data
@@ -85,13 +83,12 @@ class ID3 {
     }
 
     /**
-     * Returns any adjacent ID3 tags found in data starting at offset as one block of data
+     * Returns any adjacent ID3 tags found in data starting at offset, as one block of data
      * @param {Uint8Array} data - The data to search in
      * @param {number} offset - The offset at which to start searching
      * @return {Uint8Array} - The block of data containing any ID3 tags found
      */
     static getID3Data(data, offset) {
-        let tags = [];
         const front = offset;
         let length = 0;
 

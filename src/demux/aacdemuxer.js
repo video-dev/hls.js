@@ -60,10 +60,7 @@ class AACDemuxer {
             frameIndex = 0,
             stamp = pts,
             length = data.length,
-            offset = id3Data.length,
-            config,
-            frameIndex,
-            offset;
+            offset = id3Data.length;
 
         let id3Samples = [{ pts: stamp, dts: stamp, data: id3Data }];
 
@@ -88,7 +85,7 @@ class AACDemuxer {
                     stamp = frame.sample.pts;
                     frameIndex++;
                 } else {
-                    //logger.log('Unable to parse AAC frame');
+                    logger.log('Unable to parse AAC frame');
                     break;
                 }
             } else if (ID3.isHeader(data, offset)) {
