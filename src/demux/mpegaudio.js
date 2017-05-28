@@ -1,8 +1,6 @@
 /**
  *  MPEG parser helper
  */
-import { logger } from '../utils/logger';
-
 const MpegAudio = {
 
     BitratesMap: [

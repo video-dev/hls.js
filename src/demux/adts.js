@@ -191,7 +191,7 @@ import {ErrorTypes, ErrorDetails} from '../errors';
     if ((frameLength > 0) && ((offset + headerLength + frameLength) <= length)) {
       stamp = pts + frameIndex * frameDuration;
       //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
-      return { headerLength, frameLength, stamp }
+      return { headerLength, frameLength, stamp };
     }
 
     return undefined;
