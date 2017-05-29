@@ -367,7 +367,7 @@ class BufferController extends EventHandler {
       return;
     }
     for (let type in sourceBuffer) {
-      if (sourceBuffer[type].updating) {
+      if (sourceBuffer[type] && sourceBuffer[type].updating) {
         // can't set duration whilst a buffer is updating
         return;
       }
