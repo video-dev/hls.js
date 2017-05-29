@@ -81,7 +81,8 @@ class MP4Remuxer {
                         videoTrack,
                         timeOffset,
                         contiguous,
-                        audioTrackLength
+                        audioTrackLength,
+                        accurateTimeOffset
                     );
                 }
             } else {
@@ -91,7 +92,8 @@ class MP4Remuxer {
                     videoData = this.remuxVideo(
                         videoTrack,
                         timeOffset,
-                        contiguous
+                        contiguous,
+                        accurateTimeOffset
                     );
                 }
                 if (videoData && audioTrack.codec) {
@@ -213,7 +215,13 @@ class MP4Remuxer {
         }
     }
 
-    remuxVideo(track, timeOffset, contiguous, audioTrackLength) {
+    remuxVideo(
+        track,
+        timeOffset,
+        contiguous,
+        audioTrackLength,
+        accurateTimeOffset
+    ) {
         var offset = 8,
             timeScale = track.timescale,
             mp4SampleDuration,
@@ -243,18 +251,34 @@ class MP4Remuxer {
         //   logger.log(avcSample.pts + '/' + avcSample.dts + ',' + unitsString + avcSample.units.length);
         // }
 
-        // PTS is coded on 33bits, and can loop from -2^32 to 2^32
-        // ptsNormalize will make PTS/DTS value monotonic, we use last known DTS value as reference value
-        let nextAvcDts;
-        // contiguous fragments are consecutive fragments from same quality level (same level, new SN = old SN + 1)
-        if (contiguous) {
-            // if parsed fragment is contiguous with last one, let's use last DTS value as reference
-            nextAvcDts = this.nextAvcDts;
-        } else {
+        // if parsed fragment is contiguous with last one, let's use last DTS value as reference
+        let nextAvcDts = this.nextAvcDts;
+
+        const isSafari = this.isSafari;
+
+        // Safari does not like overlapping DTS on consecutive fragments. let's use nextAvcDts to overcome this if fragments are consecutive
+        if (isSafari) {
+            // also consider consecutive fragments as being contiguous (even if a level switch occurs),
+            // for sake of clarity:
+            // consecutive fragments are frags with
+            //  - less than 100ms gaps between new time offset (if accurate) and next expected PTS OR
+            //  - less than 200 ms PTS gaps (timeScale/5)
+            contiguous |=
+                inputSamples.length &&
+                nextAvcDts &&
+                ((accurateTimeOffset &&
+                    Math.abs(timeOffset - nextAvcDts / timeScale) < 0.1) ||
+                    Math.abs(inputSamples[0].pts - nextAvcDts - initDTS) <
+                        timeScale / 5);
+        }
+
+        if (!contiguous) {
             // if not contiguous, let's use target timeOffset
             nextAvcDts = timeOffset * timeScale;
         }
 
+        // PTS is coded on 33bits, and can loop from -2^32 to 2^32
+        // ptsNormalize will make PTS/DTS value monotonic, we use last known DTS value as reference value
         inputSamples.forEach(function(sample) {
             sample.pts = ptsNormalize(sample.pts - initDTS, nextAvcDts);
             sample.dts = ptsNormalize(sample.dts - initDTS, nextAvcDts);
@@ -323,7 +347,6 @@ class MP4Remuxer {
         lastDTS = Math.max(sample.dts, 0);
         lastPTS = Math.max(sample.pts, 0, lastDTS);
 
-        const isSafari = this.isSafari;
         // on Safari let's signal the same sample duration for all samples
         // sample duration (as expected by trun MP4 boxes), should be the delta between sample DTS
         // set this constant duration as being the avg delta between consecutive DTS.
