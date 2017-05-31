@@ -1,6 +1,0 @@
-#EXTM3U
-#EXT-X-VERSION:3
-#EXT-X-ALLOW-CACHE:NO
-## Created with Z/IPStream X/2 v1.10.09
-#EXT-X-STREAM-INF:BANDWIDTH=106240,CODECS="mp4a.40.2"
-aac-playlist.m3u8
