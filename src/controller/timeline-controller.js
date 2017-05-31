@@ -40,7 +40,8 @@ class TimelineController extends EventHandler {
             Event.MANIFEST_LOADED,
             Event.FRAG_LOADED,
             Event.LEVEL_SWITCHING,
-            Event.INIT_PTS_FOUND
+            Event.INIT_PTS_FOUND,
+            Event.FRAG_PARSING_INIT_SEGMENT
         );
 
         this.hls = hls;
@@ -289,7 +290,7 @@ class TimelineController extends EventHandler {
                     textTrack.mode = track.default ? 'showing' : 'hidden';
                     this.textTracks.push(textTrack);
                 });
-            } else if (!sameTracks) {
+            } else if (!sameTracks && this.tracks && this.tracks.length) {
                 // Create a list of tracks for the provider to consume
                 let tracksList = this.tracks.map(track => {
                     return {
@@ -425,6 +426,14 @@ class TimelineController extends EventHandler {
                 var ccdatas = this.extractCea608Data(data.samples[i].bytes);
                 this.cea608Parser.addData(data.samples[i].pts, ccdatas);
             }
+        }
+    }
+
+    onFragParsingInitSegment() {
+        // If we receive this event, we have not received an onInitPtsFound event. This happens when the video track has no samples (but has audio)
+        // In order to have captions display, which requires an initPTS, we assume one of 90000
+        if (typeof this.initPTS === 'undefined') {
+            this.onInitPtsFound({ initPTS: 90000 });
         }
     }
 
