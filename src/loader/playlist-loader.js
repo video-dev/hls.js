@@ -436,7 +436,7 @@ class PlaylistLoader extends EventHandler {
     return level;
   }
 
-  loadsuccess(response, stats, context, xhr) {
+  loadsuccess(response, stats, context, networkDetails=null) {
     var string = response.data,
         url = response.url,
         type = context.type,
@@ -461,22 +461,22 @@ class PlaylistLoader extends EventHandler {
             levelDetails.tload = stats.tload;
         if (type === 'manifest') {
         // first request, stream manifest (no master playlist), fire manifest loaded event with level details
-          hls.trigger(Event.MANIFEST_LOADED, {levels: [{url: url, details : levelDetails}], audioTracks : [], url: url, stats: stats, xhr: xhr});
+          hls.trigger(Event.MANIFEST_LOADED, {levels: [{url: url, details : levelDetails}], audioTracks : [], url: url, stats: stats, networkDetails: networkDetails});
         }
         stats.tparsed = performance.now();
         if (levelDetails.targetduration) {
           if (isLevel) {
-            hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: level || 0, id: id || 0, stats: stats, xhr: xhr});
+            hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: level || 0, id: id || 0, stats: stats, networkDetails: networkDetails});
           } else {
             if (type === 'audioTrack') {
-              hls.trigger(Event.AUDIO_TRACK_LOADED, {details: levelDetails, id: id, stats: stats, xhr: xhr});
+              hls.trigger(Event.AUDIO_TRACK_LOADED, {details: levelDetails, id: id, stats: stats, networkDetails: networkDetails});
             }
             else if (type === 'subtitleTrack') {
-              hls.trigger(Event.SUBTITLE_TRACK_LOADED, {details: levelDetails, id: id, stats: stats, xhr: xhr});
+              hls.trigger(Event.SUBTITLE_TRACK_LOADED, {details: levelDetails, id: id, stats: stats, networkDetails: networkDetails});
             }
           }
         } else {
-          hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'invalid targetduration', xhr: xhr});
+          hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'invalid targetduration', networkDetails: networkDetails});
         }
       } else {
         let levels = this.parseMasterPlaylist(string, url);
@@ -499,17 +499,17 @@ class PlaylistLoader extends EventHandler {
               audioTracks.unshift({ type : 'main', name : 'main'});
             }
           }
-          hls.trigger(Event.MANIFEST_LOADED, {levels, audioTracks, subtitles, url, stats, xhr});
+          hls.trigger(Event.MANIFEST_LOADED, {levels, audioTracks, subtitles, url, stats, networkDetails});
         } else {
-          hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'no level found in manifest', xhr: xhr});
+          hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'no level found in manifest', networkDetails: networkDetails});
         }
       }
     } else {
-      hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'no EXTM3U delimiter', xhr: xhr});
+      hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'no EXTM3U delimiter', networkDetails: networkDetails});
     }
   }
 
-  loaderror(response, context, xhr) {
+  loaderror(response, context, networkDetails=null) {
     var details, fatal,loader = context.loader;
     switch(context.type) {
       case 'manifest':
@@ -529,10 +529,10 @@ class PlaylistLoader extends EventHandler {
       loader.abort();
       this.loaders[context.type] = undefined;
     }
-    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: loader.url, loader: loader, response: response, context : context, xhr: xhr});
+    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: loader.url, loader: loader, response: response, context : context, networkDetails: networkDetails});
   }
 
-  loadtimeout(stats, context) {
+  loadtimeout(stats, context, networkDetails=null) {
     var details, fatal, loader = context.loader;
     switch(context.type) {
       case 'manifest':
@@ -552,7 +552,7 @@ class PlaylistLoader extends EventHandler {
       loader.abort();
       this.loaders[context.type] = undefined;
     }
-    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: loader.url, loader: loader, context : context});
+    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: loader.url, loader: loader, context : context, networkDetails: networkDetails});
   }
 }
 

@@ -636,7 +636,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param [stats.bw] {number} - download bandwidth in bit/s
       @param stats.total {number} - total nb of bytes
       @param context {object} - loader context
-      @param xhr {object} - the XHR object used in the request
+      @param networkDetails {object} - loader network details (the xhr for default loaders)
 
       @callback onProgressCallback
       @param stats {object} - loading stats
@@ -647,14 +647,14 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param [stats.bw] {number} - current download bandwidth in bit/s (monitored by ABR controller to control emergency switch down)
       @param context {object} - loader context
       @param data {string/arraybuffer} - onProgress data (should be defined only if context.progressData === true)
-      @param xhr {object} - the XHR object used in the request
+      @param networkDetails {object} - loader network details (the xhr for default loaders)
 
       @callback onErrorCallback
       @param error {object} - error data
       @param error.code {number} - error status code
       @param error.text {string} - error description
       @param context {object} - loader context
-      @param xhr {object} - the XHR object used in the request
+      @param networkDetails {object} - loader network details (the xhr for default loaders)
 
       @callback onTimeoutCallback
       @param stats {object} - loading stats
