@@ -493,7 +493,7 @@ class PlaylistLoader extends EventHandler {
         return level;
     }
 
-    loadsuccess(response, stats, context) {
+    loadsuccess(response, stats, context, xhr) {
         var string = response.data,
             url = response.url,
             type = context.type,
@@ -529,7 +529,8 @@ class PlaylistLoader extends EventHandler {
                         levels: [{ url: url, details: levelDetails }],
                         audioTracks: [],
                         url: url,
-                        stats: stats
+                        stats: stats,
+                        xhr: xhr
                     });
                 }
                 stats.tparsed = performance.now();
@@ -539,20 +540,23 @@ class PlaylistLoader extends EventHandler {
                             details: levelDetails,
                             level: level || 0,
                             id: id || 0,
-                            stats: stats
+                            stats: stats,
+                            xhr: xhr
                         });
                     } else {
                         if (type === 'audioTrack') {
                             hls.trigger(Event.AUDIO_TRACK_LOADED, {
                                 details: levelDetails,
                                 id: id,
-                                stats: stats
+                                stats: stats,
+                                xhr: xhr
                             });
                         } else if (type === 'subtitleTrack') {
                             hls.trigger(Event.SUBTITLE_TRACK_LOADED, {
                                 details: levelDetails,
                                 id: id,
-                                stats: stats
+                                stats: stats,
+                                xhr: xhr
                             });
                         }
                     }
@@ -562,7 +566,8 @@ class PlaylistLoader extends EventHandler {
                         details: ErrorDetails.MANIFEST_PARSING_ERROR,
                         fatal: true,
                         url: url,
-                        reason: 'invalid targetduration'
+                        reason: 'invalid targetduration',
+                        xhr: xhr
                     });
                 }
             } else {
@@ -605,7 +610,8 @@ class PlaylistLoader extends EventHandler {
                         audioTracks,
                         subtitles,
                         url,
-                        stats
+                        stats,
+                        xhr
                     });
                 } else {
                     hls.trigger(Event.ERROR, {
@@ -613,7 +619,8 @@ class PlaylistLoader extends EventHandler {
                         details: ErrorDetails.MANIFEST_PARSING_ERROR,
                         fatal: true,
                         url: url,
-                        reason: 'no level found in manifest'
+                        reason: 'no level found in manifest',
+                        xhr: xhr
                     });
                 }
             }
@@ -623,12 +630,13 @@ class PlaylistLoader extends EventHandler {
                 details: ErrorDetails.MANIFEST_PARSING_ERROR,
                 fatal: true,
                 url: url,
-                reason: 'no EXTM3U delimiter'
+                reason: 'no EXTM3U delimiter',
+                xhr: xhr
             });
         }
     }
 
-    loaderror(response, context) {
+    loaderror(response, context, xhr) {
         var details,
             fatal,
             loader = context.loader;
@@ -657,7 +665,8 @@ class PlaylistLoader extends EventHandler {
             url: loader.url,
             loader: loader,
             response: response,
-            context: context
+            context: context,
+            xhr: xhr
         });
     }
 

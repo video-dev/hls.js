@@ -70,7 +70,8 @@ class XhrLoader {
             // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
             this.callbacks.onError(
                 { code: xhr.status, text: e.message },
-                context
+                context,
+                xhr
             );
             return;
         }
@@ -127,7 +128,7 @@ class XhrLoader {
                     }
                     stats.loaded = stats.total = len;
                     let response = { url: xhr.responseURL, data: data };
-                    this.callbacks.onSuccess(response, stats, context);
+                    this.callbacks.onSuccess(response, stats, context, xhr);
                 } else {
                     // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
                     if (
@@ -137,7 +138,8 @@ class XhrLoader {
                         logger.error(`${status} while loading ${context.url}`);
                         this.callbacks.onError(
                             { code: status, text: xhr.statusText },
-                            context
+                            context,
+                            xhr
                         );
                     } else {
                         // retry
@@ -177,7 +179,9 @@ class XhrLoader {
     }
 
     loadprogress(event) {
-        var stats = this.stats;
+        var xhr = event.currentTarget,
+            stats = this.stats;
+
         stats.loaded = event.loaded;
         if (event.lengthComputable) {
             stats.total = event.total;
@@ -185,7 +189,7 @@ class XhrLoader {
         let onProgress = this.callbacks.onProgress;
         if (onProgress) {
             // last args is to provide on progress data
-            onProgress(stats, this.context, null);
+            onProgress(stats, this.context, null, xhr);
         }
     }
 }
