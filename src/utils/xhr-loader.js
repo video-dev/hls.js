@@ -145,7 +145,7 @@ class XhrLoader {
 
   loadtimeout() {
     logger.warn(`timeout while loading ${this.context.url}` );
-    this.callbacks.onTimeout(this.stats, this.context);
+    this.callbacks.onTimeout(this.stats, this.context, null);
   }
 
   loadprogress(event) {
@@ -158,7 +158,7 @@ class XhrLoader {
     }
     let onProgress = this.callbacks.onProgress;
     if (onProgress) {
-      // last args is to provide on progress data
+      // third arg is to provide on progress data
       onProgress(stats, this.context, null, xhr);
     }
   }
