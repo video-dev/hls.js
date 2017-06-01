@@ -35,7 +35,7 @@
     "lint": "jshint src/",
     "serve": "http-server -p 8000 .",
     "open": "opener http://localhost:8000/demo/",
-    "live-reload": "live-reload --port 8001 dist/",
+    "live-reload": "livereload dist/",
     "dev": "npm run builddist && (npm run open -s & parallelshell 'npm run live-reload -s' 'npm run serve -s' 'npm run watch -s')"
   },
   "devDependencies": {
@@ -54,7 +54,7 @@
     "exorcist": "^0.4.0",
     "http-server": "^0.9.0",
     "jshint": "^2.9.4",
-    "live-reload": "^1.1.0",
+    "livereload": "^0.6.2",
     "mocha": "^3.0.2",
     "mversion": "^1.10.1",
     "opener": "^1.4.0",
