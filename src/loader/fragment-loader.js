@@ -69,7 +69,7 @@ class FragmentLoader extends EventHandler {
         loader.load(loaderContext, loaderConfig, loaderCallbacks);
     }
 
-    loadsuccess(response, stats, context, xhr) {
+    loadsuccess(response, stats, context, networkDetails = null) {
         let payload = response.data,
             frag = context.frag;
         // detach fragment loader on load success
@@ -79,11 +79,11 @@ class FragmentLoader extends EventHandler {
             payload: payload,
             frag: frag,
             stats: stats,
-            xhr: xhr
+            networkDetails: networkDetails
         });
     }
 
-    loaderror(response, context, xhr) {
+    loaderror(response, context, networkDetails = null) {
         let loader = context.loader;
         if (loader) {
             loader.abort();
@@ -95,11 +95,11 @@ class FragmentLoader extends EventHandler {
             fatal: false,
             frag: context.frag,
             response: response,
-            xhr: xhr
+            networkDetails: networkDetails
         });
     }
 
-    loadtimeout(stats, context) {
+    loadtimeout(stats, context, networkDetails = null) {
         let loader = context.loader;
         if (loader) {
             loader.abort();
@@ -109,19 +109,20 @@ class FragmentLoader extends EventHandler {
             type: ErrorTypes.NETWORK_ERROR,
             details: ErrorDetails.FRAG_LOAD_TIMEOUT,
             fatal: false,
-            frag: context.frag
+            frag: context.frag,
+            networkDetails: networkDetails
         });
     }
 
     // data will be used for progressive parsing
-    loadprogress(stats, context, data, xhr) {
+    loadprogress(stats, context, data, networkDetails = null) {
         // jshint ignore:line
         let frag = context.frag;
         frag.loaded = stats.loaded;
         this.hls.trigger(Event.FRAG_LOAD_PROGRESS, {
             frag: frag,
             stats: stats,
-            xhr: xhr
+            networkDetails: networkDetails
         });
     }
 }

@@ -493,7 +493,7 @@ class PlaylistLoader extends EventHandler {
         return level;
     }
 
-    loadsuccess(response, stats, context, xhr) {
+    loadsuccess(response, stats, context, networkDetails = null) {
         var string = response.data,
             url = response.url,
             type = context.type,
@@ -530,7 +530,7 @@ class PlaylistLoader extends EventHandler {
                         audioTracks: [],
                         url: url,
                         stats: stats,
-                        xhr: xhr
+                        networkDetails: networkDetails
                     });
                 }
                 stats.tparsed = performance.now();
@@ -541,7 +541,7 @@ class PlaylistLoader extends EventHandler {
                             level: level || 0,
                             id: id || 0,
                             stats: stats,
-                            xhr: xhr
+                            networkDetails: networkDetails
                         });
                     } else {
                         if (type === 'audioTrack') {
@@ -549,14 +549,14 @@ class PlaylistLoader extends EventHandler {
                                 details: levelDetails,
                                 id: id,
                                 stats: stats,
-                                xhr: xhr
+                                networkDetails: networkDetails
                             });
                         } else if (type === 'subtitleTrack') {
                             hls.trigger(Event.SUBTITLE_TRACK_LOADED, {
                                 details: levelDetails,
                                 id: id,
                                 stats: stats,
-                                xhr: xhr
+                                networkDetails: networkDetails
                             });
                         }
                     }
@@ -567,7 +567,7 @@ class PlaylistLoader extends EventHandler {
                         fatal: true,
                         url: url,
                         reason: 'invalid targetduration',
-                        xhr: xhr
+                        networkDetails: networkDetails
                     });
                 }
             } else {
@@ -611,7 +611,7 @@ class PlaylistLoader extends EventHandler {
                         subtitles,
                         url,
                         stats,
-                        xhr
+                        networkDetails
                     });
                 } else {
                     hls.trigger(Event.ERROR, {
@@ -620,7 +620,7 @@ class PlaylistLoader extends EventHandler {
                         fatal: true,
                         url: url,
                         reason: 'no level found in manifest',
-                        xhr: xhr
+                        networkDetails: networkDetails
                     });
                 }
             }
@@ -631,12 +631,12 @@ class PlaylistLoader extends EventHandler {
                 fatal: true,
                 url: url,
                 reason: 'no EXTM3U delimiter',
-                xhr: xhr
+                networkDetails: networkDetails
             });
         }
     }
 
-    loaderror(response, context, xhr) {
+    loaderror(response, context, networkDetails = null) {
         var details,
             fatal,
             loader = context.loader;
@@ -666,11 +666,11 @@ class PlaylistLoader extends EventHandler {
             loader: loader,
             response: response,
             context: context,
-            xhr: xhr
+            networkDetails: networkDetails
         });
     }
 
-    loadtimeout(stats, context) {
+    loadtimeout(stats, context, networkDetails = null) {
         var details,
             fatal,
             loader = context.loader;
@@ -698,7 +698,8 @@ class PlaylistLoader extends EventHandler {
             fatal: fatal,
             url: loader.url,
             loader: loader,
-            context: context
+            context: context,
+            networkDetails: networkDetails
         });
     }
 }
