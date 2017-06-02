@@ -842,7 +842,7 @@
         startOffset = 0,
         aacOverFlow = this.aacOverFlow,
         aacLastPTS = this.aacLastPTS,
-        config, frameLength, frameDuration, frameIndex, offset, headerLength, stamp, len, aacSample;
+        frameDuration, frameIndex, offset, stamp, len;
     if (aacOverFlow) {
       var tmp = new Uint8Array(aacOverFlow.byteLength + data.byteLength);
       tmp.set(aacOverFlow, 0);
@@ -852,7 +852,7 @@
     }
     // look for ADTS header (0xFFFx)
     for (offset = startOffset, len = data.length; offset < len - 1; offset++) {
-      if ((data[offset] === 0xff) && (data[offset+1] & 0xf0) === 0xf0) {
+      if (ADTS.isHeader(data, offset)) {
         break;
       }
     }
@@ -872,18 +872,10 @@
         return;
       }
     }
-    if (!track.samplerate) {
-      const audioCodec = this.audioCodec;
-      config = ADTS.getAudioConfig(this.observer,data, offset, audioCodec);
-      track.config = config.config;
-      track.samplerate = config.samplerate;
-      track.channelCount = config.channelCount;
-      track.codec = config.codec;
-      track.manifestCodec = config.manifestCodec;
-      logger.log(`parsed codec:${track.codec},rate:${config.samplerate},nb channel:${config.channelCount}`);
-    }
+
+    ADTS.initTrackConfig(track, this.observer, data, offset, this.audioCodec);
     frameIndex = 0;
-    frameDuration = 1024 * 90000 / track.samplerate;
+    frameDuration = ADTS.getFrameDuration(track.samplerate);
 
     // if last AAC frame is overflowing, we should ensure timestamps are contiguous:
     // first sample PTS should be equal to last sample PTS + frameDuration
@@ -895,34 +887,24 @@
       }
     }
 
-    while ((offset + 5) < len) {
-      // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
-      headerLength = (!!(data[offset + 1] & 0x01) ? 7 : 9);
-      // retrieve frame size
-      frameLength = ((data[offset + 3] & 0x03) << 11) |
-                     (data[offset + 4] << 3) |
-                    ((data[offset + 5] & 0xE0) >>> 5);
-      frameLength  -= headerLength;
-      //stamp = pes.pts;
-
-      if ((frameLength > 0) && ((offset + headerLength + frameLength) <= len)) {
-        stamp = pts + frameIndex * frameDuration;
-        //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
-        aacSample = {unit: data.subarray(offset + headerLength, offset + headerLength + frameLength), pts: stamp, dts: stamp};
-        track.samples.push(aacSample);
-        track.len += frameLength;
-        offset += frameLength + headerLength;
-        frameIndex++;
-        // look for ADTS header (0xFFFx)
-        for ( ; offset < (len - 1); offset++) {
-          if ((data[offset] === 0xff) && ((data[offset + 1] & 0xf0) === 0xf0)) {
-            break;
-          }
+    //scan for aac samples
+    while (offset < len) {
+      if (ADTS.isHeader(data, offset) && (offset + 5) < len) {
+        var frame = ADTS.appendFrame(track, data, offset, pts, frameIndex);
+        if (frame) {
+          offset += frame.length;
+          stamp = frame.sample.pts;
+          frameIndex++;
+        } else {
+          //logger.log('Unable to parse AAC frame');
+          break;
         }
       } else {
-        break;
+        //nothing found, keep looking
+        offset++;
       }
     }
+
     if (offset < len) {
       aacOverFlow = data.subarray(offset, len);
       //logger.log(`AAC: overflow detected:${len-offset}`);
@@ -934,7 +916,27 @@
   }
 
   _parseMPEGPES(pes) {
-    MpegAudio.parse(this._audioTrack, pes.data, 0, pes.pts);
+    var data = pes.data;
+    var length = data.length;
+    var frameIndex = 0;
+    var offset = 0;
+    var pts = pes.pts;
+
+    while (offset < length) {
+      if (MpegAudio.isHeader(data, offset)) {
+        var frame = MpegAudio.appendFrame(this._audioTrack, data, offset, pts, frameIndex);
+        if (frame) {
+          offset += frame.length;
+          frameIndex++;
+        } else {
+          //logger.log('Unable to parse Mpeg audio frame');
+          break;
+        }
+      } else {
+        //nothing found, keep looking
+        offset++;
+      }
+    }
   }
 
   _parseID3PES(pes) {
