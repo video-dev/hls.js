@@ -30,24 +30,19 @@ class MP3Demuxer {
 
     static probe(data) {
         // check if data contains ID3 timestamp and MPEG sync word
-        var id3 = new ID3(data),
-            offset,
-            length;
-        if (id3.hasTimeStamp) {
+        var offset, length;
+        let id3Data = ID3.getID3Data(data, 0);
+        if (id3Data && ID3.getTimeStamp(id3Data) !== undefined) {
             // Look for MPEG header | 1111 1111 | 111X XYZX | where X can be either 0 or 1 and Y or Z should be 1
             // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
             // More info http://www.mp3-tech.org/programmer/frame_header.html
             for (
-                offset = id3.length,
+                offset = id3Data.length,
                     length = Math.min(data.length - 1, offset + 100);
                 offset < length;
                 offset++
             ) {
-                if (
-                    data[offset] === 0xff &&
-                    (data[offset + 1] & 0xe0) === 0xe0 &&
-                    (data[offset + 1] & 0x06) !== 0x00
-                ) {
+                if (MpegAudio.isHeader(data, offset)) {
                     //logger.log('MPEG sync word found !');
                     return true;
                 }
@@ -58,35 +53,47 @@ class MP3Demuxer {
 
     // feed incoming data to the front of the parsing pipeline
     append(data, timeOffset, contiguous, accurateTimeOffset) {
-        var id3 = new ID3(data);
-        var pts = 90 * id3.timeStamp;
-        var afterID3 = id3.length;
-        var offset, length;
+        let id3Data = ID3.getID3Data(data, 0);
+        let pts = 90 * ID3.getTimeStamp(id3Data);
+        var offset = id3Data.length;
+        var length = data.length;
+        var frameIndex = 0,
+            stamp = 0;
+        var track = this._audioTrack;
 
-        // Look for MPEG header
-        for (
-            offset = afterID3, length = data.length;
-            offset < length - 1;
-            offset++
-        ) {
-            if (
-                data[offset] === 0xff &&
-                (data[offset + 1] & 0xe0) === 0xe0 &&
-                (data[offset + 1] & 0x06) !== 0x00
-            ) {
-                break;
+        let id3Samples = [{ pts: pts, dts: pts, data: id3Data }];
+
+        while (offset < length) {
+            if (MpegAudio.isHeader(data, offset)) {
+                var frame = MpegAudio.appendFrame(
+                    track,
+                    data,
+                    offset,
+                    pts,
+                    frameIndex
+                );
+                if (frame) {
+                    offset += frame.length;
+                    stamp = frame.sample.pts;
+                    frameIndex++;
+                } else {
+                    //logger.log('Unable to parse Mpeg audio frame');
+                    break;
+                }
+            } else if (ID3.isHeader(data, offset)) {
+                id3Data = ID3.getID3Data(data, offset);
+                id3Samples.push({ pts: stamp, dts: stamp, data: id3Data });
+                offset += id3Data.length;
+            } else {
+                //nothing found, keep looking
+                offset++;
             }
         }
 
-        MpegAudio.parse(this._audioTrack, data, id3.length, pts);
-
         this.remuxer.remux(
-            this._audioTrack,
+            track,
             { samples: [] },
-            {
-                samples: [{ pts: pts, dts: pts, data: id3.payload }],
-                inputTimeScale: 90000
-            },
+            { samples: id3Samples, inputTimeScale: 90000 },
             { samples: [] },
             timeOffset,
             contiguous,

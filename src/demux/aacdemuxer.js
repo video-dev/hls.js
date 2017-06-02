@@ -31,23 +31,19 @@ class AACDemuxer {
 
     static probe(data) {
         // check if data contains ID3 timestamp and ADTS sync word
-        var id3 = new ID3(data),
-            offset,
-            length;
-        if (id3.hasTimeStamp) {
+        var offset, length;
+        let id3Data = ID3.getID3Data(data, 0);
+        if (id3Data && ID3.getTimeStamp(id3Data) !== undefined) {
             // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
             // Layer bits (position 14 and 15) in header should be always 0 for ADTS
             // More info https://wiki.multimedia.cx/index.php?title=ADTS
             for (
-                offset = id3.length,
+                offset = id3Data.length,
                     length = Math.min(data.length - 1, offset + 100);
                 offset < length;
                 offset++
             ) {
-                if (
-                    data[offset] === 0xff &&
-                    (data[offset + 1] & 0xf6) === 0xf0
-                ) {
+                if (ADTS.isHeader(data, offset)) {
                     //logger.log('ADTS sync word found !');
                     return true;
                 }
@@ -58,100 +54,54 @@ class AACDemuxer {
 
     // feed incoming data to the front of the parsing pipeline
     append(data, timeOffset, contiguous, accurateTimeOffset) {
-        var track,
-            id3 = new ID3(data),
-            pts = 90 * id3.timeStamp,
-            config,
-            frameLength,
-            frameDuration,
-            frameIndex,
-            offset,
-            headerLength,
-            stamp,
-            length,
-            aacSample;
+        var track = this._audioTrack,
+            id3Data = ID3.getID3Data(data, 0),
+            pts = 90 * ID3.getTimeStamp(id3Data),
+            frameIndex = 0,
+            stamp = pts,
+            length = data.length,
+            offset = id3Data.length;
 
-        track = this._audioTrack;
+        let id3Samples = [{ pts: stamp, dts: stamp, data: id3Data }];
 
-        // Look for ADTS header
-        for (
-            offset = id3.length, length = data.length;
-            offset < length - 1;
-            offset++
-        ) {
-            if (data[offset] === 0xff && (data[offset + 1] & 0xf6) === 0xf0) {
-                break;
-            }
-        }
-
-        if (!track.samplerate) {
-            config = ADTS.getAudioConfig(
-                this.observer,
-                data,
-                offset,
-                track.manifestCodec
-            );
-            track.config = config.config;
-            track.samplerate = config.samplerate;
-            track.channelCount = config.channelCount;
-            track.codec = config.codec;
-            logger.log(
-                `parsed codec:${track.codec},rate:${
-                    config.samplerate
-                },nb channel:${config.channelCount}`
-            );
-        }
-        frameIndex = 0;
-        frameDuration = 1024 * 90000 / track.samplerate;
-        while (offset + 5 < length) {
-            // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
-            headerLength = !!(data[offset + 1] & 0x01) ? 7 : 9;
-            // retrieve frame size
-            frameLength =
-                ((data[offset + 3] & 0x03) << 11) |
-                (data[offset + 4] << 3) |
-                ((data[offset + 5] & 0xe0) >>> 5);
-            frameLength -= headerLength;
-            //stamp = pes.pts;
-
-            if (
-                frameLength > 0 &&
-                offset + headerLength + frameLength <= length
-            ) {
-                stamp = pts + frameIndex * frameDuration;
-                //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
-                aacSample = {
-                    unit: data.subarray(
-                        offset + headerLength,
-                        offset + headerLength + frameLength
-                    ),
-                    pts: stamp,
-                    dts: stamp
-                };
-                track.samples.push(aacSample);
-                track.len += frameLength;
-                offset += frameLength + headerLength;
-                frameIndex++;
-                // look for ADTS header (0xFFFx)
-                for (; offset < length - 1; offset++) {
-                    if (
-                        data[offset] === 0xff &&
-                        (data[offset + 1] & 0xf6) === 0xf0
-                    ) {
-                        break;
-                    }
+        while (offset < length - 1) {
+            if (ADTS.isHeader(data, offset) && offset + 5 < length) {
+                ADTS.initTrackConfig(
+                    track,
+                    this.observer,
+                    data,
+                    offset,
+                    track.manifestCodec
+                );
+                var frame = ADTS.appendFrame(
+                    track,
+                    data,
+                    offset,
+                    pts,
+                    frameIndex
+                );
+                if (frame) {
+                    offset += frame.length;
+                    stamp = frame.sample.pts;
+                    frameIndex++;
+                } else {
+                    logger.log('Unable to parse AAC frame');
+                    break;
                 }
+            } else if (ID3.isHeader(data, offset)) {
+                id3Data = ID3.getID3Data(data, offset);
+                id3Samples.push({ pts: stamp, dts: stamp, data: id3Data });
+                offset += id3Data.length;
             } else {
-                break;
+                //nothing found, keep looking
+                offset++;
             }
         }
+
         this.remuxer.remux(
             track,
             { samples: [] },
-            {
-                samples: [{ pts: pts, dts: pts, data: id3.payload }],
-                inputTimeScale: 90000
-            },
+            { samples: id3Samples, inputTimeScale: 90000 },
             { samples: [] },
             timeOffset,
             contiguous,
