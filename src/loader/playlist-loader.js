@@ -493,7 +493,7 @@ class PlaylistLoader extends EventHandler {
         return level;
     }
 
-    loadsuccess(response, stats, context) {
+    loadsuccess(response, stats, context, networkDetails = null) {
         var string = response.data,
             url = response.url,
             type = context.type,
@@ -529,7 +529,8 @@ class PlaylistLoader extends EventHandler {
                         levels: [{ url: url, details: levelDetails }],
                         audioTracks: [],
                         url: url,
-                        stats: stats
+                        stats: stats,
+                        networkDetails: networkDetails
                     });
                 }
                 stats.tparsed = performance.now();
@@ -539,20 +540,23 @@ class PlaylistLoader extends EventHandler {
                             details: levelDetails,
                             level: level || 0,
                             id: id || 0,
-                            stats: stats
+                            stats: stats,
+                            networkDetails: networkDetails
                         });
                     } else {
                         if (type === 'audioTrack') {
                             hls.trigger(Event.AUDIO_TRACK_LOADED, {
                                 details: levelDetails,
                                 id: id,
-                                stats: stats
+                                stats: stats,
+                                networkDetails: networkDetails
                             });
                         } else if (type === 'subtitleTrack') {
                             hls.trigger(Event.SUBTITLE_TRACK_LOADED, {
                                 details: levelDetails,
                                 id: id,
-                                stats: stats
+                                stats: stats,
+                                networkDetails: networkDetails
                             });
                         }
                     }
@@ -562,7 +566,8 @@ class PlaylistLoader extends EventHandler {
                         details: ErrorDetails.MANIFEST_PARSING_ERROR,
                         fatal: true,
                         url: url,
-                        reason: 'invalid targetduration'
+                        reason: 'invalid targetduration',
+                        networkDetails: networkDetails
                     });
                 }
             } else {
@@ -605,7 +610,8 @@ class PlaylistLoader extends EventHandler {
                         audioTracks,
                         subtitles,
                         url,
-                        stats
+                        stats,
+                        networkDetails
                     });
                 } else {
                     hls.trigger(Event.ERROR, {
@@ -613,7 +619,8 @@ class PlaylistLoader extends EventHandler {
                         details: ErrorDetails.MANIFEST_PARSING_ERROR,
                         fatal: true,
                         url: url,
-                        reason: 'no level found in manifest'
+                        reason: 'no level found in manifest',
+                        networkDetails: networkDetails
                     });
                 }
             }
@@ -623,12 +630,13 @@ class PlaylistLoader extends EventHandler {
                 details: ErrorDetails.MANIFEST_PARSING_ERROR,
                 fatal: true,
                 url: url,
-                reason: 'no EXTM3U delimiter'
+                reason: 'no EXTM3U delimiter',
+                networkDetails: networkDetails
             });
         }
     }
 
-    loaderror(response, context) {
+    loaderror(response, context, networkDetails = null) {
         var details,
             fatal,
             loader = context.loader;
@@ -657,11 +665,12 @@ class PlaylistLoader extends EventHandler {
             url: loader.url,
             loader: loader,
             response: response,
-            context: context
+            context: context,
+            networkDetails: networkDetails
         });
     }
 
-    loadtimeout(stats, context) {
+    loadtimeout(stats, context, networkDetails = null) {
         var details,
             fatal,
             loader = context.loader;
@@ -689,7 +698,8 @@ class PlaylistLoader extends EventHandler {
             fatal: fatal,
             url: loader.url,
             loader: loader,
-            context: context
+            context: context,
+            networkDetails: networkDetails
         });
     }
 }

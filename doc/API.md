@@ -2,7 +2,7 @@
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
- 
+
 
 - [Getting started](#getting-started)
   - [First step: setup and support](#first-step-setup-and-support)
@@ -636,6 +636,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param [stats.bw] {number} - download bandwidth in bit/s
       @param stats.total {number} - total nb of bytes
       @param context {object} - loader context
+      @param networkDetails {object} - loader network details (the xhr for default loaders)
 
       @callback onProgressCallback
       @param stats {object} - loading stats
@@ -646,12 +647,14 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param [stats.bw] {number} - current download bandwidth in bit/s (monitored by ABR controller to control emergency switch down)
       @param context {object} - loader context
       @param data {string/arraybuffer} - onProgress data (should be defined only if context.progressData === true)
+      @param networkDetails {object} - loader network details (the xhr for default loaders)
 
       @callback onErrorCallback
       @param error {object} - error data
       @param error.code {number} - error status code
       @param error.text {string} - error description
       @param context {object} - loader context
+      @param networkDetails {object} - loader network details (the xhr for default loaders)
 
       @callback onTimeoutCallback
       @param stats {object} - loading stats
@@ -881,7 +884,7 @@ If `abrBandWidthUpFactor * bandwidth average < level.bitrate` then ABR can switc
 (default: `false`)
 
 max bitrate used in ABR by avg measured bitrate
-i.e. if bitrate signaled in variant manifest for a given level is 2Mb/s but average bitrate measured on this level is 2.5Mb/s, 
+i.e. if bitrate signaled in variant manifest for a given level is 2Mb/s but average bitrate measured on this level is 2.5Mb/s,
 then if config value is set to `true`, ABR will use 2.5 Mb/s for this quality level.
 
 ### `minAutoBitrate`
@@ -1142,16 +1145,16 @@ import Hls from 'hls.js';
 let myHls = new Hls({
   pLoader: function (config) {
     let loader = new Hls.DefaultConfig.loader(config);
-    
+
     this.abort = () => loader.abort();
     this.destroy = () => loader.destroy();
     this.load = (context, config, callbacks) => {
       let {type, url} = context;
-  
+
       if (type === 'manifest') {
         console.log(`Manifest ${url} will be loaded.`);
       }
-  
+
       loader.load(context, config, callbacks);
     };
   }
