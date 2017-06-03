@@ -185,7 +185,7 @@ class DemuxerInline {
             remuxer.resetInitSegment();
         }
         if (discontinuity) {
-            demuxer.resetTimeStamp();
+            demuxer.resetTimeStamp(defaultInitPTS);
             remuxer.resetTimeStamp(defaultInitPTS);
         }
         if (typeof demuxer.setDecryptData === 'function') {
