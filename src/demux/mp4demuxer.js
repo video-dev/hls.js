@@ -248,7 +248,7 @@ static offsetStartDTS(initData,fragment,timeOffset) {
       MP4Demuxer.findBox(traf, ['tfdt']).map(function(tfdt) {
         var version = tfdt.data[tfdt.start];
         var baseMediaDecodeTime = MP4Demuxer.readUint32(tfdt, 4);
-        if (version == 0) {
+        if (version === 0) {
           MP4Demuxer.writeUint32(tfdt, 4, baseMediaDecodeTime - timeOffset*timescale);
         } else {
           baseMediaDecodeTime *= Math.pow(2, 32);
