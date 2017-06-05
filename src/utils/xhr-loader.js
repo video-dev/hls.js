@@ -51,20 +51,27 @@ class XhrLoader {
     stats.tfirst = 0;
     stats.loaded = 0;
     const xhrSetup = this.xhrSetup;
-    if (xhrSetup) {
-      try {
-        xhrSetup(xhr, context.url);
-      } catch(e) {
-        // fix xhrSetup: (xhr, url) => {xhr.setRequestHeader("Content-Language", "test");}
-        // not working, as xhr.setRequestHeader expects xhr.readyState === OPEN
-        xhr.open('GET', context.url, true);
-        xhrSetup(xhr, context.url);        
+
+    try {
+      if (xhrSetup) {
+        try {
+          xhrSetup(xhr, context.url);
+        } catch (e) {
+          // fix xhrSetup: (xhr, url) => {xhr.setRequestHeader("Content-Language", "test");}
+          // not working, as xhr.setRequestHeader expects xhr.readyState === OPEN
+          xhr.open('GET', context.url, true);
+          xhrSetup(xhr, context.url);
+        }
       }
+      if (!xhr.readyState) {
+        xhr.open('GET', context.url, true);
+      }
+    } catch (e) {
+      // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
+      this.callbacks.onError({ code : xhr.status, text: e.message }, context, xhr);
+      return;
     }
 
-    if (!xhr.readyState) {
-      xhr.open('GET', context.url, true);
-    }
     if (context.rangeEnd) {
       xhr.setRequestHeader('Range','bytes=' + context.rangeStart + '-' + (context.rangeEnd-1));
     }
@@ -111,12 +118,12 @@ class XhrLoader {
           }
           stats.loaded = stats.total = len;
           let response = { url : xhr.responseURL, data : data };
-          this.callbacks.onSuccess(response, stats, context);
+          this.callbacks.onSuccess(response, stats, context, xhr);
         } else {
             // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
           if (stats.retry >= config.maxRetry || (status >= 400 && status < 499)) {
             logger.error(`${status} while loading ${context.url}` );
-            this.callbacks.onError({ code : status, text : xhr.statusText}, context);
+            this.callbacks.onError({ code : status, text : xhr.statusText}, context, xhr);
           } else {
             // retry
             logger.warn(`${status} while loading ${context.url}, retrying in ${this.retryDelay}...`);
@@ -138,19 +145,21 @@ class XhrLoader {
 
   loadtimeout() {
     logger.warn(`timeout while loading ${this.context.url}` );
-    this.callbacks.onTimeout(this.stats, this.context);
+    this.callbacks.onTimeout(this.stats, this.context, null);
   }
 
   loadprogress(event) {
-    var stats = this.stats;
+    var xhr = event.currentTarget,
+        stats = this.stats;
+
     stats.loaded = event.loaded;
     if (event.lengthComputable) {
       stats.total = event.total;
     }
     let onProgress = this.callbacks.onProgress;
     if (onProgress) {
-      // last args is to provide on progress data
-      onProgress(stats, this.context, null);
+      // third arg is to provide on progress data
+      onProgress(stats, this.context, null, xhr);
     }
   }
 }

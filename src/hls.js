@@ -12,6 +12,7 @@ import KeyLoader from './loader/key-loader';
 
 import StreamController from  './controller/stream-controller';
 import LevelController from  './controller/level-controller';
+import ID3TrackController from './controller/id3-track-controller';
 
 import {logger, enableLogs} from './utils/logger';
 import EventEmitter from 'events';
@@ -25,10 +26,19 @@ class Hls {
   }
 
   static isSupported() {
-    window.MediaSource = window.MediaSource || window.WebKitMediaSource;
-    return (window.MediaSource &&
-            typeof window.MediaSource.isTypeSupported === 'function' &&
-            window.MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"'));
+    const mediaSource = window.MediaSource = window.MediaSource || window.WebKitMediaSource;
+    const sourceBuffer = window.SourceBuffer = window.SourceBuffer || window.WebKitSourceBuffer;
+    const isTypeSupported = mediaSource &&
+                            typeof mediaSource.isTypeSupported === 'function' &&
+                            mediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
+
+    // if SourceBuffer is exposed ensure its API is valid
+    // safari and old version of Chrome doe not expose SourceBuffer globally so checking SourceBuffer.prototype is impossible
+    const sourceBufferValidAPI = !sourceBuffer ||
+                                 (sourceBuffer.prototype &&
+                                 typeof sourceBuffer.prototype.appendBuffer === 'function' &&
+                                 typeof sourceBuffer.prototype.remove === 'function');
+    return isTypeSupported && sourceBufferValidAPI;
   }
 
   static get Events() {
@@ -98,6 +108,7 @@ class Hls {
     const playListLoader = new PlaylistLoader(this);
     const fragmentLoader = new FragmentLoader(this);
     const keyLoader = new KeyLoader(this);
+    const id3TrackController = new ID3TrackController(this);
 
     // network controllers
     const levelController = this.levelController = new LevelController(this);
@@ -111,7 +122,7 @@ class Hls {
     }
     this.networkControllers = networkControllers;
 
-    let coreComponents = [ playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController ];
+    let coreComponents = [ playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController, id3TrackController ];
 
     // optional audio track and subtitle controller
     Controller = config.audioTrackController;
