@@ -67,8 +67,8 @@ class DemuxerInline {
       const typeSupported = this.typeSupported;
       const config = this.config;
       const muxConfig = [ {demux : TSDemuxer,  remux : MP4Remuxer},
-                          {demux : MP3Demuxer, remux : MP4Remuxer},
                           {demux : AACDemuxer, remux : MP4Remuxer},
+                          {demux : MP3Demuxer, remux : MP4Remuxer},
                           {demux : MP4Demuxer, remux : PassThroughRemuxer}];
 
       // probe for content type
