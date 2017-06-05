@@ -88,13 +88,7 @@ class AudioStreamController extends EventHandler {
             //If we are waiting we need to demux/remux the waiting frag
             //With the new initPTS
             if (this.state === State.WAITING_INIT_PTS) {
-                logger.log('sending pending audio frag to demuxer');
-                this.state = State.FRAG_LOADING;
-                //We have audio frag waiting or video pts
-                //Let process it
-                this.onFragLoaded(this.waitingFragment);
-                //Lets clean the waiting frag
-                this.waitingFragment = null;
+                this.tick();
             }
         }
     }
