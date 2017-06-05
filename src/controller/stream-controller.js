@@ -214,8 +214,13 @@ class StreamController extends EventHandler {
         }
         // determine next load level
         let level = hls.nextLoadLevel,
-            levelInfo = this.levels[level],
-            levelBitrate = levelInfo.bitrate,
+            levelInfo = this.levels[level];
+
+        if (!levelInfo) {
+            return;
+        }
+
+        let levelBitrate = levelInfo.bitrate,
             maxBufLen;
 
         // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
@@ -281,12 +286,12 @@ class StreamController extends EventHandler {
                 fragPrevious.start + fragPrevious.duration
             );
             // if everything (almost) til the end is buffered, let's signal eos
-            // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference
-            // using half frag duration should help cope with these cases.
+            // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference (audio/video offsets...)
+            // tolerate up to one frag duration to cope with these cases.
             // also cope with almost zero last frag duration (max last frag duration with 200ms) refer to https://github.com/video-dev/hls.js/pull/657
             if (
                 duration - Math.max(bufferInfo.end, fragPrevious.start) <=
-                Math.max(0.2, fragPrevious.duration / 2)
+                Math.max(0.2, fragPrevious.duration)
             ) {
                 // Finalize the media stream
                 let data = {};
@@ -549,55 +554,62 @@ class StreamController extends EventHandler {
             const prevFrag = fragments[curSNIdx - 1];
             const nextFrag = fragments[curSNIdx + 1];
             //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
-            if (sameLevel && frag.sn === fragPrevious.sn) {
-                if (frag.sn < levelDetails.endSN) {
-                    let deltaPTS = fragPrevious.deltaPTS;
-                    // if there is a significant delta between audio and video, larger than max allowed hole,
-                    // and if previous remuxed fragment did not start with a keyframe. (fragPrevious.dropped)
-                    // let's try to load previous fragment again to get last keyframe
-                    // then we will reload again current fragment (that way we should be able to fill the buffer hole ...)
-                    if (
-                        deltaPTS &&
-                        deltaPTS > config.maxBufferHole &&
-                        fragPrevious.dropped &&
-                        curSNIdx
-                    ) {
-                        frag = prevFrag;
-                        logger.warn(
-                            `SN just loaded, with large PTS gap between audio and video, maybe frag is not starting with a keyframe ? load previous one to try to overcome this`
-                        );
-                        // decrement previous frag load counter to avoid frag loop loading error when next fragment will get reloaded
-                        fragPrevious.loadCounter--;
-                    } else {
-                        frag = nextFrag;
-                        logger.log(`SN just loaded, load next one: ${frag.sn}`);
-                    }
-                } else {
-                    frag = null;
-                }
-            } else if (frag.dropped && !sameLevel) {
-                // Only backtrack a max of 1 consecutive fragment to prevent sliding back too far when little or no frags start with keyframes
-                if (nextFrag && nextFrag.backtracked) {
-                    logger.warn(
-                        `Already backtracked from fragment ${curSNIdx +
-                            1}, will not backtrack to fragment ${curSNIdx}. Loading fragment ${curSNIdx +
-                            1}`
-                    );
-                    frag = nextFrag;
-                } else {
-                    // If a fragment has dropped frames and it's in a different level/sequence, load the previous fragment to try and find the keyframe
-                    // Reset the dropped count now since it won't be reset until we parse the fragment again, which prevents infinite backtracking on the same segment
-                    logger.warn(
-                        'Loaded fragment with dropped frames, backtracking 1 segment to find a keyframe'
-                    );
-                    frag.dropped = 0;
-                    if (prevFrag) {
-                        if (prevFrag.loadCounter) {
-                            prevFrag.loadCounter--;
+            if (fragPrevious && frag.sn === fragPrevious.sn) {
+                if (sameLevel && !frag.backtracked) {
+                    if (frag.sn < levelDetails.endSN) {
+                        let deltaPTS = fragPrevious.deltaPTS;
+                        // if there is a significant delta between audio and video, larger than max allowed hole,
+                        // and if previous remuxed fragment did not start with a keyframe. (fragPrevious.dropped)
+                        // let's try to load previous fragment again to get last keyframe
+                        // then we will reload again current fragment (that way we should be able to fill the buffer hole ...)
+                        if (
+                            deltaPTS &&
+                            deltaPTS > config.maxBufferHole &&
+                            fragPrevious.dropped &&
+                            curSNIdx
+                        ) {
+                            frag = prevFrag;
+                            logger.warn(
+                                `SN just loaded, with large PTS gap between audio and video, maybe frag is not starting with a keyframe ? load previous one to try to overcome this`
+                            );
+                            // decrement previous frag load counter to avoid frag loop loading error when next fragment will get reloaded
+                            fragPrevious.loadCounter--;
+                        } else {
+                            frag = nextFrag;
+                            logger.log(
+                                `SN just loaded, load next one: ${frag.sn}`
+                            );
                         }
-                        frag = prevFrag;
                     } else {
                         frag = null;
+                    }
+                } else if (frag.backtracked) {
+                    // Only backtrack a max of 1 consecutive fragment to prevent sliding back too far when little or no frags start with keyframes
+                    if (nextFrag && nextFrag.backtracked) {
+                        logger.warn(
+                            `Already backtracked from fragment ${
+                                nextFrag.sn
+                            }, will not backtrack to fragment ${
+                                frag.sn
+                            }. Loading fragment ${nextFrag.sn}`
+                        );
+                        frag = nextFrag;
+                    } else {
+                        // If a fragment has dropped frames and it's in a same level/sequence, load the previous fragment to try and find the keyframe
+                        // Reset the dropped count now since it won't be reset until we parse the fragment again, which prevents infinite backtracking on the same segment
+                        logger.warn(
+                            'Loaded fragment with dropped frames, backtracking 1 segment to find a keyframe'
+                        );
+                        frag.dropped = 0;
+                        if (prevFrag) {
+                            if (prevFrag.loadCounter) {
+                                prevFrag.loadCounter--;
+                            }
+                            frag = prevFrag;
+                            frag.backtracked = true;
+                        } else {
+                            frag = null;
+                        }
                     }
                 }
             }
@@ -955,15 +967,17 @@ class StreamController extends EventHandler {
         let media = this.media,
             currentTime = media ? media.currentTime : undefined,
             config = this.config;
-        logger.log(`media seeking to ${currentTime.toFixed(3)}`);
+        if (!isNaN(currentTime)) {
+            logger.log(`media seeking to ${currentTime.toFixed(3)}`);
+        }
+        let mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
+        let bufferInfo = BufferHelper.bufferInfo(
+            mediaBuffer,
+            currentTime,
+            this.config.maxBufferHole
+        );
         if (this.state === State.FRAG_LOADING) {
-            let mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
-            let bufferInfo = BufferHelper.bufferInfo(
-                    mediaBuffer,
-                    currentTime,
-                    this.config.maxBufferHole
-                ),
-                fragCurrent = this.fragCurrent;
+            let fragCurrent = this.fragCurrent;
             // check if we are seeking to a unbuffered area AND if frag loading is in progress
             if (bufferInfo.len === 0 && fragCurrent) {
                 let tolerance = config.maxFragLookUpTolerance,
@@ -992,6 +1006,10 @@ class StreamController extends EventHandler {
                 }
             }
         } else if (this.state === State.ENDED) {
+            // if seeking to unbuffered area, clean up fragPrevious
+            if (bufferInfo.len === 0) {
+                this.fragPrevious = 0;
+            }
             // switch to IDLE state to check for potential new fragment
             this.state = State.IDLE;
         }
@@ -1014,7 +1032,11 @@ class StreamController extends EventHandler {
     }
 
     onMediaSeeked() {
-        logger.log(`media seeked to ${this.media.currentTime.toFixed(3)}`);
+        const media = this.media,
+            currentTime = media ? media.currentTime : undefined;
+        if (!isNaN(currentTime)) {
+            logger.log(`media seeked to ${currentTime.toFixed(3)}`);
+        }
         // tick to speed up FRAGMENT_PLAYING triggering
         this.tick();
     }
@@ -1379,12 +1401,16 @@ class StreamController extends EventHandler {
                 frag.dropped = data.dropped;
                 if (frag.dropped) {
                     if (!frag.backtracked) {
+                        logger.warn(
+                            'missing video frame(s), backtracking fragment'
+                        );
                         // Return back to the IDLE state without appending to buffer
                         // Causes findFragments to backtrack a segment and find the keyframe
                         // Audio fragments arriving before video sets the nextLoadPosition, causing _findFragments to skip the backtracked fragment
                         frag.backtracked = true;
                         this.nextLoadPosition = data.startPTS;
                         this.state = State.IDLE;
+                        this.fragPrevious = frag;
                         this.tick();
                         return;
                     } else {
@@ -1400,7 +1426,7 @@ class StreamController extends EventHandler {
 
             var drift = LevelHelper.updateFragPTSDTS(
                     level.details,
-                    frag.sn,
+                    frag,
                     data.startPTS,
                     data.endPTS,
                     data.startDTS,
@@ -1690,8 +1716,11 @@ class StreamController extends EventHandler {
                             } state ...`
                         );
                     } else {
-                        // in cas of non fatal error while waiting level load to be completed, switch back to IDLE
-                        if (this.state === State.WAITING_LEVEL) {
+                        // in case of non fatal error while loading level, if level controller is not retrying to load level , switch back to IDLE
+                        if (
+                            !data.levelRetry &&
+                            this.state === State.WAITING_LEVEL
+                        ) {
                             this.state = State.IDLE;
                         }
                     }

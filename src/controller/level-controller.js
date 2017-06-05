@@ -348,6 +348,8 @@ class LevelController extends EventHandler {
                             `level controller,${details}, but media buffered, retry in ${retryDelay}ms`
                         );
                         this.timer = setTimeout(this.ontick, retryDelay);
+                        // boolean used to inform stream controller not to switch back to IDLE on non fatal error
+                        data.levelRetry = true;
                     } else {
                         logger.error(`cannot recover ${details} error`);
                         this._level = undefined;
