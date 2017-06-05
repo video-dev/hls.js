@@ -518,8 +518,7 @@ class PlaylistLoader extends EventHandler {
               reason: 'no level found in manifest'
             });
           } else {
-            hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.LEVEL_EMPTY_ERROR, fatal: true, url: url, reason: 'no media found in level', networkDetails });
-
+            hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.LEVEL_EMPTY_ERROR, fatal: true, url: url, reason: 'no media found in level', networkDetails });
           }
         }
       }
