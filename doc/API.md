@@ -2,7 +2,7 @@
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
- 
+
 
 - [Getting started](#getting-started)
   - [First step: setup and support](#first-step-setup-and-support)
@@ -222,7 +222,7 @@ See sample code below to listen to errors:
       default:
         break;
     }
-  }
+  });
 ```
 
 #### Fatal Error Recovery
@@ -315,7 +315,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       fragLoadingMaxRetry: 6,
       fragLoadingRetryDelay: 500,
       fragLoadingMaxRetryTimeout: 64000,
-      startFragPrefech: false,
+      startFragPrefetch: false,
       appendErrorMaxRetry: 3,
       loader: customLoader,
       fLoader: customFragmentLoader,
@@ -583,7 +583,6 @@ Prefetch start fragment although media not attached.
 (default: `false`)
 
 Start prefetching start fragment although media not attached yet.
-Max number of append retries.
 
 ### `appendErrorMaxRetry`
 
@@ -637,6 +636,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param [stats.bw] {number} - download bandwidth in bit/s
       @param stats.total {number} - total nb of bytes
       @param context {object} - loader context
+      @param networkDetails {object} - loader network details (the xhr for default loaders)
 
       @callback onProgressCallback
       @param stats {object} - loading stats
@@ -647,12 +647,14 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param [stats.bw] {number} - current download bandwidth in bit/s (monitored by ABR controller to control emergency switch down)
       @param context {object} - loader context
       @param data {string/arraybuffer} - onProgress data (should be defined only if context.progressData === true)
+      @param networkDetails {object} - loader network details (the xhr for default loaders)
 
       @callback onErrorCallback
       @param error {object} - error data
       @param error.code {number} - error status code
       @param error.text {string} - error description
       @param context {object} - loader context
+      @param networkDetails {object} - loader network details (the xhr for default loaders)
 
       @callback onTimeoutCallback
       @param stats {object} - loading stats
@@ -882,7 +884,7 @@ If `abrBandWidthUpFactor * bandwidth average < level.bitrate` then ABR can switc
 (default: `false`)
 
 max bitrate used in ABR by avg measured bitrate
-i.e. if bitrate signaled in variant manifest for a given level is 2Mb/s but average bitrate measured on this level is 2.5Mb/s, 
+i.e. if bitrate signaled in variant manifest for a given level is 2Mb/s but average bitrate measured on this level is 2.5Mb/s,
 then if config value is set to `true`, ABR will use 2.5 Mb/s for this quality level.
 
 ### `minAutoBitrate`
@@ -1024,66 +1026,112 @@ hls.on(Hls.Events.LEVEL_LOADED,function(event,data) {
 ```
 Full list of Events is available below:
 
-  - `Hls.Events.MEDIA_ATTACHING`  - fired to attach Media to hls instance.
-    -  data: { video , mediaSource }
-  - `Hls.Events.MEDIA_ATTACHED`  - fired when Media has been succesfully attached to hls instance
-    -  data: { video , mediaSource }
-  - `Hls.Events.MEDIA_DETACHING`  - fired before detaching Media from hls instance
+  - `Hls.Events.MEDIA_ATTACHING`  - fired before MediaSource is attaching to media element
+    -  data: { media }
+  - `Hls.Events.MEDIA_ATTACHED`  - fired when MediaSource has been succesfully attached to media element
     -  data: { }
-  - `Hls.Events.MEDIA_DETACHED`  - fired when Media has been detached from hls instance
+  - `Hls.Events.MEDIA_DETACHING`  - fired before detaching MediaSource from media element
     -  data: { }
+  - `Hls.Events.MEDIA_DETACHED`  - fired when MediaSource has been detached from media element
+    -  data: { }
+  - `Hls.Events.BUFFER_RESET`  - fired when we buffer is going to be reset
+    -  data: { }
+  - `Hls.Events.BUFFER_CODECS`  - fired when we know about the codecs that we need buffers for to push into
+    -  data: { tracks : { container, codec, levelCodec, initSegment, metadata } }
+  - `Hls.Events.BUFFER_CREATED`  - fired when sourcebuffers have been created
+    -  data: { tracks : tracks }
+   - `Hls.Events.BUFFER_APPENDING`  - fired when we append a segment to the buffer
+    -  data: { segment : segment object }
+  - `Hls.Events.BUFFER_APPENDED`  - fired when we are done with appending a media segment to the buffer
+    -  data: { parent : segment parent that triggered `BUFFER_APPENDING`, pending : nb of segments waiting for appending for this segment parent }
+  - `Hls.Events.BUFFER_EOS`  - fired when the stream is finished and we want to notify the media buffer that there will be no more data
+    -  data: { }
+  - `Hls.Events.BUFFER_FLUSHING`  - fired when the media buffer should be flushed
+    -  data: { startOffset, endOffset }
+  - `Hls.Events.BUFFER_FLUSHED`  - fired when the media buffer has been flushed
+    -  data: { startOffset, endOffset }
   - `Hls.Events.MANIFEST_LOADING`  - fired to signal that a manifest loading starts
     -  data: { url : manifestURL }
   - `Hls.Events.MANIFEST_LOADED`  - fired after manifest has been loaded
-    -  data: { levels : [available quality levels] , audioTracks : [ available audio tracks], url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
+    -  data: { levels : [available quality levels], audioTracks : [ available audio tracks], url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
   - `Hls.Events.MANIFEST_PARSED`  - fired after manifest has been parsed
     -  data: { levels : [ available quality levels ], firstLevel : index of first quality level appearing in Manifest }
+  - `Hls.Events.LEVEL_SWITCH`  - fired when a level switch is requested (deprecated in favor of `LEVEL_SWITCHING`)
+    -  data: { level : id of new level }
+  - `Hls.Events.LEVEL_SWITCHING`  - fired when a level switch is requested
+    -  data: { `level` object (please see [below](#level) for more information) }
+  - `Hls.Events.LEVEL_SWITCHED`  - fired when a level switch is effective
+    -  data: { level : id of new level }
   - `Hls.Events.LEVEL_LOADING`  - fired when a level playlist loading starts
     -  data: { url : level URL, level : id of level being loaded }
   - `Hls.Events.LEVEL_LOADED`  - fired when a level playlist loading finishes
-    -  data: { details : levelDetails object, levelId : id of loaded level, stats : { trequest, tfirst, tload, mtime } }
+    -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), level : id of loaded level, stats : { trequest, tfirst, tload, mtime } }
   - `Hls.Events.LEVEL_UPDATED`  - fired when a level's details have been updated based on previous details, after it has been loaded
-    -  data: { details : levelDetails object, level : id of updated level }
+    -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), level : id of updated level }
   - `Hls.Events.LEVEL_PTS_UPDATED`  - fired when a level's PTS information has been updated after parsing a fragment
-    -  data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment }
-  - `Hls.Events.LEVEL_SWITCHING`  - fired when a level switch is requested
-    -  data: { `level` object( please see [below](#level) for more information )  }
-  - `Hls.Events.LEVEL_SWITCHED`  - fired when a level switch is effective
-    -  data: { `level` object( please see [below](#level) for more information )  }
-  - `Hls.Events.KEY_LOADING`  - fired when a decryption key loading starts
-    -  data: { frag : fragment object }
-  - `Hls.Events.KEY_LOADED`  - fired when a decryption key loading is completed
-    -  data: { frag : fragment object }
-  - `Hls.Events.INIT_PTS_FOUND`  - fired when first timestamp has been found
-    -  data: { id : demuxer id, frag : fragment object, initPTS: initPTS }
+    -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), level : id of updated level, drift: PTS drift observed when parsing last fragment }
+  - `Hls.Events.AUDIO_TRACKS_UPDATED`  - fired to notify that audio track lists has been updated
+    -  data: { audioTracks : audioTracks }
+  - `Hls.Events.AUDIO_TRACK_SWITCH`  - fired when an audio track switch occurs (deprecated in favor of `AUDIO_TRACK_SWITCHING`)
+    -  data: { audioTracks : audioTracks }
+  - `Hls.Events.AUDIO_TRACK_SWITCHING`  - fired when an audio track switching is requested
+    -  data: { id : audio track id }
+  - `Hls.Events.AUDIO_TRACK_SWITCHED`  - fired when an audio track switch actually occurs
+    -  data: { id : audio track id }
+  - `Hls.Events.AUDIO_TRACK_LOADING`  - fired when an audio track loading starts
+    -  data: { url : audio track URL, id : audio track id }
+  - `Hls.Events.AUDIO_TRACK_LOADED`  - fired when an audio track loading finishes
+    -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), id : audio track id, stats : { trequest, tfirst, tload, mtime} }
+  - `Hls.Events.SUBTITLE_TRACKS_UPDATED`  - fired to notify that subtitle track lists has been updated
+    -  data: { subtitleTracks : subtitleTracks }
+  - `Hls.Events.SUBTITLE_TRACK_SWITCH`  - fired when a subtitle track switch occurs
+    -  data: { id : subtitle track id }
+  - `Hls.Events.SUBTITLE_TRACK_LOADING`  - fired when a subtitle track loading starts
+    -  data: { url : audio track URL, id : audio track id }
+  - `Hls.Events.SUBTITLE_TRACK_LOADED`  - fired when a subtitle track loading finishes
+    -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), id : subtitle track id, stats : { trequest, tfirst, tload, mtime} }
+  - `Hls.Events.SUBTITLE_FRAG_PROCESSED`  - fired when a subtitle fragment has been processed
+    -  data: { success : boolean, frag : the processed frag }
+  - `Hls.Events.INIT_PTS_FOUND`  - fired when the first timestamp is found
+    -  data: { d : demuxer id, initPTS: initPTS , frag : fragment object }
   - `Hls.Events.FRAG_LOADING`  - fired when a fragment loading starts
     -  data: { frag : fragment object }
   - `Hls.Events.FRAG_LOAD_PROGRESS`  - fired when a fragment load is in progress
     - data: { frag : fragment object with frag.loaded=stats.loaded, stats : { trequest, tfirst, loaded, total } }
+  - `Hls.Events.FRAG_LOAD_EMERGENCY_ABORTED`  - Identifier for fragment load aborting for emergency switch down
+    - data: { frag : fragment object }
   - `Hls.Events.FRAG_LOADED`  - fired when a fragment loading is completed
     -  data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length}}
   - `Hls.Events.FRAG_DECRYPTED`  - fired when a fragment decryption is completed
     -  data: { id : demuxer id, frag : fragment object, stats : { tstart, tdecrypt}}
   - `Hls.Events.FRAG_PARSING_INIT_SEGMENT` - fired when Init Segment has been extracted from fragment
-    -  data: { id: demuxer id, frag : fragment object, moov : moov MP4 box, codecs : codecs found while parsing fragment}
+    -  data: { id: demuxer id, frag : fragment object, moov : moov MP4 box, codecs : codecs found while parsing fragment }
+  - `Hls.Events.FRAG_PARSING_USERDATA`  - fired when parsing sei text is completed
+    -  data: { id : demuxer id, frag: fragment object, samples : [ sei samples pes ] }
   - `Hls.Events.FRAG_PARSING_METADATA`  - fired when parsing id3 is completed
-      -  data: { id: demuxer id, frag : fragment object, samples : [ id3 pes - pts and dts timestamp are relative, values are in seconds]}
+      -  data: { id: demuxer id, frag : fragment object, samples : [ id3 pes - pts and dts timestamp are relative, values are in seconds] }
   - `Hls.Events.FRAG_PARSING_DATA`  - fired when moof/mdat have been extracted from fragment
-    -  data: { id: demuxer id, frag : fragment object, moof : moof MP4 box, mdat : mdat MP4 box, startPTS : PTS of first sample, endPTS : PTS of last sample, startDTS : DTS of first sample, endDTS : DTS of last sample, type : stream type (audio or video), nb : number of samples}
+    -  data: { id: demuxer id, frag : fragment object, moof : moof MP4 box, mdat : mdat MP4 box, startPTS : PTS of first sample, endPTS : PTS of last sample, startDTS : DTS of first sample, endDTS : DTS of last sample, type : stream type (audio or video), nb : number of samples }
   - `Hls.Events.FRAG_PARSED`  - fired when fragment parsing is completed
-    -  data: { id: demuxer id,frag : fragment object}
+    -  data: { id: demuxer id,frag : fragment object }
   - `Hls.Events.FRAG_BUFFERED`  - fired when fragment remuxed MP4 boxes have all been appended into SourceBuffer
-    -  data: { id: demuxer id, frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length} }
+    -  data: { id: demuxer id, frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length, bwEstimate } }
   - `Hls.Events.FRAG_CHANGED`  - fired when fragment matching with current video position is changing
-    -  data: { frag : fragment object }
+    -  data: { id : demuxer id, frag : fragment object }
   - `Hls.Events.FPS_DROP` - triggered when FPS drop in last monitoring period is higher than given threshold
-    -  data: { curentDropped : nb of dropped frames in last monitoring period, currentDecoded : nb of decoded frames in last monitoring period, totalDropped : total dropped frames on this video element }
+    -  data: { curentDropped : nb of dropped frames in last monitoring period, currentDecoded : nb of decoded frames in last monitoring period, totalDroppedFrames : total dropped frames on this video element }
   - `Hls.Events.FPS_DROP_LEVEL_CAPPING` - triggered when FPS drop triggers auto level capping
-    - data: { level: suggested new auto level capping by fps controller, droppedLevel : level has to much dropped frame will be restricted }
+    - data: { level: suggested new auto level capping by fps controller, droppedLevel : level has too many dropped frames and will be restricted }
   - `Hls.Events.ERROR` -  Identifier for an error event
     - data: { type : error type, details : error details, fatal : is error fatal or not, other error specific data }
-  - `Hls.Events.DESTROYING` -  fired when hls.js instance starts destroying. Different from MEDIA_DETACHED as one could want to detach and reattach a video to the instance of hls.js to handle mid-rolls for example.
+  - `Hls.Events.DESTROYING` -  fired when hls.js instance starts destroying. Different from `MEDIA_DETACHED` as one could want to detach and reattach a video to the instance of hls.js to handle mid-rolls for example
     - data: { }
+  - `Hls.Events.KEY_LOADING`  - fired when a decryption key loading starts
+    -  data: { frag : fragment object }
+  - `Hls.Events.KEY_LOADED`  - fired when a decryption key loading is completed
+    -  data: { frag : fragment object }
+  - `Hls.Events.STREAM_STATE_TRANSITION`  - fired upon stream controller state transitions
+    -  data: { previousState, nextState }
 
 ## Loader Composition
 
@@ -1097,16 +1145,16 @@ import Hls from 'hls.js';
 let myHls = new Hls({
   pLoader: function (config) {
     let loader = new Hls.DefaultConfig.loader(config);
-    
+
     this.abort = () => loader.abort();
     this.destroy = () => loader.destroy();
     this.load = (context, config, callbacks) => {
       let {type, url} = context;
-  
+
       if (type === 'manifest') {
         console.log(`Manifest ${url} will be loaded.`);
       }
-  
+
       loader.load(context, config, callbacks);
     };
   }

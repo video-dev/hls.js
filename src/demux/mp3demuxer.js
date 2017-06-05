@@ -1,11 +1,10 @@
 /**
- * AAC demuxer
+ * MP3 demuxer
  */
-import ADTS from './adts';
-import {logger} from '../utils/logger';
 import ID3 from '../demux/id3';
+import MpegAudio from './mpegaudio';
 
- class AACDemuxer {
+ class MP3Demuxer {
 
   constructor(observer, remuxer, config) {
     this.observer = observer;
@@ -14,23 +13,23 @@ import ID3 from '../demux/id3';
   }
 
   resetInitSegment(initSegment,audioCodec,videoCodec, duration) {
-    this._audioTrack = {container : 'audio/adts', type: 'audio', id :-1, sequenceNumber: 0, isAAC : true , samples : [], len : 0, manifestCodec : audioCodec, duration : duration, inputTimeScale : 90000};
+    this._audioTrack = {container : 'audio/mpeg', type: 'audio', id :-1, sequenceNumber: 0, isAAC : false , samples : [], len : 0, manifestCodec : audioCodec, duration : duration, inputTimeScale : 90000};
   }
 
   resetTimeStamp() {
   }
 
   static probe(data) {
-    // check if data contains ID3 timestamp and ADTS sync word
+    // check if data contains ID3 timestamp and MPEG sync word
     var offset, length;
     let id3Data = ID3.getID3Data(data, 0);
     if (id3Data && ID3.getTimeStamp(id3Data) !== undefined) {
-      // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
-      // Layer bits (position 14 and 15) in header should be always 0 for ADTS
-      // More info https://wiki.multimedia.cx/index.php?title=ADTS
+      // Look for MPEG header | 1111 1111 | 111X XYZX | where X can be either 0 or 1 and Y or Z should be 1
+      // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
+      // More info http://www.mp3-tech.org/programmer/frame_header.html
       for (offset = id3Data.length, length = Math.min(data.length - 1, offset + 100); offset < length; offset++) {
-        if (ADTS.isHeader(data, offset)) {
-          //logger.log('ADTS sync word found !');
+        if (MpegAudio.isHeader(data, offset)) {
+          //logger.log('MPEG sync word found !');
           return true;
         }
       }
@@ -39,27 +38,25 @@ import ID3 from '../demux/id3';
   }
 
   // feed incoming data to the front of the parsing pipeline
-  append(data, timeOffset, contiguous, accurateTimeOffset) {
-    var track = this._audioTrack,
-        id3Data = ID3.getID3Data(data, 0),
-        pts = 90 * ID3.getTimeStamp(id3Data),
-        frameIndex = 0,
-        stamp = pts,
-        length = data.length,
-        offset = id3Data.length;
+  append(data, timeOffset,contiguous,accurateTimeOffset) {
+    let id3Data = ID3.getID3Data(data, 0);
+    let pts = 90 * ID3.getTimeStamp(id3Data);
+    var offset = id3Data.length;
+    var length = data.length;
+    var frameIndex = 0, stamp = 0;
+    var track = this._audioTrack;
 
-    let id3Samples = [{ pts: stamp, dts : stamp, data : id3Data }];
+    let id3Samples = [{ pts: pts, dts : pts, data : id3Data }];
 
-    while (offset < length - 1) {
-      if (ADTS.isHeader(data, offset) && (offset + 5) < length) {
-        ADTS.initTrackConfig(track, this.observer, data, offset, track.manifestCodec);
-        var frame = ADTS.appendFrame(track, data, offset, pts, frameIndex);
+    while (offset < length) {
+      if (MpegAudio.isHeader(data, offset)) {
+        var frame = MpegAudio.appendFrame(track, data, offset, pts, frameIndex);
         if (frame) {
           offset += frame.length;
           stamp = frame.sample.pts;
           frameIndex++;
         } else {
-          logger.log('Unable to parse AAC frame');
+          //logger.log('Unable to parse Mpeg audio frame');
           break;
         }
       } else if (ID3.isHeader(data, offset)) {
@@ -83,7 +80,6 @@ import ID3 from '../demux/id3';
 
   destroy() {
   }
-
 }
 
-export default AACDemuxer;
+export default MP3Demuxer;

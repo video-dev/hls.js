@@ -8,6 +8,7 @@ import Decrypter from '../crypt/decrypter';
 import AACDemuxer from '../demux/aacdemuxer';
 import MP4Demuxer from '../demux/mp4demuxer';
 import TSDemuxer from '../demux/tsdemuxer';
+import MP3Demuxer from '../demux/mp3demuxer';
 import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
 
@@ -66,6 +67,7 @@ class DemuxerInline {
       const typeSupported = this.typeSupported;
       const config = this.config;
       const muxConfig = [ {demux : TSDemuxer,  remux : MP4Remuxer},
+                          {demux : MP3Demuxer, remux : MP4Remuxer},
                           {demux : AACDemuxer, remux : MP4Remuxer},
                           {demux : MP4Demuxer, remux : PassThroughRemuxer}];
 
@@ -93,7 +95,7 @@ class DemuxerInline {
       remuxer.resetInitSegment();
     }
     if (discontinuity) {
-      demuxer.resetTimeStamp();
+      demuxer.resetTimeStamp(defaultInitPTS);
       remuxer.resetTimeStamp(defaultInitPTS);
     }
     if (typeof demuxer.setDecryptData === 'function') {

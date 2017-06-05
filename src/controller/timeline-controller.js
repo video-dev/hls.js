@@ -234,7 +234,7 @@ class TimelineController extends EventHandler {
           }
         }
         if (!textTrack) {
-            textTrack = this.createTextTrack('subtitles', track.name, track.lang);          
+            textTrack = this.createTextTrack('subtitles', track.name, track.lang);
         }
         textTrack.mode = track.default ? 'showing' : 'hidden';
         this.textTracks.push(textTrack);
@@ -253,7 +253,10 @@ class TimelineController extends EventHandler {
       var sn = frag.sn;
       // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
       if (sn !== this.lastSn + 1) {
-        this.cea608Parser.reset();
+        const cea608Parser = this.cea608Parser;
+        if (cea608Parser) {
+          cea608Parser.reset();
+        }
       }
       this.lastSn = sn;
     }
@@ -275,9 +278,15 @@ class TimelineController extends EventHandler {
 
         // Parse the WebVTT file contents.
         WebVTTParser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
+            const currentTrack = textTracks[frag.trackId];
             // Add cues and trigger event with success true.
             cues.forEach(cue => {
-              textTracks[frag.trackId].addCue(cue);
+              // Sometimes there are cue overlaps on segmented vtts so the same
+              // cue can appear more than once in different vtt files.
+              // This avoid showing duplicated cues with same timecode and text.
+              if (!currentTrack.cues.getCueById(cue.id)) {
+                currentTrack.addCue(cue);
+              }
             });
             hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: true, frag: frag});
           },

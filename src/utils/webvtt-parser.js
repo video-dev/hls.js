@@ -1,5 +1,10 @@
 import VTTParser from './vttparser';
 
+// String.prototype.startsWith is not supported in IE11
+const startsWith = function(inputString, searchString, position) {
+  return inputString.substr(position || 0, searchString.length) === searchString;
+};
+
 const cueString2millis = function(timeString) {
     let ts = parseInt(timeString.substr(-3));
     let secs = parseInt(timeString.substr(-6,2));
@@ -15,6 +20,16 @@ const cueString2millis = function(timeString) {
     ts += 60*60*1000 * hours;
 
     return ts;
+};
+
+// From https://github.com/darkskyapp/string-hash
+const hash = function(text) {
+    let hash = 5381;
+    let i = text.length;
+    while (i) {
+        hash = (hash * 33) ^ text.charCodeAt(--i);
+    }
+    return (hash >>> 0).toString();
 };
 
 const calculateOffset = function(vttCCs, cc, presentationTime) {
@@ -65,7 +80,7 @@ const WebVTTParser = {
 
             // Update offsets for new discontinuities
             if (currCC && currCC.new) {
-                if (localTime) {
+                if (localTime !== undefined) {
                     // When local time is provided, offset = discontinuity start time - local time
                     cueOffset = vttCCs.ccOffset = currCC.start;
                 } else {
@@ -73,13 +88,17 @@ const WebVTTParser = {
                 }
             }
 
-            if (presentationTime && !localTime) {
-                // If we have MPEGTS but no LOCAL time, offset = presentation time + discontinuity offset
+            if (presentationTime) {
+                // If we have MPEGTS, offset = presentation time + discontinuity offset
                 cueOffset = presentationTime + vttCCs.ccOffset - vttCCs.presentationOffset;
             }
 
             cue.startTime += cueOffset - localTime;
             cue.endTime += cueOffset - localTime;
+
+            // Create a unique hash id for a cue based on start/end times and text.
+            // This helps timeline-controller to avoid showing repeated captions.
+            cue.id = hash(cue.startTime) + hash(cue.endTime) + hash(cue.text);
 
             // Fix encoding of special characters. TODO: Test with all sorts of weird characters.
             cue.text = decodeURIComponent(escape(cue.text));
@@ -104,14 +123,14 @@ const WebVTTParser = {
         vttLines.forEach(line => {
             if (inHeader) {
                 // Look for X-TIMESTAMP-MAP in header.
-                if (line.startsWith('X-TIMESTAMP-MAP=')) {
+                if (startsWith(line, 'X-TIMESTAMP-MAP=')) {
                     // Once found, no more are allowed anyway, so stop searching.
                     inHeader = false;
                     // Extract LOCAL and MPEGTS.
                     line.substr(16).split(',').forEach(timestamp => {
-                        if (timestamp.startsWith('LOCAL:')) {
+                        if (startsWith(timestamp, 'LOCAL:')) {
                           cueTime = timestamp.substr(6);
-                        } else if (timestamp.startsWith('MPEGTS:')) {
+                        } else if (startsWith(timestamp, 'MPEGTS:')) {
                           mpegTs = parseInt(timestamp.substr(7));
                         }
                     });
