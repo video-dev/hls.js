@@ -240,7 +240,7 @@ class LevelController extends EventHandler {
       case ErrorDetails.REMUX_ALLOC_ERROR:
         levelId = data.level;
         break;
-      case ErrorDetails.MANIFEST_EMPTY_ERROR:
+      case ErrorDetails.LEVEL_EMPTY_ERROR:
         levelId = data.context.level;
         levelError = true;
         removeLevel = true;
