@@ -18,7 +18,7 @@ export const ErrorDetails = {
   MANIFEST_PARSING_ERROR: 'manifestParsingError',
   // Identifier for a manifest with only incompatible codecs error - data: { url : faulty URL, reason : error reason}
   MANIFEST_INCOMPATIBLE_CODECS_ERROR: 'manifestIncompatibleCodecsError',
-  // Identifier for a level with an empty manifest - data: { level : faulty level Id, event : error description}
+  // Identifier for a child manifest containing no media - data: { level : faulty level Id, event : error description }
   LEVEL_EMPTY_ERROR: 'manifestEmptyError',
   // Identifier for a level load error - data: { url : faulty URL, response : { code: error code, text: error text }}
   LEVEL_LOAD_ERROR: 'levelLoadError',
