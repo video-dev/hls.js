@@ -11,6 +11,7 @@ import LevelHelper from '../helper/level-helper';
 import TimeRanges from '../utils/timeRanges';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
+import { findFragWithCC } from '../utils/discontinuities';
 
 const State = {
     STOPPED: 'STOPPED',
@@ -57,6 +58,7 @@ class AudioStreamController extends EventHandler {
         this.ontick = this.tick.bind(this);
         this.initPTS = [];
         this.waitingFragment = null;
+        this.videoTrackCC = null;
     }
 
     destroy() {
@@ -78,6 +80,7 @@ class AudioStreamController extends EventHandler {
             //Always update the new INIT PTS
             //Can change due level switch
             this.initPTS[cc] = initPTS;
+            this.videoTrackCC = cc;
             logger.log(
                 `InitPTS for cc:${cc} found from video track:${initPTS}`
             );
@@ -85,13 +88,7 @@ class AudioStreamController extends EventHandler {
             //If we are waiting we need to demux/remux the waiting frag
             //With the new initPTS
             if (this.state === State.WAITING_INIT_PTS) {
-                logger.log('sending pending audio frag to demuxer');
-                this.state = State.FRAG_LOADING;
-                //We have audio frag waiting or video pts
-                //Let process it
-                this.onFragLoaded(this.waitingFragment);
-                //Lets clean the waiting frag
-                this.waitingFragment = null;
+                this.tick();
             }
         }
     }
@@ -299,6 +296,13 @@ class AudioStreamController extends EventHandler {
                         // if bufferEnd before start of playlist, load first fragment
                         frag = fragments[0];
                         if (
+                            this.videoTrackCC !== null &&
+                            frag.cc !== this.videoTrackCC
+                        ) {
+                            // Ensure we find a fragment which matches the continuity of the video track
+                            frag = findFragWithCC(fragments, this.videoTrackCC);
+                        }
+                        if (
                             trackDetails.live &&
                             frag.loadIdx &&
                             frag.loadIdx === this.fragLoadIdx
@@ -421,7 +425,7 @@ class AudioStreamController extends EventHandler {
                             hls.trigger(Event.KEY_LOADING, { frag: frag });
                         } else {
                             logger.log(
-                                `Loading ${frag.sn} of [${
+                                `Loading ${frag.sn}, cc: ${frag.cc} of [${
                                     trackDetails.startSN
                                 } ,${
                                     trackDetails.endSN
@@ -491,6 +495,32 @@ class AudioStreamController extends EventHandler {
                 }
                 break;
             case State.WAITING_INIT_PTS:
+                if (this.initPTS[this.videoTrackCC] === undefined) {
+                    break;
+                }
+
+                // Ensure we don't get stuck in the WAITING_INIT_PTS state if the waiting frag CC doesn't match any initPTS
+                const waitingFrag = this.waitingFragment;
+                if (waitingFrag) {
+                    const waitingFragCC = waitingFrag.frag.cc;
+                    if (this.videoTrackCC !== waitingFragCC) {
+                        logger.warn(
+                            `Waiting fragment CC (${waitingFragCC}) does not match video track CC (${
+                                this.videoTrackCC
+                            })`
+                        );
+                        this.waitingFragment = null;
+                        this.state = State.IDLE;
+                    } else {
+                        this.onFragLoaded(this.waitingFragment);
+                        this.state = State.FRAG_LOADING;
+                        this.waitingFragment = null;
+                    }
+                } else {
+                    this.state = State.IDLE;
+                }
+
+                break;
             case State.STOPPED:
             case State.FRAG_LOADING:
             case State.PARSING:
