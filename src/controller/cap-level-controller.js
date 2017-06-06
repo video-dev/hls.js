@@ -26,10 +26,13 @@ class CapLevelController extends EventHandler {
     }
 
     onFpsDropLevelCapping(data) {
-        if (!this.restrictedLevels) {
-            this.restrictedLevels = [];
-        }
-        if (!this.isLevelRestricted(data.droppedLevel)) {
+        // Don't add a restricted level more than once
+        if (
+            CapLevelController.isLevelAllowed(
+                data.droppedLevel,
+                this.restrictedLevels
+            )
+        ) {
             this.restrictedLevels.push(data.droppedLevel);
         }
     }
@@ -40,6 +43,7 @@ class CapLevelController extends EventHandler {
 
     onManifestParsed(data) {
         const hls = this.hls;
+        this.restrictedLevels = [];
         if (hls.config.capLevelToPlayerSize) {
             this.autoLevelCapping = Number.POSITIVE_INFINITY;
             this.levels = data.levels;
@@ -70,42 +74,23 @@ class CapLevelController extends EventHandler {
   * returns level should be the one with the dimensions equal or greater than the media (player) dimensions (so the video will be downscaled)
   */
     getMaxLevel(capLevelIndex) {
-        let result = 0,
-            i,
-            level,
-            mWidth = this.mediaWidth,
-            mHeight = this.mediaHeight,
-            lWidth = 0,
-            lHeight = 0;
-
-        for (i = 0; i <= capLevelIndex; i++) {
-            level = this.levels[i];
-            if (this.isLevelRestricted(i)) {
-                break;
-            }
-            result = i;
-            lWidth = level.width;
-            lHeight = level.height;
-            if (mWidth <= lWidth || mHeight <= lHeight) {
-                break;
-            }
+        if (!this.levels) {
+            return -1;
         }
-        return result;
-    }
 
-    isLevelRestricted(level) {
-        return this.restrictedLevels &&
-            this.restrictedLevels.indexOf(level) !== -1
-            ? true
-            : false;
-    }
+        const validLevels = this.levels.filter(
+            (level, index) =>
+                CapLevelController.isLevelAllowed(
+                    index,
+                    this.restrictedLevels
+                ) && index <= capLevelIndex
+        );
 
-    get contentScaleFactor() {
-        let pixelRatio = 1;
-        try {
-            pixelRatio = window.devicePixelRatio;
-        } catch (e) {}
-        return pixelRatio;
+        return CapLevelController.getMaxLevelByMediaSize(
+            validLevels,
+            this.mediaWidth,
+            this.mediaHeight
+        );
     }
 
     get mediaWidth() {
@@ -113,7 +98,7 @@ class CapLevelController extends EventHandler {
         const media = this.media;
         if (media) {
             width = media.width || media.clientWidth || media.offsetWidth;
-            width *= this.contentScaleFactor;
+            width *= CapLevelController.contentScaleFactor;
         }
         return width;
     }
@@ -123,9 +108,56 @@ class CapLevelController extends EventHandler {
         const media = this.media;
         if (media) {
             height = media.height || media.clientHeight || media.offsetHeight;
-            height *= this.contentScaleFactor;
+            height *= CapLevelController.contentScaleFactor;
         }
         return height;
+    }
+
+    static get contentScaleFactor() {
+        let pixelRatio = 1;
+        try {
+            pixelRatio = window.devicePixelRatio;
+        } catch (e) {}
+        return pixelRatio;
+    }
+
+    static isLevelAllowed(level, restrictedLevels = []) {
+        return restrictedLevels.indexOf(level) === -1;
+    }
+
+    static getMaxLevelByMediaSize(levels, width, height) {
+        if (!levels || (levels && !levels.length)) {
+            return -1;
+        }
+
+        // Levels can have the same dimensions but differing bandwidths - since levels are ordered, we can look to the next
+        // to determine whether we've chosen the greatest bandwidth for the media's dimensions
+        const atGreatestBandiwdth = (curLevel, nextLevel) => {
+            if (!nextLevel) {
+                return true;
+            }
+            return (
+                curLevel.width !== nextLevel.width ||
+                curLevel.height !== nextLevel.height
+            );
+        };
+
+        // If we run through the loop without breaking, the media's dimensions are greater than every level, so default to
+        // the max level
+        let maxLevelIndex = levels.length - 1;
+
+        for (let i = 0; i < levels.length; i += 1) {
+            const level = levels[i];
+            if (
+                (level.width >= width || level.height >= height) &&
+                atGreatestBandiwdth(level, levels[i + 1])
+            ) {
+                maxLevelIndex = i;
+                break;
+            }
+        }
+
+        return maxLevelIndex;
     }
 }
 
