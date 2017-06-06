@@ -484,6 +484,13 @@ class BufferController extends EventHandler {
               hls.trigger(Event.ERROR, event);
             }
           } else {
+            // In IE11 and Edge, it is not enough to just set this.config.maxMaxBufferLength to half of its value
+            // when we encounter QuotaExceededError. We need to explicitly flush the buffer, or else, QuotaExceededError
+            // keeps coming.
+            this.flushRange.push({start: 0, end: Number.POSITIVE_INFINITY});
+            this.flushBufferCounter = 0;
+            this.doFlush();
+
             // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
             // let's stop appending any segments, and report BUFFER_FULL_ERROR error
             this.segments = [];
