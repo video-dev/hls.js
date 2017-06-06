@@ -142,25 +142,55 @@ class DemuxerInline {
             ];
 
             // probe for content type
-            for (let i in muxConfig) {
-                const mux = muxConfig[i];
+            let tsMatch = TSDemuxer.probe(data);
+            let aacMatch = AACDemuxer.probe(data);
+            let mp3Match = MP3Demuxer.probe(data);
+            let mp4Match = MP4Demuxer.probe(data);
+
+            let h264Pattern = /^avc/i;
+            let aacPattern = /^mp4a(\.40\.2|\.40\.5|\.40\.29)/i;
+            let mp3Pattern = /^mp4a.40.34/i;
+
+            /* prioritize demuxer:
+       * if tsMatch && h264Pattern  => TSDemuxer
+       * if aacMatch && aacPattern => AACDemuxer
+       * if mp3Match && mp3Pattern => MP3Demuxer
+       * if mp4Match && h264Pattern => MP4Demuxer
+       * if no codec info in Manifest, use fallback order : AAC/MP3/TS/MP4
+       */
+            let mux;
+            if (tsMatch && videoCodec && h264Pattern.test(videoCodec)) {
+                mux = muxConfig[0];
+            } else if (aacMatch && audioCodec && aacPattern.test(audioCodec)) {
+                mux = muxConfig[1];
+            } else if (mp3Match && audioCodec && mp3Pattern.test(audioCodec)) {
+                mux = muxConfig[2];
+            } else if (mp4Match && videoCodec && h264Pattern.test(videoCodec)) {
+                mux = muxConfig[3];
+            } else if (aacMatch) {
+                mux = muxConfig[1];
+            } else if (mp3Match) {
+                mux = muxConfig[2];
+            } else if (tsMatch) {
+                mux = muxConfig[0];
+            } else if (mp4Match) {
+                mux = muxConfig[3];
+            }
+            if (mux) {
                 const probe = mux.demux.probe;
-                if (probe(data)) {
-                    const remuxer = (this.remuxer = new mux.remux(
-                        observer,
-                        config,
-                        typeSupported,
-                        this.vendor
-                    ));
-                    demuxer = new mux.demux(
-                        observer,
-                        remuxer,
-                        config,
-                        typeSupported
-                    );
-                    this.probe = probe;
-                    break;
-                }
+                const remuxer = (this.remuxer = new mux.remux(
+                    observer,
+                    config,
+                    typeSupported,
+                    this.vendor
+                ));
+                demuxer = new mux.demux(
+                    observer,
+                    remuxer,
+                    config,
+                    typeSupported
+                );
+                this.probe = probe;
             }
             if (!demuxer) {
                 observer.trigger(Event.ERROR, {
