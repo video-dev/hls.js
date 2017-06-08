@@ -76,26 +76,26 @@ class DemuxerInline {
       let aacMatch = AACDemuxer.probe(data);
       let mp3Match = MP3Demuxer.probe(data);
       let mp4Match = MP4Demuxer.probe(data);
-
-      let h264Pattern = /^avc/i;
+      
+      let h26XPattern = /^(avc|hvc)/i;
       let aacPattern = /^mp4a(\.40\.2|\.40\.5|\.40\.29)/i;
       let mp3Pattern = /^mp4a.40.34/i;
 
       /* prioritize demuxer:
-       * if tsMatch && h264Pattern  => TSDemuxer
+       * if tsMatch && h26XPattern  => TSDemuxer
        * if aacMatch && aacPattern => AACDemuxer
        * if mp3Match && mp3Pattern => MP3Demuxer
-       * if mp4Match && h264Pattern => MP4Demuxer
+       * if mp4Match && h26XPattern => MP4Demuxer
        * if no codec info in Manifest, use fallback order : AAC/MP3/TS/MP4
        */
       let mux;
-      if (tsMatch && videoCodec && h264Pattern.test(videoCodec)) {
+      if (tsMatch && videoCodec && h26XPattern.test(videoCodec)) {
         mux = muxConfig[0];
       } else if (aacMatch && audioCodec && aacPattern.test(audioCodec)) {
         mux = muxConfig[1];
       } else if (mp3Match && audioCodec && mp3Pattern.test(audioCodec)) {
         mux = muxConfig[2];
-      } else if (mp4Match && videoCodec && h264Pattern.test(videoCodec)) {
+      } else if (mp4Match && videoCodec && h26XPattern.test(videoCodec)) {
         mux = muxConfig[3];
       } else if (aacMatch) {
         mux = muxConfig[1];
