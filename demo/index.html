@@ -948,6 +948,11 @@ function timeRangesToString(r) {
   }
 
   function updateLevelInfo() {
+
+    if (!hls.levels) {
+      return;
+    }
+
     var button_template = '<button type="button" class="btn btn-sm ';
     var button_enabled  = 'btn-primary" ';
     var button_disabled = 'btn-success" ';
