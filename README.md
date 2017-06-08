@@ -29,7 +29,7 @@ hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
 ## Getting Started
 
 ```js
-<script src="https://cdn.jsdelivr.net/hls.js/latest/hls.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <video id="video"></video>
 <script>
   if(Hls.isSupported()) {

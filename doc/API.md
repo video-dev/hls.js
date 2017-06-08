@@ -111,16 +111,16 @@
 
 ### First step: setup and support
 
-First include `https://cdn.jsdelivr.net/hls.js/latest/hls.min.js` (or `/hls.js` for unminified) in your web page.
+First include `https://cdn.jsdelivr.net/npm/hls.js@latest` (or `/hls.js` for unminified) in your web page.
 
 ```html
-  <script src="https://cdn.jsdelivr.net/hls.js/latest/hls.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 ```
 
 Invoke the following static method: `Hls.isSupported()` to check whether your browser is supporting [MediaSource Extensions](http://w3c.github.io/media-source/).
 
 ```html
-  <script src="https://cdn.jsdelivr.net/hls.js/latest/hls.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script>
     if (Hls.isSupported()) {
  	    console.log("hello hls.js!");
@@ -137,7 +137,7 @@ Let's
    - bind video element to this HLS object
 
 ```html
-  <script src="https://cdn.jsdelivr.net/hls.js/latest/hls.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
   <video id="video"></video>
   <script>
@@ -159,7 +159,7 @@ Let's
 You need to provide manifest URL as below:
 
 ```html
-  <script src="https://cdn.jsdelivr.net/hls.js/latest/hls.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
   <video id="video"></video>
   <script>
