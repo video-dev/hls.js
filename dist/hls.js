@@ -3926,9 +3926,11 @@ var StreamController = function (_EventHandler) {
         return;
       }
 
-      // we just got done loading the final fragment, check if we need to finalize media stream
+      // we just got done loading the final fragment, and currentPos is buffered, and there is no other buffered range after ...
+      // rationale is that in case there are any buffered rangesafter, it means that there are unbuffered portion in between
+      // so we should not switch to ENDED in that case, to be able to buffer themx
       var fragPrevious = this.fragPrevious;
-      if (!levelDetails.live && fragPrevious && fragPrevious.sn === levelDetails.endSN) {
+      if (!levelDetails.live && fragPrevious && fragPrevious.sn === levelDetails.endSN && bufferLen && !bufferInfo.nextStart) {
         // fragPrevious is last fragment. retrieve level duration using last frag start offset + duration
         // real duration might be lower than initial duration if there are drifts between real frag duration and playlist signaling
         var duration = Math.min(media.duration, fragPrevious.start + fragPrevious.duration);
@@ -5071,7 +5073,8 @@ var StreamController = function (_EventHandler) {
   }, {
     key: '_checkBuffer',
     value: function _checkBuffer() {
-      var media = this.media;
+      var media = this.media,
+          config = this.config;
       // if ready state different from HAVE_NOTHING (numeric value 0), we are allowed to seek
       if (media && media.readyState) {
         var currentTime = media.currentTime,
@@ -5083,13 +5086,14 @@ var StreamController = function (_EventHandler) {
           // only adjust currentTime if different from startPosition or if startPosition not buffered
           // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
           var startPosition = media.seeking ? currentTime : this.startPosition,
-              startPositionBuffered = _bufferHelper2.default.isBuffered(mediaBuffer, startPosition);
+              startPositionBuffered = _bufferHelper2.default.isBuffered(mediaBuffer, startPosition),
+              firstbufferedPosition = buffered.start(0);
           // if currentTime not matching with expected startPosition or startPosition not buffered
-          if (currentTime !== startPosition || !startPositionBuffered) {
+          if (currentTime !== startPosition || !startPositionBuffered && Math.abs(startPosition - firstbufferedPosition) < config.maxSeekHole) {
             _logger.logger.log('target start position:' + startPosition);
             // if startPosition not buffered, let's seek to buffered.start(0)
             if (!startPositionBuffered) {
-              startPosition = buffered.start(0);
+              startPosition = firstbufferedPosition;
               _logger.logger.log('target start position not buffered, seek to buffered.start(0) ' + startPosition);
             }
             _logger.logger.log('adjust currentTime from ' + currentTime + ' to ' + startPosition);
@@ -5105,8 +5109,7 @@ var StreamController = function (_EventHandler) {
               // not playing if nothing buffered
           jumpThreshold = 0.5,
               // tolerance needed as some browsers stalls playback before reaching buffered range end
-          playheadMoving = currentTime !== this.lastCurrentTime,
-              config = this.config;
+          playheadMoving = currentTime !== this.lastCurrentTime;
 
           if (playheadMoving) {
             // played moving, but was previously stalled => now not stuck anymore
