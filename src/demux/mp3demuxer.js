@@ -2,6 +2,7 @@
  * MP3 demuxer
  */
 import ID3 from '../demux/id3';
+import { logger } from '../utils/logger';
 import MpegAudio from './mpegaudio';
 
 class MP3Demuxer {
@@ -43,7 +44,7 @@ class MP3Demuxer {
                 offset++
             ) {
                 if (MpegAudio.isHeader(data, offset)) {
-                    //logger.log('MPEG sync word found !');
+                    logger.log('MPEG Audio sync word found !');
                     return true;
                 }
             }

@@ -44,7 +44,7 @@ class AACDemuxer {
                 offset++
             ) {
                 if (ADTS.isHeader(data, offset)) {
-                    //logger.log('ADTS sync word found !');
+                    logger.log('ADTS sync word found !');
                     return true;
                 }
             }
