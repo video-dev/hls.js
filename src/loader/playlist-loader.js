@@ -452,7 +452,12 @@ class PlaylistLoader extends EventHandler {
         type = context.type,
         id = context.id,
         level = context.level,
-        hls = this.hls;
+        hls = this.hls,
+        config = this.hls.config;
+
+    if (config.playlistLoadSuccessDataProcessing) {
+      string = config.playlistLoadSuccessDataProcessing(string);
+    }
 
     this.loaders[type] = undefined;
     // responseURL not supported on some browsers (it is used to detect URL redirection)

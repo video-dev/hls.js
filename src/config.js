@@ -69,6 +69,7 @@ export var hlsDefaultConfig = {
       pLoader: undefined,
       xhrSetup: undefined,
       fetchSetup: undefined,
+      playlistLoadSuccessDataProcessing: undefined,
       abrController: AbrController,
       bufferController: BufferController,
       capLevelController: CapLevelController,
