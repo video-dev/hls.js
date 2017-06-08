@@ -244,6 +244,8 @@ class PlaylistLoader extends EventHandler {
           const codec = codecs[i];
           if (codec.indexOf('avc1') !== -1) {
             level.videoCodec = this.avc1toavcoti(codec);
+          } else if (codec.indexOf('hvc1') !== -1) {
+            level.videoCodec = codec;
           } else {
             level.audioCodec = codec;
           }
