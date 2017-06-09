@@ -805,7 +805,7 @@ class AudioStreamController extends EventHandler {
             // include levelCodec in audio and video tracks
             track = tracks.audio;
             if (track) {
-                track.levelCodec = 'mp4a.40.2';
+                track.levelCodec = track.codec;
                 track.id = data.id;
                 this.hls.trigger(Event.BUFFER_CODECS, tracks);
                 logger.log(
