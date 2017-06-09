@@ -43,7 +43,7 @@ class MP3Demuxer {
                 offset < length;
                 offset++
             ) {
-                if (MpegAudio.isHeader(data, offset)) {
+                if (MpegAudio.probe(data, offset)) {
                     logger.log('MPEG Audio sync word found !');
                     return true;
                 }

@@ -178,6 +178,15 @@ const ADTS = {
         // Layer bits (position 14 and 15) in header should be always 0 for ADTS
         // More info https://wiki.multimedia.cx/index.php?title=ADTS
         if (offset + 1 < data.length && this.isHeaderPattern(data, offset)) {
+            return true;
+        }
+        return false;
+    },
+
+    probe: function(data, offset) {
+        // same as isHeader but we also check that ADTS frame follows last ADTS frame
+        // or end of data is reached
+        if (offset + 1 < data.length && this.isHeaderPattern(data, offset)) {
             // ADTS header Length
             let headerLength = this.getHeaderLength(data, offset);
             // ADTS frame Length
@@ -185,7 +194,6 @@ const ADTS = {
             if (offset + 5 < data.length) {
                 frameLength = this.getFullFrameLength(data, offset);
             }
-            // check that ADTS frame follows last ADTS frame or end of data is reached
             let newOffset = offset + frameLength;
             if (
                 newOffset === data.length ||
