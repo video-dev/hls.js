@@ -512,8 +512,8 @@ class AudioStreamController extends EventHandler {
                         this.waitingFragment = null;
                         this.state = State.IDLE;
                     } else {
-                        this.onFragLoaded(this.waitingFragment);
                         this.state = State.FRAG_LOADING;
+                        this.onFragLoaded(this.waitingFragment);
                         this.waitingFragment = null;
                     }
                 } else {
