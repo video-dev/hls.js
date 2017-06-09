@@ -1476,8 +1476,8 @@ var AudioStreamController = function (_EventHandler) {
               this.waitingFragment = null;
               this.state = State.IDLE;
             } else {
-              this.onFragLoaded(this.waitingFragment);
               this.state = State.FRAG_LOADING;
+              this.onFragLoaded(this.waitingFragment);
               this.waitingFragment = null;
             }
           } else {
@@ -1731,7 +1731,7 @@ var AudioStreamController = function (_EventHandler) {
         // include levelCodec in audio and video tracks
         track = tracks.audio;
         if (track) {
-          track.levelCodec = 'mp4a.40.2';
+          track.levelCodec = track.codec;
           track.id = data.id;
           this.hls.trigger(_events2.default.BUFFER_CODECS, tracks);
           _logger.logger.log('audio track:audio,container:' + track.container + ',codecs[level/parsed]=[' + track.levelCodec + '/' + track.codec + ']');
