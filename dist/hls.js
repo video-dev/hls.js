@@ -11466,6 +11466,8 @@ var PlaylistLoader = function (_EventHandler) {
   }, {
     key: 'parseMasterPlaylistMedia',
     value: function parseMasterPlaylistMedia(string, baseurl, type) {
+      var audioCodec = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
+
       var result = void 0,
           medias = [],
           id = 0;
@@ -11486,6 +11488,9 @@ var PlaylistLoader = function (_EventHandler) {
           media.lang = attrs.LANGUAGE;
           if (!media.name) {
             media.name = media.lang;
+          }
+          if (audioCodec) {
+            media.audioCodec = audioCodec;
           }
           media.id = id++;
           medias.push(media);
@@ -11711,7 +11716,7 @@ var PlaylistLoader = function (_EventHandler) {
           var levels = this.parseMasterPlaylist(string, url);
           // multi level playlist, parse level info
           if (levels.length) {
-            var audioTracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO');
+            var audioTracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO', levels[0].audioCodec);
             var subtitles = this.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
             if (audioTracks.length) {
               // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
