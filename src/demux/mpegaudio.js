@@ -69,6 +69,15 @@ const MpegAudio = {
         // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
         // More info http://www.mp3-tech.org/programmer/frame_header.html
         if (offset + 1 < data.length && this.isHeaderPattern(data, offset)) {
+            return true;
+        }
+        return false;
+    },
+
+    probe: function (data, offset) {
+        // same as isHeader but we also check that MPEG frame follows last MPEG frame 
+        // or end of data is reached
+        if (offset + 1 < data.length && this.isHeaderPattern(data, offset)) {
             // MPEG header Length
             let headerLength = 4;
             // MPEG frame Length
@@ -77,7 +86,6 @@ const MpegAudio = {
             if (header && header.frameLength) {
                 frameLength = header.frameLength;
             }
-            // check that MPEG frame follows last MPEG frame or end of data is reached
             let newOffset = offset + frameLength;
             if (newOffset === data.length || (newOffset + 1 < data.length && this.isHeaderPattern(data, newOffset))) {
                 return true;

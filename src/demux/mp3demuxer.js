@@ -29,7 +29,7 @@ class MP3Demuxer {
       // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
       // More info http://www.mp3-tech.org/programmer/frame_header.html
       for (offset = id3Data.length, length = Math.min(data.length - 1, offset + 100); offset < length; offset++) {
-        if (MpegAudio.isHeader(data, offset)) {
+        if (MpegAudio.probe(data, offset)) {
           logger.log('MPEG Audio sync word found !');
           return true;
         }
