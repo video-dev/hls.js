@@ -28,6 +28,24 @@ class SubtitleTrackController extends EventHandler {
     this.tracks = [];
     this.trackId = -1;
     this.media = undefined;
+
+    this.textTracksChangeListener = () => {
+      // Media is undefined when switching streams via loadSource()
+      if (!this.media) {
+        return;
+      }
+
+      let trackId = -1;
+      let tracks = filterSubtitleTracks(this.media.textTracks);
+      for (let id = 0; id < tracks.length; id++) {
+        if (tracks[id].mode === 'showing') {
+          trackId = id;
+        }
+      }
+
+      // Setting current subtitleTrack will invoke code.
+      this.subtitleTrack = trackId;
+    };
   }
 
   destroy() {
@@ -41,26 +59,16 @@ class SubtitleTrackController extends EventHandler {
       return;
     }
 
-    this.media.textTracks.addEventListener('change', () => {
-      // Media is undefined when switching streams via loadSource()
-      if (!this.media) {
-        return;
-      }
-
-      let trackId = -1;
-      let tracks = filterSubtitleTracks(this.media.textTracks);
-      for (let id = 0; id < tracks.length; id++) {
-        if (tracks[id].mode === 'showing') {
-          trackId = id;
-        }
-      }
-      // Setting current subtitleTrack will invoke code.
-      this.subtitleTrack = trackId;
-    });
+    this.media.textTracks.addEventListener('change', this.textTracksChangeListener);
   }
 
   onMediaDetaching() {
-    // TODO: Remove event listeners.
+    if (!this.media) {
+      return;
+    }
+
+    this.media.textTracks.removeEventListener('change', this.textTracksChangeListener);
+
     this.media = undefined;
   }
 
