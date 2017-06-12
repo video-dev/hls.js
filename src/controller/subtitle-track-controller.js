@@ -62,7 +62,7 @@ class SubtitleTrackController extends EventHandler {
 
         this.media.textTracks.addEventListener(
             'change',
-            this._onTextTracksChanged
+            this._onTextTracksChanged.bind(this)
         );
     }
 
