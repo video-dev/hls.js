@@ -59,7 +59,8 @@ class SubtitleTrackController extends EventHandler {
       return;
     }
 
-    this.media.textTracks.addEventListener('change', this._onTextTracksChanged.bind(this));
+    this.trackChangeListener = this._onTextTracksChanged.bind(this);
+    this.media.textTracks.addEventListener('change', this.trackChangeListener);
   }
 
   onMediaDetaching() {
@@ -67,7 +68,7 @@ class SubtitleTrackController extends EventHandler {
       return;
     }
 
-    this.media.textTracks.removeEventListener('change', this._onTextTracksChanged.bind(this));
+    this.media.textTracks.removeEventListener('change', this.trackChangeListener);
 
     this.media = undefined;
   }
