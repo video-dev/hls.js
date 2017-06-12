@@ -29,24 +29,24 @@ class SubtitleTrackController extends EventHandler {
         this.tracks = [];
         this.trackId = -1;
         this.media = undefined;
+    }
 
-        this.textTracksChangeListener = () => {
-            // Media is undefined when switching streams via loadSource()
-            if (!this.media) {
-                return;
+    _onTextTracksChanged() {
+        // Media is undefined when switching streams via loadSource()
+        if (!this.media) {
+            return;
+        }
+
+        let trackId = -1;
+        let tracks = filterSubtitleTracks(this.media.textTracks);
+        for (let id = 0; id < tracks.length; id++) {
+            if (tracks[id].mode === 'showing') {
+                trackId = id;
             }
+        }
 
-            let trackId = -1;
-            let tracks = filterSubtitleTracks(this.media.textTracks);
-            for (let id = 0; id < tracks.length; id++) {
-                if (tracks[id].mode === 'showing') {
-                    trackId = id;
-                }
-            }
-
-            // Setting current subtitleTrack will invoke code.
-            this.subtitleTrack = trackId;
-        };
+        // Setting current subtitleTrack will invoke code.
+        this.subtitleTrack = trackId;
     }
 
     destroy() {
@@ -62,7 +62,7 @@ class SubtitleTrackController extends EventHandler {
 
         this.media.textTracks.addEventListener(
             'change',
-            this.textTracksChangeListener
+            this._onTextTracksChanged
         );
     }
 
@@ -73,7 +73,7 @@ class SubtitleTrackController extends EventHandler {
 
         this.media.textTracks.removeEventListener(
             'change',
-            this.textTracksChangeListener
+            this._onTextTracksChanged
         );
 
         this.media = undefined;
