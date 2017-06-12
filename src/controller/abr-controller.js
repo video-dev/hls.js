@@ -23,6 +23,8 @@ class AbrController extends EventHandler {
         this.lastLoadedFragLevel = 0;
         this._nextAutoLevel = -1;
         this.hls = hls;
+        this.timer = null;
+        this._bwEstimator = null;
         this.onCheck = this._abandonRulesCheck.bind(this);
     }
 
@@ -269,10 +271,8 @@ class AbrController extends EventHandler {
     }
 
     clearTimer() {
-        if (this.timer) {
-            clearInterval(this.timer);
-            this.timer = null;
-        }
+        clearInterval(this.timer);
+        this.timer = null;
     }
 
     // return next auto level
