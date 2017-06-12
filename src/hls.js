@@ -1,8 +1,6 @@
 /**
  * HLS interface
  */
-'use strict';
-
 import URLToolkit from 'url-toolkit';
 import Event from './events';
 import { ErrorTypes, ErrorDetails } from './errors';
