@@ -1,6 +1,7 @@
 /**
  *  MPEG parser helper
  */
+
 const MpegAudio = {
 
     BitratesMap: [
@@ -37,10 +38,10 @@ const MpegAudio = {
     },
 
     parseHeader: function (data, offset) {
-        var headerB =   (data[offset + 1] >> 3) & 3;
-        var headerC =   (data[offset + 1] >> 1) & 3;
-        var headerE =   (data[offset + 2] >> 4) & 15;
-        var headerF =   (data[offset + 2] >> 2) & 3;
+        var headerB = (data[offset + 1] >> 3) & 3;
+        var headerC = (data[offset + 1] >> 1) & 3;
+        var headerE = (data[offset + 2] >> 4) & 15;
+        var headerF = (data[offset + 2] >> 2) & 3;
         var headerG = !!(data[offset + 2] & 2);
         if (headerB !== 1 && headerE !== 0 && headerE !== 15 && headerF !== 3) {
             var columnInBitrates = headerB === 3 ? (3 - headerC) : (headerC === 3 ? 3 : 4);
@@ -59,12 +60,34 @@ const MpegAudio = {
         return undefined;
     },
 
+    isHeaderPattern: function (data, offset) {
+        return data[offset] === 0xff && (data[offset + 1] & 0xe0) === 0xe0 && (data[offset + 1] & 0x06) !== 0x00;
+    },
+
     isHeader: function (data, offset) {
         // Look for MPEG header | 1111 1111 | 111X XYZX | where X can be either 0 or 1 and Y or Z should be 1
         // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
         // More info http://www.mp3-tech.org/programmer/frame_header.html
-        if (offset + 1 < data.length) {
-            if ((data[offset] === 0xff) && (data[offset + 1] & 0xe0) === 0xe0 && (data[offset + 1] & 0x06) !== 0x00) {
+        if (offset + 1 < data.length && this.isHeaderPattern(data, offset)) {
+            return true;
+        }
+        return false;
+    },
+
+    probe: function (data, offset) {
+        // same as isHeader but we also check that MPEG frame follows last MPEG frame 
+        // or end of data is reached
+        if (offset + 1 < data.length && this.isHeaderPattern(data, offset)) {
+            // MPEG header Length
+            let headerLength = 4;
+            // MPEG frame Length
+            let header = this.parseHeader(data, offset);
+            let frameLength = headerLength;
+            if (header && header.frameLength) {
+                frameLength = header.frameLength;
+            }
+            let newOffset = offset + frameLength;
+            if (newOffset === data.length || (newOffset + 1 < data.length && this.isHeaderPattern(data, newOffset))) {
                 return true;
             }
         }
