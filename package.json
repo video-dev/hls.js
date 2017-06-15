@@ -58,7 +58,7 @@
     "mocha": "^3.0.2",
     "mversion": "^1.10.1",
     "opener": "^1.4.0",
-    "parallelshell": "^2.0.0",
+    "parallelshell": "^3.0.1",
     "rimraf": "^2.6.1",
     "uglify-js": "^3.0.15",
     "url-toolkit": "^2.0.1",
