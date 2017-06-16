@@ -5,13 +5,12 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
 const ADTS = {
-  getAudioConfig: function (observer, data, offset, audioCodec) {
+  getAudioConfig: function (observer, data, offset, audioCodec, env) {
     var adtsObjectType, // :int
       adtsSampleingIndex, // :int
       adtsExtensionSampleingIndex, // :int
       adtsChanelConfig, // :int
       config,
-      userAgent = navigator.userAgent.toLowerCase(),
       manifestCodec = audioCodec,
       adtsSampleingRates = [
         96000, 88200,
@@ -33,7 +32,7 @@ const ADTS = {
     adtsChanelConfig |= ((data[offset + 3] & 0xC0) >>> 6);
     logger.log(`manifest codec:${audioCodec},ADTS data:type:${adtsObjectType},sampleingIndex:${adtsSampleingIndex}[${adtsSampleingRates[adtsSampleingIndex]}Hz],channelConfig:${adtsChanelConfig}`);
     // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
-    if (/firefox/i.test(userAgent)) {
+    if (env.isFirefox) {
       if (adtsSampleingIndex >= 6) {
         adtsObjectType = 5;
         config = new Array(4);
@@ -47,7 +46,7 @@ const ADTS = {
         adtsExtensionSampleingIndex = adtsSampleingIndex;
       }
       // Android : always use AAC
-    } else if (userAgent.indexOf('android') !== -1) {
+    } else if (env.isAndroid) {
       adtsObjectType = 2;
       config = new Array(2);
       adtsExtensionSampleingIndex = adtsSampleingIndex;
@@ -171,9 +170,9 @@ const ADTS = {
     return false;
   },
 
-  initTrackConfig: function (track, observer, data, offset, audioCodec) {
+  initTrackConfig: function (track, observer, data, offset, audioCodec, env) {
     if (!track.samplerate) {
-      var config = this.getAudioConfig(observer, data, offset, audioCodec);
+      var config = this.getAudioConfig(observer, data, offset, audioCodec, env);
       track.config = config.config;
       track.samplerate = config.samplerate;
       track.channelCount = config.channelCount;
@@ -227,4 +226,4 @@ const ADTS = {
   }
 };
 
-module.exports = ADTS;
+export default ADTS;

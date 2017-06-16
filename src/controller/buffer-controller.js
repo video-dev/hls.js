@@ -6,6 +6,7 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import {logger} from '../utils/logger';
 import {ErrorTypes, ErrorDetails} from '../errors';
+import { Env } from '../utils/env';
 
 
 class BufferController extends EventHandler {
@@ -523,7 +524,7 @@ class BufferController extends EventHandler {
                 bufStart = sb.buffered.start(i);
                 bufEnd = sb.buffered.end(i);
                 // workaround firefox not able to properly flush multiple buffered range.
-                if (navigator.userAgent.toLowerCase().indexOf('firefox') !== -1 && endOffset === Number.POSITIVE_INFINITY) {
+                if (Env.isFirefox && endOffset === Number.POSITIVE_INFINITY) {
                   flushStart = startOffset;
                   flushEnd = endOffset;
                 } else {

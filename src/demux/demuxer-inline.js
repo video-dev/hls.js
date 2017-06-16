@@ -14,11 +14,11 @@ import PassThroughRemuxer from '../remux/passthrough-remuxer';
 
 class DemuxerInline {
 
-  constructor(observer, typeSupported, config, vendor) {
+  constructor(observer, typeSupported, config, env) {
     this.observer = observer;
     this.typeSupported = typeSupported;
     this.config = config;
-    this.vendor = vendor;
+    this.env = env;
   }
 
   destroy() {
@@ -77,8 +77,8 @@ class DemuxerInline {
         const mux = muxConfig[i];
         const probe = mux.demux.probe;
         if (probe(data)) {
-          const remuxer = this.remuxer = new mux.remux(observer, config, typeSupported, this.vendor);
-          demuxer = new mux.demux(observer, remuxer, config, typeSupported);
+          const remuxer = this.remuxer = new mux.remux(observer, config, typeSupported, this.env);
+          demuxer = new mux.demux(observer, remuxer, config, typeSupported, this.env);
           this.probe = probe;
           break;
         }

@@ -7,10 +7,12 @@ import ID3 from '../demux/id3';
 
 class AACDemuxer {
 
-  constructor(observer, remuxer, config) {
+  constructor(observer, remuxer, config, typeSupported, env) {
     this.observer = observer;
-    this.config = config;
     this.remuxer = remuxer;
+    this.config = config;
+    this.typeSupported = typeSupported;
+    this.env = env;
   }
 
   resetInitSegment(initSegment, audioCodec, videoCodec, duration) {
@@ -52,7 +54,7 @@ class AACDemuxer {
 
     while (offset < length - 1) {
       if (ADTS.isHeader(data, offset) && (offset + 5) < length) {
-        ADTS.initTrackConfig(track, this.observer, data, offset, track.manifestCodec);
+        ADTS.initTrackConfig(track, this.observer, data, offset, track.manifestCodec, this.env);
         var frame = ADTS.appendFrame(track, data, offset, pts, frameIndex);
         if (frame) {
           offset += frame.length;

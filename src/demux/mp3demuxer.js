@@ -7,10 +7,12 @@ import MpegAudio from './mpegaudio';
 
 class MP3Demuxer {
 
-  constructor(observer, remuxer, config) {
+  constructor(observer, remuxer, config, typeSupported, env) {
     this.observer = observer;
-    this.config = config;
     this.remuxer = remuxer;
+    this.config = config;
+    this.typeSupported = typeSupported;
+    this.env = env;
   }
 
   resetInitSegment(initSegment, audioCodec, videoCodec, duration) {

@@ -22,13 +22,14 @@
   "unused"    : true,
   "white"     : true,
   "globals"   : {
-    "console"     : true,
-    "MediaSource" : true,
-    "performance" : true,
-    "crypto"      : true,
-    "fetch"       : true,
-    "Request"     : true,
-    "Headers"     : true,
-    "escape"      : true
+    "console"      : true,
+    "MediaSource"  : true,
+    "performance"  : true,
+    "crypto"       : true,
+    "fetch"        : true,
+    "Request"      : true,
+    "Headers"      : true,
+    "escape"       : true,
+    "DocumentTouch": true
   }
 }
