@@ -202,6 +202,9 @@ class AudioStreamController extends EventHandler {
                     pos = this.media.currentTime;
                 } else {
                     pos = this.nextLoadPosition;
+                    if (pos === undefined) {
+                        break;
+                    }
                 }
                 let media = this.mediaBuffer ? this.mediaBuffer : this.media,
                     bufferInfo = BufferHelper.bufferInfo(
@@ -604,7 +607,6 @@ class AudioStreamController extends EventHandler {
         // if any URL found on new audio track, it is an alternate audio track
         var altAudio = !!data.url;
         this.trackId = data.id;
-        this.state = State.IDLE;
 
         this.fragCurrent = null;
         this.state = State.PAUSED;
