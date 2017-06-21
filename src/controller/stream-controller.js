@@ -426,6 +426,7 @@ class StreamController extends EventHandler {
             ) {
                 media.currentTime = liveSyncPosition;
             }
+            this.nextLoadPosition = liveSyncPosition;
         }
 
         // if end of buffer greater than live edge, don't load any fragment
