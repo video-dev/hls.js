@@ -705,6 +705,8 @@ var AbrController = function (_EventHandler) {
     _this.lastLoadedFragLevel = 0;
     _this._nextAutoLevel = -1;
     _this.hls = hls;
+    _this.timer = null;
+    _this._bwEstimator = null;
     _this.onCheck = _this._abandonRulesCheck.bind(_this);
     return _this;
   }
@@ -889,10 +891,8 @@ var AbrController = function (_EventHandler) {
   }, {
     key: 'clearTimer',
     value: function clearTimer() {
-      if (this.timer) {
-        clearInterval(this.timer);
-        this.timer = null;
-      }
+      clearInterval(this.timer);
+      this.timer = null;
     }
 
     // return next auto level
@@ -4690,8 +4690,8 @@ var AACDemuxer = function () {
         // Layer bits (position 14 and 15) in header should be always 0 for ADTS
         // More info https://wiki.multimedia.cx/index.php?title=ADTS
         for (offset = id3Data.length, length = Math.min(data.length - 1, offset + 100); offset < length; offset++) {
-          if (_adts2.default.isHeader(data, offset)) {
-            //logger.log('ADTS sync word found !');
+          if (_adts2.default.probe(data, offset)) {
+            _logger.logger.log('ADTS sync word found !');
             return true;
           }
         }
@@ -4833,12 +4833,41 @@ var ADTS = {
     return { config: config, samplerate: adtsSampleingRates[adtsSampleingIndex], channelCount: adtsChanelConfig, codec: 'mp4a.40.' + adtsObjectType, manifestCodec: manifestCodec };
   },
 
+  isHeaderPattern: function isHeaderPattern(data, offset) {
+    return data[offset] === 0xff && (data[offset + 1] & 0xf6) === 0xf0;
+  },
+
+  getHeaderLength: function getHeaderLength(data, offset) {
+    return !!(data[offset + 1] & 0x01) ? 7 : 9;
+  },
+
+  getFullFrameLength: function getFullFrameLength(data, offset) {
+    return (data[offset + 3] & 0x03) << 11 | data[offset + 4] << 3 | (data[offset + 5] & 0xE0) >>> 5;
+  },
+
   isHeader: function isHeader(data, offset) {
     // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
     // Layer bits (position 14 and 15) in header should be always 0 for ADTS
     // More info https://wiki.multimedia.cx/index.php?title=ADTS
-    if (offset + 1 < data.length) {
-      if (data[offset] === 0xff && (data[offset + 1] & 0xf6) === 0xf0) {
+    if (offset + 1 < data.length && this.isHeaderPattern(data, offset)) {
+      return true;
+    }
+    return false;
+  },
+
+  probe: function probe(data, offset) {
+    // same as isHeader but we also check that ADTS frame follows last ADTS frame 
+    // or end of data is reached
+    if (offset + 1 < data.length && this.isHeaderPattern(data, offset)) {
+      // ADTS header Length
+      var headerLength = this.getHeaderLength(data, offset);
+      // ADTS frame Length
+      var frameLength = headerLength;
+      if (offset + 5 < data.length) {
+        frameLength = this.getFullFrameLength(data, offset);
+      }
+      var newOffset = offset + frameLength;
+      if (newOffset === data.length || newOffset + 1 < data.length && this.isHeaderPattern(data, newOffset)) {
         return true;
       }
     }
@@ -4886,9 +4915,9 @@ var ADTS = {
     var length = data.length;
 
     // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
-    headerLength = !!(data[offset + 1] & 0x01) ? 7 : 9;
+    headerLength = this.getHeaderLength(data, offset);
     // retrieve frame size
-    frameLength = (data[offset + 3] & 0x03) << 11 | data[offset + 4] << 3 | (data[offset + 5] & 0xE0) >>> 5;
+    frameLength = this.getFullFrameLength(data, offset);
     frameLength -= headerLength;
 
     if (frameLength > 0 && offset + headerLength + frameLength <= length) {
@@ -5011,10 +5040,11 @@ var DemuxerInline = function () {
         var observer = this.observer;
         var typeSupported = this.typeSupported;
         var config = this.config;
-        var muxConfig = [{ demux: _tsdemuxer2.default, remux: _mp4Remuxer2.default }, { demux: _mp3demuxer2.default, remux: _mp4Remuxer2.default }, { demux: _aacdemuxer2.default, remux: _mp4Remuxer2.default }, { demux: _mp4demuxer2.default, remux: _passthroughRemuxer2.default }];
+        // probing order is AAC/MP3/TS/MP4
+        var muxConfig = [{ demux: _aacdemuxer2.default, remux: _mp4Remuxer2.default }, { demux: _mp3demuxer2.default, remux: _mp4Remuxer2.default }, { demux: _tsdemuxer2.default, remux: _mp4Remuxer2.default }, { demux: _mp4demuxer2.default, remux: _passthroughRemuxer2.default }];
 
         // probe for content type
-        for (var i in muxConfig) {
+        for (var i = 0, len = muxConfig.length; i < len; i++) {
           var mux = muxConfig[i];
           var probe = mux.demux.probe;
           if (probe(data)) {
@@ -6108,6 +6138,8 @@ var _id = _dereq_(22);
 
 var _id2 = _interopRequireDefault(_id);
 
+var _logger = _dereq_(46);
+
 var _mpegaudio = _dereq_(25);
 
 var _mpegaudio2 = _interopRequireDefault(_mpegaudio);
@@ -6186,8 +6218,8 @@ var MP3Demuxer = function () {
         // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
         // More info http://www.mp3-tech.org/programmer/frame_header.html
         for (offset = id3Data.length, length = Math.min(data.length - 1, offset + 100); offset < length; offset++) {
-          if (_mpegaudio2.default.isHeader(data, offset)) {
-            //logger.log('MPEG sync word found !');
+          if (_mpegaudio2.default.probe(data, offset)) {
+            _logger.logger.log('MPEG Audio sync word found !');
             return true;
           }
         }
@@ -6201,7 +6233,7 @@ var MP3Demuxer = function () {
 
 exports.default = MP3Demuxer;
 
-},{"22":22,"25":25}],24:[function(_dereq_,module,exports){
+},{"22":22,"25":25,"46":46}],24:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6532,6 +6564,7 @@ exports.default = MP4Demuxer;
 /**
  *  MPEG parser helper
  */
+
 var MpegAudio = {
 
     BitratesMap: [32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160],
@@ -6583,12 +6616,34 @@ var MpegAudio = {
         return undefined;
     },
 
+    isHeaderPattern: function isHeaderPattern(data, offset) {
+        return data[offset] === 0xff && (data[offset + 1] & 0xe0) === 0xe0 && (data[offset + 1] & 0x06) !== 0x00;
+    },
+
     isHeader: function isHeader(data, offset) {
         // Look for MPEG header | 1111 1111 | 111X XYZX | where X can be either 0 or 1 and Y or Z should be 1
         // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
         // More info http://www.mp3-tech.org/programmer/frame_header.html
-        if (offset + 1 < data.length) {
-            if (data[offset] === 0xff && (data[offset + 1] & 0xe0) === 0xe0 && (data[offset + 1] & 0x06) !== 0x00) {
+        if (offset + 1 < data.length && this.isHeaderPattern(data, offset)) {
+            return true;
+        }
+        return false;
+    },
+
+    probe: function probe(data, offset) {
+        // same as isHeader but we also check that MPEG frame follows last MPEG frame 
+        // or end of data is reached
+        if (offset + 1 < data.length && this.isHeaderPattern(data, offset)) {
+            // MPEG header Length
+            var headerLength = 4;
+            // MPEG frame Length
+            var header = this.parseHeader(data, offset);
+            var frameLength = headerLength;
+            if (header && header.frameLength) {
+                frameLength = header.frameLength;
+            }
+            var newOffset = offset + frameLength;
+            if (newOffset === data.length || newOffset + 1 < data.length && this.isHeaderPattern(data, newOffset)) {
                 return true;
             }
         }
@@ -7922,7 +7977,7 @@ var EventHandler = function () {
             throw new Error('Forbidden event name: ' + event);
           }
           this.hls.on(event, this.onEvent);
-        }.bind(this));
+        }, this);
       }
     }
   }, {
@@ -7931,7 +7986,7 @@ var EventHandler = function () {
       if (this.isEventHandler()) {
         this.handledEvents.forEach(function (event) {
           this.hls.off(event, this.onEvent);
-        }.bind(this));
+        }, this);
       }
     }
 
@@ -8387,16 +8442,16 @@ var LevelHelper = {
 module.exports = LevelHelper;
 
 },{"46":46}],34:[function(_dereq_,module,exports){
-/**
- * HLS interface
- */
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /**
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      * HLS interface
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
+
 
 var _urlToolkit = _dereq_(2);
 
