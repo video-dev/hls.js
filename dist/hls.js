@@ -4024,6 +4024,7 @@ var StreamController = function (_EventHandler) {
         if (media && media.readyState && media.duration > liveSyncPosition) {
           media.currentTime = liveSyncPosition;
         }
+        this.nextLoadPosition = liveSyncPosition;
       }
 
       // if end of buffer greater than live edge, don't load any fragment
