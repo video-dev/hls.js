@@ -54,12 +54,14 @@ class MP4Remuxer {
            initPTS = Math.min(initPTS,ptsNormalize(sample.pts - timeScale * timeOffset, refPTS));
            initDTS = Math.min(initDTS,ptsNormalize(sample.dts - timeScale * timeOffset, refPTS));
         }
-        const initPTSDelta = refPTS - initPTS;
-        if (Math.abs(initPTSDelta) > 10 * timeScale) {
-          logger.warn(`timestamp inconsistency, ${(initPTSDelta/timeScale).toFixed(3)}s delta against expected value: missing discontinuity ? reset initPTS/initDTS`);
-          this._initPTS = initPTS;
-          this._initDTS = initDTS;
-          this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS});
+        if (initPTS !== Infinity) {
+          const initPTSDelta = refPTS - initPTS;
+          if (Math.abs(initPTSDelta) > 10 * timeScale) {
+            logger.warn(`timestamp inconsistency, ${(initPTSDelta/timeScale).toFixed(3)}s delta against expected value: missing discontinuity ? reset initPTS/initDTS`);
+            this._initPTS = initPTS;
+            this._initDTS = initDTS;
+            this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS});
+          }
         }
       }
     }
