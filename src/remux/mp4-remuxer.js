@@ -40,16 +40,17 @@ class MP4Remuxer {
     } else {
       if (accurateTimeOffset) {
         // check timestamp consistency. it there is more than 10s gap between expected PTS/DTS, recompute initPTS/DTS
-        let initPTS = Infinity, initDTS = Infinity;
-        let refPTS = this._initPTS;
+        const refPTS = this._initPTS;
         const ptsNormalize = this._PTSNormalize;
-        let timeScale = audioTrack.inputTimeScale;
-        if (timeScale) {
-           initPTS = initDTS = ptsNormalize(audioTrack.samples[0].pts - timeScale * timeOffset, refPTS);
+        const timeScale = audioTrack.inputTimeScale || videoTrack.inputTimeScale;
+        let initPTS = Infinity, initDTS = Infinity;
+        let samples = audioTrack.samples;
+        if (samples.length) {
+           initPTS = initDTS = ptsNormalize(samples[0].pts - timeScale * timeOffset, refPTS);
         }
-        timeScale = videoTrack.inputTimeScale;
-        if (timeScale) {
-          let sample = videoTrack.samples[0];
+        samples = videoTrack.samples;
+        if (samples.length) {
+          let sample = samples[0];
            initPTS = Math.min(initPTS,ptsNormalize(sample.pts - timeScale * timeOffset, refPTS));
            initDTS = Math.min(initDTS,ptsNormalize(sample.dts - timeScale * timeOffset, refPTS));
         }
