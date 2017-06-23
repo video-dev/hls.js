@@ -463,7 +463,8 @@ class StreamController extends EventHandler {
               }
               frag = prevFrag;
               frag.backtracked = true;
-            } else {
+            } else if (curSNIdx) {
+              // can't backtrack on very first fragment
               frag = null;
             }
           }
