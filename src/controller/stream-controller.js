@@ -903,9 +903,11 @@ class StreamController extends EventHandler {
                         fragCurrent.loader.abort();
                     }
                     this.fragCurrent = null;
-                    // flush position is the start position of this new buffer
+                    // start flush position is the start PTS of next buffered frag.
+                    // we use frag.naxStartPTS which is max(audio startPTS, video startPTS).
+                    // in case there is a small PTS Delta between audio and video, using maxStartPTS avoids flushing last samples from current fragment
                     this.flushMainBuffer(
-                        nextBufferedFrag.startPTS,
+                        nextBufferedFrag.maxStartPTS,
                         Number.POSITIVE_INFINITY
                     );
                 }

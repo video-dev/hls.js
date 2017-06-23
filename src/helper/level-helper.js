@@ -86,6 +86,7 @@ const LevelHelper = {
         endDTS
     ) {
         // update frag PTS/DTS
+        let maxStartPTS = startPTS;
         if (!isNaN(frag.startPTS)) {
             // delta PTS between audio and video
             let deltaPTS = Math.abs(frag.startPTS - startPTS);
@@ -94,6 +95,7 @@ const LevelHelper = {
             } else {
                 frag.deltaPTS = Math.max(deltaPTS, frag.deltaPTS);
             }
+            maxStartPTS = Math.max(startPTS, frag.startPTS);
             startPTS = Math.min(startPTS, frag.startPTS);
             endPTS = Math.max(endPTS, frag.endPTS);
             startDTS = Math.min(startDTS, frag.startDTS);
@@ -102,6 +104,7 @@ const LevelHelper = {
 
         const drift = startPTS - frag.start;
         frag.start = frag.startPTS = startPTS;
+        frag.maxStartPTS = maxStartPTS;
         frag.endPTS = endPTS;
         frag.startDTS = startDTS;
         frag.endDTS = endDTS;
