@@ -892,6 +892,7 @@
       if (ADTS.isHeader(data, offset) && (offset + 5) < len) {
         var frame = ADTS.appendFrame(track, data, offset, pts, frameIndex);
         if (frame) {
+          //logger.log(`${Math.round(frame.sample.pts)} : AAC`);
           offset += frame.length;
           stamp = frame.sample.pts;
           frameIndex++;
