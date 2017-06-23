@@ -1151,6 +1151,7 @@ class TSDemuxer {
                     frameIndex
                 );
                 if (frame) {
+                    //logger.log(`${Math.round(frame.sample.pts)} : AAC`);
                     offset += frame.length;
                     stamp = frame.sample.pts;
                     frameIndex++;
