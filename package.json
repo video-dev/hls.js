@@ -16,6 +16,14 @@
     "url": "https://github.com/video-dev/hls.js/issues"
   },
   "main": "./dist/hls.js",
+  "nyc": {
+    "reporter": [
+      "lcov"
+    ],
+    "exclude": [
+      "tests"
+    ]
+  },
   "scripts": {
     "build": "npm run buildlib && rimraf dist/* && npm run builddist && npm run builddistlight",
     "buildlib": "rimraf lib/* && babel src --out-dir lib",
@@ -36,7 +44,8 @@
     "serve": "http-server -p 8000 .",
     "open": "opener http://localhost:8000/demo/",
     "live-reload": "livereload dist/",
-    "dev": "npm run builddist && (npm run open -s & parallelshell 'npm run live-reload -s' 'npm run serve -s' 'npm run watch -s')"
+    "dev": "npm run builddist && (npm run open -s & parallelshell 'npm run live-reload -s' 'npm run serve -s' 'npm run watch -s')",
+    "coverage": "nyc mocha --compilers js:babel-register --recursive tests/unit"
   },
   "devDependencies": {
     "arraybuffer-equal": "^1.0.4",
@@ -57,12 +66,13 @@
     "livereload": "^0.6.2",
     "mocha": "^3.0.2",
     "mversion": "^1.10.1",
+    "nyc": "^11.0.2",
     "opener": "^1.4.0",
     "parallelshell": "^2.0.0",
     "rimraf": "^2.6.1",
+    "selenium-webdriver": "^3.1.0",
     "uglify-js": "^3.0.15",
     "url-toolkit": "^2.0.1",
-    "selenium-webdriver": "^3.1.0",
     "watchify": "^3.7.0",
     "webworkify": "^1.4.0"
   }
