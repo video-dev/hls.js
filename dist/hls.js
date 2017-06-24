@@ -4153,7 +4153,8 @@ var StreamController = function (_EventHandler) {
                 }
                 frag = prevFrag;
                 frag.backtracked = true;
-              } else {
+              } else if (curSNIdx) {
+                // can't backtrack on very first fragment
                 frag = null;
               }
             }
@@ -4375,8 +4376,10 @@ var StreamController = function (_EventHandler) {
               fragCurrent.loader.abort();
             }
             this.fragCurrent = null;
-            // flush position is the start position of this new buffer
-            this.flushMainBuffer(nextBufferedFrag.startPTS, Number.POSITIVE_INFINITY);
+            // start flush position is the start PTS of next buffered frag.
+            // we use frag.naxStartPTS which is max(audio startPTS, video startPTS).
+            // in case there is a small PTS Delta between audio and video, using maxStartPTS avoids flushing last samples from current fragment
+            this.flushMainBuffer(nextBufferedFrag.maxStartPTS, Number.POSITIVE_INFINITY);
           }
         }
       }
@@ -9292,6 +9295,7 @@ var TSDemuxer = function () {
           expGolombDecoder,
           avcSample = this.avcSample,
           push,
+          spsfound = false,
           i;
       //free pes.data to save up some memory
       pes.data = null;
@@ -9305,9 +9309,10 @@ var TSDemuxer = function () {
               avcSample.debug += 'NDR ';
             }
             avcSample.frame = true;
-            // retrieve slice type by parsing beginning of NAL unit (follow H264 spec, slice_header definition) to detect keyframe embedded in NDR
             var data = unit.data;
-            if (data.length > 4) {
+            // only check slice type to detect KF in case SPS found in same packet (any keyframe is preceded by SPS ...)
+            if (spsfound && data.length > 4) {
+              // retrieve slice type by parsing beginning of NAL unit (follow H264 spec, slice_header definition) to detect keyframe embedded in NDR
               var sliceType = new _expGolomb2.default(data).readSliceType();
               // 2 : I slice, 4 : SI slice, 7 : I slice, 9: SI slice
               // SI slice : A slice that is coded using intra prediction only and using quantisation of the prediction samples.
@@ -9409,6 +9414,7 @@ var TSDemuxer = function () {
           //SPS
           case 7:
             push = true;
+            spsfound = true;
             if (debug && avcSample) {
               avcSample.debug += 'SPS ';
             }
@@ -9728,6 +9734,7 @@ var TSDemuxer = function () {
         if (_adts2.default.isHeader(data, offset) && offset + 5 < len) {
           var frame = _adts2.default.appendFrame(track, data, offset, pts, frameIndex);
           if (frame) {
+            //logger.log(`${Math.round(frame.sample.pts)} : AAC`);
             offset += frame.length;
             stamp = frame.sample.pts;
             frameIndex++;
@@ -10318,6 +10325,7 @@ var LevelHelper = {
 
   updateFragPTSDTS: function updateFragPTSDTS(details, frag, startPTS, endPTS, startDTS, endDTS) {
     // update frag PTS/DTS
+    var maxStartPTS = startPTS;
     if (!isNaN(frag.startPTS)) {
       // delta PTS between audio and video
       var deltaPTS = Math.abs(frag.startPTS - startPTS);
@@ -10326,6 +10334,7 @@ var LevelHelper = {
       } else {
         frag.deltaPTS = Math.max(deltaPTS, frag.deltaPTS);
       }
+      maxStartPTS = Math.max(startPTS, frag.startPTS);
       startPTS = Math.min(startPTS, frag.startPTS);
       endPTS = Math.max(endPTS, frag.endPTS);
       startDTS = Math.min(startDTS, frag.startDTS);
@@ -10334,6 +10343,7 @@ var LevelHelper = {
 
     var drift = startPTS - frag.start;
     frag.start = frag.startPTS = startPTS;
+    frag.maxStartPTS = maxStartPTS;
     frag.endPTS = endPTS;
     frag.startDTS = startDTS;
     frag.endDTS = endDTS;
@@ -10472,7 +10482,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.7.9';
+      return '0.7.10';
     }
   }, {
     key: 'Events',
@@ -12471,6 +12481,34 @@ var MP4Remuxer = function () {
       // generate Init Segment if needed
       if (!this.ISGenerated) {
         this.generateIS(audioTrack, videoTrack, timeOffset);
+      } else {
+        if (accurateTimeOffset) {
+          // check timestamp consistency. it there is more than 10s gap between expected PTS/DTS, recompute initPTS/DTS
+          var refPTS = this._initPTS;
+          var ptsNormalize = this._PTSNormalize;
+          var timeScale = audioTrack.inputTimeScale || videoTrack.inputTimeScale;
+          var initPTS = Infinity,
+              initDTS = Infinity;
+          var samples = audioTrack.samples;
+          if (samples.length) {
+            initPTS = initDTS = ptsNormalize(samples[0].pts - timeScale * timeOffset, refPTS);
+          }
+          samples = videoTrack.samples;
+          if (samples.length) {
+            var sample = samples[0];
+            initPTS = Math.min(initPTS, ptsNormalize(sample.pts - timeScale * timeOffset, refPTS));
+            initDTS = Math.min(initDTS, ptsNormalize(sample.dts - timeScale * timeOffset, refPTS));
+          }
+          if (initPTS !== Infinity) {
+            var initPTSDelta = refPTS - initPTS;
+            if (Math.abs(initPTSDelta) > 10 * timeScale) {
+              _logger.logger.warn('timestamp inconsistency, ' + (initPTSDelta / timeScale).toFixed(3) + 's delta against expected value: missing discontinuity ? reset initPTS/initDTS');
+              this._initPTS = initPTS;
+              this._initDTS = initDTS;
+              this.observer.trigger(_events2.default.INIT_PTS_FOUND, { initPTS: initPTS });
+            }
+          }
+        }
       }
 
       if (this.ISGenerated) {
