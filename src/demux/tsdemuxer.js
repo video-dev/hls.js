@@ -473,6 +473,7 @@
         expGolombDecoder,
         avcSample = this.avcSample,
         push,
+        spsfound = false,
         i;
     //free pes.data to save up some memory
     pes.data = null;
@@ -486,9 +487,10 @@
             avcSample.debug += 'NDR ';
            }
            avcSample.frame = true;
-           // retrieve slice type by parsing beginning of NAL unit (follow H264 spec, slice_header definition) to detect keyframe embedded in NDR
            let data = unit.data;
-           if (data.length > 4) {
+           // only check slice type to detect KF in case SPS found in same packet (any keyframe is preceded by SPS ...)
+           if (spsfound && data.length > 4) {
+             // retrieve slice type by parsing beginning of NAL unit (follow H264 spec, slice_header definition) to detect keyframe embedded in NDR
              let sliceType = new ExpGolomb(data).readSliceType();
              // 2 : I slice, 4 : SI slice, 7 : I slice, 9: SI slice
              // SI slice : A slice that is coded using intra prediction only and using quantisation of the prediction samples.
@@ -593,6 +595,7 @@
         //SPS
         case 7:
           push = true;
+          spsfound = true;
           if(debug && avcSample) {
             avcSample.debug += 'SPS ';
           }
