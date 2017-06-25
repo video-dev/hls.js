@@ -71,7 +71,7 @@
     "parallelshell": "^2.0.0",
     "rimraf": "^2.6.1",
     "selenium-webdriver": "^3.1.0",
-    "uglify-js": "^3.0.15",
+    "uglify-js": "^3.0.20",
     "url-toolkit": "^2.0.1",
     "watchify": "^3.7.0",
     "webworkify": "^1.4.0"
