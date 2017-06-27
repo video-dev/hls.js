@@ -209,7 +209,7 @@ header {
 
   <script src="../../streams.js"></script>
   <!-- live-reload script -->
-  <script src="//localhost:8001"></script>
+  <script src="//localhost:35729/livereload.js?snipver=1"></script>
   <script src="../dist/hls.js"></script>
   <script src="canvas.js"></script>
   <script src="metrics.js"></script>
@@ -257,7 +257,7 @@ $(document).ready(function() {
   video.volume = 0.05;
   $("#currentVersion").html("Hls version:" + Hls.version);
 
-  loadStream(decodeURIComponent(getURLParam('src','http://www.streambox.fr/playlists/x36xhzz/x36xhzz.m3u8')));
+  loadStream(decodeURIComponent(getURLParam('src','https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8')));
 
   function loadStream(url) {
     hideCanvas();
@@ -959,6 +959,11 @@ function timeRangesToString(r) {
   }
 
   function updateLevelInfo() {
+
+    if (!hls.levels) {
+      return;
+    }
+
     var button_template = '<button type="button" class="btn btn-sm ';
     var button_enabled  = 'btn-primary" ';
     var button_disabled = 'btn-success" ';

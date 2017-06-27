@@ -22,6 +22,16 @@ const cueString2millis = function(timeString) {
     return ts;
 };
 
+// From https://github.com/darkskyapp/string-hash
+const hash = function(text) {
+    let hash = 5381;
+    let i = text.length;
+    while (i) {
+        hash = (hash * 33) ^ text.charCodeAt(--i);
+    }
+    return (hash >>> 0).toString();
+};
+
 const calculateOffset = function(vttCCs, cc, presentationTime) {
     let currCC = vttCCs[cc];
     let prevCC = vttCCs[currCC.prevCC];
@@ -70,7 +80,7 @@ const WebVTTParser = {
 
             // Update offsets for new discontinuities
             if (currCC && currCC.new) {
-                if (localTime) {
+                if (localTime !== undefined) {
                     // When local time is provided, offset = discontinuity start time - local time
                     cueOffset = vttCCs.ccOffset = currCC.start;
                 } else {
@@ -78,13 +88,17 @@ const WebVTTParser = {
                 }
             }
 
-            if (presentationTime && !localTime) {
-                // If we have MPEGTS but no LOCAL time, offset = presentation time + discontinuity offset
+            if (presentationTime) {
+                // If we have MPEGTS, offset = presentation time + discontinuity offset
                 cueOffset = presentationTime + vttCCs.ccOffset - vttCCs.presentationOffset;
             }
 
             cue.startTime += cueOffset - localTime;
             cue.endTime += cueOffset - localTime;
+
+            // Create a unique hash id for a cue based on start/end times and text.
+            // This helps timeline-controller to avoid showing repeated captions.
+            cue.id = hash(cue.startTime) + hash(cue.endTime) + hash(cue.text);
 
             // Fix encoding of special characters. TODO: Test with all sorts of weird characters.
             cue.text = decodeURIComponent(escape(cue.text));

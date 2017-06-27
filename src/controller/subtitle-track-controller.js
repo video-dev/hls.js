@@ -6,6 +6,16 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import {logger} from '../utils/logger';
 
+function filterSubtitleTracks(textTrackList) {
+  let tracks = [];
+  for (let i = 0; i < textTrackList.length; i++) {
+    if (textTrackList[i].kind === 'subtitles') {
+      tracks.push(textTrackList[i]);
+    }
+  }
+  return tracks;
+}
+
 class SubtitleTrackController extends EventHandler {
 
   constructor(hls) {
@@ -20,6 +30,24 @@ class SubtitleTrackController extends EventHandler {
     this.media = undefined;
   }
 
+  _onTextTracksChanged() {
+    // Media is undefined when switching streams via loadSource()
+    if (!this.media) {
+      return;
+    }
+
+    let trackId = -1;
+    let tracks = filterSubtitleTracks(this.media.textTracks);
+    for (let id = 0; id < tracks.length; id++) {
+      if (tracks[id].mode === 'showing') {
+        trackId = id;
+      }
+    }
+
+    // Setting current subtitleTrack will invoke code.
+    this.subtitleTrack = trackId;
+  }
+
   destroy() {
     EventHandler.prototype.destroy.call(this);
   }
@@ -31,26 +59,17 @@ class SubtitleTrackController extends EventHandler {
       return;
     }
 
-    this.media.textTracks.addEventListener('change', () => {
-      // Media is undefined when switching streams via loadSource()
-      if (!this.media) {
-        return;
-      }
-
-      let trackId = -1;
-      let tracks = this.media.textTracks;
-      for(let id = 0; id< tracks.length; id++) {
-        if(tracks[id].mode === 'showing') {
-          trackId = id;
-        }
-      }
-      // Setting current subtitleTrack will invoke code.
-      this.subtitleTrack = trackId;
-    });
+    this.trackChangeListener = this._onTextTracksChanged.bind(this);
+    this.media.textTracks.addEventListener('change', this.trackChangeListener);
   }
 
   onMediaDetaching() {
-    // TODO: Remove event listeners.
+    if (!this.media) {
+      return;
+    }
+
+    this.media.textTracks.removeEventListener('change', this.trackChangeListener);
+
     this.media = undefined;
   }
 
