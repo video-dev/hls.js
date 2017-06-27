@@ -127,7 +127,7 @@ class XhrLoader {
                     }
                     stats.loaded = stats.total = len;
                     let response = { url: xhr.responseURL, data: data };
-                    this.callbacks.onSuccess(response, stats, context);
+                    this.callbacks.onSuccess(response, stats, context, xhr);
                 } else {
                     // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
                     if (
@@ -137,7 +137,8 @@ class XhrLoader {
                         logger.error(`${status} while loading ${context.url}`);
                         this.callbacks.onError(
                             { code: status, text: xhr.statusText },
-                            context
+                            context,
+                            xhr
                         );
                     } else {
                         // retry
@@ -173,19 +174,21 @@ class XhrLoader {
 
     loadtimeout() {
         logger.warn(`timeout while loading ${this.context.url}`);
-        this.callbacks.onTimeout(this.stats, this.context);
+        this.callbacks.onTimeout(this.stats, this.context, null);
     }
 
     loadprogress(event) {
-        var stats = this.stats;
+        var xhr = event.currentTarget,
+            stats = this.stats;
+
         stats.loaded = event.loaded;
         if (event.lengthComputable) {
             stats.total = event.total;
         }
         let onProgress = this.callbacks.onProgress;
         if (onProgress) {
-            // last args is to provide on progress data
-            onProgress(stats, this.context, null);
+            // third arg is to provide on progress data
+            onProgress(stats, this.context, null, xhr);
         }
     }
 }

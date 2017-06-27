@@ -23,6 +23,8 @@ class AbrController extends EventHandler {
         this.lastLoadedFragLevel = 0;
         this._nextAutoLevel = -1;
         this.hls = hls;
+        this.timer = null;
+        this._bwEstimator = null;
         this.onCheck = this._abandonRulesCheck.bind(this);
     }
 
@@ -246,6 +248,7 @@ class AbrController extends EventHandler {
                 )}`
             );
             this._bwEstimator.sample(fragLoadingProcessingMs, stats.loaded);
+            stats.bwEstimate = this._bwEstimator.getEstimate();
             // if fragment has been loaded to perform a bitrate test, (hls.startLevel = -1), store bitrate test delay duration
             if (frag.bitrateTest) {
                 this.bitrateTestDelay = fragLoadingProcessingMs / 1000;
@@ -268,10 +271,8 @@ class AbrController extends EventHandler {
     }
 
     clearTimer() {
-        if (this.timer) {
-            clearInterval(this.timer);
-            this.timer = null;
-        }
+        clearInterval(this.timer);
+        this.timer = null;
     }
 
     // return next auto level
@@ -427,10 +428,12 @@ class AbrController extends EventHandler {
                 adjustedbw > bitrate &&
                 // fragment fetchDuration unknown OR live stream OR fragment fetchDuration less than max allowed fetch duration, then this level matches
                 // we don't account for max Fetch Duration for live streams, this is to avoid switching down when near the edge of live sliding window ...
-                (!fetchDuration || live || fetchDuration < maxFetchDuration)
+                // special case to support startLevel = -1 (bitrateTest) on live streams : in that case we should not exit loop so that _findBestLevel will return -1
+                (!fetchDuration ||
+                    (live && !this.bitrateTestDelay) ||
+                    fetchDuration < maxFetchDuration)
             ) {
                 // as we are looping from highest to lowest, this will return the best achievable quality level
-
                 return i;
             }
         }
