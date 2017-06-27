@@ -503,8 +503,6 @@ class MP4Remuxer {
 
         const duration = Math.abs(1000*delta/inputTimeScale);
 
-        const duration = Math.abs(1000*delta/inputTimeScale);
-
         // If we're overlapping by more than a duration, drop this sample
         if (delta <= -inputSampleDuration) {
           logger.warn(`Dropping 1 audio frame @ ${(nextPts/inputTimeScale).toFixed(3)}s due to ${duration} ms overlap.`);
