@@ -1,6 +1,6 @@
 {
   "name": "hls.js",
-  "version": "0.7.5",
+  "version": "0.7.10",
   "license": "Apache-2.0",
   "description": "JavaScript HLS client using MediaSourceExtension",
   "homepage": "https://github.com/video-dev/hls.js",
@@ -9,15 +9,26 @@
     "type": "git",
     "url": "https://github.com/video-dev/hls.js"
   },
+  "publishConfig": {
+    "registry": "http://registry.npmjs.org"
+  },
   "bugs": {
     "url": "https://github.com/video-dev/hls.js/issues"
   },
   "main": "./dist/hls.js",
+  "nyc": {
+    "reporter": [
+      "lcov"
+    ],
+    "exclude": [
+      "tests"
+    ]
+  },
   "scripts": {
     "build": "npm run buildlib && rimraf dist/* && npm run builddist && npm run builddistlight",
     "buildlib": "rimraf lib/* && babel src --out-dir lib",
-    "builddistlight": "browserify -t [browserify-conditionalify --definitions [--subtitle 0 --altaudio 0 ] ] -t browserify-versionify -t [babelify] -p browserify-derequire -p bundle-collapser/plugin -s Hls src/index.js --debug | exorcist dist/hls.light.js.map -b . > dist/hls.light.js && npm run minifylight",
-    "builddist": "browserify -t browserify-versionify -t [babelify] -p browserify-derequire -p bundle-collapser/plugin -s Hls src/index.js --debug | exorcist dist/hls.js.map -b . > dist/hls.js && npm run minify",
+    "builddistlight": "browserify -t [browserify-conditionalify --definitions [--subtitle 0 --altaudio 0 ] ] -t browserify-versionify -t [babelify] -p browserify-derequire -p bundle-collapser/plugin -s Hls src/index.js --debug | exorcist dist/hls.light.js.map -b . > dist/hls.light.js && npm run minifylight && node scripts/foldersize.js dist",
+    "builddist": "browserify -t browserify-versionify -t [babelify] -p browserify-derequire -p bundle-collapser/plugin -s Hls src/index.js --debug | exorcist dist/hls.js.map -b . > dist/hls.js && npm run minify && node scripts/foldersize.js dist",
     "preparerelease": "npm run build && npm run test && git add dist/* && git commit -m 'update dist'",
     "prerelease": "mversion prerelease && npm run preparerelease",
     "patch": "mversion p && npm run preparerelease",
@@ -28,12 +39,13 @@
     "watch": "watchify --debug -s Hls src/index.js -t [babelify] -o dist/hls.js",
     "pretest": "npm run lint",
     "test": "mocha --compilers js:babel-register --recursive tests/unit",
-    "testfunc": "mocha --compilers js:babel-register tests/functional/auto/hlsjs.js --timeout 40000",
+    "testfunc": "mocha --compilers js:babel-register tests/functional/auto/hlsjs.js --timeout 80000",
     "lint": "jshint src/",
     "serve": "http-server -p 8000 .",
     "open": "opener http://localhost:8000/demo/",
-    "live-reload": "live-reload --port 8001 dist/",
-    "dev": "npm run builddist && (npm run open -s & parallelshell 'npm run live-reload -s' 'npm run serve -s' 'npm run watch -s')"
+    "live-reload": "livereload dist/",
+    "dev": "npm run builddist && (npm run open -s & parallelshell 'npm run live-reload -s' 'npm run serve -s' 'npm run watch -s')",
+    "coverage": "nyc mocha --compilers js:babel-register --recursive tests/unit"
   },
   "devDependencies": {
     "arraybuffer-equal": "^1.0.4",
@@ -49,17 +61,18 @@
     "chromedriver": "^2.28.0",
     "deep-strict-equal": "^0.2.0",
     "exorcist": "^0.4.0",
-    "http-server": "^0.9.0",
+    "http-server": "^0.10.0",
     "jshint": "^2.9.4",
-    "live-reload": "^1.1.0",
+    "livereload": "^0.6.2",
     "mocha": "^3.0.2",
     "mversion": "^1.10.1",
+    "nyc": "^11.0.2",
     "opener": "^1.4.0",
     "parallelshell": "^2.0.0",
     "rimraf": "^2.6.1",
-    "uglify-js": "^2.8.11",
-    "url-toolkit": "^2.0.1",
     "selenium-webdriver": "^3.1.0",
+    "uglify-js": "^3.0.15",
+    "url-toolkit": "^2.0.1",
     "watchify": "^3.7.0",
     "webworkify": "^1.4.0"
   }

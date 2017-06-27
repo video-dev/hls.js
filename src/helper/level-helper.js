@@ -30,6 +30,8 @@ const LevelHelper = {
           newFrag.start = newFrag.startPTS = oldFrag.startPTS;
           newFrag.endPTS = oldFrag.endPTS;
           newFrag.duration = oldFrag.duration;
+          newFrag.backtracked = oldFrag.backtracked;
+          newFrag.dropped = oldFrag.dropped;
           PTSFrag = newFrag;
         }
       }
@@ -44,7 +46,7 @@ const LevelHelper = {
 
     // if at least one fragment contains PTS info, recompute PTS information for all fragments
     if(PTSFrag) {
-      LevelHelper.updateFragPTSDTS(newDetails,PTSFrag.sn,PTSFrag.startPTS,PTSFrag.endPTS,PTSFrag.startDTS,PTSFrag.endDTS);
+      LevelHelper.updateFragPTSDTS(newDetails,PTSFrag,PTSFrag.startPTS,PTSFrag.endPTS,PTSFrag.startDTS,PTSFrag.endDTS);
     } else {
       // ensure that delta is within oldfragments range
       // also adjust sliding in case delta is 0 (we could have old=[50-60] and new=old=[50-61])
@@ -63,15 +65,9 @@ const LevelHelper = {
     return;
   },
 
-  updateFragPTSDTS : function(details,sn,startPTS,endPTS,startDTS,endDTS) {
-    var fragIdx, fragments, frag, i;
-    // exit if sn out of range
-    if (!details || sn < details.startSN || sn > details.endSN) {
-      return 0;
-    }
-    fragIdx = sn - details.startSN;
-    fragments = details.fragments;
-    frag = fragments[fragIdx];
+  updateFragPTSDTS : function(details,frag,startPTS,endPTS,startDTS,endDTS) {
+    // update frag PTS/DTS
+    let maxStartPTS = startPTS;
     if(!isNaN(frag.startPTS)) {
       // delta PTS between audio and video
       let deltaPTS = Math.abs(frag.startPTS-startPTS);
@@ -80,19 +76,30 @@ const LevelHelper = {
       } else {
         frag.deltaPTS = Math.max(deltaPTS,frag.deltaPTS);
       }
+      maxStartPTS = Math.max(startPTS,frag.startPTS);
       startPTS = Math.min(startPTS,frag.startPTS);
       endPTS = Math.max(endPTS, frag.endPTS);
       startDTS = Math.min(startDTS,frag.startDTS);
       endDTS = Math.max(endDTS, frag.endDTS);
     }
 
-    var drift = startPTS - frag.start;
-
+    const drift = startPTS - frag.start;
     frag.start = frag.startPTS = startPTS;
+    frag.maxStartPTS = maxStartPTS;
     frag.endPTS = endPTS;
     frag.startDTS = startDTS;
     frag.endDTS = endDTS;
     frag.duration = endPTS - startPTS;
+
+    const sn = frag.sn;
+    // exit if sn out of range
+    if (!details || sn < details.startSN || sn > details.endSN) {
+      return 0;
+    }
+    var fragIdx, fragments, i;
+    fragIdx = sn - details.startSN;
+    fragments = details.fragments;
+    frag = fragments[fragIdx];
     // adjust fragment PTS/duration from seqnum-1 to frag 0
     for(i = fragIdx ; i > 0 ; i--) {
       LevelHelper.updatePTS(fragments,i,i-1);

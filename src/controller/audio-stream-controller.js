@@ -83,13 +83,7 @@ class AudioStreamController extends EventHandler {
       //If we are waiting we need to demux/remux the waiting frag
       //With the new initPTS
       if (this.state === State.WAITING_INIT_PTS) {
-        logger.log('sending pending audio frag to demuxer');
-        this.state = State.FRAG_LOADING;
-        //We have audio frag waiting or video pts
-        //Let process it
-        this.onFragLoaded(this.waitingFragment);
-        //Lets clean the waiting frag
-        this.waitingFragment = null;
+        this.tick();
       }
     }
   }
@@ -191,8 +185,9 @@ class AudioStreamController extends EventHandler {
           pos = this.media.currentTime;
         } else if (this.nextLoadPosition) {
           pos = this.nextLoadPosition;
-        } else {
-          pos = 0;
+          if (pos === undefined) {
+            break;
+          }
         }
 
         let media = this.mediaBuffer ? this.mediaBuffer : this.media,
@@ -396,8 +391,8 @@ class AudioStreamController extends EventHandler {
             this.waitingFragment = null;
             this.state = State.IDLE;
           } else {
-            this.onFragLoaded(this.waitingFragment);
             this.state = State.FRAG_LOADING;
+            this.onFragLoaded(this.waitingFragment);
             this.waitingFragment = null;
           }
         } else {
@@ -489,7 +484,6 @@ class AudioStreamController extends EventHandler {
     // if any URL found on new audio track, it is an alternate audio track
     var altAudio = !!data.url;
     this.trackId = data.id;
-    this.state = State.IDLE;
 
     this.fragCurrent = null;
     this.state = State.PAUSED;
@@ -649,7 +643,7 @@ class AudioStreamController extends EventHandler {
       // include levelCodec in audio and video tracks
       track = tracks.audio;
       if(track) {
-        track.levelCodec = 'mp4a.40.2';
+        track.levelCodec = track.codec;
         track.id = data.id;
         this.hls.trigger(Event.BUFFER_CODECS,tracks);
         logger.log(`audio track:audio,container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
@@ -690,7 +684,7 @@ class AudioStreamController extends EventHandler {
       }
 
       logger.log(`parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
-      LevelHelper.updateFragPTSDTS(track.details,fragCurrent.sn,data.startPTS,data.endPTS);
+      LevelHelper.updateFragPTSDTS(track.details,fragCurrent,data.startPTS,data.endPTS);
 
       let audioSwitch = this.audioSwitch, media = this.media, appendOnBufferFlush = false;
       //Only flush audio from old audio tracks when PTS is known on new audio track

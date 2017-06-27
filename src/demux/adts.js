@@ -1,31 +1,31 @@
 /**
  *  ADTS parser helper
  */
-import {logger} from '../utils/logger';
-import {ErrorTypes, ErrorDetails} from '../errors';
+import { logger } from '../utils/logger';
+import { ErrorTypes, ErrorDetails } from '../errors';
 
- const ADTS = {
-  getAudioConfig : function(observer, data, offset, audioCodec) {
+const ADTS = {
+  getAudioConfig: function (observer, data, offset, audioCodec) {
     var adtsObjectType, // :int
-        adtsSampleingIndex, // :int
-        adtsExtensionSampleingIndex, // :int
-        adtsChanelConfig, // :int
-        config,
-        userAgent = navigator.userAgent.toLowerCase(),
-        manifestCodec = audioCodec,
-        adtsSampleingRates = [
-            96000, 88200,
-            64000, 48000,
-            44100, 32000,
-            24000, 22050,
-            16000, 12000,
-            11025, 8000,
-            7350];
+      adtsSampleingIndex, // :int
+      adtsExtensionSampleingIndex, // :int
+      adtsChanelConfig, // :int
+      config,
+      userAgent = navigator.userAgent.toLowerCase(),
+      manifestCodec = audioCodec,
+      adtsSampleingRates = [
+        96000, 88200,
+        64000, 48000,
+        44100, 32000,
+        24000, 22050,
+        16000, 12000,
+        11025, 8000,
+        7350];
     // byte 2
     adtsObjectType = ((data[offset + 2] & 0xC0) >>> 6) + 1;
     adtsSampleingIndex = ((data[offset + 2] & 0x3C) >>> 2);
-    if(adtsSampleingIndex > adtsSampleingRates.length-1) {
-      observer.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: `invalid ADTS sampling index:${adtsSampleingIndex}`});
+    if (adtsSampleingIndex > adtsSampleingRates.length - 1) {
+      observer.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: `invalid ADTS sampling index:${adtsSampleingIndex}` });
       return;
     }
     adtsChanelConfig = ((data[offset + 2] & 0x01) << 2);
@@ -59,8 +59,8 @@ import {ErrorTypes, ErrorDetails} from '../errors';
       config = new Array(4);
       // if (manifest codec is HE-AAC or HE-AACv2) OR (manifest codec not specified AND frequency less than 24kHz)
       if ((audioCodec && ((audioCodec.indexOf('mp4a.40.29') !== -1) ||
-                          (audioCodec.indexOf('mp4a.40.5') !== -1))) ||
-          (!audioCodec && adtsSampleingIndex >= 6)) {
+        (audioCodec.indexOf('mp4a.40.5') !== -1))) ||
+        (!audioCodec && adtsSampleingIndex >= 6)) {
         // HE-AAC uses SBR (Spectral Band Replication) , high frequencies are constructed from low frequencies
         // there is a factor 2 between frame sample rate and output sample rate
         // multiply frequency by 2 (see table below, equivalent to substract 3)
@@ -69,7 +69,7 @@ import {ErrorTypes, ErrorDetails} from '../errors';
         // if (manifest codec is AAC) AND (frequency less than 24kHz AND nb channel is 1) OR (manifest codec not specified and mono audio)
         // Chrome fails to play back with low frequency AAC LC mono when initialized with HE-AAC.  This is not a problem with stereo.
         if (audioCodec && audioCodec.indexOf('mp4a.40.2') !== -1 && (adtsSampleingIndex >= 6 && adtsChanelConfig === 1) ||
-            (!audioCodec && adtsChanelConfig === 1)) {
+          (!audioCodec && adtsChanelConfig === 1)) {
           adtsObjectType = 2;
           config = new Array(2);
         }
@@ -125,7 +125,105 @@ import {ErrorTypes, ErrorDetails} from '../errors';
       config[2] |= 2 << 2;
       config[3] = 0;
     }
-    return {config: config, samplerate: adtsSampleingRates[adtsSampleingIndex], channelCount: adtsChanelConfig, codec: ('mp4a.40.' + adtsObjectType), manifestCodec : manifestCodec};
+    return { config: config, samplerate: adtsSampleingRates[adtsSampleingIndex], channelCount: adtsChanelConfig, codec: ('mp4a.40.' + adtsObjectType), manifestCodec: manifestCodec };
+  },
+
+  isHeaderPattern: function (data, offset) {
+    return data[offset] === 0xff && (data[offset + 1] & 0xf6) === 0xf0;
+  },
+
+  getHeaderLength: function (data, offset) {
+    return (!!(data[offset + 1] & 0x01) ? 7 : 9);
+  },
+
+  getFullFrameLength: function (data, offset) {
+    return ((data[offset + 3] & 0x03) << 11) |
+      (data[offset + 4] << 3) |
+      ((data[offset + 5] & 0xE0) >>> 5);
+  },
+
+  isHeader: function (data, offset) {
+    // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
+    // Layer bits (position 14 and 15) in header should be always 0 for ADTS
+    // More info https://wiki.multimedia.cx/index.php?title=ADTS
+    if (offset + 1 < data.length && this.isHeaderPattern(data, offset)) {
+      return true;
+    }
+    return false;
+  },
+
+  probe: function (data, offset) {
+    // same as isHeader but we also check that ADTS frame follows last ADTS frame 
+    // or end of data is reached
+    if (offset + 1 < data.length && this.isHeaderPattern(data, offset)) {
+      // ADTS header Length
+      let headerLength = this.getHeaderLength(data, offset);
+      // ADTS frame Length
+      let frameLength = headerLength;
+      if (offset + 5 < data.length) {
+        frameLength = this.getFullFrameLength(data, offset);
+      }
+      let newOffset = offset + frameLength;
+      if (newOffset === data.length || (newOffset + 1 < data.length && this.isHeaderPattern(data, newOffset))) {
+        return true;
+      }
+    }
+    return false;
+  },
+
+  initTrackConfig: function (track, observer, data, offset, audioCodec) {
+    if (!track.samplerate) {
+      var config = this.getAudioConfig(observer, data, offset, audioCodec);
+      track.config = config.config;
+      track.samplerate = config.samplerate;
+      track.channelCount = config.channelCount;
+      track.codec = config.codec;
+      track.manifestCodec = config.manifestCodec;
+      logger.log(`parsed codec:${track.codec},rate:${config.samplerate},nb channel:${config.channelCount}`);
+    }
+  },
+
+  getFrameDuration: function (samplerate) {
+    return 1024 * 90000 / samplerate;
+  },
+
+  appendFrame: function (track, data, offset, pts, frameIndex) {
+    var frameDuration = this.getFrameDuration(track.samplerate);
+    var header = this.parseFrameHeader(data, offset, pts, frameIndex, frameDuration);
+    if (header) {
+      var stamp = header.stamp;
+      var headerLength = header.headerLength;
+      var frameLength = header.frameLength;
+
+      //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
+      var aacSample = { unit: data.subarray(offset + headerLength, offset + headerLength + frameLength), pts: stamp, dts: stamp };
+
+      track.samples.push(aacSample);
+      track.len += frameLength;
+
+      return { sample: aacSample, length: frameLength + headerLength };
+    }
+
+    return undefined;
+  },
+
+  parseFrameHeader: function (data, offset, pts, frameIndex, frameDuration) {
+    var headerLength, frameLength, stamp;
+    var length = data.length;
+
+    // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
+    headerLength = this.getHeaderLength(data, offset);
+    // retrieve frame size
+    frameLength = this.getFullFrameLength(data, offset);
+    frameLength -= headerLength;
+
+    if ((frameLength > 0) && ((offset + headerLength + frameLength) <= length)) {
+      stamp = pts + frameIndex * frameDuration;
+      //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
+      return { headerLength, frameLength, stamp };
+    }
+
+    return undefined;
   }
 };
 
