@@ -46,7 +46,7 @@ class AudioTrackController extends EventHandler {
     // loop through available audio tracks and autoselect default if needed
     let id = 0;
     tracks.forEach(track => {
-      if(track.default) {
+      if(track.default && !defaultFound) {
         this.audioTrack = id;
         defaultFound = true;
         return;
