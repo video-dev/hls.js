@@ -75,7 +75,7 @@ const MpegAudio = {
     },
 
     probe: function (data, offset) {
-        // same as isHeader but we also check that MPEG frame follows last MPEG frame 
+        // same as isHeader but we also check that MPEG frame follows last MPEG frame
         // or end of data is reached
         if (offset + 1 < data.length && this.isHeaderPattern(data, offset)) {
             // MPEG header Length
@@ -95,4 +95,4 @@ const MpegAudio = {
     }
 };
 
-module.exports = MpegAudio;
+export default MpegAudio;
