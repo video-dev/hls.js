@@ -144,7 +144,7 @@ export function mergeDetails(oldDetails, newDetails) {
 
     // if at least one fragment contains PTS info, recompute PTS information for all fragments
     if (PTSFrag) {
-        LevelHelper.updateFragPTSDTS(
+        updateFragPTSDTS(
             newDetails,
             PTSFrag,
             PTSFrag.startPTS,

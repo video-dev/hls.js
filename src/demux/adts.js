@@ -225,6 +225,25 @@ export function getFrameDuration(samplerate) {
     return 1024 * 90000 / samplerate;
 }
 
+export function parseFrameHeader(data, offset, pts, frameIndex, frameDuration) {
+    var headerLength, frameLength, stamp;
+    var length = data.length;
+
+    // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
+    headerLength = getHeaderLength(data, offset);
+    // retrieve frame size
+    frameLength = getFullFrameLength(data, offset);
+    frameLength -= headerLength;
+
+    if (frameLength > 0 && offset + headerLength + frameLength <= length) {
+        stamp = pts + frameIndex * frameDuration;
+        //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
+        return { headerLength, frameLength, stamp };
+    }
+
+    return undefined;
+}
+
 export function appendFrame(track, data, offset, pts, frameIndex) {
     var frameDuration = getFrameDuration(track.samplerate);
     var header = parseFrameHeader(data, offset, pts, frameIndex, frameDuration);
@@ -247,25 +266,6 @@ export function appendFrame(track, data, offset, pts, frameIndex) {
         track.len += frameLength;
 
         return { sample: aacSample, length: frameLength + headerLength };
-    }
-
-    return undefined;
-}
-
-export function parseFrameHeader(data, offset, pts, frameIndex, frameDuration) {
-    var headerLength, frameLength, stamp;
-    var length = data.length;
-
-    // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
-    headerLength = getHeaderLength(data, offset);
-    // retrieve frame size
-    frameLength = getFullFrameLength(data, offset);
-    frameLength -= headerLength;
-
-    if (frameLength > 0 && offset + headerLength + frameLength <= length) {
-        stamp = pts + frameIndex * frameDuration;
-        //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
-        return { headerLength, frameLength, stamp };
     }
 
     return undefined;
