@@ -123,7 +123,7 @@ export function mergeDetails(oldDetails,newDetails) {
 
     // if at least one fragment contains PTS info, recompute PTS information for all fragments
     if(PTSFrag) {
-      LevelHelper.updateFragPTSDTS(newDetails,PTSFrag,PTSFrag.startPTS,PTSFrag.endPTS,PTSFrag.startDTS,PTSFrag.endDTS);
+      updateFragPTSDTS(newDetails,PTSFrag,PTSFrag.startPTS,PTSFrag.endPTS,PTSFrag.startDTS,PTSFrag.endDTS);
     } else {
       // ensure that delta is within oldfragments range
       // also adjust sliding in case delta is 0 (we could have old=[50-60] and new=old=[50-61])
