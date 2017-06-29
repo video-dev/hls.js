@@ -1,8 +1,6 @@
-var pkgJson = require('./package.json')
-var path = require('path')
-var webpack = require('webpack')
-
-var buildVersion = process.env.BUILD_VERSION || 'full'
+const pkgJson = require('./package.json');
+const path = require('path');
+const webpack = require('webpack');
 
 const buildConstants = {
   __VERSION__: JSON.stringify(pkgJson.version),
