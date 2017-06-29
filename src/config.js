@@ -1,7 +1,6 @@
 /**
  * HLS config
  */
-'use strict';
 
 import AbrController from    './controller/abr-controller';
 import BufferController from  './controller/buffer-controller';
