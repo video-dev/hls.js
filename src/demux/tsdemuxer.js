@@ -9,7 +9,7 @@
  * upon discontinuity or level switch detection, it will also notifies the remuxer so that it can reset its state.
  */
 
-import ADTS from './adts';
+import * as ADTS from './adts';
 import MpegAudio from './mpegaudio';
 import Event from '../events';
 import ExpGolomb from './exp-golomb';
