@@ -4,8 +4,25 @@ var webpack = require('webpack')
 
 var buildVersion = process.env.BUILD_VERSION || 'full'
 
-var config = {
-  entry: './src/index.js',
+const buildConstants = {
+  __VERSION__: JSON.stringify(pkgJson.version),
+  __BUILD_VERSION__: process.env.BUILD_VERSION || 'full'
+};
+
+const uglifyJsOptions = {
+  screwIE8: true,
+  stats: true,
+  compress: {
+    warnings: false
+  },
+  mangle: {
+    toplevel: true,
+    eval: true
+  }
+};
+
+const commonConfig = {
+  entry: './src/hls.js',
   module: {
     rules: [
       {
