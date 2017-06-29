@@ -38,6 +38,16 @@ const commonConfig = {
   }
 };
 
+const commonPlugins = [
+  new webpack.optimize.OccurrenceOrderPlugin(),
+  new webpack.optimize.ModuleConcatenationPlugin(),
+  new webpack.DefinePlugin(buildConstants)
+];
+
+const minifyPlugins = commonPlugins.concat([
+  new webpack.optimize.UglifyJsPlugin(uglifyJsOptions)
+]);
+
 const multiConfig = [
   {
     name: 'debug',
@@ -50,11 +60,7 @@ const multiConfig = [
       library: 'Hls',
       libraryTarget: 'umd'
     },
-    plugins: [
-      new webpack.optimize.OccurrenceOrderPlugin(),
-      new webpack.optimize.ModuleConcatenationPlugin(),
-      new webpack.DefinePlugin(buildConstants)
-    ],
+    plugins: commonPlugins,
     devtool: 'source-map',
   },
   {
@@ -67,12 +73,7 @@ const multiConfig = [
       library: 'Hls',
       libraryTarget: 'umd'
     },
-    plugins: [
-      new webpack.optimize.OccurrenceOrderPlugin(),
-      new webpack.optimize.ModuleConcatenationPlugin(),
-      new webpack.DefinePlugin(buildConstants),
-      new webpack.optimize.UglifyJsPlugin(uglifyJsOptions)
-    ],
+    plugins: minifyPlugins
   },
   {
     name: 'light',
@@ -95,11 +96,7 @@ const multiConfig = [
         './controller/subtitle-stream-controller': ''
       }
     },
-    plugins: [
-      new webpack.optimize.OccurrenceOrderPlugin(),
-      new webpack.DefinePlugin(buildConstants),
-      new webpack.optimize.ModuleConcatenationPlugin()
-    ],
+    plugins: commonPlugins,
     devtool: 'source-map'
   },
   {
@@ -122,12 +119,7 @@ const multiConfig = [
         './controller/subtitle-stream-controller': ''
       }
     },
-    plugins: [
-      new webpack.optimize.OccurrenceOrderPlugin(),
-      new webpack.DefinePlugin(buildConstants),
-      new webpack.optimize.ModuleConcatenationPlugin(),
-      new webpack.optimize.UglifyJsPlugin(uglifyJsOptions)
-    ]
+    plugins: minifyPlugins
   }
 ].map(fragment => Object.assign({}, commonConfig, fragment));
 
