@@ -22,11 +22,15 @@ class LevelController extends EventHandler {
     }
 
     destroy() {
+        this.cleanTimer();
+        this._manualLevel = -1;
+    }
+
+    cleanTimer() {
         if (this.timer) {
             clearTimeout(this.timer);
             this.timer = null;
         }
-        this._manualLevel = -1;
     }
 
     startLoad() {
@@ -182,10 +186,7 @@ class LevelController extends EventHandler {
         // check if level idx is valid
         if (newLevel >= 0 && newLevel < levels.length) {
             // stopping live reloading timer if any
-            if (this.timer) {
-                clearTimeout(this.timer);
-                this.timer = null;
-            }
+            this.cleanTimer();
             if (this._level !== newLevel) {
                 logger.log(`switching to level ${newLevel}`);
                 this._level = newLevel;
@@ -262,6 +263,9 @@ class LevelController extends EventHandler {
 
     onError(data) {
         if (data.fatal) {
+            if (data.type === ErrorTypes.NETWORK_ERROR) {
+                this.cleanTimer();
+            }
             return;
         }
 
@@ -354,10 +358,7 @@ class LevelController extends EventHandler {
                         logger.error(`cannot recover ${details} error`);
                         this._level = undefined;
                         // stopping live reloading timer if any
-                        if (this.timer) {
-                            clearTimeout(this.timer);
-                            this.timer = null;
-                        }
+                        this.cleanTimer();
                         // switch error to fatal
                         data.fatal = true;
                     }
