@@ -42,8 +42,8 @@
   },
   "devDependencies": {
     "arraybuffer-equal": "^1.0.4",
-    "babel-core": "^6.22.1",
-    "babel-loader": "^6.2.10",
+    "babel-core": "^6.25.0",
+    "babel-loader": "^7.1.1",
     "babel-preset-env": "^1.3.3",
     "babel-register": "^6.18.0",
     "chromedriver": "^2.27.1",
@@ -54,8 +54,8 @@
     "mocha": "^3.0.2",
     "mversion": "^1.10.1",
     "selenium-webdriver": "^2.52.0",
-    "webpack": "^2.4.0",
-    "webpack-dev-server": "^2.2.0",
+    "webpack": "^3.0.0",
+    "webpack-dev-server": "^2.5.0",
     "webworkify-webpack": "^2.0.0"
   }
 }

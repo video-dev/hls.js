@@ -12,7 +12,7 @@ import XhrLoader from './utils/xhr-loader';
 import AudioTrackController from './controller/audio-track-controller';
 import AudioStreamController from  './controller/audio-stream-controller';
 
-import Cues from './utils/cues';
+import * as Cues from './utils/cues';
 import TimelineController from './controller/timeline-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
 import SubtitleStreamController from  './controller/subtitle-stream-controller';
