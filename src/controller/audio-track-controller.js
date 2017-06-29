@@ -5,6 +5,7 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import {logger} from '../utils/logger';
+import {ErrorTypes} from '../errors';
 
 class AudioTrackController extends EventHandler {
 
