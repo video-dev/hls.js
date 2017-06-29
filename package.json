@@ -25,19 +25,15 @@
     ]
   },
   "scripts": {
-    "build:dist": "webpack --progress --devtool source-map --output-filename hls.js",
-    "build:dist:min": "webpack --progress --optimize-minimize --output-filename hls.min.js",
-    "build:dist:light": "cross-env BUILD_VERSION=light webpack --progress --devtool source-map --output-filename hls.light.js",
-    "build:dist:light:min": "cross-env BUILD_VERSION=light webpack --progress --optimize-minimize --output-filename hls.light.min.js",
-    "build": "npm run build:dist && npm run build:dist:min && npm run build:dist:light && npm run build:dist:light:min",
+    "build": "webpack",
     "preparerelease": "npm run build && npm run test && git add dist/* && git commit -m 'update dist'",
     "prerelease": "mversion prerelease && npm run preparerelease",
     "patch": "mversion p && npm run preparerelease",
     "minor": "mversion mi && npm run preparerelease",
     "major": "mversion ma && npm run preparerelease",
     "pretest": "npm run lint",
-    "test": "mocha --compilers js:babel-register --recursive tests/unit",
-    "testfunc": "mocha --compilers js:babel-register tests/functional/auto/hlsjs.js --timeout 80000",
+    "test": "BABEL_ENV=test mocha --compilers js:babel-register --recursive tests/unit",
+    "testfunc": "BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/hlsjs.js --timeout 40000",
     "lint": "jshint src/",
     "dev": "webpack-dev-server --open --output-filename hls.js --devtool source-map"
   },

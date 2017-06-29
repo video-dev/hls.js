@@ -1,8 +1,7 @@
 var assert = require("assert");
-var Events = require('../../src/events.js');
+import Events from '../../src/events';
 
 function getAllCapsSnakeCaseToCamelCase(eventType) {
-
   var eventValue = "";
   var previousWasUscore, nextChar;
 
