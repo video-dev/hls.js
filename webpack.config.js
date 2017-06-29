@@ -88,12 +88,12 @@ const multiConfig = [
     },
     resolve: {
       alias: {
-        './controller/audio-track-controller': '',
-        './controller/audio-stream-controller': '',
-        './utils/cues': '',
-        './controller/timeline-controller': '',
-        './controller/subtitle-track-controller': '',
-        './controller/subtitle-stream-controller': ''
+        './controller/audio-track-controller': './empty.js',
+        './controller/audio-stream-controller': './empty.js',
+        './utils/cues': './empty.js',
+        './controller/timeline-controller': './empty.js',
+        './controller/subtitle-track-controller': './empty.js',
+        './controller/subtitle-stream-controller': './empty.js'
       }
     },
     plugins: commonPlugins,
@@ -111,12 +111,12 @@ const multiConfig = [
     },
     resolve: {
       alias: {
-        './controller/audio-track-controller': '',
-        './controller/audio-stream-controller': '',
-        './utils/cues': '',
-        './controller/timeline-controller': '',
-        './controller/subtitle-track-controller': '',
-        './controller/subtitle-stream-controller': ''
+        './controller/audio-track-controller': './empty.js',
+        './controller/audio-stream-controller': './empty.js',
+        './utils/cues': './empty.js',
+        './controller/timeline-controller': './empty.js',
+        './controller/subtitle-track-controller': './empty.js',
+        './controller/subtitle-stream-controller': './empty.js'
       }
     },
     plugins: minifyPlugins
