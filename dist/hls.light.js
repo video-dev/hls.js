@@ -70,7 +70,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/ 	__webpack_require__.p = "/hls.js/dist/";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 9);
+/******/ 	return __webpack_require__(__webpack_require__.s = 8);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -2228,6 +2228,98 @@ var MP4Demuxer = function () {
 }();
 
 /* harmony default export */ var mp4demuxer_defaultExport = (MP4Demuxer);
+// CONCATENATED MODULE: ./src/demux/mpegaudio.js
+/**
+ *  MPEG parser helper
+ */
+
+var MpegAudio = {
+
+    BitratesMap: [32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160],
+
+    SamplingRateMap: [44100, 48000, 32000, 22050, 24000, 16000, 11025, 12000, 8000],
+
+    appendFrame: function appendFrame(track, data, offset, pts, frameIndex) {
+        // Using http://www.datavoyage.com/mpgscript/mpeghdr.htm as a reference
+        if (offset + 24 > data.length) {
+            return undefined;
+        }
+
+        var header = this.parseHeader(data, offset);
+        if (header && offset + header.frameLength <= data.length) {
+            var frameDuration = 1152 * 90000 / header.sampleRate;
+            var stamp = pts + frameIndex * frameDuration;
+            var sample = { unit: data.subarray(offset, offset + header.frameLength), pts: stamp, dts: stamp };
+
+            track.config = [];
+            track.channelCount = header.channelCount;
+            track.samplerate = header.sampleRate;
+            track.samples.push(sample);
+            track.len += header.frameLength;
+
+            return { sample: sample, length: header.frameLength };
+        }
+
+        return undefined;
+    },
+
+    parseHeader: function parseHeader(data, offset) {
+        var headerB = data[offset + 1] >> 3 & 3;
+        var headerC = data[offset + 1] >> 1 & 3;
+        var headerE = data[offset + 2] >> 4 & 15;
+        var headerF = data[offset + 2] >> 2 & 3;
+        var headerG = !!(data[offset + 2] & 2);
+        if (headerB !== 1 && headerE !== 0 && headerE !== 15 && headerF !== 3) {
+            var columnInBitrates = headerB === 3 ? 3 - headerC : headerC === 3 ? 3 : 4;
+            var bitRate = MpegAudio.BitratesMap[columnInBitrates * 14 + headerE - 1] * 1000;
+            var columnInSampleRates = headerB === 3 ? 0 : headerB === 2 ? 1 : 2;
+            var sampleRate = MpegAudio.SamplingRateMap[columnInSampleRates * 3 + headerF];
+            var padding = headerG ? 1 : 0;
+            var channelCount = data[offset + 3] >> 6 === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
+            var frameLength = headerC === 3 ? (headerB === 3 ? 12 : 6) * bitRate / sampleRate + padding << 2 : (headerB === 3 ? 144 : 72) * bitRate / sampleRate + padding | 0;
+
+            return { sampleRate: sampleRate, channelCount: channelCount, frameLength: frameLength };
+        }
+
+        return undefined;
+    },
+
+    isHeaderPattern: function isHeaderPattern(data, offset) {
+        return data[offset] === 0xff && (data[offset + 1] & 0xe0) === 0xe0 && (data[offset + 1] & 0x06) !== 0x00;
+    },
+
+    isHeader: function isHeader(data, offset) {
+        // Look for MPEG header | 1111 1111 | 111X XYZX | where X can be either 0 or 1 and Y or Z should be 1
+        // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
+        // More info http://www.mp3-tech.org/programmer/frame_header.html
+        if (offset + 1 < data.length && this.isHeaderPattern(data, offset)) {
+            return true;
+        }
+        return false;
+    },
+
+    probe: function probe(data, offset) {
+        // same as isHeader but we also check that MPEG frame follows last MPEG frame
+        // or end of data is reached
+        if (offset + 1 < data.length && this.isHeaderPattern(data, offset)) {
+            // MPEG header Length
+            var headerLength = 4;
+            // MPEG frame Length
+            var header = this.parseHeader(data, offset);
+            var frameLength = headerLength;
+            if (header && header.frameLength) {
+                frameLength = header.frameLength;
+            }
+            var newOffset = offset + frameLength;
+            if (newOffset === data.length || newOffset + 1 < data.length && this.isHeaderPattern(data, newOffset)) {
+                return true;
+            }
+        }
+        return false;
+    }
+};
+
+/* harmony default export */ var mpegaudio_defaultExport = (MpegAudio);
 // CONCATENATED MODULE: ./src/demux/exp-golomb.js
 /* harmony import */ var exp_golomb___WEBPACK_IMPORTED_MODULE_0__utils_logger__ = __webpack_require__(0);
 function exp_golomb__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -2709,8 +2801,6 @@ var sample_aes_SampleAesDecrypter = function () {
 
 /* harmony default export */ var sample_aes_defaultExport = (sample_aes_SampleAesDecrypter);
 // CONCATENATED MODULE: ./src/demux/tsdemuxer.js
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__mpegaudio__ = __webpack_require__(8);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__mpegaudio___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_1__mpegaudio__);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__events__ = __webpack_require__(1);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_5__utils_logger__ = __webpack_require__(0);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_6__errors__ = __webpack_require__(2);
@@ -3680,8 +3770,8 @@ var tsdemuxer_TSDemuxer = function () {
     var pts = pes.pts;
 
     while (offset < length) {
-      if (__WEBPACK_IMPORTED_MODULE_1__mpegaudio___default.a.isHeader(data, offset)) {
-        var frame = __WEBPACK_IMPORTED_MODULE_1__mpegaudio___default.a.appendFrame(this._audioTrack, data, offset, pts, frameIndex);
+      if (mpegaudio_defaultExport.isHeader(data, offset)) {
+        var frame = mpegaudio_defaultExport.appendFrame(this._audioTrack, data, offset, pts, frameIndex);
         if (frame) {
           offset += frame.length;
           frameIndex++;
@@ -3707,8 +3797,6 @@ var tsdemuxer_TSDemuxer = function () {
 // CONCATENATED MODULE: ./src/demux/mp3demuxer.js
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__demux_id3__ = __webpack_require__(4);
 /* harmony import */ var mp3demuxer___WEBPACK_IMPORTED_MODULE_1__utils_logger__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__mpegaudio__ = __webpack_require__(8);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__mpegaudio___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_2__mpegaudio__);
 function mp3demuxer__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 /**
@@ -3718,7 +3806,7 @@ function mp3demuxer__classCallCheck(instance, Constructor) { if (!(instance inst
 
 
 
-var MP3Demuxer = function () {
+var mp3demuxer_MP3Demuxer = function () {
   function MP3Demuxer(observer, remuxer, config) {
     mp3demuxer__classCallCheck(this, MP3Demuxer);
 
@@ -3742,7 +3830,7 @@ var MP3Demuxer = function () {
       // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
       // More info http://www.mp3-tech.org/programmer/frame_header.html
       for (offset = id3Data.length, length = Math.min(data.length - 1, offset + 100); offset < length; offset++) {
-        if (__WEBPACK_IMPORTED_MODULE_2__mpegaudio___default.a.probe(data, offset)) {
+        if (mpegaudio_defaultExport.probe(data, offset)) {
           mp3demuxer___WEBPACK_IMPORTED_MODULE_1__utils_logger__["b" /* logger */].log('MPEG Audio sync word found !');
           return true;
         }
@@ -3766,8 +3854,8 @@ var MP3Demuxer = function () {
     var id3Samples = [{ pts: pts, dts: pts, data: id3Data }];
 
     while (offset < length) {
-      if (__WEBPACK_IMPORTED_MODULE_2__mpegaudio___default.a.isHeader(data, offset)) {
-        var frame = __WEBPACK_IMPORTED_MODULE_2__mpegaudio___default.a.appendFrame(track, data, offset, pts, frameIndex);
+      if (mpegaudio_defaultExport.isHeader(data, offset)) {
+        var frame = mpegaudio_defaultExport.appendFrame(track, data, offset, pts, frameIndex);
         if (frame) {
           offset += frame.length;
           stamp = frame.sample.pts;
@@ -3794,7 +3882,7 @@ var MP3Demuxer = function () {
   return MP3Demuxer;
 }();
 
-/* harmony default export */ var mp3demuxer_defaultExport = (MP3Demuxer);
+/* harmony default export */ var mp3demuxer_defaultExport = (mp3demuxer_MP3Demuxer);
 // CONCATENATED MODULE: ./src/helper/aac.js
 function aac__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -5328,102 +5416,6 @@ var demuxer_inline_DemuxerInline = function () {
 
 /***/ }),
 /* 8 */
-/***/ (function(module, exports) {
-
-/**
- *  MPEG parser helper
- */
-
-var MpegAudio = {
-
-    BitratesMap: [32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160],
-
-    SamplingRateMap: [44100, 48000, 32000, 22050, 24000, 16000, 11025, 12000, 8000],
-
-    appendFrame: function appendFrame(track, data, offset, pts, frameIndex) {
-        // Using http://www.datavoyage.com/mpgscript/mpeghdr.htm as a reference
-        if (offset + 24 > data.length) {
-            return undefined;
-        }
-
-        var header = this.parseHeader(data, offset);
-        if (header && offset + header.frameLength <= data.length) {
-            var frameDuration = 1152 * 90000 / header.sampleRate;
-            var stamp = pts + frameIndex * frameDuration;
-            var sample = { unit: data.subarray(offset, offset + header.frameLength), pts: stamp, dts: stamp };
-
-            track.config = [];
-            track.channelCount = header.channelCount;
-            track.samplerate = header.sampleRate;
-            track.samples.push(sample);
-            track.len += header.frameLength;
-
-            return { sample: sample, length: header.frameLength };
-        }
-
-        return undefined;
-    },
-
-    parseHeader: function parseHeader(data, offset) {
-        var headerB = data[offset + 1] >> 3 & 3;
-        var headerC = data[offset + 1] >> 1 & 3;
-        var headerE = data[offset + 2] >> 4 & 15;
-        var headerF = data[offset + 2] >> 2 & 3;
-        var headerG = !!(data[offset + 2] & 2);
-        if (headerB !== 1 && headerE !== 0 && headerE !== 15 && headerF !== 3) {
-            var columnInBitrates = headerB === 3 ? 3 - headerC : headerC === 3 ? 3 : 4;
-            var bitRate = MpegAudio.BitratesMap[columnInBitrates * 14 + headerE - 1] * 1000;
-            var columnInSampleRates = headerB === 3 ? 0 : headerB === 2 ? 1 : 2;
-            var sampleRate = MpegAudio.SamplingRateMap[columnInSampleRates * 3 + headerF];
-            var padding = headerG ? 1 : 0;
-            var channelCount = data[offset + 3] >> 6 === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
-            var frameLength = headerC === 3 ? (headerB === 3 ? 12 : 6) * bitRate / sampleRate + padding << 2 : (headerB === 3 ? 144 : 72) * bitRate / sampleRate + padding | 0;
-
-            return { sampleRate: sampleRate, channelCount: channelCount, frameLength: frameLength };
-        }
-
-        return undefined;
-    },
-
-    isHeaderPattern: function isHeaderPattern(data, offset) {
-        return data[offset] === 0xff && (data[offset + 1] & 0xe0) === 0xe0 && (data[offset + 1] & 0x06) !== 0x00;
-    },
-
-    isHeader: function isHeader(data, offset) {
-        // Look for MPEG header | 1111 1111 | 111X XYZX | where X can be either 0 or 1 and Y or Z should be 1
-        // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
-        // More info http://www.mp3-tech.org/programmer/frame_header.html
-        if (offset + 1 < data.length && this.isHeaderPattern(data, offset)) {
-            return true;
-        }
-        return false;
-    },
-
-    probe: function probe(data, offset) {
-        // same as isHeader but we also check that MPEG frame follows last MPEG frame 
-        // or end of data is reached
-        if (offset + 1 < data.length && this.isHeaderPattern(data, offset)) {
-            // MPEG header Length
-            var headerLength = 4;
-            // MPEG frame Length
-            var header = this.parseHeader(data, offset);
-            var frameLength = headerLength;
-            if (header && header.frameLength) {
-                frameLength = header.frameLength;
-            }
-            var newOffset = offset + frameLength;
-            if (newOffset === data.length || newOffset + 1 < data.length && this.isHeaderPattern(data, newOffset)) {
-                return true;
-            }
-        }
-        return false;
-    }
-};
-
-module.exports = MpegAudio;
-
-/***/ }),
-/* 9 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -6608,7 +6600,7 @@ var BufferHelper = {
 /* harmony import */ var demuxer___WEBPACK_IMPORTED_MODULE_3__errors__ = __webpack_require__(2);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_4_events__ = __webpack_require__(5);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_4_events___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_4_events__);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5_webworkify_webpack__ = __webpack_require__(10);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_5_webworkify_webpack__ = __webpack_require__(9);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_5_webworkify_webpack___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_5_webworkify_webpack__);
 function demuxer__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -6673,7 +6665,7 @@ var Demuxer = function () {
       __WEBPACK_IMPORTED_MODULE_2__utils_logger__["b" /* logger */].log('demuxing in webworker');
       var w = void 0;
       try {
-        w = this.w = __WEBPACK_IMPORTED_MODULE_5_webworkify_webpack___default.a(/*require.resolve*/(11));
+        w = this.w = __WEBPACK_IMPORTED_MODULE_5_webworkify_webpack___default.a(/*require.resolve*/(10));
         this.onwmsg = this.onWorkerMessage.bind(this);
         w.addEventListener('message', this.onwmsg);
         w.onerror = function (event) {
@@ -11060,7 +11052,7 @@ var hls_Hls = function () {
 /* harmony default export */ __webpack_exports__["default"] = (hls_Hls);
 
 /***/ }),
-/* 10 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 function webpackBootstrapFunc (modules) {
@@ -11191,7 +11183,7 @@ module.exports = function (moduleId, options) {
 
 
 /***/ }),
-/* 11 */
+/* 10 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
