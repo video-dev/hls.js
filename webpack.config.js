@@ -44,8 +44,12 @@ const commonPlugins = [
   new webpack.DefinePlugin(buildConstants)
 ];
 
-const minifyPlugins = commonPlugins.concat([
-  new webpack.optimize.UglifyJsPlugin(uglifyJsOptions)
+const distPlugins = commonPlugins.concat([
+  new webpack.optimize.UglifyJsPlugin(uglifyJsOptions),
+  new webpack.LoaderOptionsPlugin({
+    minimize: true,
+    debug: false
+  })
 ]);
 
 const multiConfig = [
@@ -73,7 +77,7 @@ const multiConfig = [
       library: 'Hls',
       libraryTarget: 'umd'
     },
-    plugins: minifyPlugins
+    plugins: distPlugins
   },
   {
     name: 'light',
@@ -119,7 +123,7 @@ const multiConfig = [
         './controller/subtitle-stream-controller': './empty.js'
       }
     },
-    plugins: minifyPlugins
+    plugins: distPlugins
   }
 ].map(fragment => Object.assign({}, commonConfig, fragment));
 
