@@ -19,12 +19,18 @@ const BufferHelper = {
     },
 
     bufferInfo: function(media, pos, maxHoleDuration) {
+        // When the buffer can't be read load from the given position (buffer end determines load position)
+        const defaultBufferInfo = {
+            len: 0,
+            start: pos,
+            end: pos,
+            nextStart: undefined
+        };
         if (media) {
             try {
-                var vbuffered = media.buffered,
-                    buffered = [],
-                    i;
-                for (i = 0; i < vbuffered.length; i++) {
+                const vbuffered = media.buffered;
+                const buffered = [];
+                for (let i = 0; i < vbuffered.length; i++) {
                     buffered.push({
                         start: vbuffered.start(i),
                         end: vbuffered.end(i)
@@ -32,10 +38,10 @@ const BufferHelper = {
                 }
                 return this.bufferedInfo(buffered, pos, maxHoleDuration);
             } catch (e) {
-                return { len: 0, start: 0, end: 0, nextStart: undefined };
+                return defaultBufferInfo;
             }
         } else {
-            return { len: 0, start: pos, end: pos, nextStart: undefined };
+            return defaultBufferInfo;
         }
     },
 
