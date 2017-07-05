@@ -4,8 +4,11 @@
 import Event from '../events';
 
 class PassThroughRemuxer {
-  constructor(observer) {
+  constructor(observer, config, typeSupported, env) {
     this.observer = observer;
+    this.config = config;
+    this.typeSupported = typeSupported;
+    this.env = env;
   }
 
   destroy() {

@@ -13,12 +13,11 @@ import {ErrorTypes, ErrorDetails} from '../errors';
 const MAX_SILENT_FRAME_DURATION = 10 * 1000;
 
 class MP4Remuxer {
-  constructor(observer, config, typeSupported, vendor) {
+  constructor(observer, config, typeSupported, env) {
     this.observer = observer;
     this.config = config;
     this.typeSupported = typeSupported;
-    const userAgent = navigator.userAgent;
-    this.isSafari = vendor && vendor.indexOf('Apple') > -1 && userAgent && !userAgent.match('CriOS');
+    this.env = env;
     this.ISGenerated = false;
   }
 
@@ -218,8 +217,7 @@ class MP4Remuxer {
 
     // if parsed fragment is contiguous with last one, let's use last DTS value as reference
     let nextAvcDts = this.nextAvcDts;
-
-    const isSafari = this.isSafari;
+    const isSafari = this.env.isSafari;
 
     // Safari does not like overlapping DTS on consecutive fragments. let's use nextAvcDts to overcome this if fragments are consecutive
     if (isSafari) {
@@ -413,7 +411,7 @@ class MP4Remuxer {
     track.len = 0;
     track.nbNalu = 0;
     track.dropped = 0;
-    if(outputSamples.length && navigator.userAgent.toLowerCase().indexOf('chrome') > -1) {
+    if(outputSamples.length && this.env.isChrome) {
       let flags = outputSamples[0].flags;
     // chrome workaround, mark first sample as being a Random Access Point to avoid sourcebuffer append issue
     // https://code.google.com/p/chromium/issues/detail?id=229412

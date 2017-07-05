@@ -1,4 +1,5 @@
 import { fixLineBreaks } from './vttparser';
+import { Env } from './env';
 
 const Cues = {
 
@@ -53,7 +54,7 @@ const Cues = {
 
         // VTTCue.line get's flakey when using controls, so let's now include line 13&14
         // also, drop line 1 since it's to close to the top
-        if (navigator.userAgent.match(/Firefox\//))
+        if (Env.isFirefox)
         {
           cue.line = r + 1;
         }
@@ -63,7 +64,7 @@ const Cues = {
         }
         cue.align = 'left';
         // Clamp the position between 0 and 100 - if out of these bounds, Firefox throws an exception and captions break
-        cue.position = Math.max(0, Math.min(100, 100 * (indent / 32) + (navigator.userAgent.match(/Firefox\//) ? 50 : 0)));
+        cue.position = Math.max(0, Math.min(100, 100 * (indent / 32) + (Env.isFirefox ? 50 : 0)));
         track.addCue(cue);
       }
     }

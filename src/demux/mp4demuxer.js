@@ -8,9 +8,12 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
 
  class MP4Demuxer {
 
-  constructor(observer, remuxer) {
+  constructor(observer, remuxer, config, typeSupported, env) {
     this.observer = observer;
     this.remuxer = remuxer;
+    this.config = config;
+    this.typeSupported = typeSupported;
+    this.env = env;
   }
 
   resetTimeStamp(initPTS) {

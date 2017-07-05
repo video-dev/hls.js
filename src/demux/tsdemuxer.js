@@ -20,11 +20,12 @@
 
  class TSDemuxer {
 
-  constructor(observer, remuxer, config, typeSupported) {
+  constructor(observer, remuxer, config, typeSupported, env) {
     this.observer = observer;
+    this.remuxer = remuxer;
     this.config = config;
     this.typeSupported = typeSupported;
-    this.remuxer = remuxer;
+    this.env = env;
     this.sampleAes = null;
   }
 
@@ -883,7 +884,7 @@
       }
     }
 
-    ADTS.initTrackConfig(track, this.observer, data, offset, this.audioCodec);
+    ADTS.initTrackConfig(track, this.observer, data, offset, this.audioCodec, this.env);
     frameIndex = 0;
     frameDuration = ADTS.getFrameDuration(track.samplerate);
 

@@ -7,6 +7,7 @@ import EventHandler from '../event-handler';
 import {logger} from '../utils/logger';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import BufferHelper from '../helper/buffer-helper';
+import { Env } from '../utils/env';
 
 class LevelController extends EventHandler {
 
@@ -63,9 +64,8 @@ class LevelController extends EventHandler {
         videoCodecFound = false,
         audioCodecFound = false,
         hls = this.hls,
-        brokenmp4inmp3 = /chrome|firefox/.test(navigator.userAgent.toLowerCase()),
+        brokenmp4inmp3 = Env.isFirefox || Env.isChrome,
         checkSupported = function(type,codec) { return MediaSource.isTypeSupported(`${type}/mp4;codecs=${codec}`);};
-
     // regroup redundant level together
     data.levels.forEach(level => {
       if(level.videoCodec) {
