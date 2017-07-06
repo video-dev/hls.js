@@ -9,11 +9,19 @@ import WebVTTParser from '../utils/webvtt-parser';
 import { logger } from '../utils/logger';
 
 function clearCurrentCues(track) {
-    if (track && track.cues) {
-        while (track.cues.length > 0) {
-            track.removeCue(track.cues[0]);
-        }
+    if (!track || !track.cues) {
+        return;
     }
+
+    let trackMode = track.mode;
+    if (trackMode === 'disabled') {
+        track.mode = 'hidden';
+    }
+
+    while (track.cues.length > 0) {
+        track.removeCue(track.cues[0]);
+    }
+    track.mode = trackMode;
 }
 
 function reuseVttTextTrack(inUseTrack, manifestTrack) {
@@ -239,12 +247,15 @@ class TimelineController extends EventHandler {
 
         // clear outdated subtitles
         const media = this.media;
-        if (media) {
-            const textTracks = media.textTracks;
-            if (textTracks) {
-                for (let i = 0; i < textTracks.length; i++) {
-                    clearCurrentCues(textTracks[i]);
-                }
+        if (!media || !media.textTracks) {
+            return;
+        }
+
+        const textTracks = media.textTracks;
+        for (let i = 0; i < textTracks.length; i++) {
+            // do not clear tracks that are managed externally
+            if (textTracks[i].textTrack1 || textTracks[i].textTrack2) {
+                clearCurrentCues(textTracks[i]);
             }
         }
     }
