@@ -60,7 +60,8 @@ const multiConfig = [
       path: path.resolve(__dirname, 'dist'),
       publicPath: '/hls.js/dist/',
       library: 'Hls',
-      libraryTarget: 'umd'
+      libraryTarget: 'umd',
+      libraryExport: 'default'
     },
     plugins: commonPlugins,
     devtool: 'source-map',
@@ -73,7 +74,8 @@ const multiConfig = [
       path: path.resolve(__dirname, 'dist'),
       publicPath: '/hls.js/dist/',
       library: 'Hls',
-      libraryTarget: 'umd'
+      libraryTarget: 'umd',
+      libraryExport: 'default'
     },
     plugins: distPlugins
   },
@@ -86,7 +88,8 @@ const multiConfig = [
       path: path.resolve(__dirname, 'dist'),
       publicPath: '/hls.js/dist/',
       library: 'Hls',
-      libraryTarget: 'umd'
+      libraryTarget: 'umd',
+      libraryExport: 'default'
     },
     resolve: {
       alias: {
@@ -109,7 +112,8 @@ const multiConfig = [
       path: path.resolve(__dirname, 'dist'),
       publicPath: '/hls.js/dist/',
       library: 'Hls',
-      libraryTarget: 'umd'
+      libraryTarget: 'umd',
+      libraryExport: 'default'
     },
     resolve: {
       alias: {
