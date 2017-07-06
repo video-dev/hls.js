@@ -35,7 +35,7 @@
     "test": "BABEL_ENV=test mocha --compilers js:babel-register --recursive tests/unit",
     "testfunc": "BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/hlsjs.js --timeout 40000",
     "lint": "jshint src/",
-    "dev": "webpack-dev-server --open --output-filename hls.js --devtool source-map"
+    "dev": "webpack-dev-server --env.debug --port 8080"
   },
   "dependencies": {
     "url-toolkit": "^2.0.1"
