@@ -113,6 +113,7 @@ class AudioTrackController extends EventHandler {
   }
 
  setAudioTrackInternal(newId) {
+
     // check if level idx is valid
     if (newId >= 0 && newId < this.tracks.length) {
       // stopping live reloading timer if any
@@ -136,6 +137,10 @@ class AudioTrackController extends EventHandler {
       }
     }
   }
+
+  // onError(err){
+  // }
+
 
   updateTrack(newId) {
     // check if level idx is valid
