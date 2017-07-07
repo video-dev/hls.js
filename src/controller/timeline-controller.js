@@ -9,19 +9,20 @@ import WebVTTParser from '../utils/webvtt-parser';
 import {logger} from '../utils/logger';
 
 function clearCurrentCues(track) {
-  if (!track || !track.cues) {
-    return;
-  }
+  if (track) {
+    let trackMode = track.mode;
 
-  let trackMode = track.mode;
-  if (trackMode === 'disabled') {
-    track.mode = 'hidden';
+    // When track.mode is disabled, track.cues will be null.
+    // To guarantee the removal of cues, we need to temporarily
+    // change the mode to hidden
+    if (trackMode === 'disabled') {
+      track.mode = 'hidden';
+    }
+    while (track.cues.length > 0) {
+      track.removeCue(track.cues[0]);
+    }
+    track.mode = trackMode;
   }
-
-  while (track.cues.length > 0) {
-    track.removeCue(track.cues[0]);
-  }
-  track.mode = trackMode;
 }
 
 function reuseVttTextTrack(inUseTrack, manifestTrack) {
