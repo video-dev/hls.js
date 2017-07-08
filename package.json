@@ -4,7 +4,7 @@
   "license": "Apache-2.0",
   "description": "JavaScript HLS client using MediaSourceExtension",
   "homepage": "https://github.com/video-dev/hls.js",
-  "authors": "Guillaume du Pontavice <guillaume.dupontavice@dailymotion.com>",
+  "authors": "Guillaume du Pontavice <g.du.pontavice@gmail.com>",
   "repository": {
     "type": "git",
     "url": "https://github.com/video-dev/hls.js"
@@ -35,7 +35,7 @@
     "test": "BABEL_ENV=test mocha --compilers js:babel-register --recursive tests/unit",
     "testfunc": "BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/hlsjs.js --timeout 40000",
     "lint": "jshint src/",
-    "dev": "webpack-dev-server --env.debug --port 8080"
+    "dev": "webpack-dev-server --env.debug --port 8000"
   },
   "dependencies": {
     "url-toolkit": "^2.0.1"
