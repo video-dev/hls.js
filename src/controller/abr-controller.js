@@ -245,7 +245,7 @@ class AbrController extends EventHandler {
           // cap maxLoadingDelay and ensure it is not bigger 'than bitrate test' frag duration
           const maxLoadingDelay = currentFragDuration ? Math.min(currentFragDuration,config.maxLoadingDelay) : config.maxLoadingDelay;
           maxStarvationDelay = maxLoadingDelay - bitrateTestDelay;
-          logger.trace(`bitrate test took ${Math.round(1000*bitrateTestDelaybitrateTestDelay)}ms, set first fragment max fetchDuration to ${Math.round(1000*maxStarvationDelay)} ms`);
+          logger.trace(`bitrate test took ${Math.round(1000*bitrateTestDelay)}ms, set first fragment max fetchDuration to ${Math.round(1000*maxStarvationDelay)} ms`);
           // don't use conservative factor on bitrate test
           bwFactor = bwUpFactor = 1;
         }
