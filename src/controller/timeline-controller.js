@@ -300,7 +300,17 @@ class TimelineController extends EventHandler {
                             // cue can appear more than once in different vtt files.
                             // This avoid showing duplicated cues with same timecode and text.
                             if (!currentTrack.cues.getCueById(cue.id)) {
-                                currentTrack.addCue(cue);
+                                try {
+                                    currentTrack.addCue(cue);
+                                } catch (err) {
+                                    const textTrackCue = new window.TextTrackCue(
+                                        cue.startTime,
+                                        cue.endTime,
+                                        cue.text
+                                    );
+                                    textTrackCue.id = cue.id;
+                                    currentTrack.addCue(textTrackCue);
+                                }
                             }
                         });
                         hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {
