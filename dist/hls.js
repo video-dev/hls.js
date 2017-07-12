@@ -1466,7 +1466,8 @@ var AudioStreamController = function (_EventHandler) {
           }
           break;
         case State.WAITING_INIT_PTS:
-          if (this.initPTS[this.videoTrackCC] === undefined) {
+          var videoTrackCC = this.videoTrackCC;
+          if (this.initPTS[videoTrackCC] === undefined) {
             break;
           }
 
@@ -1474,10 +1475,13 @@ var AudioStreamController = function (_EventHandler) {
           var waitingFrag = this.waitingFragment;
           if (waitingFrag) {
             var waitingFragCC = waitingFrag.frag.cc;
-            if (this.videoTrackCC !== waitingFragCC) {
-              _logger.logger.warn('Waiting fragment CC (' + waitingFragCC + ') does not match video track CC (' + this.videoTrackCC + ')');
-              this.waitingFragment = null;
-              this.state = State.IDLE;
+            if (videoTrackCC !== waitingFragCC) {
+              track = this.tracks[this.trackId];
+              if (track.details && track.details.live) {
+                _logger.logger.warn('Waiting fragment CC (' + waitingFragCC + ') does not match video track CC (' + videoTrackCC + ')');
+                this.waitingFragment = null;
+                this.state = State.IDLE;
+              }
             } else {
               this.state = State.FRAG_LOADING;
               this.onFragLoaded(this.waitingFragment);
@@ -2020,6 +2024,8 @@ var _eventHandler2 = _interopRequireDefault(_eventHandler);
 
 var _logger = _dereq_(54);
 
+var _errors = _dereq_(33);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -2036,7 +2042,7 @@ var AudioTrackController = function (_EventHandler) {
   function AudioTrackController(hls) {
     _classCallCheck(this, AudioTrackController);
 
-    var _this = _possibleConstructorReturn(this, (AudioTrackController.__proto__ || Object.getPrototypeOf(AudioTrackController)).call(this, hls, _events2.default.MANIFEST_LOADING, _events2.default.MANIFEST_LOADED, _events2.default.AUDIO_TRACK_LOADED));
+    var _this = _possibleConstructorReturn(this, (AudioTrackController.__proto__ || Object.getPrototypeOf(AudioTrackController)).call(this, hls, _events2.default.MANIFEST_LOADING, _events2.default.MANIFEST_LOADED, _events2.default.AUDIO_TRACK_LOADED, _events2.default.ERROR));
 
     _this.ticks = 0;
     _this.ontick = _this.tick.bind(_this);
@@ -2046,7 +2052,16 @@ var AudioTrackController = function (_EventHandler) {
   _createClass(AudioTrackController, [{
     key: 'destroy',
     value: function destroy() {
+      this.cleanTimer();
       _eventHandler2.default.prototype.destroy.call(this);
+    }
+  }, {
+    key: 'cleanTimer',
+    value: function cleanTimer() {
+      if (this.timer) {
+        clearTimeout(this.timer);
+        this.timer = null;
+      }
     }
   }, {
     key: 'tick',
@@ -2064,6 +2079,13 @@ var AudioTrackController = function (_EventHandler) {
     key: 'doTick',
     value: function doTick() {
       this.updateTrack(this.trackId);
+    }
+  }, {
+    key: 'onError',
+    value: function onError(data) {
+      if (data.fatal && data.type === _errors.ErrorTypes.NETWORK_ERROR) {
+        this.cleanTimer();
+      }
     }
   }, {
     key: 'onManifestLoading',
@@ -2110,8 +2132,7 @@ var AudioTrackController = function (_EventHandler) {
         }
         if (!data.details.live && this.timer) {
           // playlist is not live and timer is armed : stopping it
-          clearInterval(this.timer);
-          this.timer = null;
+          this.cleanTimer();
         }
       }
     }
@@ -2124,10 +2145,7 @@ var AudioTrackController = function (_EventHandler) {
       // check if level idx is valid
       if (newId >= 0 && newId < this.tracks.length) {
         // stopping live reloading timer if any
-        if (this.timer) {
-          clearInterval(this.timer);
-          this.timer = null;
-        }
+        this.cleanTimer();
         this.trackId = newId;
         _logger.logger.log('switching to audioTrack ' + newId);
         var audioTrack = this.tracks[newId],
@@ -2153,10 +2171,7 @@ var AudioTrackController = function (_EventHandler) {
       // check if level idx is valid
       if (newId >= 0 && newId < this.tracks.length) {
         // stopping live reloading timer if any
-        if (this.timer) {
-          clearInterval(this.timer);
-          this.timer = null;
-        }
+        this.cleanTimer();
         this.trackId = newId;
         _logger.logger.log('updating audioTrack ' + newId);
         var audioTrack = this.tracks[newId],
@@ -2198,7 +2213,7 @@ var AudioTrackController = function (_EventHandler) {
 
 exports.default = AudioTrackController;
 
-},{"34":34,"35":35,"54":54}],8:[function(_dereq_,module,exports){
+},{"33":33,"34":34,"35":35,"54":54}],8:[function(_dereq_,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3282,11 +3297,16 @@ var LevelController = function (_EventHandler) {
   _createClass(LevelController, [{
     key: 'destroy',
     value: function destroy() {
+      this.cleanTimer();
+      this._manualLevel = -1;
+    }
+  }, {
+    key: 'cleanTimer',
+    value: function cleanTimer() {
       if (this.timer) {
         clearTimeout(this.timer);
         this.timer = null;
       }
-      this._manualLevel = -1;
     }
   }, {
     key: 'startLoad',
@@ -3398,10 +3418,7 @@ var LevelController = function (_EventHandler) {
       // check if level idx is valid
       if (newLevel >= 0 && newLevel < levels.length) {
         // stopping live reloading timer if any
-        if (this.timer) {
-          clearTimeout(this.timer);
-          this.timer = null;
-        }
+        this.cleanTimer();
         if (this._level !== newLevel) {
           _logger.logger.log('switching to level ' + newLevel);
           this._level = newLevel;
@@ -3428,6 +3445,9 @@ var LevelController = function (_EventHandler) {
     key: 'onError',
     value: function onError(data) {
       if (data.fatal) {
+        if (data.type === _errors.ErrorTypes.NETWORK_ERROR) {
+          this.cleanTimer();
+        }
         return;
       }
 
@@ -3502,10 +3522,7 @@ var LevelController = function (_EventHandler) {
               _logger.logger.error('cannot recover ' + details + ' error');
               this._level = undefined;
               // stopping live reloading timer if any
-              if (this.timer) {
-                clearTimeout(this.timer);
-                this.timer = null;
-              }
+              this.cleanTimer();
               // switch error to fatal
               data.fatal = true;
             }
@@ -6733,7 +6750,7 @@ var ADTS = {
       } else {
         // if (manifest codec is AAC) AND (frequency less than 24kHz AND nb channel is 1) OR (manifest codec not specified and mono audio)
         // Chrome fails to play back with low frequency AAC LC mono when initialized with HE-AAC.  This is not a problem with stereo.
-        if (audioCodec && audioCodec.indexOf('mp4a.40.2') !== -1 && adtsSampleingIndex >= 6 && adtsChanelConfig === 1 || !audioCodec && adtsChanelConfig === 1) {
+        if (audioCodec && audioCodec.indexOf('mp4a.40.2') !== -1 && (adtsSampleingIndex >= 6 && adtsChanelConfig === 1 || /vivaldi/i.test(userAgent)) || !audioCodec && adtsChanelConfig === 1) {
           adtsObjectType = 2;
           config = new Array(2);
         }
@@ -6815,7 +6832,7 @@ var ADTS = {
   },
 
   probe: function probe(data, offset) {
-    // same as isHeader but we also check that ADTS frame follows last ADTS frame 
+    // same as isHeader but we also check that ADTS frame follows last ADTS frame
     // or end of data is reached
     if (offset + 1 < data.length && this.isHeaderPattern(data, offset)) {
       // ADTS header Length
@@ -12086,7 +12103,8 @@ var MP4 = function () {
     key: 'mfhd',
     value: function mfhd(sequenceNumber) {
       return MP4.box(MP4.types.mfhd, new Uint8Array([0x00, 0x00, 0x00, 0x00, // flags
-      sequenceNumber >> 24, sequenceNumber >> 16 & 0xFF, sequenceNumber >> 8 & 0xFF, sequenceNumber & 0xFF]));
+      sequenceNumber >> 24, sequenceNumber >> 16 & 0xFF, sequenceNumber >> 8 & 0xFF, sequenceNumber & 0xFF]) // sequence_number
+      );
     }
   }, {
     key: 'minf',
@@ -12333,7 +12351,8 @@ var MP4 = function () {
           lowerWordBaseMediaDecodeTime = Math.floor(baseMediaDecodeTime % (UINT32_MAX + 1));
       return MP4.box(MP4.types.traf, MP4.box(MP4.types.tfhd, new Uint8Array([0x00, // version 0
       0x00, 0x00, 0x00, // flags
-      id >> 24, id >> 16 & 0XFF, id >> 8 & 0XFF, id & 0xFF])), MP4.box(MP4.types.tfdt, new Uint8Array([0x01, // version 1
+      id >> 24, id >> 16 & 0XFF, id >> 8 & 0XFF, id & 0xFF]) // track_ID
+      ), MP4.box(MP4.types.tfdt, new Uint8Array([0x01, // version 1
       0x00, 0x00, 0x00, // flags
       upperWordBaseMediaDecodeTime >> 24, upperWordBaseMediaDecodeTime >> 16 & 0XFF, upperWordBaseMediaDecodeTime >> 8 & 0XFF, upperWordBaseMediaDecodeTime & 0xFF, lowerWordBaseMediaDecodeTime >> 24, lowerWordBaseMediaDecodeTime >> 16 & 0XFF, lowerWordBaseMediaDecodeTime >> 8 & 0XFF, lowerWordBaseMediaDecodeTime & 0xFF])), MP4.trun(track, sampleDependencyTable.length + 16 + // tfhd
       20 + // tfdt
