@@ -203,14 +203,14 @@ class AbrController extends EventHandler {
       return forcedAutoLevel;
     }
     // compute next level using ABR logic
-    let nextABRAutoLevel = this._nextABRAutoLevel;
+    let nextABRAutoLevel = this._getnextABRAutoLevel();
     // if forced auto level has been defined, use it to cap ABR computed quality level
     if (forcedAutoLevel !== -1) {
       nextABRAutoLevel = Math.min(forcedAutoLevel,nextABRAutoLevel);
     }
     return nextABRAutoLevel;
   }
-  get _nextABRAutoLevel() {
+  _getnextABRAutoLevel() {
     var hls = this.hls, maxAutoLevel = hls.maxAutoLevel, levels = hls.levels, config = hls.config, minAutoLevel = hls.minAutoLevel;
     const v = hls.media,
           currentLevel = this.lastLoadedFragLevel,
