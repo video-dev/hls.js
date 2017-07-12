@@ -90,7 +90,8 @@ const ADTS = {
                 if (
                     (audioCodec &&
                         audioCodec.indexOf('mp4a.40.2') !== -1 &&
-                        (adtsSampleingIndex >= 6 && adtsChanelConfig === 1)) ||
+                        ((adtsSampleingIndex >= 6 && adtsChanelConfig === 1) ||
+                            /vivaldi/i.test(userAgent))) ||
                     (!audioCodec && adtsChanelConfig === 1)
                 ) {
                     adtsObjectType = 2;
