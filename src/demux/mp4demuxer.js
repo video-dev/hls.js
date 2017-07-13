@@ -248,8 +248,6 @@ class MP4Demuxer {
                         }
                         return result;
                     })[0];
-                    baseTime = baseTime || Infinity;
-
                     // convert base time to seconds
                     return baseTime / scale;
                 });
