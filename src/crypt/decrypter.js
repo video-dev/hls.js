@@ -5,32 +5,42 @@ import AESDecryptor from './aes-decryptor';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
 
+/*globals self: false */
+
 class Decrypter {
-  constructor(hls) {
-    this.hls = hls;
+  constructor(observer,config) {
+    this.observer = observer;
+    this.config = config;
+    this.logEnabled = true;
     try {
-      const browserCrypto = window ? window.crypto : crypto;
+      const browserCrypto = crypto ? crypto : self.crypto;
       this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
     } catch (e) {}
-
-    this.disableWebCrypto = !this.supportsWebCrypto();
+    this.disableWebCrypto = !this.subtle;
   }
 
-  supportsWebCrypto() {
-    return this.subtle && window.location.protocol === 'https:';
+  isSync() {
+    return (this.disableWebCrypto && this.config.enableSoftwareAES);
   }
 
   decrypt(data, key, iv, callback) {
-    if (this.disableWebCrypto && this.hls.config.enableSoftwareAES) {
-      logger.log('decrypting by JavaScript Implementation');
-      if (!this.decryptor) {
-        this.decryptor = new AESDecryptor();
+    if (this.disableWebCrypto && this.config.enableSoftwareAES) {
+      if (this.logEnabled) {
+        logger.log('JS AES decrypt');
+        this.logEnabled = false;
       }
-      this.decryptor.expandKey(key);
-      callback(this.decryptor.decrypt(data, 0, iv));
+      let decryptor = this.decryptor;
+      if (!decryptor) {
+        this.decryptor = decryptor = new AESDecryptor();
+      }
+      decryptor.expandKey(key);
+      callback(decryptor.decrypt(data, 0, iv));
     }
     else {
-      logger.log('decrypting by WebCrypto API');
+      if (this.logEnabled) {
+        logger.log('WebCrypto AES decrypt');
+        this.logEnabled = false;
+      }
       const subtle = this.subtle;
       if (this.key !== key) {
         this.key = key;
@@ -42,9 +52,12 @@ class Decrypter {
           // decrypt using web crypto
           let crypto = new AESCrypto(subtle,iv);
           crypto.decrypt(data, aesKey).
-            then((result) => {
-              callback(result);
-            });
+          catch ((err) => {
+            this.onWebCryptoError(err, data, key, iv, callback);
+          }).
+          then((result) => {
+            callback(result);
+          });
         }).
         catch ((err) => {
           this.onWebCryptoError(err, data, key, iv, callback);
@@ -53,15 +66,15 @@ class Decrypter {
   }
 
   onWebCryptoError(err, data, key, iv, callback) {
-    let hls = this.hls;
-    if (hls.config.enableSoftwareAES) {
-      logger.log('disabling to use WebCrypto API');
+    if (this.config.enableSoftwareAES) {
+      logger.log('WebCrypto Error, disable WebCrypto API');
       this.disableWebCrypto = true;
+      this.logEnabled = true;
       this.decrypt(data, key, iv, callback);
     }
     else {
       logger.error(`decrypting error : ${err.message}`);
-      hls.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_DECRYPT_ERROR, fatal : true, reason : err.message});
+      this.observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details : ErrorDetails.FRAG_DECRYPT_ERROR, fatal : true, reason : err.message});
     }
   }
 

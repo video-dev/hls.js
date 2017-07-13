@@ -38,19 +38,20 @@
         white-space: pre-wrap;
       }
     </style>
-    <script src="/dist/hls.js"></script>
+    <script src="/dist/hls.min.js"></script>
     <script>
-      var video, hls;
+      var video, hls, logString ='';
 
       function startStream(streamUrl, callback) {
         if (Hls.isSupported()) {
           if (hls) {
-           callback('hlsjsAlreadyInitialised');
+            callback({ code : 'hlsjsAlreadyInitialised', logs : logString});
            return;
           }
           video = document.getElementById('video');
           try {
             hls = new Hls({debug: true});
+            console.log(navigator.userAgent);
             hls.loadSource(streamUrl);
             hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, function() {
@@ -58,17 +59,23 @@
             });
             hls.on(Hls.Events.ERROR, function(event, data) {
               if (data.fatal) {
-                callback(data.details);
+                console.log('hlsjs fatal error :' + data.details);
+                if (data.details === Hls.ErrorDetails.INTERNAL_EXCEPTION) {
+                  console.log('exception in :' + data.event);
+                  console.log(data.err.stack ? JSON.stringify(data.err.stack) : data.err.message);
+                }
+                callback({ code : data.details, logs : logString});
               }
             });
             video.onerror = function(event) {
-              callback('video_error_' + video.error.code);
+              console.log('video error, code :' + video.error.code);
+              callback({ code : 'video_error_' + video.error.code, logs : logString});
             };
           } catch(err) {
-            callback('exception');
+            callback({ code : 'exception', logs : logString});
           }
         } else {
-          callback('notSupported');
+          callback({ code : 'notSupported', logs : logString});
         }
       }
 
@@ -104,7 +111,7 @@
       }
      </script>
     </head>
-    <body>
+    <body id="hlsjs-functional-tests">
       <video id="video"></video>
       <div id="log">
         <div class="inner"></div>
@@ -132,6 +139,7 @@
             var line = document.createElement('pre');
             line.className = "line line-"+methodName;
             line.appendChild(text);
+            logString += a + '\n';
             inner.appendChild(line);
           }
         })();

@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-import EwmaBandWidthEstimator from '../../../src/controller/ewma-bandwidth-estimator';
+import EwmaBandWidthEstimator from '../../../src/utils/ewma-bandwidth-estimator';
 import Hls from '../../../src/hls';
 
 

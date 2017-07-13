@@ -18,18 +18,19 @@ class FPSController extends EventHandler{
     }
     this.isVideoPlaybackQualityAvailable = false;
   }
-  
+
   onMediaAttaching(data) {
-    if (this.hls.config.capLevelOnFPSDrop) {
-      this.video = data.media instanceof HTMLVideoElement ? data.media : null;
-      if (typeof this.video.getVideoPlaybackQuality === 'function') {
+    const config = this.hls.config;
+    if (config.capLevelOnFPSDrop) {
+      const video = this.video = data.media instanceof HTMLVideoElement ? data.media : null;
+      if (typeof video.getVideoPlaybackQuality === 'function') {
         this.isVideoPlaybackQualityAvailable = true;
       }
       clearInterval(this.timer);
-      this.timer = setInterval(this.checkFPSInterval.bind(this), this.hls.config.fpsDroppedMonitoringPeriod);
-    } 
+      this.timer = setInterval(this.checkFPSInterval.bind(this), config.fpsDroppedMonitoringPeriod);
+    }
   }
-  
+
   checkFPS(video, decodedFrames, droppedFrames) {
     let currentTime = performance.now();
     if (decodedFrames) {
@@ -37,18 +38,19 @@ class FPSController extends EventHandler{
         let currentPeriod = currentTime - this.lastTime,
             currentDropped = droppedFrames - this.lastDroppedFrames,
             currentDecoded = decodedFrames - this.lastDecodedFrames,
-            droppedFPS = 1000 * currentDropped / currentPeriod;
-        this.hls.trigger(Event.FPS_DROP, {currentDropped: currentDropped, currentDecoded: currentDecoded, totalDroppedFrames: droppedFrames});
+            droppedFPS = 1000 * currentDropped / currentPeriod,
+            hls = this.hls;
+        hls.trigger(Event.FPS_DROP, {currentDropped: currentDropped, currentDecoded: currentDecoded, totalDroppedFrames: droppedFrames});
         if (droppedFPS > 0) {
           //logger.log('checkFPS : droppedFPS/decodedFPS:' + droppedFPS/(1000 * currentDecoded / currentPeriod));
-          if (currentDropped > this.hls.config.fpsDroppedMonitoringThreshold * currentDecoded) {
-            let currentLevel = this.hls.currentLevel;
+          if (currentDropped > hls.config.fpsDroppedMonitoringThreshold * currentDecoded) {
+            let currentLevel = hls.currentLevel;
             logger.warn('drop FPS ratio greater than max allowed value for currentLevel: ' + currentLevel);
-            if (currentLevel > 0 && (this.hls.autoLevelCapping === -1 || this.hls.autoLevelCapping >= currentLevel)) {
+            if (currentLevel > 0 && (hls.autoLevelCapping === -1 || hls.autoLevelCapping >= currentLevel)) {
               currentLevel = currentLevel - 1;
-              this.hls.trigger(Event.FPS_DROP_LEVEL_CAPPING, {level: currentLevel, droppedLevel: this.hls.currentLevel});
-              this.hls.autoLevelCapping = currentLevel;
-              this.hls.streamController.nextLevelSwitch();
+              hls.trigger(Event.FPS_DROP_LEVEL_CAPPING, {level: currentLevel, droppedLevel: hls.currentLevel});
+              hls.autoLevelCapping = currentLevel;
+              hls.streamController.nextLevelSwitch();
             }
           }
         }
@@ -58,17 +60,18 @@ class FPSController extends EventHandler{
       this.lastDecodedFrames = decodedFrames;
     }
   }
-  
+
   checkFPSInterval() {
-    if (this.video) {
+    const video = this.video;
+    if (video) {
       if (this.isVideoPlaybackQualityAvailable) {
-        let videoPlaybackQuality = this.video.getVideoPlaybackQuality();
-        this.checkFPS(this.video, videoPlaybackQuality.totalVideoFrames, videoPlaybackQuality.droppedVideoFrames);
+        let videoPlaybackQuality = video.getVideoPlaybackQuality();
+        this.checkFPS(video, videoPlaybackQuality.totalVideoFrames, videoPlaybackQuality.droppedVideoFrames);
       } else {
-        this.checkFPS(this.video, this.video.webkitDecodedFrameCount, this.video.webkitDroppedFrameCount);  
+        this.checkFPS(video, video.webkitDecodedFrameCount, video.webkitDroppedFrameCount);
       }
     }
-  } 
+  }
 }
 
 export default FPSController;
