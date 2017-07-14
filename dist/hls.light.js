@@ -2866,8 +2866,21 @@ var StreamController = function (_EventHandler) {
         if (fragPrevious) {
           var targetSN = fragPrevious.sn + 1;
           if (targetSN >= levelDetails.startSN && targetSN <= levelDetails.endSN) {
-            frag = fragments[targetSN - levelDetails.startSN];
-            _logger.logger.log('live playlist, switching playlist, load frag with next SN: ' + frag.sn);
+            var fragNext = fragments[targetSN - levelDetails.startSN];
+            if (fragPrevious.cc == fragNext.cc) {
+              frag = fragNext;
+              _logger.logger.log('live playlist, switching playlist, load frag with next SN: ' + frag.sn);
+            }
+          }
+          // next frag SN not available (or not with same continuity counter)
+          // look for a frag sharing the same CC
+          if (!frag) {
+            frag = _binarySearch2.default.search(fragments, function (frag) {
+              return fragPrevious.cc - frag.cc;
+            });
+            if (frag) {
+              _logger.logger.log('live playlist, switching playlist, load frag with same CC: ' + frag.sn);
+            }
           }
         }
         if (!frag) {
