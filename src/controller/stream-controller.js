@@ -358,10 +358,23 @@ class StreamController extends EventHandler {
          even if SN are not synchronized between playlists, loading this frag will help us
          compute playlist sliding and find the right one after in case it was not the right consecutive one */
       if (fragPrevious) {
-        var targetSN = fragPrevious.sn + 1;
+        const targetSN = fragPrevious.sn + 1;
         if (targetSN >= levelDetails.startSN && targetSN <= levelDetails.endSN) {
-          frag = fragments[targetSN - levelDetails.startSN];
-          logger.log(`live playlist, switching playlist, load frag with next SN: ${frag.sn}`);
+          const fragNext = fragments[targetSN - levelDetails.startSN];
+          if (fragPrevious.cc == fragNext.cc) {
+            frag = fragNext;
+            logger.log(`live playlist, switching playlist, load frag with next SN: ${frag.sn}`);
+          }
+        }
+        // next frag SN not available (or not with same continuity counter)
+        // look for a frag sharing the same CC
+        if (!frag) {
+          frag = BinarySearch.search(fragments, function(frag) {
+            return fragPrevious.cc - frag.cc;
+          });
+          if (frag) {
+            logger.log(`live playlist, switching playlist, load frag with same CC: ${frag.sn}`);
+          }
         }
       }
       if (!frag) {
