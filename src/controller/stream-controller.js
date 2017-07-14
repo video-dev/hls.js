@@ -361,7 +361,7 @@ class StreamController extends EventHandler {
         const targetSN = fragPrevious.sn + 1;
         if (targetSN >= levelDetails.startSN && targetSN <= levelDetails.endSN) {
           const fragNext = fragments[targetSN - levelDetails.startSN];
-          if (fragPrevious.cc == fragNext.cc) {
+          if (fragPrevious.cc === fragNext.cc) {
             frag = fragNext;
             logger.log(`live playlist, switching playlist, load frag with next SN: ${frag.sn}`);
           }
