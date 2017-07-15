@@ -815,7 +815,7 @@ var AbrController = function (_EventHandler) {
       var stats = loader.stats;
       /* only monitor frag retrieval time if
       (video not paused OR first fragment being loaded(ready state === HAVE_NOTHING = 0)) AND autoswitching enabled AND not lowest level (=> means that we have several levels) */
-      if (v && (!v.paused && v.playbackRate !== 0 || !v.readyState) && frag.autoLevel && frag.level) {
+      if (v && stats && (!v.paused && v.playbackRate !== 0 || !v.readyState) && frag.autoLevel && frag.level) {
         var requestDelay = performance.now() - stats.trequest,
             playbackRate = Math.abs(v.playbackRate);
         // monitor fragment load progress after half of expected fragment duration,to stabilize bitrate
@@ -4067,7 +4067,7 @@ var StreamController = function (_EventHandler) {
           var targetSN = fragPrevious.sn + 1;
           if (targetSN >= levelDetails.startSN && targetSN <= levelDetails.endSN) {
             var fragNext = fragments[targetSN - levelDetails.startSN];
-            if (fragPrevious.cc == fragNext.cc) {
+            if (fragPrevious.cc === fragNext.cc) {
               frag = fragNext;
               _logger.logger.log('live playlist, switching playlist, load frag with next SN: ' + frag.sn);
             }
@@ -10393,7 +10393,12 @@ var LevelHelper = {
     var fragIdx, fragments, i;
     fragIdx = sn - details.startSN;
     fragments = details.fragments;
-    frag = fragments[fragIdx];
+    // update frag reference in fragments array
+    // rationale is that fragments array might not contain this frag object.
+    // this will happpen if playlist has been refreshed between frag loading and call to updateFragPTSDTS()
+    // if we don't update frag, we won't be able to propagate PTS info on the playlist
+    // resulting in invalid sliding computation
+    fragments[fragIdx] = frag;
     // adjust fragment PTS/duration from seqnum-1 to frag 0
     for (i = fragIdx; i > 0; i--) {
       LevelHelper.updatePTS(fragments, i, i - 1);
