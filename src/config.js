@@ -84,9 +84,7 @@ export var hlsDefaultConfig = {
     minAutoBitrate: 0 // used by hls
 };
 
-if (typeof __BUILD_VERSION__ === 'undefined' || __BUILD_VERSION__ === 'full') {
-    hlsDefaultConfig.audioStreamController = AudioStreamController;
-    hlsDefaultConfig.audioTrackController = AudioTrackController;
+if (typeof __SUBTITLE__ !== 'undefined' && __SUBTITLE__) {
     hlsDefaultConfig.subtitleStreamController = SubtitleStreamController;
     hlsDefaultConfig.subtitleTrackController = SubtitleTrackController;
     hlsDefaultConfig.timelineController = TimelineController;
@@ -97,4 +95,9 @@ if (typeof __BUILD_VERSION__ === 'undefined' || __BUILD_VERSION__ === 'full') {
     hlsDefaultConfig.captionsTextTrack1LanguageCode = 'en'; // used by timeline-controller
     hlsDefaultConfig.captionsTextTrack2Label = 'Spanish'; // used by timeline-controller
     hlsDefaultConfig.captionsTextTrack2LanguageCode = 'es'; // used by timeline-controller
+}
+
+if (typeof __ALT_AUDIO__ !== 'undefined' && __ALT_AUDIO__) {
+    hlsDefaultConfig.audioStreamController = AudioStreamController;
+    hlsDefaultConfig.audioTrackController = AudioTrackController;
 }
