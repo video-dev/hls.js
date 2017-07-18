@@ -15,6 +15,7 @@ class LevelController extends EventHandler {
       Event.MANIFEST_LOADED,
       Event.LEVEL_LOADED,
       Event.FRAG_LOADED,
+      Event.LEVEL_REMOVED,
       Event.ERROR);
     this.ontick = this.tick.bind(this);
     this._manualLevel = -1;
@@ -225,6 +226,7 @@ class LevelController extends EventHandler {
     }
 
     let details = data.details, hls = this.hls, levelId, level, levelError = false;
+    let removeLevel = false;
     // try to recover not fatal errors
     switch(details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
@@ -241,6 +243,11 @@ class LevelController extends EventHandler {
         break;
       case ErrorDetails.REMUX_ALLOC_ERROR:
         levelId = data.level;
+        break;
+      case ErrorDetails.LEVEL_EMPTY_ERROR:
+        levelId = data.context.level;
+        levelError = true;
+        removeLevel = true;
         break;
       default:
         break;
@@ -264,12 +271,18 @@ class LevelController extends EventHandler {
         level.details = undefined;
         logger.warn(`level controller,${details} for level ${levelId}: switching to redundant stream id ${level.urlId}`);
       } else {
+        if (removeLevel) {
+          logger.warn(`Bad level encountered, removing & forcing to auto mode`);
+          this._levels = this.levels.filter((l, index) => index !== levelId);
+          hls.currentLevel = -1;
+          hls.trigger(Event.LEVEL_REMOVED, { level: levelId });
+        }
         // we could try to recover if in auto mode and current level not lowest level (0)
         let recoverable = ((this._manualLevel === -1) && levelId);
         if (recoverable) {
           logger.warn(`level controller,${details}: switch-down for next fragment`);
           hls.nextAutoLevel = Math.max(0,levelId-1);
-        } else if(level && level.details && level.details.live) {
+        }  else if(level && level.details && level.details.live) {
           logger.warn(`level controller,${details} on live stream, discard`);
           if (levelError) {
             // reset this._level so that another call to set level() will retrigger a frag load

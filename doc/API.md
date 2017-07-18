@@ -1104,6 +1104,8 @@ Full list of Events is available below:
     -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), level : id of updated level }
   - `Hls.Events.LEVEL_PTS_UPDATED`  - fired when a level's PTS information has been updated after parsing a fragment
     -  data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), level : id of updated level, drift: PTS drift observed when parsing last fragment }
+  - `Hls.Events.LEVEL_REMOVED` - fired when a level should no longer be use
+    - data: { level: levelId }
   - `Hls.Events.AUDIO_TRACKS_UPDATED`  - fired to notify that audio track lists has been updated
     -  data: { audioTracks : audioTracks }
   - `Hls.Events.AUDIO_TRACK_SWITCH`  - fired when an audio track switch occurs (deprecated in favor of `AUDIO_TRACK_SWITCHING`)
@@ -1238,7 +1240,8 @@ Full list of errors is described below:
     - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_FULL_ERROR`, fatal : `false` }
   - `Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE` - raised after hls.js seeks over a buffer hole to unstuck the playback,
     - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE`, fatal : `false`, hole : hole duration }
-
+  - `Hls.ErrorDetails.LEVEL_EMPTY_ERROR`: raised after parsing aa child manifest containing no media
+    -  data: { level : faulty level Id, event : error description }
 
 ## Objects
 
