@@ -1,7 +1,6 @@
 /**
  * HLS config
  */
-'use strict';
 
 import AbrController from './controller/abr-controller';
 import BufferController from './controller/buffer-controller';
@@ -9,17 +8,14 @@ import CapLevelController from './controller/cap-level-controller';
 import FPSController from './controller/fps-controller';
 import XhrLoader from './utils/xhr-loader';
 //import FetchLoader from './utils/fetch-loader';
-//#if altaudio
+
 import AudioTrackController from './controller/audio-track-controller';
 import AudioStreamController from './controller/audio-stream-controller';
-//#endif
 
-//#if subtitle
-import Cues from './utils/cues';
+import * as Cues from './utils/cues';
 import TimelineController from './controller/timeline-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
 import SubtitleStreamController from './controller/subtitle-stream-controller';
-//#endif
 
 export var hlsDefaultConfig = {
     autoStartLoad: true, // used by stream-controller
@@ -37,7 +33,7 @@ export var hlsDefaultConfig = {
     highBufferWatchdogPeriod: 3, // used by stream-controller
     nudgeOffset: 0.1, // used by stream-controller
     nudgeMaxRetry: 3, // used by stream-controller
-    maxFragLookUpTolerance: 0.25, // used by stream-controller
+    maxFragLookUpTolerance: 0.2, // used by stream-controller
     liveSyncDurationCount: 3, // used by stream-controller
     liveMaxLatencyDurationCount: Infinity, // used by stream-controller
     liveSyncDuration: undefined, // used by stream-controller
@@ -73,22 +69,6 @@ export var hlsDefaultConfig = {
     bufferController: BufferController,
     capLevelController: CapLevelController,
     fpsController: FPSController,
-    //#if altaudio
-    audioStreamController: AudioStreamController,
-    audioTrackController: AudioTrackController,
-    //#endif
-    //#if subtitle
-    subtitleStreamController: SubtitleStreamController,
-    subtitleTrackController: SubtitleTrackController,
-    timelineController: TimelineController,
-    cueHandler: Cues,
-    enableCEA708Captions: true, // used by timeline-controller
-    enableWebVTT: true, // used by timeline-controller
-    captionsTextTrack1Label: 'English', // used by timeline-controller
-    captionsTextTrack1LanguageCode: 'en', // used by timeline-controller
-    captionsTextTrack2Label: 'Spanish', // used by timeline-controller
-    captionsTextTrack2LanguageCode: 'es', // used by timeline-controller
-    //#endif
     stretchShortVideoTrack: false, // used by mp4-remuxer
     forceKeyFrameOnDiscontinuity: true, // used by ts-demuxer
     abrEwmaFastLive: 3, // used by abr-controller
@@ -103,3 +83,21 @@ export var hlsDefaultConfig = {
     maxLoadingDelay: 4, // used by abr-controller
     minAutoBitrate: 0 // used by hls
 };
+
+if (typeof __SUBTITLE__ !== 'undefined' && __SUBTITLE__) {
+    hlsDefaultConfig.subtitleStreamController = SubtitleStreamController;
+    hlsDefaultConfig.subtitleTrackController = SubtitleTrackController;
+    hlsDefaultConfig.timelineController = TimelineController;
+    hlsDefaultConfig.cueHandler = Cues;
+    hlsDefaultConfig.enableCEA708Captions = true; // used by timeline-controller
+    hlsDefaultConfig.enableWebVTT = true; // used by timeline-controller
+    hlsDefaultConfig.captionsTextTrack1Label = 'English'; // used by timeline-controller
+    hlsDefaultConfig.captionsTextTrack1LanguageCode = 'en'; // used by timeline-controller
+    hlsDefaultConfig.captionsTextTrack2Label = 'Spanish'; // used by timeline-controller
+    hlsDefaultConfig.captionsTextTrack2LanguageCode = 'es'; // used by timeline-controller
+}
+
+if (typeof __ALT_AUDIO__ !== 'undefined' && __ALT_AUDIO__) {
+    hlsDefaultConfig.audioStreamController = AudioStreamController;
+    hlsDefaultConfig.audioTrackController = AudioTrackController;
+}

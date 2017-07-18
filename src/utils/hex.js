@@ -17,4 +17,4 @@ const Hex = {
     }
 };
 
-module.exports = Hex;
+export default Hex;
