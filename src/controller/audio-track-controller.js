@@ -67,7 +67,7 @@ class AudioTrackController extends EventHandler {
     let id = 0;
     tracks.forEach(track => {
       if(track.default && !defaultFound) {
-        this._audioTrack = id;
+        this._setAudioTrackInternal(id);
         defaultFound = true;
         return;
       }
@@ -75,7 +75,7 @@ class AudioTrackController extends EventHandler {
     });
     if (defaultFound === false && tracks.length) {
       logger.log('no default audio track defined, use first audio track as default');
-      this._audioTrack = 0;
+      this._setAudioTrackInternal(0);
     }
   }
 
