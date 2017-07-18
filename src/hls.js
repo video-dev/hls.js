@@ -16,13 +16,10 @@ import {logger, enableLogs} from './utils/logger';
 import EventEmitter from 'events';
 import {hlsDefaultConfig} from './config';
 
-class Hls {
-
+export default class Hls {
   static get version() {
-    // replaced with browserify-versionify transform
-    return '__VERSION__';
+    return __VERSION__;
   }
-
   static isSupported() {
     const mediaSource = window.MediaSource = window.MediaSource || window.WebKitMediaSource;
     const sourceBuffer = window.SourceBuffer = window.SourceBuffer || window.WebKitSourceBuffer;
@@ -389,5 +386,3 @@ class Hls {
     }
   }
 }
-
-export default Hls;

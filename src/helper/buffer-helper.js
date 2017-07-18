@@ -83,4 +83,4 @@ const BufferHelper = {
   }
 };
 
-module.exports = BufferHelper;
+export default BufferHelper;

@@ -221,8 +221,6 @@ static getStartDTS(initData, fragment) {
         }
         return result;
       })[0];
-      baseTime = baseTime || Infinity;
-
       // convert base time to seconds
       return baseTime / scale;
     });
