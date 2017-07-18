@@ -8553,7 +8553,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.7.10';
+      return '0.7.11';
     }
   }, {
     key: 'Events',

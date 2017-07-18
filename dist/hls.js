@@ -6031,7 +6031,13 @@ var TimelineController = function (_EventHandler) {
                 // cue can appear more than once in different vtt files.
                 // This avoid showing duplicated cues with same timecode and text.
                 if (!currentTrack.cues.getCueById(cue.id)) {
-                  currentTrack.addCue(cue);
+                  try {
+                    currentTrack.addCue(cue);
+                  } catch (err) {
+                    var textTrackCue = new window.TextTrackCue(cue.startTime, cue.endTime, cue.text);
+                    textTrackCue.id = cue.id;
+                    currentTrack.addCue(textTrackCue);
+                  }
                 }
               });
               hls.trigger(_events2.default.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
@@ -10523,7 +10529,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.7.10';
+      return '0.7.11';
     }
   }, {
     key: 'Events',
