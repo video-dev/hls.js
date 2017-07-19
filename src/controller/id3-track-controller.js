@@ -13,8 +13,8 @@ class ID3TrackController extends EventHandler {
                Event.MEDIA_ATTACHED,
                Event.MEDIA_DETACHING,
                Event.FRAG_PARSING_METADATA);
-    this.id3Track = undefined;
-    this.media = undefined;
+    this._id3Track = undefined;
+    this._media = undefined;
   }
 
   destroy() {
@@ -23,14 +23,14 @@ class ID3TrackController extends EventHandler {
 
   // Add ID3 metatadata text track.
   onMediaAttached(data) {
-    this.media = data.media;
-    if (!this.media) {
+    this._media = data.media;
+    if (!this._media) {
       return;
     }
   }
 
   onMediaDetaching() {
-    this.media = undefined;
+    this._media = undefined;
   }
 
   onFragParsingMetadata(data) {
@@ -38,9 +38,9 @@ class ID3TrackController extends EventHandler {
     const samples = data.samples;
 
     // create track dynamically
-    if (!this.id3Track) {
-      this.id3Track = this.media.addTextTrack('metadata', 'id3');
-      this.id3Track.mode = 'hidden';
+    if (!this._id3Track) {
+      this._id3Track = this._media.addTextTrack('metadata', 'id3');
+      this._id3Track.mode = 'hidden';
     }
 
     // Attempt to recreate Safari functionality by creating
@@ -65,7 +65,7 @@ class ID3TrackController extends EventHandler {
           if (!ID3.isTimeStampFrame(frame)) {
             const cue = new Cue(startTime, endTime, '');
             cue.value = frame;
-            this.id3Track.addCue(cue);
+            this._id3Track.addCue(cue);
           }
         }
       }
