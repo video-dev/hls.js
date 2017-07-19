@@ -5,7 +5,7 @@ import Event from '../events';
 
 class PassThroughRemuxer {
   constructor(observer) {
-    this.observer = observer;
+    this._observer = observer;
   }
 
   destroy() {
@@ -18,7 +18,7 @@ class PassThroughRemuxer {
   }
 
   remux(audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous,accurateTimeOffset,rawData) {
-    var observer = this.observer;
+    var observer = this._observer;
     var streamType = '';
     if (audioTrack) {
       streamType += 'audio';
