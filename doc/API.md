@@ -56,7 +56,7 @@
   - [`fetchSetup`](#fetchsetup)
   - [`abrController`](#abrcontroller)
   - [`timelineController`](#timelinecontroller)
-  - [`enableWebVTT`](#enableWebVTT)
+  - [`enableWebVTT`](#enablewebvtt)
   - [`enableCEA708Captions`](#enablecea708captions)
     [`captionsTextTrack1Label`](#captionsTextTrack1Label)
     [`captionsTextTrack1LanguageCode`](#captionsTextTrack1LanguageCode)
