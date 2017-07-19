@@ -8,9 +8,9 @@ import MpegAudio from './mpegaudio';
 class MP3Demuxer {
 
   constructor(observer, remuxer, config) {
-    this.observer = observer;
-    this.config = config;
-    this.remuxer = remuxer;
+    this._observer = observer;
+    this._config = config;
+    this._remuxer = remuxer;
   }
 
   resetInitSegment(initSegment, audioCodec, videoCodec, duration) {
@@ -70,7 +70,7 @@ class MP3Demuxer {
       }
     }
 
-    this.remuxer.remux(track,
+    this._remuxer.remux(track,
       { samples: [] },
       { samples: id3Samples, inputTimeScale: 90000 },
       { samples: [] },
