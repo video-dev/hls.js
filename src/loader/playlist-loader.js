@@ -27,15 +27,14 @@ const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.
 class LevelKey {
 
   constructor() {
-    this._method = null;
-    this._key = null;
-    this._iv = null;
-    this._uri = null;
+    this.method = null;
+    this.key = null;
+    this.iv = null;
   }
 
   get uri() {
-    if (!this._uri && this._reluri) {
-      this._uri = URLToolkit.buildAbsoluteURL(this._baseuri, this._reluri, { alwaysNormalize: true });
+    if (!this._uri && this.reluri) {
+      this._uri = URLToolkit.buildAbsoluteURL(this.baseuri, this.reluri, { alwaysNormalize: true });
     }
     return this._uri;
   }
@@ -63,8 +62,8 @@ class Fragment {
   }
 
   get programDateTime() {
-    if (!this._programDateTime && this._rawProgramDateTime) {
-      this._programDateTime = new Date(Date.parse(this._rawProgramDateTime));
+    if (!this._programDateTime && this.rawProgramDateTime) {
+      this._programDateTime = new Date(Date.parse(this.rawProgramDateTime));
     }
     return this._programDateTime;
   }
@@ -75,7 +74,7 @@ class Fragment {
       if (this.rawByteRange) {
         const params = this.rawByteRange.split('@', 2);
         if (params.length === 1) {
-          const lastByteRangeEndOffset = this._lastByteRangeEndOffset;
+          const lastByteRangeEndOffset = this.lastByteRangeEndOffset;
           byteRange[0] = lastByteRangeEndOffset ? lastByteRangeEndOffset : 0;
         } else {
           byteRange[0] = parseInt(params[1]);
@@ -96,7 +95,7 @@ class Fragment {
 
   get decryptdata() {
     if (!this._decryptdata) {
-      this._decryptdata = this._fragmentDecryptdataFromLevelkey(this._levelkey, this._sn);
+      this._decryptdata = this._fragmentDecryptdataFromLevelkey(this.levelkey, this.sn);
     }
     return this._decryptdata;
   }
