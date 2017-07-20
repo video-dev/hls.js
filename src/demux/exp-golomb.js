@@ -9,7 +9,7 @@ class ExpGolomb {
   constructor(data) {
     this._data = data;
     // the number of bytes left to examine in this._data
-    this._bytesAvailable = data.byteLength;
+    this.bytesAvailable = data.byteLength;
     // the current word being examined
     this._word = 0; // :uint
     // the number of bits left to examine in the current word
@@ -20,7 +20,7 @@ class ExpGolomb {
   _loadWord() {
     var
       data = this._data,
-      bytesAvailable = this._bytesAvailable,
+      bytesAvailable = this.bytesAvailable,
       position = data.byteLength - bytesAvailable,
       workingBytes = new Uint8Array(4),
       availableBytes = Math.min(4, bytesAvailable);
@@ -31,7 +31,7 @@ class ExpGolomb {
     this._word = new DataView(workingBytes.buffer).getUint32(0);
     // track the amount of this._data that has been processed
     this._bitsAvailable = availableBytes * 8;
-    this._bytesAvailable -= availableBytes;
+    this.bytesAvailable -= availableBytes;
   }
 
   // (count:int):void
@@ -44,7 +44,7 @@ class ExpGolomb {
       count -= this._bitsAvailable;
       skipBytes = count >> 3;
       count -= (skipBytes >> 3);
-      this._bytesAvailable -= skipBytes;
+      this.bytesAvailable -= skipBytes;
       this._loadWord();
       this._word <<= count;
       this._bitsAvailable -= count;
@@ -62,7 +62,7 @@ class ExpGolomb {
     this._bitsAvailable -= bits;
     if (this._bitsAvailable > 0) {
       this._word <<= bits;
-    } else if (this._bytesAvailable > 0) {
+    } else if (this.bytesAvailable > 0) {
       this._loadWord();
     }
     bits = size - bits;
@@ -128,11 +128,11 @@ class ExpGolomb {
   }
 
   // ():int
-  _readUShort() {
+  readUShort() {
     return this._readBits(16);
   }
     // ():int
-  _readUInt() {
+  readUInt() {
     return this._readBits(32);
   }
 
