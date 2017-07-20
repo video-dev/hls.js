@@ -25,6 +25,7 @@ class SubtitleTrackController extends EventHandler {
                Event.MANIFEST_LOADING,
                Event.MANIFEST_LOADED,
                Event.SUBTITLE_TRACK_LOADED);
+    this._hls = hls;
     this._tracks = [];
     this._trackId = -1;
     this._media = undefined;
