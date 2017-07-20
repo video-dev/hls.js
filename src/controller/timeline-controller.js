@@ -38,28 +38,29 @@ class TimelineController extends EventHandler {
                 Event.LEVEL_SWITCHING,
                 Event.INIT_PTS_FOUND);
 
-    this.hls = hls;
-    this.config = hls.config;
-    this.enabled = true;
-    this.Cues = hls.config.cueHandler;
-    this.textTracks = [];
-    this.tracks = [];
-    this.unparsedVttFrags = [];
-    this.initPTS = undefined;
-    this.cueRanges = [];
+    this._hls = hls;
+    const config = this._config = hls.config;
+    this._enabled = true;
+    this._Cues = hls.config.cueHandler;
+    this._textTracks = [];
+    this._tracks = [];
+    this._unparsedVttFrags = [];
+    this._initPTS = undefined;
+    this._cueRanges = [];
 
-    if (this.config.enableCEA708Captions)
+
+    if (config.enableCEA708Captions)
     {
       var channel1 = new OutputFilter(this, 1);
       var channel2 = new OutputFilter(this, 2);
 
-      this.cea608Parser = new Cea608Parser(0, channel1, channel2);
+      this._cea608Parser = new Cea608Parser(0, channel1, channel2);
     }
   }
 
   addCues(channel, startTime, endTime, screen) {
     // skip cues which overlap more than 50% with previously parsed time ranges
-    const ranges = this.cueRanges;
+    const ranges = this._cueRanges;
     let merged = false;
     for (let i = ranges.length; i--;) {
       let cueRange = ranges[i];
@@ -76,27 +77,27 @@ class TimelineController extends EventHandler {
     if (!merged) {
       ranges.push([startTime, endTime]);
     }
-    this.Cues.newCue(this[channel], startTime, endTime, screen);
+    this._Cues.newCue(this[channel], startTime, endTime, screen);
   }
 
   // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
   onInitPtsFound(data) {
-    if (typeof this.initPTS === 'undefined') {
-      this.initPTS = data.initPTS;
+    if (typeof this._initPTS === 'undefined') {
+      this._initPTS = data.initPTS;
     }
 
     // Due to asynchrony, initial PTS may arrive later than the first VTT fragments are loaded.
     // Parse any unparsed fragments upon receiving the initial PTS.
-    if (this.unparsedVttFrags.length) {
-      this.unparsedVttFrags.forEach(frag => {
+    if (this._unparsedVttFrags.length) {
+      this._unparsedVttFrags.forEach(frag => {
         this.onFragLoaded(frag);
       });
-      this.unparsedVttFrags = [];
+      this._unparsedVttFrags = [];
     }
   }
 
   getExistingTrack(channelNumber) {
-    const media = this.media;
+    const media = this._media;
     if (media) {
       for (let i = 0; i < media.textTracks.length; i++) {
         let textTrack = media.textTracks[i];
@@ -143,7 +144,7 @@ class TimelineController extends EventHandler {
   }
 
   createTextTrack(kind, label, lang) {
-    const media = this.media;
+    const media = this._media;
     if (media)
     {
       return media.addTextTrack(kind, label, lang);
@@ -155,27 +156,27 @@ class TimelineController extends EventHandler {
   }
 
   onMediaAttaching(data) {
-    this.media = data.media;
+    this._media = data.media;
     this._cleanTracks();
   }
 
   onMediaDetaching() {
-    clearCurrentCues(this.textTrack1);
-    clearCurrentCues(this.textTrack2);
+    clearCurrentCues(this._textTrack1);
+    clearCurrentCues(this._textTrack2);
   }
 
   onManifestLoading()
   {
-    this.lastSn = -1; // Detect discontiguity in fragment parsing
-    this.prevCC = -1;
-    this.vttCCs = {ccOffset: 0, presentationOffset: 0}; // Detect discontinuity in subtitle manifests
+    this._lastSn = -1; // Detect discontiguity in fragment parsing
+    this._prevCC = -1;
+    this._vttCCs = {ccOffset: 0, presentationOffset: 0}; // Detect discontinuity in subtitle manifests
     this._cleanTracks();
 
   }
 
   _cleanTracks() {
     // clear outdated subtitles
-    const media = this.media;
+    const media = this._media;
     if (media) {
       const textTracks = media.textTracks;
       if (textTracks) {
@@ -187,16 +188,16 @@ class TimelineController extends EventHandler {
   }
 
   onManifestLoaded(data) {
-    this.textTracks = [];
-    this.unparsedVttFrags = this.unparsedVttFrags || [];
-    this.initPTS = undefined;
-    this.cueRanges = [];
+    this._textTracks = [];
+    this._unparsedVttFrags = this._unparsedVttFrags || [];
+    this._initPTS = undefined;
+    this._cueRanges = [];
 
-    if (this.config.enableWebVTT) {
-      this.tracks = data.subtitles || [];
-      const inUseTracks = this.media ? this.media.textTracks : [];
+    if (this._config.enableWebVTT) {
+      this._tracks = data.subtitles || [];
+      const inUseTracks = this._media ? this._media.textTracks : [];
 
-      this.tracks.forEach((track, index) => {
+      this._tracks.forEach((track, index) => {
         let textTrack;
         if (index < inUseTracks.length) {
           const inUseTrack = inUseTracks[index];
@@ -209,13 +210,13 @@ class TimelineController extends EventHandler {
             textTrack = this.createTextTrack('subtitles', track.name, track.lang);
         }
         textTrack.mode = track.default ? 'showing' : 'hidden';
-        this.textTracks.push(textTrack);
+        this._textTracks.push(textTrack);
       });
     }
   }
 
   onLevelSwitching() {
-    this.enabled = this.hls.currentLevel.closedCaptions !== 'NONE';
+    this._enabled = this._hls.currentLevel.closedCaptions !== 'NONE';
   }
 
   onFragLoaded(data) {
@@ -224,23 +225,22 @@ class TimelineController extends EventHandler {
     if (frag.type === 'main') {
       var sn = frag.sn;
       // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
-      if (sn !== this.lastSn + 1) {
-        const cea608Parser = this.cea608Parser;
+      if (sn !== this._lastSn + 1) {
+        const cea608Parser = this._cea608Parser;
         if (cea608Parser) {
           cea608Parser.reset();
         }
       }
-      this.lastSn = sn;
+      this._lastSn = sn;
     }
     // If fragment is subtitle type, parse as WebVTT.
     else if (frag.type === 'subtitle') {
       if (payload.byteLength) {
         // We need an initial synchronisation PTS. Store fragments as long as none has arrived.
-        if (typeof this.initPTS === 'undefined') {
-          this.unparsedVttFrags.push(data);
+        if (typeof this._initPTS === 'undefined') {
+          this._unparsedVttFrags.push(data);
           return;
         }
-
         var decryptData = frag.decryptdata;
         // If the subtitles are not encrypted, parse VTTs now. Otherwise, we need to wait.
         if ((decryptData == null) || (decryptData.key == null) || (decryptData.method !== 'AES-128')) {
@@ -249,7 +249,7 @@ class TimelineController extends EventHandler {
       }
       else {
         // In case there is no payload, finish unsuccessfully.
-        this.hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: false, frag: frag});
+        this._hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: false, frag: frag});
       }
     }
   }
@@ -307,15 +307,15 @@ class TimelineController extends EventHandler {
   onFragParsingUserdata(data) {
     // push all of the CEA-708 messages into the interpreter
     // immediately. It will create the proper timestamps based on our PTS value
-    if (this.enabled && this.config.enableCEA708Captions) {
+    if (this._enabled && this._config.enableCEA708Captions) {
       for (var i=0; i<data.samples.length; i++) {
-        var ccdatas = this.extractCea608Data(data.samples[i].bytes);
-        this.cea608Parser.addData(data.samples[i].pts, ccdatas);
+        var ccdatas = this._extractCea608Data(data.samples[i].bytes);
+        this._cea608Parser.addData(data.samples[i].pts, ccdatas);
       }
     }
   }
 
-  extractCea608Data(byteArray) {
+  _extractCea608Data(byteArray) {
     var count = byteArray[0] & 31;
     var position = 2;
     var tmpByte, ccbyte1, ccbyte2, ccValid, ccType;
