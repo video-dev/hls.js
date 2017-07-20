@@ -21,8 +21,8 @@ export default class Hls {
     return __VERSION__;
   }
   static isSupported() {
-    const mediaSource = window.MediaSource = window.MediaSource || window.WebKitMediaSource;
-    const sourceBuffer = window.SourceBuffer = window.SourceBuffer || window.WebKitSourceBuffer;
+    const mediaSource = window.MediaSource || window.WebKitMediaSource;
+    const sourceBuffer = window.SourceBuffer || window.WebKitSourceBuffer;
     const isTypeSupported = mediaSource &&
                             typeof mediaSource.isTypeSupported === 'function' &&
                             mediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
