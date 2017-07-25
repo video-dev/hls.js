@@ -5,7 +5,8 @@ design idea is pretty simple :
    - main functionalities are split into several subsystems
    - all subsystems are instantiated by the Hls instance.
    - each subsystem heavily relies on events for internal/external communications.
-   - Events are handled using [EventEmitter](https://nodejs.org/api/events.html) bundled for the browser by [webpack](https://webpack.js.org/)
+   - Events are handled using [EventEmitter](https://nodejs.org/api/events.html)
+   - bundled for the browser by [webpack](https://webpack.js.org/)
 
 ## Code structure
 
