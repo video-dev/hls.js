@@ -56,6 +56,7 @@
   - [`fetchSetup`](#fetchsetup)
   - [`abrController`](#abrcontroller)
   - [`timelineController`](#timelinecontroller)
+  - [`enableWebVTT`](#enablewebvtt)
   - [`enableCEA708Captions`](#enablecea708captions)
     [`captionsTextTrack1Label`](#captionsTextTrack1Label)
     [`captionsTextTrack1LanguageCode`](#captionsTextTrack1LanguageCode)
@@ -326,6 +327,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       fetchSetup: FetchSetupCallback,
       abrController: customAbrController,
       timelineController: TimelineController,
+      enableWebVTT: true,
       enableCEA708Captions: true,
       stretchShortVideoTrack: false,
       forceKeyFrameOnDiscontinuity: true,
@@ -792,6 +794,14 @@ Customized text track syncronization controller.
 Parameter should be a class with a `destroy()` method:
 
  - `destroy()` : should clean-up all used resources
+
+### `enableWebVTT`
+
+(default: `true`)
+
+whether or not to enable WebVTT captions on HLS
+
+parameter should be a boolean
 
 ### `enableCEA708Captions`
 
