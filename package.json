@@ -32,8 +32,8 @@
     "minor": "mversion mi && npm run preparerelease",
     "major": "mversion ma && npm run preparerelease",
     "pretest": "npm run lint",
-    "test": "BABEL_ENV=test mocha --compilers js:babel-register --recursive tests/unit",
-    "testfunc": "BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/hlsjs.js --timeout 40000",
+    "test": "cross-env BABEL_ENV=test mocha --compilers js:babel-register --recursive tests/unit",
+    "testfunc": "cross-env BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/hlsjs.js --timeout 40000",
     "lint": "jshint src/",
     "dev": "webpack-dev-server --env.debug --port 8000"
   },
