@@ -332,7 +332,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       abrEwmaFastVoD: 4.0,
       abrEwmaSlowVoD: 15.0,
       abrEwmaDefaultEstimate: 500000,
-      abrBandWidthFactor: 0.8,
+      abrBandWidthFactor: 0.95,
       abrBandWidthUpFactor: 0.7,
       minAutoBitrate: 0
   };
@@ -901,7 +901,7 @@ parameter should be a float
 
 ### `abrBandWidthFactor`
 
-(default: `0.8`)
+(default: `0.95`)
 
 Scale factor to be applied against measured bandwidth average, to determine whether we can stay on current or lower quality level.
 If `abrBandWidthFactor * bandwidth average < level.bitrate` then ABR can switch to that level providing that it is equal or less than current level.

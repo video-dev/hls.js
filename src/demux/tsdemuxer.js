@@ -474,9 +474,20 @@
         avcSample = this.avcSample,
         push,
         spsfound = false,
-        i;
+        i,
+        pushAccesUnit = this.pushAccesUnit.bind(this),
+        createAVCSample = function(key,pts,dts,debug) {
+          return { key : key, pts : pts, dts : dts, units : [], debug : debug};
+        };
     //free pes.data to save up some memory
     pes.data = null;
+
+    // if new NAL units found and last sample still there, let's push ...
+    // this helps parsing streams with missing AUD
+    if (avcSample && units.length) {
+      pushAccesUnit(avcSample,track);
+      avcSample = this.avcSample = createAVCSample(false,pes.pts,pes.dts,'');
+    }
 
     units.forEach(unit => {
       switch(unit.type) {
@@ -507,7 +518,7 @@
           push = true;
           // handle PES not starting with AUD
           if (!avcSample) {
-            avcSample = this.avcSample = this._createAVCSample(true,pes.pts,pes.dts,'');
+            avcSample = this.avcSample = createAVCSample(true,pes.pts,pes.dts,'');
           }
           if(debug) {
             avcSample.debug += 'IDR ';
@@ -633,9 +644,9 @@
         case 9:
           push = false;
           if (avcSample) {
-            this.pushAccesUnit(avcSample,track);
+            pushAccesUnit(avcSample,track);
           }
-          avcSample = this.avcSample = this._createAVCSample(false,pes.pts,pes.dts,debug ? 'AUD ': '');
+          avcSample = this.avcSample = createAVCSample(false,pes.pts,pes.dts,debug ? 'AUD ': '');
           break;
         // Filler Data
         case 12:
@@ -655,13 +666,9 @@
     });
     // if last PES packet, push samples
     if (last && avcSample) {
-      this.pushAccesUnit(avcSample,track);
+      pushAccesUnit(avcSample,track);
       this.avcSample = null;
     }
-  }
-
-  _createAVCSample(key,pts,dts,debug) {
-    return { key : key, pts : pts, dts : dts, units : [], debug : debug};
   }
 
   _insertSampleInOrder(arr, data) {

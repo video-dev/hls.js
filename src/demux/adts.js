@@ -68,7 +68,8 @@ const ADTS = {
       } else {
         // if (manifest codec is AAC) AND (frequency less than 24kHz AND nb channel is 1) OR (manifest codec not specified and mono audio)
         // Chrome fails to play back with low frequency AAC LC mono when initialized with HE-AAC.  This is not a problem with stereo.
-        if (audioCodec && audioCodec.indexOf('mp4a.40.2') !== -1 && (adtsSampleingIndex >= 6 && adtsChanelConfig === 1) ||
+        if (audioCodec && audioCodec.indexOf('mp4a.40.2') !== -1 && ((adtsSampleingIndex >= 6 && adtsChanelConfig === 1) ||
+              /vivaldi/i.test(userAgent)) ||
           (!audioCodec && adtsChanelConfig === 1)) {
           adtsObjectType = 2;
           config = new Array(2);
@@ -153,7 +154,7 @@ const ADTS = {
   },
 
   probe: function (data, offset) {
-    // same as isHeader but we also check that ADTS frame follows last ADTS frame 
+    // same as isHeader but we also check that ADTS frame follows last ADTS frame
     // or end of data is reached
     if (offset + 1 < data.length && this.isHeaderPattern(data, offset)) {
       // ADTS header Length
