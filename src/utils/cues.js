@@ -2,56 +2,54 @@ import { fixLineBreaks } from './vttparser';
 import VTTCue from './vttcue';
 
 
-const Cues = {
+export function newCue(track, startTime, endTime, captionScreen) {
+  var row;
+  var cue;
+  var indenting;
+  var indent;
+  var text;
+  var VTTCue = window.VTTCue || window.TextTrackCue;
 
-  createCues: function(startTime, endTime, captionScreen) {
-    var row;
-    var cue;
-    var cues = [];
-    var indenting;
-    var indent;
-    var text;
+  for (var r=0; r<captionScreen.rows.length; r++)
+  {
+    row = captionScreen.rows[r];
+    indenting = true;
+    indent = 0;
+    text = '';
 
-    for (var r=0; r<captionScreen.rows.length; r++)
+    if (!row.isEmpty())
     {
-      row = captionScreen.rows[r];
-      indenting = true;
-      indent = 0;
-      text = '';
-
-      if (!row.isEmpty())
+      for (var c=0; c<row.chars.length; c++)
       {
-        for (var c=0; c<row.chars.length; c++)
-        {
-          if (row.chars[c].uchar.match(/\s/) && indenting)
-          {
-            indent++;
-          }
-          else
-          {
-            text += row.chars[c].uchar;
-            indenting = false;
-          }
-        }
-        //To be used for cleaning-up orphaned roll-up captions
-        row.cueStartTime = startTime;
-
-        // Give a slight bump to the endTime if it's equal to startTime to avoid a SyntaxError in IE
-        if (startTime === endTime)
-        {
-          endTime += 0.0001;
-        }
-
-        cue = new VTTCue(startTime, endTime, fixLineBreaks(text.trim()));
-
-        if (indent >= 16)
-        {
-          indent--;
-        }
-        else
+        if (row.chars[c].uchar.match(/\s/) && indenting)
         {
           indent++;
         }
+        else
+        {
+          text += row.chars[c].uchar;
+          indenting = false;
+        }
+      }
+      //To be used for cleaning-up orphaned roll-up captions
+      row.cueStartTime = startTime;
+
+      // Give a slight bump to the endTime if it's equal to startTime to avoid a SyntaxError in IE
+      if (startTime === endTime)
+      {
+        endTime += 0.0001;
+      }
+
+      cue = new VTTCue(startTime, endTime, fixLineBreaks(text.trim()));
+
+      if (indent >= 16)
+      {
+        indent--;
+      }
+      else
+      {
+        indent++;
+      }
 
         // VTTCue.line get's flakey when using controls, so let's now include line 13&14
         // also, drop line 1 since it's to close to the top
@@ -65,13 +63,9 @@ const Cues = {
         }
         cue.align = 'left';
         // Clamp the position between 0 and 100 - if out of these bounds, Firefox throws an exception and captions break
-        cue.position = Math.max(0, Math.min(100, 100 * (indent / 32)));
+        cue.position = Math.max(0, Math.min(100, 100 * (indent / 32) ));
         cues.push(cue);
       }
     }
-    return cues;
-  }
+  return cues;}
 
-};
-
-module.exports = Cues;
