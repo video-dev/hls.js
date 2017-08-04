@@ -90,6 +90,7 @@ class AbrController extends EventHandler {
     (video not paused OR first fragment being loaded(ready state === HAVE_NOTHING = 0)) AND autoswitching enabled AND not lowest level (=> means that we have several levels) */
         if (
             v &&
+            stats &&
             ((!v.paused && v.playbackRate !== 0) || !v.readyState) &&
             frag.autoLevel &&
             frag.level
