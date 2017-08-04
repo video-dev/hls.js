@@ -1,7 +1,7 @@
 /**
  * AAC demuxer
  */
-import ADTS from './adts';
+import * as ADTS from './adts';
 import { logger } from '../utils/logger';
 import ID3 from '../demux/id3';
 

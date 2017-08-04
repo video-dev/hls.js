@@ -166,5 +166,4 @@ const WebVTTParser = {
     }
 };
 
-
-module.exports = WebVTTParser;
+export default WebVTTParser;
