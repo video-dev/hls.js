@@ -191,4 +191,4 @@ const MpegAudio = {
     }
 };
 
-module.exports = MpegAudio;
+export default MpegAudio;
