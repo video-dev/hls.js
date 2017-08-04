@@ -770,7 +770,7 @@ var AbrController = function (_EventHandler) {
       var stats = loader.stats;
       /* only monitor frag retrieval time if
       (video not paused OR first fragment being loaded(ready state === HAVE_NOTHING = 0)) AND autoswitching enabled AND not lowest level (=> means that we have several levels) */
-      if (v && (!v.paused && v.playbackRate !== 0 || !v.readyState) && frag.autoLevel && frag.level) {
+      if (v && stats && (!v.paused && v.playbackRate !== 0 || !v.readyState) && frag.autoLevel && frag.level) {
         var requestDelay = performance.now() - stats.trequest,
             playbackRate = Math.abs(v.playbackRate);
         // monitor fragment load progress after half of expected fragment duration,to stabilize bitrate
@@ -1113,7 +1113,7 @@ var BufferController = function (_EventHandler) {
     key: 'onManifestParsed',
     value: function onManifestParsed(data) {
       var audioExpected = data.audio,
-          videoExpected = data.video,
+          videoExpected = data.video || data.levels.length && data.audio,
           sourceBufferNb = 0;
       // in case of alt audio 2 BUFFER_CODECS events will be triggered, one per stream controller
       // sourcebuffers will be created all at once when the expected nb of tracks will be reached
@@ -2097,11 +2097,16 @@ var LevelController = function (_EventHandler) {
   _createClass(LevelController, [{
     key: 'destroy',
     value: function destroy() {
+      this.cleanTimer();
+      this._manualLevel = -1;
+    }
+  }, {
+    key: 'cleanTimer',
+    value: function cleanTimer() {
       if (this.timer) {
         clearTimeout(this.timer);
         this.timer = null;
       }
-      this._manualLevel = -1;
     }
   }, {
     key: 'startLoad',
@@ -2213,10 +2218,7 @@ var LevelController = function (_EventHandler) {
       // check if level idx is valid
       if (newLevel >= 0 && newLevel < levels.length) {
         // stopping live reloading timer if any
-        if (this.timer) {
-          clearTimeout(this.timer);
-          this.timer = null;
-        }
+        this.cleanTimer();
         if (this._level !== newLevel) {
           _logger.logger.log('switching to level ' + newLevel);
           this._level = newLevel;
@@ -2243,6 +2245,9 @@ var LevelController = function (_EventHandler) {
     key: 'onError',
     value: function onError(data) {
       if (data.fatal) {
+        if (data.type === _errors.ErrorTypes.NETWORK_ERROR) {
+          this.cleanTimer();
+        }
         return;
       }
 
@@ -2317,10 +2322,7 @@ var LevelController = function (_EventHandler) {
               _logger.logger.error('cannot recover ' + details + ' error');
               this._level = undefined;
               // stopping live reloading timer if any
-              if (this.timer) {
-                clearTimeout(this.timer);
-                this.timer = null;
-              }
+              this.cleanTimer();
               // switch error to fatal
               data.fatal = true;
             }
@@ -2864,8 +2866,21 @@ var StreamController = function (_EventHandler) {
         if (fragPrevious) {
           var targetSN = fragPrevious.sn + 1;
           if (targetSN >= levelDetails.startSN && targetSN <= levelDetails.endSN) {
-            frag = fragments[targetSN - levelDetails.startSN];
-            _logger.logger.log('live playlist, switching playlist, load frag with next SN: ' + frag.sn);
+            var fragNext = fragments[targetSN - levelDetails.startSN];
+            if (fragPrevious.cc === fragNext.cc) {
+              frag = fragNext;
+              _logger.logger.log('live playlist, switching playlist, load frag with next SN: ' + frag.sn);
+            }
+          }
+          // next frag SN not available (or not with same continuity counter)
+          // look for a frag sharing the same CC
+          if (!frag) {
+            frag = _binarySearch2.default.search(fragments, function (frag) {
+              return fragPrevious.cc - frag.cc;
+            });
+            if (frag) {
+              _logger.logger.log('live playlist, switching playlist, load frag with same CC: ' + frag.sn);
+            }
           }
         }
         if (!frag) {
@@ -4778,7 +4793,7 @@ var ADTS = {
       } else {
         // if (manifest codec is AAC) AND (frequency less than 24kHz AND nb channel is 1) OR (manifest codec not specified and mono audio)
         // Chrome fails to play back with low frequency AAC LC mono when initialized with HE-AAC.  This is not a problem with stereo.
-        if (audioCodec && audioCodec.indexOf('mp4a.40.2') !== -1 && adtsSampleingIndex >= 6 && adtsChanelConfig === 1 || !audioCodec && adtsChanelConfig === 1) {
+        if (audioCodec && audioCodec.indexOf('mp4a.40.2') !== -1 && (adtsSampleingIndex >= 6 && adtsChanelConfig === 1 || /vivaldi/i.test(userAgent)) || !audioCodec && adtsChanelConfig === 1) {
           adtsObjectType = 2;
           config = new Array(2);
         }
@@ -4860,7 +4875,7 @@ var ADTS = {
   },
 
   probe: function probe(data, offset) {
-    // same as isHeader but we also check that ADTS frame follows last ADTS frame 
+    // same as isHeader but we also check that ADTS frame follows last ADTS frame
     // or end of data is reached
     if (offset + 1 < data.length && this.isHeaderPattern(data, offset)) {
       // ADTS header Length
@@ -7341,9 +7356,20 @@ var TSDemuxer = function () {
           avcSample = this.avcSample,
           push,
           spsfound = false,
-          i;
+          i,
+          pushAccesUnit = this.pushAccesUnit.bind(this),
+          createAVCSample = function createAVCSample(key, pts, dts, debug) {
+        return { key: key, pts: pts, dts: dts, units: [], debug: debug };
+      };
       //free pes.data to save up some memory
       pes.data = null;
+
+      // if new NAL units found and last sample still there, let's push ...
+      // this helps parsing streams with missing AUD
+      if (avcSample && units.length) {
+        pushAccesUnit(avcSample, track);
+        avcSample = this.avcSample = createAVCSample(false, pes.pts, pes.dts, '');
+      }
 
       units.forEach(function (unit) {
         switch (unit.type) {
@@ -7374,7 +7400,7 @@ var TSDemuxer = function () {
             push = true;
             // handle PES not starting with AUD
             if (!avcSample) {
-              avcSample = _this.avcSample = _this._createAVCSample(true, pes.pts, pes.dts, '');
+              avcSample = _this.avcSample = createAVCSample(true, pes.pts, pes.dts, '');
             }
             if (debug) {
               avcSample.debug += 'IDR ';
@@ -7497,9 +7523,9 @@ var TSDemuxer = function () {
           case 9:
             push = false;
             if (avcSample) {
-              _this.pushAccesUnit(avcSample, track);
+              pushAccesUnit(avcSample, track);
             }
-            avcSample = _this.avcSample = _this._createAVCSample(false, pes.pts, pes.dts, debug ? 'AUD ' : '');
+            avcSample = _this.avcSample = createAVCSample(false, pes.pts, pes.dts, debug ? 'AUD ' : '');
             break;
           // Filler Data
           case 12:
@@ -7519,14 +7545,9 @@ var TSDemuxer = function () {
       });
       // if last PES packet, push samples
       if (last && avcSample) {
-        this.pushAccesUnit(avcSample, track);
+        pushAccesUnit(avcSample, track);
         this.avcSample = null;
       }
-    }
-  }, {
-    key: '_createAVCSample',
-    value: function _createAVCSample(key, pts, dts, debug) {
-      return { key: key, pts: pts, dts: dts, units: [], debug: debug };
     }
   }, {
     key: '_insertSampleInOrder',
@@ -8402,7 +8423,12 @@ var LevelHelper = {
     var fragIdx, fragments, i;
     fragIdx = sn - details.startSN;
     fragments = details.fragments;
-    frag = fragments[fragIdx];
+    // update frag reference in fragments array
+    // rationale is that fragments array might not contain this frag object.
+    // this will happpen if playlist has been refreshed between frag loading and call to updateFragPTSDTS()
+    // if we don't update frag, we won't be able to propagate PTS info on the playlist
+    // resulting in invalid sliding computation
+    fragments[fragIdx] = frag;
     // adjust fragment PTS/duration from seqnum-1 to frag 0
     for (i = fragIdx; i > 0; i--) {
       LevelHelper.updatePTS(fragments, i, i - 1);
@@ -8527,7 +8553,7 @@ var Hls = function () {
     key: 'version',
     get: function get() {
       // replaced with browserify-versionify transform
-      return '0.7.10';
+      return '0.7.11';
     }
   }, {
     key: 'Events',
@@ -10125,7 +10151,8 @@ var MP4 = function () {
     key: 'mfhd',
     value: function mfhd(sequenceNumber) {
       return MP4.box(MP4.types.mfhd, new Uint8Array([0x00, 0x00, 0x00, 0x00, // flags
-      sequenceNumber >> 24, sequenceNumber >> 16 & 0xFF, sequenceNumber >> 8 & 0xFF, sequenceNumber & 0xFF]));
+      sequenceNumber >> 24, sequenceNumber >> 16 & 0xFF, sequenceNumber >> 8 & 0xFF, sequenceNumber & 0xFF]) // sequence_number
+      );
     }
   }, {
     key: 'minf',
@@ -10372,7 +10399,8 @@ var MP4 = function () {
           lowerWordBaseMediaDecodeTime = Math.floor(baseMediaDecodeTime % (UINT32_MAX + 1));
       return MP4.box(MP4.types.traf, MP4.box(MP4.types.tfhd, new Uint8Array([0x00, // version 0
       0x00, 0x00, 0x00, // flags
-      id >> 24, id >> 16 & 0XFF, id >> 8 & 0XFF, id & 0xFF])), MP4.box(MP4.types.tfdt, new Uint8Array([0x01, // version 1
+      id >> 24, id >> 16 & 0XFF, id >> 8 & 0XFF, id & 0xFF]) // track_ID
+      ), MP4.box(MP4.types.tfdt, new Uint8Array([0x01, // version 1
       0x00, 0x00, 0x00, // flags
       upperWordBaseMediaDecodeTime >> 24, upperWordBaseMediaDecodeTime >> 16 & 0XFF, upperWordBaseMediaDecodeTime >> 8 & 0XFF, upperWordBaseMediaDecodeTime & 0xFF, lowerWordBaseMediaDecodeTime >> 24, lowerWordBaseMediaDecodeTime >> 16 & 0XFF, lowerWordBaseMediaDecodeTime >> 8 & 0XFF, lowerWordBaseMediaDecodeTime & 0xFF])), MP4.trun(track, sampleDependencyTable.length + 16 + // tfhd
       20 + // tfdt

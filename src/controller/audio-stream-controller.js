@@ -378,7 +378,8 @@ class AudioStreamController extends EventHandler {
         }
         break;
       case State.WAITING_INIT_PTS:
-        if (this.initPTS[this.videoTrackCC] === undefined) {
+      const videoTrackCC = this.videoTrackCC;
+        if (this.initPTS[videoTrackCC] === undefined) {
           break;
         }
 
@@ -386,10 +387,13 @@ class AudioStreamController extends EventHandler {
         const waitingFrag = this.waitingFragment;
         if (waitingFrag) {
           const waitingFragCC = waitingFrag.frag.cc;
-          if (this.videoTrackCC !== waitingFragCC) {
-            logger.warn(`Waiting fragment CC (${waitingFragCC}) does not match video track CC (${this.videoTrackCC})`);
-            this.waitingFragment = null;
-            this.state = State.IDLE;
+          if (videoTrackCC !== waitingFragCC) {
+            track = this.tracks[this.trackId];
+            if (track.details && track.details.live) {
+              logger.warn(`Waiting fragment CC (${waitingFragCC}) does not match video track CC (${videoTrackCC})`);
+              this.waitingFragment = null;
+              this.state = State.IDLE;
+            }
           } else {
             this.state = State.FRAG_LOADING;
             this.onFragLoaded(this.waitingFragment);

@@ -78,7 +78,7 @@ class BufferController extends EventHandler {
 
   onManifestParsed(data) {
     let audioExpected = data.audio,
-        videoExpected = data.video,
+        videoExpected = data.video || (data.levels.length && data.audio),
         sourceBufferNb = 0;
     // in case of alt audio 2 BUFFER_CODECS events will be triggered, one per stream controller
     // sourcebuffers will be created all at once when the expected nb of tracks will be reached
