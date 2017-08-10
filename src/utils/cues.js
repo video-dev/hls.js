@@ -1,15 +1,15 @@
 import { fixLineBreaks } from './vttparser';
 import VTTCue from './vttcue';
 
-export function newCue(track, startTime, endTime, captionScreen) {
-    var row;
-    var cue;
-    var indenting;
-    var indent;
-    var text;
-    var VTTCue = window.VTTCue || window.TextTrackCue;
+export function createCues(startTime, endTime, captionScreen) {
+    let row;
+    let cue;
+    let indenting;
+    let indent;
+    let text;
+    const cues = [];
 
-    for (var r = 0; r < captionScreen.rows.length; r++) {
+    for (let r = 0; r < captionScreen.rows.length; r++) {
         row = captionScreen.rows[r];
         indenting = true;
         indent = 0;
@@ -53,5 +53,6 @@ export function newCue(track, startTime, endTime, captionScreen) {
             cues.push(cue);
         }
     }
+
     return cues;
 }
