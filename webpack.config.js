@@ -1,3 +1,5 @@
+'use strict';
+
 const pkgJson = require('./package.json');
 const path = require('path');
 const webpack = require('webpack');
