@@ -5424,7 +5424,7 @@ var demuxer_inline_DemuxerInline = function () {
 
 "use strict";
 var cues_namespaceObject = {};
-__webpack_require__.d(cues_namespaceObject, "newCue", function() { return cues_newCue; });
+__webpack_require__.d(cues_namespaceObject, "createCues", function() { return createCues; });
 
 // EXTERNAL MODULE: ./node_modules/url-toolkit/src/url-toolkit.js
 var url_toolkit = __webpack_require__(5);
@@ -12387,13 +12387,13 @@ VTTParser.prototype = {
 
 
 
-function cues_newCue(track, startTime, endTime, captionScreen) {
-  var row;
-  var cue;
-  var indenting;
-  var indent;
-  var text;
-  var VTTCue = window.VTTCue || window.TextTrackCue;
+function createCues(startTime, endTime, captionScreen) {
+  var row = void 0;
+  var cue = void 0;
+  var indenting = void 0;
+  var indent = void 0;
+  var text = void 0;
+  var cues = [];
 
   for (var r = 0; r < captionScreen.rows.length; r++) {
     row = captionScreen.rows[r];
@@ -12418,7 +12418,7 @@ function cues_newCue(track, startTime, endTime, captionScreen) {
         endTime += 0.0001;
       }
 
-      cue = new VTTCue(startTime, endTime, fixLineBreaks(text.trim()));
+      cue = new vttcue(startTime, endTime, fixLineBreaks(text.trim()));
 
       if (indent >= 16) {
         indent--;
