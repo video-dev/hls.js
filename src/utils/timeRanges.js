@@ -12,4 +12,4 @@ const TimeRanges = {
   }
 };
 
-module.exports = TimeRanges;
+export default TimeRanges;

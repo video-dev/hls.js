@@ -36,6 +36,7 @@ class CapLevelController extends EventHandler {
 
   onManifestParsed(data) {
     const hls = this.hls;
+    this.restrictedLevels = [];
     if (hls.config.capLevelToPlayerSize) {
       this.autoLevelCapping = Number.POSITIVE_INFINITY;
       this.levels = data.levels;
