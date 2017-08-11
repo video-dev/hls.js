@@ -1,5 +1,5 @@
 var assert = require("assert");
-var BinarySearch = require("../../../src/utils/binary-search");
+import BinarySearch from '../../../src/utils/binary-search';
 
 describe('binary search util', function() {
   describe('search helper', function () {
@@ -32,4 +32,4 @@ describe('binary search util', function() {
       assert.strictEqual(foundItem, null);
     });
   });
-});  
+});

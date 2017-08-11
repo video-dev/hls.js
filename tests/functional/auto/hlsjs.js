@@ -97,9 +97,12 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
         return this.browser.get('http://127.0.0.1:8000/tests/functional/auto/hlsjs.html').then(function() {
           // ensure that the page has loaded and we haven't got an error page
           return this.browser.findElement(webdriver.By.css('body#hlsjs-functional-tests')).catch(function(e) {
-            console.log("Test page not loaded.");
-            return Promise.reject(e);
-          });
+            console.log("CSS not found");
+            this.browser.getPageSource().then(function(source){
+              console.log(source);
+              return Promise.reject(e);
+            });
+          }.bind(this));
         }.bind(this));
       }.bind(this)).then(function() {
         console.log("Test page loaded.");

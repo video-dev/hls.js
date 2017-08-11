@@ -1,5 +1,3 @@
-'use strict';
-
 function noop() {}
 
 const fakeLogger = {

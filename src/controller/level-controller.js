@@ -21,11 +21,15 @@ class LevelController extends EventHandler {
   }
 
   destroy() {
+    this.cleanTimer();
+    this._manualLevel = -1;
+  }
+
+  cleanTimer() {
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = null;
     }
-    this._manualLevel = -1;
   }
 
   startLoad() {
@@ -148,10 +152,7 @@ class LevelController extends EventHandler {
     // check if level idx is valid
     if (newLevel >= 0 && newLevel < levels.length) {
       // stopping live reloading timer if any
-      if (this.timer) {
-       clearTimeout(this.timer);
-       this.timer = null;
-      }
+      this.cleanTimer();
       if (this._level !== newLevel) {
         logger.log(`switching to level ${newLevel}`);
         this._level = newLevel;
@@ -217,6 +218,9 @@ class LevelController extends EventHandler {
 
   onError(data) {
     if(data.fatal) {
+      if (data.type === ErrorTypes.NETWORK_ERROR) {
+        this.cleanTimer();
+      }
       return;
     }
 
@@ -293,14 +297,13 @@ class LevelController extends EventHandler {
             let retryDelay = hls.config.levelLoadingRetryDelay;
             logger.warn(`level controller,${details}, but media buffered, retry in ${retryDelay}ms`);
             this.timer = setTimeout(this.ontick,retryDelay);
+            // boolean used to inform stream controller not to switch back to IDLE on non fatal error
+            data.levelRetry = true;
           } else {
             logger.error(`cannot recover ${details} error`);
             this._level = undefined;
             // stopping live reloading timer if any
-            if (this.timer) {
-              clearTimeout(this.timer);
-              this.timer = null;
-            }
+            this.cleanTimer();
             // switch error to fatal
             data.fatal = true;
           }

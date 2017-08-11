@@ -139,8 +139,7 @@ http://proxy-21.dailymotion.com/sec(2a991e17f08fcd94f95637a6dd718ddd)/video/107/
     var level = `#EXTM3U
 #EXT-X-VERSION:3
 #EXT-X-PLAYLIST-TYPE:VOD
-#EXT-X-TARGETDURATION:14
-#EXTINF:11.360,`;
+#EXT-X-TARGETDURATION:14`;
     var result = new PlaylistLoader({on : function() { }}).parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core',0);
     assert.strictEqual(result.fragments.length, 0);
     assert.strictEqual(result.totalduration,0);
@@ -180,6 +179,31 @@ http://proxy-21.dailymotion.com/sec(2a991e17f08fcd94f95637a6dd718ddd)/video/107/
     assert.strictEqual(result.fragments[4].start, 47.36);
     assert.strictEqual(result.fragments[4].duration, 3.88);
     assert.strictEqual(result.fragments[4].url, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(5)/video/107/282/158282701_mp4_h264_aac_hq.ts');
+  });
+
+  it('parse level with single char fragment URI', () => {
+    var level = `#EXTM3U
+#EXT-X-ALLOW-CACHE:NO
+#EXT-X-TARGETDURATION:2
+#EXTINF:2,
+0
+#EXTINF:2,
+1
+#EXT-X-ENDLIST`;
+     var result = new PlaylistLoader({on : function() { }}).parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(5)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core',0);
+     assert.strictEqual(result.totalduration, 4);
+     assert.strictEqual(result.startSN, 0);
+     assert.strictEqual(result.targetduration, 2);
+     assert.strictEqual(result.live, false);
+     assert.strictEqual(result.fragments.length, 2);
+     assert.strictEqual(result.fragments[0].cc, 0);
+     assert.strictEqual(result.fragments[0].duration, 2);
+     assert.strictEqual(result.fragments[0].sn, 0);
+     assert.strictEqual(result.fragments[0].relurl, '0');
+     assert.strictEqual(result.fragments[1].cc, 0);
+     assert.strictEqual(result.fragments[1].duration, 2);
+     assert.strictEqual(result.fragments[1].sn, 1);
+     assert.strictEqual(result.fragments[1].relurl, '1');
   });
 
   it('parse level with EXTINF line without comma', () => {
