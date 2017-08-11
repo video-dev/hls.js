@@ -7,7 +7,7 @@ import BufferHelper from '../helper/buffer-helper';
 import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import EventHandler from '../event-handler';
-import LevelHelper from '../helper/level-helper';
+import * as LevelHelper from '../helper/level-helper';
 import TimeRanges from '../utils/timeRanges';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
@@ -88,13 +88,7 @@ class AudioStreamController extends EventHandler {
             //If we are waiting we need to demux/remux the waiting frag
             //With the new initPTS
             if (this.state === State.WAITING_INIT_PTS) {
-                logger.log('sending pending audio frag to demuxer');
-                this.state = State.FRAG_LOADING;
-                //We have audio frag waiting or video pts
-                //Let process it
-                this.onFragLoaded(this.waitingFragment);
-                //Lets clean the waiting frag
-                this.waitingFragment = null;
+                this.tick();
             }
         }
     }
@@ -208,8 +202,9 @@ class AudioStreamController extends EventHandler {
                     pos = this.media.currentTime;
                 } else if (this.nextLoadPosition) {
                     pos = this.nextLoadPosition;
-                } else {
-                    pos = 0;
+                    if (pos === undefined) {
+                        break;
+                    }
                 }
 
                 let media = this.mediaBuffer ? this.mediaBuffer : this.media,
@@ -504,7 +499,8 @@ class AudioStreamController extends EventHandler {
                 }
                 break;
             case State.WAITING_INIT_PTS:
-                if (this.initPTS[this.videoTrackCC] === undefined) {
+                const videoTrackCC = this.videoTrackCC;
+                if (this.initPTS[videoTrackCC] === undefined) {
                     break;
                 }
 
@@ -512,17 +508,18 @@ class AudioStreamController extends EventHandler {
                 const waitingFrag = this.waitingFragment;
                 if (waitingFrag) {
                     const waitingFragCC = waitingFrag.frag.cc;
-                    if (this.videoTrackCC !== waitingFragCC) {
-                        logger.warn(
-                            `Waiting fragment CC (${waitingFragCC}) does not match video track CC (${
-                                this.videoTrackCC
-                            })`
-                        );
-                        this.waitingFragment = null;
-                        this.state = State.IDLE;
+                    if (videoTrackCC !== waitingFragCC) {
+                        track = this.tracks[this.trackId];
+                        if (track.details && track.details.live) {
+                            logger.warn(
+                                `Waiting fragment CC (${waitingFragCC}) does not match video track CC (${videoTrackCC})`
+                            );
+                            this.waitingFragment = null;
+                            this.state = State.IDLE;
+                        }
                     } else {
-                        this.onFragLoaded(this.waitingFragment);
                         this.state = State.FRAG_LOADING;
+                        this.onFragLoaded(this.waitingFragment);
                         this.waitingFragment = null;
                     }
                 } else {
@@ -613,7 +610,6 @@ class AudioStreamController extends EventHandler {
         // if any URL found on new audio track, it is an alternate audio track
         var altAudio = !!data.url;
         this.trackId = data.id;
-        this.state = State.IDLE;
 
         this.fragCurrent = null;
         this.state = State.PAUSED;
@@ -814,7 +810,7 @@ class AudioStreamController extends EventHandler {
             // include levelCodec in audio and video tracks
             track = tracks.audio;
             if (track) {
-                track.levelCodec = 'mp4a.40.2';
+                track.levelCodec = track.codec;
                 track.id = data.id;
                 this.hls.trigger(Event.BUFFER_CODECS, tracks);
                 logger.log(
@@ -874,7 +870,7 @@ class AudioStreamController extends EventHandler {
             );
             LevelHelper.updateFragPTSDTS(
                 track.details,
-                fragCurrent.sn,
+                fragCurrent,
                 data.startPTS,
                 data.endPTS
             );

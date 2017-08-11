@@ -358,7 +358,10 @@ class TimelineController extends EventHandler {
             let sn = frag.sn;
             // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
             if (sn !== this.lastSn + 1) {
-                this.cea608Parser.reset();
+                const cea608Parser = this.cea608Parser;
+                if (cea608Parser) {
+                    cea608Parser.reset();
+                }
             }
             this.lastSn = sn;
         } else if (frag.type === 'subtitle') {

@@ -9,7 +9,8 @@
  * upon discontinuity or level switch detection, it will also notifies the remuxer so that it can reset its state.
  */
 
-import ADTS from './adts';
+import * as ADTS from './adts';
+import MpegAudio from './mpegaudio';
 import Event from '../events';
 import ExpGolomb from './exp-golomb';
 import SampleAesDecrypter from './sample-aes';
@@ -75,6 +76,7 @@ class TSDemuxer {
             type: 'audio',
             id: -1,
             inputTimeScale: 90000,
+            duration: duration,
             sequenceNumber: 0,
             samples: [],
             len: 0,
@@ -639,9 +641,32 @@ class TSDemuxer {
             expGolombDecoder,
             avcSample = this.avcSample,
             push,
-            i;
+            spsfound = false,
+            i,
+            pushAccesUnit = this.pushAccesUnit.bind(this),
+            createAVCSample = function(key, pts, dts, debug) {
+                return {
+                    key: key,
+                    pts: pts,
+                    dts: dts,
+                    units: [],
+                    debug: debug
+                };
+            };
         //free pes.data to save up some memory
         pes.data = null;
+
+        // if new NAL units found and last sample still there, let's push ...
+        // this helps parsing streams with missing AUD
+        if (avcSample && units.length) {
+            pushAccesUnit(avcSample, track);
+            avcSample = this.avcSample = createAVCSample(
+                false,
+                pes.pts,
+                pes.dts,
+                ''
+            );
+        }
 
         units.forEach(unit => {
             switch (unit.type) {
@@ -652,9 +677,10 @@ class TSDemuxer {
                         avcSample.debug += 'NDR ';
                     }
                     avcSample.frame = true;
-                    // retrieve slice type by parsing beginning of NAL unit (follow H264 spec, slice_header definition) to detect keyframe embedded in NDR
                     let data = unit.data;
-                    if (data.length > 4) {
+                    // only check slice type to detect KF in case SPS found in same packet (any keyframe is preceded by SPS ...)
+                    if (spsfound && data.length > 4) {
+                        // retrieve slice type by parsing beginning of NAL unit (follow H264 spec, slice_header definition) to detect keyframe embedded in NDR
                         let sliceType = new ExpGolomb(data).readSliceType();
                         // 2 : I slice, 4 : SI slice, 7 : I slice, 9: SI slice
                         // SI slice : A slice that is coded using intra prediction only and using quantisation of the prediction samples.
@@ -676,7 +702,7 @@ class TSDemuxer {
                     push = true;
                     // handle PES not starting with AUD
                     if (!avcSample) {
-                        avcSample = this.avcSample = this._createAVCSample(
+                        avcSample = this.avcSample = createAVCSample(
                             true,
                             pes.pts,
                             pes.dts,
@@ -791,6 +817,7 @@ class TSDemuxer {
                 //SPS
                 case 7:
                     push = true;
+                    spsfound = true;
                     if (debug && avcSample) {
                         avcSample.debug += 'SPS ';
                     }
@@ -828,9 +855,9 @@ class TSDemuxer {
                 case 9:
                     push = false;
                     if (avcSample) {
-                        this.pushAccesUnit(avcSample, track);
+                        pushAccesUnit(avcSample, track);
                     }
-                    avcSample = this.avcSample = this._createAVCSample(
+                    avcSample = this.avcSample = createAVCSample(
                         false,
                         pes.pts,
                         pes.dts,
@@ -855,13 +882,9 @@ class TSDemuxer {
         });
         // if last PES packet, push samples
         if (last && avcSample) {
-            this.pushAccesUnit(avcSample, track);
+            pushAccesUnit(avcSample, track);
             this.avcSample = null;
         }
-    }
-
-    _createAVCSample(key, pts, dts, debug) {
-        return { key: key, pts: pts, dts: dts, units: [], debug: debug };
     }
 
     _insertSampleInOrder(arr, data) {
@@ -1070,15 +1093,11 @@ class TSDemuxer {
             startOffset = 0,
             aacOverFlow = this.aacOverFlow,
             aacLastPTS = this.aacLastPTS,
-            config,
-            frameLength,
             frameDuration,
             frameIndex,
             offset,
-            headerLength,
             stamp,
-            len,
-            aacSample;
+            len;
         if (aacOverFlow) {
             var tmp = new Uint8Array(aacOverFlow.byteLength + data.byteLength);
             tmp.set(aacOverFlow, 0);
@@ -1092,7 +1111,7 @@ class TSDemuxer {
             offset < len - 1;
             offset++
         ) {
-            if (data[offset] === 0xff && (data[offset + 1] & 0xf0) === 0xf0) {
+            if (ADTS.isHeader(data, offset)) {
                 break;
             }
         }
@@ -1117,28 +1136,16 @@ class TSDemuxer {
                 return;
             }
         }
-        if (!track.samplerate) {
-            const audioCodec = this.audioCodec;
-            config = ADTS.getAudioConfig(
-                this.observer,
-                data,
-                offset,
-                audioCodec
-            );
-            track.config = config.config;
-            track.samplerate = config.samplerate;
-            track.channelCount = config.channelCount;
-            track.codec = config.codec;
-            track.manifestCodec = config.manifestCodec;
-            track.duration = this._duration;
-            logger.log(
-                `parsed codec:${track.codec},rate:${
-                    config.samplerate
-                },nb channel:${config.channelCount}`
-            );
-        }
+
+        ADTS.initTrackConfig(
+            track,
+            this.observer,
+            data,
+            offset,
+            this.audioCodec
+        );
         frameIndex = 0;
-        frameDuration = 1024 * 90000 / track.samplerate;
+        frameDuration = ADTS.getFrameDuration(track.samplerate);
 
         // if last AAC frame is overflowing, we should ensure timestamps are contiguous:
         // first sample PTS should be equal to last sample PTS + frameDuration
@@ -1154,45 +1161,31 @@ class TSDemuxer {
             }
         }
 
-        while (offset + 5 < len) {
-            // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
-            headerLength = !!(data[offset + 1] & 0x01) ? 7 : 9;
-            // retrieve frame size
-            frameLength =
-                ((data[offset + 3] & 0x03) << 11) |
-                (data[offset + 4] << 3) |
-                ((data[offset + 5] & 0xe0) >>> 5);
-            frameLength -= headerLength;
-            //stamp = pes.pts;
-
-            if (frameLength > 0 && offset + headerLength + frameLength <= len) {
-                stamp = pts + frameIndex * frameDuration;
-                //logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
-                aacSample = {
-                    unit: data.subarray(
-                        offset + headerLength,
-                        offset + headerLength + frameLength
-                    ),
-                    pts: stamp,
-                    dts: stamp
-                };
-                track.samples.push(aacSample);
-                track.len += frameLength;
-                offset += frameLength + headerLength;
-                frameIndex++;
-                // look for ADTS header (0xFFFx)
-                for (; offset < len - 1; offset++) {
-                    if (
-                        data[offset] === 0xff &&
-                        (data[offset + 1] & 0xf0) === 0xf0
-                    ) {
-                        break;
-                    }
+        //scan for aac samples
+        while (offset < len) {
+            if (ADTS.isHeader(data, offset) && offset + 5 < len) {
+                var frame = ADTS.appendFrame(
+                    track,
+                    data,
+                    offset,
+                    pts,
+                    frameIndex
+                );
+                if (frame) {
+                    //logger.log(`${Math.round(frame.sample.pts)} : AAC`);
+                    offset += frame.length;
+                    stamp = frame.sample.pts;
+                    frameIndex++;
+                } else {
+                    //logger.log('Unable to parse AAC frame');
+                    break;
                 }
             } else {
-                break;
+                //nothing found, keep looking
+                offset++;
             }
         }
+
         if (offset < len) {
             aacOverFlow = data.subarray(offset, len);
             //logger.log(`AAC: overflow detected:${len-offset}`);
@@ -1205,194 +1198,32 @@ class TSDemuxer {
 
     _parseMPEGPES(pes) {
         var data = pes.data;
-        var pts = pes.pts;
         var length = data.length;
         var frameIndex = 0;
         var offset = 0;
-        var parsed;
+        var pts = pes.pts;
 
-        while (
-            offset < length &&
-            (parsed = this._parseMpeg(
-                data,
-                offset,
-                length,
-                frameIndex++,
-                pts
-            )) > 0
-        ) {
-            offset += parsed;
-        }
-    }
-
-    _onMpegFrame(data, bitRate, sampleRate, channelCount, frameIndex, pts) {
-        var frameDuration = 1152 / sampleRate * 1000;
-        var stamp = pts + frameIndex * frameDuration;
-        var track = this._audioTrack;
-
-        track.config = [];
-        track.channelCount = channelCount;
-        track.samplerate = sampleRate;
-        track.duration = this._duration;
-        track.samples.push({ unit: data, pts: stamp, dts: stamp });
-        track.len += data.length;
-    }
-
-    _onMpegNoise(data) {
-        logger.warn('mpeg audio has noise: ' + data.length + ' bytes');
-    }
-
-    _parseMpeg(data, start, end, frameIndex, pts) {
-        var BitratesMap = [
-            32,
-            64,
-            96,
-            128,
-            160,
-            192,
-            224,
-            256,
-            288,
-            320,
-            352,
-            384,
-            416,
-            448,
-            32,
-            48,
-            56,
-            64,
-            80,
-            96,
-            112,
-            128,
-            160,
-            192,
-            224,
-            256,
-            320,
-            384,
-            32,
-            40,
-            48,
-            56,
-            64,
-            80,
-            96,
-            112,
-            128,
-            160,
-            192,
-            224,
-            256,
-            320,
-            32,
-            48,
-            56,
-            64,
-            80,
-            96,
-            112,
-            128,
-            144,
-            160,
-            176,
-            192,
-            224,
-            256,
-            8,
-            16,
-            24,
-            32,
-            40,
-            48,
-            56,
-            64,
-            80,
-            96,
-            112,
-            128,
-            144,
-            160
-        ];
-        var SamplingRateMap = [
-            44100,
-            48000,
-            32000,
-            22050,
-            24000,
-            16000,
-            11025,
-            12000,
-            8000
-        ];
-
-        if (start + 2 > end) {
-            return -1; // we need at least 2 bytes to detect sync pattern
-        }
-        if (data[start] === 0xff || (data[start + 1] & 0xe0) === 0xe0) {
-            // Using http://www.datavoyage.com/mpgscript/mpeghdr.htm as a reference
-            if (start + 24 > end) {
-                return -1;
-            }
-            var headerB = (data[start + 1] >> 3) & 3;
-            var headerC = (data[start + 1] >> 1) & 3;
-            var headerE = (data[start + 2] >> 4) & 15;
-            var headerF = (data[start + 2] >> 2) & 3;
-            var headerG = !!(data[start + 2] & 2);
-            if (
-                headerB !== 1 &&
-                headerE !== 0 &&
-                headerE !== 15 &&
-                headerF !== 3
-            ) {
-                var columnInBitrates =
-                    headerB === 3 ? 3 - headerC : headerC === 3 ? 3 : 4;
-                var bitRate =
-                    BitratesMap[columnInBitrates * 14 + headerE - 1] * 1000;
-                var columnInSampleRates =
-                    headerB === 3 ? 0 : headerB === 2 ? 1 : 2;
-                var sampleRate =
-                    SamplingRateMap[columnInSampleRates * 3 + headerF];
-                var padding = headerG ? 1 : 0;
-                var channelCount = data[start + 3] >> 6 === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
-                var frameLength =
-                    headerC === 3
-                        ? ((headerB === 3 ? 12 : 6) * bitRate / sampleRate +
-                              padding) <<
-                          2
-                        : ((headerB === 3 ? 144 : 72) * bitRate / sampleRate +
-                              padding) |
-                          0;
-                if (start + frameLength > end) {
-                    return -1;
+        while (offset < length) {
+            if (MpegAudio.isHeader(data, offset)) {
+                var frame = MpegAudio.appendFrame(
+                    this._audioTrack,
+                    data,
+                    offset,
+                    pts,
+                    frameIndex
+                );
+                if (frame) {
+                    offset += frame.length;
+                    frameIndex++;
+                } else {
+                    //logger.log('Unable to parse Mpeg audio frame');
+                    break;
                 }
-                if (this._onMpegFrame) {
-                    this._onMpegFrame(
-                        data.subarray(start, start + frameLength),
-                        bitRate,
-                        sampleRate,
-                        channelCount,
-                        frameIndex,
-                        pts
-                    );
-                }
-                return frameLength;
+            } else {
+                //nothing found, keep looking
+                offset++;
             }
         }
-        // noise or ID3, trying to skip
-        var offset = start + 2;
-        while (offset < end) {
-            if (data[offset - 1] === 0xff && (data[offset] & 0xe0) === 0xe0) {
-                // sync pattern is found
-                if (this._onMpegNoise) {
-                    this._onMpegNoise(data.subarray(start, offset - 1));
-                }
-                return offset - start - 1;
-            }
-            offset++;
-        }
-        return -1;
     }
 
     _parseID3PES(pes) {
