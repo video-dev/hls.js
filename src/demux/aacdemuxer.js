@@ -14,7 +14,8 @@ class AACDemuxer {
   }
 
   resetInitSegment(initSegment, audioCodec, videoCodec, duration) {
-    this._audioTrack = { container: 'audio/adts', type: 'audio', id: -1, sequenceNumber: 0, isAAC: true, samples: [], len: 0, manifestCodec: audioCodec, duration: duration, inputTimeScale: 90000 };
+    // The id must be different from -1 to work on Safari
+    this._audioTrack = { container: 'audio/adts', type: 'audio', id: 1, sequenceNumber: 0, isAAC: true, samples: [], len: 0, manifestCodec: audioCodec, duration: duration, inputTimeScale: 90000 };
   }
 
   resetTimeStamp() {
