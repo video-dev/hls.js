@@ -657,7 +657,9 @@ class StreamController extends EventHandler {
     }
     this.fragCurrent = null;
     // increase fragment load Index to avoid frag loop loading error after buffer flush
-    this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+    if (this.fragLoadIdx !== undefined) {
+      this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+    }
     // flush everything
     this.flushMainBuffer(0,Number.POSITIVE_INFINITY);
   }
