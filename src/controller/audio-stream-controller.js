@@ -433,9 +433,9 @@ class AudioStreamController extends EventHandler {
                                     trackDetails.startSN
                                 } ,${
                                     trackDetails.endSN
-                                }],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(
-                                    3
-                                )}`
+                                }],track ${trackId}, currentTime:${pos},bufferEnd:${(
+                                    bufferEnd || 0
+                                ).toFixed(3)}`
                             );
                             // ensure that we are not reloading the same fragments in loop ...
                             if (this.fragLoadIdx !== undefined) {
