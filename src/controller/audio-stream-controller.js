@@ -328,7 +328,7 @@ class AudioStreamController extends EventHandler {
               this.state = State.KEY_LOADING;
               hls.trigger(Event.KEY_LOADING, {frag: frag});
             } else {
-              logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
+              logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${(bufferEnd || 0).toFixed(3)}`);
               // ensure that we are not reloading the same fragments in loop ...
               if (this.fragLoadIdx !== undefined) {
                 this.fragLoadIdx++;
