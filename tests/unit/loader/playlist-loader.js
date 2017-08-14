@@ -653,5 +653,44 @@ Rollover38803/20160525T064049-01-69844069.ts
     assert.strictEqual(result.initSegment.byteRangeEndOffset, 718);
     assert.strictEqual(result.initSegment.sn, 'initSegment');
   });
-
+  it('parses #EXT-X-GAP tag', () => {
+    var level = `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXT-X-TARGETDURATION:14
+#EXTINF:11.360,
+/sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(1)/video/107/282/158282701_mp4_h264_aac_hq.ts
+#EXT-X-GAP
+#EXTINF:11.320,
+/sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(2)/video/107/282/158282701_mp4_h264_aac_hq.ts
+#EXTINF:13.480,
+#EXT-X-GAP
+# general comment
+/sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(3)/video/107/282/158282701_mp4_h264_aac_hq.ts
+#EXTINF:11.200,
+/sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(4)/video/107/282/158282701_mp4_h264_aac_hq.ts
+#EXTINF:3.880,
+/sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(5)/video/107/282/158282701_mp4_h264_aac_hq.ts
+#EXT-X-ENDLIST`;
+    var result = new PlaylistLoader({on : function() { }}).parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core',0);
+    assert.strictEqual(result.totalduration, 51.24);
+    assert.strictEqual(result.startSN, 0);
+    assert.strictEqual(result.version, 3);
+    assert.strictEqual(result.type, 'VOD');
+    assert.strictEqual(result.targetduration, 14);
+    assert.strictEqual(result.live, false);
+    assert.strictEqual(result.fragments.length, 5);
+    assert.strictEqual(result.fragments[0].cc, 0);
+    assert.strictEqual(result.fragments[0].duration, 11.36);
+    assert.strictEqual(result.fragments[4].sn, 4);
+    assert.strictEqual(result.fragments[0].level, 0);
+    assert.strictEqual(result.fragments[1].gap, true);
+    assert.strictEqual(result.fragments[2].gap, true);
+    assert.strictEqual(result.fragments[3].gap, undefined);
+    assert.strictEqual(result.fragments[4].cc, 0);
+    assert.strictEqual(result.fragments[4].sn, 4);
+    assert.strictEqual(result.fragments[4].start, 47.36);
+    assert.strictEqual(result.fragments[4].duration, 3.88);
+    assert.strictEqual(result.fragments[4].url, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(5)/video/107/282/158282701_mp4_h264_aac_hq.ts');
+  });
 });
