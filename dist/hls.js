@@ -11088,7 +11088,7 @@ var audio_stream_controller_AudioStreamController = function (_EventHandler) {
               this.state = audio_stream_controller_State.KEY_LOADING;
               hls.trigger(events["a" /* default */].KEY_LOADING, { frag: frag });
             } else {
-              logger["b" /* logger */].log('Loading ' + frag.sn + ', cc: ' + frag.cc + ' of [' + trackDetails.startSN + ' ,' + trackDetails.endSN + '],track ' + trackId + ', currentTime:' + pos + ',bufferEnd:' + bufferEnd.toFixed(3));
+              logger["b" /* logger */].log('Loading ' + frag.sn + ', cc: ' + frag.cc + ' of [' + trackDetails.startSN + ' ,' + trackDetails.endSN + '],track ' + trackId + ', currentTime:' + pos + ',bufferEnd:' + (bufferEnd || 0).toFixed(3));
               // ensure that we are not reloading the same fragments in loop ...
               if (this.fragLoadIdx !== undefined) {
                 this.fragLoadIdx++;
