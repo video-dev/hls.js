@@ -15,11 +15,15 @@ const BufferHelper = {
     return false;
   },
 
-  bufferInfo : function(media, pos,maxHoleDuration) {
+  bufferInfo : function(media, pos,maxHoleDuration, gapsRange = undefined) {
     if (media) {
       var vbuffered = media.buffered, buffered = [],i;
       for (i = 0; i < vbuffered.length; i++) {
         buffered.push({start: vbuffered.start(i), end: vbuffered.end(i)});
+      }
+      // consider gaps range as buffered, merge them with buffered ranges
+      if (gapsRange) {
+        Array.prototype.push.apply(buffered,gapsRange);
       }
       return this.bufferedInfo(buffered,pos,maxHoleDuration);
     } else {
@@ -48,7 +52,7 @@ const BufferHelper = {
       if(buf2len) {
         var buf2end = buffered2[buf2len - 1].end;
         // if small hole (value between 0 or maxHoleDuration ) or overlapping (negative)
-        if((buffered[i].start - buf2end) < maxHoleDuration) {
+        if((buffered[i].start - buf2end) <= maxHoleDuration) {
           // merge overlapping time ranges
           // update lastRange.end only if smaller than item.end
           // e.g.  [ 1, 15] with  [ 2,8] => [ 1,15] (no need to modify lastRange.end)

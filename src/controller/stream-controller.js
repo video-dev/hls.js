@@ -220,7 +220,7 @@ class StreamController extends EventHandler {
     // determine next candidate fragment to be loaded, based on current position and end of buffer position
     // ensure up to `config.maxMaxBufferLength` of buffer upfront
 
-    const bufferInfo = BufferHelper.bufferInfo(this.mediaBuffer ? this.mediaBuffer : media, pos, config.maxBufferHole),
+    let bufferInfo = BufferHelper.bufferInfo(this.mediaBuffer ? this.mediaBuffer : media, pos, config.maxBufferHole),
           bufferLen = bufferInfo.len;
     // Stay idle if we are still with buffer margins
     if (bufferLen >= maxBufLen) {
@@ -240,6 +240,13 @@ class StreamController extends EventHandler {
     if (typeof levelDetails === 'undefined' || levelDetails.live && this.levelLastLoaded !== level) {
       this.state = State.WAITING_LEVEL;
       return;
+    }
+
+    const gapsRanges = levelDetails.gapsRanges;
+    // update buffer info if gaps found in playlist
+    if (gapsRanges) {
+      bufferInfo = BufferHelper.bufferInfo(this.mediaBuffer ? this.mediaBuffer : media, pos, config.maxBufferHole, gapsRanges);
+      bufferLen = bufferInfo.len;
     }
 
     // we just got done loading the final fragment and there is no other buffered range after ...
@@ -1472,17 +1479,28 @@ _checkBuffer() {
               const stalledDuration = tnow - this.stalled;
               const bufferLen = bufferInfo.len;
               let nudgeRetry = this.nudgeRetry || 0;
+              var nextBufferStart = bufferInfo.nextStart, delta = nextBufferStart-currentTime;
               // have we reached stall deadline ?
               if (bufferLen <= jumpThreshold && stalledDuration > config.lowBufferWatchdogPeriod * 1000) {
                 // report stalled error once
                 if (!this.stallReported) {
                   this.stallReported = true;
-                  logger.warn(`playback stalling in low buffer @${currentTime}`);
-                  hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_STALLED_ERROR, fatal: false, buffer : bufferLen});
+                  // check if buffer is low because of gaps
+                  const levelId = this.fragCurrent.level;
+                  const gapsRanges = hls.levels[levelId].details.gapsRanges;
+                  if (gapsRanges) {
+                    bufferInfo = BufferHelper.bufferInfo(media,currentTime,0,gapsRanges);
+                  }
+                  if (bufferInfo.len > jumpThreshold) {
+                    logger.warn(`playback stalling because of ${delta.toFixed(3)}s gaps @${currentTime}`);
+                    hls.trigger(Event.FRAG_GAP_REACHED, { duration : delta});
+                  } else {
+                    logger.warn(`playback stalling in low buffer @${currentTime}`);
+                    hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_STALLED_ERROR, fatal: false, buffer : bufferLen});
+                  }
                 }
                 // if buffer len is below threshold, try to jump to start of next buffer range if close
                 // no buffer available @ currentTime, check if next buffer is close (within a config.maxSeekHole second range)
-                var nextBufferStart = bufferInfo.nextStart, delta = nextBufferStart-currentTime;
                 if(nextBufferStart &&
                    (delta < config.maxSeekHole) &&
                    (delta > 0)) {

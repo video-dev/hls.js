@@ -31,6 +31,21 @@ export function updatePTS(fragments,fromIdx, toIdx) {
   }
 }
 
+export function computeGapRanges(details) {
+  const gaps = details.gaps;
+  if (gaps) {
+    const startSN = details.startSN;
+    let gapsRanges = [];
+    gaps.forEach(function(gap) {
+      const frag = details.fragments[gap-startSN],
+            start = frag.start,
+            end = start + frag.duration;
+      gapsRanges.push({ start : start, end : end})
+    });
+    details.gapsRanges = gapsRanges;
+  }
+}
+
 export function updateFragPTSDTS(details,frag,startPTS,endPTS,startDTS,endDTS) {
   // update frag PTS/DTS
   let maxStartPTS = startPTS;
@@ -139,6 +154,7 @@ export function mergeDetails(oldDetails,newDetails) {
         }
       }
     }
+    computeGapRanges(newDetails);
     // if we are here, it means we have fragments overlapping between
     // old and new level. reliable PTS info is thus relying on old level
     newDetails.PTSKnown = oldDetails.PTSKnown;

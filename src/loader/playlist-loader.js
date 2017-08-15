@@ -9,6 +9,7 @@ import {ErrorTypes, ErrorDetails} from '../errors';
 import AttrList from '../utils/attr-list';
 import {logger} from '../utils/logger';
 import {isCodecType} from '../utils/codecs';
+import * as LevelHelper from '../helper/level-helper'
 
 // https://regex101.com is your friend
 const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
@@ -317,6 +318,7 @@ class PlaylistLoader extends EventHandler {
         cc = 0,
         prevFrag = null,
         frag = new Fragment(),
+        gaps = [],
         result,
         i;
 
@@ -446,6 +448,7 @@ class PlaylistLoader extends EventHandler {
             break;
           case 'GAP':
             frag.gap = true;
+            gaps.push(currentSN);
             break;
           default:
             logger.warn(`line parsed but not handled: ${result}`);
@@ -458,6 +461,10 @@ class PlaylistLoader extends EventHandler {
     if(frag && !frag.relurl) {
       level.fragments.pop();
       totalduration-=frag.duration;
+    }
+    if (gaps.length) {
+      level.gaps = gaps;
+      LevelHelper.computeGapRanges(level);
     }
     level.totalduration = totalduration;
     level.averagetargetduration = totalduration / level.fragments.length;

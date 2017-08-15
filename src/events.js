@@ -91,6 +91,8 @@ export default {
   FRAG_BUFFERED: 'hlsFragBuffered',
   // fired when fragment matching with current media position is changing - data : { id : demuxer id, frag : fragment object }
   FRAG_CHANGED: 'hlsFragChanged',
+   // fired when a fragment GAP is reached - data : { duration : gap duration}
+  FRAG_GAP_REACHED: 'hlsFragGapReached',
   // Identifier for a FPS drop event - data: { curentDropped, currentDecoded, totalDroppedFrames }
   FPS_DROP: 'hlsFpsDrop',
   //triggered when FPS drop triggers auto level capping - data: { level, droppedlevel }

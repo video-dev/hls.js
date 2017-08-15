@@ -1184,6 +1184,8 @@ Full list of Events is available below:
     -  data: { id: demuxer id, frag : fragment object, stats : { trequest, tfirst, tload, tparsed, tbuffered, length, bwEstimate } }
   - `Hls.Events.FRAG_CHANGED`  - fired when fragment matching with current video position is changing
     -  data: { id : demuxer id, frag : fragment object }
+  - `Hls.Events.FRAG_GAP_REACHED`  - fired when a fragment GAP is reached
+      - data: { duration : gap duration }
   - `Hls.Events.FPS_DROP` - triggered when FPS drop in last monitoring period is higher than given threshold
     -  data: { curentDropped : nb of dropped frames in last monitoring period, currentDecoded : nb of decoded frames in last monitoring period, totalDroppedFrames : total dropped frames on this video element }
   - `Hls.Events.FPS_DROP_LEVEL_CAPPING` - triggered when FPS drop triggers auto level capping
