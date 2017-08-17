@@ -16,7 +16,7 @@ class AACDemuxer {
         this._audioTrack = {
             container: 'audio/adts',
             type: 'audio',
-            id: -1,
+            id: 0,
             sequenceNumber: 0,
             isAAC: true,
             samples: [],
