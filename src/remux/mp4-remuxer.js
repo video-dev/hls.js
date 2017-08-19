@@ -47,58 +47,6 @@ class MP4Remuxer {
         // generate Init Segment if needed
         if (!this.ISGenerated) {
             this.generateIS(audioTrack, videoTrack, timeOffset);
-        } else {
-            if (accurateTimeOffset) {
-                // check timestamp consistency. it there is more than 10s gap between expected PTS/DTS, recompute initPTS/DTS
-                const refPTS = this._initPTS;
-                const ptsNormalize = this._PTSNormalize;
-                const timeScale =
-                    audioTrack.inputTimeScale || videoTrack.inputTimeScale;
-                let initPTS = Infinity,
-                    initDTS = Infinity;
-                let samples = audioTrack.samples;
-                if (samples.length) {
-                    initPTS = initDTS = ptsNormalize(
-                        samples[0].pts - timeScale * timeOffset,
-                        refPTS
-                    );
-                }
-                samples = videoTrack.samples;
-                if (samples.length) {
-                    let sample = samples[0];
-                    initPTS = Math.min(
-                        initPTS,
-                        ptsNormalize(
-                            sample.pts - timeScale * timeOffset,
-                            refPTS
-                        )
-                    );
-                    initDTS = Math.min(
-                        initDTS,
-                        ptsNormalize(
-                            sample.dts - timeScale * timeOffset,
-                            refPTS
-                        )
-                    );
-                }
-                if (initPTS !== Infinity) {
-                    const initPTSDelta = refPTS - initPTS;
-                    if (Math.abs(initPTSDelta) > 10 * timeScale) {
-                        logger.warn(
-                            `timestamp inconsistency, ${(
-                                initPTSDelta / timeScale
-                            ).toFixed(
-                                3
-                            )}s delta against expected value: missing discontinuity ? reset initPTS/initDTS`
-                        );
-                        this._initPTS = initPTS;
-                        this._initDTS = initDTS;
-                        this.observer.trigger(Event.INIT_PTS_FOUND, {
-                            initPTS: initPTS
-                        });
-                    }
-                }
-            }
         }
 
         if (this.ISGenerated) {
