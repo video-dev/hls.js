@@ -23,19 +23,27 @@ class MP4Demuxer {
                 initSegment
             ));
             var tracks = {};
-            if (initData.audio) {
-                tracks.audio = {
-                    container: 'audio/mp4',
-                    codec: audioCodec,
-                    initSegment: duration ? initSegment : null
-                };
-            }
-            if (initData.video) {
-                tracks.video = {
+            if (initData.audio && initData.video) {
+                tracks.audiovideo = {
                     container: 'video/mp4',
-                    codec: videoCodec,
+                    codec: audioCodec + ',' + videoCodec,
                     initSegment: duration ? initSegment : null
                 };
+            } else {
+                if (initData.audio) {
+                    tracks.audio = {
+                        container: 'audio/mp4',
+                        codec: audioCodec,
+                        initSegment: duration ? initSegment : null
+                    };
+                }
+                if (initData.video) {
+                    tracks.video = {
+                        container: 'video/mp4',
+                        codec: videoCodec,
+                        initSegment: duration ? initSegment : null
+                    };
+                }
             }
             this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, {
                 tracks: tracks
