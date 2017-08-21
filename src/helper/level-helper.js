@@ -40,7 +40,7 @@ export function computeGapRanges(details) {
       const frag = details.fragments[gap-startSN],
             start = frag.start,
             end = start + frag.duration;
-      gapsRanges.push({ start : start, end : end})
+      gapsRanges.push({ start : start, end : end});
     });
     details.gapsRanges = gapsRanges;
   }
