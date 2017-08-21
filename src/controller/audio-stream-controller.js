@@ -150,7 +150,10 @@ class AudioStreamController extends EventHandler {
   }
 
   doTick() {
-    var pos, track, trackDetails, hls = this.hls, config = hls.config;
+    let track;
+    let trackDetails;
+    let hls = this.hls;
+    let config = hls.config;
     //logger.log('audioStream:' + this.state);
     switch(this.state) {
       case State.ERROR:
@@ -177,16 +180,13 @@ class AudioStreamController extends EventHandler {
           (this.startFragRequested || !config.startFragPrefetch)) {
           break;
         }
-        // determine next candidate fragment to be loaded, based on current position and
-        //  end of buffer position
-        // if we have not yet loaded any fragment, start loading from start position
+        // Determine next candidate fragment to be loaded, based on current position and end of buffer position
+        // If we have not yet loaded any fragment, start loading from start position (0 by default)
+        let pos = 0;
         if (this.loadedmetadata) {
           pos = this.media.currentTime;
-        } else if (this.nextLoadPosition) {
+        } else if (this.nextLoadPosition >= 0) {
           pos = this.nextLoadPosition;
-          if (pos === undefined) {
-            break;
-          }
         }
 
         let media = this.mediaBuffer ? this.mediaBuffer : this.media,
