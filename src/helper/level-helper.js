@@ -79,7 +79,12 @@ export function updateFragPTSDTS(
     var fragIdx, fragments, i;
     fragIdx = sn - details.startSN;
     fragments = details.fragments;
-    frag = fragments[fragIdx];
+    // update frag reference in fragments array
+    // rationale is that fragments array might not contain this frag object.
+    // this will happpen if playlist has been refreshed between frag loading and call to updateFragPTSDTS()
+    // if we don't update frag, we won't be able to propagate PTS info on the playlist
+    // resulting in invalid sliding computation
+    fragments[fragIdx] = frag;
     // adjust fragment PTS/duration from seqnum-1 to frag 0
     for (i = fragIdx; i > 0; i--) {
         updatePTS(fragments, i, i - 1);
