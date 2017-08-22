@@ -94,7 +94,7 @@ export function mergeDetails(oldDetails,newDetails) {
 
     // check if old/new playlists have fragments in common
     if ( end < start) {
-      newDetails.PTSKnown = oldDetails.PTSKnown
+      newDetails.PTSKnown = oldDetails.PTSKnown;
       //if the new segments start before the previous segments, adjust the start/end
       //so that they occur after the previous segments.
       var numOldFragments = oldDetails.fragments.length;
