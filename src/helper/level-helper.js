@@ -103,9 +103,9 @@ export function mergeDetails(oldDetails,newDetails) {
       var numNewFragments = newDetails.fragments.length;
       for (var newFragmentCtr = 0; newFragmentCtr < numNewFragments; newFragmentCtr++)
       {
-         newDetails.fragments[newFragmentCtr].start += lastOldFragmentEndPTS;
-         newDetails.fragments[newFragmentCtr].startPTS += lastOldFragmentEndPTS;
-         newDetails.fragments[newFragmentCtr].endPTS += lastOldFragmentEndPTS;
+        newDetails.fragments[newFragmentCtr].start += lastOldFragmentEndPTS;
+        newDetails.fragments[newFragmentCtr].startPTS += lastOldFragmentEndPTS;
+        newDetails.fragments[newFragmentCtr].endPTS += lastOldFragmentEndPTS;
       }
       return;
     }
