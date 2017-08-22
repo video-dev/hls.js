@@ -1128,7 +1128,6 @@ class StreamController extends EventHandler {
                 newDetails.endSN
             }],duration:${duration}`
         );
-        this.levelLastLoaded = newLevelId;
 
         if (newDetails.live) {
             var curDetails = curLevel.details;
