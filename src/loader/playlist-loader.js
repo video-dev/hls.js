@@ -404,6 +404,11 @@ class PlaylistLoader extends EventHandler {
                     'PROGRAM-DATE-TIME',
                     frag.rawProgramDateTime
                 ]);
+                if (level.programDateTime === undefined) {
+                    level.programDateTime = new Date(
+                        new Date(Date.parse(result[5])) - 1000 * totalduration
+                    );
+                }
             } else {
                 result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
                 for (i = 1; i < result.length; i++) {
