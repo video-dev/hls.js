@@ -515,13 +515,15 @@ class StreamController extends EventHandler {
         frag.loadCounter = 1;
       }
       frag.loadIdx = this.fragLoadIdx;
-      this.fragCurrent = frag;
-      this.startFragRequested = true;
-      if (!isNaN(frag.sn)) {
-        this.nextLoadPosition = frag.start + frag.duration;
-      }
       frag.autoLevel = hls.autoLevelEnabled;
       frag.bitrateTest = this.bitrateTest;
+
+      this.fragCurrent = frag;
+      this.startFragRequested = true;
+      // Don't update nextLoadPosition for fragments which are not buffered
+      if (!isNaN(frag.sn) && !frag.bitrateTest) {
+        this.nextLoadPosition = frag.start + frag.duration;
+      }
       hls.trigger(Event.FRAG_LOADING, {frag: frag});
       // lazy demuxer init, as this could take some time ... do it during frag loading
       if (!this.demuxer) {
