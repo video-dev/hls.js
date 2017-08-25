@@ -1304,38 +1304,33 @@ class StreamController extends EventHandler {
     if (frag && frag.type !== 'main') {
       return;
     }
-    let media = this.media,
-        // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
-        mediaBuffered = media && BufferHelper.isBuffered(media,media.currentTime) && BufferHelper.isBuffered(media,media.currentTime+0.5);
+    // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
+    let mediaBuffered = this.media
+      && BufferHelper.isBuffered(this.media, this.media.currentTime)
+      && BufferHelper.isBuffered(this.media, this.media.currentTime + 0.5);
+
     switch(data.details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
       case ErrorDetails.KEY_LOAD_ERROR:
       case ErrorDetails.KEY_LOAD_TIMEOUT:
-        if(!data.fatal) {
-          var loadError = this.fragLoadError;
-          if(loadError) {
-            loadError++;
-          } else {
-            loadError=1;
-          }
-          let config = this.config;
+        if (!data.fatal) {
           // keep retrying / don't raise fatal network error if current position is buffered or if in automode with current level not 0
-          if (loadError <= config.fragLoadingMaxRetry || mediaBuffered || (frag.autoLevel && frag.level)) {
-            this.fragLoadError = loadError;
+          if ((this.fragLoadError + 1) <= this.config.fragLoadingMaxRetry || mediaBuffered || (frag.autoLevel && frag.level)) {
+            // exponential backoff capped to config.fragLoadingMaxRetryTimeout
+            let delay = Math.min(Math.pow(2, this.fragLoadError) * this.config.fragLoadingRetryDelay, this.config.fragLoadingMaxRetryTimeout);
             // reset load counter to avoid frag loop loading error
             frag.loadCounter = 0;
-            // exponential backoff capped to config.fragLoadingMaxRetryTimeout
-            var delay = Math.min(Math.pow(2,loadError-1)*config.fragLoadingRetryDelay,config.fragLoadingMaxRetryTimeout);
             logger.warn(`mediaController: frag loading failed, retry in ${delay} ms`);
             this.retryDate = performance.now() + delay;
             // retry loading state
             // if loadedmetadata is not set, it means that we are emergency switch down on first frag
             // in that case, reset startFragRequested flag
-            if(!this.loadedmetadata) {
+            if (!this.loadedmetadata) {
               this.startFragRequested = false;
               this.nextLoadPosition = this.startPosition;
             }
+            this.fragLoadError++;
             this.state = State.FRAG_LOADING_WAITING_RETRY;
           } else {
             logger.error(`mediaController: ${data.details} reaches max retry, redispatch as fatal ...`);
