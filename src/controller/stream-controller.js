@@ -1666,7 +1666,7 @@ class StreamController extends EventHandler {
         }
         // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
         let mediaBuffered =
-            this.media &&
+            !!this.media &&
             BufferHelper.isBuffered(this.media, this.media.currentTime) &&
             BufferHelper.isBuffered(this.media, this.media.currentTime + 0.5);
 
