@@ -11,10 +11,7 @@ import * as LevelHelper from '../helper/level-helper';
 import TimeRanges from '../utils/timeRanges';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
-import {
-    alignDiscontinuities,
-    findFirstFragWithCC
-} from '../utils/discontinuities';
+import { alignDiscontinuities } from '../utils/discontinuities';
 
 const State = {
     STOPPED: 'STOPPED',
@@ -459,7 +456,6 @@ class StreamController extends EventHandler {
          compute playlist sliding and find the right one after in case it was not the right consecutive one */
             if (fragPrevious) {
                 const targetSN = fragPrevious.sn + 1;
-                const targetCC = fragPrevious.cc + 1;
                 if (
                     targetSN >= levelDetails.startSN &&
                     targetSN <= levelDetails.endSN
@@ -473,16 +469,20 @@ class StreamController extends EventHandler {
                             }`
                         );
                     }
-                } else if (
-                    targetCC >= levelDetails.startCC &&
-                    targetCC <= levelDetails.endCC
-                ) {
-                    frag = findFirstFragWithCC(fragments, targetCC);
-                    logger.log(
-                        `Live playlist switch, cannot find frag with target SN. Loading frag with next CC: ${
-                            frag.cc
-                        }`
-                    );
+                }
+                // next frag SN not available (or not with same continuity counter)
+                // look for a frag sharing the same CC
+                if (!frag) {
+                    frag = BinarySearch.search(fragments, function(frag) {
+                        return fragPrevious.cc - frag.cc;
+                    });
+                    if (frag) {
+                        logger.log(
+                            `live playlist, switching playlist, load frag with same CC: ${
+                                frag.sn
+                            }`
+                        );
+                    }
                 }
             }
             if (!frag) {
