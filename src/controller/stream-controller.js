@@ -1315,8 +1315,9 @@ class StreamController extends EventHandler {
       case ErrorDetails.KEY_LOAD_ERROR:
       case ErrorDetails.KEY_LOAD_TIMEOUT:
         if (!data.fatal) {
-          // keep retrying / don't raise fatal network error if current position is buffered or if in automode with current level not 0
-          if ((this.fragLoadError + 1) <= this.config.fragLoadingMaxRetry || mediaBuffered || (frag.autoLevel && frag.level)) {
+          // keep retrying until the limit will be reached
+          // TODO Introduce an ability to hunt for the fragments from other available levels
+          if ((this.fragLoadError + 1) <= this.config.fragLoadingMaxRetry && mediaBuffered === true) {
             // exponential backoff capped to config.fragLoadingMaxRetryTimeout
             let delay = Math.min(Math.pow(2, this.fragLoadError) * this.config.fragLoadingRetryDelay, this.config.fragLoadingMaxRetryTimeout);
             // reset load counter to avoid frag loop loading error
