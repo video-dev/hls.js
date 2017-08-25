@@ -1305,9 +1305,7 @@ class StreamController extends EventHandler {
       return;
     }
     // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
-    let mediaBuffered = this.media
-      && BufferHelper.isBuffered(this.media, this.media.currentTime)
-      && BufferHelper.isBuffered(this.media, this.media.currentTime + 0.5);
+    let mediaBuffered = !!this.media && BufferHelper.isBuffered(this.media, this.media.currentTime) && BufferHelper.isBuffered(this.media, this.media.currentTime + 0.5);
 
     switch(data.details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
