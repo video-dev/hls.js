@@ -11,6 +11,7 @@ import * as LevelHelper from '../helper/level-helper';
 import TimeRanges from '../utils/timeRanges';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
+import { alignDiscontinuities } from '../utils/discontinuities';
 
 const State = {
     STOPPED: 'STOPPED',
@@ -1117,18 +1118,18 @@ class StreamController extends EventHandler {
     }
 
     onLevelLoaded(data) {
-        var newDetails = data.details,
-            newLevelId = data.level,
-            curLevel = this.levels[newLevelId],
-            duration = newDetails.totalduration,
-            sliding = 0;
+        const newDetails = data.details;
+        const newLevelId = data.level;
+        const lastLevel = this.levels[this.levelLastLoaded];
+        const curLevel = this.levels[newLevelId];
+        const duration = newDetails.totalduration;
+        let sliding = 0;
 
         logger.log(
             `level ${newLevelId} loaded [${newDetails.startSN},${
                 newDetails.endSN
             }],duration:${duration}`
         );
-        this.levelLastLoaded = newLevelId;
 
         if (newDetails.live) {
             var curDetails = curLevel.details;
@@ -1144,16 +1145,23 @@ class StreamController extends EventHandler {
                     logger.log(`live playlist sliding:${sliding.toFixed(3)}`);
                 } else {
                     logger.log('live playlist - outdated PTS, unknown sliding');
+                    alignDiscontinuities(
+                        this.fragPrevious,
+                        lastLevel,
+                        newDetails
+                    );
                 }
             } else {
-                newDetails.PTSKnown = false;
                 logger.log('live playlist - first load, unknown sliding');
+                newDetails.PTSKnown = false;
+                alignDiscontinuities(this.fragPrevious, lastLevel, newDetails);
             }
         } else {
             newDetails.PTSKnown = false;
         }
         // override level info
         curLevel.details = newDetails;
+        this.levelLastLoaded = newLevelId;
         this.hls.trigger(Event.LEVEL_UPDATED, {
             details: newDetails,
             level: newLevelId
