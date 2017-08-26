@@ -1,5 +1,5 @@
 /*
- * audio track controller
+ * subtitle track controller
 */
 
 import Event from '../events';
