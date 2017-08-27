@@ -94,7 +94,19 @@ export function mergeDetails(oldDetails,newDetails) {
 
     // check if old/new playlists have fragments in common
     if ( end < start) {
-      newDetails.PTSKnown = false;
+      newDetails.PTSKnown = oldDetails.PTSKnown;
+      //if the new segments start before the previous segments, adjust the start/end
+      //so that they occur after the previous segments.
+      var numOldFragments = oldDetails.fragments.length;
+      var lastOldFragment = oldDetails.fragments[numOldFragments -1];
+      var lastOldFragmentEndPTS = lastOldFragment.endPTS;
+      var numNewFragments = newDetails.fragments.length;
+      for (var newFragmentCtr = 0; newFragmentCtr < numNewFragments; newFragmentCtr++)
+      {
+        newDetails.fragments[newFragmentCtr].start += lastOldFragmentEndPTS;
+        newDetails.fragments[newFragmentCtr].startPTS += lastOldFragmentEndPTS;
+        newDetails.fragments[newFragmentCtr].endPTS += lastOldFragmentEndPTS;
+      }
       return;
     }
     // loop through overlapping SN and update startPTS , cc, and duration if any found
