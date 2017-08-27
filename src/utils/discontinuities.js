@@ -1,7 +1,7 @@
 import BinarySearch from './binary-search';
 import { logger } from '../utils/logger';
 
-export function findFirstFragWithCC(fragments, cc) {
+function findFirstFragWithCC(fragments, cc) {
     let firstFrag = null;
 
     for (let i = 0; i < fragments.length; i += 1) {
@@ -27,7 +27,7 @@ export function findFragWithCC(fragments, CC) {
     });
 }
 
-export function shouldAlignOnDiscontinuities(lastFrag, lastLevel, details) {
+function shouldAlignOnDiscontinuities(lastFrag, lastLevel, details) {
     let shouldAlign = false;
     if (lastLevel && lastLevel.details && details) {
         if (
@@ -41,7 +41,7 @@ export function shouldAlignOnDiscontinuities(lastFrag, lastLevel, details) {
 }
 
 // Find the first frag in the previous level which matches the CC of the first frag of the new level
-export function findDiscontinuousReferenceFrag(prevDetails, curDetails) {
+function findDiscontinuousReferenceFrag(prevDetails, curDetails) {
     const prevFrags = prevDetails.fragments;
     const curFrags = curDetails.fragments;
 
@@ -60,7 +60,7 @@ export function findDiscontinuousReferenceFrag(prevDetails, curDetails) {
     return prevStartFrag;
 }
 
-export function adjustPtsByReferenceFrag(referenceFrag, details) {
+function adjustPtsByReferenceFrag(referenceFrag, details) {
     if (!referenceFrag) {
         return;
     }
