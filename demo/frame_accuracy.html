@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+<script src="../dist/hls.js"></script>
+<video id="video" controls width="640"></video>
+<br>
+<button type="button" onclick="document.getElementById('video').currentTime-=1/frameRate">frame-=1</button>
+<button type="button" onclick="document.getElementById('video').currentTime-=5/frameRate">frame-=5</button>
+<button type="button" onclick="document.getElementById('video').currentTime+=1/frameRate">frame+=1</button>
+<button type="button" onclick="document.getElementById('video').currentTime+=5/frameRate">frame+=5</button>
+<script>
+    /* get stream from query string */
+    function getParameterByName(name) {
+        name = name.replace(/[\[]/, "\\[").replace(/[\]]/, "\\]");
+        var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+                results = regex.exec(location.search);
+        return results === null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+    }
+
+    var stream = getParameterByName('stream') || 'http://serverus.clipro.tv/LiveStreams/SqlPlaylist.m3u8?stream=streamid=28302,startindex=0,source=0';
+</script>
+<script>
+var initPTS;
+var frameRate;
+if(Hls.isSupported()) {
+    var video = document.getElementById('video');
+    var hls = new Hls();
+    hls.loadSource(stream);
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED,function() {
+        var el = document.getElementById('update');
+        el.innerHTML = 'MANIFEST_PARSED';
+        video.play();
+    });
+    hls.on(Hls.Events.INIT_PTS_FOUND,function(event,data) {
+        initPTS = data.initPTS;
+    });
+    hls.on(Hls.Events.FRAG_PARSING_DATA,function(event,data) {
+        if (data.type === 'video') {
+            frameRate = Math.round(100 * data.nb / (data.endDTS - data.startDTS))/100;
+            console.log(frameRate);
+        }
+    });
+
+}
+</script>
+<script>
+var video = document.getElementById('video');
+    window.onload = function(){
+        var i=0;
+        var el = document.getElementById('update');
+        function foo(){
+            i++;
+            if (initPTS !== undefined) {
+                el.innerHTML = 'currentTime:' + video.currentTime + '<br>frameCount:' + Math.round(video.currentTime*frameRate) + '<br>currentPTS:' + Math.round(90000 * video.currentTime + initPTS);
+            }
+            window.requestAnimationFrame(foo);
+        }
+        foo();
+    };
+</script>
+<div id="update"></div>
+</body>
+</html>
