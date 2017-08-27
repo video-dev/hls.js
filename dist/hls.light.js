@@ -1961,7 +1961,7 @@ var mp4demuxer_MP4Demuxer = function () {
       var initData = this.initData = MP4Demuxer.parseInitSegment(initSegment);
       var tracks = {};
       if (initData.audio && initData.video) {
-        tracks.audiovideo = { container: 'video/mp4', codec: audioCodec + "," + videoCodec, initSegment: duration ? initSegment : null };
+        tracks.audiovideo = { container: 'video/mp4', codec: audioCodec + ',' + videoCodec, initSegment: duration ? initSegment : null };
       } else {
         if (initData.audio) {
           tracks.audio = { container: 'audio/mp4', codec: audioCodec, initSegment: duration ? initSegment : null };
@@ -5585,6 +5585,82 @@ var AttrList = function () {
 }();
 
 /* harmony default export */ var attr_list = (AttrList);
+// CONCATENATED MODULE: ./src/utils/codecs.js
+// from http://mp4ra.org/codecs.html
+var sampleEntryCodesISO = {
+    audio: {
+        'a3ds': true,
+        'ac-3': true,
+        'ac-4': true,
+        'alac': true,
+        'alaw': true,
+        'dra1': true,
+        'dts+': true,
+        'dts-': true,
+        'dtsc': true,
+        'dtse': true,
+        'dtsh': true,
+        'ec-3': true,
+        'enca': true,
+        'g719': true,
+        'g726': true,
+        'm4ae': true,
+        'mha1': true,
+        'mha2': true,
+        'mhm1': true,
+        'mhm2': true,
+        'mlpa': true,
+        'mp4a': true,
+        'raw ': true,
+        'Opus': true,
+        'samr': true,
+        'sawb': true,
+        'sawp': true,
+        'sevc': true,
+        'sqcp': true,
+        'ssmv': true,
+        'twos': true,
+        'ulaw': true
+    },
+    video: {
+        'avc1': true,
+        'avc2': true,
+        'avc3': true,
+        'avc4': true,
+        'avcp': true,
+        'drac': true,
+        'dvav': true,
+        'dvhe': true,
+        'encv': true,
+        'hev1': true,
+        'hvc1': true,
+        'mjp2': true,
+        'mp4v': true,
+        'mvc1': true,
+        'mvc2': true,
+        'mvc3': true,
+        'mvc4': true,
+        'resv': true,
+        'rv60': true,
+        's263': true,
+        'svc1': true,
+        'svc2': true,
+        'vc-1': true,
+        'vp08': true,
+        'vp09': true
+    }
+};
+
+function isCodecType(codec, type) {
+    var typeCodes = sampleEntryCodesISO[type];
+    return !!typeCodes && typeCodes[codec.slice(0, 4)] === true;
+}
+
+function isCodecSupportedInMp4(codec) {
+    return MediaSource.isTypeSupported('video/mp4;codecs="' + codec + '"');
+}
+
+
 // CONCATENATED MODULE: ./src/loader/playlist-loader.js
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
@@ -5597,6 +5673,7 @@ function playlist_loader__classCallCheck(instance, Constructor) { if (!(instance
 /**
  * Playlist Loader
 */
+
 
 
 
@@ -5838,6 +5915,28 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
     var levels = [],
         result = void 0;
     MASTER_PLAYLIST_REGEX.lastIndex = 0;
+
+    function setCodecs(codecs, level) {
+      ['video', 'audio'].forEach(function (type) {
+        var filtered = codecs.filter(function (codec) {
+          return isCodecType(codec, type);
+        });
+        if (filtered.length) {
+          var preferred = filtered.filter(function (codec) {
+            return codec.lastIndexOf('avc1', 0) === 0 || codec.lastIndexOf('mp4a', 0) === 0;
+          });
+          level[type + 'Codec'] = preferred.length > 0 ? preferred[0] : filtered[0];
+
+          // remove from list
+          codecs = codecs.filter(function (codec) {
+            return filtered.indexOf(codec) === -1;
+          });
+        }
+      });
+
+      level.unknownCodecs = codecs;
+    }
+
     while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
       var level = {};
 
@@ -5852,19 +5951,10 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
       level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
       level.name = attrs.NAME;
 
-      var codecs = attrs.CODECS;
-      if (codecs) {
-        codecs = codecs.split(/[ ,]+/);
-        for (var i = 0; i < codecs.length; i++) {
-          var codec = codecs[i];
-          if (codec.indexOf('avc1') !== -1) {
-            level.videoCodec = this.avc1toavcoti(codec);
-          } else if (codec.indexOf('hvc1') !== -1) {
-            level.videoCodec = codec;
-          } else {
-            level.audioCodec = codec;
-          }
-        }
+      setCodecs([].concat((attrs.CODECS || '').split(/[ ,]+/)), level);
+
+      if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1) {
+        level.videoCodec = this.avc1toavcoti(level.videoCodec);
       }
 
       levels.push(level);
@@ -5975,6 +6065,9 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         frag.rawProgramDateTime = (' ' + result[5]).slice(1);
         frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
+        if (level.programDateTime === undefined) {
+          level.programDateTime = new Date(new Date(Date.parse(result[5])) - 1000 * totalduration);
+        }
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
         for (i = 1; i < result.length; i++) {
@@ -6070,6 +6163,8 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
     level.totalduration = totalduration;
     level.averagetargetduration = totalduration / level.fragments.length;
     level.endSN = currentSN - 1;
+    level.startCC = level.fragments[0] ? level.fragments[0].cc : 0;
+    level.endCC = cc;
     return level;
   };
 
@@ -6897,6 +6992,91 @@ var TimeRanges = {
 };
 
 /* harmony default export */ var timeRanges = (TimeRanges);
+// CONCATENATED MODULE: ./src/utils/discontinuities.js
+
+
+
+function findFirstFragWithCC(fragments, cc) {
+  var firstFrag = null;
+
+  for (var i = 0; i < fragments.length; i += 1) {
+    var currentFrag = fragments[i];
+    if (currentFrag && currentFrag.cc === cc) {
+      firstFrag = currentFrag;
+      break;
+    }
+  }
+
+  return firstFrag;
+}
+
+function findFragWithCC(fragments, CC) {
+  return binary_search.search(fragments, function (candidate) {
+    if (candidate.cc < CC) {
+      return 1;
+    } else if (candidate.cc > CC) {
+      return -1;
+    } else {
+      return 0;
+    }
+  });
+}
+
+function shouldAlignOnDiscontinuities(lastFrag, lastLevel, details) {
+  var shouldAlign = false;
+  if (lastLevel && lastLevel.details && details) {
+    if (details.endCC > details.startCC || lastFrag && lastFrag.cc < details.startCC) {
+      shouldAlign = true;
+    }
+  }
+  return shouldAlign;
+}
+
+// Find the first frag in the previous level which matches the CC of the first frag of the new level
+function findDiscontinuousReferenceFrag(prevDetails, curDetails) {
+  var prevFrags = prevDetails.fragments;
+  var curFrags = curDetails.fragments;
+
+  if (!curFrags.length || !prevFrags.length) {
+    logger["b" /* logger */].log('No fragments to align');
+    return;
+  }
+
+  var prevStartFrag = findFirstFragWithCC(prevFrags, curFrags[0].cc);
+
+  if (!prevStartFrag || prevStartFrag && !prevStartFrag.startPTS) {
+    logger["b" /* logger */].log('No frag in previous level to align on');
+    return;
+  }
+
+  return prevStartFrag;
+}
+
+function adjustPtsByReferenceFrag(referenceFrag, details) {
+  if (!referenceFrag) {
+    return;
+  }
+
+  details.fragments.forEach(function (frag, index) {
+    if (frag) {
+      frag.duration = referenceFrag.duration;
+      frag.end = frag.endPTS = referenceFrag.endPTS + frag.duration * index;
+      frag.start = frag.startPTS = referenceFrag.startPTS + frag.start;
+    }
+  });
+  details.PTSKnown = true;
+}
+
+// If a change in CC is detected, the PTS can no longer be relied upon
+// Attempt to align the level by using the last level - find the last frag matching the current CC and use it's PTS
+// as a reference
+function alignDiscontinuities(lastFrag, lastLevel, details) {
+  if (shouldAlignOnDiscontinuities(lastFrag, lastLevel, details)) {
+    logger["b" /* logger */].log('Adjusting PTS using last level due to CC increase within current level');
+    var referenceFrag = findDiscontinuousReferenceFrag(lastLevel.details, details);
+    adjustPtsByReferenceFrag(referenceFrag, details);
+  }
+}
 // CONCATENATED MODULE: ./src/controller/stream-controller.js
 var stream_controller__createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
@@ -6909,6 +7089,7 @@ function stream_controller__inherits(subClass, superClass) { if (typeof superCla
 /*
  * Stream Controller
 */
+
 
 
 
@@ -7412,13 +7593,15 @@ var stream_controller_StreamController = function (_EventHandler) {
         frag.loadCounter = 1;
       }
       frag.loadIdx = this.fragLoadIdx;
-      this.fragCurrent = frag;
-      this.startFragRequested = true;
-      if (!isNaN(frag.sn)) {
-        this.nextLoadPosition = frag.start + frag.duration;
-      }
       frag.autoLevel = hls.autoLevelEnabled;
       frag.bitrateTest = this.bitrateTest;
+
+      this.fragCurrent = frag;
+      this.startFragRequested = true;
+      // Don't update nextLoadPosition for fragments which are not buffered
+      if (!isNaN(frag.sn) && !frag.bitrateTest) {
+        this.nextLoadPosition = frag.start + frag.duration;
+      }
       hls.trigger(events["a" /* default */].FRAG_LOADING, { frag: frag });
       // lazy demuxer init, as this could take some time ... do it during frag loading
       if (!this.demuxer) {
@@ -7763,14 +7946,14 @@ var stream_controller_StreamController = function (_EventHandler) {
   };
 
   StreamController.prototype.onLevelLoaded = function onLevelLoaded(data) {
-    var newDetails = data.details,
-        newLevelId = data.level,
-        curLevel = this.levels[newLevelId],
-        duration = newDetails.totalduration,
-        sliding = 0;
+    var newDetails = data.details;
+    var newLevelId = data.level;
+    var lastLevel = this.levels[this.levelLastLoaded];
+    var curLevel = this.levels[newLevelId];
+    var duration = newDetails.totalduration;
+    var sliding = 0;
 
     logger["b" /* logger */].log('level ' + newLevelId + ' loaded [' + newDetails.startSN + ',' + newDetails.endSN + '],duration:' + duration);
-    this.levelLastLoaded = newLevelId;
 
     if (newDetails.live) {
       var curDetails = curLevel.details;
@@ -7783,16 +7966,19 @@ var stream_controller_StreamController = function (_EventHandler) {
           logger["b" /* logger */].log('live playlist sliding:' + sliding.toFixed(3));
         } else {
           logger["b" /* logger */].log('live playlist - outdated PTS, unknown sliding');
+          alignDiscontinuities(this.fragPrevious, lastLevel, newDetails);
         }
       } else {
-        newDetails.PTSKnown = false;
         logger["b" /* logger */].log('live playlist - first load, unknown sliding');
+        newDetails.PTSKnown = false;
+        alignDiscontinuities(this.fragPrevious, lastLevel, newDetails);
       }
     } else {
       newDetails.PTSKnown = false;
     }
     // override level info
     curLevel.details = newDetails;
+    this.levelLastLoaded = newLevelId;
     this.hls.trigger(events["a" /* default */].LEVEL_UPDATED, { details: newDetails, level: newLevelId });
 
     if (this.startFragRequested === false) {
@@ -8501,6 +8687,7 @@ function level_controller__inherits(subClass, superClass) { if (typeof superClas
 
 
 
+
 var level_controller_LevelController = function (_EventHandler) {
   level_controller__inherits(LevelController, _EventHandler);
 
@@ -8557,10 +8744,7 @@ var level_controller_LevelController = function (_EventHandler) {
         videoCodecFound = false,
         audioCodecFound = false,
         hls = this.hls,
-        brokenmp4inmp3 = /chrome|firefox/.test(navigator.userAgent.toLowerCase()),
-        checkSupported = function checkSupported(type, codec) {
-      return MediaSource.isTypeSupported(type + '/mp4;codecs=' + codec);
-    };
+        brokenmp4inmp3 = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
 
     // regroup redundant level together
     data.levels.forEach(function (level) {
@@ -8599,7 +8783,7 @@ var level_controller_LevelController = function (_EventHandler) {
     levels = levels.filter(function (level) {
       var audioCodec = level.audioCodec,
           videoCodec = level.videoCodec;
-      return (!audioCodec || checkSupported('audio', audioCodec)) && (!videoCodec || checkSupported('video', videoCodec));
+      return (!audioCodec || isCodecSupportedInMp4(audioCodec)) && (!videoCodec || isCodecSupportedInMp4(videoCodec));
     });
 
     if (levels.length) {
@@ -10564,7 +10748,7 @@ var hls_Hls = function () {
   hls__createClass(Hls, null, [{
     key: 'version',
     get: function get() {
-      return "0.7.11";
+      return "0.8.0";
     }
   }, {
     key: 'Events',
