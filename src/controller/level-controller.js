@@ -326,10 +326,11 @@ class LevelController extends EventHandler {
                 } else if (levelError === true) {
                     // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
                     let mediaBuffered =
-                        media &&
+                        !!media &&
                         BufferHelper.isBuffered(media, media.currentTime) &&
                         BufferHelper.isBuffered(media, media.currentTime + 0.5);
-                    if (mediaBuffered) {
+                    // FIXME Rely on Level Retry parameters, now it's possible to retry as long as media is buffered
+                    if (mediaBuffered === true) {
                         logger.warn(
                             `level controller,${details}, but media buffered, retry in ${
                                 config.levelLoadingRetryDelay
