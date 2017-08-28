@@ -294,7 +294,11 @@ VTTParser.prototype = {
         }
 
         line = collectNextLine();
-
+        // strip of UTF-8 BOM if any
+        // https://en.wikipedia.org/wiki/Byte_order_mark#UTF-8
+        if (line.indexOf("ï»¿") === 0) {
+          line = line.substr(3);
+        }
         var m = line.match(/^WEBVTT([ \t].*)?$/);
         if (!m || !m[0]) {
           throw new Error('Malformed WebVTT signature.');
