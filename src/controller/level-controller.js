@@ -57,25 +57,28 @@ class LevelController extends EventHandler {
   }
 
   onManifestLoaded(data) {
-    var levels0 = [],
-        levels = [],
+    let levels0         = [],
+        levels          = [],
         bitrateStart,
-        bitrateSet = {},
+        bitrateSet      = {},
         videoCodecFound = false,
         audioCodecFound = false,
-        hls = this.hls,
-        brokenmp4inmp3 = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
+        brokenmp4inmp3  = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
 
-    // regroup redundant level together
+    // regroup redundant levels together
     data.levels.forEach(level => {
-      if(level.videoCodec) {
+      level.loadError = 0;
+      level.fragmentError = false;
+
+      if (level.videoCodec) {
         videoCodecFound = true;
       }
-      // erase audio codec info if browser does not support mp4a.40.34. demuxer will autodetect codec and fallback to mpeg/audio
-      if(brokenmp4inmp3 && level.audioCodec && level.audioCodec.indexOf('mp4a.40.34') !== -1) {
+      // erase audio codec info if browser does not support mp4a.40.34.
+      // demuxer will autodetect codec and fallback to mpeg/audio
+      if (brokenmp4inmp3 && level.audioCodec && level.audioCodec.indexOf('mp4a.40.34') !== -1) {
         level.audioCodec = undefined;
       }
-      if(level.audioCodec || (level.attrs && level.attrs.AUDIO)) {
+      if (level.audioCodec || (level.attrs && level.attrs.AUDIO)) {
         audioCodecFound = true;
       }
       let redundantLevelId = bitrateSet[level.bitrate];
@@ -90,23 +93,22 @@ class LevelController extends EventHandler {
     });
 
     // remove audio-only level if we also have levels with audio+video codecs signalled
-    if(videoCodecFound && audioCodecFound) {
+    if (videoCodecFound && audioCodecFound) {
       levels0.forEach(level => {
-        if(level.videoCodec) {
+        if (level.videoCodec) {
           levels.push(level);
         }
       });
     } else {
       levels = levels0;
     }
-    // only keep level with supported audio/video codecs
-    levels = levels.filter(function(level) {
-    let audioCodec = level.audioCodec, videoCodec = level.videoCodec;
-      return (!audioCodec || isCodecSupportedInMp4(audioCodec)) &&
-             (!videoCodec || isCodecSupportedInMp4(videoCodec));
+
+    // only keep levels with supported audio/video codecs
+    levels = levels.filter(({audioCodec, videoCodec}) => {
+      return (!audioCodec || isCodecSupportedInMp4(audioCodec)) && (!videoCodec || isCodecSupportedInMp4(videoCodec));
     });
 
-    if(levels.length) {
+    if (levels.length > 0) {
       // start bitrate is the first bitrate of the manifest
       bitrateStart = levels[0].bitrate;
       // sort level on bitrate
@@ -122,11 +124,23 @@ class LevelController extends EventHandler {
           break;
         }
       }
-      hls.trigger(Event.MANIFEST_PARSED, {levels: levels, firstLevel: this._firstLevel, stats: data.stats, audio : audioCodecFound, video : videoCodecFound, altAudio : data.audioTracks.length > 0});
+      this.hls.trigger(Event.MANIFEST_PARSED, {
+        levels    : levels,
+        firstLevel: this._firstLevel,
+        stats     : data.stats,
+        audio     : audioCodecFound,
+        video     : videoCodecFound,
+        altAudio  : data.audioTracks.length > 0
+      });
     } else {
-      hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR, fatal: true, url: hls.url, reason: 'no level with compatible codecs found in manifest'});
+      this.hls.trigger(Event.ERROR, {
+        type   : ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR,
+        fatal  : true,
+        url    : this.hls.url,
+        reason : 'no level with compatible codecs found in manifest'
+      });
     }
-    return;
   }
 
   get levels() {
