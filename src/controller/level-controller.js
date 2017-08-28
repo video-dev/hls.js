@@ -325,10 +325,7 @@ class LevelController extends EventHandler {
                         this._level = undefined;
                     }
                     // other errors are handled by stream controller
-                } else if (
-                    details === ErrorDetails.LEVEL_LOAD_ERROR ||
-                    details === ErrorDetails.LEVEL_LOAD_TIMEOUT
-                ) {
+                } else if (levelError === true) {
                     let media = hls.media,
                         // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
                         mediaBuffered =
