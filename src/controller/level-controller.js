@@ -372,8 +372,10 @@ class LevelController extends EventHandler {
         // only process level loaded events matching with expected level
         if (levelId === this._level) {
             let curLevel = this._levels[levelId];
-            // reset level load error counter on successful level loaded
-            curLevel.loadError = 0;
+            // reset level load error counter on successful level loaded only if there is no issues with fragments
+            if (curLevel.fragmentError === false) {
+                curLevel.loadError = 0;
+            }
             let newDetails = data.details;
             // if current playlist is a live playlist, arm a timer to reload it
             if (newDetails.live) {
