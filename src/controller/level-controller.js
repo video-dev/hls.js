@@ -321,29 +321,31 @@ class LevelController extends EventHandler {
 
   onLevelLoaded(data) {
     const levelId = data.level;
-     // only process level loaded events matching with expected level
+    // only process level loaded events matching with expected level
     if (levelId === this._level) {
       let curLevel = this._levels[levelId];
-      // reset level load error counter on successful level loaded
-      curLevel.loadError = 0;
+      // reset level load error counter on successful level loaded only if there is no issues with fragments
+      if(curLevel.fragmentError === false){
+        curLevel.loadError = 0;
+      }
       let newDetails = data.details;
       // if current playlist is a live playlist, arm a timer to reload it
       if (newDetails.live) {
-        let reloadInterval = 1000*( newDetails.averagetargetduration ? newDetails.averagetargetduration : newDetails.targetduration),
-            curDetails = curLevel.details;
+        let reloadInterval = 1000 * ( newDetails.averagetargetduration ? newDetails.averagetargetduration : newDetails.targetduration),
+            curDetails     = curLevel.details;
         if (curDetails && newDetails.endSN === curDetails.endSN) {
           // follow HLS Spec, If the client reloads a Playlist file and finds that it has not
           // changed then it MUST wait for a period of one-half the target
           // duration before retrying.
-          reloadInterval /=2;
+          reloadInterval /= 2;
           logger.log(`same live playlist, reload twice faster`);
         }
         // decrement reloadInterval with level loading delay
         reloadInterval -= performance.now() - data.stats.trequest;
         // in any case, don't reload more than every second
-        reloadInterval = Math.max(1000,Math.round(reloadInterval));
+        reloadInterval = Math.max(1000, Math.round(reloadInterval));
         logger.log(`live playlist, reload in ${reloadInterval} ms`);
-        this.timer = setTimeout(this.ontick,reloadInterval);
+        this.timer = setTimeout(this.ontick, reloadInterval);
       } else {
         this.cleanTimer();
       }
