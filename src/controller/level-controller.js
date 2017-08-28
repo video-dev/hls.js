@@ -18,7 +18,6 @@ class LevelController extends EventHandler {
             Event.FRAG_LOADED,
             Event.ERROR
         );
-        this.ontick = this.tick.bind(this);
         this._manualLevel = -1;
         this.timer = null;
     }
@@ -338,7 +337,7 @@ class LevelController extends EventHandler {
                             }ms`
                         );
                         this.timer = setTimeout(
-                            this.ontick,
+                            () => this.tick(),
                             config.levelLoadingRetryDelay
                         );
                         // boolean used to inform stream controller not to switch back to IDLE on non fatal error
@@ -397,7 +396,7 @@ class LevelController extends EventHandler {
                 // in any case, don't reload more than every second
                 reloadInterval = Math.max(1000, Math.round(reloadInterval));
                 logger.log(`live playlist, reload in ${reloadInterval} ms`);
-                this.timer = setTimeout(this.ontick, reloadInterval);
+                this.timer = setTimeout(() => this.tick(), reloadInterval);
             } else {
                 this.cleanTimer();
             }
