@@ -356,12 +356,12 @@ class LevelController extends EventHandler {
         }
     }
 
-    // reset level load error counter on successful frag loaded
-    onFragLoaded(data) {
-        const fragLoaded = data.frag;
-        if (fragLoaded && fragLoaded.type === 'main') {
-            const level = this._levels[fragLoaded.level];
-            if (level) {
+    // reset errors on the successful load of a fragment
+    onFragLoaded({ frag }) {
+        if (frag !== undefined && frag.type === 'main') {
+            const level = this._levels[frag.level];
+            if (level !== undefined) {
+                level.fragmentError = false;
                 level.loadError = 0;
             }
         }
