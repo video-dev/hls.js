@@ -20,6 +20,7 @@ class LevelController extends EventHandler {
         );
         this.ontick = this.tick.bind(this);
         this._manualLevel = -1;
+        this.timer = null;
     }
 
     destroy() {
@@ -28,7 +29,7 @@ class LevelController extends EventHandler {
     }
 
     cleanTimer() {
-        if (this.timer) {
+        if (this.timer !== null) {
             clearTimeout(this.timer);
             this.timer = null;
         }
@@ -396,7 +397,7 @@ class LevelController extends EventHandler {
                 logger.log(`live playlist, reload in ${reloadInterval} ms`);
                 this.timer = setTimeout(this.ontick, reloadInterval);
             } else {
-                this.timer = null;
+                this.cleanTimer();
             }
         }
     }
