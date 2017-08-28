@@ -18,6 +18,7 @@ class LevelController extends EventHandler {
       Event.ERROR);
     this.ontick = this.tick.bind(this);
     this._manualLevel = -1;
+    this._liveLoadError = 0;
   }
 
   destroy() {
@@ -269,19 +270,21 @@ class LevelController extends EventHandler {
         if (recoverable) {
           logger.warn(`level controller,${details}: switch-down for next fragment`);
           hls.nextAutoLevel = Math.max(0,levelId-1);
-        } else if(level && level.details && level.details.live) {
-          logger.warn(`level controller,${details} on live stream, discard`);
-          if (levelError) {
-            // reset this._level so that another call to set level() will retrigger a frag load
-            this._level = undefined;
-          }
           // other errors are handled by stream controller
-        } else if (details === ErrorDetails.LEVEL_LOAD_ERROR ||
-                   details === ErrorDetails.LEVEL_LOAD_TIMEOUT) {
+        } else if (levelError) {
           let media = hls.media,
-            // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
+            // 0.5 : tolerance needed as some browsers stall playback before reaching buffered end
               mediaBuffered = media && BufferHelper.isBuffered(media,media.currentTime) && BufferHelper.isBuffered(media,media.currentTime+0.5);
-          if (mediaBuffered) {
+          if (level && level.details && level.details.live && this._liveLoadError < hls.config.levelLoadingMaxRetry) {
+            let that = this,
+                retryDelay = Math.min(Math.pow(2, this._liveLoadError) * hls.config.levelLoadingRetryDelay, hls.config.levelLoadingMaxRetryTimeout);
+            logger.warn(`level controller,${details} on live stream, retry in ${retryDelay}ms`);
+            this.timer = setTimeout(function() {
+              that._liveLoadError++;
+              // reset that._level so that another call to set level() will retrigger a frag load
+              that._level = undefined;
+            },retryDelay);
+          } else if (mediaBuffered) {
             let retryDelay = hls.config.levelLoadingRetryDelay;
             logger.warn(`level controller,${details}, but media buffered, retry in ${retryDelay}ms`);
             this.timer = setTimeout(this.ontick,retryDelay);
@@ -306,6 +309,7 @@ class LevelController extends EventHandler {
     if (fragLoaded && fragLoaded.type === 'main') {
       const level = this._levels[fragLoaded.level];
       if (level) {
+        this._liveLoadError = 0;
         level.loadError = 0;
       }
     }
