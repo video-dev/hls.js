@@ -233,7 +233,7 @@ class LevelController extends EventHandler {
       return;
     }
 
-    let details = data.details, hls = this.hls, levelId, level, levelError = false;
+    let details = data.details, levelId, level, levelError = false;
     // try to recover not fatal errors
     switch (details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
@@ -277,7 +277,7 @@ class LevelController extends EventHandler {
         let recoverable = ((this._manualLevel === -1) && levelId);
         if (recoverable) {
           logger.warn(`level controller,${details}: switch-down for next fragment`);
-          hls.nextAutoLevel = Math.max(0, levelId - 1);
+          this.hls.nextAutoLevel = Math.max(0, levelId - 1);
         } else if (level && level.details && level.details.live) {
           logger.warn(`level controller,${details} on live stream, discard`);
           if (levelError) {
@@ -286,11 +286,11 @@ class LevelController extends EventHandler {
           }
           // other errors are handled by stream controller
         } else if (levelError === true) {
-          let media         = hls.media,
+          let media         = this.hls.media,
               // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
               mediaBuffered = media && BufferHelper.isBuffered(media, media.currentTime) && BufferHelper.isBuffered(media, media.currentTime + 0.5);
           if (mediaBuffered) {
-            let retryDelay = hls.config.levelLoadingRetryDelay;
+            let retryDelay = this.hls.config.levelLoadingRetryDelay;
             logger.warn(`level controller,${details}, but media buffered, retry in ${retryDelay}ms`);
             this.timer = setTimeout(this.ontick, retryDelay);
             // boolean used to inform stream controller not to switch back to IDLE on non fatal error
