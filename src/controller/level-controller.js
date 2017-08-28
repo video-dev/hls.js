@@ -254,7 +254,7 @@ class LevelController extends EventHandler {
     }
 
     onError(data) {
-        if (data.fatal) {
+        if (data.fatal === true) {
             if (data.type === ErrorTypes.NETWORK_ERROR) {
                 this.cleanTimer();
             }
@@ -262,9 +262,11 @@ class LevelController extends EventHandler {
         }
 
         let details = data.details,
-            levelId,
-            level,
-            levelError = false;
+            levelError = false,
+            fragmentError = false;
+        let levelIndex, level;
+        let { config, media } = this.hls;
+
         // try to recover not fatal errors
         switch (details) {
             case ErrorDetails.FRAG_LOAD_ERROR:
@@ -272,74 +274,71 @@ class LevelController extends EventHandler {
             case ErrorDetails.FRAG_LOOP_LOADING_ERROR:
             case ErrorDetails.KEY_LOAD_ERROR:
             case ErrorDetails.KEY_LOAD_TIMEOUT:
-                levelId = data.frag.level;
+                levelIndex = data.frag.level;
+                fragmentError = true;
                 break;
             case ErrorDetails.LEVEL_LOAD_ERROR:
             case ErrorDetails.LEVEL_LOAD_TIMEOUT:
-                levelId = data.context.level;
+                levelIndex = data.context.level;
                 levelError = true;
                 break;
             case ErrorDetails.REMUX_ALLOC_ERROR:
-                levelId = data.level;
-                break;
-            default:
+                levelIndex = data.level;
                 break;
         }
         /* try to switch to a redundant stream if any available.
      * if no redundant stream available, emergency switch down (if in auto mode and current level not 0)
      * otherwise, we cannot recover this network error ...
      */
-        if (levelId !== undefined) {
-            level = this._levels[levelId];
-            if (!level.loadError) {
-                level.loadError = 1;
-            } else {
-                level.loadError++;
-            }
+        if (levelIndex !== undefined) {
+            level = this._levels[levelIndex];
+            level.loadError++;
+            level.fragmentError = fragmentError;
+
             // if any redundant streams available and if we haven't try them all (level.loadError is reseted on successful frag/level load.
-            // if level.loadError reaches nbRedundantLevel it means that we tried them all, no hope  => let's switch down
-            const nbRedundantLevel = level.url.length;
-            if (nbRedundantLevel > 1 && level.loadError < nbRedundantLevel) {
-                level.urlId = (level.urlId + 1) % nbRedundantLevel;
+            // if level.loadError reaches redundantLevels it means that we tried them all, no hope  => let's switch down
+            const redundantLevels = level.url.length;
+
+            if (redundantLevels > 1 && level.loadError < redundantLevels) {
+                level.urlId = (level.urlId + 1) % redundantLevels;
                 level.details = undefined;
                 logger.warn(
-                    `level controller,${details} for level ${levelId}: switching to redundant stream id ${
+                    `level controller,${details} for level ${levelIndex}: switching to redundant stream id ${
                         level.urlId
                     }`
                 );
             } else {
                 // we could try to recover if in auto mode and current level not lowest level (0)
-                let recoverable = this._manualLevel === -1 && levelId;
-                if (recoverable) {
+                if (this._manualLevel === -1 && levelIndex !== 0) {
                     logger.warn(
                         `level controller,${details}: switch-down for next fragment`
                     );
-                    this.hls.nextAutoLevel = Math.max(0, levelId - 1);
+                    this.hls.nextAutoLevel = Math.max(0, levelIndex - 1);
                 } else if (level && level.details && level.details.live) {
                     logger.warn(
                         `level controller,${details} on live stream, discard`
                     );
-                    if (levelError) {
-                        // reset this._level so that another call to set level() will retrigger a frag load
+                    if (levelError === true) {
+                        // reset this._level so that another call to set level() will trigger again a frag load
                         this._level = undefined;
                     }
                     // other errors are handled by stream controller
                 } else if (levelError === true) {
-                    let media = this.hls.media,
-                        // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
-                        mediaBuffered =
-                            media &&
-                            BufferHelper.isBuffered(media, media.currentTime) &&
-                            BufferHelper.isBuffered(
-                                media,
-                                media.currentTime + 0.5
-                            );
+                    // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
+                    let mediaBuffered =
+                        media &&
+                        BufferHelper.isBuffered(media, media.currentTime) &&
+                        BufferHelper.isBuffered(media, media.currentTime + 0.5);
                     if (mediaBuffered) {
-                        let retryDelay = this.hls.config.levelLoadingRetryDelay;
                         logger.warn(
-                            `level controller,${details}, but media buffered, retry in ${retryDelay}ms`
+                            `level controller,${details}, but media buffered, retry in ${
+                                config.levelLoadingRetryDelay
+                            }ms`
                         );
-                        this.timer = setTimeout(this.ontick, retryDelay);
+                        this.timer = setTimeout(
+                            this.ontick,
+                            config.levelLoadingRetryDelay
+                        );
                         // boolean used to inform stream controller not to switch back to IDLE on non fatal error
                         data.levelRetry = true;
                     } else {
