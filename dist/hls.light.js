@@ -67,7 +67,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/ 	__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
 /******/
 /******/ 	// __webpack_public_path__
-/******/ 	__webpack_require__.p = "/hls.js/dist/";
+/******/ 	__webpack_require__.p = "../dist/";
 /******/
 /******/ 	// Load entry module and return exports
 /******/ 	return __webpack_require__(__webpack_require__.s = 8);
@@ -10748,7 +10748,7 @@ var hls_Hls = function () {
   hls__createClass(Hls, null, [{
     key: 'version',
     get: function get() {
-      return "0.8.0";
+      return "0.8.1";
     }
   }, {
     key: 'Events',
