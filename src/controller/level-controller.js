@@ -58,10 +58,10 @@ class LevelController extends EventHandler {
     }
 
     onManifestLoaded(data) {
-        let levels0 = [],
-            levels = [],
+        let levels = [],
             bitrateStart,
-            bitrateSet = {},
+            levelSet = {},
+            levelFromSet = null,
             videoCodecFound = false,
             audioCodecFound = false,
             brokenmp4inmp3 = /chrome|firefox/.test(
@@ -88,26 +88,22 @@ class LevelController extends EventHandler {
             if (level.audioCodec || (level.attrs && level.attrs.AUDIO)) {
                 audioCodecFound = true;
             }
-            let redundantLevelId = bitrateSet[level.bitrate];
-            if (redundantLevelId === undefined) {
-                bitrateSet[level.bitrate] = levels0.length;
+
+            levelFromSet = levelSet[level.bitrate];
+
+            if (levelFromSet === undefined) {
                 level.url = [level.url];
                 level.urlId = 0;
-                levels0.push(level);
+                levelSet[level.bitrate] = level;
+                levels.push(level);
             } else {
-                levels0[redundantLevelId].url.push(level.url);
+                levelFromSet.url.push(level.url);
             }
         });
 
         // remove audio-only level if we also have levels with audio+video codecs signalled
-        if (videoCodecFound && audioCodecFound) {
-            levels0.forEach(level => {
-                if (level.videoCodec) {
-                    levels.push(level);
-                }
-            });
-        } else {
-            levels = levels0;
+        if (videoCodecFound === true && audioCodecFound === true) {
+            levels = levels.filter(({ videoCodec }) => !!videoCodec);
         }
 
         // only keep levels with supported audio/video codecs
