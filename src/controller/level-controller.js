@@ -262,7 +262,6 @@ class LevelController extends EventHandler {
         }
 
         let details = data.details,
-            hls = this.hls,
             levelId,
             level,
             levelError = false;
@@ -315,7 +314,7 @@ class LevelController extends EventHandler {
                     logger.warn(
                         `level controller,${details}: switch-down for next fragment`
                     );
-                    hls.nextAutoLevel = Math.max(0, levelId - 1);
+                    this.hls.nextAutoLevel = Math.max(0, levelId - 1);
                 } else if (level && level.details && level.details.live) {
                     logger.warn(
                         `level controller,${details} on live stream, discard`
@@ -326,7 +325,7 @@ class LevelController extends EventHandler {
                     }
                     // other errors are handled by stream controller
                 } else if (levelError === true) {
-                    let media = hls.media,
+                    let media = this.hls.media,
                         // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
                         mediaBuffered =
                             media &&
@@ -336,7 +335,7 @@ class LevelController extends EventHandler {
                                 media.currentTime + 0.5
                             );
                     if (mediaBuffered) {
-                        let retryDelay = hls.config.levelLoadingRetryDelay;
+                        let retryDelay = this.hls.config.levelLoadingRetryDelay;
                         logger.warn(
                             `level controller,${details}, but media buffered, retry in ${retryDelay}ms`
                         );
