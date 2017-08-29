@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustPtsByReferenceFrag } from '../../../src/utils/discontinuities';
+import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustPts } from '../../../src/utils/discontinuities';
 
 const mockReferenceFrag = {
   start: 20,
@@ -26,6 +26,14 @@ const mockFrags = [
     startPTS: 4,
     endPTS: 8,
     duration: 4,
+    cc: 1
+  },
+  {
+    start: 8,
+    end: 16,
+    startPTS: 8,
+    endPTS: 16,
+    duration: 8,
     cc: 1
   }
 ];
@@ -53,24 +61,22 @@ describe('level-helper', function () {
         endPTS: 28,
         duration: 4,
         cc: 1
+      },
+      {
+        start: 28,
+        end: 36,
+        startPTS: 28,
+        endPTS: 36,
+        duration: 8,
+        cc: 1
       }
     ];
 
-    adjustPtsByReferenceFrag(mockReferenceFrag, details);
+    adjustPts(mockReferenceFrag.start, details);
     assert.deepEqual(expected, details.fragments);
     assert.equal(true, details.PTSKnown);
   });
 
-  it ('does not adjust level fragments if there is no reference frag', function () {
-    const details = {
-      fragments: mockFrags.slice(0),
-      PTSKnown: false
-    };
-
-    adjustPtsByReferenceFrag(undefined, details);
-    assert.deepEqual(mockFrags, details.fragments);
-    assert.equal(false, details.PTSKnown);
-  });
 
   it('finds the first fragment in an array which matches the CC of the first fragment in another array', function () {
     const prevDetails = {

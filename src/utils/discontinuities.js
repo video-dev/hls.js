@@ -57,16 +57,12 @@ export function findDiscontinuousReferenceFrag(prevDetails, curDetails) {
   return prevStartFrag;
 }
 
-export function adjustPtsByReferenceFrag(referenceFrag, details) {
-  if (!referenceFrag) {
-    return;
-  }
-
-  details.fragments.forEach((frag, index) => {
+export function adjustPts(sliding, details) {
+  details.fragments.forEach((frag) => {
     if (frag) {
-      frag.duration = referenceFrag.duration;
-      frag.end = frag.endPTS = referenceFrag.endPTS + (frag.duration * index);
-      frag.start = frag.startPTS = referenceFrag.startPTS + frag.start;
+      let start = frag.start + sliding, end = frag.end + sliding;
+      frag.start = frag.startPTS = start;
+      frag.end = frag.endPTS = end;
     }
   });
   details.PTSKnown = true;
@@ -79,6 +75,8 @@ export function alignDiscontinuities(lastFrag, lastLevel, details) {
   if (shouldAlignOnDiscontinuities(lastFrag, lastLevel, details)) {
     logger.log('Adjusting PTS using last level due to CC increase within current level');
     const referenceFrag = findDiscontinuousReferenceFrag(lastLevel.details, details);
-    adjustPtsByReferenceFrag(referenceFrag, details);
+    if (referenceFrag) {
+      adjustPts(referenceFrag.start, details);
+    }
   }
 }
