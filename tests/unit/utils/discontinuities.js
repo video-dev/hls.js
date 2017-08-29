@@ -1,6 +1,6 @@
 const assert = require('assert');
 
-import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustPts } from '../../../src/utils/discontinuities';
+import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustPts, alignDiscontinuities } from '../../../src/utils/discontinuities';
 
 const mockReferenceFrag = {
   start: 20,
@@ -40,7 +40,7 @@ const mockFrags = [
 
 
 describe('level-helper', function () {
-  it ('adjusts level fragments using a reference fragment', function () {
+  it ('adjusts level fragments with overlapping CC range using a reference fragment', function () {
     const details = {
       fragments: mockFrags.slice(0),
       PTSKnown: false
@@ -75,6 +75,112 @@ describe('level-helper', function () {
     adjustPts(mockReferenceFrag.start, details);
     assert.deepEqual(expected, details.fragments);
     assert.equal(true, details.PTSKnown);
+  });
+
+
+it ('adjusts level fragments without overlapping CC range but with programDateTime info', function () {
+
+    const lastFrag = { cc : 0 };
+    const lastLevel = {
+      details : {
+        PTSKnown : true,
+        programDateTime : new Date('2017-08-28 00:00:00'),
+        fragments : [
+          {
+            start: 20,
+            end: 24,
+            startPTS: 20,
+            endPTS: 24,
+            duration: 4,
+            cc: 0,
+          },
+          {
+            start: 24,
+            end: 28,
+            startPTS: 24,
+            endPTS: 28,
+            duration: 4,
+            cc: 1
+          },
+          {
+            start: 28,
+            end: 36,
+            startPTS: 28,
+            endPTS: 36,
+            duration: 8,
+            cc: 1
+          }
+        ]
+      }
+    };
+
+    var details = {
+      fragments: [
+          {
+            start: 0,
+            end: 4,
+            startPTS: 0,
+            endPTS: 4,
+            duration: 4,
+            cc: 2,
+          },
+          {
+            start: 4,
+            end: 8,
+            startPTS: 4,
+            endPTS: 8,
+            duration: 4,
+            cc: 2
+          },
+          {
+            start: 8,
+            end: 16,
+            startPTS: 8,
+            endPTS: 16,
+            duration: 8,
+            cc: 3
+          }
+        ],
+      PTSKnown: false,
+      programDateTime : new Date('2017-08-28 00:00:50'),
+      startCC : 2,
+      endCC : 3
+    };
+
+    var detailsExpected = {
+        fragments : [
+          {
+            start: 70,
+            end: 74,
+            startPTS: 70,
+            endPTS: 74,
+            duration: 4,
+            cc: 2
+          },
+          {
+            start: 74,
+            end: 78,
+            startPTS: 74,
+            endPTS: 78,
+            duration: 4,
+            cc: 2
+          },
+          {
+            start: 78,
+            end: 86,
+            startPTS: 78,
+            endPTS: 86,
+            duration: 8,
+            cc: 3
+          }
+        ],
+      PTSKnown: true,
+      programDateTime : new Date('2017-08-28 00:00:50'),
+      startCC : 2,
+      endCC : 3
+    };
+    alignDiscontinuities(lastFrag,lastLevel,details);
+    assert.deepEqual(detailsExpected,details);
   });
 
 
