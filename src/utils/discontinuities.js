@@ -86,23 +86,25 @@ export function alignDiscontinuities(lastFrag, lastLevel, details) {
                 'Adjusting PTS using last level due to CC increase within current level'
             );
             adjustPts(referenceFrag.start, details);
-        } else if (lastLevel && lastLevel.details) {
-            // try to align using programDateTime attribute (if available)
-            // if last level sliding is 1000 and its first frag PROGRAM-DATE-TIME is 2017-08-20 1:10:00 AM
-            // and if new details first frag PROGRAM DATE-TIME is 2017-08-20 1:10:08 AM
-            // then we can deduce that playlist B sliding is 1000+8 = 1008s
-            let lastPDT = lastLevel.details.programDateTime;
-            let newPDT = details.programDateTime;
-            // date diff is in ms. frag.start is in seconds
-            let sliding =
-                (newPDT - lastPDT) / 1000 +
-                lastLevel.details.fragments[0].start;
-            if (!isNaN(sliding)) {
-                logger.log(
-                    `no CC range in common between old and new playlist, adjusting using programDateTime delta, sliding:${sliding}`
-                );
-                adjustPts(sliding, details);
-            }
+        }
+    }
+    // try to align using programDateTime attribute (if available)
+    if (details.PTSKnown === false && lastLevel && lastLevel.details) {
+        // if last level sliding is 1000 and its first frag PROGRAM-DATE-TIME is 2017-08-20 1:10:00 AM
+        // and if new details first frag PROGRAM DATE-TIME is 2017-08-20 1:10:08 AM
+        // then we can deduce that playlist B sliding is 1000+8 = 1008s
+        let lastPDT = lastLevel.details.programDateTime;
+        let newPDT = details.programDateTime;
+        // date diff is in ms. frag.start is in seconds
+        let sliding =
+            (newPDT - lastPDT) / 1000 + lastLevel.details.fragments[0].start;
+        if (!isNaN(sliding)) {
+            logger.log(
+                `adjusting PTS using programDateTime delta, sliding:${sliding.toFixed(
+                    3
+                )}`
+            );
+            adjustPts(sliding, details);
         }
     }
 }
