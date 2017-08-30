@@ -1141,7 +1141,7 @@ class StreamController extends EventHandler {
                     sliding,
                     curDetails
                 );
-                if (newDetails.PTSKnown) {
+                if (newDetails.PTSKnown && !isNaN(sliding)) {
                     logger.log(`live playlist sliding:${sliding.toFixed(3)}`);
                 } else {
                     logger.log('live playlist - outdated PTS, unknown sliding');
