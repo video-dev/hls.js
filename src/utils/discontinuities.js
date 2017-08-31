@@ -63,10 +63,9 @@ export function findDiscontinuousReferenceFrag(prevDetails, curDetails) {
 export function adjustPts(sliding, details) {
     details.fragments.forEach(frag => {
         if (frag) {
-            let start = frag.start + sliding,
-                end = frag.end + sliding;
+            let start = frag.start + sliding;
             frag.start = frag.startPTS = start;
-            frag.end = frag.endPTS = end;
+            frag.endPTS = start + frag.duration;
         }
     });
     details.PTSKnown = true;

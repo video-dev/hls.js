@@ -4,7 +4,6 @@ import { shouldAlignOnDiscontinuities, findDiscontinuousReferenceFrag, adjustPts
 
 const mockReferenceFrag = {
   start: 20,
-  end: 24,
   startPTS: 20,
   endPTS: 24,
   duration: 4,
@@ -14,7 +13,6 @@ const mockReferenceFrag = {
 const mockFrags = [
   {
     start: 0,
-    end: 4,
     startPTS: 0,
     endPTS: 4,
     duration: 4,
@@ -22,7 +20,6 @@ const mockFrags = [
   },
   {
     start: 4,
-    end: 8,
     startPTS: 4,
     endPTS: 8,
     duration: 4,
@@ -30,7 +27,6 @@ const mockFrags = [
   },
   {
     start: 8,
-    end: 16,
     startPTS: 8,
     endPTS: 16,
     duration: 8,
@@ -48,7 +44,6 @@ describe('level-helper', function () {
     const expected = [
       {
         start: 20,
-        end: 24,
         startPTS: 20,
         endPTS: 24,
         duration: 4,
@@ -56,7 +51,6 @@ describe('level-helper', function () {
       },
       {
         start: 24,
-        end: 28,
         startPTS: 24,
         endPTS: 28,
         duration: 4,
@@ -64,7 +58,6 @@ describe('level-helper', function () {
       },
       {
         start: 28,
-        end: 36,
         startPTS: 28,
         endPTS: 36,
         duration: 8,
@@ -88,7 +81,6 @@ it ('adjusts level fragments without overlapping CC range but with programDateTi
         fragments : [
           {
             start: 20,
-            end: 24,
             startPTS: 20,
             endPTS: 24,
             duration: 4,
@@ -96,7 +88,6 @@ it ('adjusts level fragments without overlapping CC range but with programDateTi
           },
           {
             start: 24,
-            end: 28,
             startPTS: 24,
             endPTS: 28,
             duration: 4,
@@ -104,7 +95,6 @@ it ('adjusts level fragments without overlapping CC range but with programDateTi
           },
           {
             start: 28,
-            end: 36,
             startPTS: 28,
             endPTS: 36,
             duration: 8,
@@ -118,7 +108,6 @@ it ('adjusts level fragments without overlapping CC range but with programDateTi
       fragments: [
           {
             start: 0,
-            end: 4,
             startPTS: 0,
             endPTS: 4,
             duration: 4,
@@ -126,7 +115,6 @@ it ('adjusts level fragments without overlapping CC range but with programDateTi
           },
           {
             start: 4,
-            end: 8,
             startPTS: 4,
             endPTS: 8,
             duration: 4,
@@ -134,7 +122,6 @@ it ('adjusts level fragments without overlapping CC range but with programDateTi
           },
           {
             start: 8,
-            end: 16,
             startPTS: 8,
             endPTS: 16,
             duration: 8,
@@ -151,7 +138,6 @@ it ('adjusts level fragments without overlapping CC range but with programDateTi
         fragments : [
           {
             start: 70,
-            end: 74,
             startPTS: 70,
             endPTS: 74,
             duration: 4,
@@ -159,7 +145,6 @@ it ('adjusts level fragments without overlapping CC range but with programDateTi
           },
           {
             start: 74,
-            end: 78,
             startPTS: 74,
             endPTS: 78,
             duration: 4,
@@ -167,7 +152,6 @@ it ('adjusts level fragments without overlapping CC range but with programDateTi
           },
           {
             start: 78,
-            end: 86,
             startPTS: 78,
             endPTS: 86,
             duration: 8,
