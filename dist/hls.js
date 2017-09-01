@@ -10907,11 +10907,10 @@ var audio_stream_controller_AudioStreamController = function (_EventHandler) {
   };
 
   AudioStreamController.prototype.doTick = function doTick() {
-    var pos,
-        track,
-        trackDetails,
-        hls = this.hls,
-        config = hls.config;
+    var track = void 0;
+    var trackDetails = void 0;
+    var hls = this.hls;
+    var config = hls.config;
     //logger.log('audioStream:' + this.state);
     switch (this.state) {
       case audio_stream_controller_State.ERROR:
@@ -10937,16 +10936,13 @@ var audio_stream_controller_AudioStreamController = function (_EventHandler) {
         if (!this.media && (this.startFragRequested || !config.startFragPrefetch)) {
           break;
         }
-        // determine next candidate fragment to be loaded, based on current position and
-        //  end of buffer position
-        // if we have not yet loaded any fragment, start loading from start position
+        // Determine next candidate fragment to be loaded, based on current position and end of buffer position
+        // If we have not yet loaded any fragment, start loading from start position (0 by default)
+        var pos = 0;
         if (this.loadedmetadata) {
           pos = this.media.currentTime;
-        } else if (this.nextLoadPosition) {
+        } else if (this.nextLoadPosition >= 0) {
           pos = this.nextLoadPosition;
-          if (pos === undefined) {
-            break;
-          }
         }
 
         var media = this.mediaBuffer ? this.mediaBuffer : this.media,
