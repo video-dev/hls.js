@@ -572,6 +572,7 @@ Max number of load retries.
 (default: `64000` ms)
 
 Maximum frag/manifest/key retry timeout (in milliseconds) in case I/O errors are met.
+This value is used as capping value for exponential grow of `loading retry delays`, i.e.  the retry delay can not be bigger than this value, but overall time will be based on the overall number of retries.
 
 ### `fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay`
 
