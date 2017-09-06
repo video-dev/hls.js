@@ -494,7 +494,10 @@
         //NDR
          case 1:
            push = true;
-           if(debug && avcSample) {
+           if (!avcSample) {
+            avcSample = this.avcSample = createAVCSample(true,pes.pts,pes.dts,'');
+           }
+           if(debug) {
             avcSample.debug += 'NDR ';
            }
            avcSample.frame = true;
