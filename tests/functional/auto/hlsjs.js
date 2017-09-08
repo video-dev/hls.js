@@ -191,6 +191,23 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
     }
   }
 
+  const testSeekEndVOD = function(url) {
+    return function() {
+      return this.browser.executeAsyncScript(function(url) {
+        var callback = arguments[arguments.length - 1];
+        startStream(url, callback);
+        video.onloadeddata = function() {
+          window.setTimeout(function() { video.currentTime = video.duration;}, 5000);
+        };
+        video.onended = function() {
+          callback({ code : 'ended', logs : logString});
+        };
+      }, url).then(function(result) {
+        assert.strictEqual(result.code, 'ended');
+      });
+    }
+  }
+
   for (var name in streams) {
     var stream = streams[name];
     var url = stream.url;
@@ -203,7 +220,8 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
       if (stream.live) {
         it('should seek near the end and receive video seeked event for ' + stream.description, testSeekOnLive(url));
       } else {
-        it('should seek near the end and receive video ended event for ' + stream.description, testSeekOnVOD(url));
+        it('should seek 5s from end and receive video ended event for ' + stream.description, testSeekOnVOD(url));
+        it('should seek on end and receive video ended event for ' + stream.description, testSeekEndVOD(url));
       }
     }
   }
