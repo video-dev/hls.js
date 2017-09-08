@@ -26,10 +26,14 @@ class AACDemuxer {
     // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
     // Layer bits (position 14 and 15) in header should be always 0 for ADTS
     // More info https://wiki.multimedia.cx/index.php?title=ADTS
+    const id3Data = ID3.getID3Data(data, 0);
     let offset;
+    if (id3Data) {
+      offset = id3Data.length;
+    }
+
     let length;
-    let id3Data = ID3.getID3Data(data, 0);
-    for (offset = id3Data.length, length = Math.min(data.length - 1, offset + 100); offset < length; offset++) {
+    for (offset, length = data.length; offset < length; offset++) {
       if (ADTS.probe(data, offset)) {
         logger.log('ADTS sync word found !');
         return true;
