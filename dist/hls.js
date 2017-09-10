@@ -67,7 +67,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/ 	__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
 /******/
 /******/ 	// __webpack_public_path__
-/******/ 	__webpack_require__.p = "../dist/";
+/******/ 	__webpack_require__.p = "/dist/";
 /******/
 /******/ 	// Load entry module and return exports
 /******/ 	return __webpack_require__(__webpack_require__.s = 7);
@@ -3307,8 +3307,8 @@ var tsdemuxer_TSDemuxer = function () {
     pes.data = null;
 
     // if new NAL units found and last sample still there, let's push ...
-    // this helps parsing streams with missing AUD
-    if (avcSample && units.length) {
+    // this helps parsing streams with missing AUD (only do this if AUD never found)
+    if (avcSample && units.length && !track.audFound) {
       pushAccesUnit(avcSample, track);
       avcSample = this.avcSample = createAVCSample(false, pes.pts, pes.dts, '');
     }
@@ -3318,7 +3318,10 @@ var tsdemuxer_TSDemuxer = function () {
         //NDR
         case 1:
           push = true;
-          if (debug && avcSample) {
+          if (!avcSample) {
+            avcSample = _this.avcSample = createAVCSample(true, pes.pts, pes.dts, '');
+          }
+          if (debug) {
             avcSample.debug += 'NDR ';
           }
           avcSample.frame = true;
@@ -3464,6 +3467,7 @@ var tsdemuxer_TSDemuxer = function () {
         // AUD
         case 9:
           push = false;
+          track.audFound = true;
           if (avcSample) {
             pushAccesUnit(avcSample, track);
           }
@@ -7046,16 +7050,12 @@ function findDiscontinuousReferenceFrag(prevDetails, curDetails) {
   return prevStartFrag;
 }
 
-function adjustPtsByReferenceFrag(referenceFrag, details) {
-  if (!referenceFrag) {
-    return;
-  }
-
-  details.fragments.forEach(function (frag, index) {
+function adjustPts(sliding, details) {
+  details.fragments.forEach(function (frag) {
     if (frag) {
-      frag.duration = referenceFrag.duration;
-      frag.end = frag.endPTS = referenceFrag.endPTS + frag.duration * index;
-      frag.start = frag.startPTS = referenceFrag.startPTS + frag.start;
+      var start = frag.start + sliding;
+      frag.start = frag.startPTS = start;
+      frag.endPTS = start + frag.duration;
     }
   });
   details.PTSKnown = true;
@@ -7066,9 +7066,25 @@ function adjustPtsByReferenceFrag(referenceFrag, details) {
 // as a reference
 function alignDiscontinuities(lastFrag, lastLevel, details) {
   if (shouldAlignOnDiscontinuities(lastFrag, lastLevel, details)) {
-    logger["b" /* logger */].log('Adjusting PTS using last level due to CC increase within current level');
     var referenceFrag = findDiscontinuousReferenceFrag(lastLevel.details, details);
-    adjustPtsByReferenceFrag(referenceFrag, details);
+    if (referenceFrag) {
+      logger["b" /* logger */].log('Adjusting PTS using last level due to CC increase within current level');
+      adjustPts(referenceFrag.start, details);
+    }
+  }
+  // try to align using programDateTime attribute (if available)
+  if (details.PTSKnown === false && lastLevel && lastLevel.details) {
+    // if last level sliding is 1000 and its first frag PROGRAM-DATE-TIME is 2017-08-20 1:10:00 AM
+    // and if new details first frag PROGRAM DATE-TIME is 2017-08-20 1:10:08 AM
+    // then we can deduce that playlist B sliding is 1000+8 = 1008s
+    var lastPDT = lastLevel.details.programDateTime;
+    var newPDT = details.programDateTime;
+    // date diff is in ms. frag.start is in seconds
+    var sliding = (newPDT - lastPDT) / 1000 + lastLevel.details.fragments[0].start;
+    if (!isNaN(sliding)) {
+      logger["b" /* logger */].log('adjusting PTS using programDateTime delta, sliding:' + sliding.toFixed(3));
+      adjustPts(sliding, details);
+    }
   }
 }
 // CONCATENATED MODULE: ./src/controller/stream-controller.js
@@ -7312,11 +7328,11 @@ var stream_controller_StreamController = function (_EventHandler) {
       return;
     }
 
-    // we just got done loading the final fragment, and currentPos is buffered, and there is no other buffered range after ...
-    // rationale is that in case there are any buffered rangesafter, it means that there are unbuffered portion in between
-    // so we should not switch to ENDED in that case, to be able to buffer themx
+    // we just got done loading the final fragment and there is no other buffered range after ...
+    // rationale is that in case there are any buffered ranges after, it means that there are unbuffered portion in between
+    // so we should not switch to ENDED in that case, to be able to buffer them
     var fragPrevious = this.fragPrevious;
-    if (!levelDetails.live && fragPrevious && fragPrevious.sn === levelDetails.endSN && bufferLen && !bufferInfo.nextStart) {
+    if (!levelDetails.live && fragPrevious && fragPrevious.sn === levelDetails.endSN && !bufferInfo.nextStart) {
       // fragPrevious is last fragment. retrieve level duration using last frag start offset + duration
       // real duration might be lower than initial duration if there are drifts between real frag duration and playlist signaling
       var duration = Math.min(media.duration, fragPrevious.start + fragPrevious.duration);
@@ -7956,7 +7972,7 @@ var stream_controller_StreamController = function (_EventHandler) {
         mergeDetails(curDetails, newDetails);
         sliding = newDetails.fragments[0].start;
         this.liveSyncPosition = this.computeLivePosition(sliding, curDetails);
-        if (newDetails.PTSKnown) {
+        if (newDetails.PTSKnown && !isNaN(sliding)) {
           logger["b" /* logger */].log('live playlist sliding:' + sliding.toFixed(3));
         } else {
           logger["b" /* logger */].log('live playlist - outdated PTS, unknown sliding');
@@ -8340,30 +8356,21 @@ var stream_controller_StreamController = function (_EventHandler) {
     if (frag && frag.type !== 'main') {
       return;
     }
-    var media = this.media,
-
     // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
-    mediaBuffered = media && buffer_helper.isBuffered(media, media.currentTime) && buffer_helper.isBuffered(media, media.currentTime + 0.5);
+    var mediaBuffered = !!this.media && buffer_helper.isBuffered(this.media, this.media.currentTime) && buffer_helper.isBuffered(this.media, this.media.currentTime + 0.5);
+
     switch (data.details) {
       case errors["a" /* ErrorDetails */].FRAG_LOAD_ERROR:
       case errors["a" /* ErrorDetails */].FRAG_LOAD_TIMEOUT:
       case errors["a" /* ErrorDetails */].KEY_LOAD_ERROR:
       case errors["a" /* ErrorDetails */].KEY_LOAD_TIMEOUT:
         if (!data.fatal) {
-          var loadError = this.fragLoadError;
-          if (loadError) {
-            loadError++;
-          } else {
-            loadError = 1;
-          }
-          var config = this.config;
-          // keep retrying / don't raise fatal network error if current position is buffered or if in automode with current level not 0
-          if (loadError <= config.fragLoadingMaxRetry || mediaBuffered || frag.autoLevel && frag.level) {
-            this.fragLoadError = loadError;
+          // keep retrying until the limit will be reached
+          if (this.fragLoadError + 1 <= this.config.fragLoadingMaxRetry) {
+            // exponential backoff capped to config.fragLoadingMaxRetryTimeout
+            var delay = Math.min(Math.pow(2, this.fragLoadError) * this.config.fragLoadingRetryDelay, this.config.fragLoadingMaxRetryTimeout);
             // reset load counter to avoid frag loop loading error
             frag.loadCounter = 0;
-            // exponential backoff capped to config.fragLoadingMaxRetryTimeout
-            var delay = Math.min(Math.pow(2, loadError - 1) * config.fragLoadingRetryDelay, config.fragLoadingMaxRetryTimeout);
             logger["b" /* logger */].warn('mediaController: frag loading failed, retry in ' + delay + ' ms');
             this.retryDate = performance.now() + delay;
             // retry loading state
@@ -8373,6 +8380,7 @@ var stream_controller_StreamController = function (_EventHandler) {
               this.startFragRequested = false;
               this.nextLoadPosition = this.startPosition;
             }
+            this.fragLoadError++;
             this.state = State.FRAG_LOADING_WAITING_RETRY;
           } else {
             logger["b" /* logger */].error('mediaController: ' + data.details + ' reaches max retry, redispatch as fatal ...');
@@ -9099,9 +9107,6 @@ var id3_track_controller_ID3TrackController = function (_EventHandler) {
     if (!this.media) {
       return;
     }
-
-    this.id3Track = this.media.addTextTrack('metadata', 'id3');
-    this.id3Track.mode = 'hidden';
   };
 
   ID3TrackController.prototype.onMediaDetaching = function onMediaDetaching() {
@@ -9111,6 +9116,12 @@ var id3_track_controller_ID3TrackController = function (_EventHandler) {
   ID3TrackController.prototype.onFragParsingMetadata = function onFragParsingMetadata(data) {
     var fragment = data.frag;
     var samples = data.samples;
+
+    // create track dynamically
+    if (!this.id3Track) {
+      this.id3Track = this.media.addTextTrack('metadata', 'id3');
+      this.id3Track.mode = 'hidden';
+    }
 
     // Attempt to recreate Safari functionality by creating
     // WebKitDataCue objects when available and store the decoded
@@ -12275,8 +12286,9 @@ VTTParser.prototype = {
         }
 
         line = collectNextLine();
-
-        var m = line.match(/^WEBVTT([ \t].*)?$/);
+        // strip of UTF-8 BOM if any
+        // https://en.wikipedia.org/wiki/Byte_order_mark#UTF-8
+        var m = line.match(/^(ï»¿)?WEBVTT([ \t].*)?$/);
         if (!m || !m[0]) {
           throw new Error('Malformed WebVTT signature.');
         }
@@ -14718,7 +14730,7 @@ var hls_Hls = function () {
   hls__createClass(Hls, null, [{
     key: 'version',
     get: function get() {
-      return "0.8.1";
+      return "0.8.2";
     }
   }, {
     key: 'Events',
