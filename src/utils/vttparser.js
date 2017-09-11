@@ -129,7 +129,7 @@ function parseOptions(input, callback, keyValueDelim, groupDelim) {
 
 var defaults = new VTTCue(0, 0, 0);
 // 'middle' was changed to 'center' in the spec: https://github.com/w3c/webvtt/pull/244
-// Chrome and Safari don't yet support this change, but FF does
+//  Safari doesn't yet support this change, but FF and Chrome do.
 var center = defaults.align === 'middle' ? 'middle' : 'center';
 
 function parseCue(input, cue, regionList) {
