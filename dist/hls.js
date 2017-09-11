@@ -1191,7 +1191,6 @@ function isUndefined(arg) {
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 
 // EXTERNAL MODULE: ./src/events.js
 var events = __webpack_require__(1);
@@ -1878,18 +1877,17 @@ var aacdemuxer_AACDemuxer = function () {
 
 
   AACDemuxer.probe = function probe(data) {
+    if (!data) {
+      return false;
+    }
     // Check for the ADTS sync word
     // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
     // Layer bits (position 14 and 15) in header should be always 0 for ADTS
     // More info https://wiki.multimedia.cx/index.php?title=ADTS
-    var id3Data = id3["a" /* default */].getID3Data(data, 0);
-    var offset = void 0;
-    if (id3Data) {
-      offset = id3Data.length;
-    }
+    var id3Data = id3["a" /* default */].getID3Data(data, 0) || [];
+    var offset = id3Data.length;
 
-    var length = void 0;
-    for (offset, length = data.length; offset < length; offset++) {
+    for (var length = data.length; offset < length; offset++) {
       if (adts_probe(data, offset)) {
         logger["b" /* logger */].log('ADTS sync word found !');
         return true;
@@ -1903,7 +1901,7 @@ var aacdemuxer_AACDemuxer = function () {
 
   AACDemuxer.prototype.append = function append(data, timeOffset, contiguous, accurateTimeOffset) {
     var track = this._audioTrack;
-    var id3Data = id3["a" /* default */].getID3Data(data, 0);
+    var id3Data = id3["a" /* default */].getID3Data(data, 0) || [];
     var timestamp = id3["a" /* default */].getTimeStamp(id3Data);
     var pts = timestamp ? 90 * timestamp : timeOffset * 90000;
     var frameIndex = 0;
@@ -5428,7 +5426,6 @@ var demuxer_inline_DemuxerInline = function () {
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 var cues_namespaceObject = {};
 __webpack_require__.d(cues_namespaceObject, "createCues", function() { return createCues; });
 
