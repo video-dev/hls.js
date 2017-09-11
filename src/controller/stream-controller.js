@@ -884,8 +884,10 @@ class StreamController extends EventHandler {
         // ensure that media is defined and that metadata are available (to retrieve currentTime)
         if (media && media.readyState) {
             let fetchdelay, fragPlayingCurrent, nextBufferedFrag;
-            // increase fragment load Index to avoid frag loop loading error after buffer flush
-            this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+            if (this.fragLoadIdx !== undefined) {
+                // increase fragment load Index to avoid frag loop loading error after buffer flush
+                this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+            }
             fragPlayingCurrent = this.getBufferedFrag(media.currentTime);
             if (fragPlayingCurrent && fragPlayingCurrent.startPTS > 1) {
                 // flush buffer preceding current fragment (flush until current fragment start offset)
@@ -1793,8 +1795,10 @@ class StreamController extends EventHandler {
             logger.warn(
                 `main:reduce max buffer length to ${config.maxMaxBufferLength}s`
             );
-            // increase fragment load Index to avoid frag loop loading error after buffer flush
-            this.fragLoadIdx += 2 * config.fragLoadingLoopThreshold;
+            if (this.fragLoadIdx !== undefined) {
+                // increase fragment load Index to avoid frag loop loading error after buffer flush
+                this.fragLoadIdx += 2 * config.fragLoadingLoopThreshold;
+            }
         }
     }
 
@@ -2015,8 +2019,10 @@ class StreamController extends EventHandler {
             );
         });
 
-        // increase fragment load Index to avoid frag loop loading error after buffer flush
-        this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+        if (this.fragLoadIdx !== undefined) {
+            // increase fragment load Index to avoid frag loop loading error after buffer flush
+            this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+        }
         // move to IDLE once flush complete. this should trigger new fragment loading
         this.state = State.IDLE;
         // reset reference to frag
