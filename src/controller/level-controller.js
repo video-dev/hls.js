@@ -73,9 +73,12 @@ class LevelController extends EventHandler {
             level.loadError = 0;
             level.fragmentError = false;
 
-            if (level.videoCodec) {
-                videoCodecFound = true;
-            }
+            videoCodecFound = videoCodecFound || !!level.videoCodec;
+            audioCodecFound =
+                audioCodecFound ||
+                !!level.audioCodec ||
+                !!(level.attrs && level.attrs.AUDIO);
+
             // erase audio codec info if browser does not support mp4a.40.34.
             // demuxer will autodetect codec and fallback to mpeg/audio
             if (
@@ -84,8 +87,6 @@ class LevelController extends EventHandler {
                 level.audioCodec.indexOf('mp4a.40.34') !== -1
             ) {
                 level.audioCodec = undefined;
-            } else if (level.audioCodec || (level.attrs && level.attrs.AUDIO)) {
-                audioCodecFound = true;
             }
 
             levelFromSet = levelSet[level.bitrate];
