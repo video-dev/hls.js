@@ -1893,8 +1893,8 @@ var aacdemuxer_AACDemuxer = function () {
     // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
     // Layer bits (position 14 and 15) in header should be always 0 for ADTS
     // More info https://wiki.multimedia.cx/index.php?title=ADTS
-    var id3Data = id3["a" /* default */].getID3Data(data, 0);
-    var offset = id3Data ? id3Data.length : 0;
+    var id3Data = id3["a" /* default */].getID3Data(data, 0) || [];
+    var offset = id3Data.length;
 
     for (var length = data.length; offset < length; offset++) {
       if (adts_probe(data, offset)) {
@@ -5390,7 +5390,7 @@ var demuxer_inline_DemuxerInline = function () {
       var typeSupported = this.typeSupported;
       var config = this.config;
       // probing order is AAC/MP3/TS/MP4
-      var muxConfig = [{ demux: aacdemuxer, remux: mp4_remuxer }, { demux: mp3demuxer, remux: mp4_remuxer }, { demux: tsdemuxer, remux: mp4_remuxer }, { demux: mp4demuxer, remux: passthrough_remuxer }];
+      var muxConfig = [{ demux: tsdemuxer, remux: mp4_remuxer }, { demux: aacdemuxer, remux: mp4_remuxer }, { demux: mp3demuxer, remux: mp4_remuxer }, { demux: mp4demuxer, remux: passthrough_remuxer }];
 
       // probe for content type
       for (var i = 0, len = muxConfig.length; i < len; i++) {
