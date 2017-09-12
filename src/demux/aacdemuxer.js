@@ -22,18 +22,17 @@ class AACDemuxer {
 
   // Source for probe info - https://wiki.multimedia.cx/index.php?title=ADTS
   static probe(data) {
+    if (!data) {
+      return false;
+    }
     // Check for the ADTS sync word
     // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
     // Layer bits (position 14 and 15) in header should be always 0 for ADTS
     // More info https://wiki.multimedia.cx/index.php?title=ADTS
-    const id3Data = ID3.getID3Data(data, 0);
-    let offset;
-    if (id3Data) {
-      offset = id3Data.length;
-    }
+    const id3Data = ID3.getID3Data(data, 0) || [];
+    let offset = id3Data.length;
 
-    let length;
-    for (offset, length = data.length; offset < length; offset++) {
+    for (let length = data.length; offset < length; offset++) {
       if (ADTS.probe(data, offset)) {
         logger.log('ADTS sync word found !');
         return true;
@@ -45,7 +44,7 @@ class AACDemuxer {
   // feed incoming data to the front of the parsing pipeline
   append(data, timeOffset, contiguous, accurateTimeOffset) {
     let track = this._audioTrack;
-    let id3Data = ID3.getID3Data(data, 0);
+    let id3Data = ID3.getID3Data(data, 0) || [];
     let timestamp = ID3.getTimeStamp(id3Data);
     let pts = timestamp ? 90 * timestamp : timeOffset * 90000;
     let frameIndex = 0;
