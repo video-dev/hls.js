@@ -712,6 +712,9 @@ var lastSeekingIdx, lastStartPosition,lastDuration, lastAudioTrackSwitchingIdx;
               errorTxt = "The video could not be loaded, either because the server or network failed or because the format is not supported";
               break;
           }
+          if (mediaError.message) {
+            errorTxt += ' - ' + mediaError.message;
+          }
           $("#HlsStatus").text(errorTxt);
           console.error(errorTxt);
         }
