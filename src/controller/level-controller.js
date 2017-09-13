@@ -264,43 +264,45 @@ class LevelController extends EventHandler {
       level.loadError++;
       level.fragmentError = fragmentError;
 
-      // if any redundant streams available and if we haven't try them all (level.loadError is reseted on successful frag/level load.
-      // if level.loadError reaches redundantLevels it means that we tried them all, no hope  => let's switch down
-      const redundantLevels = level.url.length;
+      // Allow fragment retry as long as configuration allows.
+      // Since fragment retry logic could depend on the levels, we should not enforce retry limits when there is an issue with fragments
+      // FIXME Find a better abstraction where fragment/level retry management is well decoupled
+      if (fragmentError === true){
+        // if any redundant streams available and if we haven't try them all (level.loadError is reseted on successful frag/level load.
+        // if level.loadError reaches redundantLevels it means that we tried them all, no hope  => let's switch down
+        const redundantLevels = level.url.length;
 
-      if (redundantLevels > 1 && level.loadError < redundantLevels) {
-        level.urlId = (level.urlId + 1) % redundantLevels;
-        level.details = undefined;
-        logger.warn(`level controller,${details} for level ${levelIndex}: switching to redundant stream id ${level.urlId}`);
-      } else {
-        // we could try to recover if in auto mode and current level not lowest level (0)
-        if ((this._manualLevel === -1) && levelIndex !== 0) {
-          logger.warn(`level controller,${details}: switch-down for next fragment`);
-          this.hls.nextAutoLevel = Math.max(0, levelIndex - 1);
-        } else if (level && level.details && level.details.live) {
-          logger.warn(`level controller,${details} on live stream, discard`);
-          if (levelError === true) {
+        if (redundantLevels > 1 && level.loadError < redundantLevels) {
+          level.urlId = (level.urlId + 1) % redundantLevels;
+          level.details = undefined;
+          logger.warn(`level controller,${details} for level ${levelIndex}: switching to redundant stream id ${level.urlId}`);
+        } else {
+          // we could try to recover if in auto mode and current level not lowest level (0)
+          if ((this._manualLevel === -1) && levelIndex !== 0) {
+            logger.warn(`level controller,${details}: switch-down for next fragment`);
+            this.hls.nextAutoLevel = levelIndex - 1;
+          } else  {
+            logger.warn(`level controller, ${details}: reload a fragment`);
             // reset this._level so that another call to set level() will trigger again a frag load
             this._level = undefined;
           }
-          // other errors are handled by stream controller
-        } else if (levelError === true) {
-          // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
-          let mediaBuffered = !!media && BufferHelper.isBuffered(media, media.currentTime) && BufferHelper.isBuffered(media, media.currentTime + 0.5);
-          // FIXME Rely on Level Retry parameters, now it's possible to retry as long as media is buffered
-          if (mediaBuffered === true) {
-            logger.warn(`level controller,${details}, but media buffered, retry in ${config.levelLoadingRetryDelay}ms`);
-            this.timer = setTimeout(() => this.tick(), config.levelLoadingRetryDelay);
-            // boolean used to inform stream controller not to switch back to IDLE on non fatal error
-            data.levelRetry = true;
-          } else {
-            logger.error(`cannot recover ${details} error`);
-            this._level = undefined;
-            // stopping live reloading timer if any
-            this.cleanTimer();
-            // switch error to fatal
-            data.fatal = true;
-          }
+        }
+      } else if (levelError === true){
+        // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
+        let mediaBuffered = !!media && BufferHelper.isBuffered(media, media.currentTime) && BufferHelper.isBuffered(media, media.currentTime + 0.5);
+        // FIXME Rely on Level Retry parameters, now it's possible to retry as long as media is buffered
+        if (mediaBuffered === true) {
+          logger.warn(`level controller,${details}, but media buffered, retry in ${config.levelLoadingRetryDelay}ms`);
+          this.timer = setTimeout(() => this.tick(), config.levelLoadingRetryDelay);
+          // boolean used to inform stream controller not to switch back to IDLE on non fatal error
+          data.levelRetry = true;
+        } else {
+          logger.error(`cannot recover ${details} error`);
+          this._level = undefined;
+          // stopping live reloading timer if any
+          this.cleanTimer();
+          // switch error to fatal
+          data.fatal = true;
         }
       }
     }
