@@ -293,7 +293,7 @@ class LevelController extends EventHandler {
         // FIXME Rely on Level Retry parameters, now it's possible to retry as long as media is buffered
         if ((this.levelRetryCount + 1) <= config.levelLoadingMaxRetry) {
           // exponential backoff capped to max retry timeout
-          const delay = Math.min(Math.pow(2, this.levelRetryCount) * this.config.levelLoadingRetryDelay, this.config.levelLoadingMaxRetryTimeout);
+          const delay = Math.min(Math.pow(2, this.levelRetryCount) * config.levelLoadingRetryDelay, config.levelLoadingMaxRetryTimeout);
           // reset load counter to avoid frag loop loading error
           this.timer = setTimeout(() => this.tick(), delay);
           // boolean used to inform stream controller not to switch back to IDLE on non fatal error
