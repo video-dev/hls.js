@@ -293,6 +293,7 @@ $(document).ready(function() {
        hls.on(Hls.Events.MEDIA_DETACHED,function() {
         $("#HlsStatus").text('MediaSource detached...');
           bufferingIdx = -1;
+          tracks = [];
           events.video.push({time : performance.now() - events.t0, type : "Media detached"});
        });
        hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT,function(event,data) {
