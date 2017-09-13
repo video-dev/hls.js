@@ -207,15 +207,28 @@ class AudioStreamController extends EventHandler {
                     }
                 }
                 let media = this.mediaBuffer ? this.mediaBuffer : this.media,
+                    videoBuffer = this.videoBuffer
+                        ? this.videoBuffer
+                        : this.media,
                     bufferInfo = BufferHelper.bufferInfo(
                         media,
+                        pos,
+                        config.maxBufferHole
+                    ),
+                    mainBufferInfo = BufferHelper.bufferInfo(
+                        videoBuffer,
                         pos,
                         config.maxBufferHole
                     ),
                     bufferLen = bufferInfo.len,
                     bufferEnd = bufferInfo.end,
                     fragPrevious = this.fragPrevious,
-                    maxBufLen = config.maxMaxBufferLength,
+                    // ensure we buffer at least config.maxBufferLength (default 30s)
+                    // once we reach that threshold, don't buffer more than video (mainBufferInfo.len)
+                    maxBufLen = Math.max(
+                        config.maxBufferLength,
+                        mainBufferInfo.len
+                    ),
                     audioSwitch = this.audioSwitch,
                     trackId = this.trackId;
 
@@ -574,7 +587,7 @@ class AudioStreamController extends EventHandler {
             media.removeEventListener('ended', this.onvended);
             this.onvseeking = this.onvseeked = this.onvended = null;
         }
-        this.media = this.mediaBuffer = null;
+        this.media = this.mediaBuffer = this.videoBuffer = null;
         this.loadedmetadata = false;
         this.stopLoad();
     }
@@ -960,6 +973,9 @@ class AudioStreamController extends EventHandler {
         if (audioTrack) {
             this.mediaBuffer = audioTrack.buffer;
             this.loadedmetadata = true;
+        }
+        if (data.tracks.video) {
+            this.videoBuffer = data.tracks.video.buffer;
         }
     }
 
