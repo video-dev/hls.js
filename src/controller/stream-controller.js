@@ -244,11 +244,12 @@ class StreamController extends EventHandler {
       return;
     }
 
-    // we just got done loading the final fragment, and currentPos is buffered, and there is no other buffered range after ...
-    // rationale is that in case there are any buffered rangesafter, it means that there are unbuffered portion in between
-    // so we should not switch to ENDED in that case, to be able to buffer themx
+    // we just got done loading the final fragment and there is no other buffered range after ...
+    // rationale is that in case there are any buffered ranges after, it means that there are unbuffered portion in between
+    // so we should not switch to ENDED in that case, to be able to buffer them
+    // dont switch to ENDED if we need to backtrack last fragment
     let fragPrevious = this.fragPrevious;
-    if (!levelDetails.live && fragPrevious && fragPrevious.sn === levelDetails.endSN && bufferLen && !bufferInfo.nextStart) {
+    if (!levelDetails.live && fragPrevious && !fragPrevious.backtracked && fragPrevious.sn === levelDetails.endSN && bufferLen && !bufferInfo.nextStart) {
         // fragPrevious is last fragment. retrieve level duration using last frag start offset + duration
         // real duration might be lower than initial duration if there are drifts between real frag duration and playlist signaling
         const duration = Math.min(media.duration,fragPrevious.start + fragPrevious.duration);
