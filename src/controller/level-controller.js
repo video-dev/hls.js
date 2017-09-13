@@ -236,7 +236,7 @@ class LevelController extends EventHandler {
 
     let details = data.details, levelError = false, fragmentError = false;
     let levelIndex, level;
-    let {config, media} = this.hls;
+    let {config} = this.hls;
 
     // try to recover not fatal errors
     switch (details) {
@@ -292,11 +292,14 @@ class LevelController extends EventHandler {
       } else if (levelError === true){
         // FIXME Rely on Level Retry parameters, now it's possible to retry as long as media is buffered
         if ((this.levelRetryCount + 1) <= config.levelLoadingMaxRetry) {
-          this.timer = setTimeout(() => this.tick(), config.levelLoadingRetryDelay);
+          // exponential backoff capped to max retry timeout
+          const delay = Math.min(Math.pow(2, this.levelRetryCount) * this.config.levelLoadingRetryDelay, this.config.levelLoadingMaxRetryTimeout);
+          // reset load counter to avoid frag loop loading error
+          this.timer = setTimeout(() => this.tick(), delay);
           // boolean used to inform stream controller not to switch back to IDLE on non fatal error
           data.levelRetry = true;
           this.levelRetryCount++;
-          logger.warn(`level controller,${details}, retry in ${config.levelLoadingRetryDelay}ms, current retry ${this.levelRetryCount}`);
+          logger.warn(`level controller,${details}, retry in ${delay} ms, current retry count is ${this.levelRetryCount}`);
         } else {
           logger.error(`cannot recover ${details} error`);
           this._level = undefined;
