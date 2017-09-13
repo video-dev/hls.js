@@ -50,6 +50,7 @@ export function updateFragPTSDTS(
     endDTS
 ) {
     // update frag PTS/DTS
+    let maxStartPTS = startPTS;
     if (!isNaN(frag.startPTS)) {
         // delta PTS between audio and video
         let deltaPTS = Math.abs(frag.startPTS - startPTS);
@@ -58,6 +59,7 @@ export function updateFragPTSDTS(
         } else {
             frag.deltaPTS = Math.max(deltaPTS, frag.deltaPTS);
         }
+        maxStartPTS = Math.max(startPTS, frag.startPTS);
         startPTS = Math.min(startPTS, frag.startPTS);
         endPTS = Math.max(endPTS, frag.endPTS);
         startDTS = Math.min(startDTS, frag.startDTS);
@@ -66,6 +68,7 @@ export function updateFragPTSDTS(
 
     const drift = startPTS - frag.start;
     frag.start = frag.startPTS = startPTS;
+    frag.maxStartPTS = maxStartPTS;
     frag.endPTS = endPTS;
     frag.startDTS = startDTS;
     frag.endDTS = endDTS;
