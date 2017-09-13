@@ -6,7 +6,6 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import {logger} from '../utils/logger';
 import {ErrorTypes, ErrorDetails} from '../errors';
-import BufferHelper from '../helper/buffer-helper';
 import {isCodecSupportedInMp4} from '../utils/codecs';
 
 class LevelController extends EventHandler {
@@ -34,8 +33,11 @@ class LevelController extends EventHandler {
   }
 
   startLoad() {
-    this.canload = true;
     let levels = this._levels;
+
+    this.canload = true;
+    this.levelRetryCount = 0;
+
     // clean up live level details to force reload them, and reset load errors
     if(levels) {
       levels.forEach(level => {
@@ -288,14 +290,13 @@ class LevelController extends EventHandler {
           }
         }
       } else if (levelError === true){
-        // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
-        let mediaBuffered = !!media && BufferHelper.isBuffered(media, media.currentTime) && BufferHelper.isBuffered(media, media.currentTime + 0.5);
         // FIXME Rely on Level Retry parameters, now it's possible to retry as long as media is buffered
-        if (mediaBuffered === true) {
-          logger.warn(`level controller,${details}, but media buffered, retry in ${config.levelLoadingRetryDelay}ms`);
+        if ((this.levelRetryCount + 1) <= config.levelLoadingMaxRetry) {
           this.timer = setTimeout(() => this.tick(), config.levelLoadingRetryDelay);
           // boolean used to inform stream controller not to switch back to IDLE on non fatal error
           data.levelRetry = true;
+          this.levelRetryCount++;
+          logger.warn(`level controller,${details}, retry in ${config.levelLoadingRetryDelay}ms, current retry ${this.levelRetryCount}`);
         } else {
           logger.error(`cannot recover ${details} error`);
           this._level = undefined;
@@ -315,6 +316,7 @@ class LevelController extends EventHandler {
       if (level !== undefined) {
         level.fragmentError = false;
         level.loadError = 0;
+        this.levelRetryCount = 0;
       }
     }
   }
@@ -327,6 +329,7 @@ class LevelController extends EventHandler {
       // reset level load error counter on successful level loaded only if there is no issues with fragments
       if(curLevel.fragmentError === false){
         curLevel.loadError = 0;
+        this.levelRetryCount = 0;
       }
       let newDetails = data.details;
       // if current playlist is a live playlist, arm a timer to reload it
