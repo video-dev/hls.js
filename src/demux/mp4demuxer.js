@@ -256,6 +256,7 @@ static offsetStartDTS(initData,fragment,timeOffset) {
           baseMediaDecodeTime *= Math.pow(2, 32);
           baseMediaDecodeTime += MP4Demuxer.readUint32(tfdt, 8);
           baseMediaDecodeTime -= timeOffset*timescale;
+          baseMediaDecodeTime = Math.max(baseMediaDecodeTime,0);
           const upper = Math.floor(baseMediaDecodeTime / (UINT32_MAX + 1));
           const lower = Math.floor(baseMediaDecodeTime % (UINT32_MAX + 1));
           MP4Demuxer.writeUint32(tfdt, 4, upper);
