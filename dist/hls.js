@@ -1191,7 +1191,6 @@ function isUndefined(arg) {
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 
 // EXTERNAL MODULE: ./src/events.js
 var events = __webpack_require__(1);
@@ -5381,7 +5380,7 @@ var demuxer_inline_DemuxerInline = function () {
       var observer = this.observer;
       var typeSupported = this.typeSupported;
       var config = this.config;
-      // probing order is AAC/MP3/TS/MP4
+      // probing order is TS/AAC/MP3/MP4
       var muxConfig = [{ demux: tsdemuxer, remux: mp4_remuxer }, { demux: aacdemuxer, remux: mp4_remuxer }, { demux: mp3demuxer, remux: mp4_remuxer }, { demux: mp4demuxer, remux: passthrough_remuxer }];
 
       // probe for content type
@@ -5427,7 +5426,6 @@ var demuxer_inline_DemuxerInline = function () {
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 var cues_namespaceObject = {};
 __webpack_require__.d(cues_namespaceObject, "createCues", function() { return createCues; });
 
@@ -5912,15 +5910,19 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
   };
 
   PlaylistLoader.prototype.parseMasterPlaylistMedia = function parseMasterPlaylistMedia(string, baseurl, type) {
-    var audioCodec = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
+    var _this2 = this;
+
+    var audioGroups = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : [];
 
     var result = void 0,
         medias = [],
         id = 0;
     MASTER_PLAYLIST_MEDIA_REGEX.lastIndex = 0;
-    while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) != null) {
+
+    var _loop = function _loop() {
       var media = {};
-      var attrs = new attr_list(result[1]);
+      attrs = new attr_list(result[1]);
+
       if (attrs.TYPE === type) {
         media.groupId = attrs['GROUP-ID'];
         media.instreamId = attrs['INSTREAM-ID'];
@@ -5930,18 +5932,27 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
         media.autoselect = attrs.AUTOSELECT === 'YES';
         media.forced = attrs.FORCED === 'YES';
         if (attrs.URI) {
-          media.url = this.resolve(attrs.URI, baseurl);
+          media.url = _this2.resolve(attrs.URI, baseurl);
         }
         media.lang = attrs.LANGUAGE;
         if (!media.name) {
           media.name = media.lang;
         }
-        if (audioCodec) {
-          media.audioCodec = audioCodec;
+        if (audioGroups.length) {
+          var groupCodec = audioGroups.find(function (x) {
+            return x.groupId === media.groupId;
+          });
+          media.audioCodec = groupCodec ? groupCodec.audioCodec : audioGroups[0].audioCodec;
         }
         media.id = id++;
         medias.push(media);
       }
+    };
+
+    while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) != null) {
+      var attrs;
+
+      _loop();
     }
     return medias;
   };
@@ -6162,7 +6173,10 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
         var levels = this.parseMasterPlaylist(string, url);
         // multi level playlist, parse level info
         if (levels.length) {
-          var audioTracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO', levels[0].audioCodec);
+          var audioGroups = levels.map(function (l) {
+            return { groupId: l.attrs.AUDIO, audioCodec: l.audioCodec };
+          });
+          var audioTracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
           var subtitles = this.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
           var captions = this.parseMasterPlaylistMedia(string, url, 'CLOSED-CAPTIONS');
           if (audioTracks.length) {
@@ -8701,15 +8715,16 @@ var level_controller_LevelController = function (_EventHandler) {
   };
 
   LevelController.prototype.onManifestLoaded = function onManifestLoaded(data) {
-    var levels0 = [],
-        levels = [],
-        bitrateStart,
-        bitrateSet = {},
-        videoCodecFound = false,
-        audioCodecFound = false,
-        hls = this.hls,
-        brokenmp4inmp3 = /chrome|firefox/.test(navigator.userAgent.toLowerCase()),
-        checkSupported = function checkSupported(type, codec) {
+    var levels0 = [];
+    var levels = [];
+    var audioTracks = [];
+    var bitrateStart = void 0;
+    var bitrateSet = {};
+    var videoCodecFound = false;
+    var audioCodecFound = false;
+    var hls = this.hls;
+    var brokenmp4inmp3 = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
+    var checkSupported = function checkSupported(type, codec) {
       return MediaSource.isTypeSupported(type + '/mp4;codecs=' + codec);
     };
 
@@ -8753,6 +8768,12 @@ var level_controller_LevelController = function (_EventHandler) {
       return (!audioCodec || checkSupported('audio', audioCodec)) && (!videoCodec || checkSupported('video', videoCodec));
     });
 
+    if (data.audioTracks) {
+      audioTracks = data.audioTracks.filter(function (track) {
+        return !track.audioCodec || checkSupported('audio', track.audioCodec);
+      });
+    }
+
     if (levels.length) {
       // start bitrate is the first bitrate of the manifest
       bitrateStart = levels[0].bitrate;
@@ -8769,7 +8790,7 @@ var level_controller_LevelController = function (_EventHandler) {
           break;
         }
       }
-      hls.trigger(events["a" /* default */].MANIFEST_PARSED, { levels: levels, firstLevel: this._firstLevel, stats: data.stats, audio: audioCodecFound, video: videoCodecFound, altAudio: data.audioTracks.length > 0 });
+      hls.trigger(events["a" /* default */].MANIFEST_PARSED, { levels: levels, audioTracks: audioTracks, firstLevel: this._firstLevel, stats: data.stats, audio: audioCodecFound, video: videoCodecFound, altAudio: data.audioTracks.length > 0 });
     } else {
       hls.trigger(events["a" /* default */].ERROR, { type: errors["b" /* ErrorTypes */].MEDIA_ERROR, details: errors["a" /* ErrorDetails */].MANIFEST_INCOMPATIBLE_CODECS_ERROR, fatal: true, url: hls.url, reason: 'no level with compatible codecs found in manifest' });
     }
@@ -10608,7 +10629,7 @@ var audio_track_controller_AudioTrackController = function (_EventHandler) {
   function AudioTrackController(hls) {
     audio_track_controller__classCallCheck(this, AudioTrackController);
 
-    var _this = audio_track_controller__possibleConstructorReturn(this, _EventHandler.call(this, hls, events["a" /* default */].MANIFEST_LOADING, events["a" /* default */].MANIFEST_LOADED, events["a" /* default */].AUDIO_TRACK_LOADED, events["a" /* default */].ERROR));
+    var _this = audio_track_controller__possibleConstructorReturn(this, _EventHandler.call(this, hls, events["a" /* default */].MANIFEST_LOADING, events["a" /* default */].MANIFEST_PARSED, events["a" /* default */].AUDIO_TRACK_LOADED, events["a" /* default */].ERROR));
 
     _this.ticks = 0;
     _this.ontick = _this.tick.bind(_this);
@@ -10654,7 +10675,7 @@ var audio_track_controller_AudioTrackController = function (_EventHandler) {
     this.trackId = -1;
   };
 
-  AudioTrackController.prototype.onManifestLoaded = function onManifestLoaded(data) {
+  AudioTrackController.prototype.onManifestParsed = function onManifestParsed(data) {
     var _this2 = this;
 
     var tracks = data.audioTracks || [];
