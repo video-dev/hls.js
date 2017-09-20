@@ -289,7 +289,7 @@ class PlaylistLoader extends EventHandler {
         return levels;
     }
 
-    parseMasterPlaylistMedia(string, baseurl, type, audioCodec = null) {
+    parseMasterPlaylistMedia(string, baseurl, type, audioGroups = []) {
         let result,
             medias = [],
             id = 0;
@@ -312,8 +312,13 @@ class PlaylistLoader extends EventHandler {
                 if (!media.name) {
                     media.name = media.lang;
                 }
-                if (audioCodec) {
-                    media.audioCodec = audioCodec;
+                if (audioGroups.length) {
+                    const groupCodec = audioGroups.find(
+                        x => x.groupId === media.groupId
+                    );
+                    media.audioCodec = groupCodec
+                        ? groupCodec.audioCodec
+                        : audioGroups[0].audioCodec;
                 }
                 media.id = id++;
                 medias.push(media);
@@ -593,11 +598,15 @@ class PlaylistLoader extends EventHandler {
                 let levels = this.parseMasterPlaylist(string, url);
                 // multi level playlist, parse level info
                 if (levels.length) {
+                    const audioGroups = levels.map(l => ({
+                        groupId: l.attrs.AUDIO,
+                        audioCodec: l.audioCodec
+                    }));
                     let audioTracks = this.parseMasterPlaylistMedia(
                         string,
                         url,
                         'AUDIO',
-                        levels[0].audioCodec
+                        audioGroups
                     );
                     let subtitles = this.parseMasterPlaylistMedia(
                         string,
