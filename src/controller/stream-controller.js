@@ -1822,17 +1822,16 @@ class StreamController extends EventHandler {
                         mediaBuffer,
                         startPosition
                     ),
-                    firstbufferedPosition = buffered.start(0);
-                // if currentTime not matching with expected startPosition or startPosition not buffered
-                if (
-                    currentTime !== startPosition ||
-                    (!startPositionBuffered &&
+                    firstbufferedPosition = buffered.start(0),
+                    startNotBufferedButClose =
+                        !startPositionBuffered &&
                         Math.abs(startPosition - firstbufferedPosition) <
-                            config.maxSeekHole)
-                ) {
+                            config.maxSeekHole;
+                // if currentTime not matching with expected startPosition or startPosition not buffered but close to first buffered
+                if (currentTime !== startPosition || startNotBufferedButClose) {
                     logger.log(`target start position:${startPosition}`);
                     // if startPosition not buffered, let's seek to buffered.start(0)
-                    if (!startPositionBuffered) {
+                    if (!startNotBufferedButClose) {
                         startPosition = firstbufferedPosition;
                         logger.log(
                             `target start position not buffered, seek to buffered.start(0) ${startPosition}`
