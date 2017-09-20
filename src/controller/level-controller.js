@@ -114,7 +114,15 @@ class LevelController extends EventHandler {
             );
         });
 
-        if (levels.length > 0) {
+        if (data.audioTracks) {
+            audioTracks = data.audioTracks.filter(
+                track =>
+                    !track.audioCodec ||
+                    checkSupported('audio', track.audioCodec)
+            );
+        }
+
+        if (levels.length) {
             // start bitrate is the first bitrate of the manifest
             bitrateStart = levels[0].bitrate;
             // sort level on bitrate
@@ -135,7 +143,8 @@ class LevelController extends EventHandler {
                 }
             }
             this.hls.trigger(Event.MANIFEST_PARSED, {
-                levels: levels,
+                levels,
+                audioTracks,
                 firstLevel: this._firstLevel,
                 stats: data.stats,
                 audio: audioCodecFound,
