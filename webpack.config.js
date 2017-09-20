@@ -97,7 +97,7 @@ const multiConfig = [
       chunkFilename: '[name].js',
       sourceMapFilename: 'hls.js.map',
       path: path.resolve(__dirname, 'dist'),
-      publicPath: '/hls.js/dist/',
+      publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
       libraryExport: 'default'
@@ -111,7 +111,7 @@ const multiConfig = [
       filename: 'hls.min.js',
       chunkFilename: '[name].js',
       path: path.resolve(__dirname, 'dist'),
-      publicPath: '/hls.js/dist/',
+      publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
       libraryExport: 'default'
@@ -125,7 +125,7 @@ const multiConfig = [
       chunkFilename: '[name].js',
       sourceMapFilename: 'hls.light.js.map',
       path: path.resolve(__dirname, 'dist'),
-      publicPath: '/hls.js/dist/',
+      publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
       libraryExport: 'default'
@@ -142,7 +142,7 @@ const multiConfig = [
       filename: 'hls.light.min.js',
       chunkFilename: '[name].js',
       path: path.resolve(__dirname, 'dist'),
-      publicPath: '/hls.js/dist/',
+      publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
       libraryExport: 'default'

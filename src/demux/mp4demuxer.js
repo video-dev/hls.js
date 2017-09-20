@@ -22,11 +22,15 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
     if (initSegment && initSegment.byteLength) {
       const initData = this.initData = MP4Demuxer.parseInitSegment(initSegment);
       var tracks = {};
-      if (initData.audio) {
-        tracks.audio = { container : 'audio/mp4', codec : audioCodec, initSegment : duration ? initSegment : null };
-      }
-      if (initData.video) {
-        tracks.video = { container : 'video/mp4', codec : videoCodec, initSegment : duration ? initSegment : null };
+      if(initData.audio && initData.video) {
+        tracks.audiovideo = { container : 'video/mp4', codec : audioCodec + ',' + videoCodec, initSegment : duration ? initSegment : null };
+      } else {
+        if (initData.audio) {
+          tracks.audio = { container : 'audio/mp4', codec : audioCodec, initSegment : duration ? initSegment : null };
+        }
+        if (initData.video) {
+          tracks.video = { container : 'video/mp4', codec : videoCodec, initSegment : duration ? initSegment : null };
+        }
       }
       this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT,{ tracks : tracks });
     } else {
@@ -252,6 +256,7 @@ static offsetStartDTS(initData,fragment,timeOffset) {
           baseMediaDecodeTime *= Math.pow(2, 32);
           baseMediaDecodeTime += MP4Demuxer.readUint32(tfdt, 8);
           baseMediaDecodeTime -= timeOffset*timescale;
+          baseMediaDecodeTime = Math.max(baseMediaDecodeTime,0);
           const upper = Math.floor(baseMediaDecodeTime / (UINT32_MAX + 1));
           const lower = Math.floor(baseMediaDecodeTime % (UINT32_MAX + 1));
           MP4Demuxer.writeUint32(tfdt, 4, upper);

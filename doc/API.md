@@ -63,6 +63,7 @@
     [`captionsTextTrack2Label`](#captionsTextTrack2Label)
     [`captionsTextTrack2LanguageCode`](#captionsTextTrack2LanguageCode)
   - [`stretchShortVideoTrack`](#stretchshortvideotrack)
+  - [`maxAudioFramesDrift`](#maxAudioFramesDrift)
   - [`forceKeyFrameOnDiscontinuity`](#forcekeyframeondiscontinuity)
   - [`abrEwmaFastLive`](#abrewmafastlive)
   - [`abrEwmaSlowLive`](#abrewmaslowlive)
@@ -330,6 +331,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       enableWebVTT: true,
       enableCEA708Captions: true,
       stretchShortVideoTrack: false,
+      maxAudioFramesDrift : 1,
       forceKeyFrameOnDiscontinuity: true,
       abrEwmaFastLive: 5.0,
       abrEwmaSlowLive: 9.0,
@@ -572,6 +574,7 @@ Max number of load retries.
 (default: `64000` ms)
 
 Maximum frag/manifest/key retry timeout (in milliseconds) in case I/O errors are met.
+This value is used as capping value for exponential grow of `loading retry delays`, i.e.  the retry delay can not be bigger than this value, but overall time will be based on the overall number of retries.
 
 ### `fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay`
 
@@ -851,6 +854,23 @@ If a segment's video track is shorter than its audio track by > `min(maxSeekHole
 This helps playback continue in certain cases that might otherwise get stuck.
 
 parameter should be a boolean
+
+### `maxAudioFramesDrift`
+
+(default: `1`)
+
+Browsers are really strict about audio frames timings.
+They usually play audio frames one after the other, regardless of the timestamps advertised in the fmp4.
+If audio timestamps are not consistent (consecutive audio frames too close or too far from each other), audio will easily drift.
+hls.js is restamping audio frames so that the distance between consecutive audio frame remains constant.
+if the distance is larger than the max allowed drift, hls.js will either
+
+ - drop the next audio frame if distance is too small (if next audio frame timestamp is smaller than expected time stamp - max allowed drift)
+ - insert silent frames if distance is too big  (next audio frame timestamp is bigger than expected timestamp + max allowed drift)
+
+parameter should be an integer representing the max number of audio frames allowed to drift.
+keep in mind that one audio frame is 1024 audio samples (if using AAC), at 44.1 kHz, it gives 1024/44100 = 23ms
+
 
 ### `forceKeyFrameOnDiscontinuity`
 

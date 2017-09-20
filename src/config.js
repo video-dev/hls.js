@@ -70,6 +70,7 @@ export var hlsDefaultConfig = {
   capLevelController: CapLevelController,
   fpsController: FPSController,
   stretchShortVideoTrack: false,            // used by mp4-remuxer
+  maxAudioFramesDrift :1,                   // used by mp4-remuxer
   forceKeyFrameOnDiscontinuity: true,       // used by ts-demuxer
   abrEwmaFastLive: 3,                       // used by abr-controller
   abrEwmaSlowLive: 9,                       // used by abr-controller
