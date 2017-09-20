@@ -5381,7 +5381,7 @@ var demuxer_inline_DemuxerInline = function () {
       var observer = this.observer;
       var typeSupported = this.typeSupported;
       var config = this.config;
-      // probing order is AAC/MP3/TS/MP4
+      // probing order is TS/AAC/MP3/MP4
       var muxConfig = [{ demux: tsdemuxer, remux: mp4_remuxer }, { demux: aacdemuxer, remux: mp4_remuxer }, { demux: mp3demuxer, remux: mp4_remuxer }, { demux: mp4demuxer, remux: passthrough_remuxer }];
 
       // probe for content type
@@ -13920,10 +13920,7 @@ var timeline_controller_TimelineController = function (_EventHandler) {
               } else {
                 self.textTrack1 = existingTrack1;
                 clearCurrentCues(self.textTrack1);
-
-                var event = new window.Event('addtrack');
-                event.track = self.textTrack1;
-                self.media.dispatchEvent(event);
+                self.textTrack1.inuse = true;
               }
             } else {
               // Create a list of a single track for the provider to consume
@@ -13953,10 +13950,7 @@ var timeline_controller_TimelineController = function (_EventHandler) {
               } else {
                 self.textTrack2 = existingTrack2;
                 clearCurrentCues(self.textTrack2);
-
-                var event = new window.Event('addtrack');
-                event.track = self.textTrack2;
-                self.media.dispatchEvent(event);
+                self.textTrack2.inuse = true;
               }
             } else {
               // Create a list of a single track for the provider to consume
@@ -14063,6 +14057,8 @@ var timeline_controller_TimelineController = function (_EventHandler) {
   TimelineController.prototype.onMediaDetaching = function onMediaDetaching() {
     clearCurrentCues(this.textTrack1);
     clearCurrentCues(this.textTrack2);
+    delete this.textTrack1;
+    delete this.textTrack2;
   };
 
   TimelineController.prototype.onManifestLoading = function onManifestLoading() {
