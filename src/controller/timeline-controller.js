@@ -84,10 +84,7 @@ class TimelineController extends EventHandler {
                             } else {
                                 self.textTrack1 = existingTrack1;
                                 clearCurrentCues(self.textTrack1);
-
-                                let event = new window.Event('addtrack');
-                                event.track = self.textTrack1;
-                                self.media.dispatchEvent(event);
+                                self.textTrack1.inuse = true;
                             }
                         } else {
                             // Create a list of a single track for the provider to consume
@@ -124,10 +121,7 @@ class TimelineController extends EventHandler {
                             } else {
                                 self.textTrack2 = existingTrack2;
                                 clearCurrentCues(self.textTrack2);
-
-                                let event = new window.Event('addtrack');
-                                event.track = self.textTrack2;
-                                self.media.dispatchEvent(event);
+                                self.textTrack2.inuse = true;
                             }
                         } else {
                             // Create a list of a single track for the provider to consume
@@ -239,6 +233,8 @@ class TimelineController extends EventHandler {
     onMediaDetaching() {
         clearCurrentCues(this.textTrack1);
         clearCurrentCues(this.textTrack2);
+        delete this.textTrack1;
+        delete this.textTrack2;
     }
 
     onManifestLoading() {
