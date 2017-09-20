@@ -5389,7 +5389,7 @@ var demuxer_inline_DemuxerInline = function () {
       var observer = this.observer;
       var typeSupported = this.typeSupported;
       var config = this.config;
-      // probing order is AAC/MP3/TS/MP4
+      // probing order is TS/AAC/MP3/MP4
       var muxConfig = [{ demux: tsdemuxer, remux: mp4_remuxer }, { demux: aacdemuxer, remux: mp4_remuxer }, { demux: mp3demuxer, remux: mp4_remuxer }, { demux: mp4demuxer, remux: passthrough_remuxer }];
 
       // probe for content type
