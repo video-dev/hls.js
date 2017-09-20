@@ -84,11 +84,12 @@ class LevelController extends EventHandler {
       if (levelFromSet === undefined) {
         level.url = [level.url];
         level.urlId = 0;
-        levelSet[level.bitrate] = level;
-        levels.push(level);
-      } else {
-        levelFromSet.url.push(level.url);
-      }
+        levelSet[level.bitrate] =level;
+          levels.push(level);
+        }
+       else {
+      levelFromSet.url.push( level .url);
+    }
     });
 
     // remove audio-only level if we also have levels with audio+video codecs signalled
@@ -101,7 +102,11 @@ class LevelController extends EventHandler {
       return (!audioCodec || isCodecSupportedInMp4(audioCodec)) && (!videoCodec || isCodecSupportedInMp4(videoCodec));
     });
 
-    if (levels.length > 0) {
+    if (data.audioTracks) {
+      audioTracks = data.audioTracks.filter(track => !track.audioCodec || checkSupported('audio', track.audioCodec));
+    }
+
+    if(levels.length) {
       // start bitrate is the first bitrate of the manifest
       bitrateStart = levels[0].bitrate;
       // sort level on bitrate
@@ -117,14 +122,7 @@ class LevelController extends EventHandler {
           break;
         }
       }
-      this.hls.trigger(Event.MANIFEST_PARSED, {
-        levels    : levels,
-        firstLevel: this._firstLevel,
-        stats     : data.stats,
-        audio     : audioCodecFound,
-        video     : videoCodecFound,
-        altAudio  : data.audioTracks.length > 0
-      });
+      this.hls.trigger(Event.MANIFEST_PARSED, {levels, audioTracks, firstLevel: this._firstLevel, stats: data.stats, audio : audioCodecFound, video : videoCodecFound, altAudio : data.audioTracks.length > 0});
     } else {
       this.hls.trigger(Event.ERROR, {
         type   : ErrorTypes.MEDIA_ERROR,

@@ -267,7 +267,7 @@ class PlaylistLoader extends EventHandler {
     return levels;
   }
 
-  parseMasterPlaylistMedia(string, baseurl, type, audioCodec=null) {
+  parseMasterPlaylistMedia(string, baseurl, type, audioGroups=[]) {
     let result, medias = [], id = 0;
     MASTER_PLAYLIST_MEDIA_REGEX.lastIndex = 0;
     while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) != null){
@@ -287,8 +287,9 @@ class PlaylistLoader extends EventHandler {
         if(!media.name) {
             media.name = media.lang;
         }
-        if (audioCodec) {
-          media.audioCodec = audioCodec;
+        if (audioGroups.length) {
+          const groupCodec = audioGroups.find(x => x.groupId === media.groupId);
+          media.audioCodec = groupCodec ? groupCodec.audioCodec : audioGroups[0].audioCodec;
         }
         media.id = id++;
         medias.push(media);
@@ -510,7 +511,8 @@ class PlaylistLoader extends EventHandler {
         let levels = this.parseMasterPlaylist(string, url);
         // multi level playlist, parse level info
         if (levels.length) {
-          let audioTracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO', levels[0].audioCodec);
+          const audioGroups = levels.map(l => ({ groupId: l.attrs.AUDIO, audioCodec: l.audioCodec}));
+          let audioTracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
           let subtitles = this.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
           if (audioTracks.length) {
             // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
