@@ -39,7 +39,7 @@ class XhrLoader {
     this.loadInternal();
   }
 
-  loadInternal() {
+  async loadInternal() { // jshint ignore:line
     var xhr, context = this.context;
     xhr = this.loader = new XMLHttpRequest();
     
@@ -51,12 +51,12 @@ class XhrLoader {
     try {
       if (xhrSetup) {
         try {
-          xhrSetup(xhr, context.url);
+          await xhrSetup(xhr, context.url); // jshint ignore:line
         } catch (e) {
           // fix xhrSetup: (xhr, url) => {xhr.setRequestHeader("Content-Language", "test");}
           // not working, as xhr.setRequestHeader expects xhr.readyState === OPEN
           xhr.open('GET', context.url, true);
-          xhrSetup(xhr, context.url);
+          await xhrSetup(xhr, context.url); // jshint ignore:line
         }
       }
       if (!xhr.readyState) {
