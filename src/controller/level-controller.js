@@ -104,7 +104,7 @@ class LevelController extends EventHandler {
     });
 
     if (data.audioTracks) {
-      audioTracks = data.audioTracks.filter(track => !track.audioCodec || isCodecSupportedInMp4('audio', track.audioCodec));
+      audioTracks = data.audioTracks.filter(track => !track.audioCodec || isCodecSupportedInMp4(track.audioCodec, 'audio'));
     }
 
     if(levels.length) {
