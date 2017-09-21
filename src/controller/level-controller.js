@@ -56,15 +56,18 @@ class LevelController extends EventHandler {
   }
 
   onManifestLoaded(data) {
-    var levels0 = [],
-        levels = [],
-        bitrateStart,
-        bitrateSet = {},
-        videoCodecFound = false,
-        audioCodecFound = false,
-        hls = this.hls,
-        brokenmp4inmp3 = /chrome|firefox/.test(navigator.userAgent.toLowerCase()),
-        checkSupported = function(type,codec) { return MediaSource.isTypeSupported(`${type}/mp4;codecs=${codec}`);};
+    let levels0 = [];
+    let levels = [];
+    let audioTracks = [];
+    let bitrateStart;
+    let bitrateSet = {};
+    let videoCodecFound = false;
+    let audioCodecFound = false;
+    let hls = this.hls;
+    let brokenmp4inmp3 = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
+    let checkSupported = function (type, codec) {
+      return MediaSource.isTypeSupported(`${type}/mp4;codecs=${codec}`);
+    };
 
     // regroup redundant level together
     data.levels.forEach(level => {
@@ -101,10 +104,14 @@ class LevelController extends EventHandler {
     }
     // only keep level with supported audio/video codecs
     levels = levels.filter(function(level) {
-    let audioCodec = level.audioCodec, videoCodec = level.videoCodec;
+      let audioCodec = level.audioCodec, videoCodec = level.videoCodec;
       return (!audioCodec || checkSupported('audio',audioCodec)) &&
-             (!videoCodec || checkSupported('video',videoCodec));
+        (!videoCodec || checkSupported('video', videoCodec));
     });
+
+    if (data.audioTracks) {
+      audioTracks = data.audioTracks.filter(track => !track.audioCodec || checkSupported('audio', track.audioCodec));
+    }
 
     if(levels.length) {
       // start bitrate is the first bitrate of the manifest
@@ -122,7 +129,7 @@ class LevelController extends EventHandler {
           break;
         }
       }
-      hls.trigger(Event.MANIFEST_PARSED, {levels: levels, firstLevel: this._firstLevel, stats: data.stats, audio : audioCodecFound, video : videoCodecFound, altAudio : data.audioTracks.length > 0});
+      hls.trigger(Event.MANIFEST_PARSED, {levels, audioTracks, firstLevel: this._firstLevel, stats: data.stats, audio : audioCodecFound, video : videoCodecFound, altAudio : data.audioTracks.length > 0});
     } else {
       hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR, fatal: true, url: hls.url, reason: 'no level with compatible codecs found in manifest'});
     }
