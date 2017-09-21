@@ -14115,34 +14115,36 @@ var timeline_controller_TimelineController = function (_EventHandler) {
       var sameTracks = this.tracks && data.subtitles && this.tracks.length === data.subtitles.length;
       this.tracks = data.subtitles || [];
 
-      if (this.config.renderNatively) {
-        var inUseTracks = this.media ? this.media.textTracks : [];
+      if (!sameTracks) {
+        if (this.config.renderNatively) {
+          var inUseTracks = this.media ? this.media.textTracks : [];
 
-        this.tracks.forEach(function (track, index) {
-          var textTrack = void 0;
-          if (index < inUseTracks.length) {
-            var inUseTrack = inUseTracks[index];
-            // Reuse tracks with the same label, but do not reuse 608/708 tracks
-            if (reuseVttTextTrack(inUseTrack, track)) {
-              textTrack = inUseTrack;
+          this.tracks.forEach(function (track, index) {
+            var textTrack = void 0;
+            if (index < inUseTracks.length) {
+              var inUseTrack = inUseTracks[index];
+              // Reuse tracks with the same label, but do not reuse 608/708 tracks
+              if (reuseVttTextTrack(inUseTrack, track)) {
+                textTrack = inUseTrack;
+              }
             }
-          }
-          if (!textTrack) {
-            textTrack = _this4.createTextTrack('subtitles', track.name, track.lang);
-          }
-          textTrack.mode = track.default ? 'showing' : 'hidden';
-          _this4.textTracks.push(textTrack);
-        });
-      } else if (!sameTracks && this.tracks && this.tracks.length) {
-        // Create a list of tracks for the provider to consume
-        var tracksList = this.tracks.map(function (track) {
-          return {
-            'label': track.name,
-            'kind': track.type.toLowerCase(),
-            'default': track.default
-          };
-        });
-        this.hls.trigger(events["a" /* default */].NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: tracksList });
+            if (!textTrack) {
+              textTrack = _this4.createTextTrack('subtitles', track.name, track.lang);
+            }
+            textTrack.mode = track.default ? 'showing' : 'hidden';
+            _this4.textTracks.push(textTrack);
+          });
+        } else if (this.tracks && this.tracks.length) {
+          // Create a list of tracks for the provider to consume
+          var tracksList = this.tracks.map(function (track) {
+            return {
+              'label': track.name,
+              'kind': track.type.toLowerCase(),
+              'default': track.default
+            };
+          });
+          this.hls.trigger(events["a" /* default */].NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: tracksList });
+        }
       }
     }
 
