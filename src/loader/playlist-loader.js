@@ -308,13 +308,15 @@ class PlaylistLoader extends EventHandler {
     }
 
     parseMasterPlaylistMedia(string, baseurl, type, audioGroups = []) {
-        let result,
-            medias = [],
-            id = 0;
+        let result;
+        let medias = [];
+        let id = 0;
+        const findGroup = (groups, mediaGroupId) =>
+            groups.find(group => group.id === mediaGroupId);
         MASTER_PLAYLIST_MEDIA_REGEX.lastIndex = 0;
-        while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) != null) {
+        while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) !== null) {
             const media = {};
-            var attrs = new AttrList(result[1]);
+            const attrs = new AttrList(result[1]);
             if (attrs.TYPE === type) {
                 media.groupId = attrs['GROUP-ID'];
                 media.name = attrs.NAME;
@@ -330,12 +332,10 @@ class PlaylistLoader extends EventHandler {
                     media.name = media.lang;
                 }
                 if (audioGroups.length) {
-                    const groupCodec = audioGroups.find(
-                        x => x.groupId === media.groupId
-                    );
+                    const groupCodec = findGroup(audioGroups, media.groupId);
                     media.audioCodec = groupCodec
-                        ? groupCodec.audioCodec
-                        : audioGroups[0].audioCodec;
+                        ? groupCodec.codec
+                        : audioGroups[0].codec;
                 }
                 media.id = id++;
                 medias.push(media);
@@ -621,8 +621,8 @@ class PlaylistLoader extends EventHandler {
                 // multi level playlist, parse level info
                 if (levels.length) {
                     const audioGroups = levels.map(l => ({
-                        groupId: l.attrs.AUDIO,
-                        audioCodec: l.audioCodec
+                        id: l.attrs.AUDIO,
+                        codec: l.audioCodec
                     }));
                     let audioTracks = this.parseMasterPlaylistMedia(
                         string,
