@@ -58,15 +58,16 @@ class LevelController extends EventHandler {
     }
 
     onManifestLoaded(data) {
-        let levels = [],
-            bitrateStart,
-            levelSet = {},
-            levelFromSet = null,
-            videoCodecFound = false,
-            audioCodecFound = false,
-            chromeOrFirefox = /chrome|firefox/.test(
-                navigator.userAgent.toLowerCase()
-            );
+        let levels = [];
+        let bitrateStart;
+        let levelSet = {};
+        let levelFromSet = null;
+        let videoCodecFound = false;
+        let audioCodecFound = false;
+        let chromeOrFirefox = /chrome|firefox/.test(
+            navigator.userAgent.toLowerCase()
+        );
+        let audioTracks = [];
 
         // regroup redundant levels together
         data.levels.forEach(level => {
@@ -118,7 +119,7 @@ class LevelController extends EventHandler {
             audioTracks = data.audioTracks.filter(
                 track =>
                     !track.audioCodec ||
-                    checkSupported('audio', track.audioCodec)
+                    isCodecSupportedInMp4('audio', track.audioCodec)
             );
         }
 
@@ -149,7 +150,7 @@ class LevelController extends EventHandler {
                 stats: data.stats,
                 audio: audioCodecFound,
                 video: videoCodecFound,
-                altAudio: data.audioTracks.length > 0
+                altAudio: audioTracks.length > 0
             });
         } else {
             this.hls.trigger(Event.ERROR, {
