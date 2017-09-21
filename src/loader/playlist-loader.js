@@ -257,13 +257,16 @@ class PlaylistLoader extends EventHandler {
     return levels;
   }
 
-  parseMasterPlaylistMedia(string, baseurl, type, audioCodec=null) {
-    let result, medias = [], id = 0;
+  parseMasterPlaylistMedia(string, baseurl, type, audioGroups=[]) {
+    let result;
+    let medias = [];
+    let id = 0;
+    const findGroup = (groups, mediaGroupId) => groups.find(group => group.id === mediaGroupId);
     MASTER_PLAYLIST_MEDIA_REGEX.lastIndex = 0;
-    while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) != null){
+    while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) !== null) {
       const media = {};
-      var attrs = new AttrList(result[1]);
-      if(attrs.TYPE === type) {
+      const attrs = new AttrList(result[1]);
+      if (attrs.TYPE === type) {
         media.groupId = attrs['GROUP-ID'];
         media.instreamId = attrs['INSTREAM-ID'];
         media.name = attrs.NAME;
@@ -275,11 +278,12 @@ class PlaylistLoader extends EventHandler {
           media.url = this.resolve(attrs.URI, baseurl);
         }
         media.lang = attrs.LANGUAGE;
-        if(!media.name) {
+        if (!media.name) {
             media.name = media.lang;
         }
-        if (audioCodec) {
-          media.audioCodec = audioCodec;
+        if (audioGroups.length) {
+          const groupCodec = findGroup(audioGroups, media.groupId);
+          media.audioCodec = groupCodec ? groupCodec.codec : audioGroups[0].codec;
         }
         media.id = id++;
         medias.push(media);
@@ -498,7 +502,8 @@ class PlaylistLoader extends EventHandler {
         let levels = this.parseMasterPlaylist(string, url);
         // multi level playlist, parse level info
         if (levels.length) {
-          let audioTracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO', levels[0].audioCodec);
+          const audioGroups = levels.map(l => ({ id: l.attrs.AUDIO, codec: l.audioCodec}));
+          let audioTracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
           let subtitles = this.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
           let captions = this.parseMasterPlaylistMedia(string, url, 'CLOSED-CAPTIONS');
           if (audioTracks.length) {
