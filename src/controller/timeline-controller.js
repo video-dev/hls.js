@@ -276,40 +276,42 @@ class TimelineController extends EventHandler {
                 this.tracks.length === data.subtitles.length;
             this.tracks = data.subtitles || [];
 
-            if (this.config.renderNatively) {
-                let inUseTracks = this.media ? this.media.textTracks : [];
+            if (!sameTracks) {
+                if (this.config.renderNatively) {
+                    let inUseTracks = this.media ? this.media.textTracks : [];
 
-                this.tracks.forEach((track, index) => {
-                    let textTrack;
-                    if (index < inUseTracks.length) {
-                        const inUseTrack = inUseTracks[index];
-                        // Reuse tracks with the same label, but do not reuse 608/708 tracks
-                        if (reuseVttTextTrack(inUseTrack, track)) {
-                            textTrack = inUseTrack;
+                    this.tracks.forEach((track, index) => {
+                        let textTrack;
+                        if (index < inUseTracks.length) {
+                            const inUseTrack = inUseTracks[index];
+                            // Reuse tracks with the same label, but do not reuse 608/708 tracks
+                            if (reuseVttTextTrack(inUseTrack, track)) {
+                                textTrack = inUseTrack;
+                            }
                         }
-                    }
-                    if (!textTrack) {
-                        textTrack = this.createTextTrack(
-                            'subtitles',
-                            track.name,
-                            track.lang
-                        );
-                    }
-                    textTrack.mode = track.default ? 'showing' : 'hidden';
-                    this.textTracks.push(textTrack);
-                });
-            } else if (!sameTracks && this.tracks && this.tracks.length) {
-                // Create a list of tracks for the provider to consume
-                let tracksList = this.tracks.map(track => {
-                    return {
-                        label: track.name,
-                        kind: track.type.toLowerCase(),
-                        default: track.default
-                    };
-                });
-                this.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, {
-                    tracks: tracksList
-                });
+                        if (!textTrack) {
+                            textTrack = this.createTextTrack(
+                                'subtitles',
+                                track.name,
+                                track.lang
+                            );
+                        }
+                        textTrack.mode = track.default ? 'showing' : 'hidden';
+                        this.textTracks.push(textTrack);
+                    });
+                } else if (this.tracks && this.tracks.length) {
+                    // Create a list of tracks for the provider to consume
+                    let tracksList = this.tracks.map(track => {
+                        return {
+                            label: track.name,
+                            kind: track.type.toLowerCase(),
+                            default: track.default
+                        };
+                    });
+                    this.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, {
+                        tracks: tracksList
+                    });
+                }
             }
         }
 
