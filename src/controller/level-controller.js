@@ -119,7 +119,7 @@ class LevelController extends EventHandler {
             audioTracks = data.audioTracks.filter(
                 track =>
                     !track.audioCodec ||
-                    isCodecSupportedInMp4('audio', track.audioCodec)
+                    isCodecSupportedInMp4(track.audioCodec, 'audio')
             );
         }
 
