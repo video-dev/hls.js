@@ -1,3 +1,5 @@
+require('babel-core/register');
+require('babel-polyfill');
 const pkgJson = require('./package.json');
 const path = require('path');
 const webpack = require('webpack');
@@ -15,7 +17,7 @@ const uglifyJsOptions = {
 };
 
 const commonConfig = {
-  entry: './src/hls.js',
+  entry: ['babel-polyfill', './src/hls.js'],
   module: {
     rules: [
       {
