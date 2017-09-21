@@ -57,21 +57,20 @@ class LevelController extends EventHandler {
     }
 
     onManifestLoaded(data) {
-        var levels0 = [],
-            levels = [],
-            bitrateStart,
-            bitrateSet = {},
-            videoCodecFound = false,
-            audioCodecFound = false,
-            hls = this.hls,
-            brokenmp4inmp3 = /chrome|firefox/.test(
-                navigator.userAgent.toLowerCase()
-            ),
-            checkSupported = function(type, codec) {
-                return MediaSource.isTypeSupported(
-                    `${type}/mp4;codecs=${codec}`
-                );
-            };
+        let levels0 = [];
+        let levels = [];
+        let audioTracks = [];
+        let bitrateStart;
+        let bitrateSet = {};
+        let videoCodecFound = false;
+        let audioCodecFound = false;
+        let hls = this.hls;
+        let brokenmp4inmp3 = /chrome|firefox/.test(
+            navigator.userAgent.toLowerCase()
+        );
+        let checkSupported = function(type, codec) {
+            return MediaSource.isTypeSupported(`${type}/mp4;codecs=${codec}`);
+        };
 
         // regroup redundant level together
         data.levels.forEach(level => {
@@ -120,6 +119,14 @@ class LevelController extends EventHandler {
             );
         });
 
+        if (data.audioTracks) {
+            audioTracks = data.audioTracks.filter(
+                track =>
+                    !track.audioCodec ||
+                    checkSupported('audio', track.audioCodec)
+            );
+        }
+
         if (levels.length) {
             // start bitrate is the first bitrate of the manifest
             bitrateStart = levels[0].bitrate;
@@ -141,7 +148,8 @@ class LevelController extends EventHandler {
                 }
             }
             hls.trigger(Event.MANIFEST_PARSED, {
-                levels: levels,
+                levels,
+                audioTracks,
                 firstLevel: this._firstLevel,
                 stats: data.stats,
                 audio: audioCodecFound,

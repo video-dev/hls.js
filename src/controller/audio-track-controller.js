@@ -12,7 +12,7 @@ class AudioTrackController extends EventHandler {
         super(
             hls,
             Event.MANIFEST_LOADING,
-            Event.MANIFEST_LOADED,
+            Event.MANIFEST_PARSED,
             Event.AUDIO_TRACK_LOADED,
             Event.ERROR
         );
@@ -59,7 +59,7 @@ class AudioTrackController extends EventHandler {
         this.trackId = -1;
     }
 
-    onManifestLoaded(data) {
+    onManifestParsed(data) {
         let tracks = data.audioTracks || [];
         let defaultFound = false;
         this.tracks = tracks;
