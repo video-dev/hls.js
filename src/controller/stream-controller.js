@@ -247,6 +247,10 @@ class StreamController extends EventHandler {
     if (gapsRanges) {
       bufferInfo = BufferHelper.bufferInfo(this.mediaBuffer ? this.mediaBuffer : media, pos, config.maxBufferHole, gapsRanges);
       bufferLen = bufferInfo.len;
+      // Stay idle if we are still with buffer margins
+      if (bufferLen >= maxBufLen) {
+        return;
+      }
     }
 
     // we just got done loading the final fragment and there is no other buffered range after ...
@@ -402,7 +406,12 @@ class StreamController extends EventHandler {
     let frag;
     let foundFrag;
     let maxFragLookUpTolerance = config.maxFragLookUpTolerance;
-    const fragNext = fragPrevious ? fragments[fragPrevious.sn - fragments[0].sn + 1] : undefined;
+    let fragNext = fragPrevious ? fragments[fragPrevious.sn - fragments[0].sn + 1] : undefined;
+    let gap = false;
+    if (fragNext && fragNext.gap) {
+      gap = true;
+      //fragNext = fragPrevious ? fragments[fragPrevious.sn - fragments[0].sn + 2] : undefined;
+    }
     let fragmentWithinToleranceTest = (candidate) => {
       // offset should be within fragment boundary - config.maxFragLookUpTolerance
       // this is to cope with situations like
@@ -419,6 +428,9 @@ class StreamController extends EventHandler {
       //logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
       // Set the lookup tolerance to be small enough to detect the current segment - ensures we don't skip over very small segments
       let candidateLookupTolerance = Math.min(maxFragLookUpTolerance, candidate.duration + (candidate.deltaPTS ? candidate.deltaPTS : 0));
+      if (gap) {
+        candidateLookupTolerance *= 2;
+      }
       if (candidate.start + candidate.duration - candidateLookupTolerance <= bufferEnd) {
         return 1;
       } // if maxFragLookUpTolerance will have negative value then don't return -1 for first element
