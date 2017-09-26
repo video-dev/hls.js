@@ -150,6 +150,23 @@ class Fragment {
     }
 }
 
+function findGroup(groups, mediaGroupId) {
+    if (!groups) {
+        return null;
+    }
+
+    let matchingGroup = null;
+
+    for (let i = 0; i < groups.length; i++) {
+        const group = groups[i];
+        if (group.id === mediaGroupId) {
+            matchingGroup = group;
+        }
+    }
+
+    return matchingGroup;
+}
+
 class PlaylistLoader extends EventHandler {
     constructor(hls) {
         super(
@@ -293,8 +310,6 @@ class PlaylistLoader extends EventHandler {
         let result;
         let medias = [];
         let id = 0;
-        const findGroup = (groups, mediaGroupId) =>
-            groups.find(group => group.id === mediaGroupId);
         MASTER_PLAYLIST_MEDIA_REGEX.lastIndex = 0;
         while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) !== null) {
             const media = {};

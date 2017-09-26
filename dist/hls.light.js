@@ -5923,11 +5923,6 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
     var result = void 0;
     var medias = [];
     var id = 0;
-    var findGroup = function findGroup(groups, mediaGroupId) {
-      return groups.find(function (group) {
-        return group.id === mediaGroupId;
-      });
-    };
     MASTER_PLAYLIST_MEDIA_REGEX.lastIndex = 0;
     while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) !== null) {
       var media = {};
@@ -6272,6 +6267,22 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
 
   return PlaylistLoader;
 }(event_handler);
+
+function findGroup() {
+  var groups = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
+  var mediaGroupId = arguments[1];
+
+  var matchingGroup = null;
+
+  for (var i = 0; i < groups.length; i++) {
+    var group = groups[i];
+    if (group.id === mediaGroupId) {
+      matchingGroup = group;
+    }
+  }
+
+  return matchingGroup;
+}
 
 /* harmony default export */ var playlist_loader = (playlist_loader_PlaylistLoader);
 // CONCATENATED MODULE: ./src/loader/fragment-loader.js
