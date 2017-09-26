@@ -139,6 +139,23 @@ class Fragment {
   }
 }
 
+function findGroup(groups, mediaGroupId) {
+  if (!groups) {
+    return null;
+  }
+
+  let matchingGroup = null;
+
+  for (let i = 0; i < groups.length; i ++) {
+    const group = groups[i];
+    if (group.id === mediaGroupId) {
+      matchingGroup = group;
+    }
+  }
+
+  return matchingGroup;
+}
+
 class PlaylistLoader extends EventHandler {
 
   constructor(hls) {
@@ -586,19 +603,6 @@ class PlaylistLoader extends EventHandler {
     }
     this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: context.url, loader: loader, context : context, networkDetails: networkDetails});
   }
-}
-
-function findGroup(groups = [], mediaGroupId) {
-  let matchingGroup = null;
-
-  for (let i = 0; i < groups.length; i ++) {
-    const group = groups[i];
-    if (group.id === mediaGroupId) {
-      matchingGroup = group;
-    }
-  }
-
-  return matchingGroup;
 }
 
 export default PlaylistLoader;
