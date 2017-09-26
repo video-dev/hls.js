@@ -1831,7 +1831,7 @@ class StreamController extends EventHandler {
                 if (currentTime !== startPosition || startNotBufferedButClose) {
                     logger.log(`target start position:${startPosition}`);
                     // if startPosition not buffered, let's seek to buffered.start(0)
-                    if (!startNotBufferedButClose) {
+                    if (startNotBufferedButClose) {
                         startPosition = firstbufferedPosition;
                         logger.log(
                             `target start position not buffered, seek to buffered.start(0) ${startPosition}`
