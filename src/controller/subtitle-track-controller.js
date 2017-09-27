@@ -1,5 +1,5 @@
 /*
- * audio track controller
+ * subtitle track controller
 */
 
 import Event from '../events';
@@ -61,21 +61,34 @@ class SubtitleTrackController extends EventHandler {
         }
 
         this.trackChangeListener = this._onTextTracksChanged.bind(this);
-        this.media.textTracks.addEventListener(
-            'change',
-            this.trackChangeListener
+
+        this.useTextTrackPolling = !(
+            this.media.textTracks && 'onchange' in this.media.textTracks
         );
+        if (this.useTextTrackPolling) {
+            this.subtitlePollingInterval = setInterval(() => {
+                this.trackChangeListener();
+            }, 500);
+        } else {
+            this.media.textTracks.addEventListener(
+                'change',
+                this.trackChangeListener
+            );
+        }
     }
 
     onMediaDetaching() {
         if (!this.media) {
             return;
         }
-
-        this.media.textTracks.removeEventListener(
-            'change',
-            this.trackChangeListener
-        );
+        if (this.useTextTrackPolling) {
+            clearInterval(this.subtitlePollingInterval);
+        } else {
+            this.media.textTracks.removeEventListener(
+                'change',
+                this.trackChangeListener
+            );
+        }
 
         this.media = undefined;
     }

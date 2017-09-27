@@ -128,7 +128,7 @@ function parseOptions(input, callback, keyValueDelim, groupDelim) {
 
 var defaults = new VTTCue(0, 0, 0);
 // 'middle' was changed to 'center' in the spec: https://github.com/w3c/webvtt/pull/244
-// Chrome and Safari don't yet support this change, but FF does
+//  Safari doesn't yet support this change, but FF and Chrome do.
 var center = defaults.align === 'middle' ? 'middle' : 'center';
 
 function parseCue(input, cue, regionList) {
@@ -329,8 +329,9 @@ VTTParser.prototype = {
                 }
 
                 line = collectNextLine();
-
-                var m = line.match(/^WEBVTT([ \t].*)?$/);
+                // strip of UTF-8 BOM if any
+                // https://en.wikipedia.org/wiki/Byte_order_mark#UTF-8
+                var m = line.match(/^(ï»¿)?WEBVTT([ \t].*)?$/);
                 if (!m || !m[0]) {
                     throw new Error('Malformed WebVTT signature.');
                 }

@@ -31,6 +31,7 @@
     "Headers"           : true,
     "escape"            : true,
     "__VERSION__"       : true,
-    "__BUILD_VERSION__" : true
+    "__SUBTITLE__"      : true,
+    "__ALT_AUDIO__"     : true
   }
 }
