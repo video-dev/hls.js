@@ -483,8 +483,8 @@
     pes.data = null;
 
     // if new NAL units found and last sample still there, let's push ...
-    // this helps parsing streams with missing AUD
-    if (avcSample && units.length) {
+    // this helps parsing streams with missing AUD (only do this if AUD never found)
+    if (avcSample && units.length && !track.audFound) {
       pushAccesUnit(avcSample,track);
       avcSample = this.avcSample = createAVCSample(false,pes.pts,pes.dts,'');
     }
@@ -494,7 +494,10 @@
         //NDR
          case 1:
            push = true;
-           if(debug && avcSample) {
+           if (!avcSample) {
+            avcSample = this.avcSample = createAVCSample(true,pes.pts,pes.dts,'');
+           }
+           if(debug) {
             avcSample.debug += 'NDR ';
            }
            avcSample.frame = true;
@@ -643,6 +646,7 @@
         // AUD
         case 9:
           push = false;
+          track.audFound = true;
           if (avcSample) {
             pushAccesUnit(avcSample,track);
           }

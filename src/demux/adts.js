@@ -68,7 +68,8 @@ export function getAudioConfig(observer, data, offset, audioCodec) {
         // if (manifest codec is AAC) AND (frequency less than 24kHz AND nb channel is 1) OR (manifest codec not specified and mono audio)
         // Chrome fails to play back with low frequency AAC LC mono when initialized with HE-AAC.  This is not a problem with stereo.
         if (audioCodec && audioCodec.indexOf('mp4a.40.2') !== -1 && ((adtsSampleingIndex >= 6 && adtsChanelConfig === 1) ||
-          /vivaldi/i.test(userAgent)) ||(!audioCodec && adtsChanelConfig === 1)) {
+              /vivaldi/i.test(userAgent)) ||
+          (!audioCodec && adtsChanelConfig === 1)) {
           adtsObjectType = 2;
           config = new Array(2);
         }

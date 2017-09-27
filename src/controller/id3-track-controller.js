@@ -27,9 +27,6 @@ class ID3TrackController extends EventHandler {
     if (!this.media) {
       return;
     }
-
-    this.id3Track = this.media.addTextTrack('metadata', 'id3');
-    this.id3Track.mode = 'hidden';
   }
 
   onMediaDetaching() {
@@ -39,6 +36,12 @@ class ID3TrackController extends EventHandler {
   onFragParsingMetadata(data) {
     const fragment = data.frag;
     const samples = data.samples;
+
+    // create track dynamically
+    if (!this.id3Track) {
+      this.id3Track = this.media.addTextTrack('metadata', 'id3');
+      this.id3Track.mode = 'hidden';
+    }
 
     // Attempt to recreate Safari functionality by creating
     // WebKitDataCue objects when available and store the decoded
