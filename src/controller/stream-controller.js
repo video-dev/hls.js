@@ -364,13 +364,12 @@ class StreamController extends EventHandler {
          compute playlist sliding and find the right one after in case it was not the right consecutive one */
       if (fragPrevious) {
         const targetSN = fragPrevious.sn + 1;
-        var targetCC = fragPrevious.cc + 1;
         if (targetSN >= levelDetails.startSN && targetSN <= levelDetails.endSN) {
-          frag = fragments[targetSN - levelDetails.startSN];
-          logger.log(`live playlist, switching playlist, load frag with next SN: ${frag.sn}`);
-        } else if (targetCC >= levelDetails.startCC && targetCC <= levelDetails.endCC) {
-          frag = findFirstFragWithCC(fragments, targetCC);
-          logger.log(`Live playlist switch, cannot find frag with target SN. Loading frag with next CC: ${ frag.cc }`);
+          const fragNext = fragments[targetSN - levelDetails.startSN];
+          if (fragPrevious.cc === fragNext.cc) {
+            frag = fragNext;
+            logger.log(`live playlist, switching playlist, load frag with next SN: ${frag.sn}`);
+          }
         }
         // next frag SN not available (or not with same continuity counter)
         // look for a frag sharing the same CC
