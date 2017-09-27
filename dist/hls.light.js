@@ -1870,18 +1870,20 @@ var aacdemuxer_AACDemuxer = function () {
   AACDemuxer.prototype.resetTimeStamp = function resetTimeStamp() {};
 
   AACDemuxer.probe = function probe(data) {
-    // check if data contains ID3 timestamp and ADTS sync word
-    var offset, length;
-    var id3Data = id3["a" /* default */].getID3Data(data, 0);
-    if (id3Data && id3["a" /* default */].getTimeStamp(id3Data) !== undefined) {
-      // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
-      // Layer bits (position 14 and 15) in header should be always 0 for ADTS
-      // More info https://wiki.multimedia.cx/index.php?title=ADTS
-      for (offset = id3Data.length, length = Math.min(data.length - 1, offset + 100); offset < length; offset++) {
-        if (adts_probe(data, offset)) {
-          logger["b" /* logger */].log('ADTS sync word found !');
-          return true;
-        }
+    if (!data) {
+      return false;
+    }
+    // Check for the ADTS sync word
+    // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
+    // Layer bits (position 14 and 15) in header should be always 0 for ADTS
+    // More info https://wiki.multimedia.cx/index.php?title=ADTS
+    var id3Data = id3["a" /* default */].getID3Data(data, 0) || [];
+    var offset = id3Data.length;
+
+    for (var length = data.length; offset < length; offset++) {
+      if (adts_probe(data, offset)) {
+        logger["b" /* logger */].log('ADTS sync word found !');
+        return true;
       }
     }
     return false;
@@ -1891,13 +1893,14 @@ var aacdemuxer_AACDemuxer = function () {
 
 
   AACDemuxer.prototype.append = function append(data, timeOffset, contiguous, accurateTimeOffset) {
-    var track = this._audioTrack,
-        id3Data = id3["a" /* default */].getID3Data(data, 0),
-        pts = 90 * id3["a" /* default */].getTimeStamp(id3Data),
-        frameIndex = 0,
-        stamp = pts,
-        length = data.length,
-        offset = id3Data.length;
+    var track = this._audioTrack;
+    var id3Data = id3["a" /* default */].getID3Data(data, 0) || [];
+    var timestamp = id3["a" /* default */].getTimeStamp(id3Data);
+    var pts = timestamp ? 90 * timestamp : timeOffset * 90000;
+    var frameIndex = 0;
+    var stamp = pts;
+    var length = data.length;
+    var offset = id3Data.length;
 
     var id3Samples = [{ pts: stamp, dts: stamp, data: id3Data }];
 
@@ -5364,8 +5367,8 @@ var demuxer_inline_DemuxerInline = function () {
       var observer = this.observer;
       var typeSupported = this.typeSupported;
       var config = this.config;
-      // probing order is AAC/MP3/TS/MP4
-      var muxConfig = [{ demux: aacdemuxer, remux: mp4_remuxer }, { demux: mp3demuxer, remux: mp4_remuxer }, { demux: tsdemuxer, remux: mp4_remuxer }, { demux: mp4demuxer, remux: passthrough_remuxer }];
+      // probing order is TS/AAC/MP3/MP4
+      var muxConfig = [{ demux: tsdemuxer, remux: mp4_remuxer }, { demux: aacdemuxer, remux: mp4_remuxer }, { demux: mp3demuxer, remux: mp4_remuxer }, { demux: mp4demuxer, remux: passthrough_remuxer }];
 
       // probe for content type
       for (var i = 0, len = muxConfig.length; i < len; i++) {
@@ -8507,7 +8510,7 @@ var stream_controller_StreamController = function (_EventHandler) {
         if (currentTime !== startPosition || startNotBufferedButClose) {
           logger["b" /* logger */].log('target start position:' + startPosition);
           // if startPosition not buffered, let's seek to buffered.start(0)
-          if (!startNotBufferedButClose) {
+          if (startNotBufferedButClose) {
             startPosition = firstbufferedPosition;
             logger["b" /* logger */].log('target start position not buffered, seek to buffered.start(0) ' + startPosition);
           }
@@ -10806,7 +10809,7 @@ var hls_Hls = function () {
   hls__createClass(Hls, null, [{
     key: 'version',
     get: function get() {
-      return "0.8.3";
+      return "0.8.4";
     }
   }, {
     key: 'Events',
