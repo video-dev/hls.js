@@ -7069,7 +7069,7 @@ var TimeRanges = {
 
 
 
-function discontinuities_findFirstFragWithCC(fragments, cc) {
+function findFirstFragWithCC(fragments, cc) {
   var firstFrag = null;
 
   for (var i = 0; i < fragments.length; i += 1) {
@@ -7115,7 +7115,7 @@ function findDiscontinuousReferenceFrag(prevDetails, curDetails) {
     return;
   }
 
-  var prevStartFrag = discontinuities_findFirstFragWithCC(prevFrags, curFrags[0].cc);
+  var prevStartFrag = findFirstFragWithCC(prevFrags, curFrags[0].cc);
 
   if (!prevStartFrag || prevStartFrag && !prevStartFrag.startPTS) {
     logger["b" /* logger */].log('No frag in previous level to align on');
@@ -7522,13 +7522,12 @@ var stream_controller_StreamController = function (_EventHandler) {
          compute playlist sliding and find the right one after in case it was not the right consecutive one */
       if (fragPrevious) {
         var targetSN = fragPrevious.sn + 1;
-        var targetCC = fragPrevious.cc + 1;
         if (targetSN >= levelDetails.startSN && targetSN <= levelDetails.endSN) {
-          frag = fragments[targetSN - levelDetails.startSN];
-          logger["b" /* logger */].log('live playlist, switching playlist, load frag with next SN: ' + frag.sn);
-        } else if (targetCC >= levelDetails.startCC && targetCC <= levelDetails.endCC) {
-          frag = findFirstFragWithCC(fragments, targetCC);
-          logger["b" /* logger */].log('Live playlist switch, cannot find frag with target SN. Loading frag with next CC: ' + frag.cc);
+          var fragNext = fragments[targetSN - levelDetails.startSN];
+          if (fragPrevious.cc === fragNext.cc) {
+            frag = fragNext;
+            logger["b" /* logger */].log('live playlist, switching playlist, load frag with next SN: ' + frag.sn);
+          }
         }
         // next frag SN not available (or not with same continuity counter)
         // look for a frag sharing the same CC
