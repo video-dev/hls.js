@@ -654,10 +654,11 @@ class AudioStreamController extends EventHandler {
         this.hls.trigger(Event.BUFFER_CODECS,tracks);
         logger.log(`audio track:audio,container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
         let initSegment = track.initSegment;
+        this.pendingData = [];
         if (initSegment) {
           let appendObj = {type: 'audio', data: initSegment, parent : 'audio',content : 'initSegment'};
           if (this.audioSwitch) {
-            this.pendingData = [appendObj];
+            this.pendingData.push(appendObj);
           } else {
             this.appended = true;
             // arm pending Buffering flag before appending a segment
