@@ -209,6 +209,8 @@ var logger = exportedLogger;
   // fired when a level's PTS information has been updated after parsing a fragment - data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment }
   LEVEL_PTS_UPDATED: 'hlsLevelPtsUpdated',
   // fired to notify that audio track lists has been updated - data: { audioTracks : audioTracks }
+  LEVEL_REMOVED: 'hlsLevelRemoved',
+  // fired when a level should no longer be used
   AUDIO_TRACKS_UPDATED: 'hlsAudioTracksUpdated',
   // fired when an audio track switch occurs - data: { id : audio track id } // deprecated in favor AUDIO_TRACK_SWITCHING
   AUDIO_TRACK_SWITCH: 'hlsAudioTrackSwitch',
@@ -230,6 +232,10 @@ var logger = exportedLogger;
   SUBTITLE_TRACK_LOADED: 'hlsSubtitleTrackLoaded',
   // fired when a subtitle fragment has been processed - data: { success : boolean, frag : the processed frag }
   SUBTITLE_FRAG_PROCESSED: 'hlsSubtitleFragProcessed',
+  // fired when a set of VTTCues to be managed externally has been parsed - data: { type: string, track: string, cues: [ VTTCue ] }
+  CUES_PARSED: 'hlsCuesParsed',
+  // fired when a text track to be managed externally is found - data: { tracks: [ { label: string, kind: string, default: boolean } ] }
+  NON_NATIVE_TEXT_TRACKS_FOUND: 'hlsNonNativeTextTracksFound',
   // fired when the first timestamp is found - data: { id : demuxer id, initPTS: initPTS, frag : fragment object }
   INIT_PTS_FOUND: 'hlsInitPtsFound',
   // fired when a fragment loading starts - data: { frag : fragment object }
@@ -240,6 +246,8 @@ var logger = exportedLogger;
   FRAG_LOAD_EMERGENCY_ABORTED: 'hlsFragLoadEmergencyAborted',
   // fired when a fragment loading is completed - data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length } }
   FRAG_LOADED: 'hlsFragLoaded',
+  // fired when a fragment has started decrypting - data: { level : levelId, sn : sequence number }
+  FRAG_DECRYPT_STARTED: 'hlsFragDecryptStarted',
   // fired when a fragment has finished decrypting - data: { id : demuxer id, frag: fragment object, stats : { tstart, tdecrypt } }
   FRAG_DECRYPTED: 'hlsFragDecrypted',
   // fired when Init Segment has been extracted from fragment - data: { id : demuxer id, frag: fragment object, moov : moov MP4 box, codecs : codecs found while parsing fragment }
@@ -299,6 +307,8 @@ var ErrorDetails = {
   MANIFEST_PARSING_ERROR: 'manifestParsingError',
   // Identifier for a manifest with only incompatible codecs error - data: { url : faulty URL, reason : error reason}
   MANIFEST_INCOMPATIBLE_CODECS_ERROR: 'manifestIncompatibleCodecsError',
+  //
+  MANIFEST_EMPTY_ERROR: 'manifestEmptyError',
   // Identifier for a level load error - data: { url : faulty URL, response : { code: error code, text: error text }}
   LEVEL_LOAD_ERROR: 'levelLoadError',
   // Identifier for a level load timeout - data: { url : faulty URL, response : { code: error code, text: error text }}
@@ -1187,6 +1197,7 @@ function isUndefined(arg) {
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 
 // EXTERNAL MODULE: ./src/events.js
 var events = __webpack_require__(1);
@@ -1868,6 +1879,9 @@ var aacdemuxer_AACDemuxer = function () {
   };
 
   AACDemuxer.prototype.resetTimeStamp = function resetTimeStamp() {};
+
+  // Source for probe info - https://wiki.multimedia.cx/index.php?title=ADTS
+
 
   AACDemuxer.probe = function probe(data) {
     if (!data) {
@@ -4986,7 +5000,7 @@ var mp4_remuxer_MP4Remuxer = function () {
           } else {
             // Otherwise, just adjust pts
             if (Math.abs(delta) > 0.1 * inputSampleDuration) {
-              //logger.log(`Invalid frame delta ${Math.round(delta + inputSampleDuration)} at PTS ${Math.round(pts / 90)} (should be ${Math.round(inputSampleDuration)}).`);
+              // logger.log(`Invalid frame delta ${Math.round(delta + inputSampleDuration)} at PTS ${Math.round(pts / 90)} (should be ${Math.round(inputSampleDuration)}).`);
             }
             sample.pts = sample.dts = nextPts;
             nextPts += inputSampleDuration;
@@ -5679,8 +5693,8 @@ function isCodecType(codec, type) {
     return !!typeCodes && typeCodes[codec.slice(0, 4)] === true;
 }
 
-function isCodecSupportedInMp4(codec) {
-    return MediaSource.isTypeSupported('video/mp4;codecs="' + codec + '"');
+function isCodecSupportedInMp4(codec, type) {
+    return MediaSource.isTypeSupported((type || 'video') + '/mp4;codecs="' + codec + '"');
 }
 
 
@@ -5851,6 +5865,23 @@ var playlist_loader_Fragment = function () {
   return Fragment;
 }();
 
+function findGroup(groups, mediaGroupId) {
+  if (!groups) {
+    return null;
+  }
+
+  var matchingGroup = null;
+
+  for (var i = 0; i < groups.length; i++) {
+    var group = groups[i];
+    if (group.id === mediaGroupId) {
+      matchingGroup = group;
+    }
+  }
+
+  return matchingGroup;
+}
+
 var playlist_loader_PlaylistLoader = function (_EventHandler) {
   _inherits(PlaylistLoader, _EventHandler);
 
@@ -5986,17 +6017,18 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
   };
 
   PlaylistLoader.prototype.parseMasterPlaylistMedia = function parseMasterPlaylistMedia(string, baseurl, type) {
-    var audioCodec = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
+    var audioGroups = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : [];
 
-    var result = void 0,
-        medias = [],
-        id = 0;
+    var result = void 0;
+    var medias = [];
+    var id = 0;
     MASTER_PLAYLIST_MEDIA_REGEX.lastIndex = 0;
-    while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) != null) {
+    while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) !== null) {
       var media = {};
       var attrs = new attr_list(result[1]);
       if (attrs.TYPE === type) {
         media.groupId = attrs['GROUP-ID'];
+        media.instreamId = attrs['INSTREAM-ID'];
         media.name = attrs.NAME;
         media.type = type;
         media.default = attrs.DEFAULT === 'YES';
@@ -6009,8 +6041,9 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
         if (!media.name) {
           media.name = media.lang;
         }
-        if (audioCodec) {
-          media.audioCodec = audioCodec;
+        if (audioGroups.length) {
+          var groupCodec = findGroup(audioGroups, media.groupId);
+          media.audioCodec = groupCodec ? groupCodec.codec : audioGroups[0].codec;
         }
         media.id = id++;
         medias.push(media);
@@ -6238,8 +6271,12 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
         var levels = this.parseMasterPlaylist(string, url);
         // multi level playlist, parse level info
         if (levels.length) {
-          var audioTracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO', levels[0].audioCodec);
+          var audioGroups = levels.map(function (l) {
+            return { id: l.attrs.AUDIO, codec: l.audioCodec };
+          });
+          var audioTracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
           var subtitles = this.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
+          var captions = this.parseMasterPlaylistMedia(string, url, 'CLOSED-CAPTIONS');
           if (audioTracks.length) {
             // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
             var embeddedAudioFound = false;
@@ -6255,9 +6292,20 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
               audioTracks.unshift({ type: 'main', name: 'main' });
             }
           }
-          hls.trigger(events["a" /* default */].MANIFEST_LOADED, { levels: levels, audioTracks: audioTracks, subtitles: subtitles, url: url, stats: stats, networkDetails: networkDetails });
+          hls.trigger(events["a" /* default */].MANIFEST_LOADED, { levels: levels, audioTracks: audioTracks, subtitles: subtitles, captions: captions, url: url, stats: stats, networkDetails: networkDetails });
         } else {
-          hls.trigger(events["a" /* default */].ERROR, { type: errors["b" /* ErrorTypes */].NETWORK_ERROR, details: errors["a" /* ErrorDetails */].MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'no level found in manifest', networkDetails: networkDetails });
+          if (type === 'manifest') {
+            hls.trigger(events["a" /* default */].ERROR, {
+              type: errors["b" /* ErrorTypes */].NETWORK_ERROR,
+              details: errors["a" /* ErrorDetails */].MANIFEST_PARSING_ERROR,
+              fatal: true,
+              url: url,
+              reason: 'no level found in manifest',
+              networkDetails: networkDetails
+            });
+          } else {
+            hls.trigger(events["a" /* default */].ERROR, { type: errors["b" /* ErrorTypes */].NETWORK_ERROR, details: errors["a" /* ErrorDetails */].MANIFEST_EMPTY_ERROR, fatal: false, url: url, reason: 'no level found in manifest', context: context });
+          }
         }
       }
     } else {
@@ -6289,7 +6337,7 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
       loader.abort();
       this.loaders[context.type] = undefined;
     }
-    this.hls.trigger(events["a" /* default */].ERROR, { type: errors["b" /* ErrorTypes */].NETWORK_ERROR, details: details, fatal: fatal, url: loader.url, loader: loader, response: response, context: context, networkDetails: networkDetails });
+    this.hls.trigger(events["a" /* default */].ERROR, { type: errors["b" /* ErrorTypes */].NETWORK_ERROR, details: details, fatal: fatal, url: context.url, loader: loader, response: response, context: context, networkDetails: networkDetails });
   };
 
   PlaylistLoader.prototype.loadtimeout = function loadtimeout(stats, context) {
@@ -6316,7 +6364,7 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
       loader.abort();
       this.loaders[context.type] = undefined;
     }
-    this.hls.trigger(events["a" /* default */].ERROR, { type: errors["b" /* ErrorTypes */].NETWORK_ERROR, details: details, fatal: fatal, url: loader.url, loader: loader, context: context, networkDetails: networkDetails });
+    this.hls.trigger(events["a" /* default */].ERROR, { type: errors["b" /* ErrorTypes */].NETWORK_ERROR, details: details, fatal: fatal, url: context.url, loader: loader, context: context, networkDetails: networkDetails });
   };
 
   return PlaylistLoader;
@@ -6606,16 +6654,21 @@ var BufferHelper = {
   },
 
   bufferInfo: function bufferInfo(media, pos, maxHoleDuration) {
+    // When the buffer can't be read load from the given position (buffer end determines load position)
+    var defaultBufferInfo = { len: 0, start: pos, end: pos, nextStart: undefined };
     if (media) {
-      var vbuffered = media.buffered,
-          buffered = [],
-          i;
-      for (i = 0; i < vbuffered.length; i++) {
-        buffered.push({ start: vbuffered.start(i), end: vbuffered.end(i) });
+      try {
+        var vbuffered = media.buffered;
+        var buffered = [];
+        for (var i = 0; i < vbuffered.length; i++) {
+          buffered.push({ start: vbuffered.start(i), end: vbuffered.end(i) });
+        }
+        return this.bufferedInfo(buffered, pos, maxHoleDuration);
+      } catch (e) {
+        return defaultBufferInfo;
       }
-      return this.bufferedInfo(buffered, pos, maxHoleDuration);
     } else {
-      return { len: 0, start: pos, end: pos, nextStart: undefined };
+      return defaultBufferInfo;
     }
   },
 
@@ -6676,7 +6729,7 @@ var BufferHelper = {
         break;
       }
     }
-    return { len: bufferLen, start: bufferStart, end: bufferEnd, nextStart: bufferStartNext };
+    return { len: bufferLen, start: bufferStart || 0, end: bufferEnd || 0, nextStart: bufferStartNext };
   }
 };
 
@@ -7022,7 +7075,7 @@ var TimeRanges = {
 
 
 
-function findFirstFragWithCC(fragments, cc) {
+function discontinuities_findFirstFragWithCC(fragments, cc) {
   var firstFrag = null;
 
   for (var i = 0; i < fragments.length; i += 1) {
@@ -7068,7 +7121,7 @@ function findDiscontinuousReferenceFrag(prevDetails, curDetails) {
     return;
   }
 
-  var prevStartFrag = findFirstFragWithCC(prevFrags, curFrags[0].cc);
+  var prevStartFrag = discontinuities_findFirstFragWithCC(prevFrags, curFrags[0].cc);
 
   if (!prevStartFrag || prevStartFrag && !prevStartFrag.startPTS) {
     logger["b" /* logger */].log('No frag in previous level to align on');
@@ -7158,7 +7211,7 @@ var stream_controller_StreamController = function (_EventHandler) {
   function StreamController(hls) {
     stream_controller__classCallCheck(this, StreamController);
 
-    var _this = stream_controller__possibleConstructorReturn(this, _EventHandler.call(this, hls, events["a" /* default */].MEDIA_ATTACHED, events["a" /* default */].MEDIA_DETACHING, events["a" /* default */].MANIFEST_LOADING, events["a" /* default */].MANIFEST_PARSED, events["a" /* default */].LEVEL_LOADED, events["a" /* default */].KEY_LOADED, events["a" /* default */].FRAG_LOADED, events["a" /* default */].FRAG_LOAD_EMERGENCY_ABORTED, events["a" /* default */].FRAG_PARSING_INIT_SEGMENT, events["a" /* default */].FRAG_PARSING_DATA, events["a" /* default */].FRAG_PARSED, events["a" /* default */].ERROR, events["a" /* default */].AUDIO_TRACK_SWITCHING, events["a" /* default */].AUDIO_TRACK_SWITCHED, events["a" /* default */].BUFFER_CREATED, events["a" /* default */].BUFFER_APPENDED, events["a" /* default */].BUFFER_FLUSHED));
+    var _this = stream_controller__possibleConstructorReturn(this, _EventHandler.call(this, hls, events["a" /* default */].MEDIA_ATTACHED, events["a" /* default */].MEDIA_DETACHING, events["a" /* default */].MANIFEST_LOADING, events["a" /* default */].MANIFEST_PARSED, events["a" /* default */].LEVEL_LOADED, events["a" /* default */].KEY_LOADED, events["a" /* default */].FRAG_LOADED, events["a" /* default */].FRAG_LOAD_EMERGENCY_ABORTED, events["a" /* default */].FRAG_PARSING_INIT_SEGMENT, events["a" /* default */].FRAG_PARSING_DATA, events["a" /* default */].FRAG_PARSED, events["a" /* default */].ERROR, events["a" /* default */].AUDIO_TRACK_SWITCHING, events["a" /* default */].AUDIO_TRACK_SWITCHED, events["a" /* default */].BUFFER_CREATED, events["a" /* default */].BUFFER_APPENDED, events["a" /* default */].BUFFER_FLUSHED, events["a" /* default */].LEVEL_REMOVED));
 
     _this.config = hls.config;
     _this.audioCodecSwap = false;
@@ -7305,12 +7358,13 @@ var stream_controller_StreamController = function (_EventHandler) {
     }
 
     // if we have not yet loaded any fragment, start loading from start position
-    var pos = void 0;
+    var pos = 0;
     if (this.loadedmetadata) {
       pos = media.currentTime;
-    } else {
+    } else if (this.nextLoadPosition) {
       pos = this.nextLoadPosition;
     }
+
     // determine next load level
     var level = hls.nextLoadLevel,
         levelInfo = this.levels[level];
@@ -7474,12 +7528,13 @@ var stream_controller_StreamController = function (_EventHandler) {
          compute playlist sliding and find the right one after in case it was not the right consecutive one */
       if (fragPrevious) {
         var targetSN = fragPrevious.sn + 1;
+        var targetCC = fragPrevious.cc + 1;
         if (targetSN >= levelDetails.startSN && targetSN <= levelDetails.endSN) {
-          var fragNext = fragments[targetSN - levelDetails.startSN];
-          if (fragPrevious.cc === fragNext.cc) {
-            frag = fragNext;
-            logger["b" /* logger */].log('live playlist, switching playlist, load frag with next SN: ' + frag.sn);
-          }
+          frag = fragments[targetSN - levelDetails.startSN];
+          logger["b" /* logger */].log('live playlist, switching playlist, load frag with next SN: ' + frag.sn);
+        } else if (targetCC >= levelDetails.startCC && targetCC <= levelDetails.endCC) {
+          frag = findFirstFragWithCC(fragments, targetCC);
+          logger["b" /* logger */].log('Live playlist switch, cannot find frag with target SN. Loading frag with next CC: ' + frag.cc);
         }
         // next frag SN not available (or not with same continuity counter)
         // look for a frag sharing the same CC
@@ -7563,7 +7618,7 @@ var stream_controller_StreamController = function (_EventHandler) {
             // and if previous remuxed fragment did not start with a keyframe. (fragPrevious.dropped)
             // let's try to load previous fragment again to get last keyframe
             // then we will reload again current fragment (that way we should be able to fill the buffer hole ...)
-            if (deltaPTS && deltaPTS > config.maxBufferHole && fragPrevious.dropped && curSNIdx) {
+            if (deltaPTS && deltaPTS > config.maxBufferHole && fragPrevious.dropped && curSNIdx && !frag.backtracked) {
               frag = prevFrag;
               logger["b" /* logger */].warn('SN just loaded, with large PTS gap between audio and video, maybe frag is not starting with a keyframe ? load previous one to try to overcome this');
               // decrement previous frag load counter to avoid frag loop loading error when next fragment will get reloaded
@@ -7612,7 +7667,7 @@ var stream_controller_StreamController = function (_EventHandler) {
       this.state = State.KEY_LOADING;
       hls.trigger(events["a" /* default */].KEY_LOADING, { frag: frag });
     } else {
-      logger["b" /* logger */].log('Loading ' + frag.sn + ' of [' + levelDetails.startSN + ' ,' + levelDetails.endSN + '],level ' + level + ', currentTime:' + pos.toFixed(3) + ',bufferEnd:' + bufferEnd.toFixed(3));
+      logger["b" /* logger */].log('Loading ' + frag.sn + ' of [' + levelDetails.startSN + ' ,' + levelDetails.endSN + '],level ' + level + ', currentTime:' + pos.toFixed(3) + ',bufferEnd:' + bufferEnd);
       // ensure that we are not reloading the same fragments in loop ...
       if (this.fragLoadIdx !== undefined) {
         this.fragLoadIdx++;
@@ -7992,7 +8047,7 @@ var stream_controller_StreamController = function (_EventHandler) {
     var duration = newDetails.totalduration;
     var sliding = 0;
 
-    logger["b" /* logger */].log('level ' + newLevelId + ' loaded [' + newDetails.startSN + ',' + newDetails.endSN + '],duration:' + duration);
+    logger["b" /* logger */].log('level ' + newLevelId + ' loaded [' + newDetails.startSN + ',' + newDetails.endSN + '], cc [' + newDetails.startCC + ', ' + newDetails.endCC + '] duration:' + duration);
 
     if (newDetails.live) {
       var curDetails = curLevel.details;
@@ -8016,6 +8071,7 @@ var stream_controller_StreamController = function (_EventHandler) {
       newDetails.PTSKnown = false;
     }
     // override level info
+    this.levelLastLoaded = newLevelId;
     curLevel.details = newDetails;
     this.levelLastLoaded = newLevelId;
     this.hls.trigger(events["a" /* default */].LEVEL_UPDATED, { details: newDetails, level: newLevelId });
@@ -8635,6 +8691,12 @@ var stream_controller_StreamController = function (_EventHandler) {
     this.fragPrevious = null;
   };
 
+  StreamController.prototype.onLevelRemoved = function onLevelRemoved(data) {
+    this.levels = this.levels.filter(function (level, index) {
+      return index !== data.level;
+    });
+  };
+
   StreamController.prototype.swapAudioCodec = function swapAudioCodec() {
     this.audioCodecSwap = !this.audioCodecSwap;
   };
@@ -8773,13 +8835,14 @@ var level_controller_LevelController = function (_EventHandler) {
   };
 
   LevelController.prototype.onManifestLoaded = function onManifestLoaded(data) {
-    var levels = [],
-        bitrateStart = void 0,
-        levelSet = {},
-        levelFromSet = null,
-        videoCodecFound = false,
-        audioCodecFound = false,
-        chromeOrFirefox = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
+    var levels = [];
+    var bitrateStart = void 0;
+    var levelSet = {};
+    var levelFromSet = null;
+    var videoCodecFound = false;
+    var audioCodecFound = false;
+    var chromeOrFirefox = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
+    var audioTracks = [];
 
     // regroup redundant levels together
     data.levels.forEach(function (level) {
@@ -8823,7 +8886,13 @@ var level_controller_LevelController = function (_EventHandler) {
       return (!audioCodec || isCodecSupportedInMp4(audioCodec)) && (!videoCodec || isCodecSupportedInMp4(videoCodec));
     });
 
-    if (levels.length > 0) {
+    if (data.audioTracks) {
+      audioTracks = data.audioTracks.filter(function (track) {
+        return !track.audioCodec || isCodecSupportedInMp4(track.audioCodec, 'audio');
+      });
+    }
+
+    if (levels.length) {
       // start bitrate is the first bitrate of the manifest
       bitrateStart = levels[0].bitrate;
       // sort level on bitrate
@@ -8839,14 +8908,7 @@ var level_controller_LevelController = function (_EventHandler) {
           break;
         }
       }
-      this.hls.trigger(events["a" /* default */].MANIFEST_PARSED, {
-        levels: levels,
-        firstLevel: this._firstLevel,
-        stats: data.stats,
-        audio: audioCodecFound,
-        video: videoCodecFound,
-        altAudio: data.audioTracks.length > 0
-      });
+      this.hls.trigger(events["a" /* default */].MANIFEST_PARSED, { levels: levels, audioTracks: audioTracks, firstLevel: this._firstLevel, stats: data.stats, audio: audioCodecFound, video: videoCodecFound, altAudio: audioTracks.length > 0 });
     } else {
       this.hls.trigger(events["a" /* default */].ERROR, {
         type: errors["b" /* ErrorTypes */].MEDIA_ERROR,
@@ -10562,7 +10624,7 @@ var xhr_loader_XhrLoader = function () {
       }
     } catch (e) {
       // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
-      this.callbacks.onError({ code: xhr.status, text: e.message }, context, xhr);
+      this.callbacks.onError({ code: xhr.status, text: e.message }, context);
       return;
     }
 
