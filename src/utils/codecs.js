@@ -68,8 +68,8 @@ function isCodecType(codec, type) {
     return !!typeCodes && typeCodes[codec.slice(0, 4)] === true;
 }
 
-function isCodecSupportedInMp4(codec) {
-    return MediaSource.isTypeSupported(`video/mp4;codecs="${codec}"`);
+function isCodecSupportedInMp4(codec, type) {
+    return MediaSource.isTypeSupported(`${type || 'video'}/mp4;codecs="${codec}"`);
 }
 
 export { isCodecType, isCodecSupportedInMp4 };
