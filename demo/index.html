@@ -293,6 +293,7 @@ $(document).ready(function() {
        hls.on(Hls.Events.MEDIA_DETACHED,function() {
         $("#HlsStatus").text('MediaSource detached...');
           bufferingIdx = -1;
+          tracks = [];
           events.video.push({time : performance.now() - events.t0, type : "Media detached"});
        });
        hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT,function(event,data) {
@@ -722,6 +723,9 @@ var lastSeekingIdx, lastStartPosition,lastDuration, lastAudioTrackSwitchingIdx;
             case mediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
               errorTxt = "The video could not be loaded, either because the server or network failed or because the format is not supported";
               break;
+          }
+          if (mediaError.message) {
+            errorTxt += ' - ' + mediaError.message;
           }
           $("#HlsStatus").text(errorTxt);
           console.error(errorTxt);
