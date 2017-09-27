@@ -58,20 +58,16 @@ class LevelController extends EventHandler {
     }
 
     onManifestLoaded(data) {
-        let levels0 = [];
         let levels = [];
-        let audioTracks = [];
         let bitrateStart;
-        let bitrateSet = {};
+        let levelSet = {};
+        let levelFromSet = null;
         let videoCodecFound = false;
         let audioCodecFound = false;
-        let hls = this.hls;
-        let brokenmp4inmp3 = /chrome|firefox/.test(
+        let chromeOrFirefox = /chrome|firefox/.test(
             navigator.userAgent.toLowerCase()
         );
-        let checkSupported = function(type, codec) {
-            return MediaSource.isTypeSupported(`${type}/mp4;codecs=${codec}`);
-        };
+        let audioTracks = [];
 
         // regroup redundant levels together
         data.levels.forEach(level => {
@@ -123,7 +119,7 @@ class LevelController extends EventHandler {
             audioTracks = data.audioTracks.filter(
                 track =>
                     !track.audioCodec ||
-                    checkSupported('audio', track.audioCodec)
+                    isCodecSupportedInMp4(track.audioCodec, 'audio')
             );
         }
 
@@ -154,7 +150,7 @@ class LevelController extends EventHandler {
                 stats: data.stats,
                 audio: audioCodecFound,
                 video: videoCodecFound,
-                altAudio: data.audioTracks.length > 0
+                altAudio: audioTracks.length > 0
             });
         } else {
             this.hls.trigger(Event.ERROR, {
@@ -323,16 +319,6 @@ class LevelController extends EventHandler {
                     }`
                 );
             } else {
-                if (removeLevel) {
-                    logger.warn(
-                        `Bad level encountered, removing & forcing to auto mode`
-                    );
-                    this._levels = this.levels.filter(
-                        (l, index) => index !== levelId
-                    );
-                    hls.currentLevel = -1;
-                    hls.trigger(Event.LEVEL_REMOVED, { level: levelId });
-                }
                 // we could try to recover if in auto mode and current level not lowest level (0)
                 if (this._manualLevel === -1 && levelIndex !== 0) {
                     logger.warn(
@@ -408,7 +394,6 @@ class LevelController extends EventHandler {
                         (newDetails.averagetargetduration
                             ? newDetails.averagetargetduration
                             : newDetails.targetduration),
-                    curLevel = this._levels[data.level],
                     curDetails = curLevel.details;
                 if (curDetails && newDetails.endSN === curDetails.endSN) {
                     // follow HLS Spec, If the client reloads a Playlist file and finds that it has not
