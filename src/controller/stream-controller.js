@@ -1413,7 +1413,7 @@ class StreamController extends EventHandler {
 _checkBuffer() {
     var media = this.media,
         config = this.config;
-    // Only attempt to seek when readyState is > 1
+    // Only attempt to seek when readyState is > 1 to avoid freezing the video tag
     if(media && media.readyState > 1) {
         let currentTime = media.currentTime,
             mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media,
