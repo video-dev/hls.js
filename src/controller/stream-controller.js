@@ -1413,8 +1413,8 @@ class StreamController extends EventHandler {
 _checkBuffer() {
     var media = this.media,
         config = this.config;
-    // if ready state different from HAVE_NOTHING (numeric value 0), we are allowed to seek
-    if(media && media.readyState) {
+    // Only attempt to seek when readyState is > 1
+    if(media && media.readyState > 1) {
         let currentTime = media.currentTime,
             mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media,
              buffered = mediaBuffer.buffered;
