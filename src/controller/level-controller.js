@@ -290,7 +290,6 @@ class LevelController extends EventHandler {
           }
         }
       } else if (levelError === true){
-        // FIXME Rely on Level Retry parameters, now it's possible to retry as long as media is buffered
         if ((this.levelRetryCount + 1) <= config.levelLoadingMaxRetry) {
           // exponential backoff capped to max retry timeout
           const delay = Math.min(Math.pow(2, this.levelRetryCount) * config.levelLoadingRetryDelay, config.levelLoadingMaxRetryTimeout);
