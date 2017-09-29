@@ -379,7 +379,7 @@ class TimelineController extends EventHandler {
                 }
 
                 let hls = this.hls;
-                let tracks = self.config.renderNatively
+                let tracks = this.config.renderNatively
                     ? this.textTracks
                     : this.tracks;
 
@@ -390,18 +390,22 @@ class TimelineController extends EventHandler {
                     vttCCs,
                     frag.cc,
                     function(cues) {
+                        const currentTrack = tracks[frag.trackId];
+                        const newCues = cues.filter(
+                            cue => !currentTrack.cues.getCueById(cue.id)
+                        );
+
                         if (self.config.renderNatively) {
-                            cues.forEach(cue => {
-                                tracks[frag.trackId].addCue(cue);
+                            newCues.forEach(cue => {
+                                currentTrack.addCue(cue);
                             });
                         } else {
-                            let track = tracks[frag.trackId];
-                            let trackId = track.default
+                            let trackId = currentTrack.default
                                 ? 'default'
                                 : 'subtitles' + frag.trackId;
                             hls.trigger(Event.CUES_PARSED, {
                                 type: 'subtitles',
-                                cues: cues,
+                                cues: newCues,
                                 track: trackId
                             });
                         }
