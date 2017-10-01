@@ -248,36 +248,34 @@ class TimelineController extends EventHandler {
       const sameTracks = this.tracks && data.subtitles && this.tracks.length === data.subtitles.length;
       this.tracks = data.subtitles || [];
 
-      if (!sameTracks) {
-        if (this.config.renderNatively) {
-          let inUseTracks = this.media ? this.media.textTracks : [];
+      if (this.config.renderNatively) {
+        let inUseTracks = this.media ? this.media.textTracks : [];
 
-          this.tracks.forEach((track, index) => {
-            let textTrack;
-            if (index < inUseTracks.length) {
-              const inUseTrack = inUseTracks[index];
-              // Reuse tracks with the same label, but do not reuse 608/708 tracks
-              if (reuseVttTextTrack(inUseTrack, track)) {
-                textTrack = inUseTrack;
-              }
+        this.tracks.forEach((track, index) => {
+          let textTrack;
+          if (index < inUseTracks.length) {
+            const inUseTrack = inUseTracks[index];
+            // Reuse tracks with the same label, but do not reuse 608/708 tracks
+            if (reuseVttTextTrack(inUseTrack, track)) {
+              textTrack = inUseTrack;
             }
-            if (!textTrack) {
-              textTrack = this.createTextTrack('subtitles', track.name, track.lang);
-            }
-            textTrack.mode = track.default ? 'showing' : 'hidden';
-            this.textTracks.push(textTrack);
-          });
-        } else if (this.tracks && this.tracks.length) {
-          // Create a list of tracks for the provider to consume
-          let tracksList = this.tracks.map((track) => {
-            return {
-              'label': track.name,
-              'kind': track.type.toLowerCase(),
-              'default': track.default
-            };
-          });
-          this.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: tracksList });
-        }
+          }
+          if (!textTrack) {
+            textTrack = this.createTextTrack('subtitles', track.name, track.lang);
+          }
+          textTrack.mode = track.default ? 'showing' : 'hidden';
+          this.textTracks.push(textTrack);
+        });
+      } else if (!sameTracks && this.tracks && this.tracks.length) {
+        // Create a list of tracks for the provider to consume
+        let tracksList = this.tracks.map((track) => {
+          return {
+            'label': track.name,
+            'kind': track.type.toLowerCase(),
+            'default': track.default
+          };
+        });
+        this.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: tracksList });
       }
     }
 
@@ -337,16 +335,18 @@ class TimelineController extends EventHandler {
         }
 
         let hls = this.hls;
-        let tracks = (self.config.renderNatively) ? this.textTracks : this.tracks;
+        let tracks = this.config.renderNatively ? this.textTracks : this.tracks;
 
         // Parse the WebVTT file contents.
         WebVTTParser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
+            const currentTrack = tracks[frag.trackId];
+            const newCues = cues.filter(cue => !currentTrack.cues.getCueById(cue.id));
+
             if (self.config.renderNatively) {
-              cues.forEach(cue => { tracks[frag.trackId].addCue(cue); });
+              newCues.forEach(cue => { currentTrack.addCue(cue); });
             } else {
-              let track = tracks[frag.trackId];
-              let trackId = track.default ? 'default' : 'subtitles' + frag.trackId;
-              hls.trigger(Event.CUES_PARSED, { type: 'subtitles', cues: cues, track: trackId });
+              let trackId = currentTrack.default ? 'default' : 'subtitles' + frag.trackId;
+              hls.trigger(Event.CUES_PARSED, { type: 'subtitles', cues: newCues, track: trackId });
             }
             hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
           },
