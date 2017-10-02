@@ -8,6 +8,7 @@ import EventHandler from '../event-handler';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import AttrList from '../utils/attr-list';
 import {logger} from '../utils/logger';
+import {isCodecType} from '../utils/codecs';
 
 // https://regex101.com is your friend
 const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
@@ -240,6 +241,24 @@ class PlaylistLoader extends EventHandler {
   parseMasterPlaylist(string, baseurl) {
     let levels = [], result;
     MASTER_PLAYLIST_REGEX.lastIndex = 0;
+
+    function setCodecs(codecs, level) {
+      ['video', 'audio'].forEach((type) => {
+        const filtered = codecs.filter((codec) => isCodecType(codec, type));
+        if (filtered.length) {
+          const preferred = filtered.filter((codec) => {
+            return codec.lastIndexOf('avc1', 0) === 0 || codec.lastIndexOf('mp4a', 0) === 0;
+          });
+          level[`${type}Codec`] = preferred.length > 0 ? preferred[0] : filtered[0];
+
+          // remove from list
+          codecs = codecs.filter((codec) => filtered.indexOf(codec) === -1);
+        }
+      });
+
+      level.unknownCodecs = codecs;
+    }
+
     while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null){
       const level = {};
 
@@ -254,19 +273,10 @@ class PlaylistLoader extends EventHandler {
       level.bitrate = attrs.decimalInteger('AVERAGE-BANDWIDTH') || attrs.decimalInteger('BANDWIDTH');
       level.name = attrs.NAME;
 
-      var codecs = attrs.CODECS;
-      if(codecs) {
-        codecs = codecs.split(/[ ,]+/);
-        for (let i = 0; i < codecs.length; i++) {
-          const codec = codecs[i];
-          if (codec.indexOf('avc1') !== -1) {
-            level.videoCodec = this.avc1toavcoti(codec);
-          } else if (codec.indexOf('hvc1') !== -1) {
-            level.videoCodec = codec;
-          } else {
-            level.audioCodec = codec;
-          }
-        }
+      setCodecs([].concat((attrs.CODECS || '').split(/[ ,]+/)), level);
+
+      if (level.videoCodec && level.videoCodec.indexOf('avc1') !== -1) {
+        level.videoCodec = this.avc1toavcoti(level.videoCodec);
       }
 
       levels.push(level);
@@ -372,6 +382,9 @@ class PlaylistLoader extends EventHandler {
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         frag.rawProgramDateTime = (' ' + result[5]).slice(1);
         frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
+        if (level.programDateTime === undefined) {
+          level.programDateTime = new Date(new Date(Date.parse(result[5])) - 1000 * totalduration);
+        }
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
         for (i = 1; i < result.length; i++) {

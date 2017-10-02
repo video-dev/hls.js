@@ -613,6 +613,7 @@ Rollover38803/20160525T064049-01-69844069.ts
     `;
     var result = new PlaylistLoader({on : function() { }}).parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8',0);
     assert.strictEqual(result.fragments.length, 3);
+    assert.strictEqual(result.programDateTime.getTime(),1464366884000);
     assert.strictEqual(result.totalduration, 30);
     assert.strictEqual(result.fragments[0].url, 'http://video.example.com/Rollover38803/20160525T064049-01-69844067.ts');
     assert.strictEqual(result.fragments[0].programDateTime.getTime(), 1464366884000);

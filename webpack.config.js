@@ -4,11 +4,6 @@ const pkgJson = require('./package.json');
 const path = require('path');
 const webpack = require('webpack');
 
-const buildConstants = {
-  __VERSION__: JSON.stringify(pkgJson.version),
-  __BUILD_VERSION__: process.env.BUILD_VERSION || 'full'
-};
-
 const uglifyJsOptions = {
   screwIE8: true,
   stats: true,
@@ -38,19 +33,63 @@ const commonConfig = {
   }
 };
 
-const commonPlugins = [
-  new webpack.optimize.OccurrenceOrderPlugin(),
-  new webpack.optimize.ModuleConcatenationPlugin(),
-  new webpack.DefinePlugin(buildConstants)
-];
+// Allow to customise light dists through env-vars.
+const env = process.env;
+const addSubtitleSupport = (typeof env.SUBTITLE !== 'undefined' && env.SUBTITLE);
+const addAltAudioSupport = (typeof env.ALT_AUDIO !== 'undefined' && env.ALT_AUDIO);
 
-const distPlugins = commonPlugins.concat([
-  new webpack.optimize.UglifyJsPlugin(uglifyJsOptions),
-  new webpack.LoaderOptionsPlugin({
-    minimize: true,
-    debug: false
-  })
-]);
+function getPluginsForConfig(type, minify = false) {
+  // common plugins.
+  const plugins = [
+    new webpack.optimize.OccurrenceOrderPlugin(),
+    new webpack.optimize.ModuleConcatenationPlugin(),
+    new webpack.DefinePlugin(getConstantsForConfig(type))
+  ];
+
+  if (minify) {
+    // minification plugins.
+    return plugins.concat([
+      new webpack.optimize.UglifyJsPlugin(uglifyJsOptions),
+      new webpack.LoaderOptionsPlugin({
+        minimize: true,
+        debug: false
+      })
+    ]);
+  }
+
+  return plugins;
+}
+
+function getConstantsForConfig(type) {
+  // By default the "main" dists (hls.js & hls.min.js) are full-featured.
+  return {
+    __VERSION__: JSON.stringify(pkgJson.version),
+    __SUBTITLE__: JSON.stringify(type === 'main' ? true: addSubtitleSupport),
+    __ALT_AUDIO__: JSON.stringify(type === 'main' ? true : addAltAudioSupport)
+  };
+}
+
+function getAliasesForLightDist() {
+  let aliases = {};
+
+  if (!addSubtitleSupport) {
+    aliases = Object.assign({}, aliases, {
+      './utils/cues': './empty.js',
+      './controller/timeline-controller': './empty.js',
+      './controller/subtitle-track-controller': './empty.js',
+      './controller/subtitle-stream-controller': './empty.js'
+    });
+  }
+
+  if (!addAltAudioSupport) {
+    aliases = Object.assign({}, aliases, {
+      './controller/audio-track-controller': './empty.js',
+      './controller/audio-stream-controller': './empty.js'
+    });
+  }
+
+  return aliases;
+}
 
 const multiConfig = [
   {
@@ -60,12 +99,12 @@ const multiConfig = [
       chunkFilename: '[name].js',
       sourceMapFilename: 'hls.js.map',
       path: path.resolve(__dirname, 'dist'),
-      publicPath: '/hls.js/dist/',
+      publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
       libraryExport: 'default'
     },
-    plugins: commonPlugins,
+    plugins: getPluginsForConfig('main'),
     devtool: 'source-map',
   },
   {
@@ -74,12 +113,12 @@ const multiConfig = [
       filename: 'hls.min.js',
       chunkFilename: '[name].js',
       path: path.resolve(__dirname, 'dist'),
-      publicPath: '/hls.js/dist/',
+      publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
       libraryExport: 'default'
     },
-    plugins: distPlugins
+    plugins: getPluginsForConfig('main', true)
   },
   {
     name: 'light',
@@ -88,22 +127,15 @@ const multiConfig = [
       chunkFilename: '[name].js',
       sourceMapFilename: 'hls.light.js.map',
       path: path.resolve(__dirname, 'dist'),
-      publicPath: '/hls.js/dist/',
+      publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
       libraryExport: 'default'
     },
     resolve: {
-      alias: {
-        './controller/audio-track-controller': './empty.js',
-        './controller/audio-stream-controller': './empty.js',
-        './utils/cues': './empty.js',
-        './controller/timeline-controller': './empty.js',
-        './controller/subtitle-track-controller': './empty.js',
-        './controller/subtitle-stream-controller': './empty.js'
-      }
+      alias: getAliasesForLightDist()
     },
-    plugins: commonPlugins,
+    plugins: getPluginsForConfig('light'),
     devtool: 'source-map'
   },
   {
@@ -112,22 +144,15 @@ const multiConfig = [
       filename: 'hls.light.min.js',
       chunkFilename: '[name].js',
       path: path.resolve(__dirname, 'dist'),
-      publicPath: '/hls.js/dist/',
+      publicPath: '/dist/',
       library: 'Hls',
       libraryTarget: 'umd',
       libraryExport: 'default'
     },
     resolve: {
-      alias: {
-        './controller/audio-track-controller': './empty.js',
-        './controller/audio-stream-controller': './empty.js',
-        './utils/cues': './empty.js',
-        './controller/timeline-controller': './empty.js',
-        './controller/subtitle-track-controller': './empty.js',
-        './controller/subtitle-stream-controller': './empty.js'
-      }
+      alias: getAliasesForLightDist()
     },
-    plugins: distPlugins
+    plugins: getPluginsForConfig('light', true)
   }
 ].map(fragment => Object.assign({}, commonConfig, fragment));
 
