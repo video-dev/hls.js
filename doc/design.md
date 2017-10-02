@@ -91,6 +91,16 @@ design idea is pretty simple :
        if playhead is stuck for more than `config.highBufferWatchdogPeriod` second in a buffered area, hls.js will nudge currentTime until playback recovers (it will retry every seconds, and report a fatal error after config.maxNudgeRetry retries)
     - convert non-fatal `FRAG_LOAD_ERROR`/`FRAG_LOAD_TIMEOUT`/`KEY_LOAD_ERROR`/`KEY_LOAD_TIMEOUT` error into fatal error when media position is not buffered and max load retry has been reached
     - stream controller actions are scheduled by a tick timer (invoked every 100ms) and actions are controlled by a state machine.
+  - [src/controller/subtitle-stream-controller.js][]
+    - subtitle stream controller is in charge of processing subtitle track fragments 
+	- subtitle stream controller takes the following actions:
+	  - once a SUBTITLE_TRACK_LOADED is received, the controller will begin processing the subtitle fragments
+	  - trigger KEY_LOADING event if fragment is encrypted
+	  - trigger FRAG_LOADING event
+	  - invoke decrypter.decrypt method on FRAG_LOADED if frag is encrypted
+	  - trigger FRAG_DECRYPTED event once encrypted fragment is decrypted
+  - [src/controller/subtitle-track-controller.js][]
+    - subtitle track controller handles subtitle track loading and switching
   - [src/controller/timeline-controller.js][]
     - Manages pulling CEA-708 caption data from the fragments, running them through the cea-608-parser, and handing them off to a display class, which defaults to src/utils/cues.js
   - [src/crypt/aes.js][]
