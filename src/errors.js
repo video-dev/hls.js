@@ -62,7 +62,5 @@ export const ErrorDetails = {
     // Identifier for a buffer nudge on stall (playback is stuck although currentTime is in a buffered area)
     BUFFER_NUDGE_ON_STALL: 'bufferNudgeOnStall',
     // Identifier for an internal exception happening inside hls.js while handling an event
-    INTERNAL_EXCEPTION: 'internalException',
-    // Malformed WebVTT contents
-    WEBVTT_EXCEPTION: 'webVTTException'
+    INTERNAL_EXCEPTION: 'internalException'
 };
