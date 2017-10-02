@@ -5,7 +5,7 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import {logger} from '../utils/logger';
-import Decrypter from '../crypt/decrypter'
+import Decrypter from '../crypt/decrypter';
 
 const State = {
   STOPPED : 'STOPPED',
@@ -91,7 +91,7 @@ class SubtitleStreamController extends EventHandler {
     if (this.ticks === 1) {
       this.doTick();
       if (this.ticks > 1) {
-        setTimeout(() => { this.tick() }, 1);
+        setTimeout(() => { this.tick(); }, 1);
       }
       this.ticks = 0;
     }
@@ -136,7 +136,7 @@ class SubtitleStreamController extends EventHandler {
             if ((frag.decryptdata && frag.decryptdata.uri != null) && (frag.decryptdata.key == null)) {
               logger.log(`Loading key for ${frag.sn}`);
               this.state = State.KEY_LOADING;
-              hls.trigger(Event.KEY_LOADING, {frag: frag});
+              this.hls.trigger(Event.KEY_LOADING, {frag: frag});
             } else {
               // Frags don't know their subtitle track ID, so let's just add that...
               frag.trackId = trackId;
@@ -165,7 +165,7 @@ class SubtitleStreamController extends EventHandler {
   }
 
   // Got a new set of subtitle fragments.
-  onSubtitleTrackLoaded(data) {
+  onSubtitleTrackLoaded() {
     this.tick();
   }
 
@@ -200,7 +200,7 @@ class SubtitleStreamController extends EventHandler {
               } catch (error) {
                 endTime = Date.now();
               }
-              hls.trigger(Event.FRAG_DECRYPTED, { frag: fragLoaded, payload : decryptedData, stats: { tstart: startTime, tdecrypt: endTime } });
+              this.hls.trigger(Event.FRAG_DECRYPTED, { frag: fragLoaded, payload : decryptedData, stats: { tstart: startTime, tdecrypt: endTime } });
             });
           }
         }
