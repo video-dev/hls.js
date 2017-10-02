@@ -179,7 +179,8 @@ class SubtitleStreamController extends EventHandler {
   onFragLoaded(data) {
     var fragCurrent = this.fragCurrent,
         decryptData = data.frag.decryptdata;
-    let fragLoaded = data.frag;
+    let fragLoaded = data.frag,
+        hls = this.hls;
     if (this.state === State.FRAG_LOADING &&
         fragCurrent &&
         data.frag.type === 'subtitle' &&
@@ -200,7 +201,7 @@ class SubtitleStreamController extends EventHandler {
               } catch (error) {
                 endTime = Date.now();
               }
-              this.hls.trigger(Event.FRAG_DECRYPTED, { frag: fragLoaded, payload : decryptedData, stats: { tstart: startTime, tdecrypt: endTime } });
+              hls.trigger(Event.FRAG_DECRYPTED, { frag: fragLoaded, payload : decryptedData, stats: { tstart: startTime, tdecrypt: endTime } });
             });
           }
         }
