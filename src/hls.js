@@ -12,6 +12,7 @@ import StreamController from  './controller/stream-controller';
 import LevelController from  './controller/level-controller';
 import ID3TrackController from './controller/id3-track-controller';
 
+import {getMediaSource} from './helper/mediasource-helper';
 import {logger, enableLogs} from './utils/logger';
 import EventEmitter from 'events';
 import {hlsDefaultConfig} from './config';
@@ -21,8 +22,8 @@ export default class Hls {
     return __VERSION__;
   }
   static isSupported() {
-    const mediaSource = window.MediaSource = window.MediaSource || window.WebKitMediaSource;
-    const sourceBuffer = window.SourceBuffer = window.SourceBuffer || window.WebKitSourceBuffer;
+    const mediaSource = getMediaSource();
+    const sourceBuffer = window.SourceBuffer || window.WebKitSourceBuffer;
     const isTypeSupported = mediaSource &&
                             typeof mediaSource.isTypeSupported === 'function' &&
                             mediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
