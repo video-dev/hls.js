@@ -2842,12 +2842,30 @@ var tsdemuxer_TSDemuxer = function () {
   };
 
   TSDemuxer.probe = function probe(data) {
-    // a TS fragment should contain at least 3 TS packets, a PAT, a PMT, and one PID, each starting with 0x47
-    if (data.length >= 3 * 188 && data[0] === 0x47 && data[188] === 0x47 && data[2 * 188] === 0x47) {
-      return true;
-    } else {
+    var syncOffset = TSDemuxer._syncOffset(data);
+    if (syncOffset < 0) {
       return false;
+    } else {
+      if (syncOffset) {
+        logger["b" /* logger */].warn('MPEG2-TS detected but first sync word found @ offset ' + syncOffset + ', junk ahead ?');
+      }
+      return true;
     }
+  };
+
+  TSDemuxer._syncOffset = function _syncOffset(data) {
+    // scan 1000 first bytes
+    var scanwindow = Math.min(1000, data.length - 3 * 188);
+    var i = 0;
+    while (i < scanwindow) {
+      // a TS fragment should contain at least 3 TS packets, a PAT, a PMT, and one PID, each starting with 0x47
+      if (data[i] === 0x47 && data[i + 188] === 0x47 && data[i + 2 * 188] === 0x47) {
+        return i;
+      } else {
+        i++;
+      }
+    }
+    return -1;
   };
 
   TSDemuxer.prototype.resetInitSegment = function resetInitSegment(initSegment, audioCodec, videoCodec, duration) {
@@ -2900,10 +2918,13 @@ var tsdemuxer_TSDemuxer = function () {
         parseMPEGPES = this._parseMPEGPES.bind(this),
         parseID3PES = this._parseID3PES.bind(this);
 
+    var syncOffset = TSDemuxer._syncOffset(data);
+
     // don't parse last TS packet if incomplete
-    len -= len % 188;
+    len -= (len + syncOffset) % 188;
+
     // loop through TS packets
-    for (start = 0; start < len; start += 188) {
+    for (start = syncOffset; start < len; start += 188) {
       if (data[start] === 0x47) {
         stt = !!(data[start + 1] & 0x40);
         // pid is a 13-bit field starting at the last bit of TS[1]
@@ -2993,7 +3014,7 @@ var tsdemuxer_TSDemuxer = function () {
               logger["b" /* logger */].log('reparse from beginning');
               unknownPIDs = false;
               // we set it to -188, the += 188 in the for loop will reset start to 0
-              start = -188;
+              start = syncOffset - 188;
             }
             pmtParsed = this.pmtParsed = true;
             break;
@@ -6686,6 +6707,16 @@ var events_default = /*#__PURE__*/__webpack_require__.n(events_events);
 var webworkify_webpack = __webpack_require__(8);
 var webworkify_webpack_default = /*#__PURE__*/__webpack_require__.n(webworkify_webpack);
 
+// CONCATENATED MODULE: ./src/helper/mediasource-helper.js
+/**
+ * MediaSource helper
+ */
+
+function getMediaSource() {
+  if (typeof window !== 'undefined') {
+    return window.MediaSource || window.WebKitMediaSource;
+  }
+}
 // CONCATENATED MODULE: ./src/demux/demuxer.js
 function demuxer__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -6695,6 +6726,9 @@ function demuxer__classCallCheck(instance, Constructor) { if (!(instance instanc
 
 
 
+
+
+var demuxer_MediaSource = getMediaSource();
 
 var demuxer_Demuxer = function () {
   function Demuxer(hls, id) {
@@ -6739,9 +6773,9 @@ var demuxer_Demuxer = function () {
     observer.on(events["a" /* default */].INIT_PTS_FOUND, forwardMessage);
 
     var typeSupported = {
-      mp4: MediaSource.isTypeSupported('video/mp4'),
-      mpeg: MediaSource.isTypeSupported('audio/mpeg'),
-      mp3: MediaSource.isTypeSupported('audio/mp4; codecs="mp3"')
+      mp4: demuxer_MediaSource.isTypeSupported('video/mp4'),
+      mpeg: demuxer_MediaSource.isTypeSupported('audio/mpeg'),
+      mp3: demuxer_MediaSource.isTypeSupported('audio/mp4; codecs="mp3"')
     };
     // navigator.vendor is not always available in Web Worker
     // refer to https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/navigator
@@ -8208,16 +8242,21 @@ var stream_controller_StreamController = function (_EventHandler) {
         frag.dropped = data.dropped;
         if (frag.dropped) {
           if (!frag.backtracked) {
-            logger["b" /* logger */].warn('missing video frame(s), backtracking fragment');
-            // Return back to the IDLE state without appending to buffer
-            // Causes findFragments to backtrack a segment and find the keyframe
-            // Audio fragments arriving before video sets the nextLoadPosition, causing _findFragments to skip the backtracked fragment
-            frag.backtracked = true;
-            this.nextLoadPosition = data.startPTS;
-            this.state = State.IDLE;
-            this.fragPrevious = frag;
-            this.tick();
-            return;
+            var levelDetails = level.details;
+            if (levelDetails && frag.sn === levelDetails.startSN) {
+              logger["b" /* logger */].warn('missing video frame(s) on first frag, appending with gap');
+            } else {
+              logger["b" /* logger */].warn('missing video frame(s), backtracking fragment');
+              // Return back to the IDLE state without appending to buffer
+              // Causes findFragments to backtrack a segment and find the keyframe
+              // Audio fragments arriving before video sets the nextLoadPosition, causing _findFragments to skip the backtracked fragment
+              frag.backtracked = true;
+              this.nextLoadPosition = data.startPTS;
+              this.state = State.IDLE;
+              this.fragPrevious = frag;
+              this.tick();
+              return;
+            }
           } else {
             logger["b" /* logger */].warn('Already backtracked on this fragment, appending with the gap');
           }
@@ -9049,7 +9088,8 @@ var level_controller_LevelController = function (_EventHandler) {
     },
     set: function set(newLevel) {
       var levels = this._levels;
-      if (levels && levels.length > newLevel) {
+      if (levels) {
+        newLevel = Math.min(newLevel, levels.length - 1);
         if (this._level !== newLevel || levels[newLevel].details === undefined) {
           this.setLevelInternal(newLevel);
         }
@@ -9660,6 +9700,9 @@ function buffer_controller__inherits(subClass, superClass) { if (typeof superCla
 
 
 
+
+var buffer_controller_MediaSource = getMediaSource();
+
 var buffer_controller_BufferController = function (_EventHandler) {
   buffer_controller__inherits(BufferController, _EventHandler);
 
@@ -9742,7 +9785,7 @@ var buffer_controller_BufferController = function (_EventHandler) {
     var media = this.media = data.media;
     if (media) {
       // setup the media source
-      var ms = this.mediaSource = new MediaSource();
+      var ms = this.mediaSource = new buffer_controller_MediaSource();
       //Media Source listeners
       this.onmso = this.onMediaSourceOpen.bind(this);
       this.onmse = this.onMediaSourceEnded.bind(this);
@@ -13833,7 +13876,10 @@ var WebVTTParser = {
     parse: function parse(vttByteArray, syncPTS, vttCCs, cc, callBack, errorCallBack) {
         // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
         var re = /\r\n|\n\r|\n|\r/g;
-        var vttLines = String.fromCharCode.apply(null, new Uint8Array(vttByteArray)).trim().replace(re, '\n').split('\n');
+        var vttLines = new Uint8Array(vttByteArray).reduce(function (raw, vttByte) {
+            return raw + String.fromCharCode(vttByte);
+        }, '').trim().replace(re, '\n').split('\n');
+
         var cueTime = '00:00.000';
         var mpegTs = 0;
         var localTime = 0;
@@ -14681,7 +14727,7 @@ var hlsDefaultConfig = {
   highBufferWatchdogPeriod: 3, // used by stream-controller
   nudgeOffset: 0.1, // used by stream-controller
   nudgeMaxRetry: 3, // used by stream-controller
-  maxFragLookUpTolerance: 0.2, // used by stream-controller
+  maxFragLookUpTolerance: 0.25, // used by stream-controller
   liveSyncDurationCount: 3, // used by stream-controller
   liveMaxLatencyDurationCount: Infinity, // used by stream-controller
   liveSyncDuration: undefined, // used by stream-controller
@@ -14773,10 +14819,11 @@ function hls__classCallCheck(instance, Constructor) { if (!(instance instanceof 
 
 
 
+
 var hls_Hls = function () {
   Hls.isSupported = function isSupported() {
-    var mediaSource = window.MediaSource = window.MediaSource || window.WebKitMediaSource;
-    var sourceBuffer = window.SourceBuffer = window.SourceBuffer || window.WebKitSourceBuffer;
+    var mediaSource = getMediaSource();
+    var sourceBuffer = window.SourceBuffer || window.WebKitSourceBuffer;
     var isTypeSupported = mediaSource && typeof mediaSource.isTypeSupported === 'function' && mediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
 
     // if SourceBuffer is exposed ensure its API is valid
