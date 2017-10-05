@@ -37,12 +37,30 @@
   }
 
   static probe(data) {
-    // a TS fragment should contain at least 3 TS packets, a PAT, a PMT, and one PID, each starting with 0x47
-    if (data.length >= 3*188 && data[0] === 0x47 && data[188] === 0x47 && data[2*188] === 0x47) {
-      return true;
-    } else {
+    const syncOffset = TSDemuxer._syncOffset(data);
+    if (syncOffset < 0)  {
       return false;
+    } else {
+      if (syncOffset) {
+        logger.warn(`MPEG2-TS detected but first sync word found @ offset ${syncOffset}, junk ahead ?`);
+      }
+      return true;
     }
+  }
+
+  static _syncOffset(data) {
+    // scan 1000 first bytes
+    const scanwindow  = Math.min(1000,data.length - 3*188);
+    let i = 0;
+    while(i < scanwindow) {
+      // a TS fragment should contain at least 3 TS packets, a PAT, a PMT, and one PID, each starting with 0x47
+      if (data[i] === 0x47 && data[i+188] === 0x47 && data[i+2*188] === 0x47) {
+        return i;
+      } else {
+        i++;
+      }
+    }
+    return -1;
   }
 
   resetInitSegment(initSegment,audioCodec,videoCodec, duration) {
@@ -88,10 +106,13 @@
         parseMPEGPES = this._parseMPEGPES.bind(this),
         parseID3PES  = this._parseID3PES.bind(this);
 
+    const syncOffset = TSDemuxer._syncOffset(data);
+
     // don't parse last TS packet if incomplete
-    len -= len % 188;
+    len -= (len + syncOffset) % 188;
+
     // loop through TS packets
-    for (start = 0; start < len; start += 188) {
+    for (start = syncOffset; start < len; start += 188) {
       if (data[start] === 0x47) {
         stt = !!(data[start + 1] & 0x40);
         // pid is a 13-bit field starting at the last bit of TS[1]
@@ -181,7 +202,7 @@
               logger.log('reparse from beginning');
               unknownPIDs = false;
               // we set it to -188, the += 188 in the for loop will reset start to 0
-              start = -188;
+              start = syncOffset-188;
             }
             pmtParsed = this.pmtParsed = true;
             break;
