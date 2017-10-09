@@ -66,8 +66,9 @@ design idea is pretty simple :
   - [src/controller/level-controller.js][]
     - level controller is handling quality level set/get ((re)loading stream manifest/switching levels)  
     - in charge of scheduling playlist (re)loading
-    - monitor fragment/key/level loading error. handle fallback mechanism in case of errors : switch to redundant level, then level switch down till lowest rendition is reached. if `LEVEL_LOAD_ERROR`/`LEVEL_LOAD_TIMEOUT` is raised while media.currentTime is not buffered  and it is not possible to fallback (either because we are already on the lowest rendition or because we are in manual level selection), then `LEVEL_LOAD_ERROR`/`LEVEL_LOAD_TIMEOUT` will be converted into a fatal error.
-    - a timer is armed to periodically refresh active live playlist.
+    - monitors fragment and key loading errors. Performs fragment hunt by switching between primary and backup streams and down-shifting a level till `fragLoadingMaxRetry` limit is reached.
+    - monitors level loading errors. Reloads level manifest with an exponential falloff and converts an error to fatal when `levelLoadingMaxRetry` limit is reached.
+    - a timer is armed to periodically refresh active live playlist
   - [src/controller/stream-controller.js][]
     - stream controller is in charge of:
       - triggering BUFFER_RESET on MANIFEST_PARSED or startLoad()    
