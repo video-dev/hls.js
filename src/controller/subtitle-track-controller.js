@@ -28,6 +28,7 @@ class SubtitleTrackController extends EventHandler {
     this.tracks = [];
     this.trackId = -1;
     this.media = undefined;
+    this.subtitleDisplay = false;
   }
 
   _onTextTracksChanged() {
@@ -177,7 +178,7 @@ class SubtitleTrackController extends EventHandler {
     let textTracks = filterSubtitleTracks(this.media.textTracks);
 
     // hide currently enabled subtitle track
-    if (this.trackId !== -1) {
+    if (this.trackId !== -1 && this.subtitleDisplay) {
       textTracks[this.trackId].mode = 'hidden';
     }
 
@@ -190,7 +191,9 @@ class SubtitleTrackController extends EventHandler {
     }
 
     let subtitleTrack = this.tracks[newId];
-    textTracks[newId].mode = 'showing';
+    if (this.subtitleDisplay) {
+      textTracks[newId].mode = 'showing';
+    }
 
     // check if we need to load playlist for this subtitle Track
     let details = subtitleTrack.details;
