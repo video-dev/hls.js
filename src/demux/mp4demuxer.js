@@ -1,7 +1,7 @@
 /**
  * MP4 demuxer
  */
-//import {logger} from '../utils/logger';
+import {logger} from '../utils/logger';
 import Event from '../events';
 
 const UINT32_MAX = Math.pow(2, 32) - 1;
@@ -21,6 +21,16 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
     //jshint unused:false
     if (initSegment && initSegment.byteLength) {
       const initData = this.initData = MP4Demuxer.parseInitSegment(initSegment);
+
+      // default audio codec if nothing specified
+      // TODO : extract that from initsegment
+      if (audioCodec == null) {
+        audioCodec = 'mp4a.40.5';
+      }
+      if (videoCodec == null) {
+        videoCodec = 'avc1.42e01e';
+
+      }
       var tracks = {};
       if(initData.audio && initData.video) {
         tracks.audiovideo = { container : 'video/mp4', codec : audioCodec + ',' + videoCodec, initSegment : duration ? initSegment : null };
@@ -44,11 +54,8 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
   }
 
   static probe(data) {
-    if (data.length >= 8) {
-      const dataType = MP4Demuxer.bin2str(data.subarray(4,8));
-      return (['moof','ftyp','styp'].indexOf(dataType) >= 0);
-    }
-    return false;
+    // ensure we find a moof box in the first 16 kB
+    return MP4Demuxer.findBox( { data : data, start : 0, end : Math.min(data.length, 16384) } ,['moof']).length > 0;
   }
 
 
@@ -169,6 +176,13 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
             const hdlrType = MP4Demuxer.bin2str(hdlr.data.subarray(hdlr.start+8, hdlr.start+12));
             let type = { 'soun' : 'audio', 'vide' : 'video'}[hdlrType];
             if (type) {
+                 // extract codec info. TODO : parse codec details to be able to build MIME type
+                  let codecBox = MP4Demuxer.findBox( trak, ['mdia','minf','stbl','stsd']);
+                  if (codecBox.length) {
+                    codecBox = codecBox[0];
+                    let codecType = MP4Demuxer.bin2str(codecBox.data.subarray(codecBox.start+12, codecBox.start+16));
+                    logger.log(`MP4Demuxer:${type}:${codecType} found`);
+                  }
               result[trackId] = { timescale : timescale , type : type};
               result[type] = { timescale : timescale , id : trackId};
             }
