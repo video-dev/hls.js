@@ -51,7 +51,7 @@
     "deep-strict-equal": "^0.2.0",
     "http-server": "^0.10.0",
     "jshint": "^2.9.4",
-    "mocha": "^3.0.2",
+    "mocha": "^4.0.0",
     "mversion": "^1.10.1",
     "selenium-webdriver": "^3.1.0",
     "webpack": "^3.5.5",
