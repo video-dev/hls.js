@@ -386,4 +386,16 @@ export default class Hls {
       subtitleTrackController.subtitleTrack = subtitleTrackId;
     }
   }
+
+  get subtitleDisplay() {
+    const subtitleTrackController = this.subtitleTrackController;
+    return subtitleTrackController ? subtitleTrackController.subtitleDisplay : false;
+  }
+
+  set subtitleDisplay(value) {
+    const subtitleTrackController = this.subtitleTrackController;
+    if (subtitleTrackController) {
+      subtitleTrackController.subtitleDisplay = value;
+    }
+  }
 }

@@ -95,6 +95,10 @@
 - [Audio Tracks Control API](#audio-tracks-control-api)
   - [`hls.audioTracks`](#hlsaudiotracks)
   - [`hls.audioTrack`](#hlsaudiotrack)
+- [Subtitle Tracks Control API](#subtitle-tracks-control-api)
+  - [`hls.subtitleTracks`](#hlssubtitletracks)
+  - [`hls.subtitleTrack`](#hlssubtitletrack)
+  - [`hls.subtitleDisplay`](#hlssubtitledisplay)
 - [Live stream API](#live-stream-api)
   - [`hls.liveSyncPosition`](#hlslivesyncposition)
 - [Runtime Events](#runtime-events)
@@ -1074,6 +1078,22 @@ get : array of audio tracks exposed in manifest
 ### `hls.audioTrack`
 
 get/set : audio track id (returned by)
+
+## Subtitle Tracks Control API
+
+### `hls.subtitleTracks`
+
+get : array of subtitle tracks exposed in manifest
+
+### `hls.subtitleTrack`
+
+get/set : subtitle track id (returned by)
+
+### `hls.subtitleDisplay`
+
+(default: `false`)
+
+get/set : boolean to enable/disable subtitle display by hls.js
 
 ## Live stream API
 
