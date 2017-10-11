@@ -1169,7 +1169,7 @@ Full list of Events is available below:
   - `Hls.Events.FRAG_LOADED`  - fired when a fragment loading is completed
     -  data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length}}
   - `Hls.Events.FRAG_DECRYPTED`  - fired when a fragment decryption is completed
-    -  data: { id : demuxer id, frag : fragment object, stats : { tstart, tdecrypt}}
+    -  data: { id : demuxer id, frag : fragment object, payload : fragment payload, stats : { tstart, tdecrypt}}
   - `Hls.Events.FRAG_PARSING_INIT_SEGMENT` - fired when Init Segment has been extracted from fragment
     -  data: { id: demuxer id, frag : fragment object, moov : moov MP4 box, codecs : codecs found while parsing fragment }
   - `Hls.Events.FRAG_PARSING_USERDATA`  - fired when parsing sei text is completed
