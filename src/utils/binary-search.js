@@ -40,4 +40,4 @@ var BinarySearch = {
     }
 };
 
-module.exports = BinarySearch;
+export default BinarySearch;

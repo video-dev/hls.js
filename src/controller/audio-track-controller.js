@@ -5,20 +5,31 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import {logger} from '../utils/logger';
+import {ErrorTypes} from '../errors';
 
 class AudioTrackController extends EventHandler {
 
   constructor(hls) {
     super(hls, Event.MANIFEST_LOADING,
                Event.MANIFEST_LOADED,
-               Event.AUDIO_TRACK_LOADED);
+               Event.AUDIO_TRACK_LOADED,
+               Event.ERROR);
     this.ticks = 0;
     this.ontick = this.tick.bind(this);
   }
 
   destroy() {
+    this.cleanTimer();
     EventHandler.prototype.destroy.call(this);
   }
+
+  cleanTimer() {
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+  }
+
   tick() {
     this.ticks++;
     if (this.ticks === 1) {
@@ -29,9 +40,17 @@ class AudioTrackController extends EventHandler {
       this.ticks = 0;
     }
   }
+
   doTick() {
     this.updateTrack(this.trackId);
   }
+
+  onError(data) {
+    if(data.fatal && data.type === ErrorTypes.NETWORK_ERROR) {
+      this.cleanTimer();
+    }
+  }
+
   onManifestLoading() {
     // reset audio tracks on manifest loading
     this.tracks = [];
@@ -46,7 +65,7 @@ class AudioTrackController extends EventHandler {
     // loop through available audio tracks and autoselect default if needed
     let id = 0;
     tracks.forEach(track => {
-      if(track.default) {
+      if(track.default && !defaultFound) {
         this.audioTrack = id;
         defaultFound = true;
         return;
@@ -71,8 +90,7 @@ class AudioTrackController extends EventHandler {
       }
       if (!data.details.live && this.timer) {
         // playlist is not live and timer is armed : stopping it
-        clearInterval(this.timer);
-        this.timer = null;
+        this.cleanTimer();
       }
     }
   }
@@ -98,10 +116,7 @@ class AudioTrackController extends EventHandler {
     // check if level idx is valid
     if (newId >= 0 && newId < this.tracks.length) {
       // stopping live reloading timer if any
-      if (this.timer) {
-       clearInterval(this.timer);
-       this.timer = null;
-      }
+      this.cleanTimer();
       this.trackId = newId;
       logger.log(`switching to audioTrack ${newId}`);
       let audioTrack = this.tracks[newId],
@@ -126,10 +141,7 @@ class AudioTrackController extends EventHandler {
     // check if level idx is valid
     if (newId >= 0 && newId < this.tracks.length) {
       // stopping live reloading timer if any
-      if (this.timer) {
-       clearInterval(this.timer);
-       this.timer = null;
-      }
+      this.cleanTimer();
       this.trackId = newId;
       logger.log(`updating audioTrack ${newId}`);
       let audioTrack = this.tracks[newId], url = audioTrack.url;

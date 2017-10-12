@@ -1,12 +1,9 @@
 /**
- * Buffer Helper class, providing methods dealing buffer length retrieval
+ * Buffer Helper utils, providing methods dealing buffer length retrieval
 */
 
-
-class BufferHelper {
-
-
-  static isBuffered(media,position) {
+const BufferHelper = {
+  isBuffered : function(media,position) {
     if (media) {
       let buffered = media.buffered;
       for (let i = 0; i < buffered.length; i++) {
@@ -16,9 +13,9 @@ class BufferHelper {
       }
     }
     return false;
-  }
+  },
 
-  static bufferInfo(media, pos,maxHoleDuration) {
+  bufferInfo : function(media, pos,maxHoleDuration) {
     if (media) {
       var vbuffered = media.buffered, buffered = [],i;
       for (i = 0; i < vbuffered.length; i++) {
@@ -28,9 +25,9 @@ class BufferHelper {
     } else {
       return {len: 0, start: pos, end: pos, nextStart : undefined} ;
     }
-  }
+  },
 
-  static bufferedInfo(buffered,pos,maxHoleDuration) {
+  bufferedInfo : function(buffered,pos,maxHoleDuration) {
     var buffered2 = [],
         // bufferStart and bufferEnd are buffer boundaries around current video position
         bufferLen,bufferStart, bufferEnd,bufferStartNext,i;
@@ -84,7 +81,6 @@ class BufferHelper {
     }
     return {len: bufferLen, start: bufferStart, end: bufferEnd, nextStart : bufferStartNext};
   }
-
-}
+};
 
 export default BufferHelper;

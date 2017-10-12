@@ -34,7 +34,7 @@ class EventHandler {
           throw new Error('Forbidden event name: ' + event);
         }
         this.hls.on(event, this.onEvent);
-      }.bind(this));
+      }, this);
     }
   }
 
@@ -42,7 +42,7 @@ class EventHandler {
     if (this.isEventHandler()) {
       this.handledEvents.forEach(function(event) {
         this.hls.off(event, this.onEvent);
-      }.bind(this));
+      }, this);
     }
   }
 

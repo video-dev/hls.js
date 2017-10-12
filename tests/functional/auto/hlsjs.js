@@ -72,7 +72,7 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
       browserName: browserConfig.name,
       platform: browserConfig.platform,
       version: browserConfig.version,
-      commandTimeout: 60,
+      commandTimeout: 90,
     };
     if (onTravis) {
       capabilities['tunnel-identifier'] = process.env.TRAVIS_JOB_NUMBER;
@@ -85,7 +85,7 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
       this.browser = new webdriver.Builder();
     }
     this.browser = this.browser.withCapabilities(capabilities).build();
-    this.browser.manage().timeouts().setScriptTimeout(40000);
+    this.browser.manage().timeouts().setScriptTimeout(75000);
     console.log("Retrieving web driver session...");
     return this.browser.getSession().then(function(session) {
       console.log("Web driver session id: "+session.getId());
@@ -97,9 +97,12 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
         return this.browser.get('http://127.0.0.1:8000/tests/functional/auto/hlsjs.html').then(function() {
           // ensure that the page has loaded and we haven't got an error page
           return this.browser.findElement(webdriver.By.css('body#hlsjs-functional-tests')).catch(function(e) {
-            console.log("Test page not loaded.");
-            return Promise.reject(e);
-          });
+            console.log("CSS not found");
+            this.browser.getPageSource().then(function(source){
+              console.log(source);
+              return Promise.reject(e);
+            });
+          }.bind(this));
         }.bind(this));
       }.bind(this)).then(function() {
         console.log("Test page loaded.");
@@ -110,9 +113,16 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
   });
 
   afterEach(function() {
-    console.log("Quitting browser...");
-    return this.browser.quit().then(function() {
-      console.log("Browser quit.");
+    var browser = this.browser;
+    browser.executeScript('return logString').then(function(return_value){
+      console.log('travis_fold:start:debug_logs');
+      console.log('logs');
+      console.log(return_value);
+      console.log('travis_fold:end:debug_logs');
+      console.log("Quitting browser...");
+      return browser.quit().then(function() {
+        console.log("Browser quit.");
+      });
     });
   });
 
@@ -125,9 +135,6 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
           callback({ code : 'loadeddata', logs : logString});
         };
       }, url).then(function(result) {
-        console.log('travis_fold:start:debug_logs');
-        console.log(result.logs);
-        console.log('travis_fold:end:debug_logs');
         assert.strictEqual(result.code, 'loadeddata');
       });
     }
@@ -145,9 +152,6 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
           callback({ code : video.readyState, logs : logString});
         }, 12000);
       }, url).then(function(result) {
-        console.log('travis_fold:start:debug_logs');
-        console.log(result.logs);
-        console.log('travis_fold:end:debug_logs');
         assert.strictEqual(result.code, 4);
       });
     }
@@ -165,9 +169,6 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
           callback({ code : 'seeked', logs : logString});
         };
       }, url).then(function(result) {
-        console.log('travis_fold:start:debug_logs');
-        console.log(result.logs);
-        console.log('travis_fold:end:debug_logs');
         assert.strictEqual(result.code, 'seeked');
       });
     }
@@ -185,9 +186,23 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
           callback({ code : 'ended', logs : logString});
         };
       }, url).then(function(result) {
-        console.log('travis_fold:start:debug_logs');
-        console.log(result.logs);
-        console.log('travis_fold:end:debug_logs');
+        assert.strictEqual(result.code, 'ended');
+      });
+    }
+  }
+
+  const testSeekEndVOD = function(url) {
+    return function() {
+      return this.browser.executeAsyncScript(function(url) {
+        var callback = arguments[arguments.length - 1];
+        startStream(url, callback);
+        video.onloadeddata = function() {
+          window.setTimeout(function() { video.currentTime = video.duration;}, 5000);
+        };
+        video.onended = function() {
+          callback({ code : 'ended', logs : logString});
+        };
+      }, url).then(function(result) {
         assert.strictEqual(result.code, 'ended');
       });
     }
@@ -205,7 +220,8 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
       if (stream.live) {
         it('should seek near the end and receive video seeked event for ' + stream.description, testSeekOnLive(url));
       } else {
-        it('should seek near the end and receive video ended event for ' + stream.description, testSeekOnVOD(url));
+        it('should seek 5s from end and receive video ended event for ' + stream.description, testSeekOnVOD(url));
+        //it('should seek on end and receive video ended event for ' + stream.description, testSeekEndVOD(url));
       }
     }
   }

@@ -29,7 +29,7 @@ var DemuxerWorker = function (self) {
     switch (data.cmd) {
       case 'init':
         let config = JSON.parse(data.config);
-        self.demuxer = new DemuxerInline(observer, data.id, data.typeSupported, config);
+        self.demuxer = new DemuxerInline(observer, data.typeSupported, config, data.vendor);
         try {
           enableLogs(config.debug === true);
         } catch(err) {
@@ -39,7 +39,7 @@ var DemuxerWorker = function (self) {
         forwardMessage('init',null);
         break;
       case 'demux':
-        self.demuxer.push(data.data, data.initSegment, data.audioCodec, data.videoCodec, data.timeOffset, data.cc, data.level, data.sn, data.duration,data.decryptdata,data.accurateTimeOffset,data.defaultInitPTS);
+        self.demuxer.push(data.data, data.decryptdata, data.initSegment, data.audioCodec, data.videoCodec, data.timeOffset,data.discontinuity, data.trackSwitch,data.contiguous,data.duration,data.accurateTimeOffset,data.defaultInitPTS);
         break;
       default:
         break;

@@ -7,10 +7,11 @@ import BufferHelper from '../helper/buffer-helper';
 import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import EventHandler from '../event-handler';
-import LevelHelper from '../helper/level-helper';
-import TimeRanges from '../utils/timeRanges';
+import * as LevelHelper from '../helper/level-helper';import TimeRanges from '../utils/timeRanges';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
+import { alignDiscontinuities } from '../utils/discontinuities';
+
 
 const State = {
   STOPPED : 'STOPPED',
@@ -96,7 +97,7 @@ class StreamController extends EventHandler {
       this.nextLoadPosition = this.startPosition = this.lastCurrentTime = startPosition;
       this.tick();
     } else {
-      logger.warn('cannot start loading as manifest not parsed yet');
+      this.forceStartLoad = true;
       this.state = State.STOPPED;
     }
   }
@@ -115,6 +116,7 @@ class StreamController extends EventHandler {
       this.demuxer = null;
     }
     this.state = State.STOPPED;
+    this.forceStartLoad = false;
   }
 
   tick() {
@@ -138,11 +140,7 @@ class StreamController extends EventHandler {
         this.fragLoadError = 0;
         break;
       case State.IDLE:
-        // when this returns false there was an error and we shall return immediatly
-        // from current tick
-        if (!this._doTickIdle()) {
-          return;
-        }
+        this._doTickIdle();
         break;
       case State.WAITING_LEVEL:
         var level = this.levels[this.level];
@@ -184,13 +182,13 @@ class StreamController extends EventHandler {
           config = hls.config,
           media = this.media;
 
-    // if video not attached AND
-    // start fragment already requested OR start frag prefetch disable
-    // exit loop
-    // => if start level loaded and media not attached but start frag prefetch is enabled and start frag not requested yet, we will not exit loop
-    if (this.levelLastLoaded !== undefined && !media &&
-      (this.startFragRequested || !config.startFragPrefetch)) {
-      return true;
+
+    // if start level not parsed yet OR
+    // if video not attached AND start fragment already requested OR start frag prefetch disable
+    // exit loop, as we either need more info (level not parsed) or we need media to be attached to load new fragment
+    if (this.levelLastLoaded === undefined || (
+      !media && (this.startFragRequested || !config.startFragPrefetch))) {
+      return;
     }
 
     // if we have not yet loaded any fragment, start loading from start position
@@ -202,8 +200,13 @@ class StreamController extends EventHandler {
     }
     // determine next load level
     let level = hls.nextLoadLevel,
-        levelInfo = this.levels[level],
-        levelBitrate = levelInfo.bitrate,
+        levelInfo = this.levels[level];
+
+    if (!levelInfo) {
+      return;
+    }
+
+    let levelBitrate = levelInfo.bitrate,
         maxBufLen;
 
     // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
@@ -221,7 +224,7 @@ class StreamController extends EventHandler {
           bufferLen = bufferInfo.len;
     // Stay idle if we are still with buffer margins
     if (bufferLen >= maxBufLen) {
-      return true;
+      return;
     }
 
     // if buffer length is less than maxBufLen try to load a new fragment ...
@@ -236,30 +239,36 @@ class StreamController extends EventHandler {
     // a useless and outdated fragment (that might even introduce load error if it is already out of the live playlist)
     if (typeof levelDetails === 'undefined' || levelDetails.live && this.levelLastLoaded !== level) {
       this.state = State.WAITING_LEVEL;
-      return true;
+      return;
     }
 
-    // we just got done loading the final fragment, check if we need to finalize media stream
+    // we just got done loading the final fragment and there is no other buffered range after ...
+    // rationale is that in case there are any buffered ranges after, it means that there are unbuffered portion in between
+    // so we should not switch to ENDED in that case, to be able to buffer them
+    // dont switch to ENDED if we need to backtrack last fragment
     let fragPrevious = this.fragPrevious;
-    if (!levelDetails.live && fragPrevious && fragPrevious.sn === levelDetails.endSN) {
+    if (!levelDetails.live && fragPrevious && !fragPrevious.backtracked && fragPrevious.sn === levelDetails.endSN && !bufferInfo.nextStart) {
+        // fragPrevious is last fragment. retrieve level duration using last frag start offset + duration
+        // real duration might be lower than initial duration if there are drifts between real frag duration and playlist signaling
+        const duration = Math.min(media.duration,fragPrevious.start + fragPrevious.duration);
         // if everything (almost) til the end is buffered, let's signal eos
-        // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference
-        // using half frag duration should help cope with these cases.
-        // also cope with almost zero last frag duration (max last frag duration with 200ms) refer to https://github.com/dailymotion/hls.js/pull/657
-        if (media.duration - Math.max(bufferInfo.end,fragPrevious.start) <= Math.max(0.2,fragPrevious.duration/2)) {
-        // Finalize the media stream
-        let data = {};
-        if (this.altAudio) {
-          data.type = 'video';
-        }
-        this.hls.trigger(Event.BUFFER_EOS,data);
-        this.state = State.ENDED;
-        return true;
+        // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference (audio/video offsets...)
+        // tolerate up to one frag duration to cope with these cases.
+        // also cope with almost zero last frag duration (max last frag duration with 200ms) refer to https://github.com/video-dev/hls.js/pull/657
+        if (duration - Math.max(bufferInfo.end,fragPrevious.start) <= Math.max(0.2,fragPrevious.duration)) {
+          // Finalize the media stream
+          let data = {};
+          if (this.altAudio) {
+            data.type = 'video';
+          }
+          this.hls.trigger(Event.BUFFER_EOS,data);
+          this.state = State.ENDED;
+          return;
       }
     }
 
     // if we have the levelDetails for the selected variant, lets continue enrichen our stream (load keys/fragments or trigger EOS, etc..)
-    return this._fetchPayloadOrEos(pos, bufferInfo, levelDetails);
+    this._fetchPayloadOrEos(pos, bufferInfo, levelDetails);
   }
 
   _fetchPayloadOrEos(pos, bufferInfo, levelDetails) {
@@ -270,7 +279,7 @@ class StreamController extends EventHandler {
 
     // empty playlist
     if (fragLen === 0) {
-      return false;
+      return;
     }
 
     // find fragment index, contiguous with end of buffer position
@@ -287,13 +296,13 @@ class StreamController extends EventHandler {
         let initialLiveManifestSize = this.config.initialLiveManifestSize;
         if(fragLen < initialLiveManifestSize){
           logger.warn(`Can not start playback of a level, reason: not enough fragments ${fragLen} < ${initialLiveManifestSize}`);
-          return false;
+          return;
         }
 
         frag = this._ensureFragmentAtLivePoint(levelDetails, bufferEnd, start, end, fragPrevious, fragments, fragLen);
         // if it explicitely returns null don't load any fragment and exit function now
         if (frag === null) {
-          return false;
+          return;
         }
 
       } else {
@@ -307,9 +316,9 @@ class StreamController extends EventHandler {
       frag = this._findFragment(start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails);
     }
     if(frag) {
-      return this._loadFragmentOrKey(frag, level, levelDetails, pos, bufferEnd);
+      this._loadFragmentOrKey(frag, level, levelDetails, pos, bufferEnd);
     }
-    return true;
+    return;
   }
 
   _ensureFragmentAtLivePoint(levelDetails, bufferEnd, start, end, fragPrevious, fragments, fragLen) {
@@ -328,6 +337,7 @@ class StreamController extends EventHandler {
         if (media && media.readyState && media.duration > liveSyncPosition) {
           media.currentTime = liveSyncPosition;
         }
+        this.nextLoadPosition = liveSyncPosition;
     }
 
     // if end of buffer greater than live edge, don't load any fragment
@@ -350,10 +360,23 @@ class StreamController extends EventHandler {
          even if SN are not synchronized between playlists, loading this frag will help us
          compute playlist sliding and find the right one after in case it was not the right consecutive one */
       if (fragPrevious) {
-        var targetSN = fragPrevious.sn + 1;
+        const targetSN = fragPrevious.sn + 1;
         if (targetSN >= levelDetails.startSN && targetSN <= levelDetails.endSN) {
-          frag = fragments[targetSN - levelDetails.startSN];
-          logger.log(`live playlist, switching playlist, load frag with next SN: ${frag.sn}`);
+          const fragNext = fragments[targetSN - levelDetails.startSN];
+          if (fragPrevious.cc === fragNext.cc) {
+            frag = fragNext;
+            logger.log(`live playlist, switching playlist, load frag with next SN: ${frag.sn}`);
+          }
+        }
+        // next frag SN not available (or not with same continuity counter)
+        // look for a frag sharing the same CC
+        if (!frag) {
+          frag = BinarySearch.search(fragments, function(frag) {
+            return fragPrevious.cc - frag.cc;
+          });
+          if (frag) {
+            logger.log(`live playlist, switching playlist, load frag with same CC: ${frag.sn}`);
+          }
         }
       }
       if (!frag) {
@@ -388,7 +411,7 @@ class StreamController extends EventHandler {
       //  return -1             return 0                 return 1
       //logger.log(`level/sn/start/end/bufEnd:${level}/${candidate.sn}/${candidate.start}/${(candidate.start+candidate.duration)}/${bufferEnd}`);
       // Set the lookup tolerance to be small enough to detect the current segment - ensures we don't skip over very small segments
-      let candidateLookupTolerance = Math.min(maxFragLookUpTolerance, candidate.duration);
+      let candidateLookupTolerance = Math.min(maxFragLookUpTolerance, candidate.duration + (candidate.deltaPTS ? candidate.deltaPTS : 0));
       if (candidate.start + candidate.duration - candidateLookupTolerance <= bufferEnd) {
         return 1;
       } // if maxFragLookUpTolerance will have negative value then don't return -1 for first element
@@ -419,7 +442,8 @@ class StreamController extends EventHandler {
       const prevFrag = fragments[curSNIdx - 1];
       const nextFrag = fragments[curSNIdx + 1];
       //logger.log('find SN matching with pos:' +  bufferEnd + ':' + frag.sn);
-       if (sameLevel && frag.sn === fragPrevious.sn) {
+      if (fragPrevious && frag.sn === fragPrevious.sn) {
+        if (sameLevel && !frag.backtracked) {
           if (frag.sn < levelDetails.endSN) {
             let deltaPTS = fragPrevious.deltaPTS;
             // if there is a significant delta between audio and video, larger than max allowed hole,
@@ -438,24 +462,29 @@ class StreamController extends EventHandler {
           } else {
             frag = null;
           }
-        } else if (frag.dropped && !sameLevel) {
-         // Only backtrack a max of 1 consecutive fragment to prevent sliding back too far when little or no frags start with keyframes
-         if (nextFrag && nextFrag.backtracked) {
-           logger.warn(`Already backtracked from fragment ${curSNIdx + 1}, will not backtrack to fragment ${curSNIdx}. Loading fragment ${curSNIdx + 1}`);
-           frag = nextFrag;
-         } else {
-           // If a fragment has dropped frames and it's in a different level/sequence, load the previous fragment to try and find the keyframe
-           // Reset the dropped count now since it won't be reset until we parse the fragment again, which prevents infinite backtracking on the same segment
-           logger.warn('Loaded fragment with dropped frames, backtracking 1 segment to find a keyframe');
-           frag.dropped = 0;
-           if (prevFrag && prevFrag.loadCounter) {
-             prevFrag.loadCounter--;
-             frag = prevFrag;
-           } else {
-             frag = null;
-           }
-         }
-       }
+        } else if (frag.backtracked) {
+          // Only backtrack a max of 1 consecutive fragment to prevent sliding back too far when little or no frags start with keyframes
+          if (nextFrag && nextFrag.backtracked) {
+            logger.warn(`Already backtracked from fragment ${nextFrag.sn}, will not backtrack to fragment ${frag.sn}. Loading fragment ${nextFrag.sn}`);
+            frag = nextFrag;
+          } else {
+            // If a fragment has dropped frames and it's in a same level/sequence, load the previous fragment to try and find the keyframe
+            // Reset the dropped count now since it won't be reset until we parse the fragment again, which prevents infinite backtracking on the same segment
+            logger.warn('Loaded fragment with dropped frames, backtracking 1 segment to find a keyframe');
+            frag.dropped = 0;
+            if (prevFrag) {
+              if (prevFrag.loadCounter) {
+                prevFrag.loadCounter--;
+              }
+              frag = prevFrag;
+              frag.backtracked = true;
+            } else if (curSNIdx) {
+              // can't backtrack on very first fragment
+              frag = null;
+            }
+          }
+        }
+      }
     }
     return frag;
   }
@@ -483,26 +512,28 @@ class StreamController extends EventHandler {
         // if this frag has already been loaded 3 times, and if it has been reloaded recently
         if (frag.loadCounter > maxThreshold && (Math.abs(this.fragLoadIdx - frag.loadIdx) < maxThreshold)) {
           hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal: false, frag: frag});
-          return false;
+          return;
         }
       } else {
         frag.loadCounter = 1;
       }
       frag.loadIdx = this.fragLoadIdx;
-      this.fragCurrent = frag;
-      this.startFragRequested = true;
-      if (!isNaN(frag.sn)) {
-        this.nextLoadPosition = frag.start + frag.duration;
-      }
       frag.autoLevel = hls.autoLevelEnabled;
       frag.bitrateTest = this.bitrateTest;
+
+      this.fragCurrent = frag;
+      this.startFragRequested = true;
+      // Don't update nextLoadPosition for fragments which are not buffered
+      if (!isNaN(frag.sn) && !frag.bitrateTest) {
+        this.nextLoadPosition = frag.start + frag.duration;
+      }
       hls.trigger(Event.FRAG_LOADING, {frag: frag});
       // lazy demuxer init, as this could take some time ... do it during frag loading
       if (!this.demuxer) {
         this.demuxer = new Demuxer(hls,'main');
       }
       this.state = State.FRAG_LOADING;
-      return true;
+      return;
     }
   }
 
@@ -519,11 +550,11 @@ class StreamController extends EventHandler {
     return this._state;
   }
 
-  getBufferRange(position) {
-    return BinarySearch.search(this.bufferRange, function(range) {
-      if (position < range.start) {
+  getBufferedFrag(position) {
+    return BinarySearch.search(this._bufferedFrags, function(frag) {
+      if (position < frag.startPTS) {
         return -1;
-      } else if (position > range.end) {
+      } else if (position > frag.endPTS) {
         return 1;
       }
       return 0;
@@ -533,43 +564,43 @@ class StreamController extends EventHandler {
   get currentLevel() {
     let media = this.media;
     if (media) {
-      var range = this.getBufferRange(media.currentTime);
-      if (range) {
-        return range.frag.level;
+      const frag = this.getBufferedFrag(media.currentTime);
+      if (frag) {
+        return frag.level;
       }
     }
     return -1;
   }
 
-  get nextBufferRange() {
+  get nextBufferedFrag() {
     let media = this.media;
     if (media) {
       // first get end range of current fragment
-      return this.followingBufferRange(this.getBufferRange(media.currentTime));
+      return this.followingBufferedFrag(this.getBufferedFrag(media.currentTime));
     } else {
       return null;
     }
   }
 
-  followingBufferRange(range) {
-    if (range) {
+  followingBufferedFrag(frag) {
+    if (frag) {
       // try to get range of next fragment (500ms after this range)
-      return this.getBufferRange(range.end + 0.5);
+      return this.getBufferedFrag(frag.endPTS + 0.5);
     }
     return null;
   }
 
   get nextLevel() {
-    var range = this.nextBufferRange;
-    if (range) {
-      return range.frag.level;
+    const frag = this.nextBufferedFrag;
+    if (frag) {
+      return frag.level;
     } else {
       return -1;
     }
   }
 
   _checkFragmentChanged() {
-    var rangeCurrent, currentTime, video = this.media;
+    var fragPlayingCurrent, currentTime, video = this.media;
     if (video && video.readyState && video.seeking === false) {
       currentTime = video.currentTime;
       /* if video element is in seeked state, currentTime can only increase.
@@ -582,20 +613,24 @@ class StreamController extends EventHandler {
         this.lastCurrentTime = currentTime;
       }
       if (BufferHelper.isBuffered(video,currentTime)) {
-        rangeCurrent = this.getBufferRange(currentTime);
+        fragPlayingCurrent = this.getBufferedFrag(currentTime);
       } else if (BufferHelper.isBuffered(video,currentTime + 0.1)) {
         /* ensure that FRAG_CHANGED event is triggered at startup,
           when first video frame is displayed and playback is paused.
           add a tolerance of 100ms, in case current position is not buffered,
           check if current pos+100ms is buffered and use that buffer range
           for FRAG_CHANGED event reporting */
-        rangeCurrent = this.getBufferRange(currentTime + 0.1);
+        fragPlayingCurrent = this.getBufferedFrag(currentTime + 0.1);
       }
-      if (rangeCurrent) {
-        var fragPlaying = rangeCurrent.frag;
+      if (fragPlayingCurrent) {
+        var fragPlaying = fragPlayingCurrent;
         if (fragPlaying !== this.fragPlaying) {
-          this.fragPlaying = fragPlaying;
           this.hls.trigger(Event.FRAG_CHANGED, {frag: fragPlaying});
+          const fragPlayingLevel = fragPlaying.level;
+          if (!this.fragPlaying || this.fragPlaying.level !== fragPlayingLevel) {
+            this.hls.trigger(Event.LEVEL_SWITCHED, {level: fragPlayingLevel});
+          }
+          this.fragPlaying = fragPlaying;
         }
       }
     }
@@ -627,7 +662,9 @@ class StreamController extends EventHandler {
     }
     this.fragCurrent = null;
     // increase fragment load Index to avoid frag loop loading error after buffer flush
-    this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+    if (this.fragLoadIdx !== undefined) {
+      this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+    }
     // flush everything
     this.flushMainBuffer(0,Number.POSITIVE_INFINITY);
   }
@@ -660,14 +697,16 @@ class StreamController extends EventHandler {
     let media = this.media;
     // ensure that media is defined and that metadata are available (to retrieve currentTime)
     if (media && media.readyState) {
-      let fetchdelay, currentRange, nextRange;
-      // increase fragment load Index to avoid frag loop loading error after buffer flush
-      this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
-      currentRange = this.getBufferRange(media.currentTime);
-      if (currentRange && currentRange.start > 1) {
+      let fetchdelay, fragPlayingCurrent, nextBufferedFrag;
+      if (this.fragLoadIdx !== undefined) {
+        // increase fragment load Index to avoid frag loop loading error after buffer flush
+        this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+      }
+      fragPlayingCurrent = this.getBufferedFrag(media.currentTime);
+      if (fragPlayingCurrent && fragPlayingCurrent.startPTS > 1) {
         // flush buffer preceding current fragment (flush until current fragment start offset)
         // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
-        this.flushMainBuffer(0,currentRange.start - 1);
+        this.flushMainBuffer(0,fragPlayingCurrent.startPTS - 1);
       }
       if (!media.paused) {
         // add a safety delay of 1s
@@ -682,19 +721,21 @@ class StreamController extends EventHandler {
       }
       //logger.log('fetchdelay:'+fetchdelay);
       // find buffer range that will be reached once new fragment will be fetched
-      nextRange = this.getBufferRange(media.currentTime + fetchdelay);
-      if (nextRange) {
+      nextBufferedFrag = this.getBufferedFrag(media.currentTime + fetchdelay);
+      if (nextBufferedFrag) {
         // we can flush buffer range following this one without stalling playback
-        nextRange = this.followingBufferRange(nextRange);
-        if (nextRange) {
+        nextBufferedFrag = this.followingBufferedFrag(nextBufferedFrag);
+        if (nextBufferedFrag) {
           // if we are here, we can also cancel any loading/demuxing in progress, as they are useless
           var fragCurrent = this.fragCurrent;
           if (fragCurrent && fragCurrent.loader) {
             fragCurrent.loader.abort();
           }
           this.fragCurrent = null;
-          // flush position is the start position of this new buffer
-          this.flushMainBuffer(nextRange.start , Number.POSITIVE_INFINITY);
+          // start flush position is the start PTS of next buffered frag.
+          // we use frag.naxStartPTS which is max(audio startPTS, video startPTS).
+          // in case there is a small PTS Delta between audio and video, using maxStartPTS avoids flushing last samples from current fragment
+          this.flushMainBuffer(nextBufferedFrag.maxStartPTS , Number.POSITIVE_INFINITY);
         }
       }
     }
@@ -758,11 +799,13 @@ class StreamController extends EventHandler {
 
   onMediaSeeking() {
     let media = this.media, currentTime = media ? media.currentTime : undefined, config = this.config;
-    logger.log(`media seeking to ${currentTime.toFixed(3)}`);
+    if (!isNaN(currentTime)) {
+      logger.log(`media seeking to ${currentTime.toFixed(3)}`);
+    }
+    let mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
+    let bufferInfo = BufferHelper.bufferInfo(mediaBuffer,currentTime,this.config.maxBufferHole);
     if (this.state === State.FRAG_LOADING) {
-      let mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
-      let bufferInfo = BufferHelper.bufferInfo(mediaBuffer,currentTime,this.config.maxBufferHole),
-          fragCurrent = this.fragCurrent;
+      let fragCurrent = this.fragCurrent;
       // check if we are seeking to a unbuffered area AND if frag loading is in progress
       if (bufferInfo.len === 0 && fragCurrent) {
         let tolerance = config.maxFragLookUpTolerance,
@@ -783,6 +826,10 @@ class StreamController extends EventHandler {
         }
       }
     } else if (this.state === State.ENDED) {
+        // if seeking to unbuffered area, clean up fragPrevious
+        if (bufferInfo.len === 0) {
+          this.fragPrevious = 0;
+        }
         // switch to IDLE state to check for potential new fragment
         this.state = State.IDLE;
     }
@@ -802,7 +849,10 @@ class StreamController extends EventHandler {
   }
 
   onMediaSeeked() {
-    logger.log(`media seeked to ${this.media.currentTime.toFixed(3)}`);
+    const media = this.media, currentTime = media ? media.currentTime : undefined;
+    if (!isNaN(currentTime)) {
+      logger.log(`media seeked to ${currentTime.toFixed(3)}`);
+    }
     // tick to speed up FRAGMENT_PLAYING triggering
     this.tick();
   }
@@ -818,7 +868,7 @@ class StreamController extends EventHandler {
     // reset buffer on manifest loading
     logger.log('trigger BUFFER_RESET');
     this.hls.trigger(Event.BUFFER_RESET);
-    this.bufferRange = [];
+    this._bufferedFrags = [];
     this.stalled = false;
     this.startPosition = this.lastCurrentTime = 0;
   }
@@ -842,23 +892,22 @@ class StreamController extends EventHandler {
       logger.log('both AAC/HE-AAC audio found in levels; declaring level codec as HE-AAC');
     }
     this.levels = data.levels;
-    this.startLevelLoaded = false;
     this.startFragRequested = false;
     let config = this.config;
-    if (config.autoStartLoad) {
+    if (config.autoStartLoad || this.forceStartLoad) {
       this.hls.startLoad(config.startPosition);
     }
   }
 
   onLevelLoaded(data) {
-    var newDetails = data.details,
-        newLevelId = data.level,
-        curLevel = this.levels[newLevelId],
-        duration = newDetails.totalduration,
-        sliding = 0;
+    const newDetails = data.details;
+    const newLevelId = data.level;
+    const lastLevel = this.levels[this.levelLastLoaded];
+    const curLevel = this.levels[newLevelId];
+    const duration = newDetails.totalduration;
+    let sliding = 0;
 
     logger.log(`level ${newLevelId} loaded [${newDetails.startSN},${newDetails.endSN}],duration:${duration}`);
-    this.levelLastLoaded = newLevelId;
 
     if (newDetails.live) {
       var curDetails = curLevel.details;
@@ -867,20 +916,23 @@ class StreamController extends EventHandler {
         LevelHelper.mergeDetails(curDetails,newDetails);
         sliding = newDetails.fragments[0].start;
         this.liveSyncPosition = this.computeLivePosition(sliding, curDetails);
-        if (newDetails.PTSKnown) {
+        if (newDetails.PTSKnown && !isNaN(sliding)) {
           logger.log(`live playlist sliding:${sliding.toFixed(3)}`);
         } else {
           logger.log('live playlist - outdated PTS, unknown sliding');
+          alignDiscontinuities(this.fragPrevious, lastLevel, newDetails);
         }
       } else {
-        newDetails.PTSKnown = false;
         logger.log('live playlist - first load, unknown sliding');
+        newDetails.PTSKnown = false;
+        alignDiscontinuities(this.fragPrevious, lastLevel, newDetails);
       }
     } else {
       newDetails.PTSKnown = false;
     }
     // override level info
     curLevel.details = newDetails;
+    this.levelLastLoaded = newLevelId;
     this.hls.trigger(Event.LEVEL_UPDATED, { details: newDetails, level: newLevelId });
 
     if (this.startFragRequested === false) {
@@ -957,7 +1009,6 @@ class StreamController extends EventHandler {
         this.state = State.PARSING;
         // transmux the MPEG-TS data to ISO-BMFF segments
         let duration = details.totalduration,
-            start = !isNaN(fragCurrent.startDTS) ? fragCurrent.startDTS  : fragCurrent.start,
             level = fragCurrent.level,
             sn = fragCurrent.sn,
             audioCodec = this.config.defaultAudioCodec || currentLevel.audioCodec;
@@ -986,18 +1037,19 @@ class StreamController extends EventHandler {
         let mediaSeeking = media && media.seeking;
         let accurateTimeOffset = !mediaSeeking && (details.PTSKnown || !details.live);
         let initSegmentData = details.initSegment ? details.initSegment.data : [];
-        demuxer.push(data.payload, initSegmentData,audioCodec, currentLevel.videoCodec, start, fragCurrent.cc, level, sn, duration, fragCurrent.decryptdata, accurateTimeOffset,undefined);
+        demuxer.push(data.payload, initSegmentData,audioCodec, currentLevel.videoCodec, fragCurrent, duration, accurateTimeOffset,undefined);
       }
     }
     this.fragLoadError = 0;
   }
 
   onFragParsingInitSegment(data) {
-    let fragCurrent = this.fragCurrent;
+    const fragCurrent = this.fragCurrent;
+    const fragNew = data.frag;
     if (fragCurrent &&
         data.id === 'main' &&
-        data.sn === fragCurrent.sn &&
-        data.level === fragCurrent.level &&
+        fragNew.sn === fragCurrent.sn &&
+        fragNew.level === fragCurrent.level &&
         this.state === State.PARSING) {
       var tracks = data.tracks, trackName, track;
 
@@ -1043,30 +1095,6 @@ class StreamController extends EventHandler {
         track.levelCodec = this.levels[this.level].videoCodec;
         track.id = data.id;
       }
-
-      // if remuxer specify that a unique track needs to generated,
-      // let's merge all tracks together
-      if (data.unique) {
-        var mergedTrack = {
-            codec : '',
-            levelCodec : ''
-          };
-        for (trackName in data.tracks) {
-          track = tracks[trackName];
-          mergedTrack.container = track.container;
-          if (mergedTrack.codec) {
-            mergedTrack.codec +=  ',';
-            mergedTrack.levelCodec +=  ',';
-          }
-          if(track.codec) {
-            mergedTrack.codec +=  track.codec;
-          }
-          if (track.levelCodec) {
-            mergedTrack.levelCodec +=  track.levelCodec;
-          }
-        }
-        tracks = { audiovideo : mergedTrack };
-      }
       this.hls.trigger(Event.BUFFER_CODECS,tracks);
       // loop through tracks that are going to be provided to bufferController
       for (trackName in tracks) {
@@ -1086,15 +1114,16 @@ class StreamController extends EventHandler {
   }
 
   onFragParsingData(data) {
-    let fragCurrent = this.fragCurrent;
+    const fragCurrent = this.fragCurrent;
+    const fragNew = data.frag;
     if (fragCurrent &&
         data.id === 'main' &&
-        data.sn === fragCurrent.sn &&
-        data.level === fragCurrent.level &&
+        fragNew.sn === fragCurrent.sn &&
+        fragNew.level === fragCurrent.level &&
         !(data.type === 'audio' && this.altAudio) && // filter out main audio if audio track is loaded through audio stream controller
         this.state === State.PARSING) {
       var level = this.levels[this.level],
-          frag = this.fragCurrent;
+          frag = fragCurrent;
           if (isNaN(data.endPTS)) {
             data.endPTS = data.startPTS + fragCurrent.duration;
             data.endDTS = data.startDTS + fragCurrent.duration;
@@ -1107,14 +1136,21 @@ class StreamController extends EventHandler {
         frag.dropped = data.dropped;
         if (frag.dropped) {
           if (!frag.backtracked) {
-            // Return back to the IDLE state without appending to buffer
-            // Causes findFragments to backtrack a segment and find the keyframe
-            // Audio fragments arriving before video sets the nextLoadPosition, causing _findFragments to skip the backtracked fragment
-            frag.backtracked = true;
-            this.nextLoadPosition = data.startPTS;
-            this.state = State.IDLE;
-            this.tick();
-            return;
+            const levelDetails = level.details;
+            if (levelDetails && frag.sn === levelDetails.startSN) {
+              logger.warn('missing video frame(s) on first frag, appending with gap');
+            } else {
+              logger.warn('missing video frame(s), backtracking fragment');
+              // Return back to the IDLE state without appending to buffer
+              // Causes findFragments to backtrack a segment and find the keyframe
+              // Audio fragments arriving before video sets the nextLoadPosition, causing _findFragments to skip the backtracked fragment
+              frag.backtracked = true;
+              this.nextLoadPosition = data.startPTS;
+              this.state = State.IDLE;
+              this.fragPrevious = frag;
+              this.tick();
+              return;
+            }
           } else {
             logger.warn('Already backtracked on this fragment, appending with the gap');
           }
@@ -1124,7 +1160,7 @@ class StreamController extends EventHandler {
         }
       }
 
-      var drift = LevelHelper.updateFragPTSDTS(level.details,frag.sn,data.startPTS,data.endPTS,data.startDTS,data.endDTS),
+      var drift = LevelHelper.updateFragPTSDTS(level.details,frag,data.startPTS,data.endPTS,data.startDTS,data.endDTS),
           hls = this.hls;
       hls.trigger(Event.LEVEL_PTS_UPDATED, {details: level.details, level: this.level, drift: drift, type: data.type, start: data.startPTS, end: data.endPTS});
 
@@ -1145,11 +1181,12 @@ class StreamController extends EventHandler {
   }
 
   onFragParsed(data) {
-    let fragCurrent = this.fragCurrent;
+    const fragCurrent = this.fragCurrent;
+    const fragNew = data.frag;
     if (fragCurrent &&
         data.id === 'main' &&
-        data.sn === fragCurrent.sn &&
-        data.level === fragCurrent.level &&
+        fragNew.sn === fragCurrent.sn &&
+        fragNew.level === fragCurrent.level &&
         this.state === State.PARSING) {
       this.stats.tparsed = performance.now();
       this.state = State.PARSED;
@@ -1250,12 +1287,12 @@ class StreamController extends EventHandler {
       if (frag) {
         const media = this.mediaBuffer ? this.mediaBuffer : this.media;
         logger.log(`main buffered : ${TimeRanges.toString(media.buffered)}`);
-        // filter potentially evicted bufferRange. this is to avoid memleak on live streams
-        let bufferRange = this.bufferRange.filter(range => {return BufferHelper.isBuffered(media,(range.start + range.end) / 2);});
+        // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
+        let bufferedFrags = this._bufferedFrags.filter(frag => {return BufferHelper.isBuffered(media,(frag.startPTS + frag.endPTS) / 2);});
         // push new range
-        bufferRange.push({type: frag.type, start: frag.startPTS, end: frag.endPTS, frag: frag});
-        // sort, as we use BinarySearch for lookup in getBufferRange ...
-        this.bufferRange = bufferRange.sort(function(a,b) {return (a.start - b.start);});
+        bufferedFrags.push(frag);
+        // sort frags, as we use BinarySearch for lookup in getBufferedFrag ...
+        this._bufferedFrags = bufferedFrags.sort(function(a,b) {return (a.startPTS - b.startPTS);});
         this.fragPrevious = frag;
         const stats = this.stats;
         stats.tbuffered = performance.now();
@@ -1274,44 +1311,36 @@ class StreamController extends EventHandler {
     if (frag && frag.type !== 'main') {
       return;
     }
-    let media = this.media,
-        // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
-        mediaBuffered = media && BufferHelper.isBuffered(media,media.currentTime) && BufferHelper.isBuffered(media,media.currentTime+0.5);
+    // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
+    let mediaBuffered = !!this.media && BufferHelper.isBuffered(this.media, this.media.currentTime) && BufferHelper.isBuffered(this.media, this.media.currentTime + 0.5);
+
     switch(data.details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
       case ErrorDetails.KEY_LOAD_ERROR:
       case ErrorDetails.KEY_LOAD_TIMEOUT:
-        if(!data.fatal) {
-          var loadError = this.fragLoadError;
-          if(loadError) {
-            loadError++;
-          } else {
-            loadError=1;
-          }
-          let config = this.config;
-          // keep retrying / don't raise fatal network error if current position is buffered or if in automode with current level not 0
-          if (loadError <= config.fragLoadingMaxRetry || mediaBuffered || (frag.autoLevel && frag.level)) {
-            this.fragLoadError = loadError;
+        if (!data.fatal) {
+          // keep retrying until the limit will be reached
+          if ((this.fragLoadError + 1) <= this.config.fragLoadingMaxRetry) {
+            // exponential backoff capped to config.fragLoadingMaxRetryTimeout
+            let delay = Math.min(Math.pow(2, this.fragLoadError) * this.config.fragLoadingRetryDelay, this.config.fragLoadingMaxRetryTimeout);
             // reset load counter to avoid frag loop loading error
             frag.loadCounter = 0;
-            // exponential backoff capped to config.fragLoadingMaxRetryTimeout
-            var delay = Math.min(Math.pow(2,loadError-1)*config.fragLoadingRetryDelay,config.fragLoadingMaxRetryTimeout);
             logger.warn(`mediaController: frag loading failed, retry in ${delay} ms`);
             this.retryDate = performance.now() + delay;
             // retry loading state
             // if loadedmetadata is not set, it means that we are emergency switch down on first frag
             // in that case, reset startFragRequested flag
-            if(!this.loadedmetadata) {
+            if (!this.loadedmetadata) {
               this.startFragRequested = false;
               this.nextLoadPosition = this.startPosition;
             }
+            this.fragLoadError++;
             this.state = State.FRAG_LOADING_WAITING_RETRY;
           } else {
             logger.error(`mediaController: ${data.details} reaches max retry, redispatch as fatal ...`);
-            // redispatch same error but with fatal set to true
+            // switch error to fatal
             data.fatal = true;
-            this.hls.trigger(Event.ERROR, data);
             this.state = State.ERROR;
           }
         }
@@ -1328,9 +1357,8 @@ class StreamController extends EventHandler {
             // buffer empty. report as fatal if in manual mode or if lowest level.
             // level controller takes care of emergency switch down logic
             if (!frag.autoLevel || frag.level === 0) {
-              // redispatch same error but with fatal set to true
+              // switch error to fatal
               data.fatal = true;
-              this.hls.trigger(Event.ERROR, data);
               this.state = State.ERROR;
             }
           }
@@ -1344,8 +1372,8 @@ class StreamController extends EventHandler {
             this.state = State.ERROR;
             logger.warn(`streamController: ${data.details},switch to ${this.state} state ...`);
           } else {
-            // in cas of non fatal error while waiting level load to be completed, switch back to IDLE
-            if (this.state === State.WAITING_LEVEL) {
+            // in case of non fatal error while loading level, if level controller is not retrying to load level , switch back to IDLE
+            if (!data.levelRetry && this.state === State.WAITING_LEVEL) {
               this.state = State.IDLE;
             }
           }
@@ -1360,7 +1388,7 @@ class StreamController extends EventHandler {
             this.state = State.IDLE;
           } else {
             // current position is not buffered, but browser is still complaining about buffer full error
-            // this happens on IE/Edge, refer to https://github.com/dailymotion/hls.js/pull/708
+            // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
             // in that case flush the whole buffer to recover
             logger.warn('buffer full error also media.currentTime is not buffered, flush everything');
             this.fragCurrent = null;
@@ -1380,31 +1408,36 @@ class StreamController extends EventHandler {
       // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
       config.maxMaxBufferLength/=2;
       logger.warn(`main:reduce max buffer length to ${config.maxMaxBufferLength}s`);
-      // increase fragment load Index to avoid frag loop loading error after buffer flush
-      this.fragLoadIdx += 2 * config.fragLoadingLoopThreshold;
+      if (this.fragLoadIdx !== undefined) {
+        // increase fragment load Index to avoid frag loop loading error after buffer flush
+        this.fragLoadIdx += 2 * config.fragLoadingLoopThreshold;
+      }
     }
   }
 
 _checkBuffer() {
-    var media = this.media;
+    var media = this.media,
+        config = this.config;
     // if ready state different from HAVE_NOTHING (numeric value 0), we are allowed to seek
     if(media && media.readyState) {
         let currentTime = media.currentTime,
             mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media,
              buffered = mediaBuffer.buffered;
       // adjust currentTime to start position on loaded metadata
-      if(!this.loadedmetadata && buffered.length && !media.seeking) {
+      if(!this.loadedmetadata && buffered.length) {
         this.loadedmetadata = true;
         // only adjust currentTime if different from startPosition or if startPosition not buffered
         // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
-        let startPosition = this.startPosition,
-            startPositionBuffered = BufferHelper.isBuffered(mediaBuffer,startPosition);
-        // if currentTime not matching with expected startPosition or startPosition not buffered
-        if (currentTime !== startPosition || !startPositionBuffered) {
+        let startPosition = media.seeking ? currentTime : this.startPosition,
+            startPositionBuffered = BufferHelper.isBuffered(mediaBuffer,startPosition),
+            firstbufferedPosition = buffered.start(0),
+            startNotBufferedButClose = !startPositionBuffered && (Math.abs(startPosition-firstbufferedPosition) < config.maxSeekHole);
+        // if currentTime not matching with expected startPosition or startPosition not buffered but close to first buffered
+        if (currentTime !== startPosition || startNotBufferedButClose) {
           logger.log(`target start position:${startPosition}`);
           // if startPosition not buffered, let's seek to buffered.start(0)
-          if(!startPositionBuffered) {
-            startPosition = buffered.start(0);
+          if(startNotBufferedButClose) {
+            startPosition = firstbufferedPosition;
             logger.log(`target start position not buffered, seek to buffered.start(0) ${startPosition}`);
           }
           logger.log(`adjust currentTime from ${currentTime} to ${startPosition}`);
@@ -1418,8 +1451,7 @@ _checkBuffer() {
                                 media.ended  || // not playing when media is ended
                                 media.buffered.length === 0), // not playing if nothing buffered
             jumpThreshold = 0.5, // tolerance needed as some browsers stalls playback before reaching buffered range end
-            playheadMoving = currentTime !== this.lastCurrentTime,
-            config = this.config;
+            playheadMoving = currentTime !== this.lastCurrentTime;
 
         if (playheadMoving) {
           // played moving, but was previously stalled => now not stuck anymore
@@ -1510,14 +1542,16 @@ _checkBuffer() {
   }
 
   onBufferFlushed() {
-    /* after successful buffer flushing, filter flushed fragments from bufferRange
+    /* after successful buffer flushing, filter flushed fragments from bufferedFrags
       use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
     */
     const media = this.mediaBuffer ? this.mediaBuffer : this.media;
-    this.bufferRange = this.bufferRange.filter(range => {return BufferHelper.isBuffered(media,(range.start + range.end) / 2);});
+    this._bufferedFrags = this._bufferedFrags.filter(frag => {return BufferHelper.isBuffered(media,(frag.startPTS + frag.endPTS) / 2);});
 
-    // increase fragment load Index to avoid frag loop loading error after buffer flush
-    this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+    if (this.fragLoadIdx !== undefined) {
+      // increase fragment load Index to avoid frag loop loading error after buffer flush
+      this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+    }
     // move to IDLE once flush complete. this should trigger new fragment loading
     this.state = State.IDLE;
     // reset reference to frag
