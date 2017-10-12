@@ -109,8 +109,9 @@ class Demuxer {
     }
     this.frag = frag;
     if (w) {
-      // post fragment payload as transferable objects (no copy)
-      w.postMessage({cmd: 'demux', data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset,defaultInitPTS}, [data]);
+      // if fragment payload is not SharedArrayBuffer post it as transferable objects (no copy)
+      const transferList = data instanceof SharedArrayBuffer ? [] : [data];
+      w.postMessage({cmd: 'demux', data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset,defaultInitPTS}, transferList);
     } else {
       let demuxer = this.demuxer;
       if (demuxer) {

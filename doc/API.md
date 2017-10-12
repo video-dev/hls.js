@@ -638,7 +638,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @callback onSuccessCallback
       @param response {object} - response data
       @param response.url {string} - response URL (which might have been redirected)
-      @param response.data {string/arraybuffer} - response data (reponse type should be as per context.responseType)
+      @param response.data {string/arraybuffer/sharedarraybuffer} - response data (reponse type should be as per context.responseType)
       @param stats {object} - loading stats
       @param stats.trequest {number} - performance.now() just after load() has been called
       @param stats.tfirst {number} - performance.now() of first received byte
@@ -657,7 +657,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param [stats.total] {number} - total nb of bytes
       @param [stats.bw] {number} - current download bandwidth in bit/s (monitored by ABR controller to control emergency switch down)
       @param context {object} - loader context
-      @param data {string/arraybuffer} - onProgress data (should be defined only if context.progressData === true)
+      @param data {string/arraybuffer/sharedarraybuffer} - onProgress data (should be defined only if context.progressData === true)
       @param networkDetails {object} - loader network details (the xhr for default loaders)
 
       @callback onErrorCallback
