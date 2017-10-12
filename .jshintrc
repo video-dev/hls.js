@@ -30,6 +30,7 @@
     "Request"           : true,
     "Headers"           : true,
     "escape"            : true,
+    "SharedArrayBuffer" : true,
     "__VERSION__"       : true,
     "__SUBTITLE__"      : true,
     "__ALT_AUDIO__"     : true
