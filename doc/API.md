@@ -979,7 +979,7 @@ Example:
   var player = new Clappr.Player({
     parentId: "#video",
     hlsjsConfig: {
-      debug: true
+      debug: true,
       postInit: (hls) => console.log("Embedded hls.js version is", hls.constructor.version)
     },
     source: videoUrl
