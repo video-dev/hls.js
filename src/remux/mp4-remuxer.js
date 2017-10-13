@@ -108,11 +108,23 @@ class MP4Remuxer {
         tracks = {},
         data = { tracks : tracks },
         computePTSDTS = (this._initPTS === undefined),
+        editOffset = 0,
         initPTS, initDTS;
 
     if (computePTSDTS) {
       initPTS = initDTS = Infinity;
     }
+
+    if (audioSamples.length && videoSamples.length) {
+      const firstAudioSample = audioSamples[0];
+      const firstVideoSample = videoSamples[0];
+      editOffset = Math.max(firstAudioSample.pts,firstVideoSample.pts)- Math.min(firstAudioSample.dts,firstVideoSample.dts)+0.02;
+      editOffset /= audioTrack.inputTimeScale;
+      if (editOffset) {
+        logger.log(`editOffset : ${editOffset.toFixed(5)}`);
+      }
+    }
+
     if (audioTrack.config && audioSamples.length) {
       // let's use audio sampling rate as MP4 time scale.
       // rationale is that there is a integer nb of audio frames per audio sample (1024 for AAC)
@@ -131,7 +143,7 @@ class MP4Remuxer {
       tracks.audio = {
         container : container,
         codec :  audioTrack.codec,
-        initSegment : !audioTrack.isAAC && typeSupported.mpeg ? new Uint8Array() : MP4.initSegment([audioTrack]),
+        initSegment : !audioTrack.isAAC && typeSupported.mpeg ? new Uint8Array() : MP4.initSegment([audioTrack], editOffset),
         metadata : {
           channelCount : audioTrack.channelCount
         }
@@ -150,7 +162,7 @@ class MP4Remuxer {
       tracks.video = {
         container : 'video/mp4',
         codec :  videoTrack.codec,
-        initSegment : MP4.initSegment([videoTrack]),
+        initSegment : MP4.initSegment([videoTrack],editOffset),
         metadata : {
           width : videoTrack.width,
           height : videoTrack.height
