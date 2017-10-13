@@ -74,6 +74,7 @@
   - [`abrBandWidthUpFactor`](#abrbandwidthupfactor)
   - [`abrMaxWithRealBitrate`](#abrmaxwithrealbitrate)
   - [`minAutoBitrate`](#minautobitrate)
+  - [`postInit`](#postinit)
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
   - [`hls.attachMedia(videoElement)`](#hlsattachmediavideoelement)
   - [`hls.detachMedia()`](#hlsdetachmedia)
@@ -344,7 +345,8 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       abrEwmaDefaultEstimate: 500000,
       abrBandWidthFactor: 0.95,
       abrBandWidthUpFactor: 0.7,
-      minAutoBitrate: 0
+      minAutoBitrate: 0,
+      postInit: undefined
   };
 
   var hls = new Hls(config);
@@ -963,6 +965,26 @@ then if config value is set to `true`, ABR will use 2.5 Mb/s for this quality le
 
 Return the capping/min bandwidth value that could be used by automatic level selection algorithm.
 Useful when browser or tab of the browser is not in the focus and bandwidth drops
+
+### `postInit`
+
+(default: `undefined`)
+
+Post init function that should be called after hls.js player is initialized. `Hls` object is passed as the argument to this function.
+This allows user to access emdedded into other players `Hls` object and configure it, determine version, attach events etc.
+
+Example:
+
+```js
+  var player = new Clappr.Player({
+    parentId: "#video",
+    hlsjsConfig: {
+      debug: true
+      postInit: (hls) => console.log("Embedded hls.js version is", hls.constructor.version)
+    },
+    source: videoUrl
+  });
+```
 
 
 ## Video Binding/Unbinding API
