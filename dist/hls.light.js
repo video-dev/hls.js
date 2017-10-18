@@ -240,7 +240,7 @@ var logger = exportedLogger;
   FRAG_LOAD_EMERGENCY_ABORTED: 'hlsFragLoadEmergencyAborted',
   // fired when a fragment loading is completed - data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length } }
   FRAG_LOADED: 'hlsFragLoaded',
-  // fired when a fragment has finished decrypting - data: { id : demuxer id, frag: fragment object, stats : { tstart, tdecrypt } }
+  // fired when a fragment has finished decrypting - data: { id : demuxer id, frag: fragment object, payload : fragment payload, stats : { tstart, tdecrypt } }
   FRAG_DECRYPTED: 'hlsFragDecrypted',
   // fired when Init Segment has been extracted from fragment - data: { id : demuxer id, frag: fragment object, moov : moov MP4 box, codecs : codecs found while parsing fragment }
   FRAG_PARSING_INIT_SEGMENT: 'hlsFragParsingInitSegment',
@@ -1941,7 +1941,7 @@ function mp4demuxer__classCallCheck(instance, Constructor) { if (!(instance inst
 /**
  * MP4 demuxer
  */
-//import {logger} from '../utils/logger';
+
 
 
 var UINT32_MAX = Math.pow(2, 32) - 1;
@@ -1962,6 +1962,15 @@ var mp4demuxer_MP4Demuxer = function () {
     //jshint unused:false
     if (initSegment && initSegment.byteLength) {
       var initData = this.initData = MP4Demuxer.parseInitSegment(initSegment);
+
+      // default audio codec if nothing specified
+      // TODO : extract that from initsegment
+      if (audioCodec == null) {
+        audioCodec = 'mp4a.40.5';
+      }
+      if (videoCodec == null) {
+        videoCodec = 'avc1.42e01e';
+      }
       var tracks = {};
       if (initData.audio && initData.video) {
         tracks.audiovideo = { container: 'video/mp4', codec: audioCodec + ',' + videoCodec, initSegment: duration ? initSegment : null };
@@ -1985,11 +1994,8 @@ var mp4demuxer_MP4Demuxer = function () {
   };
 
   MP4Demuxer.probe = function probe(data) {
-    if (data.length >= 8) {
-      var dataType = MP4Demuxer.bin2str(data.subarray(4, 8));
-      return ['moof', 'ftyp', 'styp'].indexOf(dataType) >= 0;
-    }
-    return false;
+    // ensure we find a moof box in the first 16 kB
+    return MP4Demuxer.findBox({ data: data, start: 0, end: Math.min(data.length, 16384) }, ['moof']).length > 0;
   };
 
   MP4Demuxer.bin2str = function bin2str(buffer) {
@@ -2113,6 +2119,13 @@ var mp4demuxer_MP4Demuxer = function () {
             var hdlrType = MP4Demuxer.bin2str(hdlr.data.subarray(hdlr.start + 8, hdlr.start + 12));
             var type = { 'soun': 'audio', 'vide': 'video' }[hdlrType];
             if (type) {
+              // extract codec info. TODO : parse codec details to be able to build MIME type
+              var codecBox = MP4Demuxer.findBox(trak, ['mdia', 'minf', 'stbl', 'stsd']);
+              if (codecBox.length) {
+                codecBox = codecBox[0];
+                var codecType = MP4Demuxer.bin2str(codecBox.data.subarray(codecBox.start + 12, codecBox.start + 16));
+                logger["b" /* logger */].log('MP4Demuxer:' + type + ':' + codecType + ' found');
+              }
               result[trackId] = { timescale: timescale, type: type };
               result[type] = { timescale: timescale, id: trackId };
             }
@@ -6848,8 +6861,8 @@ var demuxer_Demuxer = function () {
     }
     this.frag = frag;
     if (w) {
-      // post fragment payload as transferable objects (no copy)
-      w.postMessage({ cmd: 'demux', data: data, decryptdata: decryptdata, initSegment: initSegment, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, discontinuity: discontinuity, trackSwitch: trackSwitch, contiguous: contiguous, duration: duration, accurateTimeOffset: accurateTimeOffset, defaultInitPTS: defaultInitPTS }, [data]);
+      // post fragment payload as transferable objects for ArrayBuffer (no copy)
+      w.postMessage({ cmd: 'demux', data: data, decryptdata: decryptdata, initSegment: initSegment, audioCodec: audioCodec, videoCodec: videoCodec, timeOffset: timeOffset, discontinuity: discontinuity, trackSwitch: trackSwitch, contiguous: contiguous, duration: duration, accurateTimeOffset: accurateTimeOffset, defaultInitPTS: defaultInitPTS }, data instanceof ArrayBuffer ? [data] : []);
     } else {
       var demuxer = this.demuxer;
       if (demuxer) {
@@ -8762,7 +8775,6 @@ function level_controller__inherits(subClass, superClass) { if (typeof superClas
 
 
 
-
 var level_controller_LevelController = function (_EventHandler) {
   level_controller__inherits(LevelController, _EventHandler);
 
@@ -8789,8 +8801,11 @@ var level_controller_LevelController = function (_EventHandler) {
   };
 
   LevelController.prototype.startLoad = function startLoad() {
-    this.canload = true;
     var levels = this._levels;
+
+    this.canload = true;
+    this.levelRetryCount = 0;
+
     // clean up live level details to force reload them, and reset load errors
     if (levels) {
       levels.forEach(function (level) {
@@ -8942,9 +8957,7 @@ var level_controller_LevelController = function (_EventHandler) {
         fragmentError = false;
     var levelIndex = void 0,
         level = void 0;
-    var _hls = this.hls,
-        config = _hls.config,
-        media = _hls.media;
+    var config = this.hls.config;
 
     // try to recover not fatal errors
 
@@ -8975,45 +8988,48 @@ var level_controller_LevelController = function (_EventHandler) {
       level.loadError++;
       level.fragmentError = fragmentError;
 
-      // if any redundant streams available and if we haven't try them all (level.loadError is reseted on successful frag/level load.
-      // if level.loadError reaches redundantLevels it means that we tried them all, no hope  => let's switch down
-      var redundantLevels = level.url.length;
+      // Allow fragment retry as long as configuration allows.
+      // Since fragment retry logic could depend on the levels, we should not enforce retry limits when there is an issue with fragments
+      // FIXME Find a better abstraction where fragment/level retry management is well decoupled
+      if (fragmentError === true) {
+        // if any redundant streams available and if we haven't try them all (level.loadError is reseted on successful frag/level load.
+        // if level.loadError reaches redundantLevels it means that we tried them all, no hope  => let's switch down
+        var redundantLevels = level.url.length;
 
-      if (redundantLevels > 1 && level.loadError < redundantLevels) {
-        level.urlId = (level.urlId + 1) % redundantLevels;
-        level.details = undefined;
-        logger["b" /* logger */].warn('level controller,' + details + ' for level ' + levelIndex + ': switching to redundant stream id ' + level.urlId);
-      } else {
-        // we could try to recover if in auto mode and current level not lowest level (0)
-        if (this._manualLevel === -1 && levelIndex !== 0) {
-          logger["b" /* logger */].warn('level controller,' + details + ': switch-down for next fragment');
-          this.hls.nextAutoLevel = Math.max(0, levelIndex - 1);
-        } else if (level && level.details && level.details.live) {
-          logger["b" /* logger */].warn('level controller,' + details + ' on live stream, discard');
-          if (levelError === true) {
+        if (redundantLevels > 1 && level.loadError < redundantLevels) {
+          level.urlId = (level.urlId + 1) % redundantLevels;
+          level.details = undefined;
+          logger["b" /* logger */].warn('level controller,' + details + ' for level ' + levelIndex + ': switching to redundant stream id ' + level.urlId);
+        } else {
+          // we could try to recover if in auto mode and current level not lowest level (0)
+          if (this._manualLevel === -1 && levelIndex !== 0) {
+            logger["b" /* logger */].warn('level controller,' + details + ': switch-down for next fragment');
+            this.hls.nextAutoLevel = levelIndex - 1;
+          } else {
+            logger["b" /* logger */].warn('level controller, ' + details + ': reload a fragment');
             // reset this._level so that another call to set level() will trigger again a frag load
             this._level = undefined;
           }
-          // other errors are handled by stream controller
-        } else if (levelError === true) {
-          // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
-          var mediaBuffered = !!media && buffer_helper.isBuffered(media, media.currentTime) && buffer_helper.isBuffered(media, media.currentTime + 0.5);
-          // FIXME Rely on Level Retry parameters, now it's possible to retry as long as media is buffered
-          if (mediaBuffered === true) {
-            logger["b" /* logger */].warn('level controller,' + details + ', but media buffered, retry in ' + config.levelLoadingRetryDelay + 'ms');
-            this.timer = setTimeout(function () {
-              return _this2.tick();
-            }, config.levelLoadingRetryDelay);
-            // boolean used to inform stream controller not to switch back to IDLE on non fatal error
-            data.levelRetry = true;
-          } else {
-            logger["b" /* logger */].error('cannot recover ' + details + ' error');
-            this._level = undefined;
-            // stopping live reloading timer if any
-            this.cleanTimer();
-            // switch error to fatal
-            data.fatal = true;
-          }
+        }
+      } else if (levelError === true) {
+        if (this.levelRetryCount + 1 <= config.levelLoadingMaxRetry) {
+          // exponential backoff capped to max retry timeout
+          var delay = Math.min(Math.pow(2, this.levelRetryCount) * config.levelLoadingRetryDelay, config.levelLoadingMaxRetryTimeout);
+          // reset load counter to avoid frag loop loading error
+          this.timer = setTimeout(function () {
+            return _this2.tick();
+          }, delay);
+          // boolean used to inform stream controller not to switch back to IDLE on non fatal error
+          data.levelRetry = true;
+          this.levelRetryCount++;
+          logger["b" /* logger */].warn('level controller,' + details + ', retry in ' + delay + ' ms, current retry count is ' + this.levelRetryCount);
+        } else {
+          logger["b" /* logger */].error('cannot recover ' + details + ' error');
+          this._level = undefined;
+          // stopping live reloading timer if any
+          this.cleanTimer();
+          // switch error to fatal
+          data.fatal = true;
         }
       }
     }
@@ -9030,6 +9046,7 @@ var level_controller_LevelController = function (_EventHandler) {
       if (level !== undefined) {
         level.fragmentError = false;
         level.loadError = 0;
+        this.levelRetryCount = 0;
       }
     }
   };
@@ -9044,6 +9061,7 @@ var level_controller_LevelController = function (_EventHandler) {
       // reset level load error counter on successful level loaded only if there is no issues with fragments
       if (curLevel.fragmentError === false) {
         curLevel.loadError = 0;
+        this.levelRetryCount = 0;
       }
       var newDetails = data.details;
       // if current playlist is a live playlist, arm a timer to reload it
@@ -10853,7 +10871,7 @@ var hls_Hls = function () {
   hls__createClass(Hls, null, [{
     key: 'version',
     get: function get() {
-      return "0.8.4";
+      return "0.8.5";
     }
   }, {
     key: 'Events',
@@ -11297,6 +11315,18 @@ var hls_Hls = function () {
       var subtitleTrackController = this.subtitleTrackController;
       if (subtitleTrackController) {
         subtitleTrackController.subtitleTrack = subtitleTrackId;
+      }
+    }
+  }, {
+    key: 'subtitleDisplay',
+    get: function get() {
+      var subtitleTrackController = this.subtitleTrackController;
+      return subtitleTrackController ? subtitleTrackController.subtitleDisplay : false;
+    },
+    set: function set(value) {
+      var subtitleTrackController = this.subtitleTrackController;
+      if (subtitleTrackController) {
+        subtitleTrackController.subtitleDisplay = value;
       }
     }
   }]);
