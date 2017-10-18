@@ -122,7 +122,7 @@
 First include `https://cdn.jsdelivr.net/npm/hls.js@latest` (or `/hls.js` for unminified) in your web page.
 
 ```html
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="//cdn.jsdelivr.net/npm/hls.js@latest"></script>
 ```
 
 Invoke the following static method: `Hls.isSupported()` to check whether your browser is supporting [MediaSource Extensions](http://w3c.github.io/media-source/).
