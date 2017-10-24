@@ -317,6 +317,7 @@ class LevelController extends EventHandler {
 
   onLevelLoaded(data) {
     const levelId = data.level;
+    const playbackRate = this.hls.media.playbackRate;
     // only process level loaded events matching with expected level
     if (levelId === this._level) {
       let curLevel = this._levels[levelId];
@@ -329,6 +330,7 @@ class LevelController extends EventHandler {
       if (newDetails.live) {
         let reloadInterval = 1000 * ( newDetails.averagetargetduration ? newDetails.averagetargetduration : newDetails.targetduration),
             curDetails     = curLevel.details;
+        reloadInterval /= playbackRate;
         if (curDetails && newDetails.endSN === curDetails.endSN) {
           // follow HLS Spec, If the client reloads a Playlist file and finds that it has not
           // changed then it MUST wait for a period of one-half the target
