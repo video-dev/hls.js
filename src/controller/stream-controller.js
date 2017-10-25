@@ -612,7 +612,7 @@ class StreamController extends EventHandler {
         media decode error, check this, to avoid seeking back to
         wrong position after a media decode error
       */
-      if(currentTime > video.playbackRate*this.lastCurrentTime) {
+      if(currentTime > this.lastCurrentTime) {
         this.lastCurrentTime = currentTime;
       }
       if (BufferHelper.isBuffered(video,currentTime)) {
