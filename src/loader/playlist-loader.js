@@ -15,7 +15,7 @@ const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 
 const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
-  /#EXTINF:(\d*(?:\.\d+)?)(?:,(.*)\s+)?/.source, // duration (#EXTINF:<duration>,<title>), group 1 => duration, group 2 => title
+  /#EXTINF:\s*(\d*(?:\.\d+)?)(?:,(.*)\s+)?/.source, // duration (#EXTINF:<duration>,<title>), group 1 => duration, group 2 => title
   /|(?!#)(\S+)/.source,                          // segment URI, group 3 => the URI (note newline is not eaten)
   /|#EXT-X-BYTERANGE:*(.+)/.source,              // next segment's byterange, group 4 => range spec (x@y)
   /|#EXT-X-PROGRAM-DATE-TIME:(.+)/.source,       // next segment's program date/time group 5 => the datetime spec
