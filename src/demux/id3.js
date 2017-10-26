@@ -314,18 +314,21 @@ class ID3 {
    * LastModified: Dec 25 1999
    * This library is free.  You can redistribute it and/or modify it.
    */
-    static _utf8ArrayToStr(array) {
+    static _utf8ArrayToStr(array, startingIndex) {
+        const len = array.length;
+        let c;
         let char2;
         let char3;
         let out = '';
-        let i = 0;
-        let length = array.length;
-
-        while (i < length) {
-            let c = array[i++];
+        let i = startingIndex || 0;
+        while (i < len) {
+            c = array[i++];
+            // If the character is 3 (END_OF_TEXT) or 0 (NULL) then skip it
+            if (c === 0x00 || c === 0x03) {
+                continue;
+            }
             switch (c >> 4) {
                 case 0:
-                    return out;
                 case 1:
                 case 2:
                 case 3:
@@ -354,11 +357,15 @@ class ID3 {
                             ((char3 & 0x3f) << 0)
                     );
                     break;
+                default:
             }
         }
-
         return out;
     }
 }
 
+const utf8ArrayToStr = ID3._utf8ArrayToStr;
+
 export default ID3;
+
+export { utf8ArrayToStr };

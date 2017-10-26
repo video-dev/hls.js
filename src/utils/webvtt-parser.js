@@ -1,4 +1,5 @@
 import VTTParser from './vttparser';
+import { utf8ArrayToStr } from '../demux/id3';
 
 // String.prototype.startsWith is not supported in IE11
 const startsWith = function(inputString, searchString, position) {
@@ -72,8 +73,7 @@ const WebVTTParser = {
     ) {
         // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
         let re = /\r\n|\n\r|\n|\r/g;
-        let vttLines = String.fromCharCode
-            .apply(null, new Uint8Array(vttByteArray))
+        let vttLines = utf8ArrayToStr(new Uint8Array(vttByteArray))
             .trim()
             .replace(re, '\n')
             .split('\n');
@@ -120,7 +120,7 @@ const WebVTTParser = {
             cue.id = hash(cue.startTime) + hash(cue.endTime) + hash(cue.text);
 
             // Fix encoding of special characters. TODO: Test with all sorts of weird characters.
-            cue.text = decodeURIComponent(escape(cue.text));
+            cue.text = decodeURIComponent(encodeURIComponent(cue.text));
             if (cue.endTime > 0) {
                 cues.push(cue);
             }
