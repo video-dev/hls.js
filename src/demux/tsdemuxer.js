@@ -85,7 +85,7 @@ class TSDemuxer {
    * @param {number} duration
    * @return {object} TSDemuxer's internal track model
    */
-  static createTrack(type, duration = undefined) {
+  static createTrack(type, duration) {
     return {
       container: type === 'video' || type === 'audio' ? 'video/mp2t' : undefined, 
       type, 
