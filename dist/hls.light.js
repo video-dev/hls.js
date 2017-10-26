@@ -7735,7 +7735,7 @@ var stream_controller_StreamController = function (_EventHandler) {
         media decode error, check this, to avoid seeking back to
         wrong position after a media decode error
       */
-      if (currentTime > video.playbackRate * this.lastCurrentTime) {
+      if (currentTime > this.lastCurrentTime) {
         this.lastCurrentTime = currentTime;
       }
       if (buffer_helper.isBuffered(video, currentTime)) {

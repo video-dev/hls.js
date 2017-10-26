@@ -7729,7 +7729,7 @@ var stream_controller_StreamController = function (_EventHandler) {
         media decode error, check this, to avoid seeking back to
         wrong position after a media decode error
       */
-      if (currentTime > video.playbackRate * this.lastCurrentTime) {
+      if (currentTime > this.lastCurrentTime) {
         this.lastCurrentTime = currentTime;
       }
       if (buffer_helper.isBuffered(video, currentTime)) {
@@ -14019,7 +14019,7 @@ function clearCurrentCues(track) {
     if (trackMode === 'disabled') {
       track.mode = 'hidden';
     }
-    while (track.cues.length > 0) {
+    while (track.cues && track.cues.length > 0) {
       track.removeCue(track.cues[0]);
     }
     track.mode = trackMode;
@@ -14248,36 +14248,34 @@ var timeline_controller_TimelineController = function (_EventHandler) {
       var sameTracks = this.tracks && data.subtitles && this.tracks.length === data.subtitles.length;
       this.tracks = data.subtitles || [];
 
-      if (!sameTracks) {
-        if (this.config.renderNatively) {
-          var inUseTracks = this.media ? this.media.textTracks : [];
+      if (this.config.renderNatively) {
+        var inUseTracks = this.media ? this.media.textTracks : [];
 
-          this.tracks.forEach(function (track, index) {
-            var textTrack = void 0;
-            if (index < inUseTracks.length) {
-              var inUseTrack = inUseTracks[index];
-              // Reuse tracks with the same label, but do not reuse 608/708 tracks
-              if (reuseVttTextTrack(inUseTrack, track)) {
-                textTrack = inUseTrack;
-              }
+        this.tracks.forEach(function (track, index) {
+          var textTrack = void 0;
+          if (index < inUseTracks.length) {
+            var inUseTrack = inUseTracks[index];
+            // Reuse tracks with the same label, but do not reuse 608/708 tracks
+            if (reuseVttTextTrack(inUseTrack, track)) {
+              textTrack = inUseTrack;
             }
-            if (!textTrack) {
-              textTrack = _this4.createTextTrack('subtitles', track.name, track.lang);
-            }
-            textTrack.mode = track.default ? 'showing' : 'hidden';
-            _this4.textTracks.push(textTrack);
-          });
-        } else if (this.tracks && this.tracks.length) {
-          // Create a list of tracks for the provider to consume
-          var tracksList = this.tracks.map(function (track) {
-            return {
-              'label': track.name,
-              'kind': track.type.toLowerCase(),
-              'default': track.default
-            };
-          });
-          this.hls.trigger(events["a" /* default */].NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: tracksList });
-        }
+          }
+          if (!textTrack) {
+            textTrack = _this4.createTextTrack('subtitles', track.name, track.lang);
+          }
+          textTrack.mode = track.default ? 'showing' : 'hidden';
+          _this4.textTracks.push(textTrack);
+        });
+      } else if (!sameTracks && this.tracks && this.tracks.length) {
+        // Create a list of tracks for the provider to consume
+        var tracksList = this.tracks.map(function (track) {
+          return {
+            'label': track.name,
+            'kind': track.type.toLowerCase(),
+            'default': track.default
+          };
+        });
+        this.hls.trigger(events["a" /* default */].NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: tracksList });
       }
     }
 
@@ -14338,18 +14336,22 @@ var timeline_controller_TimelineController = function (_EventHandler) {
           }
 
           var hls = this.hls;
-          var tracks = self.config.renderNatively ? this.textTracks : this.tracks;
+          var tracks = this.config.renderNatively ? this.textTracks : this.tracks;
 
           // Parse the WebVTT file contents.
           webvtt_parser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
+            var currentTrack = tracks[frag.trackId];
+            var newCues = cues.filter(function (cue) {
+              return !currentTrack.cues.getCueById(cue.id);
+            });
+
             if (self.config.renderNatively) {
-              cues.forEach(function (cue) {
-                tracks[frag.trackId].addCue(cue);
+              newCues.forEach(function (cue) {
+                currentTrack.addCue(cue);
               });
             } else {
-              var track = tracks[frag.trackId];
-              var trackId = track.default ? 'default' : 'subtitles' + frag.trackId;
-              hls.trigger(events["a" /* default */].CUES_PARSED, { type: 'subtitles', cues: cues, track: trackId });
+              var trackId = currentTrack.default ? 'default' : 'subtitles' + frag.trackId;
+              hls.trigger(events["a" /* default */].CUES_PARSED, { type: 'subtitles', cues: newCues, track: trackId });
             }
             hls.trigger(events["a" /* default */].SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
           }, function (e) {
