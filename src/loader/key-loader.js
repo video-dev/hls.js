@@ -7,8 +7,6 @@ import EventHandler from '../event-handler';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
 
-const keyCache = {};
-
 class KeyLoader extends EventHandler {
 
   constructor(hls) {
@@ -16,6 +14,7 @@ class KeyLoader extends EventHandler {
     this.loaders = {};
     this.decryptkey = null;
     this.decrypturl = null;
+    this.decryptkeyCache = {};
   }
 
   destroy() {
@@ -35,7 +34,7 @@ class KeyLoader extends EventHandler {
         loader = this.loaders[type],
         decryptdata = frag.decryptdata,
         uri = decryptdata.uri;
-      this.decryptkey = keyCache[uri];
+      this.decryptkey = this.decryptkeyCache[uri];
         // if uri is different from previous one or if decrypt key not retrieved yet
       if (!this.decryptkey) {
         let config = this.hls.config;
@@ -64,7 +63,7 @@ class KeyLoader extends EventHandler {
     let frag = context.frag;
     this.decryptkey = frag.decryptdata.key = new Uint8Array(response.data);
     // cache the key.
-    keyCache[frag.decryptdata.uri] = this.decryptkey;
+    this.decryptkeyCache[frag.decryptdata.uri] = this.decryptkey;
     // detach fragment loader on load success
     frag.loader = undefined;
     this.loaders[frag.type] = undefined;
