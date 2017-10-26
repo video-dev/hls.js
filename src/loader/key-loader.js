@@ -7,6 +7,8 @@ import EventHandler from '../event-handler';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
 
+const keyCache = {};
+
 class KeyLoader extends EventHandler {
 
   constructor(hls) {
@@ -33,8 +35,9 @@ class KeyLoader extends EventHandler {
         loader = this.loaders[type],
         decryptdata = frag.decryptdata,
         uri = decryptdata.uri;
+      this.decryptkey = keyCache[uri];
         // if uri is different from previous one or if decrypt key not retrieved yet
-      if (uri !== this.decrypturl || this.decryptkey === null) {
+      if (!this.decryptkey) {
         let config = this.hls.config;
 
         if (loader) {
@@ -50,7 +53,7 @@ class KeyLoader extends EventHandler {
         loaderConfig = { timeout : config.fragLoadingTimeOut, maxRetry : config.fragLoadingMaxRetry , retryDelay : config.fragLoadingRetryDelay, maxRetryDelay : config.fragLoadingMaxRetryTimeout};
         loaderCallbacks = { onSuccess : this.loadsuccess.bind(this), onError :this.loaderror.bind(this), onTimeout : this.loadtimeout.bind(this)};
         frag.loader.load(loaderContext,loaderConfig,loaderCallbacks);
-      } else if (this.decryptkey) {
+      } else {
         // we already loaded this key, return it
         decryptdata.key = this.decryptkey;
         this.hls.trigger(Event.KEY_LOADED, {frag: frag});
