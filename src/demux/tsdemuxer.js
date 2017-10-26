@@ -27,10 +27,10 @@
 // With MSE currently one can only have one track of each, and we are muxing
 // whatever video/audio rendition in them.
 const RemuxerTrackIdConfig = {
-  'video': 0,
-  'audio': 1,
-  'id3': 2,
-  'text': 3
+  video: 0,
+  audio: 1,
+  id3: 2,
+  text: 3
 };
 
 class TSDemuxer {
