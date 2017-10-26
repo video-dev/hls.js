@@ -63,6 +63,8 @@ class KeyLoader extends EventHandler {
   loadsuccess(response, stats, context) {
     let frag = context.frag;
     this.decryptkey = frag.decryptdata.key = new Uint8Array(response.data);
+    // cache the key.
+    keyCache[frag.decryptdata.uri] = this.decryptkey;
     // detach fragment loader on load success
     frag.loader = undefined;
     this.loaders[frag.type] = undefined;
