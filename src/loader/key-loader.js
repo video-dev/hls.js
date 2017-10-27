@@ -14,7 +14,7 @@ class KeyLoader extends EventHandler {
     this.loaders = {};
     this.decryptkey = null;
     this.decrypturl = null;
-    this.decryptkeyCache = {};
+    this.decryptkeyCache = Object.create(null);
   }
 
   destroy() {
