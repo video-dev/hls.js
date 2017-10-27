@@ -11,9 +11,6 @@ class KeyLoader extends EventHandler {
 
   constructor(hls) {
     super(hls, Event.KEY_LOADING);
-    this.loaders = {};
-    this.decryptkey = null;
-    this.decrypturl = null;
     this.decryptkeyCache = Object.create(null);
   }
 
@@ -33,10 +30,10 @@ class KeyLoader extends EventHandler {
         type = frag.type,
         loader = this.loaders[type],
         decryptdata = frag.decryptdata,
-        uri = decryptdata.uri;
-      this.decryptkey = this.decryptkeyCache[uri];
+        uri = decryptdata.uri,
+        decryptkey = this.decryptkeyCache[uri];
         // if uri is different from previous one or if decrypt key not retrieved yet
-      if (!this.decryptkey) {
+      if (decryptkey) {
         let config = this.hls.config;
 
         if (loader) {
@@ -44,8 +41,6 @@ class KeyLoader extends EventHandler {
           loader.abort();
         }
         frag.loader = this.loaders[type] = new config.loader(config);
-        this.decrypturl = uri;
-        this.decryptkey = null;
 
         let loaderContext, loaderConfig, loaderCallbacks;
         loaderContext = { url : uri, frag : frag, responseType : 'arraybuffer'};
@@ -54,16 +49,16 @@ class KeyLoader extends EventHandler {
         frag.loader.load(loaderContext,loaderConfig,loaderCallbacks);
       } else {
         // we already loaded this key, return it
-        decryptdata.key = this.decryptkey;
+        decryptdata.key = decryptkey;
         this.hls.trigger(Event.KEY_LOADED, {frag: frag});
       }
   }
 
   loadsuccess(response, stats, context) {
-    let frag = context.frag;
-    this.decryptkey = frag.decryptdata.key = new Uint8Array(response.data);
+    let frag = context.frag,
+        decryptkey = frag.decryptdata.key = new Uint8Array(response.data);
     // cache the key.
-    this.decryptkeyCache[frag.decryptdata.uri] = this.decryptkey;
+    this.decryptkeyCache[frag.decryptdata.uri] = decryptkey;
     // detach fragment loader on load success
     frag.loader = undefined;
     this.loaders[frag.type] = undefined;
