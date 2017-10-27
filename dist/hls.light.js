@@ -367,6 +367,7 @@ var ErrorDetails = {
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
+/* unused harmony export utf8ArrayToStr */
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 /**
@@ -676,20 +677,22 @@ var ID3 = function () {
    */
 
 
-  ID3._utf8ArrayToStr = function _utf8ArrayToStr(array) {
+  ID3._utf8ArrayToStr = function _utf8ArrayToStr(array, startingIndex) {
 
+    var len = array.length;
+    var c = void 0;
     var char2 = void 0;
     var char3 = void 0;
     var out = '';
-    var i = 0;
-    var length = array.length;
-
-    while (i < length) {
-      var c = array[i++];
+    var i = startingIndex || 0;
+    while (i < len) {
+      c = array[i++];
+      // If the character is 3 (END_OF_TEXT) or 0 (NULL) then skip it
+      if (c === 0x00 || c === 0x03) {
+        continue;
+      }
       switch (c >> 4) {
-        case 0:
-          return out;
-        case 1:case 2:case 3:case 4:case 5:case 6:case 7:
+        case 0:case 1:case 2:case 3:case 4:case 5:case 6:case 7:
           // 0xxxxxxx
           out += String.fromCharCode(c);
           break;
@@ -704,16 +707,20 @@ var ID3 = function () {
           char3 = array[i++];
           out += String.fromCharCode((c & 0x0F) << 12 | (char2 & 0x3F) << 6 | (char3 & 0x3F) << 0);
           break;
+        default:
       }
     }
-
     return out;
   };
 
   return ID3;
 }();
 
+var utf8ArrayToStr = ID3._utf8ArrayToStr;
+
 /* harmony default export */ __webpack_exports__["a"] = (ID3);
+
+
 
 /***/ }),
 /* 5 */
