@@ -36,6 +36,13 @@ class MP4Remuxer {
   remux(audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous,accurateTimeOffset) {
     // generate Init Segment if needed
     if (!this.ISGenerated) {
+      // align first audio/video PTS in case of discontinuity / IS not generated
+      if (!contiguous && audioTrack.samples.length && videoTrack.samples.length) {
+        const firstAudioSample = audioTrack.samples[0];
+        const firstVideoSample = videoTrack.samples[0];
+        logger.log('adjusting first video PTS/DTS to first audio PTS');
+        firstVideoSample.dts = firstVideoSample.pts = firstAudioSample.pts;
+      }
       this.generateIS(audioTrack,videoTrack,timeOffset);
     }
 
