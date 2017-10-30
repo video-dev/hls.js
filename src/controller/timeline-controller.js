@@ -5,6 +5,7 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import Cea608Parser from '../utils/cea-608-parser';
+import OutputFilter from '../utils/output-filter';
 import WebVTTParser from '../utils/webvtt-parser';
 import {logger} from '../utils/logger';
 
@@ -22,66 +23,6 @@ function reuseVttTextTrack(inUseTrack, manifestTrack) {
 
 function intersection(x1, x2, y1, y2) {
   return Math.min(x2, y2) - Math.max(x1, y1);
-}
-
-class OutputFilter {
-  constructor(timelineController, track) {
-    this.timelineController = timelineController;
-    this.track = track;
-    this.startTime = null;
-    this.endTime = null;
-    this.screen = null;
-  }
-
-  createTextTrack() {
-    let trackVar = 'textTrack' + this.track;
-    if (!this.timelineController[trackVar]) {
-      //Enable reuse of existing text track.
-      let existingTrack = this.timelineController.getExistingTrack(this.track);
-      if (!existingTrack) {
-        const textTrack = this.timelineController.createTextTrack('captions', this.timelineController.config['captionsTextTrack' + this.track + 'Label'], this.timelineController.config.captionsTextTrack1LanguageCode);
-        if (textTrack) {
-          textTrack[trackVar] = true;
-          this.timelineController[trackVar] = textTrack;
-        }
-      } else {
-        this.timelineController[trackVar] = existingTrack;
-        clearCurrentCues(this.timelineController[trackVar]);
-
-        this.sendAddTrackEvent(this.timelineController[trackVar], this.timelineController.media);
-      }
-    }
-  }
-
-  dispatchCue() {
-    if (this.startTime === null) {
-      return;
-    }
-    this.timelineController.addCues('textTrack' + this.track, this.startTime, this.endTime, this.screen);
-    this.startTime = null;
-  }
-
-  newCue(startTime, endTime, screen) {
-    if (this.startTime === null || this.startTime > startTime) {
-      this.startTime = startTime;
-    }
-    this.endTime = endTime;
-    this.screen = screen;
-    this.createTextTrack();
-  }
-
-  sendAddTrackEvent(track, media) {
-    var e = null;
-    try {
-      e = new window.Event('addtrack');
-    } catch (err) {
-      //for IE11
-      e = document.createEvent('Event');
-      e.initEvent('addtrack', false, false);
-    }
-    e.track = track;
-    media.dispatchEvent(e);
-  }
 }
 
 class TimelineController extends EventHandler {
@@ -166,6 +107,39 @@ class TimelineController extends EventHandler {
       }
     }
     return null;
+  }
+
+  sendAddTrackEvent(track, media) {
+    var e = null;
+    try {
+      e = new window.Event('addtrack');
+    } catch (err) {
+      //for IE11
+      e = document.createEvent('Event');
+      e.initEvent('addtrack', false, false);
+    }
+    e.track = track;
+    media.dispatchEvent(e);
+  }
+
+  createCaptionsTrack(track) {
+    let trackVar = 'textTrack' + track;
+    if (!this[trackVar]) {
+      //Enable reuse of existing text track.
+      let existingTrack = this.getExistingTrack(track);
+      if (!existingTrack) {
+        const textTrack = this.createTextTrack('captions', this.config['captionsTextTrack' + track + 'Label'], this.config.captionsTextTrack1LanguageCode);
+        if (textTrack) {
+          textTrack[trackVar] = true;
+          this[trackVar] = textTrack;
+        }
+      } else {
+        this[trackVar] = existingTrack;
+        clearCurrentCues(this[trackVar]);
+
+        this.sendAddTrackEvent(this[trackVar], this.media);
+      }
+    }
   }
 
   createTextTrack(kind, label, lang) {
