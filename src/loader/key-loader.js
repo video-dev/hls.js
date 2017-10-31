@@ -11,6 +11,7 @@ class KeyLoader extends EventHandler {
 
   constructor(hls) {
     super(hls, Event.KEY_LOADING);
+    this.loaders = Object.create(null);
     this.decryptkeyCache = Object.create(null);
   }
 
