@@ -34,7 +34,7 @@ class KeyLoader extends EventHandler {
         uri = decryptdata.uri,
         decryptkey = this.decryptkeyCache[uri];
         // if uri is different from previous one or if decrypt key not retrieved yet
-      if (decryptkey) {
+      if (!decryptkey) {
         let config = this.hls.config;
 
         if (loader) {
