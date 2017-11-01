@@ -188,7 +188,7 @@ class StreamController extends EventHandler {
     // if start level not parsed yet OR
     // if video not attached AND start fragment already requested OR start frag prefetch disable
     // exit loop, as we either need more info (level not parsed) or we need media to be attached to load new fragment
-    if ((this.levelLastLoaded === undefined) || (
+    if (this.levelLastLoaded === undefined || (
       !media && (this.startFragRequested || !config.startFragPrefetch))) {
       return;
     }
