@@ -16,7 +16,8 @@ class LevelController extends EventHandler {
             Event.MANIFEST_LOADED,
             Event.LEVEL_LOADED,
             Event.FRAG_LOADED,
-            Event.ERROR
+            Event.ERROR,
+            Event.LEVEL_REMOVED
         );
         this._manualLevel = -1;
         this.timer = null;
@@ -442,6 +443,12 @@ class LevelController extends EventHandler {
         if (this._manualLevel === -1) {
             this.hls.nextAutoLevel = nextLevel;
         }
+    }
+
+    onLevelRemoved(data) {
+        this._levels = this.levels.filter(
+            (level, index) => index !== data.level
+        );
     }
 }
 
