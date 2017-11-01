@@ -190,6 +190,7 @@ class TimelineController extends EventHandler {
 
   onMediaAttaching(data) {
     this.media = data.media;
+    this._cleanTracks();
   }
 
   onMediaDetaching() {
@@ -202,7 +203,11 @@ class TimelineController extends EventHandler {
     this.lastSn = -1; // Detect discontiguity in fragment parsing
     this.prevCC = -1;
     this.vttCCs = {ccOffset: 0, presentationOffset: 0}; // Detect discontinuity in subtitle manifests
+    this._cleanTracks();
 
+  }
+
+  _cleanTracks() {
     // clear outdated subtitles
     const media = this.media;
     if (media) {
