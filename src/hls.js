@@ -10,7 +10,6 @@ import KeyLoader from './loader/key-loader';
 
 import StreamController from './controller/stream-controller';
 import LevelController from './controller/level-controller';
-import ID3TrackController from './controller/id3-track-controller';
 
 import { logger, enableLogs } from './utils/logger';
 import EventEmitter from 'events';
@@ -130,7 +129,6 @@ export default class Hls {
         const playListLoader = new PlaylistLoader(this);
         const fragmentLoader = new FragmentLoader(this);
         const keyLoader = new KeyLoader(this);
-        const id3TrackController = new ID3TrackController(this);
 
         // network controllers
         const levelController = (this.levelController = new LevelController(
@@ -155,8 +153,7 @@ export default class Hls {
             abrController,
             bufferController,
             capLevelController,
-            fpsController,
-            id3TrackController
+            fpsController
         ];
 
         // optional audio track and subtitle controller
