@@ -562,7 +562,14 @@ class PlaylistLoader extends EventHandler {
               networkDetails
             });
           } else {
-            hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_EMPTY_ERROR, fatal: false, url: url, reason: 'no level found in manifest', context });
+            hls.trigger(Event.ERROR, {
+              type: ErrorTypes.NETWORK_ERROR,
+              details: ErrorDetails.LEVEL_EMPTY_ERROR,
+              fatal: false,
+              url: url,
+              reason: 'no fragments found in level',
+              level: context.level
+            });
           }
         }
       }
