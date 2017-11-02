@@ -1,5 +1,5 @@
 import VTTParser from './vttparser';
-import { utf8ArrayToStr } from '../demux/id3'
+import { utf8ArrayToStr } from '../demux/id3';
 
 // String.prototype.startsWith is not supported in IE11
 const startsWith = function(inputString, searchString, position) {
