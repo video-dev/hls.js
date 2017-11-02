@@ -9185,98 +9185,6 @@ var level_controller_LevelController = function (_EventHandler) {
 }(event_handler);
 
 /* harmony default export */ var level_controller = (level_controller_LevelController);
-// EXTERNAL MODULE: ./src/demux/id3.js
-var id3 = __webpack_require__(3);
-
-// CONCATENATED MODULE: ./src/controller/id3-track-controller.js
-function id3_track_controller__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function id3_track_controller__possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function id3_track_controller__inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/*
- * id3 metadata track controller
-*/
-
-
-
-
-
-var id3_track_controller_ID3TrackController = function (_EventHandler) {
-  id3_track_controller__inherits(ID3TrackController, _EventHandler);
-
-  function ID3TrackController(hls) {
-    id3_track_controller__classCallCheck(this, ID3TrackController);
-
-    var _this = id3_track_controller__possibleConstructorReturn(this, _EventHandler.call(this, hls, events["a" /* default */].MEDIA_ATTACHED, events["a" /* default */].MEDIA_DETACHING, events["a" /* default */].FRAG_PARSING_METADATA));
-
-    _this.id3Track = undefined;
-    _this.media = undefined;
-    return _this;
-  }
-
-  ID3TrackController.prototype.destroy = function destroy() {
-    event_handler.prototype.destroy.call(this);
-  };
-
-  // Add ID3 metatadata text track.
-
-
-  ID3TrackController.prototype.onMediaAttached = function onMediaAttached(data) {
-    this.media = data.media;
-    if (!this.media) {
-      return;
-    }
-  };
-
-  ID3TrackController.prototype.onMediaDetaching = function onMediaDetaching() {
-    this.media = undefined;
-  };
-
-  ID3TrackController.prototype.onFragParsingMetadata = function onFragParsingMetadata(data) {
-    var fragment = data.frag;
-    var samples = data.samples;
-
-    // create track dynamically
-    if (!this.id3Track) {
-      this.id3Track = this.media.addTextTrack('metadata', 'id3');
-      this.id3Track.mode = 'hidden';
-    }
-
-    // Attempt to recreate Safari functionality by creating
-    // WebKitDataCue objects when available and store the decoded
-    // ID3 data in the value property of the cue
-    var Cue = window.WebKitDataCue || window.VTTCue || window.TextTrackCue;
-
-    for (var i = 0; i < samples.length; i++) {
-      var frames = id3["a" /* default */].getID3Frames(samples[i].data);
-      if (frames) {
-        var startTime = samples[i].pts;
-        var endTime = i < samples.length - 1 ? samples[i + 1].pts : fragment.endPTS;
-
-        // Give a slight bump to the endTime if it's equal to startTime to avoid a SyntaxError in IE
-        if (startTime === endTime) {
-          endTime += 0.0001;
-        }
-
-        for (var j = 0; j < frames.length; j++) {
-          var frame = frames[j];
-          // Safari doesn't put the timestamp frame in the TextTrack
-          if (!id3["a" /* default */].isTimeStampFrame(frame)) {
-            var cue = new Cue(startTime, endTime, '');
-            cue.value = frame;
-            this.id3Track.addCue(cue);
-          }
-        }
-      }
-    }
-  };
-
-  return ID3TrackController;
-}(event_handler);
-
-/* harmony default export */ var id3_track_controller = (id3_track_controller_ID3TrackController);
 // CONCATENATED MODULE: ./src/utils/ewma.js
 function ewma__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -13830,6 +13738,9 @@ var Cea608Parser = function () {
 }();
 
 /* harmony default export */ var cea_608_parser = (Cea608Parser);
+// EXTERNAL MODULE: ./src/demux/id3.js
+var id3 = __webpack_require__(3);
+
 // CONCATENATED MODULE: ./src/utils/webvtt-parser.js
 
 
@@ -14349,17 +14260,16 @@ var timeline_controller_TimelineController = function (_EventHandler) {
           // Parse the WebVTT file contents.
           webvtt_parser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
             var currentTrack = tracks[frag.trackId];
-            var newCues = cues.filter(function (cue) {
-              return !currentTrack.cues.getCueById(cue.id);
-            });
 
             if (self.config.renderNatively) {
-              newCues.forEach(function (cue) {
+              cues.filter(function (cue) {
+                return !currentTrack.cues.getCueById(cue.id);
+              }).forEach(function (cue) {
                 currentTrack.addCue(cue);
               });
             } else {
               var trackId = currentTrack.default ? 'default' : 'subtitles' + frag.trackId;
-              hls.trigger(events["a" /* default */].CUES_PARSED, { type: 'subtitles', cues: newCues, track: trackId });
+              hls.trigger(events["a" /* default */].CUES_PARSED, { type: 'subtitles', cues: cues, track: trackId });
             }
             hls.trigger(events["a" /* default */].SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
           }, function (e) {
@@ -14912,7 +14822,6 @@ function hls__classCallCheck(instance, Constructor) { if (!(instance instanceof 
 
 
 
-
 var hls_Hls = function () {
   Hls.isSupported = function isSupported() {
     var mediaSource = window.MediaSource = window.MediaSource || window.WebKitMediaSource;
@@ -15018,7 +14927,6 @@ var hls_Hls = function () {
     var playListLoader = new playlist_loader(this);
     var fragmentLoader = new fragment_loader(this);
     var keyLoader = new key_loader(this);
-    var id3TrackController = new id3_track_controller(this);
 
     // network controllers
     var levelController = this.levelController = new level_controller(this);
@@ -15032,7 +14940,7 @@ var hls_Hls = function () {
     }
     this.networkControllers = networkControllers;
 
-    var coreComponents = [playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController, id3TrackController];
+    var coreComponents = [playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController];
 
     // optional audio track and subtitle controller
     Controller = config.audioTrackController;

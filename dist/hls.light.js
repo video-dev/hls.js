@@ -70,7 +70,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/ 	__webpack_require__.p = "/dist/";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 8);
+/******/ 	return __webpack_require__(__webpack_require__.s = 7);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -364,366 +364,6 @@ var ErrorDetails = {
 
 /***/ }),
 /* 4 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-/* unused harmony export utf8ArrayToStr */
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-/**
- * ID3 parser
- */
-var ID3 = function () {
-  function ID3() {
-    _classCallCheck(this, ID3);
-  }
-
-  /**
-   * Returns true if an ID3 header can be found at offset in data
-   * @param {Uint8Array} data - The data to search in
-   * @param {number} offset - The offset at which to start searching
-   * @return {boolean} - True if an ID3 header is found
-   */
-  ID3.isHeader = function isHeader(data, offset) {
-    /*
-    * http://id3.org/id3v2.3.0
-    * [0]     = 'I'
-    * [1]     = 'D'
-    * [2]     = '3'
-    * [3,4]   = {Version}
-    * [5]     = {Flags}
-    * [6-9]   = {ID3 Size}
-    *
-    * An ID3v2 tag can be detected with the following pattern:
-    *  $49 44 33 yy yy xx zz zz zz zz
-    * Where yy is less than $FF, xx is the 'flags' byte and zz is less than $80
-    */
-    if (offset + 10 <= data.length) {
-      //look for 'ID3' identifier
-      if (data[offset] === 0x49 && data[offset + 1] === 0x44 && data[offset + 2] === 0x33) {
-        //check version is within range
-        if (data[offset + 3] < 0xFF && data[offset + 4] < 0xFF) {
-          //check size is within range
-          if (data[offset + 6] < 0x80 && data[offset + 7] < 0x80 && data[offset + 8] < 0x80 && data[offset + 9] < 0x80) {
-            return true;
-          }
-        }
-      }
-    }
-
-    return false;
-  };
-
-  /**
-   * Returns true if an ID3 footer can be found at offset in data
-   * @param {Uint8Array} data - The data to search in
-   * @param {number} offset - The offset at which to start searching
-   * @return {boolean} - True if an ID3 footer is found
-   */
-
-
-  ID3.isFooter = function isFooter(data, offset) {
-    /*
-    * The footer is a copy of the header, but with a different identifier
-    */
-    if (offset + 10 <= data.length) {
-      //look for '3DI' identifier
-      if (data[offset] === 0x33 && data[offset + 1] === 0x44 && data[offset + 2] === 0x49) {
-        //check version is within range
-        if (data[offset + 3] < 0xFF && data[offset + 4] < 0xFF) {
-          //check size is within range
-          if (data[offset + 6] < 0x80 && data[offset + 7] < 0x80 && data[offset + 8] < 0x80 && data[offset + 9] < 0x80) {
-            return true;
-          }
-        }
-      }
-    }
-
-    return false;
-  };
-
-  /**
-   * Returns any adjacent ID3 tags found in data starting at offset, as one block of data
-   * @param {Uint8Array} data - The data to search in
-   * @param {number} offset - The offset at which to start searching
-   * @return {Uint8Array} - The block of data containing any ID3 tags found
-   */
-
-
-  ID3.getID3Data = function getID3Data(data, offset) {
-    var front = offset;
-    var length = 0;
-
-    while (ID3.isHeader(data, offset)) {
-      //ID3 header is 10 bytes
-      length += 10;
-
-      var size = ID3._readSize(data, offset + 6);
-      length += size;
-
-      if (ID3.isFooter(data, offset + 10)) {
-        //ID3 footer is 10 bytes
-        length += 10;
-      }
-
-      offset += length;
-    }
-
-    if (length > 0) {
-      return data.subarray(front, front + length);
-    }
-
-    return undefined;
-  };
-
-  ID3._readSize = function _readSize(data, offset) {
-    var size = 0;
-    size = (data[offset] & 0x7f) << 21;
-    size |= (data[offset + 1] & 0x7f) << 14;
-    size |= (data[offset + 2] & 0x7f) << 7;
-    size |= data[offset + 3] & 0x7f;
-    return size;
-  };
-
-  /**
-   * Searches for the Elementary Stream timestamp found in the ID3 data chunk
-   * @param {Uint8Array} data - Block of data containing one or more ID3 tags
-   * @return {number} - The timestamp
-   */
-
-
-  ID3.getTimeStamp = function getTimeStamp(data) {
-    var frames = ID3.getID3Frames(data);
-    for (var i = 0; i < frames.length; i++) {
-      var frame = frames[i];
-      if (ID3.isTimeStampFrame(frame)) {
-        return ID3._readTimeStamp(frame);
-      }
-    }
-
-    return undefined;
-  };
-
-  /**
-   * Returns true if the ID3 frame is an Elementary Stream timestamp frame
-   * @param {ID3 frame} frame
-   */
-
-
-  ID3.isTimeStampFrame = function isTimeStampFrame(frame) {
-    return frame && frame.key === 'PRIV' && frame.info === 'com.apple.streaming.transportStreamTimestamp';
-  };
-
-  ID3._getFrameData = function _getFrameData(data) {
-    /*
-    Frame ID       $xx xx xx xx (four characters)
-    Size           $xx xx xx xx
-    Flags          $xx xx
-    */
-    var type = String.fromCharCode(data[0], data[1], data[2], data[3]);
-    var size = ID3._readSize(data, 4);
-
-    //skip frame id, size, and flags
-    var offset = 10;
-
-    return { type: type, size: size, data: data.subarray(offset, offset + size) };
-  };
-
-  /**
-   * Returns an array of ID3 frames found in all the ID3 tags in the id3Data
-   * @param {Uint8Array} id3Data - The ID3 data containing one or more ID3 tags
-   * @return {ID3 frame[]} - Array of ID3 frame objects
-   */
-
-
-  ID3.getID3Frames = function getID3Frames(id3Data) {
-    var offset = 0;
-    var frames = [];
-
-    while (ID3.isHeader(id3Data, offset)) {
-      var size = ID3._readSize(id3Data, offset + 6);
-      //skip past ID3 header
-      offset += 10;
-      var end = offset + size;
-      //loop through frames in the ID3 tag
-      while (offset + 8 < end) {
-        var frameData = ID3._getFrameData(id3Data.subarray(offset));
-        var frame = ID3._decodeFrame(frameData);
-        if (frame) {
-          frames.push(frame);
-        }
-        //skip frame header and frame data
-        offset += frameData.size + 10;
-      }
-
-      if (ID3.isFooter(id3Data, offset)) {
-        offset += 10;
-      }
-    }
-
-    return frames;
-  };
-
-  ID3._decodeFrame = function _decodeFrame(frame) {
-    if (frame.type === 'PRIV') {
-      return ID3._decodePrivFrame(frame);
-    } else if (frame.type[0] === 'T') {
-      return ID3._decodeTextFrame(frame);
-    } else if (frame.type[0] === 'W') {
-      return ID3._decodeURLFrame(frame);
-    }
-
-    return undefined;
-  };
-
-  ID3._readTimeStamp = function _readTimeStamp(timeStampFrame) {
-    if (timeStampFrame.data.byteLength === 8) {
-      var data = new Uint8Array(timeStampFrame.data);
-      // timestamp is 33 bit expressed as a big-endian eight-octet number,
-      // with the upper 31 bits set to zero.
-      var pts33Bit = data[3] & 0x1;
-      var timestamp = (data[4] << 23) + (data[5] << 15) + (data[6] << 7) + data[7];
-      timestamp /= 45;
-
-      if (pts33Bit) {
-        timestamp += 47721858.84; // 2^32 / 90
-      }
-
-      return Math.round(timestamp);
-    }
-
-    return undefined;
-  };
-
-  ID3._decodePrivFrame = function _decodePrivFrame(frame) {
-    /*
-    Format: <text string>\0<binary data>
-    */
-    if (frame.size < 2) {
-      return undefined;
-    }
-
-    var owner = ID3._utf8ArrayToStr(frame.data);
-    var privateData = new Uint8Array(frame.data.subarray(owner.length + 1));
-
-    return { key: frame.type, info: owner, data: privateData.buffer };
-  };
-
-  ID3._decodeTextFrame = function _decodeTextFrame(frame) {
-    if (frame.size < 2) {
-      return undefined;
-    }
-
-    if (frame.type === 'TXXX') {
-      /*
-      Format:
-      [0]   = {Text Encoding}
-      [1-?] = {Description}\0{Value}
-      */
-      var index = 1;
-      var description = ID3._utf8ArrayToStr(frame.data.subarray(index));
-
-      index += description.length + 1;
-      var value = ID3._utf8ArrayToStr(frame.data.subarray(index));
-
-      return { key: frame.type, info: description, data: value };
-    } else {
-      /*
-      Format:
-      [0]   = {Text Encoding}
-      [1-?] = {Value}
-      */
-      var text = ID3._utf8ArrayToStr(frame.data.subarray(1));
-      return { key: frame.type, data: text };
-    }
-  };
-
-  ID3._decodeURLFrame = function _decodeURLFrame(frame) {
-    if (frame.type === 'WXXX') {
-      /*
-      Format:
-      [0]   = {Text Encoding}
-      [1-?] = {Description}\0{URL}
-      */
-      if (frame.size < 2) {
-        return undefined;
-      }
-
-      var index = 1;
-      var description = ID3._utf8ArrayToStr(frame.data.subarray(index));
-
-      index += description.length + 1;
-      var value = ID3._utf8ArrayToStr(frame.data.subarray(index));
-
-      return { key: frame.type, info: description, data: value };
-    } else {
-      /*
-      Format:
-      [0-?] = {URL}
-      */
-      var url = ID3._utf8ArrayToStr(frame.data);
-      return { key: frame.type, data: url };
-    }
-  };
-
-  // http://stackoverflow.com/questions/8936984/uint8array-to-string-in-javascript/22373197
-  // http://www.onicos.com/staff/iz/amuse/javascript/expert/utf.txt
-  /* utf.js - UTF-8 <=> UTF-16 convertion
-   *
-   * Copyright (C) 1999 Masanao Izumo <iz@onicos.co.jp>
-   * Version: 1.0
-   * LastModified: Dec 25 1999
-   * This library is free.  You can redistribute it and/or modify it.
-   */
-
-
-  ID3._utf8ArrayToStr = function _utf8ArrayToStr(array, startingIndex) {
-
-    var len = array.length;
-    var c = void 0;
-    var char2 = void 0;
-    var char3 = void 0;
-    var out = '';
-    var i = startingIndex || 0;
-    while (i < len) {
-      c = array[i++];
-      // If the character is 3 (END_OF_TEXT) or 0 (NULL) then skip it
-      if (c === 0x00 || c === 0x03) {
-        continue;
-      }
-      switch (c >> 4) {
-        case 0:case 1:case 2:case 3:case 4:case 5:case 6:case 7:
-          // 0xxxxxxx
-          out += String.fromCharCode(c);
-          break;
-        case 12:case 13:
-          // 110x xxxx   10xx xxxx
-          char2 = array[i++];
-          out += String.fromCharCode((c & 0x1F) << 6 | char2 & 0x3F);
-          break;
-        case 14:
-          // 1110 xxxx  10xx xxxx  10xx xxxx
-          char2 = array[i++];
-          char3 = array[i++];
-          out += String.fromCharCode((c & 0x0F) << 12 | (char2 & 0x3F) << 6 | (char3 & 0x3F) << 0);
-          break;
-        default:
-      }
-    }
-    return out;
-  };
-
-  return ID3;
-}();
-
-var utf8ArrayToStr = ID3._utf8ArrayToStr;
-
-/* harmony default export */ __webpack_exports__["a"] = (ID3);
-
-
-
-/***/ }),
-/* 5 */
 /***/ (function(module, exports) {
 
 // Copyright Joyent, Inc. and other Node contributors.
@@ -1031,7 +671,7 @@ function isUndefined(arg) {
 
 
 /***/ }),
-/* 6 */
+/* 5 */
 /***/ (function(module, exports, __webpack_require__) {
 
 // see https://tools.ietf.org/html/rfc1808
@@ -1200,7 +840,7 @@ function isUndefined(arg) {
 
 
 /***/ }),
-/* 7 */
+/* 6 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -1859,8 +1499,359 @@ function appendFrame(track, data, offset, pts, frameIndex) {
 
   return undefined;
 }
-// EXTERNAL MODULE: ./src/demux/id3.js
-var id3 = __webpack_require__(4);
+// CONCATENATED MODULE: ./src/demux/id3.js
+function id3__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+/**
+ * ID3 parser
+ */
+var ID3 = function () {
+  function ID3() {
+    id3__classCallCheck(this, ID3);
+  }
+
+  /**
+   * Returns true if an ID3 header can be found at offset in data
+   * @param {Uint8Array} data - The data to search in
+   * @param {number} offset - The offset at which to start searching
+   * @return {boolean} - True if an ID3 header is found
+   */
+  ID3.isHeader = function isHeader(data, offset) {
+    /*
+    * http://id3.org/id3v2.3.0
+    * [0]     = 'I'
+    * [1]     = 'D'
+    * [2]     = '3'
+    * [3,4]   = {Version}
+    * [5]     = {Flags}
+    * [6-9]   = {ID3 Size}
+    *
+    * An ID3v2 tag can be detected with the following pattern:
+    *  $49 44 33 yy yy xx zz zz zz zz
+    * Where yy is less than $FF, xx is the 'flags' byte and zz is less than $80
+    */
+    if (offset + 10 <= data.length) {
+      //look for 'ID3' identifier
+      if (data[offset] === 0x49 && data[offset + 1] === 0x44 && data[offset + 2] === 0x33) {
+        //check version is within range
+        if (data[offset + 3] < 0xFF && data[offset + 4] < 0xFF) {
+          //check size is within range
+          if (data[offset + 6] < 0x80 && data[offset + 7] < 0x80 && data[offset + 8] < 0x80 && data[offset + 9] < 0x80) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  };
+
+  /**
+   * Returns true if an ID3 footer can be found at offset in data
+   * @param {Uint8Array} data - The data to search in
+   * @param {number} offset - The offset at which to start searching
+   * @return {boolean} - True if an ID3 footer is found
+   */
+
+
+  ID3.isFooter = function isFooter(data, offset) {
+    /*
+    * The footer is a copy of the header, but with a different identifier
+    */
+    if (offset + 10 <= data.length) {
+      //look for '3DI' identifier
+      if (data[offset] === 0x33 && data[offset + 1] === 0x44 && data[offset + 2] === 0x49) {
+        //check version is within range
+        if (data[offset + 3] < 0xFF && data[offset + 4] < 0xFF) {
+          //check size is within range
+          if (data[offset + 6] < 0x80 && data[offset + 7] < 0x80 && data[offset + 8] < 0x80 && data[offset + 9] < 0x80) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  };
+
+  /**
+   * Returns any adjacent ID3 tags found in data starting at offset, as one block of data
+   * @param {Uint8Array} data - The data to search in
+   * @param {number} offset - The offset at which to start searching
+   * @return {Uint8Array} - The block of data containing any ID3 tags found
+   */
+
+
+  ID3.getID3Data = function getID3Data(data, offset) {
+    var front = offset;
+    var length = 0;
+
+    while (ID3.isHeader(data, offset)) {
+      //ID3 header is 10 bytes
+      length += 10;
+
+      var size = ID3._readSize(data, offset + 6);
+      length += size;
+
+      if (ID3.isFooter(data, offset + 10)) {
+        //ID3 footer is 10 bytes
+        length += 10;
+      }
+
+      offset += length;
+    }
+
+    if (length > 0) {
+      return data.subarray(front, front + length);
+    }
+
+    return undefined;
+  };
+
+  ID3._readSize = function _readSize(data, offset) {
+    var size = 0;
+    size = (data[offset] & 0x7f) << 21;
+    size |= (data[offset + 1] & 0x7f) << 14;
+    size |= (data[offset + 2] & 0x7f) << 7;
+    size |= data[offset + 3] & 0x7f;
+    return size;
+  };
+
+  /**
+   * Searches for the Elementary Stream timestamp found in the ID3 data chunk
+   * @param {Uint8Array} data - Block of data containing one or more ID3 tags
+   * @return {number} - The timestamp
+   */
+
+
+  ID3.getTimeStamp = function getTimeStamp(data) {
+    var frames = ID3.getID3Frames(data);
+    for (var i = 0; i < frames.length; i++) {
+      var frame = frames[i];
+      if (ID3.isTimeStampFrame(frame)) {
+        return ID3._readTimeStamp(frame);
+      }
+    }
+
+    return undefined;
+  };
+
+  /**
+   * Returns true if the ID3 frame is an Elementary Stream timestamp frame
+   * @param {ID3 frame} frame
+   */
+
+
+  ID3.isTimeStampFrame = function isTimeStampFrame(frame) {
+    return frame && frame.key === 'PRIV' && frame.info === 'com.apple.streaming.transportStreamTimestamp';
+  };
+
+  ID3._getFrameData = function _getFrameData(data) {
+    /*
+    Frame ID       $xx xx xx xx (four characters)
+    Size           $xx xx xx xx
+    Flags          $xx xx
+    */
+    var type = String.fromCharCode(data[0], data[1], data[2], data[3]);
+    var size = ID3._readSize(data, 4);
+
+    //skip frame id, size, and flags
+    var offset = 10;
+
+    return { type: type, size: size, data: data.subarray(offset, offset + size) };
+  };
+
+  /**
+   * Returns an array of ID3 frames found in all the ID3 tags in the id3Data
+   * @param {Uint8Array} id3Data - The ID3 data containing one or more ID3 tags
+   * @return {ID3 frame[]} - Array of ID3 frame objects
+   */
+
+
+  ID3.getID3Frames = function getID3Frames(id3Data) {
+    var offset = 0;
+    var frames = [];
+
+    while (ID3.isHeader(id3Data, offset)) {
+      var size = ID3._readSize(id3Data, offset + 6);
+      //skip past ID3 header
+      offset += 10;
+      var end = offset + size;
+      //loop through frames in the ID3 tag
+      while (offset + 8 < end) {
+        var frameData = ID3._getFrameData(id3Data.subarray(offset));
+        var frame = ID3._decodeFrame(frameData);
+        if (frame) {
+          frames.push(frame);
+        }
+        //skip frame header and frame data
+        offset += frameData.size + 10;
+      }
+
+      if (ID3.isFooter(id3Data, offset)) {
+        offset += 10;
+      }
+    }
+
+    return frames;
+  };
+
+  ID3._decodeFrame = function _decodeFrame(frame) {
+    if (frame.type === 'PRIV') {
+      return ID3._decodePrivFrame(frame);
+    } else if (frame.type[0] === 'T') {
+      return ID3._decodeTextFrame(frame);
+    } else if (frame.type[0] === 'W') {
+      return ID3._decodeURLFrame(frame);
+    }
+
+    return undefined;
+  };
+
+  ID3._readTimeStamp = function _readTimeStamp(timeStampFrame) {
+    if (timeStampFrame.data.byteLength === 8) {
+      var data = new Uint8Array(timeStampFrame.data);
+      // timestamp is 33 bit expressed as a big-endian eight-octet number,
+      // with the upper 31 bits set to zero.
+      var pts33Bit = data[3] & 0x1;
+      var timestamp = (data[4] << 23) + (data[5] << 15) + (data[6] << 7) + data[7];
+      timestamp /= 45;
+
+      if (pts33Bit) {
+        timestamp += 47721858.84; // 2^32 / 90
+      }
+
+      return Math.round(timestamp);
+    }
+
+    return undefined;
+  };
+
+  ID3._decodePrivFrame = function _decodePrivFrame(frame) {
+    /*
+    Format: <text string>\0<binary data>
+    */
+    if (frame.size < 2) {
+      return undefined;
+    }
+
+    var owner = ID3._utf8ArrayToStr(frame.data);
+    var privateData = new Uint8Array(frame.data.subarray(owner.length + 1));
+
+    return { key: frame.type, info: owner, data: privateData.buffer };
+  };
+
+  ID3._decodeTextFrame = function _decodeTextFrame(frame) {
+    if (frame.size < 2) {
+      return undefined;
+    }
+
+    if (frame.type === 'TXXX') {
+      /*
+      Format:
+      [0]   = {Text Encoding}
+      [1-?] = {Description}\0{Value}
+      */
+      var index = 1;
+      var description = ID3._utf8ArrayToStr(frame.data.subarray(index));
+
+      index += description.length + 1;
+      var value = ID3._utf8ArrayToStr(frame.data.subarray(index));
+
+      return { key: frame.type, info: description, data: value };
+    } else {
+      /*
+      Format:
+      [0]   = {Text Encoding}
+      [1-?] = {Value}
+      */
+      var text = ID3._utf8ArrayToStr(frame.data.subarray(1));
+      return { key: frame.type, data: text };
+    }
+  };
+
+  ID3._decodeURLFrame = function _decodeURLFrame(frame) {
+    if (frame.type === 'WXXX') {
+      /*
+      Format:
+      [0]   = {Text Encoding}
+      [1-?] = {Description}\0{URL}
+      */
+      if (frame.size < 2) {
+        return undefined;
+      }
+
+      var index = 1;
+      var description = ID3._utf8ArrayToStr(frame.data.subarray(index));
+
+      index += description.length + 1;
+      var value = ID3._utf8ArrayToStr(frame.data.subarray(index));
+
+      return { key: frame.type, info: description, data: value };
+    } else {
+      /*
+      Format:
+      [0-?] = {URL}
+      */
+      var url = ID3._utf8ArrayToStr(frame.data);
+      return { key: frame.type, data: url };
+    }
+  };
+
+  // http://stackoverflow.com/questions/8936984/uint8array-to-string-in-javascript/22373197
+  // http://www.onicos.com/staff/iz/amuse/javascript/expert/utf.txt
+  /* utf.js - UTF-8 <=> UTF-16 convertion
+   *
+   * Copyright (C) 1999 Masanao Izumo <iz@onicos.co.jp>
+   * Version: 1.0
+   * LastModified: Dec 25 1999
+   * This library is free.  You can redistribute it and/or modify it.
+   */
+
+
+  ID3._utf8ArrayToStr = function _utf8ArrayToStr(array, startingIndex) {
+
+    var len = array.length;
+    var c = void 0;
+    var char2 = void 0;
+    var char3 = void 0;
+    var out = '';
+    var i = startingIndex || 0;
+    while (i < len) {
+      c = array[i++];
+      // If the character is 3 (END_OF_TEXT) or 0 (NULL) then skip it
+      if (c === 0x00 || c === 0x03) {
+        continue;
+      }
+      switch (c >> 4) {
+        case 0:case 1:case 2:case 3:case 4:case 5:case 6:case 7:
+          // 0xxxxxxx
+          out += String.fromCharCode(c);
+          break;
+        case 12:case 13:
+          // 110x xxxx   10xx xxxx
+          char2 = array[i++];
+          out += String.fromCharCode((c & 0x1F) << 6 | char2 & 0x3F);
+          break;
+        case 14:
+          // 1110 xxxx  10xx xxxx  10xx xxxx
+          char2 = array[i++];
+          char3 = array[i++];
+          out += String.fromCharCode((c & 0x0F) << 12 | (char2 & 0x3F) << 6 | (char3 & 0x3F) << 0);
+          break;
+        default:
+      }
+    }
+    return out;
+  };
+
+  return ID3;
+}();
+
+var utf8ArrayToStr = ID3._utf8ArrayToStr;
+
+/* harmony default export */ var id3 = (ID3);
+
 
 // CONCATENATED MODULE: ./src/demux/aacdemuxer.js
 function aacdemuxer__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -1898,7 +1889,7 @@ var aacdemuxer_AACDemuxer = function () {
     // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
     // Layer bits (position 14 and 15) in header should be always 0 for ADTS
     // More info https://wiki.multimedia.cx/index.php?title=ADTS
-    var id3Data = id3["a" /* default */].getID3Data(data, 0) || [];
+    var id3Data = id3.getID3Data(data, 0) || [];
     var offset = id3Data.length;
 
     for (var length = data.length; offset < length; offset++) {
@@ -1915,8 +1906,8 @@ var aacdemuxer_AACDemuxer = function () {
 
   AACDemuxer.prototype.append = function append(data, timeOffset, contiguous, accurateTimeOffset) {
     var track = this._audioTrack;
-    var id3Data = id3["a" /* default */].getID3Data(data, 0) || [];
-    var timestamp = id3["a" /* default */].getTimeStamp(id3Data);
+    var id3Data = id3.getID3Data(data, 0) || [];
+    var timestamp = id3.getTimeStamp(id3Data);
     var pts = timestamp ? 90 * timestamp : timeOffset * 90000;
     var frameIndex = 0;
     var stamp = pts;
@@ -1937,8 +1928,8 @@ var aacdemuxer_AACDemuxer = function () {
           logger["b" /* logger */].log('Unable to parse AAC frame');
           break;
         }
-      } else if (id3["a" /* default */].isHeader(data, offset)) {
-        id3Data = id3["a" /* default */].getID3Data(data, offset);
+      } else if (id3.isHeader(data, offset)) {
+        id3Data = id3.getID3Data(data, offset);
         id3Samples.push({ pts: stamp, dts: stamp, data: id3Data });
         offset += id3Data.length;
       } else {
@@ -3858,8 +3849,8 @@ var mp3demuxer_MP3Demuxer = function () {
   MP3Demuxer.probe = function probe(data) {
     // check if data contains ID3 timestamp and MPEG sync word
     var offset, length;
-    var id3Data = id3["a" /* default */].getID3Data(data, 0);
-    if (id3Data && id3["a" /* default */].getTimeStamp(id3Data) !== undefined) {
+    var id3Data = id3.getID3Data(data, 0);
+    if (id3Data && id3.getTimeStamp(id3Data) !== undefined) {
       // Look for MPEG header | 1111 1111 | 111X XYZX | where X can be either 0 or 1 and Y or Z should be 1
       // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
       // More info http://www.mp3-tech.org/programmer/frame_header.html
@@ -3877,8 +3868,8 @@ var mp3demuxer_MP3Demuxer = function () {
 
 
   MP3Demuxer.prototype.append = function append(data, timeOffset, contiguous, accurateTimeOffset) {
-    var id3Data = id3["a" /* default */].getID3Data(data, 0);
-    var pts = 90 * id3["a" /* default */].getTimeStamp(id3Data);
+    var id3Data = id3.getID3Data(data, 0);
+    var pts = 90 * id3.getTimeStamp(id3Data);
     var offset = id3Data.length;
     var length = data.length;
     var frameIndex = 0,
@@ -3898,8 +3889,8 @@ var mp3demuxer_MP3Demuxer = function () {
           //logger.log('Unable to parse Mpeg audio frame');
           break;
         }
-      } else if (id3["a" /* default */].isHeader(data, offset)) {
-        id3Data = id3["a" /* default */].getID3Data(data, offset);
+      } else if (id3.isHeader(data, offset)) {
+        id3Data = id3.getID3Data(data, offset);
         id3Samples.push({ pts: stamp, dts: stamp, data: id3Data });
         offset += id3Data.length;
       } else {
@@ -5430,14 +5421,14 @@ var demuxer_inline_DemuxerInline = function () {
 /* harmony default export */ var demuxer_inline = __webpack_exports__["a"] = (demuxer_inline_DemuxerInline);
 
 /***/ }),
-/* 8 */
+/* 7 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
 
 // EXTERNAL MODULE: ./node_modules/url-toolkit/src/url-toolkit.js
-var url_toolkit = __webpack_require__(6);
+var url_toolkit = __webpack_require__(5);
 var url_toolkit_default = /*#__PURE__*/__webpack_require__.n(url_toolkit);
 
 // EXTERNAL MODULE: ./src/events.js
@@ -6741,15 +6732,15 @@ var BufferHelper = {
 };
 
 /* harmony default export */ var buffer_helper = (BufferHelper);
-// EXTERNAL MODULE: ./src/demux/demuxer-inline.js + 16 modules
-var demuxer_inline = __webpack_require__(7);
+// EXTERNAL MODULE: ./src/demux/demuxer-inline.js + 17 modules
+var demuxer_inline = __webpack_require__(6);
 
 // EXTERNAL MODULE: ./node_modules/events/events.js
-var events_events = __webpack_require__(5);
+var events_events = __webpack_require__(4);
 var events_default = /*#__PURE__*/__webpack_require__.n(events_events);
 
 // EXTERNAL MODULE: ./node_modules/webworkify-webpack/index.js
-var webworkify_webpack = __webpack_require__(9);
+var webworkify_webpack = __webpack_require__(8);
 var webworkify_webpack_default = /*#__PURE__*/__webpack_require__.n(webworkify_webpack);
 
 // CONCATENATED MODULE: ./src/demux/demuxer.js
@@ -6816,7 +6807,7 @@ var demuxer_Demuxer = function () {
       logger["b" /* logger */].log('demuxing in webworker');
       var w = void 0;
       try {
-        w = this.w = webworkify_webpack_default()(/*require.resolve*/(10));
+        w = this.w = webworkify_webpack_default()(/*require.resolve*/(9));
         this.onwmsg = this.onWorkerMessage.bind(this);
         w.addEventListener('message', this.onwmsg);
         w.onerror = function (event) {
@@ -9191,98 +9182,6 @@ var level_controller_LevelController = function (_EventHandler) {
 }(event_handler);
 
 /* harmony default export */ var level_controller = (level_controller_LevelController);
-// EXTERNAL MODULE: ./src/demux/id3.js
-var id3 = __webpack_require__(4);
-
-// CONCATENATED MODULE: ./src/controller/id3-track-controller.js
-function id3_track_controller__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function id3_track_controller__possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function id3_track_controller__inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/*
- * id3 metadata track controller
-*/
-
-
-
-
-
-var id3_track_controller_ID3TrackController = function (_EventHandler) {
-  id3_track_controller__inherits(ID3TrackController, _EventHandler);
-
-  function ID3TrackController(hls) {
-    id3_track_controller__classCallCheck(this, ID3TrackController);
-
-    var _this = id3_track_controller__possibleConstructorReturn(this, _EventHandler.call(this, hls, events["a" /* default */].MEDIA_ATTACHED, events["a" /* default */].MEDIA_DETACHING, events["a" /* default */].FRAG_PARSING_METADATA));
-
-    _this.id3Track = undefined;
-    _this.media = undefined;
-    return _this;
-  }
-
-  ID3TrackController.prototype.destroy = function destroy() {
-    event_handler.prototype.destroy.call(this);
-  };
-
-  // Add ID3 metatadata text track.
-
-
-  ID3TrackController.prototype.onMediaAttached = function onMediaAttached(data) {
-    this.media = data.media;
-    if (!this.media) {
-      return;
-    }
-  };
-
-  ID3TrackController.prototype.onMediaDetaching = function onMediaDetaching() {
-    this.media = undefined;
-  };
-
-  ID3TrackController.prototype.onFragParsingMetadata = function onFragParsingMetadata(data) {
-    var fragment = data.frag;
-    var samples = data.samples;
-
-    // create track dynamically
-    if (!this.id3Track) {
-      this.id3Track = this.media.addTextTrack('metadata', 'id3');
-      this.id3Track.mode = 'hidden';
-    }
-
-    // Attempt to recreate Safari functionality by creating
-    // WebKitDataCue objects when available and store the decoded
-    // ID3 data in the value property of the cue
-    var Cue = window.WebKitDataCue || window.VTTCue || window.TextTrackCue;
-
-    for (var i = 0; i < samples.length; i++) {
-      var frames = id3["a" /* default */].getID3Frames(samples[i].data);
-      if (frames) {
-        var startTime = samples[i].pts;
-        var endTime = i < samples.length - 1 ? samples[i + 1].pts : fragment.endPTS;
-
-        // Give a slight bump to the endTime if it's equal to startTime to avoid a SyntaxError in IE
-        if (startTime === endTime) {
-          endTime += 0.0001;
-        }
-
-        for (var j = 0; j < frames.length; j++) {
-          var frame = frames[j];
-          // Safari doesn't put the timestamp frame in the TextTrack
-          if (!id3["a" /* default */].isTimeStampFrame(frame)) {
-            var cue = new Cue(startTime, endTime, '');
-            cue.value = frame;
-            this.id3Track.addCue(cue);
-          }
-        }
-      }
-    }
-  };
-
-  return ID3TrackController;
-}(event_handler);
-
-/* harmony default export */ var id3_track_controller = (id3_track_controller_ID3TrackController);
 // CONCATENATED MODULE: ./src/utils/ewma.js
 function ewma__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -10861,7 +10760,6 @@ function hls__classCallCheck(instance, Constructor) { if (!(instance instanceof 
 
 
 
-
 var hls_Hls = function () {
   Hls.isSupported = function isSupported() {
     var mediaSource = window.MediaSource = window.MediaSource || window.WebKitMediaSource;
@@ -10967,7 +10865,6 @@ var hls_Hls = function () {
     var playListLoader = new playlist_loader(this);
     var fragmentLoader = new fragment_loader(this);
     var keyLoader = new key_loader(this);
-    var id3TrackController = new id3_track_controller(this);
 
     // network controllers
     var levelController = this.levelController = new level_controller(this);
@@ -10981,7 +10878,7 @@ var hls_Hls = function () {
     }
     this.networkControllers = networkControllers;
 
-    var coreComponents = [playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController, id3TrackController];
+    var coreComponents = [playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController];
 
     // optional audio track and subtitle controller
     Controller = config.audioTrackController;
@@ -11331,7 +11228,7 @@ var hls_Hls = function () {
 /* harmony default export */ var src_hls = __webpack_exports__["default"] = (hls_Hls);
 
 /***/ }),
-/* 9 */
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 function webpackBootstrapFunc (modules) {
@@ -11462,15 +11359,15 @@ module.exports = function (moduleId, options) {
 
 
 /***/ }),
-/* 10 */
+/* 9 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
 Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__demux_demuxer_inline__ = __webpack_require__(7);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__demux_demuxer_inline__ = __webpack_require__(6);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__events__ = __webpack_require__(1);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__utils_logger__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_events__ = __webpack_require__(5);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_events__ = __webpack_require__(4);
 /* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_events___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3_events__);
 /* demuxer web worker.
  *  - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
