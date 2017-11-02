@@ -743,13 +743,13 @@ class Cea608Channel
     ccEDM() { // Erase Displayed Memory
         logger.log('INFO', 'EDM - Erase Displayed Memory');
         this.displayedMemory.reset();
-        this.outputDataUpdate();
+        this.outputDataUpdate(true);
     }
 
     ccCR() { // Carriage Return
         logger.log('CR - Carriage Return');
         this.writeScreen.rollUp();
-        this.outputDataUpdate();
+        this.outputDataUpdate(true);
     }
 
     ccENM() { //Erase Non-Displayed Memory
@@ -766,7 +766,7 @@ class Cea608Channel
             this.writeScreen = this.nonDisplayedMemory;
             logger.log('TEXT', 'DISP: ' + this.displayedMemory.getDisplayText());
         }
-        this.outputDataUpdate();
+        this.outputDataUpdate(true);
     }
 
     ccTO(nrCols) { // Tab Offset 1,2, or 3 columns
@@ -789,21 +789,21 @@ class Cea608Channel
         this.writeScreen.setPen(styles);
     }
 
-    outputDataUpdate() {
-        var t = logger.time;
+    outputDataUpdate(dispatch = false) {
+        let t = logger.time;
         if (t === null) {
             return;
         }
         if (this.outputFilter) {
-            if (this.outputFilter.updateData) {
-                this.outputFilter.updateData(t, this.displayedMemory);
-            }
             if (this.cueStartTime === null && !this.displayedMemory.isEmpty()) { // Start of a new cue
                 this.cueStartTime = t;
             } else {
                 if (!this.displayedMemory.equals(this.lastOutputScreen)) {
                     if (this.outputFilter.newCue) {
                         this.outputFilter.newCue(this.cueStartTime, t, this.lastOutputScreen);
+                        if (dispatch === true && this.outputFilter.dispatchCue) {
+                            this.outputFilter.dispatchCue();
+                        }
                     }
                     this.cueStartTime = this.displayedMemory.isEmpty() ? null : t;
                 }
