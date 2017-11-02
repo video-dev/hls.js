@@ -340,13 +340,13 @@ class TimelineController extends EventHandler {
         // Parse the WebVTT file contents.
         WebVTTParser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
             const currentTrack = tracks[frag.trackId];
-            const newCues = cues.filter(cue => !currentTrack.cues.getCueById(cue.id));
 
             if (self.config.renderNatively) {
-              newCues.forEach(cue => { currentTrack.addCue(cue); });
+              cues.filter(cue => !currentTrack.cues.getCueById(cue.id))
+                  .forEach(cue => { currentTrack.addCue(cue); });
             } else {
               let trackId = currentTrack.default ? 'default' : 'subtitles' + frag.trackId;
-              hls.trigger(Event.CUES_PARSED, { type: 'subtitles', cues: newCues, track: trackId });
+              hls.trigger(Event.CUES_PARSED, { type: 'subtitles', cues: cues, track: trackId });
             }
             hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
           },
