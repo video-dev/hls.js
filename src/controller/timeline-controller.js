@@ -391,21 +391,22 @@ class TimelineController extends EventHandler {
                     frag.cc,
                     function(cues) {
                         const currentTrack = tracks[frag.trackId];
-                        const newCues = cues.filter(
-                            cue => !currentTrack.cues.getCueById(cue.id)
-                        );
 
                         if (self.config.renderNatively) {
-                            newCues.forEach(cue => {
-                                currentTrack.addCue(cue);
-                            });
+                            cues
+                                .filter(
+                                    cue => !currentTrack.cues.getCueById(cue.id)
+                                )
+                                .forEach(cue => {
+                                    currentTrack.addCue(cue);
+                                });
                         } else {
                             let trackId = currentTrack.default
                                 ? 'default'
                                 : 'subtitles' + frag.trackId;
                             hls.trigger(Event.CUES_PARSED, {
                                 type: 'subtitles',
-                                cues: newCues,
+                                cues: cues,
                                 track: trackId
                             });
                         }
