@@ -72,6 +72,7 @@ class DemuxerInline {
         { demux: AACDemuxer, remux: MP4Remuxer },
         { demux: MP3Demuxer, remux: MP4Remuxer },
         { demux: MP4Demuxer, remux: PassThroughRemuxer }
+        ];
 
       // probe for content type
       for (let i = 0, len = muxConfig.length; i < len; i++) {
