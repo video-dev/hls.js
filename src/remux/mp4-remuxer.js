@@ -36,7 +36,7 @@ class MP4Remuxer {
   remux(audioTrack,videoTrack,id3Track,textTrack,timeOffset, contiguous,accurateTimeOffset) {
     // generate Init Segment if needed
     if (!this._ISGenerated) {
-      this.generateIS(audioTrack,videoTrack,timeOffset);
+      this._generateIS(audioTrack,videoTrack,timeOffset);
     }
 
     if (this._ISGenerated) {
@@ -481,7 +481,7 @@ class MP4Remuxer {
 
     // only inject/drop audio frames in case time offset is accurate
     if (accurateTimeOffset && track.isAAC) {
-      const maxAudioFramesDrift = this.config.maxAudioFramesDrift;
+      const maxAudioFramesDrift = this._config.maxAudioFramesDrift;
       for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length; ) {
         // First, let's see how far off this frame is from where we expect it to be
         var sample = inputSamples[i], delta;
