@@ -70,7 +70,7 @@ class Decrypter {
       logger.log('WebCrypto Error, disable WebCrypto API');
       this._disableWebCrypto = true;
       this._logEnabled = true;
-      this._decrypt(data, key, iv, callback);
+      this.decrypt(data, key, iv, callback);
     }
     else {
       logger.error(`decrypting error : ${err.message}`);
