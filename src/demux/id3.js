@@ -292,14 +292,14 @@
    * LastModified: Dec 25 1999
    * This library is free.  You can redistribute it and/or modify it.
    */
-  static _utf8ArrayToStr(array, startingIndex) {
+  static _utf8ArrayToStr(array) {
 
     const len = array.length;
     let c;
     let char2;
     let char3;
     let out = '';
-    let i = startingIndex || 0;
+    let i = 0;
     while (i < len) {
         c = array[i++];
         // If the character is 3 (END_OF_TEXT) or 0 (NULL) then skip it
