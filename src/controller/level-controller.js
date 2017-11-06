@@ -329,6 +329,7 @@ class LevelController extends EventHandler {
           // duration before retrying.
           reloadInterval /=2;
           logger.log(`same live playlist, reload twice faster`);
+          this.hls.trigger(Event.ERROR, {type : ErrorTypes.OTHER_ERROR, details: ErrorDetails.SAME_PLAYLIST, fatal: false});
         }
         // decrement reloadInterval with level loading delay
         reloadInterval -= performance.now() - data.stats.trequest;

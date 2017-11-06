@@ -64,5 +64,7 @@ export const ErrorDetails = {
   // Malformed WebVTT contents
   WEBVTT_EXCEPTION: 'webVTTException',
   // Identifier for empty playlist
-  EMPTY_PLAYLIST: 'emptyPlaylist'
+  EMPTY_PLAYLIST: 'emptyPlaylist',
+  // Identifier for repeated same playlist
+  SAME_PLAYLIST: 'samePlaylist'
 };
