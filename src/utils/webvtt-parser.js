@@ -61,7 +61,10 @@ const WebVTTParser = {
     parse: function(vttByteArray, syncPTS, vttCCs, cc, callBack, errorCallBack) {
         // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
         let re = /\r\n|\n\r|\n|\r/g;
-        let vttLines = utf8ArrayToStr(new Uint8Array(vttByteArray)).trim().replace(re, '\n').split('\n');
+        // Uint8Array.prototype.reduce is not implemented in IE11
+        let vttLines = utf8ArrayToStr(Array.prototype.reduce
+          .call(new Uint8Array(vttByteArray), (raw, vttByte) => raw + String.fromCharCode(vttByte), ''))
+          .trim().replace(re, '\n').split('\n');
 
         let cueTime = '00:00.000';
         let mpegTs = 0;
