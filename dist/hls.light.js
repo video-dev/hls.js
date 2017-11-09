@@ -210,7 +210,7 @@ var logger = exportedLogger;
   LEVEL_PTS_UPDATED: 'hlsLevelPtsUpdated',
   // fired to notify that audio track lists has been updated - data: { audioTracks : audioTracks }
   LEVEL_REMOVED: 'hlsLevelRemoved',
-  // fired when a level should no longer be used
+  // fired when a level should be removed
   AUDIO_TRACKS_UPDATED: 'hlsAudioTracksUpdated',
   // fired when an audio track switch occurs - data: { id : audio track id } // deprecated in favor AUDIO_TRACK_SWITCHING
   AUDIO_TRACK_SWITCH: 'hlsAudioTrackSwitch',
@@ -307,8 +307,8 @@ var ErrorDetails = {
   MANIFEST_PARSING_ERROR: 'manifestParsingError',
   // Identifier for a manifest with only incompatible codecs error - data: { url : faulty URL, reason : error reason}
   MANIFEST_INCOMPATIBLE_CODECS_ERROR: 'manifestIncompatibleCodecsError',
-  //
-  MANIFEST_EMPTY_ERROR: 'manifestEmptyError',
+  // Identifier for a level which contains no fragments - data: { url: faulty URL, reason: error reason, level: index of the bad level }
+  LEVEL_EMPTY_ERROR: 'levelEmptyError',
   // Identifier for a level load error - data: { url : faulty URL, response : { code: error code, text: error text }}
   LEVEL_LOAD_ERROR: 'levelLoadError',
   // Identifier for a level load timeout - data: { url : faulty URL, response : { code: error code, text: error text }}
@@ -6302,7 +6302,14 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
               networkDetails: networkDetails
             });
           } else {
-            hls.trigger(events["a" /* default */].ERROR, { type: errors["b" /* ErrorTypes */].NETWORK_ERROR, details: errors["a" /* ErrorDetails */].MANIFEST_EMPTY_ERROR, fatal: false, url: url, reason: 'no level found in manifest', context: context });
+            hls.trigger(events["a" /* default */].ERROR, {
+              type: errors["b" /* ErrorTypes */].NETWORK_ERROR,
+              details: errors["a" /* ErrorDetails */].LEVEL_EMPTY_ERROR,
+              fatal: false,
+              url: url,
+              reason: 'no fragments found in level',
+              level: context.level
+            });
           }
         }
       }
@@ -8789,7 +8796,7 @@ var level_controller_LevelController = function (_EventHandler) {
   function LevelController(hls) {
     level_controller__classCallCheck(this, LevelController);
 
-    var _this = level_controller__possibleConstructorReturn(this, _EventHandler.call(this, hls, events["a" /* default */].MANIFEST_LOADED, events["a" /* default */].LEVEL_LOADED, events["a" /* default */].FRAG_LOADED, events["a" /* default */].ERROR));
+    var _this = level_controller__possibleConstructorReturn(this, _EventHandler.call(this, hls, events["a" /* default */].MANIFEST_LOADED, events["a" /* default */].LEVEL_LOADED, events["a" /* default */].FRAG_LOADED, events["a" /* default */].ERROR, events["a" /* default */].LEVEL_REMOVED));
 
     _this._manualLevel = -1;
     _this.timer = null;
@@ -9100,6 +9107,12 @@ var level_controller_LevelController = function (_EventHandler) {
         this.hls.trigger(events["a" /* default */].LEVEL_LOADING, { url: level.url[urlId], level: levelId, id: urlId });
       }
     }
+  };
+
+  LevelController.prototype.onLevelRemoved = function onLevelRemoved(data) {
+    this._levels = this.levels.filter(function (level, index) {
+      return index !== data.level;
+    });
   };
 
   level_controller__createClass(LevelController, [{
@@ -10962,6 +10975,10 @@ var hls_Hls = function () {
     var media = this.media;
     this.detachMedia();
     this.attachMedia(media);
+  };
+
+  Hls.prototype.removeLevel = function removeLevel(level) {
+    this.trigger(events["a" /* default */].LEVEL_REMOVED, { level: level });
   };
 
   /** Return all quality levels **/
