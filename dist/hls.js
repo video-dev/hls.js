@@ -14039,9 +14039,7 @@ var WebVTTParser = {
         // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
         var re = /\r\n|\n\r|\n|\r/g;
         // Uint8Array.prototype.reduce is not implemented in IE11
-        var vttLines = Object(id3["b" /* utf8ArrayToStr */])(Array.prototype.reduce.call(new Uint8Array(vttByteArray), function (raw, vttByte) {
-            return raw + String.fromCharCode(vttByte);
-        }, '')).trim().replace(re, '\n').split('\n');
+        var vttLines = Object(id3["b" /* utf8ArrayToStr */])(new Uint8Array(vttByteArray)).trim().replace(re, '\n').split('\n');
 
         var cueTime = '00:00.000';
         var mpegTs = 0;
@@ -15139,7 +15137,7 @@ var hls_Hls = function () {
   hls__createClass(Hls, null, [{
     key: 'version',
     get: function get() {
-      return "0.8.6";
+      return "0.8.7";
     }
   }, {
     key: 'Events',
