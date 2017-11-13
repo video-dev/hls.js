@@ -71,6 +71,8 @@ class AbrController extends EventHandler {
     if(!loader || ( loader.stats && loader.stats.aborted)) {
       logger.warn('frag loader destroy or aborted, disarm abandonRules');
       this.clearTimer();
+      // reset forced auto level value so that next level will be selected
+      this._nextAutoLevel = -1;
       return;
     }
     let stats = loader.stats;
