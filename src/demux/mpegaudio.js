@@ -21,7 +21,7 @@ const MpegAudio = {
 
         var header = this.parseHeader(data, offset);
         if (header && offset + header.frameLength <= data.length) {
-            var frameDuration = 1152 * 90000 / header.sampleRate;
+            var frameDuration = header.samplesPerFrame * 90000 / header.sampleRate;
             var stamp = pts + frameIndex * frameDuration;
             var sample = { unit: data.subarray(offset, offset + header.frameLength), pts: stamp, dts: stamp };
 
@@ -42,19 +42,30 @@ const MpegAudio = {
         var headerC = (data[offset + 1] >> 1) & 3;
         var headerE = (data[offset + 2] >> 4) & 15;
         var headerF = (data[offset + 2] >> 2) & 3;
-        var headerG = !!(data[offset + 2] & 2);
+        var headerG = (data[offset + 2] >> 1) & 1;
         if (headerB !== 1 && headerE !== 0 && headerE !== 15 && headerF !== 3) {
             var columnInBitrates = headerB === 3 ? (3 - headerC) : (headerC === 3 ? 3 : 4);
             var bitRate = MpegAudio.BitratesMap[columnInBitrates * 14 + headerE - 1] * 1000;
             var columnInSampleRates = headerB === 3 ? 0 : headerB === 2 ? 1 : 2;
             var sampleRate = MpegAudio.SamplingRateMap[columnInSampleRates * 3 + headerF];
-            var padding = headerG ? 1 : 0;
             var channelCount = data[offset + 3] >> 6 === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
-            var frameLength = headerC === 3 ?
-                ((headerB === 3 ? 12 : 6) * bitRate / sampleRate + padding) << 2 :
-                ((headerB === 3 ? 144 : 72) * bitRate / sampleRate + padding) | 0;
+            var samplesPerFrame = 0;
+            var frameLength = 0;
 
-            return { sampleRate, channelCount, frameLength };
+            if (headerC === 3) { // Layer1
+              samplesPerFrame = 384;
+              frameLength = (12 * bitRate / sampleRate + headerG) << 2;
+            }
+            else if (headerB === 3) { // MPEG Version 1 Layer2 & Layer3
+              samplesPerFrame = 1152;
+              frameLength = (144 * bitRate / sampleRate + headerG) | 0;
+            }
+            else { // MPEG version 2, 2.5 Layer3
+              samplesPerFrame = 576;
+              frameLength = (72 * bitRate / sampleRate + headerG) | 0;
+            }
+
+            return { sampleRate, channelCount, frameLength, samplesPerFrame };
         }
 
         return undefined;
