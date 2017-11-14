@@ -13,6 +13,44 @@ const MpegAudio = {
 
     SamplingRateMap: [44100, 48000, 32000, 22050, 24000, 16000, 11025, 12000, 8000],
 
+    SamplesCoefficients: [
+      // MPEG 2.5
+      [
+        0, // Reserved
+        72, // Layer3
+        144, // Layer2
+        12, // Layer1
+      ],
+      // Reserved
+      [
+        0, // Reserved
+        0, // Layer3
+        0, // Layer2
+        0, // Layer1
+      ],
+      // MPEG 2
+      [
+        0, // Reserved
+        72, // Layer3
+        144, // Layer2
+        12, // Layer1
+      ],
+      // MPEG 1
+      [
+        0, // Reserved
+        144, // Layer3
+        144, // Layer2
+        12, // Layer1
+      ]
+    ],
+
+    BytesInSlot: [
+      0, // Reserved
+      1, // Layer3
+      1, // Layer2
+      4 // Layer1
+    ],
+
     appendFrame: function (track, data, offset, pts, frameIndex) {
         // Using http://www.datavoyage.com/mpgscript/mpeghdr.htm as a reference
         if (offset + 24 > data.length) {
@@ -49,21 +87,10 @@ const MpegAudio = {
             var columnInSampleRates = headerB === 3 ? 0 : headerB === 2 ? 1 : 2;
             var sampleRate = MpegAudio.SamplingRateMap[columnInSampleRates * 3 + headerF];
             var channelCount = data[offset + 3] >> 6 === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
-            var samplesPerFrame = 0;
-            var frameLength = 0;
-
-            if (headerC === 3) { // Layer1
-              samplesPerFrame = 384;
-              frameLength = (12 * bitRate / sampleRate + headerG) << 2;
-            }
-            else if (headerB === 3) { // MPEG Version 1 Layer2 & Layer3
-              samplesPerFrame = 1152;
-              frameLength = (144 * bitRate / sampleRate + headerG) | 0;
-            }
-            else { // MPEG version 2, 2.5 Layer3
-              samplesPerFrame = 576;
-              frameLength = (72 * bitRate / sampleRate + headerG) | 0;
-            }
+            var sampleCoefficient = MpegAudio.SamplesCoefficients[headerB][headerC];
+            var bytesInSlot = MpegAudio.BytesInSlot[headerC];
+            var samplesPerFrame = sampleCoefficient * 8 * bytesInSlot;
+            var frameLength = parseInt(sampleCoefficient * bitRate / sampleRate + headerG, 10) * bytesInSlot;
 
             return { sampleRate, channelCount, frameLength, samplesPerFrame };
         }
