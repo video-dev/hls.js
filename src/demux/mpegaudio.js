@@ -19,28 +19,28 @@ const MpegAudio = {
         0, // Reserved
         72, // Layer3
         144, // Layer2
-        12, // Layer1
+        12 // Layer1
       ],
       // Reserved
       [
         0, // Reserved
         0, // Layer3
         0, // Layer2
-        0, // Layer1
+        0 // Layer1
       ],
       // MPEG 2
       [
         0, // Reserved
         72, // Layer3
         144, // Layer2
-        12, // Layer1
+        12 // Layer1
       ],
       // MPEG 1
       [
         0, // Reserved
         144, // Layer3
         144, // Layer2
-        12, // Layer1
+        12 // Layer1
       ]
     ],
 
