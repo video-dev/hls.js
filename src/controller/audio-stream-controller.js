@@ -756,7 +756,7 @@ class AudioStreamController extends EventHandler {
     }
   }
 
- onBufferReset(data) {
+ onBufferReset() {
     // reset reference to sourcebuffers
     this.mediaBuffer = this.videoBuffer = null;
     this.loadedmetadata = false;
