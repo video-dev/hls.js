@@ -44,6 +44,7 @@ class AudioStreamController extends EventHandler {
       Event.FRAG_PARSING_DATA,
       Event.FRAG_PARSED,
       Event.ERROR,
+      Event.BUFFER_RESET,
       Event.BUFFER_CREATED,
       Event.BUFFER_APPENDED,
       Event.BUFFER_FLUSHED,
@@ -755,6 +756,11 @@ class AudioStreamController extends EventHandler {
     }
   }
 
+ onBufferReset(data) {
+    // reset reference to sourcebuffers
+    this.mediaBuffer = this.videoBuffer = null;
+    this.loadedmetadata = false;
+ }
 
   onBufferCreated(data) {
     let audioTrack = data.tracks.audio;
