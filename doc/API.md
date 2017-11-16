@@ -1087,7 +1087,7 @@ get : array of subtitle tracks exposed in manifest
 
 ### `hls.subtitleTrack`
 
-get/set : subtitle track id (returned by)
+get/set : subtitle track id (returned by). Returns -1 if no track is visible. Set to -1 to hide all subtitle tracks.
 
 ### `hls.subtitleDisplay`
 
