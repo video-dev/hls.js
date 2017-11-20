@@ -731,11 +731,23 @@ class StreamController extends EventHandler {
     }
 
     getBufferedFrag(position) {
+        // Position and frag PTS values have differing precision; truncate to 3 digits so that marginal differences do not
+        // cause unexpected results (e.g. we want 1.000000001 to equal 1.000)
+        const trunc = num => Math.round(num * 1000) / 1000;
+        const isDefined = num => num !== void 0 && num !== null;
+
+        if (!isDefined(position)) {
+            return;
+        }
+
+        const truncPos = trunc(position);
         return BinarySearch.search(this._bufferedFrags, function(frag) {
-            if (position < frag.startPTS) {
-                return -1;
-            } else if (position > frag.endPTS) {
-                return 1;
+            if (isDefined(frag.startPTS) && isDefined(frag.endPTS)) {
+                if (truncPos < trunc(frag.startPTS)) {
+                    return -1;
+                } else if (truncPos > trunc(frag.endPTS)) {
+                    return 1;
+                }
             }
             return 0;
         });
