@@ -633,6 +633,9 @@ class AudioStreamController extends EventHandler {
   }
 
   onFragParsingInitSegment(data) {
+
+    console.log('audio init segment found');
+
     const fragCurrent = this.fragCurrent;
     const fragNew = data.frag;
     if (fragCurrent &&
@@ -715,12 +718,19 @@ class AudioStreamController extends EventHandler {
         }
       }
 
-
       let pendingData = this.pendingData;
+
+      if (!pendingData) {
+        console.warn('Apparently attempt to enqueue media payload without codec initialization data upfront');
+        hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: null, fatal: true});
+        return;
+      }
+
       if(!this.audioSwitch) {
         [data.data1, data.data2].forEach(buffer => {
           if (buffer && buffer.length) {
-            pendingData.push({type: data.type, data: buffer, parent : 'audio',content : 'data'});
+
+            pendingData.push({type: data.type, data: buffer, parent: 'audio', content: 'data'});
           }
         });
       if (!appendOnBufferFlush && pendingData.length) {
