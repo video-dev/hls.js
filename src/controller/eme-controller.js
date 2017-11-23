@@ -87,10 +87,10 @@ class EMEController extends EventHandler {
 
         console.log('EME controller online');
 
-        this._mediaKeySystemAccessList = [];
         this._mediaKeysList = [];
         this._media = null;
 
+        this._hasSetMediaKeys = false;
         this._isMediaEncrypted = false;
     }
 
@@ -116,44 +116,80 @@ class EMEController extends EventHandler {
 
         window.navigator.requestMediaKeySystemAccess(keySystem, mediaKeySystemConfigs)
             .then((mediaKeySystemAccess) => {
-
-                console.log('Key system access obtained with config:', 
-                    mediaKeySystemAccess.getConfiguration());
-
-                const mediaKeysListItem = {
-                    mediaKeys: null,
-                    mediaKeysSession: null,
-                    mediaKeySystemAccess: mediaKeySystemAccess
-                };
-
-                this._mediaKeysList.push(mediaKeysListItem);
-
-                // this is a bit redundant for now, let's see if we ll really need it
-                this._mediaKeySystemAccessList.push(mediaKeySystemAccess);
-        
-                mediaKeySystemAccess.createMediaKeys()
-                    .then((mediaKeys) => {
-                        mediaKeysListItem.mediaKeys = mediaKeys;
-
-                        console.log('Created media-keys:', mediaKeys);
-                    })
-                    .catch((err) => {
-                        console.error('Failed to create media-keys:', err);
-                    });
-
-                console.log('Obtained key-system access for:', keySystem);
+                this._onMediaKeySystemAccessObtained(keySystem, mediaKeySystemAccess);
             })
             .catch((err) => {
                 console.error(`Failed to obtain key-system ${keySystem} access:`, err);
             });
     }
 
-    _setMediaEncrypted(isEncrypted) {
-        this._isMediaEncrypted = isEncrypted;
+    /**
+     * Handles obtaining access to a key-system
+     * 
+     * @param {string} keySystem 
+     * @param {MediaKeySystemAccess} mediaKeySystemAccess https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySystemAccess
+     */
+    _onMediaKeySystemAccessObtained(keySystem, mediaKeySystemAccess) {
 
-        if (isEncrypted) {
+        console.log('Key system access obtained with config:',
+            mediaKeySystemAccess.getConfiguration());
 
-            console.log('Media is encrypted!');
+        const mediaKeysListItem = {
+            mediaKeys: null,
+            mediaKeysSession: null,
+            mediaKeySystemAccess: mediaKeySystemAccess
+        };
+
+        this._mediaKeysList.push(mediaKeysListItem);
+
+        mediaKeySystemAccess.createMediaKeys()
+            .then((mediaKeys) => {
+                mediaKeysListItem.mediaKeys = mediaKeys;
+
+                console.log('Created media-keys:', mediaKeys);
+
+                this._onMediaKeysCreated();
+            })
+            .catch((err) => {
+                console.error('Failed to create media-keys:', err);
+            });
+
+        console.log('Obtained key-system access for:', keySystem);
+    }
+
+    /**
+     * Handles key-creation (represents access to CDM). We are going to create key-sessions upon this
+     * for all existing keys where no session exists yet.
+     */
+    _onMediaKeysCreated() {
+        
+        // check for all key-list items if a session exists, otherwise, create one
+        this._mediaKeysList.forEach((mediaKeysListItem) => {
+            if(!mediaKeysListItem.mediaKeysSession) {
+                mediaKeysListItem.mediaKeysSession = mediaKeysListItem.mediaKeys.createSession();
+                this._onNewMediaKeySession(mediaKeysListItem.mediaKeysSession);
+            }
+        })
+    }
+
+    /**
+     * 
+     * @param {*} keySession 
+     */
+    _onNewMediaKeySession(keySession) {
+        console.log('New key-system session:', keySession);
+    }
+
+    _onMediaEncrypted() {
+        this._isMediaEncrypted = true;
+
+        console.log('Media is encrypted!');
+
+        this._attemptSetMediaKeys();
+    }
+
+    _attemptSetMediaKeys() {
+        if (!this._hasSetMediaKeys) {
 
             const keysListItem = this._mediaKeysList[0];
 
@@ -163,6 +199,7 @@ class EMEController extends EventHandler {
             }
 
             this._media.setMediaKeys(keysListItem.mediaKeys);
+            this._hasSetMediaKeys = true;
 
             console.log('Media keys set!');
         }
@@ -182,7 +219,7 @@ class EMEController extends EventHandler {
         this._media = media;
 
         media.addEventListener('encrypted', () => {
-            this._setMediaEncrypted(true);
+            this._onMediaEncrypted();
         });
     }
 
