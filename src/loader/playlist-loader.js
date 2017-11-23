@@ -433,7 +433,8 @@ class PlaylistLoader extends EventHandler {
                 decryptiv = keyAttrs.hexadecimalInteger('IV');
             if (decryptmethod) {
               levelkey = new LevelKey();
-              if ((decrypturi) && (['AES-128', 'SAMPLE-AES'].indexOf(decryptmethod) >= 0)) {
+              if ((decrypturi) && (['AES-128', 'SAMPLE-AES', 'SAMPLE-AES-CENC'].indexOf(decryptmethod) >= 0)) {
+
                 levelkey.method = decryptmethod;
                 // URI to get the key
                 levelkey.baseuri = baseurl;
@@ -441,6 +442,8 @@ class PlaylistLoader extends EventHandler {
                 levelkey.key = null;
                 // Initialization Vector (IV)
                 levelkey.iv = decryptiv;
+
+                console.log('Level Key', levelkey);
               }
             }
             break;
