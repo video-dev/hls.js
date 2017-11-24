@@ -659,7 +659,8 @@ class AudioStreamController extends EventHandler {
         logger.log(`audio track:audio,container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
         let initSegment = track.initSegment;
         if (initSegment) {
-          let appendObj = {type: 'audio', data: initSegment, parent : 'audio',content : 'initSegment'};
+
+          let appendObj = {type: 'audio', data: initSegment, parent: 'audio', content : 'initSegment'};
           if (this.audioSwitch) {
             this.pendingData = [appendObj];
           } else {
