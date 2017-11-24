@@ -484,6 +484,29 @@ class PlaylistLoader extends EventHandler {
     level.endSN = currentSN - 1;
     level.startCC = level.fragments[0] ? level.fragments[0].cc : 0;
     level.endCC = cc;
+
+    if (!level.initSegment) {
+      // this is a bit lurky but HLS really has no other way to tell us
+      // if the fragments are TS or MP4, except if we download them :/
+      // but this is to be able to handle SIDX.
+      // FIXME: replace string test by a regex that matches
+      //        also `m4s` `m4a` `m4v` and other popular extensions
+      if(level.fragments.every((frag) => frag.relurl.endsWith('.mp4'))) {
+        console.warn('MP4 fragments found but no initSegment');
+        frag = new Fragment();
+        frag.relurl = level.fragments[0].relurl;
+        frag.rawByteRange = '2048@0';
+        
+        console.log('Init segment byteRange:', frag.byteRange)
+
+        frag.baseurl = baseurl;
+        frag.level = id;
+        frag.type = type;
+        frag.sn = 'initSegment';
+        level.initSegment = frag;
+      }
+    }
+
     return level;
   }
 
