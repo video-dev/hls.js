@@ -184,7 +184,7 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
     // skip reserved
     index += 2;
 
-    let startByte = sidx.start + sidx.data.length + firstOffset;
+    let startByte = sidx.end + firstOffset;
 
     const referencesCount = MP4Demuxer.readUint16(sidx, index);
     index += 2;
