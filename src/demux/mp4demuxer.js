@@ -285,7 +285,7 @@ static offsetStartDTS(initData,fragment,timeOffset) {
   append(data, timeOffset,contiguous,accurateTimeOffset) {
     let initData = this.initData;
     if(!initData) {
-      this.resetInitSegment(data,this.audioCodec,this.videoCodec);
+      this.resetInitSegment(data, this.audioCodec, this.videoCodec, true);
       initData = this.initData;
     }
     let startDTS, initPTS = this.initPTS;
