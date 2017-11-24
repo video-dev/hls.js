@@ -17,7 +17,8 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
     this.initPTS = initPTS;
   }
 
-  resetInitSegment(initSegment,audioCodec,videoCodec, duration) {
+  resetInitSegment(initSegment, audioCodec, videoCodec, duration) {
+
     //jshint unused:false
     if (initSegment && initSegment.byteLength) {
       const initData = this.initData = MP4Demuxer.parseInitSegment(initSegment);
@@ -299,8 +300,7 @@ static offsetStartDTS(initData,fragment,timeOffset) {
     this.remuxer.remux(initData.audio, initData.video, null, null, startDTS, contiguous,accurateTimeOffset,data);
   }
 
-  destroy() {
-  }
+  destroy() {}
 
 }
 
