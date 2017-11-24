@@ -230,25 +230,25 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
     };
   }
 
-/**
- * Parses an MP4 initialization segment and extracts stream type and
- * timescale values for any declared tracks. Timescale values indicate the
- * number of clock ticks per second to assume for time-based values
- * elsewhere in the MP4.
- *
- * To determine the start time of an MP4, you need two pieces of
- * information: the timescale unit and the earliest base media decode
- * time. Multiple timescales can be specified within an MP4 but the
- * base media decode time is always expressed in the timescale from
- * the media header box for the track:
- * ```
- * moov > trak > mdia > mdhd.timescale
- * moov > trak > mdia > hdlr
- * ```
- * @param init {Uint8Array} the bytes of the init segment
- * @return {object} a hash of track type to timescale values or null if
- * the init segment is malformed.
- */
+  /**
+   * Parses an MP4 initialization segment and extracts stream type and
+   * timescale values for any declared tracks. Timescale values indicate the
+   * number of clock ticks per second to assume for time-based values
+   * elsewhere in the MP4.
+   *
+   * To determine the start time of an MP4, you need two pieces of
+   * information: the timescale unit and the earliest base media decode
+   * time. Multiple timescales can be specified within an MP4 but the
+   * base media decode time is always expressed in the timescale from
+   * the media header box for the track:
+   * ```
+   * moov > trak > mdia > mdhd.timescale
+   * moov > trak > mdia > hdlr
+   * ```
+   * @param init {Uint8Array} the bytes of the init segment
+   * @return {object} a hash of track type to timescale values or null if
+   * the init segment is malformed.
+   */
   static parseInitSegment(initSegment) {
 
     console.log('parseInitSegment of size:', initSegment.byteLength);
