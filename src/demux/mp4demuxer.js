@@ -64,6 +64,18 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
     return String.fromCharCode.apply(null, buffer);
   }
 
+  static readUint16(buffer, offset) {
+    if (buffer.data) {
+      offset += buffer.start;
+      buffer = buffer.data;
+    }
+
+    const val = buffer[offset] << 8 |
+                buffer[offset + 1];
+
+    return val < 0 ? 65536 + val : val;
+  }
+
   static readUint32(buffer, offset) {
     if (buffer.data) {
       offset += buffer.start;
