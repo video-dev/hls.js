@@ -276,7 +276,7 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
           const hdlr = MP4Demuxer.findBox(trak, ['mdia', 'hdlr'])[0];
           if (hdlr) {
             const hdlrType = MP4Demuxer.bin2str(hdlr.data.subarray(hdlr.start+8, hdlr.start+12));
-            let type = { 'soun' : 'audio', 'vide' : 'video'}[hdlrType];
+            let type = {'soun' : 'audio', 'vide' : 'video'}[hdlrType];
             if (type) {
                  // extract codec info. TODO : parse codec details to be able to build MIME type
                   let codecBox = MP4Demuxer.findBox( trak, ['mdia','minf','stbl','stsd']);
@@ -387,7 +387,7 @@ static offsetStartDTS(initData,fragment,timeOffset) {
   append(data, timeOffset,contiguous,accurateTimeOffset) {
     let initData = this.initData;
     if(!initData) {
-      this.resetInitSegment(data, this.audioCodec, this.videoCodec, true);
+      this.resetInitSegment(data, this.audioCodec, this.videoCodec, false);
       initData = this.initData;
     }
     let startDTS, initPTS = this.initPTS;
