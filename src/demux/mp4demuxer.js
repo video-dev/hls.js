@@ -21,6 +21,12 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
 
     //jshint unused:false
     if (initSegment && initSegment.byteLength) {
+
+      const sidxInfo = MP4Demuxer.parseSegmentIndex(initSegment);
+      if (sidxInfo) {
+        console.log('SIDX info:', sidxInfo);
+      }
+  
       const initData = this.initData = MP4Demuxer.parseInitSegment(initSegment);
 
       // default audio codec if nothing specified
@@ -43,7 +49,7 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
           tracks.video = { container : 'video/mp4', codec : videoCodec, initSegment : duration ? initSegment : null };
         }
       }
-      this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT,{ tracks : tracks });
+      this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, { tracks, sidxInfo });
     } else {
       if (audioCodec) {
         this.audioCodec = audioCodec;
@@ -250,12 +256,6 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
    * the init segment is malformed.
    */
   static parseInitSegment(initSegment) {
-
-    console.log('parseInitSegment of size:', initSegment.byteLength);
-
-    const sidxInfo = MP4Demuxer.parseSegmentIndex(initSegment);
-
-    console.log('SIDX info:', sidxInfo);
 
     var result = [];
     var traks = MP4Demuxer.findBox(initSegment, ['moov', 'trak']);
