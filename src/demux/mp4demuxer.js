@@ -150,70 +150,84 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
 
     let index = 0;
     let sidx = MP4Demuxer.findBox(initSegment, ['sidx']);
+    let references;
 
-    if (sidx && sidx[0]) {
-
-      console.log('found SIDX:', sidx[0]);
-      
-      sidx = sidx[0];
-
-      const version = sidx.data[0];
-
-      console.log('version:', version);
-
-      // set initial offset, we skip the reference ID (not needed)
-      index = version === 0 ? 8 : 16;
-
-      const timescale = MP4Demuxer.readUint32(sidx, index);
-
-      index += 4;
-
-      console.log('timescale:', timescale);
-
-      // TODO: parse earliestPresentationTime and firstOffset
-      // usually zero in our case
-      if (version === 0) {
-        index += 8;
-      } else {
-        index += 16;
-      }
-      // skip reserved
-      index += 2;
-  
-      const referencesCount = MP4Demuxer.readUint16(sidx, index);
-      index += 2;
-
-      console.log('referencesCount:', referencesCount);
-
-      for (var i = 0; i < referencesCount; i++) {
-        let referenceIndex = index;
-
-        const referenceInfo = MP4Demuxer.readUint32(sidx, referenceIndex);
-        referenceIndex += 4;
-
-        const referenceSize = referenceInfo & 0x7FFFFFFF;
-        const referenceType = referenceInfo & 0x7FFFFFFF;
-
-        console.log('referenceSize:', referenceSize);
-
-        if (referenceType === 1) {
-          console.warn('SIDX has hierarchical references');
-          return;
-        }
-
-        const subsegmentDuration = MP4Demuxer.readUint32(sidx, referenceIndex);
-
-        console.log('subsegmentDuration:', subsegmentDuration);
-
-        // Skipping 1 bit for |startsWithSap|, 3 bits for |sapType|, and 28 bits
-        // for |sapDelta|.
-        referenceIndex += 4;
-
-        // skip to next ref
-        index = referenceIndex;
-      }
-
+    if (!sidx || !sidx[0]) {
+      return null;
     }
+
+    references = [];
+    sidx = sidx[0];
+
+    const version = sidx.data[0];
+
+    // set initial offset, we skip the reference ID (not needed)
+    index = version === 0 ? 8 : 16;
+
+    const timescale = MP4Demuxer.readUint32(sidx, index);
+    index += 4;
+
+    // TODO: parse earliestPresentationTime and firstOffset
+    // usually zero in our case
+    let earliestPresentationTime = 0;
+    let firstOffset = 0;
+
+    if (version === 0) {
+      index += 8;
+    } else {
+      index += 16;
+    }
+    // skip reserved
+    index += 2;
+
+    let startByte = sidx.start + sidx.data.length + firstOffset;
+
+    const referencesCount = MP4Demuxer.readUint16(sidx, index);
+    index += 2;
+
+    for (let i = 0; i < referencesCount; i++) {
+      let referenceIndex = index;
+
+      const referenceInfo = MP4Demuxer.readUint32(sidx, referenceIndex);
+      referenceIndex += 4;
+
+      const referenceSize = referenceInfo & 0x7FFFFFFF;
+      const referenceType = referenceInfo & 0x7FFFFFFF;
+
+      if (referenceType === 1) {
+        console.warn('SIDX has hierarchical references (not supported)');
+        return;
+      }
+
+      const subsegmentDuration = MP4Demuxer.readUint32(sidx, referenceIndex);
+      referenceIndex += 4;
+
+      references.push({
+        referenceSize,
+        subsegmentDuration, // unscaled
+        info: {
+          duration: subsegmentDuration / timescale,
+          start: startByte,
+          end: startByte + referenceSize - 1
+        }
+      });
+
+      startByte += referenceSize;
+
+      // Skipping 1 bit for |startsWithSap|, 3 bits for |sapType|, and 28 bits
+      // for |sapDelta|.
+      referenceIndex += 4;
+
+      // skip to next ref
+      index = referenceIndex;
+    }
+
+    return {
+      timescale,
+      version,
+      referencesCount,
+      references
+    };
   }
 
 /**
@@ -239,7 +253,9 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
 
     console.log('parseInitSegment of size:', initSegment.byteLength);
 
-    const sidx = MP4Demuxer.parseSegmentIndex(initSegment);
+    const sidxInfo = MP4Demuxer.parseSegmentIndex(initSegment);
+
+    console.log('SIDX info:', sidxInfo);
 
     var result = [];
     var traks = MP4Demuxer.findBox(initSegment, ['moov', 'trak']);
