@@ -146,7 +146,48 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
     return results;
   }
 
+  static parseSegmentIndex(initSegment) {
 
+    let index = 0;
+    let sidx = MP4Demuxer.findBox(initSegment, ['sidx']);
+
+    if (sidx && sidx[0]) {
+
+      console.log('found SIDX:', sidx[0]);
+      
+      sidx = sidx[0];
+
+      const version = sidx.data[0];
+
+      console.log('version:', version);
+
+      // set initial offset, we skip the reference ID (not needed)
+      index = version === 0 ? 8 : 16;
+
+      const timescale = MP4Demuxer.readUint32(sidx, index);
+
+      index += 4;
+
+      console.log('timescale:', timescale);
+
+      // TODO: parse earliestPresentationTime and firstOffset
+      // usually zero in our case
+      if (version === 0) {
+        index += 8;
+      } else {
+        index += 16;
+      }
+      // skip reserved
+      index += 2;
+  
+      const referencesCount = MP4Demuxer.readUint16(sidx, index);
+
+      console.log('referencesCount:', referencesCount);
+
+
+      
+    }
+  }
 
 /**
  * Parses an MP4 initialization segment and extracts stream type and
@@ -168,6 +209,11 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
  * the init segment is malformed.
  */
   static parseInitSegment(initSegment) {
+
+    console.log('parseInitSegment of size:', initSegment.byteLength);
+
+    const sidx = MP4Demuxer.parseSegmentIndex(initSegment);
+
     var result = [];
     var traks = MP4Demuxer.findBox(initSegment, ['moov', 'trak']);
 
