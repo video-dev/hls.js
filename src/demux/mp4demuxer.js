@@ -181,11 +181,38 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
       index += 2;
   
       const referencesCount = MP4Demuxer.readUint16(sidx, index);
+      index += 2;
 
       console.log('referencesCount:', referencesCount);
 
+      for (var i = 0; i < referencesCount; i++) {
+        let referenceIndex = index;
 
-      
+        const referenceInfo = MP4Demuxer.readUint32(sidx, referenceIndex);
+        referenceIndex += 4;
+
+        const referenceSize = referenceInfo & 0x7FFFFFFF;
+        const referenceType = referenceInfo & 0x7FFFFFFF;
+
+        console.log('referenceSize:', referenceSize);
+
+        if (referenceType === 1) {
+          console.warn('SIDX has hierarchical references');
+          return;
+        }
+
+        const subsegmentDuration = MP4Demuxer.readUint32(sidx, referenceIndex);
+
+        console.log('subsegmentDuration:', subsegmentDuration);
+
+        // Skipping 1 bit for |startsWithSap|, 3 bits for |sapType|, and 28 bits
+        // for |sapDelta|.
+        referenceIndex += 4;
+
+        // skip to next ref
+        index = referenceIndex;
+      }
+
     }
   }
 
