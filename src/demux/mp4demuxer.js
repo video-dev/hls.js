@@ -22,11 +22,9 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
     //jshint unused:false
     if (initSegment && initSegment.byteLength) {
 
+      const moov = MP4Demuxer.findBox(initSegment, ['moov'])[0];
+      const moovEndOffset = moov.end; // we need this in case we need to chop of garbage of the end of current data
       const sidxInfo = MP4Demuxer.parseSegmentIndex(initSegment);
-      if (sidxInfo) {
-        console.log('SIDX info:', sidxInfo);
-      }
-  
       const initData = this.initData = MP4Demuxer.parseInitSegment(initSegment);
 
       // default audio codec if nothing specified
@@ -49,7 +47,7 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
           tracks.video = { container : 'video/mp4', codec : videoCodec, initSegment : duration ? initSegment : null };
         }
       }
-      this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, { tracks, sidxInfo });
+      this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, { tracks, sidxInfo, moovEndOffset });
     } else {
       if (audioCodec) {
         this.audioCodec = audioCodec;
