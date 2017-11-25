@@ -11,12 +11,16 @@ import Event from './events';
 class EventHandler {
 
   constructor(hls, ...events) {
-    this.hls = hls;
+    this._hls = hls;
     this.onEvent = this.onEvent.bind(this);
     this.handledEvents = events;
     this.useGenericHandler = true;
 
     this.registerListeners();
+  }
+
+  get hls() {
+    return this._hls;
   }
 
   destroy() {
