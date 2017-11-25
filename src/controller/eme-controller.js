@@ -275,8 +275,9 @@ class EMEController extends EventHandler {
 
         console.log('_requestLicense');
 
-        var challenge;
-        var xhr = new XMLHttpRequest();
+        let challenge;
+        
+        const xhr = new XMLHttpRequest();
         xhr.open('POST', url);
         xhr.responseType = 'arraybuffer';
         xhr.onreadystatechange = function () {
