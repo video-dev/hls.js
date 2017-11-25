@@ -660,9 +660,8 @@ class AudioStreamController extends EventHandler {
         let initSegment = track.initSegment;
         if (initSegment) {
 
-          const {moovEndOffset, sidxInfo} = data;
-          
           // FIXME: move this stuff into demuxer
+          const {moovEndOffset} = data;
           if (initSegment.byteLength > moovEndOffset) {
             console.log('cropping initSegment:', initSegment.byteLength, moovEndOffset);
             initSegment = track.initSegment = track.initSegment.subarray(0, moovEndOffset);

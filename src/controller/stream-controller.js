@@ -1046,7 +1046,8 @@ class StreamController extends EventHandler {
   onFragParsingInitSegment(data) {
     const fragCurrent = this.fragCurrent;
     const fragNew = data.frag;
-    const {moovEndOffset, sidxInfo} = data;
+    
+    const {moovEndOffset} = data;
     console.log('onFragParsingInitSegment:', data);
 
     if (fragCurrent &&
