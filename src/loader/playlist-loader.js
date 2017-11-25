@@ -449,8 +449,6 @@ class PlaylistLoader extends EventHandler {
                 levelkey.key = null;
                 // Initialization Vector (IV)
                 levelkey.iv = decryptiv;
-
-                console.log('Level Key', levelkey);
               }
             }
             break;
@@ -503,9 +501,6 @@ class PlaylistLoader extends EventHandler {
         frag = new Fragment();
         frag.relurl = level.fragments[0].relurl;
         frag.rawByteRange = '2048@0';
-        
-        console.log('Init segment byteRange:', frag.byteRange)
-
         frag.baseurl = baseurl;
         frag.level = id;
         frag.type = type;

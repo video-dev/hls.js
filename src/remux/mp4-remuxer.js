@@ -376,8 +376,6 @@ class MP4Remuxer {
         compositionTimeOffset = Math.max(0,mp4SampleDuration*Math.round((avcSample.pts - avcSample.dts)/mp4SampleDuration));
       }
 
-
-      //console.log('PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${avcSample.pts}/${avcSample.dts}/${initDTS}/${ptsnorm}/${dtsnorm}/${(avcSample.pts/4294967296).toFixed(3)}');
       outputSamples.push({
         size: mp4SampleLength,
          // constant duration
@@ -488,7 +486,6 @@ class MP4Remuxer {
         let pts = sample.pts;
         delta = pts - nextPts;
 
-        //console.log(Math.round(pts) + '/' + Math.round(nextPts) + '/' + Math.round(delta));
         const duration = Math.abs(1000*delta/inputTimeScale);
 
         // If we're overlapping by more than a duration, drop this sample
@@ -621,7 +618,6 @@ class MP4Remuxer {
       mdat.set(unit, offset);
       let unitLen = unit.byteLength;
       offset += unitLen;
-      //console.log('PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${audioSample.pts}/${audioSample.dts}/${initDTS}/${ptsnorm}/${dtsnorm}/${(audioSample.pts/4294967296).toFixed(3)}');
       mp4Sample = {
         size: unitLen,
         cts: 0,

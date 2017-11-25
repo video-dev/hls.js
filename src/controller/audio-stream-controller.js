@@ -634,7 +634,6 @@ class AudioStreamController extends EventHandler {
 
   onFragParsingInitSegment(data) {
 
-    console.log('audio init segment found');
 
     const fragCurrent = this.fragCurrent;
     const fragNew = data.frag;
