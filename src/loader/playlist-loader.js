@@ -70,20 +70,27 @@ class Fragment {
   }
 
   get byteRange() {
-    if (!this._byteRange) {
-      let byteRange = this._byteRange = [];
-      if (this.rawByteRange) {
-        const params = this.rawByteRange.split('@', 2);
-        if (params.length === 1) {
-          const lastByteRangeEndOffset = this.lastByteRangeEndOffset;
-          byteRange[0] = lastByteRangeEndOffset ? lastByteRangeEndOffset : 0;
-        } else {
-          byteRange[0] = parseInt(params[1]);
-        }
-        byteRange[1] = parseInt(params[0]) + byteRange[0];
-      }
+    if (!this._byteRange && !this.rawByteRange) { 
+      return [];
     }
-    return this._byteRange;
+
+    if (this._byteRange) {
+      return this._byteRange;
+    }
+
+    let byteRange = [];
+    if (this.rawByteRange) {
+      const params = this.rawByteRange.split('@', 2);
+      if (params.length === 1) {
+        const lastByteRangeEndOffset = this.lastByteRangeEndOffset;
+        byteRange[0] = lastByteRangeEndOffset ? lastByteRangeEndOffset : 0;
+      } else {
+        byteRange[0] = parseInt(params[1]);
+      }
+      byteRange[1] = parseInt(params[0]) + byteRange[0];
+      this._byteRange = byteRange;
+    }
+    return byteRange;
   }
 
   get byteRangeStartOffset() {
