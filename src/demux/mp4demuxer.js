@@ -196,7 +196,7 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
       referenceIndex += 4;
 
       const referenceSize = referenceInfo & 0x7FFFFFFF;
-      const referenceType = referenceInfo & 0x7FFFFFFF;
+      const referenceType = (referenceInfo & 0x80000000) >>> 31
 
       if (referenceType === 1) {
         console.warn('SIDX has hierarchical references (not supported)');
