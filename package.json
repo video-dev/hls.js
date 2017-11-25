@@ -26,6 +26,7 @@
   },
   "scripts": {
     "build": "webpack --progress",
+    "docs": "esdoc",
     "preparerelease": "npm run build && npm run test && git add dist/* && git commit -m 'update dist'",
     "prerelease": "mversion prerelease && npm run preparerelease",
     "patch": "mversion p && npm run preparerelease",
@@ -35,6 +36,7 @@
     "test": "karma start karma.conf.js",
     "testfunc": "cross-env BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/hlsjs.js --timeout 40000",
     "lint": "jshint src/",
+    "fixmyjs": "fixmyjs src/",
     "dev": "webpack-dev-server --progress --env.debug --port 8000"
   },
   "dependencies": {
