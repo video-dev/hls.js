@@ -280,7 +280,14 @@ $(document).ready(function() {
        events = { url : url, t0 : performance.now(), load : [], buffer : [], video : [], level : [], bitrate : []};
        recoverDecodingErrorDate = recoverSwapAudioCodecDate = null;
        fmp4Data = { 'audio': [], 'video': [] };
-       hls = new Hls({debug:true, enableWorker : enableWorker, defaultAudioCodec : defaultAudioCodec});
+
+       const drmConfig = {
+         widevineLicenseUrl: "https://cwip-shaka-proxy.appspot.com/no_auth",
+         playreadyLicenseUrl: null
+       };
+
+       hls = new Hls({debug:true, enableWorker : enableWorker, defaultAudioCodec : defaultAudioCodec, drmConfig});
+
        $("#HlsStatus").text('loading manifest and attaching video element...');
        hls.loadSource(url);
        hls.autoLevelCapping = levelCapping;
