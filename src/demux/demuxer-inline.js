@@ -15,14 +15,14 @@ import PassThroughRemuxer from '../remux/passthrough-remuxer';
 class DemuxerInline {
 
   constructor(observer, typeSupported, config, vendor) {
-    this.observer = observer;
-    this.typeSupported = typeSupported;
-    this.config = config;
-    this.vendor = vendor;
+    this._observer = observer;
+    this._typeSupported = typeSupported;
+    this._config = config;
+    this._vendor = vendor;
   }
 
   destroy() {
-    var demuxer = this.demuxer;
+    var demuxer = this._demuxer;
     if (demuxer) {
       demuxer.destroy();
     }
@@ -30,9 +30,9 @@ class DemuxerInline {
 
   push(data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS) {
     if ((data.byteLength > 0) && (decryptdata != null) && (decryptdata.key != null) && (decryptdata.method === 'AES-128')) {
-      let decrypter = this.decrypter;
+      let decrypter = this._decrypter;
       if (decrypter == null) {
-        decrypter = this.decrypter = new Decrypter(this.observer, this.config);
+        decrypter = this._decrypter = new Decrypter(this._observer, this._config);
       }
       var localthis = this;
       // performance.now() not available on WebWorker, at least on Safari Desktop
@@ -49,39 +49,39 @@ class DemuxerInline {
         } catch (error) {
           endTime = Date.now();
         }
-        localthis.observer.trigger(Event.FRAG_DECRYPTED, { stats: { tstart: startTime, tdecrypt: endTime } });
-        localthis.pushDecrypted(new Uint8Array(decryptedData), decryptdata, new Uint8Array(initSegment), audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS);
+        localthis._observer.trigger(Event.FRAG_DECRYPTED, { stats: { tstart: startTime, tdecrypt: endTime } });
+        localthis._pushDecrypted(new Uint8Array(decryptedData), decryptdata, new Uint8Array(initSegment), audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS);
       });
     } else {
-      this.pushDecrypted(new Uint8Array(data), decryptdata, new Uint8Array(initSegment), audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS);
+      this._pushDecrypted(new Uint8Array(data), decryptdata, new Uint8Array(initSegment), audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS);
     }
   }
 
-  pushDecrypted(data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS) {
-    var demuxer = this.demuxer;
+  _pushDecrypted(data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS) {
+    var demuxer = this._demuxer;
     if (!demuxer ||
       // in case of continuity change, we might switch from content type (AAC container to TS container for example)
       // so let's check that current demuxer is still valid
-      (discontinuity && !this.probe(data))) {
-      const observer = this.observer;
-      const typeSupported = this.typeSupported;
-      const config = this.config;
+      (discontinuity && !this._probe(data))) {
+      const observer = this._observer;
+      const typeSupported = this._typeSupported;
+      const config = this._config;
       // probing order is TS/AAC/MP3/MP4
       const muxConfig = [
         { demux: TSDemuxer, remux: MP4Remuxer },
         { demux: AACDemuxer, remux: MP4Remuxer },
         { demux: MP3Demuxer, remux: MP4Remuxer },
         { demux: MP4Demuxer, remux: PassThroughRemuxer }
-      ];
+        ];
 
       // probe for content type
       for (let i = 0, len = muxConfig.length; i < len; i++) {
         const mux = muxConfig[i];
         const probe = mux.demux.probe;
         if (probe(data)) {
-          const remuxer = this.remuxer = new mux.remux(observer, config, typeSupported, this.vendor);
+          const remuxer = this._remuxer = new mux.remux(observer, config, typeSupported, this._vendor);
           demuxer = new mux.demux(observer, remuxer, config, typeSupported);
-          this.probe = probe;
+          this._probe = probe;
           break;
         }
       }
@@ -89,9 +89,9 @@ class DemuxerInline {
         observer.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: true, reason: 'no demux matching with content found' });
         return;
       }
-      this.demuxer = demuxer;
+      this._demuxer = demuxer;
     }
-    const remuxer = this.remuxer;
+    const remuxer = this._remuxer;
 
     if (discontinuity || trackSwitch) {
       demuxer.resetInitSegment(initSegment, audioCodec, videoCodec, duration);

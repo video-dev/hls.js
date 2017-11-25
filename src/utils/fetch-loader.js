@@ -8,7 +8,7 @@
 class FetchLoader {
 
   constructor(config) {
-    this.fetchSetup = config.fetchSetup;
+    this._fetchSetup = config.fetchSetup;
   }
 
   destroy() {
@@ -29,8 +29,8 @@ class FetchLoader {
       initParams.headers = new Headers({ 'Range' :  'bytes=' + context.rangeStart + '-' + (context.rangeEnd-1)});
     }
 
-    if (this.fetchSetup) {
-      request = this.fetchSetup(context,initParams);
+    if (this._fetchSetup) {
+      request = this._fetchSetup(context,initParams);
     } else {
       request = new Request(context.url,initParams);
     }

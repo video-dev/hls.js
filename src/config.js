@@ -102,3 +102,4 @@ if (typeof __ALT_AUDIO__ !== 'undefined' && __ALT_AUDIO__) {
   hlsDefaultConfig.audioStreamController = AudioStreamController;
   hlsDefaultConfig.audioTrackController = AudioTrackController;
 }
+

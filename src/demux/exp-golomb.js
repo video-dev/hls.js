@@ -7,19 +7,19 @@ import {logger} from '../utils/logger';
 class ExpGolomb {
 
   constructor(data) {
-    this.data = data;
-    // the number of bytes left to examine in this.data
+    this._data = data;
+    // the number of bytes left to examine in this._data
     this.bytesAvailable = data.byteLength;
     // the current word being examined
-    this.word = 0; // :uint
+    this._word = 0; // :uint
     // the number of bits left to examine in the current word
-    this.bitsAvailable = 0; // :uint
+    this._bitsAvailable = 0; // :uint
   }
 
   // ():void
-  loadWord() {
+  _loadWord() {
     var
-      data = this.data,
+      data = this._data,
       bytesAvailable = this.bytesAvailable,
       position = data.byteLength - bytesAvailable,
       workingBytes = new Uint8Array(4),
@@ -28,86 +28,86 @@ class ExpGolomb {
       throw new Error('no bytes available');
     }
     workingBytes.set(data.subarray(position, position + availableBytes));
-    this.word = new DataView(workingBytes.buffer).getUint32(0);
-    // track the amount of this.data that has been processed
-    this.bitsAvailable = availableBytes * 8;
+    this._word = new DataView(workingBytes.buffer).getUint32(0);
+    // track the amount of this._data that has been processed
+    this._bitsAvailable = availableBytes * 8;
     this.bytesAvailable -= availableBytes;
   }
 
   // (count:int):void
-  skipBits(count) {
+  _skipBits(count) {
     var skipBytes; // :int
-    if (this.bitsAvailable > count) {
-      this.word <<= count;
-      this.bitsAvailable -= count;
+    if (this._bitsAvailable > count) {
+      this._word <<= count;
+      this._bitsAvailable -= count;
     } else {
-      count -= this.bitsAvailable;
+      count -= this._bitsAvailable;
       skipBytes = count >> 3;
       count -= (skipBytes >> 3);
       this.bytesAvailable -= skipBytes;
-      this.loadWord();
-      this.word <<= count;
-      this.bitsAvailable -= count;
+      this._loadWord();
+      this._word <<= count;
+      this._bitsAvailable -= count;
     }
   }
 
   // (size:int):uint
-  readBits(size) {
+  _readBits(size) {
     var
-      bits = Math.min(this.bitsAvailable, size), // :uint
-      valu = this.word >>> (32 - bits); // :uint
+      bits = Math.min(this._bitsAvailable, size), // :uint
+      valu = this._word >>> (32 - bits); // :uint
     if (size > 32) {
       logger.error('Cannot read more than 32 bits at a time');
     }
-    this.bitsAvailable -= bits;
-    if (this.bitsAvailable > 0) {
-      this.word <<= bits;
+    this._bitsAvailable -= bits;
+    if (this._bitsAvailable > 0) {
+      this._word <<= bits;
     } else if (this.bytesAvailable > 0) {
-      this.loadWord();
+      this._loadWord();
     }
     bits = size - bits;
-    if (bits > 0 && this.bitsAvailable) {
-      return valu << bits | this.readBits(bits);
+    if (bits > 0 && this._bitsAvailable) {
+      return valu << bits | this._readBits(bits);
     } else {
       return valu;
     }
   }
 
   // ():uint
-  skipLZ() {
+  _skipLZ() {
     var leadingZeroCount; // :uint
-    for (leadingZeroCount = 0; leadingZeroCount < this.bitsAvailable; ++leadingZeroCount) {
-      if (0 !== (this.word & (0x80000000 >>> leadingZeroCount))) {
+    for (leadingZeroCount = 0; leadingZeroCount < this._bitsAvailable; ++leadingZeroCount) {
+      if (0 !== (this._word & (0x80000000 >>> leadingZeroCount))) {
         // the first bit of working word is 1
-        this.word <<= leadingZeroCount;
-        this.bitsAvailable -= leadingZeroCount;
+        this._word <<= leadingZeroCount;
+        this._bitsAvailable -= leadingZeroCount;
         return leadingZeroCount;
       }
     }
     // we exhausted word and still have not found a 1
-    this.loadWord();
-    return leadingZeroCount + this.skipLZ();
+    this._loadWord();
+    return leadingZeroCount + this._skipLZ();
   }
 
   // ():void
-  skipUEG() {
-    this.skipBits(1 + this.skipLZ());
+  _skipUEG() {
+    this._skipBits(1 + this._skipLZ());
   }
 
   // ():void
-  skipEG() {
-    this.skipBits(1 + this.skipLZ());
+  _skipEG() {
+    this._skipBits(1 + this._skipLZ());
   }
 
   // ():uint
-  readUEG() {
-    var clz = this.skipLZ(); // :uint
-    return this.readBits(clz + 1) - 1;
+  _readUEG() {
+    var clz = this._skipLZ(); // :uint
+    return this._readBits(clz + 1) - 1;
   }
 
   // ():int
-  readEG() {
-    var valu = this.readUEG(); // :int
+  _readEG() {
+    var valu = this._readUEG(); // :int
     if (0x01 & valu) {
       // the number is odd if the low order bit is set
       return (1 + valu) >>> 1; // add 1 to make it even, and divide by 2
@@ -118,22 +118,22 @@ class ExpGolomb {
 
   // Some convenience functions
   // :Boolean
-  readBoolean() {
-    return 1 === this.readBits(1);
+  _readBoolean() {
+    return 1 === this._readBits(1);
   }
 
   // ():int
   readUByte() {
-    return this.readBits(8);
+    return this._readBits(8);
   }
 
   // ():int
   readUShort() {
-    return this.readBits(16);
+    return this._readBits(16);
   }
     // ():int
   readUInt() {
-    return this.readBits(32);
+    return this._readBits(32);
   }
 
   /**
@@ -143,7 +143,7 @@ class ExpGolomb {
    * @param count {number} the number of entries in this scaling list
    * @see Recommendation ITU-T H.264, Section 7.3.2.1.1.1
    */
-  skipScalingList(count) {
+  _skipScalingList(count) {
     var
       lastScale = 8,
       nextScale = 8,
@@ -151,7 +151,7 @@ class ExpGolomb {
       deltaScale;
     for (j = 0; j < count; j++) {
       if (nextScale !== 0) {
-        deltaScale = this.readEG();
+        deltaScale = this._readEG();
         nextScale = (lastScale + deltaScale + 256) % 256;
       }
       lastScale = (nextScale === 0) ? lastScale : nextScale;
@@ -179,20 +179,19 @@ class ExpGolomb {
       frameMbsOnlyFlag,
       scalingListCount,
       i,
-      readUByte = this.readUByte.bind(this),
-      readBits = this.readBits.bind(this),
-      readUEG = this.readUEG.bind(this),
-      readBoolean = this.readBoolean.bind(this),
-      skipBits = this.skipBits.bind(this),
-      skipEG = this.skipEG.bind(this),
-      skipUEG = this.skipUEG.bind(this),
-      skipScalingList = this.skipScalingList.bind(this);
+      readBits = this._readBits.bind(this),
+      readUEG = this._readUEG.bind(this),
+      readBoolean = this._readBoolean.bind(this),
+      skipBits = this._skipBits.bind(this),
+      skipEG = this._skipEG.bind(this),
+      skipUEG = this._skipUEG.bind(this),
+      skipScalingList = this._skipScalingList.bind(this);
 
-    readUByte();
-    profileIdc = readUByte(); // profile_idc
+    readBits(8);
+    profileIdc = readBits(8); // profile_idc
     profileCompat = readBits(5); // constraint_set[0-4]_flag, u(5)
     skipBits(3); // reserved_zero_3bits u(3),
-    levelIdc = readUByte(); //level_idc u(8)
+    levelIdc = readBits(8); //level_idc u(8)
     skipUEG(); // seq_parameter_set_id
     // some profiles have more optional data we don't need
     if (profileIdc === 100 ||
@@ -257,7 +256,7 @@ class ExpGolomb {
       // vui_parameters_present_flag
       if (readBoolean()) {
         // aspect_ratio_info_present_flag
-        const aspectRatioIdc = readUByte();
+        const aspectRatioIdc = readBits(8);
         switch (aspectRatioIdc) {
           case 1: pixelRatio = [1,1]; break;
           case 2: pixelRatio = [12,11]; break;
@@ -276,7 +275,7 @@ class ExpGolomb {
           case 15: pixelRatio = [3,2]; break;
           case 16: pixelRatio = [2,1]; break;
           case 255: {
-            pixelRatio = [readUByte() << 8 | readUByte(), readUByte() << 8 | readUByte()];
+            pixelRatio = [readBits(8) << 8 | readBits(8), readBits(8) << 8 | readBits(8)];
             break;
           }
         }
@@ -291,11 +290,11 @@ class ExpGolomb {
 
   readSliceType() {
     // skip NALu type
-    this.readUByte();
+    this._readBits(8);
     // discard first_mb_in_slice
-    this.readUEG();
+    this._readUEG();
     // return slice_type
-    return this.readUEG();
+    return this._readUEG();
   }
 }
 

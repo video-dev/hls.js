@@ -1,10 +1,10 @@
 export default class AESCrypto {
   constructor(subtle,iv) {
-    this.subtle = subtle;
-    this.aesIV = iv;
+    this._subtle = subtle;
+    this._aesIV = iv;
   }
 
   decrypt(data, key) {
-    return this.subtle.decrypt({name: 'AES-CBC', iv: this.aesIV}, key, data);
+    return this._subtle.decrypt({name: 'AES-CBC', iv: this._aesIV}, key, data);
   }
 }

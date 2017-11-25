@@ -18,29 +18,29 @@ class AbrController extends EventHandler {
                Event.FRAG_LOADED,
                Event.FRAG_BUFFERED,
                Event.ERROR);
-    this.lastLoadedFragLevel = 0;
+    this._lastLoadedFragLevel = 0;
     this._nextAutoLevel = -1;
-    this.hls = hls;
-    this.timer = null;
+    this._hls = hls;
+    this._timer = null;
     this._bwEstimator = null;
-    this.onCheck = this._abandonRulesCheck.bind(this);
+    this._onCheck = this._abandonRulesCheck.bind(this);
   }
 
   destroy() {
-    this.clearTimer();
+    this._clearTimer();
     EventHandler.prototype.destroy.call(this);
   }
 
   onFragLoading(data) {
     let frag = data.frag;
     if (frag.type === 'main') {
-      if (!this.timer) {
-        this.timer = setInterval(this.onCheck, 100);
+      if (!this._timer) {
+        this._timer = setInterval(this._onCheck, 100);
       }
       // lazy init of bw Estimator, rationale is that we use different params for Live/VoD
       // so we need to wait for stream manifest / playlist type to instantiate it.
       if (!this._bwEstimator) {
-        let hls = this.hls,
+        let hls = this._hls,
             level = data.frag.level,
             isLive = hls.levels[level].details.live,
             config = hls.config,
@@ -55,7 +55,7 @@ class AbrController extends EventHandler {
         }
         this._bwEstimator = new EwmaBandWidthEstimator(hls,ewmaSlow,ewmaFast,config.abrEwmaDefaultEstimate);
       }
-      this.fragCurrent = frag;
+      this._fragCurrent = frag;
     }
   }
 
@@ -65,12 +65,12 @@ class AbrController extends EventHandler {
       we compute expected time of arrival of the complete fragment.
       we compare it to expected time of buffer starvation
     */
-    let hls = this.hls, v = hls.media,frag = this.fragCurrent, loader = frag.loader, minAutoLevel = hls.minAutoLevel;
+    let hls = this._hls, v = hls.media,frag = this._fragCurrent, loader = frag.loader, minAutoLevel = hls.minAutoLevel;
 
     // if loader has been destroyed or loading has been aborted, stop timer and return
     if(!loader || ( loader.stats && loader.stats.aborted)) {
       logger.warn('frag loader destroy or aborted, disarm abandonRules');
-      this.clearTimer();
+      this._clearTimer();
       return;
     }
     let stats = loader.stats;
@@ -119,7 +119,7 @@ class AbrController extends EventHandler {
             //abort fragment loading
             loader.abort();
             // stop abandon rules timer
-            this.clearTimer();
+            this._clearTimer();
             hls.trigger(Event.FRAG_LOAD_EMERGENCY_ABORTED, {frag: frag, stats: stats });
           }
         }
@@ -131,15 +131,15 @@ class AbrController extends EventHandler {
     let frag = data.frag;
     if (frag.type === 'main' && !isNaN(frag.sn)) {
       // stop monitoring bw once frag loaded
-      this.clearTimer();
+      this._clearTimer();
       // store level id after successful fragment load
-      this.lastLoadedFragLevel = frag.level;
+      this._lastLoadedFragLevel = frag.level;
       // reset forced auto level value so that next level will be selected
       this._nextAutoLevel = -1;
 
       // compute level average bitrate
-      if (this.hls.config.abrMaxWithRealBitrate) {
-        const level = this.hls.levels[frag.level];
+      if (this._hls.config.abrMaxWithRealBitrate) {
+        const level = this._hls.levels[frag.level];
         let loadedBytes = (level.loaded ? level.loaded.bytes : 0) + data.stats.loaded;
         let loadedDuration = (level.loaded ? level.loaded.duration : 0) + data.frag.duration;
         level.loaded = { bytes : loadedBytes, duration : loadedDuration };
@@ -170,9 +170,9 @@ class AbrController extends EventHandler {
       stats.bwEstimate = this._bwEstimator.getEstimate();
       // if fragment has been loaded to perform a bitrate test, (hls.startLevel = -1), store bitrate test delay duration
       if (frag.bitrateTest) {
-        this.bitrateTestDelay = fragLoadingProcessingMs/1000;
+        this._bitrateTestDelay = fragLoadingProcessingMs/1000;
       } else {
-        this.bitrateTestDelay = 0;
+        this._bitrateTestDelay = 0;
       }
     }
   }
@@ -182,16 +182,16 @@ class AbrController extends EventHandler {
     switch(data.details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
-        this.clearTimer();
+        this._clearTimer();
         break;
       default:
         break;
     }
   }
 
- clearTimer() {
-    clearInterval(this.timer);
-    this.timer = null;
+ _clearTimer() {
+    clearInterval(this._timer);
+    this._timer = null;
  }
 
   // return next auto level
@@ -203,18 +203,18 @@ class AbrController extends EventHandler {
       return forcedAutoLevel;
     }
     // compute next level using ABR logic
-    let nextABRAutoLevel = this._nextABRAutoLevel;
+    let nextABRAutoLevel = this._getnextABRAutoLevel();
     // if forced auto level has been defined, use it to cap ABR computed quality level
     if (forcedAutoLevel !== -1) {
       nextABRAutoLevel = Math.min(forcedAutoLevel,nextABRAutoLevel);
     }
     return nextABRAutoLevel;
   }
-  get _nextABRAutoLevel() {
-    var hls = this.hls, maxAutoLevel = hls.maxAutoLevel, levels = hls.levels, config = hls.config, minAutoLevel = hls.minAutoLevel;
+  _getnextABRAutoLevel() {
+    var hls = this._hls, maxAutoLevel = hls.maxAutoLevel, levels = hls.levels, config = hls.config, minAutoLevel = hls.minAutoLevel;
     const v = hls.media,
-          currentLevel = this.lastLoadedFragLevel,
-          currentFragDuration = this.fragCurrent ? this.fragCurrent.duration : 0,
+          currentLevel = this._lastLoadedFragLevel,
+          currentFragDuration = this._fragCurrent ? this._fragCurrent.duration : 0,
           pos = (v ? v.currentTime : 0),
           // playbackRate is the absolute value of the playback rate; if v.playbackRate is 0, we use 1 to load as
           // if we're playing back at the normal rate.
@@ -236,7 +236,7 @@ class AbrController extends EventHandler {
           bwUpFactor = config.abrBandWidthUpFactor;
       if (bufferStarvationDelay === 0) {
         // in case buffer is empty, let's check if previous fragment was loaded to perform a bitrate test
-        let bitrateTestDelay = this.bitrateTestDelay;
+        let bitrateTestDelay = this._bitrateTestDelay;
         if (bitrateTestDelay) {
           // if it is the case, then we need to adjust our max starvation delay using maxLoadingDelay config value
           // max video loading delay used in  automatic start level selection :
@@ -282,7 +282,7 @@ class AbrController extends EventHandler {
       // fragment fetchDuration unknown OR live stream OR fragment fetchDuration less than max allowed fetch duration, then this level matches
       // we don't account for max Fetch Duration for live streams, this is to avoid switching down when near the edge of live sliding window ...
       // special case to support startLevel = -1 (bitrateTest) on live streams : in that case we should not exit loop so that _findBestLevel will return -1
-        (!fetchDuration || (live  && !this.bitrateTestDelay) || fetchDuration < maxFetchDuration) ) {
+        (!fetchDuration || (live  && !this._bitrateTestDelay) || fetchDuration < maxFetchDuration) ) {
         // as we are looping from highest to lowest, this will return the best achievable quality level
         return i;
       }

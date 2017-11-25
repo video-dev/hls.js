@@ -11,33 +11,34 @@ class FragmentLoader extends EventHandler {
 
   constructor(hls) {
     super(hls, Event.FRAG_LOADING);
-    this.loaders = {};
+    this._hls = hls;
+    this._loaders = {};
   }
 
   destroy() {
-    let loaders = this.loaders;
+    let loaders = this._loaders;
     for (let loaderName in loaders) {
       let loader = loaders[loaderName];
       if (loader) {
         loader.destroy();
       }
     }
-    this.loaders = {};
+    this._loaders = {};
     EventHandler.prototype.destroy.call(this);
   }
 
   onFragLoading(data) {
     let frag = data.frag,
         type = frag.type,
-        loader = this.loaders[type],
-        config = this.hls.config;
+        loader = this._loaders[type],
+        config = this._hls.config;
 
     frag.loaded = 0;
     if (loader) {
       logger.warn(`abort previous fragment loader for type:${type}`);
       loader.abort();
     }
-    loader  = this.loaders[type] = frag.loader = typeof(config.fLoader) !== 'undefined' ? new config.fLoader(config) : new config.loader(config);
+    loader  = this._loaders[type] = frag.loader = typeof(config.fLoader) !== 'undefined' ? new config.fLoader(config) : new config.loader(config);
 
     let loaderContext, loaderConfig, loaderCallbacks;
     loaderContext = { url : frag.url, frag : frag, responseType : 'arraybuffer', progressData : false};
@@ -47,41 +48,41 @@ class FragmentLoader extends EventHandler {
       loaderContext.rangeEnd = end;
     }
     loaderConfig = { timeout : config.fragLoadingTimeOut, maxRetry : 0 , retryDelay : 0, maxRetryDelay : config.fragLoadingMaxRetryTimeout};
-    loaderCallbacks = { onSuccess : this.loadsuccess.bind(this), onError :this.loaderror.bind(this), onTimeout : this.loadtimeout.bind(this), onProgress: this.loadprogress.bind(this)};
+    loaderCallbacks = { onSuccess : this._loadsuccess.bind(this), onError :this._loaderror.bind(this), onTimeout : this._loadtimeout.bind(this), onProgress: this._loadprogress.bind(this)};
     loader.load(loaderContext,loaderConfig,loaderCallbacks);
   }
 
-  loadsuccess(response, stats, context, networkDetails=null) {
+  _loadsuccess(response, stats, context, networkDetails=null) {
     let payload = response.data, frag = context.frag;
     // detach fragment loader on load success
     frag.loader = undefined;
-    this.loaders[frag.type] = undefined;
-    this.hls.trigger(Event.FRAG_LOADED, {payload: payload, frag: frag, stats: stats, networkDetails: networkDetails});
+    this._loaders[frag.type] = undefined;
+    this._hls.trigger(Event.FRAG_LOADED, {payload: payload, frag: frag, stats: stats, networkDetails: networkDetails});
   }
 
-  loaderror(response, context, networkDetails=null) {
+  _loaderror(response, context, networkDetails=null) {
     let loader = context.loader;
     if (loader) {
       loader.abort();
     }
-    this.loaders[context.type] = undefined;
-    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.FRAG_LOAD_ERROR, fatal: false, frag: context.frag, response: response, networkDetails: networkDetails});
+    this._loaders[context.type] = undefined;
+    this._hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.FRAG_LOAD_ERROR, fatal: false, frag: context.frag, response: response, networkDetails: networkDetails});
   }
 
-  loadtimeout(stats, context, networkDetails=null) {
+  _loadtimeout(stats, context, networkDetails=null) {
     let loader = context.loader;
     if (loader) {
       loader.abort();
     }
-    this.loaders[context.type] = undefined;
-    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.FRAG_LOAD_TIMEOUT, fatal: false, frag: context.frag, networkDetails: networkDetails});
+    this._loaders[context.type] = undefined;
+    this._hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.FRAG_LOAD_TIMEOUT, fatal: false, frag: context.frag, networkDetails: networkDetails});
   }
 
   // data will be used for progressive parsing
-  loadprogress(stats, context, data, networkDetails=null) { // jshint ignore:line
+  _loadprogress(stats, context, data, networkDetails=null) { // jshint ignore:line
     let frag = context.frag;
     frag.loaded = stats.loaded;
-    this.hls.trigger(Event.FRAG_LOAD_PROGRESS, {frag: frag, stats: stats, networkDetails: networkDetails});
+    this._hls.trigger(Event.FRAG_LOAD_PROGRESS, {frag: frag, stats: stats, networkDetails: networkDetails});
   }
 }
 

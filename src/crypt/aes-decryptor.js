@@ -1,20 +1,20 @@
 class AESDecryptor {
   constructor() {
     // Static after running initTable
-    this.rcon = [0x0, 0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36];
-    this.subMix = [new Uint32Array(256),new Uint32Array(256),new Uint32Array(256),new Uint32Array(256)];
-    this.invSubMix = [new Uint32Array(256),new Uint32Array(256),new Uint32Array(256),new Uint32Array(256)];
-    this.sBox = new Uint32Array(256);
-    this.invSBox = new Uint32Array(256);
+    this._rcon = [0x0, 0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36];
+    this._subMix = [new Uint32Array(256),new Uint32Array(256),new Uint32Array(256),new Uint32Array(256)];
+    this._invSubMix = [new Uint32Array(256),new Uint32Array(256),new Uint32Array(256),new Uint32Array(256)];
+    this._sBox = new Uint32Array(256);
+    this._invSBox = new Uint32Array(256);
 
     // Changes during runtime
-    this.key = new Uint32Array(0);
+    this._key = new Uint32Array(0);
 
-    this.initTable();
+    this._initTable();
   }
 
   // Using view.getUint32() also swaps the byte order.
-  uint8ArrayToUint32Array_(arrayBuffer) {
+  _uint8ArrayToUint32Array_(arrayBuffer) {
     let view = new DataView(arrayBuffer);
     let newArray = new Uint32Array(4);
     for (let i = 0; i < 4; i++) {
@@ -23,15 +23,15 @@ class AESDecryptor {
     return newArray;
   }
 
-  initTable() {
-    let sBox = this.sBox;
-    let invSBox = this.invSBox;
-    let subMix = this.subMix;
+  _initTable() {
+    let sBox = this._sBox;
+    let invSBox = this._invSBox;
+    let subMix = this._subMix;
     let subMix0 = subMix[0];
     let subMix1 = subMix[1];
     let subMix2 = subMix[2];
     let subMix3 = subMix[3];
-    let invSubMix  = this.invSubMix;
+    let invSubMix  = this._invSubMix;
     let invSubMix0 = invSubMix[0];
     let invSubMix1 = invSubMix[1];
     let invSubMix2 = invSubMix[2];
@@ -86,12 +86,12 @@ class AESDecryptor {
 
   expandKey(keyBuffer) {
     // convert keyBuffer to Uint32Array
-    let key = this.uint8ArrayToUint32Array_(keyBuffer);
+    let key = this._uint8ArrayToUint32Array_(keyBuffer);
     let sameKey = true;
     let offset = 0;
 
     while (offset < key.length && sameKey) {
-      sameKey = (key[offset] === this.key[offset]);
+      sameKey = (key[offset] === this._key[offset]);
       offset++;
     }
 
@@ -99,23 +99,23 @@ class AESDecryptor {
       return;
     }
 
-    this.key = key;
-    let keySize = this.keySize = key.length;
+    this._key = key;
+    let keySize = this._keySize = key.length;
 
     if (keySize !== 4 && keySize !== 6 && keySize !== 8) {
       throw new Error('Invalid aes key size=' + keySize);
     }
 
-    let ksRows = this.ksRows = (keySize + 6 + 1) * 4;
+    let ksRows = this._ksRows = (keySize + 6 + 1) * 4;
     let ksRow;
     let invKsRow;
 
-    let keySchedule = this.keySchedule = new Uint32Array(ksRows);
-    let invKeySchedule = this.invKeySchedule = new Uint32Array(ksRows);
-    let sbox = this.sBox;
-    let rcon = this.rcon;
+    let keySchedule = this._keySchedule = new Uint32Array(ksRows);
+    let invKeySchedule = this._invKeySchedule = new Uint32Array(ksRows);
+    let sbox = this._sBox;
+    let rcon = this._rcon;
 
-    let invSubMix  = this.invSubMix;
+    let invSubMix  = this._invSubMix;
     let invSubMix0 = invSubMix[0];
     let invSubMix1 = invSubMix[1];
     let invSubMix2 = invSubMix[2];
@@ -138,7 +138,7 @@ class AESDecryptor {
         // Sub word
         t = (sbox[t >>> 24] << 24) | (sbox[(t >>> 16) & 0xff] << 16) | (sbox[(t >>> 8) & 0xff] << 8) | sbox[t & 0xff];
 
-        // Mix Rcon
+        // Mix _rcon
         t ^= rcon[(ksRow / keySize) | 0] << 24;
       } else if (keySize > 6 && ksRow % keySize === 4)  {
         // Sub word
@@ -167,22 +167,22 @@ class AESDecryptor {
   }
 
   // Adding this as a method greatly improves performance.
-  networkToHostOrderSwap(word) {
+  _networkToHostOrderSwap(word) {
     return (word << 24) | ((word & 0xff00) << 8) | ((word & 0xff0000) >> 8) | (word >>> 24);
   }
 
   decrypt(inputArrayBuffer, offset, aesIV) {
-    let nRounds = this.keySize + 6;
-    let invKeySchedule = this.invKeySchedule;
-    let invSBOX = this.invSBox;
+    let nRounds = this._keySize + 6;
+    let invKeySchedule = this._invKeySchedule;
+    let invSBOX = this._invSBox;
 
-    let invSubMix  = this.invSubMix;
+    let invSubMix  = this._invSubMix;
     let invSubMix0 = invSubMix[0];
     let invSubMix1 = invSubMix[1];
     let invSubMix2 = invSubMix[2];
     let invSubMix3 = invSubMix[3];
 
-    let initVector = this.uint8ArrayToUint32Array_(aesIV);
+    let initVector = this._uint8ArrayToUint32Array_(aesIV);
     let initVector0 = initVector[0];
     let initVector1 = initVector[1];
     let initVector2 = initVector[2];
@@ -196,7 +196,7 @@ class AESDecryptor {
     let inputWords0, inputWords1, inputWords2, inputWords3;
 
     var ksRow, i;
-    let swapWord = this.networkToHostOrderSwap;
+    let swapWord = this._networkToHostOrderSwap;
 
     while (offset < inputInt32.length) {
       inputWords0 = swapWord(inputInt32[offset]);
@@ -252,18 +252,18 @@ class AESDecryptor {
   }
 
   destroy() {
-    this.key = undefined;
-    this.keySize = undefined;
-    this.ksRows = undefined;
+    this._key = undefined;
+    this._keySize = undefined;
+    this._ksRows = undefined;
 
-    this.sBox = undefined;
-    this.invSBox = undefined;
-    this.subMix = undefined;
-    this.invSubMix = undefined;
-    this.keySchedule = undefined;
-    this.invKeySchedule = undefined;
+    this._sBox = undefined;
+    this._invSBox = undefined;
+    this._subMix = undefined;
+    this._invSubMix = undefined;
+    this._keySchedule = undefined;
+    this._invKeySchedule = undefined;
 
-    this.rcon = undefined;
+    this._rcon = undefined;
   }
 }
 

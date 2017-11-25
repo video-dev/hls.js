@@ -36,18 +36,18 @@ const RemuxerTrackIdConfig = {
 class TSDemuxer {
 
   constructor(observer, remuxer, config, typeSupported) {
-    this.observer = observer;
-    this.config = config;
-    this.typeSupported = typeSupported;
-    this.remuxer = remuxer;
-    this.sampleAes = null;
+    this._observer = observer;
+    this._config = config;
+    this._typeSupported = typeSupported;
+    this._remuxer = remuxer;
+    this._sampleAes = null;
   }
 
   setDecryptData(decryptdata) {
     if ((decryptdata != null) && (decryptdata.key != null) && (decryptdata.method === 'SAMPLE-AES')) {
-      this.sampleAes = new SampleAesDecrypter(this.observer, this.config, decryptdata, this.discardEPB);
+      this._sampleAes = new SampleAesDecrypter(this._observer, this._config, decryptdata, this._discardEPB);
     } else {
-      this.sampleAes = null;
+      this._sampleAes = null;
     }
   }
 
@@ -87,8 +87,8 @@ class TSDemuxer {
    */
   static createTrack(type, duration) {
     return {
-      container: type === 'video' || type === 'audio' ? 'video/mp2t' : undefined, 
-      type, 
+      container: type === 'video' || type === 'audio' ? 'video/mp2t' : undefined,
+      type,
       id: RemuxerTrackIdConfig[type],
       pid : -1,
       inputTimeScale : 90000,
@@ -102,7 +102,7 @@ class TSDemuxer {
   }
 
   /**
-   * Initializes a new init segment on the demuxer/remuxer interface. Needed for discontinuities/track-switches (or at stream start) 
+   * Initializes a new init segment on the demuxer/remuxer interface. Needed for discontinuities/track-switches (or at stream start)
    * Resets all internal track instances of the demuxer.
    *
    * @override Implements generic demuxing/remuxing interface (see DemuxerInline)
@@ -112,7 +112,7 @@ class TSDemuxer {
    * @param {number} duration (in TS timescale = 90kHz)
    */
   resetInitSegment(initSegment, audioCodec, videoCodec, duration) {
-    this.pmtParsed = false;
+    this._pmtParsed = false;
     this._pmtId = -1;
 
     this._avcTrack = TSDemuxer.createTrack('video', duration);
@@ -121,16 +121,16 @@ class TSDemuxer {
     this._txtTrack = TSDemuxer.createTrack('text', duration);
 
     // flush any partial content
-    this.aacOverFlow = null;
-    this.aacLastPTS = null;
-    this.avcSample = null;
-    this.audioCodec = audioCodec;
-    this.videoCodec = videoCodec;
+    this._aacOverFlow = null;
+    this._aacLastPTS = null;
+    this._avcSample = null;
+    this._audioCodec = audioCodec;
+    this._videoCodec = videoCodec;
     this._duration = duration;
   }
 
   /**
-   * 
+   *
    * @override
    */
   resetTimeStamp() {}
@@ -139,8 +139,8 @@ class TSDemuxer {
   append(data, timeOffset, contiguous,accurateTimeOffset) {
     var start, len = data.length, stt, pid, atf, offset,pes,
         unknownPIDs = false;
-    this.contiguous = contiguous;
-    var pmtParsed = this.pmtParsed,
+    this._contiguous = contiguous;
+    var pmtParsed = this._pmtParsed,
         avcTrack = this._avcTrack,
         audioTrack = this._audioTrack,
         id3Track = this._id3Track,
@@ -232,7 +232,7 @@ class TSDemuxer {
             if (stt) {
               offset += data[offset] + 1;
             }
-            let parsedPIDs = parsePMT(data, offset, this.typeSupported.mpeg === true || this.typeSupported.mp3 === true, this.sampleAes != null);
+            let parsedPIDs = parsePMT(data, offset, this._typeSupported.mpeg === true || this._typeSupported.mp3 === true, this._sampleAes != null);
 
             // only update track id if track PID found while parsing PMT
             // this is to avoid resetting the PID to -1 in case
@@ -259,7 +259,7 @@ class TSDemuxer {
               // we set it to -188, the += 188 in the for loop will reset start to 0
               start = syncOffset-188;
             }
-            pmtParsed = this.pmtParsed = true;
+            pmtParsed = this._pmtParsed = true;
             break;
           case 17:
           case 0x1fff:
@@ -269,7 +269,7 @@ class TSDemuxer {
             break;
         }
       } else {
-        this.observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47'});
+        this._observer.trigger(Event.ERROR, {type : ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'TS packet did not start with 0x47'});
       }
     }
     // try to parse last PES packets
@@ -304,32 +304,32 @@ class TSDemuxer {
       id3Track.pesData = id3Data;
     }
 
-    if (this.sampleAes == null) {
-      this.remuxer.remux(audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset);
+    if (this._sampleAes == null) {
+      this._remuxer.remux(audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset);
     } else {
-      this.decryptAndRemux(audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset);
+      this._decryptAndRemux(audioTrack, avcTrack, id3Track, this._txtTrack, timeOffset, contiguous, accurateTimeOffset);
     }
   }
 
-  decryptAndRemux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
+  _decryptAndRemux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
     if (audioTrack.samples && audioTrack.isAAC) {
       let localthis = this;
-      this.sampleAes.decryptAacSamples(audioTrack.samples, 0, function() {
-        localthis.decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
+      this._sampleAes.decryptAacSamples(audioTrack.samples, 0, function() {
+        localthis._decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
       });
     } else {
-      this.decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
+      this._decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
     }
   }
 
-  decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
+  _decryptAndRemuxAvc(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset) {
     if (videoTrack.samples) {
       let localthis = this;
-      this.sampleAes.decryptAvcSamples(videoTrack.samples, 0, 0, function () {
-        localthis.remuxer.remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
+      this._sampleAes.decryptAvcSamples(videoTrack.samples, 0, 0, function () {
+        localthis._remuxer.remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
       });
     } else {
-      this.remuxer.remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
+      this._remuxer.remux(audioTrack, videoTrack, id3Track, textTrack, timeOffset, contiguous, accurateTimeOffset);
     }
   }
 
@@ -518,7 +518,7 @@ class TSDemuxer {
     }
   }
 
-  pushAccesUnit(avcSample,avcTrack) {
+  _pushAccesUnit(avcSample,avcTrack) {
     if (avcSample.units.length && avcSample.frame) {
       const samples = avcTrack.samples;
       const nbSamples = samples.length;
@@ -526,9 +526,9 @@ class TSDemuxer {
       //    if keyframe already found in this fragment OR
       //       keyframe found in last fragment (track.sps) AND
       //          samples already appended (we already found a keyframe in this fragment) OR fragment is contiguous
-      if (!this.config.forceKeyFrameOnDiscontinuity ||
+      if (!this._config.forceKeyFrameOnDiscontinuity ||
           avcSample.key === true ||
-          (avcTrack.sps && (nbSamples || this.contiguous))) {
+          (avcTrack.sps && (nbSamples || this._contiguous))) {
         avcSample.id = nbSamples;
         samples.push(avcSample);
       } else {
@@ -547,11 +547,11 @@ class TSDemuxer {
         units = this._parseAVCNALu(pes.data),
         debug = false,
         expGolombDecoder,
-        avcSample = this.avcSample,
+        avcSample = this._avcSample,
         push,
         spsfound = false,
         i,
-        pushAccesUnit = this.pushAccesUnit.bind(this),
+        pushAccesUnit = this._pushAccesUnit.bind(this),
         createAVCSample = function(key,pts,dts,debug) {
           return { key : key, pts : pts, dts : dts, units : [], debug : debug};
         };
@@ -562,7 +562,7 @@ class TSDemuxer {
     // this helps parsing streams with missing AUD (only do this if AUD never found)
     if (avcSample && units.length && !track.audFound) {
       pushAccesUnit(avcSample,track);
-      avcSample = this.avcSample = createAVCSample(false,pes.pts,pes.dts,'');
+      avcSample = this._avcSample = createAVCSample(false,pes.pts,pes.dts,'');
     }
 
     units.forEach(unit => {
@@ -597,7 +597,7 @@ class TSDemuxer {
           push = true;
           // handle PES not starting with AUD
           if (!avcSample) {
-            avcSample = this.avcSample = createAVCSample(true,pes.pts,pes.dts,'');
+            avcSample = this._avcSample = createAVCSample(true,pes.pts,pes.dts,'');
           }
           if(debug) {
             avcSample.debug += 'IDR ';
@@ -611,7 +611,7 @@ class TSDemuxer {
           if(debug && avcSample) {
             avcSample.debug += 'SEI ';
           }
-          expGolombDecoder = new ExpGolomb(this.discardEPB(unit.data));
+          expGolombDecoder = new ExpGolomb(this._discardEPB(unit.data));
 
           // skip frameType
           expGolombDecoder.readUByte();
@@ -726,7 +726,7 @@ class TSDemuxer {
           if (avcSample) {
             pushAccesUnit(avcSample,track);
           }
-          avcSample = this.avcSample = createAVCSample(false,pes.pts,pes.dts,debug ? 'AUD ': '');
+          avcSample = this._avcSample = createAVCSample(false,pes.pts,pes.dts,debug ? 'AUD ': '');
           break;
         // Filler Data
         case 12:
@@ -747,7 +747,7 @@ class TSDemuxer {
     // if last PES packet, push samples
     if (last && avcSample) {
       pushAccesUnit(avcSample,track);
-      this.avcSample = null;
+      this._avcSample = null;
     }
   }
 
@@ -773,7 +773,7 @@ class TSDemuxer {
   }
 
   _getLastNalUnit() {
-    let avcSample = this.avcSample, lastUnit;
+    let avcSample = this._avcSample, lastUnit;
     // try to fallback to previous sample if current one is empty
     if (!avcSample || avcSample.units.length === 0) {
       let track = this._avcTrack, samples = track.samples;
@@ -884,7 +884,7 @@ class TSDemuxer {
   /**
    * remove Emulation Prevention bytes from a RBSP
    */
-  discardEPB(data) {
+  _discardEPB(data) {
     var length = data.byteLength,
         EPBPositions = [],
         i = 1,
@@ -930,8 +930,8 @@ class TSDemuxer {
         data = pes.data,
         pts = pes.pts,
         startOffset = 0,
-        aacOverFlow = this.aacOverFlow,
-        aacLastPTS = this.aacLastPTS,
+        aacOverFlow = this._aacOverFlow,
+        aacLastPTS = this._aacLastPTS,
         frameDuration, frameIndex, offset, stamp, len;
     if (aacOverFlow) {
       var tmp = new Uint8Array(aacOverFlow.byteLength + data.byteLength);
@@ -957,13 +957,13 @@ class TSDemuxer {
         fatal = true;
       }
       logger.warn(`parsing error:${reason}`);
-      this.observer.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason});
+      this._observer.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: fatal, reason: reason});
       if (fatal) {
         return;
       }
     }
 
-    ADTS.initTrackConfig(track, this.observer, data, offset, this.audioCodec);
+    ADTS.initTrackConfig(track, this._observer, data, offset, this._audioCodec);
     frameIndex = 0;
     frameDuration = ADTS.getFrameDuration(track.samplerate);
 
@@ -1002,8 +1002,8 @@ class TSDemuxer {
     } else {
       aacOverFlow = null;
     }
-    this.aacOverFlow = aacOverFlow;
-    this.aacLastPTS = stamp;
+    this._aacOverFlow = aacOverFlow;
+    this._aacLastPTS = stamp;
   }
 
   _parseMPEGPES(pes) {

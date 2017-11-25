@@ -4,7 +4,7 @@
 
 class DummyRemuxer {
   constructor(observer) {
-    this.observer = observer;
+    this._observer = observer;
   }
 
   destroy() {

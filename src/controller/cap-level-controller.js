@@ -11,54 +11,55 @@ class CapLevelController extends EventHandler {
       Event.FPS_DROP_LEVEL_CAPPING,
       Event.MEDIA_ATTACHING,
       Event.MANIFEST_PARSED);
+    this._hls = hls;
 	}
 
 	destroy() {
-    if (this.hls.config.capLevelToPlayerSize) {
-      this.media = this.restrictedLevels = null;
-      this.autoLevelCapping = Number.POSITIVE_INFINITY;
-      if (this.timer) {
-        this.timer = clearInterval(this.timer);
+    if (this._hls.config.capLevelToPlayerSize) {
+      this._media = this._restrictedLevels = null;
+      this._autoLevelCapping = Number.POSITIVE_INFINITY;
+      if (this._timer) {
+        this._timer = clearInterval(this._timer);
       }
     }
   }
 
   onFpsDropLevelCapping(data) {
 	  // Don't add a restricted level more than once
-    if (CapLevelController.isLevelAllowed(data.droppedLevel, this.restrictedLevels)) {
-      this.restrictedLevels.push(data.droppedLevel);
+    if (CapLevelController.isLevelAllowed(data.droppedLevel, this._restrictedLevels)) {
+      this._restrictedLevels.push(data.droppedLevel);
     }
   }
 
 	onMediaAttaching(data) {
-    this.media = data.media instanceof HTMLVideoElement ? data.media : null;
+    this._media = data.media instanceof HTMLVideoElement ? data.media : null;
   }
 
   onManifestParsed(data) {
-    const hls = this.hls;
-    this.restrictedLevels = [];
+    const hls = this._hls;
+    this._restrictedLevels = [];
     if (hls.config.capLevelToPlayerSize) {
-      this.autoLevelCapping = Number.POSITIVE_INFINITY;
-      this.levels = data.levels;
-      hls.firstLevel = this.getMaxLevel(data.firstLevel);
-      clearInterval(this.timer);
-      this.timer = setInterval(this.detectPlayerSize.bind(this), 1000);
-      this.detectPlayerSize();
+      this._autoLevelCapping = Number.POSITIVE_INFINITY;
+      this._levels = data.levels;
+      hls.firstLevel = this._getMaxLevel(data.firstLevel);
+      clearInterval(this._timer);
+      this._timer = setInterval(this._detectPlayerSize.bind(this), 1000);
+      this._detectPlayerSize();
     }
   }
 
-  detectPlayerSize() {
-    if (this.media) {
-      let levelsLength = this.levels ? this.levels.length : 0;
+  _detectPlayerSize() {
+    if (this._media) {
+      let levelsLength = this._levels ? this._levels.length : 0;
       if (levelsLength) {
-        const hls = this.hls;
-        hls.autoLevelCapping = this.getMaxLevel(levelsLength - 1);
-        if (hls.autoLevelCapping > this.autoLevelCapping) {
+        const hls = this._hls;
+        hls.autoLevelCapping = this._getMaxLevel(levelsLength - 1);
+        if (hls.autoLevelCapping > this._autoLevelCapping) {
           // if auto level capping has a higher value for the previous one, flush the buffer using nextLevelSwitch
           // usually happen when the user go to the fullscreen mode.
           hls.streamController.nextLevelSwitch();
         }
-        this.autoLevelCapping = hls.autoLevelCapping;
+        this._autoLevelCapping = hls.autoLevelCapping;
       }
     }
   }
@@ -66,21 +67,21 @@ class CapLevelController extends EventHandler {
   /*
   * returns level should be the one with the dimensions equal or greater than the media (player) dimensions (so the video will be downscaled)
   */
-  getMaxLevel(capLevelIndex) {
-    if (!this.levels) {
+  _getMaxLevel(capLevelIndex) {
+    if (!this._levels) {
       return -1;
     }
 
-    const validLevels = this.levels.filter((level, index) =>
-      CapLevelController.isLevelAllowed(index, this.restrictedLevels) && index <= capLevelIndex
+    const validLevels = this._levels.filter((level, index) =>
+      CapLevelController.isLevelAllowed(index, this._restrictedLevels) && index <= capLevelIndex
     );
 
-    return CapLevelController.getMaxLevelByMediaSize(validLevels, this.mediaWidth, this.mediaHeight);
+    return CapLevelController.getMaxLevelByMediaSize(validLevels, this._getMediaWidth(), this._getMediaHeight());
   }
 
-  get mediaWidth() {
+  _getMediaWidth() {
     let width;
-    const media = this.media;
+    const media = this._media;
     if (media) {
       width = media.width || media.clientWidth || media.offsetWidth;
       width *= CapLevelController.contentScaleFactor;
@@ -88,9 +89,9 @@ class CapLevelController extends EventHandler {
     return width;
   }
 
-  get mediaHeight() {
+  _getMediaHeight() {
     let height;
-    const media = this.media;
+    const media = this._media;
     if (media) {
       height = media.height || media.clientHeight || media.offsetHeight;
       height *= CapLevelController.contentScaleFactor;

@@ -14,59 +14,60 @@ class AudioTrackController extends EventHandler {
                Event.MANIFEST_PARSED,
                Event.AUDIO_TRACK_LOADED,
                Event.ERROR);
-    this.ticks = 0;
-    this.ontick = this.tick.bind(this);
+    this._ticks = 0;
+    this._hls = hls;
+    this._ontick = this._tick.bind(this);
   }
 
   destroy() {
-    this.cleanTimer();
+    this._cleanTimer();
     EventHandler.prototype.destroy.call(this);
   }
 
-  cleanTimer() {
-    if (this.timer) {
-      clearTimeout(this.timer);
-      this.timer = null;
+  _cleanTimer() {
+    if (this._timer) {
+      clearTimeout(this._timer);
+      this._timer = null;
     }
   }
 
-  tick() {
-    this.ticks++;
-    if (this.ticks === 1) {
-      this.doTick();
-      if (this.ticks > 1) {
-        setTimeout(this.tick, 1);
+  _tick() {
+    this._ticks++;
+    if (this._ticks === 1) {
+      this._doTick();
+      if (this._ticks > 1) {
+        setTimeout(this._tick, 1);
       }
-      this.ticks = 0;
+      this._ticks = 0;
     }
   }
 
-  doTick() {
-    this.updateTrack(this.trackId);
+  _doTick() {
+    this._updateTrack(this._trackId);
   }
 
   onError(data) {
     if(data.fatal && data.type === ErrorTypes.NETWORK_ERROR) {
-      this.cleanTimer();
+      this._cleanTimer();
     }
   }
 
   onManifestLoading() {
     // reset audio tracks on manifest loading
-    this.tracks = [];
-    this.trackId = -1;
+    this._tracks = [];
+    this._trackId = -1;
   }
 
   onManifestParsed(data) {
     let tracks = data.audioTracks || [];
     let defaultFound = false;
-    this.tracks = tracks;
-    this.hls.trigger(Event.AUDIO_TRACKS_UPDATED, {audioTracks : tracks});
+    this._tracks = tracks;
+    this._hls.trigger(Event.AUDIO_TRACKS_UPDATED, {audioTracks : tracks});
     // loop through available audio tracks and autoselect default if needed
     let id = 0;
     tracks.forEach(track => {
       if(track.default && !defaultFound) {
-        this.audioTrack = id;
+        this._setAudioTrackInternal(id);
         defaultFound = true;
         return;
       }
@@ -74,53 +75,53 @@ class AudioTrackController extends EventHandler {
     });
     if (defaultFound === false && tracks.length) {
       logger.log('no default audio track defined, use first audio track as default');
-      this.audioTrack = 0;
+      this._setAudioTrackInternal(0);
     }
   }
 
   onAudioTrackLoaded(data) {
-    if (data.id < this.tracks.length) {
+    if (data.id < this._tracks.length) {
       logger.log(`audioTrack ${data.id} loaded`);
-      this.tracks[data.id].details = data.details;
+      this._tracks[data.id].details = data.details;
       // check if current playlist is a live playlist
-      if (data.details.live && !this.timer) {
+      if (data.details.live && !this._timer) {
         // if live playlist we will have to reload it periodically
         // set reload period to playlist target duration
-        this.timer = setInterval(this.ontick, 1000 * data.details.targetduration);
+        this._timer = setInterval(this._ontick, 1000 * data.details.targetduration);
       }
-      if (!data.details.live && this.timer) {
+      if (!data.details.live && this._timer) {
         // playlist is not live and timer is armed : stopping it
-        this.cleanTimer();
+        this._cleanTimer();
       }
     }
   }
 
   /** get alternate audio tracks list from playlist **/
   get audioTracks() {
-    return this.tracks;
+    return this._tracks;
   }
 
   /** get index of the selected audio track (index in audio track lists) **/
   get audioTrack() {
-   return this.trackId;
+   return this._trackId;
   }
 
   /** select an audio track, based on its index in audio track lists**/
   set audioTrack(audioTrackId) {
-    if (this.trackId !== audioTrackId || this.tracks[audioTrackId].details === undefined) {
-      this.setAudioTrackInternal(audioTrackId);
+    if (this._trackId !== audioTrackId || this._tracks[audioTrackId].details === undefined) {
+      this._setAudioTrackInternal(audioTrackId);
     }
   }
 
- setAudioTrackInternal(newId) {
+ _setAudioTrackInternal(newId) {
     // check if level idx is valid
-    if (newId >= 0 && newId < this.tracks.length) {
+    if (newId >= 0 && newId < this._tracks.length) {
       // stopping live reloading timer if any
-      this.cleanTimer();
-      this.trackId = newId;
+      this._cleanTimer();
+      this._trackId = newId;
       logger.log(`switching to audioTrack ${newId}`);
-      let audioTrack = this.tracks[newId],
-          hls = this.hls,
+      let audioTrack = this._tracks[newId],
+          hls = this._hls,
           type = audioTrack.type,
           url = audioTrack.url,
           eventObj = {id: newId, type : type, url : url};
@@ -137,20 +138,20 @@ class AudioTrackController extends EventHandler {
     }
   }
 
-  updateTrack(newId) {
+  _updateTrack(newId) {
     // check if level idx is valid
-    if (newId >= 0 && newId < this.tracks.length) {
+    if (newId >= 0 && newId < this._tracks.length) {
       // stopping live reloading timer if any
-      this.cleanTimer();
-      this.trackId = newId;
+      this._cleanTimer();
+      this._trackId = newId;
       logger.log(`updating audioTrack ${newId}`);
-      let audioTrack = this.tracks[newId], url = audioTrack.url;
+      let audioTrack = this._tracks[newId], url = audioTrack.url;
        // check if we need to load playlist for this audio Track
        let details = audioTrack.details;
       if (url && (details === undefined || details.live === true)) {
         // track not retrieved yet, or live playlist we need to (re)load it
         logger.log(`(re)loading playlist for audioTrack ${newId}`);
-        this.hls.trigger(Event.AUDIO_TRACK_LOADING, {url: url, id: newId});
+        this._hls.trigger(Event.AUDIO_TRACK_LOADING, {url: url, id: newId});
       }
     }
   }

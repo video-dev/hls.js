@@ -9,27 +9,27 @@ class EWMA {
  //  About half of the estimated value will be from the last |halfLife| samples by weight.
   constructor(halfLife) {
     // Larger values of alpha expire historical data more slowly.
-    this.alpha_ = halfLife ? Math.exp(Math.log(0.5) / halfLife) : 0;
-    this.estimate_ = 0;
-    this.totalWeight_ = 0;
+    this._alpha = halfLife ? Math.exp(Math.log(0.5) / halfLife) : 0;
+    this._estimate = 0;
+    this._totalWeight = 0;
   }
 
   sample(weight,value) {
-    var adjAlpha = Math.pow(this.alpha_, weight);
-    this.estimate_ = value * (1 - adjAlpha) + adjAlpha * this.estimate_;
-    this.totalWeight_ += weight;
+    var adjAlpha = Math.pow(this._alpha, weight);
+    this._estimate = value * (1 - adjAlpha) + adjAlpha * this._estimate;
+    this._totalWeight += weight;
   }
 
   getTotalWeight() {
-    return this.totalWeight_;
+    return this._totalWeight;
   }
 
   getEstimate() {
-    if (this.alpha_) {
-      var zeroFactor = 1 - Math.pow(this.alpha_, this.totalWeight_);
-      return this.estimate_ / zeroFactor;
+    if (this._alpha) {
+      var zeroFactor = 1 - Math.pow(this._alpha, this._totalWeight);
+      return this._estimate / zeroFactor;
     } else {
-      return this.estimate_;
+      return this._estimate;
     }
   }
 }
