@@ -207,7 +207,7 @@ header {
   </div>
   <br><br>
 
-  <script src="../../streams.js"></script>
+  <script src="../tests/functional/streams.json"></script>
   <script src="../dist/hls.js"></script>
   <script src="canvas.js"></script>
   <script src="metrics.js"></script>
@@ -215,9 +215,15 @@ header {
   <script>
 
 $(document).ready(function() {
-  $('#streamSelect').change(function()      { $('#streamURL').val($('#streamSelect').val());loadStream($('#streamURL').val());});
-  $('#streamURL').change(function()           { loadStream($('#streamURL').val());});
-  $('#videoSize').change(function()          {  $('#video').width($('#videoSize').val()); $('#buffered_c').width($('#videoSize').val());  });
+  $('#streamSelect').change(function() { 
+    $('#streamURL').val($('#streamSelect').val()); 
+    loadStream($('#streamURL').val());
+  });
+  $('#streamURL').change(function() { loadStream($('#streamURL').val());});
+  $('#videoSize').change(function() { 
+    $('#video').width($('#videoSize').val()); 
+    $('#buffered_c').width($('#videoSize').val());  
+  });
    $("#PlaybackControl").hide();
    $("#QualityLevelControl").hide();
    $("#AudioTrackControl").hide();
@@ -241,7 +247,6 @@ $(document).ready(function() {
    $('h2').append(' <a target=_blank href=https://github.com/video-dev/hls.js/releases/tag/v' + Hls.version + '>v' + Hls.version + '</a>');
 
 });
-
 
   'use strict';
   var hls,events, stats,tracks,fmp4Data,
@@ -881,7 +886,6 @@ function timeRangesToString(r) {
         temp[keys[index]] = sortObject(obj[keys[index]]);
     return temp;
   }
-
 
   function showCanvas()  {
       showMetrics();
