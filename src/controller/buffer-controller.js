@@ -138,7 +138,8 @@ class BufferController extends EventHandler {
       if (this.media) {
         URL.revokeObjectURL(this._objectUrl);
 
-        // clean up video tag src only if it's our own url
+        // clean up video tag src only if it's our own url. some external libraries might
+        // hijack the video tag and change its 'src' without destroying the Hls instance first
         if (this.media.src === this._objectUrl) {
           this.media.removeAttribute('src');
           this.media.load();
