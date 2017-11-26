@@ -135,15 +135,19 @@ class BufferController extends EventHandler {
 
       // Detach properly the MediaSource from the HTMLMediaElement as
       // suggested in https://github.com/w3c/media-source/issues/53.
-      // only if the src is the one that we generated
-      if (this.media && (!this._objectUrl || this.media.src === this._objectUrl)) {
-        URL.revokeObjectURL(this.media.src);
-        this.media.removeAttribute('src');
-        this.media.load();
+      if (this.media) {
+        URL.revokeObjectURL(this._objectUrl);
+
+        // clean up video tag src only if it's our own url
+        if (this.media.src === this._objectUrl) {
+          this.media.removeAttribute('src');
+          this.media.load();
+        }
       }
 
       this.mediaSource = null;
       this.media = null;
+      this._objectUrl = null;
       this.pendingTracks = {};
       this.tracks = {};
       this.sourceBuffer = {};
