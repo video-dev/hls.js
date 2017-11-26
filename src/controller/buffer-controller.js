@@ -143,6 +143,8 @@ class BufferController extends EventHandler {
         if (this.media.src === this._objectUrl) {
           this.media.removeAttribute('src');
           this.media.load();
+        } else {
+          logger.warn('media.src was changed by a third party - skip cleanup');
         }
       }
 
