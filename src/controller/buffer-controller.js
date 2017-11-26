@@ -30,6 +30,8 @@ class BufferController extends EventHandler {
     this._msDuration = null;
     // the value that we want to set mediaSource.duration to
     this._levelDuration = null;
+    // cache the self generated object url to detect hijack of video tag
+    this._objectUrl = null;
 
     // Source Buffer listeners
     this.onsbue = this.onSBUpdateEnd.bind(this);
@@ -107,6 +109,8 @@ class BufferController extends EventHandler {
       ms.addEventListener('sourceclose', this.onmsc);
       // link video and media Source
       media.src = URL.createObjectURL(ms);
+      // cache the locally generated object url
+      this._objectUrl = media.src;
     }
   }
 
@@ -131,7 +135,8 @@ class BufferController extends EventHandler {
 
       // Detach properly the MediaSource from the HTMLMediaElement as
       // suggested in https://github.com/w3c/media-source/issues/53.
-      if (this.media) {
+      // only if the src is the one that we generated
+      if (this.media && (!this._objectUrl || this.media.src === this._objectUrl)) {
         URL.revokeObjectURL(this.media.src);
         this.media.removeAttribute('src');
         this.media.load();
