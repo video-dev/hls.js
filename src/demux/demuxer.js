@@ -1,9 +1,12 @@
 import Event from '../events';
 import DemuxerInline from '../demux/demuxer-inline';
-import DemuxerWorker from '../demux/demuxer-worker';
 import {logger} from '../utils/logger';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import EventEmitter from 'events';
+import work from 'webworkify-webpack';
+import {getMediaSource} from '../helper/mediasource-helper';
+
+const MediaSource = getMediaSource();
 
 class Demuxer {
 
@@ -50,8 +53,7 @@ class Demuxer {
         logger.log('demuxing in webworker');
         let w;
         try {
-          let work = require('webworkify');
-          w = this.w = work(DemuxerWorker);
+          w = this.w = work(require.resolve('../demux/demuxer-worker.js'));
           this.onwmsg = this.onWorkerMessage.bind(this);
           w.addEventListener('message', this.onwmsg);
           w.onerror = function(event) { hls.trigger(Event.ERROR, {type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event : 'demuxerWorker', err : { message : event.message + ' (' + event.filename + ':' + event.lineno + ')' }});};
@@ -98,7 +100,7 @@ class Demuxer {
     const discontinuity = !(lastFrag && (frag.cc === lastFrag.cc));
     const trackSwitch = !(lastFrag && (frag.level === lastFrag.level));
     const nextSN = lastFrag && (frag.sn === (lastFrag.sn+1));
-    const contiguous = !discontinuity && !trackSwitch && nextSN;
+    const contiguous = !trackSwitch && nextSN;
     if (discontinuity) {
       logger.log(`${this.id}:discontinuity detected`);
     }
@@ -107,8 +109,8 @@ class Demuxer {
     }
     this.frag = frag;
     if (w) {
-      // post fragment payload as transferable objects (no copy)
-      w.postMessage({cmd: 'demux', data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset,defaultInitPTS}, [data]);
+      // post fragment payload as transferable objects for ArrayBuffer (no copy)
+      w.postMessage({cmd: 'demux', data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset,defaultInitPTS}, data instanceof ArrayBuffer ? [data] : []);
     } else {
       let demuxer = this.demuxer;
       if (demuxer) {

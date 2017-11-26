@@ -208,8 +208,6 @@ header {
   <br><br>
 
   <script src="../../streams.js"></script>
-  <!-- live-reload script -->
-  <script src="//localhost:8001"></script>
   <script src="../dist/hls.js"></script>
   <script src="canvas.js"></script>
   <script src="metrics.js"></script>
@@ -257,7 +255,7 @@ $(document).ready(function() {
   video.volume = 0.05;
   $("#currentVersion").html("Hls version:" + Hls.version);
 
-  loadStream(decodeURIComponent(getURLParam('src','http://www.streambox.fr/playlists/x36xhzz/x36xhzz.m3u8')));
+  loadStream(decodeURIComponent(getURLParam('src','https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8')));
 
   function loadStream(url) {
     hideCanvas();
@@ -295,6 +293,7 @@ $(document).ready(function() {
        hls.on(Hls.Events.MEDIA_DETACHED,function() {
         $("#HlsStatus").text('MediaSource detached...');
           bufferingIdx = -1;
+          tracks = [];
           events.video.push({time : performance.now() - events.t0, type : "Media detached"});
        });
        hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT,function(event,data) {
@@ -714,6 +713,9 @@ var lastSeekingIdx, lastStartPosition,lastDuration, lastAudioTrackSwitchingIdx;
               errorTxt = "The video could not be loaded, either because the server or network failed or because the format is not supported";
               break;
           }
+          if (mediaError.message) {
+            errorTxt += ' - ' + mediaError.message;
+          }
           $("#HlsStatus").text(errorTxt);
           console.error(errorTxt);
         }
@@ -948,6 +950,11 @@ function timeRangesToString(r) {
   }
 
   function updateLevelInfo() {
+
+    if (!hls.levels) {
+      return;
+    }
+
     var button_template = '<button type="button" class="btn btn-sm ';
     var button_enabled  = 'btn-primary" ';
     var button_disabled = 'btn-success" ';
