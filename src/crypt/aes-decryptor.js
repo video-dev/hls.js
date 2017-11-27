@@ -250,7 +250,7 @@ class AESDecryptor {
  
     if (outputInt32.buffer.byteLength) {
       // padding (PKCS7)
-      let paddingBytes = (new DataView(outputInt32.buffer)).getInt8(outputInt32.buffer.byteLength - 1);
+      let paddingBytes = (new DataView(outputInt32.buffer)).getUint8(outputInt32.buffer.byteLength - 1);
       return outputInt32.buffer.slice(0, outputInt32.buffer.byteLength - paddingBytes);
     }
 
