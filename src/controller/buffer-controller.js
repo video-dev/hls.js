@@ -30,6 +30,8 @@ class BufferController extends EventHandler {
     this._msDuration = null;
     // the value that we want to set mediaSource.duration to
     this._levelDuration = null;
+    // cache the self generated object url to detect hijack of video tag
+    this._objectUrl = null;
 
     // Source Buffer listeners
     this.onsbue = this.onSBUpdateEnd.bind(this);
@@ -107,6 +109,8 @@ class BufferController extends EventHandler {
       ms.addEventListener('sourceclose', this.onmsc);
       // link video and media Source
       media.src = URL.createObjectURL(ms);
+      // cache the locally generated object url
+      this._objectUrl = media.src;
     }
   }
 
@@ -132,13 +136,21 @@ class BufferController extends EventHandler {
       // Detach properly the MediaSource from the HTMLMediaElement as
       // suggested in https://github.com/w3c/media-source/issues/53.
       if (this.media) {
-        URL.revokeObjectURL(this.media.src);
-        this.media.removeAttribute('src');
-        this.media.load();
+        URL.revokeObjectURL(this._objectUrl);
+
+        // clean up video tag src only if it's our own url. some external libraries might
+        // hijack the video tag and change its 'src' without destroying the Hls instance first
+        if (this.media.src === this._objectUrl) {
+          this.media.removeAttribute('src');
+          this.media.load();
+        } else {
+          logger.warn('media.src was changed by a third party - skip cleanup');
+        }
       }
 
       this.mediaSource = null;
       this.media = null;
+      this._objectUrl = null;
       this.pendingTracks = {};
       this.tracks = {};
       this.sourceBuffer = {};
