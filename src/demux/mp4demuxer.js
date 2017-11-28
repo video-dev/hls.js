@@ -22,9 +22,6 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
     //jshint unused:false
     if (initSegment && initSegment.byteLength) {
 
-      const moov = MP4Demuxer.findBox(initSegment, ['moov'])[0];
-      const moovEndOffset = moov.end; // we need this in case we need to chop of garbage of the end of current data
-      const sidxInfo = MP4Demuxer.parseSegmentIndex(initSegment);
       const initData = this.initData = MP4Demuxer.parseInitSegment(initSegment);
 
       // default audio codec if nothing specified
@@ -47,7 +44,7 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
           tracks.video = { container : 'video/mp4', codec : videoCodec, initSegment : duration ? initSegment : null };
         }
       }
-      this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, { tracks, sidxInfo, moovEndOffset });
+      this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, { tracks });
     } else {
       if (audioCodec) {
         this.audioCodec = audioCodec;
@@ -62,7 +59,6 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
     // ensure we find a moof box in the first 16 kB
     return MP4Demuxer.findBox( { data : data, start : 0, end : Math.min(data.length, 16384) } ,['moof']).length > 0;
   }
-
 
   static bin2str(buffer) {
     return String.fromCharCode.apply(null, buffer);
@@ -152,6 +148,11 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
 
   static parseSegmentIndex(initSegment) {
 
+    console.log('parsing SIDX:');
+
+    const moov = MP4Demuxer.findBox(initSegment, ['moov'])[0];
+    const moovEndOffset = moov ? moov.end : null; // we need this in case we need to chop of garbage of the end of current data
+
     let index = 0;
     let sidx = MP4Demuxer.findBox(initSegment, ['sidx']);
     let references;
@@ -230,7 +231,8 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
       timescale,
       version,
       referencesCount,
-      references
+      references,
+      moovEndOffset
     };
   }
 
@@ -348,9 +350,6 @@ static getStartDTS(initData, fragment) {
   result = Math.min.apply(null, baseTimes);
   return isFinite(result) ? result : 0;
 }
-
-
-
 
 static offsetStartDTS(initData,fragment,timeOffset) {
   MP4Demuxer.findBox(fragment, ['moof', 'traf']).map(function(traf) {
