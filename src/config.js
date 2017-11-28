@@ -38,6 +38,7 @@ export var hlsDefaultConfig = {
   liveMaxLatencyDurationCount: Infinity,  // used by stream-controller
   liveSyncDuration: undefined,            // used by stream-controller
   liveMaxLatencyDuration: undefined,      // used by stream-controller
+  liveDurationInfinity: false,            // used by buffer-controller
   maxMaxBufferLength: 600,                // used by stream-controller
   enableWorker: true,                     // used by demuxer
   enableSoftwareAES: true,                // used by decrypter
