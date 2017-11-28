@@ -185,62 +185,74 @@ class PlaylistLoader extends EventHandler {
       }
     }
     this.loaders = {};
-    EventHandler.prototype.destroy.call(this);
+
+    super.destroy();
   }
 
   onManifestLoading(data) {
-    this.load(data.url, { type : 'manifest'});
+    this.load(data.url, {type: 'manifest'});
   }
 
   onLevelLoading(data) {
-    this.load(data.url, { type : 'level', level : data.level, id : data.id});
+    this.load(data.url, {type: 'level', level: data.level, id: data.id});
   }
 
   onAudioTrackLoading(data) {
-    this.load(data.url, { type : 'audioTrack', id : data.id});
+    this.load(data.url, {type: 'audioTrack', id: data.id});
   }
 
   onSubtitleTrackLoading(data) {
-    this.load(data.url, { type : 'subtitleTrack', id : data.id});
+    this.load(data.url, {type: 'subtitleTrack', id: data.id});
   }
 
   load(url, context) {
+
     let loader = this.loaders[context.type];
     if (loader) {
       let loaderContext = loader.context;
-      if (loaderContext && loaderContext.url === url) {
+      if (loaderContext && loaderContext.url === url) { // same URL can't overlap
         logger.trace(`playlist request ongoing`);
         return;
       } else {
-        logger.warn(`abort previous loader for type:${context.type}`);
+        logger.warn(`aborting previous loader for type: ${context.type}`);
         loader.abort();
       }
     }
+
     let config = this.hls.config,
-        retry,
+        maxRetry,
         timeout,
         retryDelay,
         maxRetryDelay;
-    if(context.type === 'manifest') {
-      retry = config.manifestLoadingMaxRetry;
+
+    switch(context.type) {
+    case 'manifest':
+      maxRetry = config.manifestLoadingMaxRetry;
       timeout = config.manifestLoadingTimeOut;
       retryDelay = config.manifestLoadingRetryDelay;
       maxRetryDelay = config.manifestLoadingMaxRetryTimeout;
-    } else {
-      retry = config.levelLoadingMaxRetry;
+      break;
+    default:
+      maxRetry = config.levelLoadingMaxRetry;
       timeout = config.levelLoadingTimeOut;
       retryDelay = config.levelLoadingRetryDelay;
       maxRetryDelay = config.levelLoadingMaxRetryTimeout;
-      logger.log(`loading playlist for ${context.type} ${context.level || context.id}`);
+      logger.log(`Playlist loader for ${context.type} ${context.level || context.id}`);
+      break;
     }
+
     loader  = this.loaders[context.type] = context.loader = typeof(config.pLoader) !== 'undefined' ? new config.pLoader(config) : new config.loader(config);
     context.url = url;
-    context.responseType = '';
+    context.responseType = context.responseType || ''; // FIXME: (should not be necessary to do this)
 
     let loaderConfig, loaderCallbacks;
-    loaderConfig = { timeout : timeout, maxRetry : retry , retryDelay : retryDelay, maxRetryDelay : maxRetryDelay};
-    loaderCallbacks = { onSuccess : this.loadsuccess.bind(this), onError :this.loaderror.bind(this), onTimeout : this.loadtimeout.bind(this)};
-    loader.load(context,loaderConfig,loaderCallbacks);
+    loaderConfig = {timeout, maxRetry, retryDelay, maxRetryDelay};
+    loaderCallbacks = {
+      onSuccess: this.loadsuccess.bind(this),
+      onError: this.loaderror.bind(this),
+      onTimeout: this.loadtimeout.bind(this)
+    };
+    loader.load(context, loaderConfig, loaderCallbacks);
   }
 
   resolve(url, baseUrl) {
@@ -501,11 +513,8 @@ class PlaylistLoader extends EventHandler {
       if(level.fragments.every((frag) => frag.relurl.endsWith('.mp4'))) {
         console.warn('MP4 fragments found but no initSegment');
 
-
-
         frag = new Fragment();
         frag.relurl = level.fragments[0].relurl;
-        frag.rawByteRange = '2048@0';
         frag.baseurl = baseurl;
         frag.level = id;
         frag.type = type;
@@ -519,55 +528,115 @@ class PlaylistLoader extends EventHandler {
     return level;
   }
 
-  loadsuccess(response, stats, context, networkDetails=null) {
-    var string = response.data,
-        url = response.url,
-        type = context.type,
-        id = context.id,
-        level = context.level,
-        hls = this.hls;
+  loadsuccess(response, stats, context, networkDetails = null) {
 
-    this.loaders[type] = undefined;
+    let url = response.url;
     // responseURL not supported on some browsers (it is used to detect URL redirection)
     // data-uri mode also not supported (but no need to detect redirection)
     if (url === undefined || url.indexOf('data:') === 0) {
       // fallback to initial URL
       url = context.url;
     }
+
+    const string = response.data;
+    const hls = this.hls;
+    const {id, level, levelDetails, type, isSidxRequest} = context;
+
+    if (isSidxRequest) {
+
+      const sidxInfo = MP4Demuxer.parseSegmentIndex(new Uint8Array(response.data));
+
+      console.log(sidxInfo);
+
+      sidxInfo.references.forEach((segmentRef, index) => {
+
+        const segRefInfo = segmentRef.info;
+        const frag = context.levelDetails.fragments[index];
+
+        if(frag.byteRange.length === 0) {
+
+          frag.rawByteRange = String(1 + segRefInfo.end - segRefInfo.start) + '@' + String(segRefInfo.start);
+
+          console.log(frag.rawByteRange);
+        }
+
+      });
+
+      context.levelDetails.initSegment.rawByteRange = String(sidxInfo.moovEndOffset) + '@0';
+
+      this._handlePlaylistLoaded(response, stats, context, networkDetails);
+      return;
+    }
+
+    this.loaders[type] = undefined;
+
     stats.tload = performance.now();
     //stats.mtime = new Date(target.getResponseHeader('Last-Modified'));
+
     if (string.indexOf('#EXTM3U') === 0) {
+
       if (string.indexOf('#EXTINF:') > 0) {
+
         let isLevel = (type !== 'audioTrack' && type !== 'subtitleTrack'),
             levelId = !isNaN(level) ? level : !isNaN(id) ? id : 0,
             levelDetails = this.parseLevelPlaylist(string, url, levelId, (type === 'audioTrack' ? 'audio' : (type === 'subtitleTrack' ? 'subtitle' : 'main') ));
             levelDetails.tload = stats.tload;
-        if (type === 'manifest') {
+
         // first request, stream manifest (no master playlist), fire manifest loaded event with level details
-          hls.trigger(Event.MANIFEST_LOADED, {levels: [{url: url, details : levelDetails}], audioTracks : [], url: url, stats: stats, networkDetails: networkDetails});
+        if (type === 'manifest') {
+
+          hls.trigger(Event.MANIFEST_LOADED, {
+            levels: [{url: url, details : levelDetails}],
+            audioTracks : [],
+            url: url,
+            stats: stats,
+            networkDetails: networkDetails
+          });
+
         }
+
         stats.tparsed = performance.now();
-        if (levelDetails.targetduration) {
-          if (isLevel) {
-            hls.trigger(Event.LEVEL_LOADED, {details: levelDetails, level: level || 0, id: id || 0, stats: stats, networkDetails: networkDetails});
-          } else {
-            if (type === 'audioTrack') {
-              hls.trigger(Event.AUDIO_TRACK_LOADED, {details: levelDetails, id: id, stats: stats, networkDetails: networkDetails});
-            }
-            else if (type === 'subtitleTrack') {
-              hls.trigger(Event.SUBTITLE_TRACK_LOADED, {details: levelDetails, id: id, stats: stats, networkDetails: networkDetails});
-            }
-          }
+
+        if (levelDetails.needSidxRanges) {
+
+          const sidxUrl = levelDetails.initSegment.url
+
+          this.load(sidxUrl, {
+            isSidxRequest: true,
+            type,
+            level,
+            levelDetails,
+            id,
+            rangeStart: 0,
+            rangeEnd: 2048,
+            responseType: 'arraybuffer'
+          });
+
+          console.log('requesting SIDX info:', sidxUrl);
+
+          return;
+
         } else {
-          hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'invalid targetduration', networkDetails: networkDetails});
+
+          Object.assign(context, {
+            levelDetails
+          });
+
+          this._handlePlaylistLoaded(response, stats, context, networkDetails);
         }
+
       } else {
-        let levels = this.parseMasterPlaylist(string, url);
+
+        const levels = this.parseMasterPlaylist(string, url);
+
         // multi level playlist, parse level info
         if (levels.length) {
+
           const audioGroups = levels.map(l => ({ id: l.attrs.AUDIO, codec: l.audioCodec}));
+
           let audioTracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
           let subtitles = this.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
+
           if (audioTracks.length) {
             // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
             let embeddedAudioFound = false;
@@ -576,6 +645,7 @@ class PlaylistLoader extends EventHandler {
                 embeddedAudioFound = true;
               }
             });
+
             // if no embedded audio track defined, but audio codec signaled in quality level, we need to signal this main audio track
             // this could happen with playlists with alt audio rendition in which quality levels (main) contains both audio+video. but with mixed audio track not signaled
             if (embeddedAudioFound === false && levels[0].audioCodec && !levels[0].attrs.AUDIO) {
@@ -583,61 +653,137 @@ class PlaylistLoader extends EventHandler {
               audioTracks.unshift({ type : 'main', name : 'main'});
             }
           }
-          hls.trigger(Event.MANIFEST_LOADED, {levels, audioTracks, subtitles, url, stats, networkDetails});
+
+          hls.trigger(Event.MANIFEST_LOADED, {
+            levels,
+            audioTracks,
+            subtitles,
+            url,
+            stats,
+            networkDetails
+          });
+
         } else {
-          hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'no level found in manifest', networkDetails: networkDetails});
+
+          this._handleManifestParsingError(response, context, 'no level found in manifest', networkDetails);
+
         }
       }
     } else {
-      hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: ErrorDetails.MANIFEST_PARSING_ERROR, fatal: true, url: url, reason: 'no EXTM3U delimiter', networkDetails: networkDetails});
+
+      this._handleManifestParsingError(response, context, 'no EXTM3U delimiter', networkDetails);
+
     }
   }
 
-  loaderror(response, context, networkDetails=null) {
-    var details, fatal,loader = context.loader;
-    switch(context.type) {
-      case 'manifest':
-        details = ErrorDetails.MANIFEST_LOAD_ERROR;
-        fatal = true;
-        break;
-      case 'level':
-        details = ErrorDetails.LEVEL_LOAD_ERROR;
-        fatal = false;
-        break;
-      case 'audioTrack':
-        details = ErrorDetails.AUDIO_TRACK_LOAD_ERROR;
-        fatal = false;
-        break;
-    }
-    if (loader) {
-      loader.abort();
-      this.loaders[context.type] = undefined;
-    }
-    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: loader.url, loader: loader, response: response, context : context, networkDetails: networkDetails});
+  loaderror(response, context, networkDetails = null) {
+    this._handleNetworkError(response, context, networkDetails);
   }
 
-  loadtimeout(stats, context, networkDetails=null) {
+  loadtimeout(stats, context, networkDetails = null) {
+    this._handleNetworkError(response, context, networkDetails);
+  }
+
+  _handleManifestLoaded() {
+    hls.trigger(Event.MANIFEST_LOADED, {
+      levels: [{url: url, details : levelDetails}],
+      audioTracks : [], url:
+      url,
+      stats: stats,
+      networkDetails: networkDetails
+    });
+  }
+
+  _handleManifestParsingError(response, context, reason, networkDetails) {
+    hls.trigger(Event.ERROR, {
+      type: ErrorTypes.NETWORK_ERROR,
+      details: ErrorDetails.MANIFEST_PARSING_ERROR,
+      fatal: true,
+      url: response.url,
+      reason,
+      networkDetails
+    });
+  }
+
+  _handleNetworkError(response, context, networkDetails = null) {
     var details, fatal, loader = context.loader;
     switch(context.type) {
-      case 'manifest':
-        details = ErrorDetails.MANIFEST_LOAD_TIMEOUT;
-        fatal = true;
-        break;
-      case 'level':
-        details = ErrorDetails.LEVEL_LOAD_TIMEOUT;
-        fatal = false;
-        break;
-      case 'audioTrack':
-        details = ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT;
-        fatal = false;
-        break;
+    case 'manifest':
+      details = ErrorDetails.MANIFEST_LOAD_TIMEOUT;
+      fatal = true;
+      break;
+    case 'level':
+      details = ErrorDetails.LEVEL_LOAD_TIMEOUT;
+      fatal = false;
+      break;
+    case 'audioTrack':
+      details = ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT;
+      fatal = false;
+      break;
     }
+
     if (loader) {
       loader.abort();
       this.loaders[context.type] = undefined;
     }
-    this.hls.trigger(Event.ERROR, {type: ErrorTypes.NETWORK_ERROR, details: details, fatal: fatal, url: loader.url, loader: loader, context : context, networkDetails: networkDetails});
+
+    this.hls.trigger(Event.ERROR, {
+      type: ErrorTypes.NETWORK_ERROR,
+      details: details,
+      fatal: fatal,
+      url: loader.url,
+      loader: loader,
+      context : context,
+      networkDetails: networkDetails
+    });
   }
+
+  _handlePlaylistLoaded(response, stats, context, networkDetails) {
+
+    const url = response.url;
+    const {type, level, id, levelDetails} = context;
+
+    if (levelDetails.targetduration) {
+
+      const isLevel = (type !== 'audioTrack' && type !== 'subtitleTrack');
+      if (isLevel) {
+
+        hls.trigger(Event.LEVEL_LOADED, {
+          details: levelDetails,
+          level: level || 0,
+          id: id || 0,
+          stats: stats,
+          networkDetails: networkDetails
+        });
+
+      } else {
+
+        if (type === 'audioTrack') {
+
+          hls.trigger(Event.AUDIO_TRACK_LOADED, {
+            details: levelDetails,
+            id: id,
+            stats: stats,
+            networkDetails: networkDetails
+          });
+
+        } else if (type === 'subtitleTrack') {
+
+          hls.trigger(Event.SUBTITLE_TRACK_LOADED, {
+            details: levelDetails,
+            id: id,
+            stats: stats,
+            networkDetails: networkDetails
+          });
+
+        }
+      }
+
+    } else {
+      this._handleManifestParsingError(response, context, 'invalid target duration', networkDetails);
+    }
+  }
+
 }
 
 export default PlaylistLoader;
