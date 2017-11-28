@@ -12,7 +12,6 @@ import {ErrorTypes, ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
 import { alignDiscontinuities } from '../utils/discontinuities';
 
-
 const State = {
   STOPPED : 'STOPPED',
   IDLE : 'IDLE',
@@ -120,13 +119,14 @@ class StreamController extends EventHandler {
   }
 
   tick() {
-    this.ticks++;
-    if (this.ticks === 1) {
+    const MAX_TICK_RE_ENTRY = 0;
+    if (this.ticks > MAX_TICKS_RE_ENTRY) {
+      this.ticks++;
       this.doTick();
-      if (this.ticks > 1) {
-        setTimeout(this.tick, 1);
-      }
+      this.ticks--;
+    } else {
       this.ticks = 0;
+      setTimeout(this.tick.bind(this), 0);
     }
   }
 
@@ -1046,7 +1046,7 @@ class StreamController extends EventHandler {
   onFragParsingInitSegment(data) {
     const fragCurrent = this.fragCurrent;
     const fragNew = data.frag;
-    
+
     const {moovEndOffset} = data;
     console.log('onFragParsingInitSegment:', data);
 
