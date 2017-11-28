@@ -616,7 +616,6 @@ class AudioStreamController extends TaskLoop {
 
   onFragParsingInitSegment(data) {
 
-
     const fragCurrent = this.fragCurrent;
     const fragNew = data.frag;
     if (fragCurrent &&
@@ -640,15 +639,6 @@ class AudioStreamController extends TaskLoop {
         logger.log(`audio track:audio,container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
         let initSegment = track.initSegment;
         if (initSegment) {
-
-          // FIXME: move this stuff into demuxer
-          const {moovEndOffset} = data;
-          if (initSegment.byteLength > moovEndOffset) {
-            console.log('cropping initSegment:', initSegment.byteLength, moovEndOffset);
-            initSegment = track.initSegment = track.initSegment.subarray(0, moovEndOffset);
-          }
-
-          console.log('append init segment');
 
           let appendObj = {type: 'audio', data: initSegment, parent: 'audio', content : 'initSegment'};
           if (this.audioSwitch) {

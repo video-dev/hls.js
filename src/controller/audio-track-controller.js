@@ -12,7 +12,6 @@ class AudioTrackController extends EventHandler {
   constructor(hls) {
     super(hls, Event.MANIFEST_LOADING,
                Event.MANIFEST_PARSED,
-               Event.FRAG_PARSING_INIT_SEGMENT,
                Event.AUDIO_TRACK_LOADED,
                Event.ERROR);
     this.ticks = 0;
@@ -56,31 +55,6 @@ class AudioTrackController extends EventHandler {
     // reset audio tracks on manifest loading
     this.tracks = [];
     this.trackId = -1;
-  }
-
-  onFragParsingInitSegment(data) {
-    if (data.id !== 'audio') {
-      return;
-    }
-
-    const {sidxInfo} = data;
-    if (sidxInfo) {
-      
-      console.log('Audio track ctrl received SIDX info:', sidxInfo);
-
-      console.log(this.tracks[this.trackId]);
-
-      sidxInfo.references.forEach((segmentRef, index) => {
-        
-        const segRefInfo = segmentRef.info;
-
-        const frag = this.tracks[this.trackId].details.fragments[index];
-
-        if(frag.byteRange.length === 0) {
-          frag.rawByteRange = String(segRefInfo.end - segRefInfo.start) + '@' + String(segRefInfo.start);
-        }
-      });
-    }
   }
 
   onManifestParsed(data) {

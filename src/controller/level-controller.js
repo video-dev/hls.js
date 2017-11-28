@@ -15,7 +15,6 @@ class LevelController extends EventHandler {
       Event.MANIFEST_LOADED,
       Event.LEVEL_LOADED,
       Event.FRAG_LOADED,
-      Event.FRAG_PARSING_INIT_SEGMENT,
       Event.ERROR);
     this._manualLevel = -1;
     this.timer = null;
@@ -308,30 +307,6 @@ class LevelController extends EventHandler {
           data.fatal = true;
         }
       }
-    }
-  }
-
-  onFragParsingInitSegment(data) {
-    if (data.id !== 'main') {
-      return;
-    }
-
-    const {sidxInfo} = data;
-    if (sidxInfo) {
-
-      console.log('Level controller received SIDX info:', sidxInfo);
-
-      sidxInfo.references.forEach((segmentRef, index) => {
-
-        const segRefInfo = segmentRef.info;
-
-        const frag = this.levels[this.level].details.fragments[index];
-
-        if(frag.byteRange.length === 0) {
-          frag.rawByteRange = String(segRefInfo.end - segRefInfo.start) + '@' + String(segRefInfo.start);
-        }
-
-      });
     }
   }
 

@@ -1030,9 +1030,6 @@ class StreamController extends TaskLoop {
     const fragCurrent = this.fragCurrent;
     const fragNew = data.frag;
 
-    const {moovEndOffset} = data;
-    console.log('onFragParsingInitSegment:', data);
-
     if (fragCurrent &&
         data.id === 'main' &&
         fragNew.sn === fragCurrent.sn &&
@@ -1047,12 +1044,6 @@ class StreamController extends TaskLoop {
       // include levelCodec in audio and video tracks
       track = tracks.audio;
       if(track) {
-
-        // FIXME: move this stuff into demuxer
-        if (track.initSegment.byteLength > moovEndOffset) {
-          console.log('cropping initSegment');
-          track.initSegment = track.initSegment.subarray(0, moovEndOffset);
-        }
 
         var audioCodec = this.levels[this.level].audioCodec,
             ua = navigator.userAgent.toLowerCase();
@@ -1086,13 +1077,6 @@ class StreamController extends TaskLoop {
       }
       track = tracks.video;
       if(track) {
-
-        // FIXME: move this stuff into demuxer
-        if (track.initSegment.byteLength > moovEndOffset) {
-          console.log('cropping initSegment:', track.initSegment.byteLength, moovEndOffset);
-          track.initSegment = track.initSegment.subarray(0, moovEndOffset);
-        }
-
         track.levelCodec = this.levels[this.level].videoCodec;
         track.id = data.id;
       }
