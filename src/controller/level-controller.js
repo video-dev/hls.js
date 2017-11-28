@@ -327,7 +327,7 @@ class LevelController extends EventHandler {
         // Switch-down if more renditions are available
         if (this._manualLevel === -1 && levelIndex !== 0) {
           logger.warn(`level controller, ${errorDetails}: switch-down to ${levelIndex - 1}`);
-          this.hls.nextAutoLevel = levelIndex - 1;
+          this.hls.nextAutoLevel = this._level = levelIndex - 1;
         } else if (fragmentError === true) {
           // Allow fragment retry as long as configuration allows.
           // reset this._level so that another call to set level() will trigger again a frag load
