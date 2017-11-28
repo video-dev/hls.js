@@ -10,6 +10,8 @@ import AttrList from '../utils/attr-list';
 import {logger} from '../utils/logger';
 import {isCodecType} from '../utils/codecs';
 
+import MP4Demuxer from '../demux/mp4demuxer';
+
 // https://regex101.com is your friend
 const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
@@ -70,7 +72,7 @@ class Fragment {
   }
 
   get byteRange() {
-    if (!this._byteRange && !this.rawByteRange) { 
+    if (!this._byteRange && !this.rawByteRange) {
       return [];
     }
 
@@ -498,6 +500,9 @@ class PlaylistLoader extends EventHandler {
       //        also `m4s` `m4a` `m4v` and other popular extensions
       if(level.fragments.every((frag) => frag.relurl.endsWith('.mp4'))) {
         console.warn('MP4 fragments found but no initSegment');
+
+
+
         frag = new Fragment();
         frag.relurl = level.fragments[0].relurl;
         frag.rawByteRange = '2048@0';
@@ -505,7 +510,9 @@ class PlaylistLoader extends EventHandler {
         frag.level = id;
         frag.type = type;
         frag.sn = 'initSegment';
+
         level.initSegment = frag;
+        level.needSidxRanges = true;
       }
     }
 
