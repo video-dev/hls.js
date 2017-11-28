@@ -2267,6 +2267,38 @@ var MpegAudio = {
 
     SamplingRateMap: [44100, 48000, 32000, 22050, 24000, 16000, 11025, 12000, 8000],
 
+    SamplesCoefficients: [
+    // MPEG 2.5
+    [0, // Reserved
+    72, // Layer3
+    144, // Layer2
+    12 // Layer1
+    ],
+    // Reserved
+    [0, // Reserved
+    0, // Layer3
+    0, // Layer2
+    0 // Layer1
+    ],
+    // MPEG 2
+    [0, // Reserved
+    72, // Layer3
+    144, // Layer2
+    12 // Layer1
+    ],
+    // MPEG 1
+    [0, // Reserved
+    144, // Layer3
+    144, // Layer2
+    12 // Layer1
+    ]],
+
+    BytesInSlot: [0, // Reserved
+    1, // Layer3
+    1, // Layer2
+    4 // Layer1
+    ],
+
     appendFrame: function appendFrame(track, data, offset, pts, frameIndex) {
         // Using http://www.datavoyage.com/mpgscript/mpeghdr.htm as a reference
         if (offset + 24 > data.length) {
@@ -2275,7 +2307,7 @@ var MpegAudio = {
 
         var header = this.parseHeader(data, offset);
         if (header && offset + header.frameLength <= data.length) {
-            var frameDuration = 1152 * 90000 / header.sampleRate;
+            var frameDuration = header.samplesPerFrame * 90000 / header.sampleRate;
             var stamp = pts + frameIndex * frameDuration;
             var sample = { unit: data.subarray(offset, offset + header.frameLength), pts: stamp, dts: stamp };
 
@@ -2296,17 +2328,19 @@ var MpegAudio = {
         var headerC = data[offset + 1] >> 1 & 3;
         var headerE = data[offset + 2] >> 4 & 15;
         var headerF = data[offset + 2] >> 2 & 3;
-        var headerG = !!(data[offset + 2] & 2);
+        var headerG = data[offset + 2] >> 1 & 1;
         if (headerB !== 1 && headerE !== 0 && headerE !== 15 && headerF !== 3) {
             var columnInBitrates = headerB === 3 ? 3 - headerC : headerC === 3 ? 3 : 4;
             var bitRate = MpegAudio.BitratesMap[columnInBitrates * 14 + headerE - 1] * 1000;
             var columnInSampleRates = headerB === 3 ? 0 : headerB === 2 ? 1 : 2;
             var sampleRate = MpegAudio.SamplingRateMap[columnInSampleRates * 3 + headerF];
-            var padding = headerG ? 1 : 0;
             var channelCount = data[offset + 3] >> 6 === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
-            var frameLength = headerC === 3 ? (headerB === 3 ? 12 : 6) * bitRate / sampleRate + padding << 2 : (headerB === 3 ? 144 : 72) * bitRate / sampleRate + padding | 0;
+            var sampleCoefficient = MpegAudio.SamplesCoefficients[headerB][headerC];
+            var bytesInSlot = MpegAudio.BytesInSlot[headerC];
+            var samplesPerFrame = sampleCoefficient * 8 * bytesInSlot;
+            var frameLength = parseInt(sampleCoefficient * bitRate / sampleRate + headerG, 10) * bytesInSlot;
 
-            return { sampleRate: sampleRate, channelCount: channelCount, frameLength: frameLength };
+            return { sampleRate: sampleRate, channelCount: channelCount, frameLength: frameLength, samplesPerFrame: samplesPerFrame };
         }
 
         return undefined;
@@ -9555,6 +9589,8 @@ var abr_controller_AbrController = function (_EventHandler) {
     if (!loader || loader.stats && loader.stats.aborted) {
       logger["b" /* logger */].warn('frag loader destroy or aborted, disarm abandonRules');
       this.clearTimer();
+      // reset forced auto level value so that next level will be selected
+      this._nextAutoLevel = -1;
       return;
     }
     var stats = loader.stats;
@@ -9830,6 +9866,8 @@ var buffer_controller_BufferController = function (_EventHandler) {
     _this._msDuration = null;
     // the value that we want to set mediaSource.duration to
     _this._levelDuration = null;
+    // cache the self generated object url to detect hijack of video tag
+    _this._objectUrl = null;
 
     // Source Buffer listeners
     _this.onsbue = _this.onSBUpdateEnd.bind(_this);
@@ -9909,6 +9947,8 @@ var buffer_controller_BufferController = function (_EventHandler) {
       ms.addEventListener('sourceclose', this.onmsc);
       // link video and media Source
       media.src = URL.createObjectURL(ms);
+      // cache the locally generated object url
+      this._objectUrl = media.src;
     }
   };
 
@@ -9934,13 +9974,21 @@ var buffer_controller_BufferController = function (_EventHandler) {
       // Detach properly the MediaSource from the HTMLMediaElement as
       // suggested in https://github.com/w3c/media-source/issues/53.
       if (this.media) {
-        URL.revokeObjectURL(this.media.src);
-        this.media.removeAttribute('src');
-        this.media.load();
+        URL.revokeObjectURL(this._objectUrl);
+
+        // clean up video tag src only if it's our own url. some external libraries might
+        // hijack the video tag and change its 'src' without destroying the Hls instance first
+        if (this.media.src === this._objectUrl) {
+          this.media.removeAttribute('src');
+          this.media.load();
+        } else {
+          logger["b" /* logger */].warn('media.src was changed by a third party - skip cleanup');
+        }
       }
 
       this.mediaSource = null;
       this.media = null;
+      this._objectUrl = null;
       this.pendingTracks = {};
       this.tracks = {};
       this.sourceBuffer = {};
