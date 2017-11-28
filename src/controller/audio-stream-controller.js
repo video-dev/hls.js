@@ -211,8 +211,11 @@ class AudioStreamController extends EventHandler {
             break;
           }
 
-          // we just got done loading the final fragment, check if we need to finalize media stream
-          if (!audioSwitch && !trackDetails.live && fragPrevious && fragPrevious.sn === trackDetails.endSN) {
+          // check if we need to finalize media stream
+          // we just got done loading the final fragment and there is no other buffered range after ...
+          // rationale is that in case there are any buffered ranges after, it means that there are unbuffered portion in between
+          // so we should not switch to ENDED in that case, to be able to buffer them
+          if (!audioSwitch && !trackDetails.live && fragPrevious && fragPrevious.sn === trackDetails.endSN  && !bufferInfo.nextStart) {
               // if we are not seeking or if we are seeking but everything (almost) til the end is buffered, let's signal eos
               // we don't compare exactly media.duration === bufferInfo.end as there could be some subtle media duration difference when switching
               // between different renditions. using half frag duration should help cope with these cases.
