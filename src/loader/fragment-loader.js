@@ -23,7 +23,8 @@ class FragmentLoader extends EventHandler {
       }
     }
     this.loaders = {};
-    EventHandler.prototype.destroy.call(this);
+
+    super.destroy();
   }
 
   onFragLoading(data) {
@@ -37,18 +38,37 @@ class FragmentLoader extends EventHandler {
       logger.warn(`abort previous fragment loader for type:${type}`);
       loader.abort();
     }
-    loader  = this.loaders[type] = frag.loader = typeof(config.fLoader) !== 'undefined' ? new config.fLoader(config) : new config.loader(config);
+
+    loader = this.loaders[type] = frag.loader
+           = !!config.fLoader ? new config.fLoader(config) : new config.loader(config);
 
     let loaderContext, loaderConfig, loaderCallbacks;
+
     loaderContext = { url : frag.url, frag : frag, responseType : 'arraybuffer', progressData : false};
-    let start = frag.byteRangeStartOffset, end = frag.byteRangeEndOffset;
+
+    let start = frag.byteRangeStartOffset,
+        end = frag.byteRangeEndOffset;
+
     if (!isNaN(start) && !isNaN(end)) {
       loaderContext.rangeStart = start;
       loaderContext.rangeEnd = end;
     }
-    loaderConfig = { timeout : config.fragLoadingTimeOut, maxRetry : 0 , retryDelay : 0, maxRetryDelay : config.fragLoadingMaxRetryTimeout};
-    loaderCallbacks = { onSuccess : this.loadsuccess.bind(this), onError :this.loaderror.bind(this), onTimeout : this.loadtimeout.bind(this), onProgress: this.loadprogress.bind(this)};
-    loader.load(loaderContext,loaderConfig,loaderCallbacks);
+
+    loaderConfig = {
+      timeout: config.fragLoadingTimeOut,
+      maxRetry: 0 ,
+      retryDelay: 0,
+      maxRetryDelay: config.fragLoadingMaxRetryTimeout
+    };
+
+    loaderCallbacks = {
+      onSuccess: this.loadsuccess.bind(this),
+      onError: this.loaderror.bind(this),
+      onTimeout: this.loadtimeout.bind(this),
+      onProgress: this.loadprogress.bind(this)
+    };
+
+    loader.load(loaderContext, loaderConfig, loaderCallbacks);
   }
 
   loadsuccess(response, stats, context, networkDetails=null) {
