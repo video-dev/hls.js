@@ -218,7 +218,8 @@ class PlaylistLoader extends EventHandler {
       retryDelay = config.manifestLoadingRetryDelay;
       maxRetryDelay = config.manifestLoadingMaxRetryTimeout;
     } else {
-      retry = config.levelLoadingMaxRetry;
+      // Disable internal loader retry logic, since we are managing retries in Level Controller
+      retry = 0;
       timeout = config.levelLoadingTimeOut;
       retryDelay = config.levelLoadingRetryDelay;
       maxRetryDelay = config.levelLoadingMaxRetryTimeout;
