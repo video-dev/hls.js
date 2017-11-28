@@ -16,6 +16,8 @@ class LevelController extends EventHandler {
       Event.LEVEL_LOADED,
       Event.FRAG_LOADED,
       Event.ERROR);
+    this.canload = false;
+    this.currentLevelIndex = null;
     this._manualLevel = -1;
     this.timer = null;
   }
@@ -149,14 +151,14 @@ class LevelController extends EventHandler {
   }
 
   get level() {
-    return this._level;
+    return this.currentLevelIndex;
   }
 
   set level(newLevel) {
     let levels = this._levels;
     if (levels) {
       newLevel = Math.min(newLevel, levels.length - 1);
-      if (this._level !== newLevel || levels[newLevel].details === undefined) {
+      if (this.currentLevelIndex !== newLevel || levels[newLevel].details === undefined) {
         this.setLevelInternal(newLevel);
       }
     }
@@ -169,9 +171,9 @@ class LevelController extends EventHandler {
     if (newLevel >= 0 && newLevel < levels.length) {
       // stopping live reloading timer if any
       this.cleanTimer();
-      if (this._level !== newLevel) {
+      if (this.currentLevelIndex !== newLevel) {
         logger.log(`switching to level ${newLevel}`);
-        this._level = newLevel;
+        this.currentLevelIndex = newLevel;
         var levelProperties = levels[newLevel];
         levelProperties.level = newLevel;
         // LEVEL_SWITCH to be deprecated in next major release
@@ -305,7 +307,7 @@ class LevelController extends EventHandler {
         logger.warn(`level controller, ${errorDetails}, retry in ${delay} ms, current retry count is ${this.levelRetryCount}`);
       } else {
         logger.error(`level controller, cannot recover from ${errorDetails} error`);
-        this._level = undefined;
+        this.currentLevelIndex = null;
         // stopping live reloading timer if any
         this.cleanTimer();
         // switch error to fatal
@@ -327,12 +329,12 @@ class LevelController extends EventHandler {
         // Switch-down if more renditions are available
         if (this._manualLevel === -1 && levelIndex !== 0) {
           logger.warn(`level controller, ${errorDetails}: switch-down to ${levelIndex - 1}`);
-          this.hls.nextAutoLevel = this._level = levelIndex - 1;
+          this.hls.nextAutoLevel = this.currentLevelIndex = levelIndex - 1;
         } else if (fragmentError === true) {
           // Allow fragment retry as long as configuration allows.
           // reset this._level so that another call to set level() will trigger again a frag load
           logger.warn(`level controller, ${errorDetails}: reload a fragment`);
-          this._level = undefined;
+          this.currentLevelIndex = null;
         }
       }
     }
@@ -353,7 +355,7 @@ class LevelController extends EventHandler {
   onLevelLoaded(data) {
     const levelId = data.level;
     // only process level loaded events matching with expected level
-    if (levelId === this._level) {
+    if (levelId === this.currentLevelIndex) {
       let curLevel = this._levels[levelId];
       // reset level load error counter on successful level loaded only if there is no issues with fragments
       if (curLevel.fragmentError === false) {
@@ -385,12 +387,13 @@ class LevelController extends EventHandler {
   }
 
   loadLevel() {
-    var levelId = this._level;
-    if (levelId !== undefined && this.canload) {
-      var level = this._levels[levelId];
-      if (level && level.url) {
-        var urlId = level.urlId;
-        this.hls.trigger(Event.LEVEL_LOADING, {url: level.url[urlId], level: levelId, id: urlId});
+    let level, urlIndex;
+
+    if (this.currentLevelIndex !== null && this.canload === true) {
+      level = this._levels[this.currentLevelIndex];
+      if (level !== undefined && level.url.length > 0) {
+        urlIndex = level.urlId;
+        this.hls.trigger(Event.LEVEL_LOADING, {url: level.url[urlIndex], level: this.currentLevelIndex, id: urlIndex});
       }
     }
   }
