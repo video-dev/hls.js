@@ -11,6 +11,7 @@ import * as LevelHelper from '../helper/level-helper';import TimeRanges from '..
 import {ErrorTypes, ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
 import { findFragWithCC } from '../utils/discontinuities';
+import TaskLoop from '../task-loop';
 
 const State = {
   STOPPED : 'STOPPED',
@@ -29,7 +30,7 @@ const State = {
   WAITING_INIT_PTS : 'WAITING_INIT_PTS'
 };
 
-class AudioStreamController extends EventHandler {
+class AudioStreamController extends TaskLoop {
 
   constructor(hls) {
     super(hls,
@@ -52,21 +53,17 @@ class AudioStreamController extends EventHandler {
 
     this.config = hls.config;
     this.audioCodecSwap = false;
-    this.ticks = 0;
     this._state = State.STOPPED;
-    this.ontick = this.tick.bind(this);
-    this.initPTS=[];
-    this.waitingFragment=null;
+    this.initPTS = [];
+    this.waitingFragment = null;
     this.videoTrackCC = null;
   }
 
-  destroy() {
+  _onDestroying() {
     this.stopLoad();
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
-    EventHandler.prototype.destroy.call(this);
+  }
+
+  _onDestroyed() {
     this.state = State.STOPPED;
   }
 
@@ -92,9 +89,7 @@ class AudioStreamController extends EventHandler {
     if (this.tracks) {
       var lastCurrentTime = this.lastCurrentTime;
       this.stopLoad();
-      if (!this.timer) {
-        this.timer = setInterval(this.ontick, 100);
-      }
+      this.setInterval(100);
       this.fragLoadError = 0;
       if (lastCurrentTime > 0 && startPosition === -1) {
         logger.log(`audio:override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(3)}`);
@@ -137,17 +132,6 @@ class AudioStreamController extends EventHandler {
 
   get state() {
     return this._state;
-  }
-
-  tick() {
-    this.ticks++;
-    if (this.ticks === 1) {
-      this.doTick();
-      if (this.ticks > 1) {
-        setTimeout(this.tick, 1);
-      }
-      this.ticks = 0;
-    }
   }
 
   doTick() {
@@ -503,9 +487,7 @@ class AudioStreamController extends EventHandler {
       }
     } else {
       // switching to audio track, start timer if not already started
-      if (!this.timer) {
-        this.timer = setInterval(this.ontick, 100);
-      }
+      this.setInterval(100);
     }
 
     //should we switch tracks ?

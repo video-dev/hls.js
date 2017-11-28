@@ -1,13 +1,14 @@
 import EventHandler from './event-handler';
 
-const MAX_TICK_RE_ENTRY = 0;
+const MAX_TICKS_RE_ENTRY = 0;
 
-export class TaskLoop extends EventHandler {
+export default class TaskLoop extends EventHandler {
 
   constructor(hls, ...events) {
     super(hls, ...events);
 
     this._tickInterval = null;
+    this._ticks = 0;
   }
 
   /**
@@ -15,8 +16,7 @@ export class TaskLoop extends EventHandler {
    */
   destroy() {
     this.clearInterval();
-
-    EventHandler.prototype.destroy.call(this);
+    super.destroy();
   }
 
   /**
@@ -26,14 +26,21 @@ export class TaskLoop extends EventHandler {
     return !isNaN(this._tickInterval);
   }
 
-  setInterval() {
+  /**
+   * @param {number} millis Interval time (ms)
+   * @returns {boolean} True when interval has been scheduled, false when already scheduled (no effect)
+   */
+  setInterval(millis) {
     if (!this._tickInterval) {
-      this._tickInterval = setInterval(this.tick.bind(this));
+      this._tickInterval = setInterval(this.tick.bind(this, false), millis);
       return true;
     }
     return false;
   }
 
+  /**
+   * @returns {boolean} True when interval was cleared, false when none was set (no effect)
+   */
   clearInterval() {
     if (this._tickInterval) {
       clearInterval(this._tickInterval);
@@ -47,14 +54,14 @@ export class TaskLoop extends EventHandler {
    * @param {Wether to force async} forceAsync
    * @returns {boolean} True when async, false when sync
    */
-  tick(forceAsync = false) {
-    if (this.ticks > MAX_TICKS_RE_ENTRY && !forceAsync) {
-      this.ticks++;
+  tick(forceAsync = true) {
+    if (this._ticks > MAX_TICKS_RE_ENTRY || !forceAsync) {
+      this._ticks++;
       this.doTick();
-      this.ticks--;
+      this._ticks--;
       return false;
     } else {
-      this.ticks = 0;
+      this._ticks = 0;
       setTimeout(this.tick.bind(this), 0);
       return true;
     }

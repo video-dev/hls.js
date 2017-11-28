@@ -11,6 +11,7 @@ import * as LevelHelper from '../helper/level-helper';import TimeRanges from '..
 import {ErrorTypes, ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
 import { alignDiscontinuities } from '../utils/discontinuities';
+import TaskLoop from '../task-loop';
 
 const State = {
   STOPPED : 'STOPPED',
@@ -26,7 +27,7 @@ const State = {
   ERROR : 'ERROR'
 };
 
-class StreamController extends EventHandler {
+class StreamController extends TaskLoop {
 
   constructor(hls) {
     super(hls,
@@ -50,18 +51,14 @@ class StreamController extends EventHandler {
 
     this.config = hls.config;
     this.audioCodecSwap = false;
-    this.ticks = 0;
     this._state = State.STOPPED;
-    this.ontick = this.tick.bind(this);
   }
 
-  destroy() {
+  _onDestroying() {
     this.stopLoad();
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
-    EventHandler.prototype.destroy.call(this);
+  }
+
+  _onDestroyed() {
     this.state = State.STOPPED;
   }
 
@@ -69,9 +66,7 @@ class StreamController extends EventHandler {
     if (this.levels) {
       let lastCurrentTime = this.lastCurrentTime, hls = this.hls;
       this.stopLoad();
-      if (!this.timer) {
-        this.timer = setInterval(this.ontick, 100);
-      }
+      this.setInterval(100);
       this.level = -1;
       this.fragLoadError = 0;
       if (!this.startFragRequested) {
@@ -118,19 +113,8 @@ class StreamController extends EventHandler {
     this.forceStartLoad = false;
   }
 
-  tick() {
-    const MAX_TICK_RE_ENTRY = 0;
-    if (this.ticks > MAX_TICKS_RE_ENTRY) {
-      this.ticks++;
-      this.doTick();
-      this.ticks--;
-    } else {
-      this.ticks = 0;
-      setTimeout(this.tick.bind(this), 0);
-    }
-  }
-
   doTick() {
+
     switch(this.state) {
       case State.ERROR:
         //don't do anything in error state to avoid breaking further ...
@@ -181,7 +165,6 @@ class StreamController extends EventHandler {
     const hls = this.hls,
           config = hls.config,
           media = this.media;
-
 
     // if start level not parsed yet OR
     // if video not attached AND start fragment already requested OR start frag prefetch disable

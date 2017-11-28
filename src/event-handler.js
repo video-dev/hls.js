@@ -20,8 +20,13 @@ class EventHandler {
   }
 
   destroy() {
+    this._onDestroying();
     this.unregisterListeners();
+    this._onDestroyed();
   }
+
+  _onDestroying() {}
+  _onDestroyed() {}
 
   isEventHandler() {
     return typeof this.handledEvents === 'object' && this.handledEvents.length && typeof this.onEvent === 'function';

@@ -21,7 +21,7 @@ class LevelController extends EventHandler {
     this.timer = null;
   }
 
-  destroy() {
+  _onDestroying() {
     this.cleanTimer();
     this._manualLevel = -1;
   }
@@ -318,7 +318,7 @@ class LevelController extends EventHandler {
 
     const {sidxInfo} = data;
     if (sidxInfo) {
-      
+
       console.log('Level controller received SIDX info:', sidxInfo);
 
       sidxInfo.references.forEach((segmentRef, index) => {
@@ -326,7 +326,7 @@ class LevelController extends EventHandler {
         const segRefInfo = segmentRef.info;
 
         const frag = this.levels[this.level].details.fragments[index];
-       
+
         if(frag.byteRange.length === 0) {
           frag.rawByteRange = String(segRefInfo.end - segRefInfo.start) + '@' + String(segRefInfo.start);
         }
