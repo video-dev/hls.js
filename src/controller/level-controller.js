@@ -50,7 +50,7 @@ class LevelController extends EventHandler {
     }
     // speed up live playlist refresh if timer exists
     if (this.timer !== null) {
-      this.tick();
+      this.loadLevel();
     }
   }
 
@@ -298,7 +298,7 @@ class LevelController extends EventHandler {
         // exponential backoff capped to max retry timeout
         delay = Math.min(Math.pow(2, this.levelRetryCount) * config.levelLoadingRetryDelay, config.levelLoadingMaxRetryTimeout);
         // Schedule level reload
-        this.timer = setTimeout(() => this.tick(), delay);
+        this.timer = setTimeout(() => this.loadLevel(), delay);
         // boolean used to inform stream controller not to switch back to IDLE on non fatal error
         errorEvent.levelRetry = true;
         this.levelRetryCount++;
@@ -326,7 +326,7 @@ class LevelController extends EventHandler {
       } else {
         // Switch-down if more renditions are available
         if (this._manualLevel === -1 && levelIndex !== 0) {
-          logger.warn(`level controller, ${errorDetails}: switch-down`);
+          logger.warn(`level controller, ${errorDetails}: switch-down to ${levelIndex - 1}`);
           this.hls.nextAutoLevel = levelIndex - 1;
         } else if (fragmentError === true) {
           // Allow fragment retry as long as configuration allows.
@@ -377,14 +377,14 @@ class LevelController extends EventHandler {
         // in any case, don't reload more than every second
         reloadInterval = Math.max(1000, Math.round(reloadInterval));
         logger.log(`live playlist, reload in ${reloadInterval} ms`);
-        this.timer = setTimeout(() => this.tick(), reloadInterval);
+        this.timer = setTimeout(() => this.loadLevel(), reloadInterval);
       } else {
         this.cleanTimer();
       }
     }
   }
 
-  tick() {
+  loadLevel() {
     var levelId = this._level;
     if (levelId !== undefined && this.canload) {
       var level = this._levels[levelId];
