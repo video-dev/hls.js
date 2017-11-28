@@ -30,6 +30,8 @@ class BufferController extends EventHandler {
     this._msDuration = null;
     // the value that we want to set mediaSource.duration to
     this._levelDuration = null;
+    // current stream state: true - for live broadcast, false - for VoD content
+    this._live = null;
     // cache the self generated object url to detect hijack of video tag
     this._objectUrl = null;
 
@@ -365,7 +367,8 @@ class BufferController extends EventHandler {
   onLevelUpdated({details}) {
     if (details.fragments.length > 0) {
       this._levelDuration = details.totalduration + details.fragments[0].start;
-      this.updateMediaElementDuration(details.live);
+      this._live = details.live;
+      this.updateMediaElementDuration();
     }
   }
 
@@ -373,10 +376,8 @@ class BufferController extends EventHandler {
    * Update Media Source duration to current level duration or override to Infinity if configuration parameter
    * 'liveDurationInfinity` is set to `true`
    * More details: https://github.com/video-dev/hls.js/issues/355
-   *
-   * @param {Boolean} live
    */
-  updateMediaElementDuration(live) {
+  updateMediaElementDuration() {
     let {config} = this.hls;
     let duration;
 
@@ -402,7 +403,7 @@ class BufferController extends EventHandler {
       this._msDuration = this.mediaSource.duration;
     }
 
-    if (live === true && config.liveDurationInfinity === true) {
+    if (this._live === true && config.liveDurationInfinity === true) {
       // Override duration to Infinity
       logger.log('Media Source duration is set to Infinity');
       this._msDuration = this.mediaSource.duration = Infinity;
