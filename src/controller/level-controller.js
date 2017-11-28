@@ -8,7 +8,7 @@ import {logger} from '../utils/logger';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import {isCodecSupportedInMp4} from '../utils/codecs';
 
-class LevelController extends EventHandler {
+export default class LevelController extends EventHandler {
 
   constructor(hls) {
     super(hls,
@@ -18,13 +18,13 @@ class LevelController extends EventHandler {
       Event.ERROR);
     this.canload = false;
     this.currentLevelIndex = null;
-    this._manualLevel = -1;
+    this.manualLevelIndex = -1;
     this.timer = null;
   }
 
   destroy() {
     this.cleanTimer();
-    this._manualLevel = -1;
+    this.manualLevelIndex = -1;
   }
 
   cleanTimer() {
@@ -200,11 +200,11 @@ class LevelController extends EventHandler {
   }
 
   get manualLevel() {
-    return this._manualLevel;
+    return this.manualLevelIndex;
   }
 
   set manualLevel(newLevel) {
-    this._manualLevel = newLevel;
+    this.manualLevelIndex = newLevel;
     if (this._startLevel === undefined) {
       this._startLevel = newLevel;
     }
@@ -327,7 +327,7 @@ class LevelController extends EventHandler {
         level.details = undefined;
       } else {
         // Switch-down if more renditions are available
-        if (this._manualLevel === -1 && levelIndex !== 0) {
+        if (this.manualLevelIndex === -1 && levelIndex !== 0) {
           logger.warn(`level controller, ${errorDetails}: switch-down to ${levelIndex - 1}`);
           this.hls.nextAutoLevel = this.currentLevelIndex = levelIndex - 1;
         } else if (fragmentError === true) {
@@ -399,8 +399,8 @@ class LevelController extends EventHandler {
   }
 
   get nextLoadLevel() {
-    if (this._manualLevel !== -1) {
-      return this._manualLevel;
+    if (this.manualLevelIndex !== -1) {
+      return this.manualLevelIndex;
     } else {
       return this.hls.nextAutoLevel;
     }
@@ -408,10 +408,8 @@ class LevelController extends EventHandler {
 
   set nextLoadLevel(nextLevel) {
     this.level = nextLevel;
-    if (this._manualLevel === -1) {
+    if (this.manualLevelIndex === -1) {
       this.hls.nextAutoLevel = nextLevel;
     }
   }
 }
-
-export default LevelController;
