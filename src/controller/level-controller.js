@@ -268,6 +268,7 @@ export default class LevelController extends EventHandler {
         break;
       case ErrorDetails.REMUX_ALLOC_ERROR:
         levelIndex = data.level;
+        levelError = true;
         break;
     }
 
