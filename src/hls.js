@@ -21,7 +21,7 @@ export default class Hls {
   static get version() {
     return __VERSION__;
   }
-  static isSupported = isSupported();
+  static isSupported = isSupported;
 
   static get Events() {
     return Event;
