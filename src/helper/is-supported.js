@@ -13,5 +13,5 @@ export function isSupported() {
     (sourceBuffer.prototype &&
       typeof sourceBuffer.prototype.appendBuffer === 'function' &&
       typeof sourceBuffer.prototype.remove === 'function');
-  return isTypeSupported && sourceBufferValidAPI;
+  return !!isTypeSupported && !!sourceBufferValidAPI;
 }
