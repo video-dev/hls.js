@@ -5053,21 +5053,20 @@ var mp4_remuxer_MP4Remuxer = function () {
     // and this also avoids audio glitches/cut when switching quality, or reporting wrong duration on first audio frame
     contiguous |= inputSamples.length && nextAudioPts && (accurateTimeOffset && Math.abs(timeOffset - nextAudioPts / inputTimeScale) < 0.1 || Math.abs(inputSamples[0].pts - nextAudioPts - initDTS) < 20 * inputSampleDuration);
 
-    if (!contiguous) {
-      // if fragments are not contiguous, let's use timeOffset to compute next Audio PTS
-      nextAudioPts = timeOffset * inputTimeScale;
-    }
-
     // compute normalized PTS
     inputSamples.forEach(function (sample) {
-      sample.pts = sample.dts = ptsNormalize(sample.pts - initDTS, nextAudioPts);
+      sample.pts = sample.dts = ptsNormalize(sample.pts - initDTS, timeOffset * inputTimeScale);
     });
 
-    // sort based on normalized PTS (this is to avoid sorting issues in case timestamp
-    // reloop in the middle of our samples array)
-    inputSamples.sort(function (a, b) {
-      return a.pts - b.pts;
-    });
+    if (!contiguous) {
+      if (!accurateTimeOffset) {
+        // if frag are mot contiguous and if we cant trust time offset, let's use first sample PTS as next audio PTS
+        nextAudioPts = inputSamples[0].pts;
+      } else {
+        // if timeOffset is accurate, let's use it as predicted next audio PTS
+        nextAudioPts = timeOffset * inputTimeScale;
+      }
+    }
 
     // If the audio track is missing samples, the frames seem to get "left-shifted" within the
     // resulting mp4 segment, causing sync issues and leaving gaps at the end of the audio segment.
@@ -5075,8 +5074,7 @@ var mp4_remuxer_MP4Remuxer = function () {
     // When possible, we inject a silent frame; when that's not possible, we duplicate the last
     // frame.
 
-    // only inject/drop audio frames in case time offset is accurate
-    if (accurateTimeOffset && track.isAAC) {
+    if (track.isAAC) {
       var maxAudioFramesDrift = this.config.maxAudioFramesDrift;
       for (var i = 0, nextPts = nextAudioPts; i < inputSamples.length;) {
         // First, let's see how far off this frame is from where we expect it to be
@@ -6752,29 +6750,40 @@ var BinarySearch = {
 
 var BufferHelper = {
   isBuffered: function isBuffered(media, position) {
-    if (media) {
-      var buffered = media.buffered;
-      for (var i = 0; i < buffered.length; i++) {
-        if (position >= buffered.start(i) && position <= buffered.end(i)) {
-          return true;
+    try {
+      if (media) {
+        var buffered = media.buffered;
+        for (var i = 0; i < buffered.length; i++) {
+          if (position >= buffered.start(i) && position <= buffered.end(i)) {
+            return true;
+          }
         }
       }
+    } catch (error) {
+      // this is to catch
+      // InvalidStateError: Failed to read the 'buffered' property from 'SourceBuffer':
+      // This SourceBuffer has been removed from the parent media source
     }
     return false;
   },
 
   bufferInfo: function bufferInfo(media, pos, maxHoleDuration) {
-    if (media) {
-      var vbuffered = media.buffered,
-          buffered = [],
-          i;
-      for (i = 0; i < vbuffered.length; i++) {
-        buffered.push({ start: vbuffered.start(i), end: vbuffered.end(i) });
+    try {
+      if (media) {
+        var vbuffered = media.buffered,
+            buffered = [],
+            i;
+        for (i = 0; i < vbuffered.length; i++) {
+          buffered.push({ start: vbuffered.start(i), end: vbuffered.end(i) });
+        }
+        return this.bufferedInfo(buffered, pos, maxHoleDuration);
       }
-      return this.bufferedInfo(buffered, pos, maxHoleDuration);
-    } else {
-      return { len: 0, start: pos, end: pos, nextStart: undefined };
+    } catch (error) {
+      // this is to catch
+      // InvalidStateError: Failed to read the 'buffered' property from 'SourceBuffer':
+      // This SourceBuffer has been removed from the parent media source
     }
+    return { len: 0, start: pos, end: pos, nextStart: undefined };
   },
 
   bufferedInfo: function bufferedInfo(buffered, pos, maxHoleDuration) {
@@ -9866,6 +9875,8 @@ var buffer_controller_BufferController = function (_EventHandler) {
     _this._msDuration = null;
     // the value that we want to set mediaSource.duration to
     _this._levelDuration = null;
+    // current stream state: true - for live broadcast, false - for VoD content
+    _this._live = null;
     // cache the self generated object url to detect hijack of video tag
     _this._objectUrl = null;
 
@@ -10199,49 +10210,61 @@ var buffer_controller_BufferController = function (_EventHandler) {
 
   BufferController.prototype.onBufferFlushing = function onBufferFlushing(data) {
     this.flushRange.push({ start: data.startOffset, end: data.endOffset, type: data.type });
-    // attempt flush immediatly
+    // attempt flush immediately
     this.flushBufferCounter = 0;
     this.doFlush();
   };
 
-  BufferController.prototype.onLevelUpdated = function onLevelUpdated(event) {
-    var details = event.details;
-    if (details.fragments.length === 0) {
-      return;
+  BufferController.prototype.onLevelUpdated = function onLevelUpdated(_ref) {
+    var details = _ref.details;
+
+    if (details.fragments.length > 0) {
+      this._levelDuration = details.totalduration + details.fragments[0].start;
+      this._live = details.live;
+      this.updateMediaElementDuration();
     }
-    this._levelDuration = details.totalduration + details.fragments[0].start;
-    this.updateMediaElementDuration();
   };
 
-  // https://github.com/video-dev/hls.js/issues/355
+  /**
+   * Update Media Source duration to current level duration or override to Infinity if configuration parameter
+   * 'liveDurationInfinity` is set to `true`
+   * More details: https://github.com/video-dev/hls.js/issues/355
+   */
 
 
   BufferController.prototype.updateMediaElementDuration = function updateMediaElementDuration() {
-    var media = this.media,
-        mediaSource = this.mediaSource,
-        sourceBuffer = this.sourceBuffer,
-        levelDuration = this._levelDuration;
-    if (levelDuration === null || !media || !mediaSource || !sourceBuffer || media.readyState === 0 || mediaSource.readyState !== 'open') {
+    var config = this.hls.config;
+
+    var duration = void 0;
+
+    if (this._levelDuration === null || !this.media || !this.mediaSource || !this.sourceBuffer || this.media.readyState === 0 || this.mediaSource.readyState !== 'open') {
       return;
     }
-    for (var type in sourceBuffer) {
-      if (sourceBuffer[type].updating) {
+
+    for (var type in this.sourceBuffer) {
+      if (this.sourceBuffer[type].updating === true) {
         // can't set duration whilst a buffer is updating
         return;
       }
     }
+
+    duration = this.media.duration;
+    // initialise to the value that the media source is reporting
     if (this._msDuration === null) {
-      // initialise to the value that the media source is reporting
-      this._msDuration = mediaSource.duration;
+      this._msDuration = this.mediaSource.duration;
     }
-    var duration = media.duration;
-    // levelDuration was the last value we set.
-    // not using mediaSource.duration as the browser may tweak this value
-    // only update mediasource duration if its value increase, this is to avoid
-    // flushing already buffered portion when switching between quality level
-    if (levelDuration > this._msDuration && levelDuration > duration || duration === Infinity || isNaN(duration)) {
-      logger["b" /* logger */].log('Updating mediasource duration to ' + levelDuration.toFixed(3));
-      this._msDuration = mediaSource.duration = levelDuration;
+
+    if (this._live === true && config.liveDurationInfinity === true) {
+      // Override duration to Infinity
+      logger["b" /* logger */].log('Media Source duration is set to Infinity');
+      this._msDuration = this.mediaSource.duration = Infinity;
+    } else if (this._levelDuration > this._msDuration && this._levelDuration > duration || duration === Infinity || isNaN(duration)) {
+      // levelDuration was the last value we set.
+      // not using mediaSource.duration as the browser may tweak this value
+      // only update Media Source duration if its value increase, this is to avoid
+      // flushing already buffered portion when switching between quality level
+      logger["b" /* logger */].log('Updating Media Source duration to ' + this._levelDuration.toFixed(3));
+      this._msDuration = this.mediaSource.duration = this._levelDuration;
     }
   };
 
@@ -10906,6 +10929,7 @@ var hlsDefaultConfig = {
   liveMaxLatencyDurationCount: Infinity, // used by stream-controller
   liveSyncDuration: undefined, // used by stream-controller
   liveMaxLatencyDuration: undefined, // used by stream-controller
+  liveDurationInfinity: false, // used by buffer-controller
   maxMaxBufferLength: 600, // used by stream-controller
   enableWorker: true, // used by demuxer
   enableSoftwareAES: true, // used by decrypter
