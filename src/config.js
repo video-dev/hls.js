@@ -21,7 +21,7 @@ export var hlsDefaultConfig = {
   autoStartLoad: true,                    // used by stream-controller
   startPosition: -1,                      // used by stream-controller
   defaultAudioCodec: undefined,           // used by stream-controller
-  debug: false,                           // used by logger
+  debug: true,                           // used by logger
   capLevelOnFPSDrop: false,               // used by fps-controller
   capLevelToPlayerSize: false,            // used by cap-level-controller
   initialLiveManifestSize: 1,             // used by stream-controller

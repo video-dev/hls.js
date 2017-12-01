@@ -23,8 +23,6 @@ export default {
   BUFFER_FLUSHING: 'hlsBufferFlushing',
   // fired when the media buffer has been flushed - data: { }
   BUFFER_FLUSHED: 'hlsBufferFlushed',
-  // fired when we start appending a media segment to the buffer - data : { }
-  SOURCE_BUFFER_APPEND: 'hlsSourceBufferAppend',
   // fired to signal that a manifest loading starts - data: { url : manifestURL}
   MANIFEST_LOADING: 'hlsManifestLoading',
   // fired after manifest has been loaded - data: { levels : [available quality levels], audioTracks : [ available audio tracks], url : manifestURL, stats : { trequest, tfirst, tload, mtime}}
