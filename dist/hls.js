@@ -5066,6 +5066,13 @@ var mp4_remuxer_MP4Remuxer = function () {
       sample.pts = sample.dts = ptsNormalize(sample.pts - initDTS, timeOffset * inputTimeScale);
     });
 
+    // filter out sample with negative PTS that are not playable anyway
+    // if we don't remove these negative samples, they will shift all audio samples forward.
+    // leading to audio overlap between current / next fragment
+    inputSamples = inputSamples.filter(function (sample) {
+      return sample.pts > 0;
+    });
+
     if (!contiguous) {
       if (!accurateTimeOffset) {
         // if frag are mot contiguous and if we cant trust time offset, let's use first sample PTS as next audio PTS
@@ -5175,8 +5182,8 @@ var mp4_remuxer_MP4Remuxer = function () {
             _pts = nextAudioPts;
           }
         }
-        // remember first PTS of our audioSamples, ensure value is positive
-        firstPTS = Math.max(0, _pts);
+        // remember first PTS of our audioSamples
+        firstPTS = _pts;
         if (track.len > 0) {
           /* concatenate the audio data and construct the mdat in place
             (need 8 more bytes to fill length and mdat type) */
