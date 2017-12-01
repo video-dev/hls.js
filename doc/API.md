@@ -27,7 +27,6 @@
   - [`maxBufferLength`](#maxbufferlength)
   - [`maxBufferSize`](#maxbuffersize)
   - [`maxBufferHole`](#maxbufferhole)
-  - [`maxSeekHole`](#maxseekhole)
   - [`maxStarvationDelay`](#maxstarvationdelay)
   - [`maxLoadingDelay`](#maxloadingdelay)
   - [`lowBufferWatchdogPeriod`](#lowbufferwatchdogperiod)
@@ -302,7 +301,6 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       maxMaxBufferLength: 600,
       maxBufferSize: 60*1000*1000,
       maxBufferHole: 0.5,
-      maxSeekHole: 2,
       lowBufferWatchdogPeriod: 0.5,
       highBufferWatchdogPeriod: 3,
       nudgeOffset: 0.1,
@@ -422,14 +420,6 @@ This is the guaranteed buffer length hls.js will try to reach, regardless of max
 'Maximum' inter-fragment buffer hole tolerance that hls.js can cope with when searching for the next fragment to load.
 When switching between quality level, fragments might not be perfectly aligned.
 This could result in small overlapping or hole in media buffer. This tolerance factor helps cope with this.
-
-### `maxSeekHole`
-
-(default: `2` seconds)
-
-In case playback is stalled, and a buffered range is available upfront, less than `maxSeekHole` seconds from current media position,
-hls.js will jump over this buffer hole to reach the beginning of this following buffered range.
-`maxSeekHole` allows to configure this jumpable threshold.
 
 ### `maxStarvationDelay`
 
@@ -864,7 +854,7 @@ parameter should be a string
 
 (default: `false`)
 
-If a segment's video track is shorter than its audio track by > `min(maxSeekHole, maxBufferHole)`, extend the final video frame's duration to match the audio track's duration.
+If a segment's video track is shorter than its audio track by > `maxBufferHole`, extend the final video frame's duration to match the audio track's duration.
 This helps playback continue in certain cases that might otherwise get stuck.
 
 parameter should be a boolean
@@ -1139,13 +1129,15 @@ Full list of Events is available below:
    - `Hls.Events.BUFFER_APPENDING`  - fired when we append a segment to the buffer
     -  data: { segment : segment object }
   - `Hls.Events.BUFFER_APPENDED`  - fired when we are done with appending a media segment to the buffer
-    -  data: { parent : segment parent that triggered `BUFFER_APPENDING`, pending : nb of segments waiting for appending for this segment parent }
+    -  data: { parent : segment parent that triggered `BUFFER_APPENDING`, pending : nb of segments waiting for appending for this segment parent, sourceBufferRanges : video source buffer after appending }
   - `Hls.Events.BUFFER_EOS`  - fired when the stream is finished and we want to notify the media buffer that there will be no more data
     -  data: { }
   - `Hls.Events.BUFFER_FLUSHING`  - fired when the media buffer should be flushed
     -  data: { startOffset, endOffset }
   - `Hls.Events.BUFFER_FLUSHED`  - fired when the media buffer has been flushed
     -  data: { startOffset, endOffset }
+  - `Hls.Events.SOURCE_BUFFER_APPEND` - fired when we start appending a media segment to the source buffer
+    -  data: { segment : segment object }
   - `Hls.Events.MANIFEST_LOADING`  - fired to signal that a manifest loading starts
     -  data: { url : manifestURL }
   - `Hls.Events.MANIFEST_LOADED`  - fired after manifest has been loaded
@@ -1290,7 +1282,7 @@ Full list of errors is described below:
 
   - `Hls.ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR` - raised when manifest only contains quality level with codecs incompatible with MediaSource Engine.
     - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR`, fatal : `true`, url : manifest URL }
-  - `Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR` - raised upon detection of same fragment being requested in loop
+  - `Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR` - raised upon detection of same audio fragment being requested in loop
     - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR`, fatal : `true` or `false`, frag : fragment object }
   - `Hls.ErrorDetails.FRAG_DECRYPT_ERROR` - raised when fragment decryption fails
     - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.FRAG_DECRYPT_ERROR`, fatal : `true`, reason : failure reason }
