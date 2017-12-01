@@ -28,7 +28,6 @@ export var hlsDefaultConfig = {
   maxBufferLength: 30,                    // used by stream-controller
   maxBufferSize: 60 * 1000 * 1000,        // used by stream-controller
   maxBufferHole: 0.5,                     // used by stream-controller
-  maxSeekHole: 2,                         // used by stream-controller
   lowBufferWatchdogPeriod: 0.5,           // used by stream-controller
   highBufferWatchdogPeriod: 3,            // used by stream-controller
   nudgeOffset: 0.1,                       // used by stream-controller
