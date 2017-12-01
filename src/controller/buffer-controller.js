@@ -471,6 +471,7 @@ class BufferController extends EventHandler {
         let segment = segments.shift();
         try {
           let type = segment.type, sb = sourceBuffer[type];
+          console.error(type, sb);
           if(sb) {
             if(!sb.updating) {
               // reset sourceBuffer ended flag before appending segment
@@ -478,7 +479,6 @@ class BufferController extends EventHandler {
               //logger.log(`appending ${segment.content} ${type} SB, size:${segment.data.length}, ${segment.parent}`);
               this.parent = segment.parent;
               sb.appendBuffer(segment.data);
-              this.hls.trigger(Event.SOURCE_BUFFER_APPEND, { segment : segment });
               this.appendError = 0;
               this.appended++;
               this.appending = true;

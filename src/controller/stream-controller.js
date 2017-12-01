@@ -502,27 +502,23 @@ class StreamController extends EventHandler {
     } else {
       logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferEnd.toFixed(3)}`);
       // Check if fragment is attempting to load or already loaded with bad PTS
-      if(this.fragmentTracker.isBadFragment(frag)) {
-        logger.warn(`bad fragment PTS detected, level: ${frag.level} sn: ${frag.sn}`);
-        // hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal: false, frag: frag});
-        return;
-      }
-      frag.autoLevel = this.hls.autoLevelEnabled;
-      frag.bitrateTest = this.bitrateTest;
+      if(!this.fragmentTracker.isBadFragment(frag)) {
+        frag.autoLevel = this.hls.autoLevelEnabled;
+        frag.bitrateTest = this.bitrateTest;
 
-      this.fragCurrent = frag;
-      this.startFragRequested = true;
-      // Don't update nextLoadPosition for fragments which are not buffered
-      if (!isNaN(frag.sn) && !frag.bitrateTest) {
-        this.nextLoadPosition = frag.start + frag.duration;
+        this.fragCurrent = frag;
+        this.startFragRequested = true;
+        // Don't update nextLoadPosition for fragments which are not buffered
+        if (!isNaN(frag.sn) && !frag.bitrateTest) {
+          this.nextLoadPosition = frag.start + frag.duration;
+        }
+        this.hls.trigger(Event.FRAG_LOADING, {frag: frag});
+        // lazy demuxer init, as this could take some time ... do it during frag loading
+        if (!this.demuxer) {
+          this.demuxer = new Demuxer(this.hls,'main');
+        }
+        this.state = State.FRAG_LOADING;
       }
-      this.hls.trigger(Event.FRAG_LOADING, {frag: frag});
-      // lazy demuxer init, as this could take some time ... do it during frag loading
-      if (!this.demuxer) {
-        this.demuxer = new Demuxer(this.hls,'main');
-      }
-      this.state = State.FRAG_LOADING;
-      return;
     }
   }
 
@@ -1140,7 +1136,7 @@ class StreamController extends EventHandler {
       var drift = LevelHelper.updateFragPTSDTS(level.details,frag,data.startPTS,data.endPTS,data.startDTS,data.endDTS),
           hls = this.hls;
       hls.trigger(Event.LEVEL_PTS_UPDATED, {details: level.details, level: this.level, drift: drift, type: data.type, start: data.startPTS, end: data.endPTS});
-
+      let segmentsPerFragment = 0;
       // has remuxer dropped video frames located before first keyframe ?
       [data.data1, data.data2].forEach(buffer => {
         // only append in PARSING state (rationale is that an appending error could happen synchronously on first segment appending)
@@ -1150,6 +1146,7 @@ class StreamController extends EventHandler {
           // arm pending Buffering flag before appending a segment
           this.pendingBuffering = true;
           hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer, parent : 'main',content : 'data', fragment : frag, updatePTS: buffer === data.data2});
+          segmentsPerFragment++;
         }
       });
       //trigger handler right now

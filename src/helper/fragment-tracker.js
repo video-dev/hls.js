@@ -11,8 +11,8 @@ export default class FragmentTracker extends EventHandler {
 
   constructor(hls) {
     super(hls,
-      Event.SOURCE_BUFFER_APPEND,
-      Event.BUFFER_APPENDED
+      Event.BUFFER_APPENDED,
+      Event.FRAG_BUFFERED
     );
 
     // This holds all the loading fragments until the buffer is populated
@@ -21,14 +21,12 @@ export default class FragmentTracker extends EventHandler {
     this.partialFragments = {};
     this.partialFragmentTimes = {};
     this.config = hls.config;
-    this.shouldTestFragment = false;
   }
 
   destroy() {
     this.loadingFragments = {};
     this.partialFragments = {};
     this.partialFragmentTimes = {};
-    this.shouldTestFragment = false;
     EventHandler.prototype.destroy.call(this);
   }
 
@@ -158,28 +156,23 @@ export default class FragmentTracker extends EventHandler {
    */
   onBufferAppended(e) {
     let buffered = e.sourceBufferRanges;
+    console.error("onBufferAppended", e, buffered, this.loadingFragments, this.partialFragments);
     if(buffered === null) {
       return;
     }
     this.detectEvictedFragments(buffered);
     // Check for bad fragments
-    if(this.shouldTestFragment === true) {
-      this.detectPartialFragments(buffered);
-    }
+    this.detectPartialFragments(buffered);
   }
 
   /**
    * Fires when source buffer is being appended to
    * Note that this should not be called again before invoking onBufferAppended
    */
-  onSourceBufferAppend(e) {
-    let segment = e.segment;
-    // Only test videos that effect the PTS
-    this.shouldTestFragment = segment.type === 'video' && segment.updatePTS === true;
-    if(this.shouldTestFragment === true) {
-      let fragment = segment.fragment;
-      let fragKey = getFragmentKey(fragment);
-      this.loadingFragments[fragKey] = fragment;
-    }
+  onFragBuffered(e) {
+    console.error("onFragBuffered", e, e.frag);
+    let fragment = e.frag;
+    let fragKey = getFragmentKey(fragment);
+    this.loadingFragments[fragKey] = fragment;
   }
 }
