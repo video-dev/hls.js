@@ -1184,16 +1184,21 @@ class StreamController extends EventHandler {
         frag.dropped = data.dropped;
         if (frag.dropped) {
           if (!frag.backtracked) {
-            logger.warn('missing video frame(s), backtracking fragment');
-            // Return back to the IDLE state without appending to buffer
-            // Causes findFragments to backtrack a segment and find the keyframe
-            // Audio fragments arriving before video sets the nextLoadPosition, causing _findFragments to skip the backtracked fragment
-            frag.backtracked = true;
-            this.nextLoadPosition = data.startPTS;
-            this.state = State.IDLE;
-            this.fragPrevious = frag;
-            this.tick();
-            return;
+            const levelDetails = level.details;
+            if (levelDetails && frag.sn === levelDetails.startSN) {
+              logger.warn('missing video frame(s) on first frag, appending with gap');
+            } else {
+              logger.warn('missing video frame(s), backtracking fragment');
+              // Return back to the IDLE state without appending to buffer
+              // Causes findFragments to backtrack a segment and find the keyframe
+              // Audio fragments arriving before video sets the nextLoadPosition, causing _findFragments to skip the backtracked fragment
+              frag.backtracked = true;
+              this.nextLoadPosition = data.startPTS;
+              this.state = State.IDLE;
+              this.fragPrevious = frag;
+              this.tick();
+              return;
+            }
           } else {
             logger.warn('Already backtracked on this fragment, appending with the gap');
           }
@@ -1479,7 +1484,7 @@ _checkBuffer() {
         if (currentTime !== startPosition || startNotBufferedButClose) {
           logger.log(`target start position:${startPosition}`);
           // if startPosition not buffered, let's seek to buffered.start(0)
-          if(!startNotBufferedButClose) {
+          if(startNotBufferedButClose) {
             startPosition = firstbufferedPosition;
             logger.log(`target start position not buffered, seek to buffered.start(0) ${startPosition}`);
           }

@@ -33,11 +33,12 @@ export var hlsDefaultConfig = {
   highBufferWatchdogPeriod: 3,            // used by stream-controller
   nudgeOffset: 0.1,                       // used by stream-controller
   nudgeMaxRetry : 3,                      // used by stream-controller
-  maxFragLookUpTolerance: 0.2,            // used by stream-controller
+  maxFragLookUpTolerance: 0.25,           // used by stream-controller
   liveSyncDurationCount:3,                // used by stream-controller
   liveMaxLatencyDurationCount: Infinity,  // used by stream-controller
   liveSyncDuration: undefined,            // used by stream-controller
   liveMaxLatencyDuration: undefined,      // used by stream-controller
+  liveDurationInfinity: false,            // used by buffer-controller
   maxMaxBufferLength: 600,                // used by stream-controller
   enableWorker: true,                     // used by demuxer
   enableSoftwareAES: true,                // used by decrypter
