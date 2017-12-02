@@ -15,7 +15,7 @@ const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 
 const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
-  /#EXTINF:(\d*(?:\.\d+)?)(?:,(.*)\s+)?/.source, // duration (#EXTINF:<duration>,<title>), group 1 => duration, group 2 => title
+  /#EXTINF:\s*(\d*(?:\.\d+)?)(?:,(.*)\s+)?/.source, // duration (#EXTINF:<duration>,<title>), group 1 => duration, group 2 => title
   /|(?!#)(\S+)/.source,                          // segment URI, group 3 => the URI (note newline is not eaten)
   /|#EXT-X-BYTERANGE:*(.+)/.source,              // next segment's byterange, group 4 => range spec (x@y)
   /|#EXT-X-PROGRAM-DATE-TIME:(.+)/.source,       // next segment's program date/time group 5 => the datetime spec
@@ -138,6 +138,23 @@ class Fragment {
   cloneObj(obj) {
     return JSON.parse(JSON.stringify(obj));
   }
+}
+
+function findGroup(groups, mediaGroupId) {
+  if (!groups) {
+    return null;
+  }
+
+  let matchingGroup = null;
+
+  for (let i = 0; i < groups.length; i ++) {
+    const group = groups[i];
+    if (group.id === mediaGroupId) {
+      matchingGroup = group;
+    }
+  }
+
+  return matchingGroup;
 }
 
 class PlaylistLoader extends EventHandler {
@@ -267,13 +284,15 @@ class PlaylistLoader extends EventHandler {
     return levels;
   }
 
-  parseMasterPlaylistMedia(string, baseurl, type, audioCodec=null) {
-    let result, medias = [], id = 0;
+  parseMasterPlaylistMedia(string, baseurl, type, audioGroups=[]) {
+    let result;
+    let medias = [];
+    let id = 0;
     MASTER_PLAYLIST_MEDIA_REGEX.lastIndex = 0;
-    while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) != null){
+    while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) !== null) {
       const media = {};
-      var attrs = new AttrList(result[1]);
-      if(attrs.TYPE === type) {
+      const attrs = new AttrList(result[1]);
+      if (attrs.TYPE === type) {
         media.groupId = attrs['GROUP-ID'];
         media.name = attrs.NAME;
         media.type = type;
@@ -284,11 +303,12 @@ class PlaylistLoader extends EventHandler {
           media.url = this.resolve(attrs.URI, baseurl);
         }
         media.lang = attrs.LANGUAGE;
-        if(!media.name) {
+        if (!media.name) {
             media.name = media.lang;
         }
-        if (audioCodec) {
-          media.audioCodec = audioCodec;
+        if (audioGroups.length) {
+          const groupCodec = findGroup(audioGroups, media.groupId);
+          media.audioCodec = groupCodec ? groupCodec.codec : audioGroups[0].codec;
         }
         media.id = id++;
         medias.push(media);
@@ -510,7 +530,8 @@ class PlaylistLoader extends EventHandler {
         let levels = this.parseMasterPlaylist(string, url);
         // multi level playlist, parse level info
         if (levels.length) {
-          let audioTracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO', levels[0].audioCodec);
+          const audioGroups = levels.map(l => ({ id: l.attrs.AUDIO, codec: l.audioCodec}));
+          let audioTracks = this.parseMasterPlaylistMedia(string, url, 'AUDIO', audioGroups);
           let subtitles = this.parseMasterPlaylistMedia(string, url, 'SUBTITLES');
           if (audioTracks.length) {
             // check if we have found an audio track embedded in main playlist (audio track without URI attribute)

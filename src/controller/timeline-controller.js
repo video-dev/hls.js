@@ -5,6 +5,7 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import Cea608Parser from '../utils/cea-608-parser';
+import OutputFilter from '../utils/output-filter';
 import WebVTTParser from '../utils/webvtt-parser';
 import {logger} from '../utils/logger';
 
@@ -30,6 +31,7 @@ class TimelineController extends EventHandler {
     super(hls, Event.MEDIA_ATTACHING,
                 Event.MEDIA_DETACHING,
                 Event.FRAG_PARSING_USERDATA,
+                Event.FRAG_DECRYPTED,
                 Event.MANIFEST_LOADING,
                 Event.MANIFEST_LOADED,
                 Event.FRAG_LOADED,
@@ -48,76 +50,8 @@ class TimelineController extends EventHandler {
 
     if (this.config.enableCEA708Captions)
     {
-      var self = this;
-      var sendAddTrackEvent = function (track, media)
-      {
-        var e = null;
-        try {
-          e = new window.Event('addtrack');
-        } catch (err) {
-          //for IE11
-          e = document.createEvent('Event');
-          e.initEvent('addtrack', false, false);
-        }
-        e.track = track;
-        media.dispatchEvent(e);
-      };
-
-      var channel1 =
-      {
-        'newCue': function(startTime, endTime, screen)
-        {
-          if (!self.textTrack1)
-          {
-            //Enable reuse of existing text track.
-            var existingTrack1 = self.getExistingTrack('1');
-            if (!existingTrack1)
-            {
-              const textTrack1 = self.createTextTrack('captions', self.config.captionsTextTrack1Label, self.config.captionsTextTrack1LanguageCode);
-              if (textTrack1) {
-                textTrack1.textTrack1 = true;
-                self.textTrack1 = textTrack1;
-              }
-            }
-            else
-            {
-              self.textTrack1 = existingTrack1;
-              clearCurrentCues(self.textTrack1);
-
-              sendAddTrackEvent(self.textTrack1, self.media);
-            }
-          }
-          self.addCues('textTrack1', startTime, endTime, screen);
-        }
-      };
-
-      var channel2 =
-      {
-        'newCue': function(startTime, endTime, screen)
-        {
-          if (!self.textTrack2)
-          {
-            //Enable reuse of existing text track.
-            var existingTrack2 = self.getExistingTrack('2');
-            if (!existingTrack2)
-            {
-              const textTrack2 = self.createTextTrack('captions', self.config.captionsTextTrack2Label, self.config.captionsTextTrack1LanguageCode);
-              if (textTrack2) {
-                textTrack2.textTrack2 = true;
-                self.textTrack2 = textTrack2;
-              }
-            }
-            else
-            {
-              self.textTrack2 = existingTrack2;
-              clearCurrentCues(self.textTrack2);
-
-              sendAddTrackEvent(self.textTrack2, self.media);
-            }
-          }
-          self.addCues('textTrack2', startTime, endTime, screen);
-        }
-      };
+      var channel1 = new OutputFilter(this, 1);
+      var channel2 = new OutputFilter(this, 2);
 
       this.cea608Parser = new Cea608Parser(0, channel1, channel2);
     }
@@ -175,6 +109,39 @@ class TimelineController extends EventHandler {
     return null;
   }
 
+  sendAddTrackEvent(track, media) {
+    var e = null;
+    try {
+      e = new window.Event('addtrack');
+    } catch (err) {
+      //for IE11
+      e = document.createEvent('Event');
+      e.initEvent('addtrack', false, false);
+    }
+    e.track = track;
+    media.dispatchEvent(e);
+  }
+
+  createCaptionsTrack(track) {
+    let trackVar = 'textTrack' + track;
+    if (!this[trackVar]) {
+      //Enable reuse of existing text track.
+      let existingTrack = this.getExistingTrack(track);
+      if (!existingTrack) {
+        const textTrack = this.createTextTrack('captions', this.config['captionsTextTrack' + track + 'Label'], this.config.captionsTextTrack1LanguageCode);
+        if (textTrack) {
+          textTrack[trackVar] = true;
+          this[trackVar] = textTrack;
+        }
+      } else {
+        this[trackVar] = existingTrack;
+        clearCurrentCues(this[trackVar]);
+
+        this.sendAddTrackEvent(this[trackVar], this.media);
+      }
+    }
+  }
+
   createTextTrack(kind, label, lang) {
     const media = this.media;
     if (media)
@@ -189,6 +156,7 @@ class TimelineController extends EventHandler {
 
   onMediaAttaching(data) {
     this.media = data.media;
+    this._cleanTracks();
   }
 
   onMediaDetaching() {
@@ -201,7 +169,11 @@ class TimelineController extends EventHandler {
     this.lastSn = -1; // Detect discontiguity in fragment parsing
     this.prevCC = -1;
     this.vttCCs = {ccOffset: 0, presentationOffset: 0}; // Detect discontinuity in subtitle manifests
+    this._cleanTracks();
 
+  }
+
+  _cleanTracks() {
     // clear outdated subtitles
     const media = this.media;
     if (media) {
@@ -268,44 +240,67 @@ class TimelineController extends EventHandler {
           this.unparsedVttFrags.push(data);
           return;
         }
-        let vttCCs = this.vttCCs;
-        if (!vttCCs[frag.cc]) {
-          vttCCs[frag.cc] = { start: frag.start, prevCC: this.prevCC, new: true };
-          this.prevCC = frag.cc;
-        }
-        let textTracks = this.textTracks,
-          hls = this.hls;
 
-        // Parse the WebVTT file contents.
-        WebVTTParser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
-            const currentTrack = textTracks[frag.trackId];
-            // Add cues and trigger event with success true.
-            cues.forEach(cue => {
-              // Sometimes there are cue overlaps on segmented vtts so the same
-              // cue can appear more than once in different vtt files.
-              // This avoid showing duplicated cues with same timecode and text.
-              if (!currentTrack.cues.getCueById(cue.id)) {
-                try {
-                  currentTrack.addCue(cue);
-                } catch (err) {
-                  const textTrackCue = new window.TextTrackCue(cue.startTime, cue.endTime, cue.text);
-                  textTrackCue.id = cue.id;
-                  currentTrack.addCue(textTrackCue);
-                }
-              }
-            });
-            hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: true, frag: frag});
-          },
-          function (e) {
-            // Something went wrong while parsing. Trigger event with success false.
-            logger.log(`Failed to parse VTT cue: ${e}`);
-            hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: false, frag: frag});
-          });
+        var decryptData = frag.decryptdata;
+        // If the subtitles are not encrypted, parse VTTs now. Otherwise, we need to wait.
+        if ((decryptData == null) || (decryptData.key == null) || (decryptData.method !== 'AES-128')) {
+          this._parseVTTs(frag, payload);
+        }
       }
       else {
         // In case there is no payload, finish unsuccessfully.
         this.hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: false, frag: frag});
       }
+    }
+  }
+
+  _parseVTTs(frag, payload) {
+    let vttCCs = this.vttCCs;
+    if (!vttCCs[frag.cc]) {
+      vttCCs[frag.cc] = { start: frag.start, prevCC: this.prevCC, new: true };
+      this.prevCC = frag.cc;
+    }
+    let textTracks = this.textTracks,
+      hls = this.hls;
+
+    // Parse the WebVTT file contents.
+    WebVTTParser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
+        const currentTrack = textTracks[frag.trackId];
+        // Add cues and trigger event with success true.
+        cues.forEach(cue => {
+          // Sometimes there are cue overlaps on segmented vtts so the same
+          // cue can appear more than once in different vtt files.
+          // This avoid showing duplicated cues with same timecode and text.
+          if (!currentTrack.cues.getCueById(cue.id)) {
+            try {
+              currentTrack.addCue(cue);
+            } catch (err) {
+              const textTrackCue = new window.TextTrackCue(cue.startTime, cue.endTime, cue.text);
+              textTrackCue.id = cue.id;
+              currentTrack.addCue(textTrackCue);
+            }
+          }
+        });
+        hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: true, frag: frag});
+      },
+      function (e) {
+        // Something went wrong while parsing. Trigger event with success false.
+        logger.log(`Failed to parse VTT cue: ${e}`);
+        hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: false, frag: frag});
+      });
+  }
+
+  onFragDecrypted(data) {
+    var decryptedData = data.payload,
+        frag = data.frag;
+
+    if (frag.type === 'subtitle') {
+      if (typeof this.initPTS === 'undefined') {
+        this.unparsedVttFrags.push(data);
+        return;
+      }
+
+      this._parseVTTs(frag, decryptedData);
     }
   }
 

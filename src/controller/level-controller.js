@@ -6,7 +6,6 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 import {logger} from '../utils/logger';
 import {ErrorTypes, ErrorDetails} from '../errors';
-import BufferHelper from '../helper/buffer-helper';
 import {isCodecSupportedInMp4} from '../utils/codecs';
 
 class LevelController extends EventHandler {
@@ -34,8 +33,11 @@ class LevelController extends EventHandler {
   }
 
   startLoad() {
-    this.canload = true;
     let levels = this._levels;
+
+    this.canload = true;
+    this.levelRetryCount = 0;
+
     // clean up live level details to force reload them, and reset load errors
     if(levels) {
       levels.forEach(level => {
@@ -57,13 +59,14 @@ class LevelController extends EventHandler {
   }
 
   onManifestLoaded(data) {
-    let levels          = [],
-        bitrateStart,
-        levelSet        = {},
-        levelFromSet    = null,
-        videoCodecFound = false,
-        audioCodecFound = false,
-        chromeOrFirefox = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
+    let levels = [];
+    let bitrateStart;
+    let levelSet = {};
+    let levelFromSet = null;
+    let videoCodecFound = false;
+    let audioCodecFound = false;
+    let chromeOrFirefox = /chrome|firefox/.test(navigator.userAgent.toLowerCase());
+    let audioTracks = [];
 
     // regroup redundant levels together
     data.levels.forEach(level => {
@@ -84,11 +87,12 @@ class LevelController extends EventHandler {
       if (levelFromSet === undefined) {
         level.url = [level.url];
         level.urlId = 0;
-        levelSet[level.bitrate] = level;
-        levels.push(level);
-      } else {
-        levelFromSet.url.push(level.url);
-      }
+        levelSet[level.bitrate] =level;
+          levels.push(level);
+        }
+       else {
+      levelFromSet.url.push( level .url);
+    }
     });
 
     // remove audio-only level if we also have levels with audio+video codecs signalled
@@ -101,7 +105,11 @@ class LevelController extends EventHandler {
       return (!audioCodec || isCodecSupportedInMp4(audioCodec)) && (!videoCodec || isCodecSupportedInMp4(videoCodec));
     });
 
-    if (levels.length > 0) {
+    if (data.audioTracks) {
+      audioTracks = data.audioTracks.filter(track => !track.audioCodec || isCodecSupportedInMp4(track.audioCodec, 'audio'));
+    }
+
+    if(levels.length) {
       // start bitrate is the first bitrate of the manifest
       bitrateStart = levels[0].bitrate;
       // sort level on bitrate
@@ -117,14 +125,7 @@ class LevelController extends EventHandler {
           break;
         }
       }
-      this.hls.trigger(Event.MANIFEST_PARSED, {
-        levels    : levels,
-        firstLevel: this._firstLevel,
-        stats     : data.stats,
-        audio     : audioCodecFound,
-        video     : videoCodecFound,
-        altAudio  : data.audioTracks.length > 0
-      });
+      this.hls.trigger(Event.MANIFEST_PARSED, {levels, audioTracks, firstLevel: this._firstLevel, stats: data.stats, audio : audioCodecFound, video : videoCodecFound, altAudio : audioTracks.length > 0});
     } else {
       this.hls.trigger(Event.ERROR, {
         type   : ErrorTypes.MEDIA_ERROR,
@@ -146,7 +147,8 @@ class LevelController extends EventHandler {
 
   set level(newLevel) {
     let levels = this._levels;
-    if (levels && levels.length > newLevel) {
+    if (levels) {
+      newLevel = Math.min(newLevel, levels.length-1);
       if (this._level !== newLevel || levels[newLevel].details === undefined) {
         this.setLevelInternal(newLevel);
       }
@@ -233,7 +235,7 @@ class LevelController extends EventHandler {
 
     let details = data.details, levelError = false, fragmentError = false;
     let levelIndex, level;
-    let {config, media} = this.hls;
+    let {config} = this.hls;
 
     // try to recover not fatal errors
     switch (details) {
@@ -263,43 +265,46 @@ class LevelController extends EventHandler {
       level.loadError++;
       level.fragmentError = fragmentError;
 
-      // if any redundant streams available and if we haven't try them all (level.loadError is reseted on successful frag/level load.
-      // if level.loadError reaches redundantLevels it means that we tried them all, no hope  => let's switch down
-      const redundantLevels = level.url.length;
+      // Allow fragment retry as long as configuration allows.
+      // Since fragment retry logic could depend on the levels, we should not enforce retry limits when there is an issue with fragments
+      // FIXME Find a better abstraction where fragment/level retry management is well decoupled
+      if (fragmentError === true){
+        // if any redundant streams available and if we haven't try them all (level.loadError is reseted on successful frag/level load.
+        // if level.loadError reaches redundantLevels it means that we tried them all, no hope  => let's switch down
+        const redundantLevels = level.url.length;
 
-      if (redundantLevels > 1 && level.loadError < redundantLevels) {
-        level.urlId = (level.urlId + 1) % redundantLevels;
-        level.details = undefined;
-        logger.warn(`level controller,${details} for level ${levelIndex}: switching to redundant stream id ${level.urlId}`);
-      } else {
-        // we could try to recover if in auto mode and current level not lowest level (0)
-        if ((this._manualLevel === -1) && levelIndex !== 0) {
-          logger.warn(`level controller,${details}: switch-down for next fragment`);
-          this.hls.nextAutoLevel = Math.max(0, levelIndex - 1);
-        } else if (level && level.details && level.details.live) {
-          logger.warn(`level controller,${details} on live stream, discard`);
-          if (levelError === true) {
+        if (redundantLevels > 1 && level.loadError < redundantLevels) {
+          level.urlId = (level.urlId + 1) % redundantLevels;
+          level.details = undefined;
+          logger.warn(`level controller,${details} for level ${levelIndex}: switching to redundant stream id ${level.urlId}`);
+        } else {
+          // we could try to recover if in auto mode and current level not lowest level (0)
+          if ((this._manualLevel === -1) && levelIndex !== 0) {
+            logger.warn(`level controller,${details}: switch-down for next fragment`);
+            this.hls.nextAutoLevel = levelIndex - 1;
+          } else  {
+            logger.warn(`level controller, ${details}: reload a fragment`);
             // reset this._level so that another call to set level() will trigger again a frag load
             this._level = undefined;
           }
-          // other errors are handled by stream controller
-        } else if (levelError === true) {
-          // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
-          let mediaBuffered = !!media && BufferHelper.isBuffered(media, media.currentTime) && BufferHelper.isBuffered(media, media.currentTime + 0.5);
-          // FIXME Rely on Level Retry parameters, now it's possible to retry as long as media is buffered
-          if (mediaBuffered === true) {
-            logger.warn(`level controller,${details}, but media buffered, retry in ${config.levelLoadingRetryDelay}ms`);
-            this.timer = setTimeout(() => this.tick(), config.levelLoadingRetryDelay);
-            // boolean used to inform stream controller not to switch back to IDLE on non fatal error
-            data.levelRetry = true;
-          } else {
-            logger.error(`cannot recover ${details} error`);
-            this._level = undefined;
-            // stopping live reloading timer if any
-            this.cleanTimer();
-            // switch error to fatal
-            data.fatal = true;
-          }
+        }
+      } else if (levelError === true){
+        if ((this.levelRetryCount + 1) <= config.levelLoadingMaxRetry) {
+          // exponential backoff capped to max retry timeout
+          const delay = Math.min(Math.pow(2, this.levelRetryCount) * config.levelLoadingRetryDelay, config.levelLoadingMaxRetryTimeout);
+          // reset load counter to avoid frag loop loading error
+          this.timer = setTimeout(() => this.tick(), delay);
+          // boolean used to inform stream controller not to switch back to IDLE on non fatal error
+          data.levelRetry = true;
+          this.levelRetryCount++;
+          logger.warn(`level controller,${details}, retry in ${delay} ms, current retry count is ${this.levelRetryCount}`);
+        } else {
+          logger.error(`cannot recover ${details} error`);
+          this._level = undefined;
+          // stopping live reloading timer if any
+          this.cleanTimer();
+          // switch error to fatal
+          data.fatal = true;
         }
       }
     }
@@ -312,6 +317,7 @@ class LevelController extends EventHandler {
       if (level !== undefined) {
         level.fragmentError = false;
         level.loadError = 0;
+        this.levelRetryCount = 0;
       }
     }
   }
@@ -324,6 +330,7 @@ class LevelController extends EventHandler {
       // reset level load error counter on successful level loaded only if there is no issues with fragments
       if(curLevel.fragmentError === false){
         curLevel.loadError = 0;
+        this.levelRetryCount = 0;
       }
       let newDetails = data.details;
       // if current playlist is a live playlist, arm a timer to reload it
