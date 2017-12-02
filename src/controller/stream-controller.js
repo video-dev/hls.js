@@ -360,6 +360,8 @@ class StreamController extends EventHandler {
          even if SN are not synchronized between playlists, loading this frag will help us
          compute playlist sliding and find the right one after in case it was not the right consecutive one */
       if (fragPrevious) {
+		  
+		  if (!config.usePDTSearch) {//Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
         const targetSN = fragPrevious.sn + 1;
         if (targetSN >= levelDetails.startSN && targetSN <= levelDetails.endSN) {
           const fragNext = fragments[targetSN - levelDetails.startSN];
@@ -378,6 +380,9 @@ class StreamController extends EventHandler {
             logger.log(`live playlist, switching playlist, load frag with same CC: ${frag.sn}`);
           }
         }
+		  } else {//Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
+			frag = this._findFragmentByPDT(fragments, fragPrevious.endPdt + 1);
+		  }	
       }
       if (!frag) {
         /* we have no idea about which fragment should be loaded.
@@ -389,10 +394,37 @@ class StreamController extends EventHandler {
     }
     return frag;
   }
+  
+  _findFragmentByPDT(fragments, PDTValue){
+	  
+	  //if less than start
+	  let firstSegment = fragments[0];
+	  
+	  if(PDTValue < firstSegment.pdt){
+		  return null;
+	  }
+	  
+	  let lastSegment = fragments[fragments.length - 1];
+	  
+	  if(PDTValue >= lastSegment.endPdt){
+		  return null;
+	  }	  
+	  
+	 //if bigger than end
+     //          > -1 if the item should be located at a lower index than the provided item.
+     //          > 1 if the item should be located at a higher index than the provided item.
+     //          > 0 if the item is the item you're looking for.	  
+	  
+	let frag = BinarySearch.search(fragments, function(frag) {
+            return PDTValue < frag.pdt ? -1 : PDTValue >= frag.endPdt ? 1 : 0;
+          });
+		  
+	return frag;   
+  }  
 
-  _findFragment(start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails) {
+
+  _findFragmentBySN(fragPrevious, fragments, bufferEnd, end) {
     const config = this.hls.config;
-    let frag;
     let foundFrag;
     let maxFragLookUpTolerance = config.maxFragLookUpTolerance;
     const fragNext = fragPrevious ? fragments[fragPrevious.sn - fragments[0].sn + 1] : undefined;
@@ -431,6 +463,22 @@ class StreamController extends EventHandler {
       } else {
         foundFrag = BinarySearch.search(fragments, fragmentWithinToleranceTest);
       }
+	}
+	return foundFrag;
+  }	
+  
+  _findFragment(start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails) {
+    const config = this.hls.config;
+    let frag;
+    let foundFrag;
+
+    if (bufferEnd < end) {
+      if (!config.usePDTSearch) {//Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
+        foundFrag = this._findFragmentBySN(fragPrevious, fragments, bufferEnd, end);
+      } else {//Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
+        foundFrag = this._findFragmentByPDT(fragments, fragPrevious ? fragPrevious.endPdt + 1 : bufferEnd + (levelDetails.programDateTime ? Date.parse(levelDetails.programDateTime) : 0));
+      }
+ 
     } else {
       // reach end of playlist
       foundFrag = fragments[fragLen-1];

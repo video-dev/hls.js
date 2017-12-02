@@ -334,6 +334,17 @@ class PlaylistLoader extends EventHandler {
         if (!isNaN(frag.duration)) {
           const sn = currentSN++;
           frag.type = type;
+		  
+		  if(prevFrag){
+			  if(frag.rawProgramDateTime){//PDT discontinuity found
+				  frag.pdt = Date.parse(frag.rawProgramDateTime);
+			  } else {//Contiguous fragment
+				  frag.pdt = prevFrag.pdt + (prevFrag.duration * 1000);
+			  }
+		  } else {//First fragment
+			  frag.pdt = level.programDateTime ? Date.parse(level.programDateTime) : 0;
+		  }
+		  frag.endPdt = frag.pdt + (frag.duration * 1000);
           frag.start = totalduration;
           frag.levelkey = levelkey;
           frag.sn = sn;
