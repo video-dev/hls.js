@@ -1,6 +1,6 @@
 /**
  * @author Stephan Hesse <disparat@gmail.com> | <tchakabam@gmail.com>
- * 
+ *
  * DRM support for Hls.js
  */
 
@@ -13,7 +13,7 @@ import Event from '../events';
 const KeySystems = {
     WIDEVINE: 'com.widevine.alpha',
     PLAYREADY: 'com.microsoft.playready'
-}
+};
 
 /**
  * @see https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySystemConfiguration
@@ -22,13 +22,14 @@ const KeySystems = {
  * @param {object} drmSystemOptions Optional parameters/requirements for the key-system
  * @returns {Array<MediaSystemConfiguration>} An array of supported configurations
  */
-const createWidevineMediaKeySystemConfigurations = function(audioCodecs, videoCodecs, drmSystemOptions) {
+
+const createWidevineMediaKeySystemConfigurations = function(audioCodecs, videoCodecs, drmSystemOptions) { /* jshint ignore:line */
     const baseConfig = {
         //initDataTypes: ['keyids', 'mp4'],
         //label: "",
         //persistentState: "not-allowed", // or "required" ?
         //distinctiveIdentifier: "not-allowed", // or "required" ?
-        //sessionTypes: ['temporary'], 
+        //sessionTypes: ['temporary'],
         videoCapabilities: [
             //{ contentType: 'video/mp4; codecs="avc1.42E01E"' }
         ]
@@ -43,14 +44,14 @@ const createWidevineMediaKeySystemConfigurations = function(audioCodecs, videoCo
     return [
         baseConfig
     ];
-}
+};
 
 /**
  * The idea here is to handle key-system (and their respective platforms) specific configuration differences
  * in order to work with the local requestMediaKeySystemAccess method.
- * 
+ *
  * We can also rule-out platform-related key-system support at this point by throwing an error or returning null.
- * 
+ *
  * @param {string} keySystem Identifier for the key-system, see `KeySystems` enum
  * @param {Array<string>} audioCodecs List of required audio codecs to support
  * @param {Array<string>} videoCodecs List of required video codecs to support
@@ -59,16 +60,16 @@ const createWidevineMediaKeySystemConfigurations = function(audioCodecs, videoCo
 const getSupportedMediaKeySystemConfigurations = function(keySystem, audioCodecs, videoCodecs) {
     switch(keySystem) {
     case KeySystems.WIDEVINE:
-        return createWidevineMediaKeySystemConfigurations(audioCodecs, videoCodecs)
+        return createWidevineMediaKeySystemConfigurations(audioCodecs, videoCodecs);
     default:
         throw Error('Unknown key-system: ' + keySystem);
     }
-}
+};
 
 /**
  * Controller to deal with encrypted media extensions (EME)
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Encrypted_Media_Extensions_API
- * 
+ *
  * @class
  * @constructor
  */
@@ -80,7 +81,6 @@ class EMEController extends EventHandler {
      */
     constructor(hls) {
         super(hls,
-            Event.MEDIA_ATTACHING,
             Event.MEDIA_ATTACHED,
             Event.MANIFEST_PARSED,
             Event.LEVEL_SWITCHED
@@ -128,8 +128,8 @@ class EMEController extends EventHandler {
 
     /**
      * Handles obtaining access to a key-system
-     * 
-     * @param {string} keySystem 
+     *
+     * @param {string} keySystem
      * @param {MediaKeySystemAccess} mediaKeySystemAccess https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySystemAccess
      */
     _onMediaKeySystemAccessObtained(keySystem, mediaKeySystemAccess) {
@@ -167,19 +167,19 @@ class EMEController extends EventHandler {
      * for all existing keys where no session exists yet.
      */
     _onMediaKeysCreated() {
-        
+
         // check for all key-list items if a session exists, otherwise, create one
         this._mediaKeysList.forEach((mediaKeysListItem) => {
             if(!mediaKeysListItem.mediaKeysSession) {
                 mediaKeysListItem.mediaKeysSession = mediaKeysListItem.mediaKeys.createSession();
                 this._onNewMediaKeySession(mediaKeysListItem.mediaKeysSession);
             }
-        })
+        });
     }
 
     /**
-     * 
-     * @param {*} keySession 
+     *
+     * @param {*} keySession
      */
     _onNewMediaKeySession(keySession) {
         console.log('New key-system session:', keySession);
@@ -194,7 +194,7 @@ class EMEController extends EventHandler {
 
         console.log('message:', message);
 
-        this._requestLicense(message, (data) => { 
+        this._requestLicense(message, (data) => {
             keySession.update(data);
         });
     }
@@ -276,7 +276,7 @@ class EMEController extends EventHandler {
         console.log('_requestLicense');
 
         let challenge;
-        
+
         const xhr = new XMLHttpRequest();
         xhr.open('POST', url);
         xhr.responseType = 'arraybuffer';
@@ -320,15 +320,10 @@ class EMEController extends EventHandler {
             // For Widevine CDMs, the challenge is the keyMessage.
             challenge = keyMessage;
         } else {
-            console.error('Unsupported key-system:', mediaKeySystemDomain);
+            console.error('Unsupported key-system:', keysListItem.mediaKeySystemDomain);
         }
 
         xhr.send(challenge);
-    }
-
-    // Event handlers
-    onMediaAttaching(data) {
-        console.log('media attaching');
     }
 
     onMediaAttached(data) {

@@ -3,7 +3,6 @@
 */
 
 import Event from '../events';
-import EventHandler from '../event-handler';
 import {logger} from '../utils/logger';
 import Decrypter from '../crypt/decrypter';
 import TaskLoop from '../task-loop';

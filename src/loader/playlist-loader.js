@@ -9,8 +9,6 @@
  *
  */
 
-import URLToolkit from 'url-toolkit';
-
 import Event from '../events';
 import EventHandler from '../event-handler';
 import {ErrorTypes, ErrorDetails} from '../errors';
@@ -53,15 +51,15 @@ class PlaylistLoader extends EventHandler {
 
   static get ContextType() {
     return ContextType;
-  };
+  }
 
   /**
    * @param {ContextType} type
    * @returns {boolean}
    */
   static canHaveQualityLevels(type) {
-    return (type !== ContextType.AUDIO_TRACK
-          && type !== ContextType.SUBTITLE_TRACK);
+    return (type !== ContextType.AUDIO_TRACK &&
+      type !== ContextType.SUBTITLE_TRACK);
   }
 
   static mapContextToLevelType(context) {
@@ -112,8 +110,10 @@ class PlaylistLoader extends EventHandler {
     return this.loaders[context.type];
   }
 
-  resetInternalLoader(context) {
-    this.loaders[context.type] && delete this.loaders[context.type];
+  resetInternalLoader(contextType) {
+    if (this.loaders[contextType]) {
+      delete this.loaders[contextType];
+    }
   }
 
   /**
@@ -125,7 +125,7 @@ class PlaylistLoader extends EventHandler {
       if (loader) {
         loader.destroy();
       }
-      this.resetInternalLoader(context);
+      this.resetInternalLoader(contextType);
     }
   }
 
@@ -216,7 +216,7 @@ class PlaylistLoader extends EventHandler {
     return true;
   }
 
-  loadsuccess(response, stats, context, networkDetails = null) {
+  loadsuccess(response, stats, context, networkDetails=null) {
 
     if (context.isSidxRequest) {
       this._handleSidxRequest(response, context);
@@ -224,9 +224,8 @@ class PlaylistLoader extends EventHandler {
       return;
     }
 
-    this.resetInternalLoader(context);
+    this.resetInternalLoader(context.type);
 
-    const hls = this.hls;
     const string = response.data;
 
     stats.tload = performance.now();
@@ -248,15 +247,16 @@ class PlaylistLoader extends EventHandler {
   }
 
   loaderror(response, context, networkDetails = null) {
-    this._handleNetworkError(response, context, networkDetails);
+    this._handleNetworkError(context, networkDetails);
   }
 
   loadtimeout(stats, context, networkDetails = null) {
-    this._handleNetworkError(response, context, networkDetails);
+    this._handleNetworkError(context, networkDetails);
   }
 
   _handleMasterPlaylist(response, stats, context, networkDetails) {
 
+    const hls = this.hls;
     const string = response.data;
 
     const url = PlaylistLoader.getResponseUrl(response, context);
@@ -312,6 +312,8 @@ class PlaylistLoader extends EventHandler {
 
   _handleTrackOrLevelPlaylist(response, stats, context, networkDetails) {
 
+    const hls = this.hls;
+
     const {id, level, type} = context;
 
     const url = PlaylistLoader.getResponseUrl(response, context);
@@ -352,7 +354,7 @@ class PlaylistLoader extends EventHandler {
     // return early after calling load for
     // the SIDX box.
     if (levelDetails.needSidxRanges) {
-      const sidxUrl = levelDetails.initSegment.url
+      const sidxUrl = levelDetails.initSegment.url;
       this.load(sidxUrl, {
         isSidxRequest: true,
         type,
@@ -393,7 +395,7 @@ class PlaylistLoader extends EventHandler {
   }
 
   _handleManifestParsingError(response, context, reason, networkDetails) {
-    hls.trigger(Event.ERROR, {
+    this.hls.trigger(Event.ERROR, {
       type: ErrorTypes.NETWORK_ERROR,
       details: ErrorDetails.MANIFEST_PARSING_ERROR,
       fatal: true,
@@ -403,7 +405,7 @@ class PlaylistLoader extends EventHandler {
     });
   }
 
-  _handleNetworkError(response, context, networkDetails) {
+  _handleNetworkError(context, networkDetails) {
 
     let details;
     let fatal;
@@ -430,7 +432,7 @@ class PlaylistLoader extends EventHandler {
 
     if (loader) {
       loader.abort();
-      this.resetInternalLoader(context);
+      this.resetInternalLoader(context.type);
     }
 
     this.hls.trigger(Event.ERROR, {
@@ -446,7 +448,6 @@ class PlaylistLoader extends EventHandler {
 
   _handlePlaylistLoaded(response, stats, context, networkDetails) {
 
-    const url = response.url;
     const {type, level, id, levelDetails} = context;
 
     if (!levelDetails.targetduration) {
@@ -457,7 +458,7 @@ class PlaylistLoader extends EventHandler {
     const canHaveLevels = PlaylistLoader.canHaveQualityLevels(context.type);
     if (canHaveLevels) {
 
-      hls.trigger(Event.LEVEL_LOADED, {
+      this.hls.trigger(Event.LEVEL_LOADED, {
         details: levelDetails,
         level: level || 0,
         id: id || 0,
@@ -469,7 +470,7 @@ class PlaylistLoader extends EventHandler {
 
       switch(type) {
       case ContextType.AUDIO_TRACK:
-        hls.trigger(Event.AUDIO_TRACK_LOADED, {
+        this.hls.trigger(Event.AUDIO_TRACK_LOADED, {
           details: levelDetails,
           id,
           stats,
@@ -477,7 +478,7 @@ class PlaylistLoader extends EventHandler {
         });
         break;
       case ContextType.SUBTITLE_TRACK:
-        hls.trigger(Event.SUBTITLE_TRACK_LOADED, {
+        this.hls.trigger(Event.SUBTITLE_TRACK_LOADED, {
           details: levelDetails,
           id,
           stats,
@@ -493,3 +494,4 @@ class PlaylistLoader extends EventHandler {
 }
 
 export default PlaylistLoader;
+
