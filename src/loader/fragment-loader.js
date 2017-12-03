@@ -28,19 +28,24 @@ class FragmentLoader extends EventHandler {
   }
 
   onFragLoading(data) {
-    let frag = data.frag,
-        type = frag.type,
-        loader = this.loaders[type],
-        config = this.hls.config;
+    const frag = data.frag,
+          type = frag.type,
+          loaders = this.loaders[type],
+          config = this.hls.config,
+          FragmentILoader = config.fLoader,
+          DefaultILoader = config.loader;
 
+    // reset fragment state
     frag.loaded = 0;
+
+    let loader = loaders[type];
     if (loader) {
-      logger.warn(`abort previous fragment loader for type:${type}`);
+      logger.warn(`abort previous fragment loader for type: ${type}`);
       loader.abort();
     }
 
-    loader = this.loaders[type] = frag.loader
-           = !!config.fLoader ? new config.fLoader(config) : new config.loader(config);
+    loader = loaders[type] = frag.loader =
+      !!config.fLoader ? new FragmentILoader(config) : new DefaultILoader(config);
 
     let loaderContext, loaderConfig, loaderCallbacks;
 
