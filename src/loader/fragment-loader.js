@@ -30,7 +30,7 @@ class FragmentLoader extends EventHandler {
   onFragLoading(data) {
     const frag = data.frag,
           type = frag.type,
-          loaders = this.loaders[type],
+          loaders = this.loaders,
           config = this.hls.config,
           FragmentILoader = config.fLoader,
           DefaultILoader = config.loader;
