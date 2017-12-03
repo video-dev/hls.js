@@ -20,7 +20,6 @@ class AbrController extends EventHandler {
                Event.ERROR);
     this.lastLoadedFragLevel = 0;
     this._nextAutoLevel = -1;
-    this.hls = hls;
     this.timer = null;
     this._bwEstimator = null;
     this.onCheck = this._abandonRulesCheck.bind(this);

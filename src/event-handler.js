@@ -11,12 +11,16 @@ import Event from './events';
 class EventHandler {
 
   constructor(hls, ...events) {
-    this.hls = hls;
+    this._hls = hls;
     this.onEvent = this.onEvent.bind(this);
     this.handledEvents = events;
     this.useGenericHandler = true;
 
     this.registerListeners();
+  }
+
+  get hls() {
+    return this._hls;
   }
 
   destroy() {
@@ -64,7 +68,9 @@ class EventHandler {
     try {
       eventToFunction.call(this, event, data).call();
     } catch (err) {
-      logger.error(`internal error happened while processing ${event}:${err.message}`);
+
+      logger.error(`An internal error happened while handling event ${event}. Error message: "${err.message}". Here is a stacktrace:`, err);
+
       this.hls.trigger(Event.ERROR, {type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: false, event : event, err : err});
     }
   }

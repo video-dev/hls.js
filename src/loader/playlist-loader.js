@@ -9,6 +9,8 @@ import {ErrorTypes, ErrorDetails} from '../errors';
 import AttrList from '../utils/attr-list';
 import {logger} from '../utils/logger';
 import {isCodecType} from '../utils/codecs';
+import Fragment from './fragment';
+import LevelKey from './level-key';
 
 // https://regex101.com is your friend
 const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
@@ -23,122 +25,6 @@ const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
 ].join(''), 'g');
 
 const LEVEL_PLAYLIST_REGEX_SLOW = /(?:(?:#(EXTM3U))|(?:#EXT-X-(PLAYLIST-TYPE):(.+))|(?:#EXT-X-(MEDIA-SEQUENCE): *(\d+))|(?:#EXT-X-(TARGETDURATION): *(\d+))|(?:#EXT-X-(KEY):(.+))|(?:#EXT-X-(START):(.+))|(?:#EXT-X-(ENDLIST))|(?:#EXT-X-(DISCONTINUITY-SEQ)UENCE:(\d+))|(?:#EXT-X-(DIS)CONTINUITY))|(?:#EXT-X-(VERSION):(\d+))|(?:#EXT-X-(MAP):(.+))|(?:(#)(.*):(.*))|(?:(#)(.*))(?:.*)\r?\n?/;
-
-class LevelKey {
-
-  constructor() {
-    this.method = null;
-    this.key = null;
-    this.iv = null;
-    this._uri = null;
-  }
-
-  get uri() {
-    if (!this._uri && this.reluri) {
-      this._uri = URLToolkit.buildAbsoluteURL(this.baseuri, this.reluri, { alwaysNormalize: true });
-    }
-    return this._uri;
-  }
-
-}
-
-class Fragment {
-
-  constructor() {
-    this._url = null;
-    this._byteRange = null;
-    this._decryptdata = null;
-    this.tagList = [];
-  }
-
-  get url() {
-    if (!this._url && this.relurl) {
-      this._url = URLToolkit.buildAbsoluteURL(this.baseurl, this.relurl, { alwaysNormalize: true });
-    }
-    return this._url;
-  }
-
-  set url(value) {
-    this._url = value;
-  }
-
-  get programDateTime() {
-    if (!this._programDateTime && this.rawProgramDateTime) {
-      this._programDateTime = new Date(Date.parse(this.rawProgramDateTime));
-    }
-    return this._programDateTime;
-  }
-
-  get byteRange() {
-    if (!this._byteRange) {
-      let byteRange = this._byteRange = [];
-      if (this.rawByteRange) {
-        const params = this.rawByteRange.split('@', 2);
-        if (params.length === 1) {
-          const lastByteRangeEndOffset = this.lastByteRangeEndOffset;
-          byteRange[0] = lastByteRangeEndOffset ? lastByteRangeEndOffset : 0;
-        } else {
-          byteRange[0] = parseInt(params[1]);
-        }
-        byteRange[1] = parseInt(params[0]) + byteRange[0];
-      }
-    }
-    return this._byteRange;
-  }
-
-  get byteRangeStartOffset() {
-    return this.byteRange[0];
-  }
-
-  get byteRangeEndOffset() {
-    return this.byteRange[1];
-  }
-
-  get decryptdata() {
-    if (!this._decryptdata) {
-      this._decryptdata = this.fragmentDecryptdataFromLevelkey(this.levelkey, this.sn);
-    }
-    return this._decryptdata;
-  }
-
-  /**
-   * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
-   * @returns {Uint8Array}
-   */
-  createInitializationVector(segmentNumber) {
-    var uint8View = new Uint8Array(16);
-
-    for (var i = 12; i < 16; i++) {
-      uint8View[i] = (segmentNumber >> 8 * (15 - i)) & 0xff;
-    }
-
-    return uint8View;
-  }
-
-  /**
-   * Utility method for parseLevelPlaylist to get a fragment's decryption data from the currently parsed encryption key data
-   * @param levelkey - a playlist's encryption info
-   * @param segmentNumber - the fragment's segment number
-   * @returns {*} - an object to be applied as a fragment's decryptdata
-   */
-  fragmentDecryptdataFromLevelkey(levelkey, segmentNumber) {
-    var decryptdata = levelkey;
-
-    if (levelkey && levelkey.method && levelkey.uri && !levelkey.iv) {
-      decryptdata = new LevelKey();
-      decryptdata.method = levelkey.method;
-      decryptdata.baseuri = levelkey.baseuri;
-      decryptdata.reluri = levelkey.reluri;
-      decryptdata.iv = this.createInitializationVector(segmentNumber);
-    }
-
-    return decryptdata;
-  }
-
-  cloneObj(obj) {
-    return JSON.parse(JSON.stringify(obj));
-  }
-}
 
 function findGroup(groups, mediaGroupId) {
   if (!groups) {

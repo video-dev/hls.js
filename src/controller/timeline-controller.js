@@ -38,7 +38,6 @@ class TimelineController extends EventHandler {
                 Event.LEVEL_SWITCHING,
                 Event.INIT_PTS_FOUND);
 
-    this.hls = hls;
     this.config = hls.config;
     this.enabled = true;
     this.Cues = hls.config.cueHandler;
