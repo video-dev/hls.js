@@ -74,7 +74,7 @@ class AudioStreamController extends TaskLoop {
       //Can change due level switch
       this.initPTS[cc] = initPTS;
       this.videoTrackCC = cc;
-      logger.log(`InitPTS for cc:${cc} found from video track:${initPTS}`);
+      logger.log(`InitPTS for cc: ${cc} found from video track: ${initPTS}`);
 
       //If we are waiting we need to demux/remux the waiting frag
       //With the new initPTS
