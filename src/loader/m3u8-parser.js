@@ -295,7 +295,7 @@ export default class M3U8Parser {
     level.startCC = level.fragments[0] ? level.fragments[0].cc : 0;
     level.endCC = cc;
 
-    if (!level.initSegment) {
+    if (!level.initSegment && level.fragments.length) {
       // this is a bit lurky but HLS really has no other way to tell us
       // if the fragments are TS or MP4, except if we download them :/
       // but this is to be able to handle SIDX.
