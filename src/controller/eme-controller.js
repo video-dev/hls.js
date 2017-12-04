@@ -221,9 +221,10 @@ class EMEController extends EventHandler {
 
     _onKeySessionMessage(keySession, message) {
 
-        logger.log(`handling EME key-session message`);
+        logger.log(`Got EME message event, creating license request`);
 
         this._requestLicense(message, (data) => {
+            logger.log('Received license data, updating key-session');
             keySession.update(data);
         });
     }
@@ -348,31 +349,46 @@ class EMEController extends EventHandler {
       }
 
       xhr.responseType = 'arraybuffer';
-      xhr.onreadystatechange = () => {
-        if (xhr.readyState === 4) {
-          if (xhr.status === 200) {
-            this._requestLicenseFailureCount = 0;
-            callback(xhr.response);
-          } else {
-            logger.error(`License Request XHR failed (${url}). Status: ${xhr.status} (${xhr.statusText})`);
-
-            this._requestLicenseFailureCount++;
-            if (this._requestLicenseFailureCount <= MAX_LICENSE_REQUEST_FAILURES) {
-              const attemptsLeft = MAX_LICENSE_REQUEST_FAILURES - this._requestLicenseFailureCount + 1;
-              logger.warn(`Retrying license request, ${attemptsLeft} attempts left`);
-              this._requestLicense(keyMessage, callback);
-              return;
-            }
-
-            this.hls.trigger(Event.ERROR, {
-              type: ErrorTypes.KEY_SYSTEM_ERROR,
-              details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
-              fatal: true
-            });
-          }
-        }
-      };
+      xhr.onreadystatechange =
+        this._onLicenseRequestReadyStageChange.bind(this, xhr, url, keyMessage, callback);
       return xhr;
+    }
+
+    /**
+     * @param {XMLHttpRequest} xhr
+     * @param {string} url License server URL
+     * @param {ArrayBuffer} keyMessage Message data issued by key-system
+     * @param {function} callback Called when XHR has succeeded
+     *
+     */
+    _onLicenseRequestReadyStageChange(xhr, url, keyMessage, callback) {
+
+      switch(xhr.readyState) {
+      case 4:
+        if (xhr.status === 200) {
+          this._requestLicenseFailureCount = 0;
+          logger.log('License request succeeded');
+          callback(xhr.response);
+        } else {
+          logger.error(`License Request XHR failed (${url}). Status: ${xhr.status} (${xhr.statusText})`);
+
+          this._requestLicenseFailureCount++;
+          if (this._requestLicenseFailureCount <= MAX_LICENSE_REQUEST_FAILURES) {
+            const attemptsLeft = MAX_LICENSE_REQUEST_FAILURES - this._requestLicenseFailureCount + 1;
+            logger.warn(`Retrying license request, ${attemptsLeft} attempts left`);
+            this._requestLicense(keyMessage, callback);
+            return;
+          }
+
+          this.hls.trigger(Event.ERROR, {
+            type: ErrorTypes.KEY_SYSTEM_ERROR,
+            details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
+            fatal: true
+          });
+        }
+        break;
+      }
+
     }
 
     /**
@@ -420,6 +436,8 @@ class EMEController extends EventHandler {
 
     _requestLicense(keyMessage, callback) {
 
+      logger.log('Requesting content license for key-system');
+
       const keysListItem = this._mediaKeysList[0];
       if (!keysListItem) {
           logger.error('Fatal error: Media is encrypted but no key-system access has been obtained yet');
@@ -433,6 +451,8 @@ class EMEController extends EventHandler {
 
       const url = this.getLicenseServerUrl(keysListItem.mediaKeySystemDomain);
       const xhr = this._createLicenseXhr(url, keyMessage, callback);
+
+      logger.log(`Sending license request to URL: ${url}`);
 
       xhr.send(this._generateLicenseRequestChallenge(keysListItem, keyMessage));
     }
