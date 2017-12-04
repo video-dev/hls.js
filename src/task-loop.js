@@ -1,14 +1,12 @@
 import EventHandler from './event-handler';
 
-const MAX_TICKS_RE_ENTRY = 0;
-
 export default class TaskLoop extends EventHandler {
 
   constructor(hls, ...events) {
     super(hls, ...events);
 
     this._tickInterval = null;
-    this._ticks = 0;
+    this._tickCallCount = 0;
   }
 
   /**
@@ -54,16 +52,14 @@ export default class TaskLoop extends EventHandler {
    * @param {Wether to force async} forceAsync
    * @returns {boolean} True when async, false when sync
    */
-  tick(forceAsync = true) {
-    if (this._ticks > MAX_TICKS_RE_ENTRY || !forceAsync) {
-      this._ticks++;
+  tick() {
+    this._tickCallCount++;
+    if (this._tickCallCount === 1) {
       this.doTick();
-      this._ticks--;
-      return false;
-    } else {
-      this._ticks = 0;
-      setTimeout(this.tick.bind(this), 0);
-      return true;
+      if (this._tickCallCount > 1) {
+        setTimeout(this.tick.bind(this), 0);
+      }
+      this._tickCallCount = 0;
     }
   }
 
