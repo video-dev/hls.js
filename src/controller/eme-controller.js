@@ -6,8 +6,11 @@
 
 import EventHandler from '../event-handler';
 import Event from '../events';
+import {ErrorTypes, ErrorDetails} from '../errors';
 
 import {logger} from '../utils/logger';
+
+const MAX_LICENSE_REQUEST_FAILURES = 3;
 
 /**
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Navigator/requestMediaKeySystemAccess
@@ -87,13 +90,44 @@ class EMEController extends EventHandler {
         Event.MANIFEST_PARSED
       );
 
-      this._drmConfig = hls.config.drmConfig;
+      this._widevineLicenseUrl = hls.config.widevineLicenseUrl;
+      this._licenseXhrSetup = hls.config.licenseXhrSetup;
 
       this._mediaKeysList = [];
       this._media = null;
 
       this._hasSetMediaKeys = false;
       this._isMediaEncrypted = false;
+
+      this._requestLicenseFailureCount = 0;
+    }
+
+    /**
+     *
+     * @param {string} keySystem Identifier for the key-system, see `KeySystems` enum
+     * @returns {string} License server URL for key-system (if any configured, otherwise causes error)
+     */
+    getLicenseServerUrl(keySystem) {
+      let url;
+      switch(keySystem) {
+      case KeySystems.WIDEVINE:
+        url = this._widevineLicenseUrl;
+        break;
+      default:
+        url = null;
+        break;
+      }
+
+      if (!url) {
+        logger.error(`No license server URL configured for key-system "${keySystem}"`);
+        this.hls.trigger(Event.ERROR, {
+          type: ErrorTypes.KEY_SYSTEM_ERROR,
+          details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
+          fatal: true
+        });
+      }
+
+      return url;
     }
 
     /**
@@ -212,7 +246,12 @@ class EMEController extends EventHandler {
             // FIXME: see if we can/want/need-to really to deal with several potential key-sessions?
             const keysListItem = this._mediaKeysList[0];
             if (!keysListItem || !keysListItem.mediaKeys) {
-                logger.error('Fatal error: Media is encrypted but no CDM access and keys have been obtained yet');
+                logger.error('Fatal: Media is encrypted but no CDM access or no keys have been obtained yet');
+                this.hls.trigger(Event.ERROR, {
+                  type: ErrorTypes.KEY_SYSTEM_ERROR,
+                  details: ErrorDetails.KEY_SYSTEM_NO_KEYS,
+                  fatal: true
+                });
                 return;
             }
 
@@ -228,18 +267,28 @@ class EMEController extends EventHandler {
         // FIXME: see if we can/want/need-to really to deal with several potential key-sessions?
         const keysListItem = this._mediaKeysList[0];
         if (!keysListItem) {
-            logger.error('Fatal error: Media is encrypted but no key-system access has been obtained yet');
+            logger.error('Fatal: Media is encrypted but not any key-system access has been obtained yet');
+            this.hls.trigger(Event.ERROR, {
+              type: ErrorTypes.KEY_SYSTEM_ERROR,
+              details: ErrorDetails.KEY_SYSTEM_NO_ACCESS,
+              fatal: true
+            });
             return;
         }
 
         if (keysListItem.mediaKeysSessionInitialized) {
-            logger.log('Key-Session already initialized');
+            logger.warn('Key-Session already initialized but requested again');
             return;
         }
 
         const keySession = keysListItem.mediaKeysSession;
         if (!keySession) {
-            logger.error('Fatal error: Media is encrypted but no key-session existing');
+            logger.error('Fatal: Media is encrypted but no key-session existing');
+            this.hls.trigger(Event.ERROR, {
+              type: ErrorTypes.KEY_SYSTEM_ERROR,
+              details: ErrorDetails.KEY_SYSTEM_NO_SESSION,
+              fatal: true
+            });
         }
 
         const initDataType = this._mediaEncryptionInitDataType;
@@ -251,71 +300,141 @@ class EMEController extends EventHandler {
 
         keySession.generateRequest(initDataType, initData)
             .then(() => {
-                logger.debug('generateRequest succeeded');
+                logger.debug('Key-session generation succeeded');
             })
             .catch((err) => {
                 logger.error('Error generating key-session request:', err);
+                this.hls.trigger(Event.ERROR, {
+                  type: ErrorTypes.KEY_SYSTEM_ERROR,
+                  details: ErrorDetails.KEY_SYSTEM_NO_SESSION,
+                  fatal: false
+                });
+            });
+    }
+
+    /**
+     * @param {string} url License server URL
+     * @param {ArrayBuffer} keyMessage Message data issued by key-system
+     * @param {function} callback Called when XHR has succeeded
+     * @returns {XMLHttpRequest} Unsent (but opened state) XHR object
+     */
+    _createLicenseXhr(url, keyMessage, callback) {
+      const xhr = new XMLHttpRequest();
+      const licenseXhrSetup = this._licenseXhrSetup;
+
+      try {
+        if (licenseXhrSetup) {
+          try {
+            licenseXhrSetup(xhr, url);
+          } catch (e) {
+            // let's try to open before running setup
+            xhr.open('POST', url, true);
+            licenseXhrSetup(xhr, url);
+          }
+        }
+        // if licenseXhrSetup did not yet call open, let's do it now
+        if (!xhr.readyState) {
+          xhr.open('POST', url, true);
+        }
+      } catch (e) {
+        // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
+        logger.error('Error setting up key-system license XHR', e);
+        this.hls.trigger(Event.ERROR, {
+          type: ErrorTypes.KEY_SYSTEM_ERROR,
+          details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
+          fatal: true
         });
+        return;
+      }
+
+      xhr.responseType = 'arraybuffer';
+      xhr.onreadystatechange = () => {
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200) {
+            this._requestLicenseFailureCount = 0;
+            callback(xhr.response);
+          } else {
+            logger.error(`License Request XHR failed (${url}). Status: ${xhr.status} (${xhr.statusText})`);
+
+            this._requestLicenseFailureCount++;
+            if (this._requestLicenseFailureCount <= MAX_LICENSE_REQUEST_FAILURES) {
+              const attemptsLeft = MAX_LICENSE_REQUEST_FAILURES - this._requestLicenseFailureCount + 1;
+              logger.warn(`Retrying license request, ${attemptsLeft} attempts left`);
+              this._requestLicense(keyMessage, callback);
+              return;
+            }
+
+            this.hls.trigger(Event.ERROR, {
+              type: ErrorTypes.KEY_SYSTEM_ERROR,
+              details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
+              fatal: true
+            });
+          }
+        }
+      };
+      return xhr;
+    }
+
+    /**
+     * @param {object} keysListItem
+     * @param {ArrayBuffer} keyMessage
+     * @returns {ArrayBuffer} Challenge data posted to license server
+     */
+    _generateLicenseRequestChallenge(keysListItem, keyMessage) {
+      let challenge;
+
+      if (keysListItem.mediaKeySystemDomain === KeySystems.PLAYREADY) {
+
+        logger.error('PlayReady is not supported (yet)');
+
+        // from https://github.com/MicrosoftEdge/Demos/blob/master/eme/scripts/demo.js
+        /*
+        if (this.licenseType !== this.LICENSE_TYPE_WIDEVINE) {
+            // For PlayReady CDMs, we need to dig the Challenge out of the XML.
+            var keyMessageXml = new DOMParser().parseFromString(String.fromCharCode.apply(null, new Uint16Array(keyMessage)), 'application/xml');
+            if (keyMessageXml.getElementsByTagName('Challenge')[0]) {
+                challenge = atob(keyMessageXml.getElementsByTagName('Challenge')[0].childNodes[0].nodeValue);
+            } else {
+                throw 'Cannot find <Challenge> in key message';
+            }
+            var headerNames = keyMessageXml.getElementsByTagName('name');
+            var headerValues = keyMessageXml.getElementsByTagName('value');
+            if (headerNames.length !== headerValues.length) {
+                throw 'Mismatched header <name>/<value> pair in key message';
+            }
+            for (var i = 0; i < headerNames.length; i++) {
+                xhr.setRequestHeader(headerNames[i].childNodes[0].nodeValue, headerValues[i].childNodes[0].nodeValue);
+            }
+        }
+        */
+
+      } else if (keysListItem.mediaKeySystemDomain === KeySystems.WIDEVINE) {
+          // For Widevine CDMs, the challenge is the keyMessage.
+          challenge = keyMessage;
+      } else {
+          logger.error('Unsupported key-system:', keysListItem.mediaKeySystemDomain);
+      }
+
+      return challenge;
     }
 
     _requestLicense(keyMessage, callback) {
 
-        const keysListItem = this._mediaKeysList[0];
-        if (!keysListItem) {
-            logger.error('Fatal error: Media is encrypted but no key-system access has been obtained yet');
-            return;
-        }
+      const keysListItem = this._mediaKeysList[0];
+      if (!keysListItem) {
+          logger.error('Fatal error: Media is encrypted but no key-system access has been obtained yet');
+          this.hls.trigger(Event.ERROR, {
+            type: ErrorTypes.KEY_SYSTEM_ERROR,
+            details: ErrorDetails.KEY_SYSTEM_NO_ACCESS,
+            fatal: true
+          });
+          return;
+      }
 
-        const url = this._drmConfig.widevineLicenseUrl;
+      const url = this.getLicenseServerUrl(keysListItem.mediaKeySystemDomain);
+      const xhr = this._createLicenseXhr(url, keyMessage, callback);
 
-        let challenge;
-
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', url);
-        xhr.responseType = 'arraybuffer';
-        xhr.onreadystatechange = function () {
-            if (xhr.readyState === 4) {
-                if (xhr.status === 200) {
-                    callback(xhr.response);
-                } else {
-                    throw new Error('License Request XHR failed (' + url + '). Status: ' + xhr.status + ' (' + xhr.statusText + ')');
-                }
-            }
-        };
-
-        if (keysListItem.mediaKeySystemDomain === KeySystems.PLAYREADY) {
-
-            logger.error('PlayReady is not supported (yet)');
-
-            // from https://github.com/MicrosoftEdge/Demos/blob/master/eme/scripts/demo.js
-            /*
-            if (this.licenseType !== this.LICENSE_TYPE_WIDEVINE) {
-                // For PlayReady CDMs, we need to dig the Challenge out of the XML.
-                var keyMessageXml = new DOMParser().parseFromString(String.fromCharCode.apply(null, new Uint16Array(keyMessage)), 'application/xml');
-                if (keyMessageXml.getElementsByTagName('Challenge')[0]) {
-                    challenge = atob(keyMessageXml.getElementsByTagName('Challenge')[0].childNodes[0].nodeValue);
-                } else {
-                    throw 'Cannot find <Challenge> in key message';
-                }
-                var headerNames = keyMessageXml.getElementsByTagName('name');
-                var headerValues = keyMessageXml.getElementsByTagName('value');
-                if (headerNames.length !== headerValues.length) {
-                    throw 'Mismatched header <name>/<value> pair in key message';
-                }
-                for (var i = 0; i < headerNames.length; i++) {
-                    xhr.setRequestHeader(headerNames[i].childNodes[0].nodeValue, headerValues[i].childNodes[0].nodeValue);
-                }
-            }
-            */
-
-        } else if (keysListItem.mediaKeySystemDomain === KeySystems.WIDEVINE) {
-            // For Widevine CDMs, the challenge is the keyMessage.
-            challenge = keyMessage;
-        } else {
-            logger.error('Unsupported key-system:', keysListItem.mediaKeySystemDomain);
-        }
-
-        xhr.send(challenge);
+      xhr.send(this._generateLicenseRequestChallenge(keysListItem, keyMessage));
     }
 
     onMediaAttached(data) {
