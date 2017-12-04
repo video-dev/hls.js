@@ -7,12 +7,19 @@ function getFragmentKey(fragment) {
   return fragment.level + '_' + fragment.sn;
 }
 
-export default class FragmentTracker extends EventHandler {
+export const State = {
+  NONE: 'NONE',
+  LOADING: 'LOADING',
+  PARTIAL: 'PARTIAL',
+};
+
+export class FragmentTracker extends EventHandler {
 
   constructor(hls) {
     super(hls,
       Event.BUFFER_APPENDED,
-      Event.FRAG_BUFFERED
+      Event.FRAG_BUFFERED,
+      Event.FRAG_LOADED
     );
 
     // This holds all the loading fragments until the buffer is populated
@@ -20,6 +27,7 @@ export default class FragmentTracker extends EventHandler {
     // This keeps track of all fragments that loaded differently into the buffer from the PTS
     this.partialFragments = {};
     this.partialFragmentTimes = {};
+    this.timeRanges = {};
     this.config = hls.config;
   }
 
@@ -27,6 +35,7 @@ export default class FragmentTracker extends EventHandler {
     this.loadingFragments = {};
     this.partialFragments = {};
     this.partialFragmentTimes = {};
+    this.timeRanges = {};
     EventHandler.prototype.destroy.call(this);
   }
 
@@ -36,35 +45,36 @@ export default class FragmentTracker extends EventHandler {
    * Fragments will need to be reloaded when the buffer is freed up, unregistering partial fragments will allow them to reload(since there might be parts that are still playable)
    * @param buffered This should be the sourceBuffer object, not media.buffered
    */
-  detectEvictedFragments(buffered) {
+  detectEvictedFragments(type, timeRange) {
     let fragment, fragmentTimes, time, found, startTime, endTime;
     // Check if any flagged fragments have been unloaded
     for (let fragKey in this.partialFragments) {
       if (this.partialFragments.hasOwnProperty(fragKey)) {
-
         fragment = this.partialFragments[fragKey];
-        fragmentTimes = this.partialFragmentTimes[fragKey];
-
-        for (let i = 0; i < fragmentTimes.length; i++) {
-          time = fragmentTimes[i];
-          found = false;
-          // This can be optimized
-          for (let j = 0; j < buffered.length; j++) {
-            startTime = buffered.start(j) - bufferPadding;
-            endTime = buffered.end(j) + bufferPadding;
-            if (time.startPTS >= startTime && time.endPTS <= endTime) {
-              found = true;
+        if(this.partialFragmentTimes[type] && this.partialFragmentTimes[type][fragKey]){
+          fragmentTimes = this.partialFragmentTimes[type][fragKey];
+          for (let i = 0; i < fragmentTimes.length; i++) {
+            time = fragmentTimes[i];
+            found = false;
+            // This can be optimized
+            for (let j = 0; j < timeRange.length; j++) {
+              startTime = timeRange.start(j) - bufferPadding;
+              endTime = timeRange.end(j) + bufferPadding;
+              if (time.startPTS >= startTime && time.endPTS <= endTime) {
+                found = true;
+              }
+              if(time.endPTS <= startTime) {
+                // No need to check the rest of the timeRange as it is in order
+                break;
+              }
             }
-            if(time.endPTS <= startTime) {
-              // No need to check the rest of the buffered as it is in order
+            if(found === false) {
+              console.error('evicted', fragKey);
+              // Unregister partial fragment as it needs to load again to be reused
+              delete this.partialFragments[fragKey];
+              delete this.partialFragmentTimes[type][fragKey];
               break;
             }
-          }
-          if(found === false) {
-            // Unregister partial fragment as it needs to load again to be reused
-            delete this.partialFragments[fragKey];
-            delete this.partialFragmentTimes[fragKey];
-            break;
           }
         }
       }
@@ -74,43 +84,48 @@ export default class FragmentTracker extends EventHandler {
   /**
    * Fragments that are loading will be checked in the buffer to see if they are loaded properly
    * Partially loaded fragments will be registered as a partial fragment
-   * @param buffered This should be the sourceBuffer object, not media.buffered
+   * @param fragment Check the fragment against all sourceBuffers loaded
    */
-  detectPartialFragments(buffered) {
-    let fragment, fragmentGaps, startTime, endTime;
-    for (let fragKey in this.loadingFragments) {
-      if (this.loadingFragments.hasOwnProperty(fragKey)) {
-        fragment = this.loadingFragments[fragKey];
+  detectPartialFragments(fragment) {
+    let fragmentGaps, startTime, endTime;
+    let fragKey = getFragmentKey(fragment);
+    for(let type in this.timeRanges) {
+      if (this.timeRanges.hasOwnProperty(type)) {
+        let timeRange = this.timeRanges[type];
+
+        // Check for bad fragments
         fragmentGaps = [];
-        for (let i = 0; i < buffered.length; i++) {
-          startTime = buffered.start(i) - bufferPadding;
-          endTime = buffered.end(i) + bufferPadding;
+        for (let i = 0; i < timeRange.length; i++) {
+          startTime = timeRange.start(i) - bufferPadding;
+          endTime = timeRange.end(i) + bufferPadding;
 
           if (fragment.startPTS >= startTime && fragment.endPTS <= endTime) {
             // Fragment is entirely contained in buffer
-            delete this.loadingFragments[fragKey];
-            // No need to check the other buffered times since it's completely playable
+            // No need to check the other timeRange times since it's completely playable
             break;
           } else if (fragment.startPTS < endTime && fragment.endPTS > startTime) {
             // Check for intersection with buffer
             // Get playable sections of the fragment
             fragmentGaps.push({
-              startPTS: Math.max(fragment.startPTS, buffered.start(i)),
-              endPTS: Math.min(fragment.endPTS, buffered.end(i))
+              startPTS: Math.max(fragment.startPTS, timeRange.start(i)),
+              endPTS: Math.min(fragment.endPTS, timeRange.end(i))
             });
           }
         }
 
-        if(fragmentGaps.length > 0) {
+        if (fragmentGaps.length > 0) {
           let fragmentGapString = '';
-          for(let key in fragmentGaps) {
+          for (let key in fragmentGaps) {
             let time = fragmentGaps[key];
             fragmentGapString += `[${time.startPTS}, ${time.endPTS}]`;
           }
-          logger.warn(`Fragment with bad PTS detected, level: ${fragment.level} sn: ${fragment.sn} startPTS: ${fragment.startPTS} endPTS: ${fragment.endPTS} loadedPTS: ${fragmentGapString}`);
-          this.partialFragmentTimes[fragKey] = fragmentGaps;
+          logger.warn(`Fragment with bad PTS detected(${type}), level: ${fragment.level} sn: ${fragment.sn} startPTS: ${fragment.startPTS} endPTS: ${fragment.endPTS} loadedPTS: ${fragmentGapString}`);
+          if(!this.partialFragmentTimes[type]) {
+            this.partialFragmentTimes[type] = {};
+          }
+          this.partialFragmentTimes[type][fragKey] = fragmentGaps;
           this.partialFragments[fragKey] = fragment;
-          delete this.loadingFragments[fragKey];
+
         }
       }
     }
@@ -137,42 +152,48 @@ export default class FragmentTracker extends EventHandler {
   /**
    * isBadFragment
    * @param fragment The fragment to check
-   * @returns {boolean} Returns true when a fragment never loaded or if it partially loaded
+   * @returns {string} Returns true when a fragment never loaded or if it partially loaded
    */
-  isBadFragment(fragment) {
+  getState(fragment) {
     let fragKey = getFragmentKey(fragment);
     if (this.loadingFragments[fragKey]) {
       // Fragment never loaded into buffer
-      return true;
+      return State.LOADING;
     }else if (this.partialFragments[fragKey]) {
       // Fragment only partially loaded
-      return true;
+      return State.PARTIAL;
     }
-    return false;
+    return State.NONE;
+  }
+
+  onFragLoaded(e) {
+    let fragment = e.frag;
+    let fragKey = getFragmentKey(fragment);
+    this.loadingFragments[fragKey] = fragment;
   }
 
   /**
    * Fires when the buffer is updated
    */
   onBufferAppended(e) {
-    let buffered = e.sourceBufferRanges;
-    console.error("onBufferAppended", e, buffered, this.loadingFragments, this.partialFragments);
-    if(buffered === null) {
-      return;
+    // Store the latest timeRanges loaded in the buffer
+    this.timeRanges = e.timeRanges;
+    for(let type in this.timeRanges) {
+      if (this.timeRanges.hasOwnProperty(type)) {
+        let timeRange = this.timeRanges[type];
+        this.detectEvictedFragments(type, timeRange);
+      }
     }
-    this.detectEvictedFragments(buffered);
-    // Check for bad fragments
-    this.detectPartialFragments(buffered);
   }
 
   /**
-   * Fires when source buffer is being appended to
-   * Note that this should not be called again before invoking onBufferAppended
+   * Fires after a fragment has been loaded into the source buffer
    */
   onFragBuffered(e) {
-    console.error("onFragBuffered", e, e.frag);
     let fragment = e.frag;
     let fragKey = getFragmentKey(fragment);
-    this.loadingFragments[fragKey] = fragment;
+    this.detectPartialFragments(fragment);
+    delete this.loadingFragments[fragKey];
   }
+
 }

@@ -7,7 +7,7 @@ import BufferHelper from '../helper/buffer-helper';
 import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import EventHandler from '../event-handler';
-import FragmentTracker from '../helper/fragment-tracker';
+import { FragmentTracker, State as FragmentTrackerState } from '../helper/fragment-tracker';
 import * as LevelHelper from '../helper/level-helper';
 import TimeRanges from '../utils/timeRanges';
 import {ErrorTypes, ErrorDetails} from '../errors';
@@ -31,7 +31,7 @@ const State = {
 
 class StreamController extends EventHandler {
 
-  constructor(hls) {
+  constructor(hls, fragmentTracker) {
     super(hls,
       Event.MEDIA_ATTACHED,
       Event.MEDIA_DETACHING,
@@ -51,7 +51,7 @@ class StreamController extends EventHandler {
       Event.BUFFER_APPENDED,
       Event.BUFFER_FLUSHED);
 
-    this.fragmentTracker = new FragmentTracker(hls);
+    this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
     this.audioCodecSwap = false;
     this.ticks = 0;
@@ -502,7 +502,8 @@ class StreamController extends EventHandler {
     } else {
       logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferEnd.toFixed(3)}`);
       // Check if fragment is attempting to load or already loaded with bad PTS
-      if(!this.fragmentTracker.isBadFragment(frag)) {
+      let ftState = this.fragmentTracker.getState(frag);
+      if(ftState !== FragmentTrackerState.LOADING && ftState !== FragmentTrackerState.PARTIAL) {
         frag.autoLevel = this.hls.autoLevelEnabled;
         frag.bitrateTest = this.bitrateTest;
 
@@ -1145,7 +1146,7 @@ class StreamController extends EventHandler {
           this.appended = true;
           // arm pending Buffering flag before appending a segment
           this.pendingBuffering = true;
-          hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer, parent : 'main',content : 'data', fragment : frag, updatePTS: buffer === data.data2});
+          hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer, parent : 'main',content : 'data'});
           segmentsPerFragment++;
         }
       });
