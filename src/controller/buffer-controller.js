@@ -30,6 +30,10 @@ class BufferController extends EventHandler {
     this._msDuration = null;
     // the value that we want to set mediaSource.duration to
     this._levelDuration = null;
+    // current stream state: true - for live broadcast, false - for VoD content
+    this._live = null;
+    // cache the self generated object url to detect hijack of video tag
+    this._objectUrl = null;
 
     // Source Buffer listeners
     this.onsbue = this.onSBUpdateEnd.bind(this);
@@ -107,6 +111,8 @@ class BufferController extends EventHandler {
       ms.addEventListener('sourceclose', this.onmsc);
       // link video and media Source
       media.src = URL.createObjectURL(ms);
+      // cache the locally generated object url
+      this._objectUrl = media.src;
     }
   }
 
@@ -132,13 +138,21 @@ class BufferController extends EventHandler {
       // Detach properly the MediaSource from the HTMLMediaElement as
       // suggested in https://github.com/w3c/media-source/issues/53.
       if (this.media) {
-        URL.revokeObjectURL(this.media.src);
-        this.media.removeAttribute('src');
-        this.media.load();
+        URL.revokeObjectURL(this._objectUrl);
+
+        // clean up video tag src only if it's our own url. some external libraries might
+        // hijack the video tag and change its 'src' without destroying the Hls instance first
+        if (this.media.src === this._objectUrl) {
+          this.media.removeAttribute('src');
+          this.media.load();
+        } else {
+          logger.warn('media.src was changed by a third party - skip cleanup');
+        }
       }
 
       this.mediaSource = null;
       this.media = null;
+      this._objectUrl = null;
       this.pendingTracks = {};
       this.tracks = {};
       this.sourceBuffer = {};
@@ -345,47 +359,62 @@ class BufferController extends EventHandler {
 
   onBufferFlushing(data) {
     this.flushRange.push({start: data.startOffset, end: data.endOffset, type : data.type});
-    // attempt flush immediatly
+    // attempt flush immediately
     this.flushBufferCounter = 0;
     this.doFlush();
   }
 
-  onLevelUpdated(event) {
-    let details = event.details;
-    if (details.fragments.length === 0) {
-      return;
+  onLevelUpdated({details}) {
+    if (details.fragments.length > 0) {
+      this._levelDuration = details.totalduration + details.fragments[0].start;
+      this._live = details.live;
+      this.updateMediaElementDuration();
     }
-    this._levelDuration = details.totalduration + details.fragments[0].start;
-    this.updateMediaElementDuration();
   }
 
-  // https://github.com/video-dev/hls.js/issues/355
+  /**
+   * Update Media Source duration to current level duration or override to Infinity if configuration parameter
+   * 'liveDurationInfinity` is set to `true`
+   * More details: https://github.com/video-dev/hls.js/issues/355
+   */
   updateMediaElementDuration() {
-    let media = this.media,
-        mediaSource = this.mediaSource,
-        sourceBuffer = this.sourceBuffer,
-        levelDuration = this._levelDuration;
-    if (levelDuration === null || !media || !mediaSource || !sourceBuffer || media.readyState === 0 || mediaSource.readyState !== 'open') {
+    let {config} = this.hls;
+    let duration;
+
+    if (this._levelDuration === null
+      || !this.media
+      || !this.mediaSource
+      || !this.sourceBuffer
+      || this.media.readyState === 0
+      || this.mediaSource.readyState !== 'open') {
       return;
     }
-    for (let type in sourceBuffer) {
-      if (sourceBuffer[type].updating) {
+
+    for (let type in this.sourceBuffer) {
+      if (this.sourceBuffer[type].updating === true) {
         // can't set duration whilst a buffer is updating
         return;
       }
     }
+
+    duration = this.media.duration;
+    // initialise to the value that the media source is reporting
     if (this._msDuration === null) {
-      // initialise to the value that the media source is reporting
-      this._msDuration = mediaSource.duration;
+      this._msDuration = this.mediaSource.duration;
     }
-    let duration = media.duration;
-    // levelDuration was the last value we set.
-    // not using mediaSource.duration as the browser may tweak this value
-    // only update mediasource duration if its value increase, this is to avoid
-    // flushing already buffered portion when switching between quality level
-    if ((levelDuration > this._msDuration && levelDuration > duration) || (duration === Infinity || isNaN(duration) )) {
-      logger.log(`Updating mediasource duration to ${levelDuration.toFixed(3)}`);
-      this._msDuration = mediaSource.duration = levelDuration;
+
+    if (this._live === true && config.liveDurationInfinity === true) {
+      // Override duration to Infinity
+      logger.log('Media Source duration is set to Infinity');
+      this._msDuration = this.mediaSource.duration = Infinity;
+    } else if ((this._levelDuration > this._msDuration && this._levelDuration > duration)
+      || (duration === Infinity || isNaN(duration) )) {
+      // levelDuration was the last value we set.
+      // not using mediaSource.duration as the browser may tweak this value
+      // only update Media Source duration if its value increase, this is to avoid
+      // flushing already buffered portion when switching between quality level
+      logger.log(`Updating Media Source duration to ${this._levelDuration.toFixed(3)}`);
+      this._msDuration = this.mediaSource.duration = this._levelDuration;
     }
   }
 

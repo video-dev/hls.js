@@ -2,7 +2,7 @@
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
+ 
 
 - [Getting started](#getting-started)
   - [First step: setup and support](#first-step-setup-and-support)
@@ -40,6 +40,7 @@
   - [`liveMaxLatencyDurationCount`](#livemaxlatencydurationcount)
   - [`liveSyncDuration`](#livesyncduration)
   - [`liveMaxLatencyDuration`](#livemaxlatencyduration)
+  - [`liveDurationInfinity`](#livedurationinfinity)
   - [`enableWorker`](#enableworker)
   - [`enableSoftwareAES`](#enablesoftwareaes)
   - [`startLevel`](#startlevel)
@@ -58,12 +59,12 @@
   - [`timelineController`](#timelinecontroller)
   - [`enableWebVTT`](#enablewebvtt)
   - [`enableCEA708Captions`](#enablecea708captions)
-    [`captionsTextTrack1Label`](#captionsTextTrack1Label)
-    [`captionsTextTrack1LanguageCode`](#captionsTextTrack1LanguageCode)
-    [`captionsTextTrack2Label`](#captionsTextTrack2Label)
-    [`captionsTextTrack2LanguageCode`](#captionsTextTrack2LanguageCode)
+  - [`captionsTextTrack1Label`](#captionstexttrack1label)
+  - [`captionsTextTrack1LanguageCode`](#captionstexttrack1languagecode)
+  - [`captionsTextTrack2Label`](#captionstexttrack2label)
+  - [`captionsTextTrack2LanguageCode`](#captionstexttrack2languagecode)
   - [`stretchShortVideoTrack`](#stretchshortvideotrack)
-  - [`maxAudioFramesDrift`](#maxAudioFramesDrift)
+  - [`maxAudioFramesDrift`](#maxaudioframesdrift)
   - [`forceKeyFrameOnDiscontinuity`](#forcekeyframeondiscontinuity)
   - [`abrEwmaFastLive`](#abrewmafastlive)
   - [`abrEwmaSlowLive`](#abrewmaslowlive)
@@ -77,6 +78,7 @@
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
   - [`hls.attachMedia(videoElement)`](#hlsattachmediavideoelement)
   - [`hls.detachMedia()`](#hlsdetachmedia)
+    - [`hls.media`](#hlsmedia)
 - [Quality switch Control API](#quality-switch-control-api)
   - [`hls.levels`](#hlslevels)
   - [`hls.currentLevel`](#hlscurrentlevel)
@@ -525,7 +527,7 @@ a value too close from `liveSyncDurationCount` is likely to cause playback stall
 
 (default: `undefined`)
 
-Alternative parameter to ```liveSyncDurationCount```, expressed in seconds vs number of segments.
+Alternative parameter to `liveSyncDurationCount`, expressed in seconds vs number of segments.
 If defined in the configuration object, `liveSyncDuration` will take precedence over the default `liveSyncDurationCount`.
 You can't define this parameter and either `liveSyncDurationCount` or `liveMaxLatencyDurationCount` in your configuration object at the same time.
 A value too low (inferior to ~3 segment durations) is likely to cause playback stalls.
@@ -539,6 +541,14 @@ If defined in the configuration object, `liveMaxLatencyDuration` will take prece
 If set, this value must be stricly superior to `liveSyncDuration` which must be defined as well.
 You can't define this parameter and either `liveSyncDurationCount` or `liveMaxLatencyDurationCount` in your configuration object at the same time.
 A value too close from `liveSyncDuration` is likely to cause playback stalls.
+
+### `liveDurationInfinity`
+
+(default: `false`)
+
+Override current Media Source duration to `Infinity` for a live broadcast. 
+Useful, if you are building a player which relies on native UI capabilities in modern browsers. 
+If you want to have a native Live UI in environments like iOS Safari, Safari, Android Google Chrome, etc. set this value to `true`.
 
 ### `enableWorker`
 
@@ -1315,7 +1325,7 @@ Full list of errors is described below:
 
 ## Objects
 
-### <a name="level"> Level
+### Level
 
 A `Level` object represents a given quality level.
 It contains quality level related info, retrieved from manifest, such as:
