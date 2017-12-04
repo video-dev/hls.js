@@ -281,12 +281,14 @@ $(document).ready(function() {
        recoverDecodingErrorDate = recoverSwapAudioCodecDate = null;
        fmp4Data = { 'audio': [], 'video': [] };
 
-       const drmConfig = {
-         widevineLicenseUrl: "https://cwip-shaka-proxy.appspot.com/no_auth",
-         playreadyLicenseUrl: null
-       };
+       const widevineLicenseUrl = "https://cwip-shaka-proxy.appspot.com/no_auth";
 
-       hls = new Hls({debug:true, enableWorker : enableWorker, defaultAudioCodec : defaultAudioCodec, drmConfig});
+       hls = new Hls({
+         debug: true,
+         enableWorker: enableWorker,
+         defaultAudioCodec: defaultAudioCodec,
+         widevineLicenseUrl: widevineLicenseUrl
+        });
 
        $("#HlsStatus").text('loading manifest and attaching video element...');
        hls.loadSource(url);

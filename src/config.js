@@ -64,6 +64,7 @@ export var hlsDefaultConfig = {
   fLoader: undefined,
   pLoader: undefined,
   xhrSetup: undefined,
+  licenseXhrSetup: undefined,              // used by eme-controller
   fetchSetup: undefined,
   abrController: AbrController,
   bufferController: BufferController,
