@@ -148,8 +148,6 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
 
   static parseSegmentIndex(initSegment) {
 
-    console.log('parsing SIDX:');
-
     const moov = MP4Demuxer.findBox(initSegment, ['moov'])[0];
     const moovEndOffset = moov ? moov.end : null; // we need this in case we need to chop of garbage of the end of current data
 
