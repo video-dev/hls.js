@@ -381,12 +381,12 @@ class BufferController extends EventHandler {
     let {config} = this.hls;
     let duration;
 
-    if (this._levelDuration === null
-      || !this.media
-      || !this.mediaSource
-      || !this.sourceBuffer
-      || this.media.readyState === 0
-      || this.mediaSource.readyState !== 'open') {
+    if (this._levelDuration === null ||
+      !this.media ||
+      !this.mediaSource ||
+      !this.sourceBuffer ||
+      this.media.readyState === 0 ||
+      this.mediaSource.readyState !== 'open') {
       return;
     }
 
@@ -407,8 +407,8 @@ class BufferController extends EventHandler {
       // Override duration to Infinity
       logger.log('Media Source duration is set to Infinity');
       this._msDuration = this.mediaSource.duration = Infinity;
-    } else if ((this._levelDuration > this._msDuration && this._levelDuration > duration)
-      || (duration === Infinity || isNaN(duration) )) {
+    } else if ((this._levelDuration > this._msDuration && this._levelDuration > duration) ||
+      (duration === Infinity || isNaN(duration) )) {
       // levelDuration was the last value we set.
       // not using mediaSource.duration as the browser may tweak this value
       // only update Media Source duration if its value increase, this is to avoid
