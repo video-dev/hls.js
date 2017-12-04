@@ -187,7 +187,7 @@ class EMEController extends EventHandler {
 
     _onKeySessionMessage(keySession, message) {
 
-        logger.log(`EME key-session message: ${message}`);
+        logger.log(`handling EME key-session message`);
 
         this._requestLicense(message, (data) => {
             keySession.update(data);
@@ -196,7 +196,7 @@ class EMEController extends EventHandler {
 
     _onMediaEncrypted(initDataType, initData) {
 
-        logger.log('Media is encrypted, init data:', initDataType, initData);
+        logger.log(`Media is encrypted using "${initDataType}" init data type`);
 
         this._isMediaEncrypted = true;
         this._mediaEncryptionInitDataType = initDataType;
@@ -245,7 +245,7 @@ class EMEController extends EventHandler {
         const initDataType = this._mediaEncryptionInitDataType;
         const initData = this._mediaEncryptionInitData;
 
-        logger.log('generating key-session request:', initDataType, initData);
+        logger.log(`Generating key-session request for "${initDataType}" init data type`);
 
         keysListItem.mediaKeysSessionInitialized = true;
 
