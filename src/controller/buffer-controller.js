@@ -220,9 +220,17 @@ class BufferController extends EventHandler {
     let parent = this.parent;
     // count nb of pending segments waiting for appending on this sourcebuffer
     let pending = this.segments.reduce( (counter, segment) => (segment.parent === parent) ? counter + 1 : counter , 0);
-    // this.sourceBuffer.video is better to use than media.buffered as it is closer to the PTS data from the fragments
-    let bufferedVideo = (this.sourceBuffer.video !== undefined && this.sourceBuffer.video !== null)? this.sourceBuffer.video.buffered : null;
-    this.hls.trigger(Event.BUFFER_APPENDED, { parent : parent, pending : pending, sourceBufferRanges : bufferedVideo });
+
+
+    // this.sourceBuffer is better to use than media.buffered as it is closer to the PTS data from the fragments
+    let timeRanges = {};
+    for (let type in this.sourceBuffer) {
+      if (this.sourceBuffer.hasOwnProperty(type)) {
+        timeRanges[type] = this.sourceBuffer[type].buffered;
+      }
+    }
+
+    this.hls.trigger(Event.BUFFER_APPENDED, { parent, pending, timeRanges });
     // don't append in flushing mode
     if (!this._needsFlush) {
       this.doAppending();
@@ -471,7 +479,6 @@ class BufferController extends EventHandler {
         let segment = segments.shift();
         try {
           let type = segment.type, sb = sourceBuffer[type];
-          console.error(type, sb);
           if(sb) {
             if(!sb.updating) {
               // reset sourceBuffer ended flag before appending segment
