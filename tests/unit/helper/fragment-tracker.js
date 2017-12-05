@@ -14,17 +14,6 @@ function createMockBuffer(buffered) {
 }
 
 describe.only('FragmentTracker', () => {
-  // BUFFER_APPENDED
-  // FRAG_BUFFERED
-  // FRAG_LOADED
-  // detectEvictedFragments(type, timeRange)
-  // detectPartialFragments(fragment)
-  // getPartialFragment(time)
-  // getState(fragment)
-  // cancelFragmentLoad(fragment)
-  // onFragLoaded(e)
-  // onBufferAppended(e)
-  // onFragBuffered(e)
   describe('getPartialFragment', () => {
     let hls, fragmentTracker, fragment, buffered, partialFragment;
 

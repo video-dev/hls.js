@@ -114,18 +114,20 @@ export class FragmentTracker extends EventHandler {
         }
 
         if (fragmentGaps.length > 0) {
-          let fragmentGapString = '';
-          for (let key in fragmentGaps) {
-            let time = fragmentGaps[key];
-            fragmentGapString += `[${time.startPTS}, ${time.endPTS}]`;
+          if(this.config.debug) {
+            let fragmentGapString = '';
+            for (let key in fragmentGaps) {
+              let time = fragmentGaps[key];
+              fragmentGapString += `[${time.startPTS}, ${time.endPTS}]`;
+            }
+            logger.warn(`fragment-tracker: fragment with malformed PTS detected(${type}), level: ${fragment.level} sn: ${fragment.sn} startPTS: ${fragment.startPTS} endPTS: ${fragment.endPTS} loadedPTS: ${fragmentGapString}`);
           }
-          logger.warn(`Fragment with malformed PTS detected(${type}), level: ${fragment.level} sn: ${fragment.sn} startPTS: ${fragment.startPTS} endPTS: ${fragment.endPTS} loadedPTS: ${fragmentGapString}`);
+
           if(!this.partialFragmentTimes[type]) {
             this.partialFragmentTimes[type] = {};
           }
           this.partialFragmentTimes[type][fragKey] = fragmentGaps;
           this.partialFragments[fragKey] = fragment;
-
         }
       }
     }
