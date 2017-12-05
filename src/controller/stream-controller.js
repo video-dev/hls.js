@@ -7,7 +7,7 @@ import BufferHelper from '../helper/buffer-helper';
 import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import EventHandler from '../event-handler';
-import { FragmentTracker, State as FragmentTrackerState } from '../helper/fragment-tracker';
+import { FragmentTracker, FragmentTrackerState } from '../helper/fragment-tracker';
 import * as LevelHelper from '../helper/level-helper';
 import TimeRanges from '../utils/timeRanges';
 import {ErrorTypes, ErrorDetails} from '../errors';
@@ -503,7 +503,7 @@ class StreamController extends EventHandler {
       logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferEnd.toFixed(3)}`);
       // Check if fragment is attempting to load or already loaded with bad PTS
       let ftState = this.fragmentTracker.getState(frag);
-      if(ftState !== FragmentTrackerState.LOADING && ftState !== FragmentTrackerState.PARTIAL) {
+      if(frag.backtracked === true || (ftState !== FragmentTrackerState.LOADING && ftState !== FragmentTrackerState.PARTIAL)) {
         frag.autoLevel = this.hls.autoLevelEnabled;
         frag.bitrateTest = this.bitrateTest;
 
@@ -1122,6 +1122,7 @@ class StreamController extends EventHandler {
               this.nextLoadPosition = data.startPTS;
               this.state = State.IDLE;
               this.fragPrevious = frag;
+              this.fragmentTracker.cancelFragmentLoad(frag);
               this.tick();
               return;
             }
