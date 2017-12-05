@@ -7,7 +7,7 @@ function getFragmentKey(fragment) {
   return fragment.level + '_' + fragment.sn;
 }
 
-export const State = {
+export const FragmentTrackerState = {
   NONE: 'NONE',
   LOADING: 'LOADING',
   PARTIAL: 'PARTIAL',
@@ -43,7 +43,8 @@ export class FragmentTracker extends EventHandler {
    * Partial fragments effected by coded frame eviction will be unregistered
    * The browser will unload parts of the buffer to free up memory for new buffer data
    * Fragments will need to be reloaded when the buffer is freed up, unregistering partial fragments will allow them to reload(since there might be parts that are still playable)
-   * @param buffered This should be the sourceBuffer object, not media.buffered
+   * @param type The type of media this is (eg. video, audio)
+   * @param timeRange TimeRange object from a sourceBuffer
    */
   detectEvictedFragments(type, timeRange) {
     let fragment, fragmentTimes, time, found, startTime, endTime;
@@ -69,7 +70,6 @@ export class FragmentTracker extends EventHandler {
               }
             }
             if(found === false) {
-              console.error('evicted', fragKey);
               // Unregister partial fragment as it needs to load again to be reused
               delete this.partialFragments[fragKey];
               delete this.partialFragmentTimes[type][fragKey];
@@ -93,7 +93,7 @@ export class FragmentTracker extends EventHandler {
       if (this.timeRanges.hasOwnProperty(type)) {
         let timeRange = this.timeRanges[type];
 
-        // Check for bad fragments
+        // Check for malformed fragments
         fragmentGaps = [];
         for (let i = 0; i < timeRange.length; i++) {
           startTime = timeRange.start(i) - bufferPadding;
@@ -119,7 +119,7 @@ export class FragmentTracker extends EventHandler {
             let time = fragmentGaps[key];
             fragmentGapString += `[${time.startPTS}, ${time.endPTS}]`;
           }
-          logger.warn(`Fragment with bad PTS detected(${type}), level: ${fragment.level} sn: ${fragment.sn} startPTS: ${fragment.startPTS} endPTS: ${fragment.endPTS} loadedPTS: ${fragmentGapString}`);
+          logger.warn(`Fragment with malformed PTS detected(${type}), level: ${fragment.level} sn: ${fragment.sn} startPTS: ${fragment.startPTS} endPTS: ${fragment.endPTS} loadedPTS: ${fragmentGapString}`);
           if(!this.partialFragmentTimes[type]) {
             this.partialFragmentTimes[type] = {};
           }
@@ -137,35 +137,57 @@ export class FragmentTracker extends EventHandler {
    * @returns fragment Returns a partial fragment at a time or null if there is no partial fragment
    */
   getPartialFragment(time) {
-    let fragment;
+    let fragment, timePadding, startTime, endTime;
+    let bestFragment = null;
+    let bestOverlap = 0;
     for (let fragKey in this.partialFragments) {
       if (this.partialFragments.hasOwnProperty(fragKey)) {
         fragment = this.partialFragments[fragKey];
-        if(time >= fragment.startPTS && time <= fragment.endPTS) {
-          return fragment;
+        startTime = fragment.startPTS - bufferPadding;
+        endTime = fragment.endPTS - bufferPadding;
+        if(time >= startTime && time <= endTime) {
+          // Use the fragment that has the most padding from start and end time
+          timePadding = Math.min(time - startTime, endTime - time);
+          if(bestOverlap <= timePadding) {
+            bestFragment = fragment;
+            bestOverlap = timePadding;
+          }
         }
       }
     }
-    return null;
+    return bestFragment;
   }
 
   /**
-   * isBadFragment
+   * getState
    * @param fragment The fragment to check
-   * @returns {string} Returns true when a fragment never loaded or if it partially loaded
+   * @returns {string} Returns the fragment state when a fragment never loaded or if it partially loaded
    */
   getState(fragment) {
     let fragKey = getFragmentKey(fragment);
     if (this.loadingFragments[fragKey]) {
       // Fragment never loaded into buffer
-      return State.LOADING;
+      return FragmentTrackerState.LOADING;
     }else if (this.partialFragments[fragKey]) {
       // Fragment only partially loaded
-      return State.PARTIAL;
+      return FragmentTrackerState.PARTIAL;
     }
-    return State.NONE;
+    return FragmentTrackerState.NONE;
   }
 
+  /**
+   * cancelFragmentLoad
+   * Calling cancelFragmentLoad will remove a fragment from being checked by onFragBuffered
+   * @param fragment The fragment to cancel loading
+   */
+  cancelFragmentLoad(fragment) {
+    let fragKey = getFragmentKey(fragment);
+    delete this.loadingFragments[fragKey];
+  }
+
+  /**
+   * Fires when a fragment loading is completed
+   */
   onFragLoaded(e) {
     let fragment = e.frag;
     let fragKey = getFragmentKey(fragment);
