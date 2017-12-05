@@ -302,7 +302,7 @@
     let i = 0;
     while (i < len) {
         c = array[i++];
-        if (c == 0x00 && exitOnNull) {
+        if (c === 0x00 && exitOnNull) {
             return out;
         } else if (c === 0x00 || c === 0x03) {
           // If the character is 3 (END_OF_TEXT) or 0 (NULL) then skip it
