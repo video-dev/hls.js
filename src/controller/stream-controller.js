@@ -7,7 +7,7 @@ import BufferHelper from '../helper/buffer-helper';
 import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import EventHandler from '../event-handler';
-import { FragmentTracker, FragmentTrackerState } from '../helper/fragment-tracker';
+import {FragmentTrackerState} from '../helper/fragment-tracker';
 import * as LevelHelper from '../helper/level-helper';
 import TimeRanges from '../utils/timeRanges';
 import {ErrorTypes, ErrorDetails} from '../errors';

@@ -16,7 +16,7 @@ import {isSupported} from './helper/is-supported';
 import {logger, enableLogs} from './utils/logger';
 import EventEmitter from 'events';
 import {hlsDefaultConfig} from './config';
-import {FragmentTracker} from "./helper/fragment-tracker";
+import {FragmentTracker} from './helper/fragment-tracker';
 
 export default class Hls {
   static get version() {
