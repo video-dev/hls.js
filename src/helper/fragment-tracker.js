@@ -9,7 +9,7 @@ function getFragmentKey(fragment) {
 
 export const FragmentTrackerState = {
   NONE: 'NONE',
-  LOADING: 'LOADING',
+  LOADING_BUFFER: 'LOADING_BUFFER',
   PARTIAL: 'PARTIAL',
 };
 
@@ -144,7 +144,7 @@ export class FragmentTracker extends EventHandler {
       if (this.partialFragments.hasOwnProperty(fragKey)) {
         fragment = this.partialFragments[fragKey];
         startTime = fragment.startPTS - bufferPadding;
-        endTime = fragment.endPTS - bufferPadding;
+        endTime = fragment.endPTS + bufferPadding;
         if(time >= startTime && time <= endTime) {
           // Use the fragment that has the most padding from start and end time
           timePadding = Math.min(time - startTime, endTime - time);
@@ -167,7 +167,7 @@ export class FragmentTracker extends EventHandler {
     let fragKey = getFragmentKey(fragment);
     if (this.loadingFragments[fragKey]) {
       // Fragment never loaded into buffer
-      return FragmentTrackerState.LOADING;
+      return FragmentTrackerState.LOADING_BUFFER;
     }else if (this.partialFragments[fragKey]) {
       // Fragment only partially loaded
       return FragmentTrackerState.PARTIAL;
