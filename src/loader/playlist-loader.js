@@ -185,6 +185,7 @@ class PlaylistLoader extends EventHandler {
       maxRetry = 0;
       timeout = config.levelLoadingTimeOut;
       // TODO Introduce retry settings for audio-track and subtitle-track, it should not use level retry config
+      break;
     default:
       maxRetry = config.levelLoadingMaxRetry;
       timeout = config.levelLoadingTimeOut;
