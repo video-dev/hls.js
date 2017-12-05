@@ -6,7 +6,8 @@ import BinarySearch from '../utils/binary-search';
 import BufferHelper from '../helper/buffer-helper';
 import Demuxer from '../demux/demuxer';
 import Event from '../events';
-import * as LevelHelper from '../helper/level-helper';import TimeRanges from '../utils/timeRanges';
+import * as LevelHelper from '../helper/level-helper';
+import TimeRanges from '../utils/timeRanges';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
 import { alignDiscontinuities } from '../utils/discontinuities';
@@ -219,7 +220,7 @@ class StreamController extends TaskLoop {
     // if level info not retrieved yet, switch state and wait for level retrieval
     // if live playlist, ensure that new playlist has been refreshed to avoid loading/try to load
     // a useless and outdated fragment (that might even introduce load error if it is already out of the live playlist)
-    if (typeof levelDetails === 'undefined' || levelDetails.live && this.levelLastLoaded !== level) {
+    if (levelDetails === undefined || levelDetails.live === true && this.levelLastLoaded !== level) {
       this.state = State.WAITING_LEVEL;
       return;
     }

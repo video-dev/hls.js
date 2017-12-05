@@ -152,7 +152,6 @@ class PlaylistLoader extends EventHandler {
   }
 
   load(url, context) {
-
     const config = this.hls.config;
 
     // Check if a loader for this context already exists
@@ -167,7 +166,6 @@ class PlaylistLoader extends EventHandler {
         loader.abort();
       }
     }
-
     let maxRetry,
         timeout,
         retryDelay,
@@ -182,6 +180,11 @@ class PlaylistLoader extends EventHandler {
       retryDelay = config.manifestLoadingRetryDelay;
       maxRetryDelay = config.manifestLoadingMaxRetryTimeout;
       break;
+    case ContextType.LEVEL:
+      // Disable internal loader retry logic, since we are managing retries in Level Controller
+      maxRetry = 0;
+      timeout = config.levelLoadingTimeOut;
+      // TODO Introduce retry settings for audio-track and subtitle-track, it should not use level retry config
     default:
       maxRetry = config.levelLoadingMaxRetry;
       timeout = config.levelLoadingTimeOut;
