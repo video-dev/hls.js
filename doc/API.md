@@ -1129,15 +1129,13 @@ Full list of Events is available below:
    - `Hls.Events.BUFFER_APPENDING`  - fired when we append a segment to the buffer
     -  data: { segment : segment object }
   - `Hls.Events.BUFFER_APPENDED`  - fired when we are done with appending a media segment to the buffer
-    -  data: { parent : segment parent that triggered `BUFFER_APPENDING`, pending : nb of segments waiting for appending for this segment parent, sourceBufferRanges : video source buffer after appending }
+    -  data: { parent : segment parent that triggered `BUFFER_APPENDING`, pending : nb of segments waiting for appending for this segment parent, timeRanges : { video: TimeRange, audio: TimeRange }
   - `Hls.Events.BUFFER_EOS`  - fired when the stream is finished and we want to notify the media buffer that there will be no more data
     -  data: { }
   - `Hls.Events.BUFFER_FLUSHING`  - fired when the media buffer should be flushed
     -  data: { startOffset, endOffset }
   - `Hls.Events.BUFFER_FLUSHED`  - fired when the media buffer has been flushed
     -  data: { startOffset, endOffset }
-  - `Hls.Events.SOURCE_BUFFER_APPEND` - fired when we start appending a media segment to the source buffer
-    -  data: { segment : segment object }
   - `Hls.Events.MANIFEST_LOADING`  - fired to signal that a manifest loading starts
     -  data: { url : manifestURL }
   - `Hls.Events.MANIFEST_LOADED`  - fired after manifest has been loaded

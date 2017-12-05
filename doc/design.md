@@ -104,8 +104,8 @@ design idea is pretty simple :
         - once FRAG_PARSED is received an all segments have been appended (BUFFER_APPENDED) then buffer controller will recheck whether it needs to buffer more data.
       - **monitor current playback quality level** (buffer controller maintains a map between media position and quality level)
       - **monitor playback progress** : if playhead is not moving for more than `config.lowBufferWatchdogPeriod` although it should (video metadata is known and video is not ended, nor paused, nor in seeking state) and if we have less than 500ms buffered upfront, one of two things will happen.
-        - if there is a known bad fragment then hls.js will **jump over the buffer hole** and seek to the beginning the next playable buffered range.
-        - if there is not a known bad fragment, hls.js will nudge currentTime until playback recovers (it will retry every seconds, and report a fatal error after config.maxNudgeRetry retries)
+        - if there is a known malformed fragment then hls.js will **jump over the buffer hole** and seek to the beginning the next playable buffered range.
+        - hls.js will nudge currentTime until playback recovers (it will retry every seconds, and report a fatal error after config.maxNudgeRetry retries)
       500 ms is a "magic number" that has been set to overcome browsers not always stopping playback at the exact end of a buffered range.
       these holes in media buffered are often encountered on stream discontinuity or on quality level switch. holes could be "large" especially if fragments are not starting with a keyframe.
        if playhead is stuck for more than `config.highBufferWatchdogPeriod` second in a buffered area, hls.js will nudge currentTime until playback recovers (it will retry every seconds, and report a fatal error after config.maxNudgeRetry retries)
