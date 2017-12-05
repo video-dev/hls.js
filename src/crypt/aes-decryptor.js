@@ -248,13 +248,14 @@ class AESDecryptor {
       offset = offset + 4;
     }
  
-    if (outputInt32.buffer.byteLength) {
-      // padding (PKCS7)
-      let paddingBytes = (new DataView(outputInt32.buffer)).getUint8(outputInt32.buffer.byteLength - 1);
-      return outputInt32.buffer.slice(0, outputInt32.buffer.byteLength - paddingBytes);
+    // padding (PKCS7)
+    let outputBytes = outputInt32.buffer.byteLength;
+    let paddingBytes = outputBytes && (new DataView(outputInt32.buffer)).getUint8(outputBytes - 1);
+    if (paddingBytes) {
+      return outputInt32.buffer.slice(0, outputBytes - paddingBytes);
+    } else {
+      return outputInt32.buffer;
     }
-
-    return outputInt32.buffer;
   }
 
   destroy() {
