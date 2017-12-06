@@ -118,6 +118,7 @@ class AudioStreamController extends EventHandler {
       if (frag.loader) {
         frag.loader.abort();
       }
+      this.fragmentTracker.cancelFragmentLoad(frag);
       this.fragCurrent = null;
     }
     this.fragPrevious = null;
