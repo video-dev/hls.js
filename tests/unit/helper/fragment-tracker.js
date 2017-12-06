@@ -141,5 +141,45 @@ describe.only('FragmentTracker', () => {
         }});
       assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.NONE);
     });
+
+    it('supports audio buffer', () => {
+      hls.trigger(Event.BUFFER_APPENDED, {timeRanges: {
+          video: createMockBuffer([
+            {
+              startPTS: 0,
+              endPTS: 2
+            },
+          ]),
+          audio: createMockBuffer([
+            {
+              startPTS: 0.5,
+              endPTS: 2
+            },
+          ])
+        }});
+      hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
+
+      assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.PARTIAL);
+    });
+
+    it('supports video', () => {
+      hls.trigger(Event.BUFFER_APPENDED, {timeRanges: {
+          video: createMockBuffer([
+            {
+              startPTS: 0.5,
+              endPTS: 2
+            },
+          ]),
+          audio: createMockBuffer([
+            {
+              startPTS: 0,
+              endPTS: 2
+            },
+          ])
+        }});
+      hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
+
+      assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.PARTIAL);
+    });
   });
 });
