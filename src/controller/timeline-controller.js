@@ -50,7 +50,8 @@ class TimelineController extends EventHandler {
             Event.FRAG_LOADED,
             Event.LEVEL_SWITCHING,
             Event.INIT_PTS_FOUND,
-            Event.FRAG_PARSING_INIT_SEGMENT
+            Event.FRAG_PARSING_INIT_SEGMENT,
+            Event.SUBTITLE_TRACKS_CLEARED
         );
 
         this.hls = hls;
@@ -432,6 +433,10 @@ class TimelineController extends EventHandler {
                 });
             }
         }
+    }
+
+    onSubtitleTracksCleared() {
+        this.tracks = [];
     }
 
     onFragParsingUserdata(data) {

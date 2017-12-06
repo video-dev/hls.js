@@ -59,6 +59,8 @@ export default {
     AUDIO_TRACK_LOADED: 'hlsAudioTrackLoaded',
     // fired to notify that subtitle track lists has been updated - data: { subtitleTracks : subtitleTracks }
     SUBTITLE_TRACKS_UPDATED: 'hlsSubtitleTracksUpdated',
+    // fired to notify that subtitle tracks were cleared as a result of stopping the media
+    SUBTITLE_TRACKS_CLEARED: 'hlsSubtitleTracksCleared',
     // fired when an subtitle track switch occurs - data: { id : subtitle track id }
     SUBTITLE_TRACK_SWITCH: 'hlsSubtitleTrackSwitch',
     // fired when a subtitle track loading starts - data: { url : subtitle track URL, id : subtitle track id }
