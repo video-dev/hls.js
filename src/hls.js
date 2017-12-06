@@ -105,7 +105,7 @@ export default class Hls {
     // optional audio stream controller
     let Controller = config.audioStreamController;
     if (Controller) {
-      networkControllers.push(new Controller(this));
+      networkControllers.push(new Controller(this, fragmentTracker));
     }
     this.networkControllers = networkControllers;
 

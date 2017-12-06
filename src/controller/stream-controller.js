@@ -501,9 +501,9 @@ class StreamController extends EventHandler {
       this.hls.trigger(Event.KEY_LOADING, {frag: frag});
     } else {
       logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferEnd.toFixed(3)}`);
-      // Check if fragment is attempting to load or already loaded with bad PTS
+      // Check if fragment is not loaded
       let ftState = this.fragmentTracker.getState(frag);
-      if(ftState !== FragmentTrackerState.LOADING_BUFFER && ftState !== FragmentTrackerState.PARTIAL) {
+      if(ftState === FragmentTrackerState.NONE) {
         frag.autoLevel = this.hls.autoLevelEnabled;
         frag.bitrateTest = this.bitrateTest;
 
@@ -750,14 +750,12 @@ class StreamController extends EventHandler {
       this.startPosition = this.lastCurrentTime = 0;
     }
 
-    // reset fragment loading counter on MSE detaching to avoid reporting FRAG_LOOP_LOADING_ERROR after error recovery
+    // reset fragment backtracked flag
     var levels = this.levels;
     if (levels) {
-      // reset fragment load counter
         levels.forEach(level => {
           if(level.details) {
             level.details.fragments.forEach(fragment => {
-              fragment.loadCounter = undefined;
               fragment.backtracked = undefined;
             });
           }
@@ -1316,25 +1314,6 @@ class StreamController extends EventHandler {
             // switch error to fatal
             data.fatal = true;
             this.state = State.ERROR;
-          }
-        }
-        break;
-      case ErrorDetails.FRAG_LOOP_LOADING_ERROR:
-        if(!data.fatal) {
-          // if buffer is not empty
-          if (mediaBuffered) {
-            // try to reduce max buffer length : rationale is that we could get
-            // frag loop loading error because of buffer eviction
-            this._reduceMaxBufferLength(frag.duration);
-            this.state = State.IDLE;
-          } else {
-            // buffer empty. report as fatal if in manual mode or if lowest level.
-            // level controller takes care of emergency switch down logic
-            if (!frag.autoLevel || frag.level === 0) {
-              // switch error to fatal
-              data.fatal = true;
-              this.state = State.ERROR;
-            }
           }
         }
         break;

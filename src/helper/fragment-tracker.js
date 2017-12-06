@@ -11,6 +11,7 @@ export const FragmentTrackerState = {
   NONE: 'NONE',
   LOADING_BUFFER: 'LOADING_BUFFER',
   PARTIAL: 'PARTIAL',
+  GOOD: 'GOOD',
 };
 
 export class FragmentTracker extends EventHandler {
@@ -24,6 +25,8 @@ export class FragmentTracker extends EventHandler {
 
     // This holds all the loading fragments until the buffer is populated
     this.loadingFragments = {};
+    // This holds all the successfully loaded fragments until the buffer is evicted
+    this.goodFragments = {};
     // This keeps track of all fragments that loaded differently into the buffer from the PTS
     this.partialFragments = {};
     this.partialFragmentTimes = {};
@@ -32,6 +35,7 @@ export class FragmentTracker extends EventHandler {
   }
 
   destroy() {
+    this.goodFragments = {};
     this.loadingFragments = {};
     this.partialFragments = {};
     this.partialFragmentTimes = {};
@@ -52,7 +56,7 @@ export class FragmentTracker extends EventHandler {
     for (let fragKey in this.partialFragments) {
       if (this.partialFragments.hasOwnProperty(fragKey)) {
         fragment = this.partialFragments[fragKey];
-        if(this.partialFragmentTimes[type] && this.partialFragmentTimes[type][fragKey]){
+        if(this.partialFragmentTimes[type] !== undefined && this.partialFragmentTimes[type][fragKey] !== undefined){
           fragmentTimes = this.partialFragmentTimes[type][fragKey];
           for (let i = 0; i < fragmentTimes.length; i++) {
             time = fragmentTimes[i];
@@ -79,6 +83,29 @@ export class FragmentTracker extends EventHandler {
         }
       }
     }
+    for (let fragKey in this.goodFragments) {
+      if (this.goodFragments.hasOwnProperty(fragKey)) {
+        fragment = this.goodFragments[fragKey];
+        let found = false;
+        for (let i = 0; i < timeRange.length; i++) {
+          startTime = timeRange.start(i) - bufferPadding;
+          endTime = timeRange.end(i) + bufferPadding;
+          if (fragment.startPTS >= startTime && fragment.endPTS <= endTime) {
+            // Fragment is entirely contained in buffer
+            found = true;
+            // No need to check the other timeRange times since it's completely playable
+            break;
+          }
+          if(fragment.endPTS <= startTime) {
+            // No need to check the rest of the timeRange as it is in order
+            break;
+          }
+        }
+        if(!found) {
+          delete this.goodFragments[fragKey];
+        }
+      }
+    }
   }
 
   /**
@@ -89,9 +116,9 @@ export class FragmentTracker extends EventHandler {
   detectPartialFragments(fragment) {
     let fragmentGaps, startTime, endTime;
     let fragKey = getFragmentKey(fragment);
+    let goodFragment = true;
     for(let type in this.timeRanges) {
       if (this.timeRanges.hasOwnProperty(type)) {
-
         if(fragment.type === 'main' || fragment.type === type) {
           let timeRange = this.timeRanges[type];
 
@@ -123,15 +150,21 @@ export class FragmentTracker extends EventHandler {
               }
               logger.warn(`fragment-tracker: fragment with malformed PTS detected(${type}), level: ${fragment.level} sn: ${fragment.sn} startPTS: ${fragment.startPTS} endPTS: ${fragment.endPTS} loadedPTS: ${fragmentGapString}`);
             }
-
-            if(!this.partialFragmentTimes[type]) {
+            if(this.partialFragmentTimes[type] === undefined) {
+              // fragment type can be 'main' while buffer type can be 'video' so we need both
               this.partialFragmentTimes[type] = {};
             }
             this.partialFragmentTimes[type][fragKey] = fragmentGaps;
             this.partialFragments[fragKey] = fragment;
+
+            goodFragment = false;
           }
         }
       }
+    }
+    // Fragments can be good in one buffer but not in all, so we need to check this outside the loop
+    if (goodFragment) {
+      this.goodFragments[fragKey] = fragment;
     }
   }
 
@@ -169,7 +202,10 @@ export class FragmentTracker extends EventHandler {
    */
   getState(fragment) {
     let fragKey = getFragmentKey(fragment);
-    if (this.loadingFragments[fragKey]) {
+    if (this.goodFragments[fragKey]) {
+      // Fragment is still loaded
+      return FragmentTrackerState.GOOD;
+    }else if (this.loadingFragments[fragKey]) {
       // Fragment never loaded into buffer
       return FragmentTrackerState.LOADING_BUFFER;
     }else if (this.partialFragments[fragKey]) {

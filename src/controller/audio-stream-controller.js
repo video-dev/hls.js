@@ -8,9 +8,10 @@ import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import EventHandler from '../event-handler';
 import * as LevelHelper from '../helper/level-helper';import TimeRanges from '../utils/timeRanges';
-import {ErrorTypes, ErrorDetails} from '../errors';
+import {ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
 import { findFragWithCC } from '../utils/discontinuities';
+import {FragmentTrackerState} from '../helper/fragment-tracker';
 
 const State = {
   STOPPED : 'STOPPED',
@@ -31,7 +32,7 @@ const State = {
 
 class AudioStreamController extends EventHandler {
 
-  constructor(hls) {
+  constructor(hls, fragmentTracker) {
     super(hls,
       Event.MEDIA_ATTACHED,
       Event.MEDIA_DETACHING,
@@ -49,7 +50,7 @@ class AudioStreamController extends EventHandler {
       Event.BUFFER_APPENDED,
       Event.BUFFER_FLUSHED,
       Event.INIT_PTS_FOUND);
-
+    this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
     this.audioCodecSwap = false;
     this.ticks = 0;
@@ -336,31 +337,19 @@ class AudioStreamController extends EventHandler {
               hls.trigger(Event.KEY_LOADING, {frag: frag});
             } else {
               logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
-              // ensure that we are not reloading the same fragments in loop ...
-              if (this.fragLoadIdx !== undefined) {
-                this.fragLoadIdx++;
-              } else {
-                this.fragLoadIdx = 0;
-              }
-              if (frag.loadCounter) {
-                frag.loadCounter++;
-                let maxThreshold = config.fragLoadingLoopThreshold;
-                // if this frag has already been loaded 3 times, and if it has been reloaded recently
-                if (frag.loadCounter > maxThreshold && (Math.abs(this.fragLoadIdx - frag.loadIdx) < maxThreshold)) {
-                  hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_LOOP_LOADING_ERROR, fatal: false, frag: frag});
-                  return;
+              let fragmentState = this.fragmentTracker.getState(frag);
+              // Check if fragment is not loaded
+              let ftState = this.fragmentTracker.getState(frag);
+              if(ftState === FragmentTrackerState.NONE) {
+                this.fragCurrent = frag;
+                this.startFragRequested = true;
+                if (!isNaN(frag.sn)) {
+                  this.nextLoadPosition = frag.start + frag.duration;
                 }
+                hls.trigger(Event.FRAG_LOADING, {frag: frag});
+                this.state = State.FRAG_LOADING;
               } else {
-                frag.loadCounter = 1;
               }
-              frag.loadIdx = this.fragLoadIdx;
-              this.fragCurrent = frag;
-              this.startFragRequested = true;
-              if (!isNaN(frag.sn)) {
-                this.nextLoadPosition = frag.start + frag.duration;
-              }
-              hls.trigger(Event.FRAG_LOADING, {frag: frag});
-              this.state = State.FRAG_LOADING;
             }
           }
         }
@@ -440,18 +429,6 @@ class AudioStreamController extends EventHandler {
       this.startPosition = this.lastCurrentTime = 0;
     }
 
-    // reset fragment loading counter on MSE detaching to avoid reporting FRAG_LOOP_LOADING_ERROR after error recovery
-    var tracks = this.tracks;
-    if (tracks) {
-      // reset fragment load counter
-        tracks.forEach(track => {
-          if(track.details) {
-            track.details.fragments.forEach(fragment => {
-              fragment.loadCounter = undefined;
-            });
-          }
-      });
-    }
     // remove video listeners
     if (media) {
       media.removeEventListener('seeking', this.onvseeking);
@@ -470,10 +447,6 @@ class AudioStreamController extends EventHandler {
     }
     if (this.media) {
       this.lastCurrentTime = this.media.currentTime;
-    }
-    // avoid reporting fragment loop loading error in case user is seeking several times on same position
-    if (this.fragLoadIdx !== undefined) {
-      this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
     }
     // tick to speed up processing
     this.tick();
@@ -516,10 +489,6 @@ class AudioStreamController extends EventHandler {
       this.audioSwitch = true;
       //main audio track are handled by stream-controller, just do something if switching to alt audio track
       this.state=State.IDLE;
-      // increase fragment load Index to avoid frag loop loading error after buffer flush
-      if (this.fragLoadIdx !== undefined) {
-        this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
-      }
     }
     this.tick();
   }
@@ -826,8 +795,6 @@ class AudioStreamController extends EventHandler {
           let config = this.config;
           if (loadError <= config.fragLoadingMaxRetry) {
             this.fragLoadError = loadError;
-            // reset load counter to avoid frag loop loading error
-            frag.loadCounter = 0;
             // exponential backoff capped to config.fragLoadingMaxRetryTimeout
             var delay = Math.min(Math.pow(2,loadError-1)*config.fragLoadingRetryDelay,config.fragLoadingMaxRetryTimeout);
             logger.warn(`audioStreamController: frag loading failed, retry in ${delay} ms`);
@@ -842,7 +809,6 @@ class AudioStreamController extends EventHandler {
           }
         }
         break;
-      case ErrorDetails.FRAG_LOOP_LOADING_ERROR:
       case ErrorDetails.AUDIO_TRACK_LOAD_ERROR:
       case ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT:
       case ErrorDetails.KEY_LOAD_ERROR:
@@ -867,8 +833,6 @@ class AudioStreamController extends EventHandler {
               // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
               config.maxMaxBufferLength/=2;
               logger.warn(`audio:reduce max buffer length to ${config.maxMaxBufferLength}s`);
-              // increase fragment load Index to avoid frag loop loading error after buffer flush
-              this.fragLoadIdx += 2 * config.fragLoadingLoopThreshold;
             }
             this.state = State.IDLE;
           } else {

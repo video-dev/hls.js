@@ -95,7 +95,7 @@ describe('FragmentTracker', () => {
 
       hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
 
-      assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.NONE);
+      assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.GOOD);
     });
 
     it('detects partial fragments', () => {
@@ -245,7 +245,7 @@ describe('FragmentTracker', () => {
       });
       hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
 
-      assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.NONE);
+      assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.GOOD);
     });
   });
 });
