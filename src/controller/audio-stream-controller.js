@@ -337,7 +337,6 @@ class AudioStreamController extends EventHandler {
               hls.trigger(Event.KEY_LOADING, {frag: frag});
             } else {
               logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
-              let fragmentState = this.fragmentTracker.getState(frag);
               // Check if fragment is not loaded
               let ftState = this.fragmentTracker.getState(frag);
               if(ftState === FragmentTrackerState.NONE) {
