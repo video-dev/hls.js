@@ -503,7 +503,7 @@ class StreamController extends EventHandler {
       logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferEnd.toFixed(3)}`);
       // Check if fragment is attempting to load or already loaded with bad PTS
       let ftState = this.fragmentTracker.getState(frag);
-      if(frag.backtracked === true || (ftState !== FragmentTrackerState.LOADING_BUFFER && ftState !== FragmentTrackerState.PARTIAL)) {
+      if(ftState !== FragmentTrackerState.LOADING_BUFFER && ftState !== FragmentTrackerState.PARTIAL) {
         frag.autoLevel = this.hls.autoLevelEnabled;
         frag.bitrateTest = this.bitrateTest;
 

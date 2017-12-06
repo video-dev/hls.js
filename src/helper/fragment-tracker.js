@@ -4,7 +4,7 @@ import Event from '../events';
 
 const bufferPadding = 0.2;
 function getFragmentKey(fragment) {
-  return fragment.level + '_' + fragment.sn;
+  return `${fragment.type}_${fragment.level}_${fragment.sn}`;
 }
 
 export const FragmentTrackerState = {
@@ -91,43 +91,45 @@ export class FragmentTracker extends EventHandler {
     let fragKey = getFragmentKey(fragment);
     for(let type in this.timeRanges) {
       if (this.timeRanges.hasOwnProperty(type)) {
-        let timeRange = this.timeRanges[type];
 
-        // Check for malformed fragments
-        fragmentGaps = [];
-        for (let i = 0; i < timeRange.length; i++) {
-          startTime = timeRange.start(i) - bufferPadding;
-          endTime = timeRange.end(i) + bufferPadding;
+        if(fragment.type === 'main' || fragment.type === type) {
+          let timeRange = this.timeRanges[type];
 
-          if (fragment.startPTS >= startTime && fragment.endPTS <= endTime) {
-            // Fragment is entirely contained in buffer
-            // No need to check the other timeRange times since it's completely playable
-            break;
-          } else if (fragment.startPTS < endTime && fragment.endPTS > startTime) {
-            // Check for intersection with buffer
-            // Get playable sections of the fragment
-            fragmentGaps.push({
-              startPTS: Math.max(fragment.startPTS, timeRange.start(i)),
-              endPTS: Math.min(fragment.endPTS, timeRange.end(i))
-            });
-          }
-        }
-
-        if (fragmentGaps.length > 0) {
-          if(this.config.debug) {
-            let fragmentGapString = '';
-            for (let key in fragmentGaps) {
-              let time = fragmentGaps[key];
-              fragmentGapString += `[${time.startPTS}, ${time.endPTS}]`;
+          // Check for malformed fragments
+          fragmentGaps = [];
+          for (let i = 0; i < timeRange.length; i++) {
+            startTime = timeRange.start(i) - bufferPadding;
+            endTime = timeRange.end(i) + bufferPadding;
+            if (fragment.startPTS >= startTime && fragment.endPTS <= endTime) {
+              // Fragment is entirely contained in buffer
+              // No need to check the other timeRange times since it's completely playable
+              break;
+            } else if (fragment.startPTS < endTime && fragment.endPTS > startTime) {
+              // Check for intersection with buffer
+              // Get playable sections of the fragment
+              fragmentGaps.push({
+                startPTS: Math.max(fragment.startPTS, timeRange.start(i)),
+                endPTS: Math.min(fragment.endPTS, timeRange.end(i))
+              });
             }
-            logger.warn(`fragment-tracker: fragment with malformed PTS detected(${type}), level: ${fragment.level} sn: ${fragment.sn} startPTS: ${fragment.startPTS} endPTS: ${fragment.endPTS} loadedPTS: ${fragmentGapString}`);
           }
 
-          if(!this.partialFragmentTimes[type]) {
-            this.partialFragmentTimes[type] = {};
+          if (fragmentGaps.length > 0) {
+            if(this.config.debug) {
+              let fragmentGapString = '';
+              for (let key in fragmentGaps) {
+                let time = fragmentGaps[key];
+                fragmentGapString += `[${time.startPTS}, ${time.endPTS}]`;
+              }
+              logger.warn(`fragment-tracker: fragment with malformed PTS detected(${type}), level: ${fragment.level} sn: ${fragment.sn} startPTS: ${fragment.startPTS} endPTS: ${fragment.endPTS} loadedPTS: ${fragmentGapString}`);
+            }
+
+            if(!this.partialFragmentTimes[type]) {
+              this.partialFragmentTimes[type] = {};
+            }
+            this.partialFragmentTimes[type][fragKey] = fragmentGaps;
+            this.partialFragments[fragKey] = fragment;
           }
-          this.partialFragmentTimes[type][fragKey] = fragmentGaps;
-          this.partialFragments[fragKey] = fragment;
         }
       }
     }

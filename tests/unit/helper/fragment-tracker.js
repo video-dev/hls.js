@@ -13,7 +13,7 @@ function createMockBuffer(buffered) {
   };
 }
 
-describe.only('FragmentTracker', () => {
+describe('FragmentTracker', () => {
   describe('getPartialFragment', () => {
     let hls, fragmentTracker, fragment, buffered, partialFragment;
 
@@ -25,6 +25,7 @@ describe.only('FragmentTracker', () => {
       endPTS: 1,
       sn: 1,
       level: 1,
+      type: 'main'
     };
     hls.trigger(Event.FRAG_LOADED, { frag: fragment });
 
@@ -35,10 +36,12 @@ describe.only('FragmentTracker', () => {
       },
     ]);
 
-    hls.trigger(Event.BUFFER_APPENDED, {timeRanges: {
+    hls.trigger(Event.BUFFER_APPENDED, {
+      timeRanges: {
         video: buffered,
         audio: buffered
-      }});
+      }
+    });
 
     hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
 
@@ -58,7 +61,7 @@ describe.only('FragmentTracker', () => {
   });
 
   describe('getState', () => {
-    let hls, fragmentTracker, fragment, segment, buffered;
+    let hls, fragmentTracker, fragment, buffered;
 
     hls = new Hls({});
     fragmentTracker = new FragmentTracker(hls);
@@ -68,10 +71,7 @@ describe.only('FragmentTracker', () => {
       endPTS: 1,
       sn: 1,
       level: 1,
-    };
-    segment = {
-      type: 'video',
-      fragment: fragment
+      type: 'main'
     };
     hls.trigger(Event.FRAG_LOADED, { frag: fragment });
 
@@ -86,10 +86,12 @@ describe.only('FragmentTracker', () => {
           endPTS: 1
         },
       ]);
-      hls.trigger(Event.BUFFER_APPENDED, {timeRanges: {
+      hls.trigger(Event.BUFFER_APPENDED, {
+        timeRanges: {
           video: buffered,
           audio: buffered
-        }});
+        }
+      });
 
       hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
 
@@ -103,10 +105,12 @@ describe.only('FragmentTracker', () => {
           endPTS: 2
         },
       ]);
-      hls.trigger(Event.BUFFER_APPENDED, {timeRanges: {
+      hls.trigger(Event.BUFFER_APPENDED, {
+        timeRanges: {
           video: buffered,
           audio: buffered
-        }});
+        }
+      });
 
       hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
 
@@ -120,10 +124,12 @@ describe.only('FragmentTracker', () => {
           endPTS: 2
         },
       ]);
-      hls.trigger(Event.BUFFER_APPENDED, {timeRanges: {
+      hls.trigger(Event.BUFFER_APPENDED, {
+        timeRanges: {
           video: buffered,
           audio: buffered
-        }});
+        }
+      });
       hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
 
       assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.PARTIAL);
@@ -135,15 +141,34 @@ describe.only('FragmentTracker', () => {
           endPTS: 2
         },
       ]);
-      hls.trigger(Event.BUFFER_APPENDED, {timeRanges: {
+      hls.trigger(Event.BUFFER_APPENDED, {
+        timeRanges: {
           video: buffered,
           audio: buffered
-        }});
+        }
+      });
       assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.NONE);
     });
+  });
+
+  describe('onFragBuffered', () => {
+    let hls, fragmentTracker, fragment;
+
+    hls = new Hls({});
+    fragmentTracker = new FragmentTracker(hls);
 
     it('supports audio buffer', () => {
-      hls.trigger(Event.BUFFER_APPENDED, {timeRanges: {
+      fragment = {
+        startPTS: 0,
+        endPTS: 1,
+        sn: 1,
+        level: 1,
+        type: 'main'
+      };
+      hls.trigger(Event.FRAG_LOADED, { frag: fragment });
+
+      hls.trigger(Event.BUFFER_APPENDED, {
+        timeRanges: {
           video: createMockBuffer([
             {
               startPTS: 0,
@@ -156,14 +181,24 @@ describe.only('FragmentTracker', () => {
               endPTS: 2
             },
           ])
-        }});
+        }
+      });
       hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
 
       assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.PARTIAL);
     });
 
-    it('supports video', () => {
-      hls.trigger(Event.BUFFER_APPENDED, {timeRanges: {
+    it('supports video buffer', () => {
+      fragment = {
+        startPTS: 0,
+        endPTS: 1,
+        sn: 1,
+        level: 1,
+        type: 'main'
+      };
+      hls.trigger(Event.FRAG_LOADED, { frag: fragment });
+      hls.trigger(Event.BUFFER_APPENDED, {
+        timeRanges: {
           video: createMockBuffer([
             {
               startPTS: 0.5,
@@ -176,10 +211,41 @@ describe.only('FragmentTracker', () => {
               endPTS: 2
             },
           ])
-        }});
+        }
+      });
       hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
 
       assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.PARTIAL);
+    });
+
+    it('supports audio only buffer', () => {
+      fragment = {
+        startPTS: 0,
+        endPTS: 1,
+        sn: 1,
+        level: 1,
+        type: 'audio'
+      };
+      hls.trigger(Event.FRAG_LOADED, { frag: fragment });
+      hls.trigger(Event.BUFFER_APPENDED, {
+        timeRanges: {
+          video: createMockBuffer([
+            {
+              startPTS: 0.5,
+              endPTS: 2
+            },
+          ]),
+          audio: createMockBuffer([
+            {
+              startPTS: 0,
+              endPTS: 2
+            },
+          ])
+        }
+      });
+      hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
+
+      assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.NONE);
     });
   });
 });
