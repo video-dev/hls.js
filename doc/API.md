@@ -1280,8 +1280,6 @@ Full list of errors is described below:
 
   - `Hls.ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR` - raised when manifest only contains quality level with codecs incompatible with MediaSource Engine.
     - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR`, fatal : `true`, url : manifest URL }
-  - `Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR` - raised upon detection of same audio fragment being requested in loop
-    - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR`, fatal : `true` or `false`, frag : fragment object }
   - `Hls.ErrorDetails.FRAG_DECRYPT_ERROR` - raised when fragment decryption fails
     - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.FRAG_DECRYPT_ERROR`, fatal : `true`, reason : failure reason }
   - `Hls.ErrorDetails.FRAG_PARSING_ERROR` - raised when fragment parsing fails
