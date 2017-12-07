@@ -27,7 +27,7 @@ const setupEach = function(config) {
   emeController = new EMEController(new HlsMock(config));
 }
 
-describe.only('EMEController', () => {
+describe('EMEController', () => {
 
   beforeEach(() => {
     setupEach();
