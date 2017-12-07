@@ -142,14 +142,14 @@ export class FragmentTracker extends EventHandler {
           }
 
           if (fragmentGaps.length > 0) {
-            if(this.config.debug) {
-              let fragmentGapString = '';
-              for (let key in fragmentGaps) {
-                let time = fragmentGaps[key];
-                fragmentGapString += `[${time.startPTS}, ${time.endPTS}]`;
-              }
-              logger.warn(`fragment-tracker: fragment with malformed PTS detected(${type}), level: ${fragment.level} sn: ${fragment.sn} startPTS: ${fragment.startPTS} endPTS: ${fragment.endPTS} loadedPTS: ${fragmentGapString}`);
-            }
+            // if(this.config.debug) {
+            //   let fragmentGapString = '';
+            //   for (let key in fragmentGaps) {
+            //     let time = fragmentGaps[key];
+            //     fragmentGapString += `[${time.startPTS}, ${time.endPTS}]`;
+            //   }
+            //   logger.warn(`fragment-tracker: fragment with malformed PTS detected(${type}), level: ${fragment.level} sn: ${fragment.sn} startPTS: ${fragment.startPTS} endPTS: ${fragment.endPTS} loadedPTS: ${fragmentGapString}`);
+            // }
             if(this.partialFragmentTimes[type] === undefined) {
               // fragment type can be 'main' while buffer type can be 'video' so we need both
               this.partialFragmentTimes[type] = {};
