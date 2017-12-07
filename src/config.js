@@ -17,6 +17,8 @@ import TimelineController from './controller/timeline-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
 import SubtitleStreamController from  './controller/subtitle-stream-controller';
 
+const requestMediaKeySystemAccess = window.navigator.requestMediaKeySystemAccess;
+
 export var hlsDefaultConfig = {
   autoStartLoad: true,                    // used by stream-controller
   startPosition: -1,                      // used by stream-controller
@@ -84,7 +86,11 @@ export var hlsDefaultConfig = {
   abrMaxWithRealBitrate : false,            // used by abr-controller
   maxStarvationDelay : 4,                   // used by abr-controller
   maxLoadingDelay : 4,                      // used by abr-controller
-  minAutoBitrate: 0                         // used by hls
+  minAutoBitrate: 0,                        // used by hls
+  emeEnabled: false,                        // used by eme-controller
+  widevineLicenseUrl: undefined,            // used by eme-controller
+  requestMediaKeySystemAccessFunc:
+            requestMediaKeySystemAccess,    // used by eme-controller
 };
 
 if (typeof __SUBTITLE__ !== 'undefined' && __SUBTITLE__) {
