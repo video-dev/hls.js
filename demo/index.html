@@ -281,13 +281,16 @@ $(document).ready(function() {
        recoverDecodingErrorDate = recoverSwapAudioCodecDate = null;
        fmp4Data = { 'audio': [], 'video': [] };
 
-       const widevineLicenseUrl = "https://cwip-shaka-proxy.appspot.com/no_auth";
+       //const widevineLicenseUrl = "https://cwip-shaka-proxy.appspot.com/no_auth";
+       // try https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine-hls/hls.m3u8
 
        hls = new Hls({
          debug: true,
          enableWorker: enableWorker,
-         defaultAudioCodec: defaultAudioCodec,
-         widevineLicenseUrl: widevineLicenseUrl
+         defaultAudioCodec: defaultAudioCodec
+         //,
+         //emeEnabled: true,
+         //widevineLicenseUrl: widevineLicenseUrl
         });
 
        $("#HlsStatus").text('loading manifest and attaching video element...');
