@@ -224,6 +224,8 @@ var logger = exportedLogger;
   AUDIO_TRACK_LOADED: 'hlsAudioTrackLoaded',
   // fired to notify that subtitle track lists has been updated - data: { subtitleTracks : subtitleTracks }
   SUBTITLE_TRACKS_UPDATED: 'hlsSubtitleTracksUpdated',
+  // fired to notify that subtitle tracks were cleared as a result of stopping the media
+  SUBTITLE_TRACKS_CLEARED: 'hlsSubtitleTracksCleared',
   // fired when an subtitle track switch occurs - data: { id : subtitle track id }
   SUBTITLE_TRACK_SWITCH: 'hlsSubtitleTrackSwitch',
   // fired when a subtitle track loading starts - data: { url : subtitle track URL, id : subtitle track id }
@@ -7709,11 +7711,27 @@ var stream_controller_StreamController = function (_EventHandler) {
   };
 
   StreamController.prototype.getBufferedFrag = function getBufferedFrag(position) {
+    // Position and frag PTS values have differing precision; truncate to 3 digits so that marginal differences do not
+    // cause unexpected results (e.g. we want 1.000000001 to equal 1.000)
+    var trunc = function trunc(num) {
+      return Math.round(num * 1000) / 1000;
+    };
+    var isDefined = function isDefined(num) {
+      return num !== void 0 && num !== null;
+    };
+
+    if (!isDefined(position)) {
+      return;
+    }
+
+    var truncPos = trunc(position);
     return binary_search.search(this._bufferedFrags, function (frag) {
-      if (position < frag.startPTS) {
-        return -1;
-      } else if (position > frag.endPTS) {
-        return 1;
+      if (isDefined(frag.startPTS) && isDefined(frag.endPTS)) {
+        if (truncPos < trunc(frag.startPTS)) {
+          return -1;
+        } else if (truncPos > trunc(frag.endPTS)) {
+          return 1;
+        }
       }
       return 0;
     });
