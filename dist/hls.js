@@ -224,6 +224,8 @@ var logger = exportedLogger;
   AUDIO_TRACK_LOADED: 'hlsAudioTrackLoaded',
   // fired to notify that subtitle track lists has been updated - data: { subtitleTracks : subtitleTracks }
   SUBTITLE_TRACKS_UPDATED: 'hlsSubtitleTracksUpdated',
+  // fired to notify that subtitle tracks were cleared as a result of stopping the media
+  SUBTITLE_TRACKS_CLEARED: 'hlsSubtitleTracksCleared',
   // fired when an subtitle track switch occurs - data: { id : subtitle track id }
   SUBTITLE_TRACK_SWITCH: 'hlsSubtitleTrackSwitch',
   // fired when a subtitle track loading starts - data: { url : subtitle track URL, id : subtitle track id }
@@ -7712,11 +7714,27 @@ var stream_controller_StreamController = function (_EventHandler) {
   };
 
   StreamController.prototype.getBufferedFrag = function getBufferedFrag(position) {
+    // Position and frag PTS values have differing precision; truncate to 3 digits so that marginal differences do not
+    // cause unexpected results (e.g. we want 1.000000001 to equal 1.000)
+    var trunc = function trunc(num) {
+      return Math.round(num * 1000) / 1000;
+    };
+    var isDefined = function isDefined(num) {
+      return num !== void 0 && num !== null;
+    };
+
+    if (!isDefined(position)) {
+      return;
+    }
+
+    var truncPos = trunc(position);
     return binary_search.search(this._bufferedFrags, function (frag) {
-      if (position < frag.startPTS) {
-        return -1;
-      } else if (position > frag.endPTS) {
-        return 1;
+      if (isDefined(frag.startPTS) && isDefined(frag.endPTS)) {
+        if (truncPos < trunc(frag.startPTS)) {
+          return -1;
+        } else if (truncPos > trunc(frag.endPTS)) {
+          return 1;
+        }
       }
       return 0;
     });
@@ -13974,7 +13992,7 @@ var timeline_controller_TimelineController = function (_EventHandler) {
   function TimelineController(hls) {
     timeline_controller__classCallCheck(this, TimelineController);
 
-    var _this = timeline_controller__possibleConstructorReturn(this, _EventHandler.call(this, hls, events["a" /* default */].MEDIA_ATTACHING, events["a" /* default */].MEDIA_DETACHING, events["a" /* default */].FRAG_PARSING_USERDATA, events["a" /* default */].MANIFEST_LOADING, events["a" /* default */].MANIFEST_LOADED, events["a" /* default */].FRAG_LOADED, events["a" /* default */].LEVEL_SWITCHING, events["a" /* default */].INIT_PTS_FOUND, events["a" /* default */].FRAG_PARSING_INIT_SEGMENT));
+    var _this = timeline_controller__possibleConstructorReturn(this, _EventHandler.call(this, hls, events["a" /* default */].MEDIA_ATTACHING, events["a" /* default */].MEDIA_DETACHING, events["a" /* default */].FRAG_PARSING_USERDATA, events["a" /* default */].MANIFEST_LOADING, events["a" /* default */].MANIFEST_LOADED, events["a" /* default */].FRAG_LOADED, events["a" /* default */].LEVEL_SWITCHING, events["a" /* default */].INIT_PTS_FOUND, events["a" /* default */].FRAG_PARSING_INIT_SEGMENT, events["a" /* default */].SUBTITLE_TRACKS_CLEARED));
 
     _this.hls = hls;
     _this.config = hls.config;
@@ -14297,6 +14315,10 @@ var timeline_controller_TimelineController = function (_EventHandler) {
           this.hls.trigger(events["a" /* default */].SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag });
         }
       }
+  };
+
+  TimelineController.prototype.onSubtitleTracksCleared = function onSubtitleTracksCleared() {
+    this.tracks = [];
   };
 
   TimelineController.prototype.onFragParsingUserdata = function onFragParsingUserdata(data) {
