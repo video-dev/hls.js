@@ -458,8 +458,6 @@ class StreamController extends EventHandler {
             if (deltaPTS && deltaPTS > config.maxBufferHole && fragPrevious.dropped && curSNIdx) {
               frag = prevFrag;
               logger.warn(`SN just loaded, with large PTS gap between audio and video, maybe frag is not starting with a keyframe ? load previous one to try to overcome this`);
-              // decrement previous frag load counter to avoid frag loop loading error when next fragment will get reloaded
-              fragPrevious.loadCounter--;
             } else {
               frag = nextFrag;
               logger.log(`SN just loaded, load next one: ${frag.sn}`);
@@ -478,9 +476,6 @@ class StreamController extends EventHandler {
             logger.warn('Loaded fragment with dropped frames, backtracking 1 segment to find a keyframe');
             frag.dropped = 0;
             if (prevFrag) {
-              if (prevFrag.loadCounter) {
-                prevFrag.loadCounter--;
-              }
               frag = prevFrag;
               frag.backtracked = true;
             } else if (curSNIdx) {
@@ -504,16 +499,19 @@ class StreamController extends EventHandler {
       logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferEnd.toFixed(3)}`);
       // Check if fragment is not loaded
       let ftState = this.fragmentTracker.getState(frag);
-      if(ftState === FragmentTrackerState.NONE) {
+
+      this.fragCurrent = frag;
+      this.startFragRequested = true;
+      // Don't update nextLoadPosition for fragments which are not buffered
+      if (!isNaN(frag.sn) && !frag.bitrateTest) {
+        this.nextLoadPosition = frag.start + frag.duration;
+      }
+
+      // Allow backtracked fragments to load
+      if(frag.backtracked || ftState === FragmentTrackerState.NONE) {
         frag.autoLevel = this.hls.autoLevelEnabled;
         frag.bitrateTest = this.bitrateTest;
 
-        this.fragCurrent = frag;
-        this.startFragRequested = true;
-        // Don't update nextLoadPosition for fragments which are not buffered
-        if (!isNaN(frag.sn) && !frag.bitrateTest) {
-          this.nextLoadPosition = frag.start + frag.duration;
-        }
         this.hls.trigger(Event.FRAG_LOADING, {frag: frag});
         // lazy demuxer init, as this could take some time ... do it during frag loading
         if (!this.demuxer) {
@@ -1117,11 +1115,11 @@ class StreamController extends EventHandler {
               // Return back to the IDLE state without appending to buffer
               // Causes findFragments to backtrack a segment and find the keyframe
               // Audio fragments arriving before video sets the nextLoadPosition, causing _findFragments to skip the backtracked fragment
+              this.fragmentTracker.removeFragment(frag);
               frag.backtracked = true;
               this.nextLoadPosition = data.startPTS;
               this.state = State.IDLE;
               this.fragPrevious = frag;
-              this.fragmentTracker.cancelFragmentLoad(frag);
               this.tick();
               return;
             }

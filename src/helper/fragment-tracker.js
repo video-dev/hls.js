@@ -226,6 +226,23 @@ export class FragmentTracker extends EventHandler {
   }
 
   /**
+   * removeFragment
+   * Calling removeFragment will remove a fragment from fragment tracker until it is loaded again
+   * @param fragment The fragment to remove
+   */
+  removeFragment(fragment) {
+    let fragKey = getFragmentKey(fragment);
+    delete this.loadingFragments[fragKey];
+    delete this.partialFragments[fragKey];
+    for(let type in this.partialFragmentTimes) {
+      if (this.partialFragmentTimes.hasOwnProperty(type)) {
+        delete this.partialFragmentTimes[type][fragKey];
+      }
+    }
+    delete this.goodFragments[fragKey];
+  }
+
+  /**
    * Fires when a fragment loading is completed
    */
   onFragLoaded(e) {
@@ -257,5 +274,4 @@ export class FragmentTracker extends EventHandler {
     this.detectPartialFragments(fragment);
     delete this.loadingFragments[fragKey];
   }
-
 }
