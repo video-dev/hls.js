@@ -92,6 +92,9 @@ class EMEController extends EventHandler {
 
       this._widevineLicenseUrl = hls.config.widevineLicenseUrl;
       this._licenseXhrSetup = hls.config.licenseXhrSetup;
+      this._emeEnabled = hls.config.emeEnabled;
+
+      this._requestMediaKeySystemAccess = hls.config.requestMediaKeySystemAccessFunc;
 
       this._mediaKeysList = [];
       this._media = null;
@@ -150,13 +153,21 @@ class EMEController extends EventHandler {
 
         logger.log('Requesting encrypted media key-system access');
 
-        window.navigator.requestMediaKeySystemAccess(keySystem, mediaKeySystemConfigs)
+        // expecting interface like window.navigator.requestMediaKeySystemAccess
+        this.requestMediaKeySystemAccess(keySystem, mediaKeySystemConfigs)
           .then((mediaKeySystemAccess) => {
               this._onMediaKeySystemAccessObtained(keySystem, mediaKeySystemAccess);
           })
           .catch((err) => {
             logger.error(`Failed to obtain key-system "${keySystem}" access:`, err);
           });
+    }
+
+    get requestMediaKeySystemAccess() {
+      if (!this._requestMediaKeySystemAccess) {
+        throw new Error('No requestMediaKeySystemAccess function configured');
+      }
+      return this._requestMediaKeySystemAccess;
     }
 
     /**
@@ -458,20 +469,31 @@ class EMEController extends EventHandler {
     }
 
     onMediaAttached(data) {
-        const media = data.media;
+      if (!this._emeEnabled) {
+        return;
+      }
 
-        this._media = media;
+      const media = data.media;
 
-        media.addEventListener('encrypted', (e) => {
-            this._onMediaEncrypted(e.initDataType, e.initData);
-        });
+      // keep reference of media
+      this._media = media;
+
+      // FIXME: also handle detaching media !
+
+      media.addEventListener('encrypted', (e) => {
+          this._onMediaEncrypted(e.initDataType, e.initData);
+      });
     }
 
     onManifestParsed(data) {
-        const audioCodecs = data.levels.map((level) => level.audioCodec);
-        const videoCodecs = data.levels.map((level) => level.videoCodec);
+      if (!this._emeEnabled) {
+        return;
+      }
 
-        this._attemptKeySystemAccess(KeySystems.WIDEVINE, audioCodecs, videoCodecs);
+      const audioCodecs = data.levels.map((level) => level.audioCodec);
+      const videoCodecs = data.levels.map((level) => level.videoCodec);
+
+      this._attemptKeySystemAccess(KeySystems.WIDEVINE, audioCodecs, videoCodecs);
     }
 }
 
