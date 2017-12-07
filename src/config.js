@@ -17,7 +17,7 @@ import TimelineController from './controller/timeline-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
 import SubtitleStreamController from  './controller/subtitle-stream-controller';
 
-const requestMediaKeySystemAccess = window.navigator.requestMediaKeySystemAccess;
+const requestMediaKeySystemAccess = window.navigator.requestMediaKeySystemAccess.bind(window.navigator);
 
 export var hlsDefaultConfig = {
   autoStartLoad: true,                    // used by stream-controller
