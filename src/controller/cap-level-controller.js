@@ -55,7 +55,7 @@ class CapLevelController extends EventHandler {
     }
 
     detectPlayerSize() {
-        if (this.media) {
+        if (this.media && this.mediaHeight > 0 && this.mediaWidth > 0) {
             let levelsLength = this.levels ? this.levels.length : 0;
             if (levelsLength) {
                 const hls = this.hls;
