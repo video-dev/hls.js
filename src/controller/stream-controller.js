@@ -508,7 +508,7 @@ class StreamController extends EventHandler {
       }
 
       // Allow backtracked fragments to load
-      if(frag.backtracked || ftState === FragmentTrackerState.NONE) {
+      if(frag.backtracked || ftState === FragmentTrackerState.NOT_LOADED) {
         frag.autoLevel = this.hls.autoLevelEnabled;
         frag.bitrateTest = this.bitrateTest;
 

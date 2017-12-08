@@ -340,7 +340,7 @@ class AudioStreamController extends EventHandler {
               logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
               // Check if fragment is not loaded
               let ftState = this.fragmentTracker.getState(frag);
-              if(ftState === FragmentTrackerState.NONE) {
+              if(ftState === FragmentTrackerState.NOT_LOADED) {
                 this.fragCurrent = frag;
                 this.startFragRequested = true;
                 if (!isNaN(frag.sn)) {

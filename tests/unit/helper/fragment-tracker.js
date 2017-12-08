@@ -147,7 +147,7 @@ describe('FragmentTracker', () => {
           audio: buffered
         }
       });
-      assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.NONE);
+      assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.NOT_LOADED);
     });
   });
 

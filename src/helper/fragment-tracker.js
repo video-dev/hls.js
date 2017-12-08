@@ -1,4 +1,3 @@
-import {logger} from '../utils/logger';
 import EventHandler from '../event-handler';
 import Event from '../events';
 
@@ -8,7 +7,7 @@ function getFragmentKey(fragment) {
 }
 
 export const FragmentTrackerState = {
-  NONE: 'NONE',
+  NOT_LOADED: 'NOT_LOADED',
   LOADING_BUFFER: 'LOADING_BUFFER',
   PARTIAL: 'PARTIAL',
   GOOD: 'GOOD',
@@ -212,7 +211,7 @@ export class FragmentTracker extends EventHandler {
       // Fragment only partially loaded
       return FragmentTrackerState.PARTIAL;
     }
-    return FragmentTrackerState.NONE;
+    return FragmentTrackerState.NOT_LOADED;
   }
 
   /**
