@@ -7,7 +7,7 @@
 		exports["Hls"] = factory();
 	else
 		root["Hls"] = factory();
-})(this, function() {
+})(typeof self !== 'undefined' ? self : this, function() {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -10296,7 +10296,7 @@ var cap_level_controller_CapLevelController = function (_EventHandler) {
   };
 
   CapLevelController.prototype.detectPlayerSize = function detectPlayerSize() {
-    if (this.media) {
+    if (this.media && this.mediaHeight > 0 && this.mediaWidth > 0) {
       var levelsLength = this.levels ? this.levels.length : 0;
       if (levelsLength) {
         var hls = this.hls;
