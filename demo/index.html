@@ -255,6 +255,15 @@ $(document).ready(function() {
   video.volume = 0.05;
   $("#currentVersion").html("Hls version:" + Hls.version);
 
+  var widevineLicenseUrl;
+  var emeEnabled;
+  /* Widevine support demo
+  widevineLicenseUrl = "https://cwip-shaka-proxy.appspot.com/no_auth";
+  emeEnabled = true;
+  // try with https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine-hls/hls.m3u8
+  */
+
+
   loadStream(decodeURIComponent(getURLParam('src','https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8')));
 
   function loadStream(url) {
@@ -287,10 +296,9 @@ $(document).ready(function() {
        hls = new Hls({
          debug: true,
          enableWorker: enableWorker,
-         defaultAudioCodec: defaultAudioCodec
-         //,
-         //emeEnabled: true,
-         //widevineLicenseUrl: widevineLicenseUrl
+         defaultAudioCodec: defaultAudioCodec,
+         emeEnabled: emeEnabled,
+         widevineLicenseUrl: widevineLicenseUrl
         });
 
        $("#HlsStatus").text('loading manifest and attaching video element...');
