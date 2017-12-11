@@ -54,11 +54,11 @@ class StreamController extends TaskLoop {
     this._state = State.STOPPED;
   }
 
-  _onDestroying() {
+  onHandlerDestroying() {
     this.stopLoad();
   }
 
-  _onDestroyed() {
+  onHandlerDestroyed() {
     this.state = State.STOPPED;
   }
 

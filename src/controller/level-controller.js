@@ -22,7 +22,7 @@ export default class LevelController extends EventHandler {
     this.timer = null;
   }
 
-  _onDestroying() {
+  onHandlerDestroying() {
     this.cleanTimer();
     this.manualLevelIndex = -1;
   }

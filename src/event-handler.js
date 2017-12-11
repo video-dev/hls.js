@@ -8,6 +8,12 @@ import {logger} from './utils/logger';
 import {ErrorTypes, ErrorDetails} from './errors';
 import Event from './events';
 
+const FORBIDDEN_EVENT_NAMES = [
+  'hlsEventGeneric',
+  'hlsHandlerDestroying',
+  'hlsHandlerDestroyed'
+];
+
 class EventHandler {
 
   constructor(hls, ...events) {
@@ -20,13 +26,13 @@ class EventHandler {
   }
 
   destroy() {
-    this._onDestroying();
+    this.onHandlerDestroying();
     this.unregisterListeners();
-    this._onDestroyed();
+    this.onHandlerDestroyed();
   }
 
-  _onDestroying() {}
-  _onDestroyed() {}
+  onHandlerDestroying() {}
+  onHandlerDestroyed() {}
 
   isEventHandler() {
     return typeof this.handledEvents === 'object' && this.handledEvents.length && typeof this.onEvent === 'function';
@@ -35,8 +41,8 @@ class EventHandler {
   registerListeners() {
     if (this.isEventHandler()) {
       this.handledEvents.forEach(function(event) {
-        if (event === 'hlsEventGeneric') {
-          throw new Error('Forbidden event name: ' + event);
+        if (FORBIDDEN_EVENT_NAMES.includes(event)) {
+          throw new Error('Forbidden event-name: ' + event);
         }
         this.hls.on(event, this.onEvent);
       }, this);
