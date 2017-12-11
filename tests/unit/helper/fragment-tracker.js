@@ -2,7 +2,7 @@ import Event from "../../../src/events";
 
 const assert = require('assert');
 
-import {FragmentTracker, FragmentTrackerState} from '../../../src/helper/fragment-tracker';
+import {FragmentTracker, FragmentState} from '../../../src/helper/fragment-tracker';
 import Hls from '../../../src/hls';
 
 function createMockBuffer(buffered) {
@@ -43,7 +43,7 @@ describe('FragmentTracker', () => {
       }
     });
 
-    hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
+    hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
 
     it('detects fragments that partially loaded', () => {
       // Get the partial fragment at a time
@@ -66,20 +66,25 @@ describe('FragmentTracker', () => {
     hls = new Hls({});
     fragmentTracker = new FragmentTracker(hls);
 
-    fragment = {
-      startPTS: 0,
-      endPTS: 1,
-      sn: 1,
-      level: 1,
-      type: 'main'
+
+    let addFragment = () => {
+      fragment = {
+        startPTS: 0,
+        endPTS: 1,
+        sn: 1,
+        level: 0,
+        type: 'video'
+      };
+      hls.trigger(Event.FRAG_LOADED, { frag: fragment });
     };
-    hls.trigger(Event.FRAG_LOADED, { frag: fragment });
 
     it('detects fragments that never loaded', () => {
-      assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.LOADING_BUFFER);
+      addFragment();
+      assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.APPENDING);
     });
 
     it('detects fragments that loaded properly', () => {
+      addFragment();
       buffered = createMockBuffer([
         {
           startPTS: 0,
@@ -93,12 +98,13 @@ describe('FragmentTracker', () => {
         }
       });
 
-      hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
+      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'video', frag: fragment });
 
-      assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.GOOD);
+      assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.OK);
     });
 
     it('detects partial fragments', () => {
+      addFragment();
       buffered = createMockBuffer([
         {
           startPTS: 0.5,
@@ -112,12 +118,13 @@ describe('FragmentTracker', () => {
         }
       });
 
-      hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
+      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
 
-      assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.PARTIAL);
+      assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.PARTIAL);
     });
 
     it('removes evicted partial fragments', () => {
+      addFragment();
       buffered = createMockBuffer([
         {
           startPTS: 0.5,
@@ -130,9 +137,9 @@ describe('FragmentTracker', () => {
           audio: buffered
         }
       });
-      hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
+      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
 
-      assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.PARTIAL);
+      assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.PARTIAL);
 
       // Trim the buffer
       buffered = createMockBuffer([
@@ -147,7 +154,7 @@ describe('FragmentTracker', () => {
           audio: buffered
         }
       });
-      assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.NOT_LOADED);
+      assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.NOT_LOADED);
     });
   });
 
@@ -183,9 +190,9 @@ describe('FragmentTracker', () => {
           ])
         }
       });
-      hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
+      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
 
-      assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.PARTIAL);
+      assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.PARTIAL);
     });
 
     it('supports video buffer', () => {
@@ -213,9 +220,9 @@ describe('FragmentTracker', () => {
           ])
         }
       });
-      hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
+      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
 
-      assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.PARTIAL);
+      assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.PARTIAL);
     });
 
     it('supports audio only buffer', () => {
@@ -243,9 +250,9 @@ describe('FragmentTracker', () => {
           ])
         }
       });
-      hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
+      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
 
-      assert.strictEqual(fragmentTracker.getState(fragment), FragmentTrackerState.GOOD);
+      assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.OK);
     });
   });
 });

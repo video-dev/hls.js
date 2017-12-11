@@ -7,11 +7,12 @@ import BufferHelper from '../helper/buffer-helper';
 import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import EventHandler from '../event-handler';
-import * as LevelHelper from '../helper/level-helper';import TimeRanges from '../utils/timeRanges';
+import * as LevelHelper from '../helper/level-helper';
+import TimeRanges from '../utils/timeRanges';
 import {ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
 import { findFragWithCC } from '../utils/discontinuities';
-import {FragmentTrackerState} from '../helper/fragment-tracker';
+import {FragmentState} from '../helper/fragment-tracker';
 
 const State = {
   STOPPED : 'STOPPED',
@@ -118,7 +119,7 @@ class AudioStreamController extends EventHandler {
       if (frag.loader) {
         frag.loader.abort();
       }
-      this.fragmentTracker.cancelFragmentLoad(frag);
+      this.fragmentTracker.removeFragment(frag);
       this.fragCurrent = null;
     }
     this.fragPrevious = null;
@@ -340,7 +341,7 @@ class AudioStreamController extends EventHandler {
               logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
               // Check if fragment is not loaded
               let ftState = this.fragmentTracker.getState(frag);
-              if(ftState === FragmentTrackerState.NOT_LOADED) {
+              if(ftState === FragmentState.NOT_LOADED) {
                 this.fragCurrent = frag;
                 this.startFragRequested = true;
                 if (!isNaN(frag.sn)) {
