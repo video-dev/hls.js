@@ -34,8 +34,8 @@ export class FragmentTracker extends EventHandler {
    * Partial fragments effected by coded frame eviction will be removed
    * The browser will unload parts of the buffer to free up memory for new buffer data
    * Fragments will need to be reloaded when the buffer is freed up, removing partial fragments will allow them to reload(since there might be parts that are still playable)
-   * @param type The type of media this is (eg. video, audio)
-   * @param timeRange TimeRange object from a sourceBuffer
+   * @param {String} type The type of media this is (eg. video, audio)
+   * @param {Object} timeRange TimeRange object from a sourceBuffer
    */
   detectEvictedFragments(type, timeRange) {
     let fragmentObject, fragmentTimes, time, found, startTime, endTime;
@@ -76,7 +76,7 @@ export class FragmentTracker extends EventHandler {
   /**
    * Checks if the fragment passed in is loaded in the buffer properly
    * Partially loaded fragments will be registered as a partial fragment
-   * @param fragment Check the fragment against all sourceBuffers loaded
+   * @param {Object} fragment Check the fragment against all sourceBuffers loaded
    */
   detectPartialFragments(fragment) {
     let fragmentGaps, startTime, endTime;
@@ -131,8 +131,8 @@ export class FragmentTracker extends EventHandler {
 
   /**
    * Gets the partial fragment for a certain time
-   * @param time
-   * @returns fragment Returns a partial fragment at a time or null if there is no partial fragment
+   * @param {Number} time
+   * @returns {Object} fragment Returns a partial fragment at a time or null if there is no partial fragment
    */
   getPartialFragment(time) {
     let fragmentObject, timePadding, startTime, endTime;
@@ -159,8 +159,8 @@ export class FragmentTracker extends EventHandler {
   }
 
   /**
-   * @param fragment The fragment to check
-   * @returns {string} Returns the fragment state when a fragment never loaded or if it partially loaded
+   * @param {Object} fragment The fragment to check
+   * @returns {String} Returns the fragment state when a fragment never loaded or if it partially loaded
    */
   getState(fragment) {
     let fragKey = this.getFragmentKey(fragment);
@@ -172,7 +172,7 @@ export class FragmentTracker extends EventHandler {
 
   /**
    * Remove a fragment from fragment tracker until it is loaded again
-   * @param fragment The fragment to remove
+   * @param {Object} fragment The fragment to remove
    */
   removeFragment(fragment) {
     let fragKey = this.getFragmentKey(fragment);
