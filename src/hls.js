@@ -19,6 +19,9 @@ import {logger, enableLogs} from './utils/logger';
 import EventEmitter from 'events';
 import {hlsDefaultConfig} from './config';
 
+// polyfill for IE11
+require('string.prototype.endswith');
+
 export default class Hls {
   static get version() {
     return __VERSION__;
