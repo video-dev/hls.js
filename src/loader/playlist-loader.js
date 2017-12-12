@@ -374,9 +374,7 @@ class PlaylistLoader extends EventHandler {
     }
 
     // extend the context with the new levelDetails property
-    Object.assign(context, {
-      levelDetails
-    });
+    context.levelDetails = levelDetails;
 
     this._handlePlaylistLoaded(response, stats, context, networkDetails);
 
