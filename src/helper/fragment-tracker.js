@@ -20,14 +20,7 @@ export class FragmentTracker extends EventHandler {
     this.bufferPadding = 0.2;
 
     this.fragments = {};
-    //
-    // // This holds all the loading fragments until the buffer is populated
-    // this.loadingFragments = {};
-    // // This holds all the successfully loaded fragments until the buffer is evicted
-    // this.goodFragments = {};
-    // // This keeps track of all fragments that loaded differently into the buffer from the PTS
-    // this.partialFragments = {};
-    // this.partialFragmentTimes = {};
+
     this.timeRanges = {};
     this.config = hls.config;
   }
@@ -38,9 +31,9 @@ export class FragmentTracker extends EventHandler {
   }
 
   /**
-   * Partial fragments effected by coded frame eviction will be unregistered
+   * Partial fragments effected by coded frame eviction will be removed
    * The browser will unload parts of the buffer to free up memory for new buffer data
-   * Fragments will need to be reloaded when the buffer is freed up, unregistering partial fragments will allow them to reload(since there might be parts that are still playable)
+   * Fragments will need to be reloaded when the buffer is freed up, removing partial fragments will allow them to reload(since there might be parts that are still playable)
    * @param type The type of media this is (eg. video, audio)
    * @param timeRange TimeRange object from a sourceBuffer
    */
@@ -78,33 +71,10 @@ export class FragmentTracker extends EventHandler {
 
       }
     }
-    // for (let fragKey in this.goodFragments) {
-    //   if (this.goodFragments.hasOwnProperty(fragKey)) {
-    //     fragment = this.goodFragments[fragKey];
-    //     let found = false;
-    //     for (let i = 0; i < timeRange.length; i++) {
-    //       startTime = timeRange.start(i) - this.bufferPadding;
-    //       endTime = timeRange.end(i) + this.bufferPadding;
-    //       if (fragment.startPTS >= startTime && fragment.endPTS <= endTime) {
-    //         // Fragment is entirely contained in buffer
-    //         found = true;
-    //         // No need to check the other timeRange times since it's completely playable
-    //         break;
-    //       }
-    //       if(fragment.endPTS <= startTime) {
-    //         // No need to check the rest of the timeRange as it is in order
-    //         break;
-    //       }
-    //     }
-    //     if(!found) {
-    //       delete this.goodFragments[fragKey];
-    //     }
-    //   }
-    // }
   }
 
   /**
-   * Fragments that are loading will be checked in the buffer to see if they are loaded properly
+   * Checks if the fragment passed in is loaded in the buffer properly
    * Partially loaded fragments will be registered as a partial fragment
    * @param fragment Check the fragment against all sourceBuffers loaded
    */
@@ -113,11 +83,12 @@ export class FragmentTracker extends EventHandler {
     let fragKey = this.getFragmentKey(fragment);
     let fragmentIsOK = true;
     let fragmentObject = this.fragments[fragKey];
+    let timeRange;
 
     for(let type in this.timeRanges) {
       if (this.timeRanges.hasOwnProperty(type)) {
         if(fragment.type === 'main' || fragment.type === type) {
-          let timeRange = this.timeRanges[type];
+          timeRange = this.timeRanges[type];
           // Check for malformed fragments
           fragmentGaps = [];
           for (let i = 0; i < timeRange.length; i++) {
@@ -144,15 +115,6 @@ export class FragmentTracker extends EventHandler {
           }
 
           fragmentObject.range[type] = fragmentGaps;
-
-          // if(this.config.debug) {
-          //   let fragmentGapString = '';
-          //   for (let key in fragmentGaps) {
-          //     let time = fragmentGaps[key];
-          //     fragmentGapString += `[${time.startPTS}, ${time.endPTS}]`;
-          //   }
-          //   logger.warn(`fragment-tracker: fragment with malformed PTS detected(${type}), level: ${fragment.level} sn: ${fragment.sn} startPTS: ${fragment.startPTS} endPTS: ${fragment.endPTS} loadedPTS: ${fragmentGapString}`);
-          // }
         }
       }
     }
@@ -197,7 +159,6 @@ export class FragmentTracker extends EventHandler {
   }
 
   /**
-   * getState
    * @param fragment The fragment to check
    * @returns {string} Returns the fragment state when a fragment never loaded or if it partially loaded
    */
@@ -210,8 +171,7 @@ export class FragmentTracker extends EventHandler {
   }
 
   /**
-   * removeFragment
-   * Calling removeFragment will remove a fragment from fragment tracker until it is loaded again
+   * Remove a fragment from fragment tracker until it is loaded again
    * @param fragment The fragment to remove
    */
   removeFragment(fragment) {
@@ -236,11 +196,12 @@ export class FragmentTracker extends EventHandler {
    * Fires when the buffer is updated
    */
   onBufferAppended(e) {
+    let timeRange;
     // Store the latest timeRanges loaded in the buffer
     this.timeRanges = e.timeRanges;
     for(let type in this.timeRanges) {
       if (this.timeRanges.hasOwnProperty(type)) {
-        let timeRange = this.timeRanges[type];
+        timeRange = this.timeRanges[type];
         this.detectEvictedFragments(type, timeRange);
       }
     }
