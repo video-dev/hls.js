@@ -17,7 +17,7 @@
     "description": "Ad-insertion in event stream",
     "live": false,
     "abr": false,
-    "blacklist_ua": []
+    "blacklist_ua": ["internet explorer"]
   },
   "issue666": {
     "url": "http://www.streambox.fr/playlists/cisq0gim60007xzvi505emlxx.m3u8",
