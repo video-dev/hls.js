@@ -271,8 +271,8 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
         it('should seek near the end and receive video seeked event for ' + stream.description, testSeekOnLive(url));
       } else {
         it('should play ' + stream.description, testIsPlayingVOD(url));
-        // it('should seek to start ' + stream.description, testSeekStartVOD(url));
-        // it('should seek 5s from end and receive video ended event for ' + stream.description, testSeekOnVOD(url));
+        it('should seek to start ' + stream.description, testSeekStartVOD(url));
+        it('should seek 5s from end and receive video ended event for ' + stream.description, testSeekOnVOD(url));
         //it('should seek on end and receive video ended event for ' + stream.description, testSeekEndVOD(url));
       }
     }

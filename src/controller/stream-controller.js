@@ -1135,7 +1135,6 @@ class StreamController extends EventHandler {
       var drift = LevelHelper.updateFragPTSDTS(level.details,frag,data.startPTS,data.endPTS,data.startDTS,data.endDTS),
           hls = this.hls;
       hls.trigger(Event.LEVEL_PTS_UPDATED, {details: level.details, level: this.level, drift: drift, type: data.type, start: data.startPTS, end: data.endPTS});
-      let segmentsPerFragment = 0;
       // has remuxer dropped video frames located before first keyframe ?
       [data.data1, data.data2].forEach(buffer => {
         // only append in PARSING state (rationale is that an appending error could happen synchronously on first segment appending)
@@ -1145,7 +1144,6 @@ class StreamController extends EventHandler {
           // arm pending Buffering flag before appending a segment
           this.pendingBuffering = true;
           hls.trigger(Event.BUFFER_APPENDING, {type: data.type, data: buffer, parent : 'main',content : 'data'});
-          segmentsPerFragment++;
         }
       });
       //trigger handler right now
