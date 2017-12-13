@@ -348,9 +348,9 @@ class AudioStreamController extends EventHandler {
                 if (!isNaN(frag.sn)) {
                   this.nextLoadPosition = frag.start + frag.duration;
                 }
+                frag.audioOnly = true;
                 hls.trigger(Event.FRAG_LOADING, {frag: frag});
                 this.state = State.FRAG_LOADING;
-              } else {
               }
             }
           }

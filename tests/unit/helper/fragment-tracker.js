@@ -25,7 +25,7 @@ describe('FragmentTracker', () => {
       endPTS: 1,
       sn: 1,
       level: 1,
-      type: 'main'
+      audioOnly: false
     };
     hls.trigger(Event.FRAG_LOADED, { frag: fragment });
 
@@ -73,7 +73,7 @@ describe('FragmentTracker', () => {
         endPTS: 1,
         sn: 1,
         level: 0,
-        type: 'video'
+        audioOnly: false
       };
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
     };
@@ -170,7 +170,7 @@ describe('FragmentTracker', () => {
         endPTS: 1,
         sn: 1,
         level: 1,
-        type: 'main'
+        audioOnly: false
       };
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
 
@@ -201,7 +201,7 @@ describe('FragmentTracker', () => {
         endPTS: 1,
         sn: 1,
         level: 1,
-        type: 'main'
+        audioOnly: false
       };
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
       hls.trigger(Event.BUFFER_APPENDED, {
@@ -231,7 +231,7 @@ describe('FragmentTracker', () => {
         endPTS: 1,
         sn: 1,
         level: 1,
-        type: 'audio'
+        audioOnly: true
       };
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
       hls.trigger(Event.BUFFER_APPENDED, {

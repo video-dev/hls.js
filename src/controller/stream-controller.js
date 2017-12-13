@@ -498,7 +498,7 @@ class StreamController extends EventHandler {
     } else {
       logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferEnd.toFixed(3)}`);
       // Check if fragment is not loaded
-      let ftState = this.fragmentTracker.getState(frag);
+      let fragState = this.fragmentTracker.getState(frag);
 
       this.fragCurrent = frag;
       this.startFragRequested = true;
@@ -508,9 +508,10 @@ class StreamController extends EventHandler {
       }
 
       // Allow backtracked fragments to load
-      if(frag.backtracked || ftState === FragmentState.NOT_LOADED) {
+      if(frag.backtracked || fragState === FragmentState.NOT_LOADED) {
         frag.autoLevel = this.hls.autoLevelEnabled;
         frag.bitrateTest = this.bitrateTest;
+        frag.audioOnly = false;
 
         this.hls.trigger(Event.FRAG_LOADING, {frag: frag});
         // lazy demuxer init, as this could take some time ... do it during frag loading
