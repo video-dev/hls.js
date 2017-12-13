@@ -1,5 +1,4 @@
 const assert = require('assert');
-const sinon = require('sinon');
 
 import Event from '../../../src/events.js';
 import StreamController from '../../../src/controller/stream-controller.js';

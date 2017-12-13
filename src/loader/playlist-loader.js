@@ -339,6 +339,7 @@ class PlaylistLoader extends EventHandler {
         totalduration = 0,
         level = {type: null, version: null, url: baseurl, fragments: [], live: true, startSN: 0},
         levelkey = new LevelKey(),
+		config = this.hls.config,
         cc = 0,
         prevFrag = null,
         frag = new Fragment(),
@@ -399,6 +400,9 @@ class PlaylistLoader extends EventHandler {
         frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
         if (level.programDateTime === undefined) {
           level.programDateTime = new Date(new Date(Date.parse(result[5])) - 1000 * totalduration);
+		  if(config.usePDTSearch === undefined){//If this variable has been set to false is intentionally denying PDTSearch
+			  config.usePDTSearch = true;
+		  }
         }
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);

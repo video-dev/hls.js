@@ -613,7 +613,7 @@ Rollover38803/20160525T064049-01-69844068.ts
 #EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:35:04Z
 Rollover38803/20160525T064049-01-69844069.ts
     `;
-    var result = new PlaylistLoader({on : function() { }}).parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8',0);
+    var result = new PlaylistLoader({config : { usePDTSearch : false }, on : function() { }}).parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8',0);
     assert.strictEqual(result.fragments.length, 3);
     assert.strictEqual(result.programDateTime.getTime(),1464366884000);
     assert.strictEqual(result.totalduration, 30);
@@ -655,5 +655,62 @@ Rollover38803/20160525T064049-01-69844069.ts
     assert.strictEqual(result.initSegment.byteRangeEndOffset, 718);
     assert.strictEqual(result.initSegment.sn, 'initSegment');
   });
+  
+  it('if playlists contains #EXT-X-PROGRAM-DATE-TIME switching will be applied by PDT', () => {
+    var level = `#EXTM3U
+#EXT-X-VERSION:2
+#EXT-X-TARGETDURATION:10
+#EXT-X-MEDIA-SEQUENCE:69844067
+#EXTINF:10, no desc
+#EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:34:44Z
+Rollover38803/20160525T064049-01-69844067.ts
+#EXTINF:10, no desc
+#EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:34:54Z
+Rollover38803/20160525T064049-01-69844068.ts
+#EXTINF:10, no desc
+#EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:35:04Z
+Rollover38803/20160525T064049-01-69844069.ts
+    `;
+	var hls = {config : { usePDTSearch : undefined }, on : function() { }};
+    var result = new PlaylistLoader(hls).parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8',0);
+    assert.strictEqual(hls.config.usePDTSearch, true);
+  });  
+  
+  it('if playlists contains #EXT-X-PROGRAM-DATE-TIME but config has been set to false, switching will be applied former CC method', () => {
+    var level = `#EXTM3U
+#EXT-X-VERSION:2
+#EXT-X-TARGETDURATION:10
+#EXT-X-MEDIA-SEQUENCE:69844067
+#EXTINF:10, no desc
+#EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:34:44Z
+Rollover38803/20160525T064049-01-69844067.ts
+#EXTINF:10, no desc
+#EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:34:54Z
+Rollover38803/20160525T064049-01-69844068.ts
+#EXTINF:10, no desc
+#EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:35:04Z
+Rollover38803/20160525T064049-01-69844069.ts
+    `;
+	var hls = {config : { usePDTSearch : false }, on : function() { }};
+    var result = new PlaylistLoader(hls).parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8',0);
+    assert.strictEqual(hls.config.usePDTSearch, false);
+  });   
 
+  it('if playlists does NOT contain #EXT-X-PROGRAM-DATE-TIME switching will be applied by CC count', () => {
+    var level = `#EXTM3U
+#EXT-X-VERSION:2
+#EXT-X-TARGETDURATION:10
+#EXT-X-MEDIA-SEQUENCE:69844067
+#EXTINF:10, no desc
+Rollover38803/20160525T064049-01-69844067.ts
+#EXTINF:10, no desc
+Rollover38803/20160525T064049-01-69844068.ts
+#EXTINF:10, no desc
+Rollover38803/20160525T064049-01-69844069.ts
+    `;
+	var hls = {config : { usePDTSearch : undefined }, on : function() { }};
+    var result = new PlaylistLoader(hls).parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8',0);
+    assert.strictEqual(hls.config.usePDTSearch, undefined);
+  });    
+  
 });
