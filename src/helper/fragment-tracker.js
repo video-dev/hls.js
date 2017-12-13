@@ -38,32 +38,19 @@ export class FragmentTracker extends EventHandler {
    * @param {Object} timeRange TimeRange object from a sourceBuffer
    */
   detectEvictedFragments(type, timeRange) {
-    let fragmentObject, fragmentTimes, time, found, startTime, endTime;
+    let fragmentObject, fragmentTimes, time;
     // Check if any flagged fragments have been unloaded
     for (let fragKey in this.fragments) {
       if (this.fragments.hasOwnProperty(fragKey)) {
         fragmentObject = this.fragments[fragKey];
         if(fragmentObject.state === FragmentState.PARTIAL || fragmentObject.state === FragmentState.OK) {
-          fragmentTimes = fragmentObject.range[type];
+          fragmentTimes = fragmentObject.range[type].time;
           for (let i = 0; i < fragmentTimes.length; i++) {
             time = fragmentTimes[i];
-            found = false;
-            // This can be optimized
-            for (let j = 0; j < timeRange.length; j++) {
-              startTime = timeRange.start(j) - this.bufferPadding;
-              endTime = timeRange.end(j) + this.bufferPadding;
-              if (time.startPTS >= startTime && time.endPTS <= endTime) {
-                found = true;
-                break;
-              }
-              if(time.endPTS <= startTime) {
-                // No need to check the rest of the timeRange as it is in order
-                break;
-              }
-            }
-            if(found === false) {
+
+            if(this.isTimeBuffered(time.startPTS, time.endPTS, timeRange) === false) {
               // Unregister partial fragment as it needs to load again to be reused
-              delete this.fragments[fragKey];
+              this.removeFragment(fragmentObject.body);
               break;
             }
           }
@@ -73,56 +60,86 @@ export class FragmentTracker extends EventHandler {
     }
   }
 
+  isTimeBuffered(startPTS, endPTS, timeRange) {
+    let startTime, endTime;
+    for (let i = 0; i < timeRange.length; i++) {
+      startTime = timeRange.start(i) - this.bufferPadding;
+      endTime = timeRange.end(i) + this.bufferPadding;
+      if (startPTS >= startTime && endPTS <= endTime) {
+        return true;
+      }
+      if(endPTS <= startTime) {
+        // No need to check the rest of the timeRange as it is in order
+        return false;
+      }
+    }
+
+    return false;
+  }
+
+  getBufferedTimes(startPTS, endPTS, timeRange) {
+    let fragmentTimes = [];
+    let startTime, endTime, fragmentPartial = false;
+    for (let i = 0; i < timeRange.length; i++) {
+      startTime = timeRange.start(i) - this.bufferPadding;
+      endTime = timeRange.end(i) + this.bufferPadding;
+      if (startPTS >= startTime && endPTS <= endTime) {
+        // Fragment is entirely contained in buffer
+        // No need to check the other timeRange times since it's completely playable
+        fragmentTimes.push({
+          startPTS: Math.max(startPTS, timeRange.start(i)),
+          endPTS: Math.min(endPTS, timeRange.end(i))
+        });
+        break;
+      } else if (startPTS < endTime && endPTS > startTime) {
+        // Check for intersection with buffer
+        // Get playable sections of the fragment
+        fragmentTimes.push({
+          startPTS: Math.max(startPTS, timeRange.start(i)),
+          endPTS: Math.min(endPTS, timeRange.end(i))
+        });
+
+        fragmentPartial = true;
+      } else if(endPTS <= startTime) {
+        // No need to check the rest of the timeRange as it is in order
+        break;
+      }
+    }
+
+    return {
+      time: fragmentTimes,
+      partial: fragmentPartial
+    };
+  }
+
   /**
    * Checks if the fragment passed in is loaded in the buffer properly
    * Partially loaded fragments will be registered as a partial fragment
    * @param {Object} fragment Check the fragment against all sourceBuffers loaded
    */
   detectPartialFragments(fragment) {
-    let fragmentGaps, startTime, endTime;
+    let fragmentBuffered;
     let fragKey = this.getFragmentKey(fragment);
-    let fragmentIsOK = true;
     let fragmentObject = this.fragments[fragKey];
     let timeRange;
+    let fragmentPartial = false;
 
     for(let type in this.timeRanges) {
       if (this.timeRanges.hasOwnProperty(type)) {
         if(fragment.type === 'main' || fragment.type === type) {
           timeRange = this.timeRanges[type];
           // Check for malformed fragments
-          fragmentGaps = [];
-          for (let i = 0; i < timeRange.length; i++) {
-            startTime = timeRange.start(i) - this.bufferPadding;
-            endTime = timeRange.end(i) + this.bufferPadding;
-            if (fragment.startPTS >= startTime && fragment.endPTS <= endTime) {
-              // Fragment is entirely contained in buffer
-              // No need to check the other timeRange times since it's completely playable
-              fragmentGaps.push({
-                startPTS: Math.max(fragment.startPTS, timeRange.start(i)),
-                endPTS: Math.min(fragment.endPTS, timeRange.end(i))
-              });
-              break;
-            } else if (fragment.startPTS < endTime && fragment.endPTS > startTime) {
-              // Check for intersection with buffer
-              // Get playable sections of the fragment
-              fragmentGaps.push({
-                startPTS: Math.max(fragment.startPTS, timeRange.start(i)),
-                endPTS: Math.min(fragment.endPTS, timeRange.end(i))
-              });
-
-              fragmentIsOK = false;
-            }
+          fragmentBuffered = [];
+          // Gaps need to still be calculated for each type
+          let bufferedTimes = this.getBufferedTimes(fragment.startPTS, fragment.endPTS, timeRange);
+          fragmentObject.range[type] = bufferedTimes;
+          if(bufferedTimes.partial === true) {
+            fragmentPartial = true;
           }
-
-          fragmentObject.range[type] = fragmentGaps;
         }
       }
     }
-    if(fragmentIsOK === true) {
-      fragmentObject.state = FragmentState.OK;
-    } else {
-      fragmentObject.state = FragmentState.PARTIAL;
-    }
+    fragmentObject.state = fragmentPartial ? FragmentState.PARTIAL : FragmentState.OK;
   }
 
   getFragmentKey(fragment) {
@@ -211,7 +228,6 @@ export class FragmentTracker extends EventHandler {
    * Fires after a fragment has been loaded into the source buffer
    */
   onFragBuffered(e) {
-    let fragment = e.frag;
-    this.detectPartialFragments(fragment);
+    this.detectPartialFragments(e.frag);
   }
 }

@@ -70,6 +70,7 @@ class AudioStreamController extends EventHandler {
     }
     EventHandler.prototype.destroy.call(this);
     this.state = State.STOPPED;
+    this.fragmentTracker = null;
   }
 
   //Signal that video PTS was found

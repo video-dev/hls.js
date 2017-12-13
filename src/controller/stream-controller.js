@@ -67,7 +67,7 @@ class StreamController extends EventHandler {
     }
     EventHandler.prototype.destroy.call(this);
     this.state = State.STOPPED;
-    this.fragmentTracker.destroy();
+    this.fragmentTracker = null;
   }
 
   startLoad(startPosition) {

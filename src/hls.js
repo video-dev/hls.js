@@ -109,7 +109,7 @@ export default class Hls {
     }
     this.networkControllers = networkControllers;
 
-    let coreComponents = [ playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController, id3TrackController ];
+    let coreComponents = [ playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController, id3TrackController, fragmentTracker ];
 
     // optional audio track and subtitle controller
     Controller = config.audioTrackController;
