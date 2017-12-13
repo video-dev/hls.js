@@ -197,7 +197,7 @@ class PlaylistLoader extends EventHandler {
 
   load(url, context) {
     let loader = this.loaders[context.type];
-    if (loader) {
+    if (loader !== undefined) {
       let loaderContext = loader.context;
       if (loaderContext && loaderContext.url === url) {
         logger.trace(`playlist request ongoing`);
@@ -208,17 +208,22 @@ class PlaylistLoader extends EventHandler {
       }
     }
     let config = this.hls.config,
-        retry,
+        maxRetry,
         timeout,
         retryDelay,
         maxRetryDelay;
-    if(context.type === 'manifest') {
-      retry = config.manifestLoadingMaxRetry;
+    if (context.type === 'manifest') {
+      maxRetry = config.manifestLoadingMaxRetry;
       timeout = config.manifestLoadingTimeOut;
       retryDelay = config.manifestLoadingRetryDelay;
       maxRetryDelay = config.manifestLoadingMaxRetryTimeout;
+    } else if (context.type === 'level') {
+      // Disable internal loader retry logic, since we are managing retries in Level Controller
+      maxRetry = 0;
+      timeout = config.levelLoadingTimeOut;
     } else {
-      retry = config.levelLoadingMaxRetry;
+      // TODO Introduce retry settings for audio-track and subtitle-track, it should not use level retry config
+      maxRetry = config.levelLoadingMaxRetry;
       timeout = config.levelLoadingTimeOut;
       retryDelay = config.levelLoadingRetryDelay;
       maxRetryDelay = config.levelLoadingMaxRetryTimeout;
@@ -229,7 +234,7 @@ class PlaylistLoader extends EventHandler {
     context.responseType = '';
 
     let loaderConfig, loaderCallbacks;
-    loaderConfig = { timeout : timeout, maxRetry : retry , retryDelay : retryDelay, maxRetryDelay : maxRetryDelay};
+    loaderConfig = {timeout, maxRetry, retryDelay, maxRetryDelay};
     loaderCallbacks = { onSuccess : this.loadsuccess.bind(this), onError :this.loaderror.bind(this), onTimeout : this.loadtimeout.bind(this)};
     loader.load(context,loaderConfig,loaderCallbacks);
   }

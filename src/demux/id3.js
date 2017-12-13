@@ -220,7 +220,7 @@
       return undefined;
     }
 
-    const owner = ID3._utf8ArrayToStr(frame.data);
+    const owner = ID3._utf8ArrayToStr(frame.data, true);
     const privateData = new Uint8Array(frame.data.subarray(owner.length + 1));
 
     return { key: frame.type, info: owner, data: privateData.buffer };
@@ -292,7 +292,7 @@
    * LastModified: Dec 25 1999
    * This library is free.  You can redistribute it and/or modify it.
    */
-  static _utf8ArrayToStr(array) {
+  static _utf8ArrayToStr(array, exitOnNull = false) {
 
     const len = array.length;
     let c;
@@ -302,8 +302,10 @@
     let i = 0;
     while (i < len) {
         c = array[i++];
-        // If the character is 3 (END_OF_TEXT) or 0 (NULL) then skip it
-        if (c === 0x00 || c === 0x03) {
+        if (c === 0x00 && exitOnNull) {
+            return out;
+        } else if (c === 0x00 || c === 0x03) {
+          // If the character is 3 (END_OF_TEXT) or 0 (NULL) then skip it
             continue;
         }
         switch (c >> 4) {
