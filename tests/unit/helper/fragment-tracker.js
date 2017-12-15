@@ -16,7 +16,7 @@ function createMockBuffer(buffered) {
 
 describe('FragmentTracker', () => {
   describe('getPartialFragment', () => {
-    let hls, fragmentTracker, fragment, buffered, partialFragment;
+    let hls, fragmentTracker, fragment, buffered, partialFragment, timeRanges;
 
     hls = new Hls({});
     fragmentTracker = new FragmentTracker(hls);
@@ -26,7 +26,8 @@ describe('FragmentTracker', () => {
       endPTS: 1,
       sn: 1,
       level: 1,
-      contentTypes: new Set([MediaChannels.AUDIO, MediaChannels.VIDEO])
+      mediaChannels: new Set([MediaChannels.AUDIO, MediaChannels.VIDEO]),
+      type: 'main'
     };
     hls.trigger(Event.FRAG_LOADED, { frag: fragment });
 
@@ -37,12 +38,10 @@ describe('FragmentTracker', () => {
       },
     ]);
 
-    hls.trigger(Event.BUFFER_APPENDED, {
-      timeRanges: {
-        video: buffered,
-        audio: buffered
-      }
-    });
+    timeRanges = new Map();
+    timeRanges.set(MediaChannels.VIDEO, buffered);
+    timeRanges.set(MediaChannels.AUDIO, buffered);
+    hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
 
     hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
 
@@ -62,7 +61,7 @@ describe('FragmentTracker', () => {
   });
 
   describe('getState', () => {
-    let hls, fragmentTracker, fragment, buffered;
+    let hls, fragmentTracker, fragment, buffered, timeRanges;
 
     hls = new Hls({});
     fragmentTracker = new FragmentTracker(hls);
@@ -74,7 +73,8 @@ describe('FragmentTracker', () => {
         endPTS: 1,
         sn: 1,
         level: 0,
-        contentTypes: new Set([MediaChannels.AUDIO, MediaChannels.VIDEO])
+        mediaChannels: new Set([MediaChannels.AUDIO, MediaChannels.VIDEO]),
+        type: 'main'
       };
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
     };
@@ -92,14 +92,13 @@ describe('FragmentTracker', () => {
           endPTS: 1
         },
       ]);
-      hls.trigger(Event.BUFFER_APPENDED, {
-        timeRanges: {
-          video: buffered,
-          audio: buffered
-        }
-      });
 
-      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'video', frag: fragment });
+      timeRanges = new Map();
+      timeRanges.set(MediaChannels.VIDEO, buffered);
+      timeRanges.set(MediaChannels.AUDIO, buffered);
+      hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
+
+      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
 
       assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.OK);
     });
@@ -112,12 +111,10 @@ describe('FragmentTracker', () => {
           endPTS: 2
         },
       ]);
-      hls.trigger(Event.BUFFER_APPENDED, {
-        timeRanges: {
-          video: buffered,
-          audio: buffered
-        }
-      });
+      timeRanges = new Map();
+      timeRanges.set(MediaChannels.VIDEO, buffered);
+      timeRanges.set(MediaChannels.AUDIO, buffered);
+      hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
 
       hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
 
@@ -132,12 +129,11 @@ describe('FragmentTracker', () => {
           endPTS: 2
         },
       ]);
-      hls.trigger(Event.BUFFER_APPENDED, {
-        timeRanges: {
-          video: buffered,
-          audio: buffered
-        }
-      });
+      timeRanges = new Map();
+      timeRanges.set(MediaChannels.VIDEO, buffered);
+      timeRanges.set(MediaChannels.AUDIO, buffered);
+      hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
+
       hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
 
       assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.PARTIAL);
@@ -149,18 +145,17 @@ describe('FragmentTracker', () => {
           endPTS: 2
         },
       ]);
-      hls.trigger(Event.BUFFER_APPENDED, {
-        timeRanges: {
-          video: buffered,
-          audio: buffered
-        }
-      });
+      timeRanges = new Map();
+      timeRanges.set(MediaChannels.VIDEO, buffered);
+      timeRanges.set(MediaChannels.AUDIO, buffered);
+      hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
+
       assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.NOT_LOADED);
     });
   });
 
   describe('onFragBuffered', () => {
-    let hls, fragmentTracker, fragment;
+    let hls, fragmentTracker, fragment, timeRanges;
 
     hls = new Hls({});
     fragmentTracker = new FragmentTracker(hls);
@@ -171,26 +166,26 @@ describe('FragmentTracker', () => {
         endPTS: 1,
         sn: 1,
         level: 1,
-        contentTypes: new Set([MediaChannels.AUDIO, MediaChannels.VIDEO])
+        mediaChannels: new Set([MediaChannels.AUDIO, MediaChannels.VIDEO]),
+        type: 'main'
       };
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
 
-      hls.trigger(Event.BUFFER_APPENDED, {
-        timeRanges: {
-          video: createMockBuffer([
-            {
-              startPTS: 0,
-              endPTS: 2
-            },
-          ]),
-          audio: createMockBuffer([
-            {
-              startPTS: 0.5,
-              endPTS: 2
-            },
-          ])
-        }
-      });
+      timeRanges = new Map();
+      timeRanges.set(MediaChannels.VIDEO, createMockBuffer([
+        {
+          startPTS: 0,
+          endPTS: 2
+        },
+      ]));
+      timeRanges.set(MediaChannels.AUDIO, createMockBuffer([
+        {
+          startPTS: 0.5,
+          endPTS: 2
+        },
+      ]));
+      hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
+
       hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
 
       assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.PARTIAL);
@@ -202,25 +197,26 @@ describe('FragmentTracker', () => {
         endPTS: 1,
         sn: 1,
         level: 1,
-        contentTypes: new Set([MediaChannels.AUDIO, MediaChannels.VIDEO])
+        mediaChannels: new Set([MediaChannels.AUDIO, MediaChannels.VIDEO]),
+        type: 'main'
       };
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
-      hls.trigger(Event.BUFFER_APPENDED, {
-        timeRanges: {
-          video: createMockBuffer([
-            {
-              startPTS: 0.5,
-              endPTS: 2
-            },
-          ]),
-          audio: createMockBuffer([
-            {
-              startPTS: 0,
-              endPTS: 2
-            },
-          ])
-        }
-      });
+
+      timeRanges = new Map();
+      timeRanges.set(MediaChannels.VIDEO, createMockBuffer([
+        {
+          startPTS: 0.5,
+          endPTS: 2
+        },
+      ]));
+      timeRanges.set(MediaChannels.AUDIO, createMockBuffer([
+        {
+          startPTS: 0,
+          endPTS: 2
+        },
+      ]));
+      hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
+
       hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
 
       assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.PARTIAL);
@@ -232,25 +228,26 @@ describe('FragmentTracker', () => {
         endPTS: 1,
         sn: 1,
         level: 1,
-        contentTypes: new Set([MediaChannels.AUDIO])
+        mediaChannels: new Set([MediaChannels.AUDIO]),
+        type: 'audio'
       };
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
-      hls.trigger(Event.BUFFER_APPENDED, {
-        timeRanges: {
-          video: createMockBuffer([
-            {
-              startPTS: 0.5,
-              endPTS: 2
-            },
-          ]),
-          audio: createMockBuffer([
-            {
-              startPTS: 0,
-              endPTS: 2
-            },
-          ])
-        }
-      });
+
+      timeRanges = new Map();
+      timeRanges.set(MediaChannels.VIDEO, createMockBuffer([
+        {
+          startPTS: 0.5,
+          endPTS: 2
+        },
+      ]));
+      timeRanges.set(MediaChannels.AUDIO, createMockBuffer([
+        {
+          startPTS: 0,
+          endPTS: 2
+        },
+      ]));
+      hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
+
       hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
 
       assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.OK);

@@ -1,5 +1,6 @@
 import EventHandler from '../event-handler';
 import Event from '../events';
+import * as MediaChannels from '../media-channels';
 
 export const FragmentState = {
   NOT_LOADED: 'NOT_LOADED',
@@ -69,9 +70,11 @@ export class FragmentTracker extends EventHandler {
     let fragmentEntity = this.fragments.get(fragKey);
     fragmentEntity.buffered = true;
     for (let [channel, timeRange] of this.timeRanges) {
-      // Check for malformed fragments
-      // Gaps need to be calculated for each channel
-      fragmentEntity.range[channel] = this.getBufferedTimes(fragment.startPTS, fragment.endPTS, timeRange);
+      if(fragment.mediaChannels.has(channel) === true) {
+        // Check for malformed fragments
+        // Gaps need to be calculated for each channel
+        fragmentEntity.range[channel] = this.getBufferedTimes(fragment.startPTS, fragment.endPTS, timeRange);
+      }
     }
   }
 
@@ -97,7 +100,6 @@ export class FragmentTracker extends EventHandler {
           startPTS: Math.max(startPTS, timeRange.start(i)),
           endPTS: Math.min(endPTS, timeRange.end(i))
         });
-
         fragmentPartial = true;
       } else if(endPTS <= startTime) {
         // No need to check the rest of the timeRange as it is in order
@@ -165,8 +167,8 @@ export class FragmentTracker extends EventHandler {
 
   isPartial(fragmentEntity) {
     return fragmentEntity.buffered === true &&
-      ((fragmentEntity.range.video !== undefined && fragmentEntity.range.video.partial === true) ||
-        (fragmentEntity.range.audio !== undefined && fragmentEntity.range.audio.partial === true));
+      ((fragmentEntity.range[MediaChannels.VIDEO] !== undefined && fragmentEntity.range[MediaChannels.VIDEO].partial === true) ||
+        (fragmentEntity.range[MediaChannels.AUDIO] !== undefined && fragmentEntity.range[MediaChannels.AUDIO].partial === true));
   }
 
   isTimeBuffered(startPTS, endPTS, timeRange) {
