@@ -73,6 +73,7 @@ design idea is pretty simple :
     **Feature: Media Zigzagging**
     
     If there is a backup stream, Media Zigzagging will go through all available levels in `primary` and `backup` streams. Behavior has a dual constraint, where fragment retry limits and level limits are accounted in the same time.
+    When the lowest level has been reached, zigzagging will be adjusted to start from the highest level until retry limits are not reached.
     
     ![Media Zigzagging Explanation](./media-zigzagging.png) 
     
