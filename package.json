@@ -26,6 +26,7 @@
   },
   "scripts": {
     "build": "webpack --progress",
+    "build:analyze": "ANALYZE=true npm run build",
     "preparerelease": "npm run build && npm run test && git add dist/* && git commit -m 'update dist'",
     "prerelease": "mversion prerelease && npm run preparerelease",
     "patch": "mversion p && npm run preparerelease",
