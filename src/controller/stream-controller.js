@@ -494,7 +494,7 @@ class StreamController extends EventHandler {
     if ((frag.decryptdata && frag.decryptdata.uri != null) && (frag.decryptdata.key == null)) {
       logger.log(`Loading key for ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}`);
       this.state = State.KEY_LOADING;
-      this.hls.trigger(Event.KEY_LOADING, {frag: frag});
+      this.hls.trigger(Event.KEY_LOADING, {frag});
     } else {
       logger.log(`Loading ${frag.sn} of [${levelDetails.startSN} ,${levelDetails.endSN}],level ${level}, currentTime:${pos.toFixed(3)},bufferEnd:${bufferEnd.toFixed(3)}`);
       // Check if fragment is not loaded
@@ -512,7 +512,7 @@ class StreamController extends EventHandler {
         frag.autoLevel = this.hls.autoLevelEnabled;
         frag.bitrateTest = this.bitrateTest;
 
-        this.hls.trigger(Event.FRAG_LOADING, {frag: frag});
+        this.hls.trigger(Event.FRAG_LOADING, {frag});
         // lazy demuxer init, as this could take some time ... do it during frag loading
         if (!this.demuxer) {
           this.demuxer = new Demuxer(this.hls,'main');
@@ -1100,10 +1100,10 @@ class StreamController extends EventHandler {
         data.endDTS = data.startDTS + fragCurrent.duration;
       }
 
-      if(!frag.contentTypes) {
-        frag.contentTypes = new Set();
+      if(!frag.mediaChannels) {
+        frag.mediaChannels = new Set();
       }
-      frag.contentTypes.add(data.type);
+      frag.mediaChannels.add(data.type);
 
       logger.log(`Parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb},dropped:${data.dropped || 0}`);
 

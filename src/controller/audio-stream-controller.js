@@ -663,10 +663,10 @@ class AudioStreamController extends EventHandler {
         data.endDTS = data.startDTS + fragCurrent.duration;
       }
 
-      if(!fragCurrent.contentTypes) {
-        fragCurrent.contentTypes = new Set();
+      if(!fragCurrent.mediaChannels) {
+        fragCurrent.mediaChannels = new Set();
       }
-      fragCurrent.contentTypes.add(data.type);
+      fragCurrent.mediaChannels.add(data.type);
 
       logger.log(`parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
       LevelHelper.updateFragPTSDTS(track.details,fragCurrent,data.startPTS,data.endPTS);

@@ -224,10 +224,10 @@ class BufferController extends EventHandler {
 
 
     // this.sourceBuffer is better to use than media.buffered as it is closer to the PTS data from the fragments
-    let timeRanges = {};
+    let timeRanges = new Map();
     for (let type in this.sourceBuffer) {
       if (this.sourceBuffer.hasOwnProperty(type)) {
-        timeRanges[type] = this.sourceBuffer[type].buffered;
+        timeRanges.set(type, this.sourceBuffer[type].buffered);
       }
     }
 
