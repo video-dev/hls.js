@@ -3,6 +3,7 @@ import Event from "../../../src/events";
 const assert = require('assert');
 
 import {FragmentTracker, FragmentState} from '../../../src/helper/fragment-tracker';
+import * as MediaChannels from '../../../src/media-channels';
 import Hls from '../../../src/hls';
 
 function createMockBuffer(buffered) {
@@ -25,7 +26,7 @@ describe('FragmentTracker', () => {
       endPTS: 1,
       sn: 1,
       level: 1,
-      audioOnly: false
+      contentTypes: new Set([MediaChannels.AUDIO, MediaChannels.VIDEO])
     };
     hls.trigger(Event.FRAG_LOADED, { frag: fragment });
 
@@ -73,7 +74,7 @@ describe('FragmentTracker', () => {
         endPTS: 1,
         sn: 1,
         level: 0,
-        audioOnly: false
+        contentTypes: new Set([MediaChannels.AUDIO, MediaChannels.VIDEO])
       };
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
     };
@@ -170,7 +171,7 @@ describe('FragmentTracker', () => {
         endPTS: 1,
         sn: 1,
         level: 1,
-        audioOnly: false
+        contentTypes: new Set([MediaChannels.AUDIO, MediaChannels.VIDEO])
       };
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
 
@@ -201,7 +202,7 @@ describe('FragmentTracker', () => {
         endPTS: 1,
         sn: 1,
         level: 1,
-        audioOnly: false
+        contentTypes: new Set([MediaChannels.AUDIO, MediaChannels.VIDEO])
       };
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
       hls.trigger(Event.BUFFER_APPENDED, {
@@ -231,7 +232,7 @@ describe('FragmentTracker', () => {
         endPTS: 1,
         sn: 1,
         level: 1,
-        audioOnly: true
+        contentTypes: new Set([MediaChannels.AUDIO])
       };
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
       hls.trigger(Event.BUFFER_APPENDED, {

@@ -66,17 +66,15 @@ export class FragmentTracker extends EventHandler {
    * @param {Object} fragment Check the fragment against all sourceBuffers loaded
    */
   detectPartialFragments(fragment) {
-    let fragmentBuffered;
     let fragKey = this.getFragmentKey(fragment);
     let fragmentEntity = this.fragments[fragKey];
     fragmentEntity.buffered = true;
     let timeRange;
     for(let type in this.timeRanges) {
       if (this.timeRanges.hasOwnProperty(type)) {
-        if((fragment.audioOnly === true && type === 'audio') || fragment.audioOnly === false) {
+        if(fragment.contentTypes.has(type) === true) {
           timeRange = this.timeRanges[type];
           // Check for malformed fragments
-          fragmentBuffered = [];
           // Gaps need to be calculated for each type
           fragmentEntity.range[type] = this.getBufferedTimes(fragment.startPTS, fragment.endPTS, timeRange);
         }

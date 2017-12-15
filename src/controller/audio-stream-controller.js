@@ -13,6 +13,7 @@ import {ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
 import { findFragWithCC } from '../utils/discontinuities';
 import {FragmentState} from '../helper/fragment-tracker';
+import * as MediaChannels from '../media-channels';
 
 const State = {
   STOPPED : 'STOPPED',
@@ -341,14 +342,12 @@ class AudioStreamController extends EventHandler {
             } else {
               logger.log(`Loading ${frag.sn}, cc: ${frag.cc} of [${trackDetails.startSN} ,${trackDetails.endSN}],track ${trackId}, currentTime:${pos},bufferEnd:${bufferEnd.toFixed(3)}`);
               // Check if fragment is not loaded
-              let ftState = this.fragmentTracker.getState(frag);
-              if(ftState === FragmentState.NOT_LOADED) {
+              if(this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
                 this.fragCurrent = frag;
                 this.startFragRequested = true;
                 if (!isNaN(frag.sn)) {
                   this.nextLoadPosition = frag.start + frag.duration;
                 }
-                frag.audioOnly = true;
                 hls.trigger(Event.FRAG_LOADING, {frag: frag});
                 this.state = State.FRAG_LOADING;
               }
@@ -617,12 +616,12 @@ class AudioStreamController extends EventHandler {
       let tracks = data.tracks, track;
 
       // delete any video track found on audio demuxer
-      if (tracks.video) {
-        delete tracks.video;
+      if (tracks[MediaChannels.VIDEO]) {
+        delete tracks[MediaChannels.VIDEO];
       }
 
       // include levelCodec in audio and video tracks
-      track = tracks.audio;
+      track = tracks[MediaChannels.AUDIO];
       if(track) {
         track.levelCodec = track.codec;
         track.id = data.id;
@@ -663,6 +662,11 @@ class AudioStreamController extends EventHandler {
         data.endPTS = data.startPTS + fragCurrent.duration;
         data.endDTS = data.startDTS + fragCurrent.duration;
       }
+
+      if(!fragCurrent.contentTypes) {
+        fragCurrent.contentTypes = new Set();
+      }
+      fragCurrent.contentTypes.add(data.type);
 
       logger.log(`parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
       LevelHelper.updateFragPTSDTS(track.details,fragCurrent,data.startPTS,data.endPTS);

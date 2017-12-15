@@ -7,6 +7,7 @@ import EventHandler from '../event-handler';
 import {logger} from '../utils/logger';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import {getMediaSource} from '../helper/mediasource-helper';
+import * as MediaChannels from '../media-channels';
 
 const MediaSource = getMediaSource();
 
@@ -48,7 +49,7 @@ class BufferController extends EventHandler {
 
   onLevelPtsUpdated(data) {
     let type = data.type;
-    let audioTrack = this.tracks.audio;
+    let audioTrack = this.tracks[MediaChannels.AUDIO];
 
     // Adjusting `SourceBuffer.timestampOffset` (desired point in the timeline where the next frames should be appended)
     // in Chrome browser when we detect MPEG audio container and time delta between level PTS and `SourceBuffer.timestampOffset`
@@ -58,7 +59,7 @@ class BufferController extends EventHandler {
     // More info here: https://github.com/video-dev/hls.js/issues/332#issuecomment-257986486
 
     if (type === 'audio' && audioTrack && audioTrack.container === 'audio/mpeg') { // Chrome audio mp3 track
-      let audioBuffer = this.sourceBuffer.audio;
+      let audioBuffer = this.sourceBuffer[MediaChannels.AUDIO];
       let delta = Math.abs(audioBuffer.timestampOffset - data.start);
 
       // adjust timestamp offset if time delta is greater than 100ms
@@ -203,7 +204,7 @@ class BufferController extends EventHandler {
   onSBUpdateEnd() {
     // update timestampOffset
     if (this.audioTimestampOffset) {
-      let audioBuffer = this.sourceBuffer.audio;
+      let audioBuffer = this.sourceBuffer[MediaChannels.AUDIO];
       logger.warn('change mpeg audio timestamp offset from ' + audioBuffer.timestampOffset + ' to ' + this.audioTimestampOffset);
       audioBuffer.timestampOffset = this.audioTimestampOffset;
       delete this.audioTimestampOffset;

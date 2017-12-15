@@ -13,7 +13,7 @@ import TimeRanges from '../utils/timeRanges';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
 import { alignDiscontinuities } from '../utils/discontinuities';
-
+import * as MediaChannels from '../media-channels';
 
 const State = {
   STOPPED : 'STOPPED',
@@ -511,7 +511,6 @@ class StreamController extends EventHandler {
       if(frag.backtracked || fragState === FragmentState.NOT_LOADED) {
         frag.autoLevel = this.hls.autoLevelEnabled;
         frag.bitrateTest = this.bitrateTest;
-        frag.audioOnly = false;
 
         this.hls.trigger(Event.FRAG_LOADING, {frag: frag});
         // lazy demuxer init, as this could take some time ... do it during frag loading
@@ -1092,19 +1091,24 @@ class StreamController extends EventHandler {
         data.id === 'main' &&
         fragNew.sn === fragCurrent.sn &&
         fragNew.level === fragCurrent.level &&
-        !(data.type === 'audio' && this.altAudio) && // filter out main audio if audio track is loaded through audio stream controller
+        !(data.type === MediaChannels.AUDIO && this.altAudio) && // filter out main audio if audio track is loaded through audio stream controller
         this.state === State.PARSING) {
       var level = this.levels[this.level],
           frag = fragCurrent;
-          if (isNaN(data.endPTS)) {
-            data.endPTS = data.startPTS + fragCurrent.duration;
-            data.endDTS = data.startDTS + fragCurrent.duration;
-          }
+      if (isNaN(data.endPTS)) {
+        data.endPTS = data.startPTS + fragCurrent.duration;
+        data.endDTS = data.startDTS + fragCurrent.duration;
+      }
+
+      if(!frag.contentTypes) {
+        frag.contentTypes = new Set();
+      }
+      frag.contentTypes.add(data.type);
 
       logger.log(`Parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb},dropped:${data.dropped || 0}`);
 
       // Detect gaps in a fragment  and try to fix it by finding a keyframe in the previous fragment (see _findFragments)
-      if(data.type === 'video') {
+      if(data.type === MediaChannels.VIDEO) {
         frag.dropped = data.dropped;
         if (frag.dropped) {
           if (!frag.backtracked) {
