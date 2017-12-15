@@ -35,8 +35,7 @@
     "test": "karma start karma.conf.js",
     "testfunc": "cross-env BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/hlsjs.js --timeout 40000",
     "lint": "jshint src/",
-    "dev": "webpack-dev-server --progress --env.debug --port 8000",
-    "bundle-check": "webpack -p --config './webpack.config.bundle-analyzer.js'"
+    "dev": "webpack-dev-server --progress --env.debug --port 8000"
   },
   "dependencies": {
     "url-toolkit": "^2.0.1"
