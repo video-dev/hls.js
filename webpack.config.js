@@ -2,6 +2,8 @@ const pkgJson = require('./package.json');
 const path = require('path');
 const webpack = require('webpack');
 
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
+
 const uglifyJsOptions = {
   screwIE8: true,
   stats: true,
@@ -40,7 +42,6 @@ function getPluginsForConfig(type, minify = false) {
   // common plugins.
   const plugins = [
     new webpack.optimize.OccurrenceOrderPlugin(),
-    new webpack.optimize.ModuleConcatenationPlugin(),
     new webpack.DefinePlugin(getConstantsForConfig(type))
   ];
 
@@ -53,6 +54,16 @@ function getPluginsForConfig(type, minify = false) {
         debug: false
       })
     ]);
+  }
+
+  if (env.ANALYZE && !minify) {
+    plugins.push(new BundleAnalyzerPlugin({
+      analyzerMode: 'static',
+      reportFilename: `bundle-analyzer-report.${type}.html`
+    }));
+  } else {
+    // https://github.com/webpack-contrib/webpack-bundle-analyzer/issues/115
+    plugins.push(new webpack.optimize.ModuleConcatenationPlugin())
   }
 
   return plugins;
