@@ -5515,7 +5515,7 @@ var demuxer_inline_DemuxerInline = function () {
       var typeSupported = this.typeSupported;
       var config = this.config;
       // probing order is TS/AAC/MP3/MP4
-      var muxConfig = [{ demux: tsdemuxer, remux: mp4_remuxer }, { demux: aacdemuxer, remux: mp4_remuxer }, { demux: mp3demuxer, remux: mp4_remuxer }, { demux: mp4demuxer, remux: passthrough_remuxer }];
+      var muxConfig = [{ demux: tsdemuxer, remux: mp4_remuxer }, { demux: mp4demuxer, remux: passthrough_remuxer }, { demux: aacdemuxer, remux: mp4_remuxer }, { demux: mp3demuxer, remux: mp4_remuxer }];
 
       // probe for content type
       for (var i = 0, len = muxConfig.length; i < len; i++) {
@@ -9167,7 +9167,8 @@ var level_controller_LevelController = function (_EventHandler) {
 
     var level = this._levels[levelIndex];
     var redundantLevels = void 0,
-        delay = void 0;
+        delay = void 0,
+        nextLevel = void 0;
 
     level.loadError++;
     level.fragmentError = fragmentError;
@@ -9205,10 +9206,12 @@ var level_controller_LevelController = function (_EventHandler) {
         level.urlId = (level.urlId + 1) % redundantLevels;
         level.details = undefined;
       } else {
-        // Switch-down if more renditions are available
-        if (this.manualLevelIndex === -1 && levelIndex !== 0) {
-          logger["b" /* logger */].warn('level controller, ' + errorDetails + ': switch-down to ' + (levelIndex - 1));
-          this.hls.nextAutoLevel = this.currentLevelIndex = levelIndex - 1;
+        // Search for available level
+        if (this.manualLevelIndex === -1) {
+          // When lowest level has been reached, let's start hunt from the top
+          nextLevel = levelIndex === 0 ? this._levels.length - 1 : levelIndex - 1;
+          logger["b" /* logger */].warn('level controller, ' + errorDetails + ': switch to ' + nextLevel);
+          this.hls.nextAutoLevel = this.currentLevelIndex = nextLevel;
         } else if (fragmentError === true) {
           // Allow fragment retry as long as configuration allows.
           // reset this._level so that another call to set level() will trigger again a frag load
