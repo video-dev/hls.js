@@ -470,6 +470,11 @@ class MP4Remuxer {
       return sample.pts > 0;
     });
 
+    // in case all samples have negative PTS, and have been filtered out, return now
+    if (inputSamples.length === 0) {
+      return;
+    }
+
     if (!contiguous) {
       if (!accurateTimeOffset) {
         // if frag are mot contiguous and if we cant trust time offset, let's use first sample PTS as next audio PTS
