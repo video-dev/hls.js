@@ -5067,8 +5067,13 @@ var mp4_remuxer_MP4Remuxer = function () {
     // if we don't remove these negative samples, they will shift all audio samples forward.
     // leading to audio overlap between current / next fragment
     inputSamples = inputSamples.filter(function (sample) {
-      return sample.pts > 0;
+      return sample.pts >= 0;
     });
+
+    // in case all samples have negative PTS, and have been filtered out, return now
+    if (inputSamples.length === 0) {
+      return;
+    }
 
     if (!contiguous) {
       if (!accurateTimeOffset) {
@@ -11095,7 +11100,7 @@ var hls_Hls = function () {
   hls__createClass(Hls, null, [{
     key: 'version',
     get: function get() {
-      return "0.8.8";
+      return "0.8.9";
     }
   }, {
     key: 'Events',
