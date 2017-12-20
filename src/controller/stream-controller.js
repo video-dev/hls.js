@@ -1101,6 +1101,7 @@ class StreamController extends EventHandler {
       }
 
       if(!frag.mediaChannels) {
+        // Set is used because the elements do not repeat
         frag.mediaChannels = new Set();
       }
       frag.mediaChannels.add(data.type);

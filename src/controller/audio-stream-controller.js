@@ -348,7 +348,7 @@ class AudioStreamController extends EventHandler {
                 if (!isNaN(frag.sn)) {
                   this.nextLoadPosition = frag.start + frag.duration;
                 }
-                hls.trigger(Event.FRAG_LOADING, {frag: frag});
+                hls.trigger(Event.FRAG_LOADING, {frag});
                 this.state = State.FRAG_LOADING;
               }
             }
@@ -664,6 +664,7 @@ class AudioStreamController extends EventHandler {
       }
 
       if(!fragCurrent.mediaChannels) {
+        // Set is used because the elements do not repeat
         fragCurrent.mediaChannels = new Set();
       }
       fragCurrent.mediaChannels.add(data.type);
