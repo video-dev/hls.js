@@ -131,6 +131,10 @@ export default class Hls {
       }
     });
     this.coreComponents = coreComponents;
+
+    if (config.postInit instanceof Function) {
+      config.postInit(this);
+    }
   }
 
   destroy() {
