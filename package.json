@@ -26,6 +26,7 @@
   },
   "scripts": {
     "build": "webpack --progress",
+    "build:analyze": "ANALYZE=true webpack --progress",
     "preparerelease": "npm run build && npm run test && git add dist/* && git commit -m 'update dist'",
     "prerelease": "mversion prerelease && npm run preparerelease",
     "patch": "mversion p && npm run preparerelease",
@@ -63,6 +64,7 @@
     "mversion": "^1.10.1",
     "selenium-webdriver": "^3.1.0",
     "webpack": "^3.5.5",
+    "webpack-bundle-analyzer": "^2.9.1",
     "webpack-dev-server": "^2.7.1",
     "webworkify-webpack": "^2.0.0"
   }
