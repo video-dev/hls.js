@@ -466,8 +466,13 @@ class MP4Remuxer {
     // if we don't remove these negative samples, they will shift all audio samples forward.
     // leading to audio overlap between current / next fragment
     inputSamples = inputSamples.filter(function(sample) {
-      return sample.pts > 0;
+      return sample.pts >= 0;
     });
+
+    // in case all samples have negative PTS, and have been filtered out, return now
+    if (inputSamples.length === 0) {
+      return;
+    }
 
     if (!contiguous) {
       if (!accurateTimeOffset) {
