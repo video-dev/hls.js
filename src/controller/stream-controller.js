@@ -535,6 +535,7 @@ class StreamController extends EventHandler {
     return this._state;
   }
 
+  // TODO: Move this functionality into fragment-tracker.js
   getBufferedFrag(position) {
     return BinarySearch.search(this._bufferedFrags, function(frag) {
       if (position < frag.startPTS) {
@@ -1426,16 +1427,16 @@ _checkBuffer() {
               if(partial !== null) {
                 let lastEndTime = 0;
                 // Check if currentTime is between unbuffered regions of partial fragments
-                for (let i = 0; i < this.media.buffered.length; i++) {
-                  let startTime = this.media.buffered.start(i);
+                for (let i = 0; i < media.buffered.length; i++) {
+                  let startTime = media.buffered.start(i);
                   if(currentTime >= lastEndTime && currentTime < startTime) {
-                    this.media.currentTime = Math.max(startTime, this.media.currentTime + 0.1);
-                    logger.warn(`skipping hole, adjusting currentTime from ${currentTime} to ${this.media.currentTime}`);
+                    media.currentTime = Math.max(startTime, media.currentTime + 0.1);
+                    logger.warn(`skipping hole, adjusting currentTime from ${currentTime} to ${media.currentTime}`);
                     this.stalled = undefined;
-                    hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_SEEK_OVER_HOLE, fatal: false, reason: `fragment loaded with buffer holes, seeking from ${currentTime} to ${this.media.currentTime}`, frag: partial});
+                    hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.BUFFER_SEEK_OVER_HOLE, fatal: false, reason: `fragment loaded with buffer holes, seeking from ${currentTime} to ${media.currentTime}`, frag: partial});
                     return;
                   }
-                  lastEndTime = this.media.buffered.end(i);
+                  lastEndTime = media.buffered.end(i);
                 }
               }
               if (bufferLen > jumpThreshold && stalledDuration > config.highBufferWatchdogPeriod * 1000) {
