@@ -257,11 +257,11 @@ $(document).ready(function() {
 
   var widevineLicenseUrl;
   var emeEnabled;
-  /* Widevine support demo
+  ///* Widevine support demo
   widevineLicenseUrl = "https://cwip-shaka-proxy.appspot.com/no_auth";
   emeEnabled = true;
   // try with https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine-hls/hls.m3u8
-  */
+  //*/
 
 
   loadStream(decodeURIComponent(getURLParam('src','https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8')));
@@ -289,9 +289,6 @@ $(document).ready(function() {
        events = { url : url, t0 : performance.now(), load : [], buffer : [], video : [], level : [], bitrate : []};
        recoverDecodingErrorDate = recoverSwapAudioCodecDate = null;
        fmp4Data = { 'audio': [], 'video': [] };
-
-       //const widevineLicenseUrl = "https://cwip-shaka-proxy.appspot.com/no_auth";
-       // try https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine-hls/hls.m3u8
 
        hls = new Hls({
          debug: true,
