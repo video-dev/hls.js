@@ -99,7 +99,6 @@ export default class Hls {
     const fragmentLoader = new FragmentLoader(this);
     const keyLoader = new KeyLoader(this);
     const id3TrackController = new ID3TrackController(this);
-    const emeController = new EMEController(this);
 
     // network controllers
     const levelController = this.levelController = new LevelController(this);
@@ -113,7 +112,7 @@ export default class Hls {
     }
     this.networkControllers = networkControllers;
 
-    let coreComponents = [ emeController, playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController, id3TrackController ];
+    let coreComponents = [ playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController, id3TrackController ];
 
     // optional audio track and subtitle controller
     Controller = config.audioTrackController;
@@ -128,6 +127,13 @@ export default class Hls {
       let subtitleTrackController = new Controller(this);
       this.subtitleTrackController = subtitleTrackController;
       coreComponents.push(subtitleTrackController);
+    }
+
+    Controller = config.emeController;
+    if (Controller) {
+      let emeController = new Controller(this);
+      this.emeController = emeController;
+      coreComponents.push(emeController);
     }
 
     // optional subtitle controller
