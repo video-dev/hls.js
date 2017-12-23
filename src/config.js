@@ -16,6 +16,7 @@ import * as Cues from './utils/cues';
 import TimelineController from './controller/timeline-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
 import SubtitleStreamController from  './controller/subtitle-stream-controller';
+import EMEController from './controller/eme-controller';
 
 import {requestMediaKeySystemAccess} from './helper/mediakeys-helper';
 
@@ -93,7 +94,7 @@ export var hlsDefaultConfig = {
             requestMediaKeySystemAccess,    // used by eme-controller
 };
 
-if (typeof __SUBTITLE__ !== 'undefined' && __SUBTITLE__) {
+if (__USE_SUBTITLES__) {
   hlsDefaultConfig.subtitleStreamController = SubtitleStreamController;
   hlsDefaultConfig.subtitleTrackController = SubtitleTrackController;
   hlsDefaultConfig.timelineController = TimelineController;
@@ -106,7 +107,11 @@ if (typeof __SUBTITLE__ !== 'undefined' && __SUBTITLE__) {
   hlsDefaultConfig.captionsTextTrack2LanguageCode = 'es'; // used by timeline-controller
 }
 
-if (typeof __ALT_AUDIO__ !== 'undefined' && __ALT_AUDIO__) {
+if (__USE_ALT_AUDIO__) {
   hlsDefaultConfig.audioStreamController = AudioStreamController;
   hlsDefaultConfig.audioTrackController = AudioTrackController;
+}
+
+if (__USE_EME_DRM__) {
+  hlsDefaultConfig.emeController = EMEController;
 }
