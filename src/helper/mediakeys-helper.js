@@ -1,8 +1,12 @@
-export function requestMediaKeySystemAccess() {
-  if (window.navigato && window.navigator.requestMediaKeySystemAccess) {
+const requestMediaKeySystemAccess = (function() {
+  if (window.navigator && window.navigator.requestMediaKeySystemAccess) {
     return window.navigator.requestMediaKeySystemAccess.bind(window.navigator);
   }
   else {
     return null;
   }
-}
+})();
+
+export {
+  requestMediaKeySystemAccess
+};
