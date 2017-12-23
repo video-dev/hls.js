@@ -36,9 +36,9 @@ const commonConfig = {
 /* Allow to customise builds through env-vars */
 const env = process.env;
 
-const addSubtitleSupport = !!env.SUBTITLE;
-const addAltAudioSupport = !!env.ALT_AUDIO;
-const addEMESupport = !!env.EME_DRM;
+const addSubtitleSupport = !!env.SUBTITLE || !!env.USE_SUBTITLES ;
+const addAltAudioSupport = !!env.ALT_AUDIO || !!env.USE_ALT_AUDIO;
+const addEMESupport = !!env.EME_DRM || !!env.USE_EME_DRM;
 const runAnalyzer = !!env.ANALYZE;
 
 function getPluginsForConfig(type, minify = false) {
