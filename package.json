@@ -39,7 +39,7 @@
     "dev": "webpack-dev-server --progress --env.debug --port 8000"
   },
   "dependencies": {
-    "url-toolkit": "^2.0.1"
+    "url-toolkit": "^2.1.2"
   },
   "devDependencies": {
     "arraybuffer-equal": "^1.0.4",
