@@ -1,3 +1,14 @@
+// PKCS7
+export function removePadding(buffer) {
+  const outputBytes = buffer.byteLength;
+  const paddingBytes = outputBytes && (new DataView(buffer)).getUint8(outputBytes - 1);
+  if (paddingBytes) {
+    return buffer.slice(0, outputBytes - paddingBytes);
+  } else {
+    return buffer;
+  }
+}
+
 class AESDecryptor {
   constructor() {
     // Static after running initTable
@@ -247,15 +258,8 @@ class AESDecryptor {
 
       offset = offset + 4;
     }
- 
-    // padding (PKCS7)
-    let outputBytes = outputInt32.buffer.byteLength;
-    let paddingBytes = outputBytes && (new DataView(outputInt32.buffer)).getUint8(outputBytes - 1);
-    if (paddingBytes) {
-      return outputInt32.buffer.slice(0, outputBytes - paddingBytes);
-    } else {
-      return outputInt32.buffer;
-    }
+
+    return removePadding(outputInt32.buffer);
   }
 
   destroy() {
