@@ -1,6 +1,7 @@
 // Karma configuration
 // Generated on Tue Jul 18 2017 12:17:16 GMT-0700 (PDT)
 
+const pkgJson = require('./package.json');
 const webpack = require('webpack');
 const path = require('path');
 
@@ -55,7 +56,7 @@ module.exports = function(config) {
       },
       plugins: [
         new webpack.DefinePlugin({
-          __VERSION__: JSON.stringify('x.x.x'),
+          __VERSION__: JSON.stringify(pkgJson.version),
           __USE_SUBTITLES__: JSON.stringify(true),
           __USE_ALT_AUDIO__: JSON.stringify(true),
           __USE_EME_DRM__: JSON.stringify(true)
