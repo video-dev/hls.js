@@ -43,7 +43,12 @@ hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
     hls.on(Hls.Events.MANIFEST_PARSED,function() {
       video.play();
   });
- }
+ } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+  video.src = 'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8';
+  video.addEventListener('canplay', function() {
+    video.play();
+  });
+}
 </script>
 ```
 
