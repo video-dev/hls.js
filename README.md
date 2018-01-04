@@ -43,7 +43,11 @@ hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
     hls.on(Hls.Events.MANIFEST_PARSED,function() {
       video.play();
   });
- } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+ }
+ // hls.js is not supported on iOS as it does not support Media Source Extensions (MSE).
+ // But you can provide an HLS manifest (i.e. .m3u8 URL) directly to the element on iOS and it will play
+ // This effectively bypasses hls.js for iOS 
+ else if (video.canPlayType('application/vnd.apple.mpegurl')) {
   video.src = 'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8';
   video.addEventListener('canplay', function() {
     video.play();
