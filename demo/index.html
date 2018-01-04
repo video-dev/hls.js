@@ -255,6 +255,15 @@ $(document).ready(function() {
   video.volume = 0.05;
   $("#currentVersion").html("Hls version:" + Hls.version);
 
+  var widevineLicenseUrl;
+  var emeEnabled;
+  ///* Widevine support demo
+  widevineLicenseUrl = "https://cwip-shaka-proxy.appspot.com/no_auth";
+  emeEnabled = true;
+  // try with https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine-hls/hls.m3u8
+  //*/
+
+
   loadStream(decodeURIComponent(getURLParam('src','https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8')));
 
   function loadStream(url) {
@@ -280,7 +289,15 @@ $(document).ready(function() {
        events = { url : url, t0 : performance.now(), load : [], buffer : [], video : [], level : [], bitrate : []};
        recoverDecodingErrorDate = recoverSwapAudioCodecDate = null;
        fmp4Data = { 'audio': [], 'video': [] };
-       hls = new Hls({debug:true, enableWorker : enableWorker, defaultAudioCodec : defaultAudioCodec});
+
+       hls = new Hls({
+         debug: true,
+         enableWorker: enableWorker,
+         defaultAudioCodec: defaultAudioCodec,
+         emeEnabled: emeEnabled,
+         widevineLicenseUrl: widevineLicenseUrl
+        });
+
        $("#HlsStatus").text('loading manifest and attaching video element...');
        hls.loadSource(url);
        hls.autoLevelCapping = levelCapping;

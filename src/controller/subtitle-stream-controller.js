@@ -3,9 +3,9 @@
 */
 
 import Event from '../events';
-import EventHandler from '../event-handler';
 import {logger} from '../utils/logger';
 import Decrypter from '../crypt/decrypter';
+import TaskLoop from '../task-loop';
 
 const State = {
   STOPPED : 'STOPPED',
@@ -14,7 +14,7 @@ const State = {
   FRAG_LOADING : 'FRAG_LOADING'
 };
 
-class SubtitleStreamController extends EventHandler {
+class SubtitleStreamController extends TaskLoop {
 
   constructor(hls) {
     super(hls,
@@ -26,18 +26,17 @@ class SubtitleStreamController extends EventHandler {
       Event.SUBTITLE_TRACK_SWITCH,
       Event.SUBTITLE_TRACK_LOADED,
       Event.SUBTITLE_FRAG_PROCESSED);
+
     this.config = hls.config;
     this.vttFragSNsProcessed = {};
     this.vttFragQueues = undefined;
     this.currentlyProcessing = null;
     this.state = State.STOPPED;
     this.currentTrackId = -1;
-    this.ticks = 0;
     this.decrypter = new Decrypter(hls.observer, hls.config);
   }
 
-  destroy() {
-    EventHandler.prototype.destroy.call(this);
+  onHandlerDestroyed() {
     this.state = State.STOPPED;
   }
 
@@ -83,17 +82,6 @@ class SubtitleStreamController extends EventHandler {
     if(this.currentlyProcessing) {
       this.currentlyProcessing = null;
       this.nextFrag();
-    }
-  }
-
-  tick() {
-    this.ticks++;
-    if (this.ticks === 1) {
-      this.doTick();
-      if (this.ticks > 1) {
-        setTimeout(() => { this.tick(); }, 1);
-      }
-      this.ticks = 0;
     }
   }
 
