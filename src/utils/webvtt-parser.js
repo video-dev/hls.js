@@ -3,22 +3,27 @@ import { utf8ArrayToStr } from '../demux/id3';
 
 // String.prototype.startsWith is not supported in IE11
 const startsWith = function(inputString, searchString, position) {
-  return inputString.substr(position || 0, searchString.length) === searchString;
+    return (
+        inputString.substr(position || 0, searchString.length) === searchString
+    );
 };
 
 const cueString2millis = function(timeString) {
     let ts = parseInt(timeString.substr(-3));
-    let secs = parseInt(timeString.substr(-6,2));
-    let mins = parseInt(timeString.substr(-9,2));
-    let hours = timeString.length > 9 ? parseInt(timeString.substr(0, timeString.indexOf(':'))) : 0;
+    let secs = parseInt(timeString.substr(-6, 2));
+    let mins = parseInt(timeString.substr(-9, 2));
+    let hours =
+        timeString.length > 9
+            ? parseInt(timeString.substr(0, timeString.indexOf(':')))
+            : 0;
 
     if (isNaN(ts) || isNaN(secs) || isNaN(mins) || isNaN(hours)) {
         return -1;
     }
 
     ts += 1000 * secs;
-    ts += 60*1000 * mins;
-    ts += 60*60*1000 * hours;
+    ts += 60 * 1000 * mins;
+    ts += 60 * 60 * 1000 * hours;
 
     return ts;
 };
@@ -58,11 +63,21 @@ const calculateOffset = function(vttCCs, cc, presentationTime) {
 };
 
 const WebVTTParser = {
-    parse: function(vttByteArray, syncPTS, vttCCs, cc, callBack, errorCallBack) {
+    parse: function(
+        vttByteArray,
+        syncPTS,
+        vttCCs,
+        cc,
+        callBack,
+        errorCallBack
+    ) {
         // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
         let re = /\r\n|\n\r|\n|\r/g;
         // Uint8Array.prototype.reduce is not implemented in IE11
-        let vttLines = utf8ArrayToStr(new Uint8Array(vttByteArray)).trim().replace(re, '\n').split('\n');
+        let vttLines = utf8ArrayToStr(new Uint8Array(vttByteArray))
+            .trim()
+            .replace(re, '\n')
+            .split('\n');
 
         let cueTime = '00:00.000';
         let mpegTs = 0;
@@ -93,7 +108,10 @@ const WebVTTParser = {
 
             if (presentationTime) {
                 // If we have MPEGTS, offset = presentation time + discontinuity offset
-                cueOffset = presentationTime + vttCCs.ccOffset - vttCCs.presentationOffset;
+                cueOffset =
+                    presentationTime +
+                    vttCCs.ccOffset -
+                    vttCCs.presentationOffset;
             }
 
             cue.startTime += cueOffset - localTime;
@@ -101,12 +119,15 @@ const WebVTTParser = {
 
             // Create a unique hash id for a cue based on start/end times and text.
             // This helps timeline-controller to avoid showing repeated captions.
-            cue.id = hash(cue.startTime.toString()) + hash(cue.endTime.toString()) + hash(cue.text);
+            cue.id =
+                hash(cue.startTime.toString()) +
+                hash(cue.endTime.toString()) +
+                hash(cue.text);
 
             // Fix encoding of special characters. TODO: Test with all sorts of weird characters.
             cue.text = decodeURIComponent(encodeURIComponent(cue.text));
             if (cue.endTime > 0) {
-              cues.push(cue);
+                cues.push(cue);
             }
         };
 
@@ -130,13 +151,16 @@ const WebVTTParser = {
                     // Once found, no more are allowed anyway, so stop searching.
                     inHeader = false;
                     // Extract LOCAL and MPEGTS.
-                    line.substr(16).split(',').forEach(timestamp => {
-                        if (startsWith(timestamp, 'LOCAL:')) {
-                          cueTime = timestamp.substr(6);
-                        } else if (startsWith(timestamp, 'MPEGTS:')) {
-                          mpegTs = parseInt(timestamp.substr(7));
-                        }
-                    });
+                    line
+                        .substr(16)
+                        .split(',')
+                        .forEach(timestamp => {
+                            if (startsWith(timestamp, 'LOCAL:')) {
+                                cueTime = timestamp.substr(6);
+                            } else if (startsWith(timestamp, 'MPEGTS:')) {
+                                mpegTs = parseInt(timestamp.substr(7));
+                            }
+                        });
                     try {
                         // Calculate subtitle offset in milliseconds.
                         // If sync PTS is less than zero, we have a 33-bit wraparound, which is fixed by adding 2^33 = 8589934592.
@@ -149,20 +173,23 @@ const WebVTTParser = {
                         presentationTime = mpegTs / 90000;
 
                         if (localTime === -1) {
-                            parsingError = new Error(`Malformed X-TIMESTAMP-MAP: ${line}`);
+                            parsingError = new Error(
+                                `Malformed X-TIMESTAMP-MAP: ${line}`
+                            );
                         }
-                    }
-                    catch(e) {
-                        parsingError = new Error(`Malformed X-TIMESTAMP-MAP: ${line}`);
+                    } catch (e) {
+                        parsingError = new Error(
+                            `Malformed X-TIMESTAMP-MAP: ${line}`
+                        );
                     }
                     // Return without parsing X-TIMESTAMP-MAP line.
                     return;
                 } else if (line === '') {
-                  inHeader = false;
+                    inHeader = false;
                 }
             }
             // Parse line by default.
-            parser.parse(line+'\n');
+            parser.parse(line + '\n');
         });
 
         parser.flush();
