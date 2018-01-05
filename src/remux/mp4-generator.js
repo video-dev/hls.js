@@ -358,7 +358,7 @@ class MP4 {
         height = track.height,
         hSpacing = track.pixelRatio[0],
         vSpacing = track.pixelRatio[1];
-    //console.log('avcc:' + Hex.hexDump(avcc));
+
     return MP4.box(MP4.types.avc1, new Uint8Array([
         0x00, 0x00, 0x00, // reserved
         0x00, 0x00, 0x00, // reserved

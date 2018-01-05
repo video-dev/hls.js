@@ -31,7 +31,8 @@
     "Headers"           : true,
     "escape"            : true,
     "__VERSION__"       : true,
-    "__SUBTITLE__"      : true,
-    "__ALT_AUDIO__"     : true
+    "__USE_SUBTITLES__" : true,
+    "__USE_ALT_AUDIO__" : true,
+    "__USE_EME_DRM__"   : true
   }
 }

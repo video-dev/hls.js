@@ -6,10 +6,13 @@ const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPl
 
 const clone = (...args) => Object.assign({}, ...args);
 
-// Allow to customise light dists through env-vars.
+/* Allow to customise builds through env-vars */
 const env = process.env;
-const addSubtitleSupport = (typeof env.SUBTITLE !== 'undefined' && env.SUBTITLE);
-const addAltAudioSupport = (typeof env.ALT_AUDIO !== 'undefined' && env.ALT_AUDIO);
+
+const addSubtitleSupport = !!env.SUBTITLE || !!env.USE_SUBTITLES ;
+const addAltAudioSupport = !!env.ALT_AUDIO || !!env.USE_ALT_AUDIO;
+const addEMESupport = !!env.EME_DRM || !!env.USE_EME_DRM;
+const runAnalyzer = !!env.ANALYZE;
 
 const uglifyJsOptions = {
   screwIE8: true,
@@ -57,11 +60,21 @@ const demoConfig = clone(baseConfig, {
   devtool: 'source-map'
 });
 
+
 function getPluginsForConfig(type, minify = false) {
   // common plugins.
+
+  const defineConstants = getConstantsForConfig(type);
+
+  console.log(
+    `Building <${ minify ? 'minified' : 'non-minified / debug' }> distro-type "${type}" with compile-time defined constants:`,
+    JSON.stringify(defineConstants, null, 4),
+    '\n'
+  );
+
   const plugins = [
     new webpack.optimize.OccurrenceOrderPlugin(),
-    new webpack.DefinePlugin(getConstantsForConfig(type))
+    new webpack.DefinePlugin(defineConstants)
   ];
 
   if (minify) {
@@ -75,7 +88,7 @@ function getPluginsForConfig(type, minify = false) {
     ]);
   }
 
-  if (env.ANALYZE && !minify) {
+  if (runAnalyzer && !minify) {
     plugins.push(new BundleAnalyzerPlugin({
       analyzerMode: 'static',
       reportFilename: `bundle-analyzer-report.${type}.html`
@@ -92,13 +105,20 @@ function getConstantsForConfig(type) {
   // By default the "main" dists (hls.js & hls.min.js) are full-featured.
   return {
     __VERSION__: JSON.stringify(pkgJson.version),
-    __SUBTITLE__: JSON.stringify(type === 'main' ? true: addSubtitleSupport),
-    __ALT_AUDIO__: JSON.stringify(type === 'main' ? true : addAltAudioSupport)
+    __USE_SUBTITLES__: JSON.stringify(type === 'main' || addSubtitleSupport),
+    __USE_ALT_AUDIO__: JSON.stringify(type === 'main' || addAltAudioSupport),
+    __USE_EME_DRM__: JSON.stringify(type === 'main' || addEMESupport)
   };
 }
 
 function getAliasesForLightDist() {
   let aliases = {};
+
+  if (!addEMESupport) {
+    aliases = Object.assign({}, aliases, {
+      './controller/eme-controller': './empty.js'
+    });
+  }
 
   if (!addSubtitleSupport) {
     aliases = clone(aliases, {

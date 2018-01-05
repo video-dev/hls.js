@@ -122,7 +122,6 @@ class Demuxer {
   onWorkerMessage(ev) {
     let data = ev.data,
         hls = this.hls;
-    //console.log('onWorkerMessage:' + data.event);
     switch(data.event) {
       case 'init':
         // revoke the Object URL that was used to create demuxer worker, so as not to leak it

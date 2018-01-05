@@ -44,6 +44,15 @@ hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
       video.play();
   });
  }
+ // hls.js is not supported on platforms that do not have Media Source Extensions (MSE) enabled.
+ // When the browser has built-in HLS support (check using `canPlayType`), we can provide an HLS manifest (i.e. .m3u8 URL) directly to the video element throught the `src` property.
+ // This is using the built-in support of the plain video element, without using hls.js.
+  else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = 'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8';
+    video.addEventListener('canplay',function() {
+      video.play();
+    });
+  }
 </script>
 ```
 
@@ -125,7 +134,11 @@ npm install --save-dev @types/hls.js
 ```
 
 ## Compatibility
-hls.js is compatible with browsers supporting MSE with 'video/MP4' inputs.
+
+hls.js is compatible with browsers supporting MediaSource extensions (MSE) API with 'video/MP4' mimetypes inputs.
+
+Find a support matrix of the MediaSource API here: https://developer.mozilla.org/en-US/docs/Web/API/MediaSource
+
 As of today, it is supported on:
 
  * Chrome for Android 34+
@@ -137,6 +150,10 @@ As of today, it is supported on:
  * Opera for Desktop
  * Vivaldi for Desktop
  * Safari for Mac 8+ (beta)
+ 
+Please note: iOS Safari "Mobile" does not support the MediaSource API. Safari browsers have however built-in HLS support through the plain video "tag" source URL. See the example below to run appropriate feature detection and choose between using Hls.js or natively built-in HLS support.
+
+When a platform has neither MediaSource nor native HLS support, you will not be able to play HLS.
 
 ## CORS
 
