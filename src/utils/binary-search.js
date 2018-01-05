@@ -19,23 +19,21 @@ var BinarySearch = {
         var maxIndex = list.length - 1;
         var currentIndex = null;
         var currentElement = null;
-     
+
         while (minIndex <= maxIndex) {
-            currentIndex = (minIndex + maxIndex) / 2 | 0;
+            currentIndex = ((minIndex + maxIndex) / 2) | 0;
             currentElement = list[currentIndex];
-            
+
             var comparisonResult = comparisonFunction(currentElement);
             if (comparisonResult > 0) {
                 minIndex = currentIndex + 1;
-            }
-            else if (comparisonResult < 0) {
+            } else if (comparisonResult < 0) {
                 maxIndex = currentIndex - 1;
-            }
-            else {
+            } else {
                 return currentElement;
             }
         }
-     
+
         return null;
     }
 };

@@ -39,7 +39,8 @@
     "test:unit:watch": "karma start karma.conf.js --auto-watch --no-single-run",
     "test:func": "cross-env BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/hlsjs.js --timeout 40000",
     "lint": "jshint src/",
-    "dev": "webpack-dev-server --progress --env.debug --port 8000"
+    "dev": "webpack-dev-server --progress --env.debug --port 8000",
+    "prettier": "prettier --tab-width 4 --single-quote --write 'src/**/*.js'"
   },
   "dependencies": {
     "string.prototype.endswith": "^0.2.0",
@@ -68,6 +69,7 @@
     "karma-webpack": "^2.0.4",
     "mocha": "^3.0.2",
     "mversion": "^1.10.1",
+    "prettier": "1.9.2",
     "selenium-webdriver": "^3.1.0",
     "should": "^13.1.3",
     "sinon": "^4.1.3",
