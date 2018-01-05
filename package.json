@@ -38,7 +38,8 @@
     "test:unit": "karma start karma.conf.js",
     "test:unit:watch": "karma start karma.conf.js --auto-watch --no-single-run",
     "test:func": "cross-env BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/hlsjs.js --timeout 40000",
-    "lint": "jshint src/",
+    "lint": "eslint src/ tests/",
+    "lint:fix": "eslint src/ tests/ --fix",
     "dev": "webpack-dev-server --progress --env.debug --port 8000"
   },
   "dependencies": {
