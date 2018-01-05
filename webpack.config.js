@@ -4,6 +4,16 @@ const webpack = require('webpack');
 
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
+const clone = (...args) => Object.assign({}, ...args);
+
+/* Allow to customise builds through env-vars */
+const env = process.env;
+
+const addSubtitleSupport = !!env.SUBTITLE || !!env.USE_SUBTITLES ;
+const addAltAudioSupport = !!env.ALT_AUDIO || !!env.USE_ALT_AUDIO;
+const addEMESupport = !!env.EME_DRM || !!env.USE_EME_DRM;
+const runAnalyzer = !!env.ANALYZE;
+
 const uglifyJsOptions = {
   screwIE8: true,
   stats: true,
@@ -16,7 +26,7 @@ const uglifyJsOptions = {
   }
 };
 
-const commonConfig = {
+const baseConfig = {
   entry: './src/hls.js',
   module: {
     rules: [
@@ -33,13 +43,23 @@ const commonConfig = {
   }
 };
 
-/* Allow to customise builds through env-vars */
-const env = process.env;
+const demoConfig = clone(baseConfig, {
+  name: 'demo',
+  entry: './demo/index',
+  output: {
+    filename: 'hls-demo.js',
+    chunkFilename: '[name].js',
+    sourceMapFilename: 'hls-demo.js.map',
+    path: path.resolve(__dirname, 'dist'),
+    publicPath: '/dist/',
+    library: 'HlsDemo',
+    libraryTarget: 'umd',
+    libraryExport: 'default'
+  },
+  plugins: [],
+  devtool: 'source-map'
+});
 
-const addSubtitleSupport = !!env.SUBTITLE || !!env.USE_SUBTITLES ;
-const addAltAudioSupport = !!env.ALT_AUDIO || !!env.USE_ALT_AUDIO;
-const addEMESupport = !!env.EME_DRM || !!env.USE_EME_DRM;
-const runAnalyzer = !!env.ANALYZE;
 
 function getPluginsForConfig(type, minify = false) {
   // common plugins.
@@ -101,7 +121,7 @@ function getAliasesForLightDist() {
   }
 
   if (!addSubtitleSupport) {
-    aliases = Object.assign({}, aliases, {
+    aliases = clone(aliases, {
       './utils/cues': './empty.js',
       './controller/timeline-controller': './empty.js',
       './controller/subtitle-track-controller': './empty.js',
@@ -110,7 +130,7 @@ function getAliasesForLightDist() {
   }
 
   if (!addAltAudioSupport) {
-    aliases = Object.assign({}, aliases, {
+    aliases = clone(aliases, {
       './controller/audio-track-controller': './empty.js',
       './controller/audio-stream-controller': './empty.js'
     });
@@ -182,7 +202,9 @@ const multiConfig = [
     },
     plugins: getPluginsForConfig('light', true)
   }
-].map(fragment => Object.assign({}, commonConfig, fragment));
+].map(config => clone(baseConfig, config));
+
+multiConfig.push(demoConfig);
 
 // webpack matches the --env arguments to a string; for example, --env.debug.min translates to { debug: true, min: true }
 module.exports = (envArgs) => {
@@ -193,12 +215,12 @@ module.exports = (envArgs) => {
 
   // Find the first enabled config within the arguments array
   const enabledConfigName = Object.keys(envArgs).find(envName => envArgs[envName]);
-  let enabledConfig = multiConfig.find(config => config.name === enabledConfigName);
-
+  // Filter out config with name
+  const enabledConfig = multiConfig.find(config => config.name === enabledConfigName);
   if (!enabledConfig) {
     console.error(`Couldn't find a valid config with the name "${enabledConfigName}". Known configs are: ${multiConfig.map(config => config.name).join(', ')}`);
     return;
   }
 
-  return enabledConfig;
+  return [enabledConfig, demoConfig];
 };
