@@ -109,8 +109,8 @@ class Demuxer {
     }
     this.frag = frag;
     if (w) {
-      // post fragment payload as transferable objects (no copy)
-      w.postMessage({cmd: 'demux', data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset,defaultInitPTS}, [data]);
+      // post fragment payload as transferable objects for ArrayBuffer (no copy)
+      w.postMessage({cmd: 'demux', data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset,defaultInitPTS}, data instanceof ArrayBuffer ? [data] : []);
     } else {
       let demuxer = this.demuxer;
       if (demuxer) {
@@ -122,7 +122,6 @@ class Demuxer {
   onWorkerMessage(ev) {
     let data = ev.data,
         hls = this.hls;
-    //console.log('onWorkerMessage:' + data.event);
     switch(data.event) {
       case 'init':
         // revoke the Object URL that was used to create demuxer worker, so as not to leak it

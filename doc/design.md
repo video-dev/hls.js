@@ -64,11 +64,29 @@ design idea is pretty simple :
   - [src/controller/id3-track-controller.js](../src/controller/id3-track-controller.js)
     - in charge of creating the id3 metadata text track and adding cues to that track in response to the FRAG_PARSING_METADATA event. the raw id3 data is base64 encoded and stored in the cue's text property.
   - [src/controller/level-controller.js][]
-    - level controller is handling quality level set/get ((re)loading stream manifest/switching levels)  
+    - handling quality level set/get ((re)loading stream manifest/switching levels)  
     - in charge of scheduling playlist (re)loading
     - monitors fragment and key loading errors. Performs fragment hunt by switching between primary and backup streams and down-shifting a level till `fragLoadingMaxRetry` limit is reached.
-    - monitors level loading errors. Reloads level manifest with an exponential falloff and converts an error to fatal when `levelLoadingMaxRetry` limit is reached.
-    - a timer is armed to periodically refresh active live playlist
+    - monitors level loading errors. Performs level hunt by switching between primary and backup streams and down-shifting a level till `levelLoadingMaxRetry` limit is reached.
+    - periodically refresh active live playlist
+    
+    **Feature: Media Zigzagging**
+    
+    If there is a backup stream, Media Zigzagging will go through all available levels in `primary` and `backup` streams. Behavior has a dual constraint, where fragment retry limits and level limits are accounted in the same time.
+    When the lowest level has been reached, zigzagging will be adjusted to start from the highest level until retry limits are not reached.
+    
+    ![Media Zigzagging Explanation](./media-zigzagging.png) 
+    
+    Where: F - Bad Fragment, L - Bad Level
+    
+    **Retry Recommendations**
+    
+    By not having multiple renditions, recovery logic will not be able to add extra value to your platform. In order to have good results for dual constraint media hunt, specify big enough limits for fragments and levels retries.
+    
+    - Level: don't use total retry less than `3 - 4`
+    - Fragment: don't use total retry less than `4 - 6`
+    - Implement short burst retries (i.e. small retry delay `0.5 - 4` seconds), and when library returns fatal error switch to a different CDN
+
   - [src/controller/stream-controller.js][]
     - stream controller is in charge of:
       - triggering BUFFER_RESET on MANIFEST_PARSED or startLoad()    

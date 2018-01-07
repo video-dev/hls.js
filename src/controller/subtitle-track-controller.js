@@ -60,6 +60,11 @@ class SubtitleTrackController extends EventHandler {
       return;
     }
 
+    if (this.queuedDefaultTrack !== undefined) {
+      this.subtitleTrack = this.queuedDefaultTrack;
+      delete this.queuedDefaultTrack;
+    }
+
     this.trackChangeListener = this._onTextTracksChanged.bind(this);
 
     this.useTextTrackPolling = !(this.media.textTracks && 'onchange' in this.media.textTracks);
@@ -94,7 +99,6 @@ class SubtitleTrackController extends EventHandler {
   // Fired whenever a new manifest is loaded.
   onManifestLoaded(data) {
     let tracks = data.subtitles || [];
-    let defaultFound = false;
     this.tracks = tracks;
     this.trackId = -1;
     this.hls.trigger(Event.SUBTITLE_TRACKS_UPDATED, {subtitleTracks : tracks});
@@ -103,8 +107,15 @@ class SubtitleTrackController extends EventHandler {
     // TODO: improve selection logic to handle forced, etc
     tracks.forEach(track => {
       if (track.default) {
-        this.subtitleTrack = track.id;
-        defaultFound = true;
+        // setting this.subtitleTrack will trigger internal logic
+        // if media has not been attached yet, it will fail
+        // we keep a reference to the default track id
+        // and we'll set subtitleTrack when onMediaAttached is triggered
+        if (this.media) {
+          this.subtitleTrack = track.id;
+        } else {
+          this.queuedDefaultTrack = track.id;
+        }
       }
     });
   }

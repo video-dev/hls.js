@@ -1,6 +1,6 @@
 {
   "name": "hls.js",
-  "version": "0.8.4",
+  "version": "0.8.9",
   "license": "Apache-2.0",
   "description": "JavaScript HLS client using MediaSourceExtension",
   "homepage": "https://github.com/video-dev/hls.js",
@@ -25,20 +25,25 @@
     ]
   },
   "scripts": {
-    "build": "webpack",
+    "build": "webpack --progress",
+    "build:watch": "webpack --progress --watch",
+    "build:analyze": "ANALYZE=true webpack --progress",
     "preparerelease": "npm run build && npm run test && git add dist/* && git commit -m 'update dist'",
     "prerelease": "mversion prerelease && npm run preparerelease",
     "patch": "mversion p && npm run preparerelease",
     "minor": "mversion mi && npm run preparerelease",
     "major": "mversion ma && npm run preparerelease",
     "pretest": "npm run lint",
-    "test": "karma start karma.conf.js",
-    "testfunc": "cross-env BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/hlsjs.js --timeout 40000",
+    "test": "npm run test:unit && npm run test:func",
+    "test:unit": "karma start karma.conf.js",
+    "test:unit:watch": "karma start karma.conf.js --auto-watch --no-single-run",
+    "test:func": "cross-env BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/hlsjs.js --timeout 40000",
     "lint": "jshint src/",
-    "dev": "webpack-dev-server --env.debug --port 8000"
+    "dev": "webpack-dev-server --progress --env.debug --port 8000"
   },
   "dependencies": {
-    "url-toolkit": "^2.0.1"
+    "string.prototype.endswith": "^0.2.0",
+    "url-toolkit": "^2.1.2"
   },
   "devDependencies": {
     "arraybuffer-equal": "^1.0.4",
@@ -57,12 +62,17 @@
     "karma-coverage-istanbul-reporter": "^1.3.0",
     "karma-mocha": "^1.3.0",
     "karma-mocha-reporter": "^2.2.3",
+    "karma-should": "^1.0.0",
+    "karma-sinon": "^1.0.5",
     "karma-sourcemap-loader": "^0.3.7",
     "karma-webpack": "^2.0.4",
     "mocha": "^3.0.2",
     "mversion": "^1.10.1",
     "selenium-webdriver": "^3.1.0",
+    "should": "^13.1.3",
+    "sinon": "^4.1.3",
     "webpack": "^3.5.5",
+    "webpack-bundle-analyzer": "^2.9.1",
     "webpack-dev-server": "^2.7.1",
     "webworkify-webpack": "^2.0.0"
   }

@@ -12,29 +12,21 @@ import StreamController from  './controller/stream-controller';
 import LevelController from  './controller/level-controller';
 import ID3TrackController from './controller/id3-track-controller';
 
-import {getMediaSource} from './helper/mediasource-helper';
+import {isSupported} from './helper/is-supported';
 import {logger, enableLogs} from './utils/logger';
 import EventEmitter from 'events';
 import {hlsDefaultConfig} from './config';
+
+// polyfill for IE11
+require('string.prototype.endswith');
 
 export default class Hls {
   static get version() {
     return __VERSION__;
   }
-  static isSupported() {
-    const mediaSource = getMediaSource();
-    const sourceBuffer = window.SourceBuffer || window.WebKitSourceBuffer;
-    const isTypeSupported = mediaSource &&
-                            typeof mediaSource.isTypeSupported === 'function' &&
-                            mediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
 
-    // if SourceBuffer is exposed ensure its API is valid
-    // safari and old version of Chrome doe not expose SourceBuffer globally so checking SourceBuffer.prototype is impossible
-    const sourceBufferValidAPI = !sourceBuffer ||
-                                 (sourceBuffer.prototype &&
-                                 typeof sourceBuffer.prototype.appendBuffer === 'function' &&
-                                 typeof sourceBuffer.prototype.remove === 'function');
-    return isTypeSupported && sourceBufferValidAPI;
+  static isSupported() {
+    return isSupported();
   }
 
   static get Events() {
@@ -133,6 +125,13 @@ export default class Hls {
       let subtitleTrackController = new Controller(this);
       this.subtitleTrackController = subtitleTrackController;
       coreComponents.push(subtitleTrackController);
+    }
+
+    Controller = config.emeController;
+    if (Controller) {
+      let emeController = new Controller(this);
+      this.emeController = emeController;
+      coreComponents.push(emeController);
     }
 
     // optional subtitle controller

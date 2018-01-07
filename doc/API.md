@@ -2,7 +2,7 @@
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
+ 
 
 - [Getting started](#getting-started)
   - [First step: setup and support](#first-step-setup-and-support)
@@ -40,6 +40,7 @@
   - [`liveMaxLatencyDurationCount`](#livemaxlatencydurationcount)
   - [`liveSyncDuration`](#livesyncduration)
   - [`liveMaxLatencyDuration`](#livemaxlatencyduration)
+  - [`liveDurationInfinity`](#livedurationinfinity)
   - [`enableWorker`](#enableworker)
   - [`enableSoftwareAES`](#enablesoftwareaes)
   - [`startLevel`](#startlevel)
@@ -58,12 +59,12 @@
   - [`timelineController`](#timelinecontroller)
   - [`enableWebVTT`](#enablewebvtt)
   - [`enableCEA708Captions`](#enablecea708captions)
-    [`captionsTextTrack1Label`](#captionsTextTrack1Label)
-    [`captionsTextTrack1LanguageCode`](#captionsTextTrack1LanguageCode)
-    [`captionsTextTrack2Label`](#captionsTextTrack2Label)
-    [`captionsTextTrack2LanguageCode`](#captionsTextTrack2LanguageCode)
+  - [`captionsTextTrack1Label`](#captionstexttrack1label)
+  - [`captionsTextTrack1LanguageCode`](#captionstexttrack1languagecode)
+  - [`captionsTextTrack2Label`](#captionstexttrack2label)
+  - [`captionsTextTrack2LanguageCode`](#captionstexttrack2languagecode)
   - [`stretchShortVideoTrack`](#stretchshortvideotrack)
-  - [`maxAudioFramesDrift`](#maxAudioFramesDrift)
+  - [`maxAudioFramesDrift`](#maxaudioframesdrift)
   - [`forceKeyFrameOnDiscontinuity`](#forcekeyframeondiscontinuity)
   - [`abrEwmaFastLive`](#abrewmafastlive)
   - [`abrEwmaSlowLive`](#abrewmaslowlive)
@@ -77,6 +78,7 @@
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
   - [`hls.attachMedia(videoElement)`](#hlsattachmediavideoelement)
   - [`hls.detachMedia()`](#hlsdetachmedia)
+    - [`hls.media`](#hlsmedia)
 - [Quality switch Control API](#quality-switch-control-api)
   - [`hls.levels`](#hlslevels)
   - [`hls.currentLevel`](#hlscurrentlevel)
@@ -122,7 +124,7 @@
 First include `https://cdn.jsdelivr.net/npm/hls.js@latest` (or `/hls.js` for unminified) in your web page.
 
 ```html
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="//cdn.jsdelivr.net/npm/hls.js@latest"></script>
 ```
 
 Invoke the following static method: `Hls.isSupported()` to check whether your browser is supporting [MediaSource Extensions](http://w3c.github.io/media-source/).
@@ -525,7 +527,7 @@ a value too close from `liveSyncDurationCount` is likely to cause playback stall
 
 (default: `undefined`)
 
-Alternative parameter to ```liveSyncDurationCount```, expressed in seconds vs number of segments.
+Alternative parameter to `liveSyncDurationCount`, expressed in seconds vs number of segments.
 If defined in the configuration object, `liveSyncDuration` will take precedence over the default `liveSyncDurationCount`.
 You can't define this parameter and either `liveSyncDurationCount` or `liveMaxLatencyDurationCount` in your configuration object at the same time.
 A value too low (inferior to ~3 segment durations) is likely to cause playback stalls.
@@ -539,6 +541,14 @@ If defined in the configuration object, `liveMaxLatencyDuration` will take prece
 If set, this value must be stricly superior to `liveSyncDuration` which must be defined as well.
 You can't define this parameter and either `liveSyncDurationCount` or `liveMaxLatencyDurationCount` in your configuration object at the same time.
 A value too close from `liveSyncDuration` is likely to cause playback stalls.
+
+### `liveDurationInfinity`
+
+(default: `false`)
+
+Override current Media Source duration to `Infinity` for a live broadcast. 
+Useful, if you are building a player which relies on native UI capabilities in modern browsers. 
+If you want to have a native Live UI in environments like iOS Safari, Safari, Android Google Chrome, etc. set this value to `true`.
 
 ### `enableWorker`
 
@@ -638,7 +648,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @callback onSuccessCallback
       @param response {object} - response data
       @param response.url {string} - response URL (which might have been redirected)
-      @param response.data {string/arraybuffer} - response data (reponse type should be as per context.responseType)
+      @param response.data {string/arraybuffer/sharedarraybuffer} - response data (reponse type should be as per context.responseType)
       @param stats {object} - loading stats
       @param stats.trequest {number} - performance.now() just after load() has been called
       @param stats.tfirst {number} - performance.now() of first received byte
@@ -657,7 +667,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param [stats.total] {number} - total nb of bytes
       @param [stats.bw] {number} - current download bandwidth in bit/s (monitored by ABR controller to control emergency switch down)
       @param context {object} - loader context
-      @param data {string/arraybuffer} - onProgress data (should be defined only if context.progressData === true)
+      @param data {string/arraybuffer/sharedarraybuffer} - onProgress data (should be defined only if context.progressData === true)
       @param networkDetails {object} - loader network details (the xhr for default loaders)
 
       @callback onErrorCallback
@@ -1087,7 +1097,7 @@ get : array of subtitle tracks exposed in manifest
 
 ### `hls.subtitleTrack`
 
-get/set : subtitle track id (returned by)
+get/set : subtitle track id (returned by). Returns -1 if no track is visible. Set to -1 to hide all subtitle tracks.
 
 ### `hls.subtitleDisplay`
 
@@ -1315,7 +1325,7 @@ Full list of errors is described below:
 
 ## Objects
 
-### <a name="level"> Level
+### Level
 
 A `Level` object represents a given quality level.
 It contains quality level related info, retrieved from manifest, such as:
