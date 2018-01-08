@@ -3,7 +3,6 @@ import Event from "../../../src/events";
 const assert = require('assert');
 
 import {FragmentTracker, FragmentState} from '../../../src/helper/fragment-tracker';
-import * as MediaChannels from '../../../src/media-channels';
 import Hls from '../../../src/hls';
 
 function createMockBuffer(buffered) {
@@ -26,7 +25,7 @@ describe('FragmentTracker', () => {
       endPTS: 1,
       sn: 1,
       level: 1,
-      mediaChannels: new Set([MediaChannels.AUDIO, MediaChannels.VIDEO]),
+      mediaChannels: new Set(['audio', 'video']),
       type: 'main'
     };
     hls.trigger(Event.FRAG_LOADED, { frag: fragment });
@@ -39,8 +38,8 @@ describe('FragmentTracker', () => {
     ]);
 
     timeRanges = new Map();
-    timeRanges.set(MediaChannels.VIDEO, buffered);
-    timeRanges.set(MediaChannels.AUDIO, buffered);
+    timeRanges.set('video', buffered);
+    timeRanges.set('audio', buffered);
     hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
 
     hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
@@ -73,7 +72,7 @@ describe('FragmentTracker', () => {
         endPTS: 1,
         sn: 1,
         level: 0,
-        mediaChannels: new Set([MediaChannels.AUDIO, MediaChannels.VIDEO]),
+        mediaChannels: new Set(['audio', 'video']),
         type: 'main'
       };
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
@@ -94,8 +93,8 @@ describe('FragmentTracker', () => {
       ]);
 
       timeRanges = new Map();
-      timeRanges.set(MediaChannels.VIDEO, buffered);
-      timeRanges.set(MediaChannels.AUDIO, buffered);
+      timeRanges.set('video', buffered);
+      timeRanges.set('audio', buffered);
       hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
 
       hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
@@ -112,8 +111,8 @@ describe('FragmentTracker', () => {
         },
       ]);
       timeRanges = new Map();
-      timeRanges.set(MediaChannels.VIDEO, buffered);
-      timeRanges.set(MediaChannels.AUDIO, buffered);
+      timeRanges.set('video', buffered);
+      timeRanges.set('audio', buffered);
       hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
 
       hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
@@ -130,8 +129,8 @@ describe('FragmentTracker', () => {
         },
       ]);
       timeRanges = new Map();
-      timeRanges.set(MediaChannels.VIDEO, buffered);
-      timeRanges.set(MediaChannels.AUDIO, buffered);
+      timeRanges.set('video', buffered);
+      timeRanges.set('audio', buffered);
       hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
 
       hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
@@ -146,8 +145,8 @@ describe('FragmentTracker', () => {
         },
       ]);
       timeRanges = new Map();
-      timeRanges.set(MediaChannels.VIDEO, buffered);
-      timeRanges.set(MediaChannels.AUDIO, buffered);
+      timeRanges.set('video', buffered);
+      timeRanges.set('audio', buffered);
       hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
 
       assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.NOT_LOADED);
@@ -166,19 +165,19 @@ describe('FragmentTracker', () => {
         endPTS: 1,
         sn: 1,
         level: 1,
-        mediaChannels: new Set([MediaChannels.AUDIO, MediaChannels.VIDEO]),
+        mediaChannels: new Set(['audio', 'video']),
         type: 'main'
       };
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
 
       timeRanges = new Map();
-      timeRanges.set(MediaChannels.VIDEO, createMockBuffer([
+      timeRanges.set('video', createMockBuffer([
         {
           startPTS: 0,
           endPTS: 2
         },
       ]));
-      timeRanges.set(MediaChannels.AUDIO, createMockBuffer([
+      timeRanges.set('audio', createMockBuffer([
         {
           startPTS: 0.5,
           endPTS: 2
@@ -197,19 +196,19 @@ describe('FragmentTracker', () => {
         endPTS: 1,
         sn: 1,
         level: 1,
-        mediaChannels: new Set([MediaChannels.AUDIO, MediaChannels.VIDEO]),
+        mediaChannels: new Set(['audio', 'video']),
         type: 'main'
       };
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
 
       timeRanges = new Map();
-      timeRanges.set(MediaChannels.VIDEO, createMockBuffer([
+      timeRanges.set('video', createMockBuffer([
         {
           startPTS: 0.5,
           endPTS: 2
         },
       ]));
-      timeRanges.set(MediaChannels.AUDIO, createMockBuffer([
+      timeRanges.set('audio', createMockBuffer([
         {
           startPTS: 0,
           endPTS: 2
@@ -228,19 +227,19 @@ describe('FragmentTracker', () => {
         endPTS: 1,
         sn: 1,
         level: 1,
-        mediaChannels: new Set([MediaChannels.AUDIO]),
+        mediaChannels: new Set(['audio']),
         type: 'audio'
       };
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
 
       timeRanges = new Map();
-      timeRanges.set(MediaChannels.VIDEO, createMockBuffer([
+      timeRanges.set('video', createMockBuffer([
         {
           startPTS: 0.5,
           endPTS: 2
         },
       ]));
-      timeRanges.set(MediaChannels.AUDIO, createMockBuffer([
+      timeRanges.set('audio', createMockBuffer([
         {
           startPTS: 0,
           endPTS: 2

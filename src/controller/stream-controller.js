@@ -13,7 +13,6 @@ import TimeRanges from '../utils/timeRanges';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
 import { alignDiscontinuities } from '../utils/discontinuities';
-import * as MediaChannels from '../media-channels';
 
 const State = {
   STOPPED : 'STOPPED',
@@ -60,6 +59,7 @@ class StreamController extends EventHandler {
   }
 
   destroy() {
+    console.error('destroy stream controller');
     this.stopLoad();
     if (this.timer) {
       clearInterval(this.timer);
@@ -1092,7 +1092,7 @@ class StreamController extends EventHandler {
         data.id === 'main' &&
         fragNew.sn === fragCurrent.sn &&
         fragNew.level === fragCurrent.level &&
-        !(data.type === MediaChannels.AUDIO && this.altAudio) && // filter out main audio if audio track is loaded through audio stream controller
+        !(data.type === 'audio' && this.altAudio) && // filter out main audio if audio track is loaded through audio stream controller
         this.state === State.PARSING) {
       var level = this.levels[this.level],
           frag = fragCurrent;
@@ -1110,7 +1110,7 @@ class StreamController extends EventHandler {
       logger.log(`Parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb},dropped:${data.dropped || 0}`);
 
       // Detect gaps in a fragment  and try to fix it by finding a keyframe in the previous fragment (see _findFragments)
-      if(data.type === MediaChannels.VIDEO) {
+      if(data.type === 'video') {
         frag.dropped = data.dropped;
         if (frag.dropped) {
           if (!frag.backtracked) {

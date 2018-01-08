@@ -6,7 +6,6 @@
 import AAC from '../helper/aac';
 import Event from '../events';
 import {logger} from '../utils/logger';
-import * as MediaChannels from '../media-channels';
 import MP4 from '../remux/mp4-generator';
 import {ErrorTypes, ErrorDetails} from '../errors';
 
@@ -129,7 +128,7 @@ class MP4Remuxer {
           audioTrack.codec = 'mp3';
         }
       }
-      tracks[MediaChannels.AUDIO] = {
+      tracks.audio = {
         container : container,
         codec :  audioTrack.codec,
         initSegment : !audioTrack.isAAC && typeSupported.mpeg ? new Uint8Array() : MP4.initSegment([audioTrack]),
@@ -148,7 +147,7 @@ class MP4Remuxer {
       // we use input time scale straight away to avoid rounding issues on frame duration / cts computation
       const inputTimeScale = videoTrack.inputTimeScale;
       videoTrack.timescale = inputTimeScale;
-      tracks[MediaChannels.VIDEO] = {
+      tracks.video = {
         container : 'video/mp4',
         codec :  videoTrack.codec,
         initSegment : MP4.initSegment([videoTrack]),

@@ -13,7 +13,6 @@ import {ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
 import { findFragWithCC } from '../utils/discontinuities';
 import {FragmentState} from '../helper/fragment-tracker';
-import * as MediaChannels from '../media-channels';
 
 const State = {
   STOPPED : 'STOPPED',
@@ -616,12 +615,12 @@ class AudioStreamController extends EventHandler {
       let tracks = data.tracks, track;
 
       // delete any video track found on audio demuxer
-      if (tracks[MediaChannels.VIDEO]) {
-        delete tracks[MediaChannels.VIDEO];
+      if (tracks.video) {
+        delete tracks.video;
       }
 
       // include levelCodec in audio and video tracks
-      track = tracks[MediaChannels.AUDIO];
+      track = tracks.audio;
       if(track) {
         track.levelCodec = track.codec;
         track.id = data.id;

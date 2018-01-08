@@ -1,6 +1,5 @@
 import EventHandler from '../event-handler';
 import Event from '../events';
-import * as MediaChannels from '../media-channels';
 
 export const FragmentState = {
   NOT_LOADED: 'NOT_LOADED',
@@ -38,7 +37,7 @@ export class FragmentTracker extends EventHandler {
    * Partial fragments effected by coded frame eviction will be removed
    * The browser will unload parts of the buffer to free up memory for new buffer data
    * Fragments will need to be reloaded when the buffer is freed up, removing partial fragments will allow them to reload(since there might be parts that are still playable)
-   * @param {String} channel The channel of media this is (eg. MediaChannels.VIDEO, MediaChannels.AUDIO)
+   * @param {String} channel The channel of media this is (eg. video/audio)
    * @param {Object} timeRange TimeRange object from a sourceBuffer
    */
   detectEvictedFragments(channel, timeRange) {
@@ -167,8 +166,8 @@ export class FragmentTracker extends EventHandler {
 
   isPartial(fragmentEntity) {
     return fragmentEntity.buffered === true &&
-      ((fragmentEntity.range[MediaChannels.VIDEO] !== undefined && fragmentEntity.range[MediaChannels.VIDEO].partial === true) ||
-        (fragmentEntity.range[MediaChannels.AUDIO] !== undefined && fragmentEntity.range[MediaChannels.AUDIO].partial === true));
+      ((fragmentEntity.range.video !== undefined && fragmentEntity.range.video.partial === true) ||
+        (fragmentEntity.range.audio !== undefined && fragmentEntity.range.audio.partial === true));
   }
 
   isTimeBuffered(startPTS, endPTS, timeRange) {
