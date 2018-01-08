@@ -6,12 +6,12 @@ import BinarySearch from '../utils/binary-search';
 import BufferHelper from '../helper/buffer-helper';
 import Demuxer from '../demux/demuxer';
 import Event from '../events';
-import EventHandler from '../event-handler';
 import * as LevelHelper from '../helper/level-helper';
 import TimeRanges from '../utils/timeRanges';
-import {ErrorDetails} from '../errors';
+import {ErrorTypes, ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
 import { findFragWithCC } from '../utils/discontinuities';
+import TaskLoop from '../task-loop';
 import {FragmentState} from '../helper/fragment-tracker';
 
 const State = {
@@ -31,7 +31,7 @@ const State = {
   WAITING_INIT_PTS : 'WAITING_INIT_PTS'
 };
 
-class AudioStreamController extends EventHandler {
+class AudioStreamController extends TaskLoop {
 
   constructor(hls, fragmentTracker) {
     super(hls,
@@ -54,21 +54,17 @@ class AudioStreamController extends EventHandler {
     this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
     this.audioCodecSwap = false;
-    this.ticks = 0;
     this._state = State.STOPPED;
-    this.ontick = this.tick.bind(this);
-    this.initPTS=[];
-    this.waitingFragment=null;
+    this.initPTS = [];
+    this.waitingFragment = null;
     this.videoTrackCC = null;
   }
 
-  destroy() {
+  onHandlerDestroying() {
     this.stopLoad();
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
-    EventHandler.prototype.destroy.call(this);
+  }
+
+  onHandlerDestroyed() {
     this.state = State.STOPPED;
     this.fragmentTracker = null;
   }
@@ -81,7 +77,7 @@ class AudioStreamController extends EventHandler {
       //Can change due level switch
       this.initPTS[cc] = initPTS;
       this.videoTrackCC = cc;
-      logger.log(`InitPTS for cc:${cc} found from video track:${initPTS}`);
+      logger.log(`InitPTS for cc: ${cc} found from video track: ${initPTS}`);
 
       //If we are waiting we need to demux/remux the waiting frag
       //With the new initPTS
@@ -95,9 +91,7 @@ class AudioStreamController extends EventHandler {
     if (this.tracks) {
       var lastCurrentTime = this.lastCurrentTime;
       this.stopLoad();
-      if (!this.timer) {
-        this.timer = setInterval(this.ontick, 100);
-      }
+      this.setInterval(100);
       this.fragLoadError = 0;
       if (lastCurrentTime > 0 && startPosition === -1) {
         logger.log(`audio:override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(3)}`);
@@ -141,17 +135,6 @@ class AudioStreamController extends EventHandler {
 
   get state() {
     return this._state;
-  }
-
-  tick() {
-    this.ticks++;
-    if (this.ticks === 1) {
-      this.doTick();
-      if (this.ticks > 1) {
-        setTimeout(this.tick, 1);
-      }
-      this.ticks = 0;
-    }
   }
 
   doTick() {
@@ -479,9 +462,7 @@ class AudioStreamController extends EventHandler {
       }
     } else {
       // switching to audio track, start timer if not already started
-      if (!this.timer) {
-        this.timer = setInterval(this.ontick, 100);
-      }
+      this.setInterval(100);
     }
 
     //should we switch tracks ?
@@ -605,6 +586,7 @@ class AudioStreamController extends EventHandler {
   }
 
   onFragParsingInitSegment(data) {
+
     const fragCurrent = this.fragCurrent;
     const fragNew = data.frag;
     if (fragCurrent &&
@@ -628,7 +610,8 @@ class AudioStreamController extends EventHandler {
         logger.log(`audio track:audio,container:${track.container},codecs[level/parsed]=[${track.levelCodec}/${track.codec}]`);
         let initSegment = track.initSegment;
         if (initSegment) {
-          let appendObj = {type: 'audio', data: initSegment, parent : 'audio',content : 'initSegment'};
+
+          let appendObj = {type: 'audio', data: initSegment, parent: 'audio', content : 'initSegment'};
           if (this.audioSwitch) {
             this.pendingData = [appendObj];
           } else {
@@ -693,12 +676,19 @@ class AudioStreamController extends EventHandler {
         }
       }
 
-
       let pendingData = this.pendingData;
+
+      if (!pendingData) {
+        console.warn('Apparently attempt to enqueue media payload without codec initialization data upfront');
+        hls.trigger(Event.ERROR, {type: ErrorTypes.MEDIA_ERROR, details: null, fatal: true});
+        return;
+      }
+
       if(!this.audioSwitch) {
         [data.data1, data.data2].forEach(buffer => {
           if (buffer && buffer.length) {
-            pendingData.push({type: data.type, data: buffer, parent : 'audio',content : 'data'});
+
+            pendingData.push({type: data.type, data: buffer, parent: 'audio', content: 'data'});
           }
         });
       if (!appendOnBufferFlush && pendingData.length) {

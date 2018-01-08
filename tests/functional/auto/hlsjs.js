@@ -79,6 +79,7 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
       capabilities.build = 'HLSJS-'+process.env.TRAVIS_BUILD_NUMBER;
       capabilities.username = process.env.SAUCE_USERNAME;
       capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
+      capabilities.avoidProxy = true;
       this.browser = new webdriver.Builder().usingServer('http://'+process.env.SAUCE_USERNAME+':'+process.env.SAUCE_ACCESS_KEY+'@ondemand.saucelabs.com:80/wd/hub');
     }
     else {

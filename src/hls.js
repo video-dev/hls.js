@@ -18,6 +18,9 @@ import EventEmitter from 'events';
 import {hlsDefaultConfig} from './config';
 import {FragmentTracker} from './helper/fragment-tracker';
 
+// polyfill for IE11
+require('string.prototype.endswith');
+
 export default class Hls {
   static get version() {
     return __VERSION__;
@@ -125,6 +128,13 @@ export default class Hls {
       let subtitleTrackController = new Controller(this);
       this.subtitleTrackController = subtitleTrackController;
       coreComponents.push(subtitleTrackController);
+    }
+
+    Controller = config.emeController;
+    if (Controller) {
+      let emeController = new Controller(this);
+      this.emeController = emeController;
+      coreComponents.push(emeController);
     }
 
     // optional subtitle controller

@@ -6,13 +6,13 @@ import BinarySearch from '../utils/binary-search';
 import BufferHelper from '../helper/buffer-helper';
 import Demuxer from '../demux/demuxer';
 import Event from '../events';
-import EventHandler from '../event-handler';
 import {FragmentState} from '../helper/fragment-tracker';
 import * as LevelHelper from '../helper/level-helper';
 import TimeRanges from '../utils/timeRanges';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
 import { alignDiscontinuities } from '../utils/discontinuities';
+import TaskLoop from '../task-loop';
 
 const State = {
   STOPPED : 'STOPPED',
@@ -28,7 +28,7 @@ const State = {
   ERROR : 'ERROR'
 };
 
-class StreamController extends EventHandler {
+class StreamController extends TaskLoop {
 
   constructor(hls, fragmentTracker) {
     super(hls,
@@ -53,19 +53,14 @@ class StreamController extends EventHandler {
     this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
     this.audioCodecSwap = false;
-    this.ticks = 0;
     this._state = State.STOPPED;
-    this.ontick = this.tick.bind(this);
   }
 
-  destroy() {
-    console.error('destroy stream controller');
+  onHandlerDestroying() {
     this.stopLoad();
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
-    EventHandler.prototype.destroy.call(this);
+  }
+
+  onHandlerDestroyed() {
     this.state = State.STOPPED;
     this.fragmentTracker = null;
   }
@@ -74,9 +69,7 @@ class StreamController extends EventHandler {
     if (this.levels) {
       let lastCurrentTime = this.lastCurrentTime, hls = this.hls;
       this.stopLoad();
-      if (!this.timer) {
-        this.timer = setInterval(this.ontick, 100);
-      }
+      this.setInterval(100);
       this.level = -1;
       this.fragLoadError = 0;
       if (!this.startFragRequested) {
@@ -124,18 +117,8 @@ class StreamController extends EventHandler {
     this.forceStartLoad = false;
   }
 
-  tick() {
-    this.ticks++;
-    if (this.ticks === 1) {
-      this.doTick();
-      if (this.ticks > 1) {
-        setTimeout(this.tick, 1);
-      }
-      this.ticks = 0;
-    }
-  }
-
   doTick() {
+
     switch(this.state) {
       case State.ERROR:
         //don't do anything in error state to avoid breaking further ...
@@ -186,7 +169,6 @@ class StreamController extends EventHandler {
     const hls = this.hls,
           config = hls.config,
           media = this.media;
-
 
     // if start level not parsed yet OR
     // if video not attached AND start fragment already requested OR start frag prefetch disable
@@ -1018,6 +1000,7 @@ class StreamController extends EventHandler {
   onFragParsingInitSegment(data) {
     const fragCurrent = this.fragCurrent;
     const fragNew = data.frag;
+
     if (fragCurrent &&
         data.id === 'main' &&
         fragNew.sn === fragCurrent.sn &&
@@ -1032,6 +1015,7 @@ class StreamController extends EventHandler {
       // include levelCodec in audio and video tracks
       track = tracks.audio;
       if(track) {
+
         var audioCodec = this.levels[this.level].audioCodec,
             ua = navigator.userAgent.toLowerCase();
         if(audioCodec && this.audioCodecSwap) {
