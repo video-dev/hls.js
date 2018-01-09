@@ -1,9 +1,12 @@
 import Event from '../events';
 import DemuxerInline from '../demux/demuxer-inline';
-import DemuxerWorker from '../demux/demuxer-worker';
 import {logger} from '../utils/logger';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import EventEmitter from 'events';
+import work from 'webworkify-webpack';
+import {getMediaSource} from '../helper/mediasource-helper';
+
+const MediaSource = getMediaSource();
 
 class Demuxer {
 
@@ -38,32 +41,34 @@ class Demuxer {
     observer.on(Event.FRAG_PARSING_USERDATA, forwardMessage);
     observer.on(Event.INIT_PTS_FOUND, forwardMessage);
 
-    var typeSupported = {
+    const typeSupported = {
       mp4 : MediaSource.isTypeSupported('video/mp4'),
       mpeg: MediaSource.isTypeSupported('audio/mpeg'),
       mp3: MediaSource.isTypeSupported('audio/mp4; codecs="mp3"')
     };
+    // navigator.vendor is not always available in Web Worker
+    // refer to https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/navigator
+    const vendor = navigator.vendor;
     if (config.enableWorker && (typeof(Worker) !== 'undefined')) {
         logger.log('demuxing in webworker');
         let w;
         try {
-          let work = require('webworkify');
-          w = this.w = work(DemuxerWorker);
+          w = this.w = work(require.resolve('../demux/demuxer-worker.js'));
           this.onwmsg = this.onWorkerMessage.bind(this);
           w.addEventListener('message', this.onwmsg);
           w.onerror = function(event) { hls.trigger(Event.ERROR, {type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event : 'demuxerWorker', err : { message : event.message + ' (' + event.filename + ':' + event.lineno + ')' }});};
-          w.postMessage({cmd: 'init', typeSupported : typeSupported, id : id, config: JSON.stringify(config)});
+          w.postMessage({cmd: 'init', typeSupported : typeSupported, vendor : vendor, id : id, config: JSON.stringify(config)});
         } catch(err) {
           logger.error('error while initializing DemuxerWorker, fallback on DemuxerInline');
           if (w) {
             // revoke the Object URL that was used to create demuxer worker, so as not to leak it
             URL.revokeObjectURL(w.objectURL);
           }
-          this.demuxer = new DemuxerInline(observer,id,typeSupported,config);
+          this.demuxer = new DemuxerInline(observer,typeSupported,config,vendor);
           this.w = undefined;
         }
       } else {
-        this.demuxer = new DemuxerInline(observer,id,typeSupported,config);
+        this.demuxer = new DemuxerInline(observer,typeSupported,config, vendor);
       }
   }
 
@@ -95,7 +100,7 @@ class Demuxer {
     const discontinuity = !(lastFrag && (frag.cc === lastFrag.cc));
     const trackSwitch = !(lastFrag && (frag.level === lastFrag.level));
     const nextSN = lastFrag && (frag.sn === (lastFrag.sn+1));
-    const contiguous = !discontinuity && !trackSwitch && nextSN;
+    const contiguous = !trackSwitch && nextSN;
     if (discontinuity) {
       logger.log(`${this.id}:discontinuity detected`);
     }
@@ -104,8 +109,8 @@ class Demuxer {
     }
     this.frag = frag;
     if (w) {
-      // post fragment payload as transferable objects (no copy)
-      w.postMessage({cmd: 'demux', data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset,defaultInitPTS}, [data]);
+      // post fragment payload as transferable objects for ArrayBuffer (no copy)
+      w.postMessage({cmd: 'demux', data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset,defaultInitPTS}, data instanceof ArrayBuffer ? [data] : []);
     } else {
       let demuxer = this.demuxer;
       if (demuxer) {
@@ -117,7 +122,6 @@ class Demuxer {
   onWorkerMessage(ev) {
     let data = ev.data,
         hls = this.hls;
-    //console.log('onWorkerMessage:' + data.event);
     switch(data.event) {
       case 'init':
         // revoke the Object URL that was used to create demuxer worker, so as not to leak it

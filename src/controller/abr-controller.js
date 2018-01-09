@@ -9,7 +9,7 @@ import EventHandler from '../event-handler';
 import BufferHelper from '../helper/buffer-helper';
 import {ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
-import EwmaBandWidthEstimator from './ewma-bandwidth-estimator';
+import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
 
 class AbrController extends EventHandler {
 
@@ -21,6 +21,8 @@ class AbrController extends EventHandler {
     this.lastLoadedFragLevel = 0;
     this._nextAutoLevel = -1;
     this.hls = hls;
+    this.timer = null;
+    this._bwEstimator = null;
     this.onCheck = this._abandonRulesCheck.bind(this);
   }
 
@@ -69,12 +71,14 @@ class AbrController extends EventHandler {
     if(!loader || ( loader.stats && loader.stats.aborted)) {
       logger.warn('frag loader destroy or aborted, disarm abandonRules');
       this.clearTimer();
+      // reset forced auto level value so that next level will be selected
+      this._nextAutoLevel = -1;
       return;
     }
     let stats = loader.stats;
     /* only monitor frag retrieval time if
     (video not paused OR first fragment being loaded(ready state === HAVE_NOTHING = 0)) AND autoswitching enabled AND not lowest level (=> means that we have several levels) */
-    if (v && ((!v.paused && (v.playbackRate !== 0)) || !v.readyState) && frag.autoLevel && frag.level) {
+    if (v && stats && ((!v.paused && (v.playbackRate !== 0)) || !v.readyState) && frag.autoLevel && frag.level) {
       let requestDelay = performance.now() - stats.trequest,
           playbackRate = Math.abs(v.playbackRate);
       // monitor fragment load progress after half of expected fragment duration,to stabilize bitrate
@@ -165,6 +169,7 @@ class AbrController extends EventHandler {
       let fragLoadingProcessingMs = stats.tparsed - stats.trequest;
       logger.log(`latency/loading/parsing/append/kbps:${Math.round(stats.tfirst-stats.trequest)}/${Math.round(stats.tload-stats.tfirst)}/${Math.round(stats.tparsed-stats.tload)}/${Math.round(stats.tbuffered-stats.tparsed)}/${Math.round(8*stats.loaded/(stats.tbuffered-stats.trequest))}`);
       this._bwEstimator.sample(fragLoadingProcessingMs,stats.loaded);
+      stats.bwEstimate = this._bwEstimator.getEstimate();
       // if fragment has been loaded to perform a bitrate test, (hls.startLevel = -1), store bitrate test delay duration
       if (frag.bitrateTest) {
         this.bitrateTestDelay = fragLoadingProcessingMs/1000;
@@ -187,10 +192,8 @@ class AbrController extends EventHandler {
   }
 
  clearTimer() {
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
+    clearInterval(this.timer);
+    this.timer = null;
  }
 
   // return next auto level
@@ -280,9 +283,9 @@ class AbrController extends EventHandler {
       if (adjustedbw > bitrate &&
       // fragment fetchDuration unknown OR live stream OR fragment fetchDuration less than max allowed fetch duration, then this level matches
       // we don't account for max Fetch Duration for live streams, this is to avoid switching down when near the edge of live sliding window ...
-        (!fetchDuration || live || fetchDuration < maxFetchDuration) ) {
+      // special case to support startLevel = -1 (bitrateTest) on live streams : in that case we should not exit loop so that _findBestLevel will return -1
+        (!fetchDuration || (live  && !this.bitrateTestDelay) || fetchDuration < maxFetchDuration) ) {
         // as we are looping from highest to lowest, this will return the best achievable quality level
-
         return i;
       }
     }

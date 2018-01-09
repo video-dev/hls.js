@@ -1,8 +1,7 @@
 /**
  * HLS interface
  */
-'use strict';
-
+import URLToolkit from 'url-toolkit';
 import Event from './events';
 import {ErrorTypes, ErrorDetails} from './errors';
 import PlaylistLoader from './loader/playlist-loader';
@@ -11,23 +10,23 @@ import KeyLoader from './loader/key-loader';
 
 import StreamController from  './controller/stream-controller';
 import LevelController from  './controller/level-controller';
+import ID3TrackController from './controller/id3-track-controller';
 
+import {isSupported} from './helper/is-supported';
 import {logger, enableLogs} from './utils/logger';
 import EventEmitter from 'events';
 import {hlsDefaultConfig} from './config';
 
-class Hls {
+// polyfill for IE11
+require('string.prototype.endswith');
 
+export default class Hls {
   static get version() {
-    // replaced with browserify-versionify transform
-    return '__VERSION__';
+    return __VERSION__;
   }
 
   static isSupported() {
-    window.MediaSource = window.MediaSource || window.WebKitMediaSource;
-    return (window.MediaSource &&
-            typeof window.MediaSource.isTypeSupported === 'function' &&
-            window.MediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"'));
+    return isSupported();
   }
 
   static get Events() {
@@ -97,6 +96,7 @@ class Hls {
     const playListLoader = new PlaylistLoader(this);
     const fragmentLoader = new FragmentLoader(this);
     const keyLoader = new KeyLoader(this);
+    const id3TrackController = new ID3TrackController(this);
 
     // network controllers
     const levelController = this.levelController = new LevelController(this);
@@ -110,7 +110,7 @@ class Hls {
     }
     this.networkControllers = networkControllers;
 
-    let coreComponents = [ playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController ];
+    let coreComponents = [ playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController, id3TrackController ];
 
     // optional audio track and subtitle controller
     Controller = config.audioTrackController;
@@ -125,6 +125,13 @@ class Hls {
       let subtitleTrackController = new Controller(this);
       this.subtitleTrackController = subtitleTrackController;
       coreComponents.push(subtitleTrackController);
+    }
+
+    Controller = config.emeController;
+    if (Controller) {
+      let emeController = new Controller(this);
+      this.emeController = emeController;
+      coreComponents.push(emeController);
     }
 
     // optional subtitle controller
@@ -159,6 +166,7 @@ class Hls {
   }
 
   loadSource(url) {
+    url = URLToolkit.buildAbsoluteURL(window.location.href, url, { alwaysNormalize: true });
     logger.log(`loadSource:${url}`);
     this.url = url;
     // when attaching to a source URL, trigger a playlist load
@@ -377,6 +385,16 @@ class Hls {
       subtitleTrackController.subtitleTrack = subtitleTrackId;
     }
   }
-}
 
-export default Hls;
+  get subtitleDisplay() {
+    const subtitleTrackController = this.subtitleTrackController;
+    return subtitleTrackController ? subtitleTrackController.subtitleDisplay : false;
+  }
+
+  set subtitleDisplay(value) {
+    const subtitleTrackController = this.subtitleTrackController;
+    if (subtitleTrackController) {
+      subtitleTrackController.subtitleDisplay = value;
+    }
+  }
+}

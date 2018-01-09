@@ -4,6 +4,8 @@ bower_components/*
 /streams.js
 lib
 npm-debug.log
-
+.nyc_output/
+coverage/
 # ignore JetBrains
 .idea/*
+dist/bundle-analyzer-report.*

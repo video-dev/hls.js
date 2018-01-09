@@ -3,6 +3,8 @@ export const ErrorTypes = {
   NETWORK_ERROR: 'networkError',
   // Identifier for a media Error (video/parsing/mediasource error)
   MEDIA_ERROR: 'mediaError',
+  // EME (encrypted media extensions) errors
+  KEY_SYSTEM_ERROR: 'keySystemError',
   // Identifier for a mux Error (demuxing/remuxing)
   MUX_ERROR: 'muxError',
   // Identifier for all other errors
@@ -10,6 +12,10 @@ export const ErrorTypes = {
 };
 
 export const ErrorDetails = {
+  KEY_SYSTEM_NO_KEYS: 'keySystemNoKeys',
+  KEY_SYSTEM_NO_ACCESS: 'keySystemNoAccess',
+  KEY_SYSTEM_NO_SESSION: 'keySystemNoSession',
+  KEY_SYSTEM_LICENSE_REQUEST_FAILED: 'keySystemLicenseRequestFailed',
   // Identifier for a manifest load error - data: { url : faulty URL, response : { code: error code, text: error text }}
   MANIFEST_LOAD_ERROR: 'manifestLoadError',
   // Identifier for a manifest load timeout - data: { url : faulty URL, response : { code: error code, text: error text }}
@@ -60,7 +66,5 @@ export const ErrorDetails = {
   // Identifier for a buffer nudge on stall (playback is stuck although currentTime is in a buffered area)
   BUFFER_NUDGE_ON_STALL : 'bufferNudgeOnStall',
   // Identifier for an internal exception happening inside hls.js while handling an event
-  INTERNAL_EXCEPTION: 'internalException',
-  // Malformed WebVTT contents
-  WEBVTT_EXCEPTION: 'webVTTException'
+  INTERNAL_EXCEPTION: 'internalException'
 };
