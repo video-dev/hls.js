@@ -25,7 +25,7 @@ describe('FragmentTracker', () => {
       endPTS: 1,
       sn: 1,
       level: 1,
-      mediaChannels: new Set(['audio', 'video']),
+      elementaryStreams: new Set(['audio', 'video']),
       type: 'main'
     };
     hls.trigger(Event.FRAG_LOADED, { frag: fragment });
@@ -72,7 +72,7 @@ describe('FragmentTracker', () => {
         endPTS: 1,
         sn: 1,
         level: 0,
-        mediaChannels: new Set(['audio', 'video']),
+        elementaryStreams: new Set(['audio', 'video']),
         type: 'main'
       };
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
@@ -165,7 +165,7 @@ describe('FragmentTracker', () => {
         endPTS: 1,
         sn: 1,
         level: 1,
-        mediaChannels: new Set(['audio', 'video']),
+        elementaryStreams: new Set(['audio', 'video']),
         type: 'main'
       };
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
@@ -196,7 +196,7 @@ describe('FragmentTracker', () => {
         endPTS: 1,
         sn: 1,
         level: 1,
-        mediaChannels: new Set(['audio', 'video']),
+        elementaryStreams: new Set(['audio', 'video']),
         type: 'main'
       };
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
@@ -227,7 +227,7 @@ describe('FragmentTracker', () => {
         endPTS: 1,
         sn: 1,
         level: 1,
-        mediaChannels: new Set(['audio']),
+        elementaryStreams: new Set(['audio']),
         type: 'audio'
       };
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });

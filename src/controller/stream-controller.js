@@ -1085,11 +1085,7 @@ class StreamController extends TaskLoop {
         data.endDTS = data.startDTS + fragCurrent.duration;
       }
 
-      if(!frag.mediaChannels) {
-        // Set is used because the elements do not repeat
-        frag.mediaChannels = new Set();
-      }
-      frag.mediaChannels.add(data.type);
+      frag.elementaryStreams.add(data.type);
 
       logger.log(`Parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb},dropped:${data.dropped || 0}`);
 
@@ -1365,10 +1361,19 @@ _checkBuffer() {
         this.loadedmetadata = true;
         // only adjust currentTime if different from startPosition or if startPosition not buffered
         // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
-        let startPosition = media.seeking ? currentTime : this.startPosition;
-        // if currentTime not matching with expected startPosition
-        if (currentTime !== startPosition) {
+        let startPosition = media.seeking ? currentTime : this.startPosition,
+            startPositionBuffered = BufferHelper.isBuffered(mediaBuffer,startPosition),
+            firstbufferedPosition = buffered.start(0),
+            startNotBufferedButClose = !startPositionBuffered && (Math.abs(startPosition-firstbufferedPosition) < config.maxSeekHole);
+        // if currentTime not matching with expected startPosition or startPosition not buffered but close to first buffered
+        if (currentTime !== startPosition || startNotBufferedButClose) {
           logger.log(`target start position:${startPosition}`);
+
+          // if startPosition not buffered, let's seek to buffered.start(0)
+          if(startNotBufferedButClose) {
+            startPosition = firstbufferedPosition;
+            logger.log(`target start position not buffered, seek to buffered.start(0) ${startPosition}`);
+          }
           logger.log(`adjust currentTime from ${currentTime} to ${startPosition}`);
           media.currentTime = startPosition;
         }

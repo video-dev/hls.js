@@ -645,11 +645,7 @@ class AudioStreamController extends TaskLoop {
         data.endDTS = data.startDTS + fragCurrent.duration;
       }
 
-      if(!fragCurrent.mediaChannels) {
-        // Set is used because the elements do not repeat
-        fragCurrent.mediaChannels = new Set();
-      }
-      fragCurrent.mediaChannels.add(data.type);
+      fragCurrent.elementaryStreams.add(data.type);
 
       logger.log(`parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
       LevelHelper.updateFragPTSDTS(track.details,fragCurrent,data.startPTS,data.endPTS);

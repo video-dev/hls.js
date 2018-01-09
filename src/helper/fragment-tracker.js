@@ -37,15 +37,15 @@ export class FragmentTracker extends EventHandler {
    * Partial fragments effected by coded frame eviction will be removed
    * The browser will unload parts of the buffer to free up memory for new buffer data
    * Fragments will need to be reloaded when the buffer is freed up, removing partial fragments will allow them to reload(since there might be parts that are still playable)
-   * @param {String} channel The channel of media this is (eg. video/audio)
+   * @param {String} elementaryStream The elementaryStream of media this is (eg. video/audio)
    * @param {Object} timeRange TimeRange object from a sourceBuffer
    */
-  detectEvictedFragments(channel, timeRange) {
+  detectEvictedFragments(elementaryStream, timeRange) {
     let fragmentTimes, time;
     // Check if any flagged fragments have been unloaded
     for (let fragmentEntity of this.fragments.values()) {
       if(fragmentEntity.buffered === true) {
-        fragmentTimes = fragmentEntity.range[channel].time;
+        fragmentTimes = fragmentEntity.range[elementaryStream].time;
         for (let i = 0; i < fragmentTimes.length; i++) {
           time = fragmentTimes[i];
 
@@ -68,11 +68,11 @@ export class FragmentTracker extends EventHandler {
     let fragKey = this.getFragmentKey(fragment);
     let fragmentEntity = this.fragments.get(fragKey);
     fragmentEntity.buffered = true;
-    for (let [channel, timeRange] of this.timeRanges) {
-      if(fragment.mediaChannels.has(channel) === true) {
+    for (let [elementaryStream, timeRange] of this.timeRanges) {
+      if(fragment.elementaryStreams.has(elementaryStream) === true) {
         // Check for malformed fragments
-        // Gaps need to be calculated for each channel
-        fragmentEntity.range[channel] = this.getBufferedTimes(fragment.startPTS, fragment.endPTS, timeRange);
+        // Gaps need to be calculated for each elementaryStream
+        fragmentEntity.range[elementaryStream] = this.getBufferedTimes(fragment.startPTS, fragment.endPTS, timeRange);
       }
     }
   }
@@ -207,8 +207,8 @@ export class FragmentTracker extends EventHandler {
   onBufferAppended(e) {
     // Store the latest timeRanges loaded in the buffer
     this.timeRanges = e.timeRanges;
-    for (let [channel, timeRange] of this.timeRanges) {
-      this.detectEvictedFragments(channel, timeRange);
+    for (let [elementaryStream, timeRange] of this.timeRanges) {
+      this.detectEvictedFragments(elementaryStream, timeRange);
     }
   }
 

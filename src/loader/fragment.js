@@ -10,6 +10,9 @@ export default class Fragment {
     this._byteRange = null;
     this._decryptdata = null;
     this.tagList = [];
+
+    // Set is used because the elements do not repeat
+    this.elementaryStreams = new Set();
   }
 
   get url() {
