@@ -75,13 +75,21 @@ return /******/ (function(modules) { // webpackBootstrap
 /************************************************************************/
 /******/ ([
 /* 0 */
-/***/ (function(module, exports) {
+/***/ (function(module, exports, __webpack_require__) {
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
+var streamsJson = __webpack_require__(1);
+
 $(document).ready(function () {
 
-  console.log('ready');
+  console.log(streamsJson);
+
+  Object.keys(streamsJson).forEach(function (streamKey) {
+    var stream = streamsJson[streamKey];
+    var option = new Option(stream.description, stream.url);
+    $('#streamSelect').append(option);
+  });
 
   $('#streamSelect').change(function () {
     $('#streamURL').val($('#streamSelect').val());
@@ -94,11 +102,11 @@ $(document).ready(function () {
     $('#video').width($('#videoSize').val());
     $('#buffered_c').width($('#videoSize').val());
   });
-  $("#PlaybackControl").hide();
-  $("#QualityLevelControl").hide();
-  $("#AudioTrackControl").hide();
-  $("#MetricsDisplay").hide();
-  $("#StatsDisplay").hide();
+  $('#PlaybackControl').hide();
+  $('#QualityLevelControl').hide();
+  $('#AudioTrackControl').hide();
+  $('#MetricsDisplay').hide();
+  $('#StatsDisplay').hide();
   $('#metricsButtonWindow').toggle(windowSliding);
   $('#metricsButtonFixed').toggle(!windowSliding);
   $('#enableStreaming').click(function () {
@@ -125,12 +133,12 @@ $(document).ready(function () {
     defaultAudioCodec = this.value;
     updatePermalink();
   });
-  $('#enableStreaming').prop("checked", enableStreaming);
-  $('#autoRecoverError').prop("checked", autoRecoverError);
-  $('#enableWorker').prop("checked", enableWorker);
-  $('#dumpfMP4').prop("checked", dumpfMP4);
+  $('#enableStreaming').prop('checked', enableStreaming);
+  $('#autoRecoverError').prop('checked', autoRecoverError);
+  $('#enableWorker').prop('checked', enableWorker);
+  $('#dumpfMP4').prop('checked', dumpfMP4);
   $('#levelCapping').val(levelCapping);
-  $('#defaultAudioCodec').val(defaultAudioCodec || "undefined");
+  $('#defaultAudioCodec').val(defaultAudioCodec || 'undefined');
   $('h2').append(' <a target=_blank href=https://github.com/video-dev/hls.js/releases/tag/v' + Hls.version + '>v' + Hls.version + '</a>');
 });
 
@@ -143,7 +151,7 @@ var hls,
 autoRecoverError = JSON.parse(getURLParam('autoRecoverError', true)), enableWorker = JSON.parse(getURLParam('enableWorker', true)), levelCapping = JSON.parse(getURLParam('levelCapping', -1)), defaultAudioCodec = getURLParam('defaultAudioCodec', undefined), dumpfMP4 = getURLParam('dumpfMP4', false);
 var video = $('#video')[0];
 video.volume = 0.05;
-$("#currentVersion").html("Hls version:" + Hls.version);
+$('#currentVersion').html('Hls version:' + Hls.version);
 
 loadStream(decodeURIComponent(getURLParam('src', 'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8')));
 
@@ -162,46 +170,74 @@ function loadStream(url) {
     $('#streamURL').val(url);
     updatePermalink();
     if (!enableStreaming) {
-      $("#HlsStatus").text("Streaming disabled");
+      $('#HlsStatus').text('Streaming disabled');
       return;
     }
 
-    $("#HlsStatus").text('loading ' + url);
-    events = { url: url, t0: performance.now(), load: [], buffer: [], video: [], level: [], bitrate: [] };
+    $('#HlsStatus').text('loading ' + url);
+    events = {
+      url: url,
+      t0: performance.now(),
+      load: [],
+      buffer: [],
+      video: [],
+      level: [],
+      bitrate: []
+    };
     recoverDecodingErrorDate = recoverSwapAudioCodecDate = null;
-    fmp4Data = { 'audio': [], 'video': [] };
-    hls = new Hls({ debug: true, enableWorker: enableWorker, defaultAudioCodec: defaultAudioCodec });
-    $("#HlsStatus").text('loading manifest and attaching video element...');
+    fmp4Data = {
+      'audio': [],
+      'video': []
+    };
+    hls = new Hls({
+      debug: true,
+      enableWorker: enableWorker,
+      defaultAudioCodec: defaultAudioCodec
+    });
+    $('#HlsStatus').text('loading manifest and attaching video element...');
     hls.loadSource(url);
     hls.autoLevelCapping = levelCapping;
     hls.attachMedia(video);
     hls.on(Hls.Events.MEDIA_ATTACHED, function () {
-      $("#HlsStatus").text('MediaSource attached...');
+      $('#HlsStatus').text('MediaSource attached...');
       bufferingIdx = -1;
-      events.video.push({ time: performance.now() - events.t0, type: "Media attached" });
+      events.video.push({
+        time: performance.now() - events.t0,
+        type: 'Media attached'
+      });
     });
     hls.on(Hls.Events.MEDIA_DETACHED, function () {
-      $("#HlsStatus").text('MediaSource detached...');
+      $('#HlsStatus').text('MediaSource detached...');
       bufferingIdx = -1;
       tracks = [];
-      events.video.push({ time: performance.now() - events.t0, type: "Media detached" });
+      events.video.push({
+        time: performance.now() - events.t0,
+        type: 'Media detached'
+      });
     });
     hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT, function (event, data) {
       showCanvas();
-      var event = { time: performance.now() - events.t0, type: data.id + " init segment" };
+      var event = {
+        time: performance.now() - events.t0,
+        type: data.id + ' init segment'
+      };
       events.video.push(event);
     });
     hls.on(Hls.Events.FRAG_PARSING_METADATA, function (event, data) {
       //console.log("Id3 samples ", data.samples);
     });
     hls.on(Hls.Events.LEVEL_SWITCHING, function (event, data) {
-      events.level.push({ time: performance.now() - events.t0, id: data.level, bitrate: Math.round(hls.levels[data.level].bitrate / 1000) });
+      events.level.push({
+        time: performance.now() - events.t0,
+        id: data.level,
+        bitrate: Math.round(hls.levels[data.level].bitrate / 1000)
+      });
       updateLevelInfo();
     });
     hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
       var event = {
-        type: "manifest",
-        name: "",
+        type: 'manifest',
+        name: '',
         start: 0,
         end: data.levels.length,
         time: data.stats.trequest - events.t0,
@@ -213,23 +249,34 @@ function loadStream(url) {
       refreshCanvas();
     });
     hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
-      $("#HlsStatus").text("manifest successfully loaded," + hls.levels.length + " levels found");
-      stats = { levelNb: data.levels.length, levelParsed: 0 };
+      $('#HlsStatus').text('manifest successfully loaded,' + hls.levels.length + ' levels found');
+      stats = {
+        levelNb: data.levels.length,
+        levelParsed: 0
+      };
       updateLevelInfo();
     });
     hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, function (event, data) {
-      $("#HlsStatus").text(data.audioTracks.length + " audio tracks found");
+      $('#HlsStatus').text(data.audioTracks.length + ' audio tracks found');
       updateAudioTrackInfo();
     });
     hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, function (event, data) {
       updateAudioTrackInfo();
-      var event = { time: performance.now() - events.t0, type: 'audio switching', name: '@' + data.id };
+      var event = {
+        time: performance.now() - events.t0,
+        type: 'audio switching',
+        name: '@' + data.id
+      };
       events.video.push(event);
       lastAudioTrackSwitchingIdx = events.video.length - 1;
     });
     hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, function (event, data) {
       updateAudioTrackInfo();
-      var event = { time: performance.now() - events.t0, type: 'audio switched', name: '@' + data.id };
+      var event = {
+        time: performance.now() - events.t0,
+        type: 'audio switched',
+        name: '@' + data.id
+      };
       if (lastAudioTrackSwitchingIdx !== undefined) {
         events.video[lastAudioTrackSwitchingIdx].duration = event.time - events.video[lastAudioTrackSwitchingIdx].time;
         lastAudioTrackSwitchingIdx = undefined;
@@ -239,7 +286,7 @@ function loadStream(url) {
     hls.on(Hls.Events.LEVEL_LOADED, function (event, data) {
       events.isLive = data.details.live;
       var event = {
-        type: "level",
+        type: 'level',
         id: data.level,
         start: data.details.startSN,
         end: data.details.endSN,
@@ -250,21 +297,18 @@ function loadStream(url) {
         duration: data.stats.tload - data.stats.tfirst
       };
       var parsingDuration = data.stats.tparsed - data.stats.tload;
-      if (stats.levelParsed) {
-        this.sumLevelParsingMs += parsingDuration;
-      } else {
-        this.sumLevelParsingMs = parsingDuration;
-      }
+      if (stats.levelParsed) this.sumLevelParsingMs += parsingDuration;else this.sumLevelParsingMs = parsingDuration;
+
       stats.levelParsed++;
       stats.levelParsingUs = Math.round(1000 * this.sumLevelParsingMs / stats.levelParsed);
-      console.log("parsing level duration :" + stats.levelParsingUs + "us,count:" + stats.levelParsed);
+      console.log('parsing level duration :' + stats.levelParsingUs + 'us,count:' + stats.levelParsed);
       events.load.push(event);
       refreshCanvas();
     });
     hls.on(Hls.Events.AUDIO_TRACK_LOADED, function (event, data) {
       events.isLive = data.details.live;
       var event = {
-        type: "audio track",
+        type: 'audio track',
         id: data.id,
         start: data.details.startSN,
         end: data.details.endSN,
@@ -279,7 +323,7 @@ function loadStream(url) {
     });
     hls.on(Hls.Events.FRAG_BUFFERED, function (event, data) {
       var event = {
-        type: data.frag.type + " fragment",
+        type: data.frag.type + ' fragment',
         id: data.frag.level,
         id2: data.frag.sn,
         time: data.stats.trequest - events.t0,
@@ -292,9 +336,18 @@ function loadStream(url) {
         size: data.stats.total
       };
       events.load.push(event);
-      events.bitrate.push({ time: performance.now() - events.t0, bitrate: event.bw, duration: data.frag.duration, level: event.id });
+      events.bitrate.push({
+        time: performance.now() - events.t0,
+        bitrate: event.bw,
+        duration: data.frag.duration,
+        level: event.id
+      });
       if (hls.bufferTimer === undefined) {
-        events.buffer.push({ time: 0, buffer: 0, pos: 0 });
+        events.buffer.push({
+          time: 0,
+          buffer: 0,
+          pos: 0
+        });
         hls.bufferTimer = window.setInterval(checkBuffer, 100);
       }
       refreshCanvas();
@@ -342,13 +395,21 @@ function loadStream(url) {
       stats.autoLevelCappingLast = hls.autoLevelCapping;
     });
     hls.on(Hls.Events.LEVEL_SWITCHED, function (event, data) {
-      var event = { time: performance.now() - events.t0, type: 'level switched', name: data.level };
+      var event = {
+        time: performance.now() - events.t0,
+        type: 'level switched',
+        name: data.level
+      };
       events.video.push(event);
       refreshCanvas();
       updateLevelInfo();
     });
     hls.on(Hls.Events.FRAG_CHANGED, function (event, data) {
-      var event = { time: performance.now() - events.t0, type: 'frag changed', name: data.frag.sn + ' @ ' + data.frag.level };
+      var event = {
+        time: performance.now() - events.t0,
+        type: 'frag changed',
+        name: data.frag.sn + ' @ ' + data.frag.level
+      };
       events.video.push(event);
       refreshCanvas();
       updateLevelInfo();
@@ -356,17 +417,14 @@ function loadStream(url) {
 
       var level = data.frag.level,
           autoLevel = data.frag.autoLevel;
-      if (stats.levelStart === undefined) {
-        stats.levelStart = level;
-      }
+      if (stats.levelStart === undefined) stats.levelStart = level;
+
       if (autoLevel) {
         if (stats.fragChangedAuto) {
           stats.autoLevelMin = Math.min(stats.autoLevelMin, level);
           stats.autoLevelMax = Math.max(stats.autoLevelMax, level);
           stats.fragChangedAuto++;
-          if (this.levelLastAuto && level !== stats.autoLevelLast) {
-            stats.autoLevelSwitch++;
-          }
+          if (this.levelLastAuto && level !== stats.autoLevelLast) stats.autoLevelSwitch++;
         } else {
           stats.autoLevelMin = stats.autoLevelMax = level;
           stats.autoLevelSwitch = 0;
@@ -381,9 +439,7 @@ function loadStream(url) {
           stats.manualLevelMin = Math.min(stats.manualLevelMin, level);
           stats.manualLevelMax = Math.max(stats.manualLevelMax, level);
           stats.fragChangedManual++;
-          if (!this.levelLastAuto && level !== stats.manualLevelLast) {
-            stats.manualLevelSwitch++;
-          }
+          if (!this.levelLastAuto && level !== stats.manualLevelLast) stats.manualLevelSwitch++;
         } else {
           stats.manualLevelMin = stats.manualLevelMax = level;
           stats.manualLevelSwitch = 0;
@@ -396,11 +452,7 @@ function loadStream(url) {
 
     hls.on(Hls.Events.FRAG_LOAD_EMERGENCY_ABORTED, function (event, data) {
       if (stats) {
-        if (stats.fragLoadEmergencyAborted === undefined) {
-          stats.fragLoadEmergencyAborted = 1;
-        } else {
-          stats.fragLoadEmergencyAborted++;
-        }
+        if (stats.fragLoadEmergencyAborted === undefined) stats.fragLoadEmergencyAborted = 1;else stats.fragLoadEmergencyAborted++;
       }
     });
 
@@ -420,58 +472,56 @@ function loadStream(url) {
       switch (data.details) {
         case Hls.ErrorDetails.MANIFEST_LOAD_ERROR:
           try {
-            $("#HlsStatus").html("cannot Load <a href=\"" + data.context.url + "\">" + url + "</a><br>HTTP response code:" + data.response.code + " <br>" + data.response.text);
-            if (data.response.code === 0) {
-              $("#HlsStatus").append("this might be a CORS issue, consider installing <a href=\"https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi\">Allow-Control-Allow-Origin</a> Chrome Extension");
-            }
+            $('#HlsStatus').html('cannot Load <a href="' + data.context.url + '">' + url + '</a><br>HTTP response code:' + data.response.code + ' <br>' + data.response.text);
+            if (data.response.code === 0) $('#HlsStatus').append('this might be a CORS issue, consider installing <a href="https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi">Allow-Control-Allow-Origin</a> Chrome Extension');
           } catch (err) {
-            $("#HlsStatus").html("cannot Load <a href=\"" + data.context.url + "\">" + url + "</a><br>Reason:Load " + data.response.text);
+            $('#HlsStatus').html('cannot Load <a href="' + data.context.url + '">' + url + '</a><br>Reason:Load ' + data.response.text);
           }
           break;
         case Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT:
-          $("#HlsStatus").text("timeout while loading manifest");
+          $('#HlsStatus').text('timeout while loading manifest');
           break;
         case Hls.ErrorDetails.MANIFEST_PARSING_ERROR:
-          $("#HlsStatus").text("error while parsing manifest:" + data.reason);
+          $('#HlsStatus').text('error while parsing manifest:' + data.reason);
           break;
         case Hls.ErrorDetails.LEVEL_LOAD_ERROR:
-          $("#HlsStatus").text("error while loading level playlist");
+          $('#HlsStatus').text('error while loading level playlist');
           break;
         case Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT:
-          $("#HlsStatus").text("timeout while loading level playlist");
+          $('#HlsStatus').text('timeout while loading level playlist');
           break;
         case Hls.ErrorDetails.LEVEL_SWITCH_ERROR:
-          $("#HlsStatus").text("error while trying to switch to level " + data.level);
+          $('#HlsStatus').text('error while trying to switch to level ' + data.level);
           break;
         case Hls.ErrorDetails.FRAG_LOAD_ERROR:
-          $("#HlsStatus").text("error while loading fragment " + data.frag.url);
+          $('#HlsStatus').text('error while loading fragment ' + data.frag.url);
           break;
         case Hls.ErrorDetails.FRAG_LOAD_TIMEOUT:
-          $("#HlsStatus").text("timeout while loading fragment " + data.frag.url);
+          $('#HlsStatus').text('timeout while loading fragment ' + data.frag.url);
           break;
         case Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR:
-          $("#HlsStatus").text("Frag Loop Loading Error");
+          $('#HlsStatus').text('Frag Loop Loading Error');
           break;
         case Hls.ErrorDetails.FRAG_DECRYPT_ERROR:
-          $("#HlsStatus").text("Decrypting Error:" + data.reason);
+          $('#HlsStatus').text('Decrypting Error:' + data.reason);
           break;
         case Hls.ErrorDetails.FRAG_PARSING_ERROR:
-          $("#HlsStatus").text("Parsing Error:" + data.reason);
+          $('#HlsStatus').text('Parsing Error:' + data.reason);
           break;
         case Hls.ErrorDetails.KEY_LOAD_ERROR:
-          $("#HlsStatus").text("error while loading key " + data.frag.decryptdata.uri);
+          $('#HlsStatus').text('error while loading key ' + data.frag.decryptdata.uri);
           break;
         case Hls.ErrorDetails.KEY_LOAD_TIMEOUT:
-          $("#HlsStatus").text("timeout while loading key " + data.frag.decryptdata.uri);
+          $('#HlsStatus').text('timeout while loading key ' + data.frag.decryptdata.uri);
           break;
         case Hls.ErrorDetails.BUFFER_APPEND_ERROR:
-          $("#HlsStatus").text("Buffer Append Error");
+          $('#HlsStatus').text('Buffer Append Error');
           break;
         case Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR:
-          $("#HlsStatus").text("Buffer Add Codec Error for " + data.mimeType + ":" + data.err.message);
+          $('#HlsStatus').text('Buffer Add Codec Error for ' + data.mimeType + ':' + data.err.message);
           break;
         case Hls.ErrorDetails.BUFFER_APPENDING_ERROR:
-          $("#HlsStatus").text("Buffer Appending Error");
+          $('#HlsStatus').text('Buffer Appending Error');
           break;
         default:
           break;
@@ -483,31 +533,26 @@ function loadStream(url) {
             handleMediaError();
             break;
           case Hls.ErrorTypes.NETWORK_ERROR:
-            $("#HlsStatus").append(",network error ...");
+            $('#HlsStatus').append(',network error ...');
             break;
           default:
-            $("#HlsStatus").append(", unrecoverable error");
+            $('#HlsStatus').append(', unrecoverable error');
             hls.destroy();
             break;
         }
-        console.log($("#HlsStatus").text());
+        console.log($('#HlsStatus').text());
       }
-      if (!stats) stats = {};
+      if (!stats) {
+        stats = {};
+      }
       // track all errors independently
-      if (stats[data.details] === undefined) {
-        stats[data.details] = 1;
-      } else {
-        stats[data.details] += 1;
-      }
+      if (stats[data.details] === undefined) stats[data.details] = 1;else stats[data.details] += 1;
+
       // track fatal error
       if (data.fatal) {
-        if (stats.fatalError === undefined) {
-          stats.fatalError = 1;
-        } else {
-          stats.fatalError += 1;
-        }
+        if (stats.fatalError === undefined) stats.fatalError = 1;else stats.fatalError += 1;
       }
-      $("#HlsStats").text(JSON.stringify(sortObject(stats), null, "\t"));
+      $('#HlsStats').text(JSON.stringify(sortObject(stats), null, '\t'));
     });
 
     hls.on(Hls.Events.BUFFER_CREATED, function (event, data) {
@@ -515,20 +560,19 @@ function loadStream(url) {
     });
 
     hls.on(Hls.Events.BUFFER_APPENDING, function (event, data) {
-      if (dumpfMP4) {
-        fmp4Data[data.type].push(data.data);
-      }
+      if (dumpfMP4) fmp4Data[data.type].push(data.data);
     });
 
     hls.on(Hls.Events.FPS_DROP, function (event, data) {
-      var evt = { time: performance.now() - events.t0, type: "frame drop", name: data.currentDropped + "/" + data.currentDecoded };
+      var evt = {
+        time: performance.now() - events.t0,
+        type: 'frame drop',
+        name: data.currentDropped + '/' + data.currentDecoded
+      };
       events.video.push(evt);
       if (stats) {
-        if (stats.fpsDropEvent === undefined) {
-          stats.fpsDropEvent = 1;
-        } else {
-          stats.fpsDropEvent++;
-        }
+        if (stats.fpsDropEvent === undefined) stats.fpsDropEvent = 1;else stats.fpsDropEvent++;
+
         stats.fpsTotalDroppedFrames = data.totalDroppedFrames;
       }
     });
@@ -546,15 +590,14 @@ function loadStream(url) {
     video.addEventListener('loadeddata', handleVideoEvent);
     video.addEventListener('durationchange', handleVideoEvent);
   } else {
-    if (navigator.userAgent.toLowerCase().indexOf('firefox') !== -1) {
-      $("#HlsStatus").text("you are using Firefox, it looks like MediaSource is not enabled,<br>please ensure the following keys are set appropriately in <b>about:config</b><br>media.mediasource.enabled=true<br>media.mediasource.mp4.enabled=true<br><b>media.mediasource.whitelist=false</b>");
-    } else {
-      $("#HlsStatus").text("your Browser does not support MediaSourceExtension / MP4 mediasource");
-    }
+    if (navigator.userAgent.toLowerCase().indexOf('firefox') !== -1) $('#HlsStatus').text('you are using Firefox, it looks like MediaSource is not enabled,<br>please ensure the following keys are set appropriately in <b>about:config</b><br>media.mediasource.enabled=true<br>media.mediasource.mp4.enabled=true<br><b>media.mediasource.whitelist=false</b>');else $('#HlsStatus').text('your Browser does not support MediaSourceExtension / MP4 mediasource');
   }
 }
 
-var lastSeekingIdx, lastStartPosition, lastDuration, lastAudioTrackSwitchingIdx;
+var lastSeekingIdx = void 0,
+    lastStartPosition = void 0,
+    lastDuration = void 0,
+    lastAudioTrackSwitchingIdx = void 0;
 function handleVideoEvent(evt) {
   var data = '';
   switch (evt.type) {
@@ -587,27 +630,26 @@ function handleVideoEvent(evt) {
     case 'error':
       data = Math.round(evt.target.currentTime * 1000);
       if (evt.type === 'error') {
-        var errorTxt,
+        var errorTxt = void 0,
             mediaError = evt.currentTarget.error;
         switch (mediaError.code) {
           case mediaError.MEDIA_ERR_ABORTED:
-            errorTxt = "You aborted the video playback";
+            errorTxt = 'You aborted the video playback';
             break;
           case mediaError.MEDIA_ERR_DECODE:
-            errorTxt = "The video playback was aborted due to a corruption problem or because the video used features your browser did not support";
+            errorTxt = 'The video playback was aborted due to a corruption problem or because the video used features your browser did not support';
             handleMediaError();
             break;
           case mediaError.MEDIA_ERR_NETWORK:
-            errorTxt = "A network error caused the video download to fail part-way";
+            errorTxt = 'A network error caused the video download to fail part-way';
             break;
           case mediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-            errorTxt = "The video could not be loaded, either because the server or network failed or because the format is not supported";
+            errorTxt = 'The video could not be loaded, either because the server or network failed or because the format is not supported';
             break;
         }
-        if (mediaError.message) {
-          errorTxt += ' - ' + mediaError.message;
-        }
-        $("#HlsStatus").text(errorTxt);
+        if (mediaError.message) errorTxt += ' - ' + mediaError.message;
+
+        $('#HlsStatus').text(errorTxt);
         console.error(errorTxt);
       }
       break;
@@ -617,43 +659,44 @@ function handleVideoEvent(evt) {
     default:
       break;
   }
-  var event = { time: performance.now() - events.t0, type: evt.type, name: data };
+  var event = {
+    time: performance.now() - events.t0,
+    type: evt.type,
+    name: data
+  };
   events.video.push(event);
-  if (evt.type === 'seeking') {
-    lastSeekingIdx = events.video.length - 1;
-  }
-  if (evt.type === 'seeked') {
-    events.video[lastSeekingIdx].duration = event.time - events.video[lastSeekingIdx].time;
-  }
+  if (evt.type === 'seeking') lastSeekingIdx = events.video.length - 1;
+
+  if (evt.type === 'seeked') events.video[lastSeekingIdx].duration = event.time - events.video[lastSeekingIdx].time;
 }
 
-var recoverDecodingErrorDate, recoverSwapAudioCodecDate;
+var recoverDecodingErrorDate = void 0,
+    recoverSwapAudioCodecDate = void 0;
 function handleMediaError() {
   if (autoRecoverError) {
     var now = performance.now();
     if (!recoverDecodingErrorDate || now - recoverDecodingErrorDate > 3000) {
       recoverDecodingErrorDate = performance.now();
-      $("#HlsStatus").append(",try to recover media Error ...");
+      $('#HlsStatus').append(',try to recover media Error ...');
       hls.recoverMediaError();
     } else {
       if (!recoverSwapAudioCodecDate || now - recoverSwapAudioCodecDate > 3000) {
         recoverSwapAudioCodecDate = performance.now();
-        $("#HlsStatus").append(",try to swap Audio Codec and recover media Error ...");
+        $('#HlsStatus').append(',try to swap Audio Codec and recover media Error ...');
         hls.swapAudioCodec();
         hls.recoverMediaError();
       } else {
-        $("#HlsStatus").append(",cannot recover, last media error recovery failed ...");
+        $('#HlsStatus').append(',cannot recover, last media error recovery failed ...');
       }
     }
   }
 }
 
 function timeRangesToString(r) {
-  var log = "";
+  var log = '';
   for (var i = 0; i < r.length; i++) {
-    log += "[" + r.start(i) + "," + r.end(i) + "]";
-  }
-  return log;
+    log += '[' + r.start(i) + ',' + r.end(i) + ']';
+  }return log;
 }
 
 var bufferingIdx = -1;
@@ -663,14 +706,13 @@ function checkBuffer() {
   var canvas = $('#buffered_c')[0];
   var ctx = canvas.getContext('2d');
   var r = v.buffered;
-  var bufferingDuration;
-  ctx.fillStyle = "black";
+  var bufferingDuration = void 0;
+  ctx.fillStyle = 'black';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.fillStyle = "gray";
+  ctx.fillStyle = 'gray';
   if (r) {
-    if (!canvas.width || canvas.width !== v.clientWidth) {
-      canvas.width = v.clientWidth;
-    }
+    if (!canvas.width || canvas.width !== v.clientWidth) canvas.width = v.clientWidth;
+
     var pos = v.currentTime,
         bufferLen;
     for (var i = 0, bufferLen = 0; i < r.length; i++) {
@@ -692,7 +734,10 @@ function checkBuffer() {
           events.video[bufferingIdx].duration = bufferingDuration;
           events.video[bufferingIdx].name = bufferingDuration;
         } else {
-          events.video.push({ type: 'buffering', time: performance.now() - events.t0 });
+          events.video.push({
+            type: 'buffering',
+            time: performance.now() - events.t0
+          });
           // we are in buffering state
           bufferingIdx = events.video.length - 1;
         }
@@ -708,7 +753,11 @@ function checkBuffer() {
     }
 
     // update buffer/position for current Time
-    var event = { time: performance.now() - events.t0, buffer: Math.round(bufferLen * 1000), pos: Math.round(pos * 1000) };
+    var event = {
+      time: performance.now() - events.t0,
+      buffer: Math.round(bufferLen * 1000),
+      pos: Math.round(pos * 1000)
+    };
     var bufEvents = events.buffer,
         bufEventLen = bufEvents.length;
     if (bufEventLen > 1) {
@@ -720,31 +769,27 @@ function checkBuffer() {
       var slopePos0 = (event0.pos - event1.pos) / (event0.time - event1.time);
       var slopePos1 = (event1.pos - event.pos) / (event1.time - event.time);
       // compute slopes. if less than 30% difference, remove event1
-      if ((slopeBuf0 === slopeBuf1 || Math.abs(slopeBuf0 / slopeBuf1 - 1) <= 0.3) && (slopePos0 === slopePos1 || Math.abs(slopePos0 / slopePos1 - 1) <= 0.3)) {
-        bufEvents.pop();
-      }
+      if ((slopeBuf0 === slopeBuf1 || Math.abs(slopeBuf0 / slopeBuf1 - 1) <= 0.3) && (slopePos0 === slopePos1 || Math.abs(slopePos0 / slopePos1 - 1) <= 0.3)) bufEvents.pop();
     }
     events.buffer.push(event);
     refreshCanvas();
 
-    var log = "Duration:" + v.duration + "<br>" + "Buffered:" + timeRangesToString(v.buffered) + "<br>" + "Seekable:" + timeRangesToString(v.seekable) + "<br>" + "Played:" + timeRangesToString(v.played) + "<br>";
+    var log = 'Duration:' + v.duration + '<br>' + 'Buffered:' + timeRangesToString(v.buffered) + '<br>' + 'Seekable:' + timeRangesToString(v.seekable) + '<br>' + 'Played:' + timeRangesToString(v.played) + '<br>';
 
     if (hls.media) {
       for (var type in tracks) {
-        log += type + " Buffered:" + timeRangesToString(tracks[type].buffer.buffered) + "<br>";
-      }
-
-      var videoPlaybackQuality = v.getVideoPlaybackQuality;
+        log += type + ' Buffered:' + timeRangesToString(tracks[type].buffer.buffered) + '<br>';
+      }var videoPlaybackQuality = v.getVideoPlaybackQuality;
       if (videoPlaybackQuality && (typeof videoPlaybackQuality === 'undefined' ? 'undefined' : _typeof(videoPlaybackQuality)) === (typeof Function === 'undefined' ? 'undefined' : _typeof(Function))) {
-        log += "Dropped Frames:" + v.getVideoPlaybackQuality().droppedVideoFrames + "<br>";
-        log += "Corrupted Frames:" + v.getVideoPlaybackQuality().corruptedVideoFrames + "<br>";
+        log += 'Dropped Frames:' + v.getVideoPlaybackQuality().droppedVideoFrames + '<br>';
+        log += 'Corrupted Frames:' + v.getVideoPlaybackQuality().corruptedVideoFrames + '<br>';
       } else if (v.webkitDroppedFrameCount) {
-        log += "Dropped Frames:" + v.webkitDroppedFrameCount + "<br>";
+        log += 'Dropped Frames:' + v.webkitDroppedFrameCount + '<br>';
       }
     }
-    $("#buffered_log").html(log);
-    $("#HlsStats").text(JSON.stringify(sortObject(stats), null, "\t"));
-    ctx.fillStyle = "blue";
+    $('#buffered_log').html(log);
+    $('#HlsStats').text(JSON.stringify(sortObject(stats), null, '\t'));
+    ctx.fillStyle = 'blue';
     var x = v.currentTime / v.duration * canvas.width;
     ctx.fillRect(x, 0, 2, 15);
   }
@@ -764,20 +809,20 @@ function sortObject(obj) {
 
 function showCanvas() {
   showMetrics();
-  $("#buffered_log").show();
-  $("#buffered_c").show();
+  $('#buffered_log').show();
+  $('#buffered_c').show();
 }
 
 function hideCanvas() {
   hideMetrics();
-  $("#buffered_log").hide();
-  $("#buffered_c").hide();
+  $('#buffered_log').hide();
+  $('#buffered_c').hide();
 }
 
 function getMetrics() {
   var json = JSON.stringify(events);
   var jsonpacked = jsonpack.pack(json);
-  console.log("packing JSON from " + json.length + " to " + jsonpacked.length + " bytes");
+  console.log('packing JSON from ' + json.length + ' to ' + jsonpacked.length + ' bytes');
   return btoa(jsonpacked);
 }
 
@@ -786,7 +831,7 @@ function copyMetricsToClipBoard() {
 }
 
 function copyTextToClipboard(text) {
-  var textArea = document.createElement("textarea");
+  var textArea = document.createElement('textarea');
   textArea.value = text;
   document.body.appendChild(textArea);
   textArea.select();
@@ -802,7 +847,7 @@ function copyTextToClipboard(text) {
 
 function goToMetrics() {
   var url = document.URL;
-  url = url.substr(0, url.lastIndexOf("/") + 1) + 'metrics.html';
+  url = url.substr(0, url.lastIndexOf('/') + 1) + 'metrics.html';
   console.log(url);
   window.open(url, '_blank');
 }
@@ -810,7 +855,7 @@ function goToMetrics() {
 function goToMetricsPermaLink() {
   var url = document.URL;
   var b64 = getMetrics();
-  url = url.substr(0, url.lastIndexOf("/") + 1) + 'metrics.html#data=' + b64;
+  url = url.substr(0, url.lastIndexOf('/') + 1) + 'metrics.html#data=' + b64;
   console.log(url);
   window.open(url, '_blank');
 }
@@ -818,11 +863,11 @@ function goToMetricsPermaLink() {
 function minsecs(ts) {
   var m = Math.floor(Math.floor(ts % 3600) / 60);
   var s = Math.floor(ts % 60);
-  return m + ":" + (s < 10 ? "0" : "") + s;
+  return m + ':' + (s < 10 ? '0' : '') + s;
 }
 
 function buffered_seek(event) {
-  var canvas = $("#buffered_c")[0];
+  var canvas = $('#buffered_c')[0];
   var v = $('#video')[0];
   var target = (event.clientX - canvas.offsetLeft) / canvas.width * v.duration;
   v.currentTime = target;
@@ -830,103 +875,67 @@ function buffered_seek(event) {
 
 function updateLevelInfo() {
 
-  if (!hls.levels) {
-    return;
-  }
+  if (!hls.levels) return;
 
   var button_template = '<button type="button" class="btn btn-sm ';
   var button_enabled = 'btn-primary" ';
   var button_disabled = 'btn-success" ';
 
   var html1 = button_template;
-  if (hls.autoLevelEnabled) {
-    html1 += button_enabled;
-  } else {
-    html1 += button_disabled;
-  }
+  if (hls.autoLevelEnabled) html1 += button_enabled;else html1 += button_disabled;
+
   html1 += 'onclick="hls.currentLevel=-1">auto</button>';
 
   var html2 = button_template;
-  if (hls.autoLevelEnabled) {
-    html2 += button_enabled;
-  } else {
-    html2 += button_disabled;
-  }
+  if (hls.autoLevelEnabled) html2 += button_enabled;else html2 += button_disabled;
+
   html2 += 'onclick="hls.loadLevel=-1">auto</button>';
 
   var html3 = button_template;
-  if (hls.autoLevelCapping === -1) {
-    html3 += button_enabled;
-  } else {
-    html3 += button_disabled;
-  }
+  if (hls.autoLevelCapping === -1) html3 += button_enabled;else html3 += button_disabled;
+
   html3 += 'onclick="levelCapping=hls.autoLevelCapping=-1;updateLevelInfo();updatePermalink();">auto</button>';
 
   var html4 = button_template;
-  if (hls.autoLevelEnabled) {
-    html4 += button_enabled;
-  } else {
-    html4 += button_disabled;
-  }
+  if (hls.autoLevelEnabled) html4 += button_enabled;else html4 += button_disabled;
+
   html4 += 'onclick="hls.nextLevel=-1">auto</button>';
 
   for (var i = 0; i < hls.levels.length; i++) {
     html1 += button_template;
-    if (hls.currentLevel === i) {
-      html1 += button_enabled;
-    } else {
-      html1 += button_disabled;
-    }
+    if (hls.currentLevel === i) html1 += button_enabled;else html1 += button_disabled;
+
     var levelName = i,
         label = level2label(i);
-    if (label) {
-      levelName += '(' + level2label(i) + ')';
-    }
+    if (label) levelName += '(' + level2label(i) + ')';
+
     html1 += 'onclick="hls.currentLevel=' + i + '">' + levelName + '</button>';
 
     html2 += button_template;
-    if (hls.loadLevel === i) {
-      html2 += button_enabled;
-    } else {
-      html2 += button_disabled;
-    }
+    if (hls.loadLevel === i) html2 += button_enabled;else html2 += button_disabled;
+
     html2 += 'onclick="hls.loadLevel=' + i + '">' + levelName + '</button>';
 
     html3 += button_template;
-    if (hls.autoLevelCapping === i) {
-      html3 += button_enabled;
-    } else {
-      html3 += button_disabled;
-    }
+    if (hls.autoLevelCapping === i) html3 += button_enabled;else html3 += button_disabled;
+
     html3 += 'onclick="levelCapping=hls.autoLevelCapping=' + i + ';updateLevelInfo();updatePermalink();">' + levelName + '</button>';
 
     html4 += button_template;
-    if (hls.nextLevel === i) {
-      html4 += button_enabled;
-    } else {
-      html4 += button_disabled;
-    }
+    if (hls.nextLevel === i) html4 += button_enabled;else html4 += button_disabled;
+
     html4 += 'onclick="hls.nextLevel=' + i + '">' + levelName + '</button>';
   }
   var v = $('#video')[0];
-  if (v.videoWidth) {
-    $("#currentResolution").html("video resolution:" + v.videoWidth + 'x' + v.videoHeight);
-  }
-  if ($("#currentLevelControl").html() != html1) {
-    $("#currentLevelControl").html(html1);
-  }
+  if (v.videoWidth) $('#currentResolution').html('video resolution:' + v.videoWidth + 'x' + v.videoHeight);
 
-  if ($("#loadLevelControl").html() != html2) {
-    $("#loadLevelControl").html(html2);
-  }
+  if ($('#currentLevelControl').html() != html1) $('#currentLevelControl').html(html1);
 
-  if ($("#levelCappingControl").html() != html3) {
-    $("#levelCappingControl").html(html3);
-  }
+  if ($('#loadLevelControl').html() != html2) $('#loadLevelControl').html(html2);
 
-  if ($("#nextLevelControl").html() != html4) {
-    $("#nextLevelControl").html(html4);
-  }
+  if ($('#levelCappingControl').html() != html3) $('#levelCappingControl').html(html3);
+
+  if ($('#nextLevelControl').html() != html4) $('#nextLevelControl').html(html4);
 }
 
 function updateAudioTrackInfo() {
@@ -939,14 +948,11 @@ function updateAudioTrackInfo() {
 
   for (var i = 0; i < len; i++) {
     html1 += button_template;
-    if (audioTrackId === i) {
-      html1 += button_enabled;
-    } else {
-      html1 += button_disabled;
-    }
+    if (audioTrackId === i) html1 += button_enabled;else html1 += button_disabled;
+
     html1 += 'onclick="hls.audioTrack=' + i + '">' + hls.audioTracks[i].name + '</button>';
   }
-  $("#audioTrackControl").html(html1);
+  $('#audioTrackControl').html(html1);
 }
 
 function level2label(index) {
@@ -958,11 +964,7 @@ function level2label(index) {
       if (level.height) {
         return level.height + 'p / ' + Math.round(level.bitrate / 1024) + 'kb';
       } else {
-        if (level.bitrate) {
-          return Math.round(level.bitrate / 1024) + 'kb';
-        } else {
-          return null;
-        }
+        if (level.bitrate) return Math.round(level.bitrate / 1024) + 'kb';else return null;
       }
     }
   }
@@ -973,9 +975,7 @@ function getURLParam(sParam, defaultValue) {
   var sURLVariables = sPageURL.split('&');
   for (var i = 0; i < sURLVariables.length; i++) {
     var sParameterName = sURLVariables[i].split('=');
-    if (sParameterName[0] == sParam) {
-      return "undefined" == sParameterName[1] ? undefined : "false" == sParameterName[1] ? false : sParameterName[1];
-    }
+    if (sParameterName[0] == sParam) return 'undefined' == sParameterName[1] ? undefined : 'false' == sParameterName[1] ? false : sParameterName[1];
   }
   return defaultValue;
 }
@@ -983,13 +983,15 @@ function getURLParam(sParam, defaultValue) {
 function updatePermalink() {
   var url = $('#streamURL').val();
   var hlsLink = document.URL.split('?')[0] + '?src=' + encodeURIComponent(url) + '&enableStreaming=' + enableStreaming + '&autoRecoverError=' + autoRecoverError + '&enableWorker=' + enableWorker + '&dumpfMP4=' + dumpfMP4 + '&levelCapping=' + levelCapping + '&defaultAudioCodec=' + defaultAudioCodec;
-  var description = 'permalink: ' + "<a href=\"" + hlsLink + "\">" + hlsLink + "</a>";
-  $("#StreamPermalink").html(description);
+  var description = 'permalink: ' + '<a href="' + hlsLink + '">' + hlsLink + '</a>';
+  $('#StreamPermalink').html(description);
 }
 
 function createfMP4(type) {
   if (fmp4Data[type].length) {
-    var blob = new Blob([arrayConcat(fmp4Data[type])], { type: 'application/octet-stream' });
+    var blob = new Blob([arrayConcat(fmp4Data[type])], {
+      type: 'application/octet-stream'
+    });
     var filename = type + '-' + new Date().toISOString() + '.mp4';
     saveAs(blob, filename);
     //$('body').append('<a download="hlsjs-' + filename + '" href="' + window.URL.createObjectURL(blob) + '">Download ' + filename + ' track</a><br>');
@@ -1008,6 +1010,12 @@ function arrayConcat(inputArray) {
   });
   return result;
 }
+
+/***/ }),
+/* 1 */
+/***/ (function(module, exports) {
+
+module.exports = {"arte":{"url":"https://video-dev.github.io/streams/test_001/stream.m3u8","description":"ARTE China,ABR","live":false,"abr":true},"bigBuckBunny480p":{"url":"https://video-dev.github.io/streams/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8","description":"big buck bunny,480p","live":false,"abr":false,"blacklist_ua":["internet explorer"]},"deltatreDAI":{"url":"https://video-dev.github.io/streams/dai-discontinuity-deltatre/manifest.m3u8","description":"Ad-insertion in event stream","live":false,"abr":false,"blacklist_ua":["internet explorer"]},"issue666":{"url":"http://www.streambox.fr/playlists/cisq0gim60007xzvi505emlxx.m3u8","description":"hls.js/issues/666","live":false,"abr":false,"blacklist_ua":["internet explorer"]},"issue649":{"url":"http://cdn3.screen9.com/media/c/W/cW87csHkxsgu5TV1qs78aA_auto_hls.m3u8?auth=qlUjeCtbVdtkDfZYrtveTIVUXX1yuSqgF8wfWabzKpX72r-d5upW88-FHuyRRdnZA_1PKRTGAtTt_6Z-aj22kw","description":"hls.js/issues/649","live":false,"abr":false},"nasa":{"url":"https://nasa-i.akamaihd.net/hls/live/253565/NASA-NTV1-Public/master.m3u8","description":"NASA live stream","live":true,"abr":false,"blacklist_ua":["internet explorer","safari"]},"closedcaptions":{"url":"http://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8","description":"CNN special report, with CC","live":false,"abr":false,"blacklist_ua":["safari"]},"oceans_aes":{"url":"http://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8","description":"AES encrypted,ABR","live":false,"abr":true},"bbb_aes":{"url":"http://streambox.fr/playlists/sample_aes/index.m3u8","description":"SAMPLE-AES encrypted","live":false,"abr":false},"mp3":{"url":"https://player.webvideocore.net/CL1olYogIrDWvwqiIKK7eLBkzvO18gwo9ERMzsyXzwt_t-ya8ygf2kQBZww38JJT/8i4vvznv8408.m3u8","description":"MP3 VOD demo","live":false,"abr":false,"blacklist_ua":["safari"]},"mpeg_audio":{"url":"https://pl.streamingvideoprovider.com/mp3-playlist/playlist.m3u8","description":"MPEG Audio Only demo","live":false,"abr":false,"blacklist_ua":["internet explorer","MicrosoftEdge","safari","firefox"]},"fmp4":{"url":"https://storage.googleapis.com/shaka-demo-assets/angel-one-hls/hls.m3u8","description":"HLS fMP4 Angel One multiple audio tracks","live":false,"abr":false,"blacklist_ua":["safari","internet explorer"]},"fmp4-bitmovin":{"url":"https://bitdash-a.akamaihd.net/content/MI201109210084_1/m3u8s-fmp4/f08e80da-bf1d-4e3d-8899-f0f6155f6efa.m3u8","description":"HLS fMP4 by Bitmovin","live":false,"abr":true,"blacklist_ua":["safari","internet explorer"]}}
 
 /***/ })
 /******/ ])["default"];
