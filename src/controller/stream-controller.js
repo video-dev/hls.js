@@ -490,7 +490,7 @@ class StreamController extends TaskLoop {
       }
 
       // Allow backtracked fragments to load
-      if(frag.backtracked || fragState === FragmentState.NOT_LOADED) {
+      if (frag.backtracked || fragState === FragmentState.NOT_LOADED) {
         frag.autoLevel = this.hls.autoLevelEnabled;
         frag.bitrateTest = this.bitrateTest;
 
@@ -500,6 +500,11 @@ class StreamController extends TaskLoop {
           this.demuxer = new Demuxer(this.hls,'main');
         }
         this.state = State.FRAG_LOADING;
+      } else if (fragState === FragmentState.APPENDING) {
+        // Lower the buffer size and try again
+        if (this._reduceMaxBufferLength(frag.duration)) {
+          this.fragmentTracker.removeFragment(frag);
+        }
       }
     }
   }
@@ -1345,7 +1350,9 @@ class StreamController extends TaskLoop {
       // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
       config.maxMaxBufferLength/=2;
       logger.warn(`main:reduce max buffer length to ${config.maxMaxBufferLength}s`);
+      return true;
     }
+    return false;
   }
 
 _checkBuffer() {
