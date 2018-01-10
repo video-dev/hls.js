@@ -110,7 +110,7 @@ function loadStream(url) {
       'audio': [],
       'video': []
     };
-    hls = new Hls({
+    window.hls = hls = new Hls({
       debug            : true,
       enableWorker     : enableWorker,
       defaultAudioCodec: defaultAudioCodec
