@@ -39,8 +39,6 @@ module.exports = {
         2,
         "any"
       ],
-      "indent": 0,
-      /*
       "indent": [
         2,
         4,
@@ -48,7 +46,6 @@ module.exports = {
           "SwitchCase": 1
         }
       ],
-      */
       "no-use-before-define": [
         2,
         {
