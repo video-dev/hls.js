@@ -44,6 +44,7 @@
     "lint:node": "eslint *.js",
     "lint:tests": "eslint tests/",
     "lint:fix": "eslint .js src/ tests/ --fix",
+    "lint:html": "htmlhint demo/*.html",
     "precommit": "./scripts/precommit"
   },
   "dependencies": {
@@ -63,6 +64,7 @@
     "eslint": "^4.13.1",
     "eslint-config-node-style-guide": "^3.0.0",
     "eslint-plugin-prettier": "^2.4.0",
+    "htmlhint": "^0.9.13",
     "http-server": "^0.10.0",
     "husky": "^0.14.3",
     "istanbul-instrumenter-loader": "^2.0.0",
