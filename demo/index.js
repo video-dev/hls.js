@@ -225,9 +225,9 @@ function loadStream(url) {
       };
       const parsingDuration = data.stats.tparsed - data.stats.tload;
       if (stats.levelParsed)
-        this.sumLevelParsingMs += parsingDuration;
+      {this.sumLevelParsingMs += parsingDuration;}
       else
-        this.sumLevelParsingMs = parsingDuration;
+      {this.sumLevelParsingMs = parsingDuration;}
 
       stats.levelParsed++;
       stats.levelParsingUs = Math.round(1000*this.sumLevelParsingMs / stats.levelParsed);
@@ -347,7 +347,7 @@ function loadStream(url) {
 
       let level = data.frag.level, autoLevel = data.frag.autoLevel;
       if (stats.levelStart === undefined)
-        stats.levelStart = level;
+      {stats.levelStart = level;}
 
       if (autoLevel) {
         if (stats.fragChangedAuto) {
@@ -355,7 +355,7 @@ function loadStream(url) {
           stats.autoLevelMax = Math.max(stats.autoLevelMax, level);
           stats.fragChangedAuto++;
           if (this.levelLastAuto && level !== stats.autoLevelLast)
-            stats.autoLevelSwitch++;
+          {stats.autoLevelSwitch++;}
 
         } else {
           stats.autoLevelMin = stats.autoLevelMax = level;
@@ -372,7 +372,7 @@ function loadStream(url) {
           stats.manualLevelMax = Math.max(stats.manualLevelMax, level);
           stats.fragChangedManual++;
           if (!this.levelLastAuto && level !== stats.manualLevelLast)
-            stats.manualLevelSwitch++;
+          {stats.manualLevelSwitch++;}
 
         } else {
           stats.manualLevelMin = stats.manualLevelMax = level;
@@ -387,9 +387,9 @@ function loadStream(url) {
     hls.on(Hls.Events.FRAG_LOAD_EMERGENCY_ABORTED, function(event, data) {
       if (stats) {
         if (stats.fragLoadEmergencyAborted === undefined)
-          stats.fragLoadEmergencyAborted = 1;
+        {stats.fragLoadEmergencyAborted = 1;}
         else
-          stats.fragLoadEmergencyAborted++;
+        {stats.fragLoadEmergencyAborted++;}
 
       }
     });
@@ -408,77 +408,77 @@ function loadStream(url) {
     hls.on(Hls.Events.ERROR, function(event, data) {
       console.warn(data);
       switch(data.details) {
-      case Hls.ErrorDetails.MANIFEST_LOAD_ERROR:
-        try {
-          $('#HlsStatus').html('cannot Load <a href="' + data.context.url + '">' + url + '</a><br>HTTP response code:' + data.response.code + ' <br>' + data.response.text);
-          if(data.response.code === 0)
-            $('#HlsStatus').append('this might be a CORS issue, consider installing <a href="https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi">Allow-Control-Allow-Origin</a> Chrome Extension');
+        case Hls.ErrorDetails.MANIFEST_LOAD_ERROR:
+          try {
+            $('#HlsStatus').html('cannot Load <a href="' + data.context.url + '">' + url + '</a><br>HTTP response code:' + data.response.code + ' <br>' + data.response.text);
+            if(data.response.code === 0)
+            {$('#HlsStatus').append('this might be a CORS issue, consider installing <a href="https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi">Allow-Control-Allow-Origin</a> Chrome Extension');}
 
-        } catch(err) {
-          $('#HlsStatus').html('cannot Load <a href="' + data.context.url + '">' + url + '</a><br>Reason:Load ' + data.response.text);
-        }
-        break;
-      case Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT:
-        $('#HlsStatus').text('timeout while loading manifest');
-        break;
-      case Hls.ErrorDetails.MANIFEST_PARSING_ERROR:
-        $('#HlsStatus').text('error while parsing manifest:' + data.reason);
-        break;
-      case Hls.ErrorDetails.LEVEL_LOAD_ERROR:
-        $('#HlsStatus').text('error while loading level playlist');
-        break;
-      case Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT:
-        $('#HlsStatus').text('timeout while loading level playlist');
-        break;
-      case Hls.ErrorDetails.LEVEL_SWITCH_ERROR:
-        $('#HlsStatus').text('error while trying to switch to level ' + data.level);
-        break;
-      case Hls.ErrorDetails.FRAG_LOAD_ERROR:
-        $('#HlsStatus').text('error while loading fragment ' + data.frag.url);
-        break;
-      case Hls.ErrorDetails.FRAG_LOAD_TIMEOUT:
-        $('#HlsStatus').text('timeout while loading fragment ' + data.frag.url);
-        break;
-      case Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR:
-        $('#HlsStatus').text('Frag Loop Loading Error');
-        break;
-      case Hls.ErrorDetails.FRAG_DECRYPT_ERROR:
-        $('#HlsStatus').text('Decrypting Error:' + data.reason);
-        break;
-      case Hls.ErrorDetails.FRAG_PARSING_ERROR:
-        $('#HlsStatus').text('Parsing Error:' + data.reason);
-        break;
-      case Hls.ErrorDetails.KEY_LOAD_ERROR:
-        $('#HlsStatus').text('error while loading key ' + data.frag.decryptdata.uri);
-        break;
-      case Hls.ErrorDetails.KEY_LOAD_TIMEOUT:
-        $('#HlsStatus').text('timeout while loading key ' + data.frag.decryptdata.uri);
-        break;
-      case Hls.ErrorDetails.BUFFER_APPEND_ERROR:
-        $('#HlsStatus').text('Buffer Append Error');
-        break;
-      case Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR:
-        $('#HlsStatus').text('Buffer Add Codec Error for ' + data.mimeType + ':' + data.err.message);
-        break;
-      case Hls.ErrorDetails.BUFFER_APPENDING_ERROR:
-        $('#HlsStatus').text('Buffer Appending Error');
-        break;
-      default:
-        break;
+          } catch(err) {
+            $('#HlsStatus').html('cannot Load <a href="' + data.context.url + '">' + url + '</a><br>Reason:Load ' + data.response.text);
+          }
+          break;
+        case Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT:
+          $('#HlsStatus').text('timeout while loading manifest');
+          break;
+        case Hls.ErrorDetails.MANIFEST_PARSING_ERROR:
+          $('#HlsStatus').text('error while parsing manifest:' + data.reason);
+          break;
+        case Hls.ErrorDetails.LEVEL_LOAD_ERROR:
+          $('#HlsStatus').text('error while loading level playlist');
+          break;
+        case Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT:
+          $('#HlsStatus').text('timeout while loading level playlist');
+          break;
+        case Hls.ErrorDetails.LEVEL_SWITCH_ERROR:
+          $('#HlsStatus').text('error while trying to switch to level ' + data.level);
+          break;
+        case Hls.ErrorDetails.FRAG_LOAD_ERROR:
+          $('#HlsStatus').text('error while loading fragment ' + data.frag.url);
+          break;
+        case Hls.ErrorDetails.FRAG_LOAD_TIMEOUT:
+          $('#HlsStatus').text('timeout while loading fragment ' + data.frag.url);
+          break;
+        case Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR:
+          $('#HlsStatus').text('Frag Loop Loading Error');
+          break;
+        case Hls.ErrorDetails.FRAG_DECRYPT_ERROR:
+          $('#HlsStatus').text('Decrypting Error:' + data.reason);
+          break;
+        case Hls.ErrorDetails.FRAG_PARSING_ERROR:
+          $('#HlsStatus').text('Parsing Error:' + data.reason);
+          break;
+        case Hls.ErrorDetails.KEY_LOAD_ERROR:
+          $('#HlsStatus').text('error while loading key ' + data.frag.decryptdata.uri);
+          break;
+        case Hls.ErrorDetails.KEY_LOAD_TIMEOUT:
+          $('#HlsStatus').text('timeout while loading key ' + data.frag.decryptdata.uri);
+          break;
+        case Hls.ErrorDetails.BUFFER_APPEND_ERROR:
+          $('#HlsStatus').text('Buffer Append Error');
+          break;
+        case Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR:
+          $('#HlsStatus').text('Buffer Add Codec Error for ' + data.mimeType + ':' + data.err.message);
+          break;
+        case Hls.ErrorDetails.BUFFER_APPENDING_ERROR:
+          $('#HlsStatus').text('Buffer Appending Error');
+          break;
+        default:
+          break;
       }
       if(data.fatal) {
         console.log('fatal error :' + data.details);
         switch(data.type) {
-        case Hls.ErrorTypes.MEDIA_ERROR:
-          handleMediaError();
-          break;
-        case Hls.ErrorTypes.NETWORK_ERROR:
-          $('#HlsStatus').append(',network error ...');
-          break;
-        default:
-          $('#HlsStatus').append(', unrecoverable error');
-          hls.destroy();
-          break;
+          case Hls.ErrorTypes.MEDIA_ERROR:
+            handleMediaError();
+            break;
+          case Hls.ErrorTypes.NETWORK_ERROR:
+            $('#HlsStatus').append(',network error ...');
+            break;
+          default:
+            $('#HlsStatus').append(', unrecoverable error');
+            hls.destroy();
+            break;
         }
         console.log($('#HlsStatus').text());
       }
@@ -488,16 +488,16 @@ function loadStream(url) {
       }
       // track all errors independently
       if (stats[data.details] === undefined)
-        stats[data.details] = 1;
+      {stats[data.details] = 1;}
       else
-        stats[data.details] += 1;
+      {stats[data.details] += 1;}
 
       // track fatal error
       if (data.fatal) {
         if (stats.fatalError === undefined)
-          stats.fatalError = 1;
+        {stats.fatalError = 1;}
         else
-          stats.fatalError += 1;
+        {stats.fatalError += 1;}
 
       }
       $('#HlsStats').text(JSON.stringify(sortObject(stats), null, '\t'));
@@ -509,7 +509,7 @@ function loadStream(url) {
 
     hls.on(Hls.Events.BUFFER_APPENDING, function(event, data) {
       if (dumpfMP4)
-        fmp4Data[data.type].push(data.data);
+      {fmp4Data[data.type].push(data.data);}
 
     });
 
@@ -522,9 +522,9 @@ function loadStream(url) {
       events.video.push(evt);
       if (stats) {
         if (stats.fpsDropEvent === undefined)
-          stats.fpsDropEvent = 1;
+        {stats.fpsDropEvent = 1;}
         else
-          stats.fpsDropEvent++;
+        {stats.fpsDropEvent++;}
 
         stats.fpsTotalDroppedFrames = data.totalDroppedFrames;
       }
@@ -544,9 +544,9 @@ function loadStream(url) {
     video.addEventListener('durationchange', handleVideoEvent);
   } else {
     if(navigator.userAgent.toLowerCase().indexOf('firefox') !== -1)
-      $('#HlsStatus').text('you are using Firefox, it looks like MediaSource is not enabled,<br>please ensure the following keys are set appropriately in <b>about:config</b><br>media.mediasource.enabled=true<br>media.mediasource.mp4.enabled=true<br><b>media.mediasource.whitelist=false</b>');
+    {$('#HlsStatus').text('you are using Firefox, it looks like MediaSource is not enabled,<br>please ensure the following keys are set appropriately in <b>about:config</b><br>media.mediasource.enabled=true<br>media.mediasource.mp4.enabled=true<br><b>media.mediasource.whitelist=false</b>');}
     else
-      $('#HlsStatus').text('your Browser does not support MediaSourceExtension / MP4 mediasource');
+    {$('#HlsStatus').text('your Browser does not support MediaSourceExtension / MP4 mediasource');}
 
   }
 }
@@ -556,63 +556,63 @@ let lastSeekingIdx, lastStartPosition, lastDuration, lastAudioTrackSwitchingIdx;
 function handleVideoEvent(evt) {
   let data = '';
   switch(evt.type) {
-  case 'durationchange':
-    if(evt.target.duration - lastDuration <= 0.5) {
+    case 'durationchange':
+      if(evt.target.duration - lastDuration <= 0.5) {
       // some browsers reports several duration change events with almost the same value ... avoid spamming video events
-      return;
-    }
-    lastDuration = evt.target.duration;
-    data = Math.round(evt.target.duration*1000);
-    break;
-  case 'resize':
-    data = evt.target.videoWidth + '/' + evt.target.videoHeight;
-    break;
-  case 'loadedmetadata':
+        return;
+      }
+      lastDuration = evt.target.duration;
+      data = Math.round(evt.target.duration*1000);
+      break;
+    case 'resize':
+      data = evt.target.videoWidth + '/' + evt.target.videoHeight;
+      break;
+    case 'loadedmetadata':
     //   data = 'duration:' + evt.target.duration + '/videoWidth:' + evt.target.videoWidth + '/videoHeight:' + evt.target.videoHeight;
     //  break;
-  case 'loadeddata':
-  case 'canplay':
-  case 'canplaythrough':
-  case 'ended':
-  case 'seeking':
-  case 'seeked':
-  case 'play':
-  case 'playing':
-    lastStartPosition = evt.target.currentTime;
-  case 'pause':
-  case 'waiting':
-  case 'stalled':
-  case 'error':
-    data = Math.round(evt.target.currentTime*1000);
-    if(evt.type === 'error') {
-      let errorTxt, mediaError=evt.currentTarget.error;
-      switch(mediaError.code) {
-      case mediaError.MEDIA_ERR_ABORTED:
-        errorTxt = 'You aborted the video playback';
-        break;
-      case mediaError.MEDIA_ERR_DECODE:
-        errorTxt = 'The video playback was aborted due to a corruption problem or because the video used features your browser did not support';
-        handleMediaError();
-        break;
-      case mediaError.MEDIA_ERR_NETWORK:
-        errorTxt = 'A network error caused the video download to fail part-way';
-        break;
-      case mediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-        errorTxt = 'The video could not be loaded, either because the server or network failed or because the format is not supported';
-        break;
-      }
-      if (mediaError.message)
-        errorTxt += ' - ' + mediaError.message;
+    case 'loadeddata':
+    case 'canplay':
+    case 'canplaythrough':
+    case 'ended':
+    case 'seeking':
+    case 'seeked':
+    case 'play':
+    case 'playing':
+      lastStartPosition = evt.target.currentTime;
+    case 'pause':
+    case 'waiting':
+    case 'stalled':
+    case 'error':
+      data = Math.round(evt.target.currentTime*1000);
+      if(evt.type === 'error') {
+        let errorTxt, mediaError=evt.currentTarget.error;
+        switch(mediaError.code) {
+          case mediaError.MEDIA_ERR_ABORTED:
+            errorTxt = 'You aborted the video playback';
+            break;
+          case mediaError.MEDIA_ERR_DECODE:
+            errorTxt = 'The video playback was aborted due to a corruption problem or because the video used features your browser did not support';
+            handleMediaError();
+            break;
+          case mediaError.MEDIA_ERR_NETWORK:
+            errorTxt = 'A network error caused the video download to fail part-way';
+            break;
+          case mediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+            errorTxt = 'The video could not be loaded, either because the server or network failed or because the format is not supported';
+            break;
+        }
+        if (mediaError.message)
+        {errorTxt += ' - ' + mediaError.message;}
 
-      $('#HlsStatus').text(errorTxt);
-      console.error(errorTxt);
-    }
-    break;
+        $('#HlsStatus').text(errorTxt);
+        console.error(errorTxt);
+      }
+      break;
     // case 'progress':
     //   data = 'currentTime:' + evt.target.currentTime + ',bufferRange:[' + this.video.buffered.start(0) + ',' + this.video.buffered.end(0) + ']';
     //   break;
-  default:
-    break;
+    default:
+      break;
   }
   let event = {
     time: performance.now() - events.t0,
@@ -621,10 +621,10 @@ function handleVideoEvent(evt) {
   };
   events.video.push(event);
   if(evt.type === 'seeking')
-    lastSeekingIdx = events.video.length-1;
+  {lastSeekingIdx = events.video.length-1;}
 
   if(evt.type === 'seeked')
-    events.video[lastSeekingIdx].duration = event.time - events.video[lastSeekingIdx].time;
+  {events.video[lastSeekingIdx].duration = event.time - events.video[lastSeekingIdx].time;}
 
 }
 
@@ -654,7 +654,7 @@ function handleMediaError() {
 function timeRangesToString(r) {
   let log = '';
   for (let i=0; i<r.length; i++)
-    log += '[' + r.start(i) + ',' + r.end(i) + ']';
+  {log += '[' + r.start(i) + ',' + r.end(i) + ']';}
 
   return log;
 }
@@ -672,7 +672,7 @@ function checkBuffer() {
   ctx.fillStyle = 'gray';
   if (r) {
     if(!canvas.width || canvas.width !== v.clientWidth)
-      canvas.width = v.clientWidth;
+    {canvas.width = v.clientWidth;}
 
     var pos = v.currentTime, bufferLen;
     for (var i=0, bufferLen=0; i<r.length; i++) {
@@ -730,7 +730,7 @@ function checkBuffer() {
       // compute slopes. if less than 30% difference, remove event1
       if((slopeBuf0 === slopeBuf1 || Math.abs(slopeBuf0/slopeBuf1 -1) <= 0.3) &&
            (slopePos0 === slopePos1 || Math.abs(slopePos0/slopePos1 -1) <= 0.3))
-        bufEvents.pop();
+      {bufEvents.pop();}
 
     }
     events.buffer.push(event);
@@ -747,7 +747,7 @@ function checkBuffer() {
 
     if (hls.media) {
       for(let type in tracks)
-        log += type + ' Buffered:' + timeRangesToString(tracks[type].buffer.buffered) + '<br>';
+      {log += type + ' Buffered:' + timeRangesToString(tracks[type].buffer.buffered) + '<br>';}
 
 
       let videoPlaybackQuality = v.getVideoPlaybackQuality;
@@ -769,15 +769,15 @@ function checkBuffer() {
 
 function sortObject(obj) {
   if(typeof obj !== 'object')
-    return obj;
+  {return obj;}
   let temp = {
   };
   let keys = [];
   for(let key in obj)
-    keys.push(key);
+  {keys.push(key);}
   keys.sort();
   for(let index in keys)
-    temp[keys[index]] = sortObject(obj[keys[index]]);
+  {temp[keys[index]] = sortObject(obj[keys[index]]);}
   return temp;
 }
 
@@ -851,7 +851,7 @@ function buffered_seek(event) {
 function updateLevelInfo() {
 
   if (!hls.levels)
-    return;
+  {return;}
 
 
   let button_template = '<button type="button" class="btn btn-sm ';
@@ -860,92 +860,92 @@ function updateLevelInfo() {
 
   let html1 = button_template;
   if(hls.autoLevelEnabled)
-    html1 += button_enabled;
+  {html1 += button_enabled;}
   else
-    html1 += button_disabled;
+  {html1 += button_disabled;}
 
   html1 += 'onclick="hls.currentLevel=-1">auto</button>';
 
 
   let html2 = button_template;
   if(hls.autoLevelEnabled)
-    html2 += button_enabled;
+  {html2 += button_enabled;}
   else
-    html2 += button_disabled;
+  {html2 += button_disabled;}
 
   html2 += 'onclick="hls.loadLevel=-1">auto</button>';
 
   let html3 = button_template;
   if(hls.autoLevelCapping === -1)
-    html3 += button_enabled;
+  {html3 += button_enabled;}
   else
-    html3 += button_disabled;
+  {html3 += button_disabled;}
 
   html3 += 'onclick="levelCapping=hls.autoLevelCapping=-1;updateLevelInfo();updatePermalink();">auto</button>';
 
   let html4 = button_template;
   if(hls.autoLevelEnabled)
-    html4 += button_enabled;
+  {html4 += button_enabled;}
   else
-    html4 += button_disabled;
+  {html4 += button_disabled;}
 
   html4 += 'onclick="hls.nextLevel=-1">auto</button>';
 
   for (let i=0; i < hls.levels.length; i++) {
     html1 += button_template;
     if(hls.currentLevel === i)
-      html1 += button_enabled;
+    {html1 += button_enabled;}
     else
-      html1 += button_disabled;
+    {html1 += button_disabled;}
 
     let levelName = i, label = level2label(i);
     if(label)
-      levelName += '(' + level2label(i) + ')';
+    {levelName += '(' + level2label(i) + ')';}
 
     html1 += 'onclick="hls.currentLevel=' + i + '">' + levelName + '</button>';
 
     html2 += button_template;
     if(hls.loadLevel === i)
-      html2 += button_enabled;
+    {html2 += button_enabled;}
     else
-      html2 += button_disabled;
+    {html2 += button_disabled;}
 
     html2 += 'onclick="hls.loadLevel=' + i + '">' + levelName + '</button>';
 
     html3 += button_template;
     if(hls.autoLevelCapping === i)
-      html3 += button_enabled;
+    {html3 += button_enabled;}
     else
-      html3 += button_disabled;
+    {html3 += button_disabled;}
 
     html3 += 'onclick="levelCapping=hls.autoLevelCapping=' + i + ';updateLevelInfo();updatePermalink();">' + levelName + '</button>';
 
     html4 += button_template;
     if(hls.nextLevel === i)
-      html4 += button_enabled;
+    {html4 += button_enabled;}
     else
-      html4 += button_disabled;
+    {html4 += button_disabled;}
 
     html4 += 'onclick="hls.nextLevel=' + i + '">' + levelName + '</button>';
   }
   let v = $('#video')[0];
   if(v.videoWidth)
-    $('#currentResolution').html('video resolution:' + v.videoWidth + 'x' + v.videoHeight);
+  {$('#currentResolution').html('video resolution:' + v.videoWidth + 'x' + v.videoHeight);}
 
   if($('#currentLevelControl').html() != html1)
-    $('#currentLevelControl').html(html1);
+  {$('#currentLevelControl').html(html1);}
 
 
   if($('#loadLevelControl').html() != html2)
-    $('#loadLevelControl').html(html2);
+  {$('#loadLevelControl').html(html2);}
 
 
   if($('#levelCappingControl').html() != html3)
-    $('#levelCappingControl').html(html3);
+  {$('#levelCappingControl').html(html3);}
 
 
   if($('#nextLevelControl').html() != html4)
-    $('#nextLevelControl').html(html4);
+  {$('#nextLevelControl').html(html4);}
 
 }
 
@@ -959,9 +959,9 @@ function updateAudioTrackInfo() {
   for (let i=0; i < len; i++) {
     html1 += button_template;
     if(audioTrackId === i)
-      html1 += button_enabled;
+    {html1 += button_enabled;}
     else
-      html1 += button_disabled;
+    {html1 += button_disabled;}
 
     html1 += 'onclick="hls.audioTrack=' + i + '">' + hls.audioTracks[i].name + '</button>';
   }
@@ -979,9 +979,9 @@ function level2label(index) {
         return(level.height + 'p / ' + Math.round(level.bitrate / 1024) + 'kb');
       } else {
         if(level.bitrate)
-          return(Math.round(level.bitrate / 1024) + 'kb');
+        {return(Math.round(level.bitrate / 1024) + 'kb');}
         else
-          return null;
+        {return null;}
 
       }
     }
@@ -994,7 +994,7 @@ function getURLParam(sParam, defaultValue) {
   for (let i = 0; i < sURLVariables.length; i++) {
     let sParameterName = sURLVariables[i].split('=');
     if (sParameterName[0] == sParam)
-      return 'undefined' == sParameterName[1] ? undefined : 'false' == sParameterName[1] ? false : sParameterName[1];
+    {return 'undefined' == sParameterName[1] ? undefined : 'false' == sParameterName[1] ? false : sParameterName[1];}
 
   }
   return defaultValue;
