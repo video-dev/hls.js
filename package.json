@@ -41,6 +41,7 @@
     "test:func": "cross-env BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/hlsjs.js --timeout 40000",
     "lint": "eslint *.md *.js *.json src/ tests/",
     "lint:fix": "eslint src/ tests/ --fix",
+    "precommit": "./scripts/precommit",
     "prettier": "prettier --tab-width 2 --single-quote"
   },
   "dependencies": {
@@ -60,6 +61,7 @@
     "eslint-config-node-style-guide": "^3.0.0",
     "eslint-plugin-prettier": "^2.4.0",
     "http-server": "^0.10.0",
+    "husky": "^0.14.3",
     "istanbul-instrumenter-loader": "^2.0.0",
     "karma": "^1.7.0",
     "karma-chrome-launcher": "^2.2.0",
