@@ -150,7 +150,7 @@ As of today, it is supported on:
  * Opera for Desktop
  * Vivaldi for Desktop
  * Safari for Mac 8+ (beta)
- 
+
 Please note: iOS Safari "Mobile" does not support the MediaSource API. Safari browsers have however built-in HLS support through the plain video "tag" source URL. See the example below to run appropriate feature detection and choose between using Hls.js or natively built-in HLS support.
 
 When a platform has neither MediaSource nor native HLS support, you will not be able to play HLS.
@@ -173,7 +173,7 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - MPEG Audio container (MPEG-1/2 Audio Layer III audio only streams)
   - Timed Metadata for HTTP Live Streaming (in ID3 format, carried in MPEG-2 TS)
   - AES-128 decryption
-  - SAMPLE-AES decryption
+  - SAMPLE-AES decryption (only supported if using MPEG-2 TS container)
   - CEA-608/708 captionss
   - WebVTT subtitles
   - Alternate Audio Track Rendition (Master Playlist with alternative Audio) for VoD and Live playlists
