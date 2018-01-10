@@ -5,31 +5,67 @@ module.exports = {
       "es6": true,
   },
   "globals": {
-      "_gaq": false,
-      "process": false,
-      "ActiveXObject": false,
-      "VERSION": false,
-      // Build globals
-      "__dirname": false,
-      // Test globals
-      "after": false,
-      "afterEach": false,
-      "assert": false,
-      "before": false,
-      "beforeEach": false,
-      "describe": false,
-      "expect": false,
-      "it": false,
-      "sinon": false,
-      "xit": false
+      // Allowed globals
+      "console": true,
+      "MediaSource": true,
+      "performance": true,
+      "crypto": true,
+      "fetch": true,
+      "Request": true,
+      "Headers": true,
+      "escape": true,
+      // Compile-time defines
+      "__VERSION__": true,
+      "__USE_SUBTITLES__": true,
+      "__USE_ALT_AUDIO__": true,
+      "__USE_EME_DRM__": true
   },
+  /*
   "extends": "node-style-guide",
+  */
   "parserOptions": {
       "sourceType": "module"
   },
   "plugins": ["prettier"],
   "rules": {
-      "prettier/prettier": "error",
+
+
+      "no-bitwise": 0,
+      "camelcase": 2,
+      "curly": 2,
+      "eqeqeq": 2,
+      "no-eq-null": 2,
+      "wrap-iife": [
+        2,
+        "any"
+      ],
+      "indent": 0,
+      /*
+      "indent": [
+        2,
+        4,
+        {
+          "SwitchCase": 1
+        }
+      ],
+      */
+      "no-use-before-define": [
+        2,
+        {
+          "functions": false
+        }
+      ],
+      "new-cap": 2,
+      "no-caller": 2,
+      "quotes": [
+        2,
+        "single"
+      ],
+      "strict": 0,
+      "no-undef": 2,
+      "no-unused-vars": 2
+
+      /*
       // customizations of Node style-guide
       "indent": [
           "error",
@@ -61,5 +97,6 @@ module.exports = {
       "max-len": 0,
       "max-statements": 0,
       "space-after-keywords": 0
+      */
   }
 };
