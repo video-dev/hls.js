@@ -107,8 +107,8 @@ function loadStream(url) {
       bitrate: []
     };
 
-    window.recoverDecodingErrorDate =
-    window.recoverSwapAudioCodecDate = recoverDecodingErrorDate = recoverSwapAudioCodecDate = null;
+    // actual values, only on window
+    window.recoverDecodingErrorDate = window.recoverSwapAudioCodecDate = null;
 
     window.fmp4Data = fmp4Data = {
       'audio': [],
@@ -120,6 +120,7 @@ function loadStream(url) {
       enableWorker     : enableWorker,
       defaultAudioCodec: defaultAudioCodec
     });
+
     $('#HlsStatus').text('loading manifest and attaching video element...');
     hls.loadSource(url);
     hls.autoLevelCapping = levelCapping;
