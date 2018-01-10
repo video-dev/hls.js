@@ -175,7 +175,8 @@ function loadStream(url) {
     }
 
     $('#HlsStatus').text('loading ' + url);
-    events = {
+
+    window.events = events = {
       url: url,
       t0: performance.now(),
       load: [],
@@ -184,16 +185,21 @@ function loadStream(url) {
       level: [],
       bitrate: []
     };
-    recoverDecodingErrorDate = recoverSwapAudioCodecDate = null;
-    fmp4Data = {
+
+    // actual values, only on window
+    window.recoverDecodingErrorDate = window.recoverSwapAudioCodecDate = null;
+
+    window.fmp4Data = fmp4Data = {
       'audio': [],
       'video': []
     };
-    hls = new Hls({
+
+    window.hls = hls = new Hls({
       debug: true,
       enableWorker: enableWorker,
       defaultAudioCodec: defaultAudioCodec
     });
+
     $('#HlsStatus').text('loading manifest and attaching video element...');
     hls.loadSource(url);
     hls.autoLevelCapping = levelCapping;
