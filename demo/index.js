@@ -96,7 +96,8 @@ function loadStream(url) {
     }
 
     $('#HlsStatus').text('loading ' + url);
-    events = {
+
+    window.events = events = {
       url    : url,
       t0     : performance.now(),
       load   : [],
@@ -105,11 +106,15 @@ function loadStream(url) {
       level  : [],
       bitrate: []
     };
-    recoverDecodingErrorDate = recoverSwapAudioCodecDate = null;
-    fmp4Data = {
+
+    window.recoverDecodingErrorDate =
+    window.recoverSwapAudioCodecDate = recoverDecodingErrorDate = recoverSwapAudioCodecDate = null;
+
+    window.fmp4Data = fmp4Data = {
       'audio': [],
       'video': []
     };
+
     window.hls = hls = new Hls({
       debug            : true,
       enableWorker     : enableWorker,
