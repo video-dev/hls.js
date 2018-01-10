@@ -39,9 +39,10 @@
     "test:unit": "karma start karma.conf.js",
     "test:unit:watch": "karma start karma.conf.js --auto-watch --no-single-run",
     "test:func": "cross-env BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/hlsjs.js --timeout 40000",
-    "lint": "eslint *.js src/",
+    "lint": "eslint src/",
+    "lint:node": "eslint *.js",
     "lint:tests": "eslint tests/",
-    "lint:fix": "eslint src/ tests/ --fix",
+    "lint:fix": "eslint .js src/ tests/ --fix",
     "precommit": "./scripts/precommit"
   },
   "dependencies": {
