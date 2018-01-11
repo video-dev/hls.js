@@ -163,6 +163,10 @@ function loadSelectedStream() {
       console.log('Using Hls.js config:', hlsConfig);
     }
 
+    if (hlsConfig.widevineLicenseUrl) {
+      $('#widevineLicenseUrl').val(hlsConfig.widevineLicenseUrl);
+    }
+
     window.hls = hls = new Hls(hlsConfig);
 
     $('#HlsStatus').text('loading manifest and attaching video element...');
