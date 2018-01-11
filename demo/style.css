@@ -6,6 +6,11 @@ th, td {
   padding: 15px;
 }
 
+.innerControls input {
+  font-weight: normal;
+  float: right;
+}
+
 #controls {
     width: 70%;
     min-width: 615px;

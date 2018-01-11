@@ -56,61 +56,60 @@
         <input id="streamURL" class="innerControls" type=text value=""/>
 
         <label class="innerControls">
+          Enable streaming:
           <input id="enableStreaming" type=checkbox checked/>
-          &nbsp;Enable Streaming
         </label>
 
         <label class="innerControls">
+          Auto-recover media-errors:
           <input id="autoRecoverError" type=checkbox checked/>
-          &nbsp;Auto-Recover Media Error
         </label>
 
         <label class="innerControls">
+          Enable worker for transmuxing:
           <input id="enableWorker" type=checkbox checked/>
-          &nbsp;Enable Worker
         </label>
 
         <label class="innerControls">
+          Dump transmuxed fMP4 data:
           <input id="dumpfMP4" type=checkbox unchecked/>
-          &nbsp;Dump fMP4
         </label>
 
         <label class="innerControls">
-            Widevine DRM license-server URL:&nbsp;
-            <input id="widevineLicenseUrl"/>
-          </label>
-
-        <label class="innerControls">
-          Level-cap'ing (max limit):&nbsp;
-          <input id="levelCapping" type=number/>
+          Widevine DRM license-server URL:
+          <input id="widevineLicenseUrl" style="width: 50%"/>
         </label>
 
         <label class="innerControls">
-          Default audio-codec:&nbsp;
-          <input id="defaultAudioCodec"/>
+          Level-cap'ing (max limit):
+          <input id="levelCapping" style="width: 8em" type=number/>
         </label>
 
-        <p>
-          <label class="innerControls">Permalink:&nbsp;</label>
-          <div id="StreamPermalink" class="innerControls"></div>
-        </p>
+        <label class="innerControls">
+          Default audio-codec:
+          <input style="width: 8em" id="defaultAudioCodec"/>
+        </label>
 
-        <p>
-          <label class="innerControls">
-            Player size:
-          </label>
-          <select id="videoSize" style="float:left">
+        <label class="innerControls">
+          Player size:
+          <select id="videoSize" style="float:right;">
             <option value="240">Tiny (240p)</option>
             <option value="384">Small (384p)</option>
             <option value="480">Medium (480p)</option>
             <option value="720" selected>Large (720p)</option>
             <option value="1080">Huge (1080p)</option>
           </select>
-          <label class="innerControls">
-            Current video resolution:
-          </label>
-          <span class="innerControls" id="currentResolution">-</span>
-        </p>
+        </label>
+
+        <label class="innerControls">
+          Current video-resolution:
+          <span id="currentResolution">/</span>
+        </label>
+
+        <label class="innerControls">
+          Permalink:&nbsp;
+          <span id="StreamPermalink" style="width: 50%"></span>
+        </label>
 
       </div>
 
