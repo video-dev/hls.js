@@ -11,9 +11,23 @@ export default class Fragment {
     this._decryptdata = null;
     this.tagList = [];
 
-    // Holds the type of data this fragment contains(eg. video/audio)
-    // Set is used because the elements should not repeat
-    this._elementaryStreams = new Set();
+    // Holds the types of data this fragment supports
+    this._elementaryStreams = {
+      [Fragment.ElementaryStreamTypes.AUDIO] : false,
+      [Fragment.ElementaryStreamTypes.VIDEO] : false
+    };
+  }
+
+  /**
+   * `type` property for this._elementaryStreams
+   *
+   * @enum
+   */
+  static get ElementaryStreamTypes() {
+    return {
+      AUDIO: 'audio',
+      VIDEO: 'video'
+    };
   }
 
   get url() {
@@ -77,11 +91,11 @@ export default class Fragment {
    * @param {ElementaryStreamType}
    */
   addElementaryStream(type) {
-    this._elementaryStreams.add(type);
+    this._elementaryStreams[type] = true;
   }
 
   hasElementaryStream(type) {
-    return this._elementaryStreams.has(type) === true;
+    return this._elementaryStreams[type] === true;
   }
 
   /**

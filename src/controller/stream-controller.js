@@ -7,6 +7,7 @@ import BufferHelper from '../helper/buffer-helper';
 import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import {FragmentState} from '../helper/fragment-tracker';
+import Fragment from '../loader/fragment';
 import * as LevelHelper from '../helper/level-helper';
 import TimeRanges from '../utils/timeRanges';
 import {ErrorTypes, ErrorDetails} from '../errors';
@@ -1090,7 +1091,13 @@ class StreamController extends TaskLoop {
         data.endDTS = data.startDTS + fragCurrent.duration;
       }
 
-      frag.addElementaryStream(data.type);
+      if(data.hasAudio === true) {
+        frag.addElementaryStream(Fragment.ElementaryStreamTypes.AUDIO);
+      }
+
+      if(data.hasVideo === true) {
+        frag.addElementaryStream(Fragment.ElementaryStreamTypes.VIDEO);
+      }
 
       logger.log(`Parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb},dropped:${data.dropped || 0}`);
 

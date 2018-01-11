@@ -13,6 +13,7 @@ import {logger} from '../utils/logger';
 import { findFragWithCC } from '../utils/discontinuities';
 import TaskLoop from '../task-loop';
 import {FragmentState} from '../helper/fragment-tracker';
+import Fragment from '../loader/fragment';
 
 const State = {
   STOPPED : 'STOPPED',
@@ -645,7 +646,7 @@ class AudioStreamController extends TaskLoop {
         data.endDTS = data.startDTS + fragCurrent.duration;
       }
 
-      fragCurrent.addElementaryStream(data.type);
+      fragCurrent.addElementaryStream(Fragment.ElementaryStreamTypes.AUDIO);
 
       logger.log(`parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
       LevelHelper.updateFragPTSDTS(track.details,fragCurrent,data.startPTS,data.endPTS);
