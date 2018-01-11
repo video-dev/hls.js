@@ -15,13 +15,16 @@ $(document).ready(function() {
     $('#streamURL').val($('#streamSelect').val());
     loadStream($('#streamURL').val());
   });
+
   $('#streamURL').change(function() {
     loadStream($('#streamURL').val());
   });
+
   $('#videoSize').change(function() {
     $('#video').width($('#videoSize').val());
     $('#buffered_c').width($('#videoSize').val());
   });
+
   $('#PlaybackControl').hide();
   $('#QualityLevelControl').hide();
   $('#AudioTrackControl').hide();
@@ -63,15 +66,22 @@ $(document).ready(function() {
 
 });
 
-var hls, events, stats, tracks, fmp4Data,
-  enableStreaming = JSON.parse(getURLParam('enableStreaming', true));
-autoRecoverError = JSON.parse(getURLParam('autoRecoverError', true)),
-enableWorker = JSON.parse(getURLParam('enableWorker', true)),
-levelCapping = JSON.parse(getURLParam('levelCapping', -1)),
-defaultAudioCodec = getURLParam('defaultAudioCodec', undefined),
-dumpfMP4 = getURLParam('dumpfMP4', false);
+let hls,
+    events,
+    stats,
+    tracks,
+    fmp4Data,
+    enableStreaming = JSON.parse(getURLParam('enableStreaming', true));
+    autoRecoverError = JSON.parse(getURLParam('autoRecoverError', true)),
+    enableWorker = JSON.parse(getURLParam('enableWorker', true)),
+    levelCapping = JSON.parse(getURLParam('levelCapping', -1)),
+    defaultAudioCodec = getURLParam('defaultAudioCodec', undefined),
+    dumpfMP4 = getURLParam('dumpfMP4', false);
+
 let video = $('#video')[0];
+
 video.volume = 0.05;
+
 $('#currentVersion').html('Hls version:' + Hls.version);
 
 loadStream(decodeURIComponent(getURLParam('src', 'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8')));
@@ -122,9 +132,11 @@ function loadStream(url) {
     });
 
     $('#HlsStatus').text('loading manifest and attaching video element...');
+
     hls.loadSource(url);
     hls.autoLevelCapping = levelCapping;
     hls.attachMedia(video);
+
     hls.on(Hls.Events.MEDIA_ATTACHED, function() {
       $('#HlsStatus').text('MediaSource attached...');
       bufferingIdx = -1;
@@ -133,6 +145,7 @@ function loadStream(url) {
         type: 'Media attached'
       });
     });
+
     hls.on(Hls.Events.MEDIA_DETACHED, function() {
       $('#HlsStatus').text('MediaSource detached...');
       bufferingIdx = -1;
@@ -142,6 +155,7 @@ function loadStream(url) {
         type: 'Media detached'
       });
     });
+
     hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT, function(event, data) {
       showCanvas();
       var event = {
@@ -150,9 +164,11 @@ function loadStream(url) {
       };
       events.video.push(event);
     });
+
     hls.on(Hls.Events.FRAG_PARSING_METADATA, function(event, data) {
       //console.log("Id3 samples ", data.samples);
     });
+
     hls.on(Hls.Events.LEVEL_SWITCHING, function(event, data) {
       events.level.push({
         time   : performance.now() - events.t0,
@@ -161,6 +177,7 @@ function loadStream(url) {
       });
       updateLevelInfo();
     });
+
     hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
       var event = {
         type    : 'manifest',
@@ -175,6 +192,7 @@ function loadStream(url) {
       events.load.push(event);
       refreshCanvas();
     });
+
     hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
       $('#HlsStatus').text('manifest successfully loaded,' + hls.levels.length + ' levels found');
       stats = {
@@ -183,10 +201,12 @@ function loadStream(url) {
       };
       updateLevelInfo();
     });
+
     hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, function(event, data) {
       $('#HlsStatus').text(data.audioTracks.length + ' audio tracks found');
       updateAudioTrackInfo();
     });
+
     hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, function(event, data) {
       updateAudioTrackInfo();
       var event = {
@@ -197,6 +217,7 @@ function loadStream(url) {
       events.video.push(event);
       lastAudioTrackSwitchingIdx = events.video.length-1;
     });
+
     hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, function(event, data) {
       updateAudioTrackInfo();
       var event = {
@@ -210,6 +231,7 @@ function loadStream(url) {
       }
       events.video.push(event);
     });
+
     hls.on(Hls.Events.LEVEL_LOADED, function(event, data) {
       events.isLive = data.details.live;
       var event = {
@@ -235,6 +257,7 @@ function loadStream(url) {
       events.load.push(event);
       refreshCanvas();
     });
+
     hls.on(Hls.Events.AUDIO_TRACK_LOADED, function(event, data) {
       events.isLive = data.details.live;
       var event = {
@@ -251,6 +274,7 @@ function loadStream(url) {
       events.load.push(event);
       refreshCanvas();
     });
+
     hls.on(Hls.Events.FRAG_BUFFERED, function(event, data) {
       var event = {
         type    : data.frag.type + ' fragment',
@@ -324,6 +348,7 @@ function loadStream(url) {
       stats.fragparsingMs = Math.round(this.sumParsing);
       stats.autoLevelCappingLast = hls.autoLevelCapping;
     });
+
     hls.on(Hls.Events.LEVEL_SWITCHED, function(event, data) {
       var event = {
         time: performance.now() - events.t0,
@@ -334,6 +359,7 @@ function loadStream(url) {
       refreshCanvas();
       updateLevelInfo();
     });
+
     hls.on(Hls.Events.FRAG_CHANGED, function(event, data) {
       var event = {
         time: performance.now() - events.t0,
@@ -551,8 +577,11 @@ function loadStream(url) {
   }
 }
 
+let lastSeekingIdx,
+    lastStartPosition,
+    lastDuration,
+    lastAudioTrackSwitchingIdx;
 
-let lastSeekingIdx, lastStartPosition, lastDuration, lastAudioTrackSwitchingIdx;
 function handleVideoEvent(evt) {
   let data = '';
   switch(evt.type) {
@@ -628,8 +657,9 @@ function handleVideoEvent(evt) {
 
 }
 
+let recoverDecodingErrorDate,
+    recoverSwapAudioCodecDate;
 
-let recoverDecodingErrorDate, recoverSwapAudioCodecDate;
 function handleMediaError() {
   if(autoRecoverError) {
     let now = performance.now();
@@ -649,7 +679,6 @@ function handleMediaError() {
     }
   }
 }
-
 
 function timeRangesToString(r) {
   let log = '';
@@ -781,7 +810,6 @@ function sortObject(obj) {
   return temp;
 }
 
-
 function showCanvas()  {
   showMetrics();
   $('#buffered_log').show();
@@ -850,103 +878,114 @@ function buffered_seek(event) {
 
 function updateLevelInfo() {
 
-  if (!hls.levels)
-  {return;}
-
+  if (!hls.levels) {
+    return;
+  }
 
   let button_template = '<button type="button" class="btn btn-sm ';
   let button_enabled  = 'btn-primary" ';
   let button_disabled = 'btn-success" ';
 
   let html1 = button_template;
-  if(hls.autoLevelEnabled)
-  {html1 += button_enabled;}
-  else
-  {html1 += button_disabled;}
+  if(hls.autoLevelEnabled) {
+    html1 += button_enabled;
+  } else {
+    html1 += button_disabled;
+  }
 
   html1 += 'onclick="hls.currentLevel=-1">auto</button>';
 
-
   let html2 = button_template;
-  if(hls.autoLevelEnabled)
-  {html2 += button_enabled;}
-  else
-  {html2 += button_disabled;}
+  if(hls.autoLevelEnabled) {
+    html2 += button_enabled;
+  } else {
+    html2 += button_disabled;
+  }
 
   html2 += 'onclick="hls.loadLevel=-1">auto</button>';
 
   let html3 = button_template;
-  if(hls.autoLevelCapping === -1)
-  {html3 += button_enabled;}
-  else
-  {html3 += button_disabled;}
+  if(hls.autoLevelCapping === -1) {
+    html3 += button_enabled;
+  } else {
+    html3 += button_disabled;
+  }
 
   html3 += 'onclick="levelCapping=hls.autoLevelCapping=-1;updateLevelInfo();updatePermalink();">auto</button>';
 
   let html4 = button_template;
-  if(hls.autoLevelEnabled)
-  {html4 += button_enabled;}
-  else
-  {html4 += button_disabled;}
+  if(hls.autoLevelEnabled) {
+    html4 += button_enabled;
+  } else {
+    html4 += button_disabled;
+  }
 
   html4 += 'onclick="hls.nextLevel=-1">auto</button>';
 
   for (let i=0; i < hls.levels.length; i++) {
     html1 += button_template;
-    if(hls.currentLevel === i)
-    {html1 += button_enabled;}
-    else
-    {html1 += button_disabled;}
+    if(hls.currentLevel === i) {
+      html1 += button_enabled;
+    } else {
+      html1 += button_disabled;
+    }
 
     let levelName = i, label = level2label(i);
-    if(label)
-    {levelName += '(' + level2label(i) + ')';}
+    if(label) {
+      levelName += '(' + level2label(i) + ')';
+    }
 
     html1 += 'onclick="hls.currentLevel=' + i + '">' + levelName + '</button>';
 
     html2 += button_template;
-    if(hls.loadLevel === i)
-    {html2 += button_enabled;}
-    else
-    {html2 += button_disabled;}
+    if(hls.loadLevel === i) {
+      html2 += button_enabled;
+    } else {
+      html2 += button_disabled;
+    }
 
     html2 += 'onclick="hls.loadLevel=' + i + '">' + levelName + '</button>';
 
     html3 += button_template;
-    if(hls.autoLevelCapping === i)
-    {html3 += button_enabled;}
-    else
-    {html3 += button_disabled;}
+    if(hls.autoLevelCapping === i) {
+      html3 += button_enabled;
+    } else {
+      html3 += button_disabled;
+    }
 
     html3 += 'onclick="levelCapping=hls.autoLevelCapping=' + i + ';updateLevelInfo();updatePermalink();">' + levelName + '</button>';
 
     html4 += button_template;
-    if(hls.nextLevel === i)
-    {html4 += button_enabled;}
-    else
-    {html4 += button_disabled;}
+    if(hls.nextLevel === i) {
+      html4 += button_enabled;
+    } else {
+      html4 += button_disabled;
+    }
 
     html4 += 'onclick="hls.nextLevel=' + i + '">' + levelName + '</button>';
   }
+
   let v = $('#video')[0];
-  if(v.videoWidth)
-  {$('#currentResolution').html('video resolution:' + v.videoWidth + 'x' + v.videoHeight);}
 
-  if($('#currentLevelControl').html() != html1)
-  {$('#currentLevelControl').html(html1);}
+  if(v.videoWidth) {
+    $('#currentResolution').html('video resolution:' + v.videoWidth + 'x' + v.videoHeight);
+  }
 
+  if($('#currentLevelControl').html() != html1) {
+    $('#currentLevelControl').html(html1);
+  }
 
-  if($('#loadLevelControl').html() != html2)
-  {$('#loadLevelControl').html(html2);}
+  if($('#loadLevelControl').html() != html2) {
+    $('#loadLevelControl').html(html2);
+  }
 
+  if($('#levelCappingControl').html() != html3) {
+    $('#levelCappingControl').html(html3);
+  }
 
-  if($('#levelCappingControl').html() != html3)
-  {$('#levelCappingControl').html(html3);}
-
-
-  if($('#nextLevelControl').html() != html4)
-  {$('#nextLevelControl').html(html4);}
-
+  if($('#nextLevelControl').html() != html4) {
+    $('#nextLevelControl').html(html4);
+  }
 }
 
 function updateAudioTrackInfo() {
@@ -958,16 +997,16 @@ function updateAudioTrackInfo() {
 
   for (let i=0; i < len; i++) {
     html1 += button_template;
-    if(audioTrackId === i)
-    {html1 += button_enabled;}
-    else
-    {html1 += button_disabled;}
+    if(audioTrackId === i) {
+      html1 += button_enabled;
+    } else {
+      html1 += button_disabled;
+    }
 
     html1 += 'onclick="hls.audioTrack=' + i + '">' + hls.audioTracks[i].name + '</button>';
   }
   $('#audioTrackControl').html(html1);
 }
-
 
 function level2label(index) {
   if(hls && hls.levels.length-1 >= index) {
