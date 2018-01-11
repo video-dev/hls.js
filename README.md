@@ -214,10 +214,9 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - `EXT-X-START:TIME-OFFSET=x` (https://tools.ietf.org/html/draft-pantos-http-live-streaming-18#section-4.3.5.2)
 
 
-## API and Configuration Parameters
+## Documentation: API and Configuration
 
 hls.js can be configured and controlled easily, click [here](doc/API.md) for details.
-
 
 ## License
 
