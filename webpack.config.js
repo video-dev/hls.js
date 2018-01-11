@@ -45,7 +45,7 @@ const baseConfig = {
 
 const demoConfig = clone(baseConfig, {
   name: 'demo',
-  entry: './demo/index',
+  entry: './demo/main',
   output: {
     filename: 'hls-demo.js',
     chunkFilename: '[name].js',
