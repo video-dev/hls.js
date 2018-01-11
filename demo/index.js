@@ -1,12 +1,14 @@
 
-const streamsJson = require('../tests/functional/streams.json');
+const testStreams = require('../tests/test-streams');
+
+const defaultTestStreamUrl = testStreams['bbb'].url;
 
 $(document).ready(function() {
 
-  console.log(streamsJson)
+  //console.log(testStreams)
 
-  Object.keys(streamsJson).forEach((streamKey) => {
-    const stream = streamsJson[streamKey];
+  Object.keys(testStreams).forEach((streamKey) => {
+    const stream = testStreams[streamKey];
     const option = new Option(stream.description, stream.url);
     $('#streamSelect').append(option);
   })
@@ -84,7 +86,7 @@ video.volume = 0.05;
 
 $('#currentVersion').html('Hls version:' + Hls.version);
 
-loadStream(decodeURIComponent(getURLParam('src', 'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8')));
+loadStream(decodeURIComponent(getURLParam('src', defaultTestStreamUrl)));
 
 function loadStream(url) {
   hideCanvas();
@@ -965,8 +967,8 @@ function updateLevelInfo() {
 
   let v = $('#video')[0];
 
-  if(v.videoWidth) {
-    $('#currentResolution').html('video resolution:' + v.videoWidth + 'x' + v.videoHeight);
+  if(v.videoWidth && v.videoHeight) {
+    $('#currentResolution').html(v.videoWidth + ' x ' + v.videoHeight);
   }
 
   if($('#currentLevelControl').html() != html1) {
@@ -1038,16 +1040,16 @@ function getURLParam(sParam, defaultValue) {
 }
 
 function updatePermalink() {
-  let url = $('#streamURL').val();
-  let hlsLink = document.URL.split('?')[0] +  '?src=' + encodeURIComponent(url) +
+  const url = $('#streamURL').val();
+  const hlsLink = document.URL.split('?')[0] +  '?src=' + encodeURIComponent(url) +
                     '&enableStreaming=' + enableStreaming +
                     '&autoRecoverError=' + autoRecoverError +
                     '&enableWorker=' + enableWorker +
                     '&dumpfMP4=' + dumpfMP4 +
                     '&levelCapping=' + levelCapping +
                     '&defaultAudioCodec=' + defaultAudioCodec;
-  let description = 'permalink: ' + '<a href="' + hlsLink + '">' + hlsLink + '</a>';
-  $('#StreamPermalink').html(description);
+
+  $('#StreamPermalink').html('<a href="' + hlsLink + '">' + hlsLink + '</a>');
 }
 
 function createfMP4(type) {
