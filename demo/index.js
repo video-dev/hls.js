@@ -1,25 +1,46 @@
-
 const testStreams = require('../tests/test-streams');
 
 const defaultTestStreamUrl = testStreams['bbb'].url;
+
+let selectedTestStream = null;
+
+let hls,
+  url,
+  events,
+  stats,
+  tracks,
+  fmp4Data,
+  enableStreaming = JSON.parse(getURLParam('enableStreaming', true));
+  autoRecoverError = JSON.parse(getURLParam('autoRecoverError', true)),
+  enableWorker = JSON.parse(getURLParam('enableWorker', true)),
+  levelCapping = JSON.parse(getURLParam('levelCapping', -1)),
+  defaultAudioCodec = getURLParam('defaultAudioCodec', undefined),
+  dumpfMP4 = getURLParam('dumpfMP4', false);
+
+let video = $('#video')[0];
+
+video.volume = 0.05;
 
 $(document).ready(function() {
 
   //console.log(testStreams)
 
-  Object.keys(testStreams).forEach((streamKey) => {
-    const stream = testStreams[streamKey];
-    const option = new Option(stream.description, stream.url);
+  Object.keys(testStreams).forEach((key) => {
+    const stream = testStreams[key];
+    const option = new Option(stream.description, key);
     $('#streamSelect').append(option);
   })
 
   $('#streamSelect').change(function() {
-    $('#streamURL').val($('#streamSelect').val());
-    loadStream($('#streamURL').val());
+    selectedTestStream = testStreams[$('#streamSelect').val()];
+    const streamUrl = selectedTestStream.url;
+    $('#streamURL').val(streamUrl);
+    loadSelectedStream();
   });
 
   $('#streamURL').change(function() {
-    loadStream($('#streamURL').val());
+    selectedTestStream = null;
+    loadSelectedStream();
   });
 
   $('#videoSize').change(function() {
@@ -34,30 +55,37 @@ $(document).ready(function() {
   $('#StatsDisplay').hide();
   $('#metricsButtonWindow').toggle(windowSliding);
   $('#metricsButtonFixed').toggle(!windowSliding);
+
   $('#enableStreaming').click(function() {
     enableStreaming = this.checked;
-    loadStream($('#streamURL').val());
+    loadSelectedStream();
   });
+
   $('#autoRecoverError').click(function() {
     autoRecoverError = this.checked;
     updatePermalink();
   });
+
   $('#enableWorker').click(function() {
     enableWorker = this.checked;
     updatePermalink();
   });
+
   $('#dumpfMP4').click(function() {
     dumpfMP4 = this.checked;
     updatePermalink();
   });
+
   $('#levelCapping').change(function() {
     levelCapping = this.value;
     updatePermalink();
   });
+
   $('#defaultAudioCodec').change(function() {
     defaultAudioCodec = this.value;
     updatePermalink();
   });
+
   $('#enableStreaming').prop( 'checked', enableStreaming );
   $('#autoRecoverError').prop( 'checked', autoRecoverError );
   $('#enableWorker').prop( 'checked', enableWorker );
@@ -66,31 +94,43 @@ $(document).ready(function() {
   $('#defaultAudioCodec').val(defaultAudioCodec || 'undefined');
   $('h2').append(' <a target=_blank href=https://github.com/video-dev/hls.js/releases/tag/v' + Hls.version + '>v' + Hls.version + '</a>');
 
+  $('#currentVersion').html('Hls version:' + Hls.version);
+
+  $('#streamURL').val(decodeURIComponent(getURLParam('src', defaultTestStreamUrl)))
+
+  loadSelectedStream();
+
 });
 
-let hls,
-    events,
-    stats,
-    tracks,
-    fmp4Data,
-    enableStreaming = JSON.parse(getURLParam('enableStreaming', true));
-    autoRecoverError = JSON.parse(getURLParam('autoRecoverError', true)),
-    enableWorker = JSON.parse(getURLParam('enableWorker', true)),
-    levelCapping = JSON.parse(getURLParam('levelCapping', -1)),
-    defaultAudioCodec = getURLParam('defaultAudioCodec', undefined),
-    dumpfMP4 = getURLParam('dumpfMP4', false);
+function resetGlobals() {
+  window.events = events = {
+    url    : url,
+    t0     : performance.now(),
+    load   : [],
+    buffer : [],
+    video  : [],
+    level  : [],
+    bitrate: []
+  };
 
-let video = $('#video')[0];
+  // actual values, only on window
+  window.recoverDecodingErrorDate = null;
+  window.recoverSwapAudioCodecDate = null;
 
-video.volume = 0.05;
+  window.fmp4Data = fmp4Data = {
+    'audio': [],
+    'video': []
+  };
+}
 
-$('#currentVersion').html('Hls version:' + Hls.version);
+function loadSelectedStream() {
 
-loadStream(decodeURIComponent(getURLParam('src', defaultTestStreamUrl)));
+  url = $('#streamURL').val()
 
-function loadStream(url) {
   hideCanvas();
+
   if(Hls.isSupported()) {
+
     if(hls) {
       hls.destroy();
       if(hls.bufferTimer) {
@@ -100,8 +140,8 @@ function loadStream(url) {
       hls = null;
     }
 
-    $('#streamURL').val(url);
     updatePermalink();
+
     if(!enableStreaming) {
       $('#HlsStatus').text('Streaming disabled');
       return;
@@ -109,30 +149,21 @@ function loadStream(url) {
 
     $('#HlsStatus').text('loading ' + url);
 
-    window.events = events = {
-      url    : url,
-      t0     : performance.now(),
-      load   : [],
-      buffer : [],
-      video  : [],
-      level  : [],
-      bitrate: []
-    };
+    resetGlobals();
 
-    // actual values, only on window
-    window.recoverDecodingErrorDate = null;
-    window.recoverSwapAudioCodecDate = null;
-
-    window.fmp4Data = fmp4Data = {
-      'audio': [],
-      'video': []
-    };
-
-    window.hls = hls = new Hls({
+    const hlsConfig = {
       debug            : true,
       enableWorker     : enableWorker,
       defaultAudioCodec: defaultAudioCodec
-    });
+    };
+
+    if (selectedTestStream && selectedTestStream.config) {
+      Object.assign(hlsConfig, selectedTestStream.config)
+
+      console.log('Using Hls.js config:', hlsConfig);
+    }
+
+    window.hls = hls = new Hls(hlsConfig);
 
     $('#HlsStatus').text('loading manifest and attaching video element...');
 
