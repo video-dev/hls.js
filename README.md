@@ -92,7 +92,7 @@ hls.js is (being) integrated in the following players:
 
 ## Chrome/Firefox integration
 
-made by [gramk](https://github.com/gramk/chrome-hls),plays hls from address bar and m3u8 links
+made by [gramk](https://github.com/gramk/chrome-hls), plays hls from address bar and m3u8 links
 
  - Chrome [native-hls](https://chrome.google.com/webstore/detail/native-hls-playback/emnphkkblegpebimobpbekeedfgemhof)
  - Firefox [native-hls](https://addons.mozilla.org/en-US/firefox/addon/native_hls_playback/)
@@ -174,7 +174,9 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - Timed Metadata for HTTP Live Streaming (in ID3 format, carried in MPEG-2 TS)
   - AES-128 decryption
   - SAMPLE-AES decryption (only supported if using MPEG-2 TS container)
-  - CEA-608/708 captionss
+  - Encrypted media extensions (EME) support for DRM (digital rights management)
+    - Widevine CDM (beta/experimental) (see Shaka-package test-stream in demo)
+  - CEA-608/708 captions
   - WebVTT subtitles
   - Alternate Audio Track Rendition (Master Playlist with alternative Audio) for VoD and Live playlists
   - Adaptive streaming
