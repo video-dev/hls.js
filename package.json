@@ -35,7 +35,7 @@
     "lint:demo": "eslint demo/",
     "lint:node": "eslint *.js",
     "lint:tests": "eslint tests/",
-    "lint:fix": "eslint .js src/ tests/ --fix",
+    "lint:fix": "eslint *.js src/ tests/ --fix",
     "lint:html": "htmlhint demo/*.html",
     "precommit": "./scripts/precommit",
     "prerelease": "mversion prerelease && npm run build:release",
