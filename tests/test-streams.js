@@ -1,16 +1,30 @@
-{
+function createTestStream(url, description, live = false, abr = true, blacklist_ua = []) {
+  return {
+    url,
+    description,
+    live,
+    abr,
+    blacklist_ua
+  }
+}
+
+module.exports = {
+  "bbb": createTestStream(
+    "https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8",
+    "Big Buck Bunny - adaptive qualities"
+  ),
+  "bigBuckBunny480p": {
+    "url": "https://video-dev.github.io/streams/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8",
+    "description": "Big Buck Bunny - 480p only",
+    "live": false,
+    "abr": false,
+    "blacklist_ua": ["internet explorer"]
+  },
   "arte": {
     "url": "https://video-dev.github.io/streams/test_001/stream.m3u8",
     "description": "ARTE China,ABR",
     "live": false,
     "abr": true
-  },
-  "bigBuckBunny480p": {
-    "url": "https://video-dev.github.io/streams/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8",
-    "description": "big buck bunny,480p",
-    "live": false,
-    "abr": false,
-    "blacklist_ua": ["internet explorer"]
   },
   "deltatreDAI": {
     "url": "https://video-dev.github.io/streams/dai-discontinuity-deltatre/manifest.m3u8",
@@ -84,5 +98,9 @@
     "description": "DK Turntable, PTS shifted by 2.3s",
     "live": false,
     "abr": false
-  }
+  },
+  "usp-ateam": createTestStream(
+      "http://demo.unified-streaming.com/video/ateam/ateam.ism/ateam.m3u8?session_id=27199",
+      "A-Team movie trailer - HLS by Unified Streaming Platform"
+    )
 }
