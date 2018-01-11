@@ -20,6 +20,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.3/FileSaver.min.js"></script>
 
   </head>
+
   <body>
     <div class="header-container">
       <header class="wrapper clearfix">
@@ -35,9 +36,13 @@
     <div class="main-container">
       <header>
         <p>
-          Test with your HLS streams below in Chrome, Firefox, IE11, Edge or Safari !
-          <br>
-          Advanced controls are also available at the bottom of this page.
+          Test your HLS streams in Chrome, Firefox, IE11, Edge or Safari!
+        </p>
+        <p>
+          Advanced controls are available at the bottom of this page.
+        </p>
+        <p>
+          <b>Looking for a more <i>basic usage</i> example? Go <a href="basic-usage.html">here</a>.</b><br>
         </p>
       </header>
       <div id="controls">
@@ -69,6 +74,11 @@
           <input id="dumpfMP4" type=checkbox unchecked/>
           &nbsp;Dump fMP4
         </label>
+
+        <label class="innerControls">
+            Widevine DRM license-server URL:&nbsp;
+            <input id="widevineLicenseUrl"/>
+          </label>
 
         <label class="innerControls">
           Level-cap'ing (max limit):&nbsp;
