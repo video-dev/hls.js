@@ -175,6 +175,10 @@ function loadSelectedStream() {
     }
     hlsConfig.widevineLicenseUrl = $('#widevineLicenseUrl').val();
 
+    if (hlsConfig.widevineLicenseUrl) {
+      hlsConfig.emeEnabled = true;
+    }
+
     window.hls = hls = new Hls(hlsConfig);
 
     $('#HlsStatus').text('loading manifest and attaching video element...');
