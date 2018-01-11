@@ -118,7 +118,8 @@ function loadStream(url) {
     };
 
     // actual values, only on window
-    window.recoverDecodingErrorDate = window.recoverSwapAudioCodecDate = null;
+    window.recoverDecodingErrorDate = null;
+    window.recoverSwapAudioCodecDate = null;
 
     window.fmp4Data = fmp4Data = {
       'audio': [],
@@ -656,9 +657,6 @@ function handleVideoEvent(evt) {
   {events.video[lastSeekingIdx].duration = event.time - events.video[lastSeekingIdx].time;}
 
 }
-
-let recoverDecodingErrorDate,
-    recoverSwapAudioCodecDate;
 
 function handleMediaError() {
   if(autoRecoverError) {
