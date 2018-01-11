@@ -2,7 +2,14 @@ const testStreams = require('../tests/test-streams');
 
 const defaultTestStreamUrl = testStreams['bbb'].url;
 
+let bufferingIdx = -1;
+
 let selectedTestStream = null;
+
+let lastSeekingIdx,
+  lastStartPosition,
+  lastDuration,
+  lastAudioTrackSwitchingIdx;
 
 let hls,
   url,
@@ -166,6 +173,7 @@ function loadSelectedStream() {
     if (hlsConfig.widevineLicenseUrl) {
       $('#widevineLicenseUrl').val(hlsConfig.widevineLicenseUrl);
     }
+    hlsConfig.widevineLicenseUrl = $('#widevineLicenseUrl').val();
 
     window.hls = hls = new Hls(hlsConfig);
 
@@ -615,11 +623,6 @@ function loadSelectedStream() {
   }
 }
 
-let lastSeekingIdx,
-    lastStartPosition,
-    lastDuration,
-    lastAudioTrackSwitchingIdx;
-
 function handleVideoEvent(evt) {
   let data = '';
   switch(evt.type) {
@@ -722,8 +725,6 @@ function timeRangesToString(r) {
 
   return log;
 }
-
-var bufferingIdx = -1;
 
 function checkBuffer() {
   let v = $('#video')[0];
