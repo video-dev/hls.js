@@ -6,6 +6,17 @@ th, td {
   padding: 15px;
 }
 
+select {
+  padding: 2px 15px;
+  background-color: rgb(181, 222, 255);
+  font-weight: bolder;
+
+}
+
+select option {
+  font-size: 10pt;
+}
+
 .innerControls input {
   font-weight: normal;
   float: right;
