@@ -13,6 +13,14 @@ function createMockBuffer(buffered) {
   };
 }
 
+function createMockFragment(data, types) {
+  data._elementaryStreams = new Set(types);
+  data.hasElementaryStream = (type) => {
+    return data._elementaryStreams.has(type) === true;
+  }
+  return data;
+}
+
 describe('FragmentTracker', () => {
   describe('getPartialFragment', () => {
     let hls, fragmentTracker, fragment, buffered, partialFragment, timeRanges;
@@ -20,14 +28,14 @@ describe('FragmentTracker', () => {
     hls = new Hls({});
     fragmentTracker = new FragmentTracker(hls);
 
-    fragment = {
+    fragment = createMockFragment({
       startPTS: 0,
       endPTS: 1,
       sn: 1,
       level: 1,
-      elementaryStreams: new Set(['audio', 'video']),
       type: 'main'
-    };
+    }, ['audio', 'video']);
+
     hls.trigger(Event.FRAG_LOADED, { frag: fragment });
 
     buffered = createMockBuffer([
@@ -67,14 +75,13 @@ describe('FragmentTracker', () => {
 
 
     let addFragment = () => {
-      fragment = {
+      fragment = createMockFragment({
         startPTS: 0,
         endPTS: 1,
         sn: 1,
         level: 0,
-        elementaryStreams: new Set(['audio', 'video']),
         type: 'main'
-      };
+      }, ['audio', 'video']);
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
     };
 
@@ -160,14 +167,13 @@ describe('FragmentTracker', () => {
     fragmentTracker = new FragmentTracker(hls);
 
     it('supports audio buffer', () => {
-      fragment = {
+      fragment = createMockFragment({
         startPTS: 0,
         endPTS: 1,
         sn: 1,
         level: 1,
-        elementaryStreams: new Set(['audio', 'video']),
         type: 'main'
-      };
+      }, ['audio', 'video']);
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
 
       timeRanges = new Map();
@@ -191,14 +197,13 @@ describe('FragmentTracker', () => {
     });
 
     it('supports video buffer', () => {
-      fragment = {
+      fragment = createMockFragment({
         startPTS: 0,
         endPTS: 1,
         sn: 1,
         level: 1,
-        elementaryStreams: new Set(['audio', 'video']),
         type: 'main'
-      };
+      }, ['audio', 'video']);
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
 
       timeRanges = new Map();
@@ -222,14 +227,13 @@ describe('FragmentTracker', () => {
     });
 
     it('supports audio only buffer', () => {
-      fragment = {
+      fragment = createMockFragment({
         startPTS: 0,
         endPTS: 1,
         sn: 1,
         level: 1,
-        elementaryStreams: new Set(['audio']),
         type: 'audio'
-      };
+      }, ['audio']);
       hls.trigger(Event.FRAG_LOADED, { frag: fragment });
 
       timeRanges = new Map();

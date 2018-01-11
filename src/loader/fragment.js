@@ -11,8 +11,9 @@ export default class Fragment {
     this._decryptdata = null;
     this.tagList = [];
 
-    // Set is used because the elements do not repeat
-    this.elementaryStreams = new Set();
+    // Holds the type of data this fragment contains(eg. video/audio)
+    // Set is used because the elements should not repeat
+    this._elementaryStreams = new Set();
   }
 
   get url() {
@@ -70,6 +71,17 @@ export default class Fragment {
       this._decryptdata = this.fragmentDecryptdataFromLevelkey(this.levelkey, this.sn);
     }
     return this._decryptdata;
+  }
+
+  /**
+   * @param {ElementaryStreamType}
+   */
+  addElementaryStream(type) {
+    this._elementaryStreams.add(type);
+  }
+
+  hasElementaryStream(type) {
+    return this._elementaryStreams.has(type) === true;
   }
 
   /**

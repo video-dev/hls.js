@@ -645,7 +645,7 @@ class AudioStreamController extends TaskLoop {
         data.endDTS = data.startDTS + fragCurrent.duration;
       }
 
-      fragCurrent.elementaryStreams.add(data.type);
+      fragCurrent.addElementaryStream(data.type);
 
       logger.log(`parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb}`);
       LevelHelper.updateFragPTSDTS(track.details,fragCurrent,data.startPTS,data.endPTS);

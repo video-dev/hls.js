@@ -1090,7 +1090,7 @@ class StreamController extends TaskLoop {
         data.endDTS = data.startDTS + fragCurrent.duration;
       }
 
-      frag.elementaryStreams.add(data.type);
+      frag.addElementaryStream(data.type);
 
       logger.log(`Parsed ${data.type},PTS:[${data.startPTS.toFixed(3)},${data.endPTS.toFixed(3)}],DTS:[${data.startDTS.toFixed(3)}/${data.endDTS.toFixed(3)}],nb:${data.nb},dropped:${data.dropped || 0}`);
 
