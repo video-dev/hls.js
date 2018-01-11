@@ -3,7 +3,7 @@ var webdriver = require('selenium-webdriver');
 // requiring this automatically adds the chromedriver binary to the PATH
 var chromedriver = require('chromedriver');
 var HttpServer = require('http-server');
-var streams = require('../streams.json');
+var streams = require('../../test-streams');
 
 function retry(cb, numAttempts, interval) {
   numAttempts = numAttempts || 20;
