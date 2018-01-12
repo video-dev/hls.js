@@ -1,3 +1,3 @@
 #!/bin/bash
 
-git diff --name-only --staged | xargs ./node_modules/.bin/eslint
+git status --porcelain | grep .js$ | awk 'match($1, "M"){print $2}' | xargs ./node_modules/.bin/eslint
