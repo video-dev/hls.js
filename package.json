@@ -67,6 +67,7 @@
     "karma-sourcemap-loader": "^0.3.7",
     "karma-webpack": "^2.0.4",
     "mocha": "^3.0.2",
+    "mock-hls-server": "0.0.7",
     "mversion": "^1.10.1",
     "selenium-webdriver": "^3.1.0",
     "should": "^13.1.3",

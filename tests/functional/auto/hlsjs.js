@@ -3,6 +3,7 @@ var webdriver = require('selenium-webdriver');
 // requiring this automatically adds the chromedriver binary to the PATH
 var chromedriver = require('chromedriver');
 var HttpServer = require('http-server');
+var MockHLSServer = require('mock-hls-server').MockHLSServer;
 var streams = require('../streams.json');
 
 function retry(cb, numAttempts, interval) {
@@ -36,6 +37,7 @@ HttpServer.createServer({
   root: './',
 }).listen(8000, '127.0.0.1');
 
+var mockServer = null;
 
 var browserConfig = {version : 'latest'};
 if (onTravis) {
@@ -67,6 +69,11 @@ if (browserConfig.platform) {
 
 describe('testing hls.js playback in the browser on "'+browserDescription+'"', function() {
   beforeEach(function() {
+    if (stream.live) {
+      // this server will proxy requests to a VOD playlist and convert it to a live one
+      mockServer = new MockHLSServer({ port: 8080, logLevel: 'info'});
+    }
+
     var capabilities = {
       name: '"'+stream.description+'" on "'+browserDescription+'"',
       browserName: browserConfig.name,
@@ -114,6 +121,10 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
   });
 
   afterEach(function() {
+    if (mockServer) {
+      mockServer.stop();
+      mockServer = null;
+    }
     var browser = this.browser;
     browser.executeScript('return logString').then(function(return_value){
       console.log('travis_fold:start:debug_logs');
@@ -211,7 +222,11 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
 
   for (var name in streams) {
     var stream = streams[name];
-    var url = stream.url;
+    // if we are using the mock server then we need to proxy the url through it
+    var url = stream.live
+      ? 'http://localhost:8080/proxy?url=' + encodeURIComponent(stream.url)
+      : stream.url;
+
     if (!stream.blacklist_ua || stream.blacklist_ua.indexOf(browserConfig.name) === -1) {
       it('should receive video loadeddata event for ' + stream.description, testLoadedData(url));
       if (stream.abr) {
