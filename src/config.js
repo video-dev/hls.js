@@ -65,11 +65,11 @@ export var hlsDefaultConfig = {
   appendErrorMaxRetry: 3,                 // used by buffer-controller
   loader: XhrLoader,
   //loader: FetchLoader,
-  fLoader: undefined,
-  pLoader: undefined,
-  xhrSetup: undefined,
-  licenseXhrSetup: undefined,              // used by eme-controller
-  fetchSetup: undefined,
+  fLoader: undefined,                     // used by fragment-loader
+  pLoader: undefined,                     // used by playlist-loader
+  xhrSetup: undefined,                    // used by xhr-loader
+  licenseXhrSetup: undefined,             // used by eme-controller
+  // fetchSetup: undefined,
   abrController: AbrController,
   bufferController: BufferController,
   capLevelController: CapLevelController,
@@ -98,7 +98,7 @@ if (__USE_SUBTITLES__) {
   hlsDefaultConfig.subtitleStreamController = SubtitleStreamController;
   hlsDefaultConfig.subtitleTrackController = SubtitleTrackController;
   hlsDefaultConfig.timelineController = TimelineController;
-  hlsDefaultConfig.cueHandler = Cues;
+  hlsDefaultConfig.cueHandler = Cues;                     // used by timeline-controller
   hlsDefaultConfig.enableCEA708Captions = true;           // used by timeline-controller
   hlsDefaultConfig.enableWebVTT = true;                   // used by timeline-controller
   hlsDefaultConfig.captionsTextTrack1Label = 'English';   // used by timeline-controller
