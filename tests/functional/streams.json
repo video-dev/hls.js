@@ -85,5 +85,11 @@
     "live": false,
     "abr": true,
     "blacklist_ua": ["safari", "internet explorer"]
+  },
+  "offset_pts": {
+    "url": "https://video-dev.github.io/streams/pts_shift/master.m3u8", 
+    "description": "DK Turntable, PTS shifted by 2.3s", 
+    "live": false, 
+    "abr": false
   }
 }
