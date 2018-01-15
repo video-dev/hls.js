@@ -37,48 +37,34 @@ class MP4Remuxer {
     // generate Init Segment if needed
     if (!this.ISGenerated) {
       this.generateIS(audioTrack,videoTrack,timeOffset);
-    } else {
-      if (accurateTimeOffset) {
-        // check timestamp consistency. it there is more than 10s gap between expected PTS/DTS, recompute initPTS/DTS
-        const refPTS = this._initPTS;
-        const ptsNormalize = this._PTSNormalize;
-        const timeScale = audioTrack.inputTimeScale || videoTrack.inputTimeScale;
-        let initPTS = Infinity, initDTS = Infinity;
-        let samples = audioTrack.samples;
-        if (samples.length) {
-           initPTS = initDTS = ptsNormalize(samples[0].pts - timeScale * timeOffset, refPTS);
-        }
-        samples = videoTrack.samples;
-        if (samples.length) {
-          let sample = samples[0];
-           initPTS = Math.min(initPTS,ptsNormalize(sample.pts - timeScale * timeOffset, refPTS));
-           initDTS = Math.min(initDTS,ptsNormalize(sample.dts - timeScale * timeOffset, refPTS));
-        }
-        if (initPTS !== Infinity) {
-          const initPTSDelta = refPTS - initPTS;
-          if (Math.abs(initPTSDelta) > 10 * timeScale) {
-            logger.warn(`timestamp inconsistency, ${(initPTSDelta/timeScale).toFixed(3)}s delta against expected value: missing discontinuity ? reset initPTS/initDTS`);
-            this._initPTS = initPTS;
-            this._initDTS = initDTS;
-            this.observer.trigger(Event.INIT_PTS_FOUND, { initPTS: initPTS});
-          }
-        }
-      }
     }
 
     if (this.ISGenerated) {
+      const nbAudioSamples = audioTrack.samples.length;
+      const nbVideoSamples = videoTrack.samples.length;
+      let audioTimeOffset = timeOffset;
+      let videoTimeOffset = timeOffset;
+      if (nbAudioSamples && nbVideoSamples) {
+        // timeOffset is expected to be the offset of the first timestamp of this fragment (first DTS)
+        // if first audio DTS is not aligned with first video DTS then we need to take that into account
+        // when providing timeOffset to remuxAudio / remuxVideo. if we don't do that, there might be a permanent / small
+        // drift between audio and video streams
+        let audiovideoDeltaDts = (audioTrack.samples[0].dts - videoTrack.samples[0].dts)/videoTrack.inputTimeScale;
+        audioTimeOffset += Math.max(0,audiovideoDeltaDts);
+        videoTimeOffset += Math.max(0,-audiovideoDeltaDts);
+      }
       // Purposefully remuxing audio before video, so that remuxVideo can use nextAudioPts, which is
       // calculated in remuxAudio.
       //logger.log('nb AAC samples:' + audioTrack.samples.length);
-      if (audioTrack.samples.length) {
+      if (nbAudioSamples) {
         // if initSegment was generated without video samples, regenerate it again
         if (!audioTrack.timescale) {
           logger.warn('regenerate InitSegment as audio detected');
           this.generateIS(audioTrack,videoTrack,timeOffset);
         }
-        let audioData = this.remuxAudio(audioTrack,timeOffset,contiguous,accurateTimeOffset);
+        let audioData = this.remuxAudio(audioTrack,audioTimeOffset,contiguous,accurateTimeOffset);
         //logger.log('nb AVC samples:' + videoTrack.samples.length);
-        if (videoTrack.samples.length) {
+        if (nbVideoSamples) {
           let audioTrackLength;
           if (audioData) {
             audioTrackLength = audioData.endPTS - audioData.startPTS;
@@ -88,16 +74,16 @@ class MP4Remuxer {
             logger.warn('regenerate InitSegment as video detected');
             this.generateIS(audioTrack,videoTrack,timeOffset);
           }
-          this.remuxVideo(videoTrack,timeOffset,contiguous,audioTrackLength, accurateTimeOffset);
+          this.remuxVideo(videoTrack,videoTimeOffset,contiguous,audioTrackLength, accurateTimeOffset);
         }
       } else {
         let videoData;
         //logger.log('nb AVC samples:' + videoTrack.samples.length);
-        if (videoTrack.samples.length) {
-          videoData = this.remuxVideo(videoTrack,timeOffset,contiguous, accurateTimeOffset);
+        if (nbVideoSamples) {
+          videoData = this.remuxVideo(videoTrack,videoTimeOffset,contiguous, accurateTimeOffset);
         }
         if (videoData && audioTrack.codec) {
-          this.remuxEmptyAudio(audioTrack, timeOffset, contiguous, videoData);
+          this.remuxEmptyAudio(audioTrack, audioTimeOffset, contiguous, videoData);
         }
       }
     }
@@ -363,16 +349,15 @@ class MP4Remuxer {
           if (config.stretchShortVideoTrack) {
             // In some cases, a segment's audio track duration may exceed the video track duration.
             // Since we've already remuxed audio, and we know how long the audio track is, we look to
-            // see if the delta to the next segment is longer than the minimum of maxBufferHole and
-            // maxSeekHole. If so, playback would potentially get stuck, so we artificially inflate
+            // see if the delta to the next segment is longer than maxBufferHole.
+            // If so, playback would potentially get stuck, so we artificially inflate
             // the duration of the last frame to minimize any potential gap between segments.
             let maxBufferHole = config.maxBufferHole,
-                maxSeekHole = config.maxSeekHole,
-                gapTolerance = Math.floor(Math.min(maxBufferHole, maxSeekHole) * timeScale),
+                gapTolerance = Math.floor(maxBufferHole * timeScale),
                 deltaToFrameEnd = (audioTrackLength ? firstPTS + audioTrackLength * timeScale : this.nextAudioPts) - avcSample.pts;
             if (deltaToFrameEnd > gapTolerance) {
               // We subtract lastFrameDuration from deltaToFrameEnd to try to prevent any video
-              // frame overlap. maxBufferHole/maxSeekHole should be >> lastFrameDuration anyway.
+              // frame overlap. maxBufferHole should be >> lastFrameDuration anyway.
               mp4SampleDuration = deltaToFrameEnd - lastFrameDuration;
               if (mp4SampleDuration < 0) {
                 mp4SampleDuration = lastFrameDuration;
@@ -389,7 +374,6 @@ class MP4Remuxer {
       } else {
         compositionTimeOffset = Math.max(0,mp4SampleDuration*Math.round((avcSample.pts - avcSample.dts)/mp4SampleDuration));
       }
-
 
       //console.log('PTS/DTS/initDTS/normPTS/normDTS/relative PTS : ${avcSample.pts}/${avcSample.dts}/${initDTS}/${ptsnorm}/${dtsnorm}/${(avcSample.pts/4294967296).toFixed(3)}');
       outputSamples.push({
@@ -432,6 +416,8 @@ class MP4Remuxer {
       startDTS: firstDTS / timeScale,
       endDTS: this.nextAvcDts / timeScale,
       type: 'video',
+      hasAudio: false,
+      hasVideo: true,
       nb: outputSamples.length,
       dropped : dropped
     };
@@ -471,21 +457,33 @@ class MP4Remuxer {
                     Math.abs((inputSamples[0].pts-nextAudioPts-initDTS)) < 20*inputSampleDuration)
                     );
 
-    if (!contiguous) {
-      // if fragments are not contiguous, let's use timeOffset to compute next Audio PTS
-      nextAudioPts = timeOffset*inputTimeScale;
-    }
 
     // compute normalized PTS
     inputSamples.forEach(function(sample) {
-      sample.pts = sample.dts = ptsNormalize(sample.pts - initDTS, nextAudioPts);
+      sample.pts = sample.dts = ptsNormalize(sample.pts - initDTS, timeOffset*inputTimeScale);
     });
 
-    // sort based on normalized PTS (this is to avoid sorting issues in case timestamp
-    // reloop in the middle of our samples array)
-    inputSamples.sort(function(a, b) {
-      return a.pts - b.pts;
+    // filter out sample with negative PTS that are not playable anyway
+    // if we don't remove these negative samples, they will shift all audio samples forward.
+    // leading to audio overlap between current / next fragment
+    inputSamples = inputSamples.filter(function(sample) {
+      return sample.pts >= 0;
     });
+
+    // in case all samples have negative PTS, and have been filtered out, return now
+    if (inputSamples.length === 0) {
+      return;
+    }
+
+    if (!contiguous) {
+      if (!accurateTimeOffset) {
+        // if frag are mot contiguous and if we cant trust time offset, let's use first sample PTS as next audio PTS
+        nextAudioPts = inputSamples[0].pts;
+      } else {
+        // if timeOffset is accurate, let's use it as predicted next audio PTS
+        nextAudioPts = timeOffset*inputTimeScale;
+      }
+    }
 
     // If the audio track is missing samples, the frames seem to get "left-shifted" within the
     // resulting mp4 segment, causing sync issues and leaving gaps at the end of the audio segment.
@@ -493,8 +491,8 @@ class MP4Remuxer {
     // When possible, we inject a silent frame; when that's not possible, we duplicate the last
     // frame.
 
-    // only inject/drop audio frames in case time offset is accurate
-    if (accurateTimeOffset && track.isAAC) {
+    if ( track.isAAC) {
+      const maxAudioFramesDrift = this.config.maxAudioFramesDrift;
       for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length; ) {
         // First, let's see how far off this frame is from where we expect it to be
         var sample = inputSamples[i], delta;
@@ -504,18 +502,18 @@ class MP4Remuxer {
         const duration = Math.abs(1000*delta/inputTimeScale);
 
         // If we're overlapping by more than a duration, drop this sample
-        if (delta <= -inputSampleDuration) {
-          logger.warn(`Dropping 1 audio frame @ ${(nextPts/inputTimeScale).toFixed(3)}s due to ${duration} ms overlap.`);
+        if (delta <= -maxAudioFramesDrift*inputSampleDuration) {
+          logger.warn(`Dropping 1 audio frame @ ${(nextPts/inputTimeScale).toFixed(3)}s due to ${Math.round(duration)} ms overlap.`);
           inputSamples.splice(i, 1);
           track.len -= sample.unit.length;
           // Don't touch nextPtsNorm or i
         }
 
         // Insert missing frames if:
-        // 1: We're more than one frame away
+        // 1: We're more than maxAudioFramesDrift frame away
         // 2: Not more than MAX_SILENT_FRAME_DURATION away
         // 3: currentTime (aka nextPtsNorm) is not 0
-        else if (delta >= inputSampleDuration && duration < MAX_SILENT_FRAME_DURATION && nextPts) {
+        else if (delta >= maxAudioFramesDrift*inputSampleDuration && duration < MAX_SILENT_FRAME_DURATION && nextPts) {
           var missing = Math.round(delta / inputSampleDuration);
           logger.warn(`Injecting ${missing} audio frame @ ${(nextPts/inputTimeScale).toFixed(3)}s due to ${Math.round(1000*delta/inputTimeScale)} ms gap.`);
           for (var j = 0; j < missing; j++) {
@@ -585,8 +583,8 @@ class MP4Remuxer {
             pts = nextAudioPts;
           }
         }
-        // remember first PTS of our audioSamples, ensure value is positive
-        firstPTS = Math.max(0, pts);
+        // remember first PTS of our audioSamples
+        firstPTS = pts;
         if(track.len > 0) {
           /* concatenate the audio data and construct the mdat in place
             (need 8 more bytes to fill length and mdat type) */
@@ -678,6 +676,8 @@ class MP4Remuxer {
         startDTS: start,
         endDTS: end,
         type: 'audio',
+        hasAudio: true,
+        hasVideo: false,
         nb: nbSamples
       };
       this.observer.trigger(Event.FRAG_PARSING_DATA, audioData);

@@ -1,4 +1,5 @@
 import VTTParser from './vttparser';
+import { utf8ArrayToStr } from '../demux/id3';
 
 // String.prototype.startsWith is not supported in IE11
 const startsWith = function(inputString, searchString, position) {
@@ -60,7 +61,9 @@ const WebVTTParser = {
     parse: function(vttByteArray, syncPTS, vttCCs, cc, callBack, errorCallBack) {
         // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
         let re = /\r\n|\n\r|\n|\r/g;
-        let vttLines = String.fromCharCode.apply(null, new Uint8Array(vttByteArray)).trim().replace(re, '\n').split('\n');
+        // Uint8Array.prototype.reduce is not implemented in IE11
+        let vttLines = utf8ArrayToStr(new Uint8Array(vttByteArray)).trim().replace(re, '\n').split('\n');
+
         let cueTime = '00:00.000';
         let mpegTs = 0;
         let localTime = 0;
@@ -98,10 +101,10 @@ const WebVTTParser = {
 
             // Create a unique hash id for a cue based on start/end times and text.
             // This helps timeline-controller to avoid showing repeated captions.
-            cue.id = hash(cue.startTime) + hash(cue.endTime) + hash(cue.text);
+            cue.id = hash(cue.startTime.toString()) + hash(cue.endTime.toString()) + hash(cue.text);
 
             // Fix encoding of special characters. TODO: Test with all sorts of weird characters.
-            cue.text = decodeURIComponent(escape(cue.text));
+            cue.text = decodeURIComponent(encodeURIComponent(cue.text));
             if (cue.endTime > 0) {
               cues.push(cue);
             }
@@ -166,5 +169,4 @@ const WebVTTParser = {
     }
 };
 
-
-module.exports = WebVTTParser;
+export default WebVTTParser;

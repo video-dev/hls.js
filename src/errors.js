@@ -3,6 +3,8 @@ export const ErrorTypes = {
   NETWORK_ERROR: 'networkError',
   // Identifier for a media Error (video/parsing/mediasource error)
   MEDIA_ERROR: 'mediaError',
+  // EME (encrypted media extensions) errors
+  KEY_SYSTEM_ERROR: 'keySystemError',
   // Identifier for a mux Error (demuxing/remuxing)
   MUX_ERROR: 'muxError',
   // Identifier for all other errors
@@ -10,6 +12,10 @@ export const ErrorTypes = {
 };
 
 export const ErrorDetails = {
+  KEY_SYSTEM_NO_KEYS: 'keySystemNoKeys',
+  KEY_SYSTEM_NO_ACCESS: 'keySystemNoAccess',
+  KEY_SYSTEM_NO_SESSION: 'keySystemNoSession',
+  KEY_SYSTEM_LICENSE_REQUEST_FAILED: 'keySystemLicenseRequestFailed',
   // Identifier for a manifest load error - data: { url : faulty URL, response : { code: error code, text: error text }}
   MANIFEST_LOAD_ERROR: 'manifestLoadError',
   // Identifier for a manifest load timeout - data: { url : faulty URL, response : { code: error code, text: error text }}
@@ -30,8 +36,6 @@ export const ErrorDetails = {
   AUDIO_TRACK_LOAD_TIMEOUT: 'audioTrackLoadTimeOut',
   // Identifier for fragment load error - data: { frag : fragment object, response : { code: error code, text: error text }}
   FRAG_LOAD_ERROR: 'fragLoadError',
-  // Identifier for fragment loop loading error - data: { frag : fragment object}
-  FRAG_LOOP_LOADING_ERROR: 'fragLoopLoadingError',
   // Identifier for fragment load timeout error - data: { frag : fragment object}
   FRAG_LOAD_TIMEOUT: 'fragLoadTimeOut',
   // Identifier for a fragment decryption error event - data: {id : demuxer Id,frag: fragment object, reason : parsing error description }
@@ -60,7 +64,5 @@ export const ErrorDetails = {
   // Identifier for a buffer nudge on stall (playback is stuck although currentTime is in a buffered area)
   BUFFER_NUDGE_ON_STALL : 'bufferNudgeOnStall',
   // Identifier for an internal exception happening inside hls.js while handling an event
-  INTERNAL_EXCEPTION: 'internalException',
-  // Malformed WebVTT contents
-  WEBVTT_EXCEPTION: 'webVTTException'
+  INTERNAL_EXCEPTION: 'internalException'
 };

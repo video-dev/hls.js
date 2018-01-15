@@ -4,27 +4,38 @@
 
 const BufferHelper = {
   isBuffered : function(media,position) {
-    if (media) {
-      let buffered = media.buffered;
-      for (let i = 0; i < buffered.length; i++) {
-        if (position >= buffered.start(i) && position <= buffered.end(i)) {
-          return true;
+    try {
+      if (media) {
+        let buffered = media.buffered;
+        for (let i = 0; i < buffered.length; i++) {
+          if (position >= buffered.start(i) && position <= buffered.end(i)) {
+            return true;
+          }
         }
       }
+    } catch(error) {
+      // this is to catch
+      // InvalidStateError: Failed to read the 'buffered' property from 'SourceBuffer':
+      // This SourceBuffer has been removed from the parent media source
     }
     return false;
   },
 
   bufferInfo : function(media, pos,maxHoleDuration) {
-    if (media) {
-      var vbuffered = media.buffered, buffered = [],i;
-      for (i = 0; i < vbuffered.length; i++) {
-        buffered.push({start: vbuffered.start(i), end: vbuffered.end(i)});
+    try {
+      if (media) {
+        var vbuffered = media.buffered, buffered = [],i;
+        for (i = 0; i < vbuffered.length; i++) {
+          buffered.push({start: vbuffered.start(i), end: vbuffered.end(i)});
+        }
+        return this.bufferedInfo(buffered,pos,maxHoleDuration);
       }
-      return this.bufferedInfo(buffered,pos,maxHoleDuration);
-    } else {
-      return {len: 0, start: pos, end: pos, nextStart : undefined} ;
+    } catch(error) {
+        // this is to catch
+        // InvalidStateError: Failed to read the 'buffered' property from 'SourceBuffer':
+        // This SourceBuffer has been removed from the parent media source
     }
+    return {len: 0, start: pos, end: pos, nextStart : undefined} ;
   },
 
   bufferedInfo : function(buffered,pos,maxHoleDuration) {
@@ -83,4 +94,4 @@ const BufferHelper = {
   }
 };
 
-module.exports = BufferHelper;
+export default BufferHelper;

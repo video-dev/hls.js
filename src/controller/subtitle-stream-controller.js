@@ -3,27 +3,41 @@
 */
 
 import Event from '../events';
-import EventHandler from '../event-handler';
 import {logger} from '../utils/logger';
+import Decrypter from '../crypt/decrypter';
+import TaskLoop from '../task-loop';
 
-class SubtitleStreamController extends EventHandler {
+const State = {
+  STOPPED : 'STOPPED',
+  IDLE : 'IDLE',
+  KEY_LOADING : 'KEY_LOADING',
+  FRAG_LOADING : 'FRAG_LOADING'
+};
+
+class SubtitleStreamController extends TaskLoop {
 
   constructor(hls) {
     super(hls,
+      Event.MEDIA_ATTACHED,
       Event.ERROR,
+      Event.KEY_LOADED,
+      Event.FRAG_LOADED,
       Event.SUBTITLE_TRACKS_UPDATED,
       Event.SUBTITLE_TRACK_SWITCH,
       Event.SUBTITLE_TRACK_LOADED,
       Event.SUBTITLE_FRAG_PROCESSED);
+
     this.config = hls.config;
     this.vttFragSNsProcessed = {};
     this.vttFragQueues = undefined;
     this.currentlyProcessing = null;
+    this.state = State.STOPPED;
     this.currentTrackId = -1;
+    this.decrypter = new Decrypter(hls.observer, hls.config);
   }
 
-  destroy() {
-    EventHandler.prototype.destroy.call(this);
+  onHandlerDestroyed() {
+    this.state = State.STOPPED;
   }
 
   // Remove all queued items and create a new, empty queue for each track.
@@ -38,7 +52,9 @@ class SubtitleStreamController extends EventHandler {
   nextFrag() {
     if(this.currentlyProcessing === null && this.currentTrackId > -1 && this.vttFragQueues[this.currentTrackId].length) {
       let frag = this.currentlyProcessing = this.vttFragQueues[this.currentTrackId].shift();
-      this.hls.trigger(Event.FRAG_LOADING, {frag});
+      this.fragCurrent = frag;
+      this.hls.trigger(Event.FRAG_LOADING, {frag: frag});
+      this.state = State.FRAG_LOADING;
     }
   }
 
@@ -48,7 +64,12 @@ class SubtitleStreamController extends EventHandler {
       this.vttFragSNsProcessed[data.frag.trackId].push(data.frag.sn);
     }
     this.currentlyProcessing = null;
+    this.state = State.IDLE;
     this.nextFrag();
+  }
+
+  onMediaAttached() {
+    this.state = State.IDLE;
   }
 
   // If something goes wrong, procede to next frag, if we were processing one.
@@ -62,6 +83,57 @@ class SubtitleStreamController extends EventHandler {
       this.currentlyProcessing = null;
       this.nextFrag();
     }
+  }
+
+  doTick() {
+    switch(this.state) {
+      case State.IDLE:
+        const tracks = this.tracks;
+        let trackId = this.currentTrackId;
+
+        const processedFragSNs = this.vttFragSNsProcessed[trackId],
+            fragQueue = this.vttFragQueues[trackId],
+            currentFragSN = !!this.currentlyProcessing ? this.currentlyProcessing.sn : -1;
+
+        const alreadyProcessed = function(frag) {
+          return processedFragSNs.indexOf(frag.sn) > -1;
+        };
+
+        const alreadyInQueue = function(frag) {
+          return fragQueue.some(fragInQueue => {return fragInQueue.sn === frag.sn;});
+        };
+
+        // exit if tracks don't exist
+        if (!tracks) {
+          break;
+        }
+        var trackDetails;
+
+        if (trackId < tracks.length) {
+          trackDetails = tracks[trackId].details;
+        }
+
+        if (typeof trackDetails === 'undefined') {
+          break;
+        }
+
+        // Add all fragments that haven't been, aren't currently being and aren't waiting to be processed, to queue.
+        trackDetails.fragments.forEach(frag => {
+          if(!(alreadyProcessed(frag) || frag.sn === currentFragSN || alreadyInQueue(frag))) {
+            // Load key if subtitles are encrypted
+            if ((frag.decryptdata && frag.decryptdata.uri != null) && (frag.decryptdata.key == null)) {
+              logger.log(`Loading key for ${frag.sn}`);
+              this.state = State.KEY_LOADING;
+              this.hls.trigger(Event.KEY_LOADING, {frag: frag});
+            } else {
+              // Frags don't know their subtitle track ID, so let's just add that...
+              frag.trackId = trackId;
+              fragQueue.push(frag);
+              this.nextFrag();
+            }
+          }
+        });
+      }
   }
 
   // Got all new subtitle tracks.
@@ -81,30 +153,46 @@ class SubtitleStreamController extends EventHandler {
   }
 
   // Got a new set of subtitle fragments.
-  onSubtitleTrackLoaded(data) {
-    const processedFragSNs = this.vttFragSNsProcessed[data.id],
-        fragQueue = this.vttFragQueues[data.id],
-        currentFragSN = !!this.currentlyProcessing ? this.currentlyProcessing.sn : -1;
+  onSubtitleTrackLoaded() {
+    this.tick();
+  }
 
-    const alreadyProcessed = function(frag) {
-      return processedFragSNs.indexOf(frag.sn) > -1;
-    };
+  onKeyLoaded() {
+    if (this.state === State.KEY_LOADING) {
+      this.state = State.IDLE;
+      this.tick();
+    }
+  }
 
-    const alreadyInQueue = function(frag) {
-      return fragQueue.some(fragInQueue => {return fragInQueue.sn === frag.sn;});
-    };
-
-    // Add all fragments that haven't been, aren't currently being and aren't waiting to be processed, to queue.
-    data.details.fragments.forEach(frag => {
-      if(!(alreadyProcessed(frag) || frag.sn === currentFragSN || alreadyInQueue(frag))) {
-        // Frags don't know their subtitle track ID, so let's just add that...
-        frag.trackId = data.id;
-        fragQueue.push(frag);
-      }
-    });
-
-    this.nextFrag();
+  onFragLoaded(data) {
+    var fragCurrent = this.fragCurrent,
+        decryptData = data.frag.decryptdata;
+    let fragLoaded = data.frag,
+        hls = this.hls;
+    if (this.state === State.FRAG_LOADING &&
+        fragCurrent &&
+        data.frag.type === 'subtitle' &&
+        fragCurrent.sn === data.frag.sn) {
+          // check to see if the payload needs to be decrypted
+          if ((data.payload.byteLength > 0) && (decryptData != null) && (decryptData.key != null) && (decryptData.method === 'AES-128')) {
+            var startTime;
+            try {
+              startTime = performance.now();
+            } catch (error) {
+              startTime = Date.now();
+            }
+            // decrypt the subtitles
+            this.decrypter.decrypt(data.payload, decryptData.key.buffer, decryptData.iv.buffer, function(decryptedData) {
+              var endTime;
+              try {
+                endTime = performance.now();
+              } catch (error) {
+                endTime = Date.now();
+              }
+              hls.trigger(Event.FRAG_DECRYPTED, { frag: fragLoaded, payload : decryptedData, stats: { tstart: startTime, tdecrypt: endTime } });
+            });
+          }
+        }
   }
 }
 export default SubtitleStreamController;
-

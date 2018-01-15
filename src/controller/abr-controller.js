@@ -71,12 +71,14 @@ class AbrController extends EventHandler {
     if(!loader || ( loader.stats && loader.stats.aborted)) {
       logger.warn('frag loader destroy or aborted, disarm abandonRules');
       this.clearTimer();
+      // reset forced auto level value so that next level will be selected
+      this._nextAutoLevel = -1;
       return;
     }
     let stats = loader.stats;
     /* only monitor frag retrieval time if
     (video not paused OR first fragment being loaded(ready state === HAVE_NOTHING = 0)) AND autoswitching enabled AND not lowest level (=> means that we have several levels) */
-    if (v && ((!v.paused && (v.playbackRate !== 0)) || !v.readyState) && frag.autoLevel && frag.level) {
+    if (v && stats && ((!v.paused && (v.playbackRate !== 0)) || !v.readyState) && frag.autoLevel && frag.level) {
       let requestDelay = performance.now() - stats.trequest,
           playbackRate = Math.abs(v.playbackRate);
       // monitor fragment load progress after half of expected fragment duration,to stabilize bitrate
@@ -160,7 +162,7 @@ class AbrController extends EventHandler {
     // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
     // and leading to wrong bw estimation
     // on bitrate test, also only update stats once (if tload = tbuffered == on FRAG_LOADED)
-    if (stats.aborted !== true && frag.loadCounter === 1 && frag.type === 'main' && !isNaN(frag.sn) && ((!frag.bitrateTest || stats.tload === stats.tbuffered))) {
+    if (stats.aborted !== true && frag.type === 'main' && !isNaN(frag.sn) && ((!frag.bitrateTest || stats.tload === stats.tbuffered))) {
       // use tparsed-trequest instead of tbuffered-trequest to compute fragLoadingProcessing; rationale is that  buffer appending only happens once media is attached
       // in case we use config.startFragPrefetch while media is not attached yet, fragment might be parsed while media not attached yet, but it will only be buffered on media attached
       // as a consequence it could happen really late in the process. meaning that appending duration might appears huge ... leading to underestimated throughput estimation

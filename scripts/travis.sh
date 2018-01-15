@@ -3,14 +3,12 @@
 set -ev
 
 npm install
-if [ "${TRAVIS_MODE}" = "buildLib" ]; then
-	npm run buildlib
-elif [ "${TRAVIS_MODE}" = "buildDist" ]; then
-	npm run builddist && npm run builddistlight
+if [ "${TRAVIS_MODE}" = "build" ]; then
+	npm run build
 elif [ "${TRAVIS_MODE}" = "unitTests" ]; then
-	npm run test
+	npm run test:unit
 elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
-	npm run builddist
+	npm run build
 	n=0
 	maxRetries=1
 	until [ $n -ge ${maxRetries} ]
@@ -21,7 +19,7 @@ elif [ "${TRAVIS_MODE}" = "funcTests" ]; then
 			echo "Waiting ${delay} seconds..."
 			sleep $delay
 		fi
-		npm run testfunc && break
+		npm run test:func && break
 		n=$[$n+1]
 	done
 	if [ ${n} = ${maxRetries} ]; then

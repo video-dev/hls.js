@@ -1,9 +1,12 @@
 import Event from '../events';
 import DemuxerInline from '../demux/demuxer-inline';
-import DemuxerWorker from '../demux/demuxer-worker';
 import {logger} from '../utils/logger';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import EventEmitter from 'events';
+import work from 'webworkify-webpack';
+import {getMediaSource} from '../helper/mediasource-helper';
+
+const MediaSource = getMediaSource();
 
 class Demuxer {
 
@@ -50,8 +53,7 @@ class Demuxer {
         logger.log('demuxing in webworker');
         let w;
         try {
-          let work = require('webworkify');
-          w = this.w = work(DemuxerWorker);
+          w = this.w = work(require.resolve('../demux/demuxer-worker.js'));
           this.onwmsg = this.onWorkerMessage.bind(this);
           w.addEventListener('message', this.onwmsg);
           w.onerror = function(event) { hls.trigger(Event.ERROR, {type: ErrorTypes.OTHER_ERROR, details: ErrorDetails.INTERNAL_EXCEPTION, fatal: true, event : 'demuxerWorker', err : { message : event.message + ' (' + event.filename + ':' + event.lineno + ')' }});};
@@ -107,8 +109,8 @@ class Demuxer {
     }
     this.frag = frag;
     if (w) {
-      // post fragment payload as transferable objects (no copy)
-      w.postMessage({cmd: 'demux', data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset,defaultInitPTS}, [data]);
+      // post fragment payload as transferable objects for ArrayBuffer (no copy)
+      w.postMessage({cmd: 'demux', data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset,defaultInitPTS}, data instanceof ArrayBuffer ? [data] : []);
     } else {
       let demuxer = this.demuxer;
       if (demuxer) {
@@ -120,7 +122,6 @@ class Demuxer {
   onWorkerMessage(ev) {
     let data = ev.data,
         hls = this.hls;
-    //console.log('onWorkerMessage:' + data.event);
     switch(data.event) {
       case 'init':
         // revoke the Object URL that was used to create demuxer worker, so as not to leak it

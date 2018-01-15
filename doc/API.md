@@ -2,7 +2,7 @@
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-
+ 
 
 - [Getting started](#getting-started)
   - [First step: setup and support](#first-step-setup-and-support)
@@ -27,7 +27,6 @@
   - [`maxBufferLength`](#maxbufferlength)
   - [`maxBufferSize`](#maxbuffersize)
   - [`maxBufferHole`](#maxbufferhole)
-  - [`maxSeekHole`](#maxseekhole)
   - [`maxStarvationDelay`](#maxstarvationdelay)
   - [`maxLoadingDelay`](#maxloadingdelay)
   - [`lowBufferWatchdogPeriod`](#lowbufferwatchdogperiod)
@@ -40,6 +39,7 @@
   - [`liveMaxLatencyDurationCount`](#livemaxlatencydurationcount)
   - [`liveSyncDuration`](#livesyncduration)
   - [`liveMaxLatencyDuration`](#livemaxlatencyduration)
+  - [`liveDurationInfinity`](#livedurationinfinity)
   - [`enableWorker`](#enableworker)
   - [`enableSoftwareAES`](#enablesoftwareaes)
   - [`startLevel`](#startlevel)
@@ -56,12 +56,14 @@
   - [`fetchSetup`](#fetchsetup)
   - [`abrController`](#abrcontroller)
   - [`timelineController`](#timelinecontroller)
+  - [`enableWebVTT`](#enablewebvtt)
   - [`enableCEA708Captions`](#enablecea708captions)
-    [`captionsTextTrack1Label`](#captionsTextTrack1Label)
-    [`captionsTextTrack1LanguageCode`](#captionsTextTrack1LanguageCode)
-    [`captionsTextTrack2Label`](#captionsTextTrack2Label)
-    [`captionsTextTrack2LanguageCode`](#captionsTextTrack2LanguageCode)
+  - [`captionsTextTrack1Label`](#captionstexttrack1label)
+  - [`captionsTextTrack1LanguageCode`](#captionstexttrack1languagecode)
+  - [`captionsTextTrack2Label`](#captionstexttrack2label)
+  - [`captionsTextTrack2LanguageCode`](#captionstexttrack2languagecode)
   - [`stretchShortVideoTrack`](#stretchshortvideotrack)
+  - [`maxAudioFramesDrift`](#maxaudioframesdrift)
   - [`forceKeyFrameOnDiscontinuity`](#forcekeyframeondiscontinuity)
   - [`abrEwmaFastLive`](#abrewmafastlive)
   - [`abrEwmaSlowLive`](#abrewmaslowlive)
@@ -75,6 +77,7 @@
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
   - [`hls.attachMedia(videoElement)`](#hlsattachmediavideoelement)
   - [`hls.detachMedia()`](#hlsdetachmedia)
+    - [`hls.media`](#hlsmedia)
 - [Quality switch Control API](#quality-switch-control-api)
   - [`hls.levels`](#hlslevels)
   - [`hls.currentLevel`](#hlscurrentlevel)
@@ -93,6 +96,10 @@
 - [Audio Tracks Control API](#audio-tracks-control-api)
   - [`hls.audioTracks`](#hlsaudiotracks)
   - [`hls.audioTrack`](#hlsaudiotrack)
+- [Subtitle Tracks Control API](#subtitle-tracks-control-api)
+  - [`hls.subtitleTracks`](#hlssubtitletracks)
+  - [`hls.subtitleTrack`](#hlssubtitletrack)
+  - [`hls.subtitleDisplay`](#hlssubtitledisplay)
 - [Live stream API](#live-stream-api)
   - [`hls.liveSyncPosition`](#hlslivesyncposition)
 - [Runtime Events](#runtime-events)
@@ -100,6 +107,8 @@
 - [Errors](#errors)
   - [Network Errors](#network-errors)
   - [Media Errors](#media-errors)
+  - [Mux Errors](#mux-errors)
+  - [Other Errors](#other-errors)
 - [Objects](#objects)
   - [Level](#level)
   - [LevelDetails](#leveldetails)
@@ -114,7 +123,7 @@
 First include `https://cdn.jsdelivr.net/npm/hls.js@latest` (or `/hls.js` for unminified) in your web page.
 
 ```html
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="//cdn.jsdelivr.net/npm/hls.js@latest"></script>
 ```
 
 Invoke the following static method: `Hls.isSupported()` to check whether your browser is supporting [MediaSource Extensions](http://w3c.github.io/media-source/).
@@ -292,7 +301,6 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       maxMaxBufferLength: 600,
       maxBufferSize: 60*1000*1000,
       maxBufferHole: 0.5,
-      maxSeekHole: 2,
       lowBufferWatchdogPeriod: 0.5,
       highBufferWatchdogPeriod: 3,
       nudgeOffset: 0.1,
@@ -324,15 +332,17 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       fetchSetup: FetchSetupCallback,
       abrController: customAbrController,
       timelineController: TimelineController,
+      enableWebVTT: true,
       enableCEA708Captions: true,
       stretchShortVideoTrack: false,
+      maxAudioFramesDrift : 1,
       forceKeyFrameOnDiscontinuity: true,
       abrEwmaFastLive: 5.0,
       abrEwmaSlowLive: 9.0,
       abrEwmaFastVoD: 4.0,
       abrEwmaSlowVoD: 15.0,
       abrEwmaDefaultEstimate: 500000,
-      abrBandWidthFactor: 0.8,
+      abrBandWidthFactor: 0.95,
       abrBandWidthUpFactor: 0.7,
       minAutoBitrate: 0
   };
@@ -410,14 +420,6 @@ This is the guaranteed buffer length hls.js will try to reach, regardless of max
 'Maximum' inter-fragment buffer hole tolerance that hls.js can cope with when searching for the next fragment to load.
 When switching between quality level, fragments might not be perfectly aligned.
 This could result in small overlapping or hole in media buffer. This tolerance factor helps cope with this.
-
-### `maxSeekHole`
-
-(default: `2` seconds)
-
-In case playback is stalled, and a buffered range is available upfront, less than `maxSeekHole` seconds from current media position,
-hls.js will jump over this buffer hole to reach the beginning of this following buffered range.
-`maxSeekHole` allows to configure this jumpable threshold.
 
 ### `maxStarvationDelay`
 
@@ -515,7 +517,7 @@ a value too close from `liveSyncDurationCount` is likely to cause playback stall
 
 (default: `undefined`)
 
-Alternative parameter to ```liveSyncDurationCount```, expressed in seconds vs number of segments.
+Alternative parameter to `liveSyncDurationCount`, expressed in seconds vs number of segments.
 If defined in the configuration object, `liveSyncDuration` will take precedence over the default `liveSyncDurationCount`.
 You can't define this parameter and either `liveSyncDurationCount` or `liveMaxLatencyDurationCount` in your configuration object at the same time.
 A value too low (inferior to ~3 segment durations) is likely to cause playback stalls.
@@ -529,6 +531,14 @@ If defined in the configuration object, `liveMaxLatencyDuration` will take prece
 If set, this value must be stricly superior to `liveSyncDuration` which must be defined as well.
 You can't define this parameter and either `liveSyncDurationCount` or `liveMaxLatencyDurationCount` in your configuration object at the same time.
 A value too close from `liveSyncDuration` is likely to cause playback stalls.
+
+### `liveDurationInfinity`
+
+(default: `false`)
+
+Override current Media Source duration to `Infinity` for a live broadcast. 
+Useful, if you are building a player which relies on native UI capabilities in modern browsers. 
+If you want to have a native Live UI in environments like iOS Safari, Safari, Android Google Chrome, etc. set this value to `true`.
 
 ### `enableWorker`
 
@@ -568,6 +578,7 @@ Max number of load retries.
 (default: `64000` ms)
 
 Maximum frag/manifest/key retry timeout (in milliseconds) in case I/O errors are met.
+This value is used as capping value for exponential grow of `loading retry delays`, i.e.  the retry delay can not be bigger than this value, but overall time will be based on the overall number of retries.
 
 ### `fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay`
 
@@ -627,7 +638,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @callback onSuccessCallback
       @param response {object} - response data
       @param response.url {string} - response URL (which might have been redirected)
-      @param response.data {string/arraybuffer} - response data (reponse type should be as per context.responseType)
+      @param response.data {string/arraybuffer/sharedarraybuffer} - response data (reponse type should be as per context.responseType)
       @param stats {object} - loading stats
       @param stats.trequest {number} - performance.now() just after load() has been called
       @param stats.tfirst {number} - performance.now() of first received byte
@@ -646,7 +657,7 @@ Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
       @param [stats.total] {number} - total nb of bytes
       @param [stats.bw] {number} - current download bandwidth in bit/s (monitored by ABR controller to control emergency switch down)
       @param context {object} - loader context
-      @param data {string/arraybuffer} - onProgress data (should be defined only if context.progressData === true)
+      @param data {string/arraybuffer/sharedarraybuffer} - onProgress data (should be defined only if context.progressData === true)
       @param networkDetails {object} - loader network details (the xhr for default loaders)
 
       @callback onErrorCallback
@@ -791,6 +802,14 @@ Parameter should be a class with a `destroy()` method:
 
  - `destroy()` : should clean-up all used resources
 
+### `enableWebVTT`
+
+(default: `true`)
+
+whether or not to enable WebVTT captions on HLS
+
+parameter should be a boolean
+
 ### `enableCEA708Captions`
 
 (default: `true`)
@@ -835,10 +854,27 @@ parameter should be a string
 
 (default: `false`)
 
-If a segment's video track is shorter than its audio track by > `min(maxSeekHole, maxBufferHole)`, extend the final video frame's duration to match the audio track's duration.
+If a segment's video track is shorter than its audio track by > `maxBufferHole`, extend the final video frame's duration to match the audio track's duration.
 This helps playback continue in certain cases that might otherwise get stuck.
 
 parameter should be a boolean
+
+### `maxAudioFramesDrift`
+
+(default: `1`)
+
+Browsers are really strict about audio frames timings.
+They usually play audio frames one after the other, regardless of the timestamps advertised in the fmp4.
+If audio timestamps are not consistent (consecutive audio frames too close or too far from each other), audio will easily drift.
+hls.js is restamping audio frames so that the distance between consecutive audio frame remains constant.
+if the distance is larger than the max allowed drift, hls.js will either
+
+ - drop the next audio frame if distance is too small (if next audio frame timestamp is smaller than expected time stamp - max allowed drift)
+ - insert silent frames if distance is too big  (next audio frame timestamp is bigger than expected timestamp + max allowed drift)
+
+parameter should be an integer representing the max number of audio frames allowed to drift.
+keep in mind that one audio frame is 1024 audio samples (if using AAC), at 44.1 kHz, it gives 1024/44100 = 23ms
+
 
 ### `forceKeyFrameOnDiscontinuity`
 
@@ -901,7 +937,7 @@ parameter should be a float
 
 ### `abrBandWidthFactor`
 
-(default: `0.8`)
+(default: `0.95`)
 
 Scale factor to be applied against measured bandwidth average, to determine whether we can stay on current or lower quality level.
 If `abrBandWidthFactor * bandwidth average < level.bitrate` then ABR can switch to that level providing that it is equal or less than current level.
@@ -1043,6 +1079,22 @@ get : array of audio tracks exposed in manifest
 
 get/set : audio track id (returned by)
 
+## Subtitle Tracks Control API
+
+### `hls.subtitleTracks`
+
+get : array of subtitle tracks exposed in manifest
+
+### `hls.subtitleTrack`
+
+get/set : subtitle track id (returned by). Returns -1 if no track is visible. Set to -1 to hide all subtitle tracks.
+
+### `hls.subtitleDisplay`
+
+(default: `false`)
+
+get/set : boolean to enable/disable subtitle display by hls.js
+
 ## Live stream API
 
 ### `hls.liveSyncPosition`
@@ -1077,7 +1129,7 @@ Full list of Events is available below:
    - `Hls.Events.BUFFER_APPENDING`  - fired when we append a segment to the buffer
     -  data: { segment : segment object }
   - `Hls.Events.BUFFER_APPENDED`  - fired when we are done with appending a media segment to the buffer
-    -  data: { parent : segment parent that triggered `BUFFER_APPENDING`, pending : nb of segments waiting for appending for this segment parent }
+    -  data: { parent : segment parent that triggered `BUFFER_APPENDING`, pending : nb of segments waiting for appending for this segment parent, timeRanges : { video: TimeRange, audio: TimeRange }
   - `Hls.Events.BUFFER_EOS`  - fired when the stream is finished and we want to notify the media buffer that there will be no more data
     -  data: { }
   - `Hls.Events.BUFFER_FLUSHING`  - fired when the media buffer should be flushed
@@ -1137,7 +1189,7 @@ Full list of Events is available below:
   - `Hls.Events.FRAG_LOADED`  - fired when a fragment loading is completed
     -  data: { frag : fragment object, payload : fragment payload, stats : { trequest, tfirst, tload, length}}
   - `Hls.Events.FRAG_DECRYPTED`  - fired when a fragment decryption is completed
-    -  data: { id : demuxer id, frag : fragment object, stats : { tstart, tdecrypt}}
+    -  data: { id : demuxer id, frag : fragment object, payload : fragment payload, stats : { tstart, tdecrypt}}
   - `Hls.Events.FRAG_PARSING_INIT_SEGMENT` - fired when Init Segment has been extracted from fragment
     -  data: { id: demuxer id, frag : fragment object, moov : moov MP4 box, codecs : codecs found while parsing fragment }
   - `Hls.Events.FRAG_PARSING_USERDATA`  - fired when parsing sei text is completed
@@ -1210,39 +1262,58 @@ Full list of errors is described below:
   - `Hls.ErrorDetails.LEVEL_LOAD_ERROR` - raised when level loading fails because of a network error
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.LEVEL_LOAD_ERROR`, fatal : `true`, url : level URL, response : { code: error code, text: error text }, loader : URL loader }
   - `Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT` - raised when level loading fails because of a timeout
-    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT`, fatal : `true`, url : level URL, loader : URL loader }
-  - `Hls.ErrorDetails.LEVEL_SWITCH_ERROR` - raised when level switching fails
-    - data: { type : `OTHER_ERROR`, details : `Hls.ErrorDetails.LEVEL_SWITCH_ERROR`, fatal : `false`, level : failed level index, reason : failure reason }
+    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT`, fatal : `false`, url : level URL, loader : URL loader }
+  - `Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR` - raised when audio track loading fails because of a network error
+    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR`, fatal : `false`, url : audio URL, response : { code: error code, text: error text }, loader : URL loader }
+  - `Hls.ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT` - raised when audio track loading fails because of a timeout
+    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT`, fatal : `false`, url : audio URL, loader : URL loader }
   - `Hls.ErrorDetails.FRAG_LOAD_ERROR` - raised when fragment loading fails because of a network error
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.FRAG_LOAD_ERROR`, fatal : `true` or `false`, frag : fragment object, response : { code: error code, text: error text } }
-  - `Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR` - raised upon detection of same fragment being requested in loop
-    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.FRAG_LOOP_LOADING_ERROR`, fatal : `true` or `false`, frag : fragment object }
   - `Hls.ErrorDetails.FRAG_LOAD_TIMEOUT` - raised when fragment loading fails because of a timeout
     - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.FRAG_LOAD_TIMEOUT`, fatal : `true` or `false`, frag : fragment object }
-  - `Hls.ErrorDetails.FRAG_PARSING_ERROR` - raised when fragment parsing fails
-    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.FRAG_PARSING_ERROR`, fatal : `true` or `false`, reason : failure reason }
+  - `Hls.ErrorDetails.KEY_LOAD_ERROR` - raised when decrypt key loading fails because of a network error
+    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.KEY_LOAD_ERROR`, fatal : `false`, frag : fragment object, response : { code: error code, text: error text } }
+  - `Hls.ErrorDetails.KEY_LOAD_TIMEOUT` - raised when decrypt key loading fails because of a timeout
+    - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.KEY_LOAD_TIMEOUT`, fatal : `true`, frag : fragment object }
 
 ### Media Errors
 
   - `Hls.ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR` - raised when manifest only contains quality level with codecs incompatible with MediaSource Engine.
     - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR`, fatal : `true`, url : manifest URL }
-  - ```Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR``` - raised when MediaSource fails to add new sourceBuffer
+  - `Hls.ErrorDetails.FRAG_DECRYPT_ERROR` - raised when fragment decryption fails
+    - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.FRAG_DECRYPT_ERROR`, fatal : `true`, reason : failure reason }
+  - `Hls.ErrorDetails.FRAG_PARSING_ERROR` - raised when fragment parsing fails
+    - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.FRAG_PARSING_ERROR`, fatal : `true` or `false`, reason : failure reason }
+  - `Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR` - raised when MediaSource fails to add new sourceBuffer
     - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_ADD_CODEC_ERROR`, fatal : `false`, err : error raised by MediaSource, mimeType: mimeType on which the failure happened }
   - `Hls.ErrorDetails.BUFFER_APPEND_ERROR` - raised when exception is raised while calling buffer append
-    - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_APPEND_ERROR`, fatal : `true`, parent : parent stream controller }
+    - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_APPEND_ERROR`, fatal : `true` or `false`, parent : parent stream controller }
   - `Hls.ErrorDetails.BUFFER_APPENDING_ERROR` - raised when exception is raised during buffer appending
     - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_APPENDING_ERROR`, fatal : `false` }
   - `Hls.ErrorDetails.BUFFER_STALLED_ERROR` - raised when playback is stuck because buffer is running out of data
-    - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_STALLED_ERROR`, fatal : `false`, parent : parent stream controller}
+    - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_STALLED_ERROR`, fatal : `true` or `false`, buffer : buffer length (optional) }
   - `Hls.ErrorDetails.BUFFER_FULL_ERROR` - raised when no data can be appended anymore in media buffer because it is full. this error is recovered by reducing the max buffer length.
     - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_FULL_ERROR`, fatal : `false` }
   - `Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE` - raised after hls.js seeks over a buffer hole to unstuck the playback,
     - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_SEEK_OVER_HOLE`, fatal : `false`, hole : hole duration }
+  - `Hls.ErrorDetails.BUFFER_NUDGE_ON_STALL` - raised when playback is stuck although currentTime is in a buffered area
+    - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_STALLED_ERROR`, fatal : `true` }
 
+### Mux Errors
+
+  - `Hls.ErrorDetails.REMUX_ALLOC_ERROR` - raised when memory allocation fails during remuxing
+    - data: { type : `MUX_ERROR`, details : `Hls.ErrorDetails.REMUX_ALLOC_ERROR`, fatal : `false`, bytes : mdat size, reason : failure reason }
+
+### Other Errors
+
+- `Hls.ErrorDetails.LEVEL_SWITCH_ERROR` - raised when level switching fails
+  - data: { type : `OTHER_ERROR`, details : `Hls.ErrorDetails.LEVEL_SWITCH_ERROR`, fatal : `false`, level : failed level index, reason : failure reason }
+- `Hls.ErrorDetails.INTERNAL_EXCEPTION` - raised when an exception occurs in an internal hls.js event handler
+  - data: { type : `OTHER_ERROR`, details : `Hls.ErrorDetails.INTERNAL_EXCEPTION`, fatal : `true` or `false`, event : event object or string, err : { message : error message } }
 
 ## Objects
 
-### <a name="level"> Level
+### Level
 
 A `Level` object represents a given quality level.
 It contains quality level related info, retrieved from manifest, such as:

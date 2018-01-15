@@ -2,10 +2,11 @@
 
 design idea is pretty simple :
 
-   - main functionalities are splitted into several subsystems
-   - all subsytems are instantiated by Hls instance.
+   - main functionalities are split into several subsystems
+   - all subsystems are instantiated by the Hls instance.
    - each subsystem heavily relies on events for internal/external communications.
-   - Events are handled using [browserified](http://browserify.org/) [EventEmitter](https://nodejs.org/api/events.html)
+   - Events are handled using [EventEmitter](https://nodejs.org/api/events.html)
+   - bundled for the browser by [webpack](https://webpack.js.org/)
 
 ## Code structure
 
@@ -18,7 +19,7 @@ design idea is pretty simple :
   - [src/events.js][]
     - definition of Hls.Events
   - [src/hls.js][]
-    - definition of Hls Class. instantiate all subcomponents. conditionally instanciate optional subcomponents.
+    - definition of Hls Class. instantiate all subcomponents. conditionally instantiate optional subcomponents.
   - [src/index.js][]
     - needed for ES6 export
   - [src/controller/abr-controller.js][]
@@ -63,10 +64,29 @@ design idea is pretty simple :
   - [src/controller/id3-track-controller.js](../src/controller/id3-track-controller.js)
     - in charge of creating the id3 metadata text track and adding cues to that track in response to the FRAG_PARSING_METADATA event. the raw id3 data is base64 encoded and stored in the cue's text property.
   - [src/controller/level-controller.js][]
-    - level controller is handling quality level set/get ((re)loading stream manifest/switching levels)  
+    - handling quality level set/get ((re)loading stream manifest/switching levels)  
     - in charge of scheduling playlist (re)loading
-    - monitor fragment/key/level loading error. handle fallback mechanism in case of errors : switch to redundant level, then level switch down till lowest rendition is reached. if `LEVEL_LOAD_ERROR`/`LEVEL_LOAD_TIMEOUT` is raised while media.currentTime is not buffered  and it is not possible to fallback (either because we are already on the lowest rendition or because we are in manual level selection), then `LEVEL_LOAD_ERROR`/`LEVEL_LOAD_TIMEOUT` will be converted into a fatal error.
-    - a timer is armed to periodically refresh active live playlist.
+    - monitors fragment and key loading errors. Performs fragment hunt by switching between primary and backup streams and down-shifting a level till `fragLoadingMaxRetry` limit is reached.
+    - monitors level loading errors. Performs level hunt by switching between primary and backup streams and down-shifting a level till `levelLoadingMaxRetry` limit is reached.
+    - periodically refresh active live playlist
+    
+    **Feature: Media Zigzagging**
+    
+    If there is a backup stream, Media Zigzagging will go through all available levels in `primary` and `backup` streams. Behavior has a dual constraint, where fragment retry limits and level limits are accounted in the same time.
+    When the lowest level has been reached, zigzagging will be adjusted to start from the highest level until retry limits are not reached.
+    
+    ![Media Zigzagging Explanation](./media-zigzagging.png) 
+    
+    Where: F - Bad Fragment, L - Bad Level
+    
+    **Retry Recommendations**
+    
+    By not having multiple renditions, recovery logic will not be able to add extra value to your platform. In order to have good results for dual constraint media hunt, specify big enough limits for fragments and levels retries.
+    
+    - Level: don't use total retry less than `3 - 4`
+    - Fragment: don't use total retry less than `4 - 6`
+    - Implement short burst retries (i.e. small retry delay `0.5 - 4` seconds), and when library returns fatal error switch to a different CDN
+
   - [src/controller/stream-controller.js][]
     - stream controller is in charge of:
       - triggering BUFFER_RESET on MANIFEST_PARSED or startLoad()    
@@ -84,12 +104,24 @@ design idea is pretty simple :
         - trigger BUFFER_APPENDING on FRAG_PARSING_DATA
         - once FRAG_PARSED is received an all segments have been appended (BUFFER_APPENDED) then buffer controller will recheck whether it needs to buffer more data.
       - **monitor current playback quality level** (buffer controller maintains a map between media position and quality level)
-      - **monitor playback progress** : if playhead is not moving for more than `config.lowBufferWatchdogPeriod` although it should (video metadata is known and video is not ended, nor paused, nor in seeking state) and if we have less than 500ms buffered upfront, and if there is a new buffer range available upfront, less than `config.maxSeekHole` from currentTime, then hls.js will **jump over the buffer hole** and seek to the beginning of this new buffered range, to "unstuck" the playback.
+      - **monitor playback progress** : if playhead is not moving for more than `config.lowBufferWatchdogPeriod` although it should (video metadata is known and video is not ended, nor paused, nor in seeking state) and if we have less than 500ms buffered upfront, one of two things will happen.
+        - if there is a known malformed fragment then hls.js will **jump over the buffer hole** and seek to the beginning the next playable buffered range.
+        - hls.js will nudge currentTime until playback recovers (it will retry every seconds, and report a fatal error after config.maxNudgeRetry retries)
       500 ms is a "magic number" that has been set to overcome browsers not always stopping playback at the exact end of a buffered range.
       these holes in media buffered are often encountered on stream discontinuity or on quality level switch. holes could be "large" especially if fragments are not starting with a keyframe.
        if playhead is stuck for more than `config.highBufferWatchdogPeriod` second in a buffered area, hls.js will nudge currentTime until playback recovers (it will retry every seconds, and report a fatal error after config.maxNudgeRetry retries)
-    - convert non-fatal `FRAG_LOAD_ERROR`/`FRAG_LOAD_TIMEOUT`/`KEY_LOAD_ERROR`/`KEY_LOAD_TIMEOUT` error into fatal error when media position is not buffered and max load retry has been reached 
+    - convert non-fatal `FRAG_LOAD_ERROR`/`FRAG_LOAD_TIMEOUT`/`KEY_LOAD_ERROR`/`KEY_LOAD_TIMEOUT` error into fatal error when media position is not buffered and max load retry has been reached
     - stream controller actions are scheduled by a tick timer (invoked every 100ms) and actions are controlled by a state machine.
+  - [src/controller/subtitle-stream-controller.js][]
+    - subtitle stream controller is in charge of processing subtitle track fragments 
+	- subtitle stream controller takes the following actions:
+	  - once a SUBTITLE_TRACK_LOADED is received, the controller will begin processing the subtitle fragments
+	  - trigger KEY_LOADING event if fragment is encrypted
+	  - trigger FRAG_LOADING event
+	  - invoke decrypter.decrypt method on FRAG_LOADED if frag is encrypted
+	  - trigger FRAG_DECRYPTED event once encrypted fragment is decrypted
+  - [src/controller/subtitle-track-controller.js][]
+    - subtitle track controller handles subtitle track loading and switching
   - [src/controller/timeline-controller.js][]
     - Manages pulling CEA-708 caption data from the fragments, running them through the cea-608-parser, and handing them off to a display class, which defaults to src/utils/cues.js
   - [src/crypt/aes.js][]
@@ -140,6 +172,10 @@ design idea is pretty simple :
     - helper class, providing methods dealing buffer length retrieval (given a media position, it will return the upfront buffer length, next buffer position ...)
   - [src/helper/level-helper.js][]
     - helper class providing methods dealing with playlist sliding and fragment duration drift computation : after fragment parsing, start/end fragment timestamp will be used to adjust potential playlist drifts and live playlist sliding.
+  - [src/helper/fragment-tracker.js][]
+    - in charge of checking if a fragment was successfully loaded into the buffer
+    - tracks which parts of the buffer is not loaded correctly
+    - tracks which parts of the buffer was unloaded by the coded frame eviction algorithm
   - [src/loader/fragment-loader.js][]
     - in charge of loading fragments, use xhr-loader if not overrided by user config
   - [src/loader/key-loader.js][]
@@ -211,6 +247,7 @@ design idea is pretty simple :
 [src/helper/aac.js]: ../src/helper/aac.js
 [src/helper/buffer-helper.js]: ../src/helper/buffer-helper.js
 [src/helper/level-helper.js]: ../src/helper/level-helper.js
+[src/helper/fragment-tracker.js]: ../src/helper/fragment-tracker.js
 [src/loader/fragment-loader.js]: ../src/loader/fragment-loader.js
 [src/loader/key-loader.js]: ../src/loader/key-loader.js
 [src/loader/playlist-loader.js]: ../src/loader/playlist-loader.js
@@ -243,13 +280,10 @@ design idea is pretty simple :
   - ```FRAG_LOAD_ERROR``` is raised by [src/loader/fragment-loader.js][] upon xhr failure detected by [src/utils/xhr-loader.js][].
     - if auto level switch is enabled and loaded frag level is greater than 0, or if media.currentTime is buffered, this error is not fatal: in that case [src/controller/level-controller.js][] will trigger an emergency switch down to level 0.
     - if frag level is 0 or auto level switch is disabled and media.currentTime is not buffered, this error is marked as fatal and a call to ```hls.startLoad()``` could help recover it.
-  - ```FRAG_LOOP_LOADING_ERROR``` is raised by [src/controller/stream-controller.js][] upon detection of same fragment being requested in loop. this could happen with badly formatted fragments.
-    - if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal: in that case [src/controller/level-controller.js][] will trigger an emergency switch down to level 0.
-    - if frag level is 0 or auto level switch is disabled, this error is marked as fatal and a call to ```hls.startLoad()``` could help recover it.
   - ```FRAG_LOAD_TIMEOUT``` is raised by [src/loader/fragment-loader.js][] upon xhr timeout detected by [src/utils/xhr-loader.js][].
     - if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal: in that case [src/controller/level-controller.js][] will trigger an emergency switch down to level 0.
     - if frag level is 0 or auto level switch is disabled, this error is marked as fatal and a call to ```hls.startLoad()``` could help recover it.
-  - ```FRAG_DECRYPT_ERROR``` is raised by [src/demux/demuxer.js][] upon fragment decrypting error. this error is fatal. 
+  - ```FRAG_DECRYPT_ERROR``` is raised by [src/demux/demuxer.js][] upon fragment decrypting error. this error is fatal.
   - ```FRAG_PARSING_ERROR``` is raised by [src/demux/tsdemuxer.js][] upon TS parsing error. this error is not fatal.
   - ```REMUX_ALLOC_ERROR``` is raised by [src/remux/mp4-remuxer.js][] upon memory allocation error while remuxing. this error is not fatal if in auto-mode and loaded frag level is greater than 0. in that case a level switch down will occur.
   - ```KEY_LOAD_ERROR``` is raised by [src/loader/key-loader.js][] upon xhr failure detected by [src/utils/xhr-loader.js][].

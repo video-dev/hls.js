@@ -12,31 +12,22 @@ import StreamController from  './controller/stream-controller';
 import LevelController from  './controller/level-controller';
 import ID3TrackController from './controller/id3-track-controller';
 
+import {isSupported} from './helper/is-supported';
 import {logger, enableLogs} from './utils/logger';
 import EventEmitter from 'events';
 import {hlsDefaultConfig} from './config';
+import {FragmentTracker} from './helper/fragment-tracker';
 
-class Hls {
+// polyfill for IE11
+require('string.prototype.endswith');
 
+export default class Hls {
   static get version() {
-    // replaced with browserify-versionify transform
-    return '__VERSION__';
+    return __VERSION__;
   }
 
   static isSupported() {
-    const mediaSource = window.MediaSource = window.MediaSource || window.WebKitMediaSource;
-    const sourceBuffer = window.SourceBuffer = window.SourceBuffer || window.WebKitSourceBuffer;
-    const isTypeSupported = mediaSource &&
-                            typeof mediaSource.isTypeSupported === 'function' &&
-                            mediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
-
-    // if SourceBuffer is exposed ensure its API is valid
-    // safari and old version of Chrome doe not expose SourceBuffer globally so checking SourceBuffer.prototype is impossible
-    const sourceBufferValidAPI = !sourceBuffer ||
-                                 (sourceBuffer.prototype &&
-                                 typeof sourceBuffer.prototype.appendBuffer === 'function' &&
-                                 typeof sourceBuffer.prototype.remove === 'function');
-    return isTypeSupported && sourceBufferValidAPI;
+    return isSupported();
   }
 
   static get Events() {
@@ -110,17 +101,19 @@ class Hls {
 
     // network controllers
     const levelController = this.levelController = new LevelController(this);
-    const streamController = this.streamController = new StreamController(this);
+    // FragmentTracker must be defined before StreamController because the order of event handling is important
+    const fragmentTracker = new FragmentTracker(this);
+    const streamController = this.streamController = new StreamController(this, fragmentTracker);
     let networkControllers = [levelController, streamController];
 
     // optional audio stream controller
     let Controller = config.audioStreamController;
     if (Controller) {
-      networkControllers.push(new Controller(this));
+      networkControllers.push(new Controller(this, fragmentTracker));
     }
     this.networkControllers = networkControllers;
 
-    let coreComponents = [ playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController, id3TrackController ];
+    let coreComponents = [ playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController, id3TrackController, fragmentTracker ];
 
     // optional audio track and subtitle controller
     Controller = config.audioTrackController;
@@ -135,6 +128,13 @@ class Hls {
       let subtitleTrackController = new Controller(this);
       this.subtitleTrackController = subtitleTrackController;
       coreComponents.push(subtitleTrackController);
+    }
+
+    Controller = config.emeController;
+    if (Controller) {
+      let emeController = new Controller(this);
+      this.emeController = emeController;
+      coreComponents.push(emeController);
     }
 
     // optional subtitle controller
@@ -388,6 +388,16 @@ class Hls {
       subtitleTrackController.subtitleTrack = subtitleTrackId;
     }
   }
-}
 
-export default Hls;
+  get subtitleDisplay() {
+    const subtitleTrackController = this.subtitleTrackController;
+    return subtitleTrackController ? subtitleTrackController.subtitleDisplay : false;
+  }
+
+  set subtitleDisplay(value) {
+    const subtitleTrackController = this.subtitleTrackController;
+    if (subtitleTrackController) {
+      subtitleTrackController.subtitleDisplay = value;
+    }
+  }
+}

@@ -1,7 +1,7 @@
 /**
  * MP4 demuxer
  */
-//import {logger} from '../utils/logger';
+import {logger} from '../utils/logger';
 import Event from '../events';
 
 const UINT32_MAX = Math.pow(2, 32) - 1;
@@ -17,18 +17,34 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
     this.initPTS = initPTS;
   }
 
-  resetInitSegment(initSegment,audioCodec,videoCodec, duration) {
+  resetInitSegment(initSegment, audioCodec, videoCodec, duration) {
+
     //jshint unused:false
     if (initSegment && initSegment.byteLength) {
+
       const initData = this.initData = MP4Demuxer.parseInitSegment(initSegment);
-      var tracks = {};
-      if (initData.audio) {
-        tracks.audio = { container : 'audio/mp4', codec : audioCodec, initSegment : duration ? initSegment : null };
+
+      // default audio codec if nothing specified
+      // TODO : extract that from initsegment
+      if (audioCodec == null) {
+        audioCodec = 'mp4a.40.5';
       }
-      if (initData.video) {
-        tracks.video = { container : 'video/mp4', codec : videoCodec, initSegment : duration ? initSegment : null };
+      if (videoCodec == null) {
+        videoCodec = 'avc1.42e01e';
+
       }
-      this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT,{ tracks : tracks });
+      const tracks = {};
+      if(initData.audio && initData.video) {
+        tracks.audiovideo = { container : 'video/mp4', codec : audioCodec + ',' + videoCodec, initSegment : duration ? initSegment : null };
+      } else {
+        if (initData.audio) {
+          tracks.audio = { container : 'audio/mp4', codec : audioCodec, initSegment : duration ? initSegment : null };
+        }
+        if (initData.video) {
+          tracks.video = { container : 'video/mp4', codec : videoCodec, initSegment : duration ? initSegment : null };
+        }
+      }
+      this.observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, { tracks });
     } else {
       if (audioCodec) {
         this.audioCodec = audioCodec;
@@ -40,16 +56,24 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
   }
 
   static probe(data) {
-    if (data.length >= 8) {
-      const dataType = MP4Demuxer.bin2str(data.subarray(4,8));
-      return (['moof','ftyp','styp'].indexOf(dataType) >= 0);
-    }
-    return false;
+    // ensure we find a moof box in the first 16 kB
+    return MP4Demuxer.findBox( { data : data, start : 0, end : Math.min(data.length, 16384) } ,['moof']).length > 0;
   }
-
 
   static bin2str(buffer) {
     return String.fromCharCode.apply(null, buffer);
+  }
+
+  static readUint16(buffer, offset) {
+    if (buffer.data) {
+      offset += buffer.start;
+      buffer = buffer.data;
+    }
+
+    const val = buffer[offset] << 8 |
+                buffer[offset + 1];
+
+    return val < 0 ? 65536 + val : val;
   }
 
   static readUint32(buffer, offset) {
@@ -122,28 +146,116 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
     return results;
   }
 
+  static parseSegmentIndex(initSegment) {
 
+    const moov = MP4Demuxer.findBox(initSegment, ['moov'])[0];
+    const moovEndOffset = moov ? moov.end : null; // we need this in case we need to chop of garbage of the end of current data
 
-/**
- * Parses an MP4 initialization segment and extracts stream type and
- * timescale values for any declared tracks. Timescale values indicate the
- * number of clock ticks per second to assume for time-based values
- * elsewhere in the MP4.
- *
- * To determine the start time of an MP4, you need two pieces of
- * information: the timescale unit and the earliest base media decode
- * time. Multiple timescales can be specified within an MP4 but the
- * base media decode time is always expressed in the timescale from
- * the media header box for the track:
- * ```
- * moov > trak > mdia > mdhd.timescale
- * moov > trak > mdia > hdlr
- * ```
- * @param init {Uint8Array} the bytes of the init segment
- * @return {object} a hash of track type to timescale values or null if
- * the init segment is malformed.
- */
+    let index = 0;
+    let sidx = MP4Demuxer.findBox(initSegment, ['sidx']);
+    let references;
+
+    if (!sidx || !sidx[0]) {
+      return null;
+    }
+
+    references = [];
+    sidx = sidx[0];
+
+    const version = sidx.data[0];
+
+    // set initial offset, we skip the reference ID (not needed)
+    index = version === 0 ? 8 : 16;
+
+    const timescale = MP4Demuxer.readUint32(sidx, index);
+    index += 4;
+
+    // TODO: parse earliestPresentationTime and firstOffset
+    // usually zero in our case
+    let earliestPresentationTime = 0;
+    let firstOffset = 0;
+
+    if (version === 0) {
+      index += 8;
+    } else {
+      index += 16;
+    }
+    // skip reserved
+    index += 2;
+
+    let startByte = sidx.end + firstOffset;
+
+    const referencesCount = MP4Demuxer.readUint16(sidx, index);
+    index += 2;
+
+    for (let i = 0; i < referencesCount; i++) {
+      let referenceIndex = index;
+
+      const referenceInfo = MP4Demuxer.readUint32(sidx, referenceIndex);
+      referenceIndex += 4;
+
+      const referenceSize = referenceInfo & 0x7FFFFFFF;
+      const referenceType = (referenceInfo & 0x80000000) >>> 31;
+
+      if (referenceType === 1) {
+        console.warn('SIDX has hierarchical references (not supported)');
+        return;
+      }
+
+      const subsegmentDuration = MP4Demuxer.readUint32(sidx, referenceIndex);
+      referenceIndex += 4;
+
+      references.push({
+        referenceSize,
+        subsegmentDuration, // unscaled
+        info: {
+          duration: subsegmentDuration / timescale,
+          start: startByte,
+          end: startByte + referenceSize - 1
+        }
+      });
+
+      startByte += referenceSize;
+
+      // Skipping 1 bit for |startsWithSap|, 3 bits for |sapType|, and 28 bits
+      // for |sapDelta|.
+      referenceIndex += 4;
+
+      // skip to next ref
+      index = referenceIndex;
+    }
+
+    return {
+      earliestPresentationTime,
+      timescale,
+      version,
+      referencesCount,
+      references,
+      moovEndOffset
+    };
+  }
+
+  /**
+   * Parses an MP4 initialization segment and extracts stream type and
+   * timescale values for any declared tracks. Timescale values indicate the
+   * number of clock ticks per second to assume for time-based values
+   * elsewhere in the MP4.
+   *
+   * To determine the start time of an MP4, you need two pieces of
+   * information: the timescale unit and the earliest base media decode
+   * time. Multiple timescales can be specified within an MP4 but the
+   * base media decode time is always expressed in the timescale from
+   * the media header box for the track:
+   * ```
+   * moov > trak > mdia > mdhd.timescale
+   * moov > trak > mdia > hdlr
+   * ```
+   * @param init {Uint8Array} the bytes of the init segment
+   * @return {object} a hash of track type to timescale values or null if
+   * the init segment is malformed.
+   */
   static parseInitSegment(initSegment) {
+
     var result = [];
     var traks = MP4Demuxer.findBox(initSegment, ['moov', 'trak']);
 
@@ -163,8 +275,15 @@ const UINT32_MAX = Math.pow(2, 32) - 1;
           const hdlr = MP4Demuxer.findBox(trak, ['mdia', 'hdlr'])[0];
           if (hdlr) {
             const hdlrType = MP4Demuxer.bin2str(hdlr.data.subarray(hdlr.start+8, hdlr.start+12));
-            let type = { 'soun' : 'audio', 'vide' : 'video'}[hdlrType];
+            let type = {'soun' : 'audio', 'vide' : 'video'}[hdlrType];
             if (type) {
+                 // extract codec info. TODO : parse codec details to be able to build MIME type
+                  let codecBox = MP4Demuxer.findBox( trak, ['mdia','minf','stbl','stsd']);
+                  if (codecBox.length) {
+                    codecBox = codecBox[0];
+                    let codecType = MP4Demuxer.bin2str(codecBox.data.subarray(codecBox.start+12, codecBox.start+16));
+                    logger.log(`MP4Demuxer:${type}:${codecType} found`);
+                  }
               result[trackId] = { timescale : timescale , type : type};
               result[type] = { timescale : timescale , id : trackId};
             }
@@ -221,8 +340,6 @@ static getStartDTS(initData, fragment) {
         }
         return result;
       })[0];
-      baseTime = baseTime || Infinity;
-
       // convert base time to seconds
       return baseTime / scale;
     });
@@ -232,9 +349,6 @@ static getStartDTS(initData, fragment) {
   result = Math.min.apply(null, baseTimes);
   return isFinite(result) ? result : 0;
 }
-
-
-
 
 static offsetStartDTS(initData,fragment,timeOffset) {
   MP4Demuxer.findBox(fragment, ['moof', 'traf']).map(function(traf) {
@@ -254,6 +368,7 @@ static offsetStartDTS(initData,fragment,timeOffset) {
           baseMediaDecodeTime *= Math.pow(2, 32);
           baseMediaDecodeTime += MP4Demuxer.readUint32(tfdt, 8);
           baseMediaDecodeTime -= timeOffset*timescale;
+          baseMediaDecodeTime = Math.max(baseMediaDecodeTime,0);
           const upper = Math.floor(baseMediaDecodeTime / (UINT32_MAX + 1));
           const lower = Math.floor(baseMediaDecodeTime % (UINT32_MAX + 1));
           MP4Demuxer.writeUint32(tfdt, 4, upper);
@@ -268,7 +383,7 @@ static offsetStartDTS(initData,fragment,timeOffset) {
   append(data, timeOffset,contiguous,accurateTimeOffset) {
     let initData = this.initData;
     if(!initData) {
-      this.resetInitSegment(data,this.audioCodec,this.videoCodec);
+      this.resetInitSegment(data, this.audioCodec, this.videoCodec, false);
       initData = this.initData;
     }
     let startDTS, initPTS = this.initPTS;
@@ -282,8 +397,7 @@ static offsetStartDTS(initData,fragment,timeOffset) {
     this.remuxer.remux(initData.audio, initData.video, null, null, startDTS, contiguous,accurateTimeOffset,data);
   }
 
-  destroy() {
-  }
+  destroy() {}
 
 }
 
