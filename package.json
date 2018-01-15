@@ -1,16 +1,16 @@
 {
-  "name": "hls.js",
+  "name": "vdb-player-hls-js",
   "version": "0.8.9",
   "license": "Apache-2.0",
-  "description": "JavaScript HLS client using MediaSourceExtension",
-  "homepage": "https://github.com/video-dev/hls.js",
+  "description": "MSE-based HLS client, forked from https://github.com/video-dev/hls.js",
+  "homepage": "https://github.com/vidible/vdb-player-hls-js",
   "authors": "Guillaume du Pontavice <g.du.pontavice@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/video-dev/hls.js"
+    "url": "https://github.com/vidible/vdb-player-hls-js"
   },
   "publishConfig": {
-    "registry": "http://registry.npmjs.org"
+    "registry": "https://artifactory-prod.vidible.aolcloud.net/artifactory/api/npm/libs-npm-local"
   },
   "bugs": {
     "url": "https://github.com/video-dev/hls.js/issues"
