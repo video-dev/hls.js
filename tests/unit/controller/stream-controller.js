@@ -68,19 +68,19 @@ describe('StreamController tests', function() {
 		var fragLen = fragments.length;
 		var levelDetails ={
 			startSN : fragments[0].sn,
-			endSN : fragments[fragments.length - 1].sn
+			endSN : fragments[fragments.length - 1].sn,
+			programDateTime : undefined //If this field is undefined SN search is used by default
 		};
 		var bufferEnd = fragPrevious.start + fragPrevious.duration;
 		var end = fragments[fragments.length - 1].start + fragments[fragments.length - 1].duration;
 
-	  it('Default behaviour for choosing fragment after level loaded which chooses a wrong segment', function () {
-		var config = { 
-			usePDTSearch : false	//Default behaviour	
-		}; 
+	  it('SN search choosing fragment after level loaded', function () {
+		var config = {}; 
 		var hls = {
 			config : config,
 			on : function(){}
 		};
+
 		var streamController = new StreamController(hls);
 		var foundFragment = streamController._findFragment(0, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails);
 		
@@ -90,13 +90,13 @@ describe('StreamController tests', function() {
 	  });
 	  
 	  it('PDT search choosing fragment after level loaded', function () {
-		var config = { 
-			usePDTSearch : true	
-		};  
+		var config = {}; 
 		var hls = {
 			config : config,
 			on : function(){}
 		};
+		levelDetails.programDateTime = true;// If programDateTime contains a date then PDT is used (boolean used to mock) 
+				
 		var streamController = new StreamController(hls);
 		var foundFragment = streamController._findFragment(0, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails);
 		
