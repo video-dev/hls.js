@@ -73,6 +73,7 @@ design idea is pretty simple :
     **Feature: Media Zigzagging**
     
     If there is a backup stream, Media Zigzagging will go through all available levels in `primary` and `backup` streams. Behavior has a dual constraint, where fragment retry limits and level limits are accounted in the same time.
+    When the lowest level has been reached, zigzagging will be adjusted to start from the highest level until retry limits are not reached.
     
     ![Media Zigzagging Explanation](./media-zigzagging.png) 
     
@@ -103,7 +104,9 @@ design idea is pretty simple :
         - trigger BUFFER_APPENDING on FRAG_PARSING_DATA
         - once FRAG_PARSED is received an all segments have been appended (BUFFER_APPENDED) then buffer controller will recheck whether it needs to buffer more data.
       - **monitor current playback quality level** (buffer controller maintains a map between media position and quality level)
-      - **monitor playback progress** : if playhead is not moving for more than `config.lowBufferWatchdogPeriod` although it should (video metadata is known and video is not ended, nor paused, nor in seeking state) and if we have less than 500ms buffered upfront, and if there is a new buffer range available upfront, less than `config.maxSeekHole` from currentTime, then hls.js will **jump over the buffer hole** and seek to the beginning of this new buffered range, to "unstuck" the playback.
+      - **monitor playback progress** : if playhead is not moving for more than `config.lowBufferWatchdogPeriod` although it should (video metadata is known and video is not ended, nor paused, nor in seeking state) and if we have less than 500ms buffered upfront, one of two things will happen.
+        - if there is a known malformed fragment then hls.js will **jump over the buffer hole** and seek to the beginning the next playable buffered range.
+        - hls.js will nudge currentTime until playback recovers (it will retry every seconds, and report a fatal error after config.maxNudgeRetry retries)
       500 ms is a "magic number" that has been set to overcome browsers not always stopping playback at the exact end of a buffered range.
       these holes in media buffered are often encountered on stream discontinuity or on quality level switch. holes could be "large" especially if fragments are not starting with a keyframe.
        if playhead is stuck for more than `config.highBufferWatchdogPeriod` second in a buffered area, hls.js will nudge currentTime until playback recovers (it will retry every seconds, and report a fatal error after config.maxNudgeRetry retries)
@@ -169,6 +172,10 @@ design idea is pretty simple :
     - helper class, providing methods dealing buffer length retrieval (given a media position, it will return the upfront buffer length, next buffer position ...)
   - [src/helper/level-helper.js][]
     - helper class providing methods dealing with playlist sliding and fragment duration drift computation : after fragment parsing, start/end fragment timestamp will be used to adjust potential playlist drifts and live playlist sliding.
+  - [src/helper/fragment-tracker.js][]
+    - in charge of checking if a fragment was successfully loaded into the buffer
+    - tracks which parts of the buffer is not loaded correctly
+    - tracks which parts of the buffer was unloaded by the coded frame eviction algorithm
   - [src/loader/fragment-loader.js][]
     - in charge of loading fragments, use xhr-loader if not overrided by user config
   - [src/loader/key-loader.js][]
@@ -240,6 +247,7 @@ design idea is pretty simple :
 [src/helper/aac.js]: ../src/helper/aac.js
 [src/helper/buffer-helper.js]: ../src/helper/buffer-helper.js
 [src/helper/level-helper.js]: ../src/helper/level-helper.js
+[src/helper/fragment-tracker.js]: ../src/helper/fragment-tracker.js
 [src/loader/fragment-loader.js]: ../src/loader/fragment-loader.js
 [src/loader/key-loader.js]: ../src/loader/key-loader.js
 [src/loader/playlist-loader.js]: ../src/loader/playlist-loader.js
@@ -272,9 +280,6 @@ design idea is pretty simple :
   - ```FRAG_LOAD_ERROR``` is raised by [src/loader/fragment-loader.js][] upon xhr failure detected by [src/utils/xhr-loader.js][].
     - if auto level switch is enabled and loaded frag level is greater than 0, or if media.currentTime is buffered, this error is not fatal: in that case [src/controller/level-controller.js][] will trigger an emergency switch down to level 0.
     - if frag level is 0 or auto level switch is disabled and media.currentTime is not buffered, this error is marked as fatal and a call to ```hls.startLoad()``` could help recover it.
-  - ```FRAG_LOOP_LOADING_ERROR``` is raised by [src/controller/stream-controller.js][] upon detection of same fragment being requested in loop. this could happen with badly formatted fragments.
-    - if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal: in that case [src/controller/level-controller.js][] will trigger an emergency switch down to level 0.
-    - if frag level is 0 or auto level switch is disabled, this error is marked as fatal and a call to ```hls.startLoad()``` could help recover it.
   - ```FRAG_LOAD_TIMEOUT``` is raised by [src/loader/fragment-loader.js][] upon xhr timeout detected by [src/utils/xhr-loader.js][].
     - if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal: in that case [src/controller/level-controller.js][] will trigger an emergency switch down to level 0.
     - if frag level is 0 or auto level switch is disabled, this error is marked as fatal and a call to ```hls.startLoad()``` could help recover it.

@@ -220,8 +220,12 @@ class BufferController extends EventHandler {
     let parent = this.parent;
     // count nb of pending segments waiting for appending on this sourcebuffer
     let pending = this.segments.reduce( (counter, segment) => (segment.parent === parent) ? counter + 1 : counter , 0);
-    this.hls.trigger(Event.BUFFER_APPENDED, { parent : parent, pending : pending });
 
+    // this.sourceBuffer is better to use than media.buffered as it is closer to the PTS data from the fragments
+    const bufferedEntries = Object.entries(this.sourceBuffer).map(([k,v]) => [k, v.buffered]);
+    const timeRanges = new Map(bufferedEntries);
+
+    this.hls.trigger(Event.BUFFER_APPENDED, { parent, pending, timeRanges });
     // don't append in flushing mode
     if (!this._needsFlush) {
       this.doAppending();
