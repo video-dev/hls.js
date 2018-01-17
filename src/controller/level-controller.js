@@ -22,7 +22,7 @@ export default class LevelController extends EventHandler {
     this.timer = null;
   }
 
-  destroy() {
+  onHandlerDestroying() {
     this.cleanTimer();
     this.manualLevelIndex = -1;
   }
@@ -255,7 +255,6 @@ export default class LevelController extends EventHandler {
     switch (data.details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
-      case ErrorDetails.FRAG_LOOP_LOADING_ERROR:
       case ErrorDetails.KEY_LOAD_ERROR:
       case ErrorDetails.KEY_LOAD_TIMEOUT:
         levelIndex = data.frag.level;
@@ -291,7 +290,7 @@ export default class LevelController extends EventHandler {
     let {config} = this.hls;
     let {details: errorDetails} = errorEvent;
     let level = this._levels[levelIndex];
-    let redundantLevels, delay;
+    let redundantLevels, delay, nextLevel;
 
     level.loadError++;
     level.fragmentError = fragmentError;
@@ -327,10 +326,12 @@ export default class LevelController extends EventHandler {
         level.urlId = (level.urlId + 1) % redundantLevels;
         level.details = undefined;
       } else {
-        // Switch-down if more renditions are available
-        if (this.manualLevelIndex === -1 && levelIndex !== 0) {
-          logger.warn(`level controller, ${errorDetails}: switch-down to ${levelIndex - 1}`);
-          this.hls.nextAutoLevel = this.currentLevelIndex = levelIndex - 1;
+        // Search for available level
+        if (this.manualLevelIndex === -1) {
+          // When lowest level has been reached, let's start hunt from the top
+          nextLevel = (levelIndex === 0) ? this._levels.length - 1 : levelIndex - 1;
+          logger.warn(`level controller, ${errorDetails}: switch to ${nextLevel}`);
+          this.hls.nextAutoLevel = this.currentLevelIndex = nextLevel;
         } else if (fragmentError === true) {
           // Allow fragment retry as long as configuration allows.
           // reset this._level so that another call to set level() will trigger again a frag load

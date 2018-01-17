@@ -79,6 +79,7 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
       capabilities.build = 'HLSJS-'+process.env.TRAVIS_BUILD_NUMBER;
       capabilities.username = process.env.SAUCE_USERNAME;
       capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
+      capabilities.avoidProxy = true;
       this.browser = new webdriver.Builder().usingServer('http://'+process.env.SAUCE_USERNAME+':'+process.env.SAUCE_ACCESS_KEY+'@ondemand.saucelabs.com:80/wd/hub');
     }
     else {
@@ -208,6 +209,30 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
     }
   }
 
+  const testIsPlayingVOD = function(url) {
+    return function() {
+      return this.browser.executeAsyncScript(function(url) {
+        var callback = arguments[arguments.length - 1];
+        startStream(url, callback);
+        video.onloadeddata = function() {
+          let expectedPlaying = !(video.paused || // not playing when video is paused
+            video.ended  || // not playing when video is ended
+            video.buffered.length === 0); // not playing if nothing buffered
+          let currentTime = video.currentTime;
+          if(expectedPlaying) {
+            window.setTimeout(function() {
+              callback({ playing : currentTime !== video.currentTime});
+            }, 5000);
+          } else {
+            callback({ playing : false });
+          }
+        };
+      }, url).then(function(result) {
+        assert.strictEqual(result.playing, true);
+      });
+    }
+  }
+
   for (var name in streams) {
     var stream = streams[name];
     var url = stream.url;
@@ -220,6 +245,7 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
       if (stream.live) {
         it('should seek near the end and receive video seeked event for ' + stream.description, testSeekOnLive(url));
       } else {
+        it('should play ' + stream.description, testIsPlayingVOD(url));
         it('should seek 5s from end and receive video ended event for ' + stream.description, testSeekOnVOD(url));
         //it('should seek on end and receive video ended event for ' + stream.description, testSeekEndVOD(url));
       }

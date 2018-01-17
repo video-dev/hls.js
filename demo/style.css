@@ -1,0 +1,52 @@
+header {
+  text-align: center;
+}
+
+#controls {
+    width: 70%;
+    min-width: 615px;
+    padding: 3px;
+    margin: 0px auto 20px auto;
+    border: 1px solid #606060;
+    overflow: hidden;
+}
+
+.innerControls {
+    display:block;
+    float: left;
+    width: 99%;
+    margin: 3px;
+    padding-left: 3px;
+    font-size: 8pt
+}
+
+.videoCentered {
+    width: 720px;
+    margin-left: auto;
+    margin-right: auto;
+    display: block
+}
+
+.center {
+    width: 70%;
+    min-width: 615px;
+    overflow: hidden;
+    margin-left: auto;
+    margin-right: auto;
+    display: block
+}
+
+#customButtons input {
+  width: 25%;
+  display : inline-block;
+  text-align: center;
+  font-size: 8pt;
+}
+
+#toggleButtons button {
+  width: 19%;
+  display : inline-block;
+  text-align: center;
+  font-size: 8pt;
+  background-color: #A0A0A0
+}
