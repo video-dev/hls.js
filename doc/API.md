@@ -605,14 +605,6 @@ Prefetch start fragment although media not attached.
 
 Start prefetching start fragment although media not attached yet.
 
-### `usePDTSearch`
-
-(default: `undefined`)
-
-Enabled by default if EXT-X-PROGRAM-DATE-TIME tag found. All switches will use then date time config.
-If set to false is because intentionally is intended to use the former CC switch mechanism.
-Required if the m3u8 contains EXT-X-DISCONTINUITY-SEQUENCE. HLS.js uses media sequence in order to switch among playslists but not all hls playlists support this method. PDT search is another alternative to ensure accurate switches between levels which may produce better results than the media sequence approach.
-
 ### `appendErrorMaxRetry`
 
 (default: `3`)
