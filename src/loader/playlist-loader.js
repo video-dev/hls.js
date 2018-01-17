@@ -339,7 +339,6 @@ class PlaylistLoader extends EventHandler {
         totalduration = 0,
         level = {type: null, version: null, url: baseurl, fragments: [], live: true, startSN: 0},
         levelkey = new LevelKey(),
-		config = this.hls.config,
         cc = 0,
         prevFrag = null,
         frag = new Fragment(),
@@ -361,14 +360,16 @@ class PlaylistLoader extends EventHandler {
           const sn = currentSN++;
           frag.type = type;
 		  
-		  if(prevFrag){
-			  if(frag.rawProgramDateTime){//PDT discontinuity found
-				  frag.pdt = Date.parse(frag.rawProgramDateTime);
-			  } else {//Contiguous fragment
-				  frag.pdt = prevFrag.pdt + (prevFrag.duration * 1000);
+		  if(level.programDateTime){
+			  if(prevFrag){
+				  if(frag.rawProgramDateTime){//PDT discontinuity found
+					  frag.pdt = Date.parse(frag.rawProgramDateTime);
+				  } else {//Contiguous fragment
+					  frag.pdt = prevFrag.pdt + (prevFrag.duration * 1000);
+				  }
+			  } else {//First fragment
+				  frag.pdt = Date.parse(level.programDateTime);
 			  }
-		  } else {//First fragment
-			  frag.pdt = level.programDateTime ? Date.parse(level.programDateTime) : 0;
 		  }
 		  frag.endPdt = frag.pdt + (frag.duration * 1000);
           frag.start = totalduration;
@@ -400,10 +401,8 @@ class PlaylistLoader extends EventHandler {
         frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
         if (level.programDateTime === undefined) {
           level.programDateTime = new Date(new Date(Date.parse(result[5])) - 1000 * totalduration);
-		  if(config.usePDTSearch === undefined){//If this variable has been set to false is intentionally denying PDTSearch
-			  config.usePDTSearch = true;
-		  }
         }
+		logger.log('Program Date Time found, PDT search will be used instead of SN search');
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
         for (i = 1; i < result.length; i++) {

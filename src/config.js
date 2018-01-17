@@ -56,8 +56,7 @@ export var hlsDefaultConfig = {
   fragLoadingRetryDelay: 1000,            // used by fragment-loader
   fragLoadingMaxRetryTimeout: 64000,      // used by fragment-loader
   fragLoadingLoopThreshold: 3,            // used by stream-controller
-  startFragPrefetch: false,               // used by stream-controller
-  usePDTSearch: undefined,                // used by stream-controller  
+  startFragPrefetch: false,               // used by stream-controller 
   fpsDroppedMonitoringPeriod: 5000,       // used by fps-controller
   fpsDroppedMonitoringThreshold: 0.2,     // used by fps-controller
   appendErrorMaxRetry: 3,                 // used by buffer-controller
