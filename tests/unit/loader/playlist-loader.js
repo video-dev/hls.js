@@ -673,7 +673,7 @@ Rollover38803/20160525T064049-01-69844068.ts
 Rollover38803/20160525T064049-01-69844069.ts
     `;
 	var hls = {config : { }, on : function() { }};
-    var result = new PlaylistLoader(hls).parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8',0);
+    var result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8',0);
     assert.ok(result.programDateTime);
   });   
 
@@ -690,7 +690,7 @@ Rollover38803/20160525T064049-01-69844068.ts
 Rollover38803/20160525T064049-01-69844069.ts
     `;
 	var hls = {config : { }, on : function() { }};
-    var result = new PlaylistLoader(hls).parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8',0);
+    var result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8',0);
     assert.strictEqual(result.programDateTime, undefined);
   });    
   
