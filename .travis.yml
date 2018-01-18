@@ -1,5 +1,8 @@
 language: node_js
 node_js: node
+# Work-around for https://github.com/travis-ci/travis-ci/issues/8836#issuecomment-356362524.
+# (Restore `sudo: false` once that is resolved.)
+sudo: required
 # don't connect to sauce labs unless running functional tests
 # before_install: if [ "${TRAVIS_MODE}" != "funcTests" ]; then unset SAUCE_USERNAME && unset SAUCE_ACCESS_KEY; fi
 script: ./scripts/travis.sh
