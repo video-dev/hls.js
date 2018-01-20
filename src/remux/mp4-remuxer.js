@@ -77,13 +77,12 @@ class MP4Remuxer {
           this.remuxVideo(videoTrack,videoTimeOffset,contiguous,audioTrackLength, accurateTimeOffset);
         }
       } else {
-        let videoData;
         //logger.log('nb AVC samples:' + videoTrack.samples.length);
         if (nbVideoSamples) {
-          videoData = this.remuxVideo(videoTrack,videoTimeOffset,contiguous, accurateTimeOffset);
-        }
-        if (videoData && audioTrack.codec) {
-          this.remuxEmptyAudio(audioTrack, audioTimeOffset, contiguous, videoData);
+          let videoData = this.remuxVideo(videoTrack,videoTimeOffset,contiguous, 0, accurateTimeOffset);
+          if (videoData && audioTrack.codec) {
+            this.remuxEmptyAudio(audioTrack, audioTimeOffset, contiguous, videoData);
+          }
         }
       }
     }
@@ -206,6 +205,9 @@ class MP4Remuxer {
     let nextAvcDts = this.nextAvcDts;
 
     const isSafari = this.isSafari;
+	
+	if(inputSamples.length == 0)
+		return null;
 
     // Safari does not like overlapping DTS on consecutive fragments. let's use nextAvcDts to overcome this if fragments are consecutive
     if (isSafari) {
