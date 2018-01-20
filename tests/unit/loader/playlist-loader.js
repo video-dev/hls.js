@@ -3,6 +3,8 @@ const bufferIsEqual = require('arraybuffer-equal');
 
 import PlaylistLoader from '../../../src/loader/playlist-loader';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
+import Event from '../../../src/events';
+import EventEmitter from 'events';
 
 describe('PlaylistLoader', () => {
   it('parses empty manifest returns empty array', () => {
@@ -657,4 +659,45 @@ Rollover38803/20160525T064049-01-69844069.ts
     assert.strictEqual(result.initSegment.sn, 'initSegment');
   });
 
+  it('uses the returned string value from the preParseLevel function', () => {
+    let playlist = `#EXTM3U
+  #EXT-X-TARGETDURATION:6
+  #EXT-X-VERSION:7
+  #EXT-X-MEDIA-SEQUENCE:1
+  #EXT-X-PLAYLIST-TYPE:VOD
+  #EXTINF:6.00600,
+  01.ts
+  #EXTINF:6.00600,
+  02.ts
+  #EXTINF:6.00600,
+  03.ts
+  #EXT-X-ENDLIST`;
+
+    // hls is basically an event emitter with an extra function called trigger
+    var hls = new EventEmitter();
+    hls.trigger = function trigger (event, ...data) {
+      hls.emit(event, event, ...data);
+    };
+
+    var playlistLoader = new PlaylistLoader(hls);  
+  
+    playlistLoader.hls.on(Event.LEVEL_PRE_PARSE, (eventType, payload) => {
+      // modify the playlist here by removing 2 lines
+      payload.data = payload.data.split('\n').filter((line, idx) => {
+        if (idx === 5) return false;
+        if (idx === 6) return false;
+        return true;
+      }).join('\n');
+    });
+
+	var url = 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core';
+	var options = {data:playlist, url:url, levelId:0, levelType:'level'};
+    hls.trigger(Event.LEVEL_PRE_PARSE, options);	
+	
+    const levelDetails = M3U8Parser.parseLevelPlaylist(options.data, options.url, options.levelId);
+
+    assert.deepEqual(levelDetails.fragments.length, 2, 'should only have two fragments');
+    assert.deepEqual(levelDetails.fragments[0].relurl, '02.ts', 'first frag should be 02.ts');
+    assert.deepEqual(levelDetails.fragments[1].relurl, '03.ts', 'second frag should be 03.ts');
+  });
 });

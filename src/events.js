@@ -29,6 +29,8 @@ export default {
   MANIFEST_LOADED: 'hlsManifestLoaded',
   // fired after manifest has been parsed - data: { levels : [available quality levels], firstLevel : index of first quality level appearing in Manifest}
   MANIFEST_PARSED: 'hlsManifestParsed',
+  // fired before a level is parse. allows you to modify playlist string - data : {data : playlist string, id : the id of the level, type: the type of playlist being parsed, url : the url of the playlist,  }
+  LEVEL_PRE_PARSE : 'hlsLevelPreParse',  
   // fired when a level switch is requested - data: { level : id of new level } // deprecated in favor LEVEL_SWITCHING
   LEVEL_SWITCH: 'hlsLevelSwitch',
   // fired when a level switch is requested - data: { level : id of new level }
