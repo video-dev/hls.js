@@ -54,7 +54,7 @@
     "chromedriver": "^2.28.0",
     "cross-env": "^5.0.2",
     "deep-strict-equal": "^0.2.0",
-    "http-server": "^0.10.0",
+    "http-server": "^0.11.0",
     "istanbul-instrumenter-loader": "^2.0.0",
     "jshint": "^2.9.4",
     "karma": "^2.0.0",
