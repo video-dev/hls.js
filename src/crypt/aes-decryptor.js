@@ -182,7 +182,7 @@ class AESDecryptor {
     return (word << 24) | ((word & 0xff00) << 8) | ((word & 0xff0000) >> 8) | (word >>> 24);
   }
 
-  decrypt(inputArrayBuffer, offset, aesIV) {
+  decrypt(inputArrayBuffer, offset, aesIV, removePKCS7Padding) {
     let nRounds = this.keySize + 6;
     let invKeySchedule = this.invKeySchedule;
     let invSBOX = this.invSBox;
@@ -259,7 +259,7 @@ class AESDecryptor {
       offset = offset + 4;
     }
 
-    return removePadding(outputInt32.buffer);
+    return removePKCS7Padding ? removePadding(outputInt32.buffer) : outputInt32.buffer;
   }
 
   destroy() {
