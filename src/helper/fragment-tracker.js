@@ -19,7 +19,7 @@ export class FragmentTracker extends EventHandler {
 
     this.bufferPadding = 0.2;
 
-    this.fragments = new Map();
+    this.fragments = {};
     this.timeRanges = null;
 
     this.config = hls.config;
@@ -43,18 +43,21 @@ export class FragmentTracker extends EventHandler {
   detectEvictedFragments(elementaryStream, timeRange) {
     let fragmentTimes, time;
     // Check if any flagged fragments have been unloaded
-    for (let fragmentEntity of this.fragments.values()) {
-      if(fragmentEntity.buffered === true) {
-        const esData = fragmentEntity.range[elementaryStream];
-        if (esData) {
-          fragmentTimes = esData.time;
-          for (let i = 0; i < fragmentTimes.length; i++) {
-            time = fragmentTimes[i];
+    for (let key in this.fragments) {
+      if (this.fragments.hasOwnProperty(key)) {
+        let fragmentEntity = this.fragments[key];
+        if(fragmentEntity.buffered === true) {
+          const esData = fragmentEntity.range[elementaryStream];
+          if (esData) {
+            fragmentTimes = esData.time;
+            for (let i = 0; i < fragmentTimes.length; i++) {
+              time = fragmentTimes[i];
 
-            if(this.isTimeBuffered(time.startPTS, time.endPTS, timeRange) === false) {
-              // Unregister partial fragment as it needs to load again to be reused
-              this.removeFragment(fragmentEntity.body);
-              break;
+              if(this.isTimeBuffered(time.startPTS, time.endPTS, timeRange) === false) {
+                // Unregister partial fragment as it needs to load again to be reused
+                this.removeFragment(fragmentEntity.body);
+                break;
+              }
             }
           }
         }
@@ -69,13 +72,17 @@ export class FragmentTracker extends EventHandler {
    */
   detectPartialFragments(fragment) {
     let fragKey = this.getFragmentKey(fragment);
-    let fragmentEntity = this.fragments.get(fragKey);
+    let fragmentEntity = this.fragments[fragKey];
     fragmentEntity.buffered = true;
-    for (let [elementaryStream, timeRange] of this.timeRanges) {
-      if(fragment.hasElementaryStream(elementaryStream) === true) {
-        // Check for malformed fragments
-        // Gaps need to be calculated for each elementaryStream
-        fragmentEntity.range[elementaryStream] = this.getBufferedTimes(fragment.startPTS, fragment.endPTS, timeRange);
+
+    for (let elementaryStream in this.timeRanges) {
+      if (this.timeRanges.hasOwnProperty(elementaryStream)) {
+        if(fragment.hasElementaryStream(elementaryStream) === true) {
+          let timeRange = this.timeRanges[elementaryStream];
+          // Check for malformed fragments
+          // Gaps need to be calculated for each elementaryStream
+          fragmentEntity.range[elementaryStream] = this.getBufferedTimes(fragment.startPTS, fragment.endPTS, timeRange);
+        }
       }
     }
   }
@@ -128,16 +135,19 @@ export class FragmentTracker extends EventHandler {
     let timePadding, startTime, endTime;
     let bestFragment = null;
     let bestOverlap = 0;
-    for (let fragmentEntity of this.fragments.values()) {
-      if(this.isPartial(fragmentEntity)) {
-        startTime = fragmentEntity.body.startPTS - this.bufferPadding;
-        endTime = fragmentEntity.body.endPTS + this.bufferPadding;
-        if(time >= startTime && time <= endTime) {
-          // Use the fragment that has the most padding from start and end time
-          timePadding = Math.min(time - startTime, endTime - time);
-          if(bestOverlap <= timePadding) {
-            bestFragment = fragmentEntity.body;
-            bestOverlap = timePadding;
+    for (let key in this.fragments) {
+      if (this.fragments.hasOwnProperty(key)) {
+        let fragmentEntity = this.fragments[key];
+        if(this.isPartial(fragmentEntity)) {
+          startTime = fragmentEntity.body.startPTS - this.bufferPadding;
+          endTime = fragmentEntity.body.endPTS + this.bufferPadding;
+          if(time >= startTime && time <= endTime) {
+            // Use the fragment that has the most padding from start and end time
+            timePadding = Math.min(time - startTime, endTime - time);
+            if(bestOverlap <= timePadding) {
+              bestFragment = fragmentEntity.body;
+              bestOverlap = timePadding;
+            }
           }
         }
       }
@@ -151,7 +161,7 @@ export class FragmentTracker extends EventHandler {
    */
   getState(fragment) {
     let fragKey = this.getFragmentKey(fragment);
-    let fragmentEntity = this.fragments.get(fragKey);
+    let fragmentEntity = this.fragments[fragKey];
     let state = FragmentState.NOT_LOADED;
 
     if(fragmentEntity !== undefined) {
@@ -201,7 +211,7 @@ export class FragmentTracker extends EventHandler {
       range: {},
       buffered: false,
     };
-    this.fragments.set(fragKey, fragmentEntity);
+    this.fragments[fragKey] = fragmentEntity;
   }
 
   /**
@@ -210,8 +220,11 @@ export class FragmentTracker extends EventHandler {
   onBufferAppended(e) {
     // Store the latest timeRanges loaded in the buffer
     this.timeRanges = e.timeRanges;
-    for (let [elementaryStream, timeRange] of this.timeRanges) {
-      this.detectEvictedFragments(elementaryStream, timeRange);
+    for (let elementaryStream in this.timeRanges) {
+      if (this.timeRanges.hasOwnProperty(elementaryStream)) {
+        let timeRange = this.timeRanges[elementaryStream];
+        this.detectEvictedFragments(elementaryStream, timeRange);
+      }
     }
   }
 
@@ -228,6 +241,6 @@ export class FragmentTracker extends EventHandler {
    */
   removeFragment(fragment) {
     let fragKey = this.getFragmentKey(fragment);
-    this.fragments.delete(fragKey);
+    delete this.fragments[fragKey];
   }
 }
