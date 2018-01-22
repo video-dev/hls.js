@@ -45,14 +45,17 @@ export class FragmentTracker extends EventHandler {
     // Check if any flagged fragments have been unloaded
     for (let fragmentEntity of this.fragments.values()) {
       if(fragmentEntity.buffered === true) {
-        fragmentTimes = fragmentEntity.range[elementaryStream].time;
-        for (let i = 0; i < fragmentTimes.length; i++) {
-          time = fragmentTimes[i];
+        const esData = fragmentEntity.range[elementaryStream];
+        if (esData) {
+          fragmentTimes = esData.time;
+          for (let i = 0; i < fragmentTimes.length; i++) {
+            time = fragmentTimes[i];
 
-          if(this.isTimeBuffered(time.startPTS, time.endPTS, timeRange) === false) {
-            // Unregister partial fragment as it needs to load again to be reused
-            this.removeFragment(fragmentEntity.body);
-            break;
+            if(this.isTimeBuffered(time.startPTS, time.endPTS, timeRange) === false) {
+              // Unregister partial fragment as it needs to load again to be reused
+              this.removeFragment(fragmentEntity.body);
+              break;
+            }
           }
         }
       }
