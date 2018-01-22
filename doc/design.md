@@ -124,10 +124,10 @@ design idea is pretty simple :
     - subtitle track controller handles subtitle track loading and switching
   - [src/controller/timeline-controller.js][]
     - Manages pulling CEA-708 caption data from the fragments, running them through the cea-608-parser, and handing them off to a display class, which defaults to src/utils/cues.js
-  - [src/crypt/aes.js][]
+  - [src/crypt/aes-crypto.js][]
     - AES 128 software decryption routine, low level class handling decryption of 128 bit of data.
-  - [src/crypt/aes128-decrypter.js][]  
-    - AES 128-CBC software decryption routine, high-level class handling cipher-block chaining (CBC), and that should also handle padding (TODO).
+  - [src/crypt/aes-decrypter.js][]  
+    - AES 128-CBC software decryption routine, high-level class handling cipher-block chaining (CBC), handles PKCS7 padding when the option is enabled.
   - [src/crypt/decrypter.js][]
     - decrypter interface, use either WebCrypto API if available and enabled, or fallback on AES 128 software decryption routine.
   - [src/demux/aacdemuxer.js][]
