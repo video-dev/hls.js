@@ -44,7 +44,7 @@ export class FragmentTracker extends EventHandler {
     let fragmentTimes, time;
     // Check if any flagged fragments have been unloaded
     for (let key in this.fragments) {
-      if (this.fragments.hasOwnProperty(key)) {
+      if (this.fragments.hasOwnProperty(key) === true) {
         let fragmentEntity = this.fragments[key];
         if(fragmentEntity.buffered === true) {
           const esData = fragmentEntity.range[elementaryStream];
@@ -76,7 +76,7 @@ export class FragmentTracker extends EventHandler {
     fragmentEntity.buffered = true;
 
     for (let elementaryStream in this.timeRanges) {
-      if (this.timeRanges.hasOwnProperty(elementaryStream)) {
+      if (this.timeRanges.hasOwnProperty(elementaryStream) === true) {
         if(fragment.hasElementaryStream(elementaryStream) === true) {
           let timeRange = this.timeRanges[elementaryStream];
           // Check for malformed fragments
@@ -136,7 +136,7 @@ export class FragmentTracker extends EventHandler {
     let bestFragment = null;
     let bestOverlap = 0;
     for (let key in this.fragments) {
-      if (this.fragments.hasOwnProperty(key)) {
+      if (this.fragments.hasOwnProperty(key) === true) {
         let fragmentEntity = this.fragments[key];
         if(this.isPartial(fragmentEntity)) {
           startTime = fragmentEntity.body.startPTS - this.bufferPadding;
@@ -221,7 +221,7 @@ export class FragmentTracker extends EventHandler {
     // Store the latest timeRanges loaded in the buffer
     this.timeRanges = e.timeRanges;
     for (let elementaryStream in this.timeRanges) {
-      if (this.timeRanges.hasOwnProperty(elementaryStream)) {
+      if (this.timeRanges.hasOwnProperty(elementaryStream) === true) {
         let timeRange = this.timeRanges[elementaryStream];
         this.detectEvictedFragments(elementaryStream, timeRange);
       }
