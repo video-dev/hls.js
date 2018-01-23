@@ -163,8 +163,13 @@ class MP4Remuxer {
       observer.trigger(Event.FRAG_PARSING_INIT_SEGMENT, data);
       this.ISGenerated = true;
       if (computePTSDTS) {
-        this._initPTS = initPTS;
-        this._initDTS = initDTS;
+        if (this.config.disablePtsDtsCorrectionInMp4Remux) {
+          this._initPTS = 0;
+          this._initDTS = 0;
+        } else {
+          this._initPTS = initPTS;
+          this._initDTS = initDTS;
+        }
       }
     } else {
       observer.trigger(Event.ERROR, { type: ErrorTypes.MEDIA_ERROR, details: ErrorDetails.FRAG_PARSING_ERROR, fatal: false, reason: 'no audio/video samples found' });
