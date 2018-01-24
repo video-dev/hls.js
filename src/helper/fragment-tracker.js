@@ -19,7 +19,7 @@ export class FragmentTracker extends EventHandler {
 
     this.bufferPadding = 0.2;
 
-    this.fragments = {};
+    this.fragments = Object.create(null);
     this.timeRanges = null;
 
     this.config = hls.config;
@@ -43,8 +43,7 @@ export class FragmentTracker extends EventHandler {
   detectEvictedFragments(elementaryStream, timeRange) {
     let fragmentTimes, time;
     // Check if any flagged fragments have been unloaded
-    const keys = Object.keys(this.fragments);
-    keys.forEach(key => {
+    Object.keys(this.fragments).forEach(key => {
       const fragmentEntity = this.fragments[key];
       if(fragmentEntity.buffered === true) {
         const esData = fragmentEntity.range[elementaryStream];
@@ -74,8 +73,7 @@ export class FragmentTracker extends EventHandler {
     let fragmentEntity = this.fragments[fragKey];
     fragmentEntity.buffered = true;
 
-    const keys = Object.keys(this.timeRanges);
-    keys.forEach(elementaryStream => {
+    Object.keys(this.timeRanges).forEach(elementaryStream => {
       if(fragment.hasElementaryStream(elementaryStream) === true) {
         let timeRange = this.timeRanges[elementaryStream];
         // Check for malformed fragments
@@ -133,8 +131,7 @@ export class FragmentTracker extends EventHandler {
     let timePadding, startTime, endTime;
     let bestFragment = null;
     let bestOverlap = 0;
-    const keys = Object.keys(this.fragments);
-    keys.forEach(key => {
+    Object.keys(this.fragments).forEach(key => {
       const fragmentEntity = this.fragments[key];
       if(this.isPartial(fragmentEntity)) {
         startTime = fragmentEntity.body.startPTS - this.bufferPadding;
@@ -205,7 +202,7 @@ export class FragmentTracker extends EventHandler {
     let fragKey = this.getFragmentKey(fragment);
     let fragmentEntity = {
       body: fragment,
-      range: {},
+      range: Object.create(null),
       buffered: false,
     };
     this.fragments[fragKey] = fragmentEntity;
@@ -217,8 +214,7 @@ export class FragmentTracker extends EventHandler {
   onBufferAppended(e) {
     // Store the latest timeRanges loaded in the buffer
     this.timeRanges = e.timeRanges;
-    const keys = Object.keys(this.timeRanges);
-    keys.forEach(elementaryStream => {
+    Object.keys(this.timeRanges).forEach(elementaryStream => {
       let timeRange = this.timeRanges[elementaryStream];
       this.detectEvictedFragments(elementaryStream, timeRange);
     });
