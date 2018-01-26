@@ -184,9 +184,11 @@ class AudioStreamController extends TaskLoop {
             bufferLen = bufferInfo.len,
             bufferEnd = bufferInfo.end,
             fragPrevious = this.fragPrevious,
-            // ensure we buffer at least config.maxBufferLength (default 30s)
+            // ensure we buffer at least config.maxBufferLength (default 30s) or config.maxMaxBufferLength (default: 600s)
+            // whichever is smaller.
             // once we reach that threshold, don't buffer more than video (mainBufferInfo.len)
-            maxBufLen = Math.max(config.maxBufferLength,mainBufferInfo.len),
+            maxConfigBuffer = Math.min(config.maxBufferLength,config.maxMaxBufferLength),
+            maxBufLen = Math.max(maxConfigBuffer,mainBufferInfo.len),
             audioSwitch = this.audioSwitch,
             trackId = this.trackId;
 
