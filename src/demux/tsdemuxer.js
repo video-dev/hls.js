@@ -18,7 +18,22 @@
  import {logger} from '../utils/logger';
  import {ErrorTypes, ErrorDetails} from '../errors';
 
- class TSDemuxer {
+// We are using fixed track IDs for driving the MP4 remuxer
+// instead of following the TS PIDs.
+// There is no reason not to do this and some browsers/SourceBuffer-demuxers
+// may not like if there are TrackID "switches"
+// See https://github.com/video-dev/hls.js/issues/1331
+// Here we are mapping our internal track types to constant MP4 track IDs
+// With MSE currently one can only have one track of each, and we are muxing
+// whatever video/audio rendition in them.
+const RemuxerTrackIdConfig = {
+  video: 0,
+  audio: 1,
+  id3: 2,
+  text: 3
+};
+
+class TSDemuxer {
 
   constructor(observer, remuxer, config, typeSupported) {
     this.observer = observer;
@@ -37,21 +52,74 @@
   }
 
   static probe(data) {
-    // a TS fragment should contain at least 3 TS packets, a PAT, a PMT, and one PID, each starting with 0x47
-    if (data.length >= 3*188 && data[0] === 0x47 && data[188] === 0x47 && data[2*188] === 0x47) {
-      return true;
-    } else {
+    const syncOffset = TSDemuxer._syncOffset(data);
+    if (syncOffset < 0)  {
       return false;
+    } else {
+      if (syncOffset) {
+        logger.warn(`MPEG2-TS detected but first sync word found @ offset ${syncOffset}, junk ahead ?`);
+      }
+      return true;
     }
   }
 
-  resetInitSegment(initSegment,audioCodec,videoCodec, duration) {
+  static _syncOffset(data) {
+    // scan 1000 first bytes
+    const scanwindow  = Math.min(1000,data.length - 3*188);
+    let i = 0;
+    while(i < scanwindow) {
+      // a TS fragment should contain at least 3 TS packets, a PAT, a PMT, and one PID, each starting with 0x47
+      if (data[i] === 0x47 && data[i+188] === 0x47 && data[i+2*188] === 0x47) {
+        return i;
+      } else {
+        i++;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * Creates a track model internal to demuxer used to drive remuxing input
+   *
+   * @param {string} type 'audio' | 'video' | 'id3' | 'text'
+   * @param {number} duration
+   * @return {object} TSDemuxer's internal track model
+   */
+  static createTrack(type, duration) {
+    return {
+      container: type === 'video' || type === 'audio' ? 'video/mp2t' : undefined, 
+      type, 
+      id: RemuxerTrackIdConfig[type],
+      pid : -1,
+      inputTimeScale : 90000,
+      sequenceNumber: 0,
+      samples : [],
+      len : 0,
+      dropped : type === 'video' ? 0 : undefined,
+      isAAC: type === 'audio' ? true : undefined,
+      duration: type === 'audio' ? duration : undefined
+    };
+  }
+
+  /**
+   * Initializes a new init segment on the demuxer/remuxer interface. Needed for discontinuities/track-switches (or at stream start) 
+   * Resets all internal track instances of the demuxer.
+   *
+   * @override Implements generic demuxing/remuxing interface (see DemuxerInline)
+   * @param {object} initSegment
+   * @param {string} audioCodec
+   * @param {string} videoCodec
+   * @param {number} duration (in TS timescale = 90kHz)
+   */
+  resetInitSegment(initSegment, audioCodec, videoCodec, duration) {
     this.pmtParsed = false;
     this._pmtId = -1;
-    this._avcTrack = {container : 'video/mp2t', type: 'video', id :-1, inputTimeScale : 90000, sequenceNumber: 0, samples : [], len : 0, dropped : 0};
-    this._audioTrack = {container : 'video/mp2t', type: 'audio', id :-1, inputTimeScale : 90000, duration: duration, sequenceNumber: 0, samples : [], len : 0, isAAC: true};
-    this._id3Track = {type: 'id3', id :-1, inputTimeScale : 90000, sequenceNumber: 0, samples : [], len : 0};
-    this._txtTrack = {type: 'text', id: -1, inputTimeScale : 90000, sequenceNumber: 0, samples : [], len : 0};
+
+    this._avcTrack = TSDemuxer.createTrack('video', duration);
+    this._audioTrack = TSDemuxer.createTrack('audio', duration);
+    this._id3Track = TSDemuxer.createTrack('id3', duration);
+    this._txtTrack = TSDemuxer.createTrack('text', duration);
+
     // flush any partial content
     this.aacOverFlow = null;
     this.aacLastPTS = null;
@@ -61,8 +129,11 @@
     this._duration = duration;
   }
 
-  resetTimeStamp() {
-  }
+  /**
+   * 
+   * @override
+   */
+  resetTimeStamp() {}
 
   // feed incoming data to the front of the parsing pipeline
   append(data, timeOffset, contiguous,accurateTimeOffset) {
@@ -73,9 +144,9 @@
         avcTrack = this._avcTrack,
         audioTrack = this._audioTrack,
         id3Track = this._id3Track,
-        avcId = avcTrack.id,
-        audioId = audioTrack.id,
-        id3Id = id3Track.id,
+        avcId = avcTrack.pid,
+        audioId = audioTrack.pid,
+        id3Id = id3Track.pid,
         pmtId = this._pmtId,
         avcData = avcTrack.pesData,
         audioData = audioTrack.pesData,
@@ -88,10 +159,13 @@
         parseMPEGPES = this._parseMPEGPES.bind(this),
         parseID3PES  = this._parseID3PES.bind(this);
 
+    const syncOffset = TSDemuxer._syncOffset(data);
+
     // don't parse last TS packet if incomplete
-    len -= len % 188;
+    len -= (len + syncOffset) % 188;
+
     // loop through TS packets
-    for (start = 0; start < len; start += 188) {
+    for (start = syncOffset; start < len; start += 188) {
       if (data[start] === 0x47) {
         stt = !!(data[start + 1] & 0x40);
         // pid is a 13-bit field starting at the last bit of TS[1]
@@ -164,24 +238,26 @@
             // this is to avoid resetting the PID to -1 in case
             // track PID transiently disappears from the stream
             // this could happen in case of transient missing audio samples for example
+            // NOTE this is only the PID of the track as found in TS,
+            // but we are not using this for MP4 track IDs.
             avcId = parsedPIDs.avc;
             if (avcId > 0) {
-              avcTrack.id = avcId;
+              avcTrack.pid = avcId;
             }
             audioId = parsedPIDs.audio;
             if (audioId > 0) {
-              audioTrack.id = audioId;
+              audioTrack.pid = audioId;
               audioTrack.isAAC = parsedPIDs.isAAC;
             }
             id3Id = parsedPIDs.id3;
             if (id3Id > 0) {
-              id3Track.id = id3Id;
+              id3Track.pid = id3Id;
             }
             if (unknownPIDs && !pmtParsed) {
               logger.log('reparse from beginning');
               unknownPIDs = false;
               // we set it to -188, the += 188 in the for loop will reset start to 0
-              start = -188;
+              start = syncOffset-188;
             }
             pmtParsed = this.pmtParsed = true;
             break;

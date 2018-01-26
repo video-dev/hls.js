@@ -4,6 +4,9 @@ import {logger} from '../utils/logger';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import EventEmitter from 'events';
 import work from 'webworkify-webpack';
+import {getMediaSource} from '../helper/mediasource-helper';
+
+const MediaSource = getMediaSource();
 
 class Demuxer {
 
@@ -106,8 +109,8 @@ class Demuxer {
     }
     this.frag = frag;
     if (w) {
-      // post fragment payload as transferable objects (no copy)
-      w.postMessage({cmd: 'demux', data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset,defaultInitPTS}, [data]);
+      // post fragment payload as transferable objects for ArrayBuffer (no copy)
+      w.postMessage({cmd: 'demux', data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset,defaultInitPTS}, data instanceof ArrayBuffer ? [data] : []);
     } else {
       let demuxer = this.demuxer;
       if (demuxer) {

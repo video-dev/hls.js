@@ -38,7 +38,7 @@ const env = process.env;
 const addSubtitleSupport = (typeof env.SUBTITLE !== 'undefined' && env.SUBTITLE);
 const addAltAudioSupport = (typeof env.ALT_AUDIO !== 'undefined' && env.ALT_AUDIO);
 
-function getPluginsForConfig(type, minify = false) {
+function getPluginsForConfig(type, minify) {
   // common plugins.
   const plugins = [
     new webpack.optimize.OccurrenceOrderPlugin(),

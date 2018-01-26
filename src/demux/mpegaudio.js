@@ -13,6 +13,44 @@ const MpegAudio = {
 
     SamplingRateMap: [44100, 48000, 32000, 22050, 24000, 16000, 11025, 12000, 8000],
 
+    SamplesCoefficients: [
+      // MPEG 2.5
+      [
+        0, // Reserved
+        72, // Layer3
+        144, // Layer2
+        12 // Layer1
+      ],
+      // Reserved
+      [
+        0, // Reserved
+        0, // Layer3
+        0, // Layer2
+        0 // Layer1
+      ],
+      // MPEG 2
+      [
+        0, // Reserved
+        72, // Layer3
+        144, // Layer2
+        12 // Layer1
+      ],
+      // MPEG 1
+      [
+        0, // Reserved
+        144, // Layer3
+        144, // Layer2
+        12 // Layer1
+      ]
+    ],
+
+    BytesInSlot: [
+      0, // Reserved
+      1, // Layer3
+      1, // Layer2
+      4 // Layer1
+    ],
+
     appendFrame: function (track, data, offset, pts, frameIndex) {
         // Using http://www.datavoyage.com/mpgscript/mpeghdr.htm as a reference
         if (offset + 24 > data.length) {
@@ -21,7 +59,7 @@ const MpegAudio = {
 
         var header = this.parseHeader(data, offset);
         if (header && offset + header.frameLength <= data.length) {
-            var frameDuration = 1152 * 90000 / header.sampleRate;
+            var frameDuration = header.samplesPerFrame * 90000 / header.sampleRate;
             var stamp = pts + frameIndex * frameDuration;
             var sample = { unit: data.subarray(offset, offset + header.frameLength), pts: stamp, dts: stamp };
 
@@ -42,19 +80,19 @@ const MpegAudio = {
         var headerC = (data[offset + 1] >> 1) & 3;
         var headerE = (data[offset + 2] >> 4) & 15;
         var headerF = (data[offset + 2] >> 2) & 3;
-        var headerG = !!(data[offset + 2] & 2);
+        var headerG = (data[offset + 2] >> 1) & 1;
         if (headerB !== 1 && headerE !== 0 && headerE !== 15 && headerF !== 3) {
             var columnInBitrates = headerB === 3 ? (3 - headerC) : (headerC === 3 ? 3 : 4);
             var bitRate = MpegAudio.BitratesMap[columnInBitrates * 14 + headerE - 1] * 1000;
             var columnInSampleRates = headerB === 3 ? 0 : headerB === 2 ? 1 : 2;
             var sampleRate = MpegAudio.SamplingRateMap[columnInSampleRates * 3 + headerF];
-            var padding = headerG ? 1 : 0;
             var channelCount = data[offset + 3] >> 6 === 3 ? 1 : 2; // If bits of channel mode are `11` then it is a single channel (Mono)
-            var frameLength = headerC === 3 ?
-                ((headerB === 3 ? 12 : 6) * bitRate / sampleRate + padding) << 2 :
-                ((headerB === 3 ? 144 : 72) * bitRate / sampleRate + padding) | 0;
+            var sampleCoefficient = MpegAudio.SamplesCoefficients[headerB][headerC];
+            var bytesInSlot = MpegAudio.BytesInSlot[headerC];
+            var samplesPerFrame = sampleCoefficient * 8 * bytesInSlot;
+            var frameLength = parseInt(sampleCoefficient * bitRate / sampleRate + headerG, 10) * bytesInSlot;
 
-            return { sampleRate, channelCount, frameLength };
+            return { sampleRate, channelCount, frameLength, samplesPerFrame };
         }
 
         return undefined;

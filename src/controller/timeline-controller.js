@@ -38,15 +38,16 @@ class TimelineController extends EventHandler {
 
   constructor(hls) {
     super(hls, Event.MEDIA_ATTACHING,
-                Event.MEDIA_DETACHING,
-                Event.FRAG_PARSING_USERDATA,
-                Event.MANIFEST_LOADING,
-                Event.MANIFEST_LOADED,
-                Event.FRAG_LOADED,
-                Event.LEVEL_SWITCHING,
-                Event.INIT_PTS_FOUND,
-                Event.FRAG_PARSING_INIT_SEGMENT,
-                Event.SUBTITLE_TRACKS_CLEARED
+      Event.MEDIA_DETACHING,
+      Event.FRAG_PARSING_USERDATA,
+      Event.FRAG_DECRYPTED,
+      Event.MANIFEST_LOADING,
+      Event.MANIFEST_LOADED,
+      Event.FRAG_LOADED,
+      Event.LEVEL_SWITCHING,
+      Event.INIT_PTS_FOUND,
+      Event.FRAG_PARSING_INIT_SEGMENT,
+      Event.SUBTITLE_TRACKS_CLEARED
     );
 
     this.hls = hls;
@@ -60,13 +61,12 @@ class TimelineController extends EventHandler {
     this.cueRanges = [];
     this.manifestCaptionsLabels = {};
 
-    if (this.config.enableCEA708Captions)
-    {
+    if (this.config.enableCEA708Captions) {
       var self = this;
       var captionsLabels = this.manifestCaptionsLabels;
 
       var channel1 = {
-        'newCue': function(startTime, endTime, screen) {
+        'newCue': function (startTime, endTime, screen) {
           if (!self.textTrack1) {
             if (self.config.renderNatively) {
               //Enable reuse of existing text track.
@@ -88,7 +88,7 @@ class TimelineController extends EventHandler {
                 'kind': 'captions',
                 'default': false
               };
-              self.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: [ self.textTrack1 ] });
+              self.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, {tracks: [self.textTrack1]});
             }
           }
 
@@ -97,7 +97,7 @@ class TimelineController extends EventHandler {
       };
 
       var channel2 = {
-        'newCue': function(startTime, endTime, screen) {
+        'newCue': function (startTime, endTime, screen) {
           if (!self.textTrack2) {
             if (self.config.renderNatively) {
               //Enable reuse of existing text track.
@@ -119,7 +119,7 @@ class TimelineController extends EventHandler {
                 'kind': 'captions',
                 'default': false
               };
-              self.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: [ self.textTrack2 ] });
+              self.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, {tracks: [self.textTrack2]});
             }
           }
 
@@ -153,9 +153,11 @@ class TimelineController extends EventHandler {
 
     let cues = this.Cues.createCues(startTime, endTime, screen);
     if (this.config.renderNatively) {
-      cues.forEach((cue) => { this[channel].addCue(cue); });
+      cues.forEach((cue) => {
+        this[channel].addCue(cue);
+      });
     } else {
-      this.hls.trigger(Event.CUES_PARSED, { type: 'captions', cues: cues, track: channel });
+      this.hls.trigger(Event.CUES_PARSED, {type: 'captions', cues: cues, track: channel});
     }
   }
 
@@ -191,8 +193,7 @@ class TimelineController extends EventHandler {
 
   createTextTrack(kind, label, lang) {
     const media = this.media;
-    if (media)
-    {
+    if (media) {
       return media.addTextTrack(kind, label, lang);
     }
   }
@@ -212,8 +213,7 @@ class TimelineController extends EventHandler {
     delete this.textTrack2;
   }
 
-  onManifestLoading()
-  {
+  onManifestLoading() {
     this.lastSn = -1; // Detect discontinuity in fragment parsing
     this.prevCC = -1;
     this.vttCCs = {ccOffset: 0, presentationOffset: 0}; // Detect discontinuity in subtitle manifests
@@ -276,7 +276,7 @@ class TimelineController extends EventHandler {
             'default': track.default
           };
         });
-        this.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: tracksList });
+        this.hls.trigger(Event.NON_NATIVE_TEXT_TRACKS_FOUND, {tracks: tracksList});
       }
     }
 
@@ -308,7 +308,6 @@ class TimelineController extends EventHandler {
   onFragLoaded(data) {
     let frag = data.frag;
     let payload = data.payload;
-    let self = this;
 
     if (frag.type === 'main') {
       let sn = frag.sn;
@@ -329,38 +328,63 @@ class TimelineController extends EventHandler {
           this.unparsedVttFrags.push(data);
           return;
         }
-        let vttCCs = this.vttCCs;
-        if (!vttCCs[frag.cc]) {
-          vttCCs[frag.cc] = { start: frag.start, prevCC: this.prevCC, new: true };
-          this.prevCC = frag.cc;
+        var decryptData = frag.decryptdata;
+        // If the subtitles are not encrypted, parse VTTs now. Otherwise, we need to wait.
+        if ((decryptData == null) || (decryptData.key == null) || (decryptData.method !== 'AES-128')) {
+          this._parseVTTs(frag, payload);
         }
-
-        let hls = this.hls;
-        let tracks = this.config.renderNatively ? this.textTracks : this.tracks;
-
-        // Parse the WebVTT file contents.
-        WebVTTParser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
-            const currentTrack = tracks[frag.trackId];
-
-            if (self.config.renderNatively) {
-              cues.filter(cue => !currentTrack.cues.getCueById(cue.id))
-                  .forEach(cue => { currentTrack.addCue(cue); });
-            } else {
-              let trackId = currentTrack.default ? 'default' : 'subtitles' + frag.trackId;
-              hls.trigger(Event.CUES_PARSED, { type: 'subtitles', cues: cues, track: trackId });
-            }
-            hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: true, frag: frag });
-          },
-          function (e) {
-            // Something went wrong while parsing. Trigger event with success false.
-            logger.log(`Failed to parse VTT cue: ${e}`);
-            hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag });
-          });
       }
       else {
         // In case there is no payload, finish unsuccessfully.
-        this.hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, { success: false, frag: frag });
+        this.hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: false, frag: frag});
       }
+    }
+  }
+
+  _parseVTTs(frag, payload) {
+    let vttCCs = this.vttCCs;
+    if (!vttCCs[frag.cc]) {
+      vttCCs[frag.cc] = {start: frag.start, prevCC: this.prevCC, new: true};
+      this.prevCC = frag.cc;
+    }
+
+    const self = this;
+    const hls = this.hls;
+    const tracks = this.config.renderNatively ? this.textTracks : this.tracks;
+
+    // Parse the WebVTT file contents.
+    WebVTTParser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
+        const currentTrack = tracks[frag.trackId];
+
+        if (self.config.renderNatively) {
+          cues.filter(cue => !currentTrack.cues.getCueById(cue.id))
+            .forEach(cue => {
+              currentTrack.addCue(cue);
+            });
+        } else {
+          let trackId = currentTrack.default ? 'default' : 'subtitles' + frag.trackId;
+          hls.trigger(Event.CUES_PARSED, {type: 'subtitles', cues: cues, track: trackId});
+        }
+        hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: true, frag: frag});
+      },
+      function (e) {
+        // Something went wrong while parsing. Trigger event with success false.
+        logger.log(`Failed to parse VTT cue: ${e}`);
+        hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: false, frag: frag});
+      });
+  }
+
+  onFragDecrypted(data) {
+    const decryptedData = data.payload,
+      frag = data.frag;
+
+    if (frag.type === 'subtitle') {
+      if (typeof this.initPTS === 'undefined') {
+        this.unparsedVttFrags.push(data);
+        return;
+      }
+
+      this._parseVTTs(frag, decryptedData);
     }
   }
 
@@ -372,7 +396,7 @@ class TimelineController extends EventHandler {
     // push all of the CEA-708 messages into the interpreter
     // immediately. It will create the proper timestamps based on our PTS value
     if (this.enabled && this.config.enableCEA708Captions) {
-      for (var i=0; i<data.samples.length; i++) {
+      for (var i = 0; i < data.samples.length; i++) {
         var ccdatas = this.extractCea608Data(data.samples[i].bytes);
         this.cea608Parser.addData(data.samples[i].pts, ccdatas);
       }
@@ -383,7 +407,7 @@ class TimelineController extends EventHandler {
     // If we receive this event, we have not received an onInitPtsFound event. This happens when the video track has no samples (but has audio)
     // In order to have captions display, which requires an initPTS, we assume one of 90000
     if (typeof this.initPTS === 'undefined') {
-      this.onInitPtsFound({ initPTS: 90000 });
+      this.onInitPtsFound({initPTS: 90000});
     }
   }
 

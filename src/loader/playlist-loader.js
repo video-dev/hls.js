@@ -15,7 +15,7 @@ const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\n\r]*)[\r\n]+([^\r\n]+)/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 
 const LEVEL_PLAYLIST_REGEX_FAST = new RegExp([
-  /#EXTINF:(\d*(?:\.\d+)?)(?:,(.*)\s+)?/.source, // duration (#EXTINF:<duration>,<title>), group 1 => duration, group 2 => title
+  /#EXTINF:\s*(\d*(?:\.\d+)?)(?:,(.*)\s+)?/.source, // duration (#EXTINF:<duration>,<title>), group 1 => duration, group 2 => title
   /|(?!#)(\S+)/.source,                          // segment URI, group 3 => the URI (note newline is not eaten)
   /|#EXT-X-BYTERANGE:*(.+)/.source,              // next segment's byterange, group 4 => range spec (x@y)
   /|#EXT-X-PROGRAM-DATE-TIME:(.+)/.source,       // next segment's program date/time group 5 => the datetime spec
@@ -197,7 +197,7 @@ class PlaylistLoader extends EventHandler {
 
   load(url, context) {
     let loader = this.loaders[context.type];
-    if (loader) {
+    if (loader !== undefined) {
       let loaderContext = loader.context;
       if (loaderContext && loaderContext.url === url) {
         logger.trace(`playlist request ongoing`);
@@ -208,17 +208,22 @@ class PlaylistLoader extends EventHandler {
       }
     }
     let config = this.hls.config,
-        retry,
+        maxRetry,
         timeout,
         retryDelay,
         maxRetryDelay;
-    if(context.type === 'manifest') {
-      retry = config.manifestLoadingMaxRetry;
+    if (context.type === 'manifest') {
+      maxRetry = config.manifestLoadingMaxRetry;
       timeout = config.manifestLoadingTimeOut;
       retryDelay = config.manifestLoadingRetryDelay;
       maxRetryDelay = config.manifestLoadingMaxRetryTimeout;
+    } else if (context.type === 'level') {
+      // Disable internal loader retry logic, since we are managing retries in Level Controller
+      maxRetry = 0;
+      timeout = config.levelLoadingTimeOut;
     } else {
-      retry = config.levelLoadingMaxRetry;
+      // TODO Introduce retry settings for audio-track and subtitle-track, it should not use level retry config
+      maxRetry = config.levelLoadingMaxRetry;
       timeout = config.levelLoadingTimeOut;
       retryDelay = config.levelLoadingRetryDelay;
       maxRetryDelay = config.levelLoadingMaxRetryTimeout;
@@ -229,7 +234,7 @@ class PlaylistLoader extends EventHandler {
     context.responseType = '';
 
     let loaderConfig, loaderCallbacks;
-    loaderConfig = { timeout : timeout, maxRetry : retry , retryDelay : retryDelay, maxRetryDelay : maxRetryDelay};
+    loaderConfig = {timeout, maxRetry, retryDelay, maxRetryDelay};
     loaderCallbacks = { onSuccess : this.loadsuccess.bind(this), onError :this.loaderror.bind(this), onTimeout : this.loadtimeout.bind(this)};
     loader.load(context,loaderConfig,loaderCallbacks);
   }
