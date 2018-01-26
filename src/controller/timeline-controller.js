@@ -208,7 +208,11 @@ class TimelineController extends EventHandler {
         if (!textTrack) {
             textTrack = this.createTextTrack('subtitles', track.name, track.lang);
         }
-        textTrack.mode = track.default ? 'showing' : 'hidden';
+        if (track.default) {
+          textTrack.mode = this.hls.subtitleDisplay ? 'showing' : 'hidden';
+        } else {
+          textTrack.mode = 'disabled';
+        }
         this.textTracks.push(textTrack);
       });
     }
