@@ -100,7 +100,7 @@ class PlaylistLoader extends EventHandler {
 
     const loader = new InternalLoader(config);
 
-    context.loader = Loader;
+    context.loader = loader;
     this.loaders[context.type] = loader;
 
     return loader;

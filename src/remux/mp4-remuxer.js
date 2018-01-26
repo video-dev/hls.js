@@ -206,8 +206,9 @@ class MP4Remuxer {
 
     const isSafari = this.isSafari;
 	
-	if(inputSamples.length == 0)
-		return null;
+	if(nbSamples === 0){
+		return;
+	}
 
     // Safari does not like overlapping DTS on consecutive fragments. let's use nextAvcDts to overcome this if fragments are consecutive
     if (isSafari) {
