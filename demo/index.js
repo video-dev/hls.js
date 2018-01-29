@@ -917,22 +917,14 @@ function updateLevelInfo() {
 }
 
 function updateAudioTrackInfo() {
-  let button_template = '<button type="button" class="btn btn-sm ';
-  let button_enabled  = 'btn-primary" ';
-  let button_disabled = 'btn-success" ';
-  let html1 = '';
   let audioTrackId = hls.audioTrack, len = hls.audioTracks.length;
-
-  let $html = $('<div />');
+  let $audioTrackControl = $('#audioTrackControl').empty();
 
   for (let i=0; i < len; i++) {
-    $html.append(
+    $audioTrackControl.append(
       buildButton(hls.audioTracks[i].name, audioTrackId === i, function() { hls.audioTrack = i; })
     );
   }
-
-  if($('#audioTrackControl').html() != $html.html())
-    $('#audioTrackControl').html($html.html());
 }
 
 
