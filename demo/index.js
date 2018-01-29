@@ -53,26 +53,31 @@ $(document).ready(function() {
     defaultAudioCodec = this.value;
     updatePermalink();
   });
-  $('#enableStreaming').prop( 'checked', enableStreaming );
-  $('#autoRecoverError').prop( 'checked', autoRecoverError );
-  $('#enableWorker').prop( 'checked', enableWorker );
-  $('#dumpfMP4').prop( 'checked', dumpfMP4 );
+  $('#enableStreaming').prop( 'checked', !!enableStreaming );
+  $('#autoRecoverError').prop( 'checked', !!autoRecoverError );
+  $('#enableWorker').prop( 'checked', !!enableWorker );
+  $('#dumpfMP4').prop( 'checked', !!dumpfMP4 );
   $('#levelCapping').val(levelCapping);
   $('#defaultAudioCodec').val(defaultAudioCodec || 'undefined');
-  $('h2').append(' <a target=_blank href=https://github.com/video-dev/hls.js/releases/tag/v' + Hls.version + '>v' + Hls.version + '</a>');
-
+  $('h2')
+    .append(
+      $('<a />')
+        .attr('target', 'blank')
+        .attr('href', 'https://github.com/video-dev/hls.js/releases/tag/v' + Hls.version)
+        .text('v' + Hls.version)
+    );
 });
 
 var hls, events, stats, tracks, fmp4Data,
-  enableStreaming = JSON.parse(getURLParam('enableStreaming', true));
-autoRecoverError = JSON.parse(getURLParam('autoRecoverError', true)),
-enableWorker = JSON.parse(getURLParam('enableWorker', true)),
-levelCapping = JSON.parse(getURLParam('levelCapping', -1)),
+  enableStreaming = !!JSON.parse(getURLParam('enableStreaming', true));
+autoRecoverError = !!JSON.parse(getURLParam('autoRecoverError', true)),
+enableWorker = !!JSON.parse(getURLParam('enableWorker', true)),
+levelCapping = parseInt(JSON.parse(getURLParam('levelCapping', -1))),
 defaultAudioCodec = getURLParam('defaultAudioCodec', undefined),
-dumpfMP4 = getURLParam('dumpfMP4', false);
+dumpfMP4 = !!getURLParam('dumpfMP4', false);
 let video = $('#video')[0];
 video.volume = 0.05;
-$('#currentVersion').html('Hls version:' + Hls.version);
+$('#currentVersion').text('Hls version:' + Hls.version);
 
 loadStream(decodeURIComponent(getURLParam('src', 'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8')));
 
@@ -410,12 +415,28 @@ function loadStream(url) {
       switch(data.details) {
       case Hls.ErrorDetails.MANIFEST_LOAD_ERROR:
         try {
-          $('#HlsStatus').html('cannot Load <a href="' + data.context.url + '">' + url + '</a><br>HTTP response code:' + data.response.code + ' <br>' + data.response.text);
-          if(data.response.code === 0)
-            $('#HlsStatus').append('this might be a CORS issue, consider installing <a href="https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi">Allow-Control-Allow-Origin</a> Chrome Extension');
+          $('#HlsStatus')
+            .empty()
+            .appendText('cannot load ')
+            .append($('<a />').attr('href', data.context.url).text(url))
+            .append($('<br />'))
+            .appendText('HTTP response code: ' + data.response.code)
+            .append($('<br />'))
+            .appendText(data.response.text);
 
-        } catch(err) {
-          $('#HlsStatus').html('cannot Load <a href="' + data.context.url + '">' + url + '</a><br>Reason:Load ' + data.response.text);
+            if(data.response.code === 0)
+              $('#HlsStatus')
+                .empty()
+                .appendText('this might be a CORS issue, consider installing ')
+                .append($('<a />').attr('href', 'https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi').text('Allow-Control-Allow-Origin'))
+                .appendText(' chrome extension');
+          } catch(err) {
+            $('#HlsStatus')
+            .empty()
+            .appendText('cannot load ')
+            .append($('<a />').attr('href', data.context.url).text(data.context.ur))
+            .append($('<br />'))
+            .appendText('Reason: Load ' + data.response.text);
         }
         break;
       case Hls.ErrorDetails.MANIFEST_LOAD_TIMEOUT:
@@ -473,10 +494,10 @@ function loadStream(url) {
           handleMediaError();
           break;
         case Hls.ErrorTypes.NETWORK_ERROR:
-          $('#HlsStatus').append(',network error ...');
+          $('#HlsStatus').appendText(',network error ...');
           break;
         default:
-          $('#HlsStatus').append(', unrecoverable error');
+          $('#HlsStatus').appendText(', unrecoverable error');
           hls.destroy();
           break;
         }
@@ -635,16 +656,16 @@ function handleMediaError() {
     let now = performance.now();
     if(!recoverDecodingErrorDate || (now - recoverDecodingErrorDate) > 3000) {
       recoverDecodingErrorDate = performance.now();
-      $('#HlsStatus').append(',try to recover media Error ...');
+      $('#HlsStatus').appendText(',try to recover media Error ...');
       hls.recoverMediaError();
     } else {
       if(!recoverSwapAudioCodecDate || (now - recoverSwapAudioCodecDate) > 3000) {
         recoverSwapAudioCodecDate = performance.now();
-        $('#HlsStatus').append(',try to swap Audio Codec and recover media Error ...');
+        $('#HlsStatus').appendText(',try to swap Audio Codec and recover media Error ...');
         hls.swapAudioCodec();
         hls.recoverMediaError();
       } else {
-        $('#HlsStatus').append(',cannot recover, last media error recovery failed ...');
+        $('#HlsStatus').appendText(',cannot recover, last media error recovery failed ...');
       }
     }
   }
@@ -736,29 +757,33 @@ function checkBuffer() {
     events.buffer.push(event);
     refreshCanvas();
 
-    let log = 'Duration:'
-              + v.duration + '<br>'
-              + 'Buffered:'
-              + timeRangesToString(v.buffered) + '<br>'
-              + 'Seekable:'
-              + timeRangesToString(v.seekable) + '<br>'
-              + 'Played:'
-              + timeRangesToString(v.played) + '<br>';
+    let log = [
+      'Duration:' + v.duration,
+      'Buffered:' + timeRangesToString(v.buffered),
+      'Seekable:' + timeRangesToString(v.seekable),
+      'Played:' + timeRangesToString(v.played)
+    ];
 
     if (hls.media) {
       for(let type in tracks)
-        log += type + ' Buffered:' + timeRangesToString(tracks[type].buffer.buffered) + '<br>';
+        log.push(type + ' Buffered:' + timeRangesToString(tracks[type].buffer.buffered));
 
 
       let videoPlaybackQuality = v.getVideoPlaybackQuality;
       if(videoPlaybackQuality && typeof (videoPlaybackQuality) === typeof (Function)) {
-        log+='Dropped Frames:'+ v.getVideoPlaybackQuality().droppedVideoFrames + '<br>';
-        log+='Corrupted Frames:'+ v.getVideoPlaybackQuality().corruptedVideoFrames + '<br>';
+        log.push('Dropped Frames:'+ v.getVideoPlaybackQuality().droppedVideoFrames);
+        log.push('Corrupted Frames:'+ v.getVideoPlaybackQuality().corruptedVideoFrames);
       } else if(v.webkitDroppedFrameCount) {
-        log+='Dropped Frames:'+ v.webkitDroppedFrameCount + '<br>';
+        log.push('Dropped Frames:'+ v.webkitDroppedFrameCount);
       }
     }
-    $('#buffered_log').html(log);
+
+    let $log = $('#buffered_log').empty();
+    log.forEach(function(line) {
+      $log.appendText(line).append('<br />');
+    });
+
+
     $('#HlsStats').text(JSON.stringify(sortObject(stats), null, '\t'));
     ctx.fillStyle = 'blue';
     let x = v.currentTime / v.duration * canvas.width;
@@ -853,119 +878,53 @@ function updateLevelInfo() {
   if (!hls.levels)
     return;
 
+  let $currentLevel = $('currentLevelControl').empty();
+  let $loadLevel = $('#loadLevelControl').empty();
+  let $autoLevelCapping = $('#levelCappingControl').empty();
+  let $nextLevel = $('#nextLevelControl').empty();
 
-  let button_template = '<button type="button" class="btn btn-sm ';
-  let button_enabled  = 'btn-primary" ';
-  let button_disabled = 'btn-success" ';
+  $currentLevel.append(buildButton('auto', hls.autoLevelEnabled, function() { hls.currentLevel = -1 }));
+  $loadLevel.append(buildButton('auto', hls.autoLevelEnabled, function() { hls.loadLevel = -1 }));
+  $autoLevelCapping.append(buildButton('auto', hls.autoLevelCapping === -1, function() {
+    hls.autoLevelCapping = -1;
+    updateLevelInfo();
+    updatePermalink();
+  }));
+  $nextLevel.append(buildButton('auto', hls.autoLevelEnabled, function() { hls.nextLevel = -1 }));
 
-  let html1 = button_template;
-  if(hls.autoLevelEnabled)
-    html1 += button_enabled;
-  else
-    html1 += button_disabled;
-
-  html1 += 'onclick="hls.currentLevel=-1">auto</button>';
-
-
-  let html2 = button_template;
-  if(hls.autoLevelEnabled)
-    html2 += button_enabled;
-  else
-    html2 += button_disabled;
-
-  html2 += 'onclick="hls.loadLevel=-1">auto</button>';
-
-  let html3 = button_template;
-  if(hls.autoLevelCapping === -1)
-    html3 += button_enabled;
-  else
-    html3 += button_disabled;
-
-  html3 += 'onclick="levelCapping=hls.autoLevelCapping=-1;updateLevelInfo();updatePermalink();">auto</button>';
-
-  let html4 = button_template;
-  if(hls.autoLevelEnabled)
-    html4 += button_enabled;
-  else
-    html4 += button_disabled;
-
-  html4 += 'onclick="hls.nextLevel=-1">auto</button>';
-
-  for (let i=0; i < hls.levels.length; i++) {
-    html1 += button_template;
-    if(hls.currentLevel === i)
-      html1 += button_enabled;
-    else
-      html1 += button_disabled;
-
+  for (let i = 0; i < hls.levels.length; i++) {
     let levelName = i, label = level2label(i);
     if(label)
       levelName += '(' + level2label(i) + ')';
 
-    html1 += 'onclick="hls.currentLevel=' + i + '">' + levelName + '</button>';
-
-    html2 += button_template;
-    if(hls.loadLevel === i)
-      html2 += button_enabled;
-    else
-      html2 += button_disabled;
-
-    html2 += 'onclick="hls.loadLevel=' + i + '">' + levelName + '</button>';
-
-    html3 += button_template;
-    if(hls.autoLevelCapping === i)
-      html3 += button_enabled;
-    else
-      html3 += button_disabled;
-
-    html3 += 'onclick="levelCapping=hls.autoLevelCapping=' + i + ';updateLevelInfo();updatePermalink();">' + levelName + '</button>';
-
-    html4 += button_template;
-    if(hls.nextLevel === i)
-      html4 += button_enabled;
-    else
-      html4 += button_disabled;
-
-    html4 += 'onclick="hls.nextLevel=' + i + '">' + levelName + '</button>';
+    $currentLevel.append(
+      buildButton(levelName, hls.currentLevel === i, function() { hls.currentLevel = i; })
+    );
+    $loadLevel.append(
+      buildButton(levelName, hls.loadLevel === i, function() { hls.loadLevel = i; })
+    );
+    $autoLevelCapping.append(buildButton(levelName, hls.autoLevelCapping === i, function() {
+      hls.autoLevelCapping = i;
+      updateLevelInfo();
+      updatePermalink();
+    }));
+    $nextLevel.append(buildButton(levelName, hls.nextLevel === i, function() { hls.nextLevel = i }));
   }
+
   let v = $('#video')[0];
   if(v.videoWidth)
-    $('#currentResolution').html('video resolution:' + v.videoWidth + 'x' + v.videoHeight);
-
-  if($('#currentLevelControl').html() != html1)
-    $('#currentLevelControl').html(html1);
-
-
-  if($('#loadLevelControl').html() != html2)
-    $('#loadLevelControl').html(html2);
-
-
-  if($('#levelCappingControl').html() != html3)
-    $('#levelCappingControl').html(html3);
-
-
-  if($('#nextLevelControl').html() != html4)
-    $('#nextLevelControl').html(html4);
-
+    $('#currentResolution').text('video resolution:' + v.videoWidth + 'x' + v.videoHeight);
 }
 
 function updateAudioTrackInfo() {
-  let button_template = '<button type="button" class="btn btn-sm ';
-  let button_enabled  = 'btn-primary" ';
-  let button_disabled = 'btn-success" ';
-  let html1 = '';
   let audioTrackId = hls.audioTrack, len = hls.audioTracks.length;
+  let $audioTrackControl = $('#audioTrackControl').empty();
 
   for (let i=0; i < len; i++) {
-    html1 += button_template;
-    if(audioTrackId === i)
-      html1 += button_enabled;
-    else
-      html1 += button_disabled;
-
-    html1 += 'onclick="hls.audioTrack=' + i + '">' + hls.audioTracks[i].name + '</button>';
+    $audioTrackControl.append(
+      buildButton(hls.audioTracks[i].name, audioTrackId === i, function() { hls.audioTrack = i; })
+    );
   }
-  $('#audioTrackControl').html(html1);
 }
 
 
@@ -988,6 +947,15 @@ function level2label(index) {
   }
 }
 
+function buildButton(text, enabled, cb) {
+  return $('<button />')
+    .attr('type', 'button')
+    .addClass('btn btn-sm')
+    .addClass(enabled ? 'btn-primary' : 'btn-success')
+    .click(cb)
+    .text(text);
+}
+
 function getURLParam(sParam, defaultValue) {
   let sPageURL = window.location.search.substring(1);
   let sURLVariables = sPageURL.split('&');
@@ -1008,9 +976,12 @@ function updatePermalink() {
                     '&enableWorker=' + enableWorker +
                     '&dumpfMP4=' + dumpfMP4 +
                     '&levelCapping=' + levelCapping +
-                    '&defaultAudioCodec=' + defaultAudioCodec;
+                    '&defaultAudioCodec=' + encodeURIComponent(defaultAudioCodec);
   let description = 'permalink: ' + '<a href="' + hlsLink + '">' + hlsLink + '</a>';
-  $('#StreamPermalink').html(description);
+  $('#StreamPermalink')
+    .empty()
+    .appendText('permalink: ')
+    .append($('<a />').attr('href', hlsLink).text(hlsLink));
 }
 
 function createfMP4(type) {
@@ -1020,7 +991,14 @@ function createfMP4(type) {
     });
     let filename = type + '-' + new Date().toISOString() + '.mp4';
     saveAs(blob, filename);
-    //$('body').append('<a download="hlsjs-' + filename + '" href="' + window.URL.createObjectURL(blob) + '">Download ' + filename + ' track</a><br>');
+    // $('body')
+    //   .append(
+    //     $('<a />')
+    //       .attr('download', 'hlsjs-' + filename)
+    //       .attr('href', window.URL.createObjectURL(blob))
+    //       .text('Download ' + filename + ' track')
+    //   )
+    //   .append('<br />');
   }
 }
 
