@@ -5,12 +5,11 @@
 const BufferHelper = {
   /**
    * filter fragments potentially evicted from buffer.
-   * @param {{startPTS:number, endPTS:number}[]} bufferedFrags
-   * @param {HTMLMediaElement} media
-   * @returns {{startPTS:number, endPTS:number}[]}
    */
   filterLivingFragments: function(bufferedFrags, media) {
     try {
+      // Cache `buffered` at first for performance
+      // To access `media.buffered` have a cost
       const mediaBuffered = media.buffered;
       return bufferedFrags.filter(frag => {
         return this.bufferedIncludesPosition(mediaBuffered, (frag.startPTS + frag.endPTS) / 2);
@@ -22,8 +21,8 @@ const BufferHelper = {
     return [];
   },
   /**
-   * If `media`'s buffered include `position`, return true.
-   * @param {HTMLMediaElement} media
+   * Return true if `media`'s buffered include `position`
+   * @param {HTMLMediaElement|SourceBuffer} media
    * @param {number} position
    * @returns {boolean}
    */
@@ -41,7 +40,7 @@ const BufferHelper = {
     return false;
   },
   /**
-   * If `mediaBuffered` includes `position`, return true.
+   * Return true if `mediaBuffered` includes `position`
    * @param {TimeRanges} mediaBuffered
    * @param {number} position
    * @returns {boolean}

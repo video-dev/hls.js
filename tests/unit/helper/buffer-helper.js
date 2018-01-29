@@ -78,44 +78,6 @@ describe('BufferHelper', function() {
       assert.deepEqual(filteredFragments, [fragments[2], fragments[3]]);
     });
   });
-  describe('filterFragByMedia', function() {
-    const media = {
-      get buffered() {
-        return createMockBuffer([
-          {
-            startPTS: 0,
-            endPTS: 0.5
-          },
-          {
-            startPTS: 1,
-            endPTS: 2.0
-          },
-        ]);
-      }
-    };
-
-    it('should return true if media.buffered throw error', function() {
-      const invalidMedia = {
-        get buffered() {
-          throw new Error("InvalidStateError");
-        }
-      };
-      assert.equal(BufferHelper.filterLivingFragments(invalidMedia, 0), false);
-    });
-    it('should return true if some media.buffered includes the position', function() {
-      assert.equal(BufferHelper.isBuffered(media, 0), true);
-      assert.equal(BufferHelper.isBuffered(media, 0.1), true);
-      assert.equal(BufferHelper.isBuffered(media, 0.5), true);
-      assert.equal(BufferHelper.isBuffered(media, 1), true);
-      assert.equal(BufferHelper.isBuffered(media, 2), true);
-    });
-    it('should return false if any media.buffered does not includes the position', function() {
-      assert.equal(BufferHelper.isBuffered(media, -0.1), false);
-      assert.equal(BufferHelper.isBuffered(media, 0.51), false);
-      assert.equal(BufferHelper.isBuffered(media, 0.9), false);
-      assert.equal(BufferHelper.isBuffered(media, 2.1), false);
-    });
-  });
   describe('isBuffered', function() {
     // |////////|__________|////////////////|
     // 0       0.5         1               2.0
