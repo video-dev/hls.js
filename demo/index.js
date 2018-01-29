@@ -425,11 +425,11 @@ function loadStream(url) {
             .appendText(data.response.text);
 
             if(data.response.code === 0)
-            $('#HlsStatus')
-            .empty()
-            .appendText('this might be a CORS issue, consider installing ')
-            .append($('<a />').attr('href', 'https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi').text('Allow-Control-Allow-Origin'))
-            .appendText(' chrome extension');
+              $('#HlsStatus')
+                .empty()
+                .appendText('this might be a CORS issue, consider installing ')
+                .append($('<a />').attr('href', 'https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi').text('Allow-Control-Allow-Origin'))
+                .appendText(' chrome extension');
           } catch(err) {
             $('#HlsStatus')
             .empty()
