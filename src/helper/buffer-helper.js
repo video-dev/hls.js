@@ -3,20 +3,54 @@
 */
 
 const BufferHelper = {
-  isBuffered : function(media,position) {
+  /**
+   * filter fragments potentially evicted from buffer.
+   * @param {{startPTS:number, endPTS:number}[]} bufferedFrags
+   * @param {HTMLMediaElement} media
+   * @returns {{startPTS:number, endPTS:number}[]}
+   */
+  filterLivingFragments: function(bufferedFrags, media) {
+    try {
+      const mediaBuffered = media.buffered;
+      return bufferedFrags.filter(frag => {
+        return this.bufferedIncludesPosition(mediaBuffered, (frag.startPTS + frag.endPTS) / 2);
+      });
+    } catch (error) {
+      // InvalidStateError: Failed to read the 'buffered' property from 'SourceBuffer':
+      // This SourceBuffer has been removed from the parent media source
+    }
+    return [];
+  },
+  /**
+   * If `media`'s buffered include `position`, return true.
+   * @param {HTMLMediaElement} media
+   * @param {number} position
+   * @returns {boolean}
+   */
+  isBuffered: function(media,position) {
     try {
       if (media) {
-        let buffered = media.buffered;
-        for (let i = 0; i < buffered.length; i++) {
-          if (position >= buffered.start(i) && position <= buffered.end(i)) {
-            return true;
-          }
-        }
+        let mediaBuffered = media.buffered;
+        return this.bufferedIncludesPosition(mediaBuffered, position);
       }
     } catch(error) {
       // this is to catch
       // InvalidStateError: Failed to read the 'buffered' property from 'SourceBuffer':
       // This SourceBuffer has been removed from the parent media source
+    }
+    return false;
+  },
+  /**
+   * If `mediaBuffered` includes `position`, return true.
+   * @param {TimeRanges} mediaBuffered
+   * @param {number} position
+   * @returns {boolean}
+   */
+  bufferedIncludesPosition(mediaBuffered, position){
+    for (let i = 0; i < mediaBuffered.length; i++) {
+      if (position >= mediaBuffered.start(i) && position <= mediaBuffered.end(i)) {
+        return true;
+      }
     }
     return false;
   },
