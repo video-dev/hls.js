@@ -93,7 +93,7 @@ const WebVTTParser = {
 
             if (presentationTime) {
                 // If we have MPEGTS, offset = presentation time + discontinuity offset
-                cueOffset = presentationTime + vttCCs.ccOffset - vttCCs.presentationOffset;
+                cueOffset = presentationTime + vttCCs.ccOffset - vttCCs.presentationOffset - localTime;
             }
 
             cue.startTime += cueOffset - localTime;
