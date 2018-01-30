@@ -9,13 +9,18 @@ const BufferHelper = {
   filterEvictedFragments: function(bufferedFrags, media) {
     try {
       if (media) {
-        // Cache `buffered` at first for performance
-        // To access `media.buffered` have a cost
+        // Cache `media.buffered` at first for performance
+        // accessing `media.buffered` have a cost
         const mediaBuffered = media.buffered;
+        // accessing MediaElement property through a function call should be quite expensive
+        const bufferedPositions = [];
+        for (let i = 0; i < mediaBuffered.length; i++) {
+          bufferedPositions.push({ start: mediaBuffered.start(i), end: mediaBuffered.end(i) });
+        }
         return bufferedFrags.filter(frag => {
           const position = (frag.startPTS + frag.endPTS) / 2;
-          for (let i = 0; i < mediaBuffered.length; i++) {
-            if (position >= mediaBuffered.start(i) && position <= mediaBuffered.end(i)) {
+          for (let i = 0; i < bufferedPositions.length; i++) {
+            if (position >= bufferedPositions[i].start && position <= bufferedPositions[i].end) {
               return true;
             }
           }
