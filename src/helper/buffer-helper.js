@@ -6,7 +6,7 @@ const BufferHelper = {
   /**
    * filter fragments potentially evicted from buffer.
    */
-  filterLivingFragments: function(bufferedFrags, media) {
+  filterEvictedFragments: function(bufferedFrags, media) {
     try {
       // Cache `buffered` at first for performance
       // To access `media.buffered` have a cost

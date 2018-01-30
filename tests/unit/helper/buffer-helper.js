@@ -10,7 +10,7 @@ function createMockBuffer(buffered) {
 }
 
 describe('BufferHelper', function() {
-  describe('filterLivingFragments', function() {
+  describe('filterEvictedFragments', function() {
     it("should return empty array if the media is invalid", () => {
       const invalidMedia = {
         get buffered() {
@@ -27,7 +27,7 @@ describe('BufferHelper', function() {
           endPTS: 2.0
         }
       ];
-      const filteredFragments = BufferHelper.filterLivingFragments(fragments, invalidMedia);
+      const filteredFragments = BufferHelper.filterEvictedFragments(fragments, invalidMedia);
       assert.equal(filteredFragments.length, 0);
     });
     it("should return fragments that are not evicted", () => {
@@ -74,7 +74,7 @@ describe('BufferHelper', function() {
           endPTS: 4.0
         }
       ];
-      const filteredFragments = BufferHelper.filterLivingFragments(fragments, media);
+      const filteredFragments = BufferHelper.filterEvictedFragments(fragments, media);
       assert.deepEqual(filteredFragments, [fragments[2], fragments[3]]);
     });
   });

@@ -1258,7 +1258,7 @@ class StreamController extends TaskLoop {
         const media = this.mediaBuffer ? this.mediaBuffer : this.media;
         logger.log(`main buffered : ${TimeRanges.toString(media.buffered)}`);
         // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
-        let bufferedFrags = BufferHelper.filterLivingFragments(this._bufferedFrags, media);
+        let bufferedFrags = BufferHelper.filterEvictedFragments(this._bufferedFrags, media);
         // push new range
         bufferedFrags.push(frag);
         // sort frags, as we use BinarySearch for lookup in getBufferedFrag ...
