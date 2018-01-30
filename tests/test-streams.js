@@ -54,13 +54,6 @@ module.exports = {
     "live": false,
     "abr": false
   },
-  NASA: {
-    "url": "https://nasa-i.akamaihd.net/hls/live/253565/NASA-NTV1-Public/master.m3u8",
-    "description": "NASA live stream",
-    "live": true,
-    "abr": false,
-    "blacklist_ua": ["internet explorer", "safari"]
-  },
   closedCaptions: {
     "url": "http://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8",
     "description": "CNN special report, with CC",
