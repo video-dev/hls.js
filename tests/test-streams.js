@@ -54,9 +54,6 @@ module.exports = {
     "live": false,
     "abr": false
   },
-<<<<<<< 17de336966decfc9678554a82d49042d565ae0a2
-  "closedcaptions": {
-=======
   NASA: {
     "url": "https://nasa-i.akamaihd.net/hls/live/253565/NASA-NTV1-Public/master.m3u8",
     "description": "NASA live stream",
@@ -65,7 +62,6 @@ module.exports = {
     "blacklist_ua": ["internet explorer", "safari"]
   },
   closedCaptions: {
->>>>>>> allow to have custom hls config bundled in test streams
     "url": "http://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8",
     "description": "CNN special report, with CC",
     "live": false,
