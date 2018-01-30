@@ -39,7 +39,8 @@
     "test:unit:watch": "karma start karma.conf.js --auto-watch --no-single-run",
     "test:func": "cross-env BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/hlsjs.js --timeout 40000",
     "lint": "jshint src/",
-    "dev": "webpack-dev-server --progress --env.debug --port 8000"
+    "dev": "webpack-dev-server --progress --env.debug --port 8000",
+    "start": "npm run dev"
   },
   "dependencies": {
     "string.prototype.endswith": "^0.2.0",
