@@ -85,7 +85,7 @@ const WebVTTParser = {
             if (currCC && currCC.new) {
                 if (localTime !== undefined) {
                     // When local time is provided, offset = discontinuity start time - local time
-                    cueOffset = vttCCs.ccOffset = currCC.start;
+                    cueOffset = vttCCs.ccOffset = currCC.start - localTime;
                 } else {
                     calculateOffset(vttCCs, cc, presentationTime);
                 }
@@ -93,7 +93,7 @@ const WebVTTParser = {
 
             if (presentationTime) {
                 // If we have MPEGTS, offset = presentation time + discontinuity offset
-                cueOffset = presentationTime + vttCCs.ccOffset - vttCCs.presentationOffset - localTime;
+                cueOffset = presentationTime + vttCCs.ccOffset - vttCCs.presentationOffset;
             }
 
             cue.startTime += cueOffset - localTime;
