@@ -8,12 +8,20 @@ const BufferHelper = {
    */
   filterEvictedFragments: function(bufferedFrags, media) {
     try {
-      // Cache `buffered` at first for performance
-      // To access `media.buffered` have a cost
-      const mediaBuffered = media.buffered;
-      return bufferedFrags.filter(frag => {
-        return this.bufferedIncludesPosition(mediaBuffered, (frag.startPTS + frag.endPTS) / 2);
-      });
+      if (media) {
+        // Cache `buffered` at first for performance
+        // To access `media.buffered` have a cost
+        const mediaBuffered = media.buffered;
+        return bufferedFrags.filter(frag => {
+          const position = (frag.startPTS + frag.endPTS) / 2;
+          for (let i = 0; i < mediaBuffered.length; i++) {
+            if (position >= mediaBuffered.start(i) && position <= mediaBuffered.end(i)) {
+              return true;
+            }
+          }
+          return false;
+        });
+      }
     } catch (error) {
       // InvalidStateError: Failed to read the 'buffered' property from 'SourceBuffer':
       // This SourceBuffer has been removed from the parent media source
@@ -29,8 +37,13 @@ const BufferHelper = {
   isBuffered: function(media,position) {
     try {
       if (media) {
-        let mediaBuffered = media.buffered;
-        return this.bufferedIncludesPosition(mediaBuffered, position);
+        const mediaBuffered = media.buffered;
+        for (let i = 0; i < mediaBuffered.length; i++) {
+          if (position >= mediaBuffered.start(i) && position <= mediaBuffered.end(i)) {
+            return true;
+          }
+        }
+        return false;
       }
     } catch(error) {
       // this is to catch
@@ -39,21 +52,6 @@ const BufferHelper = {
     }
     return false;
   },
-  /**
-   * Return true if `mediaBuffered` includes `position`
-   * @param {TimeRanges} mediaBuffered
-   * @param {number} position
-   * @returns {boolean}
-   */
-  bufferedIncludesPosition(mediaBuffered, position){
-    for (let i = 0; i < mediaBuffered.length; i++) {
-      if (position >= mediaBuffered.start(i) && position <= mediaBuffered.end(i)) {
-        return true;
-      }
-    }
-    return false;
-  },
-
   bufferInfo : function(media, pos,maxHoleDuration) {
     try {
       if (media) {
