@@ -12,17 +12,18 @@ let lastSeekingIdx,
   lastAudioTrackSwitchingIdx;
 
 let hls,
-  url,
-  events,
-  stats,
-  tracks,
-  fmp4Data,
-  enableStreaming = JSON.parse(getURLParam('enableStreaming', true));
-  autoRecoverError = JSON.parse(getURLParam('autoRecoverError', true)),
-  enableWorker = JSON.parse(getURLParam('enableWorker', true)),
-  levelCapping = JSON.parse(getURLParam('levelCapping', -1)),
-  defaultAudioCodec = getURLParam('defaultAudioCodec', undefined),
-  dumpfMP4 = getURLParam('dumpfMP4', false);
+    url,
+    events,
+    stats,
+    tracks,
+    fmp4Data,
+    enableStreaming = JSON.parse(getURLParam('enableStreaming', true));
+    autoRecoverError = JSON.parse(getURLParam('autoRecoverError', true)),
+    enableWorker = JSON.parse(getURLParam('enableWorker', true)),
+    levelCapping = JSON.parse(getURLParam('levelCapping', -1)),
+    defaultAudioCodec = getURLParam('defaultAudioCodec', undefined),
+    widevineLicenseUrl = getURLParam('widevineLicenseURL', undefined),
+    dumpfMP4 = getURLParam('dumpfMP4', false);
 
 let video = $('#video')[0];
 
@@ -129,7 +130,10 @@ function resetGlobals() {
     'video': []
   };
 
-  window.buffered_seek = buffered_seek;
+  window.onClickBufferedRange = onClickBufferedRange;
+
+  window.updateLevelInfo = updateLevelInfo;
+  window.updatePermalink = updatePermalink;
 }
 
 function loadSelectedStream() {
@@ -149,8 +153,6 @@ function loadSelectedStream() {
       hls = null;
     }
 
-    updatePermalink();
-
     if(!enableStreaming) {
       $('#HlsStatus').text('Streaming disabled');
       return;
@@ -160,26 +162,33 @@ function loadSelectedStream() {
 
     resetGlobals();
 
+    if (widevineLicenseUrl) {
+      widevineLicenseUrl = unescape(widevineLicenseUrl)
+    }
+
     const hlsConfig = {
       debug            : true,
       enableWorker     : enableWorker,
-      defaultAudioCodec: defaultAudioCodec
+      defaultAudioCodec: defaultAudioCodec,
+      widevineLicenseUrl: widevineLicenseUrl
     };
 
     if (selectedTestStream && selectedTestStream.config) {
       Object.assign(hlsConfig, selectedTestStream.config)
-
       console.log('Using Hls.js config:', hlsConfig);
     }
 
     if (hlsConfig.widevineLicenseUrl) {
       $('#widevineLicenseUrl').val(hlsConfig.widevineLicenseUrl);
     }
-    hlsConfig.widevineLicenseUrl = $('#widevineLicenseUrl').val();
+
+    widevineLicenseUrl = hlsConfig.widevineLicenseUrl = $('#widevineLicenseUrl').val();
 
     if (hlsConfig.widevineLicenseUrl) {
       hlsConfig.emeEnabled = true;
     }
+
+    updatePermalink();
 
     window.hls = hls = new Hls(hlsConfig);
 
@@ -911,7 +920,7 @@ function minsecs(ts) {
   return m + ':' + (s < 10 ? '0' : '') + s;
 }
 
-function buffered_seek(event) {
+function onClickBufferedRange(event) {
   let canvas = $('#buffered_c')[0];
   let v = $('#video')[0];
   let target = (event.clientX - canvas.offsetLeft) / canvas.width * v.duration;
@@ -1082,6 +1091,7 @@ function getURLParam(sParam, defaultValue) {
 }
 
 function updatePermalink() {
+
   const url = $('#streamURL').val();
   const hlsLink = document.URL.split('?')[0] +  '?src=' + encodeURIComponent(url) +
                     '&enableStreaming=' + enableStreaming +
@@ -1089,7 +1099,8 @@ function updatePermalink() {
                     '&enableWorker=' + enableWorker +
                     '&dumpfMP4=' + dumpfMP4 +
                     '&levelCapping=' + levelCapping +
-                    '&defaultAudioCodec=' + defaultAudioCodec;
+                    '&defaultAudioCodec=' + defaultAudioCodec +
+                    '&widevineLicenseURL=' + escape(widevineLicenseUrl);
 
   $('#StreamPermalink').html('<a href="' + hlsLink + '">' + hlsLink + '</a>');
 }
