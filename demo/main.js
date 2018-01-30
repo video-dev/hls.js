@@ -128,6 +128,8 @@ function resetGlobals() {
     'audio': [],
     'video': []
   };
+
+  window.buffered_seek = buffered_seek;
 }
 
 function loadSelectedStream() {
