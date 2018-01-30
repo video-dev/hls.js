@@ -39,16 +39,15 @@ const BufferHelper = {
    * @param {number} position
    * @returns {boolean}
    */
-  isBuffered: function(media,position) {
+  isBuffered : function(media,position) {
     try {
       if (media) {
-        const mediaBuffered = media.buffered;
-        for (let i = 0; i < mediaBuffered.length; i++) {
-          if (position >= mediaBuffered.start(i) && position <= mediaBuffered.end(i)) {
+        let buffered = media.buffered;
+        for (let i = 0; i < buffered.length; i++) {
+          if (position >= buffered.start(i) && position <= buffered.end(i)) {
             return true;
           }
         }
-        return false;
       }
     } catch(error) {
       // this is to catch
@@ -57,6 +56,7 @@ const BufferHelper = {
     }
     return false;
   },
+
   bufferInfo : function(media, pos,maxHoleDuration) {
     try {
       if (media) {
