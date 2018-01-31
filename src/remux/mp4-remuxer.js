@@ -77,13 +77,12 @@ class MP4Remuxer {
           this.remuxVideo(videoTrack,videoTimeOffset,contiguous,audioTrackLength, accurateTimeOffset);
         }
       } else {
-        let videoData;
         //logger.log('nb AVC samples:' + videoTrack.samples.length);
         if (nbVideoSamples) {
-          videoData = this.remuxVideo(videoTrack,videoTimeOffset,contiguous, accurateTimeOffset);
-        }
-        if (videoData && audioTrack.codec) {
-          this.remuxEmptyAudio(audioTrack, audioTimeOffset, contiguous, videoData);
+          let videoData = this.remuxVideo(videoTrack,videoTimeOffset,contiguous, 0, accurateTimeOffset);
+          if (videoData && audioTrack.codec) {
+            this.remuxEmptyAudio(audioTrack, audioTimeOffset, contiguous, videoData);
+          }
         }
       }
     }
@@ -206,6 +205,10 @@ class MP4Remuxer {
     let nextAvcDts = this.nextAvcDts;
 
     const isSafari = this.isSafari;
+	
+	if(nbSamples === 0){
+		return;
+	}
 
     // Safari does not like overlapping DTS on consecutive fragments. let's use nextAvcDts to overcome this if fragments are consecutive
     if (isSafari) {
@@ -349,16 +352,15 @@ class MP4Remuxer {
           if (config.stretchShortVideoTrack) {
             // In some cases, a segment's audio track duration may exceed the video track duration.
             // Since we've already remuxed audio, and we know how long the audio track is, we look to
-            // see if the delta to the next segment is longer than the minimum of maxBufferHole and
-            // maxSeekHole. If so, playback would potentially get stuck, so we artificially inflate
+            // see if the delta to the next segment is longer than maxBufferHole.
+            // If so, playback would potentially get stuck, so we artificially inflate
             // the duration of the last frame to minimize any potential gap between segments.
             let maxBufferHole = config.maxBufferHole,
-                maxSeekHole = config.maxSeekHole,
-                gapTolerance = Math.floor(Math.min(maxBufferHole, maxSeekHole) * timeScale),
+                gapTolerance = Math.floor(maxBufferHole * timeScale),
                 deltaToFrameEnd = (audioTrackLength ? firstPTS + audioTrackLength * timeScale : this.nextAudioPts) - avcSample.pts;
             if (deltaToFrameEnd > gapTolerance) {
               // We subtract lastFrameDuration from deltaToFrameEnd to try to prevent any video
-              // frame overlap. maxBufferHole/maxSeekHole should be >> lastFrameDuration anyway.
+              // frame overlap. maxBufferHole should be >> lastFrameDuration anyway.
               mp4SampleDuration = deltaToFrameEnd - lastFrameDuration;
               if (mp4SampleDuration < 0) {
                 mp4SampleDuration = lastFrameDuration;
@@ -417,6 +419,8 @@ class MP4Remuxer {
       startDTS: firstDTS / timeScale,
       endDTS: this.nextAvcDts / timeScale,
       type: 'video',
+      hasAudio: false,
+      hasVideo: true,
       nb: outputSamples.length,
       dropped : dropped
     };
@@ -675,6 +679,8 @@ class MP4Remuxer {
         startDTS: start,
         endDTS: end,
         type: 'audio',
+        hasAudio: true,
+        hasVideo: false,
         nb: nbSamples
       };
       this.observer.trigger(Event.FRAG_PARSING_DATA, audioData);

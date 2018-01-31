@@ -39,7 +39,8 @@
     "test:unit:watch": "karma start karma.conf.js --auto-watch --no-single-run",
     "test:func": "cross-env BABEL_ENV=test mocha --compilers js:babel-register tests/functional/auto/hlsjs.js --timeout 40000",
     "lint": "jshint src/",
-    "dev": "webpack-dev-server --progress --env.debug --port 8000"
+    "dev": "webpack-dev-server --progress --env.debug --port 8000",
+    "start": "npm run dev"
   },
   "dependencies": {
     "string.prototype.endswith": "^0.2.0",
@@ -49,15 +50,16 @@
     "arraybuffer-equal": "^1.0.4",
     "babel-core": "^6.25.0",
     "babel-loader": "^7.1.1",
+    "babel-plugin-transform-object-assign": "^6.22.0",
     "babel-preset-es2015": "^6.24.1",
     "babel-register": "^6.24.0",
     "chromedriver": "^2.28.0",
     "cross-env": "^5.0.2",
     "deep-strict-equal": "^0.2.0",
-    "http-server": "^0.10.0",
+    "http-server": "^0.11.0",
     "istanbul-instrumenter-loader": "^2.0.0",
     "jshint": "^2.9.4",
-    "karma": "^1.7.0",
+    "karma": "^2.0.0",
     "karma-chrome-launcher": "^2.2.0",
     "karma-coverage-istanbul-reporter": "^1.3.0",
     "karma-mocha": "^1.3.0",

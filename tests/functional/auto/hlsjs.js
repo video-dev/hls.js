@@ -3,7 +3,7 @@ var webdriver = require('selenium-webdriver');
 // requiring this automatically adds the chromedriver binary to the PATH
 var chromedriver = require('chromedriver');
 var HttpServer = require('http-server');
-var streams = require('../streams.json');
+var streams = require('../../test-streams');
 
 function retry(cb, numAttempts, interval) {
   numAttempts = numAttempts || 20;
@@ -209,6 +209,32 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
     }
   }
 
+  const testIsPlayingVOD = function(url) {
+    return function() {
+      return this.browser.executeAsyncScript(function(url) {
+        var callback = arguments[arguments.length - 1];
+        startStream(url, callback);
+        video.onloadeddata = function() {
+          let expectedPlaying = !(video.paused || // not playing when video is paused
+            video.ended  || // not playing when video is ended
+            video.buffered.length === 0); // not playing if nothing buffered
+          let currentTime = video.currentTime;
+          if(expectedPlaying) {
+            window.setTimeout(function() {
+              console.log("video expected playing. [last currentTime/new currentTime]=[" + currentTime + "/" + video.currentTime + "]");
+              callback({ playing : currentTime !== video.currentTime});
+            }, 5000);
+          } else {
+            console.log("video not playing. [paused/ended/buffered.length]=[" + video.paused + "/" + video.ended + "/" + video.buffered.length + "]");
+            callback({ playing : false });
+          }
+        };
+      }, url).then(function(result) {
+        assert.strictEqual(result.playing, true);
+      });
+    }
+  }
+
   for (var name in streams) {
     var stream = streams[name];
     var url = stream.url;
@@ -221,6 +247,7 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
       if (stream.live) {
         it('should seek near the end and receive video seeked event for ' + stream.description, testSeekOnLive(url));
       } else {
+        it('should play ' + stream.description, testIsPlayingVOD(url));
         it('should seek 5s from end and receive video ended event for ' + stream.description, testSeekOnVOD(url));
         //it('should seek on end and receive video ended event for ' + stream.description, testSeekEndVOD(url));
       }

@@ -92,7 +92,7 @@ hls.js is (being) integrated in the following players:
 
 ## Chrome/Firefox integration
 
-made by [gramk](https://github.com/gramk/chrome-hls),plays hls from address bar and m3u8 links
+made by [gramk](https://github.com/gramk/chrome-hls), plays hls from address bar and m3u8 links
 
  - Chrome [native-hls](https://chrome.google.com/webstore/detail/native-hls-playback/emnphkkblegpebimobpbekeedfgemhof)
  - Firefox [native-hls](https://addons.mozilla.org/en-US/firefox/addon/native_hls_playback/)
@@ -150,7 +150,7 @@ As of today, it is supported on:
  * Opera for Desktop
  * Vivaldi for Desktop
  * Safari for Mac 8+ (beta)
- 
+
 Please note: iOS Safari "Mobile" does not support the MediaSource API. Safari browsers have however built-in HLS support through the plain video "tag" source URL. See the example below to run appropriate feature detection and choose between using Hls.js or natively built-in HLS support.
 
 When a platform has neither MediaSource nor native HLS support, you will not be able to play HLS.
@@ -173,8 +173,10 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - MPEG Audio container (MPEG-1/2 Audio Layer III audio only streams)
   - Timed Metadata for HTTP Live Streaming (in ID3 format, carried in MPEG-2 TS)
   - AES-128 decryption
-  - SAMPLE-AES decryption
-  - CEA-608/708 captionss
+  - SAMPLE-AES decryption (only supported if using MPEG-2 TS container)
+  - Encrypted media extensions (EME) support for DRM (digital rights management)
+    - Widevine CDM (beta/experimental) (see Shaka-package test-stream in demo)
+  - CEA-608/708 captions
   - WebVTT subtitles
   - Alternate Audio Track Rendition (Master Playlist with alternative Audio) for VoD and Live playlists
   - Adaptive streaming
@@ -214,10 +216,9 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - `EXT-X-START:TIME-OFFSET=x` (https://tools.ietf.org/html/draft-pantos-http-live-streaming-18#section-4.3.5.2)
 
 
-## API and Configuration Parameters
+## Documentation: API and Configuration
 
 hls.js can be configured and controlled easily, click [here](doc/API.md) for details.
-
 
 ## License
 

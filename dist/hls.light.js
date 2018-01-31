@@ -368,7 +368,7 @@ var ErrorDetails = {
 (function(root) { 
 /* jshint ignore:end */
 
-  var URL_REGEX = /^((?:[^\/;?#]+:)?)(\/\/[^\/\;?#]*)?(.*?)??(;.*?)?(\?.*?)?(#.*?)?$/;
+  var URL_REGEX = /^((?:[a-zA-Z0-9+\-.]+:)?)(\/\/[^\/\;?#]*)?(.*?)??(;.*?)?(\?.*?)?(#.*?)?$/;
   var FIRST_SEGMENT_REGEX = /^([^\/;?#]*)(.*)$/;
   var SLASH_DOT_REGEX = /(?:\/|^)\.(?=\/)/g;
   var SLASH_DOT_DOT_REGEX = /(?:\/|^)\.\.\/(?!\.\.\/).*?(?=\/)/g;
@@ -378,7 +378,7 @@ var ErrorDetails = {
     // E.g
     // With opts.alwaysNormalize = false (default, spec compliant)
     // http://a.com/b/cd + /e/f/../g => http://a.com/e/f/../g
-    // With opts.alwaysNormalize = true (default, not spec compliant)
+    // With opts.alwaysNormalize = true (not spec compliant)
     // http://a.com/b/cd + /e/f/../g => http://a.com/e/g
     buildAbsoluteURL: function(baseURL, relativeURL, opts) {
       opts = opts || {};
@@ -1676,6 +1676,17 @@ var FastAESKey = function () {
 // CONCATENATED MODULE: ./src/crypt/aes-decryptor.js
 function aes_decryptor__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+// PKCS7
+function removePadding(buffer) {
+  var outputBytes = buffer.byteLength;
+  var paddingBytes = outputBytes && new DataView(buffer).getUint8(outputBytes - 1);
+  if (paddingBytes) {
+    return buffer.slice(0, outputBytes - paddingBytes);
+  } else {
+    return buffer;
+  }
+}
+
 var AESDecryptor = function () {
   function AESDecryptor() {
     aes_decryptor__classCallCheck(this, AESDecryptor);
@@ -1941,7 +1952,7 @@ var AESDecryptor = function () {
       offset = offset + 4;
     }
 
-    return outputInt32.buffer;
+    return removePadding(outputInt32.buffer);
   };
 
   AESDecryptor.prototype.destroy = function destroy() {

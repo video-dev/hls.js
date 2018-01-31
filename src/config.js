@@ -58,18 +58,17 @@ export var hlsDefaultConfig = {
   fragLoadingMaxRetry: 6,                 // used by fragment-loader
   fragLoadingRetryDelay: 1000,            // used by fragment-loader
   fragLoadingMaxRetryTimeout: 64000,      // used by fragment-loader
-  fragLoadingLoopThreshold: 3,            // used by stream-controller
   startFragPrefetch: false,               // used by stream-controller
   fpsDroppedMonitoringPeriod: 5000,       // used by fps-controller
   fpsDroppedMonitoringThreshold: 0.2,     // used by fps-controller
   appendErrorMaxRetry: 3,                 // used by buffer-controller
   loader: XhrLoader,
   //loader: FetchLoader,
-  fLoader: undefined,
-  pLoader: undefined,
-  xhrSetup: undefined,
-  licenseXhrSetup: undefined,              // used by eme-controller
-  fetchSetup: undefined,
+  fLoader: undefined,                     // used by fragment-loader
+  pLoader: undefined,                     // used by playlist-loader
+  xhrSetup: undefined,                    // used by xhr-loader
+  licenseXhrSetup: undefined,             // used by eme-controller
+  // fetchSetup: undefined,
   abrController: AbrController,
   bufferController: BufferController,
   capLevelController: CapLevelController,
@@ -98,7 +97,7 @@ if (__USE_SUBTITLES__) {
   hlsDefaultConfig.subtitleStreamController = SubtitleStreamController;
   hlsDefaultConfig.subtitleTrackController = SubtitleTrackController;
   hlsDefaultConfig.timelineController = TimelineController;
-  hlsDefaultConfig.cueHandler = Cues;
+  hlsDefaultConfig.cueHandler = Cues;                     // used by timeline-controller
   hlsDefaultConfig.enableCEA708Captions = true;           // used by timeline-controller
   hlsDefaultConfig.enableWebVTT = true;                   // used by timeline-controller
   hlsDefaultConfig.captionsTextTrack1Label = 'English';   // used by timeline-controller

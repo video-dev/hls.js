@@ -7,5 +7,7 @@
       "presets": ["es2015"]
     }
   },
-  "plugins": []
+  "plugins": [
+    "transform-object-assign"
+  ]
 }

@@ -31,6 +31,8 @@ class PassThroughRemuxer {
       startPTS: timeOffset,
       startDTS: timeOffset,
       type: streamType,
+      hasAudio: !!audioTrack,
+      hasVideo: !!videoTrack,
       nb: 1,
       dropped : 0
     });
