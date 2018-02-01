@@ -328,6 +328,11 @@ export default class LevelController extends EventHandler {
       } else {
         // Search for available level
         if (this.manualLevelIndex === -1) {
+          //mark problematic level as suppressed
+          if (this.hls.config.enableLevelSuppression) {
+            this.hls.levelSuppression.set(levelIndex, this.hls.config.levelLoadingMaxRetryTimeout);
+            logger.warn(`level controller, ${levelIndex} has been suppressed for ${this.hls.config.levelLoadingMaxRetryTimeout}`);
+          }
           // When lowest level has been reached, let's start hunt from the top
           nextLevel = (levelIndex === 0) ? this._levels.length - 1 : levelIndex - 1;
           logger.warn(`level controller, ${errorDetails}: switch to ${nextLevel}`);

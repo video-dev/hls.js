@@ -45,6 +45,7 @@ export var hlsDefaultConfig = {
   maxMaxBufferLength: 600,                // used by stream-controller
   enableWorker: true,                     // used by demuxer
   enableSoftwareAES: true,                // used by decrypter
+  enableLevelSuppression: false,          // used by hls, level-controller
   manifestLoadingTimeOut: 10000,          // used by playlist-loader
   manifestLoadingMaxRetry: 1,             // used by playlist-loader
   manifestLoadingRetryDelay: 1000,        // used by playlist-loader
