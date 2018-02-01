@@ -1378,8 +1378,6 @@ _checkBuffer() {
         const startPosition = media.seeking ? currentTime : this.startPosition;
         // if currentTime not matching with expected startPosition or startPosition not buffered but close to first buffered
         if (currentTime !== startPosition) {
-          logger.log(`target start position:${startPosition}`);
-
           // if startPosition not buffered, let's seek to buffered.start(0)
           logger.log(`target start position not buffered, seek to buffered.start(0) ${startPosition} from current time ${currentTime}`);
           media.currentTime = startPosition;
@@ -1388,7 +1386,7 @@ _checkBuffer() {
         this.immediateLevelSwitchEnd();
       } else {
         let bufferInfo = BufferHelper.bufferInfo(media,currentTime,0),
-            expectedPlaying = !(media.paused || // not playing when media is paused
+            expectedPlaying = !((media.paused && media.readyState > 1) || // not playing when media is paused
                                 media.ended  || // not playing when media is ended
                                 media.buffered.length === 0), // not playing if nothing buffered
             jumpThreshold = 0.5, // tolerance needed as some browsers stalls playback before reaching buffered range end
