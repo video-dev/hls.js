@@ -114,6 +114,7 @@ class StreamController extends TaskLoop {
       this.demuxer.destroy();
       this.demuxer = null;
     }
+    this.clearInterval();
     this.state = State.STOPPED;
     this.forceStartLoad = false;
   }
