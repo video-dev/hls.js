@@ -15,7 +15,7 @@ import {logger} from '../utils/logger';
 import { alignDiscontinuities } from '../utils/discontinuities';
 import TaskLoop from '../task-loop';
 
-const State = {
+export const State = {
   STOPPED : 'STOPPED',
   IDLE : 'IDLE',
   KEY_LOADING : 'KEY_LOADING',
