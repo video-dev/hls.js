@@ -51,6 +51,15 @@ describe("StreamController", function() {
     assert.deepEqual(spy.args[0][1], { previousState: State.STOPPED, nextState: State.ENDED });
   });
 
+  it("should not trigger STREAM_STATE_TRANSITION when state is not updated", function() {
+    const { hls, streamController } = createStreamController();
+    const spy = sinon.spy();
+    hls.on(Event.STREAM_STATE_TRANSITION, spy);
+    // no update
+    streamController.state = State.STOPPED;
+    assert.equal(spy.called, false);
+  });
+
   it("should not start when controller have not levels data", function() {
     const { streamController } = createStreamController();
     streamController.startLoad(1);
