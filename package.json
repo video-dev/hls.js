@@ -28,6 +28,7 @@
     "build": "webpack --progress",
     "build:watch": "webpack --progress --watch",
     "build:analyze": "ANALYZE=true webpack --progress",
+    "docs": "esdoc",
     "preparerelease": "npm run build && npm run test && git add dist/* && git commit -m 'update dist'",
     "prerelease": "mversion prerelease && npm run preparerelease",
     "patch": "mversion p && npm run preparerelease",
