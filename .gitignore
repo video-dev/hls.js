@@ -9,3 +9,6 @@ coverage/
 # ignore JetBrains
 .idea/*
 dist/bundle-analyzer-report.*
+
+# Auto-generated docs
+docs/html
