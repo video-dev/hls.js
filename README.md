@@ -25,6 +25,10 @@ hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
 [ECMAScript6]: https://github.com/ericdouglas/ES6-Learning#articles--tutorials
 [Babel]: https://babeljs.io
 
+## API docs
+
+[http://video-dev.github.io/hls.js/docs/html](http://video-dev.github.io/hls.js/docs/html)
+
 ## Demo
 
 [http://video-dev.github.io/hls.js/demo](http://video-dev.github.io/hls.js/demo)
