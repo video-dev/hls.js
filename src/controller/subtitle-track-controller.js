@@ -28,6 +28,10 @@ class SubtitleTrackController extends EventHandler {
     this.tracks = [];
     this.trackId = -1;
     this.media = undefined;
+
+    /**
+     * @member {boolean} subtitleDisplay Enable/disable subtitle display rendering
+     */
     this.subtitleDisplay = false;
   }
 

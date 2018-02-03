@@ -9,7 +9,7 @@ import Event from '../events';
 import {FragmentState} from '../helper/fragment-tracker';
 import Fragment from '../loader/fragment';
 import * as LevelHelper from '../helper/level-helper';
-import TimeRanges from '../utils/timeRanges';
+import TimeRanges from '../utils/time-ranges';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
 import { alignDiscontinuities } from '../utils/discontinuities';
@@ -639,13 +639,13 @@ class StreamController extends TaskLoop {
     this.flushMainBuffer(0,Number.POSITIVE_INFINITY);
   }
 
-  /*
-     on immediate level switch end, after new fragment has been buffered :
-      - nudge video decoder by slightly adjusting video currentTime (if currentTime buffered)
-      - resume the playback if needed
-  */
+  /**
+   * on immediate level switch end, after new fragment has been buffered:
+   * - nudge video decoder by slightly adjusting video currentTime (if currentTime buffered)
+   * - resume the playback if needed
+   */
   immediateLevelSwitchEnd() {
-    let media = this.media;
+    const media = this.media;
     if (media && media.buffered.length) {
       this.immediateSwitch = false;
       if(BufferHelper.isBuffered(media,media.currentTime)) {
@@ -658,13 +658,14 @@ class StreamController extends TaskLoop {
     }
   }
 
+  /**
+   * try to switch ASAP without breaking video playback:
+   * in order to ensure smooth but quick level switching,
+   * we need to find the next flushable buffer range
+   * we should take into account new segment fetch time
+   */
   nextLevelSwitch() {
-    /* try to switch ASAP without breaking video playback :
-       in order to ensure smooth but quick level switching,
-      we need to find the next flushable buffer range
-      we should take into account new segment fetch time
-    */
-    let media = this.media;
+    const media = this.media;
     // ensure that media is defined and that metadata are available (to retrieve currentTime)
     if (media && media.readyState) {
       let fetchdelay, fragPlayingCurrent, nextBufferedFrag;
