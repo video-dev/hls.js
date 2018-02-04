@@ -133,7 +133,7 @@ export default class Hls {
     const abrController = this.abrController = new config.abrController(this);
 
     const bufferController  = new config.bufferController(this);
-    const capLevelController = new config.capLevelController(this);
+    const capLevelController = this.capLevelController = new config.capLevelController(this);
     const fpsController = new config.fpsController(this);
     const playListLoader = new PlaylistLoader(this);
     const fragmentLoader = new FragmentLoader(this);
@@ -617,5 +617,38 @@ export default class Hls {
     if (subtitleTrackController) {
       subtitleTrackController.subtitleDisplay = value;
     }
+  }
+
+  /**
+   * <p>
+   *   Get/set ABR capping based on the video element's dimensions.
+   * </p>
+   *
+   * <p>
+   *   If <code>true</code>, the adaptive algorithm will limit levels usable in auto-quality by the HTML video element dimensions (width
+   *   and height). If dimensions between multiple levels are equal, the cap is chosen as the level with the greatest bandwidth.
+   * </p>
+   *
+   * <p>
+   *   If <code>false</code>, levels will not be limited. All available levels could be used in auto-quality mode taking only bandwidth
+   *   into consideration.
+   * </p>
+   *
+   * <p>
+   *   The value of this property is initially <code>capLevelToPlayerSize</code> provided via the constructor or, if not provided, the
+   *   default value (<code>false</code>).
+   * </p>
+   *
+   * @type {Boolean}
+   */
+  get capLevelToPlayerSize() {
+    return this.capLevelController.capLevelToPlayerSize;
+  }
+
+  /**
+   * @type {Boolean}
+   */
+  set capLevelToPlayerSize(value) {
+    this.capLevelController.capLevelToPlayerSize = value;
   }
 }

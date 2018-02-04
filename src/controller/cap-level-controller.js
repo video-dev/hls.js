@@ -6,44 +6,89 @@ import Event from '../events';
 import EventHandler from '../event-handler';
 
 class CapLevelController extends EventHandler {
-	constructor(hls) {
+  constructor(hls) {
     super(hls,
       Event.FPS_DROP_LEVEL_CAPPING,
       Event.MEDIA_ATTACHING,
+      Event.MEDIA_DETACHING,
       Event.MANIFEST_PARSED);
-	}
 
-	destroy() {
-    if (this.hls.config.capLevelToPlayerSize) {
-      this.media = this.restrictedLevels = null;
-      this.autoLevelCapping = Number.POSITIVE_INFINITY;
-      if (this.timer) {
-        this.timer = clearInterval(this.timer);
+    this._capLevelToPlayerSize = hls.config.capLevelToPlayerSize;
+  }
+
+  destroy() {
+    this.media = this.restrictedLevels = null;
+    this.deactivate();
+  }
+
+  get capLevelToPlayerSize() {
+    return this._capLevelToPlayerSize;
+  }
+
+  set capLevelToPlayerSize(value) {
+    const booleanValue = Boolean(value);
+
+    if (booleanValue !== this._capLevelToPlayerSize) {
+      this._capLevelToPlayerSize = booleanValue;
+
+      if (booleanValue) {
+        // Activate if the manifest has already been parsed.
+        if (this.manifest) {
+          this.activate();
+        }
+      } else {
+        this.deactivate();
       }
     }
   }
 
+  activate() {
+    const {capLevelToPlayerSize, manifest} = this;
+
+    if (capLevelToPlayerSize && manifest) {
+      this.autoLevelCapping = Number.POSITIVE_INFINITY;
+      this.levels = manifest.levels;
+      this.hls.firstLevel = this.getMaxLevel(manifest.firstLevel);
+      clearInterval(this.timer);
+      this.timer = setInterval(this.detectPlayerSize.bind(this), 1000);
+      this.detectPlayerSize();
+    }
+  }
+
+  deactivate() {
+    if (this.timer) {
+      this.timer = clearInterval(this.timer);
+    }
+
+    // Remove the level cap
+    this.autoLevelCapping = Number.POSITIVE_INFINITY;
+    this.hls.autoLevelCapping = -1;
+    this.hls.streamController.nextLevelSwitch();
+  }
+
   onFpsDropLevelCapping(data) {
-	  // Don't add a restricted level more than once
+    // Don't add a restricted level more than once
     if (CapLevelController.isLevelAllowed(data.droppedLevel, this.restrictedLevels)) {
       this.restrictedLevels.push(data.droppedLevel);
     }
   }
 
-	onMediaAttaching(data) {
+  onMediaAttaching(data) {
     this.media = data.media instanceof HTMLVideoElement ? data.media : null;
   }
 
+  onMediaDetaching() {
+    this.media = this.restrictedLevels = null;
+    this.deactivate();
+  }
+
   onManifestParsed(data) {
-    const hls = this.hls;
     this.restrictedLevels = [];
-    if (hls.config.capLevelToPlayerSize) {
-      this.autoLevelCapping = Number.POSITIVE_INFINITY;
-      this.levels = data.levels;
-      hls.firstLevel = this.getMaxLevel(data.firstLevel);
-      clearInterval(this.timer);
-      this.timer = setInterval(this.detectPlayerSize.bind(this), 1000);
-      this.detectPlayerSize();
+    this.manifest = data;
+
+    // Activate if already requested
+    if (this.capLevelToPlayerSize) {
+      this.activate();
     }
   }
 
