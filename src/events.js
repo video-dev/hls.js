@@ -39,13 +39,11 @@ export default {
   LEVEL_LOADING: 'hlsLevelLoading',
   // fired when a level playlist loading finishes - data: { details : levelDetails object, level : id of loaded level, stats : { trequest, tfirst, tload, mtime} }
   LEVEL_LOADED: 'hlsLevelLoaded',
-  // fired when a level's details have been updated based on previous details, after it has been loaded - data: { details : levelDetails object, level : id of updated level }
-  LEVEL_UPDATED: 'hlsLevelUpdated',
   // fired when a level's PTS information has been updated after parsing a fragment - data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment }
   LEVEL_PTS_UPDATED: 'hlsLevelPtsUpdated',
   // fired to notify that audio track lists has been updated - data: { audioTracks : audioTracks }
-  LEVEL_REMOVED: 'hlsLevelRemoved',
-  // fired when a level should be removed
+  LEVELS_UPDATED: 'hlsLevelsUpdated',
+  // fired to notify that levels have changed outside of a manifest parsing event - data: { levels }
   AUDIO_TRACKS_UPDATED: 'hlsAudioTracksUpdated',
   // fired when an audio track switch occurs - data: { id : audio track id } // deprecated in favor AUDIO_TRACK_SWITCHING
   AUDIO_TRACK_SWITCH: 'hlsAudioTrackSwitch',

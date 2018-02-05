@@ -15,8 +15,8 @@ export default class LevelController extends EventHandler {
       Event.MANIFEST_LOADED,
       Event.LEVEL_LOADED,
       Event.FRAG_LOADED,
-      Event.ERROR,
-      Event.LEVEL_REMOVED);
+      Event.ERROR
+    );
     this.canload = false;
     this.currentLevelIndex = null;
     this.manualLevelIndex = -1;
@@ -417,7 +417,19 @@ export default class LevelController extends EventHandler {
     }
   }
 
-  onLevelRemoved(data) {
-    this._levels = this.levels.filter((level, index) => index !== data.level);
+  removeLevel(levelIndex, urlId) {
+    this._levels = this.levels.filter((level, index) => {
+      if (index !== levelIndex) {
+        return true;
+      }
+      if (level.url.length > 1 && urlId !== undefined) {
+        level.url = level.url.filter((url, id) => id !== urlId);
+        level.urlId = 0;
+        return true;
+      }
+      return false;
+    });
+
+    this.hls.trigger(Event.LEVELS_UPDATED, { levels: this._levels });
   }
 }
