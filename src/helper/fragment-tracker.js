@@ -1,5 +1,6 @@
 import EventHandler from '../event-handler';
 import Event from '../events';
+import BinarySearch from "../utils/binary-search";
 
 export const FragmentState = {
   NOT_LOADED: 'NOT_LOADED',
@@ -31,6 +32,34 @@ export class FragmentTracker extends EventHandler {
     this.config = null;
     EventHandler.prototype.destroy.call(this);
     super.destroy();
+  }
+
+
+  /**
+   * Return a Fragment that match the position.
+   * If not found any Fragment, return null
+   * @param {number} position
+   * @returns {Fragment|null}
+   */
+  getBufferedFrag(position) {
+    // TODO: currently compatible implementation with StreamController, We should refactor it
+    // create fragment body list
+    const bufferedFrags = Object.keys(this.fragments).filter(key => {
+      const fragmentEntity = this.fragments[key];
+      return fragmentEntity.buffered && fragmentEntity.body.type === "main";
+    }).map(key => {
+      const fragmentEntity = this.fragments[key];
+      return fragmentEntity.body;
+    });
+    // find position's fragment body
+    return BinarySearch.search(bufferedFrags, function(frag) {
+      if (position < frag.startPTS) {
+        return -1;
+      } else if (position > frag.endPTS) {
+        return 1;
+      }
+      return 0;
+    });
   }
 
   /**

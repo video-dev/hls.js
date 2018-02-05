@@ -21,6 +21,24 @@ function createMockFragment(data, types) {
   return data;
 }
 
+/**
+ * load fragment as `buffered: false`
+ * @param {Hls} hls
+ * @param {Fragment} fragment
+ */
+function loadFragment(hls, fragment){
+  hls.trigger(Event.FRAG_LOADED, { frag: fragment });
+}
+
+/**
+ * Load fragment to `buffered: true`
+ * @param hls
+ * @param fragment
+ */
+function loadFragmentAndBuffered(hls, fragment) {
+  loadFragment(hls, fragment);
+  hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
+}
 describe('FragmentTracker', () => {
   describe('getPartialFragment', () => {
     let hls, fragmentTracker, fragment, buffered, partialFragment, timeRanges;
@@ -157,6 +175,116 @@ describe('FragmentTracker', () => {
       hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
 
       assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.NOT_LOADED);
+    });
+  });
+
+  describe('getBufferedFrag', function () {
+    let hls;
+    let fragmentTracker;
+    beforeEach(() => {
+      hls = new Hls({});
+      fragmentTracker = new FragmentTracker(hls);
+    });
+    it('should return buffered fragment if found it', function () {
+      const fragments = [
+        // 0-1
+        createMockFragment({
+          startPTS: 0,
+          endPTS: 1,
+          sn: 1,
+          level: 1,
+          type: 'main'
+        }, ['audio', 'video']),
+        // 1-2
+        createMockFragment({
+          startPTS: 1,
+          endPTS: 2,
+          sn: 2,
+          level: 1,
+          type: 'main'
+        }, ['audio', 'video']),
+        // 2-3
+        createMockFragment({
+          startPTS: 2,
+          endPTS: 3,
+          sn: 3,
+          level: 1,
+          type: 'main'
+        }, ['audio', 'video'])
+      ];
+      // load fragments to buffered
+      fragments.forEach(fragment => {
+        loadFragmentAndBuffered(hls, fragment);
+      });
+      assert.deepEqual(fragmentTracker.getBufferedFrag(0.0), fragments[0], "0");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(0.1), fragments[0], "0.1");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(1.0), fragments[1], "1.0");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(1.1), fragments[1], "1.1");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(2.0), fragments[1], "2");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(2.1), fragments[2], "2.1");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(2.9), fragments[2], "2.9");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(3.0), fragments[2], "3");
+    });
+    it('should return null if found it, but it is not buffered', function () {
+      const fragments = [
+        // 0-1
+        createMockFragment({
+          startPTS: 0,
+          endPTS: 1,
+          sn: 1,
+          level: 1,
+          type: 'main'
+        }, ['audio', 'video']),
+        // 1-2
+        createMockFragment({
+          startPTS: 1,
+          endPTS: 2,
+          sn: 2,
+          level: 1,
+          type: 'main'
+        }, ['audio', 'video']),
+        // 2-3
+        createMockFragment({
+          startPTS: 2,
+          endPTS: 3,
+          sn: 3,
+          level: 1,
+          type: 'main'
+        }, ['audio', 'video'])
+      ];
+      // load fragments, but it is not buffered
+      fragments.forEach(fragment => {
+        loadFragment(hls, fragment);
+      });
+      assert.deepEqual(fragmentTracker.getBufferedFrag(0), null, "0");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(1), null, "1.0");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(2), null, "2");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(3), null, "3")
+    });
+    it('should return null if not found it', function () {
+      loadFragmentAndBuffered(hls, createMockFragment({
+        startPTS: 0,
+        endPTS: 1,
+        sn: 1,
+        level: 1,
+        type: 'main'
+      }, ['audio', 'video']));
+      // not found
+      assert.strictEqual(fragmentTracker.getBufferedFrag(1.1), null);
+    });
+    it('should return null if fragmentTracker not have any fragments', function () {
+      assert.strictEqual(fragmentTracker.getBufferedFrag(0), null);
+    });
+    it('should return null if not found match levelType', function () {
+      loadFragmentAndBuffered(hls, createMockFragment({
+        startPTS: 0,
+        endPTS: 1,
+        sn: 1,
+        level: 1,
+        type: "audio" // <= context type is not "main"
+      }, ['audio', 'video']));
+
+      assert.strictEqual(fragmentTracker.getBufferedFrag(0), null);
     });
   });
 

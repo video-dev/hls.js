@@ -569,9 +569,9 @@ class StreamController extends TaskLoop {
     return this._state;
   }
 
-  // TODO: Move this functionality into fragment-tracker.js
   getBufferedFrag(position) {
-    return BinarySearch.search(this._bufferedFrags, function(frag) {
+    // TODO(azu): remove it before merge
+    const prevResult =  BinarySearch.search(this._bufferedFrags, function(frag) {
       if (position < frag.startPTS) {
         return -1;
       } else if (position > frag.endPTS) {
@@ -579,6 +579,9 @@ class StreamController extends TaskLoop {
       }
       return 0;
     });
+    const newResult = this.fragmentTracker.getBufferedFrag(position);
+    console.assert(prevResult === newResult, "Break Compatibility");
+    return newResult;
   }
 
   get currentLevel() {
@@ -1536,7 +1539,9 @@ _checkBuffer() {
       use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
     */
     const media = this.mediaBuffer ? this.mediaBuffer : this.media;
+    console.log("onBufferFlushed:before", this._bufferedFrags);
     this._bufferedFrags = this._bufferedFrags.filter(frag => {return BufferHelper.isBuffered(media,(frag.startPTS + frag.endPTS) / 2);});
+    console.log("onBufferFlushed:after", this._bufferedFrags);
 
     // move to IDLE once flush complete. this should trigger new fragment loading
     this.state = State.IDLE;
