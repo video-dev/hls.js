@@ -430,6 +430,9 @@ export default class LevelController extends EventHandler {
       return false;
     });
 
+    if (this.hls.currentLevel === levelIndex) {
+      this.hls.nextLevel = -1;
+    }
     this.hls.trigger(Event.LEVELS_UPDATED, { levels: this._levels });
   }
 }
