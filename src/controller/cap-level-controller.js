@@ -10,7 +10,8 @@ class CapLevelController extends EventHandler {
     super(hls,
       Event.FPS_DROP_LEVEL_CAPPING,
       Event.MEDIA_ATTACHING,
-      Event.MANIFEST_PARSED);
+      Event.MANIFEST_PARSED,
+      Event.LEVELS_UPDATED);
 	}
 
 	destroy() {
@@ -45,6 +46,10 @@ class CapLevelController extends EventHandler {
       this.timer = setInterval(this.detectPlayerSize.bind(this), 1000);
       this.detectPlayerSize();
     }
+  }
+
+  onLevelsUpdated(data) {
+	  this.levels = data.levels;
   }
 
   detectPlayerSize() {

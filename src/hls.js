@@ -183,8 +183,9 @@ export default class Hls {
     this.attachMedia(media);
   }
 
-  removeLevel(level) {
-    this.trigger(Event.LEVEL_REMOVED, { level });
+  removeLevel(levelIndex, urlId = 0) {
+    this.levelController.removeLevel(levelIndex, urlId);
+    const levels = this.levelController.levels;
   }
 
   /** Return all quality levels **/

@@ -49,7 +49,7 @@ class StreamController extends EventHandler {
       Event.BUFFER_CREATED,
       Event.BUFFER_APPENDED,
       Event.BUFFER_FLUSHED,
-      Event.LEVEL_REMOVED
+      Event.LEVEL_UPDATED
     );
 
     this.config = hls.config;
@@ -1575,8 +1575,8 @@ _checkBuffer() {
     this.fragPrevious = null;
   }
 
-  onLevelRemoved(data) {
-    this.levels = this.levels.filter((level, index) => index !== data.level);
+  onLevelsUpdated(data) {
+    this.levels = data.levels;
   }
 
   swapAudioCodec() {
