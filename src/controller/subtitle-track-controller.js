@@ -193,7 +193,7 @@ class SubtitleTrackController extends EventHandler {
     let textTracks = filterSubtitleTracks(this.media.textTracks);
 
     // hide currently enabled subtitle track
-    if (this.trackId !== -1 && this.subtitleDisplay) {
+    if (this.trackId !== -1) {
       textTracks[this.trackId].mode = 'disabled';
     }
 
