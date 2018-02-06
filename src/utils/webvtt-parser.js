@@ -66,7 +66,7 @@ const WebVTTParser = {
 
         let cueTime = '00:00.000';
         let mpegTs = 0;
-        let localTime = 0;
+        let localTime;
         let presentationTime = 0;
         let cues = [];
         let parsingError;
