@@ -16,6 +16,10 @@ import {isSupported} from './helper/is-supported';
 import {logger, enableLogs} from './utils/logger';
 import EventEmitter from 'events';
 import {hlsDefaultConfig} from './config';
+import {FragmentTracker} from './helper/fragment-tracker';
+
+// polyfill for IE11
+require('string.prototype.endswith');
 
 export default class Hls {
   static get version() {
@@ -97,17 +101,19 @@ export default class Hls {
 
     // network controllers
     const levelController = this.levelController = new LevelController(this);
-    const streamController = this.streamController = new StreamController(this);
+    // FragmentTracker must be defined before StreamController because the order of event handling is important
+    const fragmentTracker = new FragmentTracker(this);
+    const streamController = this.streamController = new StreamController(this, fragmentTracker);
     let networkControllers = [levelController, streamController];
 
     // optional audio stream controller
     let Controller = config.audioStreamController;
     if (Controller) {
-      networkControllers.push(new Controller(this));
+      networkControllers.push(new Controller(this, fragmentTracker));
     }
     this.networkControllers = networkControllers;
 
-    let coreComponents = [ playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController, id3TrackController ];
+    let coreComponents = [ playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController, id3TrackController, fragmentTracker ];
 
     // optional audio track and subtitle controller
     Controller = config.audioTrackController;
@@ -122,6 +128,13 @@ export default class Hls {
       let subtitleTrackController = new Controller(this);
       this.subtitleTrackController = subtitleTrackController;
       coreComponents.push(subtitleTrackController);
+    }
+
+    Controller = config.emeController;
+    if (Controller) {
+      let emeController = new Controller(this);
+      this.emeController = emeController;
+      coreComponents.push(emeController);
     }
 
     // optional subtitle controller

@@ -9,7 +9,7 @@
   constructor(observer, config, decryptdata, discardEPB) {
     this.decryptdata = decryptdata;
     this.discardEPB = discardEPB;
-    this.decrypter = new Decrypter(observer, config);
+    this.decrypter = new Decrypter(observer, config, { removePKCS7Padding: false });
   }
 
   decryptBuffer(encryptedData, callback) {

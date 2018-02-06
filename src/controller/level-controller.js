@@ -22,7 +22,7 @@ export default class LevelController extends EventHandler {
     this.timer = null;
   }
 
-  destroy() {
+  onHandlerDestroying() {
     this.cleanTimer();
     this.manualLevelIndex = -1;
   }
@@ -255,7 +255,6 @@ export default class LevelController extends EventHandler {
     switch (data.details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
-      case ErrorDetails.FRAG_LOOP_LOADING_ERROR:
       case ErrorDetails.KEY_LOAD_ERROR:
       case ErrorDetails.KEY_LOAD_TIMEOUT:
         levelIndex = data.frag.level;
