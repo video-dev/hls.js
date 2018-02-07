@@ -384,4 +384,83 @@ describe('FragmentTracker', () => {
       assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.OK);
     });
   });
+
+  describe("removeFragment", () => {
+    /** @type {Hls} */
+    let hls;
+    /** @type {FragmentTracker} */
+    let fragmentTracker;
+    beforeEach(() => {
+      hls = new Hls({});
+      fragmentTracker = new FragmentTracker(hls);
+    });
+    it("should remove fragment", () => {
+      const fragment = createMockFragment({
+        startPTS: 0,
+        endPTS: 1,
+        sn: 1,
+        level: 1,
+        type: 'main'
+      }, ['audio', 'video']);
+      // load fragments to buffered
+      loadFragmentAndBuffered(hls, fragment);
+      assert.strictEqual(fragmentTracker.hasFragment(fragment), true);
+      // Remove the fragment
+      fragmentTracker.removeFragment(fragment);
+      // Check
+      assert.strictEqual(fragmentTracker.hasFragment(fragment), false);
+    });
+  });
+  describe("removeAllFragments", () => {
+    /** @type {Hls} */
+    let hls;
+    /** @type {FragmentTracker} */
+    let fragmentTracker;
+    beforeEach(() => {
+      hls = new Hls({});
+      fragmentTracker = new FragmentTracker(hls);
+    });
+    it("should remove all fragments", () => {
+      const fragments = [
+        // 0-1
+        createMockFragment({
+          startPTS: 0,
+          endPTS: 1,
+          sn: 1,
+          level: 1,
+          type: 'main'
+        }, ['audio', 'video']),
+        // 1-2
+        createMockFragment({
+          startPTS: 1,
+          endPTS: 2,
+          sn: 2,
+          level: 1,
+          type: 'main'
+        }, ['audio', 'video']),
+        // 2-3
+        createMockFragment({
+          startPTS: 2,
+          endPTS: 3,
+          sn: 3,
+          level: 1,
+          type: 'main'
+        }, ['audio', 'video'])
+      ];
+      // load fragments to buffered
+      fragments.forEach(fragment => {
+        loadFragmentAndBuffered(hls, fragment);
+      });
+      // before
+      fragments.forEach(fragment => {
+        assert.strictEqual(fragmentTracker.hasFragment(fragment), true);
+      });
+      // Remove all fragments
+      fragmentTracker.removeAllFragments();
+      // after
+      fragments.forEach(fragment => {
+        assert.strictEqual(fragmentTracker.hasFragment(fragment), false);
+      });
+    });
+  });
 });

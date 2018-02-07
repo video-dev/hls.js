@@ -257,11 +257,28 @@ export class FragmentTracker extends EventHandler {
   }
 
   /**
+   * Return true if fragment tracker has the fragment.
+   * @param {Object} fragment
+   * @returns {boolean}
+   */
+  hasFragment(fragment) {
+    const fragKey = this.getFragmentKey(fragment);
+    return this.fragments[fragKey] !== undefined;
+  }
+
+  /**
    * Remove a fragment from fragment tracker until it is loaded again
    * @param {Object} fragment The fragment to remove
    */
   removeFragment(fragment) {
     let fragKey = this.getFragmentKey(fragment);
     delete this.fragments[fragKey];
+  }
+
+  /**
+   * Remove all fragments from fragment tracker.
+   */
+  removeAllFragments(){
+    this.fragments = Object.create(null);
   }
 }
