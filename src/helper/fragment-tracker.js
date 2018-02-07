@@ -67,7 +67,7 @@ export class FragmentTracker extends EventHandler {
    * The browser will unload parts of the buffer to free up memory for new buffer data
    * Fragments will need to be reloaded when the buffer is freed up, removing partial fragments will allow them to reload(since there might be parts that are still playable)
    * @param {String} elementaryStream The elementaryStream of media this is (eg. video/audio)
-   * @param {Object} timeRange TimeRange object from a sourceBuffer
+   * @param {TimeRanges} timeRange TimeRange object from a sourceBuffer
    */
   detectEvictedFragments(elementaryStream, timeRange) {
     let fragmentTimes, time;

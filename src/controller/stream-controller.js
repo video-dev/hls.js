@@ -1528,8 +1528,8 @@ _checkBuffer() {
       use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
     */
     const media = this.mediaBuffer ? this.mediaBuffer : this.media;
-
-    this._bufferedFrags = this._bufferedFrags.filter(frag => {return BufferHelper.isBuffered(media,(frag.startPTS + frag.endPTS) / 2);});
+    // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
+    this.fragmentTracker.detectEvictedFragments(Fragment.ElementaryStreamTypes.VIDEO, media.buffered);
 
     // move to IDLE once flush complete. this should trigger new fragment loading
     this.state = State.IDLE;
