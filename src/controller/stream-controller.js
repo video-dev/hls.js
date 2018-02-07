@@ -570,18 +570,7 @@ class StreamController extends TaskLoop {
   }
 
   getBufferedFrag(position) {
-    // TODO(azu): remove it before merge
-    const prevResult =  BinarySearch.search(this._bufferedFrags, function(frag) {
-      if (position < frag.startPTS) {
-        return -1;
-      } else if (position > frag.endPTS) {
-        return 1;
-      }
-      return 0;
-    });
-    const newResult = this.fragmentTracker.getBufferedFrag(position);
-    console.assert(prevResult === newResult, "Break Compatibility");
-    return newResult;
+    return this.fragmentTracker.getBufferedFrag(position);
   }
 
   get currentLevel() {
@@ -878,7 +867,7 @@ class StreamController extends TaskLoop {
     // reset buffer on manifest loading
     logger.log('trigger BUFFER_RESET');
     this.hls.trigger(Event.BUFFER_RESET);
-    this._bufferedFrags = [];
+    this.fragmentTracker.removeAllFragments();
     this.stalled = false;
     this.startPosition = this.lastCurrentTime = 0;
   }
@@ -1539,9 +1528,8 @@ _checkBuffer() {
       use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
     */
     const media = this.mediaBuffer ? this.mediaBuffer : this.media;
-    console.log("onBufferFlushed:before", this._bufferedFrags);
+
     this._bufferedFrags = this._bufferedFrags.filter(frag => {return BufferHelper.isBuffered(media,(frag.startPTS + frag.endPTS) / 2);});
-    console.log("onBufferFlushed:after", this._bufferedFrags);
 
     // move to IDLE once flush complete. this should trigger new fragment loading
     this.state = State.IDLE;
