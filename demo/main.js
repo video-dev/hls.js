@@ -145,18 +145,15 @@ function resetGlobals() {
   window.goToMetricsPermaLink = goToMetricsPermaLink;
 }
 
-function trimArray( target, limit )
-{
+function trimArray( target, limit ) {
   while(target.length > limit )
   {
     target.shift();
   }
 }
 
-function trimEventHistory()
-{
+function trimEventHistory() {
   let x = limitMetrics;
-
   trimArray(events.load, x);
   trimArray(events.buffer, x);
   trimArray(events.video, x);
