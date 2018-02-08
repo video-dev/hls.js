@@ -15,7 +15,7 @@ import {logger} from '../utils/logger';
 import { alignDiscontinuities } from '../utils/discontinuities';
 import TaskLoop from '../task-loop';
 
-const State = {
+export const State = {
   STOPPED : 'STOPPED',
   IDLE : 'IDLE',
   KEY_LOADING : 'KEY_LOADING',
@@ -114,6 +114,7 @@ class StreamController extends TaskLoop {
       this.demuxer.destroy();
       this.demuxer = null;
     }
+    this.clearInterval();
     this.state = State.STOPPED;
     this.forceStartLoad = false;
   }
