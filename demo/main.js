@@ -17,6 +17,7 @@ let hls,
     stats,
     tracks,
     fmp4Data,
+    limitMetrics = JSON.parse(getURLParam('limitMetrics', 5000));
     enableStreaming = JSON.parse(getURLParam('enableStreaming', true));
     autoRecoverError = JSON.parse(getURLParam('autoRecoverError', true)),
     enableWorker = JSON.parse(getURLParam('enableWorker', true)),
@@ -84,6 +85,11 @@ $(document).ready(function() {
     updatePermalink();
   });
 
+  $('#limitMetrics').change(function() {
+    limitMetrics = this.value;
+    updatePermalink();
+  })
+
   $('#levelCapping').change(function() {
     levelCapping = this.value;
     updatePermalink();
@@ -94,6 +100,7 @@ $(document).ready(function() {
     updatePermalink();
   });
 
+  $('#limitMetrics').val(limitMetrics);
   $('#enableStreaming').prop( 'checked', enableStreaming );
   $('#autoRecoverError').prop( 'checked', autoRecoverError );
   $('#enableWorker').prop( 'checked', enableWorker );
@@ -134,6 +141,27 @@ function resetGlobals() {
 
   window.updateLevelInfo = updateLevelInfo;
   window.updatePermalink = updatePermalink;
+}
+
+function trimArray( target, limit )
+{
+  if( target.length > limit)
+  console.log(target.length, limit);
+  while(target.length > limit )
+  {
+    target.shift();
+  }
+}
+
+function trimEventHistory()
+{
+  let x = limitMetrics;
+
+  trimArray(events.load, x);
+  trimArray(events.buffer, x);
+  trimArray(events.video, x);
+  trimArray(events.level, x);
+  trimArray(events.bitrate, x);
 }
 
 function loadSelectedStream() {
@@ -205,6 +233,7 @@ function loadSelectedStream() {
         time: performance.now() - events.t0,
         type: 'Media attached'
       });
+      trimEventHistory();
     });
 
     hls.on(Hls.Events.MEDIA_DETACHED, function() {
@@ -215,6 +244,7 @@ function loadSelectedStream() {
         time: performance.now() - events.t0,
         type: 'Media detached'
       });
+      trimEventHistory();
     });
 
     hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT, function(event, data) {
@@ -224,6 +254,7 @@ function loadSelectedStream() {
         type: data.id + ' init segment'
       };
       events.video.push(event);
+      trimEventHistory();
     });
 
     hls.on(Hls.Events.FRAG_PARSING_METADATA, function(event, data) {
@@ -236,6 +267,7 @@ function loadSelectedStream() {
         id     : data.level,
         bitrate: Math.round(hls.levels[data.level].bitrate/1000)
       });
+      trimEventHistory();
       updateLevelInfo();
     });
 
@@ -251,6 +283,7 @@ function loadSelectedStream() {
         duration: data.stats.tload - data.stats.tfirst,
       };
       events.load.push(event);
+      trimEventHistory();
       refreshCanvas();
     });
 
@@ -260,6 +293,7 @@ function loadSelectedStream() {
         levelNb    : data.levels.length,
         levelParsed: 0
       };
+      trimEventHistory();
       updateLevelInfo();
     });
 
@@ -276,6 +310,7 @@ function loadSelectedStream() {
         name: '@' + data.id
       };
       events.video.push(event);
+      trimEventHistory();
       lastAudioTrackSwitchingIdx = events.video.length-1;
     });
 
@@ -291,6 +326,7 @@ function loadSelectedStream() {
         lastAudioTrackSwitchingIdx = undefined;
       }
       events.video.push(event);
+      trimEventHistory();
     });
 
     hls.on(Hls.Events.LEVEL_LOADED, function(event, data) {
@@ -316,6 +352,7 @@ function loadSelectedStream() {
       stats.levelParsingUs = Math.round(1000*this.sumLevelParsingMs / stats.levelParsed);
       console.log('parsing level duration :' + stats.levelParsingUs + 'us,count:' + stats.levelParsed);
       events.load.push(event);
+      trimEventHistory();
       refreshCanvas();
     });
 
@@ -333,6 +370,7 @@ function loadSelectedStream() {
         duration: data.stats.tload - data.stats.tfirst
       };
       events.load.push(event);
+      trimEventHistory();
       refreshCanvas();
     });
 
@@ -365,6 +403,7 @@ function loadSelectedStream() {
         });
         hls.bufferTimer = window.setInterval(checkBuffer, 100);
       }
+      trimEventHistory();
       refreshCanvas();
       updateLevelInfo();
 
@@ -417,6 +456,7 @@ function loadSelectedStream() {
         name: data.level
       };
       events.video.push(event);
+      trimEventHistory();
       refreshCanvas();
       updateLevelInfo();
     });
@@ -428,6 +468,7 @@ function loadSelectedStream() {
         name: data.frag.sn + ' @ ' + data.frag.level
       };
       events.video.push(event);
+      trimEventHistory();
       refreshCanvas();
       updateLevelInfo();
       stats.tagList = data.frag.tagList;
@@ -597,7 +638,6 @@ function loadSelectedStream() {
     hls.on(Hls.Events.BUFFER_APPENDING, function(event, data) {
       if (dumpfMP4)
       {fmp4Data[data.type].push(data.data);}
-
     });
 
     hls.on(Hls.Events.FPS_DROP, function(event, data) {
@@ -607,6 +647,7 @@ function loadSelectedStream() {
         name: data.currentDropped + '/' + data.currentDecoded
       };
       events.video.push(evt);
+      trimEventHistory();
       if (stats) {
         if (stats.fpsDropEvent === undefined)
         {stats.fpsDropEvent = 1;}
@@ -711,6 +752,7 @@ function handleVideoEvent(evt) {
   if(evt.type === 'seeked')
   {events.video[lastSeekingIdx].duration = event.time - events.video[lastSeekingIdx].time;}
 
+  trimEventHistory();
 }
 
 function handleMediaError() {
@@ -779,6 +821,7 @@ function checkBuffer() {
             type: 'buffering',
             time: performance.now() - events.t0
           });
+          trimEventHistory();
           // we are in buffering state
           bufferingIdx = events.video.length-1;
         }
@@ -814,6 +857,7 @@ function checkBuffer() {
 
     }
     events.buffer.push(event);
+    trimEventHistory();
     refreshCanvas();
 
     let log = 'Duration:'
@@ -1099,6 +1143,7 @@ function updatePermalink() {
                     '&enableWorker=' + enableWorker +
                     '&dumpfMP4=' + dumpfMP4 +
                     '&levelCapping=' + levelCapping +
+                    '&limitMetrics=' + limitMetrics +
                     '&defaultAudioCodec=' + defaultAudioCodec +
                     '&widevineLicenseURL=' + escape(widevineLicenseUrl);
 
