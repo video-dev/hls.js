@@ -313,7 +313,8 @@ function loadSelectedStream() {
       {this.sumLevelParsingMs = parsingDuration;}
 
       stats.levelParsed++;
-      stats.levelParsingUs = Math.round(1000*this.sumLevelParsingMs / stats.levelParsed);
+      stats.levelParsingUs = Math.round(1000 * this.sumLevelParsingMs / stats.levelParsed);
+      stats.levelsSuppressed = hls.levelSuppression._levelsSuppressed;
       console.log('parsing level duration :' + stats.levelParsingUs + 'us,count:' + stats.levelParsed);
       events.load.push(event);
       refreshCanvas();
@@ -934,11 +935,12 @@ function updateLevelInfo() {
   }
 
   let button_template = '<button type="button" class="btn btn-sm ';
-  let button_enabled  = 'btn-primary" ';
+  let button_enabled = 'btn-primary" ';
   let button_disabled = 'btn-success" ';
+  let button_suppressed = 'btn-warning" ';
 
   let html1 = button_template;
-  if(hls.autoLevelEnabled) {
+  if (hls.autoLevelEnabled) {
     html1 += button_enabled;
   } else {
     html1 += button_disabled;
@@ -973,24 +975,29 @@ function updateLevelInfo() {
 
   html4 += 'onclick="hls.nextLevel=-1">auto</button>';
 
-  for (let i=0; i < hls.levels.length; i++) {
+  for (let i = 0; i < hls.levels.length; i++) {
     html1 += button_template;
-    if(hls.currentLevel === i) {
+    if (hls.currentLevel === i) {
       html1 += button_enabled;
+    }
+    else if (hls.levelSuppression._levelsSuppressed[i]) {
+      html1 += button_suppressed;
     } else {
       html1 += button_disabled;
     }
 
     let levelName = i, label = level2label(i);
-    if(label) {
+    if (label) {
       levelName += '(' + level2label(i) + ')';
     }
 
     html1 += 'onclick="hls.currentLevel=' + i + '">' + levelName + '</button>';
 
     html2 += button_template;
-    if(hls.loadLevel === i) {
+    if (hls.loadLevel === i) {
       html2 += button_enabled;
+    } else if (hls.levelSuppression._levelsSuppressed[i]) {
+      html2 += button_suppressed;
     } else {
       html2 += button_disabled;
     }
@@ -998,7 +1005,7 @@ function updateLevelInfo() {
     html2 += 'onclick="hls.loadLevel=' + i + '">' + levelName + '</button>';
 
     html3 += button_template;
-    if(hls.autoLevelCapping === i) {
+    if (hls.autoLevelCapping === i) {
       html3 += button_enabled;
     } else {
       html3 += button_disabled;
@@ -1007,8 +1014,10 @@ function updateLevelInfo() {
     html3 += 'onclick="levelCapping=hls.autoLevelCapping=' + i + ';updateLevelInfo();updatePermalink();">' + levelName + '</button>';
 
     html4 += button_template;
-    if(hls.nextLevel === i) {
+    if (hls.nextLevel === i) {
       html4 += button_enabled;
+    } else if (hls.levelSuppression._levelsSuppressed[i]) {
+      html4 += button_suppressed;
     } else {
       html4 += button_disabled;
     }

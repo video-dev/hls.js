@@ -15,8 +15,9 @@ import ID3TrackController from './controller/id3-track-controller';
 import {isSupported} from './helper/is-supported';
 import {logger, enableLogs} from './utils/logger';
 import EventEmitter from 'events';
-import {hlsDefaultConfig} from './config';
-import {FragmentTracker} from './helper/fragment-tracker';
+import { hlsDefaultConfig } from './config';
+import { FragmentTracker } from './helper/fragment-tracker';
+import LevelSuppression from './utils/level-suppression';
 
 // polyfill for IE11
 require('string.prototype.endswith');
@@ -76,6 +77,7 @@ export default class Hls {
     enableLogs(config.debug);
     this.config = config;
     this._autoLevelCapping = -1;
+    this.levelSuppression = new LevelSuppression();
     // observer setup
     var observer = this.observer = new EventEmitter();
     observer.trigger = function trigger (event, ...data) {
@@ -154,6 +156,7 @@ export default class Hls {
     this.url = null;
     this.observer.removeAllListeners();
     this._autoLevelCapping = -1;
+    this.levelSuppression = null;
   }
 
   attachMedia(media) {
@@ -334,7 +337,14 @@ export default class Hls {
   get nextAutoLevel() {
     const hls = this;
     // ensure next auto level is between  min and max auto level
-    return Math.min(Math.max(hls.abrController.nextAutoLevel,hls.minAutoLevel),hls.maxAutoLevel);
+    let level = Math.min(Math.max(hls.abrController.nextAutoLevel, hls.minAutoLevel), hls.maxAutoLevel);
+
+    if (hls.config.enableLevelSuppression && (hls.currentLevel !== level)) {
+      return this.getAppropriateLevel(level);
+    } else {
+      return level;
+    }
+
   }
 
   // this setter is used to force next auto level
@@ -342,7 +352,36 @@ export default class Hls {
   // forced value is valid for one fragment. upon succesful frag loading at forced level, this value will be resetted to -1 by ABR controller
   set nextAutoLevel(nextLevel) {
     const hls = this;
-    hls.abrController.nextAutoLevel = Math.max(hls.minAutoLevel,nextLevel);
+
+    let level = Math.max(hls.minAutoLevel, nextLevel);
+
+    if (hls.config.enableLevelSuppression) {
+      hls.abrController.nextAutoLevel = this.getAppropriateLevel(level);
+    } else {
+      hls.abrController.nextAutoLevel = level;
+    }
+  }
+
+  getAppropriateLevel(level) {
+
+    //to avoid extra checks, return level if not suppressed
+    if (!this.levelSuppression.isSuppressed(level)) return level;
+
+    //reset if all levels have been suppressed, continute to suppress last problematic level
+    if (this.levelSuppression.isAllSuppressed(this.minAutoLevel, this.maxAutoLevel)) {
+      //reset
+      this.levelSuppression = new LevelSuppression();
+      //suppress problematic level
+      this.levelSuppression.set(this.streamController.levelLastLoaded, this.config.levelLoadingMaxRetryTimeout);
+    }
+
+
+    //find non-suppressed level
+    while (this.levelSuppression.isSuppressed(level)) {
+      level = (level === 0) ? this.levels.length - 1 : level - 1;
+    }
+
+    return level;
   }
 
   /** get alternate audio tracks list from playlist **/

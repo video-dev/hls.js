@@ -42,6 +42,7 @@
   - [`liveDurationInfinity`](#livedurationinfinity)
   - [`enableWorker`](#enableworker)
   - [`enableSoftwareAES`](#enablesoftwareaes)
+  - [`enableLevelSuppression`](#enableLevelSuppression)
   - [`startLevel`](#startlevel)
   - [`fragLoadingTimeOut` / `manifestLoadingTimeOut` / `levelLoadingTimeOut`](#fragloadingtimeout--manifestloadingtimeout--levelloadingtimeout)
   - [`fragLoadingMaxRetry` / `manifestLoadingMaxRetry` / `levelLoadingMaxRetry`](#fragloadingmaxretry--manifestloadingmaxretry--levelloadingmaxretry)
@@ -310,6 +311,7 @@ Configuration parameters could be provided to hls.js upon instantiation of `Hls`
       liveMaxLatencyDurationCount: 10,
       enableWorker: true,
       enableSoftwareAES: true,
+      enableLevelSuppression: false,
       manifestLoadingTimeOut: 10000,
       manifestLoadingMaxRetry: 1,
       manifestLoadingRetryDelay: 500,
@@ -551,6 +553,12 @@ Enable WebWorker (if available on browser) for TS demuxing/MP4 remuxing, to impr
 (default: `true`)
 
 Enable to use JavaScript version AES decryption for fallback of WebCrypto API.
+
+### `enableLevelSuppression`
+
+(default: `false`)
+
+Enable to use Level Suppression. When enabled, levels will be suppressed for a given timeout (config.levelLoadingMaxRetryTimeout) when attempting to switch.
 
 ### `startLevel`
 
