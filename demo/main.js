@@ -145,8 +145,6 @@ function resetGlobals() {
 
 function trimArray( target, limit )
 {
-  if( target.length > limit)
-  console.log(target.length, limit);
   while(target.length > limit )
   {
     target.shift();
