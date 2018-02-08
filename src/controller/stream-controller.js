@@ -1397,7 +1397,7 @@ _checkBuffer() {
       } else if (this.immediateSwitch) {
         this.immediateLevelSwitchEnd();
       } else {
-        let bufferInfo = BufferHelper.bufferInfo(media,currentTime,0),
+        let bufferInfo = BufferHelper.bufferInfo(media,currentTime,config.maxBufferHole),
             expectedPlaying = !(media.paused || // not playing when media is paused
                                 media.ended  || // not playing when media is ended
                                 media.buffered.length === 0), // not playing if nothing buffered
