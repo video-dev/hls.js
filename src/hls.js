@@ -185,7 +185,6 @@ export default class Hls {
 
   removeLevel(levelIndex, urlId = 0) {
     this.levelController.removeLevel(levelIndex, urlId);
-    const levels = this.levelController.levels;
   }
 
   /** Return all quality levels **/
