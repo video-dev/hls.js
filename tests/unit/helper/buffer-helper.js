@@ -10,6 +10,74 @@ function createMockBuffer(buffered) {
 }
 
 describe('BufferHelper', function() {
+  describe('filterEvictedFragments', function() {
+    it("should return empty array if the media is invalid", () => {
+      const invalidMedia = {
+        get buffered() {
+          throw new Error("InvalidStateError");
+        }
+      };
+      const fragments = [
+        {
+          startPTS: 0,
+          endPTS: 0.5
+        },
+        {
+          startPTS: 1,
+          endPTS: 2.0
+        }
+      ];
+      const filteredFragments = BufferHelper.filterEvictedFragments(fragments, invalidMedia);
+      assert.equal(filteredFragments.length, 0);
+    });
+    it("should return fragments that are not evicted", () => {
+      // |__________|//////////|//////////|__________|
+      // 0         1.0        2.0        3.0        4.0
+      const media = {
+        get buffered() {
+          return createMockBuffer([
+            {
+              startPTS: 1,
+              endPTS: 2.0
+            },
+            {
+              startPTS: 2.0,
+              endPTS: 3.0
+            }
+          ]);
+        }
+      };
+      // |////|/////|//////////|//////////|//////////|
+      // 0         1.0        2.0        3.0        4.0
+      const fragments = [
+        // ↓ out of buffer ↓
+        {
+          startPTS: 0,
+          endPTS: 0.5
+        },
+        {
+          startPTS: 0.5,
+          endPTS: 1.0
+        },
+        // ↑ out of buffer ↑
+        {
+          startPTS: 1.0,
+          endPTS: 2.0
+        },
+        {
+          startPTS: 2.0,
+          endPTS: 3.0
+        },
+        // ↓ out of buffer ↓
+        {
+          startPTS: 3.0,
+          endPTS: 4.0
+        }
+      ];
+      const filteredFragments = BufferHelper.filterEvictedFragments(fragments, media);
+      assert.deepEqual(filteredFragments, [fragments[2], fragments[3]]);
+    });
+  });
   describe('isBuffered', function() {
     // |////////|__________|////////////////|
     // 0       0.5         1               2.0
@@ -43,7 +111,7 @@ describe('BufferHelper', function() {
       assert.equal(BufferHelper.isBuffered(media, 1), true);
       assert.equal(BufferHelper.isBuffered(media, 2), true);
     });
-    it('should return false if some media.buffered includes the position', function() {
+    it('should return false if any media.buffered does not includes the position', function() {
       assert.equal(BufferHelper.isBuffered(media, -0.1), false);
       assert.equal(BufferHelper.isBuffered(media, 0.51), false);
       assert.equal(BufferHelper.isBuffered(media, 0.9), false);

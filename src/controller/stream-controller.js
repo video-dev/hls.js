@@ -15,7 +15,7 @@ import {logger} from '../utils/logger';
 import { alignDiscontinuities } from '../utils/discontinuities';
 import TaskLoop from '../task-loop';
 
-const State = {
+export const State = {
   STOPPED : 'STOPPED',
   IDLE : 'IDLE',
   KEY_LOADING : 'KEY_LOADING',
@@ -114,6 +114,7 @@ class StreamController extends TaskLoop {
       this.demuxer.destroy();
       this.demuxer = null;
     }
+    this.clearInterval();
     this.state = State.STOPPED;
     this.forceStartLoad = false;
   }
@@ -1258,11 +1259,13 @@ class StreamController extends TaskLoop {
         const media = this.mediaBuffer ? this.mediaBuffer : this.media;
         logger.log(`main buffered : ${TimeRanges.toString(media.buffered)}`);
         // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
-        let bufferedFrags = this._bufferedFrags.filter(frag => {return BufferHelper.isBuffered(media,(frag.startPTS + frag.endPTS) / 2);});
+        let bufferedFrags = BufferHelper.filterEvictedFragments(this._bufferedFrags, media);
         // push new range
         bufferedFrags.push(frag);
         // sort frags, as we use BinarySearch for lookup in getBufferedFrag ...
-        this._bufferedFrags = bufferedFrags.sort(function(a,b) {return (a.startPTS - b.startPTS);});
+        this._bufferedFrags = bufferedFrags.sort(function(a, b) {
+          return (a.startPTS - b.startPTS);
+        });
         this.fragPrevious = frag;
         const stats = this.stats;
         stats.tbuffered = performance.now();
@@ -1385,7 +1388,7 @@ _checkBuffer() {
       } else if (this.immediateSwitch) {
         this.immediateLevelSwitchEnd();
       } else {
-        let bufferInfo = BufferHelper.bufferInfo(media,currentTime,0),
+        let bufferInfo = BufferHelper.bufferInfo(media,currentTime,config.maxBufferHole),
             expectedPlaying = !((media.paused && media.readyState > 1) || // not playing when media is paused
                                 media.ended  || // not playing when media is ended
                                 media.buffered.length === 0), // not playing if nothing buffered
