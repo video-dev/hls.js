@@ -231,9 +231,13 @@ design idea is pretty simple :
 [src/controller/fps-controller.js]: ../src/controller/fps-controller.js
 [src/controller/level-controller.js]: ../src/controller/level-controller.js
 [src/controller/stream-controller.js]: ../src/controller/stream-controller.js
+[src/controller/subtitle-stream-controller.js]: ../src/controller/subtitle-stream-controller.js
+[src/controller/subtitle-track-controller.js]: ../src/controller/subtitle-track-controller.js
 [src/controller/timeline-controller.js]: ../src/controller/timeline-controller.js
 [src/crypt/aes.js]: ../src/crypt/aes.js
 [src/crypt/aes128-decrypter.js]: ../src/crypt/aes128-decrypter.js
+[src/crypt/aes-decrypter.js]: ..src/crypt/aes-decrypter.js
+[src/crypt/aes-crypto.js]: ../src/crypt/aes-crypto.js
 [src/crypt/decrypter.js]: ../src/crypt/decrypter.js
 [src/demux/aacdemuxer.js]: ../src/demux/aacdemuxer.js
 [src/demux/adts.js]: ../src/demux/adts.js
