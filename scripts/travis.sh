@@ -4,8 +4,6 @@ set -ev
 
 npm install
 
-npm run docs
-
 if [ "${TRAVIS_MODE}" = "build" ]; then
 	npm run build
 elif [ "${TRAVIS_MODE}" = "unitTests" ]; then
