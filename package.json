@@ -28,7 +28,7 @@
     "build": "webpack --progress",
     "build:watch": "webpack --progress --watch",
     "build:analyze": "ANALYZE=true webpack --progress",
-    "build:release": "npm run build && npm run test && git add dist/* && git commit -m 'Update dist'",
+    "build:release": "npm run build && npm run test && git add dist/* && git commit -m 'Update dist' && npm run docs:release",
     "dev": "webpack-dev-server --progress --env.debug --port 8000",
     "docs": "npm run docs:generate",
     "docs:generate": "esdoc",
