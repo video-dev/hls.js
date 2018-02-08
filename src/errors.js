@@ -1,4 +1,3 @@
-
 export const ErrorTypes = {
   // Identifier for a network error (loading error / timeout ...)
   NETWORK_ERROR: 'networkError',
