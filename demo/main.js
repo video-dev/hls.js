@@ -17,7 +17,7 @@ let hls,
     stats,
     tracks,
     fmp4Data,
-    limitMetrics = JSON.parse(getURLParam('limitMetrics', 5000));
+    limitMetrics = JSON.parse(getURLParam('limitMetrics', -1));
     enableStreaming = JSON.parse(getURLParam('enableStreaming', true));
     autoRecoverError = JSON.parse(getURLParam('autoRecoverError', true)),
     enableWorker = JSON.parse(getURLParam('enableWorker', true)),
@@ -152,6 +152,11 @@ function trimArray( target, limit ) {
 
 function trimEventHistory() {
   let x = limitMetrics;
+
+  if( x === -1 ) {
+    return;
+  }
+
   trimArray(events.load, x);
   trimArray(events.buffer, x);
   trimArray(events.video, x);
