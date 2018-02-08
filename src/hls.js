@@ -33,46 +33,42 @@ require('string.prototype.endswith');
 export default class Hls {
 
   /**
-   * @returns {string}
+   * @type {string}
    */
   static get version() {
     return __VERSION__;
   }
 
   /**
-   * @returns {boolean}
+   * @type {boolean}
    */
   static isSupported() {
     return isSupported();
   }
 
   /**
-   * @enum
-   * @returns {HlsEvents}
+   * @type {HlsEvents}
    */
   static get Events() {
     return Event;
   }
 
   /**
-   * @enum
-   * @returns {HlsErrorTypes}
+   * @type {HlsErrorTypes}
    */
   static get ErrorTypes() {
     return ErrorTypes;
   }
 
   /**
-   * @enum
-   * @returns {HlsErrorDetails}
+   * @type {HlsErrorDetails}
    */
   static get ErrorDetails() {
     return ErrorDetails;
   }
 
   /**
-   * @enum
-   * @returns {HlsConfig}
+   * @type {HlsConfig}
    */
   static get DefaultConfig() {
     if(!Hls.defaultConfig) {
@@ -82,7 +78,7 @@ export default class Hls {
   }
 
   /**
-   * @param {HlsConfig} defaultConfig
+   * @type {HlsConfig}
    */
   static set DefaultConfig(defaultConfig) {
     Hls.defaultConfig = defaultConfig;
@@ -324,7 +320,7 @@ export default class Hls {
   }
 
   /**
-   * @returns {QualityLevel[]}
+   * @type {QualityLevel[]}
    */
   get levels() {
     return this.levelController.levels;
@@ -332,7 +328,7 @@ export default class Hls {
 
   /**
    * Index of quality level currently played
-   * @returns {number}
+   * @type {number}
    */
   get currentLevel() {
     return this.streamController.currentLevel;
@@ -342,7 +338,7 @@ export default class Hls {
    * Set quality level index immediately .
    * This will flush the current buffer to replace the quality asap.
    * That means playback will interrupt at least shortly to re-buffer and re-sync eventually.
-   * @param {number} -1 for automatic level selection
+   * @type {number} -1 for automatic level selection
    */
   set currentLevel(newLevel) {
     logger.log(`set currentLevel:${newLevel}`);
@@ -352,7 +348,7 @@ export default class Hls {
 
   /**
    * Index of next quality level loaded as scheduled by stream controller.
-   * @returns {number}
+   * @type {number}
    */
   get nextLevel() {
     return this.streamController.nextLevel;
@@ -362,7 +358,7 @@ export default class Hls {
    * Set quality level index for next loaded data.
    * This will switch the video quality asap, without interrupting playback.
    * May abort current loading of data, and flush parts of buffer (outside currently played fragment region).
-   * @param {number} -1 for automatic level selection
+   * @type {number} -1 for automatic level selection
    */
   set nextLevel(newLevel) {
     logger.log(`set nextLevel:${newLevel}`);
@@ -372,7 +368,7 @@ export default class Hls {
 
   /**
    * Return the quality level of the currently or last (of none is loaded currently) segment
-   * @returns {number}
+   * @type {number}
    */
   get loadLevel() {
     return this.levelController.level;
@@ -382,7 +378,7 @@ export default class Hls {
    * Set quality level index for next loaded data in a conservative way.
    * This will switch the quality without flushing, but interrupt current loading.
    * Thus the moment when the quality switch will appear in effect will only be after the already existing buffer.
-   * @param {number} newLevel -1 for automatic level selection
+   * @type {number} newLevel -1 for automatic level selection
    */
   set loadLevel(newLevel) {
     logger.log(`set loadLevel:${newLevel}`);
@@ -391,7 +387,7 @@ export default class Hls {
 
   /**
    * get next quality level loaded
-   * @return {number}
+   * @type {number}
    */
   get nextLoadLevel() {
     return this.levelController.nextLoadLevel;
@@ -400,7 +396,7 @@ export default class Hls {
   /**
    * Set quality level of next loaded segment in a fully "non-destructive" way.
    * Same as `loadLevel` but will wait for next switch (until current loading is done).
-   * @param {number} level
+   * @type {number} level
    */
   set nextLoadLevel(level) {
     this.levelController.nextLoadLevel = level;
@@ -409,7 +405,7 @@ export default class Hls {
   /**
    * Return "first level": like a default level, if not set,
    * falls back to index of first level referenced in manifest
-   * @returns {number}
+   * @type {number}
    */
   get firstLevel() {
     return Math.max(this.levelController.firstLevel, this.minAutoLevel);
@@ -417,7 +413,7 @@ export default class Hls {
 
   /**
    * Sets "first-level", see getter.
-   * @param {number}
+   * @type {number}
    */
   set firstLevel(newLevel) {
     logger.log(`set firstLevel:${newLevel}`);
@@ -429,7 +425,7 @@ export default class Hls {
    * if not overrided by user, first level appearing in manifest will be used as start level
    * if -1 : automatic start level selection, playback will start from level matching download bandwidth
    * (determined from download of first segment)
-   * @returns {number}
+   * @type {number}
    */
   get startLevel() {
     return this.levelController.startLevel;
@@ -440,7 +436,7 @@ export default class Hls {
    * if not overrided by user, first level appearing in manifest will be used as start level
    * if -1 : automatic start level selection, playback will start from level matching download bandwidth
    * (determined from download of first segment)
-   * @param {number} newLevel
+   * @type {number} newLevel
    */
   set startLevel(newLevel) {
     logger.log(`set startLevel:${newLevel}`);
@@ -454,7 +450,7 @@ export default class Hls {
 
   /**
    * Capping/max level value that should be used by automatic level selection algorithm (`ABRController`)
-   * @returns {number}
+   * @type {number}
    */
   get autoLevelCapping() {
     return this._autoLevelCapping;
@@ -462,7 +458,7 @@ export default class Hls {
 
   /**
    * Capping/max level value that should be used by automatic level selection algorithm (`ABRController`)
-   * @param {number}
+   * @type {number}
    */
   set autoLevelCapping(newLevel) {
     logger.log(`set autoLevelCapping:${newLevel}`);
@@ -471,7 +467,7 @@ export default class Hls {
 
   /**
    * True when automatic level selection enabled
-   * @returns {boolean}
+   * @type {boolean}
    */
   get autoLevelEnabled() {
     return (this.levelController.manualLevel === -1);
@@ -480,7 +476,7 @@ export default class Hls {
 
   /**
    * Level set manually (if any)
-   * @returns {number}
+   * @type {number}
    */
   get manualLevel() {
     return this.levelController.manualLevel;
@@ -488,7 +484,7 @@ export default class Hls {
 
   /**
    * min level selectable in auto mode according to config.minAutoBitrate
-   * @returns {number}
+   * @type {number}
    */
   get minAutoLevel() {
     let hls = this, levels = hls.levels, minAutoBitrate = hls.config.minAutoBitrate, len = levels ? levels.length : 0;
@@ -503,7 +499,7 @@ export default class Hls {
 
   /**
    * max level selectable in auto mode according to autoLevelCapping
-   * @returns {number}
+   * @type {number}
    */
   get maxAutoLevel() {
     const hls = this;
@@ -520,7 +516,7 @@ export default class Hls {
 
   /**
    * next automatically selected quality level
-   * @returns {number}
+   * @type {number}
    */
   get nextAutoLevel() {
     const hls = this;
@@ -534,7 +530,7 @@ export default class Hls {
    * in case of load error on level N, hls.js can set nextAutoLevel to N-1 for example)
    * forced value is valid for one fragment. upon succesful frag loading at forced level,
    * this value will be resetted to -1 by ABR controller.
-   * @param {number}
+   * @type {number}
    */
   set nextAutoLevel(nextLevel) {
     const hls = this;
@@ -542,7 +538,7 @@ export default class Hls {
   }
 
   /**
-   * @returns {AudioTrack[]}
+   * @type {AudioTrack[]}
    */
   get audioTracks() {
     const audioTrackController = this.audioTrackController;
@@ -551,7 +547,7 @@ export default class Hls {
 
   /**
    * index of the selected audio track (index in audio track lists)
-   * @returns {number}
+   * @type {number}
    */
   get audioTrack() {
     const audioTrackController = this.audioTrackController;
@@ -560,7 +556,7 @@ export default class Hls {
 
   /**
    * selects an audio track, based on its index in audio track lists
-   * @param {number}
+   * @type {number}
    */
   set audioTrack(audioTrackId) {
     const audioTrackController = this.audioTrackController;
@@ -570,7 +566,7 @@ export default class Hls {
   }
 
   /**
-   * @returns {Seconds}
+   * @type {Seconds}
    */
   get liveSyncPosition() {
     return this.streamController.liveSyncPosition;
@@ -578,7 +574,7 @@ export default class Hls {
 
   /**
    * get alternate subtitle tracks list from playlist
-   * @returns {SubtitleTrack[]}
+   * @type {SubtitleTrack[]}
    */
   get subtitleTracks() {
     const subtitleTrackController = this.subtitleTrackController;
@@ -587,7 +583,7 @@ export default class Hls {
 
   /**
    * index of the selected subtitle track (index in subtitle track lists)
-   * @returns {number}
+   * @type {number}
    */
   get subtitleTrack() {
     const subtitleTrackController = this.subtitleTrackController;
@@ -596,7 +592,7 @@ export default class Hls {
 
   /**
    * select an subtitle track, based on its index in subtitle track lists
-   * @param {number}
+   * @type{number}
    */
   set subtitleTrack(subtitleTrackId) {
     const subtitleTrackController = this.subtitleTrackController;
@@ -606,7 +602,7 @@ export default class Hls {
   }
 
   /**
-   * @returns {booelan}
+   * @type {booelan}
    */
   get subtitleDisplay() {
     const subtitleTrackController = this.subtitleTrackController;
@@ -615,7 +611,7 @@ export default class Hls {
 
   /**
    * Enable/disable subtitle display rendering
-   * @param {boolean}
+   * @type {boolean}
    */
   set subtitleDisplay(value) {
     const subtitleTrackController = this.subtitleTrackController;
