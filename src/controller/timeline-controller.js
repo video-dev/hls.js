@@ -128,7 +128,7 @@ class TimelineController extends EventHandler {
       //Enable reuse of existing text track.
       let existingTrack = this.getExistingTrack(track);
       if (!existingTrack) {
-        const textTrack = this.createTextTrack('captions', this.config['captionsTextTrack' + track + 'Label'], this.config.captionsTextTrack1LanguageCode);
+        const textTrack = this.createTextTrack('captions', this.config['captionsTextTrack' + track + 'Label'], this.config['captionsTextTrack' + track + 'LanguageCode']);
         if (textTrack) {
           textTrack[trackVar] = true;
           this[trackVar] = textTrack;
