@@ -1389,7 +1389,7 @@ _checkBuffer() {
         this.immediateLevelSwitchEnd();
       } else {
         let bufferInfo = BufferHelper.bufferInfo(media,currentTime,config.maxBufferHole),
-            expectedPlaying = !((media.paused && media.readyState > 1) || // not playing when media is paused
+            expectedPlaying = !((media.paused && media.readyState > 1) || // not playing when media is paused and sufficiently buffered
                                 media.ended  || // not playing when media is ended
                                 media.buffered.length === 0), // not playing if nothing buffered
             jumpThreshold = 0.5, // tolerance needed as some browsers stalls playback before reaching buffered range end

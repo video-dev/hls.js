@@ -7,7 +7,7 @@
 		exports["Hls"] = factory();
 	else
 		root["Hls"] = factory();
-})(typeof self !== 'undefined' ? self : this, function() {
+})(this, function() {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -70,7 +70,7 @@ return /******/ (function(modules) { // webpackBootstrap
 /******/ 	__webpack_require__.p = "/dist/";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 13);
+/******/ 	return __webpack_require__(__webpack_require__.s = 9);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -317,6 +317,8 @@ var ErrorDetails = {
   AUDIO_TRACK_LOAD_TIMEOUT: 'audioTrackLoadTimeOut',
   // Identifier for fragment load error - data: { frag : fragment object, response : { code: error code, text: error text }}
   FRAG_LOAD_ERROR: 'fragLoadError',
+  // Identifier for fragment loop loading error - data: { frag : fragment object}
+  FRAG_LOOP_LOADING_ERROR: 'fragLoopLoadingError',
   // Identifier for fragment load timeout error - data: { frag : fragment object}
   FRAG_LOAD_TIMEOUT: 'fragLoadTimeOut',
   // Identifier for a fragment decryption error event - data: {id : demuxer Id,frag: fragment object, reason : parsing error description }
@@ -350,456 +352,172 @@ var ErrorDetails = {
 
 /***/ }),
 /* 3 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
+/***/ (function(module, exports, __webpack_require__) {
 
-"use strict";
+// see https://tools.ietf.org/html/rfc1808
 
-// CONCATENATED MODULE: ./src/crypt/aes-crypto.js
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+/* jshint ignore:start */
+(function(root) { 
+/* jshint ignore:end */
 
-var AESCrypto = function () {
-  function AESCrypto(subtle, iv) {
-    _classCallCheck(this, AESCrypto);
+  var URL_REGEX = /^((?:[a-zA-Z0-9+\-.]+:)?)(\/\/[^\/\;?#]*)?(.*?)??(;.*?)?(\?.*?)?(#.*?)?$/;
+  var FIRST_SEGMENT_REGEX = /^([^\/;?#]*)(.*)$/;
+  var SLASH_DOT_REGEX = /(?:\/|^)\.(?=\/)/g;
+  var SLASH_DOT_DOT_REGEX = /(?:\/|^)\.\.\/(?!\.\.\/).*?(?=\/)/g;
 
-    this.subtle = subtle;
-    this.aesIV = iv;
-  }
-
-  AESCrypto.prototype.decrypt = function decrypt(data, key) {
-    return this.subtle.decrypt({ name: 'AES-CBC', iv: this.aesIV }, key, data);
-  };
-
-  return AESCrypto;
-}();
-
-/* harmony default export */ var aes_crypto = (AESCrypto);
-// CONCATENATED MODULE: ./src/crypt/fast-aes-key.js
-function fast_aes_key__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var FastAESKey = function () {
-  function FastAESKey(subtle, key) {
-    fast_aes_key__classCallCheck(this, FastAESKey);
-
-    this.subtle = subtle;
-    this.key = key;
-  }
-
-  FastAESKey.prototype.expandKey = function expandKey() {
-    return this.subtle.importKey('raw', this.key, { name: 'AES-CBC' }, false, ['encrypt', 'decrypt']);
-  };
-
-  return FastAESKey;
-}();
-
-/* harmony default export */ var fast_aes_key = (FastAESKey);
-// CONCATENATED MODULE: ./src/crypt/aes-decryptor.js
-function aes_decryptor__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-// PKCS7
-function removePadding(buffer) {
-  var outputBytes = buffer.byteLength;
-  var paddingBytes = outputBytes && new DataView(buffer).getUint8(outputBytes - 1);
-  if (paddingBytes) {
-    return buffer.slice(0, outputBytes - paddingBytes);
-  } else {
-    return buffer;
-  }
-}
-
-var AESDecryptor = function () {
-  function AESDecryptor() {
-    aes_decryptor__classCallCheck(this, AESDecryptor);
-
-    // Static after running initTable
-    this.rcon = [0x0, 0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36];
-    this.subMix = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
-    this.invSubMix = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
-    this.sBox = new Uint32Array(256);
-    this.invSBox = new Uint32Array(256);
-
-    // Changes during runtime
-    this.key = new Uint32Array(0);
-
-    this.initTable();
-  }
-
-  // Using view.getUint32() also swaps the byte order.
-
-
-  AESDecryptor.prototype.uint8ArrayToUint32Array_ = function uint8ArrayToUint32Array_(arrayBuffer) {
-    var view = new DataView(arrayBuffer);
-    var newArray = new Uint32Array(4);
-    for (var i = 0; i < 4; i++) {
-      newArray[i] = view.getUint32(i * 4);
-    }
-    return newArray;
-  };
-
-  AESDecryptor.prototype.initTable = function initTable() {
-    var sBox = this.sBox;
-    var invSBox = this.invSBox;
-    var subMix = this.subMix;
-    var subMix0 = subMix[0];
-    var subMix1 = subMix[1];
-    var subMix2 = subMix[2];
-    var subMix3 = subMix[3];
-    var invSubMix = this.invSubMix;
-    var invSubMix0 = invSubMix[0];
-    var invSubMix1 = invSubMix[1];
-    var invSubMix2 = invSubMix[2];
-    var invSubMix3 = invSubMix[3];
-
-    var d = new Uint32Array(256);
-    var x = 0;
-    var xi = 0;
-    var i = 0;
-    for (i = 0; i < 256; i++) {
-      if (i < 128) {
-        d[i] = i << 1;
-      } else {
-        d[i] = i << 1 ^ 0x11b;
+  var URLToolkit = { // jshint ignore:line
+    // If opts.alwaysNormalize is true then the path will always be normalized even when it starts with / or //
+    // E.g
+    // With opts.alwaysNormalize = false (default, spec compliant)
+    // http://a.com/b/cd + /e/f/../g => http://a.com/e/f/../g
+    // With opts.alwaysNormalize = true (not spec compliant)
+    // http://a.com/b/cd + /e/f/../g => http://a.com/e/g
+    buildAbsoluteURL: function(baseURL, relativeURL, opts) {
+      opts = opts || {};
+      // remove any remaining space and CRLF
+      baseURL = baseURL.trim();
+      relativeURL = relativeURL.trim();
+      if (!relativeURL) {
+        // 2a) If the embedded URL is entirely empty, it inherits the
+        // entire base URL (i.e., is set equal to the base URL)
+        // and we are done.
+        if (!opts.alwaysNormalize) {
+          return baseURL;
+        }
+        var basePartsForNormalise = this.parseURL(baseURL);
+        if (!baseParts) {
+          throw new Error('Error trying to parse base URL.');
+        }
+        basePartsForNormalise.path = URLToolkit.normalizePath(basePartsForNormalise.path);
+        return URLToolkit.buildURLFromParts(basePartsForNormalise);
       }
-    }
-
-    for (i = 0; i < 256; i++) {
-      var sx = xi ^ xi << 1 ^ xi << 2 ^ xi << 3 ^ xi << 4;
-      sx = sx >>> 8 ^ sx & 0xff ^ 0x63;
-      sBox[x] = sx;
-      invSBox[sx] = x;
-
-      // Compute multiplication
-      var x2 = d[x];
-      var x4 = d[x2];
-      var x8 = d[x4];
-
-      // Compute sub/invSub bytes, mix columns tables
-      var t = d[sx] * 0x101 ^ sx * 0x1010100;
-      subMix0[x] = t << 24 | t >>> 8;
-      subMix1[x] = t << 16 | t >>> 16;
-      subMix2[x] = t << 8 | t >>> 24;
-      subMix3[x] = t;
-
-      // Compute inv sub bytes, inv mix columns tables
-      t = x8 * 0x1010101 ^ x4 * 0x10001 ^ x2 * 0x101 ^ x * 0x1010100;
-      invSubMix0[sx] = t << 24 | t >>> 8;
-      invSubMix1[sx] = t << 16 | t >>> 16;
-      invSubMix2[sx] = t << 8 | t >>> 24;
-      invSubMix3[sx] = t;
-
-      // Compute next counter
-      if (!x) {
-        x = xi = 1;
-      } else {
-        x = x2 ^ d[d[d[x8 ^ x2]]];
-        xi ^= d[d[xi]];
+      var relativeParts = this.parseURL(relativeURL);
+      if (!relativeParts) {
+        throw new Error('Error trying to parse relative URL.');
       }
+      if (relativeParts.scheme) {
+        // 2b) If the embedded URL starts with a scheme name, it is
+        // interpreted as an absolute URL and we are done.
+        if (!opts.alwaysNormalize) {
+          return relativeURL;
+        }
+        relativeParts.path = URLToolkit.normalizePath(relativeParts.path);
+        return URLToolkit.buildURLFromParts(relativeParts);
+      }
+      var baseParts = this.parseURL(baseURL);
+      if (!baseParts) {
+        throw new Error('Error trying to parse base URL.');
+      }
+      if (!baseParts.netLoc && baseParts.path && baseParts.path[0] !== '/') {
+        // If netLoc missing and path doesn't start with '/', assume everthing before the first '/' is the netLoc
+        // This causes 'example.com/a' to be handled as '//example.com/a' instead of '/example.com/a'
+        var pathParts = FIRST_SEGMENT_REGEX.exec(baseParts.path);
+        baseParts.netLoc = pathParts[1];
+        baseParts.path = pathParts[2];
+      }
+      if (baseParts.netLoc && !baseParts.path) {
+        baseParts.path = '/';
+      }
+      var builtParts = {
+        // 2c) Otherwise, the embedded URL inherits the scheme of
+        // the base URL.
+        scheme: baseParts.scheme,
+        netLoc: relativeParts.netLoc,
+        path: null,
+        params: relativeParts.params,
+        query: relativeParts.query,
+        fragment: relativeParts.fragment
+      };
+      if (!relativeParts.netLoc) {
+        // 3) If the embedded URL's <net_loc> is non-empty, we skip to
+        // Step 7.  Otherwise, the embedded URL inherits the <net_loc>
+        // (if any) of the base URL.
+        builtParts.netLoc = baseParts.netLoc;
+        // 4) If the embedded URL path is preceded by a slash "/", the
+        // path is not relative and we skip to Step 7.
+        if (relativeParts.path[0] !== '/') {
+          if (!relativeParts.path) {
+            // 5) If the embedded URL path is empty (and not preceded by a
+            // slash), then the embedded URL inherits the base URL path
+            builtParts.path = baseParts.path;
+            // 5a) if the embedded URL's <params> is non-empty, we skip to
+            // step 7; otherwise, it inherits the <params> of the base
+            // URL (if any) and
+            if (!relativeParts.params) {
+              builtParts.params = baseParts.params;
+              // 5b) if the embedded URL's <query> is non-empty, we skip to
+              // step 7; otherwise, it inherits the <query> of the base
+              // URL (if any) and we skip to step 7.
+              if (!relativeParts.query) {
+                builtParts.query = baseParts.query;
+              }
+            }
+          } else {
+            // 6) The last segment of the base URL's path (anything
+            // following the rightmost slash "/", or the entire path if no
+            // slash is present) is removed and the embedded URL's path is
+            // appended in its place.
+            var baseURLPath = baseParts.path;
+            var newPath = baseURLPath.substring(0, baseURLPath.lastIndexOf('/') + 1) + relativeParts.path;
+            builtParts.path = URLToolkit.normalizePath(newPath);
+          }
+        }
+      }
+      if (builtParts.path === null) {
+        builtParts.path = opts.alwaysNormalize ? URLToolkit.normalizePath(relativeParts.path) : relativeParts.path;
+      }
+      return URLToolkit.buildURLFromParts(builtParts);
+    },
+    parseURL: function(url) {
+      var parts = URL_REGEX.exec(url);
+      if (!parts) {
+        return null;
+      }
+      return {
+        scheme: parts[1] || '',
+        netLoc: parts[2] || '',
+        path: parts[3] || '',
+        params: parts[4] || '',
+        query: parts[5] || '',
+        fragment: parts[6] || ''
+      };
+    },
+    normalizePath: function(path) {
+      // The following operations are
+      // then applied, in order, to the new path:
+      // 6a) All occurrences of "./", where "." is a complete path
+      // segment, are removed.
+      // 6b) If the path ends with "." as a complete path segment,
+      // that "." is removed.
+      path = path.split('').reverse().join('').replace(SLASH_DOT_REGEX, '');
+      // 6c) All occurrences of "<segment>/../", where <segment> is a
+      // complete path segment not equal to "..", are removed.
+      // Removal of these path segments is performed iteratively,
+      // removing the leftmost matching pattern on each iteration,
+      // until no matching pattern remains.
+      // 6d) If the path ends with "<segment>/..", where <segment> is a
+      // complete path segment not equal to "..", that
+      // "<segment>/.." is removed.
+      while (path.length !== (path = path.replace(SLASH_DOT_DOT_REGEX, '')).length) {} // jshint ignore:line
+      return path.split('').reverse().join('');
+    },
+    buildURLFromParts: function(parts) {
+      return parts.scheme + parts.netLoc + parts.path + parts.params + parts.query + parts.fragment;
     }
   };
 
-  AESDecryptor.prototype.expandKey = function expandKey(keyBuffer) {
-    // convert keyBuffer to Uint32Array
-    var key = this.uint8ArrayToUint32Array_(keyBuffer);
-    var sameKey = true;
-    var offset = 0;
+/* jshint ignore:start */
+  if(true)
+    module.exports = URLToolkit;
+  else if(typeof define === 'function' && define.amd)
+    define([], function() { return URLToolkit; });
+  else if(typeof exports === 'object')
+    exports["URLToolkit"] = URLToolkit;
+  else
+    root["URLToolkit"] = URLToolkit;
+})(this);
+/* jshint ignore:end */
 
-    while (offset < key.length && sameKey) {
-      sameKey = key[offset] === this.key[offset];
-      offset++;
-    }
-
-    if (sameKey) {
-      return;
-    }
-
-    this.key = key;
-    var keySize = this.keySize = key.length;
-
-    if (keySize !== 4 && keySize !== 6 && keySize !== 8) {
-      throw new Error('Invalid aes key size=' + keySize);
-    }
-
-    var ksRows = this.ksRows = (keySize + 6 + 1) * 4;
-    var ksRow = void 0;
-    var invKsRow = void 0;
-
-    var keySchedule = this.keySchedule = new Uint32Array(ksRows);
-    var invKeySchedule = this.invKeySchedule = new Uint32Array(ksRows);
-    var sbox = this.sBox;
-    var rcon = this.rcon;
-
-    var invSubMix = this.invSubMix;
-    var invSubMix0 = invSubMix[0];
-    var invSubMix1 = invSubMix[1];
-    var invSubMix2 = invSubMix[2];
-    var invSubMix3 = invSubMix[3];
-
-    var prev = void 0;
-    var t = void 0;
-
-    for (ksRow = 0; ksRow < ksRows; ksRow++) {
-      if (ksRow < keySize) {
-        prev = keySchedule[ksRow] = key[ksRow];
-        continue;
-      }
-      t = prev;
-
-      if (ksRow % keySize === 0) {
-        // Rot word
-        t = t << 8 | t >>> 24;
-
-        // Sub word
-        t = sbox[t >>> 24] << 24 | sbox[t >>> 16 & 0xff] << 16 | sbox[t >>> 8 & 0xff] << 8 | sbox[t & 0xff];
-
-        // Mix Rcon
-        t ^= rcon[ksRow / keySize | 0] << 24;
-      } else if (keySize > 6 && ksRow % keySize === 4) {
-        // Sub word
-        t = sbox[t >>> 24] << 24 | sbox[t >>> 16 & 0xff] << 16 | sbox[t >>> 8 & 0xff] << 8 | sbox[t & 0xff];
-      }
-
-      keySchedule[ksRow] = prev = (keySchedule[ksRow - keySize] ^ t) >>> 0;
-    }
-
-    for (invKsRow = 0; invKsRow < ksRows; invKsRow++) {
-      ksRow = ksRows - invKsRow;
-      if (invKsRow & 3) {
-        t = keySchedule[ksRow];
-      } else {
-        t = keySchedule[ksRow - 4];
-      }
-
-      if (invKsRow < 4 || ksRow <= 4) {
-        invKeySchedule[invKsRow] = t;
-      } else {
-        invKeySchedule[invKsRow] = invSubMix0[sbox[t >>> 24]] ^ invSubMix1[sbox[t >>> 16 & 0xff]] ^ invSubMix2[sbox[t >>> 8 & 0xff]] ^ invSubMix3[sbox[t & 0xff]];
-      }
-
-      invKeySchedule[invKsRow] = invKeySchedule[invKsRow] >>> 0;
-    }
-  };
-
-  // Adding this as a method greatly improves performance.
-
-
-  AESDecryptor.prototype.networkToHostOrderSwap = function networkToHostOrderSwap(word) {
-    return word << 24 | (word & 0xff00) << 8 | (word & 0xff0000) >> 8 | word >>> 24;
-  };
-
-  AESDecryptor.prototype.decrypt = function decrypt(inputArrayBuffer, offset, aesIV, removePKCS7Padding) {
-    var nRounds = this.keySize + 6;
-    var invKeySchedule = this.invKeySchedule;
-    var invSBOX = this.invSBox;
-
-    var invSubMix = this.invSubMix;
-    var invSubMix0 = invSubMix[0];
-    var invSubMix1 = invSubMix[1];
-    var invSubMix2 = invSubMix[2];
-    var invSubMix3 = invSubMix[3];
-
-    var initVector = this.uint8ArrayToUint32Array_(aesIV);
-    var initVector0 = initVector[0];
-    var initVector1 = initVector[1];
-    var initVector2 = initVector[2];
-    var initVector3 = initVector[3];
-
-    var inputInt32 = new Int32Array(inputArrayBuffer);
-    var outputInt32 = new Int32Array(inputInt32.length);
-
-    var t0 = void 0,
-        t1 = void 0,
-        t2 = void 0,
-        t3 = void 0;
-    var s0 = void 0,
-        s1 = void 0,
-        s2 = void 0,
-        s3 = void 0;
-    var inputWords0 = void 0,
-        inputWords1 = void 0,
-        inputWords2 = void 0,
-        inputWords3 = void 0;
-
-    var ksRow, i;
-    var swapWord = this.networkToHostOrderSwap;
-
-    while (offset < inputInt32.length) {
-      inputWords0 = swapWord(inputInt32[offset]);
-      inputWords1 = swapWord(inputInt32[offset + 1]);
-      inputWords2 = swapWord(inputInt32[offset + 2]);
-      inputWords3 = swapWord(inputInt32[offset + 3]);
-
-      s0 = inputWords0 ^ invKeySchedule[0];
-      s1 = inputWords3 ^ invKeySchedule[1];
-      s2 = inputWords2 ^ invKeySchedule[2];
-      s3 = inputWords1 ^ invKeySchedule[3];
-
-      ksRow = 4;
-
-      // Iterate through the rounds of decryption
-      for (i = 1; i < nRounds; i++) {
-        t0 = invSubMix0[s0 >>> 24] ^ invSubMix1[s1 >> 16 & 0xff] ^ invSubMix2[s2 >> 8 & 0xff] ^ invSubMix3[s3 & 0xff] ^ invKeySchedule[ksRow];
-        t1 = invSubMix0[s1 >>> 24] ^ invSubMix1[s2 >> 16 & 0xff] ^ invSubMix2[s3 >> 8 & 0xff] ^ invSubMix3[s0 & 0xff] ^ invKeySchedule[ksRow + 1];
-        t2 = invSubMix0[s2 >>> 24] ^ invSubMix1[s3 >> 16 & 0xff] ^ invSubMix2[s0 >> 8 & 0xff] ^ invSubMix3[s1 & 0xff] ^ invKeySchedule[ksRow + 2];
-        t3 = invSubMix0[s3 >>> 24] ^ invSubMix1[s0 >> 16 & 0xff] ^ invSubMix2[s1 >> 8 & 0xff] ^ invSubMix3[s2 & 0xff] ^ invKeySchedule[ksRow + 3];
-        // Update state
-        s0 = t0;
-        s1 = t1;
-        s2 = t2;
-        s3 = t3;
-
-        ksRow = ksRow + 4;
-      }
-
-      // Shift rows, sub bytes, add round key
-      t0 = invSBOX[s0 >>> 24] << 24 ^ invSBOX[s1 >> 16 & 0xff] << 16 ^ invSBOX[s2 >> 8 & 0xff] << 8 ^ invSBOX[s3 & 0xff] ^ invKeySchedule[ksRow];
-      t1 = invSBOX[s1 >>> 24] << 24 ^ invSBOX[s2 >> 16 & 0xff] << 16 ^ invSBOX[s3 >> 8 & 0xff] << 8 ^ invSBOX[s0 & 0xff] ^ invKeySchedule[ksRow + 1];
-      t2 = invSBOX[s2 >>> 24] << 24 ^ invSBOX[s3 >> 16 & 0xff] << 16 ^ invSBOX[s0 >> 8 & 0xff] << 8 ^ invSBOX[s1 & 0xff] ^ invKeySchedule[ksRow + 2];
-      t3 = invSBOX[s3 >>> 24] << 24 ^ invSBOX[s0 >> 16 & 0xff] << 16 ^ invSBOX[s1 >> 8 & 0xff] << 8 ^ invSBOX[s2 & 0xff] ^ invKeySchedule[ksRow + 3];
-      ksRow = ksRow + 3;
-
-      // Write
-      outputInt32[offset] = swapWord(t0 ^ initVector0);
-      outputInt32[offset + 1] = swapWord(t3 ^ initVector1);
-      outputInt32[offset + 2] = swapWord(t2 ^ initVector2);
-      outputInt32[offset + 3] = swapWord(t1 ^ initVector3);
-
-      // reset initVector to last 4 unsigned int
-      initVector0 = inputWords0;
-      initVector1 = inputWords1;
-      initVector2 = inputWords2;
-      initVector3 = inputWords3;
-
-      offset = offset + 4;
-    }
-
-    return removePKCS7Padding ? removePadding(outputInt32.buffer) : outputInt32.buffer;
-  };
-
-  AESDecryptor.prototype.destroy = function destroy() {
-    this.key = undefined;
-    this.keySize = undefined;
-    this.ksRows = undefined;
-
-    this.sBox = undefined;
-    this.invSBox = undefined;
-    this.subMix = undefined;
-    this.invSubMix = undefined;
-    this.keySchedule = undefined;
-    this.invKeySchedule = undefined;
-
-    this.rcon = undefined;
-  };
-
-  return AESDecryptor;
-}();
-
-/* harmony default export */ var aes_decryptor = (AESDecryptor);
-// EXTERNAL MODULE: ./src/errors.js
-var errors = __webpack_require__(2);
-
-// EXTERNAL MODULE: ./src/utils/logger.js
-var logger = __webpack_require__(0);
-
-// CONCATENATED MODULE: ./src/crypt/decrypter.js
-function decrypter__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-
-
-
-
-
-
-
-/*globals self: false */
-
-var decrypter_Decrypter = function () {
-  function Decrypter(observer, config) {
-    var _ref = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {},
-        _ref$removePKCS7Paddi = _ref.removePKCS7Padding,
-        removePKCS7Padding = _ref$removePKCS7Paddi === undefined ? true : _ref$removePKCS7Paddi;
-
-    decrypter__classCallCheck(this, Decrypter);
-
-    this.logEnabled = true;
-    this.observer = observer;
-    this.config = config;
-    this.removePKCS7Padding = removePKCS7Padding;
-    // built in decryptor expects PKCS7 padding
-    if (removePKCS7Padding) {
-      try {
-        var browserCrypto = crypto ? crypto : self.crypto;
-        this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
-      } catch (e) {}
-    }
-    this.disableWebCrypto = !this.subtle;
-  }
-
-  Decrypter.prototype.isSync = function isSync() {
-    return this.disableWebCrypto && this.config.enableSoftwareAES;
-  };
-
-  Decrypter.prototype.decrypt = function decrypt(data, key, iv, callback) {
-    var _this = this;
-
-    if (this.disableWebCrypto && this.config.enableSoftwareAES) {
-      if (this.logEnabled) {
-        logger["b" /* logger */].log('JS AES decrypt');
-        this.logEnabled = false;
-      }
-      var decryptor = this.decryptor;
-      if (!decryptor) {
-        this.decryptor = decryptor = new aes_decryptor();
-      }
-      decryptor.expandKey(key);
-      callback(decryptor.decrypt(data, 0, iv, this.removePKCS7Padding));
-    } else {
-      if (this.logEnabled) {
-        logger["b" /* logger */].log('WebCrypto AES decrypt');
-        this.logEnabled = false;
-      }
-      var subtle = this.subtle;
-      if (this.key !== key) {
-        this.key = key;
-        this.fastAesKey = new fast_aes_key(subtle, key);
-      }
-
-      this.fastAesKey.expandKey().then(function (aesKey) {
-        // decrypt using web crypto
-        var crypto = new aes_crypto(subtle, iv);
-        crypto.decrypt(data, aesKey).catch(function (err) {
-          _this.onWebCryptoError(err, data, key, iv, callback);
-        }).then(function (result) {
-          callback(result);
-        });
-      }).catch(function (err) {
-        _this.onWebCryptoError(err, data, key, iv, callback);
-      });
-    }
-  };
-
-  Decrypter.prototype.onWebCryptoError = function onWebCryptoError(err, data, key, iv, callback) {
-    if (this.config.enableSoftwareAES) {
-      logger["b" /* logger */].log('WebCrypto Error, disable WebCrypto API');
-      this.disableWebCrypto = true;
-      this.logEnabled = true;
-      this.decrypt(data, key, iv, callback);
-    } else {
-      logger["b" /* logger */].error('decrypting error : ' + err.message);
-      this.observer.trigger(Event.ERROR, { type: errors["b" /* ErrorTypes */].MEDIA_ERROR, details: errors["a" /* ErrorDetails */].FRAG_DECRYPT_ERROR, fatal: true, reason: err.message });
-    }
-  };
-
-  Decrypter.prototype.destroy = function destroy() {
-    var decryptor = this.decryptor;
-    if (decryptor) {
-      decryptor.destroy();
-      this.decryptor = undefined;
-    }
-  };
-
-  return Decrypter;
-}();
-
-/* harmony default export */ var decrypter = __webpack_exports__["a"] = (decrypter_Decrypter);
 
 /***/ }),
 /* 4 */
@@ -1167,6 +885,451 @@ var utf8ArrayToStr = ID3._utf8ArrayToStr;
 
 /***/ }),
 /* 5 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+
+// CONCATENATED MODULE: ./src/crypt/aes-crypto.js
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var AESCrypto = function () {
+  function AESCrypto(subtle, iv) {
+    _classCallCheck(this, AESCrypto);
+
+    this.subtle = subtle;
+    this.aesIV = iv;
+  }
+
+  AESCrypto.prototype.decrypt = function decrypt(data, key) {
+    return this.subtle.decrypt({ name: 'AES-CBC', iv: this.aesIV }, key, data);
+  };
+
+  return AESCrypto;
+}();
+
+/* harmony default export */ var aes_crypto = (AESCrypto);
+// CONCATENATED MODULE: ./src/crypt/fast-aes-key.js
+function fast_aes_key__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var FastAESKey = function () {
+  function FastAESKey(subtle, key) {
+    fast_aes_key__classCallCheck(this, FastAESKey);
+
+    this.subtle = subtle;
+    this.key = key;
+  }
+
+  FastAESKey.prototype.expandKey = function expandKey() {
+    return this.subtle.importKey('raw', this.key, { name: 'AES-CBC' }, false, ['encrypt', 'decrypt']);
+  };
+
+  return FastAESKey;
+}();
+
+/* harmony default export */ var fast_aes_key = (FastAESKey);
+// CONCATENATED MODULE: ./src/crypt/aes-decryptor.js
+function aes_decryptor__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+// PKCS7
+function removePadding(buffer) {
+  var outputBytes = buffer.byteLength;
+  var paddingBytes = outputBytes && new DataView(buffer).getUint8(outputBytes - 1);
+  if (paddingBytes) {
+    return buffer.slice(0, outputBytes - paddingBytes);
+  } else {
+    return buffer;
+  }
+}
+
+var AESDecryptor = function () {
+  function AESDecryptor() {
+    aes_decryptor__classCallCheck(this, AESDecryptor);
+
+    // Static after running initTable
+    this.rcon = [0x0, 0x1, 0x2, 0x4, 0x8, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36];
+    this.subMix = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
+    this.invSubMix = [new Uint32Array(256), new Uint32Array(256), new Uint32Array(256), new Uint32Array(256)];
+    this.sBox = new Uint32Array(256);
+    this.invSBox = new Uint32Array(256);
+
+    // Changes during runtime
+    this.key = new Uint32Array(0);
+
+    this.initTable();
+  }
+
+  // Using view.getUint32() also swaps the byte order.
+
+
+  AESDecryptor.prototype.uint8ArrayToUint32Array_ = function uint8ArrayToUint32Array_(arrayBuffer) {
+    var view = new DataView(arrayBuffer);
+    var newArray = new Uint32Array(4);
+    for (var i = 0; i < 4; i++) {
+      newArray[i] = view.getUint32(i * 4);
+    }
+    return newArray;
+  };
+
+  AESDecryptor.prototype.initTable = function initTable() {
+    var sBox = this.sBox;
+    var invSBox = this.invSBox;
+    var subMix = this.subMix;
+    var subMix0 = subMix[0];
+    var subMix1 = subMix[1];
+    var subMix2 = subMix[2];
+    var subMix3 = subMix[3];
+    var invSubMix = this.invSubMix;
+    var invSubMix0 = invSubMix[0];
+    var invSubMix1 = invSubMix[1];
+    var invSubMix2 = invSubMix[2];
+    var invSubMix3 = invSubMix[3];
+
+    var d = new Uint32Array(256);
+    var x = 0;
+    var xi = 0;
+    var i = 0;
+    for (i = 0; i < 256; i++) {
+      if (i < 128) {
+        d[i] = i << 1;
+      } else {
+        d[i] = i << 1 ^ 0x11b;
+      }
+    }
+
+    for (i = 0; i < 256; i++) {
+      var sx = xi ^ xi << 1 ^ xi << 2 ^ xi << 3 ^ xi << 4;
+      sx = sx >>> 8 ^ sx & 0xff ^ 0x63;
+      sBox[x] = sx;
+      invSBox[sx] = x;
+
+      // Compute multiplication
+      var x2 = d[x];
+      var x4 = d[x2];
+      var x8 = d[x4];
+
+      // Compute sub/invSub bytes, mix columns tables
+      var t = d[sx] * 0x101 ^ sx * 0x1010100;
+      subMix0[x] = t << 24 | t >>> 8;
+      subMix1[x] = t << 16 | t >>> 16;
+      subMix2[x] = t << 8 | t >>> 24;
+      subMix3[x] = t;
+
+      // Compute inv sub bytes, inv mix columns tables
+      t = x8 * 0x1010101 ^ x4 * 0x10001 ^ x2 * 0x101 ^ x * 0x1010100;
+      invSubMix0[sx] = t << 24 | t >>> 8;
+      invSubMix1[sx] = t << 16 | t >>> 16;
+      invSubMix2[sx] = t << 8 | t >>> 24;
+      invSubMix3[sx] = t;
+
+      // Compute next counter
+      if (!x) {
+        x = xi = 1;
+      } else {
+        x = x2 ^ d[d[d[x8 ^ x2]]];
+        xi ^= d[d[xi]];
+      }
+    }
+  };
+
+  AESDecryptor.prototype.expandKey = function expandKey(keyBuffer) {
+    // convert keyBuffer to Uint32Array
+    var key = this.uint8ArrayToUint32Array_(keyBuffer);
+    var sameKey = true;
+    var offset = 0;
+
+    while (offset < key.length && sameKey) {
+      sameKey = key[offset] === this.key[offset];
+      offset++;
+    }
+
+    if (sameKey) {
+      return;
+    }
+
+    this.key = key;
+    var keySize = this.keySize = key.length;
+
+    if (keySize !== 4 && keySize !== 6 && keySize !== 8) {
+      throw new Error('Invalid aes key size=' + keySize);
+    }
+
+    var ksRows = this.ksRows = (keySize + 6 + 1) * 4;
+    var ksRow = void 0;
+    var invKsRow = void 0;
+
+    var keySchedule = this.keySchedule = new Uint32Array(ksRows);
+    var invKeySchedule = this.invKeySchedule = new Uint32Array(ksRows);
+    var sbox = this.sBox;
+    var rcon = this.rcon;
+
+    var invSubMix = this.invSubMix;
+    var invSubMix0 = invSubMix[0];
+    var invSubMix1 = invSubMix[1];
+    var invSubMix2 = invSubMix[2];
+    var invSubMix3 = invSubMix[3];
+
+    var prev = void 0;
+    var t = void 0;
+
+    for (ksRow = 0; ksRow < ksRows; ksRow++) {
+      if (ksRow < keySize) {
+        prev = keySchedule[ksRow] = key[ksRow];
+        continue;
+      }
+      t = prev;
+
+      if (ksRow % keySize === 0) {
+        // Rot word
+        t = t << 8 | t >>> 24;
+
+        // Sub word
+        t = sbox[t >>> 24] << 24 | sbox[t >>> 16 & 0xff] << 16 | sbox[t >>> 8 & 0xff] << 8 | sbox[t & 0xff];
+
+        // Mix Rcon
+        t ^= rcon[ksRow / keySize | 0] << 24;
+      } else if (keySize > 6 && ksRow % keySize === 4) {
+        // Sub word
+        t = sbox[t >>> 24] << 24 | sbox[t >>> 16 & 0xff] << 16 | sbox[t >>> 8 & 0xff] << 8 | sbox[t & 0xff];
+      }
+
+      keySchedule[ksRow] = prev = (keySchedule[ksRow - keySize] ^ t) >>> 0;
+    }
+
+    for (invKsRow = 0; invKsRow < ksRows; invKsRow++) {
+      ksRow = ksRows - invKsRow;
+      if (invKsRow & 3) {
+        t = keySchedule[ksRow];
+      } else {
+        t = keySchedule[ksRow - 4];
+      }
+
+      if (invKsRow < 4 || ksRow <= 4) {
+        invKeySchedule[invKsRow] = t;
+      } else {
+        invKeySchedule[invKsRow] = invSubMix0[sbox[t >>> 24]] ^ invSubMix1[sbox[t >>> 16 & 0xff]] ^ invSubMix2[sbox[t >>> 8 & 0xff]] ^ invSubMix3[sbox[t & 0xff]];
+      }
+
+      invKeySchedule[invKsRow] = invKeySchedule[invKsRow] >>> 0;
+    }
+  };
+
+  // Adding this as a method greatly improves performance.
+
+
+  AESDecryptor.prototype.networkToHostOrderSwap = function networkToHostOrderSwap(word) {
+    return word << 24 | (word & 0xff00) << 8 | (word & 0xff0000) >> 8 | word >>> 24;
+  };
+
+  AESDecryptor.prototype.decrypt = function decrypt(inputArrayBuffer, offset, aesIV) {
+    var nRounds = this.keySize + 6;
+    var invKeySchedule = this.invKeySchedule;
+    var invSBOX = this.invSBox;
+
+    var invSubMix = this.invSubMix;
+    var invSubMix0 = invSubMix[0];
+    var invSubMix1 = invSubMix[1];
+    var invSubMix2 = invSubMix[2];
+    var invSubMix3 = invSubMix[3];
+
+    var initVector = this.uint8ArrayToUint32Array_(aesIV);
+    var initVector0 = initVector[0];
+    var initVector1 = initVector[1];
+    var initVector2 = initVector[2];
+    var initVector3 = initVector[3];
+
+    var inputInt32 = new Int32Array(inputArrayBuffer);
+    var outputInt32 = new Int32Array(inputInt32.length);
+
+    var t0 = void 0,
+        t1 = void 0,
+        t2 = void 0,
+        t3 = void 0;
+    var s0 = void 0,
+        s1 = void 0,
+        s2 = void 0,
+        s3 = void 0;
+    var inputWords0 = void 0,
+        inputWords1 = void 0,
+        inputWords2 = void 0,
+        inputWords3 = void 0;
+
+    var ksRow, i;
+    var swapWord = this.networkToHostOrderSwap;
+
+    while (offset < inputInt32.length) {
+      inputWords0 = swapWord(inputInt32[offset]);
+      inputWords1 = swapWord(inputInt32[offset + 1]);
+      inputWords2 = swapWord(inputInt32[offset + 2]);
+      inputWords3 = swapWord(inputInt32[offset + 3]);
+
+      s0 = inputWords0 ^ invKeySchedule[0];
+      s1 = inputWords3 ^ invKeySchedule[1];
+      s2 = inputWords2 ^ invKeySchedule[2];
+      s3 = inputWords1 ^ invKeySchedule[3];
+
+      ksRow = 4;
+
+      // Iterate through the rounds of decryption
+      for (i = 1; i < nRounds; i++) {
+        t0 = invSubMix0[s0 >>> 24] ^ invSubMix1[s1 >> 16 & 0xff] ^ invSubMix2[s2 >> 8 & 0xff] ^ invSubMix3[s3 & 0xff] ^ invKeySchedule[ksRow];
+        t1 = invSubMix0[s1 >>> 24] ^ invSubMix1[s2 >> 16 & 0xff] ^ invSubMix2[s3 >> 8 & 0xff] ^ invSubMix3[s0 & 0xff] ^ invKeySchedule[ksRow + 1];
+        t2 = invSubMix0[s2 >>> 24] ^ invSubMix1[s3 >> 16 & 0xff] ^ invSubMix2[s0 >> 8 & 0xff] ^ invSubMix3[s1 & 0xff] ^ invKeySchedule[ksRow + 2];
+        t3 = invSubMix0[s3 >>> 24] ^ invSubMix1[s0 >> 16 & 0xff] ^ invSubMix2[s1 >> 8 & 0xff] ^ invSubMix3[s2 & 0xff] ^ invKeySchedule[ksRow + 3];
+        // Update state
+        s0 = t0;
+        s1 = t1;
+        s2 = t2;
+        s3 = t3;
+
+        ksRow = ksRow + 4;
+      }
+
+      // Shift rows, sub bytes, add round key
+      t0 = invSBOX[s0 >>> 24] << 24 ^ invSBOX[s1 >> 16 & 0xff] << 16 ^ invSBOX[s2 >> 8 & 0xff] << 8 ^ invSBOX[s3 & 0xff] ^ invKeySchedule[ksRow];
+      t1 = invSBOX[s1 >>> 24] << 24 ^ invSBOX[s2 >> 16 & 0xff] << 16 ^ invSBOX[s3 >> 8 & 0xff] << 8 ^ invSBOX[s0 & 0xff] ^ invKeySchedule[ksRow + 1];
+      t2 = invSBOX[s2 >>> 24] << 24 ^ invSBOX[s3 >> 16 & 0xff] << 16 ^ invSBOX[s0 >> 8 & 0xff] << 8 ^ invSBOX[s1 & 0xff] ^ invKeySchedule[ksRow + 2];
+      t3 = invSBOX[s3 >>> 24] << 24 ^ invSBOX[s0 >> 16 & 0xff] << 16 ^ invSBOX[s1 >> 8 & 0xff] << 8 ^ invSBOX[s2 & 0xff] ^ invKeySchedule[ksRow + 3];
+      ksRow = ksRow + 3;
+
+      // Write
+      outputInt32[offset] = swapWord(t0 ^ initVector0);
+      outputInt32[offset + 1] = swapWord(t3 ^ initVector1);
+      outputInt32[offset + 2] = swapWord(t2 ^ initVector2);
+      outputInt32[offset + 3] = swapWord(t1 ^ initVector3);
+
+      // reset initVector to last 4 unsigned int
+      initVector0 = inputWords0;
+      initVector1 = inputWords1;
+      initVector2 = inputWords2;
+      initVector3 = inputWords3;
+
+      offset = offset + 4;
+    }
+
+    return removePadding(outputInt32.buffer);
+  };
+
+  AESDecryptor.prototype.destroy = function destroy() {
+    this.key = undefined;
+    this.keySize = undefined;
+    this.ksRows = undefined;
+
+    this.sBox = undefined;
+    this.invSBox = undefined;
+    this.subMix = undefined;
+    this.invSubMix = undefined;
+    this.keySchedule = undefined;
+    this.invKeySchedule = undefined;
+
+    this.rcon = undefined;
+  };
+
+  return AESDecryptor;
+}();
+
+/* harmony default export */ var aes_decryptor = (AESDecryptor);
+// EXTERNAL MODULE: ./src/errors.js
+var errors = __webpack_require__(2);
+
+// EXTERNAL MODULE: ./src/utils/logger.js
+var logger = __webpack_require__(0);
+
+// CONCATENATED MODULE: ./src/crypt/decrypter.js
+function decrypter__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+
+
+
+
+
+
+
+/*globals self: false */
+
+var decrypter_Decrypter = function () {
+  function Decrypter(observer, config) {
+    decrypter__classCallCheck(this, Decrypter);
+
+    this.observer = observer;
+    this.config = config;
+    this.logEnabled = true;
+    try {
+      var browserCrypto = crypto ? crypto : self.crypto;
+      this.subtle = browserCrypto.subtle || browserCrypto.webkitSubtle;
+    } catch (e) {}
+    this.disableWebCrypto = !this.subtle;
+  }
+
+  Decrypter.prototype.isSync = function isSync() {
+    return this.disableWebCrypto && this.config.enableSoftwareAES;
+  };
+
+  Decrypter.prototype.decrypt = function decrypt(data, key, iv, callback) {
+    var _this = this;
+
+    if (this.disableWebCrypto && this.config.enableSoftwareAES) {
+      if (this.logEnabled) {
+        logger["b" /* logger */].log('JS AES decrypt');
+        this.logEnabled = false;
+      }
+      var decryptor = this.decryptor;
+      if (!decryptor) {
+        this.decryptor = decryptor = new aes_decryptor();
+      }
+      decryptor.expandKey(key);
+      callback(decryptor.decrypt(data, 0, iv));
+    } else {
+      if (this.logEnabled) {
+        logger["b" /* logger */].log('WebCrypto AES decrypt');
+        this.logEnabled = false;
+      }
+      var subtle = this.subtle;
+      if (this.key !== key) {
+        this.key = key;
+        this.fastAesKey = new fast_aes_key(subtle, key);
+      }
+
+      this.fastAesKey.expandKey().then(function (aesKey) {
+        // decrypt using web crypto
+        var crypto = new aes_crypto(subtle, iv);
+        crypto.decrypt(data, aesKey).catch(function (err) {
+          _this.onWebCryptoError(err, data, key, iv, callback);
+        }).then(function (result) {
+          callback(result);
+        });
+      }).catch(function (err) {
+        _this.onWebCryptoError(err, data, key, iv, callback);
+      });
+    }
+  };
+
+  Decrypter.prototype.onWebCryptoError = function onWebCryptoError(err, data, key, iv, callback) {
+    if (this.config.enableSoftwareAES) {
+      logger["b" /* logger */].log('WebCrypto Error, disable WebCrypto API');
+      this.disableWebCrypto = true;
+      this.logEnabled = true;
+      this.decrypt(data, key, iv, callback);
+    } else {
+      logger["b" /* logger */].error('decrypting error : ' + err.message);
+      this.observer.trigger(Event.ERROR, { type: errors["b" /* ErrorTypes */].MEDIA_ERROR, details: errors["a" /* ErrorDetails */].FRAG_DECRYPT_ERROR, fatal: true, reason: err.message });
+    }
+  };
+
+  Decrypter.prototype.destroy = function destroy() {
+    var decryptor = this.decryptor;
+    if (decryptor) {
+      decryptor.destroy();
+      this.decryptor = undefined;
+    }
+  };
+
+  return Decrypter;
+}();
+
+/* harmony default export */ var decrypter = __webpack_exports__["a"] = (decrypter_Decrypter);
+
+/***/ }),
+/* 6 */
 /***/ (function(module, exports) {
 
 // Copyright Joyent, Inc. and other Node contributors.
@@ -1474,405 +1637,7 @@ function isUndefined(arg) {
 
 
 /***/ }),
-/* 6 */
-/***/ (function(module, exports, __webpack_require__) {
-
-// see https://tools.ietf.org/html/rfc1808
-
-/* jshint ignore:start */
-(function(root) { 
-/* jshint ignore:end */
-
-  var URL_REGEX = /^((?:[a-zA-Z0-9+\-.]+:)?)(\/\/[^\/\;?#]*)?(.*?)??(;.*?)?(\?.*?)?(#.*?)?$/;
-  var FIRST_SEGMENT_REGEX = /^([^\/;?#]*)(.*)$/;
-  var SLASH_DOT_REGEX = /(?:\/|^)\.(?=\/)/g;
-  var SLASH_DOT_DOT_REGEX = /(?:\/|^)\.\.\/(?!\.\.\/).*?(?=\/)/g;
-
-  var URLToolkit = { // jshint ignore:line
-    // If opts.alwaysNormalize is true then the path will always be normalized even when it starts with / or //
-    // E.g
-    // With opts.alwaysNormalize = false (default, spec compliant)
-    // http://a.com/b/cd + /e/f/../g => http://a.com/e/f/../g
-    // With opts.alwaysNormalize = true (not spec compliant)
-    // http://a.com/b/cd + /e/f/../g => http://a.com/e/g
-    buildAbsoluteURL: function(baseURL, relativeURL, opts) {
-      opts = opts || {};
-      // remove any remaining space and CRLF
-      baseURL = baseURL.trim();
-      relativeURL = relativeURL.trim();
-      if (!relativeURL) {
-        // 2a) If the embedded URL is entirely empty, it inherits the
-        // entire base URL (i.e., is set equal to the base URL)
-        // and we are done.
-        if (!opts.alwaysNormalize) {
-          return baseURL;
-        }
-        var basePartsForNormalise = this.parseURL(baseURL);
-        if (!baseParts) {
-          throw new Error('Error trying to parse base URL.');
-        }
-        basePartsForNormalise.path = URLToolkit.normalizePath(basePartsForNormalise.path);
-        return URLToolkit.buildURLFromParts(basePartsForNormalise);
-      }
-      var relativeParts = this.parseURL(relativeURL);
-      if (!relativeParts) {
-        throw new Error('Error trying to parse relative URL.');
-      }
-      if (relativeParts.scheme) {
-        // 2b) If the embedded URL starts with a scheme name, it is
-        // interpreted as an absolute URL and we are done.
-        if (!opts.alwaysNormalize) {
-          return relativeURL;
-        }
-        relativeParts.path = URLToolkit.normalizePath(relativeParts.path);
-        return URLToolkit.buildURLFromParts(relativeParts);
-      }
-      var baseParts = this.parseURL(baseURL);
-      if (!baseParts) {
-        throw new Error('Error trying to parse base URL.');
-      }
-      if (!baseParts.netLoc && baseParts.path && baseParts.path[0] !== '/') {
-        // If netLoc missing and path doesn't start with '/', assume everthing before the first '/' is the netLoc
-        // This causes 'example.com/a' to be handled as '//example.com/a' instead of '/example.com/a'
-        var pathParts = FIRST_SEGMENT_REGEX.exec(baseParts.path);
-        baseParts.netLoc = pathParts[1];
-        baseParts.path = pathParts[2];
-      }
-      if (baseParts.netLoc && !baseParts.path) {
-        baseParts.path = '/';
-      }
-      var builtParts = {
-        // 2c) Otherwise, the embedded URL inherits the scheme of
-        // the base URL.
-        scheme: baseParts.scheme,
-        netLoc: relativeParts.netLoc,
-        path: null,
-        params: relativeParts.params,
-        query: relativeParts.query,
-        fragment: relativeParts.fragment
-      };
-      if (!relativeParts.netLoc) {
-        // 3) If the embedded URL's <net_loc> is non-empty, we skip to
-        // Step 7.  Otherwise, the embedded URL inherits the <net_loc>
-        // (if any) of the base URL.
-        builtParts.netLoc = baseParts.netLoc;
-        // 4) If the embedded URL path is preceded by a slash "/", the
-        // path is not relative and we skip to Step 7.
-        if (relativeParts.path[0] !== '/') {
-          if (!relativeParts.path) {
-            // 5) If the embedded URL path is empty (and not preceded by a
-            // slash), then the embedded URL inherits the base URL path
-            builtParts.path = baseParts.path;
-            // 5a) if the embedded URL's <params> is non-empty, we skip to
-            // step 7; otherwise, it inherits the <params> of the base
-            // URL (if any) and
-            if (!relativeParts.params) {
-              builtParts.params = baseParts.params;
-              // 5b) if the embedded URL's <query> is non-empty, we skip to
-              // step 7; otherwise, it inherits the <query> of the base
-              // URL (if any) and we skip to step 7.
-              if (!relativeParts.query) {
-                builtParts.query = baseParts.query;
-              }
-            }
-          } else {
-            // 6) The last segment of the base URL's path (anything
-            // following the rightmost slash "/", or the entire path if no
-            // slash is present) is removed and the embedded URL's path is
-            // appended in its place.
-            var baseURLPath = baseParts.path;
-            var newPath = baseURLPath.substring(0, baseURLPath.lastIndexOf('/') + 1) + relativeParts.path;
-            builtParts.path = URLToolkit.normalizePath(newPath);
-          }
-        }
-      }
-      if (builtParts.path === null) {
-        builtParts.path = opts.alwaysNormalize ? URLToolkit.normalizePath(relativeParts.path) : relativeParts.path;
-      }
-      return URLToolkit.buildURLFromParts(builtParts);
-    },
-    parseURL: function(url) {
-      var parts = URL_REGEX.exec(url);
-      if (!parts) {
-        return null;
-      }
-      return {
-        scheme: parts[1] || '',
-        netLoc: parts[2] || '',
-        path: parts[3] || '',
-        params: parts[4] || '',
-        query: parts[5] || '',
-        fragment: parts[6] || ''
-      };
-    },
-    normalizePath: function(path) {
-      // The following operations are
-      // then applied, in order, to the new path:
-      // 6a) All occurrences of "./", where "." is a complete path
-      // segment, are removed.
-      // 6b) If the path ends with "." as a complete path segment,
-      // that "." is removed.
-      path = path.split('').reverse().join('').replace(SLASH_DOT_REGEX, '');
-      // 6c) All occurrences of "<segment>/../", where <segment> is a
-      // complete path segment not equal to "..", are removed.
-      // Removal of these path segments is performed iteratively,
-      // removing the leftmost matching pattern on each iteration,
-      // until no matching pattern remains.
-      // 6d) If the path ends with "<segment>/..", where <segment> is a
-      // complete path segment not equal to "..", that
-      // "<segment>/.." is removed.
-      while (path.length !== (path = path.replace(SLASH_DOT_DOT_REGEX, '')).length) {} // jshint ignore:line
-      return path.split('').reverse().join('');
-    },
-    buildURLFromParts: function(parts) {
-      return parts.scheme + parts.netLoc + parts.path + parts.params + parts.query + parts.fragment;
-    }
-  };
-
-/* jshint ignore:start */
-  if(true)
-    module.exports = URLToolkit;
-  else if(typeof define === 'function' && define.amd)
-    define([], function() { return URLToolkit; });
-  else if(typeof exports === 'object')
-    exports["URLToolkit"] = URLToolkit;
-  else
-    root["URLToolkit"] = URLToolkit;
-})(this);
-/* jshint ignore:end */
-
-
-/***/ }),
-/* 7 */,
-/* 8 */,
-/* 9 */
-/***/ (function(module, exports, __webpack_require__) {
-
-function webpackBootstrapFunc (modules) {
-/******/  // The module cache
-/******/  var installedModules = {};
-
-/******/  // The require function
-/******/  function __webpack_require__(moduleId) {
-
-/******/    // Check if module is in cache
-/******/    if(installedModules[moduleId])
-/******/      return installedModules[moduleId].exports;
-
-/******/    // Create a new module (and put it into the cache)
-/******/    var module = installedModules[moduleId] = {
-/******/      i: moduleId,
-/******/      l: false,
-/******/      exports: {}
-/******/    };
-
-/******/    // Execute the module function
-/******/    modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
-
-/******/    // Flag the module as loaded
-/******/    module.l = true;
-
-/******/    // Return the exports of the module
-/******/    return module.exports;
-/******/  }
-
-/******/  // expose the modules object (__webpack_modules__)
-/******/  __webpack_require__.m = modules;
-
-/******/  // expose the module cache
-/******/  __webpack_require__.c = installedModules;
-
-/******/  // identity function for calling harmony imports with the correct context
-/******/  __webpack_require__.i = function(value) { return value; };
-
-/******/  // define getter function for harmony exports
-/******/  __webpack_require__.d = function(exports, name, getter) {
-/******/    if(!__webpack_require__.o(exports, name)) {
-/******/      Object.defineProperty(exports, name, {
-/******/        configurable: false,
-/******/        enumerable: true,
-/******/        get: getter
-/******/      });
-/******/    }
-/******/  };
-
-/******/  // getDefaultExport function for compatibility with non-harmony modules
-/******/  __webpack_require__.n = function(module) {
-/******/    var getter = module && module.__esModule ?
-/******/      function getDefault() { return module['default']; } :
-/******/      function getModuleExports() { return module; };
-/******/    __webpack_require__.d(getter, 'a', getter);
-/******/    return getter;
-/******/  };
-
-/******/  // Object.prototype.hasOwnProperty.call
-/******/  __webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
-
-/******/  // __webpack_public_path__
-/******/  __webpack_require__.p = "/";
-
-/******/  // on error function for async loading
-/******/  __webpack_require__.oe = function(err) { console.error(err); throw err; };
-
-  var f = __webpack_require__(__webpack_require__.s = ENTRY_MODULE)
-  return f.default || f // try to call default if defined to also support babel esmodule exports
-}
-
-// http://stackoverflow.com/a/2593661/130442
-function quoteRegExp (str) {
-  return (str + '').replace(/[.?*+^$[\]\\(){}|-]/g, '\\$&')
-}
-
-function getModuleDependencies (module) {
-  var retval = []
-  var fnString = module.toString()
-  var wrapperSignature = fnString.match(/^function\s?\(\w+,\s*\w+,\s*(\w+)\)/)
-  if (!wrapperSignature) return retval
-
-  var webpackRequireName = wrapperSignature[1]
-  var re = new RegExp('(\\\\n|\\W)' + quoteRegExp(webpackRequireName) + '\\((\/\\*.*?\\*\/)?\s?.*?([\\.|\\-|\\w|\/|@]+).*?\\)', 'g') // additional chars when output.pathinfo is true
-  var match
-  while ((match = re.exec(fnString))) {
-    retval.push(match[3])
-  }
-  return retval
-}
-
-function getRequiredModules (sources, moduleId) {
-  var modulesQueue = [moduleId]
-  var requiredModules = []
-  var seenModules = {}
-
-  while (modulesQueue.length) {
-    var moduleToCheck = modulesQueue.pop()
-    if (seenModules[moduleToCheck] || !sources[moduleToCheck]) continue
-    seenModules[moduleToCheck] = true
-    requiredModules.push(moduleToCheck)
-    var newModules = getModuleDependencies(sources[moduleToCheck])
-    modulesQueue = modulesQueue.concat(newModules)
-  }
-
-  return requiredModules
-}
-
-module.exports = function (moduleId, options) {
-  options = options || {}
-  var sources = __webpack_require__.m
-
-  var requiredModules = options.all ? Object.keys(sources) : getRequiredModules(sources, moduleId)
-  var src = '(' + webpackBootstrapFunc.toString().replace('ENTRY_MODULE', JSON.stringify(moduleId)) + ')({' + requiredModules.map(function (id) { return '' + JSON.stringify(id) + ': ' + sources[id].toString() }).join(',') + '})(self);'
-
-  var blob = new window.Blob([src], { type: 'text/javascript' })
-  if (options.bare) { return blob }
-
-  var URL = window.URL || window.webkitURL || window.mozURL || window.msURL
-
-  var workerUrl = URL.createObjectURL(blob)
-  var worker = new window.Worker(workerUrl)
-  worker.objectURL = workerUrl
-
-  return worker
-}
-
-
-/***/ }),
-/* 10 */
-/***/ (function(module, __webpack_exports__, __webpack_require__) {
-
-"use strict";
-Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__demux_demuxer_inline__ = __webpack_require__(12);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__events__ = __webpack_require__(1);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__utils_logger__ = __webpack_require__(0);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_events__ = __webpack_require__(5);
-/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_events___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3_events__);
-/* demuxer web worker.
- *  - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
- *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
- */
-
-
-
-
-
-
-var DemuxerWorker = function DemuxerWorker(self) {
-  // observer setup
-  var observer = new __WEBPACK_IMPORTED_MODULE_3_events___default.a();
-  observer.trigger = function trigger(event) {
-    for (var _len = arguments.length, data = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-      data[_key - 1] = arguments[_key];
-    }
-
-    observer.emit.apply(observer, [event, event].concat(data));
-  };
-
-  observer.off = function off(event) {
-    for (var _len2 = arguments.length, data = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-      data[_key2 - 1] = arguments[_key2];
-    }
-
-    observer.removeListener.apply(observer, [event].concat(data));
-  };
-
-  var forwardMessage = function forwardMessage(ev, data) {
-    self.postMessage({ event: ev, data: data });
-  };
-
-  self.addEventListener('message', function (ev) {
-    var data = ev.data;
-    //console.log('demuxer cmd:' + data.cmd);
-    switch (data.cmd) {
-      case 'init':
-        var config = JSON.parse(data.config);
-        self.demuxer = new __WEBPACK_IMPORTED_MODULE_0__demux_demuxer_inline__["a" /* default */](observer, data.typeSupported, config, data.vendor);
-        try {
-          Object(__WEBPACK_IMPORTED_MODULE_2__utils_logger__["a" /* enableLogs */])(config.debug === true);
-        } catch (err) {
-          console.warn('demuxerWorker: unable to enable logs');
-        }
-        // signal end of worker init
-        forwardMessage('init', null);
-        break;
-      case 'demux':
-        self.demuxer.push(data.data, data.decryptdata, data.initSegment, data.audioCodec, data.videoCodec, data.timeOffset, data.discontinuity, data.trackSwitch, data.contiguous, data.duration, data.accurateTimeOffset, data.defaultInitPTS);
-        break;
-      default:
-        break;
-    }
-  });
-
-  // forward events to main thread
-  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_DECRYPTED, forwardMessage);
-  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_PARSING_INIT_SEGMENT, forwardMessage);
-  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_PARSED, forwardMessage);
-  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].ERROR, forwardMessage);
-  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_PARSING_METADATA, forwardMessage);
-  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_PARSING_USERDATA, forwardMessage);
-  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].INIT_PTS_FOUND, forwardMessage);
-
-  // special case for FRAG_PARSING_DATA: pass data1/data2 as transferable object (no copy)
-  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_PARSING_DATA, function (ev, data) {
-    var transferable = [];
-    var message = { event: ev, data: data };
-    if (data.data1) {
-      message.data1 = data.data1.buffer;
-      transferable.push(data.data1.buffer);
-      delete data.data1;
-    }
-    if (data.data2) {
-      message.data2 = data.data2.buffer;
-      transferable.push(data.data2.buffer);
-      delete data.data2;
-    }
-    self.postMessage(message, transferable);
-  });
-};
-
-/* harmony default export */ __webpack_exports__["default"] = (DemuxerWorker);
-
-/***/ }),
-/* 11 */
+/* 7 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -2296,7 +2061,7 @@ var MP4Demuxer = function () {
 /* harmony default export */ __webpack_exports__["a"] = (MP4Demuxer);
 
 /***/ }),
-/* 12 */
+/* 8 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -2308,7 +2073,7 @@ var events = __webpack_require__(1);
 var errors = __webpack_require__(2);
 
 // EXTERNAL MODULE: ./src/crypt/decrypter.js + 3 modules
-var crypt_decrypter = __webpack_require__(3);
+var crypt_decrypter = __webpack_require__(5);
 
 // EXTERNAL MODULE: ./src/utils/logger.js
 var logger = __webpack_require__(0);
@@ -2631,7 +2396,7 @@ var aacdemuxer_AACDemuxer = function () {
 
 /* harmony default export */ var aacdemuxer = (aacdemuxer_AACDemuxer);
 // EXTERNAL MODULE: ./src/demux/mp4demuxer.js
-var mp4demuxer = __webpack_require__(11);
+var mp4demuxer = __webpack_require__(7);
 
 // CONCATENATED MODULE: ./src/demux/mpegaudio.js
 /**
@@ -3122,7 +2887,7 @@ var sample_aes_SampleAesDecrypter = function () {
 
     this.decryptdata = decryptdata;
     this.discardEPB = discardEPB;
-    this.decrypter = new crypt_decrypter["a" /* default */](observer, config, { removePKCS7Padding: false });
+    this.decrypter = new crypt_decrypter["a" /* default */](observer, config);
   }
 
   SampleAesDecrypter.prototype.decryptBuffer = function decryptBuffer(encryptedData, callback) {
@@ -3442,7 +3207,7 @@ var tsdemuxer_TSDemuxer = function () {
         switch (pid) {
           case avcId:
             if (stt) {
-              if (avcData && (pes = parsePES(avcData)) && pes.pts !== undefined) {
+              if (avcData && (pes = parsePES(avcData))) {
                 parseAVCPES(pes, false);
               }
               avcData = { data: [], size: 0 };
@@ -3454,7 +3219,7 @@ var tsdemuxer_TSDemuxer = function () {
             break;
           case audioId:
             if (stt) {
-              if (audioData && (pes = parsePES(audioData)) && pes.pts !== undefined) {
+              if (audioData && (pes = parsePES(audioData))) {
                 if (audioTrack.isAAC) {
                   parseAACPES(pes);
                 } else {
@@ -3470,7 +3235,7 @@ var tsdemuxer_TSDemuxer = function () {
             break;
           case id3Id:
             if (stt) {
-              if (id3Data && (pes = parsePES(id3Data)) && pes.pts !== undefined) {
+              if (id3Data && (pes = parsePES(id3Data))) {
                 parseID3PES(pes);
               }
               id3Data = { data: [], size: 0 };
@@ -3531,7 +3296,7 @@ var tsdemuxer_TSDemuxer = function () {
       }
     }
     // try to parse last PES packets
-    if (avcData && (pes = parsePES(avcData)) && pes.pts !== undefined) {
+    if (avcData && (pes = parsePES(avcData))) {
       parseAVCPES(pes, true);
       avcTrack.pesData = null;
     } else {
@@ -3539,7 +3304,7 @@ var tsdemuxer_TSDemuxer = function () {
       avcTrack.pesData = avcData;
     }
 
-    if (audioData && (pes = parsePES(audioData)) && pes.pts !== undefined) {
+    if (audioData && (pes = parsePES(audioData))) {
       if (audioTrack.isAAC) {
         parseAACPES(pes);
       } else {
@@ -3554,7 +3319,7 @@ var tsdemuxer_TSDemuxer = function () {
       audioTrack.pesData = audioData;
     }
 
-    if (id3Data && (pes = parsePES(id3Data)) && pes.pts !== undefined) {
+    if (id3Data && (pes = parsePES(id3Data))) {
       parseID3PES(pes);
       id3Track.pesData = null;
     } else {
@@ -5044,12 +4809,13 @@ var mp4_remuxer_MP4Remuxer = function () {
           this.remuxVideo(videoTrack, videoTimeOffset, contiguous, audioTrackLength, accurateTimeOffset);
         }
       } else {
+        var videoData = void 0;
         //logger.log('nb AVC samples:' + videoTrack.samples.length);
         if (nbVideoSamples) {
-          var videoData = this.remuxVideo(videoTrack, videoTimeOffset, contiguous, 0, accurateTimeOffset);
-          if (videoData && audioTrack.codec) {
-            this.remuxEmptyAudio(audioTrack, audioTimeOffset, contiguous, videoData);
-          }
+          videoData = this.remuxVideo(videoTrack, videoTimeOffset, contiguous, accurateTimeOffset);
+        }
+        if (videoData && audioTrack.codec) {
+          this.remuxEmptyAudio(audioTrack, audioTimeOffset, contiguous, videoData);
         }
       }
     }
@@ -5178,10 +4944,6 @@ var mp4_remuxer_MP4Remuxer = function () {
     var nextAvcDts = this.nextAvcDts;
 
     var isSafari = this.isSafari;
-
-    if (nbSamples === 0) {
-      return;
-    }
 
     // Safari does not like overlapping DTS on consecutive fragments. let's use nextAvcDts to overcome this if fragments are consecutive
     if (isSafari) {
@@ -5328,15 +5090,16 @@ var mp4_remuxer_MP4Remuxer = function () {
           if (config.stretchShortVideoTrack) {
             // In some cases, a segment's audio track duration may exceed the video track duration.
             // Since we've already remuxed audio, and we know how long the audio track is, we look to
-            // see if the delta to the next segment is longer than maxBufferHole.
-            // If so, playback would potentially get stuck, so we artificially inflate
+            // see if the delta to the next segment is longer than the minimum of maxBufferHole and
+            // maxSeekHole. If so, playback would potentially get stuck, so we artificially inflate
             // the duration of the last frame to minimize any potential gap between segments.
             var maxBufferHole = config.maxBufferHole,
-                gapTolerance = Math.floor(maxBufferHole * timeScale),
+                maxSeekHole = config.maxSeekHole,
+                gapTolerance = Math.floor(Math.min(maxBufferHole, maxSeekHole) * timeScale),
                 deltaToFrameEnd = (audioTrackLength ? firstPTS + audioTrackLength * timeScale : this.nextAudioPts) - avcSample.pts;
             if (deltaToFrameEnd > gapTolerance) {
               // We subtract lastFrameDuration from deltaToFrameEnd to try to prevent any video
-              // frame overlap. maxBufferHole should be >> lastFrameDuration anyway.
+              // frame overlap. maxBufferHole/maxSeekHole should be >> lastFrameDuration anyway.
               mp4SampleDuration = deltaToFrameEnd - lastFrameDuration;
               if (mp4SampleDuration < 0) {
                 mp4SampleDuration = lastFrameDuration;
@@ -5395,8 +5158,6 @@ var mp4_remuxer_MP4Remuxer = function () {
       startDTS: firstDTS / timeScale,
       endDTS: this.nextAvcDts / timeScale,
       type: 'video',
-      hasAudio: false,
-      hasVideo: true,
       nb: outputSamples.length,
       dropped: dropped
     };
@@ -5653,8 +5414,6 @@ var mp4_remuxer_MP4Remuxer = function () {
         startDTS: start,
         endDTS: end,
         type: 'audio',
-        hasAudio: true,
-        hasVideo: false,
         nb: nbSamples
       };
       this.observer.trigger(events["a" /* default */].FRAG_PARSING_DATA, audioData);
@@ -5814,8 +5573,6 @@ var passthrough_remuxer_PassThroughRemuxer = function () {
       startPTS: timeOffset,
       startDTS: timeOffset,
       type: streamType,
-      hasAudio: !!audioTrack,
-      hasVideo: !!videoTrack,
       nb: 1,
       dropped: 0
     });
@@ -5893,10 +5650,9 @@ var demuxer_inline_DemuxerInline = function () {
   DemuxerInline.prototype.pushDecrypted = function pushDecrypted(data, decryptdata, initSegment, audioCodec, videoCodec, timeOffset, discontinuity, trackSwitch, contiguous, duration, accurateTimeOffset, defaultInitPTS) {
     var demuxer = this.demuxer;
     if (!demuxer ||
-    // in case of continuity change, or track switch
-    // we might switch from content type (AAC container to TS container, or TS to fmp4 for example)
+    // in case of continuity change, we might switch from content type (AAC container to TS container for example)
     // so let's check that current demuxer is still valid
-    (discontinuity || trackSwitch) && !this.probe(data)) {
+    discontinuity && !this.probe(data)) {
       var observer = this.observer;
       var typeSupported = this.typeSupported;
       var config = this.config;
@@ -5942,7 +5698,7 @@ var demuxer_inline_DemuxerInline = function () {
 /* harmony default export */ var demuxer_inline = __webpack_exports__["a"] = (demuxer_inline_DemuxerInline);
 
 /***/ }),
-/* 13 */
+/* 9 */
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
@@ -5951,7 +5707,7 @@ var cues_namespaceObject = {};
 __webpack_require__.d(cues_namespaceObject, "newCue", function() { return newCue; });
 
 // EXTERNAL MODULE: ./node_modules/url-toolkit/src/url-toolkit.js
-var url_toolkit = __webpack_require__(6);
+var url_toolkit = __webpack_require__(3);
 var url_toolkit_default = /*#__PURE__*/__webpack_require__.n(url_toolkit);
 
 // EXTERNAL MODULE: ./src/events.js
@@ -6060,7 +5816,7 @@ var event_handler_EventHandler = function () {
 
 /* harmony default export */ var event_handler = (event_handler_EventHandler);
 // EXTERNAL MODULE: ./src/demux/mp4demuxer.js
-var mp4demuxer = __webpack_require__(11);
+var mp4demuxer = __webpack_require__(7);
 
 // CONCATENATED MODULE: ./src/loader/level-key.js
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -6104,43 +5860,18 @@ function fragment__classCallCheck(instance, Constructor) { if (!(instance instan
 
 var fragment_Fragment = function () {
   function Fragment() {
-    var _elementaryStreams;
-
     fragment__classCallCheck(this, Fragment);
 
     this._url = null;
     this._byteRange = null;
     this._decryptdata = null;
     this.tagList = [];
-
-    // Holds the types of data this fragment supports
-    this._elementaryStreams = (_elementaryStreams = {}, _elementaryStreams[Fragment.ElementaryStreamTypes.AUDIO] = false, _elementaryStreams[Fragment.ElementaryStreamTypes.VIDEO] = false, _elementaryStreams);
   }
-
-  /**
-   * `type` property for this._elementaryStreams
-   *
-   * @enum
-   */
-
-
-  /**
-   * @param {ElementaryStreamType}
-   */
-  Fragment.prototype.addElementaryStream = function addElementaryStream(type) {
-    this._elementaryStreams[type] = true;
-  };
-
-  Fragment.prototype.hasElementaryStream = function hasElementaryStream(type) {
-    return this._elementaryStreams[type] === true;
-  };
 
   /**
    * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
    * @returns {Uint8Array}
    */
-
-
   Fragment.prototype.createInitializationVector = function createInitializationVector(segmentNumber) {
     var uint8View = new Uint8Array(16);
 
@@ -6238,14 +5969,6 @@ var fragment_Fragment = function () {
         this._decryptdata = this.fragmentDecryptdataFromLevelkey(this.levelkey, this.sn);
       }
       return this._decryptdata;
-    }
-  }], [{
-    key: 'ElementaryStreamTypes',
-    get: function get() {
-      return {
-        AUDIO: 'audio',
-        VIDEO: 'video'
-      };
     }
   }]);
 
@@ -6874,7 +6597,7 @@ var playlist_loader_PlaylistLoader = function (_EventHandler) {
 
     var loader = new InternalLoader(config);
 
-    context.loader = loader;
+    context.loader = Loader;
     this.loaders[context.type] = loader;
 
     return loader;
@@ -7580,42 +7303,6 @@ var BinarySearch = {
 */
 
 var BufferHelper = {
-  /**
-   * filter fragments potentially evicted from buffer.
-   */
-  filterEvictedFragments: function filterEvictedFragments(bufferedFrags, media) {
-    try {
-      if (media) {
-        // Cache `media.buffered` at first for performance
-        // accessing `media.buffered` have a cost
-        var mediaBuffered = media.buffered;
-        // accessing MediaElement property through a function call should be quite expensive
-        var bufferedPositions = [];
-        for (var i = 0; i < mediaBuffered.length; i++) {
-          bufferedPositions.push({ start: mediaBuffered.start(i), end: mediaBuffered.end(i) });
-        }
-        return bufferedFrags.filter(function (frag) {
-          var position = (frag.startPTS + frag.endPTS) / 2;
-          for (var _i = 0; _i < bufferedPositions.length; _i++) {
-            if (position >= bufferedPositions[_i].start && position <= bufferedPositions[_i].end) {
-              return true;
-            }
-          }
-          return false;
-        });
-      }
-    } catch (error) {
-      // InvalidStateError: Failed to read the 'buffered' property from 'SourceBuffer':
-      // This SourceBuffer has been removed from the parent media source
-    }
-    return [];
-  },
-  /**
-   * Return true if `media`'s buffered include `position`
-   * @param {HTMLMediaElement|SourceBuffer} media
-   * @param {number} position
-   * @returns {boolean}
-   */
   isBuffered: function isBuffered(media, position) {
     try {
       if (media) {
@@ -7716,14 +7403,14 @@ var BufferHelper = {
 
 /* harmony default export */ var buffer_helper = (BufferHelper);
 // EXTERNAL MODULE: ./src/demux/demuxer-inline.js + 11 modules
-var demuxer_inline = __webpack_require__(12);
+var demuxer_inline = __webpack_require__(8);
 
 // EXTERNAL MODULE: ./node_modules/events/events.js
-var events_events = __webpack_require__(5);
+var events_events = __webpack_require__(6);
 var events_default = /*#__PURE__*/__webpack_require__.n(events_events);
 
 // EXTERNAL MODULE: ./node_modules/webworkify-webpack/index.js
-var webworkify_webpack = __webpack_require__(9);
+var webworkify_webpack = __webpack_require__(10);
 var webworkify_webpack_default = /*#__PURE__*/__webpack_require__.n(webworkify_webpack);
 
 // CONCATENATED MODULE: ./src/helper/mediasource-helper.js
@@ -7803,7 +7490,7 @@ var demuxer_Demuxer = function () {
       logger["b" /* logger */].log('demuxing in webworker');
       var w = void 0;
       try {
-        w = this.w = webworkify_webpack_default()(/*require.resolve*/(10));
+        w = this.w = webworkify_webpack_default()(/*require.resolve*/(11));
         this.onwmsg = this.onWorkerMessage.bind(this);
         w.addEventListener('message', this.onwmsg);
         w.onerror = function (event) {
@@ -7899,280 +7586,6 @@ var demuxer_Demuxer = function () {
 }();
 
 /* harmony default export */ var demux_demuxer = (demuxer_Demuxer);
-// CONCATENATED MODULE: ./src/helper/fragment-tracker.js
-function fragment_tracker__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function fragment_tracker__possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function fragment_tracker__inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-
-
-
-var FragmentState = {
-  NOT_LOADED: 'NOT_LOADED',
-  APPENDING: 'APPENDING',
-  PARTIAL: 'PARTIAL',
-  OK: 'OK'
-};
-
-var fragment_tracker_FragmentTracker = function (_EventHandler) {
-  fragment_tracker__inherits(FragmentTracker, _EventHandler);
-
-  function FragmentTracker(hls) {
-    fragment_tracker__classCallCheck(this, FragmentTracker);
-
-    var _this = fragment_tracker__possibleConstructorReturn(this, _EventHandler.call(this, hls, events["a" /* default */].BUFFER_APPENDED, events["a" /* default */].FRAG_BUFFERED, events["a" /* default */].FRAG_LOADED));
-
-    _this.bufferPadding = 0.2;
-
-    _this.fragments = Object.create(null);
-    _this.timeRanges = null;
-
-    _this.config = hls.config;
-    return _this;
-  }
-
-  FragmentTracker.prototype.destroy = function destroy() {
-    this.fragments = null;
-    this.timeRanges = null;
-    this.config = null;
-    event_handler.prototype.destroy.call(this);
-    _EventHandler.prototype.destroy.call(this);
-  };
-
-  /**
-   * Partial fragments effected by coded frame eviction will be removed
-   * The browser will unload parts of the buffer to free up memory for new buffer data
-   * Fragments will need to be reloaded when the buffer is freed up, removing partial fragments will allow them to reload(since there might be parts that are still playable)
-   * @param {String} elementaryStream The elementaryStream of media this is (eg. video/audio)
-   * @param {Object} timeRange TimeRange object from a sourceBuffer
-   */
-
-
-  FragmentTracker.prototype.detectEvictedFragments = function detectEvictedFragments(elementaryStream, timeRange) {
-    var _this2 = this;
-
-    var fragmentTimes = void 0,
-        time = void 0;
-    // Check if any flagged fragments have been unloaded
-    Object.keys(this.fragments).forEach(function (key) {
-      var fragmentEntity = _this2.fragments[key];
-      if (fragmentEntity.buffered === true) {
-        var esData = fragmentEntity.range[elementaryStream];
-        if (esData) {
-          fragmentTimes = esData.time;
-          for (var i = 0; i < fragmentTimes.length; i++) {
-            time = fragmentTimes[i];
-
-            if (_this2.isTimeBuffered(time.startPTS, time.endPTS, timeRange) === false) {
-              // Unregister partial fragment as it needs to load again to be reused
-              _this2.removeFragment(fragmentEntity.body);
-              break;
-            }
-          }
-        }
-      }
-    });
-  };
-
-  /**
-   * Checks if the fragment passed in is loaded in the buffer properly
-   * Partially loaded fragments will be registered as a partial fragment
-   * @param {Object} fragment Check the fragment against all sourceBuffers loaded
-   */
-
-
-  FragmentTracker.prototype.detectPartialFragments = function detectPartialFragments(fragment) {
-    var _this3 = this;
-
-    var fragKey = this.getFragmentKey(fragment);
-    var fragmentEntity = this.fragments[fragKey];
-    fragmentEntity.buffered = true;
-
-    Object.keys(this.timeRanges).forEach(function (elementaryStream) {
-      if (fragment.hasElementaryStream(elementaryStream) === true) {
-        var timeRange = _this3.timeRanges[elementaryStream];
-        // Check for malformed fragments
-        // Gaps need to be calculated for each elementaryStream
-        fragmentEntity.range[elementaryStream] = _this3.getBufferedTimes(fragment.startPTS, fragment.endPTS, timeRange);
-      }
-    });
-  };
-
-  FragmentTracker.prototype.getBufferedTimes = function getBufferedTimes(startPTS, endPTS, timeRange) {
-    var fragmentTimes = [];
-    var startTime = void 0,
-        endTime = void 0;
-    var fragmentPartial = false;
-    for (var i = 0; i < timeRange.length; i++) {
-      startTime = timeRange.start(i) - this.bufferPadding;
-      endTime = timeRange.end(i) + this.bufferPadding;
-      if (startPTS >= startTime && endPTS <= endTime) {
-        // Fragment is entirely contained in buffer
-        // No need to check the other timeRange times since it's completely playable
-        fragmentTimes.push({
-          startPTS: Math.max(startPTS, timeRange.start(i)),
-          endPTS: Math.min(endPTS, timeRange.end(i))
-        });
-        break;
-      } else if (startPTS < endTime && endPTS > startTime) {
-        // Check for intersection with buffer
-        // Get playable sections of the fragment
-        fragmentTimes.push({
-          startPTS: Math.max(startPTS, timeRange.start(i)),
-          endPTS: Math.min(endPTS, timeRange.end(i))
-        });
-        fragmentPartial = true;
-      } else if (endPTS <= startTime) {
-        // No need to check the rest of the timeRange as it is in order
-        break;
-      }
-    }
-
-    return {
-      time: fragmentTimes,
-      partial: fragmentPartial
-    };
-  };
-
-  FragmentTracker.prototype.getFragmentKey = function getFragmentKey(fragment) {
-    return fragment.type + '_' + fragment.level + '_' + fragment.sn;
-  };
-
-  /**
-   * Gets the partial fragment for a certain time
-   * @param {Number} time
-   * @returns {Object} fragment Returns a partial fragment at a time or null if there is no partial fragment
-   */
-
-
-  FragmentTracker.prototype.getPartialFragment = function getPartialFragment(time) {
-    var _this4 = this;
-
-    var timePadding = void 0,
-        startTime = void 0,
-        endTime = void 0;
-    var bestFragment = null;
-    var bestOverlap = 0;
-    Object.keys(this.fragments).forEach(function (key) {
-      var fragmentEntity = _this4.fragments[key];
-      if (_this4.isPartial(fragmentEntity)) {
-        startTime = fragmentEntity.body.startPTS - _this4.bufferPadding;
-        endTime = fragmentEntity.body.endPTS + _this4.bufferPadding;
-        if (time >= startTime && time <= endTime) {
-          // Use the fragment that has the most padding from start and end time
-          timePadding = Math.min(time - startTime, endTime - time);
-          if (bestOverlap <= timePadding) {
-            bestFragment = fragmentEntity.body;
-            bestOverlap = timePadding;
-          }
-        }
-      }
-    });
-    return bestFragment;
-  };
-
-  /**
-   * @param {Object} fragment The fragment to check
-   * @returns {String} Returns the fragment state when a fragment never loaded or if it partially loaded
-   */
-
-
-  FragmentTracker.prototype.getState = function getState(fragment) {
-    var fragKey = this.getFragmentKey(fragment);
-    var fragmentEntity = this.fragments[fragKey];
-    var state = FragmentState.NOT_LOADED;
-
-    if (fragmentEntity !== undefined) {
-      if (!fragmentEntity.buffered) {
-        state = FragmentState.APPENDING;
-      } else if (this.isPartial(fragmentEntity) === true) {
-        state = FragmentState.PARTIAL;
-      } else {
-        state = FragmentState.OK;
-      }
-    }
-
-    return state;
-  };
-
-  FragmentTracker.prototype.isPartial = function isPartial(fragmentEntity) {
-    return fragmentEntity.buffered === true && (fragmentEntity.range.video !== undefined && fragmentEntity.range.video.partial === true || fragmentEntity.range.audio !== undefined && fragmentEntity.range.audio.partial === true);
-  };
-
-  FragmentTracker.prototype.isTimeBuffered = function isTimeBuffered(startPTS, endPTS, timeRange) {
-    var startTime = void 0,
-        endTime = void 0;
-    for (var i = 0; i < timeRange.length; i++) {
-      startTime = timeRange.start(i) - this.bufferPadding;
-      endTime = timeRange.end(i) + this.bufferPadding;
-      if (startPTS >= startTime && endPTS <= endTime) {
-        return true;
-      }
-      if (endPTS <= startTime) {
-        // No need to check the rest of the timeRange as it is in order
-        return false;
-      }
-    }
-
-    return false;
-  };
-
-  /**
-   * Fires when a fragment loading is completed
-   */
-
-
-  FragmentTracker.prototype.onFragLoaded = function onFragLoaded(e) {
-    var fragment = e.frag;
-    var fragKey = this.getFragmentKey(fragment);
-    var fragmentEntity = {
-      body: fragment,
-      range: Object.create(null),
-      buffered: false
-    };
-    this.fragments[fragKey] = fragmentEntity;
-  };
-
-  /**
-   * Fires when the buffer is updated
-   */
-
-
-  FragmentTracker.prototype.onBufferAppended = function onBufferAppended(e) {
-    var _this5 = this;
-
-    // Store the latest timeRanges loaded in the buffer
-    this.timeRanges = e.timeRanges;
-    Object.keys(this.timeRanges).forEach(function (elementaryStream) {
-      var timeRange = _this5.timeRanges[elementaryStream];
-      _this5.detectEvictedFragments(elementaryStream, timeRange);
-    });
-  };
-
-  /**
-   * Fires after a fragment has been loaded into the source buffer
-   */
-
-
-  FragmentTracker.prototype.onFragBuffered = function onFragBuffered(e) {
-    this.detectPartialFragments(e.frag);
-  };
-
-  /**
-   * Remove a fragment from fragment tracker until it is loaded again
-   * @param {Object} fragment The fragment to remove
-   */
-
-
-  FragmentTracker.prototype.removeFragment = function removeFragment(fragment) {
-    var fragKey = this.getFragmentKey(fragment);
-    delete this.fragments[fragKey];
-  };
-
-  return FragmentTracker;
-}(event_handler);
 // CONCATENATED MODULE: ./src/helper/level-helper.js
 /**
  * Level Helper class, providing methods dealing with playlist sliding and drift
@@ -8337,7 +7750,7 @@ var TimeRanges = {
   }
 };
 
-/* harmony default export */ var utils_timeRanges = (TimeRanges);
+/* harmony default export */ var timeRanges = (TimeRanges);
 // CONCATENATED MODULE: ./src/utils/discontinuities.js
 
 
@@ -8477,7 +7890,7 @@ var TaskLoop = function (_EventHandler) {
 
 
   TaskLoop.prototype.hasInterval = function hasInterval() {
-    return this._tickInterval !== null;
+    return !isNaN(this._tickInterval);
   };
 
   /**
@@ -8522,7 +7935,6 @@ var TaskLoop = function (_EventHandler) {
   }(function () {
     if (this._tickInterval) {
       clearInterval(this._tickInterval);
-      this._tickInterval = null;
       return true;
     }
     return false;
@@ -8584,8 +7996,6 @@ function stream_controller__inherits(subClass, superClass) { if (typeof superCla
 
 
 
-
-
 var State = {
   STOPPED: 'STOPPED',
   IDLE: 'IDLE',
@@ -8603,12 +8013,11 @@ var State = {
 var stream_controller_StreamController = function (_TaskLoop) {
   stream_controller__inherits(StreamController, _TaskLoop);
 
-  function StreamController(hls, fragmentTracker) {
+  function StreamController(hls) {
     stream_controller__classCallCheck(this, StreamController);
 
     var _this = stream_controller__possibleConstructorReturn(this, _TaskLoop.call(this, hls, events["a" /* default */].MEDIA_ATTACHED, events["a" /* default */].MEDIA_DETACHING, events["a" /* default */].MANIFEST_LOADING, events["a" /* default */].MANIFEST_PARSED, events["a" /* default */].LEVEL_LOADED, events["a" /* default */].KEY_LOADED, events["a" /* default */].FRAG_LOADED, events["a" /* default */].FRAG_LOAD_EMERGENCY_ABORTED, events["a" /* default */].FRAG_PARSING_INIT_SEGMENT, events["a" /* default */].FRAG_PARSING_DATA, events["a" /* default */].FRAG_PARSED, events["a" /* default */].ERROR, events["a" /* default */].AUDIO_TRACK_SWITCHING, events["a" /* default */].AUDIO_TRACK_SWITCHED, events["a" /* default */].BUFFER_CREATED, events["a" /* default */].BUFFER_APPENDED, events["a" /* default */].BUFFER_FLUSHED));
 
-    _this.fragmentTracker = fragmentTracker;
     _this.config = hls.config;
     _this.audioCodecSwap = false;
     _this._state = State.STOPPED;
@@ -8621,7 +8030,6 @@ var stream_controller_StreamController = function (_TaskLoop) {
 
   StreamController.prototype.onHandlerDestroyed = function onHandlerDestroyed() {
     this.state = State.STOPPED;
-    this.fragmentTracker = null;
   };
 
   StreamController.prototype.startLoad = function startLoad(startPosition) {
@@ -8665,7 +8073,6 @@ var stream_controller_StreamController = function (_TaskLoop) {
       if (frag.loader) {
         frag.loader.abort();
       }
-      this.fragmentTracker.removeFragment(frag);
       this.fragCurrent = null;
     }
     this.fragPrevious = null;
@@ -8673,7 +8080,6 @@ var stream_controller_StreamController = function (_TaskLoop) {
       this.demuxer.destroy();
       this.demuxer = null;
     }
-    this.clearInterval();
     this.state = State.STOPPED;
     this.forceStartLoad = false;
   };
@@ -9002,6 +8408,8 @@ var stream_controller_StreamController = function (_TaskLoop) {
             if (deltaPTS && deltaPTS > config.maxBufferHole && fragPrevious.dropped && curSNIdx) {
               frag = prevFrag;
               logger["b" /* logger */].warn('SN just loaded, with large PTS gap between audio and video, maybe frag is not starting with a keyframe ? load previous one to try to overcome this');
+              // decrement previous frag load counter to avoid frag loop loading error when next fragment will get reloaded
+              fragPrevious.loadCounter--;
             } else {
               frag = nextFrag;
               logger["b" /* logger */].log('SN just loaded, load next one: ' + frag.sn);
@@ -9020,6 +8428,9 @@ var stream_controller_StreamController = function (_TaskLoop) {
             logger["b" /* logger */].warn('Loaded fragment with dropped frames, backtracking 1 segment to find a keyframe');
             frag.dropped = 0;
             if (prevFrag) {
+              if (prevFrag.loadCounter) {
+                prevFrag.loadCounter--;
+              }
               frag = prevFrag;
               frag.backtracked = true;
             } else if (curSNIdx) {
@@ -9034,15 +8445,36 @@ var stream_controller_StreamController = function (_TaskLoop) {
   };
 
   StreamController.prototype._loadFragmentOrKey = function _loadFragmentOrKey(frag, level, levelDetails, pos, bufferEnd) {
+    var hls = this.hls,
+        config = hls.config;
+
     //logger.log('loading frag ' + i +',pos/bufEnd:' + pos.toFixed(3) + '/' + bufferEnd.toFixed(3));
     if (frag.decryptdata && frag.decryptdata.uri != null && frag.decryptdata.key == null) {
       logger["b" /* logger */].log('Loading key for ' + frag.sn + ' of [' + levelDetails.startSN + ' ,' + levelDetails.endSN + '],level ' + level);
       this.state = State.KEY_LOADING;
-      this.hls.trigger(events["a" /* default */].KEY_LOADING, { frag: frag });
+      hls.trigger(events["a" /* default */].KEY_LOADING, { frag: frag });
     } else {
       logger["b" /* logger */].log('Loading ' + frag.sn + ' of [' + levelDetails.startSN + ' ,' + levelDetails.endSN + '],level ' + level + ', currentTime:' + pos.toFixed(3) + ',bufferEnd:' + bufferEnd.toFixed(3));
-      // Check if fragment is not loaded
-      var fragState = this.fragmentTracker.getState(frag);
+      // ensure that we are not reloading the same fragments in loop ...
+      if (this.fragLoadIdx !== undefined) {
+        this.fragLoadIdx++;
+      } else {
+        this.fragLoadIdx = 0;
+      }
+      if (frag.loadCounter) {
+        frag.loadCounter++;
+        var maxThreshold = config.fragLoadingLoopThreshold;
+        // if this frag has already been loaded 3 times, and if it has been reloaded recently
+        if (frag.loadCounter > maxThreshold && Math.abs(this.fragLoadIdx - frag.loadIdx) < maxThreshold) {
+          hls.trigger(events["a" /* default */].ERROR, { type: errors["b" /* ErrorTypes */].MEDIA_ERROR, details: errors["a" /* ErrorDetails */].FRAG_LOOP_LOADING_ERROR, fatal: false, frag: frag });
+          return;
+        }
+      } else {
+        frag.loadCounter = 1;
+      }
+      frag.loadIdx = this.fragLoadIdx;
+      frag.autoLevel = hls.autoLevelEnabled;
+      frag.bitrateTest = this.bitrateTest;
 
       this.fragCurrent = frag;
       this.startFragRequested = true;
@@ -9050,28 +8482,16 @@ var stream_controller_StreamController = function (_TaskLoop) {
       if (!isNaN(frag.sn) && !frag.bitrateTest) {
         this.nextLoadPosition = frag.start + frag.duration;
       }
-
-      // Allow backtracked fragments to load
-      if (frag.backtracked || fragState === FragmentState.NOT_LOADED) {
-        frag.autoLevel = this.hls.autoLevelEnabled;
-        frag.bitrateTest = this.bitrateTest;
-
-        this.hls.trigger(events["a" /* default */].FRAG_LOADING, { frag: frag });
-        // lazy demuxer init, as this could take some time ... do it during frag loading
-        if (!this.demuxer) {
-          this.demuxer = new demux_demuxer(this.hls, 'main');
-        }
-        this.state = State.FRAG_LOADING;
-      } else if (fragState === FragmentState.APPENDING) {
-        // Lower the buffer size and try again
-        if (this._reduceMaxBufferLength(frag.duration)) {
-          this.fragmentTracker.removeFragment(frag);
-        }
+      hls.trigger(events["a" /* default */].FRAG_LOADING, { frag: frag });
+      // lazy demuxer init, as this could take some time ... do it during frag loading
+      if (!this.demuxer) {
+        this.demuxer = new demux_demuxer(hls, 'main');
       }
+      this.state = State.FRAG_LOADING;
+      return;
     }
   };
 
-  // TODO: Move this functionality into fragment-tracker.js
   StreamController.prototype.getBufferedFrag = function getBufferedFrag(position) {
     return binary_search.search(this._bufferedFrags, function (frag) {
       if (position < frag.startPTS) {
@@ -9158,6 +8578,10 @@ var stream_controller_StreamController = function (_TaskLoop) {
       fragCurrent.loader.abort();
     }
     this.fragCurrent = null;
+    // increase fragment load Index to avoid frag loop loading error after buffer flush
+    if (this.fragLoadIdx !== undefined) {
+      this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+    }
     // flush everything
     this.flushMainBuffer(0, Number.POSITIVE_INFINITY);
   };
@@ -9195,6 +8619,10 @@ var stream_controller_StreamController = function (_TaskLoop) {
       var fetchdelay = void 0,
           fragPlayingCurrent = void 0,
           nextBufferedFrag = void 0;
+      if (this.fragLoadIdx !== undefined) {
+        // increase fragment load Index to avoid frag loop loading error after buffer flush
+        this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+      }
       fragPlayingCurrent = this.getBufferedFrag(media.currentTime);
       if (fragPlayingCurrent && fragPlayingCurrent.startPTS > 1) {
         // flush buffer preceding current fragment (flush until current fragment start offset)
@@ -9267,12 +8695,14 @@ var stream_controller_StreamController = function (_TaskLoop) {
       this.startPosition = this.lastCurrentTime = 0;
     }
 
-    // reset fragment backtracked flag
+    // reset fragment loading counter on MSE detaching to avoid reporting FRAG_LOOP_LOADING_ERROR after error recovery
     var levels = this.levels;
     if (levels) {
+      // reset fragment load counter
       levels.forEach(function (level) {
         if (level.details) {
           level.details.fragments.forEach(function (fragment) {
+            fragment.loadCounter = undefined;
             fragment.backtracked = undefined;
           });
         }
@@ -9330,6 +8760,10 @@ var stream_controller_StreamController = function (_TaskLoop) {
     }
     if (media) {
       this.lastCurrentTime = currentTime;
+    }
+    // avoid reporting fragment loop loading error in case user is seeking several times on same position
+    if (this.state !== State.FRAG_LOADING && this.fragLoadIdx !== undefined) {
+      this.fragLoadIdx += 2 * config.fragLoadingLoopThreshold;
     }
     // in case seeking occurs although no media buffered, adjust startPosition and nextLoadPosition to seek target
     if (!this.loadedmetadata) {
@@ -9617,14 +9051,6 @@ var stream_controller_StreamController = function (_TaskLoop) {
         data.endDTS = data.startDTS + fragCurrent.duration;
       }
 
-      if (data.hasAudio === true) {
-        frag.addElementaryStream(loader_fragment.ElementaryStreamTypes.AUDIO);
-      }
-
-      if (data.hasVideo === true) {
-        frag.addElementaryStream(loader_fragment.ElementaryStreamTypes.VIDEO);
-      }
-
       logger["b" /* logger */].log('Parsed ' + data.type + ',PTS:[' + data.startPTS.toFixed(3) + ',' + data.endPTS.toFixed(3) + '],DTS:[' + data.startDTS.toFixed(3) + '/' + data.endDTS.toFixed(3) + '],nb:' + data.nb + ',dropped:' + (data.dropped || 0));
 
       // Detect gaps in a fragment  and try to fix it by finding a keyframe in the previous fragment (see _findFragments)
@@ -9640,7 +9066,6 @@ var stream_controller_StreamController = function (_TaskLoop) {
               // Return back to the IDLE state without appending to buffer
               // Causes findFragments to backtrack a segment and find the keyframe
               // Audio fragments arriving before video sets the nextLoadPosition, causing _findFragments to skip the backtracked fragment
-              this.fragmentTracker.removeFragment(frag);
               frag.backtracked = true;
               this.nextLoadPosition = data.startPTS;
               this.state = State.IDLE;
@@ -9660,6 +9085,7 @@ var stream_controller_StreamController = function (_TaskLoop) {
       var drift = updateFragPTSDTS(level.details, frag, data.startPTS, data.endPTS, data.startDTS, data.endDTS),
           hls = this.hls;
       hls.trigger(events["a" /* default */].LEVEL_PTS_UPDATED, { details: level.details, level: this.level, drift: drift, type: data.type, start: data.startPTS, end: data.endPTS });
+
       // has remuxer dropped video frames located before first keyframe ?
       [data.data1, data.data2].forEach(function (buffer) {
         // only append in PARSING state (rationale is that an appending error could happen synchronously on first segment appending)
@@ -9779,9 +9205,11 @@ var stream_controller_StreamController = function (_TaskLoop) {
       var frag = this.fragCurrent;
       if (frag) {
         var media = this.mediaBuffer ? this.mediaBuffer : this.media;
-        logger["b" /* logger */].log('main buffered : ' + utils_timeRanges.toString(media.buffered));
+        logger["b" /* logger */].log('main buffered : ' + timeRanges.toString(media.buffered));
         // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
-        var bufferedFrags = buffer_helper.filterEvictedFragments(this._bufferedFrags, media);
+        var bufferedFrags = this._bufferedFrags.filter(function (frag) {
+          return buffer_helper.isBuffered(media, (frag.startPTS + frag.endPTS) / 2);
+        });
         // push new range
         bufferedFrags.push(frag);
         // sort frags, as we use BinarySearch for lookup in getBufferedFrag ...
@@ -9819,6 +9247,8 @@ var stream_controller_StreamController = function (_TaskLoop) {
           if (this.fragLoadError + 1 <= this.config.fragLoadingMaxRetry) {
             // exponential backoff capped to config.fragLoadingMaxRetryTimeout
             var delay = Math.min(Math.pow(2, this.fragLoadError) * this.config.fragLoadingRetryDelay, this.config.fragLoadingMaxRetryTimeout);
+            // reset load counter to avoid frag loop loading error
+            frag.loadCounter = 0;
             logger["b" /* logger */].warn('mediaController: frag loading failed, retry in ' + delay + ' ms');
             this.retryDate = performance.now() + delay;
             // retry loading state
@@ -9835,6 +9265,25 @@ var stream_controller_StreamController = function (_TaskLoop) {
             // switch error to fatal
             data.fatal = true;
             this.state = State.ERROR;
+          }
+        }
+        break;
+      case errors["a" /* ErrorDetails */].FRAG_LOOP_LOADING_ERROR:
+        if (!data.fatal) {
+          // if buffer is not empty
+          if (mediaBuffered) {
+            // try to reduce max buffer length : rationale is that we could get
+            // frag loop loading error because of buffer eviction
+            this._reduceMaxBufferLength(frag.duration);
+            this.state = State.IDLE;
+          } else {
+            // buffer empty. report as fatal if in manual mode or if lowest level.
+            // level controller takes care of emergency switch down logic
+            if (!frag.autoLevel || frag.level === 0) {
+              // switch error to fatal
+              data.fatal = true;
+              this.state = State.ERROR;
+            }
           }
         }
         break;
@@ -9882,9 +9331,11 @@ var stream_controller_StreamController = function (_TaskLoop) {
       // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
       config.maxMaxBufferLength /= 2;
       logger["b" /* logger */].warn('main:reduce max buffer length to ' + config.maxMaxBufferLength + 's');
-      return true;
+      if (this.fragLoadIdx !== undefined) {
+        // increase fragment load Index to avoid frag loop loading error after buffer flush
+        this.fragLoadIdx += 2 * config.fragLoadingLoopThreshold;
+      }
     }
-    return false;
   };
 
   StreamController.prototype._checkBuffer = function _checkBuffer() {
@@ -9900,18 +9351,26 @@ var stream_controller_StreamController = function (_TaskLoop) {
         this.loadedmetadata = true;
         // only adjust currentTime if different from startPosition or if startPosition not buffered
         // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
-        var startPosition = media.seeking ? currentTime : this.startPosition;
+        var startPosition = media.seeking ? currentTime : this.startPosition,
+            startPositionBuffered = buffer_helper.isBuffered(mediaBuffer, startPosition),
+            firstbufferedPosition = buffered.start(0),
+            startNotBufferedButClose = !startPositionBuffered && Math.abs(startPosition - firstbufferedPosition) < config.maxSeekHole;
         // if currentTime not matching with expected startPosition or startPosition not buffered but close to first buffered
-        if (currentTime !== startPosition) {
+        if (currentTime !== startPosition || startNotBufferedButClose) {
+          logger["b" /* logger */].log('target start position:' + startPosition);
           // if startPosition not buffered, let's seek to buffered.start(0)
-          logger["b" /* logger */].log('target start position not buffered, seek to buffered.start(0) ' + startPosition + ' from current time ' + currentTime);
+          if (startNotBufferedButClose) {
+            startPosition = firstbufferedPosition;
+            logger["b" /* logger */].log('target start position not buffered, seek to buffered.start(0) ' + startPosition);
+          }
+          logger["b" /* logger */].log('adjust currentTime from ' + currentTime + ' to ' + startPosition);
           media.currentTime = startPosition;
         }
       } else if (this.immediateSwitch) {
         this.immediateLevelSwitchEnd();
       } else {
-        var bufferInfo = buffer_helper.bufferInfo(media, currentTime, config.maxBufferHole),
-            expectedPlaying = !(media.paused && media.readyState > 1 || // not playing when media is paused
+        var bufferInfo = buffer_helper.bufferInfo(media, currentTime, 0),
+            expectedPlaying = !(media.paused || // not playing when media is paused
         media.ended || // not playing when media is ended
         media.buffered.length === 0),
             // not playing if nothing buffered
@@ -9943,24 +9402,30 @@ var stream_controller_StreamController = function (_TaskLoop) {
               var stalledDuration = tnow - this.stalled;
               var bufferLen = bufferInfo.len;
               var nudgeRetry = this.nudgeRetry || 0;
-              // Check if fragment is broken
-              var partial = this.fragmentTracker.getPartialFragment(currentTime);
-              if (partial !== null) {
-                var lastEndTime = 0;
-                // Check if currentTime is between unbuffered regions of partial fragments
-                for (var i = 0; i < media.buffered.length; i++) {
-                  var startTime = media.buffered.start(i);
-                  if (currentTime >= lastEndTime && currentTime < startTime) {
-                    media.currentTime = Math.max(startTime, media.currentTime + 0.1);
-                    logger["b" /* logger */].warn('skipping hole, adjusting currentTime from ' + currentTime + ' to ' + media.currentTime);
-                    this.stalled = undefined;
-                    hls.trigger(events["a" /* default */].ERROR, { type: errors["b" /* ErrorTypes */].MEDIA_ERROR, details: errors["a" /* ErrorDetails */].BUFFER_SEEK_OVER_HOLE, fatal: false, reason: 'fragment loaded with buffer holes, seeking from ' + currentTime + ' to ' + media.currentTime, frag: partial });
-                    return;
-                  }
-                  lastEndTime = media.buffered.end(i);
+              // have we reached stall deadline ?
+              if (bufferLen <= jumpThreshold && stalledDuration > config.lowBufferWatchdogPeriod * 1000) {
+                // report stalled error once
+                if (!this.stallReported) {
+                  this.stallReported = true;
+                  logger["b" /* logger */].warn('playback stalling in low buffer @' + currentTime);
+                  hls.trigger(events["a" /* default */].ERROR, { type: errors["b" /* ErrorTypes */].MEDIA_ERROR, details: errors["a" /* ErrorDetails */].BUFFER_STALLED_ERROR, fatal: false, buffer: bufferLen });
                 }
-              }
-              if (bufferLen > jumpThreshold && stalledDuration > config.highBufferWatchdogPeriod * 1000) {
+                // if buffer len is below threshold, try to jump to start of next buffer range if close
+                // no buffer available @ currentTime, check if next buffer is close (within a config.maxSeekHole second range)
+                var nextBufferStart = bufferInfo.nextStart,
+                    delta = nextBufferStart - currentTime;
+                if (nextBufferStart && delta < config.maxSeekHole && delta > 0) {
+                  this.nudgeRetry = ++nudgeRetry;
+                  var nudgeOffset = nudgeRetry * config.nudgeOffset;
+                  // next buffer is close ! adjust currentTime to nextBufferStart
+                  // this will ensure effective video decoding
+                  logger["b" /* logger */].log('adjust currentTime from ' + media.currentTime + ' to next buffered @ ' + nextBufferStart + ' + nudge ' + nudgeOffset);
+                  media.currentTime = nextBufferStart + nudgeOffset;
+                  // reset stalled so to rearm watchdog timer
+                  this.stalled = undefined;
+                  hls.trigger(events["a" /* default */].ERROR, { type: errors["b" /* ErrorTypes */].MEDIA_ERROR, details: errors["a" /* ErrorDetails */].BUFFER_SEEK_OVER_HOLE, fatal: false, hole: nextBufferStart + nudgeOffset - currentTime });
+                }
+              } else if (bufferLen > jumpThreshold && stalledDuration > config.highBufferWatchdogPeriod * 1000) {
                 // report stalled error once
                 if (!this.stallReported) {
                   this.stallReported = true;
@@ -10009,6 +9474,10 @@ var stream_controller_StreamController = function (_TaskLoop) {
       return buffer_helper.isBuffered(media, (frag.startPTS + frag.endPTS) / 2);
     });
 
+    if (this.fragLoadIdx !== undefined) {
+      // increase fragment load Index to avoid frag loop loading error after buffer flush
+      this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+    }
     // move to IDLE once flush complete. this should trigger new fragment loading
     this.state = State.IDLE;
     // reset reference to frag
@@ -10302,6 +9771,7 @@ var level_controller_LevelController = function (_EventHandler) {
     switch (data.details) {
       case errors["a" /* ErrorDetails */].FRAG_LOAD_ERROR:
       case errors["a" /* ErrorDetails */].FRAG_LOAD_TIMEOUT:
+      case errors["a" /* ErrorDetails */].FRAG_LOOP_LOADING_ERROR:
       case errors["a" /* ErrorDetails */].KEY_LOAD_ERROR:
       case errors["a" /* ErrorDetails */].KEY_LOAD_TIMEOUT:
         levelIndex = data.frag.level;
@@ -10937,7 +10407,7 @@ var abr_controller_AbrController = function (_EventHandler) {
     // if same frag is loaded multiple times, it might be in browser cache, and loaded quickly
     // and leading to wrong bw estimation
     // on bitrate test, also only update stats once (if tload = tbuffered == on FRAG_LOADED)
-    if (stats.aborted !== true && frag.type === 'main' && !isNaN(frag.sn) && (!frag.bitrateTest || stats.tload === stats.tbuffered)) {
+    if (stats.aborted !== true && frag.loadCounter === 1 && frag.type === 'main' && !isNaN(frag.sn) && (!frag.bitrateTest || stats.tload === stats.tbuffered)) {
       // use tparsed-trequest instead of tbuffered-trequest to compute fragLoadingProcessing; rationale is that  buffer appending only happens once media is attached
       // in case we use config.startFragPrefetch while media is not attached yet, fragment might be parsed while media not attached yet, but it will only be buffered on media attached
       // as a consequence it could happen really late in the process. meaning that appending duration might appears huge ... leading to underestimated throughput estimation
@@ -11311,15 +10781,8 @@ var buffer_controller_BufferController = function (_EventHandler) {
     var pending = this.segments.reduce(function (counter, segment) {
       return segment.parent === parent ? counter + 1 : counter;
     }, 0);
+    this.hls.trigger(events["a" /* default */].BUFFER_APPENDED, { parent: parent, pending: pending });
 
-    // this.sourceBuffer is better to use than media.buffered as it is closer to the PTS data from the fragments
-    var timeRanges = {};
-    var sourceBuffer = this.sourceBuffer;
-    for (var streamType in sourceBuffer) {
-      timeRanges[streamType] = sourceBuffer[streamType].buffered;
-    }
-
-    this.hls.trigger(events["a" /* default */].BUFFER_APPENDED, { parent: parent, pending: pending, timeRanges: timeRanges });
     // don't append in flushing mode
     if (!this._needsFlush) {
       this.doAppending();
@@ -12343,9 +11806,6 @@ function audio_stream_controller__inherits(subClass, superClass) { if (typeof su
 
 
 
-
-
-
 var audio_stream_controller_State = {
   STOPPED: 'STOPPED',
   STARTING: 'STARTING',
@@ -12366,12 +11826,11 @@ var audio_stream_controller_State = {
 var audio_stream_controller_AudioStreamController = function (_TaskLoop) {
   audio_stream_controller__inherits(AudioStreamController, _TaskLoop);
 
-  function AudioStreamController(hls, fragmentTracker) {
+  function AudioStreamController(hls) {
     audio_stream_controller__classCallCheck(this, AudioStreamController);
 
     var _this = audio_stream_controller__possibleConstructorReturn(this, _TaskLoop.call(this, hls, events["a" /* default */].MEDIA_ATTACHED, events["a" /* default */].MEDIA_DETACHING, events["a" /* default */].AUDIO_TRACKS_UPDATED, events["a" /* default */].AUDIO_TRACK_SWITCHING, events["a" /* default */].AUDIO_TRACK_LOADED, events["a" /* default */].KEY_LOADED, events["a" /* default */].FRAG_LOADED, events["a" /* default */].FRAG_PARSING_INIT_SEGMENT, events["a" /* default */].FRAG_PARSING_DATA, events["a" /* default */].FRAG_PARSED, events["a" /* default */].ERROR, events["a" /* default */].BUFFER_RESET, events["a" /* default */].BUFFER_CREATED, events["a" /* default */].BUFFER_APPENDED, events["a" /* default */].BUFFER_FLUSHED, events["a" /* default */].INIT_PTS_FOUND));
 
-    _this.fragmentTracker = fragmentTracker;
     _this.config = hls.config;
     _this.audioCodecSwap = false;
     _this._state = audio_stream_controller_State.STOPPED;
@@ -12387,7 +11846,6 @@ var audio_stream_controller_AudioStreamController = function (_TaskLoop) {
 
   AudioStreamController.prototype.onHandlerDestroyed = function onHandlerDestroyed() {
     this.state = audio_stream_controller_State.STOPPED;
-    this.fragmentTracker = null;
   };
 
   //Signal that video PTS was found
@@ -12439,7 +11897,6 @@ var audio_stream_controller_AudioStreamController = function (_TaskLoop) {
       if (frag.loader) {
         frag.loader.abort();
       }
-      this.fragmentTracker.removeFragment(frag);
       this.fragCurrent = null;
     }
     this.fragPrevious = null;
@@ -12500,11 +11957,9 @@ var audio_stream_controller_AudioStreamController = function (_TaskLoop) {
             bufferEnd = bufferInfo.end,
             fragPrevious = this.fragPrevious,
 
-        // ensure we buffer at least config.maxBufferLength (default 30s) or config.maxMaxBufferLength (default: 600s)
-        // whichever is smaller.
+        // ensure we buffer at least config.maxBufferLength (default 30s)
         // once we reach that threshold, don't buffer more than video (mainBufferInfo.len)
-        maxConfigBuffer = Math.min(config.maxBufferLength, config.maxMaxBufferLength),
-            maxBufLen = Math.max(maxConfigBuffer, mainBufferInfo.len),
+        maxBufLen = Math.max(config.maxBufferLength, mainBufferInfo.len),
             audioSwitch = this.audioSwitch,
             trackId = this.trackId;
 
@@ -12642,16 +12097,31 @@ var audio_stream_controller_AudioStreamController = function (_TaskLoop) {
               hls.trigger(events["a" /* default */].KEY_LOADING, { frag: frag });
             } else {
               logger["b" /* logger */].log('Loading ' + frag.sn + ', cc: ' + frag.cc + ' of [' + trackDetails.startSN + ' ,' + trackDetails.endSN + '],track ' + trackId + ', currentTime:' + pos + ',bufferEnd:' + bufferEnd.toFixed(3));
-              // Check if fragment is not loaded
-              if (this.fragmentTracker.getState(frag) === FragmentState.NOT_LOADED) {
-                this.fragCurrent = frag;
-                this.startFragRequested = true;
-                if (!isNaN(frag.sn)) {
-                  this.nextLoadPosition = frag.start + frag.duration;
-                }
-                hls.trigger(events["a" /* default */].FRAG_LOADING, { frag: frag });
-                this.state = audio_stream_controller_State.FRAG_LOADING;
+              // ensure that we are not reloading the same fragments in loop ...
+              if (this.fragLoadIdx !== undefined) {
+                this.fragLoadIdx++;
+              } else {
+                this.fragLoadIdx = 0;
               }
+              if (frag.loadCounter) {
+                frag.loadCounter++;
+                var maxThreshold = config.fragLoadingLoopThreshold;
+                // if this frag has already been loaded 3 times, and if it has been reloaded recently
+                if (frag.loadCounter > maxThreshold && Math.abs(this.fragLoadIdx - frag.loadIdx) < maxThreshold) {
+                  hls.trigger(events["a" /* default */].ERROR, { type: errors["b" /* ErrorTypes */].MEDIA_ERROR, details: errors["a" /* ErrorDetails */].FRAG_LOOP_LOADING_ERROR, fatal: false, frag: frag });
+                  return;
+                }
+              } else {
+                frag.loadCounter = 1;
+              }
+              frag.loadIdx = this.fragLoadIdx;
+              this.fragCurrent = frag;
+              this.startFragRequested = true;
+              if (!isNaN(frag.sn)) {
+                this.nextLoadPosition = frag.start + frag.duration;
+              }
+              hls.trigger(events["a" /* default */].FRAG_LOADING, { frag: frag });
+              this.state = audio_stream_controller_State.FRAG_LOADING;
             }
           }
         }
@@ -12731,6 +12201,18 @@ var audio_stream_controller_AudioStreamController = function (_TaskLoop) {
       this.startPosition = this.lastCurrentTime = 0;
     }
 
+    // reset fragment loading counter on MSE detaching to avoid reporting FRAG_LOOP_LOADING_ERROR after error recovery
+    var tracks = this.tracks;
+    if (tracks) {
+      // reset fragment load counter
+      tracks.forEach(function (track) {
+        if (track.details) {
+          track.details.fragments.forEach(function (fragment) {
+            fragment.loadCounter = undefined;
+          });
+        }
+      });
+    }
     // remove video listeners
     if (media) {
       media.removeEventListener('seeking', this.onvseeking);
@@ -12749,6 +12231,10 @@ var audio_stream_controller_AudioStreamController = function (_TaskLoop) {
     }
     if (this.media) {
       this.lastCurrentTime = this.media.currentTime;
+    }
+    // avoid reporting fragment loop loading error in case user is seeking several times on same position
+    if (this.fragLoadIdx !== undefined) {
+      this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
     }
     // tick to speed up processing
     this.tick();
@@ -12788,6 +12274,10 @@ var audio_stream_controller_AudioStreamController = function (_TaskLoop) {
       this.audioSwitch = true;
       //main audio track are handled by stream-controller, just do something if switching to alt audio track
       this.state = audio_stream_controller_State.IDLE;
+      // increase fragment load Index to avoid frag loop loading error after buffer flush
+      if (this.fragLoadIdx !== undefined) {
+        this.fragLoadIdx += 2 * this.config.fragLoadingLoopThreshold;
+      }
     }
     this.tick();
   };
@@ -12953,8 +12443,6 @@ var audio_stream_controller_AudioStreamController = function (_TaskLoop) {
         data.endDTS = data.startDTS + fragCurrent.duration;
       }
 
-      fragCurrent.addElementaryStream(loader_fragment.ElementaryStreamTypes.AUDIO);
-
       logger["b" /* logger */].log('parsed ' + data.type + ',PTS:[' + data.startPTS.toFixed(3) + ',' + data.endPTS.toFixed(3) + '],DTS:[' + data.startDTS.toFixed(3) + '/' + data.endDTS.toFixed(3) + '],nb:' + data.nb);
       updateFragPTSDTS(track.details, fragCurrent, data.startPTS, data.endPTS);
 
@@ -13065,7 +12553,7 @@ var audio_stream_controller_AudioStreamController = function (_TaskLoop) {
         stats.tbuffered = performance.now();
         hls.trigger(events["a" /* default */].FRAG_BUFFERED, { stats: stats, frag: frag, id: 'audio' });
         var media = this.mediaBuffer ? this.mediaBuffer : this.media;
-        logger["b" /* logger */].log('audio buffered : ' + utils_timeRanges.toString(media.buffered));
+        logger["b" /* logger */].log('audio buffered : ' + timeRanges.toString(media.buffered));
         if (this.audioSwitch && this.appended) {
           this.audioSwitch = false;
           hls.trigger(events["a" /* default */].AUDIO_TRACK_SWITCHED, { id: this.trackId });
@@ -13095,6 +12583,8 @@ var audio_stream_controller_AudioStreamController = function (_TaskLoop) {
           var config = this.config;
           if (loadError <= config.fragLoadingMaxRetry) {
             this.fragLoadError = loadError;
+            // reset load counter to avoid frag loop loading error
+            frag.loadCounter = 0;
             // exponential backoff capped to config.fragLoadingMaxRetryTimeout
             var delay = Math.min(Math.pow(2, loadError - 1) * config.fragLoadingRetryDelay, config.fragLoadingMaxRetryTimeout);
             logger["b" /* logger */].warn('audioStreamController: frag loading failed, retry in ' + delay + ' ms');
@@ -13109,6 +12599,7 @@ var audio_stream_controller_AudioStreamController = function (_TaskLoop) {
           }
         }
         break;
+      case errors["a" /* ErrorDetails */].FRAG_LOOP_LOADING_ERROR:
       case errors["a" /* ErrorDetails */].AUDIO_TRACK_LOAD_ERROR:
       case errors["a" /* ErrorDetails */].AUDIO_TRACK_LOAD_TIMEOUT:
       case errors["a" /* ErrorDetails */].KEY_LOAD_ERROR:
@@ -13133,6 +12624,8 @@ var audio_stream_controller_AudioStreamController = function (_TaskLoop) {
               // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
               _config.maxMaxBufferLength /= 2;
               logger["b" /* logger */].warn('audio:reduce max buffer length to ' + _config.maxMaxBufferLength + 's');
+              // increase fragment load Index to avoid frag loop loading error after buffer flush
+              this.fragLoadIdx += 2 * _config.fragLoadingLoopThreshold;
             }
             this.state = audio_stream_controller_State.IDLE;
           } else {
@@ -16036,7 +15529,7 @@ var subtitle_track_controller_SubtitleTrackController = function (_EventHandler)
 
 /* harmony default export */ var subtitle_track_controller = (subtitle_track_controller_SubtitleTrackController);
 // EXTERNAL MODULE: ./src/crypt/decrypter.js + 3 modules
-var decrypter = __webpack_require__(3);
+var decrypter = __webpack_require__(5);
 
 // CONCATENATED MODULE: ./src/controller/subtitle-stream-controller.js
 function subtitle_stream_controller__classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
@@ -16835,6 +16328,7 @@ var hlsDefaultConfig = {
   maxBufferLength: 30, // used by stream-controller
   maxBufferSize: 60 * 1000 * 1000, // used by stream-controller
   maxBufferHole: 0.5, // used by stream-controller
+  maxSeekHole: 2, // used by stream-controller
   lowBufferWatchdogPeriod: 0.5, // used by stream-controller
   highBufferWatchdogPeriod: 3, // used by stream-controller
   nudgeOffset: 0.1, // used by stream-controller
@@ -16861,17 +16355,18 @@ var hlsDefaultConfig = {
   fragLoadingMaxRetry: 6, // used by fragment-loader
   fragLoadingRetryDelay: 1000, // used by fragment-loader
   fragLoadingMaxRetryTimeout: 64000, // used by fragment-loader
+  fragLoadingLoopThreshold: 3, // used by stream-controller
   startFragPrefetch: false, // used by stream-controller
   fpsDroppedMonitoringPeriod: 5000, // used by fps-controller
   fpsDroppedMonitoringThreshold: 0.2, // used by fps-controller
   appendErrorMaxRetry: 3, // used by buffer-controller
   loader: xhr_loader,
   //loader: FetchLoader,
-  fLoader: undefined, // used by fragment-loader
-  pLoader: undefined, // used by playlist-loader
-  xhrSetup: undefined, // used by xhr-loader
+  fLoader: undefined,
+  pLoader: undefined,
+  xhrSetup: undefined,
   licenseXhrSetup: undefined, // used by eme-controller
-  // fetchSetup: undefined,
+  fetchSetup: undefined,
   abrController: abr_controller,
   bufferController: buffer_controller,
   capLevelController: cap_level_controller,
@@ -16895,11 +16390,11 @@ var hlsDefaultConfig = {
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess // used by eme-controller
 };
 
-if (__USE_SUBTITLES__) {
+if (true) {
   hlsDefaultConfig.subtitleStreamController = subtitle_stream_controller;
   hlsDefaultConfig.subtitleTrackController = subtitle_track_controller;
   hlsDefaultConfig.timelineController = timeline_controller;
-  hlsDefaultConfig.cueHandler = cues_namespaceObject; // used by timeline-controller
+  hlsDefaultConfig.cueHandler = cues_namespaceObject;
   hlsDefaultConfig.enableCEA708Captions = true; // used by timeline-controller
   hlsDefaultConfig.enableWebVTT = true; // used by timeline-controller
   hlsDefaultConfig.captionsTextTrack1Label = 'English'; // used by timeline-controller
@@ -16908,12 +16403,12 @@ if (__USE_SUBTITLES__) {
   hlsDefaultConfig.captionsTextTrack2LanguageCode = 'es'; // used by timeline-controller
 }
 
-if (__USE_ALT_AUDIO__) {
+if (true) {
   hlsDefaultConfig.audioStreamController = audio_stream_controller;
   hlsDefaultConfig.audioTrackController = audio_track_controller;
 }
 
-if (__USE_EME_DRM__) {
+if (true) {
   hlsDefaultConfig.emeController = eme_controller;
 }
 // CONCATENATED MODULE: ./src/hls.js
@@ -16940,9 +16435,8 @@ function hls__classCallCheck(instance, Constructor) { if (!(instance instanceof 
 
 
 
-
 // polyfill for IE11
-__webpack_require__(14);
+__webpack_require__(12);
 
 var hls_Hls = function () {
   Hls.isSupported = function isSupported() {
@@ -17046,19 +16540,17 @@ var hls_Hls = function () {
 
     // network controllers
     var levelController = this.levelController = new level_controller(this);
-    // FragmentTracker must be defined before StreamController because the order of event handling is important
-    var fragmentTracker = new fragment_tracker_FragmentTracker(this);
-    var streamController = this.streamController = new stream_controller(this, fragmentTracker);
+    var streamController = this.streamController = new stream_controller(this);
     var networkControllers = [levelController, streamController];
 
     // optional audio stream controller
     var Controller = config.audioStreamController;
     if (Controller) {
-      networkControllers.push(new Controller(this, fragmentTracker));
+      networkControllers.push(new Controller(this));
     }
     this.networkControllers = networkControllers;
 
-    var coreComponents = [playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController, id3TrackController, fragmentTracker];
+    var coreComponents = [playListLoader, fragmentLoader, keyLoader, abrController, bufferController, capLevelController, fpsController, id3TrackController];
 
     // optional audio track and subtitle controller
     Controller = config.audioTrackController;
@@ -17427,7 +16919,292 @@ var hls_Hls = function () {
 /* harmony default export */ var src_hls = __webpack_exports__["default"] = (hls_Hls);
 
 /***/ }),
-/* 14 */
+/* 10 */
+/***/ (function(module, exports, __webpack_require__) {
+
+function webpackBootstrapFunc (modules) {
+/******/  // The module cache
+/******/  var installedModules = {};
+
+/******/  // The require function
+/******/  function __webpack_require__(moduleId) {
+
+/******/    // Check if module is in cache
+/******/    if(installedModules[moduleId])
+/******/      return installedModules[moduleId].exports;
+
+/******/    // Create a new module (and put it into the cache)
+/******/    var module = installedModules[moduleId] = {
+/******/      i: moduleId,
+/******/      l: false,
+/******/      exports: {}
+/******/    };
+
+/******/    // Execute the module function
+/******/    modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+
+/******/    // Flag the module as loaded
+/******/    module.l = true;
+
+/******/    // Return the exports of the module
+/******/    return module.exports;
+/******/  }
+
+/******/  // expose the modules object (__webpack_modules__)
+/******/  __webpack_require__.m = modules;
+
+/******/  // expose the module cache
+/******/  __webpack_require__.c = installedModules;
+
+/******/  // identity function for calling harmony imports with the correct context
+/******/  __webpack_require__.i = function(value) { return value; };
+
+/******/  // define getter function for harmony exports
+/******/  __webpack_require__.d = function(exports, name, getter) {
+/******/    if(!__webpack_require__.o(exports, name)) {
+/******/      Object.defineProperty(exports, name, {
+/******/        configurable: false,
+/******/        enumerable: true,
+/******/        get: getter
+/******/      });
+/******/    }
+/******/  };
+
+/******/  // getDefaultExport function for compatibility with non-harmony modules
+/******/  __webpack_require__.n = function(module) {
+/******/    var getter = module && module.__esModule ?
+/******/      function getDefault() { return module['default']; } :
+/******/      function getModuleExports() { return module; };
+/******/    __webpack_require__.d(getter, 'a', getter);
+/******/    return getter;
+/******/  };
+
+/******/  // Object.prototype.hasOwnProperty.call
+/******/  __webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
+
+/******/  // __webpack_public_path__
+/******/  __webpack_require__.p = "/";
+
+/******/  // on error function for async loading
+/******/  __webpack_require__.oe = function(err) { console.error(err); throw err; };
+
+  var f = __webpack_require__(__webpack_require__.s = ENTRY_MODULE)
+  return f.default || f // try to call default if defined to also support babel esmodule exports
+}
+
+var moduleNameReqExp = '[\\.|\\-|\\+|\\w|\/|@]+'
+var dependencyRegExp = '\\((\/\\*.*?\\*\/)?\s?.*?(' + moduleNameReqExp + ').*?\\)' // additional chars when output.pathinfo is true
+
+// http://stackoverflow.com/a/2593661/130442
+function quoteRegExp (str) {
+  return (str + '').replace(/[.?*+^$[\]\\(){}|-]/g, '\\$&')
+}
+
+function getModuleDependencies (sources, module, queueName) {
+  var retval = {}
+  retval[queueName] = []
+
+  var fnString = module.toString()
+  var wrapperSignature = fnString.match(/^function\s?\(\w+,\s*\w+,\s*(\w+)\)/)
+  if (!wrapperSignature) return retval
+  var webpackRequireName = wrapperSignature[1]
+
+  // main bundle deps
+  var re = new RegExp('(\\\\n|\\W)' + quoteRegExp(webpackRequireName) + dependencyRegExp, 'g')
+  var match
+  while ((match = re.exec(fnString))) {
+    if (match[3] === 'dll-reference') continue
+    retval[queueName].push(match[3])
+  }
+
+  // dll deps
+  re = new RegExp('\\(' + quoteRegExp(webpackRequireName) + '\\("(dll-reference\\s(' + moduleNameReqExp + '))"\\)\\)' + dependencyRegExp, 'g')
+  while ((match = re.exec(fnString))) {
+    if (!sources[match[2]]) {
+      retval[queueName].push(match[1])
+      sources[match[2]] = __webpack_require__(match[1]).m
+    }
+    retval[match[2]] = retval[match[2]] || []
+    retval[match[2]].push(match[4])
+  }
+
+  return retval
+}
+
+function hasValuesInQueues (queues) {
+  var keys = Object.keys(queues)
+  return keys.reduce(function (hasValues, key) {
+    return hasValues || queues[key].length > 0
+  }, false)
+}
+
+function getRequiredModules (sources, moduleId) {
+  var modulesQueue = {
+    main: [moduleId]
+  }
+  var requiredModules = {
+    main: []
+  }
+  var seenModules = {
+    main: {}
+  }
+
+  while (hasValuesInQueues(modulesQueue)) {
+    var queues = Object.keys(modulesQueue)
+    for (var i = 0; i < queues.length; i++) {
+      var queueName = queues[i]
+      var queue = modulesQueue[queueName]
+      var moduleToCheck = queue.pop()
+      seenModules[queueName] = seenModules[queueName] || {}
+      if (seenModules[queueName][moduleToCheck] || !sources[queueName][moduleToCheck]) continue
+      seenModules[queueName][moduleToCheck] = true
+      requiredModules[queueName] = requiredModules[queueName] || []
+      requiredModules[queueName].push(moduleToCheck)
+      var newModules = getModuleDependencies(sources, sources[queueName][moduleToCheck], queueName)
+      var newModulesKeys = Object.keys(newModules)
+      for (var j = 0; j < newModulesKeys.length; j++) {
+        modulesQueue[newModulesKeys[j]] = modulesQueue[newModulesKeys[j]] || []
+        modulesQueue[newModulesKeys[j]] = modulesQueue[newModulesKeys[j]].concat(newModules[newModulesKeys[j]])
+      }
+    }
+  }
+
+  return requiredModules
+}
+
+module.exports = function (moduleId, options) {
+  options = options || {}
+  var sources = {
+    main: __webpack_require__.m
+  }
+
+  var requiredModules = options.all ? { main: Object.keys(sources) } : getRequiredModules(sources, moduleId)
+
+  var src = ''
+
+  Object.keys(requiredModules).filter(function (m) { return m !== 'main' }).forEach(function (module) {
+    var entryModule = 0
+    while (requiredModules[module][entryModule]) {
+      entryModule++
+    }
+    requiredModules[module].push(entryModule)
+    sources[module][entryModule] = '(function(module, exports, __webpack_require__) { module.exports = __webpack_require__; })'
+    src = src + 'var ' + module + ' = (' + webpackBootstrapFunc.toString().replace('ENTRY_MODULE', JSON.stringify(entryModule)) + ')({' + requiredModules[module].map(function (id) { return '' + JSON.stringify(id) + ': ' + sources[module][id].toString() }).join(',') + '});\n'
+  })
+
+  src = src + '(' + webpackBootstrapFunc.toString().replace('ENTRY_MODULE', JSON.stringify(moduleId)) + ')({' + requiredModules.main.map(function (id) { return '' + JSON.stringify(id) + ': ' + sources.main[id].toString() }).join(',') + '})(self);'
+
+  var blob = new window.Blob([src], { type: 'text/javascript' })
+  if (options.bare) { return blob }
+
+  var URL = window.URL || window.webkitURL || window.mozURL || window.msURL
+
+  var workerUrl = URL.createObjectURL(blob)
+  var worker = new window.Worker(workerUrl)
+  worker.objectURL = workerUrl
+
+  return worker
+}
+
+
+/***/ }),
+/* 11 */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+Object.defineProperty(__webpack_exports__, "__esModule", { value: true });
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_0__demux_demuxer_inline__ = __webpack_require__(8);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_1__events__ = __webpack_require__(1);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_2__utils_logger__ = __webpack_require__(0);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_events__ = __webpack_require__(6);
+/* harmony import */ var __WEBPACK_IMPORTED_MODULE_3_events___default = __webpack_require__.n(__WEBPACK_IMPORTED_MODULE_3_events__);
+/* demuxer web worker.
+ *  - listen to worker message, and trigger DemuxerInline upon reception of Fragments.
+ *  - provides MP4 Boxes back to main thread using [transferable objects](https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast) in order to minimize message passing overhead.
+ */
+
+
+
+
+
+
+var DemuxerWorker = function DemuxerWorker(self) {
+  // observer setup
+  var observer = new __WEBPACK_IMPORTED_MODULE_3_events___default.a();
+  observer.trigger = function trigger(event) {
+    for (var _len = arguments.length, data = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+      data[_key - 1] = arguments[_key];
+    }
+
+    observer.emit.apply(observer, [event, event].concat(data));
+  };
+
+  observer.off = function off(event) {
+    for (var _len2 = arguments.length, data = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+      data[_key2 - 1] = arguments[_key2];
+    }
+
+    observer.removeListener.apply(observer, [event].concat(data));
+  };
+
+  var forwardMessage = function forwardMessage(ev, data) {
+    self.postMessage({ event: ev, data: data });
+  };
+
+  self.addEventListener('message', function (ev) {
+    var data = ev.data;
+    //console.log('demuxer cmd:' + data.cmd);
+    switch (data.cmd) {
+      case 'init':
+        var config = JSON.parse(data.config);
+        self.demuxer = new __WEBPACK_IMPORTED_MODULE_0__demux_demuxer_inline__["a" /* default */](observer, data.typeSupported, config, data.vendor);
+        try {
+          Object(__WEBPACK_IMPORTED_MODULE_2__utils_logger__["a" /* enableLogs */])(config.debug === true);
+        } catch (err) {
+          console.warn('demuxerWorker: unable to enable logs');
+        }
+        // signal end of worker init
+        forwardMessage('init', null);
+        break;
+      case 'demux':
+        self.demuxer.push(data.data, data.decryptdata, data.initSegment, data.audioCodec, data.videoCodec, data.timeOffset, data.discontinuity, data.trackSwitch, data.contiguous, data.duration, data.accurateTimeOffset, data.defaultInitPTS);
+        break;
+      default:
+        break;
+    }
+  });
+
+  // forward events to main thread
+  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_DECRYPTED, forwardMessage);
+  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_PARSING_INIT_SEGMENT, forwardMessage);
+  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_PARSED, forwardMessage);
+  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].ERROR, forwardMessage);
+  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_PARSING_METADATA, forwardMessage);
+  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_PARSING_USERDATA, forwardMessage);
+  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].INIT_PTS_FOUND, forwardMessage);
+
+  // special case for FRAG_PARSING_DATA: pass data1/data2 as transferable object (no copy)
+  observer.on(__WEBPACK_IMPORTED_MODULE_1__events__["a" /* default */].FRAG_PARSING_DATA, function (ev, data) {
+    var transferable = [];
+    var message = { event: ev, data: data };
+    if (data.data1) {
+      message.data1 = data.data1.buffer;
+      transferable.push(data.data1.buffer);
+      delete data.data1;
+    }
+    if (data.data2) {
+      message.data2 = data.data2.buffer;
+      transferable.push(data.data2.buffer);
+      delete data.data2;
+    }
+    self.postMessage(message, transferable);
+  });
+};
+
+/* harmony default export */ __webpack_exports__["default"] = (DemuxerWorker);
+
+/***/ }),
+/* 12 */
 /***/ (function(module, exports) {
 
 /*! http://mths.be/endswith v0.2.0 by @mathias */
