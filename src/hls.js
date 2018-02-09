@@ -19,7 +19,6 @@ import {hlsDefaultConfig} from './config';
 import {FragmentTracker} from './helper/fragment-tracker';
 
 import HlsEvents from './events';
-
 import EventEmitter from 'events';
 
 // polyfill for IE11
@@ -50,7 +49,7 @@ export default class Hls {
    * @type {HlsEvents}
    */
   static get Events() {
-    return Event;
+    return HlsEvents;
   }
 
   /**
@@ -239,7 +238,7 @@ export default class Hls {
    */
   destroy() {
     logger.log('destroy');
-    this.trigger(Event.DESTROYING);
+    this.trigger(HlsEvents.DESTROYING);
     this.detachMedia();
     this.coreComponents.concat(this.networkControllers).forEach(component => {component.destroy();});
     this.url = null;
@@ -254,7 +253,7 @@ export default class Hls {
   attachMedia(media) {
     logger.log('attachMedia');
     this.media = media;
-    this.trigger(Event.MEDIA_ATTACHING, {media: media});
+    this.trigger(HlsEvents.MEDIA_ATTACHING, {media: media});
   }
 
   /**
@@ -262,7 +261,7 @@ export default class Hls {
    */
   detachMedia() {
     logger.log('detachMedia');
-    this.trigger(Event.MEDIA_DETACHING);
+    this.trigger(HlsEvents.MEDIA_DETACHING);
     this.media = null;
   }
 
@@ -275,7 +274,7 @@ export default class Hls {
     logger.log(`loadSource:${url}`);
     this.url = url;
     // when attaching to a source URL, trigger a playlist load
-    this.trigger(Event.MANIFEST_LOADING, {url: url});
+    this.trigger(HlsEvents.MANIFEST_LOADING, {url: url});
   }
 
   /**
