@@ -144,6 +144,10 @@ function resetGlobals() {
 }
 
 function trimArray( target, limit ) {
+  if( limit < 0 ) {
+    return;
+  }
+
   while(target.length > limit )
   {
     target.shift();
@@ -151,9 +155,9 @@ function trimArray( target, limit ) {
 }
 
 function trimEventHistory() {
-  let x = limitMetrics;
+  const x = limitMetrics;
 
-  if( x === -1 ) {
+  if( x < 0) {
     return;
   }
 
