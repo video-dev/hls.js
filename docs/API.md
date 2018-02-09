@@ -1093,7 +1093,7 @@ get/set : subtitle track id (returned by). Returns -1 if no track is visible. Se
 
 (default: `false`)
 
-get/set : boolean to enable/disable subtitle display by hls.js
+get/set : if set to true the active subtitle track mode will be set to `showing` and the browser will display the active subtitles. If set to false, the mode will be set to `hidden`. 
 
 ## Live stream API
 
