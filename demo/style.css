@@ -2,6 +2,26 @@ header {
   text-align: center;
 }
 
+th, td {
+  padding: 15px;
+}
+
+select {
+  padding: 2px 15px;
+  background-color: rgb(181, 222, 255);
+  font-weight: bolder;
+
+}
+
+select option {
+  font-size: 10pt;
+}
+
+.innerControls input {
+  font-weight: normal;
+  float: right;
+}
+
 #controls {
     width: 70%;
     min-width: 615px;
@@ -17,7 +37,7 @@ header {
     width: 99%;
     margin: 3px;
     padding-left: 3px;
-    font-size: 8pt
+    font-size: 10pt
 }
 
 .videoCentered {
@@ -47,6 +67,7 @@ header {
   width: 19%;
   display : inline-block;
   text-align: center;
-  font-size: 8pt;
-  background-color: #A0A0A0
+  font-size: 10pt;
+  font-weight: bolder;
+  background-color: rgb(181, 222, 255)
 }

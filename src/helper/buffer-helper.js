@@ -3,6 +3,42 @@
 */
 
 const BufferHelper = {
+  /**
+   * filter fragments potentially evicted from buffer.
+   */
+  filterEvictedFragments: function(bufferedFrags, media) {
+    try {
+      if (media) {
+        // Cache `media.buffered` at first for performance
+        // accessing `media.buffered` have a cost
+        const mediaBuffered = media.buffered;
+        // accessing MediaElement property through a function call should be quite expensive
+        const bufferedPositions = [];
+        for (let i = 0; i < mediaBuffered.length; i++) {
+          bufferedPositions.push({ start: mediaBuffered.start(i), end: mediaBuffered.end(i) });
+        }
+        return bufferedFrags.filter(frag => {
+          const position = (frag.startPTS + frag.endPTS) / 2;
+          for (let i = 0; i < bufferedPositions.length; i++) {
+            if (position >= bufferedPositions[i].start && position <= bufferedPositions[i].end) {
+              return true;
+            }
+          }
+          return false;
+        });
+      }
+    } catch (error) {
+      // InvalidStateError: Failed to read the 'buffered' property from 'SourceBuffer':
+      // This SourceBuffer has been removed from the parent media source
+    }
+    return [];
+  },
+  /**
+   * Return true if `media`'s buffered include `position`
+   * @param {HTMLMediaElement|SourceBuffer} media
+   * @param {number} position
+   * @returns {boolean}
+   */
   isBuffered : function(media,position) {
     try {
       if (media) {

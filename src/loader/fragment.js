@@ -72,6 +72,9 @@ export default class Fragment {
     return byteRange;
   }
 
+  /**
+   * @type {number}
+   */
   get byteRangeStartOffset() {
     return this.byteRange[0];
   }
@@ -88,12 +91,15 @@ export default class Fragment {
   }
 
   /**
-   * @param {ElementaryStreamType}
+   * @param {ElementaryStreamType} type
    */
   addElementaryStream(type) {
     this._elementaryStreams[type] = true;
   }
 
+  /**
+   * @param {ElementaryStreamType} type
+   */
   hasElementaryStream(type) {
     return this._elementaryStreams[type] === true;
   }
@@ -130,9 +136,5 @@ export default class Fragment {
     }
 
     return decryptdata;
-  }
-
-  cloneObj(obj) {
-    return JSON.parse(JSON.stringify(obj));
   }
 }

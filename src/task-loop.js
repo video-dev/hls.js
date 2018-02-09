@@ -21,7 +21,7 @@ export default class TaskLoop extends EventHandler {
    * @returns {boolean}
    */
   hasInterval() {
-    return !isNaN(this._tickInterval);
+    return this._tickInterval !== null;
   }
 
   /**
@@ -42,6 +42,7 @@ export default class TaskLoop extends EventHandler {
   clearInterval() {
     if (this._tickInterval) {
       clearInterval(this._tickInterval);
+      this._tickInterval = null;
       return true;
     }
     return false;
