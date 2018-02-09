@@ -17,11 +17,11 @@ let hls,
     stats,
     tracks,
     fmp4Data,
-    limitMetrics = JSON.parse(getURLParam('limitMetrics', -1));
-    enableStreaming = JSON.parse(getURLParam('enableStreaming', true));
+    enableStreaming = JSON.parse(getURLParam('enableStreaming', true)),
     autoRecoverError = JSON.parse(getURLParam('autoRecoverError', true)),
     enableWorker = JSON.parse(getURLParam('enableWorker', true)),
     levelCapping = JSON.parse(getURLParam('levelCapping', -1)),
+    limitMetrics = JSON.parse(getURLParam('limitMetrics', -1)),
     defaultAudioCodec = getURLParam('defaultAudioCodec', undefined),
     widevineLicenseUrl = getURLParam('widevineLicenseURL', undefined),
     dumpfMP4 = getURLParam('dumpfMP4', false);
