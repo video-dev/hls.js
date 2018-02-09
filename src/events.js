@@ -1,4 +1,8 @@
-export default {
+/**
+ * @typedef {string} HlsEvent
+ * @enum {HlsEvents}
+ */
+export default HlsEvents = {
   // fired before MediaSource is attaching to media element - data: { media }
   MEDIA_ATTACHING: 'hlsMediaAttaching',
   // fired when MediaSource has been succesfully attached to media element - data: { }
