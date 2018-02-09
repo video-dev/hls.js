@@ -19,7 +19,7 @@ describe('AESDecryptor', () => {
       assert.deepEqual(Array.from(new Uint8Array(removePadding(arr.buffer))), [1]);
     });
 
-    it('removes 4 bytes when the last byte is 3', () => {
+    it('removes 4 bytes when the last byte is 4', () => {
       const arr = new Uint8Array([1, 2, 3, 4]);
       assert.deepEqual(Array.from(new Uint8Array(removePadding(arr.buffer))), []);
     });
