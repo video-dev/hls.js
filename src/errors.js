@@ -11,6 +11,10 @@ export const ErrorTypes = {
   OTHER_ERROR: 'otherError'
 };
 
+/**
+ * @enum {ErrorDetails}
+ * @typedef {string} ErrorDetail
+ */
 export const ErrorDetails = {
   KEY_SYSTEM_NO_KEYS: 'keySystemNoKeys',
   KEY_SYSTEM_NO_ACCESS: 'keySystemNoAccess',

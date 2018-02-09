@@ -9,13 +9,13 @@ import Event from '../events';
 import {FragmentState} from '../helper/fragment-tracker';
 import Fragment from '../loader/fragment';
 import * as LevelHelper from '../helper/level-helper';
-import TimeRanges from '../utils/timeRanges';
+import TimeRanges from '../utils/time-ranges';
 import {ErrorTypes, ErrorDetails} from '../errors';
 import {logger} from '../utils/logger';
 import { alignDiscontinuities } from '../utils/discontinuities';
 import TaskLoop from '../task-loop';
 
-const State = {
+export const State = {
   STOPPED : 'STOPPED',
   IDLE : 'IDLE',
   KEY_LOADING : 'KEY_LOADING',
@@ -114,6 +114,7 @@ class StreamController extends TaskLoop {
       this.demuxer.destroy();
       this.demuxer = null;
     }
+    this.clearInterval();
     this.state = State.STOPPED;
     this.forceStartLoad = false;
   }
@@ -684,13 +685,13 @@ class StreamController extends TaskLoop {
     this.flushMainBuffer(0,Number.POSITIVE_INFINITY);
   }
 
-  /*
-     on immediate level switch end, after new fragment has been buffered :
-      - nudge video decoder by slightly adjusting video currentTime (if currentTime buffered)
-      - resume the playback if needed
-  */
+  /**
+   * on immediate level switch end, after new fragment has been buffered:
+   * - nudge video decoder by slightly adjusting video currentTime (if currentTime buffered)
+   * - resume the playback if needed
+   */
   immediateLevelSwitchEnd() {
-    let media = this.media;
+    const media = this.media;
     if (media && media.buffered.length) {
       this.immediateSwitch = false;
       if(BufferHelper.isBuffered(media,media.currentTime)) {
@@ -703,13 +704,14 @@ class StreamController extends TaskLoop {
     }
   }
 
+  /**
+   * try to switch ASAP without breaking video playback:
+   * in order to ensure smooth but quick level switching,
+   * we need to find the next flushable buffer range
+   * we should take into account new segment fetch time
+   */
   nextLevelSwitch() {
-    /* try to switch ASAP without breaking video playback :
-       in order to ensure smooth but quick level switching,
-      we need to find the next flushable buffer range
-      we should take into account new segment fetch time
-    */
-    let media = this.media;
+    const media = this.media;
     // ensure that media is defined and that metadata are available (to retrieve currentTime)
     if (media && media.readyState) {
       let fetchdelay, fragPlayingCurrent, nextBufferedFrag;
@@ -1303,11 +1305,13 @@ class StreamController extends TaskLoop {
         const media = this.mediaBuffer ? this.mediaBuffer : this.media;
         logger.log(`main buffered : ${TimeRanges.toString(media.buffered)}`);
         // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
-        let bufferedFrags = this._bufferedFrags.filter(frag => {return BufferHelper.isBuffered(media,(frag.startPTS + frag.endPTS) / 2);});
+        let bufferedFrags = BufferHelper.filterEvictedFragments(this._bufferedFrags, media);
         // push new range
         bufferedFrags.push(frag);
         // sort frags, as we use BinarySearch for lookup in getBufferedFrag ...
-        this._bufferedFrags = bufferedFrags.sort(function(a,b) {return (a.startPTS - b.startPTS);});
+        this._bufferedFrags = bufferedFrags.sort(function(a, b) {
+          return (a.startPTS - b.startPTS);
+        });
         this.fragPrevious = frag;
         const stats = this.stats;
         stats.tbuffered = performance.now();
@@ -1439,7 +1443,7 @@ _checkBuffer() {
       } else if (this.immediateSwitch) {
         this.immediateLevelSwitchEnd();
       } else {
-        let bufferInfo = BufferHelper.bufferInfo(media,currentTime,0),
+        let bufferInfo = BufferHelper.bufferInfo(media,currentTime,config.maxBufferHole),
             expectedPlaying = !(media.paused || // not playing when media is paused
                                 media.ended  || // not playing when media is ended
                                 media.buffered.length === 0), // not playing if nothing buffered

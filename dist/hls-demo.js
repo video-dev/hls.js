@@ -7,7 +7,7 @@
 		exports["HlsDemo"] = factory();
 	else
 		root["HlsDemo"] = factory();
-})(this, function() {
+})(typeof self !== 'undefined' ? self : this, function() {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -79,29 +79,61 @@ return /******/ (function(modules) { // webpackBootstrap
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
-var streamsJson = __webpack_require__(1);
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
+var testStreams = __webpack_require__(1);
+
+var defaultTestStreamUrl = testStreams['bbb'].url;
+
+var bufferingIdx = -1;
+
+var selectedTestStream = null;
+
+var lastSeekingIdx = void 0,
+    lastStartPosition = void 0,
+    lastDuration = void 0,
+    lastAudioTrackSwitchingIdx = void 0;
+
+var hls = void 0,
+    url = void 0,
+    events = void 0,
+    stats = void 0,
+    tracks = void 0,
+    fmp4Data = void 0,
+    enableStreaming = JSON.parse(getURLParam('enableStreaming', true));
+autoRecoverError = JSON.parse(getURLParam('autoRecoverError', true)), enableWorker = JSON.parse(getURLParam('enableWorker', true)), levelCapping = JSON.parse(getURLParam('levelCapping', -1)), defaultAudioCodec = getURLParam('defaultAudioCodec', undefined), widevineLicenseUrl = getURLParam('widevineLicenseURL', undefined), dumpfMP4 = getURLParam('dumpfMP4', false);
+
+var video = $('#video')[0];
+
+video.volume = 0.05;
 
 $(document).ready(function () {
 
-  console.log(streamsJson);
+  //console.log(testStreams)
 
-  Object.keys(streamsJson).forEach(function (streamKey) {
-    var stream = streamsJson[streamKey];
-    var option = new Option(stream.description, stream.url);
+  Object.keys(testStreams).forEach(function (key) {
+    var stream = testStreams[key];
+    var option = new Option(stream.description, key);
     $('#streamSelect').append(option);
   });
 
   $('#streamSelect').change(function () {
-    $('#streamURL').val($('#streamSelect').val());
-    loadStream($('#streamURL').val());
+    selectedTestStream = testStreams[$('#streamSelect').val()];
+    var streamUrl = selectedTestStream.url;
+    $('#streamURL').val(streamUrl);
+    loadSelectedStream();
   });
+
   $('#streamURL').change(function () {
-    loadStream($('#streamURL').val());
+    selectedTestStream = null;
+    loadSelectedStream();
   });
+
   $('#videoSize').change(function () {
     $('#video').width($('#videoSize').val());
     $('#buffered_c').width($('#videoSize').val());
   });
+
   $('#PlaybackControl').hide();
   $('#QualityLevelControl').hide();
   $('#AudioTrackControl').hide();
@@ -109,30 +141,37 @@ $(document).ready(function () {
   $('#StatsDisplay').hide();
   $('#metricsButtonWindow').toggle(windowSliding);
   $('#metricsButtonFixed').toggle(!windowSliding);
+
   $('#enableStreaming').click(function () {
     enableStreaming = this.checked;
-    loadStream($('#streamURL').val());
+    loadSelectedStream();
   });
+
   $('#autoRecoverError').click(function () {
     autoRecoverError = this.checked;
     updatePermalink();
   });
+
   $('#enableWorker').click(function () {
     enableWorker = this.checked;
     updatePermalink();
   });
+
   $('#dumpfMP4').click(function () {
     dumpfMP4 = this.checked;
     updatePermalink();
   });
+
   $('#levelCapping').change(function () {
     levelCapping = this.value;
     updatePermalink();
   });
+
   $('#defaultAudioCodec').change(function () {
     defaultAudioCodec = this.value;
     updatePermalink();
   });
+
   $('#enableStreaming').prop('checked', enableStreaming);
   $('#autoRecoverError').prop('checked', autoRecoverError);
   $('#enableWorker').prop('checked', enableWorker);
@@ -140,24 +179,48 @@ $(document).ready(function () {
   $('#levelCapping').val(levelCapping);
   $('#defaultAudioCodec').val(defaultAudioCodec || 'undefined');
   $('h2').append(' <a target=_blank href=https://github.com/video-dev/hls.js/releases/tag/v' + Hls.version + '>v' + Hls.version + '</a>');
+
+  $('#currentVersion').html('Hls version:' + Hls.version);
+
+  $('#streamURL').val(decodeURIComponent(getURLParam('src', defaultTestStreamUrl)));
+
+  loadSelectedStream();
 });
 
-var hls,
-    events,
-    stats,
-    tracks,
-    fmp4Data,
-    enableStreaming = JSON.parse(getURLParam('enableStreaming', true));
-autoRecoverError = JSON.parse(getURLParam('autoRecoverError', true)), enableWorker = JSON.parse(getURLParam('enableWorker', true)), levelCapping = JSON.parse(getURLParam('levelCapping', -1)), defaultAudioCodec = getURLParam('defaultAudioCodec', undefined), dumpfMP4 = getURLParam('dumpfMP4', false);
-var video = $('#video')[0];
-video.volume = 0.05;
-$('#currentVersion').html('Hls version:' + Hls.version);
+function resetGlobals() {
+  window.events = events = {
+    url: url,
+    t0: performance.now(),
+    load: [],
+    buffer: [],
+    video: [],
+    level: [],
+    bitrate: []
+  };
 
-loadStream(decodeURIComponent(getURLParam('src', 'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8')));
+  // actual values, only on window
+  window.recoverDecodingErrorDate = null;
+  window.recoverSwapAudioCodecDate = null;
 
-function loadStream(url) {
+  window.fmp4Data = fmp4Data = {
+    'audio': [],
+    'video': []
+  };
+
+  window.onClickBufferedRange = onClickBufferedRange;
+
+  window.updateLevelInfo = updateLevelInfo;
+  window.updatePermalink = updatePermalink;
+}
+
+function loadSelectedStream() {
+
+  url = $('#streamURL').val();
+
   hideCanvas();
+
   if (Hls.isSupported()) {
+
     if (hls) {
       hls.destroy();
       if (hls.bufferTimer) {
@@ -167,8 +230,6 @@ function loadStream(url) {
       hls = null;
     }
 
-    $('#streamURL').val(url);
-    updatePermalink();
     if (!enableStreaming) {
       $('#HlsStatus').text('Streaming disabled');
       return;
@@ -176,34 +237,44 @@ function loadStream(url) {
 
     $('#HlsStatus').text('loading ' + url);
 
-    window.events = events = {
-      url: url,
-      t0: performance.now(),
-      load: [],
-      buffer: [],
-      video: [],
-      level: [],
-      bitrate: []
-    };
+    resetGlobals();
 
-    // actual values, only on window
-    window.recoverDecodingErrorDate = window.recoverSwapAudioCodecDate = null;
+    if (widevineLicenseUrl) {
+      widevineLicenseUrl = unescape(widevineLicenseUrl);
+    }
 
-    window.fmp4Data = fmp4Data = {
-      'audio': [],
-      'video': []
-    };
-
-    window.hls = hls = new Hls({
+    var hlsConfig = {
       debug: true,
       enableWorker: enableWorker,
-      defaultAudioCodec: defaultAudioCodec
-    });
+      defaultAudioCodec: defaultAudioCodec,
+      widevineLicenseUrl: widevineLicenseUrl
+    };
+
+    if (selectedTestStream && selectedTestStream.config) {
+      _extends(hlsConfig, selectedTestStream.config);
+      console.log('Using Hls.js config:', hlsConfig);
+    }
+
+    if (hlsConfig.widevineLicenseUrl) {
+      $('#widevineLicenseUrl').val(hlsConfig.widevineLicenseUrl);
+    }
+
+    widevineLicenseUrl = hlsConfig.widevineLicenseUrl = $('#widevineLicenseUrl').val();
+
+    if (hlsConfig.widevineLicenseUrl) {
+      hlsConfig.emeEnabled = true;
+    }
+
+    updatePermalink();
+
+    window.hls = hls = new Hls(hlsConfig);
 
     $('#HlsStatus').text('loading manifest and attaching video element...');
+
     hls.loadSource(url);
     hls.autoLevelCapping = levelCapping;
     hls.attachMedia(video);
+
     hls.on(Hls.Events.MEDIA_ATTACHED, function () {
       $('#HlsStatus').text('MediaSource attached...');
       bufferingIdx = -1;
@@ -212,6 +283,7 @@ function loadStream(url) {
         type: 'Media attached'
       });
     });
+
     hls.on(Hls.Events.MEDIA_DETACHED, function () {
       $('#HlsStatus').text('MediaSource detached...');
       bufferingIdx = -1;
@@ -221,6 +293,7 @@ function loadStream(url) {
         type: 'Media detached'
       });
     });
+
     hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT, function (event, data) {
       showCanvas();
       var event = {
@@ -229,9 +302,11 @@ function loadStream(url) {
       };
       events.video.push(event);
     });
+
     hls.on(Hls.Events.FRAG_PARSING_METADATA, function (event, data) {
       //console.log("Id3 samples ", data.samples);
     });
+
     hls.on(Hls.Events.LEVEL_SWITCHING, function (event, data) {
       events.level.push({
         time: performance.now() - events.t0,
@@ -240,6 +315,7 @@ function loadStream(url) {
       });
       updateLevelInfo();
     });
+
     hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
       var event = {
         type: 'manifest',
@@ -254,6 +330,7 @@ function loadStream(url) {
       events.load.push(event);
       refreshCanvas();
     });
+
     hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
       $('#HlsStatus').text('manifest successfully loaded,' + hls.levels.length + ' levels found');
       stats = {
@@ -262,10 +339,12 @@ function loadStream(url) {
       };
       updateLevelInfo();
     });
+
     hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, function (event, data) {
       $('#HlsStatus').text(data.audioTracks.length + ' audio tracks found');
       updateAudioTrackInfo();
     });
+
     hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, function (event, data) {
       updateAudioTrackInfo();
       var event = {
@@ -276,6 +355,7 @@ function loadStream(url) {
       events.video.push(event);
       lastAudioTrackSwitchingIdx = events.video.length - 1;
     });
+
     hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, function (event, data) {
       updateAudioTrackInfo();
       var event = {
@@ -289,6 +369,7 @@ function loadStream(url) {
       }
       events.video.push(event);
     });
+
     hls.on(Hls.Events.LEVEL_LOADED, function (event, data) {
       events.isLive = data.details.live;
       var event = {
@@ -303,7 +384,11 @@ function loadStream(url) {
         duration: data.stats.tload - data.stats.tfirst
       };
       var parsingDuration = data.stats.tparsed - data.stats.tload;
-      if (stats.levelParsed) this.sumLevelParsingMs += parsingDuration;else this.sumLevelParsingMs = parsingDuration;
+      if (stats.levelParsed) {
+        this.sumLevelParsingMs += parsingDuration;
+      } else {
+        this.sumLevelParsingMs = parsingDuration;
+      }
 
       stats.levelParsed++;
       stats.levelParsingUs = Math.round(1000 * this.sumLevelParsingMs / stats.levelParsed);
@@ -311,6 +396,7 @@ function loadStream(url) {
       events.load.push(event);
       refreshCanvas();
     });
+
     hls.on(Hls.Events.AUDIO_TRACK_LOADED, function (event, data) {
       events.isLive = data.details.live;
       var event = {
@@ -327,6 +413,7 @@ function loadStream(url) {
       events.load.push(event);
       refreshCanvas();
     });
+
     hls.on(Hls.Events.FRAG_BUFFERED, function (event, data) {
       var event = {
         type: data.frag.type + ' fragment',
@@ -400,6 +487,7 @@ function loadStream(url) {
       stats.fragparsingMs = Math.round(this.sumParsing);
       stats.autoLevelCappingLast = hls.autoLevelCapping;
     });
+
     hls.on(Hls.Events.LEVEL_SWITCHED, function (event, data) {
       var event = {
         time: performance.now() - events.t0,
@@ -410,6 +498,7 @@ function loadStream(url) {
       refreshCanvas();
       updateLevelInfo();
     });
+
     hls.on(Hls.Events.FRAG_CHANGED, function (event, data) {
       var event = {
         time: performance.now() - events.t0,
@@ -423,14 +512,18 @@ function loadStream(url) {
 
       var level = data.frag.level,
           autoLevel = data.frag.autoLevel;
-      if (stats.levelStart === undefined) stats.levelStart = level;
+      if (stats.levelStart === undefined) {
+        stats.levelStart = level;
+      }
 
       if (autoLevel) {
         if (stats.fragChangedAuto) {
           stats.autoLevelMin = Math.min(stats.autoLevelMin, level);
           stats.autoLevelMax = Math.max(stats.autoLevelMax, level);
           stats.fragChangedAuto++;
-          if (this.levelLastAuto && level !== stats.autoLevelLast) stats.autoLevelSwitch++;
+          if (this.levelLastAuto && level !== stats.autoLevelLast) {
+            stats.autoLevelSwitch++;
+          }
         } else {
           stats.autoLevelMin = stats.autoLevelMax = level;
           stats.autoLevelSwitch = 0;
@@ -445,7 +538,9 @@ function loadStream(url) {
           stats.manualLevelMin = Math.min(stats.manualLevelMin, level);
           stats.manualLevelMax = Math.max(stats.manualLevelMax, level);
           stats.fragChangedManual++;
-          if (!this.levelLastAuto && level !== stats.manualLevelLast) stats.manualLevelSwitch++;
+          if (!this.levelLastAuto && level !== stats.manualLevelLast) {
+            stats.manualLevelSwitch++;
+          }
         } else {
           stats.manualLevelMin = stats.manualLevelMax = level;
           stats.manualLevelSwitch = 0;
@@ -458,7 +553,11 @@ function loadStream(url) {
 
     hls.on(Hls.Events.FRAG_LOAD_EMERGENCY_ABORTED, function (event, data) {
       if (stats) {
-        if (stats.fragLoadEmergencyAborted === undefined) stats.fragLoadEmergencyAborted = 1;else stats.fragLoadEmergencyAborted++;
+        if (stats.fragLoadEmergencyAborted === undefined) {
+          stats.fragLoadEmergencyAborted = 1;
+        } else {
+          stats.fragLoadEmergencyAborted++;
+        }
       }
     });
 
@@ -479,7 +578,9 @@ function loadStream(url) {
         case Hls.ErrorDetails.MANIFEST_LOAD_ERROR:
           try {
             $('#HlsStatus').html('cannot Load <a href="' + data.context.url + '">' + url + '</a><br>HTTP response code:' + data.response.code + ' <br>' + data.response.text);
-            if (data.response.code === 0) $('#HlsStatus').append('this might be a CORS issue, consider installing <a href="https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi">Allow-Control-Allow-Origin</a> Chrome Extension');
+            if (data.response.code === 0) {
+              $('#HlsStatus').append('this might be a CORS issue, consider installing <a href="https://chrome.google.com/webstore/detail/allow-control-allow-origi/nlfbmbojpeacfghkpbjhddihlkkiljbi">Allow-Control-Allow-Origin</a> Chrome Extension');
+            }
           } catch (err) {
             $('#HlsStatus').html('cannot Load <a href="' + data.context.url + '">' + url + '</a><br>Reason:Load ' + data.response.text);
           }
@@ -552,11 +653,19 @@ function loadStream(url) {
         stats = {};
       }
       // track all errors independently
-      if (stats[data.details] === undefined) stats[data.details] = 1;else stats[data.details] += 1;
+      if (stats[data.details] === undefined) {
+        stats[data.details] = 1;
+      } else {
+        stats[data.details] += 1;
+      }
 
       // track fatal error
       if (data.fatal) {
-        if (stats.fatalError === undefined) stats.fatalError = 1;else stats.fatalError += 1;
+        if (stats.fatalError === undefined) {
+          stats.fatalError = 1;
+        } else {
+          stats.fatalError += 1;
+        }
       }
       $('#HlsStats').text(JSON.stringify(sortObject(stats), null, '\t'));
     });
@@ -566,7 +675,9 @@ function loadStream(url) {
     });
 
     hls.on(Hls.Events.BUFFER_APPENDING, function (event, data) {
-      if (dumpfMP4) fmp4Data[data.type].push(data.data);
+      if (dumpfMP4) {
+        fmp4Data[data.type].push(data.data);
+      }
     });
 
     hls.on(Hls.Events.FPS_DROP, function (event, data) {
@@ -577,7 +688,11 @@ function loadStream(url) {
       };
       events.video.push(evt);
       if (stats) {
-        if (stats.fpsDropEvent === undefined) stats.fpsDropEvent = 1;else stats.fpsDropEvent++;
+        if (stats.fpsDropEvent === undefined) {
+          stats.fpsDropEvent = 1;
+        } else {
+          stats.fpsDropEvent++;
+        }
 
         stats.fpsTotalDroppedFrames = data.totalDroppedFrames;
       }
@@ -596,14 +711,14 @@ function loadStream(url) {
     video.addEventListener('loadeddata', handleVideoEvent);
     video.addEventListener('durationchange', handleVideoEvent);
   } else {
-    if (navigator.userAgent.toLowerCase().indexOf('firefox') !== -1) $('#HlsStatus').text('you are using Firefox, it looks like MediaSource is not enabled,<br>please ensure the following keys are set appropriately in <b>about:config</b><br>media.mediasource.enabled=true<br>media.mediasource.mp4.enabled=true<br><b>media.mediasource.whitelist=false</b>');else $('#HlsStatus').text('your Browser does not support MediaSourceExtension / MP4 mediasource');
+    if (navigator.userAgent.toLowerCase().indexOf('firefox') !== -1) {
+      $('#HlsStatus').text('you are using Firefox, it looks like MediaSource is not enabled,<br>please ensure the following keys are set appropriately in <b>about:config</b><br>media.mediasource.enabled=true<br>media.mediasource.mp4.enabled=true<br><b>media.mediasource.whitelist=false</b>');
+    } else {
+      $('#HlsStatus').text('your Browser does not support MediaSourceExtension / MP4 mediasource');
+    }
   }
 }
 
-var lastSeekingIdx = void 0,
-    lastStartPosition = void 0,
-    lastDuration = void 0,
-    lastAudioTrackSwitchingIdx = void 0;
 function handleVideoEvent(evt) {
   var data = '';
   switch (evt.type) {
@@ -653,7 +768,9 @@ function handleVideoEvent(evt) {
             errorTxt = 'The video could not be loaded, either because the server or network failed or because the format is not supported';
             break;
         }
-        if (mediaError.message) errorTxt += ' - ' + mediaError.message;
+        if (mediaError.message) {
+          errorTxt += ' - ' + mediaError.message;
+        }
 
         $('#HlsStatus').text(errorTxt);
         console.error(errorTxt);
@@ -671,13 +788,15 @@ function handleVideoEvent(evt) {
     name: data
   };
   events.video.push(event);
-  if (evt.type === 'seeking') lastSeekingIdx = events.video.length - 1;
+  if (evt.type === 'seeking') {
+    lastSeekingIdx = events.video.length - 1;
+  }
 
-  if (evt.type === 'seeked') events.video[lastSeekingIdx].duration = event.time - events.video[lastSeekingIdx].time;
+  if (evt.type === 'seeked') {
+    events.video[lastSeekingIdx].duration = event.time - events.video[lastSeekingIdx].time;
+  }
 }
 
-var recoverDecodingErrorDate = void 0,
-    recoverSwapAudioCodecDate = void 0;
 function handleMediaError() {
   if (autoRecoverError) {
     var now = performance.now();
@@ -702,10 +821,10 @@ function timeRangesToString(r) {
   var log = '';
   for (var i = 0; i < r.length; i++) {
     log += '[' + r.start(i) + ',' + r.end(i) + ']';
-  }return log;
-}
+  }
 
-var bufferingIdx = -1;
+  return log;
+}
 
 function checkBuffer() {
   var v = $('#video')[0];
@@ -717,7 +836,9 @@ function checkBuffer() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.fillStyle = 'gray';
   if (r) {
-    if (!canvas.width || canvas.width !== v.clientWidth) canvas.width = v.clientWidth;
+    if (!canvas.width || canvas.width !== v.clientWidth) {
+      canvas.width = v.clientWidth;
+    }
 
     var pos = v.currentTime,
         bufferLen;
@@ -775,7 +896,9 @@ function checkBuffer() {
       var slopePos0 = (event0.pos - event1.pos) / (event0.time - event1.time);
       var slopePos1 = (event1.pos - event.pos) / (event1.time - event.time);
       // compute slopes. if less than 30% difference, remove event1
-      if ((slopeBuf0 === slopeBuf1 || Math.abs(slopeBuf0 / slopeBuf1 - 1) <= 0.3) && (slopePos0 === slopePos1 || Math.abs(slopePos0 / slopePos1 - 1) <= 0.3)) bufEvents.pop();
+      if ((slopeBuf0 === slopeBuf1 || Math.abs(slopeBuf0 / slopeBuf1 - 1) <= 0.3) && (slopePos0 === slopePos1 || Math.abs(slopePos0 / slopePos1 - 1) <= 0.3)) {
+        bufEvents.pop();
+      }
     }
     events.buffer.push(event);
     refreshCanvas();
@@ -785,7 +908,9 @@ function checkBuffer() {
     if (hls.media) {
       for (var type in tracks) {
         log += type + ' Buffered:' + timeRangesToString(tracks[type].buffer.buffered) + '<br>';
-      }var videoPlaybackQuality = v.getVideoPlaybackQuality;
+      }
+
+      var videoPlaybackQuality = v.getVideoPlaybackQuality;
       if (videoPlaybackQuality && (typeof videoPlaybackQuality === 'undefined' ? 'undefined' : _typeof(videoPlaybackQuality)) === (typeof Function === 'undefined' ? 'undefined' : _typeof(Function))) {
         log += 'Dropped Frames:' + v.getVideoPlaybackQuality().droppedVideoFrames + '<br>';
         log += 'Corrupted Frames:' + v.getVideoPlaybackQuality().corruptedVideoFrames + '<br>';
@@ -802,15 +927,19 @@ function checkBuffer() {
 }
 
 function sortObject(obj) {
-  if ((typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) !== 'object') return obj;
+  if ((typeof obj === 'undefined' ? 'undefined' : _typeof(obj)) !== 'object') {
+    return obj;
+  }
   var temp = {};
   var keys = [];
   for (var key in obj) {
     keys.push(key);
-  }keys.sort();
+  }
+  keys.sort();
   for (var index in keys) {
     temp[keys[index]] = sortObject(obj[keys[index]]);
-  }return temp;
+  }
+  return temp;
 }
 
 function showCanvas() {
@@ -872,7 +1001,7 @@ function minsecs(ts) {
   return m + ':' + (s < 10 ? '0' : '') + s;
 }
 
-function buffered_seek(event) {
+function onClickBufferedRange(event) {
   var canvas = $('#buffered_c')[0];
   var v = $('#video')[0];
   var target = (event.clientX - canvas.offsetLeft) / canvas.width * v.duration;
@@ -881,67 +1010,115 @@ function buffered_seek(event) {
 
 function updateLevelInfo() {
 
-  if (!hls.levels) return;
+  if (!hls.levels) {
+    return;
+  }
 
   var button_template = '<button type="button" class="btn btn-sm ';
   var button_enabled = 'btn-primary" ';
   var button_disabled = 'btn-success" ';
 
   var html1 = button_template;
-  if (hls.autoLevelEnabled) html1 += button_enabled;else html1 += button_disabled;
+  if (hls.autoLevelEnabled) {
+    html1 += button_enabled;
+  } else {
+    html1 += button_disabled;
+  }
 
   html1 += 'onclick="hls.currentLevel=-1">auto</button>';
 
   var html2 = button_template;
-  if (hls.autoLevelEnabled) html2 += button_enabled;else html2 += button_disabled;
+  if (hls.autoLevelEnabled) {
+    html2 += button_enabled;
+  } else {
+    html2 += button_disabled;
+  }
 
   html2 += 'onclick="hls.loadLevel=-1">auto</button>';
 
   var html3 = button_template;
-  if (hls.autoLevelCapping === -1) html3 += button_enabled;else html3 += button_disabled;
+  if (hls.autoLevelCapping === -1) {
+    html3 += button_enabled;
+  } else {
+    html3 += button_disabled;
+  }
 
   html3 += 'onclick="levelCapping=hls.autoLevelCapping=-1;updateLevelInfo();updatePermalink();">auto</button>';
 
   var html4 = button_template;
-  if (hls.autoLevelEnabled) html4 += button_enabled;else html4 += button_disabled;
+  if (hls.autoLevelEnabled) {
+    html4 += button_enabled;
+  } else {
+    html4 += button_disabled;
+  }
 
   html4 += 'onclick="hls.nextLevel=-1">auto</button>';
 
   for (var i = 0; i < hls.levels.length; i++) {
     html1 += button_template;
-    if (hls.currentLevel === i) html1 += button_enabled;else html1 += button_disabled;
+    if (hls.currentLevel === i) {
+      html1 += button_enabled;
+    } else {
+      html1 += button_disabled;
+    }
 
     var levelName = i,
         label = level2label(i);
-    if (label) levelName += '(' + level2label(i) + ')';
+    if (label) {
+      levelName += '(' + level2label(i) + ')';
+    }
 
     html1 += 'onclick="hls.currentLevel=' + i + '">' + levelName + '</button>';
 
     html2 += button_template;
-    if (hls.loadLevel === i) html2 += button_enabled;else html2 += button_disabled;
+    if (hls.loadLevel === i) {
+      html2 += button_enabled;
+    } else {
+      html2 += button_disabled;
+    }
 
     html2 += 'onclick="hls.loadLevel=' + i + '">' + levelName + '</button>';
 
     html3 += button_template;
-    if (hls.autoLevelCapping === i) html3 += button_enabled;else html3 += button_disabled;
+    if (hls.autoLevelCapping === i) {
+      html3 += button_enabled;
+    } else {
+      html3 += button_disabled;
+    }
 
     html3 += 'onclick="levelCapping=hls.autoLevelCapping=' + i + ';updateLevelInfo();updatePermalink();">' + levelName + '</button>';
 
     html4 += button_template;
-    if (hls.nextLevel === i) html4 += button_enabled;else html4 += button_disabled;
+    if (hls.nextLevel === i) {
+      html4 += button_enabled;
+    } else {
+      html4 += button_disabled;
+    }
 
     html4 += 'onclick="hls.nextLevel=' + i + '">' + levelName + '</button>';
   }
+
   var v = $('#video')[0];
-  if (v.videoWidth) $('#currentResolution').html('video resolution:' + v.videoWidth + 'x' + v.videoHeight);
 
-  if ($('#currentLevelControl').html() != html1) $('#currentLevelControl').html(html1);
+  if (v.videoWidth && v.videoHeight) {
+    $('#currentResolution').html(v.videoWidth + ' x ' + v.videoHeight);
+  }
 
-  if ($('#loadLevelControl').html() != html2) $('#loadLevelControl').html(html2);
+  if ($('#currentLevelControl').html() != html1) {
+    $('#currentLevelControl').html(html1);
+  }
 
-  if ($('#levelCappingControl').html() != html3) $('#levelCappingControl').html(html3);
+  if ($('#loadLevelControl').html() != html2) {
+    $('#loadLevelControl').html(html2);
+  }
 
-  if ($('#nextLevelControl').html() != html4) $('#nextLevelControl').html(html4);
+  if ($('#levelCappingControl').html() != html3) {
+    $('#levelCappingControl').html(html3);
+  }
+
+  if ($('#nextLevelControl').html() != html4) {
+    $('#nextLevelControl').html(html4);
+  }
 }
 
 function updateAudioTrackInfo() {
@@ -954,7 +1131,11 @@ function updateAudioTrackInfo() {
 
   for (var i = 0; i < len; i++) {
     html1 += button_template;
-    if (audioTrackId === i) html1 += button_enabled;else html1 += button_disabled;
+    if (audioTrackId === i) {
+      html1 += button_enabled;
+    } else {
+      html1 += button_disabled;
+    }
 
     html1 += 'onclick="hls.audioTrack=' + i + '">' + hls.audioTracks[i].name + '</button>';
   }
@@ -970,7 +1151,11 @@ function level2label(index) {
       if (level.height) {
         return level.height + 'p / ' + Math.round(level.bitrate / 1024) + 'kb';
       } else {
-        if (level.bitrate) return Math.round(level.bitrate / 1024) + 'kb';else return null;
+        if (level.bitrate) {
+          return Math.round(level.bitrate / 1024) + 'kb';
+        } else {
+          return null;
+        }
       }
     }
   }
@@ -981,16 +1166,19 @@ function getURLParam(sParam, defaultValue) {
   var sURLVariables = sPageURL.split('&');
   for (var i = 0; i < sURLVariables.length; i++) {
     var sParameterName = sURLVariables[i].split('=');
-    if (sParameterName[0] == sParam) return 'undefined' == sParameterName[1] ? undefined : 'false' == sParameterName[1] ? false : sParameterName[1];
+    if (sParameterName[0] == sParam) {
+      return 'undefined' == sParameterName[1] ? undefined : 'false' == sParameterName[1] ? false : sParameterName[1];
+    }
   }
   return defaultValue;
 }
 
 function updatePermalink() {
+
   var url = $('#streamURL').val();
-  var hlsLink = document.URL.split('?')[0] + '?src=' + encodeURIComponent(url) + '&enableStreaming=' + enableStreaming + '&autoRecoverError=' + autoRecoverError + '&enableWorker=' + enableWorker + '&dumpfMP4=' + dumpfMP4 + '&levelCapping=' + levelCapping + '&defaultAudioCodec=' + defaultAudioCodec;
-  var description = 'permalink: ' + '<a href="' + hlsLink + '">' + hlsLink + '</a>';
-  $('#StreamPermalink').html(description);
+  var hlsLink = document.URL.split('?')[0] + '?src=' + encodeURIComponent(url) + '&enableStreaming=' + enableStreaming + '&autoRecoverError=' + autoRecoverError + '&enableWorker=' + enableWorker + '&dumpfMP4=' + dumpfMP4 + '&levelCapping=' + levelCapping + '&defaultAudioCodec=' + defaultAudioCodec + '&widevineLicenseURL=' + escape(widevineLicenseUrl);
+
+  $('#StreamPermalink').html('<a href="' + hlsLink + '">' + hlsLink + '</a>');
 }
 
 function createfMP4(type) {
@@ -1021,7 +1209,122 @@ function arrayConcat(inputArray) {
 /* 1 */
 /***/ (function(module, exports) {
 
-module.exports = {"arte":{"url":"https://video-dev.github.io/streams/test_001/stream.m3u8","description":"ARTE China,ABR","live":false,"abr":true},"bigBuckBunny480p":{"url":"https://video-dev.github.io/streams/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8","description":"big buck bunny,480p","live":false,"abr":false,"blacklist_ua":["internet explorer"]},"deltatreDAI":{"url":"https://video-dev.github.io/streams/dai-discontinuity-deltatre/manifest.m3u8","description":"Ad-insertion in event stream","live":false,"abr":false,"blacklist_ua":["internet explorer"]},"issue666":{"url":"http://www.streambox.fr/playlists/cisq0gim60007xzvi505emlxx.m3u8","description":"hls.js/issues/666","live":false,"abr":false,"blacklist_ua":["internet explorer"]},"issue649":{"url":"http://cdn3.screen9.com/media/c/W/cW87csHkxsgu5TV1qs78aA_auto_hls.m3u8?auth=qlUjeCtbVdtkDfZYrtveTIVUXX1yuSqgF8wfWabzKpX72r-d5upW88-FHuyRRdnZA_1PKRTGAtTt_6Z-aj22kw","description":"hls.js/issues/649","live":false,"abr":false},"nasa":{"url":"https://nasa-i.akamaihd.net/hls/live/253565/NASA-NTV1-Public/master.m3u8","description":"NASA live stream","live":true,"abr":false,"blacklist_ua":["internet explorer","safari"]},"closedcaptions":{"url":"http://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8","description":"CNN special report, with CC","live":false,"abr":false,"blacklist_ua":["safari"]},"oceans_aes":{"url":"http://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8","description":"AES encrypted,ABR","live":false,"abr":true},"bbb_aes":{"url":"http://streambox.fr/playlists/sample_aes/index.m3u8","description":"SAMPLE-AES encrypted","live":false,"abr":false},"mp3":{"url":"https://player.webvideocore.net/CL1olYogIrDWvwqiIKK7eLBkzvO18gwo9ERMzsyXzwt_t-ya8ygf2kQBZww38JJT/8i4vvznv8408.m3u8","description":"MP3 VOD demo","live":false,"abr":false,"blacklist_ua":["safari"]},"mpeg_audio":{"url":"https://pl.streamingvideoprovider.com/mp3-playlist/playlist.m3u8","description":"MPEG Audio Only demo","live":false,"abr":false,"blacklist_ua":["internet explorer","MicrosoftEdge","safari","firefox"]},"fmp4":{"url":"https://storage.googleapis.com/shaka-demo-assets/angel-one-hls/hls.m3u8","description":"HLS fMP4 Angel One multiple audio tracks","live":false,"abr":false,"blacklist_ua":["safari","internet explorer"]},"fmp4-bitmovin":{"url":"https://bitdash-a.akamaihd.net/content/MI201109210084_1/m3u8s-fmp4/f08e80da-bf1d-4e3d-8899-f0f6155f6efa.m3u8","description":"HLS fMP4 by Bitmovin","live":false,"abr":true,"blacklist_ua":["safari","internet explorer"]}}
+function createTestStream(url, description) {
+  var live = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+  var abr = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : true;
+  var blacklist_ua = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : [];
+
+  return {
+    url: url,
+    description: description,
+    live: live,
+    abr: abr,
+    blacklist_ua: blacklist_ua
+  };
+}
+
+function createTestStreamWithConfig(url, description, config) {
+  var testStream = createTestStream(url, description);
+
+  testStream.config = config;
+
+  return testStream;
+}
+
+module.exports = {
+  bbb: createTestStream("https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8", "Big Buck Bunny - adaptive qualities"),
+  bigBuckBunny480p: {
+    "url": "https://video-dev.github.io/streams/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8",
+    "description": "Big Buck Bunny - 480p only",
+    "live": false,
+    "abr": false,
+    "blacklist_ua": ["internet explorer"]
+  },
+  arte: {
+    "url": "https://video-dev.github.io/streams/test_001/stream.m3u8",
+    "description": "ARTE China,ABR",
+    "live": false,
+    "abr": true
+  },
+  deltatreDAI: {
+    "url": "https://video-dev.github.io/streams/dai-discontinuity-deltatre/manifest.m3u8",
+    "description": "Ad-insertion in event stream",
+    "live": false,
+    "abr": false,
+    "blacklist_ua": ["internet explorer"]
+  },
+  issue666: {
+    "url": "http://www.streambox.fr/playlists/cisq0gim60007xzvi505emlxx.m3u8",
+    "description": "hls.js/issues/666",
+    "live": false,
+    "abr": false,
+    "blacklist_ua": ["internet explorer"]
+  },
+  issue649: {
+    "url": "http://cdn3.screen9.com/media/c/W/cW87csHkxsgu5TV1qs78aA_auto_hls.m3u8?auth=qlUjeCtbVdtkDfZYrtveTIVUXX1yuSqgF8wfWabzKpX72r-d5upW88-FHuyRRdnZA_1PKRTGAtTt_6Z-aj22kw",
+    "description": "hls.js/issues/649",
+    "live": false,
+    "abr": false
+  },
+  closedCaptions: {
+    "url": "http://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8",
+    "description": "CNN special report, with CC",
+    "live": false,
+    "abr": false,
+    "blacklist_ua": ["safari"]
+  },
+  oceansAES: {
+    "url": "http://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8",
+    "description": "AES encrypted,ABR",
+    "live": false,
+    "abr": true
+  },
+  bbbAES: {
+    "url": "http://streambox.fr/playlists/sample_aes/index.m3u8",
+    "description": "SAMPLE-AES encrypted",
+    "live": false,
+    "abr": false
+  },
+  mp3Audio: {
+    "url": "https://player.webvideocore.net/CL1olYogIrDWvwqiIKK7eLBkzvO18gwo9ERMzsyXzwt_t-ya8ygf2kQBZww38JJT/8i4vvznv8408.m3u8",
+    "description": "MP3 VOD demo",
+    "live": false,
+    "abr": false,
+    "blacklist_ua": ["safari"]
+  },
+  mpegAudioOnly: {
+    "url": "https://pl.streamingvideoprovider.com/mp3-playlist/playlist.m3u8",
+    "description": "MPEG Audio Only demo",
+    "live": false,
+    "abr": false,
+    "blacklist_ua": ["internet explorer", "MicrosoftEdge", "safari", "firefox"]
+  },
+  fmp4: {
+    "url": "https://storage.googleapis.com/shaka-demo-assets/angel-one-hls/hls.m3u8",
+    "description": "HLS fMP4 Angel-One multiple audio-tracks",
+    "live": false,
+    "abr": false,
+    "blacklist_ua": ["safari", "internet explorer"]
+  },
+  fmp4Bitmovin: {
+    "url": "https://bitdash-a.akamaihd.net/content/MI201109210084_1/m3u8s-fmp4/f08e80da-bf1d-4e3d-8899-f0f6155f6efa.m3u8",
+    "description": "HLS fMP4 by Bitmovin",
+    "live": false,
+    "abr": true,
+    "blacklist_ua": ["safari", "internet explorer"]
+  },
+  offset_pts: {
+    "url": "https://video-dev.github.io/streams/pts_shift/master.m3u8",
+    "description": "DK Turntable, PTS shifted by 2.3s",
+    "live": false,
+    "abr": false
+  },
+  uspHLSAteam: createTestStream("http://demo.unified-streaming.com/video/ateam/ateam.ism/ateam.m3u8?session_id=27199", "A-Team movie trailer - HLS by Unified Streaming Platform"),
+  angelOneShakaWidevine: createTestStreamWithConfig("https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine-hls/hls.m3u8", "Shaka-packager Widevine DRM (EME) HLS-fMP4 - Angel One Demo", {
+    widevineLicenseUrl: "https://cwip-shaka-proxy.appspot.com/no_auth",
+    emeEnabled: true
+  })
+};
 
 /***/ })
 /******/ ])["default"];

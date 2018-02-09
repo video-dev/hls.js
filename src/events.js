@@ -1,4 +1,8 @@
-export default {
+/**
+ * @readonly
+ * @enum {string}
+ */
+const HlsEvents = {
   // fired before MediaSource is attaching to media element - data: { media }
   MEDIA_ATTACHING: 'hlsMediaAttaching',
   // fired when MediaSource has been succesfully attached to media element - data: { }
@@ -106,3 +110,4 @@ export default {
   // fired upon stream controller state transitions - data: { previousState, nextState }
   STREAM_STATE_TRANSITION: 'hlsStreamStateTransition'
 };
+export default HlsEvents;

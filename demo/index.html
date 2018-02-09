@@ -20,6 +20,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.3/FileSaver.min.js"></script>
 
   </head>
+
   <body>
     <div class="header-container">
       <header class="wrapper clearfix">
@@ -28,116 +29,209 @@
             <img src="https://cloud.githubusercontent.com/assets/616833/19739063/e10be95a-9bb9-11e6-8100-2896f8500138.png"/>
           </a>
         </h1>
-        <h2 class="title">demo page</h2>
+
+        <h2 class="title">
+          demo
+        </h2>
+
+        <h3>
+          <a href="../docs/html">API docs | usage guide</a>
+        </h3>
       </header>
     </div>
 
     <div class="main-container">
       <header>
         <p>
-          test with your HLS streams below in Chrome, Firefox, IE11 or Safari !
-          <br>Advanced controls are also available at the bottom of this page.
+          Test your HLS streams in all supported browsers (Chrome/Firefox/IE11/Edge/Safari).
+        </p>
+        <p>
+          Advanced controls are available at the bottom of this page.
+        </p>
+        <p>
+          <b>Looking for a more <i>basic</i> usage example? Go <a href="basic-usage.html">here</a>.</b><br>
         </p>
       </header>
       <div id="controls">
+
         <div id="customButtons"></div>
+
         <select id="streamSelect" class="innerControls">
-          <option value="" selected>(Enter custom URL below)</option>
+          <option value="" selected>Select a test-stream from drop-down menu. Or enter custom URL below</option>
         </select>
+
         <input id="streamURL" class="innerControls" type=text value=""/>
-        <label class="innerControls"><input id="enableStreaming" type=checkbox checked/> Enable Streaming</label>
-        <label class="innerControls"><input id="autoRecoverError" type=checkbox checked/> Auto-Recover Media Error</label>
-        <label class="innerControls"><input id="enableWorker" type=checkbox checked/> Enable Worker</label>
-        <label class="innerControls"><input id="dumpfMP4" type=checkbox unchecked/> dump fMP4</label>
-        <label class="innerControls">Level Capping <input id="levelCapping" type=number/></label>
-        <label class="innerControls">default Audio Codec <input id="defaultAudioCodec"/></label>
-        <div id="StreamPermalink" class="innerControls"></div>
-        <div>
-          <select id="videoSize" style="float:left">
-            <option value="240">player size: tiny (240p)</option>
-            <option value="384">player size: small (384p)</option>
-            <option value="480">player size: medium (480p)</option>
-            <option value="720" selected>player size: large (720p)</option>
-            <option value="1080">player size: huge (1080p)</option>
+
+        <label class="innerControls">
+          Enable streaming:
+          <input id="enableStreaming" type=checkbox checked/>
+        </label>
+
+        <label class="innerControls">
+          Auto-recover media-errors:
+          <input id="autoRecoverError" type=checkbox checked/>
+        </label>
+
+        <label class="innerControls">
+          Enable worker for transmuxing:
+          <input id="enableWorker" type=checkbox checked/>
+        </label>
+
+        <label class="innerControls">
+          Dump transmuxed fMP4 data:
+          <input id="dumpfMP4" type=checkbox unchecked/>
+        </label>
+
+        <label class="innerControls">
+          Widevine DRM license-server URL:
+          <input id="widevineLicenseUrl" style="width: 50%"/>
+        </label>
+
+        <label class="innerControls">
+          Level-cap'ing (max limit):
+          <input id="levelCapping" style="width: 8em" type=number/>
+        </label>
+
+        <label class="innerControls">
+          Default audio-codec:
+          <input style="width: 8em" id="defaultAudioCodec"/>
+        </label>
+
+        <label class="innerControls">
+          Player size:
+          <select id="videoSize" style="float:right;">
+            <option value="240">Tiny (240p)</option>
+            <option value="384">Small (384p)</option>
+            <option value="480">Medium (480p)</option>
+            <option value="720" selected>Large (720p)</option>
+            <option value="1080">Huge (1080p)</option>
           </select>
-          <span id="currentResolution" style="float:right;font-size: 8pt;">-</span>
-        </div>
+        </label>
+
+        <label class="innerControls">
+          Current video-resolution:
+          <span id="currentResolution">/</span>
+        </label>
+
+        <label class="innerControls">
+          Permalink:&nbsp;
+          <span id="StreamPermalink" style="width: 50%"></span>
+        </label>
+
       </div>
 
       <video id="video" controls autoplay class="videoCentered"></video>
 
       <br>
 
-      <canvas id="buffered_c" height="15" class="videoCentered" onclick="buffered_seek(event);"></canvas>
+      <canvas id="buffered_c" height="15" class="videoCentered" onclick="onClickBufferedRange(event);"></canvas>
 
       <br><br>
 
       <pre id="HlsStatus" class="center" style="white-space: pre-wrap;"></pre>
 
-      <div class="center" id="toggleButtons">
-        <button type="button" class="btn btn-sm" onclick="$('#PlaybackControl').toggle();">toggle playback controls</button>
-        <button type="button" class="btn btn-sm" onclick="$('#QualityLevelControl').toggle();">toggle Quality Level controls</button>
-        <button type="button" class="btn btn-sm" onclick="$('#AudioTrackControl').toggle();">toggle Audio Track controls</button>
-        <button type="button" class="btn btn-sm" onclick="$('#MetricsDisplay').toggle();toggleMetricsDisplay();">toggle Metrics Display</button>
-        <button type="button" class="btn btn-sm" onclick="$('#StatsDisplay').toggle();">toggle Stats Display</button>
+      <div class="center" style="text-align: center;" id="toggleButtons">
+        <button type="button" class="btn btn-sm" onclick="$('#PlaybackControl').toggle();">Playback controls</button>
+        <button type="button" class="btn btn-sm" onclick="$('#QualityLevelControl').toggle();">Quality-level controls</button>
+        <button type="button" class="btn btn-sm" onclick="$('#AudioTrackControl').toggle();">Audio-track controls</button>
+        <button type="button" class="btn btn-sm" onclick="$('#MetricsDisplay').toggle();toggleMetricsDisplay();">Metrics-display</button>
+        <button type="button" class="btn btn-sm" onclick="$('#StatsDisplay').toggle();">Stats-display</button>
       </div>
 
-      <div id='PlaybackControl'>
-      <h4> Playback Control </h4>
-        <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].play()">play</button>
-        <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].pause()">pause</button>
-        <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime+=10">currentTime+=10</button>
-        <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime-=10">currentTime-=10</button>
-        <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime=$('#seek_pos').val()">seek to </button>
-        <input type="text" id='seek_pos' size="8" onkeydown="if(window.event.keyCode=='13'){$('#video')[0].currentTime=$('#seek_pos').val();}"><br><br>
-        <button type="button" class="btn btn-xs btn-warning" onclick="hls.attachMedia($('#video')[0])">attach Video</button>
-        <button type="button" class="btn btn-xs btn-warning" onclick="hls.detachMedia()">detach Video</button><br>
-        <button type="button" class="btn btn-xs btn-warning" onclick="hls.startLoad()">start Load</button>
-        <button type="button" class="btn btn-xs btn-warning" onclick="hls.stopLoad()">stop Load</button>
-        <button type="button" class="btn btn-xs btn-warning" onclick="hls.recoverMediaError()">recover Media Error</button><br>
-        <button type="button" class="btn btn-xs btn-warning" onclick="createfMP4('audio');">create audio fmp4</button>
-        <button type="button" class="btn btn-xs btn-warning" onclick="createfMP4('video')">create video fmp4</button><br>
+      <div class="center" id='PlaybackControl'>
+        <h4>Playback controls</h4>
+
+        <center>
+            <p>
+              <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].play()">Play</button>
+              <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].pause()">Pause</button>
+            </p>
+
+            <p>
+              <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime-=10">- 10 s</button>
+              <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime+=10">+ 10 s</button>
+            </p>
+
+            <p>
+              <button type="button" class="btn btn-sm btn-info" onclick="$('#video')[0].currentTime=$('#seek_pos').val()">seek to </button>
+              <input type="text" id='seek_pos' size="8" onkeydown="if(window.event.keyCode=='13'){$('#video')[0].currentTime=$('#seek_pos').val();}">
+            </p>
+
+            <p>
+              <button type="button" class="btn btn-xs btn-warning" onclick="hls.attachMedia($('#video')[0])">Attach media</button>
+              <button type="button" class="btn btn-xs btn-warning" onclick="hls.detachMedia()">Detach media</button>
+            </p>
+
+            <p>
+              <button type="button" class="btn btn-xs btn-warning" onclick="hls.startLoad()">Start loading</button>
+              <button type="button" class="btn btn-xs btn-warning" onclick="hls.stopLoad()">Stop loading</button>
+            </p>
+
+            <p>
+              <button type="button" class="btn btn-xs btn-warning" onclick="hls.recoverMediaError()">Recover media-error</button>
+            </p>
+
+            <p>
+              <button type="button" class="btn btn-xs btn-warning" onclick="createfMP4('audio');">Create audio-fmp4</button>
+              <button type="button" class="btn btn-xs btn-warning" onclick="createfMP4('video')">Create video-fmp4</button>
+            </p>
+        </center>
+
       </div>
 
-      <div id='QualityLevelControl'>
-      <h4> Quality Control </h4>
+      <div class="center" id='QualityLevelControl'>
+        <h4>Quality-level controls</h4>
+        <center>
+            <table>
+                <tr>
+                  <td>
+                    <p>Currently played level</p>
+                  </td>
+                  <td>
+                    <div id="currentLevelControl" style="display: inline;"></div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <p>Next level loaded</p>
+                  </td>
+                  <td>
+                    <div id="nextLevelControl" style="display: inline;"></div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <p>Currently loaded level</p>
+                  </td>
+                  <td>
+                    <div id="loadLevelControl" style="display: inline;"></div>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <p>Cap-limit level (maximum)</p>
+                  </td>
+                  <td>
+                    <div id="levelCappingControl" style="display: inline;"></div>
+                  </td>
+                </tr>
+              </table>
+        </center>
+      </div>
+
+      <div class="center" id='AudioTrackControl'>
+        <h4>Audio-track controls</h4>
         <table>
           <tr>
-            <td>current level</td>
-            <td width=10px></td>
-            <td> <div id="currentLevelControl" style="display: inline;"></div> </td>
-          </tr>
-          <tr>
-            <td> <p>next level</p></td>
-            <td> </td>
-            <td> <div id="nextLevelControl" style="display: inline;"></div> </td>
-          </tr>
-          <tr>
-            <td> <p>load level</p></td>
-            <td> </td>
-            <td> <div id="loadLevelControl" style="display: inline;"></div> </td>
-          </tr>
-          <tr>
-            <td> <p>cap level</p></td>
-            <td> </td>
-            <td> <div id="levelCappingControl" style="display: inline;"></div> </td>
-          </tr>
-        </table>
-      </div>
-
-      <div id='AudioTrackControl'>
-      <h4> Audio Track Control </h4>
-        <table>
-          <tr>
-            <td>current audio track</td>
+            <td>Current audio-track</td>
             <td width=10px></td>
             <td> <div id="audioTrackControl" style="display: inline;"></div> </td>
           </tr>
         </table>
       </div>
 
-      <div id='MetricsDisplay'>
-      <h4> Real Time Metrics Display </h4>
+      <div class="center" id='MetricsDisplay'>
+        <h4>Real-time metrics</h4>
         <div id="metricsButton">
           <button type="button" class="btn btn-xs btn-info" onclick="$('#metricsButtonWindow').toggle();$('#metricsButtonFixed').toggle();windowSliding=!windowSliding; refreshCanvas()">toggle sliding/fixed window</button><br>
           <div id="metricsButtonWindow">
@@ -171,24 +265,27 @@
         </div>
       </div>
 
-      <div id='StatsDisplay'>
-      <h4> Stats Display </h4>
+      <div class="center" id='StatsDisplay'>
+        <h4>Stats</h4>
         <pre id='HlsStats'></pre>
         <div id="buffered_log"></div>
       </div>
-    </div>
-    <br><br>
 
+    </div>
+
+    <footer>
+      <br><br><br><br><br><br>
+    </footer>
+
+    <!-- Demo page required libs -->
     <script src="canvas.js"></script>
     <script src="metrics.js"></script>
     <script src="jsonpack.js"></script>
 
-    <!--
-    <script src="../../streams.js"></script>
-    -->
+    <!-- Compiled lib dist -->
     <script src="../dist/hls.js"></script>
+    <!-- Compiled demo main -->
     <script src="../dist/hls-demo.js"></script>
 
   </body>
-
 </html>
