@@ -8,6 +8,7 @@ import Cea608Parser from '../utils/cea-608-parser';
 import OutputFilter from '../utils/output-filter';
 import WebVTTParser from '../utils/webvtt-parser';
 import {logger} from '../utils/logger';
+import sendAddTrackEvent from '../utils/send-addtrack-event';
 
 function clearCurrentCues(track) {
   if (track && track.cues) {
@@ -109,19 +110,6 @@ class TimelineController extends EventHandler {
     return null;
   }
 
-  sendAddTrackEvent(track, media) {
-    var e = null;
-    try {
-      e = new window.Event('addtrack');
-    } catch (err) {
-      //for IE11
-      e = document.createEvent('Event');
-      e.initEvent('addtrack', false, false);
-    }
-    e.track = track;
-    media.dispatchEvent(e);
-  }
-
   createCaptionsTrack(track) {
     let trackVar = 'textTrack' + track;
     if (!this[trackVar]) {
@@ -137,7 +125,7 @@ class TimelineController extends EventHandler {
         this[trackVar] = existingTrack;
         clearCurrentCues(this[trackVar]);
 
-        this.sendAddTrackEvent(this[trackVar], this.media);
+        sendAddTrackEvent(this[trackVar], this.media);
       }
     }
   }
