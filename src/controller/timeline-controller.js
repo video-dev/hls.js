@@ -8,15 +8,7 @@ import Cea608Parser from '../utils/cea-608-parser';
 import OutputFilter from '../utils/output-filter';
 import WebVTTParser from '../utils/webvtt-parser';
 import {logger} from '../utils/logger';
-import sendAddTrackEvent from '../utils/send-addtrack-event';
-
-function clearCurrentCues(track) {
-  if (track && track.cues) {
-    while (track.cues.length > 0) {
-      track.removeCue(track.cues[0]);
-    }
-  }
-}
+import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
 
 function reuseVttTextTrack(inUseTrack, manifestTrack) {
   return inUseTrack && inUseTrack.label === manifestTrack.name && !(inUseTrack.textTrack1 || inUseTrack.textTrack2);

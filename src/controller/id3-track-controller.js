@@ -5,7 +5,7 @@
 import Event from '../events';
 import EventHandler from '../event-handler';
 import ID3 from '../demux/id3';
-import sendAddTrackEvent from '../utils/send-addtrack-event';
+import { sendAddTrackEvent, clearCurrentCues } from '../utils/texttrack-utils';
 
 class ID3TrackController extends EventHandler {
 
@@ -31,6 +31,8 @@ class ID3TrackController extends EventHandler {
   }
 
   onMediaDetaching() {
+    clearCurrentCues(this.id3Track);
+    this.id3Track = undefined;
     this.media = undefined;
   }
 

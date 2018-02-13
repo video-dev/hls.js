@@ -1,5 +1,5 @@
 
-export default function sendAddTrackEvent(track, videoEl) {
+export function sendAddTrackEvent(track, videoEl) {
   var event = null;
   try {
     event = new window.Event('addtrack');
@@ -11,3 +11,12 @@ export default function sendAddTrackEvent(track, videoEl) {
   event.track = track;
   videoEl.dispatchEvent(event);
 }
+
+export function clearCurrentCues(track) {
+  if (track && track.cues) {
+    while (track.cues.length > 0) {
+      track.removeCue(track.cues[0]);
+    }
+  }
+}
+
