@@ -32,8 +32,8 @@ function loadFragment(hls, fragment){
 
 /**
  * Load fragment to `buffered: true`
- * @param hls
- * @param fragment
+ * @param {Hls} hls
+ * @param {Fragment} fragment
  */
 function loadFragmentAndBuffered(hls, fragment) {
   loadFragment(hls, fragment);
