@@ -37,7 +37,8 @@ class CapLevelController extends EventHandler {
   onManifestParsed(data) {
     const hls = this.hls;
     this.restrictedLevels = [];
-    if (hls.config.capLevelToPlayerSize) {
+    // Only fire getMaxLevel or detectPlayerSize if video is expected in the manifest
+    if (hls.config.capLevelToPlayerSize && (data.video || (data.levels.length && data.altAudio))) {
       this.autoLevelCapping = Number.POSITIVE_INFINITY;
       this.levels = data.levels;
       hls.firstLevel = this.getMaxLevel(data.firstLevel);

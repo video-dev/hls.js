@@ -134,7 +134,7 @@ export default class LevelController extends EventHandler {
         stats     : data.stats,
         audio     : audioCodecFound,
         video     : videoCodecFound,
-        altAudio  : audioTracks.length > 0
+        altAudio  : audioTracks.length > 0 && videoCodecFound
       });
     } else {
       this.hls.trigger(Event.ERROR, {
