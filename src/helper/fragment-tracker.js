@@ -36,17 +36,18 @@ export class FragmentTracker extends EventHandler {
 
 
   /**
-   * Return a Fragment that match the position.
+   * Return a Fragment that match the position and levelType.
    * If not found any Fragment, return null
    * @param {number} position
+   * @param {LevelType} levelType
    * @returns {Fragment|null}
    */
-  getBufferedFrag(position) {
+  getBufferedFrag(position, levelType) {
     // TODO: currently compatible implementation with StreamController, We should refactor it
     // create fragment body list
     const bufferedFrags = Object.keys(this.fragments).filter(key => {
       const fragmentEntity = this.fragments[key];
-      return fragmentEntity.buffered && fragmentEntity.body.type === "main";
+      return fragmentEntity.buffered && fragmentEntity.body.type === levelType;
     }).map(key => {
       const fragmentEntity = this.fragments[key];
       return fragmentEntity.body;

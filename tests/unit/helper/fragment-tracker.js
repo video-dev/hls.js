@@ -2,8 +2,10 @@ import Event from "../../../src/events";
 
 const assert = require('assert');
 
-import {FragmentTracker, FragmentState} from '../../../src/helper/fragment-tracker';
 import Hls from '../../../src/hls';
+import {FragmentTracker, FragmentState} from '../../../src/helper/fragment-tracker';
+import PlaylistLoader from '../../../src/loader/playlist-loader';
+const LevelType = PlaylistLoader.LevelType;
 
 function createMockBuffer(buffered) {
   return {
@@ -180,6 +182,7 @@ describe('FragmentTracker', () => {
 
   describe('getBufferedFrag', function () {
     let hls;
+    /** @type {FragmentTracker} */
     let fragmentTracker;
     beforeEach(() => {
       hls = new Hls({});
@@ -216,14 +219,14 @@ describe('FragmentTracker', () => {
       fragments.forEach(fragment => {
         loadFragmentAndBuffered(hls, fragment);
       });
-      assert.deepEqual(fragmentTracker.getBufferedFrag(0.0), fragments[0], "0");
-      assert.deepEqual(fragmentTracker.getBufferedFrag(0.1), fragments[0], "0.1");
-      assert.deepEqual(fragmentTracker.getBufferedFrag(1.0), fragments[1], "1.0");
-      assert.deepEqual(fragmentTracker.getBufferedFrag(1.1), fragments[1], "1.1");
-      assert.deepEqual(fragmentTracker.getBufferedFrag(2.0), fragments[1], "2");
-      assert.deepEqual(fragmentTracker.getBufferedFrag(2.1), fragments[2], "2.1");
-      assert.deepEqual(fragmentTracker.getBufferedFrag(2.9), fragments[2], "2.9");
-      assert.deepEqual(fragmentTracker.getBufferedFrag(3.0), fragments[2], "3");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(0.0, LevelType.MAIN), fragments[0], "0");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(0.1, LevelType.MAIN), fragments[0], "0.1");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(1.0, LevelType.MAIN), fragments[1], "1.0");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(1.1, LevelType.MAIN), fragments[1], "1.1");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(2.0, LevelType.MAIN), fragments[1], "2");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(2.1, LevelType.MAIN), fragments[2], "2.1");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(2.9, LevelType.MAIN), fragments[2], "2.9");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(3.0, LevelType.MAIN), fragments[2], "3");
     });
     it('should return null if found it, but it is not buffered', function () {
       const fragments = [
@@ -256,12 +259,12 @@ describe('FragmentTracker', () => {
       fragments.forEach(fragment => {
         loadFragment(hls, fragment);
       });
-      assert.deepEqual(fragmentTracker.getBufferedFrag(0), null, "0");
-      assert.deepEqual(fragmentTracker.getBufferedFrag(1), null, "1.0");
-      assert.deepEqual(fragmentTracker.getBufferedFrag(2), null, "2");
-      assert.deepEqual(fragmentTracker.getBufferedFrag(3), null, "3")
+      assert.deepEqual(fragmentTracker.getBufferedFrag(0, LevelType.MAIN), null, "0");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(1, LevelType.MAIN), null, "1.0");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(2, LevelType.MAIN), null, "2");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(3, LevelType.MAIN), null, "3")
     });
-    it('should return null if not found it', function () {
+    it('should return null if anyone does not match the position', function () {
       loadFragmentAndBuffered(hls, createMockFragment({
         startPTS: 0,
         endPTS: 1,
@@ -270,10 +273,10 @@ describe('FragmentTracker', () => {
         type: 'main'
       }, ['audio', 'video']));
       // not found
-      assert.strictEqual(fragmentTracker.getBufferedFrag(1.1), null);
+      assert.strictEqual(fragmentTracker.getBufferedFrag(1.1, LevelType.MAIN), null);
     });
     it('should return null if fragmentTracker not have any fragments', function () {
-      assert.strictEqual(fragmentTracker.getBufferedFrag(0), null);
+      assert.strictEqual(fragmentTracker.getBufferedFrag(0, LevelType.MAIN), null);
     });
     it('should return null if not found match levelType', function () {
       loadFragmentAndBuffered(hls, createMockFragment({
@@ -281,10 +284,10 @@ describe('FragmentTracker', () => {
         endPTS: 1,
         sn: 1,
         level: 1,
-        type: "audio" // <= context type is not "main"
+        type: LevelType.AUDIO // <= level type is not "main"
       }, ['audio', 'video']));
 
-      assert.strictEqual(fragmentTracker.getBufferedFrag(0), null);
+      assert.strictEqual(fragmentTracker.getBufferedFrag(0, LevelType.MAIN), null);
     });
   });
 

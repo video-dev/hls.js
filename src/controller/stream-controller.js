@@ -8,6 +8,7 @@ import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import {FragmentState} from '../helper/fragment-tracker';
 import Fragment from '../loader/fragment';
+import PlaylistLoader from '../loader/playlist-loader';
 import * as LevelHelper from '../helper/level-helper';
 import TimeRanges from '../utils/time-ranges';
 import {ErrorTypes, ErrorDetails} from '../errors';
@@ -570,7 +571,7 @@ class StreamController extends TaskLoop {
   }
 
   getBufferedFrag(position) {
-    return this.fragmentTracker.getBufferedFrag(position);
+    return this.fragmentTracker.getBufferedFrag(position, PlaylistLoader.LevelType.MAIN);
   }
 
   get currentLevel() {
