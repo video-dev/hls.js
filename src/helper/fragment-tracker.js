@@ -1,6 +1,5 @@
 import EventHandler from '../event-handler';
 import Event from '../events';
-import BinarySearch from "../utils/binary-search";
 
 export const FragmentState = {
   NOT_LOADED: 'NOT_LOADED',
@@ -43,24 +42,25 @@ export class FragmentTracker extends EventHandler {
    * @returns {Fragment|null}
    */
   getBufferedFrag(position, levelType) {
-    // TODO: currently compatible implementation with StreamController, We should refactor it
-    // create fragment body list
-    const bufferedFrags = Object.keys(this.fragments).filter(key => {
-      const fragmentEntity = this.fragments[key];
-      return fragmentEntity.buffered && fragmentEntity.body.type === levelType;
-    }).map(key => {
-      const fragmentEntity = this.fragments[key];
-      return fragmentEntity.body;
-    });
-    // find position's fragment body
-    return BinarySearch.search(bufferedFrags, function(frag) {
-      if (position < frag.startPTS) {
-        return -1;
-      } else if (position > frag.endPTS) {
-        return 1;
+    const fragments = this.fragments;
+    const bufferedFrags = Object.keys(fragments).filter(key => {
+      const fragmentEntity = fragments[key];
+      if(fragmentEntity.body.type !== levelType){
+        return false;
       }
-      return 0;
+      if(!fragmentEntity.buffered){
+        return false;
+      }
+      const frag = fragmentEntity.body;
+      return frag.startPTS <= position && position <= frag.endPTS;
     });
+    if (bufferedFrags.length === 0) {
+      return null;
+    } else {
+      // https://github.com/video-dev/hls.js/pull/1545#discussion_r166229566
+      const bufferedFragKey = bufferedFrags[bufferedFrags.length - 1];
+      return fragments[bufferedFragKey].body;
+    }
   }
 
   /**

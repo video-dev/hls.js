@@ -219,14 +219,14 @@ describe('FragmentTracker', () => {
       fragments.forEach(fragment => {
         loadFragmentAndBuffered(hls, fragment);
       });
-      assert.deepEqual(fragmentTracker.getBufferedFrag(0.0, LevelType.MAIN), fragments[0], "0");
-      assert.deepEqual(fragmentTracker.getBufferedFrag(0.1, LevelType.MAIN), fragments[0], "0.1");
-      assert.deepEqual(fragmentTracker.getBufferedFrag(1.0, LevelType.MAIN), fragments[1], "1.0");
-      assert.deepEqual(fragmentTracker.getBufferedFrag(1.1, LevelType.MAIN), fragments[1], "1.1");
-      assert.deepEqual(fragmentTracker.getBufferedFrag(2.0, LevelType.MAIN), fragments[1], "2");
-      assert.deepEqual(fragmentTracker.getBufferedFrag(2.1, LevelType.MAIN), fragments[2], "2.1");
-      assert.deepEqual(fragmentTracker.getBufferedFrag(2.9, LevelType.MAIN), fragments[2], "2.9");
-      assert.deepEqual(fragmentTracker.getBufferedFrag(3.0, LevelType.MAIN), fragments[2], "3");
+      assert.deepEqual(fragmentTracker.getBufferedFrag(0.0, LevelType.MAIN), fragments[0]);
+      assert.deepEqual(fragmentTracker.getBufferedFrag(0.1, LevelType.MAIN), fragments[0]);
+      assert.deepEqual(fragmentTracker.getBufferedFrag(1.0, LevelType.MAIN), fragments[1]);
+      assert.deepEqual(fragmentTracker.getBufferedFrag(1.1, LevelType.MAIN), fragments[1]);
+      assert.deepEqual(fragmentTracker.getBufferedFrag(2.0, LevelType.MAIN), fragments[2]);
+      assert.deepEqual(fragmentTracker.getBufferedFrag(2.1, LevelType.MAIN), fragments[2]);
+      assert.deepEqual(fragmentTracker.getBufferedFrag(2.9, LevelType.MAIN), fragments[2]);
+      assert.deepEqual(fragmentTracker.getBufferedFrag(3.0, LevelType.MAIN), fragments[2]);
     });
     it('should return null if found it, but it is not buffered', function () {
       const fragments = [
@@ -259,10 +259,10 @@ describe('FragmentTracker', () => {
       fragments.forEach(fragment => {
         loadFragment(hls, fragment);
       });
-      assert.deepEqual(fragmentTracker.getBufferedFrag(0, LevelType.MAIN), null, "0");
-      assert.deepEqual(fragmentTracker.getBufferedFrag(1, LevelType.MAIN), null, "1.0");
-      assert.deepEqual(fragmentTracker.getBufferedFrag(2, LevelType.MAIN), null, "2");
-      assert.deepEqual(fragmentTracker.getBufferedFrag(3, LevelType.MAIN), null, "3")
+      assert.strictEqual(fragmentTracker.getBufferedFrag(0, LevelType.MAIN), null);
+      assert.strictEqual(fragmentTracker.getBufferedFrag(1, LevelType.MAIN), null);
+      assert.strictEqual(fragmentTracker.getBufferedFrag(2, LevelType.MAIN), null);
+      assert.strictEqual(fragmentTracker.getBufferedFrag(3, LevelType.MAIN), null);
     });
     it('should return null if anyone does not match the position', function () {
       loadFragmentAndBuffered(hls, createMockFragment({
