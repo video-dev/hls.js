@@ -49,7 +49,7 @@ class StreamController extends EventHandler {
       Event.BUFFER_CREATED,
       Event.BUFFER_APPENDED,
       Event.BUFFER_FLUSHED,
-      Event.LEVEL_UPDATED
+      Event.LEVELS_UPDATED
     );
 
     this.config = hls.config;
