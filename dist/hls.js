@@ -204,13 +204,11 @@ var logger = exportedLogger;
   LEVEL_LOADING: 'hlsLevelLoading',
   // fired when a level playlist loading finishes - data: { details : levelDetails object, level : id of loaded level, stats : { trequest, tfirst, tload, mtime} }
   LEVEL_LOADED: 'hlsLevelLoaded',
-  // fired when a level's details have been updated based on previous details, after it has been loaded - data: { details : levelDetails object, level : id of updated level }
-  LEVEL_UPDATED: 'hlsLevelUpdated',
   // fired when a level's PTS information has been updated after parsing a fragment - data: { details : levelDetails object, level : id of updated level, drift: PTS drift observed when parsing last fragment }
   LEVEL_PTS_UPDATED: 'hlsLevelPtsUpdated',
   // fired to notify that audio track lists has been updated - data: { audioTracks : audioTracks }
-  LEVEL_REMOVED: 'hlsLevelRemoved',
-  // fired when a level should be removed
+  LEVELS_UPDATED: 'hlsLevelsUpdated',
+  // fired to notify that levels have changed outside of a manifest parsing event - data: { levels }
   AUDIO_TRACKS_UPDATED: 'hlsAudioTracksUpdated',
   // fired when an audio track switch occurs - data: { id : audio track id } // deprecated in favor AUDIO_TRACK_SWITCHING
   AUDIO_TRACK_SWITCH: 'hlsAudioTrackSwitch',
@@ -7406,7 +7404,7 @@ var stream_controller_StreamController = function (_EventHandler) {
   function StreamController(hls) {
     stream_controller__classCallCheck(this, StreamController);
 
-    var _this = stream_controller__possibleConstructorReturn(this, _EventHandler.call(this, hls, events["a" /* default */].MEDIA_ATTACHED, events["a" /* default */].MEDIA_DETACHING, events["a" /* default */].MANIFEST_LOADING, events["a" /* default */].MANIFEST_PARSED, events["a" /* default */].LEVEL_LOADED, events["a" /* default */].KEY_LOADED, events["a" /* default */].FRAG_LOADED, events["a" /* default */].FRAG_LOAD_EMERGENCY_ABORTED, events["a" /* default */].FRAG_PARSING_INIT_SEGMENT, events["a" /* default */].FRAG_PARSING_DATA, events["a" /* default */].FRAG_PARSED, events["a" /* default */].ERROR, events["a" /* default */].AUDIO_TRACK_SWITCHING, events["a" /* default */].AUDIO_TRACK_SWITCHED, events["a" /* default */].BUFFER_CREATED, events["a" /* default */].BUFFER_APPENDED, events["a" /* default */].BUFFER_FLUSHED, events["a" /* default */].LEVEL_REMOVED));
+    var _this = stream_controller__possibleConstructorReturn(this, _EventHandler.call(this, hls, events["a" /* default */].MEDIA_ATTACHED, events["a" /* default */].MEDIA_DETACHING, events["a" /* default */].MANIFEST_LOADING, events["a" /* default */].MANIFEST_PARSED, events["a" /* default */].LEVEL_LOADED, events["a" /* default */].KEY_LOADED, events["a" /* default */].FRAG_LOADED, events["a" /* default */].FRAG_LOAD_EMERGENCY_ABORTED, events["a" /* default */].FRAG_PARSING_INIT_SEGMENT, events["a" /* default */].FRAG_PARSING_DATA, events["a" /* default */].FRAG_PARSED, events["a" /* default */].ERROR, events["a" /* default */].AUDIO_TRACK_SWITCHING, events["a" /* default */].AUDIO_TRACK_SWITCHED, events["a" /* default */].BUFFER_CREATED, events["a" /* default */].BUFFER_APPENDED, events["a" /* default */].BUFFER_FLUSHED, events["a" /* default */].LEVEL_UPDATED));
 
     _this.config = hls.config;
     _this.audioCodecSwap = false;
@@ -8906,10 +8904,8 @@ var stream_controller_StreamController = function (_EventHandler) {
     this.fragPrevious = null;
   };
 
-  StreamController.prototype.onLevelRemoved = function onLevelRemoved(data) {
-    this.levels = this.levels.filter(function (level, index) {
-      return index !== data.level;
-    });
+  StreamController.prototype.onLevelsUpdated = function onLevelsUpdated(data) {
+    this.levels = data.levels;
   };
 
   StreamController.prototype.swapAudioCodec = function swapAudioCodec() {
@@ -9006,7 +9002,7 @@ var level_controller_LevelController = function (_EventHandler) {
   function LevelController(hls) {
     level_controller__classCallCheck(this, LevelController);
 
-    var _this = level_controller__possibleConstructorReturn(this, _EventHandler.call(this, hls, events["a" /* default */].MANIFEST_LOADED, events["a" /* default */].LEVEL_LOADED, events["a" /* default */].FRAG_LOADED, events["a" /* default */].ERROR, events["a" /* default */].LEVEL_REMOVED));
+    var _this = level_controller__possibleConstructorReturn(this, _EventHandler.call(this, hls, events["a" /* default */].MANIFEST_LOADED, events["a" /* default */].LEVEL_LOADED, events["a" /* default */].FRAG_LOADED, events["a" /* default */].ERROR));
 
     _this.canload = false;
     _this.currentLevelIndex = null;
@@ -9363,10 +9359,22 @@ var level_controller_LevelController = function (_EventHandler) {
     }
   };
 
-  LevelController.prototype.onLevelRemoved = function onLevelRemoved(data) {
+  LevelController.prototype.removeLevel = function removeLevel(levelIndex, urlId) {
     this._levels = this.levels.filter(function (level, index) {
-      return index !== data.level;
+      if (index !== levelIndex) {
+        return true;
+      }
+      if (level.url.length > 1 && urlId !== undefined) {
+        level.url = level.url.filter(function (url, id) {
+          return id !== urlId;
+        });
+        level.urlId = 0;
+        return true;
+      }
+      return false;
     });
+
+    this.hls.trigger(events["a" /* default */].LEVELS_UPDATED, { levels: this._levels });
   };
 
   level_controller__createClass(LevelController, [{
@@ -10537,7 +10545,7 @@ var cap_level_controller_CapLevelController = function (_EventHandler) {
   function CapLevelController(hls) {
     cap_level_controller__classCallCheck(this, CapLevelController);
 
-    return cap_level_controller__possibleConstructorReturn(this, _EventHandler.call(this, hls, events["a" /* default */].FPS_DROP_LEVEL_CAPPING, events["a" /* default */].MEDIA_ATTACHING, events["a" /* default */].MANIFEST_PARSED));
+    return cap_level_controller__possibleConstructorReturn(this, _EventHandler.call(this, hls, events["a" /* default */].FPS_DROP_LEVEL_CAPPING, events["a" /* default */].MEDIA_ATTACHING, events["a" /* default */].MANIFEST_PARSED, events["a" /* default */].LEVELS_UPDATED));
   }
 
   CapLevelController.prototype.destroy = function destroy() {
@@ -10573,6 +10581,10 @@ var cap_level_controller_CapLevelController = function (_EventHandler) {
       this.timer = setInterval(this.detectPlayerSize.bind(this), 1000);
       this.detectPlayerSize();
     }
+  };
+
+  CapLevelController.prototype.onLevelsUpdated = function onLevelsUpdated(data) {
+    this.levels = data.levels;
   };
 
   CapLevelController.prototype.detectPlayerSize = function detectPlayerSize() {
@@ -15507,8 +15519,10 @@ var hls_Hls = function () {
     this.attachMedia(media);
   };
 
-  Hls.prototype.removeLevel = function removeLevel(level) {
-    this.trigger(events["a" /* default */].LEVEL_REMOVED, { level: level });
+  Hls.prototype.removeLevel = function removeLevel(levelIndex) {
+    var urlId = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
+    this.levelController.removeLevel(levelIndex, urlId);
   };
 
   /** Return all quality levels **/
