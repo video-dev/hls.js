@@ -8,6 +8,7 @@ import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import {FragmentState} from '../helper/fragment-tracker';
 import Fragment from '../loader/fragment';
+import PlaylistLoader from '../loader/playlist-loader';
 import * as LevelHelper from '../helper/level-helper';
 import TimeRanges from '../utils/time-ranges';
 import {ErrorTypes, ErrorDetails} from '../errors';
@@ -569,16 +570,8 @@ class StreamController extends TaskLoop {
     return this._state;
   }
 
-  // TODO: Move this functionality into fragment-tracker.js
   getBufferedFrag(position) {
-    return BinarySearch.search(this._bufferedFrags, function(frag) {
-      if (position < frag.startPTS) {
-        return -1;
-      } else if (position > frag.endPTS) {
-        return 1;
-      }
-      return 0;
-    });
+    return this.fragmentTracker.getBufferedFrag(position, PlaylistLoader.LevelType.MAIN);
   }
 
   get currentLevel() {
@@ -875,7 +868,7 @@ class StreamController extends TaskLoop {
     // reset buffer on manifest loading
     logger.log('trigger BUFFER_RESET');
     this.hls.trigger(Event.BUFFER_RESET);
-    this._bufferedFrags = [];
+    this.fragmentTracker.removeAllFragments();
     this.stalled = false;
     this.startPosition = this.lastCurrentTime = 0;
   }
@@ -1304,14 +1297,6 @@ class StreamController extends TaskLoop {
       if (frag) {
         const media = this.mediaBuffer ? this.mediaBuffer : this.media;
         logger.log(`main buffered : ${TimeRanges.toString(media.buffered)}`);
-        // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
-        let bufferedFrags = BufferHelper.filterEvictedFragments(this._bufferedFrags, media);
-        // push new range
-        bufferedFrags.push(frag);
-        // sort frags, as we use BinarySearch for lookup in getBufferedFrag ...
-        this._bufferedFrags = bufferedFrags.sort(function(a, b) {
-          return (a.startPTS - b.startPTS);
-        });
         this.fragPrevious = frag;
         const stats = this.stats;
         stats.tbuffered = performance.now();
@@ -1536,7 +1521,8 @@ _checkBuffer() {
       use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
     */
     const media = this.mediaBuffer ? this.mediaBuffer : this.media;
-    this._bufferedFrags = this._bufferedFrags.filter(frag => {return BufferHelper.isBuffered(media,(frag.startPTS + frag.endPTS) / 2);});
+    // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
+    this.fragmentTracker.detectEvictedFragments(Fragment.ElementaryStreamTypes.VIDEO, media.buffered);
 
     // move to IDLE once flush complete. this should trigger new fragment loading
     this.state = State.IDLE;
