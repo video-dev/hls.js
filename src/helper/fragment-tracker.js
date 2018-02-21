@@ -58,7 +58,7 @@ export class FragmentTracker extends EventHandler {
       return null;
     } else {
       // https://github.com/video-dev/hls.js/pull/1545#discussion_r166229566
-      const bufferedFragKey = bufferedFrags[bufferedFrags.length - 1];
+      const bufferedFragKey = bufferedFrags.pop();
       return fragments[bufferedFragKey].body;
     }
   }
