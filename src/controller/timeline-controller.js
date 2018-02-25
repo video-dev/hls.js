@@ -270,6 +270,11 @@ class TimelineController extends EventHandler {
     // Parse the WebVTT file contents.
     WebVTTParser.parse(payload, this.initPTS, vttCCs, frag.cc, function (cues) {
         const currentTrack = textTracks[frag.trackId];
+        // If text track is disabled in middle of process bailout as
+        // currentTrack.cues will be nullified when track is disabled
+        if (currentTrack.mode === 'disabled') {
+          return;
+        }
         // Add cues and trigger event with success true.
         cues.forEach(cue => {
           // Sometimes there are cue overlaps on segmented vtts so the same
