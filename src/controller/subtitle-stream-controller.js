@@ -154,6 +154,8 @@ class SubtitleStreamController extends TaskLoop {
 
   // Got a new set of subtitle fragments.
   onSubtitleTrackLoaded() {
+    this.currentlyProcessing = null;
+    this.state = State.IDLE;
     this.tick();
   }
 
