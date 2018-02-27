@@ -273,6 +273,7 @@ class TimelineController extends EventHandler {
         // If text track is disabled in middle of process bailout as
         // currentTrack.cues will be nullified when track is disabled
         if (currentTrack.mode === 'disabled') {
+          hls.trigger(Event.SUBTITLE_FRAG_PROCESSED, {success: false, frag: frag});
           return;
         }
         // Add cues and trigger event with success true.
