@@ -25,6 +25,12 @@ hls.js is written in [ECMAScript6], and transpiled in ECMAScript5 using [Babel].
 [ECMAScript6]: https://github.com/ericdouglas/ES6-Learning#articles--tutorials
 [Babel]: https://babeljs.io
 
+## API docs and usage guide
+
+* API and code documention: [http://video-dev.github.io/hls.js/docs/html](http://video-dev.github.io/hls.js/docs/html)
+
+* Find a more detailed library usage guide, use-cases and example [here](/docs/API.md)
+
 ## Demo
 
 [http://video-dev.github.io/hls.js/demo](http://video-dev.github.io/hls.js/demo)
@@ -151,7 +157,7 @@ As of today, it is supported on:
  * Vivaldi for Desktop
  * Safari for Mac 8+ (beta)
 
-Please note: iOS Safari "Mobile" does not support the MediaSource API. Safari browsers have however built-in HLS support through the plain video "tag" source URL. See the example below to run appropriate feature detection and choose between using Hls.js or natively built-in HLS support.
+Please note: iOS Safari "Mobile" does not support the MediaSource API. Safari browsers have however built-in HLS support through the plain video "tag" source URL. See the example above (Getting Started) to run appropriate feature detection and choose between using Hls.js or natively built-in HLS support.
 
 When a platform has neither MediaSource nor native HLS support, you will not be able to play HLS.
 
@@ -215,11 +221,6 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
   - `#EXT-X-PROGRAM-DATE-TIME` (https://tools.ietf.org/html/draft-pantos-http-live-streaming-18#section-4.3.2.6)
   - `EXT-X-START:TIME-OFFSET=x` (https://tools.ietf.org/html/draft-pantos-http-live-streaming-18#section-4.3.5.2)
 
-
-## Documentation: API and Configuration
-
-hls.js can be configured and controlled easily, click [here](doc/API.md) for details.
-
 ## License
 
   hls.js is released under [Apache 2.0 License](LICENSE)
@@ -245,7 +246,7 @@ npm run lint
 
 ## Design
 
-Click [here](doc/design.md) for details.
+Click [here](/docs/design.md) for details.
 
 ### Tested With
 

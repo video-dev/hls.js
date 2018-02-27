@@ -33,12 +33,42 @@ export class FragmentTracker extends EventHandler {
     super.destroy();
   }
 
+
+  /**
+   * Return a Fragment that match the position and levelType.
+   * If not found any Fragment, return null
+   * @param {number} position
+   * @param {LevelType} levelType
+   * @returns {Fragment|null}
+   */
+  getBufferedFrag(position, levelType) {
+    const fragments = this.fragments;
+    const bufferedFrags = Object.keys(fragments).filter(key => {
+      const fragmentEntity = fragments[key];
+      if(fragmentEntity.body.type !== levelType){
+        return false;
+      }
+      if(!fragmentEntity.buffered){
+        return false;
+      }
+      const frag = fragmentEntity.body;
+      return frag.startPTS <= position && position <= frag.endPTS;
+    });
+    if (bufferedFrags.length === 0) {
+      return null;
+    } else {
+      // https://github.com/video-dev/hls.js/pull/1545#discussion_r166229566
+      const bufferedFragKey = bufferedFrags.pop();
+      return fragments[bufferedFragKey].body;
+    }
+  }
+
   /**
    * Partial fragments effected by coded frame eviction will be removed
    * The browser will unload parts of the buffer to free up memory for new buffer data
    * Fragments will need to be reloaded when the buffer is freed up, removing partial fragments will allow them to reload(since there might be parts that are still playable)
    * @param {String} elementaryStream The elementaryStream of media this is (eg. video/audio)
-   * @param {Object} timeRange TimeRange object from a sourceBuffer
+   * @param {TimeRanges} timeRange TimeRange object from a sourceBuffer
    */
   detectEvictedFragments(elementaryStream, timeRange) {
     let fragmentTimes, time;
@@ -228,11 +258,28 @@ export class FragmentTracker extends EventHandler {
   }
 
   /**
+   * Return true if fragment tracker has the fragment.
+   * @param {Object} fragment
+   * @returns {boolean}
+   */
+  hasFragment(fragment) {
+    const fragKey = this.getFragmentKey(fragment);
+    return this.fragments[fragKey] !== undefined;
+  }
+
+  /**
    * Remove a fragment from fragment tracker until it is loaded again
    * @param {Object} fragment The fragment to remove
    */
   removeFragment(fragment) {
     let fragKey = this.getFragmentKey(fragment);
     delete this.fragments[fragKey];
+  }
+
+  /**
+   * Remove all fragments from fragment tracker.
+   */
+  removeAllFragments(){
+    this.fragments = Object.create(null);
   }
 }
