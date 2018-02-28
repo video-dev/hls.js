@@ -103,6 +103,11 @@ export class FragmentTracker extends EventHandler {
     let fragmentEntity = this.fragments[fragKey];
     fragmentEntity.buffered = true;
 
+    // May be null
+    if (!this.timeRanges) {
+      return
+    }
+
     Object.keys(this.timeRanges).forEach(elementaryStream => {
       if(fragment.hasElementaryStream(elementaryStream) === true) {
         let timeRange = this.timeRanges[elementaryStream];
