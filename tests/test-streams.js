@@ -17,7 +17,15 @@ function createTestStream(url, description, live = false, abr = true, blacklist_
   }
 }
 
+/**
+ * @param {Object} target
+ * @param {Object} [config]
+ * @returns {{url: string, description: string, live: boolean, abr: boolean, blacklist_ua: string[]}}
+ */
 function createTestStreamWithConfig(target, config) {
+  if (typeof target !== "object") {
+    throw new Error("target should be object");
+  }
   const testStream = createTestStream(target.url, target.description, target.live, target.abr, target.blacklist_ua);
 
   testStream.config = config;
@@ -26,9 +34,14 @@ function createTestStreamWithConfig(target, config) {
 }
 
 module.exports = {
-  bbb: createTestStream(
-    "https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8",
-    "Big Buck Bunny - adaptive qualities"
+  bbb: createTestStreamWithConfig({
+      url: "https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8",
+      description: "Big Buck Bunny - adaptive qualities",
+    },
+    {
+      // try to workaround test failing because of slow seek on Chrome/Win10
+      nudgeMaxRetry: 5
+    }
   ),
   bigBuckBunny480p: {
     "url": "https://video-dev.github.io/streams/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8",
