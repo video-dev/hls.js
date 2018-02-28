@@ -136,7 +136,7 @@ module.exports = {
   angelOneShakaWidevine: createTestStreamWithConfig({
       url: "https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine-hls/hls.m3u8",
       description: "Shaka-packager Widevine DRM (EME) HLS-fMP4 - Angel One Demo",
-      blacklist_ua: ["firefox"]
+      blacklist_ua: ["firefox","safari", "internet explorer"]
     },
     {
       widevineLicenseUrl: "https://cwip-shaka-proxy.appspot.com/no_auth",
