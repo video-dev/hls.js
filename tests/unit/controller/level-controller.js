@@ -22,7 +22,7 @@ describe('LevelController', () => {
         levelController = null;
     });
 
-    it('should trigger an error', () => {
+    it('should trigger an error when no levels are found in the manifest', () => {
 
         levelController.onManifestLoaded({
             audioTracks: [],
@@ -36,7 +36,7 @@ describe('LevelController', () => {
 
     });
 
-    it('should trigger hlsManifestParsed', () => {
+    it('should trigger hlsManifestParsed when levels are found in the manifest', () => {
 
         let data = {
           audioTracks: [],
@@ -63,7 +63,7 @@ describe('LevelController', () => {
 
     });
 
-    it('should trigger level switch', () => {
+    it('should trigger level switch when level is manually set', () => {
 
         let data = {
           audioTracks: [],

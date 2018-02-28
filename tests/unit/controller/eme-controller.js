@@ -80,7 +80,7 @@ describe('EMEController', () => {
 
   });
 
-  it('should trigger key system error', (done) => {
+  it('should trigger key system error when bad encrypted data is received', (done) => {
 
     let reqMediaKsAccessSpy = sinon.spy(() => {
       return Promise.resolve({
