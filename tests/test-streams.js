@@ -68,23 +68,25 @@ module.exports = {
     "description": "hls.js/issues/666",
     "live": false,
     "abr": false,
-    "blacklist_ua": ["internet explorer"]
+    "blacklist_ua": ["internet explorer"],
+    // does not support https
+    "demo": true
   },
   issue649: {
-    "url": "http://cdn3.screen9.com/media/c/W/cW87csHkxsgu5TV1qs78aA_auto_hls.m3u8?auth=qlUjeCtbVdtkDfZYrtveTIVUXX1yuSqgF8wfWabzKpX72r-d5upW88-FHuyRRdnZA_1PKRTGAtTt_6Z-aj22kw",
+    "url": "https://cdn3.screen9.com/media/c/W/cW87csHkxsgu5TV1qs78aA_auto_hls.m3u8?auth=qlUjeCtbVdtkDfZYrtveTIVUXX1yuSqgF8wfWabzKpX72r-d5upW88-FHuyRRdnZA_1PKRTGAtTt_6Z-aj22kw",
     "description": "hls.js/issues/649",
     "live": false,
     "abr": false
   },
   closedCaptions: {
-    "url": "http://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8",
+    "url": "https://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8",
     "description": "CNN special report, with CC",
     "live": false,
     "abr": false,
     "blacklist_ua": ["safari"]
   },
   oceansAES: {
-    "url": "http://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8",
+    "url": "https://playertest.longtailvideo.com/adaptive/oceans_aes/oceans_aes.m3u8",
     "description": "AES encrypted,ABR",
     "live": false,
     "abr": true
@@ -93,7 +95,9 @@ module.exports = {
     "url": "http://streambox.fr/playlists/sample_aes/index.m3u8",
     "description": "SAMPLE-AES encrypted",
     "live": false,
-    "abr": false
+    "abr": false,
+    // does not support https
+    "demo": false
   },
   mp3Audio: {
     "url": "https://player.webvideocore.net/CL1olYogIrDWvwqiIKK7eLBkzvO18gwo9ERMzsyXzwt_t-ya8ygf2kQBZww38JJT/8i4vvznv8408.m3u8",
@@ -130,7 +134,7 @@ module.exports = {
     "abr": false
   },
   uspHLSAteam: createTestStream(
-    "http://demo.unified-streaming.com/video/ateam/ateam.ism/ateam.m3u8?session_id=27199",
+    "https://demo.unified-streaming.com/video/ateam/ateam.ism/ateam.m3u8?session_id=27199",
     "A-Team movie trailer - HLS by Unified Streaming Platform"
   ),
   angelOneShakaWidevine: createTestStreamWithConfig({
