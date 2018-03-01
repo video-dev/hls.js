@@ -66,7 +66,7 @@ const WebVTTParser = {
 
         let cueTime = '00:00.000';
         let mpegTs = 0;
-        let localTime = 0;
+        let localTime;
         let presentationTime = 0;
         let cues = [];
         let parsingError;
@@ -85,7 +85,7 @@ const WebVTTParser = {
             if (currCC && currCC.new) {
                 if (localTime !== undefined) {
                     // When local time is provided, offset = discontinuity start time - local time
-                    cueOffset = vttCCs.ccOffset = currCC.start;
+                    cueOffset = vttCCs.ccOffset = currCC.start - localTime;
                 } else {
                     calculateOffset(vttCCs, cc, presentationTime);
                 }
