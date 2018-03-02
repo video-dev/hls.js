@@ -20,7 +20,7 @@ export class FragmentTracker extends EventHandler {
     this.bufferPadding = 0.2;
 
     this.fragments = Object.create(null);
-    this.timeRanges = null;
+    this.timeRanges = Object.create(null);
 
     this.config = hls.config;
   }
@@ -102,11 +102,6 @@ export class FragmentTracker extends EventHandler {
     let fragKey = this.getFragmentKey(fragment);
     let fragmentEntity = this.fragments[fragKey];
     fragmentEntity.buffered = true;
-
-    // May be null
-    if (!this.timeRanges) {
-      return
-    }
 
     Object.keys(this.timeRanges).forEach(elementaryStream => {
       if(fragment.hasElementaryStream(elementaryStream) === true) {
