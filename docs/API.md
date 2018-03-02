@@ -88,6 +88,7 @@
   - [`hls.startLevel`](#hlsstartlevel)
   - [`hls.autoLevelEnabled`](#hlsautolevelenabled)
   - [`hls.autoLevelCapping`](#hlsautolevelcapping)
+  - [`hls.capLevelToPlayerSize`](#hlscapleveltoplayersize)
 - [Version Control](#version-control)
   - [`Hls.version`](#hlsversion)
 - [Network Loading Control API](#network-loading-control-api)
@@ -1045,6 +1046,14 @@ Default value is `hls.firstLevel`.
 - get/set: Capping/max level value that could be used by ABR Controller.
 
 Default value is `-1` (no level capping).
+
+### `hls.capLevelToPlayerSize`
+
+(default: `false`)
+
+- get/set: ABR capping based on video element dimensions.
+  - if set to true, the adaptive algorithm with limit levels usable in auto-quality by the HTML video element dimensions (width and height). If dimensions between multiple levels are equal, the cap is chosen as the level with the greatest bandwidth.
+  - if set to false, levels will not be limited. All available levels could be used in auto-quality mode taking only bandwidth into consideration.
 
 ## Version Control
 
