@@ -20,7 +20,7 @@ export class FragmentTracker extends EventHandler {
     this.bufferPadding = 0.2;
 
     this.fragments = Object.create(null);
-    this.timeRanges = null;
+    this.timeRanges = Object.create(null);
 
     this.config = hls.config;
   }

@@ -430,7 +430,7 @@ class PlaylistLoader extends EventHandler {
     let details;
     let fatal;
 
-    const loader = context.loader;
+    const loader = this.getInternalLoader(context);
 
     switch(context.type) {
     case ContextType.MANIFEST:
