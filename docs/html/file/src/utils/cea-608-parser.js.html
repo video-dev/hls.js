@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <base data-ice="baseUrl" href="../../../">
+  <title data-ice="title">src/utils/cea-608-parser.js | hls.js</title>
+  <link type="text/css" rel="stylesheet" href="css/style.css">
+  <link type="text/css" rel="stylesheet" href="css/prettify-tomorrow.css">
+  <script src="script/prettify/prettify.js"></script>
+  <script src="script/manual.js"></script>
+<meta name="description" content="JavaScript HLS client using MediaSourceExtension"><meta property="twitter:card" content="summary"><meta property="twitter:title" content="hls.js"><meta property="twitter:description" content="JavaScript HLS client using MediaSourceExtension"></head>
+<body class="layout-container" data-ice="rootContainer">
+
+<header>
+  <a href="./">Home</a>
+  
+  <a href="identifiers.html">Reference</a>
+  <a href="source.html">Source</a>
+  
+  <div class="search-box">
+  <span>
+    <img src="./image/search.png">
+    <span class="search-input-edge"></span><input class="search-input"><span class="search-input-edge"></span>
+  </span>
+    <ul class="search-result"></ul>
+  </div>
+<a style="position:relative; top:3px;" href="https://github.com/video-dev/hls.js"><img width="20px" src="./image/github.png"></a></header>
+
+<nav class="navigation" data-ice="nav"><div>
+  <ul>
+    
+  <li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/event-handler.js~EventHandler.html">EventHandler</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/hls.js~Hls.html">Hls</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/task-loop.js~TaskLoop.html">TaskLoop</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-hlsDefaultConfig">hlsDefaultConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-ErrorTypes">ErrorTypes</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-ErrorDetail">ErrorDetail</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-typedef">T</span><span data-ice="name"><span><a href="typedef/index.html#static-typedef-HlsEvent">HlsEvent</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#controller">controller</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/abr-controller.js~AbrController.html">AbrController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-stream-controller.js~AudioStreamController.html">AudioStreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/audio-track-controller.js~AudioTrackController.html">AudioTrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/buffer-controller.js~BufferController.html">BufferController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/cap-level-controller.js~CapLevelController.html">CapLevelController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/eme-controller.js~EMEController.html">EMEController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/fps-controller.js~FPSController.html">FPSController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/id3-track-controller.js~ID3TrackController.html">ID3TrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/level-controller.js~LevelController.html">LevelController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/stream-controller.js~StreamController.html">StreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-stream-controller.js~SubtitleStreamController.html">SubtitleStreamController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/subtitle-track-controller.js~SubtitleTrackController.html">SubtitleTrackController</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/controller/timeline-controller.js~TimelineController.html">TimelineController</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#crypt">crypt</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-crypto.js~AESCrypto.html">AESCrypto</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/aes-decryptor.js~AESDecryptor.html">AESDecryptor</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/decrypter.js~Decrypter.html">Decrypter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/crypt/fast-aes-key.js~FastAESKey.html">FastAESKey</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-removePadding">removePadding</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#demux">demux</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/aacdemuxer.js~AACDemuxer.html">AACDemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/demuxer-inline.js~DemuxerInline.html">DemuxerInline</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/demuxer.js~Demuxer.html">Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/exp-golomb.js~ExpGolomb.html">ExpGolomb</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/id3.js~ID3.html">ID3</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/mp3demuxer.js~MP3Demuxer.html">MP3Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/mp4demuxer.js~MP4Demuxer.html">MP4Demuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/sample-aes.js~SampleAesDecrypter.html">SampleAesDecrypter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/demux/tsdemuxer.js~TSDemuxer.html">TSDemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-appendFrame">appendFrame</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getAudioConfig">getAudioConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getFrameDuration">getFrameDuration</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getFullFrameLength">getFullFrameLength</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getHeaderLength">getHeaderLength</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-initTrackConfig">initTrackConfig</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isHeader">isHeader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isHeaderPattern">isHeaderPattern</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-parseFrameHeader">parseFrameHeader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-probe">probe</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-DemuxerWorker">DemuxerWorker</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-utf8ArrayToStr">utf8ArrayToStr</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-MpegAudio">MpegAudio</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#helper">helper</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/helper/aac.js~AAC.html">AAC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/helper/fragment-tracker.js~FragmentTracker.html">FragmentTracker</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isSupported">isSupported</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-mergeDetails">mergeDetails</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-updateFragPTSDTS">updateFragPTSDTS</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-updatePTS">updatePTS</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-getMediaSource">getMediaSource</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BufferHelper">BufferHelper</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-FragmentState">FragmentState</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-requestMediaKeySystemAccess">requestMediaKeySystemAccess</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#loader">loader</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/fragment-loader.js~FragmentLoader.html">FragmentLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/fragment.js~Fragment.html">Fragment</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/key-loader.js~KeyLoader.html">KeyLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/level-key.js~LevelKey.html">LevelKey</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/m3u8-parser.js~M3U8Parser.html">M3U8Parser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/loader/playlist-loader.js~PlaylistLoader.html">PlaylistLoader</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#remux">remux</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/dummy-remuxer.js~DummyRemuxer.html">DummyRemuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/mp4-generator.js~MP4.html">MP4</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/mp4-remuxer.js~MP4Remuxer.html">MP4Remuxer</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/remux/passthrough-remuxer.js~PassThroughRemuxer.html">PassThroughRemuxer</a></span></span></li>
+<li data-ice="doc"><a data-ice="dirPath" class="nav-dir-path" href="identifiers.html#utils">utils</a><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/attr-list.js~AttrList.html">AttrList</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/cea-608-parser.js~Cea608Parser.html">Cea608Parser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/ewma-bandwidth-estimator.js~EwmaBandWidthEstimator.html">EwmaBandWidthEstimator</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/ewma.js~EWMA.html">EWMA</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/fetch-loader.js~FetchLoader.html">FetchLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/output-filter.js~OutputFilter.html">OutputFilter</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-class">C</span><span data-ice="name"><span><a href="class/src/utils/xhr-loader.js~XhrLoader.html">XhrLoader</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isCodecSupportedInMp4">isCodecSupportedInMp4</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-isCodecType">isCodecType</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-newCue">newCue</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-adjustPts">adjustPts</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-alignDiscontinuities">alignDiscontinuities</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findDiscontinuousReferenceFrag">findDiscontinuousReferenceFrag</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFirstFragWithCC">findFirstFragWithCC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-findFragWithCC">findFragWithCC</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-shouldAlignOnDiscontinuities">shouldAlignOnDiscontinuities</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-enableLogs">enableLogs</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-VTTParser">VTTParser</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-function">F</span><span data-ice="name"><span><a href="function/index.html#static-function-fixLineBreaks">fixLineBreaks</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-BinarySearch">BinarySearch</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-Hex">Hex</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-logger">logger</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-TimeRanges">TimeRanges</a></span></span></li>
+<li data-ice="doc"><span data-ice="kind" class="kind-variable">V</span><span data-ice="name"><span><a href="variable/index.html#static-variable-WebVTTParser">WebVTTParser</a></span></span></li>
+</ul>
+</div>
+</nav>
+
+<div class="content" data-ice="content"><h1 data-ice="title">src/utils/cea-608-parser.js</h1>
+<pre class="source-code line-number raw-source-code"><code class="prettyprint linenums" data-ice="content">/**
+ *
+ * This code was ported from the dash.js project at:
+ *   https://github.com/Dash-Industry-Forum/dash.js/blob/development/externals/cea608-parser.js
+ *   https://github.com/Dash-Industry-Forum/dash.js/commit/8269b26a761e0853bb21d78780ed945144ecdd4d#diff-71bc295a2d6b6b7093a1d3290d53a4b2
+ *
+ * The original copyright appears below:
+ *
+ * The copyright in this software is being made available under the BSD License,
+ * included below. This software may be subject to other third party and contributor
+ * rights, including patent rights, and no such rights are granted under this license.
+ *
+ * Copyright (c) 2015-2016, DASH Industry Forum.
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
+ *  1. Redistributions of source code must retain the above copyright notice, this
+ *  list of conditions and the following disclaimer.
+ *  * Redistributions in binary form must reproduce the above copyright notice,
+ *  this list of conditions and the following disclaimer in the documentation and/or
+ *  other materials provided with the distribution.
+ *  2. Neither the name of Dash Industry Forum nor the names of its
+ *  contributors may be used to endorse or promote products derived from this software
+ *  without specific prior written permission.
+ *
+ *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS AS IS AND ANY
+ *  EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ *  IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ *  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ *  NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+ *  PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ *  WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ *  ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ *  POSSIBILITY OF SUCH DAMAGE.
+ */
+    /**
+     *  Exceptions from regular ASCII. CodePoints are mapped to UTF-16 codes
+     */
+
+var specialCea608CharsCodes = {
+    0x2a : 0xe1, // lowercase a, acute accent
+    0x5c : 0xe9, // lowercase e, acute accent
+    0x5e : 0xed, // lowercase i, acute accent
+    0x5f : 0xf3, // lowercase o, acute accent
+    0x60 : 0xfa, // lowercase u, acute accent
+    0x7b : 0xe7, // lowercase c with cedilla
+    0x7c : 0xf7, // division symbol
+    0x7d : 0xd1, // uppercase N tilde
+    0x7e : 0xf1, // lowercase n tilde
+    0x7f : 0x2588, // Full block
+    // THIS BLOCK INCLUDES THE 16 EXTENDED (TWO-BYTE) LINE 21 CHARACTERS
+    // THAT COME FROM HI BYTE=0x11 AND LOW BETWEEN 0x30 AND 0x3F
+    // THIS MEANS THAT \x50 MUST BE ADDED TO THE VALUES
+    0x80 : 0xae, // Registered symbol (R)
+    0x81 : 0xb0, // degree sign
+    0x82 : 0xbd, // 1/2 symbol
+    0x83 : 0xbf, // Inverted (open) question mark
+    0x84 : 0x2122, // Trademark symbol (TM)
+    0x85 : 0xa2, // Cents symbol
+    0x86 : 0xa3, // Pounds sterling
+    0x87 : 0x266a, // Music 8&apos;th note
+    0x88 : 0xe0, // lowercase a, grave accent
+    0x89 : 0x20, // transparent space (regular)
+    0x8a : 0xe8, // lowercase e, grave accent
+    0x8b : 0xe2, // lowercase a, circumflex accent
+    0x8c : 0xea, // lowercase e, circumflex accent
+    0x8d : 0xee, // lowercase i, circumflex accent
+    0x8e : 0xf4, // lowercase o, circumflex accent
+    0x8f : 0xfb, // lowercase u, circumflex accent
+    // THIS BLOCK INCLUDES THE 32 EXTENDED (TWO-BYTE) LINE 21 CHARACTERS
+    // THAT COME FROM HI BYTE=0x12 AND LOW BETWEEN 0x20 AND 0x3F
+    0x90 : 0xc1, // capital letter A with acute
+    0x91 : 0xc9, // capital letter E with acute
+    0x92 : 0xd3, // capital letter O with acute
+    0x93 : 0xda, // capital letter U with acute
+    0x94 : 0xdc, // capital letter U with diaresis
+    0x95 : 0xfc, // lowercase letter U with diaeresis
+    0x96 : 0x2018, // opening single quote
+    0x97 : 0xa1, // inverted exclamation mark
+    0x98 : 0x2a, // asterisk
+    0x99 : 0x2019, // closing single quote
+    0x9a : 0x2501, // box drawings heavy horizontal
+    0x9b : 0xa9, // copyright sign
+    0x9c : 0x2120, // Service mark
+    0x9d : 0x2022, // (round) bullet
+    0x9e : 0x201c, // Left double quotation mark
+    0x9f : 0x201d, // Right double quotation mark
+    0xa0 : 0xc0, // uppercase A, grave accent
+    0xa1 : 0xc2, // uppercase A, circumflex
+    0xa2 : 0xc7, // uppercase C with cedilla
+    0xa3 : 0xc8, // uppercase E, grave accent
+    0xa4 : 0xca, // uppercase E, circumflex
+    0xa5 : 0xcb, // capital letter E with diaresis
+    0xa6 : 0xeb, // lowercase letter e with diaresis
+    0xa7 : 0xce, // uppercase I, circumflex
+    0xa8 : 0xcf, // uppercase I, with diaresis
+    0xa9 : 0xef, // lowercase i, with diaresis
+    0xaa : 0xd4, // uppercase O, circumflex
+    0xab : 0xd9, // uppercase U, grave accent
+    0xac : 0xf9, // lowercase u, grave accent
+    0xad : 0xdb, // uppercase U, circumflex
+    0xae : 0xab, // left-pointing double angle quotation mark
+    0xaf : 0xbb, // right-pointing double angle quotation mark
+    // THIS BLOCK INCLUDES THE 32 EXTENDED (TWO-BYTE) LINE 21 CHARACTERS
+    // THAT COME FROM HI BYTE=0x13 AND LOW BETWEEN 0x20 AND 0x3F
+    0xb0 : 0xc3, // Uppercase A, tilde
+    0xb1 : 0xe3, // Lowercase a, tilde
+    0xb2 : 0xcd, // Uppercase I, acute accent
+    0xb3 : 0xcc, // Uppercase I, grave accent
+    0xb4 : 0xec, // Lowercase i, grave accent
+    0xb5 : 0xd2, // Uppercase O, grave accent
+    0xb6 : 0xf2, // Lowercase o, grave accent
+    0xb7 : 0xd5, // Uppercase O, tilde
+    0xb8 : 0xf5, // Lowercase o, tilde
+    0xb9 : 0x7b, // Open curly brace
+    0xba : 0x7d, // Closing curly brace
+    0xbb : 0x5c, // Backslash
+    0xbc : 0x5e, // Caret
+    0xbd : 0x5f, // Underscore
+    0xbe : 0x7c, // Pipe (vertical line)
+    0xbf : 0x223c, // Tilde operator
+    0xc0 : 0xc4, // Uppercase A, umlaut
+    0xc1 : 0xe4, // Lowercase A, umlaut
+    0xc2 : 0xd6, // Uppercase O, umlaut
+    0xc3 : 0xf6, // Lowercase o, umlaut
+    0xc4 : 0xdf, // Esszett (sharp S)
+    0xc5 : 0xa5, // Yen symbol
+    0xc6 : 0xa4, // Generic currency sign
+    0xc7 : 0x2503, // Box drawings heavy vertical
+    0xc8 : 0xc5, // Uppercase A, ring
+    0xc9 : 0xe5, // Lowercase A, ring
+    0xca : 0xd8, // Uppercase O, stroke
+    0xcb : 0xf8, // Lowercase o, strok
+    0xcc : 0x250f, // Box drawings heavy down and right
+    0xcd : 0x2513, // Box drawings heavy down and left
+    0xce : 0x2517, // Box drawings heavy up and right
+    0xcf : 0x251b // Box drawings heavy up and left
+};
+
+/**
+ * Utils
+ */
+var getCharForByte = function(byte) {
+    var charCode = byte;
+    if (specialCea608CharsCodes.hasOwnProperty(byte)) {
+        charCode = specialCea608CharsCodes[byte];
+    }
+    return String.fromCharCode(charCode);
+};
+
+var NR_ROWS = 15,
+    NR_COLS = 100;
+// Tables to look up row from PAC data
+var rowsLowCh1 = {0x11 : 1, 0x12 : 3, 0x15 : 5, 0x16 : 7, 0x17 : 9, 0x10 : 11, 0x13 : 12, 0x14 : 14};
+var rowsHighCh1 = {0x11 : 2, 0x12 : 4, 0x15 : 6, 0x16 : 8, 0x17 : 10, 0x13 : 13, 0x14 : 15};
+var rowsLowCh2 = {0x19 : 1, 0x1A : 3, 0x1D : 5, 0x1E : 7, 0x1F : 9, 0x18 : 11, 0x1B : 12, 0x1C : 14};
+var rowsHighCh2 = {0x19 : 2, 0x1A : 4, 0x1D : 6, 0x1E : 8, 0x1F : 10, 0x1B : 13, 0x1C : 15};
+
+var backgroundColors = [&apos;white&apos;, &apos;green&apos;, &apos;blue&apos;, &apos;cyan&apos;, &apos;red&apos;, &apos;yellow&apos;, &apos;magenta&apos;, &apos;black&apos;, &apos;transparent&apos;];
+
+/**
+ * Simple logger class to be able to write with time-stamps and filter on level.
+ */
+var logger = {
+    verboseFilter : {&apos;DATA&apos; : 3, &apos;DEBUG&apos; : 3, &apos;INFO&apos; : 2, &apos;WARNING&apos; : 2, &apos;TEXT&apos; : 1, &apos;ERROR&apos; : 0},
+    time : null,
+    verboseLevel : 0, // Only write errors
+    setTime : function(newTime) {
+        this.time = newTime;
+    },
+    log : function(severity, msg) {
+        var minLevel = this.verboseFilter[severity];
+        if (this.verboseLevel &gt;= minLevel) {
+            console.log(this.time + &apos; [&apos; + severity + &apos;] &apos; + msg);
+        }
+    }
+};
+
+var numArrayToHexArray = function(numArray) {
+    var hexArray = [];
+    for (var j = 0; j &lt; numArray.length; j++) {
+        hexArray.push(numArray[j].toString(16));
+    }
+    return hexArray;
+};
+
+class PenState {
+
+    constructor(foreground, underline, italics, background, flash) {
+        this.foreground = foreground || &apos;white&apos;;
+        this.underline = underline || false;
+        this.italics = italics || false;
+        this.background = background || &apos;black&apos;;
+        this.flash = flash || false;
+    }
+
+    reset() {
+        this.foreground = &apos;white&apos;;
+        this.underline = false;
+        this.italics = false;
+        this.background = &apos;black&apos;;
+        this.flash = false;
+    }
+
+    setStyles(styles) {
+        var attribs = [&apos;foreground&apos;, &apos;underline&apos;, &apos;italics&apos;, &apos;background&apos;, &apos;flash&apos;];
+        for (var i = 0 ; i &lt; attribs.length; i++) {
+            var style = attribs[i];
+            if (styles.hasOwnProperty(style)) {
+                this[style] = styles[style];
+            }
+        }
+    }
+
+    isDefault() {
+        return (this.foreground === &apos;white&apos; &amp;&amp; !this.underline &amp;&amp; !this.italics &amp;&amp;
+                this.background === &apos;black&apos; &amp;&amp; !this.flash);
+    }
+
+    equals(other) {
+        return ( (this.foreground === other.foreground) &amp;&amp;
+                 (this.underline === other.underline) &amp;&amp;
+                 (this.italics === other.italics) &amp;&amp;
+                 (this.background === other.background) &amp;&amp;
+                 (this.flash === other.flash) );
+    }
+
+    copy(newPenState) {
+        this.foreground = newPenState.foreground;
+        this.underline = newPenState.underline;
+        this.italics = newPenState.italics;
+        this.background = newPenState.background;
+        this.flash = newPenState.flash;
+    }
+
+    toString() {
+        return (&apos;color=&apos; + this.foreground + &apos;, underline=&apos; + this.underline + &apos;, italics=&apos; + this.italics +
+            &apos;, background=&apos; + this.background + &apos;, flash=&apos; + this.flash);
+    }
+}
+
+/**
+ * Unicode character with styling and background.
+ * @constructor
+ */
+class StyledUnicodeChar
+{
+
+    constructor(uchar, foreground, underline, italics, background, flash) {
+        this.uchar = uchar || &apos; &apos;; // unicode character
+        this.penState = new PenState(foreground, underline,italics, background, flash);
+    }
+
+    reset() {
+        this.uchar = &apos; &apos;;
+        this.penState.reset();
+    }
+
+    setChar(uchar, newPenState) {
+        this.uchar = uchar;
+        this.penState.copy(newPenState);
+    }
+
+    setPenState(newPenState) {
+        this.penState.copy(newPenState);
+    }
+
+    equals(other) {
+        return this.uchar === other.uchar &amp;&amp; this.penState.equals(other.penState);
+    }
+
+    copy(newChar) {
+        this.uchar = newChar.uchar;
+        this.penState.copy(newChar.penState);
+    }
+
+    isEmpty() {
+        return this.uchar === &apos; &apos; &amp;&amp; this.penState.isDefault();
+    }
+}
+
+/**
+ * CEA-608 row consisting of NR_COLS instances of StyledUnicodeChar.
+ * @constructor
+ */
+class Row {
+    constructor() {
+        this.chars = [];
+        for (var i = 0 ; i &lt; NR_COLS ; i++) {
+            this.chars.push(new StyledUnicodeChar());
+        }
+        this.pos = 0;
+        this.currPenState = new PenState();
+    }
+
+    equals(other) {
+        var equal = true;
+        for (var i = 0 ; i &lt; NR_COLS; i ++) {
+            if (!this.chars[i].equals(other.chars[i])) {
+                equal = false;
+                break;
+            }
+        }
+        return equal;
+    }
+
+    copy(other) {
+        for (var i = 0 ; i &lt; NR_COLS; i ++) {
+            this.chars[i].copy(other.chars[i]);
+        }
+    }
+
+    isEmpty() {
+        var empty = true;
+        for (var i = 0 ; i &lt; NR_COLS; i ++) {
+            if (!this.chars[i].isEmpty()) {
+                empty = false;
+                break;
+            }
+        }
+        return empty;
+    }
+
+    /**
+     *  Set the cursor to a valid column.
+     */
+    setCursor(absPos) {
+        if (this.pos !== absPos) {
+            this.pos = absPos;
+        }
+        if (this.pos &lt; 0) {
+            logger.log(&apos;ERROR&apos;, &apos;Negative cursor position &apos; + this.pos);
+            this.pos = 0;
+        } else if (this.pos &gt; NR_COLS) {
+            logger.log(&apos;ERROR&apos;, &apos;Too large cursor position &apos; + this.pos);
+            this.pos = NR_COLS;
+        }
+    }
+
+    /**
+     * Move the cursor relative to current position.
+     */
+    moveCursor(relPos) {
+        var newPos = this.pos + relPos;
+        if (relPos &gt; 1) {
+            for (var i = this.pos+1; i &lt; newPos+1 ; i++) {
+                this.chars[i].setPenState(this.currPenState);
+            }
+        }
+        this.setCursor(newPos);
+    }
+
+    /**
+     * Backspace, move one step back and clear character.
+     */
+    backSpace() {
+        this.moveCursor(-1);
+        this.chars[this.pos].setChar(&apos; &apos;, this.currPenState);
+    }
+
+    insertChar(byte) {
+        if (byte &gt;= 0x90) { //Extended char
+            this.backSpace();
+        }
+        var char = getCharForByte(byte);
+        if (this.pos &gt;= NR_COLS) {
+            logger.log(&apos;ERROR&apos;, &apos;Cannot insert &apos; + byte.toString(16) +
+                        &apos; (&apos; + char + &apos;) at position &apos; + this.pos + &apos;. Skipping it!&apos;);
+            return;
+        }
+        this.chars[this.pos].setChar(char, this.currPenState);
+        this.moveCursor(1);
+    }
+
+    clearFromPos(startPos) {
+        var i;
+        for (i = startPos ; i &lt; NR_COLS ; i++) {
+            this.chars[i].reset();
+        }
+    }
+
+    clear() {
+        this.clearFromPos(0);
+        this.pos = 0;
+        this.currPenState.reset();
+    }
+
+    clearToEndOfRow() {
+        this.clearFromPos(this.pos);
+    }
+
+    getTextString() {
+        var chars = [];
+        var empty = true;
+        for (var i = 0 ; i &lt; NR_COLS ; i++) {
+            var char = this.chars[i].uchar;
+            if (char !== &apos; &apos;) {
+                empty = false;
+            }
+            chars.push(char);
+        }
+        if (empty) {
+            return &apos;&apos;;
+        } else {
+            return chars.join(&apos;&apos;);
+        }
+    }
+
+    setPenStyles(styles) {
+        this.currPenState.setStyles(styles);
+        var currChar = this.chars[this.pos];
+        currChar.setPenState(this.currPenState);
+    }
+}
+
+/**
+ * Keep a CEA-608 screen of 32x15 styled characters
+ * @constructor
+*/
+class CaptionScreen {
+
+    constructor() {
+        this.rows = [];
+        for (var i = 0 ; i &lt;  NR_ROWS; i++) {
+            this.rows.push(new Row()); // Note that we use zero-based numbering (0-14)
+        }
+        this.currRow = NR_ROWS - 1;
+        this.nrRollUpRows = null;
+        this.reset();
+    }
+
+    reset() {
+        for (var i = 0 ; i &lt; NR_ROWS ; i++) {
+            this.rows[i].clear();
+        }
+        this.currRow = NR_ROWS - 1;
+    }
+
+    equals(other) {
+        var equal = true;
+        for (var i = 0 ; i &lt; NR_ROWS ; i++) {
+            if (!this.rows[i].equals(other.rows[i])) {
+                equal = false;
+                break;
+            }
+        }
+        return equal;
+    }
+
+    copy(other) {
+        for (var i = 0 ; i &lt; NR_ROWS ; i++) {
+            this.rows[i].copy(other.rows[i]);
+        }
+    }
+
+    isEmpty() {
+        var empty = true;
+        for (var i = 0 ; i &lt; NR_ROWS ; i++) {
+            if (!this.rows[i].isEmpty()) {
+                empty = false;
+                break;
+            }
+        }
+        return empty;
+    }
+
+    backSpace() {
+        var row = this.rows[this.currRow];
+        row.backSpace();
+    }
+
+    clearToEndOfRow() {
+        var row = this.rows[this.currRow];
+        row.clearToEndOfRow();
+    }
+
+    /**
+     * Insert a character (without styling) in the current row.
+     */
+    insertChar(char) {
+        var row = this.rows[this.currRow];
+        row.insertChar(char);
+    }
+
+    setPen(styles) {
+        var row = this.rows[this.currRow];
+        row.setPenStyles(styles);
+    }
+
+    moveCursor(relPos) {
+        var row = this.rows[this.currRow];
+        row.moveCursor(relPos);
+    }
+
+    setCursor(absPos) {
+        logger.log(&apos;INFO&apos;, &apos;setCursor: &apos; + absPos);
+        var row = this.rows[this.currRow];
+        row.setCursor(absPos);
+    }
+
+    setPAC(pacData) {
+        logger.log(&apos;INFO&apos;, &apos;pacData = &apos; + JSON.stringify(pacData));
+        var newRow = pacData.row - 1;
+        if (this.nrRollUpRows  &amp;&amp; newRow &lt; this.nrRollUpRows - 1) {
+                newRow = this.nrRollUpRows-1;
+        }
+
+        //Make sure this only affects Roll-up Captions by checking this.nrRollUpRows
+        if (this.nrRollUpRows &amp;&amp; this.currRow !== newRow) {
+          //clear all rows first
+          for (let i = 0; i &lt; NR_ROWS; i++) {
+            this.rows[i].clear();
+          }
+
+          //Copy this.nrRollUpRows rows from lastOutputScreen and place it in the newRow location
+          //topRowIndex - the start of rows to copy (inclusive index)
+          var topRowIndex = this.currRow + 1 - (this.nrRollUpRows);
+          //We only copy if the last position was already shown.
+          //We use the cueStartTime value to check this.
+          const lastOutputScreen = this.lastOutputScreen;
+          if (lastOutputScreen) {
+            var prevLineTime = lastOutputScreen.rows[topRowIndex].cueStartTime;
+            if(prevLineTime &amp;&amp; prevLineTime &lt; logger.time) {
+              for (let i = 0; i &lt; this.nrRollUpRows; i++) {
+                this.rows[newRow-this.nrRollUpRows+i+1].copy(lastOutputScreen.rows[topRowIndex+i]);
+              }
+            }
+          }
+        }
+
+        this.currRow = newRow;
+        var row = this.rows[this.currRow];
+        if (pacData.indent !== null) {
+            var indent = pacData.indent;
+            var prevPos = Math.max(indent-1, 0);
+            row.setCursor(pacData.indent);
+            pacData.color = row.chars[prevPos].penState.foreground;
+        }
+        var styles = {foreground : pacData.color, underline : pacData.underline, italics : pacData.italics, background : &apos;black&apos;, flash : false};
+        this.setPen(styles);
+    }
+
+    /**
+     * Set background/extra foreground, but first do back_space, and then insert space (backwards compatibility).
+     */
+    setBkgData(bkgData) {
+
+        logger.log(&apos;INFO&apos;, &apos;bkgData = &apos; + JSON.stringify(bkgData));
+        this.backSpace();
+        this.setPen(bkgData);
+        this.insertChar(0x20); //Space
+    }
+
+    setRollUpRows(nrRows) {
+        this.nrRollUpRows = nrRows;
+    }
+
+    rollUp() {
+        if (this.nrRollUpRows === null) {
+            logger.log(&apos;DEBUG&apos;, &apos;roll_up but nrRollUpRows not set yet&apos;);
+            return; //Not properly setup
+        }
+        logger.log(&apos;TEXT&apos;, this.getDisplayText());
+        var topRowIndex = this.currRow + 1 - this.nrRollUpRows;
+        var topRow = this.rows.splice(topRowIndex, 1)[0];
+        topRow.clear();
+        this.rows.splice(this.currRow, 0, topRow);
+        logger.log(&apos;INFO&apos;, &apos;Rolling up&apos;);
+        //logger.log(&apos;TEXT&apos;, this.get_display_text())
+    }
+
+   /**
+    * Get all non-empty rows with as unicode text.
+    */
+    getDisplayText(asOneRow) {
+        asOneRow = asOneRow || false;
+        var displayText = [];
+        var text = &apos;&apos;;
+        var rowNr = -1;
+        for (var i = 0 ; i &lt; NR_ROWS ; i++) {
+            var rowText = this.rows[i].getTextString();
+            if (rowText) {
+                rowNr = i+1;
+                if (asOneRow) {
+                    displayText.push(&apos;Row &apos; + rowNr + &apos;: \&apos;&apos; + rowText + &apos;\&apos;&apos;);
+                } else {
+                    displayText.push(rowText.trim());
+                }
+            }
+        }
+        if (displayText.length &gt; 0) {
+            if (asOneRow) {
+                text = &apos;[&apos; + displayText.join(&apos; | &apos;) + &apos;]&apos;;
+            } else {
+                text = displayText.join(&apos;\n&apos;);
+            }
+        }
+        return text;
+    }
+
+    getTextAndFormat() {
+        return this.rows;
+    }
+}
+
+//var modes = [&apos;MODE_ROLL-UP&apos;, &apos;MODE_POP-ON&apos;, &apos;MODE_PAINT-ON&apos;, &apos;MODE_TEXT&apos;];
+
+class Cea608Channel
+{
+    constructor(channelNumber, outputFilter) {
+
+        this.chNr = channelNumber;
+        this.outputFilter = outputFilter;
+        this.mode = null;
+        this.verbose = 0;
+        this.displayedMemory = new CaptionScreen();
+        this.nonDisplayedMemory = new CaptionScreen();
+        this.lastOutputScreen = new CaptionScreen();
+        this.currRollUpRow = this.displayedMemory.rows[NR_ROWS-1];
+        this.writeScreen = this.displayedMemory;
+        this.mode = null;
+        this.cueStartTime = null; // Keeps track of where a cue started.
+    }
+
+    reset() {
+        this.mode = null;
+        this.displayedMemory.reset();
+        this.nonDisplayedMemory.reset();
+        this.lastOutputScreen.reset();
+        this.currRollUpRow = this.displayedMemory.rows[NR_ROWS-1];
+        this.writeScreen = this.displayedMemory;
+        this.mode = null;
+        this.cueStartTime = null;
+        this.lastCueEndTime = null;
+    }
+
+    getHandler() {
+        return this.outputFilter;
+    }
+
+    setHandler(newHandler) {
+        this.outputFilter = newHandler;
+    }
+
+    setPAC(pacData) {
+        this.writeScreen.setPAC(pacData);
+    }
+
+    setBkgData(bkgData) {
+        this.writeScreen.setBkgData(bkgData);
+    }
+
+    setMode(newMode) {
+        if (newMode === this.mode) {
+            return;
+        }
+        this.mode = newMode;
+        logger.log(&apos;INFO&apos;, &apos;MODE=&apos; + newMode);
+        if (this.mode === &apos;MODE_POP-ON&apos;) {
+            this.writeScreen = this.nonDisplayedMemory;
+        } else {
+            this.writeScreen = this.displayedMemory;
+            this.writeScreen.reset();
+        }
+        if (this.mode !== &apos;MODE_ROLL-UP&apos;) {
+            this.displayedMemory.nrRollUpRows = null;
+            this.nonDisplayedMemory.nrRollUpRows = null;
+        }
+        this.mode = newMode;
+    }
+
+    insertChars(chars) {
+        for (var i = 0 ; i &lt; chars.length ; i++) {
+            this.writeScreen.insertChar(chars[i]);
+        }
+        var screen = this.writeScreen === this.displayedMemory ? &apos;DISP&apos; : &apos;NON_DISP&apos;;
+        logger.log(&apos;INFO&apos;, screen + &apos;: &apos; + this.writeScreen.getDisplayText(true));
+        if (this.mode === &apos;MODE_PAINT-ON&apos; || this.mode === &apos;MODE_ROLL-UP&apos;) {
+            logger.log(&apos;TEXT&apos;, &apos;DISPLAYED: &apos; + this.displayedMemory.getDisplayText(true));
+            this.outputDataUpdate();
+        }
+    }
+
+    ccRCL() { // Resume Caption Loading (switch mode to Pop On)
+        logger.log(&apos;INFO&apos;, &apos;RCL - Resume Caption Loading&apos;);
+        this.setMode(&apos;MODE_POP-ON&apos;);
+    }
+
+    ccBS() { // BackSpace
+        logger.log(&apos;INFO&apos;, &apos;BS - BackSpace&apos;);
+        if (this.mode === &apos;MODE_TEXT&apos;) {
+            return;
+        }
+        this.writeScreen.backSpace();
+        if (this.writeScreen === this.displayedMemory) {
+            this.outputDataUpdate();
+        }
+    }
+
+    ccAOF() { // Reserved (formerly Alarm Off)
+        return;
+    }
+
+    ccAON() { // Reserved (formerly Alarm On)
+        return;
+    }
+
+    ccDER() { // Delete to End of Row
+        logger.log(&apos;INFO&apos;, &apos;DER- Delete to End of Row&apos;);
+        this.writeScreen.clearToEndOfRow();
+        this.outputDataUpdate();
+    }
+
+    ccRU(nrRows) { //Roll-Up Captions-2,3,or 4 Rows
+        logger.log(&apos;INFO&apos;, &apos;RU(&apos; + nrRows +&apos;) - Roll Up&apos;);
+        this.writeScreen = this.displayedMemory;
+        this.setMode(&apos;MODE_ROLL-UP&apos;);
+        this.writeScreen.setRollUpRows(nrRows);
+    }
+
+    ccFON() { //Flash On
+        logger.log(&apos;INFO&apos;, &apos;FON - Flash On&apos;);
+        this.writeScreen.setPen({flash : true});
+    }
+
+    ccRDC() { // Resume Direct Captioning (switch mode to PaintOn)
+        logger.log(&apos;INFO&apos;, &apos;RDC - Resume Direct Captioning&apos;);
+        this.setMode(&apos;MODE_PAINT-ON&apos;);
+    }
+
+    ccTR() { // Text Restart in text mode (not supported, however)
+        logger.log(&apos;INFO&apos;, &apos;TR&apos;);
+        this.setMode(&apos;MODE_TEXT&apos;);
+    }
+
+    ccRTD() { // Resume Text Display in Text mode (not supported, however)
+        logger.log(&apos;INFO&apos;, &apos;RTD&apos;);
+        this.setMode(&apos;MODE_TEXT&apos;);
+    }
+
+    ccEDM() { // Erase Displayed Memory
+        logger.log(&apos;INFO&apos;, &apos;EDM - Erase Displayed Memory&apos;);
+        this.displayedMemory.reset();
+        this.outputDataUpdate(true);
+    }
+
+    ccCR() { // Carriage Return
+        logger.log(&apos;CR - Carriage Return&apos;);
+        this.writeScreen.rollUp();
+        this.outputDataUpdate(true);
+    }
+
+    ccENM() { //Erase Non-Displayed Memory
+        logger.log(&apos;INFO&apos;, &apos;ENM - Erase Non-displayed Memory&apos;);
+        this.nonDisplayedMemory.reset();
+    }
+
+    ccEOC() { //End of Caption (Flip Memories)
+        logger.log(&apos;INFO&apos;, &apos;EOC - End Of Caption&apos;);
+        if (this.mode === &apos;MODE_POP-ON&apos;) {
+            var tmp = this.displayedMemory;
+            this.displayedMemory = this.nonDisplayedMemory;
+            this.nonDisplayedMemory = tmp;
+            this.writeScreen = this.nonDisplayedMemory;
+            logger.log(&apos;TEXT&apos;, &apos;DISP: &apos; + this.displayedMemory.getDisplayText());
+        }
+        this.outputDataUpdate(true);
+    }
+
+    ccTO(nrCols) { // Tab Offset 1,2, or 3 columns
+        logger.log(&apos;INFO&apos;, &apos;TO(&apos; + nrCols + &apos;) - Tab Offset&apos;);
+        this.writeScreen.moveCursor(nrCols);
+    }
+
+    ccMIDROW(secondByte) { // Parse MIDROW command
+        var styles = {flash : false};
+        styles.underline = secondByte % 2 === 1;
+        styles.italics = secondByte &gt;= 0x2e;
+        if (!styles.italics) {
+            var colorIndex = Math.floor(secondByte/2) - 0x10;
+            var colors = [&apos;white&apos;, &apos;green&apos;, &apos;blue&apos;, &apos;cyan&apos;, &apos;red&apos;, &apos;yellow&apos;, &apos;magenta&apos;];
+            styles.foreground = colors[colorIndex];
+        } else {
+            styles.foreground = &apos;white&apos;;
+        }
+        logger.log(&apos;INFO&apos;, &apos;MIDROW: &apos; + JSON.stringify(styles));
+        this.writeScreen.setPen(styles);
+    }
+
+    outputDataUpdate(dispatch = false) {
+        let t = logger.time;
+        if (t === null) {
+            return;
+        }
+        if (this.outputFilter) {
+            if (this.cueStartTime === null &amp;&amp; !this.displayedMemory.isEmpty()) { // Start of a new cue
+                this.cueStartTime = t;
+            } else {
+                if (!this.displayedMemory.equals(this.lastOutputScreen)) {
+                    if (this.outputFilter.newCue) {
+                        this.outputFilter.newCue(this.cueStartTime, t, this.lastOutputScreen);
+                        if (dispatch === true &amp;&amp; this.outputFilter.dispatchCue) {
+                            this.outputFilter.dispatchCue();
+                        }
+                    }
+                    this.cueStartTime = this.displayedMemory.isEmpty() ? null : t;
+                }
+            }
+            this.lastOutputScreen.copy(this.displayedMemory);
+        }
+    }
+
+    cueSplitAtTime(t) {
+        if (this.outputFilter) {
+            if (!this.displayedMemory.isEmpty()) {
+                if (this.outputFilter.newCue) {
+                    this.outputFilter.newCue(this.cueStartTime, t, this.displayedMemory);
+                }
+                this.cueStartTime = t;
+            }
+        }
+    }
+}
+
+class Cea608Parser {
+
+    constructor(field, out1, out2) {
+        this.field = field || 1;
+        this.outputs = [out1, out2];
+        this.channels = [new Cea608Channel(1, out1), new Cea608Channel(2, out2)];
+        this.currChNr = -1; // Will be 1 or 2
+        this.lastCmdA = null; // First byte of last command
+        this.lastCmdB = null; // Second byte of last command
+        this.bufferedData = [];
+        this.startTime = null;
+        this.lastTime = null;
+        this.dataCounters = {&apos;padding&apos; : 0, &apos;char&apos; : 0, &apos;cmd&apos; : 0, &apos;other&apos; : 0};
+    }
+
+    getHandler(index) {
+        return this.channels[index].getHandler();
+    }
+
+    setHandler(index, newHandler) {
+        this.channels[index].setHandler(newHandler);
+    }
+
+    /**
+     * Add data for time t in forms of list of bytes (unsigned ints). The bytes are treated as pairs.
+     */
+    addData(t, byteList) {
+        var cmdFound, a, b,
+        charsFound = false;
+
+        this.lastTime = t;
+        logger.setTime(t);
+
+        for (var i = 0 ; i &lt; byteList.length ; i+=2) {
+            a = byteList[i] &amp; 0x7f;
+            b = byteList[i+1] &amp; 0x7f;
+            if (a === 0 &amp;&amp; b === 0) {
+                this.dataCounters.padding += 2;
+                continue;
+            } else {
+                logger.log(&apos;DATA&apos;, &apos;[&apos; + numArrayToHexArray([byteList[i], byteList[i+1]]) +&apos;] -&gt; (&apos; + numArrayToHexArray([a, b]) + &apos;)&apos;);
+            }
+            cmdFound = this.parseCmd(a, b);
+            if (!cmdFound) {
+                cmdFound = this.parseMidrow(a, b);
+            }
+            if (!cmdFound) {
+                cmdFound = this.parsePAC(a, b);
+            }
+            if (!cmdFound) {
+                cmdFound = this.parseBackgroundAttributes(a, b);
+            }
+            if (!cmdFound) {
+                charsFound = this.parseChars(a, b);
+                if (charsFound) {
+                    if (this.currChNr &amp;&amp; this.currChNr &gt;=0) {
+                        var channel = this.channels[this.currChNr-1];
+                        channel.insertChars(charsFound);
+                    } else {
+                        logger.log(&apos;WARNING&apos;, &apos;No channel found yet. TEXT-MODE?&apos;);
+                    }
+                }
+            }
+            if (cmdFound) {
+                this.dataCounters.cmd += 2;
+            } else if (charsFound) {
+                this.dataCounters.char += 2;
+            } else {
+                this.dataCounters.other += 2;
+                logger.log(&apos;WARNING&apos;, &apos;Couldn\&apos;t parse cleaned data &apos; + numArrayToHexArray([a, b]) +
+                            &apos; orig: &apos; + numArrayToHexArray([byteList[i], byteList[i+1]]));
+            }
+        }
+    }
+
+    /**
+     * Parse Command.
+     * @returns {Boolean} Tells if a command was found
+     */
+    parseCmd(a, b) {
+        var chNr = null;
+
+        var cond1 = (a === 0x14 || a === 0x1C) &amp;&amp; (0x20 &lt;= b &amp;&amp; b &lt;= 0x2F);
+        var cond2 = (a === 0x17 || a === 0x1F) &amp;&amp; (0x21 &lt;= b &amp;&amp; b &lt;= 0x23);
+        if (!(cond1 || cond2)) {
+            return false;
+        }
+
+        if (a === this.lastCmdA &amp;&amp; b === this.lastCmdB) {
+            this.lastCmdA = null;
+            this.lastCmdB = null; // Repeated commands are dropped (once)
+            logger.log(&apos;DEBUG&apos;, &apos;Repeated command (&apos; + numArrayToHexArray([a, b]) + &apos;) is dropped&apos;);
+            return true;
+        }
+
+        if (a === 0x14 || a === 0x17) {
+            chNr = 1;
+        } else {
+            chNr = 2; // (a === 0x1C || a=== 0x1f)
+        }
+
+        var channel = this.channels[chNr - 1];
+
+        if (a === 0x14 || a === 0x1C) {
+            if (b === 0x20) {
+                channel.ccRCL();
+            } else if (b === 0x21) {
+                channel.ccBS();
+            } else if (b === 0x22) {
+                channel.ccAOF();
+            } else if (b === 0x23) {
+                channel.ccAON();
+            } else if (b === 0x24) {
+                channel.ccDER();
+            } else if (b === 0x25) {
+                channel.ccRU(2);
+            } else if (b === 0x26) {
+                channel.ccRU(3);
+            } else if (b === 0x27) {
+                channel.ccRU(4);
+            } else if (b === 0x28) {
+                channel.ccFON();
+            } else if (b === 0x29) {
+                channel.ccRDC();
+            } else if (b === 0x2A) {
+                channel.ccTR();
+            } else if (b === 0x2B) {
+                channel.ccRTD();
+            } else if (b === 0x2C) {
+                channel.ccEDM();
+            } else if (b === 0x2D) {
+                channel.ccCR();
+            } else if (b === 0x2E) {
+                channel.ccENM();
+            } else if (b === 0x2F) {
+                channel.ccEOC();
+            }
+        } else { //a == 0x17 || a == 0x1F
+            channel.ccTO(b - 0x20);
+        }
+        this.lastCmdA = a;
+        this.lastCmdB = b;
+        this.currChNr = chNr;
+        return true;
+    }
+
+    /**
+     * Parse midrow styling command
+     * @returns {Boolean}
+     */
+    parseMidrow(a, b) {
+        var chNr = null;
+
+        if ( ((a === 0x11) || (a === 0x19)) &amp;&amp; 0x20 &lt;= b &amp;&amp; b &lt;= 0x2f) {
+            if (a === 0x11) {
+                chNr = 1;
+            } else  {
+                chNr = 2;
+            }
+            if (chNr !== this.currChNr) {
+                logger.log(&apos;ERROR&apos;, &apos;Mismatch channel in midrow parsing&apos;);
+                return false;
+            }
+            var channel = this.channels[chNr-1];
+            channel.ccMIDROW(b);
+            logger.log(&apos;DEBUG&apos;, &apos;MIDROW (&apos; + numArrayToHexArray([a, b]) + &apos;)&apos;);
+            return true;
+        }
+        return false;
+    }
+    /**
+     * Parse Preable Access Codes (Table 53).
+     * @returns {Boolean} Tells if PAC found
+     */
+    parsePAC(a, b) {
+
+       var chNr = null;
+       var row = null;
+
+        var case1 = ((0x11 &lt;= a  &amp;&amp; a &lt;= 0x17) || (0x19 &lt;= a &amp;&amp; a &lt;= 0x1F)) &amp;&amp; (0x40 &lt;= b &amp;&amp; b &lt;= 0x7F);
+        var case2 = (a === 0x10 || a === 0x18) &amp;&amp; (0x40 &lt;= b &amp;&amp; b &lt;= 0x5F);
+        if (! (case1 || case2)) {
+            return false;
+        }
+
+        if (a === this.lastCmdA &amp;&amp; b === this.lastCmdB) {
+            this.lastCmdA = null;
+            this.lastCmdB = null;
+            return true; // Repeated commands are dropped (once)
+        }
+
+        chNr = (a &lt;= 0x17) ? 1 : 2;
+
+        if (0x40 &lt;= b &amp;&amp; b &lt;= 0x5F) {
+            row = (chNr === 1) ? rowsLowCh1[a] : rowsLowCh2[a];
+        } else { // 0x60 &lt;= b &lt;= 0x7F
+            row = (chNr === 1) ? rowsHighCh1[a] : rowsHighCh2[a];
+        }
+        var pacData = this.interpretPAC(row, b);
+        var channel = this.channels[chNr-1];
+        channel.setPAC(pacData);
+        this.lastCmdA = a;
+        this.lastCmdB = b;
+        this.currChNr = chNr;
+        return true;
+    }
+
+    /**
+     * Interpret the second byte of the pac, and return the information.
+     * @returns {Object} pacData with style parameters.
+     */
+    interpretPAC(row, byte) {
+        var pacIndex = byte;
+        var pacData = {color : null, italics : false, indent : null, underline : false, row : row};
+
+        if (byte &gt; 0x5F) {
+            pacIndex = byte - 0x60;
+        } else {
+            pacIndex = byte - 0x40;
+        }
+        pacData.underline = (pacIndex &amp; 1) === 1;
+        if (pacIndex &lt;= 0xd) {
+            pacData.color = [&apos;white&apos;, &apos;green&apos;, &apos;blue&apos;, &apos;cyan&apos;, &apos;red&apos;, &apos;yellow&apos;, &apos;magenta&apos;, &apos;white&apos;][Math.floor(pacIndex/2)];
+        } else if (pacIndex &lt;= 0xf) {
+            pacData.italics = true;
+            pacData.color = &apos;white&apos;;
+        } else {
+            pacData.indent = (Math.floor((pacIndex-0x10)/2))*4;
+        }
+        return pacData; // Note that row has zero offset. The spec uses 1.
+    }
+
+    /**
+     * Parse characters.
+     * @returns An array with 1 to 2 codes corresponding to chars, if found. null otherwise.
+     */
+    parseChars(a, b) {
+
+       var  channelNr = null,
+            charCodes = null,
+            charCode1 = null;
+
+        if (a &gt;= 0x19) {
+            channelNr = 2;
+            charCode1 = a - 8;
+        } else {
+            channelNr = 1;
+            charCode1 = a;
+        }
+        if (0x11 &lt;= charCode1 &amp;&amp; charCode1 &lt;= 0x13) {
+            // Special character
+            var oneCode = b;
+            if (charCode1 === 0x11) {
+                oneCode = b + 0x50;
+            } else if (charCode1 === 0x12) {
+                oneCode = b + 0x70;
+            } else {
+                oneCode = b + 0x90;
+            }
+            logger.log(&apos;INFO&apos;, &apos;Special char \&apos;&apos; + getCharForByte(oneCode) + &apos;\&apos; in channel &apos; + channelNr);
+            charCodes = [oneCode];
+        } else if (0x20 &lt;= a &amp;&amp; a &lt;= 0x7f) {
+            charCodes = (b === 0) ? [a] : [a, b];
+        }
+        if (charCodes) {
+            var hexCodes = numArrayToHexArray(charCodes);
+            logger.log(&apos;DEBUG&apos;, &apos;Char codes =  &apos; + hexCodes.join(&apos;,&apos;));
+            this.lastCmdA = null;
+            this.lastCmdB = null;
+        }
+        return charCodes;
+    }
+
+    /**
+    * Parse extended background attributes as well as new foreground color black.
+    * @returns{Boolean} Tells if background attributes are found
+    */
+    parseBackgroundAttributes(a, b) {
+       var  bkgData,
+            index,
+            chNr,
+            channel;
+
+        var case1 = (a === 0x10 || a === 0x18) &amp;&amp; (0x20 &lt;= b &amp;&amp; b &lt;= 0x2f);
+        var case2 = (a === 0x17 || a === 0x1f) &amp;&amp; (0x2d &lt;=b &amp;&amp; b &lt;= 0x2f);
+        if (!(case1 || case2)) {
+            return false;
+        }
+        bkgData = {};
+        if (a  === 0x10 || a === 0x18) {
+            index = Math.floor((b-0x20)/2);
+            bkgData.background = backgroundColors[index];
+            if (b % 2 === 1) {
+                bkgData.background = bkgData.background + &apos;_semi&apos;;
+            }
+        } else if (b === 0x2d) {
+            bkgData.background = &apos;transparent&apos;;
+        } else {
+            bkgData.foreground = &apos;black&apos;;
+            if (b === 0x2f) {
+                bkgData.underline = true;
+            }
+        }
+        chNr = (a &lt; 0x18) ? 1 : 2;
+        channel = this.channels[chNr-1];
+        channel.setBkgData(bkgData);
+        this.lastCmdA = null;
+        this.lastCmdB = null;
+        return true;
+    }
+
+    /**
+     * Reset state of parser and its channels.
+     */
+    reset() {
+        for (var i=0 ; i &lt; this.channels.length ; i++) {
+            if (this.channels[i]) {
+                this.channels[i].reset();
+            }
+        }
+        this.lastCmdA = null;
+        this.lastCmdB = null;
+    }
+
+    /**
+     * Trigger the generation of a cue, and the start of a new one if displayScreens are not empty.
+     */
+    cueSplitAtTime(t) {
+        for (var i=0 ; i &lt; this.channels.length ; i++) {
+            if (this.channels[i]) {
+                this.channels[i].cueSplitAtTime(t);
+            }
+        }
+    }
+}
+
+export default Cea608Parser;
+</code></pre>
+
+</div>
+
+<footer class="footer">
+  Generated by <a href="https://esdoc.org">ESDoc<span data-ice="esdocVersion">(1.0.4)</span><img src="./image/esdoc-logo-mini-black.png"></a>
+</footer>
+
+<script src="script/search_index.js"></script>
+<script src="script/search.js"></script>
+<script src="script/pretty-print.js"></script>
+<script src="script/inherited-summary.js"></script>
+<script src="script/test-summary.js"></script>
+<script src="script/inner-link.js"></script>
+<script src="script/patch-for-local.js"></script>
+</body>
+</html>

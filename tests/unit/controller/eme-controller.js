@@ -1,12 +1,14 @@
 import EMEController from '../../../src/controller/eme-controller';
-
+import assert from 'assert';
 import HlsMock from '../../mocks/hls.mock';
+import EventEmitter from 'events';
+import {ErrorTypes, ErrorDetails} from '../../../src/errors';
 
 const MediaMock = function() {
-  return {
-    setMediaKeys: sinon.spy(),
-    addEventListener: sinon.spy()
-  }
+  let media = new EventEmitter();
+  media.setMediaKeys = sinon.spy();
+  media.addEventListener = media.addListener.bind(media);
+  return media;
 };
 
 const fakeLevels = [
@@ -77,4 +79,36 @@ describe('EMEController', () => {
       }, 0)
 
   });
+
+  it('should trigger key system error when bad encrypted data is received', (done) => {
+
+    let reqMediaKsAccessSpy = sinon.spy(() => {
+      return Promise.resolve({
+        // Media-keys mock
+      })
+    });
+
+    setupEach({
+      emeEnabled: true,
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy
+    });
+
+    let badData = {
+      initDataType: "cenc",
+      initData: "bad data"
+    };
+
+    emeController.onMediaAttached({media});
+    emeController.onManifestParsed({levels: fakeLevels});
+
+    media.emit('encrypted', badData);
+
+    setTimeout(() => {
+      assert.equal(emeController.hls.trigger.args[0][1].details, ErrorDetails.KEY_SYSTEM_NO_KEYS);
+      assert.equal(emeController.hls.trigger.args[1][1].details, ErrorDetails.KEY_SYSTEM_NO_ACCESS);
+      done();
+    }, 0)
+
+  });
+
 })

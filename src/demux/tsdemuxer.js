@@ -184,7 +184,7 @@ class TSDemuxer {
         switch(pid) {
           case avcId:
             if (stt) {
-              if (avcData && (pes = parsePES(avcData))) {
+              if (avcData && (pes = parsePES(avcData)) && pes.pts !== undefined) {
                 parseAVCPES(pes,false);
               }
               avcData = {data: [], size: 0};
@@ -196,7 +196,7 @@ class TSDemuxer {
             break;
           case audioId:
             if (stt) {
-              if (audioData && (pes = parsePES(audioData))) {
+              if (audioData && (pes = parsePES(audioData)) && pes.pts !== undefined) {
                 if (audioTrack.isAAC) {
                   parseAACPES(pes);
                 } else {
@@ -212,7 +212,7 @@ class TSDemuxer {
             break;
           case id3Id:
             if (stt) {
-              if (id3Data && (pes = parsePES(id3Data))) {
+              if (id3Data && (pes = parsePES(id3Data)) && pes.pts !== undefined) {
                 parseID3PES(pes);
               }
               id3Data = {data: [], size: 0};
@@ -273,7 +273,7 @@ class TSDemuxer {
       }
     }
     // try to parse last PES packets
-    if (avcData && (pes = parsePES(avcData))) {
+    if (avcData && (pes = parsePES(avcData)) && pes.pts !== undefined) {
       parseAVCPES(pes,true);
       avcTrack.pesData = null;
     } else {
@@ -281,7 +281,7 @@ class TSDemuxer {
       avcTrack.pesData = avcData;
     }
 
-    if (audioData && (pes = parsePES(audioData))) {
+    if (audioData && (pes = parsePES(audioData)) && pes.pts !== undefined) {
       if (audioTrack.isAAC) {
         parseAACPES(pes);
       } else {
@@ -296,7 +296,7 @@ class TSDemuxer {
       audioTrack.pesData = audioData;
     }
 
-    if (id3Data && (pes = parsePES(id3Data))) {
+    if (id3Data && (pes = parsePES(id3Data)) && pes.pts !== undefined) {
       parseID3PES(pes);
       id3Track.pesData = null;
     } else {

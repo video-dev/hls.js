@@ -11,6 +11,10 @@ export const ErrorTypes = {
   OTHER_ERROR: 'otherError'
 };
 
+/**
+ * @enum {ErrorDetails}
+ * @typedef {string} ErrorDetail
+ */
 export const ErrorDetails = {
   KEY_SYSTEM_NO_KEYS: 'keySystemNoKeys',
   KEY_SYSTEM_NO_ACCESS: 'keySystemNoAccess',
@@ -36,8 +40,6 @@ export const ErrorDetails = {
   AUDIO_TRACK_LOAD_TIMEOUT: 'audioTrackLoadTimeOut',
   // Identifier for fragment load error - data: { frag : fragment object, response : { code: error code, text: error text }}
   FRAG_LOAD_ERROR: 'fragLoadError',
-  // Identifier for fragment loop loading error - data: { frag : fragment object}
-  FRAG_LOOP_LOADING_ERROR: 'fragLoopLoadingError',
   // Identifier for fragment load timeout error - data: { frag : fragment object}
   FRAG_LOAD_TIMEOUT: 'fragLoadTimeOut',
   // Identifier for a fragment decryption error event - data: {id : demuxer Id,frag: fragment object, reason : parsing error description }

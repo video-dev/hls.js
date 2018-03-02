@@ -175,6 +175,19 @@ export default class M3U8Parser {
           // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           frag.relurl = (' ' + result[3]).slice(1);
 
+		  if(level.programDateTime){
+			  if(prevFrag){
+				  if(frag.rawProgramDateTime){//PDT discontinuity found
+					  frag.pdt = Date.parse(frag.rawProgramDateTime);
+				  } else {//Contiguous fragment
+					  frag.pdt = prevFrag.pdt + (prevFrag.duration * 1000);
+				  }
+			  } else {//First fragment
+				  frag.pdt = Date.parse(level.programDateTime);
+			  }
+			  frag.endPdt = frag.pdt + (frag.duration * 1000);
+		  }		  
+		  
           level.fragments.push(frag);
           prevFrag = frag;
           totalduration += frag.duration;

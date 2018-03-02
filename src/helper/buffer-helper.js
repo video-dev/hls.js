@@ -3,6 +3,12 @@
 */
 
 const BufferHelper = {
+  /**
+   * Return true if `media`'s buffered include `position`
+   * @param {HTMLMediaElement|SourceBuffer} media
+   * @param {number} position
+   * @returns {boolean}
+   */
   isBuffered : function(media,position) {
     try {
       if (media) {

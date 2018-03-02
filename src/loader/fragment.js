@@ -10,6 +10,24 @@ export default class Fragment {
     this._byteRange = null;
     this._decryptdata = null;
     this.tagList = [];
+
+    // Holds the types of data this fragment supports
+    this._elementaryStreams = {
+      [Fragment.ElementaryStreamTypes.AUDIO] : false,
+      [Fragment.ElementaryStreamTypes.VIDEO] : false
+    };
+  }
+
+  /**
+   * `type` property for this._elementaryStreams
+   *
+   * @enum
+   */
+  static get ElementaryStreamTypes() {
+    return {
+      AUDIO: 'audio',
+      VIDEO: 'video'
+    };
   }
 
   get url() {
@@ -54,6 +72,9 @@ export default class Fragment {
     return byteRange;
   }
 
+  /**
+   * @type {number}
+   */
   get byteRangeStartOffset() {
     return this.byteRange[0];
   }
@@ -67,6 +88,20 @@ export default class Fragment {
       this._decryptdata = this.fragmentDecryptdataFromLevelkey(this.levelkey, this.sn);
     }
     return this._decryptdata;
+  }
+
+  /**
+   * @param {ElementaryStreamType} type
+   */
+  addElementaryStream(type) {
+    this._elementaryStreams[type] = true;
+  }
+
+  /**
+   * @param {ElementaryStreamType} type
+   */
+  hasElementaryStream(type) {
+    return this._elementaryStreams[type] === true;
   }
 
   /**
@@ -101,9 +136,5 @@ export default class Fragment {
     }
 
     return decryptdata;
-  }
-
-  cloneObj(obj) {
-    return JSON.parse(JSON.stringify(obj));
   }
 }
