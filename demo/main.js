@@ -35,6 +35,10 @@ $(document).ready(function() {
 
   Object.keys(testStreams).forEach((key) => {
     const stream = testStreams[key];
+    // Disallow to use some streams for demo
+    if (stream["demo"] === false) {
+      return;
+    }
     const option = new Option(stream.description, key);
     $('#streamSelect').append(option);
   })
