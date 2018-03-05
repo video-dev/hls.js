@@ -115,7 +115,7 @@ describe('testing hls.js playback in the browser on "'+browserDescription+'"', f
 
   afterEach(function() {
     var browser = this.browser;
-    browser.executeScript('return logString').then(function(return_value){
+    return browser.executeScript('return logString').then(function(return_value){
       console.log('travis_fold:start:debug_logs');
       console.log('logs');
       console.log(return_value);

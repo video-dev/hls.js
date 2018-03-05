@@ -2,8 +2,10 @@ import Event from "../../../src/events";
 
 const assert = require('assert');
 
-import {FragmentTracker, FragmentState} from '../../../src/helper/fragment-tracker';
 import Hls from '../../../src/hls';
+import {FragmentTracker, FragmentState} from '../../../src/helper/fragment-tracker';
+import PlaylistLoader from '../../../src/loader/playlist-loader';
+const LevelType = PlaylistLoader.LevelType;
 
 function createMockBuffer(buffered) {
   return {
@@ -21,6 +23,24 @@ function createMockFragment(data, types) {
   return data;
 }
 
+/**
+ * load fragment as `buffered: false`
+ * @param {Hls} hls
+ * @param {Fragment} fragment
+ */
+function loadFragment(hls, fragment){
+  hls.trigger(Event.FRAG_LOADED, { frag: fragment });
+}
+
+/**
+ * Load fragment to `buffered: true`
+ * @param {Hls} hls
+ * @param {Fragment} fragment
+ */
+function loadFragmentAndBuffered(hls, fragment) {
+  loadFragment(hls, fragment);
+  hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
+}
 describe('FragmentTracker', () => {
   describe('getPartialFragment', () => {
     let hls, fragmentTracker, fragment, buffered, partialFragment, timeRanges;
@@ -160,6 +180,117 @@ describe('FragmentTracker', () => {
     });
   });
 
+  describe('getBufferedFrag', function () {
+    let hls;
+    /** @type {FragmentTracker} */
+    let fragmentTracker;
+    beforeEach(() => {
+      hls = new Hls({});
+      fragmentTracker = new FragmentTracker(hls);
+    });
+    it('should return buffered fragment if found it', function () {
+      const fragments = [
+        // 0-1
+        createMockFragment({
+          startPTS: 0,
+          endPTS: 1,
+          sn: 1,
+          level: 1,
+          type: 'main'
+        }, ['audio', 'video']),
+        // 1-2
+        createMockFragment({
+          startPTS: 1,
+          endPTS: 2,
+          sn: 2,
+          level: 1,
+          type: 'main'
+        }, ['audio', 'video']),
+        // 2-3
+        createMockFragment({
+          startPTS: 2,
+          endPTS: 3,
+          sn: 3,
+          level: 1,
+          type: 'main'
+        }, ['audio', 'video'])
+      ];
+      // load fragments to buffered
+      fragments.forEach(fragment => {
+        loadFragmentAndBuffered(hls, fragment);
+      });
+      assert.deepEqual(fragmentTracker.getBufferedFrag(0.0, LevelType.MAIN), fragments[0]);
+      assert.deepEqual(fragmentTracker.getBufferedFrag(0.1, LevelType.MAIN), fragments[0]);
+      assert.deepEqual(fragmentTracker.getBufferedFrag(1.0, LevelType.MAIN), fragments[1]);
+      assert.deepEqual(fragmentTracker.getBufferedFrag(1.1, LevelType.MAIN), fragments[1]);
+      assert.deepEqual(fragmentTracker.getBufferedFrag(2.0, LevelType.MAIN), fragments[2]);
+      assert.deepEqual(fragmentTracker.getBufferedFrag(2.1, LevelType.MAIN), fragments[2]);
+      assert.deepEqual(fragmentTracker.getBufferedFrag(2.9, LevelType.MAIN), fragments[2]);
+      assert.deepEqual(fragmentTracker.getBufferedFrag(3.0, LevelType.MAIN), fragments[2]);
+    });
+    it('should return null if found it, but it is not buffered', function () {
+      const fragments = [
+        // 0-1
+        createMockFragment({
+          startPTS: 0,
+          endPTS: 1,
+          sn: 1,
+          level: 1,
+          type: 'main'
+        }, ['audio', 'video']),
+        // 1-2
+        createMockFragment({
+          startPTS: 1,
+          endPTS: 2,
+          sn: 2,
+          level: 1,
+          type: 'main'
+        }, ['audio', 'video']),
+        // 2-3
+        createMockFragment({
+          startPTS: 2,
+          endPTS: 3,
+          sn: 3,
+          level: 1,
+          type: 'main'
+        }, ['audio', 'video'])
+      ];
+      // load fragments, but it is not buffered
+      fragments.forEach(fragment => {
+        loadFragment(hls, fragment);
+      });
+      assert.strictEqual(fragmentTracker.getBufferedFrag(0, LevelType.MAIN), null);
+      assert.strictEqual(fragmentTracker.getBufferedFrag(1, LevelType.MAIN), null);
+      assert.strictEqual(fragmentTracker.getBufferedFrag(2, LevelType.MAIN), null);
+      assert.strictEqual(fragmentTracker.getBufferedFrag(3, LevelType.MAIN), null);
+    });
+    it('should return null if anyone does not match the position', function () {
+      loadFragmentAndBuffered(hls, createMockFragment({
+        startPTS: 0,
+        endPTS: 1,
+        sn: 1,
+        level: 1,
+        type: 'main'
+      }, ['audio', 'video']));
+      // not found
+      assert.strictEqual(fragmentTracker.getBufferedFrag(1.1, LevelType.MAIN), null);
+    });
+    it('should return null if fragmentTracker not have any fragments', function () {
+      assert.strictEqual(fragmentTracker.getBufferedFrag(0, LevelType.MAIN), null);
+    });
+    it('should return null if not found match levelType', function () {
+      loadFragmentAndBuffered(hls, createMockFragment({
+        startPTS: 0,
+        endPTS: 1,
+        sn: 1,
+        level: 1,
+        type: LevelType.AUDIO // <= level type is not "main"
+      }, ['audio', 'video']));
+
+      assert.strictEqual(fragmentTracker.getBufferedFrag(0, LevelType.MAIN), null);
+    });
+  });
+
   describe('onFragBuffered', () => {
     let hls, fragmentTracker, fragment, timeRanges;
 
@@ -254,6 +385,85 @@ describe('FragmentTracker', () => {
       hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
 
       assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.OK);
+    });
+  });
+
+  describe("removeFragment", () => {
+    /** @type {Hls} */
+    let hls;
+    /** @type {FragmentTracker} */
+    let fragmentTracker;
+    beforeEach(() => {
+      hls = new Hls({});
+      fragmentTracker = new FragmentTracker(hls);
+    });
+    it("should remove fragment", () => {
+      const fragment = createMockFragment({
+        startPTS: 0,
+        endPTS: 1,
+        sn: 1,
+        level: 1,
+        type: 'main'
+      }, ['audio', 'video']);
+      // load fragments to buffered
+      loadFragmentAndBuffered(hls, fragment);
+      assert.strictEqual(fragmentTracker.hasFragment(fragment), true);
+      // Remove the fragment
+      fragmentTracker.removeFragment(fragment);
+      // Check
+      assert.strictEqual(fragmentTracker.hasFragment(fragment), false);
+    });
+  });
+  describe("removeAllFragments", () => {
+    /** @type {Hls} */
+    let hls;
+    /** @type {FragmentTracker} */
+    let fragmentTracker;
+    beforeEach(() => {
+      hls = new Hls({});
+      fragmentTracker = new FragmentTracker(hls);
+    });
+    it("should remove all fragments", () => {
+      const fragments = [
+        // 0-1
+        createMockFragment({
+          startPTS: 0,
+          endPTS: 1,
+          sn: 1,
+          level: 1,
+          type: 'main'
+        }, ['audio', 'video']),
+        // 1-2
+        createMockFragment({
+          startPTS: 1,
+          endPTS: 2,
+          sn: 2,
+          level: 1,
+          type: 'main'
+        }, ['audio', 'video']),
+        // 2-3
+        createMockFragment({
+          startPTS: 2,
+          endPTS: 3,
+          sn: 3,
+          level: 1,
+          type: 'main'
+        }, ['audio', 'video'])
+      ];
+      // load fragments to buffered
+      fragments.forEach(fragment => {
+        loadFragmentAndBuffered(hls, fragment);
+      });
+      // before
+      fragments.forEach(fragment => {
+        assert.strictEqual(fragmentTracker.hasFragment(fragment), true);
+      });
+      // Remove all fragments
+      fragmentTracker.removeAllFragments();
+      // after
+      fragments.forEach(fragment => {
+        assert.strictEqual(fragmentTracker.hasFragment(fragment), false);
+      });
     });
   });
 });

@@ -8,6 +8,7 @@ import Demuxer from '../demux/demuxer';
 import Event from '../events';
 import {FragmentState} from '../helper/fragment-tracker';
 import Fragment from '../loader/fragment';
+import PlaylistLoader from '../loader/playlist-loader';
 import * as LevelHelper from '../helper/level-helper';
 import TimeRanges from '../utils/time-ranges';
 import {ErrorTypes, ErrorDetails} from '../errors';
@@ -349,24 +350,29 @@ class StreamController extends TaskLoop {
          even if SN are not synchronized between playlists, loading this frag will help us
          compute playlist sliding and find the right one after in case it was not the right consecutive one */
       if (fragPrevious) {
-        const targetSN = fragPrevious.sn + 1;
-        if (targetSN >= levelDetails.startSN && targetSN <= levelDetails.endSN) {
-          const fragNext = fragments[targetSN - levelDetails.startSN];
-          if (fragPrevious.cc === fragNext.cc) {
-            frag = fragNext;
-            logger.log(`live playlist, switching playlist, load frag with next SN: ${frag.sn}`);
-          }
-        }
-        // next frag SN not available (or not with same continuity counter)
-        // look for a frag sharing the same CC
-        if (!frag) {
-          frag = BinarySearch.search(fragments, function(frag) {
-            return fragPrevious.cc - frag.cc;
-          });
-          if (frag) {
-            logger.log(`live playlist, switching playlist, load frag with same CC: ${frag.sn}`);
-          }
-        }
+
+		if (!levelDetails.programDateTime) {//Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
+			const targetSN = fragPrevious.sn + 1;
+			if (targetSN >= levelDetails.startSN && targetSN <= levelDetails.endSN) {
+			  const fragNext = fragments[targetSN - levelDetails.startSN];
+			  if (fragPrevious.cc === fragNext.cc) {
+          frag = fragNext;
+          logger.log(`live playlist, switching playlist, load frag with next SN: ${frag.sn}`);
+			  }
+			}
+			// next frag SN not available (or not with same continuity counter)
+			// look for a frag sharing the same CC
+			if (!frag) {
+			  frag = BinarySearch.search(fragments, function(frag) {
+          return fragPrevious.cc - frag.cc;
+			  });
+			  if (frag) {
+          logger.log(`live playlist, switching playlist, load frag with same CC: ${frag.sn}`);
+			  }
+			}
+		} else {//Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
+			frag = this._findFragmentByPDT(fragments, fragPrevious.endPdt + 1);
+		}
       }
       if (!frag) {
         /* we have no idea about which fragment should be loaded.
@@ -379,9 +385,33 @@ class StreamController extends TaskLoop {
     return frag;
   }
 
-  _findFragment(start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails) {
+  _findFragmentByPDT(fragments, PDTValue){
+
+    if(!fragments || PDTValue === undefined){
+      return null;
+    }
+
+    //if less than start
+    let firstSegment = fragments[0];
+
+    if(PDTValue < firstSegment.pdt){
+      return null;
+    }
+
+    let lastSegment = fragments[fragments.length - 1];
+
+    if(PDTValue >= lastSegment.endPdt){
+      return null;
+    }
+
+    return BinarySearch.search(fragments, function(frag) {
+      return PDTValue < frag.pdt ? -1 : PDTValue >= frag.endPdt ? 1 : 0;
+    });
+  }
+
+
+  _findFragmentBySN(fragPrevious, fragments, bufferEnd, end) {
     const config = this.hls.config;
-    let frag;
     let foundFrag;
     let maxFragLookUpTolerance = config.maxFragLookUpTolerance;
     const fragNext = fragPrevious ? fragments[fragPrevious.sn - fragments[0].sn + 1] : undefined;
@@ -420,6 +450,22 @@ class StreamController extends TaskLoop {
       } else {
         foundFrag = BinarySearch.search(fragments, fragmentWithinToleranceTest);
       }
+	}
+	return foundFrag;
+  }
+
+  _findFragment(start, fragPrevious, fragLen, fragments, bufferEnd, end, levelDetails) {
+    const config = this.hls.config;
+    let frag;
+    let foundFrag;
+
+    if (bufferEnd < end) {
+      if (!levelDetails.programDateTime) {//Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
+        foundFrag = this._findFragmentBySN(fragPrevious, fragments, bufferEnd, end);
+      } else {//Relies on PDT in order to switch bitrates (Support EXT-X-DISCONTINUITY without EXT-X-DISCONTINUITY-SEQUENCE)
+        foundFrag = this._findFragmentByPDT(fragments, fragPrevious ? fragPrevious.endPdt + 1 : bufferEnd + (levelDetails.programDateTime ? Date.parse(levelDetails.programDateTime) : 0));
+      }
+
     } else {
       // reach end of playlist
       foundFrag = fragments[fragLen-1];
@@ -524,16 +570,8 @@ class StreamController extends TaskLoop {
     return this._state;
   }
 
-  // TODO: Move this functionality into fragment-tracker.js
   getBufferedFrag(position) {
-    return BinarySearch.search(this._bufferedFrags, function(frag) {
-      if (position < frag.startPTS) {
-        return -1;
-      } else if (position > frag.endPTS) {
-        return 1;
-      }
-      return 0;
-    });
+    return this.fragmentTracker.getBufferedFrag(position, PlaylistLoader.LevelType.MAIN);
   }
 
   get currentLevel() {
@@ -830,7 +868,7 @@ class StreamController extends TaskLoop {
     // reset buffer on manifest loading
     logger.log('trigger BUFFER_RESET');
     this.hls.trigger(Event.BUFFER_RESET);
-    this._bufferedFrags = [];
+    this.fragmentTracker.removeAllFragments();
     this.stalled = false;
     this.startPosition = this.lastCurrentTime = 0;
   }
@@ -1259,14 +1297,6 @@ class StreamController extends TaskLoop {
       if (frag) {
         const media = this.mediaBuffer ? this.mediaBuffer : this.media;
         logger.log(`main buffered : ${TimeRanges.toString(media.buffered)}`);
-        // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
-        let bufferedFrags = BufferHelper.filterEvictedFragments(this._bufferedFrags, media);
-        // push new range
-        bufferedFrags.push(frag);
-        // sort frags, as we use BinarySearch for lookup in getBufferedFrag ...
-        this._bufferedFrags = bufferedFrags.sort(function(a, b) {
-          return (a.startPTS - b.startPTS);
-        });
         this.fragPrevious = frag;
         const stats = this.stats;
         stats.tbuffered = performance.now();
@@ -1491,7 +1521,8 @@ _checkBuffer() {
       use mediaBuffered instead of media (so that we will check against video.buffered ranges in case of alt audio track)
     */
     const media = this.mediaBuffer ? this.mediaBuffer : this.media;
-    this._bufferedFrags = this._bufferedFrags.filter(frag => {return BufferHelper.isBuffered(media,(frag.startPTS + frag.endPTS) / 2);});
+    // filter fragments potentially evicted from buffer. this is to avoid memleak on live streams
+    this.fragmentTracker.detectEvictedFragments(Fragment.ElementaryStreamTypes.VIDEO, media.buffered);
 
     // move to IDLE once flush complete. this should trigger new fragment loading
     this.state = State.IDLE;

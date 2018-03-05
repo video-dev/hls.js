@@ -628,12 +628,12 @@ Rollover38803/20160525T064049-01-69844069.ts
 
   it('parses #EXTINF without a leading digit', () => {
     var level = `#EXTM3U
-  #EXT-X-VERSION:3
-  #EXT-X-PLAYLIST-TYPE:VOD
-  #EXT-X-TARGETDURATION:14
-  #EXTINF:.360,
-  /sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(1)/video/107/282/158282701_mp4_h264_aac_hq.ts
-  #EXT-X-ENDLIST`;
+#EXT-X-VERSION:3
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXT-X-TARGETDURATION:14
+#EXTINF:.360,
+/sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(1)/video/107/282/158282701_mp4_h264_aac_hq.ts
+#EXT-X-ENDLIST`;
     var result = M3U8Parser.parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core',0);
     assert.strictEqual(result.fragments.length, 1);
     assert.strictEqual(result.fragments[0].duration, 0.360);
@@ -641,20 +641,57 @@ Rollover38803/20160525T064049-01-69844069.ts
 
   it('parses #EXT-X-MAP URI', () => {
     var level = `#EXTM3U
-  #EXT-X-TARGETDURATION:6
-  #EXT-X-VERSION:7
-  #EXT-X-MEDIA-SEQUENCE:1
-  #EXT-X-PLAYLIST-TYPE:VOD
-  #EXT-X-INDEPENDENT-SEGMENTS
-  #EXT-X-MAP:URI="main.mp4",BYTERANGE="718@0"
-  #EXTINF:6.00600,
-  #EXT-X-BYTERANGE:1543597@718
-  main.mp4`;
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:7
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXT-X-INDEPENDENT-SEGMENTS
+#EXT-X-MAP:URI="main.mp4",BYTERANGE="718@0"
+#EXTINF:6.00600,
+#EXT-X-BYTERANGE:1543597@718
+main.mp4`;
     var result = M3U8Parser.parseLevelPlaylist(level, 'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core',0);
     assert.strictEqual(result.initSegment.url, "http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/main.mp4");
     assert.strictEqual(result.initSegment.byteRangeStartOffset, 0);
     assert.strictEqual(result.initSegment.byteRangeEndOffset, 718);
     assert.strictEqual(result.initSegment.sn, 'initSegment');
+  });
+
+  it('if playlists contains #EXT-X-PROGRAM-DATE-TIME switching will be applied by PDT', () => {
+    var level = `#EXTM3U
+#EXT-X-VERSION:2
+#EXT-X-TARGETDURATION:10
+#EXT-X-MEDIA-SEQUENCE:69844067
+#EXTINF:10, no desc
+#EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:34:44Z
+Rollover38803/20160525T064049-01-69844067.ts
+#EXTINF:10, no desc
+#EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:34:54Z
+Rollover38803/20160525T064049-01-69844068.ts
+#EXTINF:10, no desc
+#EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:35:04Z
+Rollover38803/20160525T064049-01-69844069.ts
+    `;
+	var hls = {config : { }, on : function() { }};
+    var result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8',0);
+    assert.ok(result.programDateTime);
+  });
+
+  it('if playlists does NOT contain #EXT-X-PROGRAM-DATE-TIME switching will be applied by CC count', () => {
+    var level = `#EXTM3U
+#EXT-X-VERSION:2
+#EXT-X-TARGETDURATION:10
+#EXT-X-MEDIA-SEQUENCE:69844067
+#EXTINF:10, no desc
+Rollover38803/20160525T064049-01-69844067.ts
+#EXTINF:10, no desc
+Rollover38803/20160525T064049-01-69844068.ts
+#EXTINF:10, no desc
+Rollover38803/20160525T064049-01-69844069.ts
+    `;
+	var hls = {config : { }, on : function() { }};
+    var result = M3U8Parser.parseLevelPlaylist(level, 'http://video.example.com/disc.m3u8',0);
+    assert.strictEqual(result.programDateTime, undefined);
   });
 
 });

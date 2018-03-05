@@ -1,3 +1,12 @@
+/**
+ * Create test stream
+ * @param {string} url
+ * @param {string} description
+ * @param {boolean} [live]
+ * @param {boolean} [abr]
+ * @param {string[]} [blacklist_ua]
+ * @returns {{url: string, description: string, live: boolean, abr: boolean, blacklist_ua: string[]}}
+ */
 function createTestStream(url, description, live = false, abr = true, blacklist_ua = []) {
   return {
     url,
@@ -8,8 +17,16 @@ function createTestStream(url, description, live = false, abr = true, blacklist_
   }
 }
 
-function createTestStreamWithConfig(url, description, config) {
-  const testStream = createTestStream(url, description);
+/**
+ * @param {Object} target
+ * @param {Object} [config]
+ * @returns {{url: string, description: string, live: boolean, abr: boolean, blacklist_ua: string[]}}
+ */
+function createTestStreamWithConfig(target, config) {
+  if (typeof target !== "object") {
+    throw new Error("target should be object");
+  }
+  const testStream = createTestStream(target.url, target.description, target.live, target.abr, target.blacklist_ua);
 
   testStream.config = config;
 
@@ -17,9 +34,14 @@ function createTestStreamWithConfig(url, description, config) {
 }
 
 module.exports = {
-  bbb: createTestStream(
-    "https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8",
-    "Big Buck Bunny - adaptive qualities"
+  bbb: createTestStreamWithConfig({
+      url: "https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8",
+      description: "Big Buck Bunny - adaptive qualities",
+    },
+    {
+      // try to workaround test failing because of slow seek on Chrome/Win10
+      nudgeMaxRetry: 5
+    }
   ),
   bigBuckBunny480p: {
     "url": "https://video-dev.github.io/streams/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8",
@@ -108,15 +130,17 @@ module.exports = {
     "abr": false
   },
   uspHLSAteam: createTestStream(
-      "http://demo.unified-streaming.com/video/ateam/ateam.ism/ateam.m3u8?session_id=27199",
-      "A-Team movie trailer - HLS by Unified Streaming Platform"
+    "http://demo.unified-streaming.com/video/ateam/ateam.ism/ateam.m3u8?session_id=27199",
+    "A-Team movie trailer - HLS by Unified Streaming Platform"
   ),
-  angelOneShakaWidevine: createTestStreamWithConfig(
-    "https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine-hls/hls.m3u8",
-    "Shaka-packager Widevine DRM (EME) HLS-fMP4 - Angel One Demo",
+  angelOneShakaWidevine: createTestStreamWithConfig({
+      url: "https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine-hls/hls.m3u8",
+      description: "Shaka-packager Widevine DRM (EME) HLS-fMP4 - Angel One Demo",
+      blacklist_ua: ["firefox","safari", "internet explorer"]
+    },
     {
       widevineLicenseUrl: "https://cwip-shaka-proxy.appspot.com/no_auth",
       emeEnabled: true,
     }
   )
-}
+};

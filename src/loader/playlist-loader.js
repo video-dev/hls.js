@@ -31,6 +31,15 @@ const ContextType = {
 };
 
 /**
+ * @enum {string}
+ */
+const LevelType = {
+  MAIN: 'main',
+  AUDIO: 'audio',
+  SUBTITLE: 'subtitle'
+};
+
+/**
  * @constructor
  */
 class PlaylistLoader extends EventHandler {
@@ -53,6 +62,10 @@ class PlaylistLoader extends EventHandler {
     return ContextType;
   }
 
+  static get LevelType() {
+    return LevelType;
+  }
+
   /**
    * @param {ContextType} type
    * @returns {boolean}
@@ -62,16 +75,21 @@ class PlaylistLoader extends EventHandler {
       type !== ContextType.SUBTITLE_TRACK);
   }
 
+  /**
+   * Map context.type to LevelType
+   * @param {{type: ContextType}} context
+   * @returns {LevelType}
+   */
   static mapContextToLevelType(context) {
     const {type} = context;
 
     switch(type) {
     case ContextType.AUDIO_TRACK:
-      return 'audio';
+      return LevelType.AUDIO;
     case ContextType.SUBTITLE_TRACK:
-      return 'subtitle';
+      return LevelType.SUBTITLE;
     default:
-      return 'main';
+      return LevelType.MAIN;
     }
   }
 
@@ -412,7 +430,7 @@ class PlaylistLoader extends EventHandler {
     let details;
     let fatal;
 
-    const loader = context.loader;
+    const loader = this.getInternalLoader(context);
 
     switch(context.type) {
     case ContextType.MANIFEST:
