@@ -6,14 +6,14 @@ var logString;
 var hls;
 
 function setupConsoleLogRedirection () {
-  let log = document.getElementById('log');
-  let inner = log.getElementsByClassName('inner')[0];
+  var log = document.getElementById('log');
+  var inner = log.getElementsByClassName('inner')[0];
 
   // append log message
   function append (methodName, msg) {
-    let a = (new Date()).toISOString().replace('T', ' ').replace('Z', '') + ': ' + msg;
-    let text = document.createTextNode(a);
-    let line = document.createElement('pre');
+    var a = (new Date()).toISOString().replace('T', ' ').replace('Z', '') + ': ' + msg;
+    var text = document.createTextNode(a);
+    var line = document.createElement('pre');
     line.className = 'line line-' + methodName;
     line.appendChild(text);
     inner.appendChild(line);
@@ -22,9 +22,9 @@ function setupConsoleLogRedirection () {
   }
 
   // overload global window console methods
-  let methods = ['log', 'debug', 'info', 'warn', 'error'];
+  var methods = ['log', 'debug', 'info', 'warn', 'error'];
   methods.forEach(function (methodName) {
-    let original = window.console[methodName];
+    var original = window.console[methodName];
     if (!original)
       return;
 
@@ -40,16 +40,16 @@ function objectAssign (target, firstSource) {
   if (target === undefined || target === null)
     throw new TypeError('Cannot convert first argument to object');
 
-  let to = Object(target);
-  for (let i = 1; i < arguments.length; i++) {
-    let nextSource = arguments[i];
+  var to = Object(target);
+  for (var i = 1; i < arguments.length; i++) {
+    var nextSource = arguments[i];
     if (nextSource === undefined || nextSource === null)
       continue;
 
-    let keysArray = Object.keys(Object(nextSource));
-    for (let nextIndex = 0, len = keysArray.length; nextIndex < len; nextIndex++) {
-      let nextKey = keysArray[nextIndex];
-      let desc = Object.getOwnPropertyDescriptor(nextSource, nextKey);
+    var keysArray = Object.keys(Object(nextSource));
+    for (var nextIndex = 0, len = keysArray.length; nextIndex < len; nextIndex++) {
+      var nextKey = keysArray[nextIndex];
+      var desc = Object.getOwnPropertyDescriptor(nextSource, nextKey);
       if (desc !== undefined && desc.enumerable)
         to[nextKey] = nextSource[nextKey];
     }
@@ -114,7 +114,7 @@ function switchToLowestLevel (mode) {
 }
 
 function switchToHighestLevel (mode) {
-  let highestLevel = hls.levels.length - 1;
+  var highestLevel = hls.levels.length - 1;
   switch (mode) {
   case 'current':
     hls.currentLevel = highestLevel;
