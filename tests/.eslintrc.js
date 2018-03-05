@@ -1,7 +1,6 @@
 module.exports = {
     "env": {
         "node": true,
-        "browser": true,
         "commonjs": true,
         "es6": true,
     },
@@ -16,6 +15,6 @@ module.exports = {
         "expect": false,
         "it": false,
         "sinon": false,
-        "xit": false,
+        "xit": false
     },
 };
