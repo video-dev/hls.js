@@ -1,13 +1,60 @@
-let assert = require('assert');
-let webdriver = require('selenium-webdriver');
+const assert = require('assert');
+const webdriver = require('selenium-webdriver');
 // requiring this automatically adds the chromedriver binary to the PATH
-let chromedriver = require('chromedriver');
-let HttpServer = require('http-server');
-let streams = require('../../test-streams');
+const chromedriver = require('chromedriver');
+const HttpServer = require('http-server');
+const streams = require('../../test-streams');
+
+const browserConfig = { version: 'latest' };
+const onTravis = !!process.env.TRAVIS;
+
+let browserDescription;
+
+// Setup browser config data from env vars
+(function () {
+  if (onTravis) {
+    let UA_VERSION = process.env.UA_VERSION;
+    if (UA_VERSION)
+      browserConfig.version = UA_VERSION;
+
+    let UA = process.env.UA;
+    if (!UA)
+      throw new Error('No test browser name.');
+
+    let OS = process.env.OS;
+    if (!OS)
+      throw new Error('No test browser platform.');
+
+    browserConfig.name = UA;
+    browserConfig.platform = OS;
+  } else {
+    browserConfig.name = 'chrome';
+  }
+
+  browserDescription = browserConfig.name;
+
+  if (browserConfig.version)
+    browserDescription += ' (' + browserConfig.version + ')';
+
+  if (browserConfig.platform)
+    browserDescription += ', ' + browserConfig.platform;
+})();
+
+// Launch static server
+(function () {
+  HttpServer.createServer({
+    showDir: false,
+    autoIndex: false,
+    root: './'
+  }).listen(8000, '127.0.0.1');
+}());
 
 function retry (cb, numAttempts, interval) {
-  numAttempts = numAttempts || 20;
-  interval = interval || 3000;
+  const DEFAULT_NUM_ATTEMPTS = 20;
+  const DEFAULT_INTERVAL_MS = 3000;
+
+  numAttempts = numAttempts || DEFAULT_NUM_ATTEMPTS;
+  interval = interval || DEFAULT_INTERVAL_MS;
   return new Promise(function (resolve, reject) {
     let attempts = 0;
     attempt();
@@ -26,40 +73,6 @@ function retry (cb, numAttempts, interval) {
     }
   });
 }
-
-let onTravis = !!process.env.TRAVIS;
-
-HttpServer.createServer({
-  showDir: false,
-  autoIndex: false,
-  root: './'
-}).listen(8000, '127.0.0.1');
-
-let browserConfig = { version: 'latest' };
-if (onTravis) {
-  let UA_VERSION = process.env.UA_VERSION;
-  if (UA_VERSION)
-    browserConfig.version = UA_VERSION;
-
-  let UA = process.env.UA;
-  if (!UA)
-    throw new Error('No test browser name.');
-
-  let OS = process.env.OS;
-  if (!OS)
-    throw new Error('No test browser platform.');
-
-  browserConfig.name = UA;
-  browserConfig.platform = OS;
-} else {
-  browserConfig.name = 'chrome';
-}
-let browserDescription = browserConfig.name;
-if (browserConfig.version)
-  browserDescription += ' (' + browserConfig.version + ')';
-
-if (browserConfig.platform)
-  browserDescription += ', ' + browserConfig.platform;
 
 describe('testing hls.js playback in the browser on "' + browserDescription + '"', function () {
   beforeEach(function () {
@@ -90,10 +103,10 @@ describe('testing hls.js playback in the browser on "' + browserDescription + '"
 
       return retry(function () {
         console.log('Loading test page...');
-        return this.browser.get('http://127.0.0.1:8000/tests/functional/auto/hlsjs.html').then(function () {
+        return this.browser.get('http://127.0.0.1:8000/tests/functional/auto/index.html').then(function () {
           // ensure that the page has loaded and we haven't got an error page
           return this.browser.findElement(webdriver.By.css('body#hlsjs-functional-tests')).catch(function (e) {
-            console.log('CSS not found');
+            console.log('DOM not found');
             this.browser.getPageSource().then(function (source) {
               console.log(source);
               return Promise.reject(e);
