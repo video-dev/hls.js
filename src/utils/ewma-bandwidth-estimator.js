@@ -8,10 +8,8 @@
 
 import EWMA from '../utils/ewma';
 
-
 class EwmaBandWidthEstimator {
-
-  constructor(hls,slow,fast,defaultEstimate) {
+  constructor (hls, slow, fast, defaultEstimate) {
     this.hls = hls;
     this.defaultEstimate_ = defaultEstimate;
     this.minWeight_ = 0.001;
@@ -20,36 +18,34 @@ class EwmaBandWidthEstimator {
     this.fast_ = new EWMA(fast);
   }
 
-  sample(durationMs,numBytes) {
+  sample (durationMs, numBytes) {
     durationMs = Math.max(durationMs, this.minDelayMs_);
-    var bandwidth = 8000* numBytes / durationMs,
-    //console.log('instant bw:'+ Math.round(bandwidth));
-    // we weight sample using loading duration....
-        weight = durationMs / 1000;
-    this.fast_.sample(weight,bandwidth);
-    this.slow_.sample(weight,bandwidth);
+    let bandwidth = 8000 * numBytes / durationMs,
+      // console.log('instant bw:'+ Math.round(bandwidth));
+      // we weight sample using loading duration....
+      weight = durationMs / 1000;
+    this.fast_.sample(weight, bandwidth);
+    this.slow_.sample(weight, bandwidth);
   }
 
-  canEstimate() {
+  canEstimate () {
     let fast = this.fast_;
     return (fast && fast.getTotalWeight() >= this.minWeight_);
   }
 
-
-  getEstimate() {
+  getEstimate () {
     if (this.canEstimate()) {
-      //console.log('slow estimate:'+ Math.round(this.slow_.getEstimate()));
-      //console.log('fast estimate:'+ Math.round(this.fast_.getEstimate()));
+      // console.log('slow estimate:'+ Math.round(this.slow_.getEstimate()));
+      // console.log('fast estimate:'+ Math.round(this.fast_.getEstimate()));
       // Take the minimum of these two estimates.  This should have the effect of
       // adapting down quickly, but up more slowly.
-      return Math.min(this.fast_.getEstimate(),this.slow_.getEstimate());
+      return Math.min(this.fast_.getEstimate(), this.slow_.getEstimate());
     } else {
       return this.defaultEstimate_;
     }
   }
 
-  destroy() {
+  destroy () {
   }
 }
 export default EwmaBandWidthEstimator;
-

@@ -1,25 +1,25 @@
-import Event from "../../../src/events";
+import Event from '../../../src/events';
 
 const assert = require('assert');
 
 import Hls from '../../../src/hls';
-import {FragmentTracker, FragmentState} from '../../../src/helper/fragment-tracker';
+import { FragmentTracker, FragmentState } from '../../../src/helper/fragment-tracker';
 import PlaylistLoader from '../../../src/loader/playlist-loader';
 const LevelType = PlaylistLoader.LevelType;
 
-function createMockBuffer(buffered) {
+function createMockBuffer (buffered) {
   return {
-    start: i => (buffered.length > i) ? buffered[i].startPTS: null,
-    end : i => (buffered.length > i) ? buffered[i].endPTS: null,
-    length: buffered.length,
+    start: i => (buffered.length > i) ? buffered[i].startPTS : null,
+    end: i => (buffered.length > i) ? buffered[i].endPTS : null,
+    length: buffered.length
   };
 }
 
-function createMockFragment(data, types) {
+function createMockFragment (data, types) {
   data._elementaryStreams = new Set(types);
   data.hasElementaryStream = (type) => {
     return data._elementaryStreams.has(type) === true;
-  }
+  };
   return data;
 }
 
@@ -28,7 +28,7 @@ function createMockFragment(data, types) {
  * @param {Hls} hls
  * @param {Fragment} fragment
  */
-function loadFragment(hls, fragment){
+function loadFragment (hls, fragment) {
   hls.trigger(Event.FRAG_LOADED, { frag: fragment });
 }
 
@@ -37,7 +37,7 @@ function loadFragment(hls, fragment){
  * @param {Hls} hls
  * @param {Fragment} fragment
  */
-function loadFragmentAndBuffered(hls, fragment) {
+function loadFragmentAndBuffered (hls, fragment) {
   loadFragment(hls, fragment);
   hls.trigger(Event.FRAG_BUFFERED, { frag: fragment });
 }
@@ -62,7 +62,7 @@ describe('FragmentTracker', () => {
       {
         startPTS: 0,
         endPTS: 0.5
-      },
+      }
     ]);
 
     timeRanges = {};
@@ -70,7 +70,7 @@ describe('FragmentTracker', () => {
     timeRanges['audio'] = buffered;
     hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
 
-    hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
+    hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
 
     it('detects fragments that partially loaded', () => {
       // Get the partial fragment at a time
@@ -92,7 +92,6 @@ describe('FragmentTracker', () => {
 
     hls = new Hls({});
     fragmentTracker = new FragmentTracker(hls);
-
 
     let addFragment = () => {
       fragment = createMockFragment({
@@ -116,7 +115,7 @@ describe('FragmentTracker', () => {
         {
           startPTS: 0,
           endPTS: 1
-        },
+        }
       ]);
 
       timeRanges = {};
@@ -124,7 +123,7 @@ describe('FragmentTracker', () => {
       timeRanges['audio'] = buffered;
       hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
 
-      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
+      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
 
       assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.OK);
     });
@@ -135,14 +134,14 @@ describe('FragmentTracker', () => {
         {
           startPTS: 0.5,
           endPTS: 2
-        },
+        }
       ]);
       timeRanges = {};
       timeRanges['video'] = buffered;
       timeRanges['audio'] = buffered;
       hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
 
-      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
+      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
 
       assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.PARTIAL);
     });
@@ -153,14 +152,14 @@ describe('FragmentTracker', () => {
         {
           startPTS: 0.5,
           endPTS: 2
-        },
+        }
       ]);
       timeRanges = {};
       timeRanges['video'] = buffered;
       timeRanges['audio'] = buffered;
       hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
 
-      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
+      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
 
       assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.PARTIAL);
 
@@ -169,7 +168,7 @@ describe('FragmentTracker', () => {
         {
           startPTS: 0.75,
           endPTS: 2
-        },
+        }
       ]);
       timeRanges = {};
       timeRanges['video'] = buffered;
@@ -312,17 +311,17 @@ describe('FragmentTracker', () => {
         {
           startPTS: 0,
           endPTS: 2
-        },
+        }
       ]);
       timeRanges['audio'] = createMockBuffer([
         {
           startPTS: 0.5,
           endPTS: 2
-        },
+        }
       ]);
       hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
 
-      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
+      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
 
       assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.PARTIAL);
     });
@@ -342,17 +341,17 @@ describe('FragmentTracker', () => {
         {
           startPTS: 0.5,
           endPTS: 2
-        },
+        }
       ]);
       timeRanges['audio'] = createMockBuffer([
         {
           startPTS: 0,
           endPTS: 2
-        },
+        }
       ]);
       hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
 
-      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
+      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
 
       assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.PARTIAL);
     });
@@ -372,23 +371,23 @@ describe('FragmentTracker', () => {
         {
           startPTS: 0.5,
           endPTS: 2
-        },
+        }
       ]);
       timeRanges['audio'] = createMockBuffer([
         {
           startPTS: 0,
           endPTS: 2
-        },
+        }
       ]);
       hls.trigger(Event.BUFFER_APPENDED, { timeRanges });
 
-      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id : 'main', frag: fragment });
+      hls.trigger(Event.FRAG_BUFFERED, { stats: { aborted: true }, id: 'main', frag: fragment });
 
       assert.strictEqual(fragmentTracker.getState(fragment), FragmentState.OK);
     });
   });
 
-  describe("removeFragment", () => {
+  describe('removeFragment', () => {
     /** @type {Hls} */
     let hls;
     /** @type {FragmentTracker} */
@@ -397,7 +396,7 @@ describe('FragmentTracker', () => {
       hls = new Hls({});
       fragmentTracker = new FragmentTracker(hls);
     });
-    it("should remove fragment", () => {
+    it('should remove fragment', () => {
       const fragment = createMockFragment({
         startPTS: 0,
         endPTS: 1,
@@ -414,7 +413,7 @@ describe('FragmentTracker', () => {
       assert.strictEqual(fragmentTracker.hasFragment(fragment), false);
     });
   });
-  describe("removeAllFragments", () => {
+  describe('removeAllFragments', () => {
     /** @type {Hls} */
     let hls;
     /** @type {FragmentTracker} */
@@ -423,7 +422,7 @@ describe('FragmentTracker', () => {
       hls = new Hls({});
       fragmentTracker = new FragmentTracker(hls);
     });
-    it("should remove all fragments", () => {
+    it('should remove all fragments', () => {
       const fragments = [
         // 0-1
         createMockFragment({

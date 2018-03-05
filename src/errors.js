@@ -48,7 +48,7 @@ export const ErrorDetails = {
   // will be renamed DEMUX_PARSING_ERROR and switched to MUX_ERROR in the next major release
   FRAG_PARSING_ERROR: 'fragParsingError',
   // Identifier for a remux alloc error event - data: { id : demuxer Id, frag : fragment object, bytes : nb of bytes on which allocation failed , reason : error text }
-  REMUX_ALLOC_ERROR : 'remuxAllocError',
+  REMUX_ALLOC_ERROR: 'remuxAllocError',
   // Identifier for decrypt key load error - data: { frag : fragment object, response : { code: error code, text: error text }}
   KEY_LOAD_ERROR: 'keyLoadError',
   // Identifier for decrypt key load timeout error - data: { frag : fragment object}
@@ -66,7 +66,7 @@ export const ErrorDetails = {
   // Identifier for a buffer seek over hole event
   BUFFER_SEEK_OVER_HOLE: 'bufferSeekOverHole',
   // Identifier for a buffer nudge on stall (playback is stuck although currentTime is in a buffered area)
-  BUFFER_NUDGE_ON_STALL : 'bufferNudgeOnStall',
+  BUFFER_NUDGE_ON_STALL: 'bufferNudgeOnStall',
   // Identifier for an internal exception happening inside hls.js while handling an event
   INTERNAL_EXCEPTION: 'internalException'
 };

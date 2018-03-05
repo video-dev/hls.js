@@ -5,12 +5,11 @@ export const FragmentState = {
   NOT_LOADED: 'NOT_LOADED',
   APPENDING: 'APPENDING',
   PARTIAL: 'PARTIAL',
-  OK: 'OK',
+  OK: 'OK'
 };
 
 export class FragmentTracker extends EventHandler {
-
-  constructor(hls) {
+  constructor (hls) {
     super(hls,
       Event.BUFFER_APPENDED,
       Event.FRAG_BUFFERED,
@@ -25,14 +24,13 @@ export class FragmentTracker extends EventHandler {
     this.config = hls.config;
   }
 
-  destroy() {
+  destroy () {
     this.fragments = null;
     this.timeRanges = null;
     this.config = null;
     EventHandler.prototype.destroy.call(this);
     super.destroy();
   }
-
 
   /**
    * Return a Fragment that match the position and levelType.
@@ -41,16 +39,16 @@ export class FragmentTracker extends EventHandler {
    * @param {LevelType} levelType
    * @returns {Fragment|null}
    */
-  getBufferedFrag(position, levelType) {
+  getBufferedFrag (position, levelType) {
     const fragments = this.fragments;
     const bufferedFrags = Object.keys(fragments).filter(key => {
       const fragmentEntity = fragments[key];
-      if(fragmentEntity.body.type !== levelType){
+      if (fragmentEntity.body.type !== levelType)
         return false;
-      }
-      if(!fragmentEntity.buffered){
+
+      if (!fragmentEntity.buffered)
         return false;
-      }
+
       const frag = fragmentEntity.body;
       return frag.startPTS <= position && position <= frag.endPTS;
     });
@@ -70,19 +68,19 @@ export class FragmentTracker extends EventHandler {
    * @param {String} elementaryStream The elementaryStream of media this is (eg. video/audio)
    * @param {TimeRanges} timeRange TimeRange object from a sourceBuffer
    */
-  detectEvictedFragments(elementaryStream, timeRange) {
+  detectEvictedFragments (elementaryStream, timeRange) {
     let fragmentTimes, time;
     // Check if any flagged fragments have been unloaded
     Object.keys(this.fragments).forEach(key => {
       const fragmentEntity = this.fragments[key];
-      if(fragmentEntity.buffered === true) {
+      if (fragmentEntity.buffered === true) {
         const esData = fragmentEntity.range[elementaryStream];
         if (esData) {
           fragmentTimes = esData.time;
           for (let i = 0; i < fragmentTimes.length; i++) {
             time = fragmentTimes[i];
 
-            if(this.isTimeBuffered(time.startPTS, time.endPTS, timeRange) === false) {
+            if (this.isTimeBuffered(time.startPTS, time.endPTS, timeRange) === false) {
               // Unregister partial fragment as it needs to load again to be reused
               this.removeFragment(fragmentEntity.body);
               break;
@@ -98,13 +96,13 @@ export class FragmentTracker extends EventHandler {
    * Partially loaded fragments will be registered as a partial fragment
    * @param {Object} fragment Check the fragment against all sourceBuffers loaded
    */
-  detectPartialFragments(fragment) {
+  detectPartialFragments (fragment) {
     let fragKey = this.getFragmentKey(fragment);
     let fragmentEntity = this.fragments[fragKey];
     fragmentEntity.buffered = true;
 
     Object.keys(this.timeRanges).forEach(elementaryStream => {
-      if(fragment.hasElementaryStream(elementaryStream) === true) {
+      if (fragment.hasElementaryStream(elementaryStream) === true) {
         let timeRange = this.timeRanges[elementaryStream];
         // Check for malformed fragments
         // Gaps need to be calculated for each elementaryStream
@@ -113,7 +111,7 @@ export class FragmentTracker extends EventHandler {
     });
   }
 
-  getBufferedTimes(startPTS, endPTS, timeRange) {
+  getBufferedTimes (startPTS, endPTS, timeRange) {
     let fragmentTimes = [];
     let startTime, endTime;
     let fragmentPartial = false;
@@ -136,7 +134,7 @@ export class FragmentTracker extends EventHandler {
           endPTS: Math.min(endPTS, timeRange.end(i))
         });
         fragmentPartial = true;
-      } else if(endPTS <= startTime) {
+      } else if (endPTS <= startTime) {
         // No need to check the rest of the timeRange as it is in order
         break;
       }
@@ -148,7 +146,7 @@ export class FragmentTracker extends EventHandler {
     };
   }
 
-  getFragmentKey(fragment) {
+  getFragmentKey (fragment) {
     return `${fragment.type}_${fragment.level}_${fragment.sn}`;
   }
 
@@ -157,19 +155,19 @@ export class FragmentTracker extends EventHandler {
    * @param {Number} time
    * @returns {Object} fragment Returns a partial fragment at a time or null if there is no partial fragment
    */
-  getPartialFragment(time) {
+  getPartialFragment (time) {
     let timePadding, startTime, endTime;
     let bestFragment = null;
     let bestOverlap = 0;
     Object.keys(this.fragments).forEach(key => {
       const fragmentEntity = this.fragments[key];
-      if(this.isPartial(fragmentEntity)) {
+      if (this.isPartial(fragmentEntity)) {
         startTime = fragmentEntity.body.startPTS - this.bufferPadding;
         endTime = fragmentEntity.body.endPTS + this.bufferPadding;
-        if(time >= startTime && time <= endTime) {
+        if (time >= startTime && time <= endTime) {
           // Use the fragment that has the most padding from start and end time
           timePadding = Math.min(time - startTime, endTime - time);
-          if(bestOverlap <= timePadding) {
+          if (bestOverlap <= timePadding) {
             bestFragment = fragmentEntity.body;
             bestOverlap = timePadding;
           }
@@ -183,39 +181,38 @@ export class FragmentTracker extends EventHandler {
    * @param {Object} fragment The fragment to check
    * @returns {String} Returns the fragment state when a fragment never loaded or if it partially loaded
    */
-  getState(fragment) {
+  getState (fragment) {
     let fragKey = this.getFragmentKey(fragment);
     let fragmentEntity = this.fragments[fragKey];
     let state = FragmentState.NOT_LOADED;
 
-    if(fragmentEntity !== undefined) {
-      if(!fragmentEntity.buffered) {
+    if (fragmentEntity !== undefined) {
+      if (!fragmentEntity.buffered)
         state = FragmentState.APPENDING;
-      } else if(this.isPartial(fragmentEntity) === true) {
+      else if (this.isPartial(fragmentEntity) === true)
         state = FragmentState.PARTIAL;
-      } else {
+      else
         state = FragmentState.OK;
-      }
     }
 
     return state;
   }
 
-  isPartial(fragmentEntity) {
+  isPartial (fragmentEntity) {
     return fragmentEntity.buffered === true &&
       ((fragmentEntity.range.video !== undefined && fragmentEntity.range.video.partial === true) ||
         (fragmentEntity.range.audio !== undefined && fragmentEntity.range.audio.partial === true));
   }
 
-  isTimeBuffered(startPTS, endPTS, timeRange) {
+  isTimeBuffered (startPTS, endPTS, timeRange) {
     let startTime, endTime;
     for (let i = 0; i < timeRange.length; i++) {
       startTime = timeRange.start(i) - this.bufferPadding;
       endTime = timeRange.end(i) + this.bufferPadding;
-      if (startPTS >= startTime && endPTS <= endTime) {
+      if (startPTS >= startTime && endPTS <= endTime)
         return true;
-      }
-      if(endPTS <= startTime) {
+
+      if (endPTS <= startTime) {
         // No need to check the rest of the timeRange as it is in order
         return false;
       }
@@ -227,13 +224,13 @@ export class FragmentTracker extends EventHandler {
   /**
    * Fires when a fragment loading is completed
    */
-  onFragLoaded(e) {
+  onFragLoaded (e) {
     let fragment = e.frag;
     let fragKey = this.getFragmentKey(fragment);
     let fragmentEntity = {
       body: fragment,
       range: Object.create(null),
-      buffered: false,
+      buffered: false
     };
     this.fragments[fragKey] = fragmentEntity;
   }
@@ -241,7 +238,7 @@ export class FragmentTracker extends EventHandler {
   /**
    * Fires when the buffer is updated
    */
-  onBufferAppended(e) {
+  onBufferAppended (e) {
     // Store the latest timeRanges loaded in the buffer
     this.timeRanges = e.timeRanges;
     Object.keys(this.timeRanges).forEach(elementaryStream => {
@@ -253,7 +250,7 @@ export class FragmentTracker extends EventHandler {
   /**
    * Fires after a fragment has been loaded into the source buffer
    */
-  onFragBuffered(e) {
+  onFragBuffered (e) {
     this.detectPartialFragments(e.frag);
   }
 
@@ -262,7 +259,7 @@ export class FragmentTracker extends EventHandler {
    * @param {Object} fragment
    * @returns {boolean}
    */
-  hasFragment(fragment) {
+  hasFragment (fragment) {
     const fragKey = this.getFragmentKey(fragment);
     return this.fragments[fragKey] !== undefined;
   }
@@ -271,7 +268,7 @@ export class FragmentTracker extends EventHandler {
    * Remove a fragment from fragment tracker until it is loaded again
    * @param {Object} fragment The fragment to remove
    */
-  removeFragment(fragment) {
+  removeFragment (fragment) {
     let fragKey = this.getFragmentKey(fragment);
     delete this.fragments[fragKey];
   }
@@ -279,7 +276,7 @@ export class FragmentTracker extends EventHandler {
   /**
    * Remove all fragments from fragment tracker.
    */
-  removeAllFragments(){
+  removeAllFragments () {
     this.fragments = Object.create(null);
   }
 }
